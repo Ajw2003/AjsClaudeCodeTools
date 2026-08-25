@@ -17,7 +17,7 @@
 # another copy that can drift. verify.sh checks that every key phrase here still appears in
 # the rules file, so drift fails a test instead of going unnoticed.
 
-REMINDER='Standing house rules (full text was injected at session start):\n- Target is Windows 11, Git Bash, PowerShell 5.1. Build for that only - no portability work unless asked.\n- Build only what was asked. Where it is ambiguous, ask instead of assuming.\n- Deliver a whole workflow: exact commands to run, no manual config editing, no step the user has to do by hand.\n- Artifacts go in the project directory as real files, not in chat and not in a temp directory.'
+REMINDER='Standing house rules (full text was injected at session start):\n- Target is Windows 11, Git Bash, PowerShell 5.1. Build for that only - no portability work unless asked.\n- Build only what was asked. Where it is ambiguous, ask instead of assuming.\n- Deliver a whole workflow: exact commands to run, no manual config editing, no step the user has to do by hand.\n- Artifacts go in the project directory as real files, not in chat and not in a temp directory.\n- Never hand over a command you have not run where the user will run it: PowerShell 5.1, where sh is not on PATH. Untested instructions are not instructions.'
 
 printf '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"%s"}}' "$REMINDER"
 

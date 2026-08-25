@@ -9,7 +9,7 @@ Four hooks, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-
 
 | Hook | When | What it does |
 |---|---|---|
-| `SessionStart` | every session, every project | [inject.sh](plugins/house-rules/scripts/inject.sh) prints [rules/house-rules.md](plugins/house-rules/rules/house-rules.md) into Claude's context. This is the CLAUDE.md replacement — no per-repo file needed. |
+| `SessionStart` | every session, every project | [inject.sh](plugins/house-rules/scripts/inject.sh) prints [rules/house-rules.md](plugins/house-rules/rules/house-rules.md) **and** [rules/environment.md](plugins/house-rules/rules/environment.md) into Claude's context. This is the CLAUDE.md replacement — no per-repo file needed. |
 | `UserPromptSubmit` | before every prompt you send | [scope.sh](plugins/house-rules/scripts/scope.sh) restates the short version — the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
 | `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | [guard.sh](plugins/house-rules/scripts/guard.sh) checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. |
 | `PostToolUse` on `Write` / `Edit` | after a file is written | [artifact.sh](plugins/house-rules/scripts/artifact.sh) notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
@@ -60,24 +60,48 @@ silently — read-only inspection is explicitly fine under the rules.
 
 The other rules — the fixed environment, build only what was asked, docs-before-research, build
 for a human working alone, the user's hands are for decisions not labour, deliver a whole
-workflow — have no shell signature to match on. They are carried by the SessionStart injection
+workflow, never hand over an untested command — have no shell signature to match on. They are carried by the SessionStart injection
 and the per-prompt reminder.
+
+## The machine profile
+
+Rule one is "build for this machine, not for everywhere" — which is worthless if nobody wrote
+down what this machine is. [rules/environment.md](plugins/house-rules/rules/environment.md) is
+that record: OS, shells, hardware, what is on PATH and what only looks like it is. It is
+injected alongside the rules at every session start.
+
+If it is missing, the injection says **NOT RECORDED YET** and tells the session to go and
+discover the facts rather than assume them. On a new machine that is the correct first move:
+run the commands at the bottom of that file and rewrite it. Steps 33–34 cover both paths.
+
+It records one trap in particular, because it has already produced a bad instruction: **`sh`
+and `bash` are not on PATH** on this machine. Git for Windows only adds `C:\Program Files\Git\cmd`,
+which holds `git.exe` and nothing else. The shells exist, but must be called by full path.
 
 ## Verify it yourself
 
-Do not take any of the above on faith. Run this and read the output:
+Do not take any of the above on faith. Run it yourself, from the **repo root**.
+
+In PowerShell — where `sh` is not on PATH, so it needs its full path:
 
 ```bash
-sh plugins/house-rules/scripts/verify.sh
+& "C:\Program Files\Git\bin\sh.exe" claude-house-rules/plugins/house-rules/scripts/verify.sh
 ```
 
-32 numbered checks. Steps 1–20 feed one real command each to the guard and print the command
+Or from a Git Bash window, where the short form works:
+
+```bash
+sh claude-house-rules/plugins/house-rules/scripts/verify.sh
+```
+
+34 numbered checks. Steps 1–20 feed one real command each to the guard and print the command
 tested, the decision expected, the decision received, and PASS or FAIL. Steps 21–23 prove the
 fail-closed and fail-loud behaviour by running the hooks with a deliberately broken `PATH`.
 Steps 24–30 check the scope and artifact reminders, including the two cases that would misfire:
 a file whose *contents* merely mention a temp path, and a script (not a document) in a temp
 directory. Steps 31–32 catch drift — reminder text that no longer matches the rules, and a
-`CLAUDE.md` turned back into a second copy of them.
+`CLAUDE.md` turned back into a second copy of them. Steps 33–34 check that the machine profile
+reaches the session, and that a missing one reads as "go and find out" rather than "assume".
 
 Exit code 0 means all passed. It runs in your terminal, in the foreground, in about a second —
 nothing is hidden and nothing is logged to a file only Claude reads.

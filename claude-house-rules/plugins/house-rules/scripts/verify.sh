@@ -52,7 +52,8 @@ printf 'Steps 1-20 feed one shell command each to the guard and check the decisi
 printf '  "ask"  = Claude Code will show you a permission prompt naming the rule.\n'
 printf '  "pass" = the command runs with no extra prompt.\n'
 printf 'Steps 21-23 check that the hooks cannot fail silently.\n'
-printf 'Steps 24-32 check the scope reminder, the artifact reminder, and rule drift.\n'
+printf 'Steps 24-34 check the scope reminder, the artifact reminder, the machine profile,\n'
+printf 'and drift between the two places the rules are worded.\n'
 printf '\n'
 
 # Fields: expect | rule-title-that-must-be-cited (empty when expecting pass) | command
@@ -131,6 +132,7 @@ for H in \
   'Build for a human working alone' \
   'hands are for decisions, not labour' \
   'Deliver a whole workflow, not a starting point' \
+  'Never hand over a command I have not run' \
   'Every artifact lives in the project directory' \
   'Never hide work in a background window or a silent process' \
   'Never commit without asking' \
@@ -215,7 +217,7 @@ art_case silent 'script in a temp directory is scratch work, not an artifact' \
 # the wording, so this is the check that stops the two saying different things.
 RULES_FILE="$HERE/../rules/house-rules.md"
 DRIFT=''
-for PHRASE in 'Windows 11' 'portability work' 'only what was asked' 'ask instead of assuming' 'project directory'; do
+for PHRASE in 'Windows 11' 'portability work' 'only what was asked' 'ask instead of assuming' 'project directory' 'hand over a command'; do
   if grep -qi "$PHRASE" "$SCOPE" 2>/dev/null; then
     grep -qi "$PHRASE" "$RULES_FILE" 2>/dev/null || DRIFT="$DRIFT; $PHRASE"
   fi
@@ -242,6 +244,35 @@ else
   report PASS 'repo CLAUDE.md is not a second copy of the rules'
   printf '          it is a pointer (%s bytes), not a copy\n' "$(wc -c <"$ROOT_CLAUDE" | tr -d ' ')"
 fi
+
+
+# --- 33. the recorded machine profile actually reaches the session -------------------------
+# Rule 1 says to build for the environment that is written down. That only works if the thing
+# written down is in context, so this checks the profile is injected, not merely present.
+OUT=$("$SH" "$INJECT" 2>/dev/null </dev/null)
+MISSING_ENV=''
+case "$OUT" in *'This machine'*) ;; *) MISSING_ENV='no machine profile in the injection' ;; esac
+case "$OUT" in *'PowerShell'*) ;; *) MISSING_ENV="$MISSING_ENV; no shell recorded" ;; esac
+case "$OUT" in *'NOT on PATH'*) ;; *) MISSING_ENV="$MISSING_ENV; the sh-not-on-PATH trap is not recorded" ;; esac
+if [ -z "$MISSING_ENV" ]; then
+  report PASS 'SessionStart injects the recorded machine profile'
+  printf '          rules + machine profile = %s characters\n' "$(printf '%s' "$OUT" | wc -c | tr -d ' ')"
+else
+  report FAIL 'SessionStart injects the recorded machine profile'
+  printf '          %s\n' "$MISSING_ENV"
+fi
+
+# --- 34. an unrecorded machine reads as "go and find out", never as "assume" ----------------
+# Uses the override so the real environment.md is never moved out from under a live session.
+OUT=$(HOUSE_RULES_ENV_FILE=/nonexistent-on-purpose "$SH" "$INJECT" 2>/dev/null </dev/null)
+case "$OUT" in
+  *'NOT RECORDED YET'*)
+    report PASS 'a missing machine profile becomes an instruction to discover it'
+    printf '          the session is told to go and find the facts, not to assume them\n' ;;
+  *)
+    report FAIL 'a missing machine profile becomes an instruction to discover it'
+    printf '          the injection said nothing about the profile being absent\n' ;;
+esac
 
 printf '\n'
 printf -- '--------------------------------\n'

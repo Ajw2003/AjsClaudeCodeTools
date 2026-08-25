@@ -266,3 +266,37 @@ against mine rather than taking my word for either.
 - Not adding a repo-root README (you didn't ask for one)
 - Not touching `Modified.md` or `New Text Document.txt`
 - Not committing anything. When the work is done I'll propose the message and wait.
+
+---
+
+## What changed after this plan was approved
+
+Recorded 2026-08-25, after implementation. The plan above is the approved version; these are
+the deviations from it, so the two can be read together without the plan quietly going stale.
+
+**Two more rules were added,** at the user's request, after the first pass shipped:
+
+1. **Rule 1 was rewritten.** It no longer just declares the environment. Windows 11 and
+   PowerShell 5.1 are the *default assumption*; the real configuration is discovered and
+   recorded in a new `rules/environment.md`, and the rule now says to check that file before
+   relying on any environment fact — and to go and find out, then write it down, when a fact
+   is not recorded.
+2. **A new rule: "Never hand over a command I have not run where they will run it."** Prompted
+   by a real failure in this session: `sh verify.sh` was given as an instruction after being
+   tested only in the agent's Bash tool. It fails in PowerShell, which is the shell actually
+   in use, because `sh` is not on PATH there.
+
+**New file: `rules/environment.md`** — the discovered machine profile (OS, shells, hardware,
+PATH contents, git config), injected alongside the rules at every session start. `inject.sh`
+was rewritten to emit both files; when the profile is absent it emits a `NOT RECORDED YET`
+instruction to discover it, so a new machine reads as "find out" rather than "assume". The
+path is overridable via `HOUSE_RULES_ENV_FILE` purely so the test can exercise that branch
+without moving the real file.
+
+**verify.sh grew from 32 to 34 checks** — steps 33 and 34 cover the two paths above.
+
+**The README's own verify command was wrong** and is now given per shell: the full
+`sh.exe` path for PowerShell, the short form for Git Bash, both from the repo root. Verified by
+running each in the shell it names.
+
+Final state: 34/34 passing, confirmed from PowerShell at the repo root.

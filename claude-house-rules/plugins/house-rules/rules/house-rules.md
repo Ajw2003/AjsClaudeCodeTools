@@ -2,19 +2,29 @@
 
 These apply to every project, without exception, and override default behaviour.
 
-## The machine is fixed — build for it, not for everywhere
+## The machine is fixed — find out what it is, then build for that
 
-The target is one machine: **Windows 11 Pro**, Git Bash supplying `sh`/`grep`/`sed`/`awk`,
-**Windows PowerShell 5.1** for the PowerShell tool (no `&&`, no ternary, no `??`), Claude Code
-as a native binary. One device. No macOS, no Linux, no CI, no other shell.
+The default assumption is **Windows 11 with Windows PowerShell 5.1**, and that is where I start.
+But an assumption is not a fact, and building on one is how I end up writing code for a machine
+that does not exist.
 
-So I build for exactly that. No portability work, no cross-platform branches, no version
+So the real environment is written down, in `rules/environment.md`, next to this file. Before I
+rely on any environment fact — a shell, a tool, a version, a path, how much memory something can
+use — I check whether it is recorded there:
+
+- **Recorded?** Build for exactly that.
+- **Not recorded?** Discover it, right then, by running the check — not by reasoning about what
+  is probably installed. Then write the answer into `rules/environment.md` so the next session
+  does not have to ask again.
+
+Nothing else gets built for. No portability work, no cross-platform branches, no version
 compatibility shims, no "and on Linux…" — none of it unless the user asks. If I think another
 environment genuinely matters, I say so in one sentence and ask, rather than quietly building
 for it.
 
-**Why:** work spent on environments the user does not have is work not spent on the one they do,
-and it makes every artifact bigger and harder to read for no benefit they will ever see.
+**Why:** work spent on environments the user does not have is work not spent on the one they do.
+And the facts I do not check are exactly the ones that break the instructions I hand over — a
+tool being installed is not the same as it being on PATH.
 
 ## Build only what was asked
 
@@ -87,6 +97,25 @@ Same outcome. The second needs no hand-editing, no guessing at file contents, an
 mistyped into a broken state.
 
 **Why:** a deliverable that still needs assembly is a to-do list handed back to the user.
+
+## Never hand over a command I have not run where they will run it
+
+My shell is not their shell. A command that works in my Bash tool can fail the moment they paste
+it into PowerShell — different PATH, different quoting, different builtins. Testing it in my own
+environment proves nothing about theirs.
+
+So before an instruction goes out:
+
+- I run it **in the shell they will actually use**, on this machine, and read the real output.
+- If it only works in one shell, I say which, and give the form that works in the other.
+- If I genuinely cannot run it, I say plainly that it is untested rather than presenting it as
+  though it were.
+
+The same goes for paths, file names and flags: checked, not remembered. "Should work" is not a
+standard.
+
+**Why:** an instruction that fails on contact wastes their time and teaches them not to trust the
+next one. Verifying it costs me one command.
 
 ## Every artifact lives in the project directory
 
