@@ -5,12 +5,14 @@ device and every project instead of living in a file you have to copy into each 
 
 ## What it actually does
 
-Two hooks, both defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
+Four hooks, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
 
 | Hook | When | What it does |
 |---|---|---|
 | `SessionStart` | every session, every project | [inject.sh](plugins/house-rules/scripts/inject.sh) prints [rules/house-rules.md](plugins/house-rules/rules/house-rules.md) into Claude's context. This is the CLAUDE.md replacement — no per-repo file needed. |
+| `UserPromptSubmit` | before every prompt you send | [scope.sh](plugins/house-rules/scripts/scope.sh) restates the short version — the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
 | `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | [guard.sh](plugins/house-rules/scripts/guard.sh) checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. |
+| `PostToolUse` on `Write` / `Edit` | after a file is written | [artifact.sh](plugins/house-rules/scripts/artifact.sh) notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
 
 The guard **never blocks a matched command outright**. Every match becomes an "ask", because
 the rules are "do not do X without asking" — not "X is forbidden".
@@ -35,7 +37,15 @@ What is left cannot fail quietly either:
   `systemMessage`, so you see "The rules were NOT loaded into this session" in the session
   instead of the rules just not being there.
 
-Both properties are tested — steps 21 and 23 below.
+- **scope.sh cannot fail at all.** On `UserPromptSubmit` a non-zero exit *erases your prompt*, so
+  that hook is one `printf` of a fixed string — it reads no file and runs no other program, so it
+  has no failure path to hit. Its text is therefore a second copy of some wording, which step 31
+  guards against drifting.
+- **artifact.sh never obstructs.** `PostToolUse` cannot block anyway (the write already happened),
+  and it does not try to be a gate. Missing `grep` gets you a `systemMessage` saying the reminder
+  is offline, not a broken write.
+
+These properties are tested — steps 21, 23, 25 and 31 below.
 
 ### What trips the guard
 
@@ -48,8 +58,10 @@ Both properties are tested — steps 21 and 23 below.
 `git status`, `git log`, `git diff`, `git show` and every ordinary command pass through
 silently — read-only inspection is explicitly fine under the rules.
 
-"Build things the user can run, verify, and keep" has no shell signature to match on, so it is
-enforced by the context injection only.
+The other rules — the fixed environment, build only what was asked, docs-before-research, build
+for a human working alone, the user's hands are for decisions not labour, deliver a whole
+workflow — have no shell signature to match on. They are carried by the SessionStart injection
+and the per-prompt reminder.
 
 ## Verify it yourself
 
@@ -59,9 +71,14 @@ Do not take any of the above on faith. Run this and read the output:
 sh plugins/house-rules/scripts/verify.sh
 ```
 
-23 numbered checks. Steps 1–20 feed one real command each to the guard and print the command
+32 numbered checks. Steps 1–20 feed one real command each to the guard and print the command
 tested, the decision expected, the decision received, and PASS or FAIL. Steps 21–23 prove the
 fail-closed and fail-loud behaviour by running the hooks with a deliberately broken `PATH`.
+Steps 24–30 check the scope and artifact reminders, including the two cases that would misfire:
+a file whose *contents* merely mention a temp path, and a script (not a document) in a temp
+directory. Steps 31–32 catch drift — reminder text that no longer matches the rules, and a
+`CLAUDE.md` turned back into a second copy of them.
+
 Exit code 0 means all passed. It runs in your terminal, in the foreground, in about a second —
 nothing is hidden and nothing is logged to a file only Claude reads.
 
@@ -107,7 +124,9 @@ register the same marketplace name.
 Editing the rules is then one commit — every device picks it up on its next update.
 
 For a local checkout instead, swap the source for
-`{ "source": "directory", "path": "C:\\path\\to\\AjsClaudeCodeTools\\claude-house-rules" }`.
+`{ "source": "directory", "path": "C:\\path\\to\\AjsClaudeCodeTools" }` — the **repo root**, since that is
+where `marketplace.json` lives. (It previously named `...\\claude-house-rules`, which stopped
+being right when the manifest moved to the root.)
 
 ## On Windows
 
@@ -119,7 +138,14 @@ Git for Windows and it works.
 ## Editing the rules
 
 [plugins/house-rules/rules/house-rules.md](plugins/house-rules/rules/house-rules.md) is the
-single source of truth for the text Claude reads.
+single source of truth for the text Claude reads. It is the **only** copy — `CLAUDE.md` files are
+pointers to it, not duplicates. Claude Code auto-loads every `CLAUDE.md` it finds, so a full copy
+there means the rules land in context twice and the two can drift apart unnoticed. Step 32 fails
+if one reappears.
+
+[plugins/house-rules/scripts/scope.sh](plugins/house-rules/scripts/scope.sh) restates a few
+phrases from the rules inline (it cannot read a file — see above). If you reword one of those
+rules, step 31 tells you the reminder no longer matches.
 [plugins/house-rules/scripts/guard.sh](plugins/house-rules/scripts/guard.sh) holds the patterns
 the guard matches. If you add a rule to the markdown that has a shell signature, add a check
 next to it and a case in `verify.sh`.

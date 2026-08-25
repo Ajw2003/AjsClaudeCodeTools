@@ -17,6 +17,9 @@ set -u
 HERE=$(dirname "$0")
 GUARD="$HERE/guard.sh"
 INJECT="$HERE/inject.sh"
+SCOPE="$HERE/scope.sh"
+ARTIFACT="$HERE/artifact.sh"
+ROOT="$HERE/../../../.."
 SH=$(command -v sh)
 
 STEP=0
@@ -42,11 +45,14 @@ printf '================================\n'
 printf 'Shell:  %s\n' "$SH"
 printf 'Guard:  %s\n' "$GUARD"
 printf 'Inject: %s\n' "$INJECT"
+printf 'Scope:  %s\n' "$SCOPE"
+printf 'Artif:  %s\n' "$ARTIFACT"
 printf '\n'
 printf 'Steps 1-20 feed one shell command each to the guard and check the decision:\n'
 printf '  "ask"  = Claude Code will show you a permission prompt naming the rule.\n'
 printf '  "pass" = the command runs with no extra prompt.\n'
 printf 'Steps 21-23 check that the hooks cannot fail silently.\n'
+printf 'Steps 24-32 check the scope reminder, the artifact reminder, and rule drift.\n'
 printf '\n'
 
 # Fields: expect | rule-title-that-must-be-cited (empty when expecting pass) | command
@@ -119,8 +125,14 @@ fi
 OUT=$("$SH" "$INJECT" 2>/dev/null </dev/null)
 MISSING=''
 for H in \
+  'The machine is fixed' \
+  'Build only what was asked' \
+  'Read the docs first, then check them against the code' \
+  'Build for a human working alone' \
+  'hands are for decisions, not labour' \
+  'Deliver a whole workflow, not a starting point' \
+  'Every artifact lives in the project directory' \
   'Never hide work in a background window or a silent process' \
-  'Build things the user can run, verify, and keep' \
   'Never commit without asking' \
   'Never take a destructive action without checking first'
 do
@@ -130,10 +142,10 @@ do
   esac
 done
 if [ -z "$MISSING" ]; then
-  report PASS 'SessionStart injects all four rules into context'
+  report PASS 'SessionStart injects every rule heading into context'
   printf '          %s characters injected\n' "$(printf '%s' "$OUT" | wc -c | tr -d ' ')"
 else
-  report FAIL 'SessionStart injects all four rules into context'
+  report FAIL 'SessionStart injects every rule heading into context'
   printf '          missing%s\n' "$MISSING"
 fi
 
@@ -148,6 +160,89 @@ case "$OUT2" in
     printf '          got: %s\n' "$OUT2" ;;
 esac
 
+# --- 24-25. the scope reminder reaches every prompt ---------------------------------------
+# scope.sh has NO dependencies by design: on UserPromptSubmit a non-zero exit erases the
+# user's prompt, so that hook must not be able to fail. Step 25 proves it by emptying PATH.
+check_scope() { # $1=title  $2=nonempty to run with PATH emptied
+  # PATH="" has to be written out literally as an assignment prefix; passing it in a
+  # variable does not work, the shell would look for a command named PATH="".
+  if [ -n "$2" ]; then
+    OUT=$(PATH="" "$SH" "$SCOPE" 2>/dev/null </dev/null)
+  else
+    OUT=$("$SH" "$SCOPE" 2>/dev/null </dev/null)
+  fi
+  BAD=''
+  case "$OUT" in *'"hookEventName":"UserPromptSubmit"'*) ;; *) BAD='wrong or missing hookEventName' ;; esac
+  case "$OUT" in *'Windows 11'*) ;; *) BAD="$BAD; environment line missing" ;; esac
+  case "$OUT" in *'only what was asked'*) ;; *) BAD="$BAD; scope line missing" ;; esac
+  if [ -z "$BAD" ]; then
+    report PASS "$1"
+    printf '          %s characters of reminder injected\n' "$(printf '%s' "$OUT" | wc -c | tr -d ' ')"
+  else
+    report FAIL "$1"
+    printf '          %s\n' "$BAD"
+  fi
+}
+check_scope 'scope reminder is emitted ahead of every prompt' ''
+check_scope 'scope reminder still works with PATH empty (it depends on nothing)' broken-path
+
+# --- 26-30. the artifact reminder fires on documents written outside a project -------------
+# Narrow on purpose: it reads the file_path field only, never the file contents. Step 29 is
+# the case that would over-trigger if it grepped the whole payload the way guard.sh does.
+art_case() { # $1=expect remind|silent  $2=title  $3=file_path  $4=extra payload
+  OUT=$(printf '{"tool_name":"Write","tool_input":{"file_path":"%s"%s}}' "$3" "$4" | "$SH" "$ARTIFACT" 2>/dev/null)
+  case "$OUT" in
+    *'artifact custody'*) GOT=remind ;;
+    '') GOT=silent ;;
+    *) GOT=malformed ;;
+  esac
+  if [ "$GOT" = "$1" ]; then report PASS "$2"; else report FAIL "$2"; fi
+  printf '          expected %s, got %s\n' "$1" "$GOT"
+}
+art_case remind 'plan written to ~/.claude/plans is flagged for copying into the project' \
+  'C:\\Users\\aj\\.claude\\plans\\some-plan.md' ''
+art_case remind 'document written to the session scratchpad is flagged' \
+  'C:\\Users\\aj\\AppData\\Local\\Temp\\claude\\scratchpad\\notes.md' ''
+art_case silent 'document written inside the project is left alone' \
+  'C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\docs\\plans\\x.md' ''
+art_case silent 'file whose CONTENTS mention a temp path is left alone' \
+  'C:\\Users\\aj\\Desktop\\proj\\README.md' ',"content":"put it in /tmp/ or scratchpad"'
+art_case silent 'script in a temp directory is scratch work, not an artifact' \
+  'C:\\Users\\aj\\AppData\\Local\\Temp\\build.sh' ''
+
+# --- 31. the reminder in scope.sh has not drifted from the rules document ------------------
+# scope.sh hardcodes its text so it cannot fail at runtime. That makes it a second copy of
+# the wording, so this is the check that stops the two saying different things.
+RULES_FILE="$HERE/../rules/house-rules.md"
+DRIFT=''
+for PHRASE in 'Windows 11' 'portability work' 'only what was asked' 'ask instead of assuming' 'project directory'; do
+  if grep -qi "$PHRASE" "$SCOPE" 2>/dev/null; then
+    grep -qi "$PHRASE" "$RULES_FILE" 2>/dev/null || DRIFT="$DRIFT; $PHRASE"
+  fi
+done
+if [ -z "$DRIFT" ]; then
+  report PASS 'scope.sh reminder still matches the rules document'
+  printf '          every key phrase in the reminder appears in rules/house-rules.md\n'
+else
+  report FAIL 'scope.sh reminder still matches the rules document'
+  printf '          in scope.sh but missing from house-rules.md%s\n' "$DRIFT"
+fi
+
+# --- 32. the rules have not been re-duplicated into CLAUDE.md ------------------------------
+# The plugin injects the rules. A full copy in CLAUDE.md means the same text loads twice and
+# the two can drift apart silently. A short pointer file is fine; no file at all is fine.
+ROOT_CLAUDE="$ROOT/CLAUDE.md"
+if [ ! -f "$ROOT_CLAUDE" ]; then
+  report PASS 'repo CLAUDE.md is not a second copy of the rules'
+  printf '          no CLAUDE.md at the repo root; the plugin is the only source\n'
+elif grep -q 'Never take a destructive action without checking first' "$ROOT_CLAUDE" 2>/dev/null; then
+  report FAIL 'repo CLAUDE.md is not a second copy of the rules'
+  printf '          it holds a full copy of the rules; it should be a pointer\n'
+else
+  report PASS 'repo CLAUDE.md is not a second copy of the rules'
+  printf '          it is a pointer (%s bytes), not a copy\n' "$(wc -c <"$ROOT_CLAUDE" | tr -d ' ')"
+fi
+
 printf '\n'
 printf -- '--------------------------------\n'
 if [ "$FAILURES" -eq 0 ]; then
@@ -157,6 +252,8 @@ else
 fi
 printf '\n'
 printf 'Dependencies used by the hooks: sh, grep, sed, awk. No node, no jq, no python.\n'
+printf 'scope.sh depends on nothing at all - a failing UserPromptSubmit hook would\n'
+printf 'erase your prompt, so that one has no failure path to hit.\n'
 printf 'Matching is textual, so a command that merely mentions a tripwire word will also\n'
 printf 'prompt. That is deliberate - an extra keypress is cheaper than a missed commit.\n'
 printf '\n'
