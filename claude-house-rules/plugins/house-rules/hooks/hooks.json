@@ -5,8 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/house-rules.js", "inject"],
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/inject.sh\"",
             "timeout": 10
           }
         ]
@@ -18,8 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/house-rules.js", "guard"],
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.sh\"",
             "timeout": 10,
             "statusMessage": "Checking house rules..."
           }
