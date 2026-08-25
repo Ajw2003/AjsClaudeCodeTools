@@ -1,0 +1,9 @@
+{
+  "name": "house-rules",
+  "description": "aj's global rules, enforced. Injects the rules into every session and prompts for approval before hidden background work, mutating git commands, or destructive commands.",
+  "version": "1.0.0",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  }
+}
