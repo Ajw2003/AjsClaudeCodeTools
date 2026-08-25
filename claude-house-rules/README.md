@@ -67,7 +67,29 @@ nothing is hidden and nothing is logged to a file only Claude reads.
 
 ## Install on a new device
 
-Add these two keys to `~/.claude/settings.json`:
+Two commands, no config editing:
+
+```bash
+claude plugin marketplace add Ajw2003/AjsClaudeCodeTools
+```
+```bash
+claude plugin install house-rules@aj-house-rules
+```
+
+Or run `/plugin` in an interactive `claude` terminal and pick it from the menu. Restart to
+load it.
+
+The marketplace manifest lives at the **repo root** (`.claude-plugin/marketplace.json`), which
+is where `marketplace add` looks — keep it there. Its plugin entries use paths relative to the
+repo root, so this plugin is `./claude-house-rules/plugins/house-rules`. Any future tool in
+this repo becomes another entry in the same list.
+
+<details>
+<summary>Declarative alternative, for a machine you want configured with no commands</summary>
+
+Add these two keys to `~/.claude/settings.json` instead. Claude Code clones the repo and
+installs the plugin at next startup. Do not combine this with `marketplace add` — both
+register the same marketplace name.
 
 ```json
 {
@@ -80,9 +102,9 @@ Add these two keys to `~/.claude/settings.json`:
   "enabledPlugins": { "house-rules@aj-house-rules": true }
 }
 ```
+</details>
 
-Claude Code clones the repo and installs the plugin at next startup. Editing the rules is then
-one commit — every device picks it up on its next update.
+Editing the rules is then one commit — every device picks it up on its next update.
 
 For a local checkout instead, swap the source for
 `{ "source": "directory", "path": "C:\\path\\to\\AjsClaudeCodeTools\\claude-house-rules" }`.

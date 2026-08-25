@@ -1,5 +1,6 @@
 {
   "name": "aj-house-rules",
+  "description": "aj's Claude Code tools. Currently one plugin: house-rules, which enforces the global CLAUDE.md rules as hooks on every device and in every project.",
   "owner": {
     "name": "aj",
     "email": "aydenjwilkins@gmail.com"
@@ -7,7 +8,7 @@
   "plugins": [
     {
       "name": "house-rules",
-      "source": "./plugins/house-rules",
+      "source": "./claude-house-rules/plugins/house-rules",
       "description": "Enforces aj's global CLAUDE.md rules as hooks: no hidden background work, no unasked git mutations, no unchecked destructive commands."
     }
   ]
