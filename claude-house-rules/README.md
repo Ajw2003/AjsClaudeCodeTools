@@ -106,6 +106,43 @@ reaches the session, and that a missing one reads as "go and find out" rather th
 Exit code 0 means all passed. It runs in your terminal, in the foreground, in about a second —
 nothing is hidden and nothing is logged to a file only Claude reads.
 
+## Testing that the hooks are actually live
+
+`verify.sh` proves the scripts are correct. It cannot prove Claude Code **loaded** them —
+hooks are read at startup, so a stale install passes every file-level check while the running
+session uses the old copy. That has already happened once here: the plugin sat three commits
+behind for a whole session, injecting four rules while the repo on disk had eleven.
+
+`tools/clean-install-test.ps1` at the repo root automates the install half. The rest has to be
+observed in a live session, after fully quitting and restarting Claude Code:
+
+| Hook | How to see it | What proves it |
+|---|---|---|
+| `SessionStart` | Ask: *what are my house rules, and what machine am I on?* | It answers both **without opening a file** — names the rules, and says the CPU/OS/shell from `environment.md`. If it goes looking for files, nothing was injected. |
+| `UserPromptSubmit` | Run `claude --debug`, then send any prompt | The hook runs and injects the line starting `Standing house rules` |
+| `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
+| `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
+
+### The guard test needs an uncommitted change — this is the part that catches people
+
+Testing the guard with `git add -A` on a **clean worktree does not work as a test**. Make a
+change first, so there is something to stage:
+
+```bash
+echo scratch > guard-test.txt
+```
+
+Then ask Claude to run `git add -A`. The prompt should appear, naming the rule and quoting the
+command. Deny it, and clean up:
+
+```bash
+del guard-test.txt
+```
+
+On a clean tree the command stages nothing whether it was intercepted or not, so the result
+looks identical either way and the test tells you nothing. Give it something real to stage and
+the outcome is unambiguous.
+
 ## Install on a new device
 
 Two commands, no config editing:
@@ -126,11 +163,19 @@ repo root, so this plugin is `./claude-house-rules/plugins/house-rules`. Any fut
 this repo becomes another entry in the same list.
 
 <details>
-<summary>Declarative alternative, for a machine you want configured with no commands</summary>
+<summary>Declarative form, for a machine you want configured with no commands</summary>
 
-Add these two keys to `~/.claude/settings.json` instead. Claude Code clones the repo and
-installs the plugin at next startup. Do not combine this with `marketplace add` — both
-register the same marketplace name.
+Add these two keys to `~/.claude/settings.json` and Claude Code clones the repo and installs
+the plugin at next startup, with no commands run.
+
+This is the **same configuration the CLI produces**, not a competing method — verified by
+watching it happen: `claude plugin marketplace add` writes `extraKnownMarketplaces`, and
+`claude plugin install` writes `enabledPlugins`, both into this same file. So the choice is
+only about ergonomics: run two commands, or ship a settings file to a machine before it has
+ever started. Doing one after the other is harmless — the second finds the keys already
+there.
+
+(An earlier version of this README said not to combine the two. That was wrong.)
 
 ```json
 {
