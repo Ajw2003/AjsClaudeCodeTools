@@ -5,17 +5,22 @@ device and every project instead of living in a file you have to copy into each 
 
 ## What it actually does
 
-Four hooks, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
+Seven hooks, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
 
 | Hook | When | What it does |
 |---|---|---|
 | `SessionStart` | every session, every project | [inject.sh](plugins/house-rules/scripts/inject.sh) prints [rules/house-rules.md](plugins/house-rules/rules/house-rules.md) **and** [rules/environment.md](plugins/house-rules/rules/environment.md) into Claude's context. This is the CLAUDE.md replacement — no per-repo file needed. |
-| `UserPromptSubmit` | before every prompt you send | [scope.sh](plugins/house-rules/scripts/scope.sh) restates the short version — the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
+| `UserPromptSubmit` | before every prompt you send | [scope.sh](plugins/house-rules/scripts/scope.sh) restates the short version — match depth to the task, the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
 | `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | [guard.sh](plugins/house-rules/scripts/guard.sh) checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. |
 | `PostToolUse` on `Write` / `Edit` | after a file is written | [artifact.sh](plugins/house-rules/scripts/artifact.sh) notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
+| `PostToolUse` on `Write` | after a file is written | [track-write.sh](plugins/house-rules/scripts/track-write.sh) notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) and remembers them for this session. |
+| `PostToolUse` on `Bash` / `PowerShell` | after a shell command runs | [clear-pending.sh](plugins/house-rules/scripts/clear-pending.sh) clears that memory — something was actually executed, so there is nothing left to verify. |
+| `Stop` | when Claude is about to end its turn | [deliverable.sh](plugins/house-rules/scripts/deliverable.sh) checks whether anything track-write.sh remembered is still pending. If so, it blocks once, names the file(s), and tells Claude to run them or explain why running does not apply — the teeth behind "deliver a whole workflow, not a starting point." |
 
 The guard **never blocks a matched command outright**. Every match becomes an "ask", because
-the rules are "do not do X without asking" — not "X is forbidden".
+the rules are "do not do X without asking" — not "X is forbidden". The deliverable check is the
+one exception: it blocks `Stop` directly, without asking you, because it is catching Claude
+handing you an unverified file — not catching an action you need to weigh in on.
 
 ## No runtime dependency, and it cannot fail silently
 
@@ -44,6 +49,12 @@ What is left cannot fail quietly either:
 - **artifact.sh never obstructs.** `PostToolUse` cannot block anyway (the write already happened),
   and it does not try to be a gate. Missing `grep` gets you a `systemMessage` saying the reminder
   is offline, not a broken write.
+- **track-write.sh and clear-pending.sh never obstruct**, for the same `PostToolUse` reason —
+  they only ever affect a later `Stop`, never the write or command that just ran.
+- **deliverable.sh fails open, on purpose**, unlike `guard.sh`. A missing `grep`, an unreadable
+  payload, or no state file all exit 0 silently. This one is a nag, not a rule with teeth on its
+  own account — a broken environment should let you finish, not hold the session hostage over a
+  reminder that couldn't be checked.
 
 These properties are tested — steps 21, 23, 25 and 31 below.
 
@@ -58,10 +69,11 @@ These properties are tested — steps 21, 23, 25 and 31 below.
 `git status`, `git log`, `git diff`, `git show` and every ordinary command pass through
 silently — read-only inspection is explicitly fine under the rules.
 
-The other rules — the fixed environment, build only what was asked, docs-before-research, build
-for a human working alone, the user's hands are for decisions not labour, deliver a whole
-workflow, never hand over an untested command — have no shell signature to match on. They are carried by the SessionStart injection
-and the per-prompt reminder.
+The other rules — match response depth to the task, the fixed environment, build only what was
+asked, docs-before-research, build for a human working alone, the user's hands are for decisions
+not labour, never hand over an untested command — have no shell signature to match on. They are
+carried by the SessionStart injection and the per-prompt reminder. "Deliver a whole workflow" is
+the exception: its runnable-file half now has a real check, at `Stop` — see the hooks table above.
 
 ## The machine profile
 
@@ -94,7 +106,7 @@ Or from a Git Bash window, where the short form works:
 sh claude-house-rules/plugins/house-rules/scripts/verify.sh
 ```
 
-34 numbered checks. Steps 1–20 feed one real command each to the guard and print the command
+40 numbered checks. Steps 1–20 feed one real command each to the guard and print the command
 tested, the decision expected, the decision received, and PASS or FAIL. Steps 21–23 prove the
 fail-closed and fail-loud behaviour by running the hooks with a deliberately broken `PATH`.
 Steps 24–30 check the scope and artifact reminders, including the two cases that would misfire:
@@ -102,6 +114,9 @@ a file whose *contents* merely mention a temp path, and a script (not a document
 directory. Steps 31–32 catch drift — reminder text that no longer matches the rules, and a
 `CLAUDE.md` turned back into a second copy of them. Steps 33–34 check that the machine profile
 reaches the session, and that a missing one reads as "go and find out" rather than "assume".
+Steps 35–40 exercise the deliverable check end to end: a runnable file gets remembered, a
+non-runnable one is ignored, an unrun file blocks `Stop` and is named, the state clears after
+one nag, running a command clears it early, and a `stop_hook_active` retry does not nag twice.
 
 Exit code 0 means all passed. It runs in your terminal, in the foreground, in about a second —
 nothing is hidden and nothing is logged to a file only Claude reads.
@@ -122,6 +137,7 @@ observed in a live session, after fully quitting and restarting Claude Code:
 | `UserPromptSubmit` | Run `claude --debug`, then send any prompt | The hook runs and injects the line starting `Standing house rules` |
 | `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
 | `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
+| `PostToolUse` + `Stop` | Ask it to write a throwaway `.sh` or `.py` script, then say "stop, don't run it" | Claude's turn gets blocked once, naming the unrun file, before it can end the turn |
 
 ### The guard test needs an uncommitted change — this is the part that catches people
 

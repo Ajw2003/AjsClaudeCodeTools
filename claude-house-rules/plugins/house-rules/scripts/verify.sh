@@ -19,6 +19,9 @@ GUARD="$HERE/guard.sh"
 INJECT="$HERE/inject.sh"
 SCOPE="$HERE/scope.sh"
 ARTIFACT="$HERE/artifact.sh"
+TRACK="$HERE/track-write.sh"
+CLEARP="$HERE/clear-pending.sh"
+DELIVER="$HERE/deliverable.sh"
 ROOT="$HERE/../../../.."
 SH=$(command -v sh)
 
@@ -47,6 +50,9 @@ printf 'Guard:  %s\n' "$GUARD"
 printf 'Inject: %s\n' "$INJECT"
 printf 'Scope:  %s\n' "$SCOPE"
 printf 'Artif:  %s\n' "$ARTIFACT"
+printf 'Track:  %s\n' "$TRACK"
+printf 'ClearP: %s\n' "$CLEARP"
+printf 'Deliver:%s\n' "$DELIVER"
 printf '\n'
 printf 'Steps 1-20 feed one shell command each to the guard and check the decision:\n'
 printf '  "ask"  = Claude Code will show you a permission prompt naming the rule.\n'
@@ -54,6 +60,7 @@ printf '  "pass" = the command runs with no extra prompt.\n'
 printf 'Steps 21-23 check that the hooks cannot fail silently.\n'
 printf 'Steps 24-34 check the scope reminder, the artifact reminder, the machine profile,\n'
 printf 'and drift between the two places the rules are worded.\n'
+printf 'Steps 35-40 check the deliverable-reminder hooks: track-write, clear-pending, deliverable.\n'
 printf '\n'
 
 # Fields: expect | rule-title-that-must-be-cited (empty when expecting pass) | command
@@ -127,6 +134,7 @@ OUT=$("$SH" "$INJECT" 2>/dev/null </dev/null)
 MISSING=''
 for H in \
   'The machine is fixed' \
+  'Match response depth to the task' \
   'Build only what was asked' \
   'Read the docs first, then check them against the code' \
   'Build for a human working alone' \
@@ -177,6 +185,7 @@ check_scope() { # $1=title  $2=nonempty to run with PATH emptied
   case "$OUT" in *'"hookEventName":"UserPromptSubmit"'*) ;; *) BAD='wrong or missing hookEventName' ;; esac
   case "$OUT" in *'Windows 11'*) ;; *) BAD="$BAD; environment line missing" ;; esac
   case "$OUT" in *'only what was asked'*) ;; *) BAD="$BAD; scope line missing" ;; esac
+  case "$OUT" in *'response depth'*) ;; *) BAD="$BAD; response-depth line missing" ;; esac
   if [ -z "$BAD" ]; then
     report PASS "$1"
     printf '          %s characters of reminder injected\n' "$(printf '%s' "$OUT" | wc -c | tr -d ' ')"
@@ -217,7 +226,7 @@ art_case silent 'script in a temp directory is scratch work, not an artifact' \
 # the wording, so this is the check that stops the two saying different things.
 RULES_FILE="$HERE/../rules/house-rules.md"
 DRIFT=''
-for PHRASE in 'Windows 11' 'portability work' 'only what was asked' 'ask instead of assuming' 'project directory' 'hand over a command'; do
+for PHRASE in 'response depth' 'Windows 11' 'portability work' 'only what was asked' 'ask instead of assuming' 'project directory' 'hand over a command'; do
   if grep -qi "$PHRASE" "$SCOPE" 2>/dev/null; then
     grep -qi "$PHRASE" "$RULES_FILE" 2>/dev/null || DRIFT="$DRIFT; $PHRASE"
   fi
@@ -273,6 +282,77 @@ case "$OUT" in
     report FAIL 'a missing machine profile becomes an instruction to discover it'
     printf '          the injection said nothing about the profile being absent\n' ;;
 esac
+
+# --- 35-40. the deliverable hooks: write a runnable file, verify it nags, verify running it ---
+# clears the nag. A dedicated session id, cleaned up before and after, so these steps are
+# deterministic and never collide with a real session's state.
+DSESSION="verify-deliverable-$$"
+DSTATE_DIR="${TEMP:-${TMP:-/tmp}}/house-rules-deliverable"
+DSTATE_FILE="$DSTATE_DIR/$DSESSION.txt"
+rm -f "$DSTATE_FILE" 2>/dev/null
+
+write_payload() { # $1=file_path
+  printf '{"session_id":"%s","tool_name":"Write","tool_input":{"file_path":"%s"}}' "$DSESSION" "$1"
+}
+run_payload() { # $1=session_id
+  printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"npm test"}}' "$1"
+}
+stop_payload() { # $1=session_id  $2=nonempty for stop_hook_active:true
+  if [ -n "$2" ]; then
+    printf '{"session_id":"%s","stop_hook_active":true}' "$1"
+  else
+    printf '{"session_id":"%s","stop_hook_active":false}' "$1"
+  fi
+}
+
+write_payload 'C:\\proj\\build.sh' | "$SH" "$TRACK" >/dev/null 2>/dev/null
+if [ -f "$DSTATE_FILE" ] && grep -qF 'build.sh' "$DSTATE_FILE" 2>/dev/null; then
+  report PASS 'track-write.sh records a runnable (.sh) file that was written'
+else
+  report FAIL 'track-write.sh records a runnable (.sh) file that was written'
+fi
+
+BEFORE=$(wc -l <"$DSTATE_FILE" 2>/dev/null | tr -d ' ')
+write_payload 'C:\\proj\\notes.md' | "$SH" "$TRACK" >/dev/null 2>/dev/null
+AFTER=$(wc -l <"$DSTATE_FILE" 2>/dev/null | tr -d ' ')
+if [ "$BEFORE" = "$AFTER" ]; then
+  report PASS 'track-write.sh ignores a non-runnable (.md) file'
+else
+  report FAIL 'track-write.sh ignores a non-runnable (.md) file'
+  printf '          state file grew from %s to %s lines on a .md write\n' "$BEFORE" "$AFTER"
+fi
+
+OUT=$(stop_payload "$DSESSION" '' | "$SH" "$DELIVER" 2>/dev/null)
+case "$OUT" in
+  *'"decision":"block"'*'build.sh'*)
+    report PASS 'deliverable.sh blocks Stop when a written file was never run, and names it' ;;
+  *)
+    report FAIL 'deliverable.sh blocks Stop when a written file was never run, and names it'
+    printf '          got: %s\n' "$OUT" ;;
+esac
+if [ -f "$DSTATE_FILE" ]; then
+  report FAIL 'deliverable.sh clears the state file after nagging once'
+else
+  report PASS 'deliverable.sh clears the state file after nagging once'
+fi
+
+write_payload 'C:\\proj\\build2.sh' | "$SH" "$TRACK" >/dev/null 2>/dev/null
+run_payload "$DSESSION" | "$SH" "$CLEARP" >/dev/null 2>/dev/null
+if [ -f "$DSTATE_FILE" ]; then
+  report FAIL 'clear-pending.sh clears the state file once a shell command runs'
+else
+  report PASS 'clear-pending.sh clears the state file once a shell command runs'
+fi
+
+write_payload 'C:\\proj\\build3.sh' | "$SH" "$TRACK" >/dev/null 2>/dev/null
+OUT=$(stop_payload "$DSESSION" yes | "$SH" "$DELIVER" 2>/dev/null)
+if [ -z "$OUT" ] && [ -f "$DSTATE_FILE" ]; then
+  report PASS 'deliverable.sh does not re-nag when stop_hook_active is true'
+else
+  report FAIL 'deliverable.sh does not re-nag when stop_hook_active is true'
+  printf '          got: %s\n' "$OUT"
+fi
+rm -f "$DSTATE_FILE" 2>/dev/null
 
 printf '\n'
 printf -- '--------------------------------\n'
