@@ -145,7 +145,16 @@ the outcome is unambiguous.
 
 ## Install on a new device
 
-Two commands, no config editing:
+One command, from the repo root, in PowerShell:
+
+```bash
+.\tools\install.ps1
+```
+
+It installs the plugin and applies the settings the plugin cannot apply to itself (see below).
+It is idempotent — running it on a machine that already has the plugin changes nothing.
+
+If you would rather do it by hand, the plugin half is two commands:
 
 ```bash
 claude plugin marketplace add Ajw2003/AjsClaudeCodeTools
@@ -156,6 +165,21 @@ claude plugin install house-rules@aj-house-rules
 
 Or run `/plugin` in an interactive `claude` terminal and pick it from the menu. Restart to
 load it.
+
+### Settings the plugin cannot ship
+
+A plugin can ship hooks, rules and scripts. It cannot set anything the Claude Code **UI**
+reads, because those live in `~/.claude/settings.json` and the harness reads them at startup —
+no amount of rule text in `house-rules.md` can change how the transcript is rendered, since
+rules steer Claude and this is the harness.
+
+So `tools/install.ps1` writes them, preserving every other key in the file:
+
+| Key | Value | Why |
+|---|---|---|
+| `verbose` | `true` | Default to the verbose transcript view — full tool calls and outputs, not the collapsed summary. Matches the rule that nothing is hidden and nothing goes to a log only an agent reads. |
+
+Run it with `-NoVerbose` to install the plugin and leave the transcript view alone.
 
 The marketplace manifest lives at the **repo root** (`.claude-plugin/marketplace.json`), which
 is where `marketplace add` looks — keep it there. Its plugin entries use paths relative to the
@@ -185,9 +209,13 @@ there.
       "autoUpdate": true
     }
   },
-  "enabledPlugins": { "house-rules@aj-house-rules": true }
+  "enabledPlugins": { "house-rules@aj-house-rules": true },
+  "verbose": true
 }
 ```
+
+`verbose` is not part of the plugin install — it is the transcript-view setting `install.ps1`
+also writes, included here so a shipped settings file configures the machine completely.
 </details>
 
 Editing the rules is then one commit — every device picks it up on its next update.
