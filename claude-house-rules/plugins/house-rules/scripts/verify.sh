@@ -19,9 +19,7 @@ GUARD="$HERE/guard.sh"
 INJECT="$HERE/inject.sh"
 SCOPE="$HERE/scope.sh"
 ARTIFACT="$HERE/artifact.sh"
-TRACK="$HERE/track-write.sh"
-CLEARP="$HERE/clear-pending.sh"
-DELIVER="$HERE/deliverable.sh"
+RUNNABLE="$HERE/runnable.sh"
 ROOT="$HERE/../../../.."
 SH=$(command -v sh)
 
@@ -50,9 +48,7 @@ printf 'Guard:  %s\n' "$GUARD"
 printf 'Inject: %s\n' "$INJECT"
 printf 'Scope:  %s\n' "$SCOPE"
 printf 'Artif:  %s\n' "$ARTIFACT"
-printf 'Track:  %s\n' "$TRACK"
-printf 'ClearP: %s\n' "$CLEARP"
-printf 'Deliver:%s\n' "$DELIVER"
+printf 'Runnbl: %s\n' "$RUNNABLE"
 printf '\n'
 printf 'The guard steps feed one shell command each to the guard and check the decision:\n'
 printf '  "ask"  = Claude Code will show you a permission prompt naming the rule.\n'
@@ -320,76 +316,65 @@ case "$OUT" in
     printf '          the injection said nothing about the profile being absent\n' ;;
 esac
 
-# --- 35-40. the deliverable hooks: write a runnable file, verify it nags, verify running it ---
-# clears the nag. A dedicated session id, cleaned up before and after, so these steps are
-# deterministic and never collide with a real session's state.
-DSESSION="verify-deliverable-$$"
-DSTATE_DIR="${TEMP:-${TMP:-/tmp}}/house-rules-deliverable"
-DSTATE_FILE="$DSTATE_DIR/$DSESSION.txt"
-rm -f "$DSTATE_FILE" 2>/dev/null
-
-write_payload() { # $1=file_path
-  printf '{"session_id":"%s","tool_name":"Write","tool_input":{"file_path":"%s"}}' "$DSESSION" "$1"
+# --- the run-what-you-wrote reminder ------------------------------------------------------
+# Stateless: no session id, no $TEMP file, nothing to clean up between cases. The three
+# scripts and the Stop hook this replaced needed a dedicated session id and a reaper here.
+run_case() { # $1=expect remind|silent  $2=title  $3=file_path  $4=extra payload
+  OUT=$(printf '{"tool_name":"Write","tool_input":{"file_path":"%s"%s}}' "$3" "$4" | "$SH" "$RUNNABLE" 2>/dev/null)
+  case "$OUT" in
+    *'whole workflows'*) GOT=remind ;;
+    '') GOT=silent ;;
+    *) GOT=malformed ;;
+  esac
+  if [ "$GOT" = "$1" ]; then report PASS "$2"; else report FAIL "$2"; fi
+  printf '          expected %s, got %s\n' "$1" "$GOT"
 }
-run_payload() { # $1=session_id
-  printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"npm test"}}' "$1"
-}
-stop_payload() { # $1=session_id  $2=nonempty for stop_hook_active:true
-  if [ -n "$2" ]; then
-    printf '{"session_id":"%s","stop_hook_active":true}' "$1"
-  else
-    printf '{"session_id":"%s","stop_hook_active":false}' "$1"
-  fi
-}
+run_case remind 'a runnable .sh created in the project is flagged to be run' \
+  'C:\\proj\\build.sh' ''
+run_case remind 'a runnable .ps1 created in the project is flagged to be run' \
+  'C:\\proj\\tools\\install.ps1' ''
+run_case remind 'a bare Dockerfile counts as runnable' \
+  'C:\\proj\\Dockerfile' ''
+run_case silent 'a document is not a runnable file' \
+  'C:\\proj\\notes.md' ''
+run_case silent 'a script written to a temp directory is scratch work, not a delivery' \
+  'C:\\Users\\aj\\AppData\\Local\\Temp\\build.sh' ''
+run_case silent 'a script written to the session scratchpad is scratch work' \
+  'C:\\Users\\aj\\AppData\\Local\\Temp\\claude\\scratchpad\\run.py' ''
+run_case silent 'a file whose CONTENTS mention a temp path is judged on where it actually is' \
+  'C:\\proj\\notes.md' ',"content":"write it to /tmp/build.sh first"'
 
-write_payload 'C:\\proj\\build.sh' | "$SH" "$TRACK" >/dev/null 2>/dev/null
-if [ -f "$DSTATE_FILE" ] && grep -qF 'build.sh' "$DSTATE_FILE" 2>/dev/null; then
-  report PASS 'track-write.sh records a runnable (.sh) file that was written'
+# --- the reminder in runnable.sh has not drifted from the rules document -------------------
+# Same guarantee as step 31 for scope.sh: this text is a second wording of a rule, so it is
+# pinned against the rules file rather than left to rot.
+DRIFT=''
+for PHRASE in 'whole workflow' 'starting point' 'hand over a command'; do
+  grep -qi "$PHRASE" "$RULES_FILE" 2>/dev/null || DRIFT="$DRIFT; $PHRASE"
+done
+if [ -z "$DRIFT" ]; then
+  report PASS 'runnable.sh reminder still matches the rules document'
+  printf '          every key phrase in the reminder appears in rules/house-rules.md\n'
 else
-  report FAIL 'track-write.sh records a runnable (.sh) file that was written'
+  report FAIL 'runnable.sh reminder still matches the rules document'
+  printf '          in runnable.sh but missing from house-rules.md%s\n' "$DRIFT"
 fi
 
-BEFORE=$(wc -l <"$DSTATE_FILE" 2>/dev/null | tr -d ' ')
-write_payload 'C:\\proj\\notes.md' | "$SH" "$TRACK" >/dev/null 2>/dev/null
-AFTER=$(wc -l <"$DSTATE_FILE" 2>/dev/null | tr -d ' ')
-if [ "$BEFORE" = "$AFTER" ]; then
-  report PASS 'track-write.sh ignores a non-runnable (.md) file'
+# --- the state machine this replaced is really gone ----------------------------------------
+# The leak was the reason for the rework: a $TEMP file removed only by a later shell command
+# or by Stop firing, with no reaper. This fails if any of it comes back.
+GONE=''
+for DEAD in track-write.sh clear-pending.sh deliverable.sh; do
+  [ -e "$HERE/$DEAD" ] && GONE="$GONE; $DEAD still exists"
+done
+grep -q '"Stop"' "$HERE/../hooks/hooks.json" 2>/dev/null && GONE="$GONE; hooks.json still registers a Stop hook"
+grep -rql 'house-rules-deliverable' "$HERE" 2>/dev/null | grep -qv 'verify.sh' && GONE="$GONE; a script still writes deliverable state"
+if [ -z "$GONE" ]; then
+  report PASS 'the stateful deliverable machinery is gone and no hook writes to TEMP'
+  printf '          every hook is stateless; nothing to leak and nothing to reap\n'
 else
-  report FAIL 'track-write.sh ignores a non-runnable (.md) file'
-  printf '          state file grew from %s to %s lines on a .md write\n' "$BEFORE" "$AFTER"
+  report FAIL 'the stateful deliverable machinery is gone and no hook writes to TEMP'
+  printf '         %s\n' "$GONE"
 fi
-
-OUT=$(stop_payload "$DSESSION" '' | "$SH" "$DELIVER" 2>/dev/null)
-case "$OUT" in
-  *'"decision":"block"'*'build.sh'*)
-    report PASS 'deliverable.sh blocks Stop when a written file was never run, and names it' ;;
-  *)
-    report FAIL 'deliverable.sh blocks Stop when a written file was never run, and names it'
-    printf '          got: %s\n' "$OUT" ;;
-esac
-if [ -f "$DSTATE_FILE" ]; then
-  report FAIL 'deliverable.sh clears the state file after nagging once'
-else
-  report PASS 'deliverable.sh clears the state file after nagging once'
-fi
-
-write_payload 'C:\\proj\\build2.sh' | "$SH" "$TRACK" >/dev/null 2>/dev/null
-run_payload "$DSESSION" | "$SH" "$CLEARP" >/dev/null 2>/dev/null
-if [ -f "$DSTATE_FILE" ]; then
-  report FAIL 'clear-pending.sh clears the state file once a shell command runs'
-else
-  report PASS 'clear-pending.sh clears the state file once a shell command runs'
-fi
-
-write_payload 'C:\\proj\\build3.sh' | "$SH" "$TRACK" >/dev/null 2>/dev/null
-OUT=$(stop_payload "$DSESSION" yes | "$SH" "$DELIVER" 2>/dev/null)
-if [ -z "$OUT" ] && [ -f "$DSTATE_FILE" ]; then
-  report PASS 'deliverable.sh does not re-nag when stop_hook_active is true'
-else
-  report FAIL 'deliverable.sh does not re-nag when stop_hook_active is true'
-  printf '          got: %s\n' "$OUT"
-fi
-rm -f "$DSTATE_FILE" 2>/dev/null
 
 printf '\n'
 printf -- '--------------------------------\n'

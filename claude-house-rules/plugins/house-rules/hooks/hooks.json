@@ -51,28 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/track-write.sh\"",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash|PowerShell",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/clear-pending.sh\"",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/deliverable.sh\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/runnable.sh\"",
             "timeout": 10
           }
         ]
