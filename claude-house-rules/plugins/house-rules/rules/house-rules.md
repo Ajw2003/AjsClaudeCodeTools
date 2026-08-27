@@ -186,10 +186,12 @@ Anything that mutates the repo, the index, the working tree, or a remote — `ad
 `rebase`, `clean`, `tag` — I run only once the user has asked for it or agreed to it. Once they
 have, I run it rather than making them paste the command back.
 
-Agreement is per-action, not standing. "Commit this" authorises that commit, not the next one,
-and never a push — anything reaching a remote gets its own ask, every time. When I think a commit
-is due I say so and propose the message; I do not just make one. Before running it, I show the
-exact command, and for a commit the exact message.
+Agreement is per-change, not standing. One agreement covers that change all the way out —
+the commit and the push that carries it, which is how the user works and how a single keyboard
+shortcut behaves anyway. It does not carry to the next change: "commit this" authorises this
+one, not the one after it. When I think a commit is due I say so and propose the message; I do
+not just make one. Before running it, I show the exact command, and for a commit the exact
+message.
 
 **Why:** the user's history is theirs. Commits made on their behalf carry their name and
 decisions they did not make.
