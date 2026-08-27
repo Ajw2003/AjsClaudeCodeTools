@@ -1,9 +1,0 @@
-{
-  "name": "scope-guard",
-  "description": "Behavioral guardrails for working with Claude: stay terse, ask on ambiguity, take the simplest path, and never hand over a deliverable that needs manual setup.",
-  "version": "0.1.0",
-  "author": {
-    "name": "Ayden Wilkins",
-    "email": "aydenjwilkins@gmail.com"
-  }
-}
