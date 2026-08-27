@@ -8,14 +8,24 @@
 # DEPENDENCIES: /bin/sh and grep. Nothing else. No node, no jq, no python.
 # That is the point — this file must never be the reason the rules stop being enforced.
 #
-# FAILS CLOSED, LOUDLY. If grep is missing or the payload is unreadable, it writes to
-# stderr and exits 2, which is a blocking error: the command does not run and the reason
-# is shown. There is no path through this script that silently lets a command past.
+# WHAT IT MATCHES AGAINST — a three-tier ladder, safest first:
 #
-# MATCHING is textual, against the whole raw payload rather than a parsed command field
-# (parsing JSON in POSIX sh is where the runtime dependency came from). So it over-triggers
-# rather than under-triggers: a command that merely mentions a tripwire word will also
-# prompt. An extra keypress is cheaper than a missed commit.
+#   1. Payload unreadable, or grep missing -> stderr + exit 2. BLOCKS. Unchanged behaviour:
+#      there is no path through this script that silently lets a command past.
+#   2. Payload readable but no "command" field -> fall back to matching the WHOLE payload,
+#      exactly as this script always did. A tool whose input field is named something else
+#      is still checked; it is never waved through.
+#   3. "command" field found -> match against that alone.
+#
+# Tier 3 is the point of the ladder. The raw payload also carries the tool's `description`
+# field, so matching the whole thing meant a command *described* as "check for uncommitted
+# changes before we commit" prompted on the word commit. artifact.sh already extracts a
+# single field for exactly this reason; this does the same. The extraction regex allows
+# backslash-escaped quotes, so a command containing "quoted text" is not truncated.
+#
+# Matching is still textual and still deliberately broad WITHIN whatever it is matching:
+# a command that genuinely mentions a tripwire word prompts. An extra keypress is cheaper
+# than a missed commit.
 
 set -u
 
@@ -37,6 +47,15 @@ PAYLOAD=$(cat 2>/dev/null) || {
 # An empty payload means there is nothing to check, not that a check failed.
 [ -n "$PAYLOAD" ] || exit 0
 
+# --- tier 2 / tier 3: decide what to match against ---------------------------------------
+
+FIELD=$(printf '%s' "$PAYLOAD" | grep -oE '"command"[[:space:]]*:[[:space:]]*"([^"\\]|\\.)*"' | head -n 1)
+if [ -n "$FIELD" ]; then
+  SUBJECT="$FIELD"
+else
+  SUBJECT="$PAYLOAD"
+fi
+
 # --- helpers ----------------------------------------------------------------------------
 
 R1=''  # Never hide work in a background window or a silent process
@@ -44,7 +63,7 @@ R3=''  # Never commit without asking
 R4=''  # Never take a destructive action without checking first
 
 matches() {
-  printf '%s' "$PAYLOAD" | grep -qiE "$1"
+  printf '%s' "$SUBJECT" | grep -qiE "$1"
 }
 
 # Reason text must stay free of double quotes and real newlines: it is interpolated into a
@@ -72,12 +91,19 @@ if matches '[^&]&[[:space:]]*\\?"'; then
 fi
 
 # --- Rule: Never commit without asking ---------------------------------------------------
+#
+# Only verbs that actually write history, the index, or the remote. Navigational verbs
+# (checkout, switch, branch, tag, remote, submodule, and a bare add) used to prompt here
+# under the reason "mutates the repo, the index, or the working tree" — which was false for
+# most of them. A prompt that says something untrue trains you to approve without reading,
+# so they were removed. The genuinely destructive checkout/restore/stash forms did NOT get
+# dropped: they moved to Rule 4 below, where they belong.
 
 if matches 'git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*push([^[:alnum:]-]|$)'; then
   add3 'reaches a remote (push)'
 fi
-if matches 'git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*(add|commit|checkout|switch|reset|revert|stash|rm|mv|branch|merge|rebase|clean|tag|cherry-pick|am|apply|remote|submodule|filter-branch)([^[:alnum:]-]|$)'; then
-  add3 'mutates the repo, the index, or the working tree'
+if matches 'git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*(commit|reset|revert|clean|rebase|merge|filter-branch|cherry-pick|am|apply)([^[:alnum:]-]|$)'; then
+  add3 'writes history, the index, or the working tree'
 fi
 
 # --- Rule: Never take a destructive action without checking first ------------------------
@@ -96,6 +122,15 @@ if matches 'Stop-Process|taskkill|pkill|kill[[:space:]]+-9'; then
 fi
 if matches 'Clear-Content|truncate[[:space:]]+-s'; then
   add4 'truncates or overwrites file contents in place'
+fi
+# Discarding uncommitted work is destructive in a way the others are not: there is no trash,
+# no reflog for unstaged edits, and nothing to undo it with. Each form gets its own reason
+# line so the prompt names what is actually about to be lost.
+if matches 'git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*(checkout[[:space:]]+(--|\.([[:space:]]|$))|restore([^[:alnum:]-]|$))'; then
+  add4 'throws away uncommitted edits to a file (git checkout -- / git restore)'
+fi
+if matches 'git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*stash[[:space:]]+(drop|clear)([^[:alnum:]-]|$)'; then
+  add4 'deletes stashed work permanently (git stash drop / clear)'
 fi
 
 # --- decision ----------------------------------------------------------------------------

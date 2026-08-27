@@ -54,13 +54,12 @@ printf 'Track:  %s\n' "$TRACK"
 printf 'ClearP: %s\n' "$CLEARP"
 printf 'Deliver:%s\n' "$DELIVER"
 printf '\n'
-printf 'Steps 1-20 feed one shell command each to the guard and check the decision:\n'
+printf 'The guard steps feed one shell command each to the guard and check the decision:\n'
 printf '  "ask"  = Claude Code will show you a permission prompt naming the rule.\n'
 printf '  "pass" = the command runs with no extra prompt.\n'
-printf 'Steps 21-23 check that the hooks cannot fail silently.\n'
-printf 'Steps 24-34 check the scope reminder, the artifact reminder, the machine profile,\n'
-printf 'and drift between the two places the rules are worded.\n'
-printf 'Steps 35-40 check the deliverable-reminder hooks: track-write, clear-pending, deliverable.\n'
+printf 'Later steps check that the hooks cannot fail silently, that the guard matches the\n'
+printf 'command field rather than the whole payload, and that the scope and artifact\n'
+printf 'reminders, the machine profile, and the rules-vs-docs drift checks all hold.\n'
 printf '\n'
 
 # Fields: expect | rule-title-that-must-be-cited (empty when expecting pass) | command
@@ -100,10 +99,13 @@ pass||ls -la src
 pass||Get-ChildItem C:\Users
 pass||npm run build && npm test
 ask|Never commit without asking|git commit -m "wip"
-ask|Never commit without asking|git add -A
+pass||git add -A
 ask|Never commit without asking|git push origin main
 ask|Never commit without asking|git push --force-with-lease
-ask|Never commit without asking|git checkout -b feature/x
+pass||git checkout -b feature/x
+pass||git switch main
+pass||git branch -d old-feature
+pass||git tag v1.2.0
 ask|Never commit without asking|git reset --hard origin/main
 ask|Never hide work in a background window or a silent process|Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"
 ask|Never hide work in a background window or a silent process|npm run dev > dev.log 2>&1 &
@@ -112,6 +114,11 @@ ask|Never hide work in a background window or a silent process|Start-Job -Script
 ask|Never take a destructive action without checking first|rm -rf node_modules
 ask|Never take a destructive action without checking first|Remove-Item -Recurse -Force ./dist
 ask|Never take a destructive action without checking first|taskkill /IM node.exe /F
+ask|Never take a destructive action without checking first|git checkout -- src/app.js
+ask|Never take a destructive action without checking first|git restore src/app.js
+ask|Never take a destructive action without checking first|git stash drop
+ask|Never take a destructive action without checking first|git stash clear
+ask|Never commit without asking|echo "starting" && git commit -m "wip"
 EOF
 
 printf '\n'
@@ -128,6 +135,36 @@ else
   report FAIL 'guard that cannot run exits 2 (blocking) and explains itself on stderr'
   printf '          exit code was %s; stderr was: %s\n' "$CODE" "$ERR"
 fi
+
+# --- the guard matches the command field, not the whole payload --------------------------
+# This is the case that justifies extracting the field at all. The Bash tool's payload also
+# carries a `description`, so whole-payload matching prompted on a command merely DESCRIBED
+# as touching git. The command itself is harmless and must run without a prompt.
+DESC_PAYLOAD='{"session_id":"verify","tool_name":"Bash","tool_input":{"command":"npm test","description":"check for uncommitted changes before we commit and push"}}'
+OUT=$(printf '%s' "$DESC_PAYLOAD" | "$SH" "$GUARD" 2>/dev/null)
+if [ -z "$OUT" ]; then
+  report PASS 'a harmless command with a git-mentioning description does not prompt'
+  printf '          matched the command field only, not the description\n'
+else
+  report FAIL 'a harmless command with a git-mentioning description does not prompt'
+  printf '          got: %s\n' "$OUT"
+fi
+
+# --- the fallback tier: no command field must never mean "wave it through" ----------------
+# hooks.json matches PowerShell as well as Bash, and a tool whose input field is named
+# something else would extract nothing. That must fall back to matching the whole payload,
+# exactly as this script did before the field extraction existed — never fail open, and
+# never fail closed either (blocking every PowerShell call would be its own outage).
+NOCMD_PAYLOAD='{"session_id":"verify","tool_name":"PowerShell","tool_input":{"script":"git commit -m wip"}}'
+OUT=$(printf '%s' "$NOCMD_PAYLOAD" | "$SH" "$GUARD" 2>/dev/null)
+case "$OUT" in
+  *'"permissionDecision":"ask"'*'Never commit without asking'*)
+    report PASS 'a payload with no command field still gets checked (whole-payload fallback)'
+    printf '          fell back to the old behaviour rather than passing it unchecked\n' ;;
+  *)
+    report FAIL 'a payload with no command field still gets checked (whole-payload fallback)'
+    printf '          got: %s\n' "$OUT" ;;
+esac
 
 # --- 22. the rules actually reach the session --------------------------------------------
 OUT=$("$SH" "$INJECT" 2>/dev/null </dev/null)
