@@ -19,7 +19,7 @@ twice and the two would drift apart unnoticed. `verify.sh` step 32 fails if that
 
 All commands run from the repo root.
 
-Run the 34-check test suite (proves the hooks match what the docs claim):
+Run the test suite (proves the hooks match what the docs claim):
 
 ```bash
 # PowerShell (sh is not on PATH here, so it needs the full path)
@@ -31,7 +31,7 @@ Run the 34-check test suite (proves the hooks match what the docs claim):
 sh claude-house-rules/plugins/house-rules/scripts/verify.sh
 ```
 
-Exit code 0 means all 34 checks passed. Each line prints the command tested, expected vs. actual
+Exit code 0 means every check passed. Each line prints the command tested, expected vs. actual
 decision, and PASS/FAIL — read there is what fails, no need to open the script.
 
 Install (or update) the plugin on a device, from PowerShell:
@@ -45,7 +45,7 @@ Idempotent. Installs via `claude plugin marketplace add` / `claude plugin instal
 `-NoVerbose` to skip that part.
 
 Prove the *published* plugin installs cleanly on a fresh machine (strips the local install, backs
-up config, reinstalls from GitHub via the two documented CLI commands, then re-runs the 34-check
+up config, reinstalls from GitHub via the two documented CLI commands, then re-runs the
 suite against the fresh clone):
 
 ```bash
@@ -57,7 +57,7 @@ currently installed. There is no build step and no linter — this repo is shell
 
 ## Architecture
 
-### The plugin is four hooks, nothing else
+### The plugin is five hooks on four events, nothing else
 
 Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](claude-house-rules/plugins/house-rules/hooks/hooks.json),
 implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/scripts/`:
@@ -66,16 +66,25 @@ implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/
 |---|---|---|---|
 | `SessionStart` | `inject.sh` | every session | Prints `rules/house-rules.md` **and** `rules/environment.md` into context as `additionalContext`. This *is* the CLAUDE.md replacement. |
 | `UserPromptSubmit` | `scope.sh` | every prompt | Restates a short reminder so the rules stay live 200 messages into a long session, after the SessionStart copy has faded from attention. |
-| `PreToolUse` | `guard.sh` | `Bash`/`PowerShell` calls | Textually matches the pending command against rule patterns (hidden/background work, git mutations, destructive deletes). A match returns `permissionDecision: "ask"` — it never blocks outright, only prompts. |
+| `PreToolUse` | `guard.sh` | `Bash`/`PowerShell` calls | Extracts the `command` field and textually matches it against rule patterns (hidden/background work, git history/index/remote writes, destructive deletes and discards). A match returns `permissionDecision: "ask"` — it never blocks outright, only prompts. |
 | `PostToolUse` | `artifact.sh` | `Write`/`Edit` calls | Notices a `.md`/`.txt` write outside the project (temp dir, scratchpad, `~/.claude/plans`) and reminds *Claude* — not the user — to copy it into `docs/` before finishing. |
+| `PostToolUse` | `runnable.sh` | `Write` calls only | Notices a runnable file (`.sh`, `.ps1`, `.py`, `Dockerfile`, …) created inside the project and reminds *Claude* to run it before finishing. `Write` only, never `Edit`. |
+
+Every one of those scripts is stateless. Nothing writes to `$TEMP`, and there is no state to
+reap. That is load-bearing, not incidental — see the deliverable note below.
+
+The table above is checked against `hooks.json` by `verify.sh`: a script registered as a hook
+but missing from this table, or listed here but not registered, fails the suite. This section
+cannot silently go stale the way it did once already.
 
 ### Design constraints that shape every script here
 
 - **No runtime dependency beyond `sh`, `grep`, `sed`, `awk`.** No node, no jq, no python. An
   earlier version parsed hook JSON with node; a missing node made the guard exit clean and let
-  every command through unchecked. The fix was to stop parsing and match raw payload text
-  instead — it over-triggers (a command that merely *mentions* a tripwire word also prompts) but
-  it cannot silently go dark. Any new hook logic must preserve this: match text, don't parse JSON.
+  every command through unchecked. The fix was to stop parsing and match text with `grep`
+  instead — it over-triggers (a command that genuinely *mentions* a tripwire word also prompts)
+  but it cannot silently go dark. Any new hook logic must preserve this: match text with `grep`,
+  don't parse JSON.
 - **Each hook's failure mode is deliberate and matches what that hook event allows:**
   - `guard.sh` **fails closed, loudly** (`PreToolUse` can block) — missing `grep` or an unreadable
     payload writes to stderr and exits 2, so the command does not run.
@@ -84,18 +93,33 @@ implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/
   - `scope.sh` **cannot fail at all, by construction** — on `UserPromptSubmit` a non-zero exit
     *erases the user's prompt*, so this hook has zero dependencies: one `printf` of a hardcoded
     string, no file read, no subprocess. Its text is therefore a second copy of a few rule
-    phrases; `verify.sh` step 31 checks it hasn't drifted from `house-rules.md`.
-  - `artifact.sh` **never obstructs** — `PostToolUse` can't block anyway (the write already
-    happened); a missing `grep` just means the reminder is offline, reported via `systemMessage`.
-- **`artifact.sh` matches narrowly on purpose**, extracting only the `file_path` field with
-  `grep -o` rather than grepping the whole payload the way `guard.sh` does — otherwise a file
-  whose *contents* mention `/tmp` would false-trigger on every save. Keep that distinction if you
-  touch it: `guard.sh` is deliberately broad (over-triggering is cheap), `artifact.sh` is
-  deliberately narrow (its output goes straight into Claude's next action, not a user prompt).
+    phrases; `verify.sh` checks it hasn't drifted from `house-rules.md`. `runnable.sh`'s
+    reminder text is pinned the same way, for the same reason.
+  - `artifact.sh` and `runnable.sh` **never obstruct** — `PostToolUse` can't block anyway (the
+    write already happened); a missing `grep` just means the reminder is offline, reported via
+    `systemMessage`.
+- **Every hook extracts the one field it cares about**, rather than grepping the whole payload.
+  `artifact.sh` and `runnable.sh` read `file_path`, so a file whose *contents* mention `/tmp`
+  doesn't false-trigger on every save. `guard.sh` reads `command`, so a call *described* as
+  "check for uncommitted changes before we commit" doesn't prompt on the word commit. Matching
+  stays deliberately broad *within* the extracted field — over-triggering there is cheap.
+- **`guard.sh`'s three-tier ladder is the shape to preserve** if you touch its input handling.
+  Unreadable payload or missing `grep` → stderr and `exit 2`, blocking. Payload readable but no
+  `command` field → fall back to matching the whole payload, exactly as it behaved before the
+  extraction existed. Field found → match that alone. The middle tier is what keeps a tool whose
+  input field is named something else from being either waved through *or* blocked outright.
+- **No hook keeps state between invocations.** An earlier design enforced "deliver a whole
+  workflow" with three scripts and a `Stop` hook: one recorded written files under `$TEMP`, one
+  cleared that record when any shell command ran, one blocked `Stop` if the record survived. It
+  leaked a state file forever whenever a session ended without `Stop` firing, it broke the
+  plugin's own "artifacts never live in a temp directory" rule, and any unrelated `ls` defeated
+  it. All of that bought only "don't nag twice". `runnable.sh` is the reminder with no memory;
+  `verify.sh` fails if any of the machinery reappears.
 - **`verify.sh` is the source of truth for "does this actually work"**, not the README. It feeds
   real hook payloads through the scripts and asserts on the JSON decision returned. When adding a
   rule with a shell signature, add both a `guard.sh` pattern and a `verify.sh` case in the same
-  change — untested rule text has no effect.
+  change — untested rule text has no effect. It computes its own check count at runtime; don't
+  write that number down anywhere, it will drift.
 
 ### The machine profile is data, not code
 
