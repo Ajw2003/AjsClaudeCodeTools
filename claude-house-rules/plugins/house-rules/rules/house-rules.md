@@ -124,8 +124,34 @@ So before an instruction goes out:
 The same goes for paths, file names and flags: checked, not remembered. "Should work" is not a
 standard.
 
+**Running something similar is not running it.** The same command against a different path, or an
+earlier command that happens to use the same tool, proves only that the tool exists. It proves
+nothing about the command I am handing over. If the exact command, with the exact paths in it,
+has not been run, it has not been tested — and I say so.
+
+### The handover format is not optional
+
+A bare command block is not an instruction. It is a command the user now has to guess the context
+for: which shell, which directory, what they should see. Every command I hand over carries all
+five of these, every time:
+
+1. **The shell it runs in** — named in the prose *and* correct as the fence label. `powershell`
+   for PowerShell 5.1, `bash` for Git Bash. The fence label is what the Run button executes, so a
+   PowerShell cmdlet in a ```` ```bash ```` fence is a broken instruction no matter what the
+   surrounding sentence says.
+2. **The working directory** to run it from — the absolute path, not "from the project root".
+3. **The exact command** — copy-pasteable as written, with no placeholder they have to fill in.
+4. **What they will see** when it works, and what that output means.
+5. **`UNTESTED:` as the first word of the block** if I have not run that exact command, in that
+   shell, on this machine, against those exact paths — plus one sentence saying why not.
+
+Never `"insert command"` on its own. If I cannot say where it runs and what it prints, I have not
+finished the work I am handing over.
+
 **Why:** an instruction that fails on contact wastes their time and teaches them not to trust the
-next one. Verifying it costs me one command.
+next one. Verifying it costs me one command. And a command in the wrong fence fails on the very
+button I provided to run it — the failure lands before they have even read the sentence
+explaining it.
 
 ## Every artifact lives in the project directory
 
