@@ -15,6 +15,16 @@ Five hooks on four events, all defined in [plugins/house-rules/hooks/hooks.json]
 | `PostToolUse` on `Write` / `Edit` | after a file is written | [artifact.sh](plugins/house-rules/scripts/artifact.sh) notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
 | `PostToolUse` on `Write` | after a file is created | [runnable.sh](plugins/house-rules/scripts/runnable.sh) notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) created inside the project and tells Claude to run them before finishing — the teeth behind "deliver a whole workflow, not a starting point." `Write` only, never `Edit`. **You are never prompted;** the nudge goes to Claude. |
 
+### And one subagent
+
+[agents/executor.md](plugins/house-rules/agents/executor.md) registers `@house-rules:executor`,
+pinned to `model: sonnet` at `effort: low`. It runs a plan that has already been decided,
+without re-deliberating the design.
+
+It exists because the `opusplan` setting below only switches models at the **plan-mode
+boundary** — a session that never enters plan mode stays on Opus start to finish. Delegating
+the implementation to this agent gets the same split when you did not plan first.
+
 The guard **never blocks a matched command outright**. Every match becomes an "ask", because
 the rules are "do not do X without asking" — not "X is forbidden". Nothing else here can block
 at all: both `PostToolUse` reminders go to Claude, and you never see them.
@@ -191,18 +201,24 @@ load it.
 
 ### Settings the plugin cannot ship
 
-A plugin can ship hooks, rules and scripts. It cannot set anything the Claude Code **UI**
-reads, because those live in `~/.claude/settings.json` and the harness reads them at startup —
-no amount of rule text in `house-rules.md` can change how the transcript is rendered, since
-rules steer Claude and this is the harness.
+A plugin can ship hooks, rules, scripts and agents. It cannot set anything the **harness**
+reads, because those live in `~/.claude/settings.json` and are read at startup — no amount of
+rule text in `house-rules.md` can change how the transcript is rendered or which model runs,
+since rules steer Claude and these are the harness.
 
 So `tools/install.ps1` writes them, preserving every other key in the file:
 
 | Key | Value | Why |
 |---|---|---|
 | `verbose` | `true` | Default to the verbose transcript view — full tool calls and outputs, not the collapsed summary. Matches the rule that nothing is hidden and nothing goes to a log only an agent reads. |
+| `model` | `opusplan` | Opus while planning, switching automatically to Sonnet to execute. Deliberation belongs in the plan; once the approach is decided, execution wants the faster model, not more reasoning. |
 
-Run it with `-NoVerbose` to install the plugin and leave the transcript view alone.
+Run it with `-NoVerbose` to leave the transcript view alone, or `-NoModel` to leave the model
+alone on a device you deliberately run on something else.
+
+**A hook cannot do this.** No hook output sets a model — a `SessionStart` hook may be *told*
+which model is running, and there is no `$CLAUDE_MODEL` — so the split is a setting plus agent
+frontmatter, never script logic. Do not try to add it to `guard.sh`.
 
 The marketplace manifest lives at the **repo root** (`.claude-plugin/marketplace.json`), which
 is where `marketplace add` looks — keep it there. Its plugin entries use paths relative to the
@@ -233,12 +249,14 @@ there.
     }
   },
   "enabledPlugins": { "house-rules@aj-house-rules": true },
-  "verbose": true
+  "verbose": true,
+  "model": "opusplan"
 }
 ```
 
-`verbose` is not part of the plugin install — it is the transcript-view setting `install.ps1`
-also writes, included here so a shipped settings file configures the machine completely.
+`verbose` and `model` are not part of the plugin install — they are the two settings
+`install.ps1` also writes, included here so a shipped settings file configures the machine
+completely.
 </details>
 
 Editing the rules is then one commit — every device picks it up on its next update.

@@ -70,6 +70,25 @@ implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/
 | `PostToolUse` | `artifact.sh` | `Write`/`Edit` calls | Notices a `.md`/`.txt` write outside the project (temp dir, scratchpad, `~/.claude/plans`) and reminds *Claude* — not the user — to copy it into `docs/` before finishing. |
 | `PostToolUse` | `runnable.sh` | `Write` calls only | Notices a runnable file (`.sh`, `.ps1`, `.py`, `Dockerfile`, …) created inside the project and reminds *Claude* to run it before finishing. `Write` only, never `Edit`. |
 
+### One subagent, for the model split
+
+`agents/executor.md` registers `@house-rules:executor`, pinned to `model: sonnet` at
+`effort: low`, for running a plan that has already been decided.
+
+**A hook cannot set the model** — no hook output changes it, a `SessionStart` hook may only be
+*told* which model is running, and there is no `$CLAUDE_MODEL`. So Opus-plans / Sonnet-executes
+rests entirely on two things outside the hooks, and neither belongs in `guard.sh`:
+
+- the `"model": "opusplan"` setting `tools/install.ps1` writes into `~/.claude/settings.json`,
+  which switches Opus → Sonnet automatically at the plan-mode boundary; and
+- this agent's frontmatter, which covers the case `opusplan` misses — a session that never
+  entered plan mode, and so never crossed that boundary.
+
+`verify.sh` checks both: the agent still pins Sonnet, and `install.ps1` still writes
+`opusplan`. It also fails if the agent sets `hooks`, `mcpServers` or `permissionMode`, which
+plugin subagents silently ignore — a field that reads as configuration and does nothing is
+worse than no field.
+
 Every one of those scripts is stateless. Nothing writes to `$TEMP`, and there is no state to
 reap. That is load-bearing, not incidental — see the deliverable note below.
 

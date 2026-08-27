@@ -376,6 +376,52 @@ else
   printf '         %s\n' "$GONE"
 fi
 
+# --- the executor subagent is pinned to Sonnet ---------------------------------------------
+# Hooks cannot set a model, so the Opus-plans/Sonnet-executes split is not enforceable from a
+# script at all. It rests on two things outside the hooks: the model setting install.ps1
+# writes, and this agent's frontmatter. Both are checked here, because "reads well" is not
+# the same as "is still set".
+AGENT="$HERE/../agents/executor.md"
+AGENTDRIFT=''
+if [ ! -f "$AGENT" ]; then
+  AGENTDRIFT='; agents/executor.md is missing'
+else
+  grep -qx 'model: sonnet' "$AGENT" || AGENTDRIFT="$AGENTDRIFT; executor.md does not pin model: sonnet"
+  grep -qx 'name: executor' "$AGENT" || AGENTDRIFT="$AGENTDRIFT; executor.md has no name: executor"
+  # Plugin subagents silently ignore these three. A field that does nothing is worse than no
+  # field: it reads as configuration and is not.
+  for DEAD in hooks mcpServers permissionMode; do
+    grep -qE "^$DEAD:" "$AGENT" && AGENTDRIFT="$AGENTDRIFT; executor.md sets $DEAD, which plugin subagents ignore"
+  done
+fi
+if [ -z "$AGENTDRIFT" ]; then
+  report PASS 'the executor subagent exists and is pinned to Sonnet'
+  printf '          execution delegated to @house-rules:executor runs on sonnet, not opus\n'
+else
+  report FAIL 'the executor subagent exists and is pinned to Sonnet'
+  printf '         %s\n' "$AGENTDRIFT"
+fi
+
+# --- install.ps1 still writes the model setting the README claims --------------------------
+# Same guarantee as the scope.sh and runnable.sh drift checks, one layer out: the README says
+# a fresh device ends up on opusplan, and this is the file that has to make that true.
+INSTALL="$ROOT/tools/install.ps1"
+MODELDRIFT=''
+if [ ! -f "$INSTALL" ]; then
+  MODELDRIFT='; tools/install.ps1 is missing'
+else
+  grep -q "Name = 'model'" "$INSTALL" || MODELDRIFT="$MODELDRIFT; install.ps1 no longer writes a model setting"
+  grep -q "opusplan" "$INSTALL" || MODELDRIFT="$MODELDRIFT; install.ps1 no longer sets opusplan"
+fi
+grep -q 'opusplan' "$ROOT/claude-house-rules/README.md" 2>/dev/null || MODELDRIFT="$MODELDRIFT; the README does not document opusplan"
+if [ -z "$MODELDRIFT" ]; then
+  report PASS 'install.ps1 sets model = opusplan and the README says so'
+  printf '          plan mode runs on opus, execution switches to sonnet, on every new device\n'
+else
+  report FAIL 'install.ps1 sets model = opusplan and the README says so'
+  printf '         %s\n' "$MODELDRIFT"
+fi
+
 # --- the architecture table in CLAUDE.md matches hooks.json --------------------------------
 # This is the check that stops the docs going stale the way they already did once: CLAUDE.md
 # claimed "four hooks, nothing else" while seven scripts ran on five events, and nothing
