@@ -1,6 +1,6 @@
 # house-rules: hooks architecture rework
 
-Status: **awaiting confirmation** — settled by interview, not yet implemented.
+Status: **implemented** — confirmed 2026-08-27, delivered in five commits on this branch.
 Date: 2026-08-27
 Branch: `claude/grillme-iuqx4y`
 
@@ -105,3 +105,31 @@ Every script is stateless. Nothing writes to `$TEMP`.
 
 `sh claude-house-rules/plugins/house-rules/scripts/verify.sh` exits 0 after each of the
 four commits, and `.\tools\clean-install-test.ps1` passes against the pushed branch.
+
+## What actually happened
+
+Four commits as planned, plus a fifth that was not.
+
+The baseline was **40 checks, not 34** — the docs had drifted further than the audit found.
+The suite ends at **54**.
+
+Commit 5 fixes the plugin's own `README.md`, which documented `track-write.sh`,
+`clear-pending.sh` and `deliverable.sh` with markdown links to all three. Commit 2 deleted
+those files, so the README that ships with the plugin carried three broken links. That was a
+defect introduced by this branch, not pre-existing drift, so it was fixed rather than left
+for a follow-up. Every check-by-number reference went with it, for the same reason the counts
+did.
+
+Two things were found by testing rather than by reasoning, and both would have shipped
+silently:
+
+- The first version of the docs-vs-`hooks.json` drift check grepped the whole of `CLAUDE.md`.
+  Every script is also discussed in the prose below the table, so deleting a table row still
+  passed — the check proved nothing. It is now scoped to the table rows, and was confirmed by
+  deleting a row, adding an unregistered script, and reinstating a hardcoded count.
+- `runnable.sh`'s reminder originally said "written but never run", which is not the rule's
+  wording. The drift pin added in the same commit caught it. The text now reads "a starting
+  point, not a whole workflow", which is the rule.
+
+Still outstanding: `.\tools\clean-install-test.ps1` has not been run. It is PowerShell and
+needs the Windows machine — see the handover note in the final report.
