@@ -20,6 +20,7 @@ INJECT="$HERE/inject.sh"
 SCOPE="$HERE/scope.sh"
 ARTIFACT="$HERE/artifact.sh"
 RUNNABLE="$HERE/runnable.sh"
+HANDOVER="$HERE/handover.sh"
 ROOT="$HERE/../../../.."
 SH=$(command -v sh)
 
@@ -49,6 +50,7 @@ printf 'Inject: %s\n' "$INJECT"
 printf 'Scope:  %s\n' "$SCOPE"
 printf 'Artif:  %s\n' "$ARTIFACT"
 printf 'Runnbl: %s\n' "$RUNNABLE"
+printf 'Handov: %s\n' "$HANDOVER"
 printf '\n'
 printf 'The guard steps feed one shell command each to the guard and check the decision:\n'
 printf '  "ask"  = Claude Code will show you a permission prompt naming the rule.\n'
@@ -359,14 +361,76 @@ else
   printf '          in runnable.sh but missing from house-rules.md%s\n' "$DRIFT"
 fi
 
+# --- the command-handover check at Stop ----------------------------------------------------
+# This is the only hook that can enforce "never hand over a command I have not run": no event
+# fires on assistant text, so Stop - after the reply exists, before the turn ends - is the one
+# place the checklist can be put in front of Claude at all.
+#
+# It blocks EVERY fresh turn, so the two cases that matter most are the ones where it must NOT
+# block: the retry (or it loops forever) and a broken environment (or the session can never
+# deliver a reply). Both are checked below.
+hand_case() { # $1=expect block|silent|offline  $2=title  $3=payload  $4=env prefix: toggle|nopath|''
+  case "$4" in
+    toggle) OUT=$(printf '%s' "$3" | HOUSE_RULES_HANDOVER=off "$SH" "$HANDOVER" 2>/dev/null) ;;
+    nopath) OUT=$(printf '%s' "$3" | PATH="" "$SH" "$HANDOVER" 2>/dev/null) ;;
+    *)      OUT=$(printf '%s' "$3" | "$SH" "$HANDOVER" 2>/dev/null) ;;
+  esac
+  CODE=$?
+  case "$OUT" in
+    *'"decision":"block"'*) GOT=block ;;
+    *systemMessage*)        GOT=offline ;;
+    '')                     GOT=silent ;;
+    *)                      GOT=malformed ;;
+  esac
+  # Exit code is part of the contract here, not decoration: any non-zero exit on Stop stops
+  # the turn from ending, which is the failure this hook must never cause.
+  [ "$CODE" -ne 0 ] && GOT="$GOT (exit $CODE)"
+  if [ "$GOT" = "$1" ]; then report PASS "$2"; else report FAIL "$2"; fi
+  printf '          expected %s, got %s\n' "$1" "$GOT"
+}
+hand_case block 'a turn about to end gets the handover checklist' \
+  '{"session_id":"verify","hook_event_name":"Stop","stop_hook_active":false}' ''
+hand_case silent 'the retry after a block is allowed to finish - it cannot loop' \
+  '{"session_id":"verify","hook_event_name":"Stop","stop_hook_active":true}' ''
+hand_case silent 'the toggle switches the check off without touching any file' \
+  '{"session_id":"verify","hook_event_name":"Stop","stop_hook_active":false}' toggle
+hand_case offline 'a broken PATH takes the check offline visibly and still lets the turn end' \
+  '{"session_id":"verify","hook_event_name":"Stop","stop_hook_active":false}' nopath
+hand_case silent 'an empty payload is nothing to check, not a failed check' '' ''
+
+# --- the checklist in handover.sh has not drifted from the rules document -------------------
+# Same guarantee as the scope.sh and runnable.sh drift checks: hardcoded text is a second copy,
+# so it is pinned to the rules file rather than left to rot.
+DRIFT=''
+for PHRASE in 'fence label' 'working directory' 'UNTESTED' 'Run button' 'hand over a command'; do
+  grep -qi "$PHRASE" "$RULES_FILE" 2>/dev/null || DRIFT="$DRIFT; $PHRASE"
+done
+if [ -z "$DRIFT" ]; then
+  report PASS 'handover.sh checklist still matches the rules document'
+  printf '          every key phrase in the checklist appears in rules/house-rules.md\n'
+else
+  report FAIL 'handover.sh checklist still matches the rules document'
+  printf '          in handover.sh but missing from house-rules.md%s\n' "$DRIFT"
+fi
+
 # --- the state machine this replaced is really gone ----------------------------------------
 # The leak was the reason for the rework: a $TEMP file removed only by a later shell command
 # or by Stop firing, with no reaper. This fails if any of it comes back.
+#
+# What is banned is the STATE, not the event. This check used to fail on any Stop hook at all,
+# which was a proxy for the real rule and outlawed the one event where the handover rule can
+# be enforced. handover.sh is on Stop and keeps nothing: its only state, stop_hook_active, is
+# held by the harness and arrives in the payload. So the ban is narrowed to what actually
+# leaked - the dead scripts and the state file - plus a guard that Stop carries nothing else.
 GONE=''
 for DEAD in track-write.sh clear-pending.sh deliverable.sh; do
   [ -e "$HERE/$DEAD" ] && GONE="$GONE; $DEAD still exists"
 done
-grep -q '"Stop"' "$HERE/../hooks/hooks.json" 2>/dev/null && GONE="$GONE; hooks.json still registers a Stop hook"
+STOP_SCRIPTS=$(awk '/"Stop"/{f=1} f&&/scripts\/[a-z0-9-]*\.sh/{print} f&&/^    \]/{f=0}' \
+  "$HERE/../hooks/hooks.json" 2>/dev/null | grep -o 'scripts/[a-z0-9-]*\.sh' | sed 's|scripts/||' | sort -u)
+for S in $STOP_SCRIPTS; do
+  [ "$S" = handover.sh ] || GONE="$GONE; $S is registered on Stop and only handover.sh may be"
+done
 grep -rql 'house-rules-deliverable' "$HERE" 2>/dev/null | grep -qv 'verify.sh' && GONE="$GONE; a script still writes deliverable state"
 if [ -z "$GONE" ]; then
   report PASS 'the stateful deliverable machinery is gone and no hook writes to TEMP'

@@ -5,13 +5,14 @@ device and every project instead of living in a file you have to copy into each 
 
 ## What it actually does
 
-Five hooks on four events, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
+Six hooks on five events, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
 
 | Hook | When | What it does |
 |---|---|---|
 | `SessionStart` | every session, every project | [inject.sh](plugins/house-rules/scripts/inject.sh) prints [rules/house-rules.md](plugins/house-rules/rules/house-rules.md) **and** [rules/environment.md](plugins/house-rules/rules/environment.md) into Claude's context. This is the CLAUDE.md replacement — no per-repo file needed. |
 | `UserPromptSubmit` | before every prompt you send | [scope.sh](plugins/house-rules/scripts/scope.sh) restates the short version — match depth to the task, the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
 | `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | [guard.sh](plugins/house-rules/scripts/guard.sh) checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. |
+| `Stop` | every turn, just before it ends | [handover.sh](plugins/house-rules/scripts/handover.sh) blocks the turn **once** and hands Claude the command-handover checklist: shell named (and correct as the fence label), absolute working directory, exact command, what you will see, `UNTESTED:` if it was not actually run. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
 | `PostToolUse` on `Write` / `Edit` | after a file is written | [artifact.sh](plugins/house-rules/scripts/artifact.sh) notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
 | `PostToolUse` on `Write` | after a file is created | [runnable.sh](plugins/house-rules/scripts/runnable.sh) notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) created inside the project and tells Claude to run them before finishing — the teeth behind "deliver a whole workflow, not a starting point." `Write` only, never `Edit`. **You are never prompted;** the nudge goes to Claude. |
 
@@ -83,9 +84,20 @@ silently — read-only inspection is explicitly fine under the rules.
 
 The other rules — match response depth to the task, the fixed environment, build only what was
 asked, docs-before-research, build for a human working alone, the user's hands are for decisions
-not labour, never hand over an untested command — have no shell signature to match on. They are
-carried by the SessionStart injection and the per-prompt reminder. "Deliver a whole workflow" is
-the exception: its runnable-file half now has a real check, at `Stop` — see the hooks table above.
+not labour — have no shell signature to match on. They are carried by the SessionStart injection
+and the per-prompt reminder.
+
+Two are exceptions, because a rule carried only by injected text is a rule that gets read and
+then drifted past:
+
+- **"Deliver a whole workflow"** — its runnable-file half has a real check, at `PostToolUse`:
+  a script created and never run gets a reminder.
+- **"Never hand over a command I have not run"** — enforced at `Stop`, which is the only event
+  that happens after the reply exists and before the turn ends. No hook can read the reply, so
+  it cannot detect a bad handover; what it can do is put the checklist in front of Claude at the
+  moment the turn would otherwise go out. That is the one command-shaped rule `guard.sh` cannot
+  cover, because `guard.sh` only ever sees commands Claude *runs*, never ones it *types into a
+  reply*.
 
 ## The machine profile
 
@@ -154,7 +166,7 @@ observed in a live session, after fully quitting and restarting Claude Code:
 | `UserPromptSubmit` | Run `claude --debug`, then send any prompt | The hook runs and injects the line starting `Standing house rules` |
 | `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
 | `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
-| `PostToolUse` + `Stop` | Ask it to write a throwaway `.sh` or `.py` script, then say "stop, don't run it" | Claude's turn gets blocked once, naming the unrun file, before it can end the turn |
+| `Stop` | Ask any trivial question and let the turn end | The turn is blocked exactly once with the command-handover checklist, then ends normally on the retry. Restart with `HOUSE_RULES_HANDOVER=off` set and it ends with no block. |
 
 ### The guard test needs an uncommitted change — this is the part that catches people
 

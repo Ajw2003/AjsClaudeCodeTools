@@ -57,7 +57,7 @@ currently installed. There is no build step and no linter — this repo is shell
 
 ## Architecture
 
-### The plugin is five hooks on four events, nothing else
+### The plugin is six hooks on five events, nothing else
 
 Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](claude-house-rules/plugins/house-rules/hooks/hooks.json),
 implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/scripts/`:
@@ -68,6 +68,7 @@ implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/
 | `UserPromptSubmit` | `scope.sh` | every prompt | Restates a short reminder so the rules stay live 200 messages into a long session, after the SessionStart copy has faded from attention. |
 | `PreToolUse` | `guard.sh` | `Bash`/`PowerShell` calls | Extracts the `command` field and textually matches it against rule patterns (hidden/background work, git history/index/remote writes, destructive deletes and discards). A match returns `permissionDecision: "ask"` — it never blocks outright, only prompts. |
 | `PostToolUse` | `artifact.sh` | `Write`/`Edit` calls | Notices a `.md`/`.txt` write outside the project (temp dir, scratchpad, `~/.claude/plans`) and reminds *Claude* — not the user — to copy it into `docs/` before finishing. |
+| `Stop` | `handover.sh` | every turn about to end | Blocks the turn **once** with the command-handover checklist: shell named and correct as the fence label, absolute working directory, exact command, expected output, `UNTESTED:` when it was not run. Stands down on the retry (`stop_hook_active`), on `HOUSE_RULES_HANDOVER=off`, and on any failure — it fails **open**, since a non-zero exit here would stop the turn ending at all. |
 | `PostToolUse` | `runnable.sh` | `Write` calls only | Notices a runnable file (`.sh`, `.ps1`, `.py`, `Dockerfile`, …) created inside the project and reminds *Claude* to run it before finishing. `Write` only, never `Edit`. |
 
 ### One subagent, for the model split
@@ -127,7 +128,13 @@ cannot silently go stale the way it did once already.
   `command` field → fall back to matching the whole payload, exactly as it behaved before the
   extraction existed. Field found → match that alone. The middle tier is what keeps a tool whose
   input field is named something else from being either waved through *or* blocked outright.
-- **No hook keeps state between invocations.** An earlier design enforced "deliver a whole
+- **No hook keeps state between invocations.** What is banned is the state, not the `Stop`
+  event: `handover.sh` runs there and stores nothing, because the one fact it needs — has it
+  already fired this turn — is held by the harness and arrives in the payload as
+  `stop_hook_active`. `verify.sh` was narrowed to match (it used to fail on any `Stop` hook at
+  all, a proxy that outlawed the only event where the handover rule is enforceable); it now
+  fails if the dead scripts or the state file return, or if anything other than `handover.sh`
+  is registered on `Stop`. An earlier design enforced "deliver a whole
   workflow" with three scripts and a `Stop` hook: one recorded written files under `$TEMP`, one
   cleared that record when any shell command ran, one blocked `Stop` if the record survived. It
   leaked a state file forever whenever a session ended without `Stop` firing, it broke the

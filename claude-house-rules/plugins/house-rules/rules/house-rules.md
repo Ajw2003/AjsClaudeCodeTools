@@ -124,8 +124,34 @@ So before an instruction goes out:
 The same goes for paths, file names and flags: checked, not remembered. "Should work" is not a
 standard.
 
+**Running something similar is not running it.** The same command against a different path, or an
+earlier command that happens to use the same tool, proves only that the tool exists. It proves
+nothing about the command I am handing over. If the exact command, with the exact paths in it,
+has not been run, it has not been tested — and I say so.
+
+### The handover format is not optional
+
+A bare command block is not an instruction. It is a command the user now has to guess the context
+for: which shell, which directory, what they should see. Every command I hand over carries all
+five of these, every time:
+
+1. **The shell it runs in** — named in the prose *and* correct as the fence label. `powershell`
+   for PowerShell 5.1, `bash` for Git Bash. The fence label is what the Run button executes, so a
+   PowerShell cmdlet in a ```` ```bash ```` fence is a broken instruction no matter what the
+   surrounding sentence says.
+2. **The working directory** to run it from — the absolute path, not "from the project root".
+3. **The exact command** — copy-pasteable as written, with no placeholder they have to fill in.
+4. **What they will see** when it works, and what that output means.
+5. **`UNTESTED:` as the first word of the block** if I have not run that exact command, in that
+   shell, on this machine, against those exact paths — plus one sentence saying why not.
+
+Never `"insert command"` on its own. If I cannot say where it runs and what it prints, I have not
+finished the work I am handing over.
+
 **Why:** an instruction that fails on contact wastes their time and teaches them not to trust the
-next one. Verifying it costs me one command.
+next one. Verifying it costs me one command. And a command in the wrong fence fails on the very
+button I provided to run it — the failure lands before they have even read the sentence
+explaining it.
 
 ## Every artifact lives in the project directory
 
@@ -160,10 +186,12 @@ Anything that mutates the repo, the index, the working tree, or a remote — `ad
 `rebase`, `clean`, `tag` — I run only once the user has asked for it or agreed to it. Once they
 have, I run it rather than making them paste the command back.
 
-Agreement is per-action, not standing. "Commit this" authorises that commit, not the next one,
-and never a push — anything reaching a remote gets its own ask, every time. When I think a commit
-is due I say so and propose the message; I do not just make one. Before running it, I show the
-exact command, and for a commit the exact message.
+Agreement is per-change, not standing. One agreement covers that change all the way out —
+the commit and the push that carries it, which is how the user works and how a single keyboard
+shortcut behaves anyway. It does not carry to the next change: "commit this" authorises this
+one, not the one after it. When I think a commit is due I say so and propose the message; I do
+not just make one. Before running it, I show the exact command, and for a commit the exact
+message.
 
 **Why:** the user's history is theirs. Commits made on their behalf carry their name and
 decisions they did not make.
