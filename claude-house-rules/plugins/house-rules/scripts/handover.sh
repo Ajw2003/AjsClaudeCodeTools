@@ -66,10 +66,16 @@ fi
 # rules file is not readable. That makes it a second copy, so verify.sh pins its key phrases
 # against the rules document and fails on drift.
 #
-# The escape clause in the last sentence is load-bearing. This hook blocks every turn it sees
-# fresh, so a turn that handed over no commands must be able to close in one cheap line rather
-# than re-explaining the work.
-NOTE='House rules, command handover - check before this turn ends. For every shell command in this reply, all five must be present: (1) the shell it runs in, named in the prose AND correct as the fence label - the fence label is what the Run button executes; (2) the absolute working directory to run it from; (3) the exact command, copy-pasteable, no placeholders; (4) what the user will see when it works; (5) UNTESTED: as the first word of the block if you did not run that exact command, in that shell, against those exact paths - running something similar is not running it. If anything is missing, fix the reply now. If this turn handed over no commands, say so in one line and stop - do not re-explain the work.'
+# The two escape clauses at the end are load-bearing, and the first was learned the hard way.
+# This hook blocks every turn it sees fresh, including the turns that were already correct — so
+# without an explicit "already fine, add nothing" case, a block reads as an instruction to DO
+# something and produces a correction whether one is needed or not. Observed in practice: a reply
+# that already named the shell and directory came back with the command and its output restated
+# three times, because a Stop block cannot rewrite text already sent, only append to it. Every
+# correction is therefore visible rework, and the only way to keep the common case clean is to
+# say plainly that a compliant reply should close in silence. The second clause does the same job
+# for a turn that handed over no commands at all.
+NOTE='House rules, command handover - check before this turn ends. For every shell command in this reply, all five must be present: (1) the shell it runs in, named in the prose AND correct as the fence label - the fence label is what the Run button executes; (2) the absolute working directory to run it from; (3) the exact command, copy-pasteable, no placeholders; (4) what the user will see when it works; (5) UNTESTED: as the first word of the block if you did not run that exact command, in that shell, against those exact paths - running something similar is not running it. If the reply already satisfies all five, stop immediately and add nothing - do not restate it, do not re-run anything, do not mention this check. If something is missing, append one short corrected block covering only what was missing - never repeat the whole answer. If this turn handed over no commands, say so in one line and stop - do not re-explain the work.'
 
 printf '{"decision":"block","reason":"%s"}' "$NOTE"
 
