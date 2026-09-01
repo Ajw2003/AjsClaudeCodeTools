@@ -25,7 +25,7 @@
 
 set -u
 
-NOTE='House rules, model split: the plan is settled. Delegate the implementation to @house-rules:executor so it runs on Sonnet instead of re-deliberating here on the planning model - unless this is a one-liner where delegating costs more than it saves. This is the mechanism on every surface, including the Desktop Code tab and Auto/Accept-edits sessions, none of which get the opusplan switch. This is a reminder to you; the user was not prompted and does not need to do anything.'
+NOTE='House rules, model split: the plan is settled. Delegate the implementation to @house-rules:executor so it runs on Sonnet instead of re-deliberating here on the planning model - unless this is a one-liner where delegating costs more than it saves. Its agent description is marked for proactive use, which is the harness'\''s own documented basis for invoking a subagent without a fresh per-turn ask from the user - so this delegation is authorized, not merely suggested, even when the next instruction is as generic as "implement the plan". This is the mechanism on every surface, including the Desktop Code tab and Auto/Accept-edits sessions, none of which get the opusplan switch. This is a reminder to you; the user was not prompted and does not need to do anything.'
 
 printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}' "$NOTE"
 

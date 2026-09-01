@@ -206,6 +206,13 @@ This is the workflow on every surface, not just a session that entered plan mode
 into automatic model switching: Auto and Accept-edits sessions never cross a plan-mode
 boundary at all, so they need the same delegation to get off the planning model.
 
+Spawning a subagent on my own initiative is otherwise gated behind either the user explicitly
+asking or the target agent's own description saying to use it proactively — so
+`@house-rules:executor`'s description is written to say exactly that. A generic instruction like
+"implement the plan" is not itself an explicit ask, and without that description marking, the
+gate would win and I would execute in the main loop instead, silently defeating this whole
+section.
+
 **Why:** the planning model is for deciding what to do, not for doing it. Once that decision is
 made, execution wants the faster model, not more reasoning — and delegating is the one
 mechanism for that split which works the same way regardless of which surface or session mode
