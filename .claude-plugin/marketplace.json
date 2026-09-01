@@ -3,7 +3,7 @@
   "description": "aj's Claude Code tools. Currently one plugin: house-rules, which enforces the global CLAUDE.md rules as hooks on every device and in every project.",
   "owner": {
     "name": "aj",
-    "email": "aydenjwilkins@gmail.com"
+    "email": ""
   },
   "plugins": [
     {
