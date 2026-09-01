@@ -101,6 +101,19 @@ wherever the plugin is installed. `verify.sh` checks the agent still pins Sonnet
 if the agent sets `hooks`, `mcpServers` or `permissionMode`, which plugin subagents silently
 ignore — a field that reads as configuration and does nothing is worse than no field.
 
+**Reaching the surface is not the same as being allowed to spawn on it.** A live Auto-mode
+session hit this: `delegate.sh`'s nudge fired after `ExitPlanMode`, the user then typed a plain
+"implement the plan", and Claude reasoned its own system prompt forbade calling the Agent tool
+without an explicit per-turn ask — so it executed the plan itself, on the planning model,
+exactly what this whole mechanism exists to avoid. The Agent tool's own instructions gate
+autonomous spawning behind two things: the user explicitly asking, or the target agent's
+description saying to use it proactively. `delegate.sh` asking Claude to delegate satisfies
+neither on its own — it's Claude prompting Claude, not the user. The fix is that
+`agents/executor.md`'s description now says "Use PROACTIVELY", the literal phrase the harness
+checks for, so the gate is satisfied before the nudge is even read. `verify.sh` greps the
+description for that word for the same reason it checks everything else here: reading well is
+not the same as still being true.
+
 Every one of those scripts is stateless. Nothing writes to `$TEMP`, and there is no state to
 reap. That is load-bearing, not incidental — see the deliverable note below.
 

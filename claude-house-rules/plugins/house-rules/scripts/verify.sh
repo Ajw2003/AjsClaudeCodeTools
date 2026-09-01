@@ -507,6 +507,20 @@ else
   printf '         %s\n' "$AGENTDRIFT"
 fi
 
+# --- the executor description authorizes proactive use ------------------------------------
+# The harness's Agent tool refuses to spawn a subagent on Claude's own initiative unless the
+# user explicitly asks OR the agent's own description says to use it proactively. delegate.sh's
+# nudge cannot satisfy that gate by itself - it is Claude asking Claude, not the user asking -
+# so without this literal word in the description, a generic "implement the plan" loses to the
+# gate and execution happens on the planning model instead. This is what would have caught that.
+if [ -f "$AGENT" ] && grep -qi 'proactiv' "$AGENT"; then
+  report PASS 'the executor description authorizes proactive use'
+  printf '          description contains "proactively", satisfying the Agent tool'\''s own gate\n'
+else
+  report FAIL 'the executor description authorizes proactive use'
+  printf '          agents/executor.md description has no "proactively" (or similar) wording\n'
+fi
+
 # --- install.ps1 still writes the model setting the README claims --------------------------
 # Same guarantee as the scope.sh and runnable.sh drift checks, one layer out: the README says
 # a fresh device ends up on opusplan, and this is the file that has to make that true.
