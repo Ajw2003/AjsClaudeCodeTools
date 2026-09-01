@@ -5,7 +5,7 @@ device and every project instead of living in a file you have to copy into each 
 
 ## What it actually does
 
-Six hooks on five events, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
+Seven hooks on five events, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
 
 | Hook | When | What it does |
 |---|---|---|
@@ -15,16 +15,27 @@ Six hooks on five events, all defined in [plugins/house-rules/hooks/hooks.json](
 | `Stop` | every turn, just before it ends | [handover.sh](plugins/house-rules/scripts/handover.sh) blocks the turn **once** and hands Claude the command-handover checklist: shell named (and correct as the fence label), absolute working directory, exact command, what you will see, `UNTESTED:` if it was not actually run. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
 | `PostToolUse` on `Write` / `Edit` | after a file is written | [artifact.sh](plugins/house-rules/scripts/artifact.sh) notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
 | `PostToolUse` on `Write` | after a file is created | [runnable.sh](plugins/house-rules/scripts/runnable.sh) notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) created inside the project and tells Claude to run them before finishing — the teeth behind "deliver a whole workflow, not a starting point." `Write` only, never `Edit`. **You are never prompted;** the nudge goes to Claude. |
+| `PostToolUse` on `ExitPlanMode` | after a plan is exited | [delegate.sh](plugins/house-rules/scripts/delegate.sh) tells Claude the plan is settled and implementation should go to `@house-rules:executor`, on Sonnet, instead of continuing on the planning model. No payload field needed, so — like `scope.sh` — it is one hardcoded `printf` with zero dependencies. **You are never prompted;** the nudge goes to Claude. |
 
-### And one subagent
+### And one subagent — the mechanism the model split actually runs on
 
 [agents/executor.md](plugins/house-rules/agents/executor.md) registers `@house-rules:executor`,
 pinned to `model: sonnet` at `effort: low`. It runs a plan that has already been decided,
-without re-deliberating the design.
+without re-deliberating the design. `delegate.sh` (above) is what asks for that delegation.
 
-It exists because the `opusplan` setting below only switches models at the **plan-mode
-boundary** — a session that never enters plan mode stays on Opus start to finish. Delegating
-the implementation to this agent gets the same split when you did not plan first.
+This subagent is the **primary** mechanism for Opus-plans/Sonnet-executes, not a fallback for
+one edge case. The `opusplan` setting documented below only switches models at the **plan-mode
+boundary**, in a session that reads a device's local `settings.json` — which leaves out three
+surfaces entirely:
+
+- **The Desktop Code tab.** Its model dropdown is a session-level override that outranks the
+  settings file, and `opusplan` isn't one of the choices in it.
+- **Cloud sessions**, which never receive a device's local `settings.json` at all.
+- **Auto and Accept-edits sessions**, on any surface, because they never enter plan mode and so
+  never cross the boundary the setting switches on.
+
+Delegating to the subagent gets the same split on all three, because agent frontmatter is
+honoured wherever the plugin is installed — unlike a setting in a file some sessions never read.
 
 The guard **never blocks a matched command outright**. Every match becomes an "ask", because
 the rules are "do not do X without asking" — not "X is forbidden". Nothing else here can block
@@ -223,14 +234,23 @@ So `tools/install.ps1` writes them, preserving every other key in the file:
 | Key | Value | Why |
 |---|---|---|
 | `verbose` | `true` | Default to the verbose transcript view — full tool calls and outputs, not the collapsed summary. Matches the rule that nothing is hidden and nothing goes to a log only an agent reads. |
-| `model` | `opusplan` | Opus while planning, switching automatically to Sonnet to execute. Deliberation belongs in the plan; once the approach is decided, execution wants the faster model, not more reasoning. |
+| `model` | `opusplan` | Opus while planning, switching automatically to Sonnet to execute — for CLI and IDE sessions that cross the plan-mode boundary and read this device's `settings.json`. |
 
 Run it with `-NoVerbose` to leave the transcript view alone, or `-NoModel` to leave the model
 alone on a device you deliberately run on something else.
 
-**A hook cannot do this.** No hook output sets a model — a `SessionStart` hook may be *told*
-which model is running, and there is no `$CLAUDE_MODEL` — so the split is a setting plus agent
-frontmatter, never script logic. Do not try to add it to `guard.sh`.
+**This setting does not reach the Desktop Code tab or cloud sessions.** The Code tab's model
+dropdown outranks `settings.json` and doesn't offer `opusplan` as a choice; cloud sessions run
+on Anthropic-managed VMs that never see a device's local settings file at all. On those
+surfaces — and in Auto/Accept-edits sessions on any surface, which never cross the plan-mode
+boundary either — the split comes from `delegate.sh` asking Claude to hand execution to
+`@house-rules:executor` instead. Pick Sonnet from the dropdown yourself in the Code tab if you
+want it as the default there too; the delegation still applies to whatever runs after planning.
+
+**A hook cannot set the model.** No hook output sets a model — a `SessionStart` hook may be
+*told* which model is running, and there is no `$CLAUDE_MODEL` — so `opusplan` is a setting,
+and the surfaces it misses are covered by agent frontmatter plus `delegate.sh`, never by script
+logic. Do not try to add it to `guard.sh`.
 
 The marketplace manifest lives at the **repo root** (`.claude-plugin/marketplace.json`), which
 is where `marketplace add` looks — keep it there. Its plugin entries use paths relative to the

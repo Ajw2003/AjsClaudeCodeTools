@@ -57,7 +57,7 @@ currently installed. There is no build step and no linter — this repo is shell
 
 ## Architecture
 
-### The plugin is six hooks on five events, nothing else
+### The plugin is seven hooks on five events, nothing else
 
 Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](claude-house-rules/plugins/house-rules/hooks/hooks.json),
 implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/scripts/`:
@@ -70,25 +70,36 @@ implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/
 | `PostToolUse` | `artifact.sh` | `Write`/`Edit` calls | Notices a `.md`/`.txt` write outside the project (temp dir, scratchpad, `~/.claude/plans`) and reminds *Claude* — not the user — to copy it into `docs/` before finishing. |
 | `Stop` | `handover.sh` | every turn about to end | Blocks the turn **once** with the command-handover checklist: shell named and correct as the fence label, absolute working directory, exact command, expected output, `UNTESTED:` when it was not run. Stands down on the retry (`stop_hook_active`), on `HOUSE_RULES_HANDOVER=off`, and on any failure — it fails **open**, since a non-zero exit here would stop the turn ending at all. |
 | `PostToolUse` | `runnable.sh` | `Write` calls only | Notices a runnable file (`.sh`, `.ps1`, `.py`, `Dockerfile`, …) created inside the project and reminds *Claude* to run it before finishing. `Write` only, never `Edit`. |
+| `PostToolUse` | `delegate.sh` | `ExitPlanMode` calls | Reminds *Claude* that the plan is settled and implementation should go to `@house-rules:executor`, so execution reaches the Desktop Code tab and cloud sessions too — surfaces where the `opusplan` setting below does nothing. No payload field needed; a bare `printf`, same zero-dependency shape as `scope.sh`. |
 
-### One subagent, for the model split
+### One subagent, for the model split — the primary mechanism, not the fallback
 
 `agents/executor.md` registers `@house-rules:executor`, pinned to `model: sonnet` at
-`effort: low`, for running a plan that has already been decided.
+`effort: low`, for running a plan that has already been decided. `delegate.sh` (above) is what
+actually asks for that delegation, on `ExitPlanMode`.
 
 **A hook cannot set the model** — no hook output changes it, a `SessionStart` hook may only be
-*told* which model is running, and there is no `$CLAUDE_MODEL`. So Opus-plans / Sonnet-executes
-rests entirely on two things outside the hooks, and neither belongs in `guard.sh`:
+*told* which model is running, and there is no `$CLAUDE_MODEL`. The `"model": "opusplan"`
+setting `tools/install.ps1` writes into `~/.claude/settings.json` switches Opus → Sonnet
+automatically at the plan-mode boundary, but it is a **CLI/IDE convenience on top of the
+subagent, not the primary mechanism** — it does nothing on three surfaces:
 
-- the `"model": "opusplan"` setting `tools/install.ps1` writes into `~/.claude/settings.json`,
-  which switches Opus → Sonnet automatically at the plan-mode boundary; and
-- this agent's frontmatter, which covers the case `opusplan` misses — a session that never
-  entered plan mode, and so never crossed that boundary.
+- **The Desktop Code tab.** The model dropdown next to the send button is a session-level
+  override that outranks `~/.claude/settings.json`'s `model` field entirely, and `opusplan` is
+  an alias reachable only via `/model`, `--model`, `ANTHROPIC_MODEL`, or a settings file — the
+  dropdown doesn't offer it as a choice.
+- **Cloud sessions.** They run on Anthropic-managed VMs and never receive a device's local
+  `settings.json`, so the setting simply isn't there to read.
+- **Auto and Accept-edits sessions**, on any surface. `opusplan` only switches at the
+  plan-mode boundary; a session that never enters plan mode stays on whatever model it started
+  on, start to finish.
 
-`verify.sh` checks both: the agent still pins Sonnet, and `install.ps1` still writes
-`opusplan`. It also fails if the agent sets `hooks`, `mcpServers` or `permissionMode`, which
-plugin subagents silently ignore — a field that reads as configuration and does nothing is
-worse than no field.
+The subagent is the one thing that reaches all of those, because agent frontmatter is honoured
+wherever the plugin is installed. `verify.sh` checks the agent still pins Sonnet, that
+`install.ps1` still writes `opusplan` (still correct for the surfaces it does cover), and that
+`delegate.sh` is actually wired to `ExitPlanMode` and actually names the executor. It also fails
+if the agent sets `hooks`, `mcpServers` or `permissionMode`, which plugin subagents silently
+ignore — a field that reads as configuration and does nothing is worse than no field.
 
 Every one of those scripts is stateless. Nothing writes to `$TEMP`, and there is no state to
 reap. That is load-bearing, not incidental — see the deliverable note below.

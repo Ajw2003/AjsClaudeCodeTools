@@ -21,6 +21,7 @@ SCOPE="$HERE/scope.sh"
 ARTIFACT="$HERE/artifact.sh"
 RUNNABLE="$HERE/runnable.sh"
 HANDOVER="$HERE/handover.sh"
+DELEGATE="$HERE/delegate.sh"
 ROOT="$HERE/../../../.."
 SH=$(command -v sh)
 
@@ -51,6 +52,7 @@ printf 'Scope:  %s\n' "$SCOPE"
 printf 'Artif:  %s\n' "$ARTIFACT"
 printf 'Runnbl: %s\n' "$RUNNABLE"
 printf 'Handov: %s\n' "$HANDOVER"
+printf 'Delega: %s\n' "$DELEGATE"
 printf '\n'
 printf 'The guard steps feed one shell command each to the guard and check the decision:\n'
 printf '  "ask"  = Claude Code will show you a permission prompt naming the rule.\n'
@@ -359,6 +361,45 @@ if [ -z "$DRIFT" ]; then
 else
   report FAIL 'runnable.sh reminder still matches the rules document'
   printf '          in runnable.sh but missing from house-rules.md%s\n' "$DRIFT"
+fi
+
+# --- the delegate reminder fires after ExitPlanMode -----------------------------------------
+# No payload field needed - the hooks.json matcher already selects ExitPlanMode, so this is
+# tested the same way as scope.sh: just invoke it and check what comes back.
+OUT=$("$SH" "$DELEGATE" 2>/dev/null </dev/null)
+case "$OUT" in
+  *'"hookEventName":"PostToolUse"'*'@house-rules:executor'*)
+    report PASS 'delegate.sh reminds Claude to hand the plan to the executor subagent'
+    printf '          names @house-rules:executor and carries the right hookEventName\n' ;;
+  *)
+    report FAIL 'delegate.sh reminds Claude to hand the plan to the executor subagent'
+    printf '          got: %s\n' "$OUT" ;;
+esac
+
+# --- delegate.sh is wired to ExitPlanMode, not just present in scripts/ ----------------------
+HOOKS_JSON="$HERE/../hooks/hooks.json"
+if grep -A6 '"matcher": *"ExitPlanMode"' "$HOOKS_JSON" 2>/dev/null | grep -q 'delegate\.sh'; then
+  report PASS 'delegate.sh is registered on PostToolUse with matcher ExitPlanMode'
+  printf '          hooks.json wires ExitPlanMode to delegate.sh\n'
+else
+  report FAIL 'delegate.sh is registered on PostToolUse with matcher ExitPlanMode'
+  printf '          hooks.json does not wire ExitPlanMode to delegate.sh\n'
+fi
+
+# --- the reminder in delegate.sh has not drifted from the rules document --------------------
+# Same guarantee as the scope.sh and runnable.sh drift checks: hardcoded text is a second copy,
+# so it is pinned to the rules file rather than left to rot.
+RULES_FILE="$HERE/../rules/house-rules.md"
+DRIFT=''
+for PHRASE in '@house-rules:executor' 'plan is settled'; do
+  grep -qi "$PHRASE" "$RULES_FILE" 2>/dev/null || DRIFT="$DRIFT; $PHRASE"
+done
+if [ -z "$DRIFT" ]; then
+  report PASS 'delegate.sh reminder still matches the rules document'
+  printf '          every key phrase in the reminder appears in rules/house-rules.md\n'
+else
+  report FAIL 'delegate.sh reminder still matches the rules document'
+  printf '          in delegate.sh but missing from house-rules.md%s\n' "$DRIFT"
 fi
 
 # --- the command-handover check at Stop ----------------------------------------------------

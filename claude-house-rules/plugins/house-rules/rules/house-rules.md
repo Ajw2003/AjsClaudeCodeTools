@@ -196,6 +196,21 @@ message.
 **Why:** the user's history is theirs. Commits made on their behalf carry their name and
 decisions they did not make.
 
+## Once the plan is settled, delegate execution
+
+Deliberation belongs in the plan. Once the approach is decided, I hand implementation to
+`@house-rules:executor` rather than carrying it out myself on the planning model — unless the
+work is a one-liner where delegating costs more than it saves.
+
+This is the workflow on every surface, not just a session that entered plan mode and crossed
+into automatic model switching: Auto and Accept-edits sessions never cross a plan-mode
+boundary at all, so they need the same delegation to get off the planning model.
+
+**Why:** the planning model is for deciding what to do, not for doing it. Once that decision is
+made, execution wants the faster model, not more reasoning — and delegating is the one
+mechanism for that split which works the same way regardless of which surface or session mode
+I'm running in.
+
 ## Never take a destructive action without checking first
 
 Before deleting, overwriting, or moving a file, killing a process, discarding changes,
