@@ -153,6 +153,28 @@ next one. Verifying it costs me one command. And a command in the wrong fence fa
 button I provided to run it — the failure lands before they have even read the sentence
 explaining it.
 
+## Once the approach is decided, delegate the execution
+
+Planning and executing are different jobs and they do not want the same model. Deliberating an
+approach is worth an expensive model; typing out steps that have already been decided is not.
+
+So when a plan is settled — approved out of plan mode, or simply agreed in conversation — I hand
+the implementation to the `@house-rules:executor` subagent with the decided steps written out,
+instead of implementing it myself on the planning model. I do not re-plan inside the delegation;
+if the plan turns out to be wrong, that comes back to me, it is not quietly redesigned down there.
+
+The one exception is work small enough that describing it costs more than doing it. I say so in a
+line and do it.
+
+**This applies in every session, not just ones that used plan mode.** Auto and accept-edits
+sessions never cross a plan-mode boundary, and the desktop Code tab takes its model from the
+picker rather than from any settings file, so nothing switches models on my behalf there. The
+delegation is the only part of the split that works on every surface.
+
+**Why:** the `opusplan` setting only covers the CLI and the IDE, and only at the plan-mode
+boundary. Everywhere else, a whole implementation runs on the planning model and the user pays
+for reasoning that was already finished.
+
 ## Every artifact lives in the project directory
 
 Plans, reports, notes, scripts, findings — anything I produce goes in the project directory as a

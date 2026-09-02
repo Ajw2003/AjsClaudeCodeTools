@@ -57,7 +57,7 @@ currently installed. There is no build step and no linter — this repo is shell
 
 ## Architecture
 
-### The plugin is six hooks on five events, nothing else
+### The plugin is seven hooks on five events, nothing else
 
 Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](claude-house-rules/plugins/house-rules/hooks/hooks.json),
 implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/scripts/`:
@@ -70,6 +70,7 @@ implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/
 | `PostToolUse` | `artifact.sh` | `Write`/`Edit` calls | Notices a `.md`/`.txt` write outside the project (temp dir, scratchpad, `~/.claude/plans`) and reminds *Claude* — not the user — to copy it into `docs/` before finishing. |
 | `Stop` | `handover.sh` | every turn about to end | Blocks the turn **once** with the command-handover checklist: shell named and correct as the fence label, absolute working directory, exact command, expected output, `UNTESTED:` when it was not run. Stands down on the retry (`stop_hook_active`), on `HOUSE_RULES_HANDOVER=off`, and on any failure — it fails **open**, since a non-zero exit here would stop the turn ending at all. |
 | `PostToolUse` | `runnable.sh` | `Write` calls only | Notices a runnable file (`.sh`, `.ps1`, `.py`, `Dockerfile`, …) created inside the project and reminds *Claude* to run it before finishing. `Write` only, never `Edit`. |
+| `PostToolUse` | `delegate.sh` | `ExitPlanMode` calls | The plan just got approved, so the deliberation is over: reminds *Claude* to hand the implementation to `@house-rules:executor` instead of running it on the planning model. One `printf`, no dependencies, no payload read. |
 
 ### One subagent, for the model split
 
@@ -77,16 +78,30 @@ implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/
 `effort: low`, for running a plan that has already been decided.
 
 **A hook cannot set the model** — no hook output changes it, a `SessionStart` hook may only be
-*told* which model is running, and there is no `$CLAUDE_MODEL`. So Opus-plans / Sonnet-executes
-rests entirely on two things outside the hooks, and neither belongs in `guard.sh`:
+*told* which model is running, and there is no `$CLAUDE_MODEL`. So the split rests on two things
+outside the hooks, and neither belongs in `guard.sh`. **The subagent is the primary one; the
+setting is a CLI convenience on top.** That is the reverse of what this file used to claim, and
+the reversal is the fix for a real bug:
 
-- the `"model": "opusplan"` setting `tools/install.ps1` writes into `~/.claude/settings.json`,
-  which switches Opus → Sonnet automatically at the plan-mode boundary; and
-- this agent's frontmatter, which covers the case `opusplan` misses — a session that never
-  entered plan mode, and so never crossed that boundary.
+- **`agents/executor.md`'s frontmatter works on every surface.** Agent definitions ship with the
+  plugin, so `@house-rules:executor` runs on Sonnet wherever the plugin is installed — terminal,
+  IDE, desktop Code tab, cloud session. It only helps if something asks for the delegation,
+  which is what `delegate.sh` and the delegation rule in `house-rules.md` now do. Before those,
+  the agent existed and was never invoked.
+- **`"model": "opusplan"` in `~/.claude/settings.json` covers the CLI and the IDE only**, and
+  only at the plan-mode boundary. Three separate reasons it does nothing in the desktop app's
+  **Code** tab: the model there comes from the picker next to the send button, which is a
+  session-level selection and outranks the `model` field in any settings file (the desktop docs
+  map both `--model` and `ANTHROPIC_MODEL` to that dropdown); `opusplan` is an alias, not a
+  model, so it is not in the picker at all; and cloud sessions run on managed VMs that never
+  receive a settings file deployed to the device, which is the only place `tools/install.ps1`
+  can write. Auto and accept-edits sessions miss it for a fourth reason that applies even in the
+  CLI — they never enter plan mode, so the one boundary `opusplan` switches at is never crossed.
 
-`verify.sh` checks both: the agent still pins Sonnet, and `install.ps1` still writes
-`opusplan`. It also fails if the agent sets `hooks`, `mcpServers` or `permissionMode`, which
+`verify.sh` checks all of it: the agent still pins Sonnet, `install.ps1` still writes
+`opusplan`, `delegate.sh` is still registered on `ExitPlanMode` and still names the same agent
+the rules name, and the docs still say the setting covers only the CLI and the IDE — asserting
+the setting exists is not asserting the split works, which is exactly how this went unnoticed. It also fails if the agent sets `hooks`, `mcpServers` or `permissionMode`, which
 plugin subagents silently ignore — a field that reads as configuration and does nothing is
 worse than no field.
 

@@ -11,7 +11,14 @@
              it on.
     model    'opusplan' — Opus while planning, automatically switching to Sonnet to execute.
              Hooks cannot set a model at all (a SessionStart hook may be told which model is
-             running; none can change it), so this is the only place it can be set.
+             running; none can change it), so this is the only place a DEFAULT model can be
+             set — but it is read by the CLI and the IDE only. In the desktop app's Code tab
+             the model comes from the picker beside the send button, a session-level selection
+             that outranks the model field in any settings file, and 'opusplan' is an alias
+             rather than a model so it is not in that picker at all. Cloud sessions run on
+             managed VMs that never see a settings file written to this device. On all of
+             those, the Opus/Sonnet split comes from the @house-rules:executor subagent the
+             plugin ships, not from this key.
 
   This script does both halves, so a new device is configured in one command instead of two
   commands plus a hand edit.
@@ -139,5 +146,12 @@ Write-Host ''
 Write-Host 'Fully quit Claude Code and start it again. Hooks, agents, the transcript view and' -ForegroundColor Yellow
 Write-Host 'the model setting are all read at startup, so none takes effect in a running session.' -ForegroundColor Yellow
 Write-Host ''
+if (-not $NoModel) {
+  Write-Host 'Note: model = opusplan applies to the CLI and the IDE extensions. The desktop Code' -ForegroundColor DarkGray
+  Write-Host 'tab takes its model from the picker beside the send button, and cloud sessions never' -ForegroundColor DarkGray
+  Write-Host 'read this file at all. There, the Opus/Sonnet split comes from the plugin delegating' -ForegroundColor DarkGray
+  Write-Host 'execution to @house-rules:executor, which is pinned to Sonnet.' -ForegroundColor DarkGray
+  Write-Host ''
+}
 if ($script:Failures -ne 0) { exit 1 }
 exit 0
