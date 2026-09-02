@@ -5,7 +5,7 @@ device and every project instead of living in a file you have to copy into each 
 
 ## What it actually does
 
-Six hooks on five events, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
+Every hook, defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
 
 | Hook | When | What it does |
 |---|---|---|
@@ -99,10 +99,10 @@ silently — read-only inspection is explicitly fine under the rules.
 
 The other rules — match response depth to the task, the fixed environment, build only what was
 asked, docs-before-research, build for a human working alone, the user's hands are for decisions
-not labour — have no shell signature to match on. They are carried by the SessionStart injection
-and the per-prompt reminder.
+not labour, once the approach is decided, delegate the execution — have no shell signature to
+match on. They are carried by the SessionStart injection and the per-prompt reminder.
 
-Two are exceptions, because a rule carried only by injected text is a rule that gets read and
+Three are exceptions, because a rule carried only by injected text is a rule that gets read and
 then drifted past:
 
 - **"Deliver a whole workflow"** — its runnable-file half has a real check, at `PostToolUse`:
@@ -113,6 +113,9 @@ then drifted past:
   moment the turn would otherwise go out. That is the one command-shaped rule `guard.sh` cannot
   cover, because `guard.sh` only ever sees commands Claude *runs*, never ones it *types into a
   reply*.
+- **"Once the approach is decided, delegate the execution"** — enforced at `PostToolUse` on
+  `ExitPlanMode`: the moment a plan is approved, `delegate.sh` names `@house-rules:executor`
+  before Claude gets a chance to just start implementing on the planning model.
 
 ## The machine profile
 
@@ -182,6 +185,7 @@ observed in a live session, after fully quitting and restarting Claude Code:
 | `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
 | `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
 | `Stop` | Ask any trivial question and let the turn end | The turn is blocked exactly once with the command-handover checklist, then ends normally on the retry. Restart with `HOUSE_RULES_HANDOVER=off` set and it ends with no block. |
+| `PostToolUse` on `ExitPlanMode` | Approve any plan out of plan mode | A delegation nudge naming `@house-rules:executor` comes back **to Claude**; you are not prompted |
 
 ### The guard test needs an uncommitted change — this is the part that catches people
 

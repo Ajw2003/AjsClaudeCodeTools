@@ -57,7 +57,7 @@ currently installed. There is no build step and no linter — this repo is shell
 
 ## Architecture
 
-### The plugin is seven hooks on five events, nothing else
+### The plugin is hooks on five events, nothing else
 
 Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](claude-house-rules/plugins/house-rules/hooks/hooks.json),
 implemented as POSIX `sh` scripts under `claude-house-rules/plugins/house-rules/scripts/`:

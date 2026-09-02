@@ -549,36 +549,41 @@ else
   printf '         %s\n' "$MODELDRIFT"
 fi
 
-# --- the architecture table in CLAUDE.md matches hooks.json --------------------------------
+# --- the architecture tables in CLAUDE.md and the README match hooks.json ------------------
 # This is the check that stops the docs going stale the way they already did once: CLAUDE.md
 # claimed "four hooks, nothing else" while seven scripts ran on five events, and nothing
 # noticed. Both directions fail — a script registered but undocumented, or documented but not
-# registered.
+# registered. A spelled-out hook count (six, seven, ...) is exactly what went stale, so any doc
+# stating one also fails.
 HOOKS_JSON="$HERE/../hooks/hooks.json"
-DOC="$ROOT/CLAUDE.md"
 DOCDRIFT=''
-if [ ! -f "$DOC" ]; then
-  DOCDRIFT='; no CLAUDE.md at the repo root to check'
-else
-  REGISTERED=$(grep -o 'scripts/[a-z0-9-]*\.sh' "$HOOKS_JSON" 2>/dev/null | sed 's|scripts/||' | sort -u)
+REGISTERED=$(grep -o 'scripts/[a-z0-9-]*\.sh' "$HOOKS_JSON" 2>/dev/null | sed 's|scripts/||' | sort -u)
+for DOC in "$ROOT/CLAUDE.md" "$ROOT/claude-house-rules/README.md"; do
+  DOCNAME=$(basename "$DOC")
+  if [ ! -f "$DOC" ]; then
+    DOCDRIFT="$DOCDRIFT; no $DOCNAME to check"
+    continue
+  fi
   # Only the table rows, not the whole file: every script is discussed in the prose further
   # down, so a whole-file grep would pass even with the row deleted. That is not hypothetical
   # — it is exactly how the first version of this check silently proved nothing.
   TABLE=$(grep -E '^\| `(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop)`' "$DOC" 2>/dev/null)
   for SCRIPT in $REGISTERED; do
-    printf '%s' "$TABLE" | grep -q "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT is a registered hook but has no row in the CLAUDE.md table"
+    printf '%s' "$TABLE" | grep -q "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT is a registered hook but has no row in the $DOCNAME table"
   done
-  for SCRIPT in $(ls "$HERE"/*.sh | sed 's|.*/||' | grep -v '^verify\.sh$'); do
-    printf '%s' "$REGISTERED" | grep -qx "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT exists but hooks.json does not register it"
-  done
-  grep -q 'four hooks, nothing else' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; CLAUDE.md still says four hooks"
-  grep -qE '[0-9]+-check|all [0-9]+ checks' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; CLAUDE.md hardcodes a check count, which drifts"
-fi
+  grep -q 'four hooks, nothing else' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; $DOCNAME still says four hooks"
+  grep -qE '[0-9]+-check|all [0-9]+ checks' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; $DOCNAME hardcodes a check count, which drifts"
+  grep -qiE '(four|five|six|seven|eight|nine) hooks' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; $DOCNAME spells out a hook count, which drifts"
+done
+# The "exists but hooks.json does not register it" direction is repo-wide, not per-doc.
+for SCRIPT in $(ls "$HERE"/*.sh | sed 's|.*/||' | grep -v '^verify\.sh$'); do
+  printf '%s' "$REGISTERED" | grep -qx "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT exists but hooks.json does not register it"
+done
 if [ -z "$DOCDRIFT" ]; then
-  report PASS 'the CLAUDE.md architecture table matches hooks.json'
+  report PASS 'the architecture tables match hooks.json'
   printf '          every registered hook is documented and every script is registered\n'
 else
-  report FAIL 'the CLAUDE.md architecture table matches hooks.json'
+  report FAIL 'the architecture tables match hooks.json'
   printf '         %s\n' "$DOCDRIFT"
 fi
 
