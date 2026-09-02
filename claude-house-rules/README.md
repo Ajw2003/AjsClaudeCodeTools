@@ -5,7 +5,7 @@ device and every project instead of living in a file you have to copy into each 
 
 ## What it actually does
 
-Seven hooks on five events, all defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
+Every hook, defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
 
 | Hook | When | What it does |
 |---|---|---|
@@ -15,7 +15,7 @@ Seven hooks on five events, all defined in [plugins/house-rules/hooks/hooks.json
 | `Stop` | every turn, just before it ends | [handover.sh](plugins/house-rules/scripts/handover.sh) blocks the turn **once** and hands Claude the command-handover checklist: shell named (and correct as the fence label), absolute working directory, exact command, what you will see, `UNTESTED:` if it was not actually run. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
 | `PostToolUse` on `Write` / `Edit` | after a file is written | [artifact.sh](plugins/house-rules/scripts/artifact.sh) notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
 | `PostToolUse` on `Write` | after a file is created | [runnable.sh](plugins/house-rules/scripts/runnable.sh) notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) created inside the project and tells Claude to run them before finishing — the teeth behind "deliver a whole workflow, not a starting point." `Write` only, never `Edit`. **You are never prompted;** the nudge goes to Claude. |
-| `PostToolUse` on `ExitPlanMode` | after a plan is exited | [delegate.sh](plugins/house-rules/scripts/delegate.sh) tells Claude the plan is settled and implementation should go to `@house-rules:executor`, on Sonnet, instead of continuing on the planning model. No payload field needed, so — like `scope.sh` — it is one hardcoded `printf` with zero dependencies. **You are never prompted;** the nudge goes to Claude. |
+| `PostToolUse` on `ExitPlanMode` | the moment a plan is approved | [delegate.sh](plugins/house-rules/scripts/delegate.sh) tells Claude the deliberation is over and the implementation should go to `@house-rules:executor`, which is pinned to Sonnet. This is the model split on surfaces where the `opusplan` setting below does not reach. **You are never prompted;** the nudge goes to Claude. |
 
 ### And one subagent — the mechanism the model split actually runs on
 
@@ -23,19 +23,23 @@ Seven hooks on five events, all defined in [plugins/house-rules/hooks/hooks.json
 pinned to `model: sonnet` at `effort: low`. It runs a plan that has already been decided,
 without re-deliberating the design. `delegate.sh` (above) is what asks for that delegation.
 
-This subagent is the **primary** mechanism for Opus-plans/Sonnet-executes, not a fallback for
-one edge case. The `opusplan` setting documented below only switches models at the **plan-mode
-boundary**, in a session that reads a device's local `settings.json` — which leaves out three
-surfaces entirely:
+**This, not the `opusplan` setting below, is what makes "Opus plans, Sonnet executes" actually
+happen.** Agent frontmatter ships with the plugin, so it works on every surface. The setting
+covers the CLI and the IDE only, and only at the plan-mode boundary:
 
-- **The Desktop Code tab.** Its model dropdown is a session-level override that outranks the
-  settings file, and `opusplan` isn't one of the choices in it.
-- **Cloud sessions**, which never receive a device's local `settings.json` at all.
-- **Auto and Accept-edits sessions**, on any surface, because they never enter plan mode and so
-  never cross the boundary the setting switches on.
+- In the desktop app's **Code** tab the model comes from the picker next to the send button.
+  That is a session-level selection, and it outranks the `model` field in any settings file —
+  the desktop docs map both `--model` and `ANTHROPIC_MODEL` to that dropdown. `opusplan` is an
+  alias rather than a model, so it is not offered there either.
+- Cloud sessions (Code tab or web) run on Anthropic-managed VMs, which never receive a settings
+  file deployed to your device — and your device is the only place `install.ps1` can write.
+- Auto and accept-edits sessions never enter plan mode, so the one boundary `opusplan` switches
+  at is never crossed. That one applies in the CLI too.
 
-Delegating to the subagent gets the same split on all three, because agent frontmatter is
-honoured wherever the plugin is installed — unlike a setting in a file some sessions never read.
+The subagent was in this repo before any of that was understood, and nothing ever invoked it.
+`delegate.sh` and the delegation rule in `house-rules.md` are what ask for it now. If you would
+rather force the split by hand in a Code-tab session, pick Sonnet in the dropdown once the plan
+is approved — but you should not have to, and that is the point.
 
 The guard **never blocks a matched command outright**. Every match becomes an "ask", because
 the rules are "do not do X without asking" — not "X is forbidden". Nothing else here can block
@@ -95,10 +99,10 @@ silently — read-only inspection is explicitly fine under the rules.
 
 The other rules — match response depth to the task, the fixed environment, build only what was
 asked, docs-before-research, build for a human working alone, the user's hands are for decisions
-not labour — have no shell signature to match on. They are carried by the SessionStart injection
-and the per-prompt reminder.
+not labour, once the approach is decided, delegate the execution — have no shell signature to
+match on. They are carried by the SessionStart injection and the per-prompt reminder.
 
-Two are exceptions, because a rule carried only by injected text is a rule that gets read and
+Three are exceptions, because a rule carried only by injected text is a rule that gets read and
 then drifted past:
 
 - **"Deliver a whole workflow"** — its runnable-file half has a real check, at `PostToolUse`:
@@ -109,6 +113,9 @@ then drifted past:
   moment the turn would otherwise go out. That is the one command-shaped rule `guard.sh` cannot
   cover, because `guard.sh` only ever sees commands Claude *runs*, never ones it *types into a
   reply*.
+- **"Once the approach is decided, delegate the execution"** — enforced at `PostToolUse` on
+  `ExitPlanMode`: the moment a plan is approved, `delegate.sh` names `@house-rules:executor`
+  before Claude gets a chance to just start implementing on the planning model.
 
 ## The machine profile
 
@@ -178,6 +185,7 @@ observed in a live session, after fully quitting and restarting Claude Code:
 | `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
 | `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
 | `Stop` | Ask any trivial question and let the turn end | The turn is blocked exactly once with the command-handover checklist, then ends normally on the retry. Restart with `HOUSE_RULES_HANDOVER=off` set and it ends with no block. |
+| `PostToolUse` on `ExitPlanMode` | Approve any plan out of plan mode | A delegation nudge naming `@house-rules:executor` comes back **to Claude**; you are not prompted |
 
 ### The guard test needs an uncommitted change — this is the part that catches people
 
@@ -234,23 +242,16 @@ So `tools/install.ps1` writes them, preserving every other key in the file:
 | Key | Value | Why |
 |---|---|---|
 | `verbose` | `true` | Default to the verbose transcript view — full tool calls and outputs, not the collapsed summary. Matches the rule that nothing is hidden and nothing goes to a log only an agent reads. |
-| `model` | `opusplan` | Opus while planning, switching automatically to Sonnet to execute — for CLI and IDE sessions that cross the plan-mode boundary and read this device's `settings.json`. |
+| `model` | `opusplan` | Opus while planning, switching automatically to Sonnet to execute. Deliberation belongs in the plan; once the approach is decided, execution wants the faster model, not more reasoning. **Read by the CLI and the IDE only** — see [And one subagent](#and-one-subagent) for why it does nothing in the desktop Code tab or a cloud session, and what covers those instead. |
 
 Run it with `-NoVerbose` to leave the transcript view alone, or `-NoModel` to leave the model
 alone on a device you deliberately run on something else.
 
-**This setting does not reach the Desktop Code tab or cloud sessions.** The Code tab's model
-dropdown outranks `settings.json` and doesn't offer `opusplan` as a choice; cloud sessions run
-on Anthropic-managed VMs that never see a device's local settings file at all. On those
-surfaces — and in Auto/Accept-edits sessions on any surface, which never cross the plan-mode
-boundary either — the split comes from `delegate.sh` asking Claude to hand execution to
-`@house-rules:executor` instead. Pick Sonnet from the dropdown yourself in the Code tab if you
-want it as the default there too; the delegation still applies to whatever runs after planning.
-
-**A hook cannot set the model.** No hook output sets a model — a `SessionStart` hook may be
-*told* which model is running, and there is no `$CLAUDE_MODEL` — so `opusplan` is a setting,
-and the surfaces it misses are covered by agent frontmatter plus `delegate.sh`, never by script
-logic. Do not try to add it to `guard.sh`.
+**A hook cannot do this.** No hook output sets a model — a `SessionStart` hook may be *told*
+which model is running, and there is no `$CLAUDE_MODEL` — so the split is agent frontmatter plus
+a setting, never script logic. Do not try to add it to `guard.sh`. What a hook *can* do is ask
+for the delegation, which is all `delegate.sh` does: it emits text, and the model change comes
+from the agent it names.
 
 The marketplace manifest lives at the **repo root** (`.claude-plugin/marketplace.json`), which
 is where `marketplace add` looks — keep it there. Its plugin entries use paths relative to the
@@ -285,6 +286,9 @@ there.
   "model": "opusplan"
 }
 ```
+
+`model` here is subject to the same limits as above: the CLI and IDE read it, the desktop Code
+tab and cloud sessions do not.
 
 `verbose` and `model` are not part of the plugin install — they are the two settings
 `install.ps1` also writes, included here so a shipped settings file configures the machine

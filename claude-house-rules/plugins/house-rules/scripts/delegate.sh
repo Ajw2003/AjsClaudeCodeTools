@@ -1,31 +1,39 @@
 #!/bin/sh
-# delegate.sh — PostToolUse hook, matcher "ExitPlanMode".
+# delegate.sh — PostToolUse hook for ExitPlanMode.
 #
-# Rule: once the approach is decided, delegate the implementation to @house-rules:executor
-# rather than executing on the planning model. The `opusplan` setting (tools/install.ps1)
-# covers this for CLI/IDE sessions that cross the plan-mode boundary, but three things defeat
-# it: the Desktop Code tab's model dropdown outranks the settings file and does not even offer
-# opusplan as a choice, cloud sessions never read a device's local settings.json at all, and
-# Auto/Accept-edits sessions never enter plan mode in the first place so the boundary the
-# setting switches on never occurs. Agent frontmatter is honoured wherever the plugin is
-# installed, so routing through the subagent is the one mechanism that actually reaches all of
-# those surfaces.
+# Rule: once the approach is decided, the implementation is delegated to @house-rules:executor
+# rather than run on the planning model. This fires at the moment that becomes true — the plan
+# has just been approved — and says so in context.
 #
-# NEEDS NO FIELD FROM THE PAYLOAD. The hooks.json matcher already selects ExitPlanMode, so
-# there is nothing to extract here and therefore nothing to fall back on if extraction fails.
-# That means no grep dependency and so no offline path — this is a single printf of a
-# hardcoded string, exactly like scope.sh, for exactly the same reason: a second copy of the
-# wording is worth it in exchange for zero dependencies. verify.sh pins these phrases against
-# rules/house-rules.md so the copies cannot drift apart unnoticed.
+# WHY THIS EXISTS AT ALL. The Opus-plans/Sonnet-executes split used to rest entirely on the
+# `"model": "opusplan"` setting install.ps1 writes into ~/.claude/settings.json. That setting is
+# read by the CLI and the IDE extensions. It is NOT what decides the model in the desktop app's
+# Code tab: there the model comes from the picker next to the send button, which is a
+# session-level selection and outranks the `model` field in any settings file — the desktop docs
+# map both `--model` and ANTHROPIC_MODEL to that dropdown. `opusplan` is not even offered in it,
+# being an alias rather than a model. Cloud sessions are worse still: they run on managed VMs
+# that never receive a settings file deployed to the device, so install.ps1 writes to a path
+# that does not exist there. On all three surfaces the split silently did not happen.
 #
-# IT NEVER PROMPTS THE USER. PostToolUse cannot block anyway (the plan was already exited by
-# the time this fires). The nudge goes to Claude; the user sees nothing. Always exits 0.
+# What DOES work everywhere is the subagent: agent frontmatter travels with the plugin, so
+# @house-rules:executor runs on Sonnet wherever the plugin is installed. The subagent was always
+# in the repo; nothing ever asked for it. This hook is the ask.
 #
-# STATELESS. Nothing under $TEMP, nothing carried between invocations.
+# DEPENDENCIES: NONE. Not even grep. The matcher in hooks.json already selects the event, so
+# there is no field to extract and no payload to read — one printf of a fixed string, the same
+# construction as scope.sh. A hook with no dependencies has no offline path to report.
+#
+# IT NEVER PROMPTS THE USER. PostToolUse cannot block, and this is a note to Claude about how
+# to run the work, not a decision for the user. Always exits 0.
+#
+# STATELESS. Nothing under $TEMP. It fires once per plan approval because that is how often the
+# event fires, not because anything is remembered.
+#
+# The text is hardcoded rather than read from rules/house-rules.md, for the reason scope.sh's is:
+# a file read is a failure path. verify.sh pins the phrases against the rules file instead, so
+# drift fails a test rather than going unnoticed.
 
-set -u
-
-NOTE='House rules, model split: the plan is settled. Delegate the implementation to @house-rules:executor so it runs on Sonnet instead of re-deliberating here on the planning model - unless this is a one-liner where delegating costs more than it saves. Its agent description is marked for proactive use, which is the harness'\''s own documented basis for invoking a subagent without a fresh per-turn ask from the user - so this delegation is authorized, not merely suggested, even when the next instruction is as generic as "implement the plan". This is the mechanism on every surface, including the Desktop Code tab and Auto/Accept-edits sessions, none of which get the opusplan switch. This is a reminder to you; the user was not prompted and does not need to do anything.'
+NOTE='House rules, execution model: the plan is settled, so the implementation is delegated work now. Hand it to the @house-rules:executor subagent (Task tool, subagent_type house-rules:executor) with the plan steps written out, rather than implementing it here. That agent is pinned to Sonnet at low effort, which is the whole point: deliberation is done, and re-deliberating it on the planning model costs the user for nothing. Do not re-plan inside the delegation - give it the decided steps. The exception is genuinely trivial work, where handing over the context costs more than doing it; say so in one line and just do it. This is a reminder to you; the user was not prompted and does not need to do anything.'
 
 printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}' "$NOTE"
 

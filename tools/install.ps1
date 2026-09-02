@@ -9,14 +9,16 @@
 
     verbose  the verbose transcript view, rendered by the harness, so no rule text can turn
              it on.
-    model    'opusplan' — Opus while planning, automatically switching to Sonnet to execute, in
-             CLI and IDE sessions that read this device's settings.json. Hooks cannot set a
-             model at all (a SessionStart hook may be told which model is running; none can
-             change it), so this is the place to set it for the surfaces it reaches. It does
-             NOT reach the Desktop Code tab (its model dropdown outranks this file and doesn't
-             offer opusplan) or cloud sessions (they never read a device's local settings.json).
-             Those surfaces, and Auto/Accept-edits sessions on any surface, get the same split
-             from the plugin's executor subagent instead — see the README.
+    model    'opusplan' — Opus while planning, automatically switching to Sonnet to execute.
+             Hooks cannot set a model at all (a SessionStart hook may be told which model is
+             running; none can change it), so this is the only place a DEFAULT model can be
+             set — but it is read by the CLI and the IDE only. In the desktop app's Code tab
+             the model comes from the picker beside the send button, a session-level selection
+             that outranks the model field in any settings file, and 'opusplan' is an alias
+             rather than a model so it is not in that picker at all. Cloud sessions run on
+             managed VMs that never see a settings file written to this device. On all of
+             those, the Opus/Sonnet split comes from the @house-rules:executor subagent the
+             plugin ships, not from this key.
 
   This script does both halves, so a new device is configured in one command instead of two
   commands plus a hand edit.
@@ -144,10 +146,12 @@ Write-Host ''
 Write-Host 'Fully quit Claude Code and start it again. Hooks, agents, the transcript view and' -ForegroundColor Yellow
 Write-Host 'the model setting are all read at startup, so none takes effect in a running session.' -ForegroundColor Yellow
 Write-Host ''
-Write-Host 'Note: the model setting above does not apply to the Desktop Code tab or cloud' -ForegroundColor Yellow
-Write-Host 'sessions - pick Sonnet from the Code tab dropdown yourself if you want it there too.' -ForegroundColor Yellow
-Write-Host 'On those surfaces, and in Auto/Accept-edits sessions anywhere, the Opus-plans /' -ForegroundColor Yellow
-Write-Host 'Sonnet-executes split comes from the plugin delegating to @house-rules:executor.' -ForegroundColor Yellow
-Write-Host ''
+if (-not $NoModel) {
+  Write-Host 'Note: model = opusplan applies to the CLI and the IDE extensions. The desktop Code' -ForegroundColor DarkGray
+  Write-Host 'tab takes its model from the picker beside the send button, and cloud sessions never' -ForegroundColor DarkGray
+  Write-Host 'read this file at all. There, the Opus/Sonnet split comes from the plugin delegating' -ForegroundColor DarkGray
+  Write-Host 'execution to @house-rules:executor, which is pinned to Sonnet.' -ForegroundColor DarkGray
+  Write-Host ''
+}
 if ($script:Failures -ne 0) { exit 1 }
 exit 0

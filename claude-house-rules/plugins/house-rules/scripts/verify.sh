@@ -481,6 +481,57 @@ else
   printf '         %s\n' "$GONE"
 fi
 
+# --- the delegation nudge fires when a plan is approved ------------------------------------
+# This is the half of the Opus-plans/Sonnet-executes split that works on every surface. The
+# other half, the opusplan setting, does not: the desktop Code tab takes its model from the
+# picker beside the send button, which outranks the model field in any settings file, and
+# cloud sessions never receive a settings file deployed to the device at all. So the nudge is
+# not a nicety on top of the setting - on those surfaces it is the only thing there is.
+#
+# delegate.sh has NO dependencies, like scope.sh: the matcher in hooks.json selects the event,
+# so there is nothing to read. The empty-PATH case proves it.
+check_delegate() { # $1=title  $2=nonempty to run with PATH emptied
+  if [ -n "$2" ]; then
+    OUT=$(PATH="" "$SH" "$DELEGATE" 2>/dev/null </dev/null)
+  else
+    OUT=$("$SH" "$DELEGATE" 2>/dev/null </dev/null)
+  fi
+  BAD=''
+  case "$OUT" in *'"hookEventName":"PostToolUse"'*) ;; *) BAD='wrong or missing hookEventName' ;; esac
+  case "$OUT" in *'@house-rules:executor'*) ;; *) BAD="$BAD; it does not name the executor subagent" ;; esac
+  case "$OUT" in *'trivial'*) ;; *) BAD="$BAD; the trivial-work exception is missing" ;; esac
+  if [ -z "$BAD" ]; then
+    report PASS "$1"
+    printf '          %s characters of delegation nudge injected\n' "$(printf '%s' "$OUT" | wc -c | tr -d ' ')"
+  else
+    report FAIL "$1"
+    printf '          %s\n' "$BAD"
+  fi
+}
+check_delegate 'the delegation nudge is emitted when plan mode is exited' ''
+check_delegate 'the delegation nudge still works with PATH empty (it depends on nothing)' broken-path
+
+# --- delegate.sh is registered on ExitPlanMode, and nowhere else ----------------------------
+# A hook that fires on every Write would nag through the whole session; the point is the one
+# moment the plan becomes settled. The matcher is the entire selection logic, so it is what
+# has to be checked.
+DELDRIFT=''
+grep -q '"matcher": "ExitPlanMode"' "$HERE/../hooks/hooks.json" 2>/dev/null ||
+  DELDRIFT="$DELDRIFT; hooks.json has no ExitPlanMode matcher"
+awk '/"matcher": "ExitPlanMode"/{f=1} f&&/scripts\//{print; exit}' "$HERE/../hooks/hooks.json" 2>/dev/null |
+  grep -q 'delegate\.sh' || DELDRIFT="$DELDRIFT; the ExitPlanMode matcher does not run delegate.sh"
+# Drift, the same guarantee scope.sh and runnable.sh get: the hardcoded nudge and the rules
+# document have to name the same agent.
+grep -q '@house-rules:executor' "$HERE/../rules/house-rules.md" 2>/dev/null ||
+  DELDRIFT="$DELDRIFT; house-rules.md no longer states the delegation rule"
+if [ -z "$DELDRIFT" ]; then
+  report PASS 'delegate.sh runs on ExitPlanMode and matches the rules document'
+  printf '          the nudge fires at the plan boundary and names the agent the rules name\n'
+else
+  report FAIL 'delegate.sh runs on ExitPlanMode and matches the rules document'
+  printf '         %s\n' "$DELDRIFT"
+fi
+
 # --- the executor subagent is pinned to Sonnet ---------------------------------------------
 # Hooks cannot set a model, so the Opus-plans/Sonnet-executes split is not enforceable from a
 # script at all. It rests on two things outside the hooks: the model setting install.ps1
@@ -524,6 +575,11 @@ fi
 # --- install.ps1 still writes the model setting the README claims --------------------------
 # Same guarantee as the scope.sh and runnable.sh drift checks, one layer out: the README says
 # a fresh device ends up on opusplan, and this is the file that has to make that true.
+#
+# The second half is the bug this check missed the first time. The setting was there, the check
+# passed, and the split still did not happen in the desktop Code tab - because a settings file
+# is not what picks the model there. Asserting the setting exists is not asserting the split
+# works, so the docs are now required to say which surfaces it covers.
 INSTALL="$ROOT/tools/install.ps1"
 MODELDRIFT=''
 if [ ! -f "$INSTALL" ]; then
@@ -533,44 +589,54 @@ else
   grep -q "opusplan" "$INSTALL" || MODELDRIFT="$MODELDRIFT; install.ps1 no longer sets opusplan"
 fi
 grep -q 'opusplan' "$ROOT/claude-house-rules/README.md" 2>/dev/null || MODELDRIFT="$MODELDRIFT; the README does not document opusplan"
+for DOCFILE in "$ROOT/claude-house-rules/README.md" "$ROOT/CLAUDE.md"; do
+  [ -f "$DOCFILE" ] || continue
+  grep -qi 'CLI and the IDE' "$DOCFILE" 2>/dev/null ||
+    MODELDRIFT="$MODELDRIFT; $(basename "$DOCFILE") does not say opusplan covers only the CLI and the IDE"
+done
 if [ -z "$MODELDRIFT" ]; then
-  report PASS 'install.ps1 sets model = opusplan and the README says so'
-  printf '          plan mode runs on opus, execution switches to sonnet, on every new device\n'
+  report PASS 'install.ps1 sets model = opusplan and the docs scope it correctly'
+  printf '          opusplan on the CLI and IDE; every other surface via @house-rules:executor\n'
 else
-  report FAIL 'install.ps1 sets model = opusplan and the README says so'
+  report FAIL 'install.ps1 sets model = opusplan and the docs scope it correctly'
   printf '         %s\n' "$MODELDRIFT"
 fi
 
-# --- the architecture table in CLAUDE.md matches hooks.json --------------------------------
+# --- the architecture tables in CLAUDE.md and the README match hooks.json ------------------
 # This is the check that stops the docs going stale the way they already did once: CLAUDE.md
 # claimed "four hooks, nothing else" while seven scripts ran on five events, and nothing
 # noticed. Both directions fail — a script registered but undocumented, or documented but not
-# registered.
+# registered. A spelled-out hook count (six, seven, ...) is exactly what went stale, so any doc
+# stating one also fails.
 HOOKS_JSON="$HERE/../hooks/hooks.json"
-DOC="$ROOT/CLAUDE.md"
 DOCDRIFT=''
-if [ ! -f "$DOC" ]; then
-  DOCDRIFT='; no CLAUDE.md at the repo root to check'
-else
-  REGISTERED=$(grep -o 'scripts/[a-z0-9-]*\.sh' "$HOOKS_JSON" 2>/dev/null | sed 's|scripts/||' | sort -u)
+REGISTERED=$(grep -o 'scripts/[a-z0-9-]*\.sh' "$HOOKS_JSON" 2>/dev/null | sed 's|scripts/||' | sort -u)
+for DOC in "$ROOT/CLAUDE.md" "$ROOT/claude-house-rules/README.md"; do
+  DOCNAME=$(basename "$DOC")
+  if [ ! -f "$DOC" ]; then
+    DOCDRIFT="$DOCDRIFT; no $DOCNAME to check"
+    continue
+  fi
   # Only the table rows, not the whole file: every script is discussed in the prose further
   # down, so a whole-file grep would pass even with the row deleted. That is not hypothetical
   # — it is exactly how the first version of this check silently proved nothing.
   TABLE=$(grep -E '^\| `(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop)`' "$DOC" 2>/dev/null)
   for SCRIPT in $REGISTERED; do
-    printf '%s' "$TABLE" | grep -q "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT is a registered hook but has no row in the CLAUDE.md table"
+    printf '%s' "$TABLE" | grep -q "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT is a registered hook but has no row in the $DOCNAME table"
   done
-  for SCRIPT in $(ls "$HERE"/*.sh | sed 's|.*/||' | grep -v '^verify\.sh$'); do
-    printf '%s' "$REGISTERED" | grep -qx "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT exists but hooks.json does not register it"
-  done
-  grep -q 'four hooks, nothing else' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; CLAUDE.md still says four hooks"
-  grep -qE '[0-9]+-check|all [0-9]+ checks' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; CLAUDE.md hardcodes a check count, which drifts"
-fi
+  grep -q 'four hooks, nothing else' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; $DOCNAME still says four hooks"
+  grep -qE '[0-9]+-check|all [0-9]+ checks' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; $DOCNAME hardcodes a check count, which drifts"
+  grep -qiE '(four|five|six|seven|eight|nine) hooks' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; $DOCNAME spells out a hook count, which drifts"
+done
+# The "exists but hooks.json does not register it" direction is repo-wide, not per-doc.
+for SCRIPT in $(ls "$HERE"/*.sh | sed 's|.*/||' | grep -v '^verify\.sh$'); do
+  printf '%s' "$REGISTERED" | grep -qx "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT exists but hooks.json does not register it"
+done
 if [ -z "$DOCDRIFT" ]; then
-  report PASS 'the CLAUDE.md architecture table matches hooks.json'
+  report PASS 'the architecture tables match hooks.json'
   printf '          every registered hook is documented and every script is registered\n'
 else
-  report FAIL 'the CLAUDE.md architecture table matches hooks.json'
+  report FAIL 'the architecture tables match hooks.json'
   printf '         %s\n' "$DOCDRIFT"
 fi
 
