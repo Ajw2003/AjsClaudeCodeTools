@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/inject.sh\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" inject",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" scope",
             "timeout": 10
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.sh\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" guard",
             "timeout": 10,
             "statusMessage": "Checking house rules..."
           }
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/handover.sh\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" handover",
             "timeout": 10
           }
         ]
@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/artifact.sh\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" artifact",
             "timeout": 10
           }
         ]
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/runnable.sh\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" runnable",
             "timeout": 10
           }
         ]
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/delegate.sh\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" delegate",
             "timeout": 10
           }
         ]
