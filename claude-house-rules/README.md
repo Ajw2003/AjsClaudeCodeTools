@@ -322,10 +322,16 @@ being right when the manifest moved to the root.)
 
 ## On Windows
 
-Hooks run through Git Bash when Git is installed, which is where `sh` for `run.sh` comes from.
-On a Windows machine with no Git Bash at all, Claude Code falls back to PowerShell and the `sh`
-invocation fails — visibly, as a hook error on every command, not silently. Install Git for
-Windows and it works.
+Every hook command is `sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" <event>` — `sh` still, even
+after the Python port. "Environment-agnostic" means every OS **given a POSIX shell**, not every
+OS unconditionally: `run.sh` is what resolves a working Python interpreter for `hook.py`, and
+`hooks.json` has to reach `run.sh` itself first, through `sh`.
+
+On Windows that `sh` comes from Git Bash. On a Windows machine with no Git Bash at all, Claude
+Code falls back to PowerShell and the `sh` invocation fails outright — visibly, as a hook error
+on every command, not silently. That has not changed and is not fixed by this port: it is the
+same risk the plugin has always carried on Windows, stated plainly rather than glossed over.
+Install Git for Windows and it works, on every OS including this one.
 
 ## Editing the rules
 
@@ -343,6 +349,7 @@ shell signature, add a check next to it and a case in `verify.py`.
 
 ## Known limitation
 
-Matching is textual and runs against the whole hook payload, so a command that merely mentions
-a tripwire word — `echo "git commit"` — prompts too. An extra keypress is cheaper than a missed
-commit.
+Matching is textual and runs against the extracted `command` field (or the whole payload, on
+the fallback tier when no `command` field is found — see "What trips the guard" above), so a
+command that merely mentions a tripwire word — `echo "git commit"` — prompts too. An extra
+keypress is cheaper than a missed commit.
