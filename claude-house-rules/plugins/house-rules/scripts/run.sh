@@ -21,10 +21,12 @@
 # DEPENDENCIES: /bin/sh only. This file must never itself need the thing it is looking for.
 #
 # FALLBACK WHEN NOTHING PROBES. What happens depends on which hook is calling, because the
-# three hook events have different failure contracts:
-#   - guard (PreToolUse)   -> fails CLOSED: 3 lines on stderr, exit 2. Blocks the command.
-#   - inject (SessionStart)-> fails LOUD, not closed: a systemMessage JSON on stdout, exit 0.
-#   - everything else      -> nothing on stdout, exit 0. PostToolUse/Stop/UserPromptSubmit
+# hook events have different failure contracts:
+#   - guard (PreToolUse)      -> fails CLOSED: 3 lines on stderr, exit 2. Blocks the command.
+#   - inject (SessionStart)   -> fails LOUD, not closed: a systemMessage JSON on stdout, exit 0.
+#   - standards (SessionStart)-> fails LOUD, not closed, same as inject: a systemMessage JSON
+#                              on stdout, exit 0. Never blocks - there is nothing to block.
+#   - everything else         -> nothing on stdout, exit 0. PostToolUse/Stop/UserPromptSubmit
 #                              hooks either cannot block (PostToolUse) or must never block
 #                              (UserPromptSubmit erases the prompt on non-zero exit; Stop
 #                              wedges the session on non-zero exit).
@@ -79,6 +81,10 @@ if [ -z "$PY" ]; then
       ;;
     inject)
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The rules were NOT loaded into this session. Run /house-rules:doctor."}'
+      exit 0
+      ;;
+    standards)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. No coding standards were loaded into this session. Run /house-rules:doctor."}'
       exit 0
       ;;
     *)
