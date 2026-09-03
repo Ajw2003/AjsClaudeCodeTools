@@ -68,6 +68,7 @@ every handler lives in that one file.
 | Hook event | `run.sh` arg | Fires on | Effect |
 |---|---|---|---|
 | `SessionStart` | `inject` | every session | Prints `rules/house-rules.md` **and** the machine profile into context as `additionalContext`. This *is* the CLAUDE.md replacement. |
+| `SessionStart` | `standards` | every session | Second entry on the same event, so a detection failure here can never take down the rules injection above. Selects and prints the coding standards docs from `rules/standards/` that apply to the repo it's sitting in — always `coding-philosophy.md`, plus `csharp-unity-standards.md` and/or `web-js-ts-node-standards.md` when their markers are detected across the repo root and one level of subdirectories, or an explicit `.claude/standards` override. |
 | `UserPromptSubmit` | `scope` | every prompt | Restates a short reminder so the rules stay live 200 messages into a long session, after the SessionStart copy has faded from attention. |
 | `PreToolUse` | `guard` | `Bash`/`PowerShell` calls | Extracts the `command` field and textually matches it against rule patterns (hidden/background work, git history/index/remote writes, destructive deletes and discards). A match returns `permissionDecision: "ask"` — it never blocks outright, only prompts. |
 | `PostToolUse` | `artifact` | `Write`/`Edit` calls | Notices a `.md`/`.txt` write outside the project (temp dir, scratchpad, `~/.claude/plans`) and reminds *Claude* — not the user — to copy it into `docs/` before finishing. |
@@ -199,6 +200,17 @@ the `sh`/`bash`-not-on-PATH trap discovered on this machine, is preserved at
   themselves, artifacts never live only in a chat transcript or a temp directory.
 - **`tools/`** holds device-setup and release-verification scripts, not plugin code — nothing here
   ships to an installed copy of the plugin.
+- **`claude-house-rules/plugins/house-rules/rules/standards/`** holds the vendored per-ecosystem
+  coding standards docs (`coding-philosophy.md`, `csharp-unity-standards.md`,
+  `web-js-ts-node-standards.md`), **committed** — unlike `rules/environment.md`, these must ship
+  with the plugin and arrive on a fresh clone. They are vendored copies, not a git submodule:
+  `claude plugin install` does not recurse submodules, so the directory would be empty on every
+  fresh machine and in every cloud session. `Ajw2003/Coding-Standards` stays the place the
+  documents are authored; `tools/sync_standards.py` pulls it and copies the changes in, so the
+  vendored copies are provably current rather than hopefully current. A repo names its own set
+  in **`.claude/standards`** (one document stem per line) when the `standards` hook's detection
+  gets it wrong or a project's needs differ from what got detected — that file, not the vendored
+  docs, is the thing worth gitignoring per-project if it's local-only.
 
 ### Editing the rules
 
