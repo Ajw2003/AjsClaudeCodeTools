@@ -30,10 +30,12 @@ RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
 AGENT = os.path.join(HERE, "..", "agents", "executor.md")
 
+# Absolute, so the PATH-emptied cases below still find the shell they are testing run.sh with —
+# with a bare "sh" those cases fail to launch at all instead of exercising the fallback.
 SH = (
     r"C:\Program Files\Git\bin\sh.exe"
     if os.path.exists(r"C:\Program Files\Git\bin\sh.exe")
-    else "sh"
+    else (shutil.which("sh") or "sh")
 )
 
 STEP = 0
@@ -532,7 +534,15 @@ hand_case("silent", "an empty payload is nothing to check, not a failed check", 
 
 # --- the checklist in hook.py's handover handler has not drifted from the rules document ----
 drift = []
-for phrase in ["fence label", "working directory", "UNTESTED", "Run button", "hand over a command"]:
+for phrase in [
+    "fence label",
+    "working directory",
+    "UNTESTED",
+    "Run button",
+    "hand over a command",
+    "open a terminal or PowerShell there",
+    "One numbered step per action",
+]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:

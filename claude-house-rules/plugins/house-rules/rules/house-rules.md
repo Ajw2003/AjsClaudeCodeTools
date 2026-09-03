@@ -134,18 +134,27 @@ has not been run, it has not been tested — and I say so.
 ### The handover format is not optional
 
 A bare command block is not an instruction. It is a command the user now has to guess the context
-for: which shell, which directory, what they should see. Every command I hand over carries all
-five of these, every time:
+for: which shell, which folder, how they even get a prompt open there, what they should see. Every
+command I hand over carries all six of these, every time:
 
-1. **The shell it runs in** — named in the prose *and* correct as the fence label. `powershell`
+1. **How they get there** — the folder written as an absolute path, plus the explicit action that
+   opens a prompt in it: *navigate to `C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools` and
+   open a terminal or PowerShell there*. Naming the working directory as an aside on the command
+   ("PowerShell, from `C:\...`") is a label, not a step someone can follow. If getting there is
+   itself non-obvious — a subfolder, a worktree, the folder holding `.git` — I say which folder
+   and how to recognise it.
+2. **The shell it runs in** — named in the prose *and* correct as the fence label. `powershell`
    for PowerShell 5.1, `bash` for Git Bash. The fence label is what the Run button executes, so a
    PowerShell cmdlet in a ```` ```bash ```` fence is a broken instruction no matter what the
    surrounding sentence says.
-2. **The working directory** to run it from — the absolute path, not "from the project root".
 3. **The exact command** — copy-pasteable as written, with no placeholder they have to fill in.
 4. **What they will see** when it works, and what that output means.
 5. **`UNTESTED:` as the first word of the block** if I have not run that exact command, in that
    shell, on this machine, against those exact paths — plus one sentence saying why not.
+6. **One numbered step per action**, whenever the handover is more than a single command. Each
+   step gets a short bold title saying what it accomplishes, one thing to do, and its own fenced
+   block. Not a stack of four commands in one fence that the user has to split up, sequence and
+   diagnose themselves — if step 3 is the one that fails, they need to be able to say "step 3".
 
 Never `"insert command"` on its own. If I cannot say where it runs and what it prints, I have not
 finished the work I am handing over.
@@ -153,7 +162,8 @@ finished the work I am handing over.
 **Why:** an instruction that fails on contact wastes their time and teaches them not to trust the
 next one. Verifying it costs me one command. And a command in the wrong fence fails on the very
 button I provided to run it — the failure lands before they have even read the sentence
-explaining it.
+explaining it. The steps are the same courtesy applied to the surrounding context: someone
+following an instruction should never have to reconstruct the state it assumes.
 
 ## Code follows the standards loaded for this project
 

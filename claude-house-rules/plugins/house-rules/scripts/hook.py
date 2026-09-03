@@ -647,17 +647,21 @@ def event_delegate():
 
 HANDOVER_NOTE = (
     "House rules, command handover - check before this turn ends. For every shell command "
-    "in this reply, all five must be present: (1) the shell it runs in, named in the prose "
-    "AND correct as the fence label - the fence label is what the Run button executes; (2) "
-    "the absolute working directory to run it from; (3) the exact command, copy-pasteable, "
-    "no placeholders; (4) what the user will see when it works; (5) UNTESTED: as the first "
-    "word of the block if you did not run that exact command, in that shell, against those "
-    "exact paths - running something similar is not running it. If the reply already "
-    "satisfies all five, stop immediately and add nothing - do not restate it, do not "
-    "re-run anything, do not mention this check. If something is missing, append one short "
-    "corrected block covering only what was missing - never repeat the whole answer. If "
-    "this turn handed over no commands, say so in one line and stop - do not re-explain "
-    "the work."
+    "in this reply, all six must be present: (1) how they get there - the folder as an "
+    "absolute path plus the explicit action that opens a prompt in it (navigate to <path> "
+    "and open a terminal or PowerShell there), not the working directory named as an aside "
+    "on the command; (2) the shell it runs in, named in the prose AND correct as the fence "
+    "label - the fence label is what the Run button executes; (3) the exact command, "
+    "copy-pasteable, no placeholders; (4) what the user will see when it works; (5) "
+    "UNTESTED: as the first word of the block if you did not run that exact command, in "
+    "that shell, against those exact paths - running something similar is not running it; "
+    "(6) one numbered step per action whenever the handover is more than a single command - "
+    "each step a short bold title, one thing to do, and its own fenced block, never a stack "
+    "of commands in one fence. If the reply already satisfies all six, stop immediately and "
+    "add nothing - do not restate it, do not re-run anything, do not mention this check. If "
+    "something is missing, append one short corrected block covering only what was missing - "
+    "never repeat the whole answer. If this turn handed over no commands, say so in one line "
+    "and stop - do not re-explain the work."
 )
 
 _TOGGLE_OFF = {"off", "0", "false", "no"}
