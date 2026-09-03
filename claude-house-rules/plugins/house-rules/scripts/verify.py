@@ -667,6 +667,42 @@ else:
     report("FAIL", "install.ps1 sets model = opusplan and the docs scope it correctly")
     print(f"          {'; '.join(moddrift)}")
 
+# --- preflight warns about a missing dependency, and points at /house-rules:doctor -----------
+env = dict(os.environ)
+env["PATH"] = ""
+code, out, err = run_hook("inject", "", env=env)
+if "Preflight gaps found" in out and "git is not on PATH" in out and "/house-rules:doctor" in out:
+    report("PASS", "SessionStart preflight warns when git is missing and points at /house-rules:doctor")
+    print("          a broken PATH produces a visible, actionable preflight warning")
+else:
+    report("FAIL", "SessionStart preflight warns when git is missing and points at /house-rules:doctor")
+    print(f"          got: {out[-400:]!r}")
+
+code, out, err = run_hook("inject", "")
+if "Preflight gaps found" not in out:
+    report("PASS", "SessionStart preflight is silent when there is nothing to warn about")
+    print("          a clean machine adds nothing to the injection")
+else:
+    report("FAIL", "SessionStart preflight is silent when there is nothing to warn about")
+    print(f"          got: {out[-400:]!r}")
+
+# --- /house-rules:doctor exists and maps gaps to an install command per OS --------------------
+DOCTOR = os.path.join(HERE, "..", "commands", "doctor.md")
+doctordrift = []
+if not os.path.isfile(DOCTOR):
+    doctordrift.append("commands/doctor.md is missing")
+else:
+    doctor_text = read(DOCTOR)
+    for needle in ["winget install Python", "brew install python", "apt install python3", "dnf install python3"]:
+        if needle not in doctor_text:
+            doctordrift.append(f"doctor.md is missing the install command: {needle}")
+if not doctordrift:
+    report("PASS", "/house-rules:doctor maps every interpreter gap to an OS-specific install command")
+    print("          winget/brew/apt/dnf all covered")
+else:
+    report("FAIL", "/house-rules:doctor maps every interpreter gap to an OS-specific install command")
+    print(f"          {'; '.join(doctordrift)}")
+
 # --- the architecture tables in CLAUDE.md and the README match hooks.json ----------------------
 # Registered dispatch events, read from hooks.json's run.sh invocations rather than filenames -
 # there is only one script (run.sh) now, dispatched by event argument.

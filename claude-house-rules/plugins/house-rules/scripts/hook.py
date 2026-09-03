@@ -80,6 +80,37 @@ def _detect_environment():
     return "\n".join(lines) + "\n"
 
 
+def _preflight_warnings():
+    """Gaps that should be visible in-session, not just discoverable via /house-rules:doctor.
+
+    Checked here (SessionStart, once) rather than in guard/scope (every call): none of these
+    are the guard's job, and they should not cost anything on the hot path. Only genuine gaps
+    produce a line - a clean machine adds nothing to the injection.
+    """
+    warnings = []
+    if _sys.version_info < (3, 8):
+        warnings.append(
+            f"- running on Python {_sys.version.split()[0]}, older than the 3.8 this plugin "
+            "targets. Handlers may behave unexpectedly."
+        )
+    if shutil.which("git") is None:
+        warnings.append("- git is not on PATH. Nothing here can be committed or inspected.")
+    if platform.system() == "Windows" and not (
+        shutil.which("sh") or os.path.exists(r"C:\Program Files\Git\bin\sh.exe")
+    ):
+        warnings.append(
+            "- no sh.exe found (Git for Windows not installed or not on PATH). run.sh, and "
+            "therefore every hook, cannot execute at all on this machine."
+        )
+    if not warnings:
+        return ""
+    return (
+        "\n\n---\n\nPreflight gaps found on this machine:\n"
+        + "\n".join(warnings)
+        + "\n\nRun /house-rules:doctor for the install command for each gap.\n"
+    )
+
+
 def event_inject():
     here = os.path.dirname(os.path.abspath(__file__))
     rules_path = os.path.join(here, "..", "rules", "house-rules.md")
@@ -134,12 +165,14 @@ def event_inject():
         "build for what is written here rather than what seems likely:\n\n"
     )
 
+    preflight = _preflight_warnings()
+
     emit(
         {
             "suppressOutput": True,
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
-                "additionalContext": preamble + body + separator + envbody,
+                "additionalContext": preamble + body + separator + envbody + preflight,
             },
         }
     )
