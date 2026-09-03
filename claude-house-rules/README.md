@@ -134,17 +134,23 @@ then drifted past:
 ## The machine profile
 
 Rule one is "build for this machine, not for everywhere" — which is worthless if nobody wrote
-down what this machine is. [rules/environment.md](plugins/house-rules/rules/environment.md) is
-that record: OS, shells, hardware, what is on PATH and what only looks like it is. It is
-injected alongside the rules at every session start.
+down what this machine is. `rules/environment.md`, next to the plugin's other rules, is that
+record: OS, shells, hardware, what is on PATH and what only looks like it is. It is injected
+alongside the rules at every session start, but it is **machine-local and gitignored** — it
+never ships with the plugin, so a fresh install has none.
 
-If it is missing, the injection says **NOT RECORDED YET** and tells the session to go and
-discover the facts rather than assume them. On a new machine that is the correct first move:
-run the commands at the bottom of that file and rewrite it. The suite covers both paths.
+When it's missing, the `inject` handler falls back to live runtime detection instead of a
+hardcoded default or a bare "go find out": OS, Python, and whether `git`, `sh`, `bash`, `pwsh`,
+`powershell`, `node` and `npm` are on PATH, checked for real on the machine the session is
+running on. That's enough to work from immediately; write a hand-verified
+`rules/environment.md` when you also need things detection can't know — RAM, GPU, line-ending
+config. [docs/example-environment.md](../docs/example-environment.md) is a worked example, kept
+for the traps it already caught.
 
 It records one trap in particular, because it has already produced a bad instruction: **`sh`
-and `bash` are not on PATH** on this machine. Git for Windows only adds `C:\Program Files\Git\cmd`,
-which holds `git.exe` and nothing else. The shells exist, but must be called by full path.
+and `bash` are not on PATH** on the machine that example was recorded from. Git for Windows only
+adds `C:\Program Files\Git\cmd`, which holds `git.exe` and nothing else. The shells exist, but
+must be called by full path.
 
 ## Verify it yourself
 

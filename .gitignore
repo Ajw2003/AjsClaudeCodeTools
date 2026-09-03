@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# Machine-local, discovered per-device - never committed. See docs/example-environment.md.
+claude-house-rules/plugins/house-rules/rules/environment.md

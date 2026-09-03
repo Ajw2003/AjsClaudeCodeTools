@@ -171,14 +171,17 @@ cannot silently go stale the way it did once already.
   change — untested rule text has no effect. It computes its own check count at runtime; don't
   write that number down anywhere, it will drift.
 
-### The machine profile is data, not code
+### The machine profile is data, not code, and is not committed
 
-[claude-house-rules/plugins/house-rules/rules/environment.md](claude-house-rules/plugins/house-rules/rules/environment.md)
-records the actual discovered machine (OS, shells, hardware, what's really on PATH) rather than
-assuming Windows-11-defaults. `inject` reads it alongside the rules; if it's missing, the
-injection says `NOT RECORDED YET` and instructs the session to discover and record facts rather
-than guess. **This file becomes user-local and gitignored in a later step of the port** (F2 in
-the port plan) — it is still committed for now.
+`claude-house-rules/plugins/house-rules/rules/environment.md` is machine-local and **gitignored**
+— each device records its own, and it never ships with the plugin. `inject` reads it alongside
+the rules; if it's missing (a fresh clone, always), `inject` falls back to live runtime
+detection (`hook.py`'s `_detect_environment`: OS, Python, and whether `git`/`sh`/`bash`/`pwsh`/
+`powershell`/`node`/`npm` are on PATH) rather than a static "go find out" message or a Windows-11
+default. A hand-written `rules/environment.md` still wins when present — runtime detection
+cannot know RAM, GPU, or CRLF config, only a human recording it can. A worked example, including
+the `sh`/`bash`-not-on-PATH trap discovered on this machine, is preserved at
+[docs/example-environment.md](docs/example-environment.md).
 
 ### Where things live, and why
 

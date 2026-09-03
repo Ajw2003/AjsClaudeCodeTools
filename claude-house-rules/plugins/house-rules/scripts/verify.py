@@ -229,7 +229,7 @@ else:
 code, out, err = run_hook("inject", "")
 missing = []
 for h in [
-    "The machine is fixed",
+    "Find out what machine you are on",
     "Match response depth to the task",
     "Build only what was asked",
     "Read the docs first, then check them against the code",
@@ -603,9 +603,14 @@ else:
 
 import re
 
-# NOTE: the "exactly one delegation heading" check belongs to the F6 merge (rules-doc dedup),
-# which is Step 4 of the port plan - added there, not here, since house-rules.md still has the
-# pre-existing duplicate at this point in the port.
+# --- house-rules.md states the delegation rule exactly once (F6 merge) -----------------------
+heading_hits = [m for m in re.finditer(r"^## .*delegat.*$", rules_text, re.IGNORECASE | re.MULTILINE)]
+if len(heading_hits) == 1:
+    report("PASS", "house-rules.md states the delegation rule exactly once")
+    print(f"          one heading: {heading_hits[0].group(0)}")
+else:
+    report("FAIL", "house-rules.md states the delegation rule exactly once")
+    print(f"          found {len(heading_hits)} delegation headings: {[m.group(0) for m in heading_hits]}")
 
 # --- the executor subagent is pinned to Sonnet ---------------------------------------------
 agentdrift = []
