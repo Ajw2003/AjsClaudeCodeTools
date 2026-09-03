@@ -14,13 +14,23 @@
   Python, and this repo does not ask you to run a manual prerequisite step first without
   telling you exactly what to run.
 #>
-[CmdletBinding()]
-param()
+param(
+  # Everything after the script name is forwarded verbatim to install.py (--no-verbose,
+  # --no-model). Without ValueFromRemainingArguments an empty param() block makes PowerShell
+  # reject any argument outright, so no flag could ever reach the installer.
+  [Parameter(ValueFromRemainingArguments = $true)]
+  [string[]]$Passthru = @()
+)
 
 function Test-Interpreter {
   param([string[]]$Candidate)
   try {
-    $out = & $Candidate[0] $Candidate[1..($Candidate.Length - 1)] -c 'print(9)' 2>$null
+    # Select-Object -Skip 1, not $Candidate[1..($n-1)]: for a ONE-element candidate that
+    # range is 1..0, which PowerShell reverses, handing back the element itself instead of an
+    # empty tail. That turned the probe into `python python -c ...`, so the bare `python` and
+    # `python3` candidates could never succeed and only `py -3` ever resolved.
+    $tail = @($Candidate | Select-Object -Skip 1)
+    $out = & $Candidate[0] @tail -c 'print(9)' 2>$null
     return ($out -eq '9')
   } catch {
     return $false
@@ -60,5 +70,6 @@ Write-Host "Using interpreter: $($found -join ' ')" -ForegroundColor DarkGray
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $installPy = Join-Path $scriptDir 'install.py'
 
-& $found[0] $found[1..($found.Length - 1)] $installPy @args
+$foundTail = @($found | Select-Object -Skip 1)
+& $found[0] @foundTail $installPy @Passthru
 exit $LASTEXITCODE

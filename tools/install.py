@@ -35,7 +35,10 @@ import os
 import subprocess
 import sys
 
-REPO = "Ajw2003/AjsClaudeCodeTools"
+# The full git URL, not the Ajw2003/AjsClaudeCodeTools shorthand. The shorthand resolves to
+# marketplace kind "github"; a settings file that already declares this name as kind "git"
+# with a .git URL is a mismatch, and the CLI refuses the add rather than reconciling them.
+REPO = "https://github.com/Ajw2003/AjsClaudeCodeTools.git"
 MARKETPLACE = "aj-house-rules"
 PLUGIN_ID = f"house-rules@{MARKETPLACE}"
 
@@ -51,8 +54,13 @@ def which(cmd):
 
 
 def run_claude(args):
+    # encoding is explicit: the claude CLI writes UTF-8, and text=True alone decodes with the
+    # locale codec (cp1252 on this box), which turned its output into mojibake.
     print(f"        claude {' '.join(args)}")
-    proc = subprocess.run(["claude"] + args, capture_output=True, text=True)
+    proc = subprocess.run(
+        ["claude"] + args, capture_output=True, text=True,
+        encoding="utf-8", errors="replace",
+    )
     for line in (proc.stdout + proc.stderr).splitlines():
         print(f"        {line}")
     return proc.returncode
@@ -93,10 +101,15 @@ def main():
 
     print()
     print("2. Install the plugin")
+    # Both return codes are checked. They used to be discarded, so a marketplace add that
+    # failed outright still reported PASS as long as a PREVIOUS install had left the plugin
+    # registered - a failure reported as a pass, which is the one thing this repo does not do.
     info(f"claude plugin marketplace add {REPO}")
-    run_claude(["plugin", "marketplace", "add", REPO])
+    if run_claude(["plugin", "marketplace", "add", REPO]) != 0:
+        bad("marketplace add failed - the lines above say why")
     info(f"claude plugin install {PLUGIN_ID} -y")
-    run_claude(["plugin", "install", PLUGIN_ID, "-y"])
+    if run_claude(["plugin", "install", PLUGIN_ID, "-y"]) != 0:
+        bad("plugin install failed - the lines above say why")
 
     claude_dir = home_claude_dir()
     installed_path = os.path.join(claude_dir, "plugins", "installed_plugins.json")

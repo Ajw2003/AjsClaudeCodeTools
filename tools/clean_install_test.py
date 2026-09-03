@@ -23,7 +23,10 @@ import shutil
 import subprocess
 import sys
 
-REPO = "Ajw2003/AjsClaudeCodeTools"
+# The full git URL, not the Ajw2003/AjsClaudeCodeTools shorthand. The shorthand resolves to
+# marketplace kind "github"; a settings file that already declares this name as kind "git"
+# with a .git URL is a mismatch, and the CLI refuses the add rather than reconciling them.
+REPO = "https://github.com/Ajw2003/AjsClaudeCodeTools.git"
 MARKETPLACE = "aj-house-rules"
 PLUGIN_ID = f"house-rules@{MARKETPLACE}"
 

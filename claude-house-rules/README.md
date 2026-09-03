@@ -239,7 +239,7 @@ already has the plugin changes nothing.
 If you would rather do it by hand, the plugin half is two commands:
 
 ```bash
-claude plugin marketplace add Ajw2003/AjsClaudeCodeTools
+claude plugin marketplace add https://github.com/Ajw2003/AjsClaudeCodeTools.git
 ```
 ```bash
 claude plugin install house-rules@aj-house-rules
@@ -295,7 +295,7 @@ there.
 {
   "extraKnownMarketplaces": {
     "aj-house-rules": {
-      "source": { "source": "github", "repo": "Ajw2003/AjsClaudeCodeTools" },
+      "source": { "source": "git", "url": "https://github.com/Ajw2003/AjsClaudeCodeTools.git" },
       "autoUpdate": true
     }
   },

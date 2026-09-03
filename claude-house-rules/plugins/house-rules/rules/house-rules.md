@@ -101,7 +101,7 @@ The difference, on "how do I set this up on a new device":
 > `~/.claude/settings.json`. Restart.
 >
 > **This:** install Claude Code and Git for Windows, then run:
-> `claude plugin marketplace add Ajw2003/AjsClaudeCodeTools`
+> `claude plugin marketplace add https://github.com/Ajw2003/AjsClaudeCodeTools.git`
 > `claude plugin install house-rules@aj-house-rules`
 > Restart to apply.
 
