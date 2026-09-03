@@ -12,9 +12,18 @@ Run it after a release that touches the handover format. Record the plugin versi
 
 ### Findings so far
 
-- **2026-09-03 — `/artifacts` is CLI only.** It is not available in the desktop app, which answers
-  "isn't available in this environment". That is the listing command, not the publishing
-  capability; §1 was rewritten to test publishing directly instead of inferring it from this.
+- **2026-09-03 — `/artifacts` is unavailable in the desktop app**, which answers "isn't available
+  in this environment". Now explained by a documented rule rather than treated as a special case:
+  built-in commands with no argument form reply exactly that in the Code tab. It is the *listing*
+  command, not the publishing capability — publishing is documented for desktop v1.13576.0+, so §1
+  tests publishing directly instead of inferring it from this.
+- **2026-09-03 — the `Stop` hook was observed correcting a live draft** on 2.3.1: a reply ended
+  with "Correction to Step 1 — how you get there and the shell weren't stated properly". Partial
+  evidence for §2b, and the reason 2.4.0 changed corrections to reprint the step. It does **not**
+  close §2b, which asks what happens with the hook *off*.
+- **2026-09-03 — `/output-style` no longer exists on any surface** (deprecated v2.1.73, removed
+  v2.1.91), and the desktop app has no style picker. §6 previously told you to run it; that was
+  wrong and is rewritten. This is why 2.4.0 forces the style.
 
 ## Which section covers which surface
 
@@ -26,6 +35,8 @@ Run it after a release that touches the handover format. Record the plugin versi
 | web / cloud session | §7 |
 | claude.ai chat — web / desktop | §8 |
 | iOS / Android | §4, §8 |
+| WSL session | §9 |
+| Desktop **Cowork** tab | §9 |
 
 ---
 
@@ -74,24 +85,38 @@ The highest-information test here, which is why it comes before the cosmetic one
   **Pass:** one card, `Step 1 of 2`, and **no published page** — the threshold is four.
 - **2b — the real question.** Fresh session with `HOUSE_RULES_HANDOVER=off`, same ask.
   **Pass:** the card still appears.
-  **Fail means:** the injection is not doing the work and the `Stop` backstop is carrying the
-  format alone — so every conforming reply costs a correction turn. That would make the decision to
-  ship the output style un-forced worth revisiting, since "inject + scope already own this ground"
-  was the argument for it.
+  **Fail means:** neither `inject` nor the forced output style is doing the work, and the `Stop`
+  backstop is carrying the format alone — so every conforming reply costs a correction turn. Since
+  2.4.0 both of those are in play, a failure here would mean the format has to move somewhere the
+  model cannot skim past, not just be stated in more places.
 - **2c — proportionality.** Ask for a handover of exactly one command.
   **Pass:** no numbering, no `*Next:*`, every other field present. Guards against the card
   becoming mandatory ceremony on a one-liner.
 
 ## 3 — The fence label and the Run button
 
-Item 2 of the handover contract exists because "the fence label is what the Run button executes".
-That has never been observed on this machine; it is inherited belief.
+**This section is the only source of truth for the claim, and rules wording is waiting on it.**
+Item 2 of the handover contract says "the fence label is what the Run button executes". A docs
+search found **nothing** — not the button's existence, not how it picks a shell, not whether the
+fence language tag has anything to do with it. Anthropic documents shell selection only for the
+Bash and PowerShell tools *Claude itself* calls, which is a different mechanism and not evidence
+about a button the user clicks. So the rule currently asserts something with nothing behind it,
+and it was deliberately left unedited in 2.4.0 rather than reworded twice.
 
 Get a reply containing a `powershell`-labelled fence and click **Run**.
 
-**You should see:** it execute in PowerShell, not the default shell. If the button ignores the
-label, the rule is still right — a mislabelled fence is still wrong — but its stated *reason* is
-wrong, and `rules/house-rules.md` needs correcting rather than left as folklore.
+**You should see:** it execute in PowerShell, not the default shell.
+
+- **If it honours the label** — the rule's stated reason is correct. Record it here and nothing
+  changes.
+- **If it ignores the label** — the rule stays (a mislabelled fence still tells the *reader* the
+  wrong shell) but its justification is folklore and `rules/house-rules.md` must be reworded to
+  stand on the reader rather than the button.
+- **If there is no Run button** on that block — say so; the claim is then vacuous.
+
+Context for interpreting the result: Git for Windows is required for the desktop Code tab, so Git
+Bash is always present, and the PowerShell tool is on by default for claude.ai accounts. Both
+shells exist on that machine, which is what makes the test meaningful.
 
 ## 4 — The published page
 
@@ -119,16 +144,24 @@ Open `claude-house-rules\plugins\house-rules\templates\step-card.html` from disk
 `href` or `https://` — but the reason for the rule is a machine mid-install with no network, and
 that has never actually been tried.
 
-## 6 — The output style is opt-in
+## 6 — The forced output style applies with no selection
 
-Run `/output-style`.
+**`/output-style` does not exist** — deprecated v2.1.73, removed v2.1.91 — and the desktop app has
+no style picker at all. That is precisely why 2.4.0 sets `force-for-plugin: true`: un-forced, the
+style was unreachable without hand-editing a settings file.
 
-**You should see:** `handover-cards` **listed but not active.** That is the un-forced decision
-holding. If it is already active, `force-for-plugin` has leaked in somehow and `verify.py`'s
-negative check has a gap worth finding.
+So the test is that it applies with **nothing selected**. In a fresh Code-tab session, having
+selected no style anywhere, ask for a multi-step handover.
 
-Then select it and confirm normal coding behaviour is retained — that is `keep-coding-instructions`
-doing its job. Switch back afterwards.
+**You should see:** the card. And normal coding behaviour intact — `keep-coding-instructions: true`
+is what preserves it, so a session that has gone oddly non-technical is that field failing.
+
+To inspect the setting on desktop, `/config` opens Settings → Claude Code; note that arguments
+after `/config` are ignored there.
+
+**Worth separating:** this cannot distinguish the style from `inject`, since both produce the card.
+If §2b shows the card surviving with the `Stop` hook off, the injection is doing the work and the
+style is belt-and-braces. That is the intended reading, not a failure.
 
 ## 7 — The other Claude Code surfaces
 
@@ -147,6 +180,20 @@ and ask each for a multi-step handover.
 **You should see:** the same card on both. Note whether the web chat *also* volunteers its own
 interactive step widget — that is model discretion, so not a failure either way, but worth
 recording, since it is the thing this whole format was built as an alternative to.
+
+## 9 — The two surfaces the plugin does not reach
+
+Neither is a card test. Both are confirmations that a documented limit is real, so the surface
+table states a checked fact rather than a repeated claim.
+
+- **WSL session.** Switch the environment dropdown to WSL and check whether house-rules is active
+  at all — ask anything that would normally draw the injected rules. **Expected: it is not.**
+  Anthropic documents that plugins are unavailable in WSL sessions. If the rules *do* appear,
+  the docs are wrong or the limit has changed, and the table needs updating in the other
+  direction.
+- **Desktop Cowork tab.** Ask for a multi-step handover there. **Expected: no card**, because
+  Cowork sources its skills and plugins from the claude.ai account rather than `~/.claude`. If a
+  card appears, something is syncing that the docs do not describe — record it.
 
 ---
 

@@ -263,7 +263,15 @@ else:
 # Asserting rules/house-rules.md contains the card is not asserting Claude ever sees it - the
 # same distinction the model-split checks exist for. Feed inject and read the injected text.
 cardmissing = []
-for marker in ["#### The card", "### Step 1 of", "**You should see:**", "UNTESTED:"]:
+for marker in [
+    "#### The card",
+    "### Step 1 of",
+    "**You should see:**",
+    "UNTESTED:",
+    "is a label on a command, not a step",
+    "A card is a sequence, not a menu",
+    "Replacing step N:",
+]:
     if marker not in out:
         cardmissing.append(marker)
 if not cardmissing:
@@ -566,6 +574,7 @@ for phrase in [
     "Step 1 of",
     "You should see:",
     "above the fence",
+    "Replacing step",
 ]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
@@ -685,10 +694,12 @@ else:
     report("FAIL", "the executor subagent exists and is pinned to Sonnet")
     print(f"          {'; '.join(agentdrift)}")
 
-# --- the opt-in output style exists and is NOT forced ----------------------------------------
-# The absent field is the point: force-for-plugin would silently displace whatever output style
-# the user selected, in every repo on every machine, since this plugin installs globally. Same
-# shape as the executor dead-field check - assert the decision, not just the file.
+# --- the output style exists and IS forced ---------------------------------------------------
+# Reversed in 2.4.0. 2.3.0 asserted this field was ABSENT, on the argument that forcing displaces
+# a style the user selected - which assumed a picker that does not exist: /output-style was
+# removed in v2.1.91 and the desktop app has no style picker, so un-forced meant unreachable
+# without hand-editing a settings file. Same shape as the executor dead-field check either way:
+# assert the decision, not just the file, so it cannot flip back by accident.
 styledrift = []
 if not os.path.isfile(STYLE):
     styledrift.append("output-styles/handover-cards.md is missing")
@@ -700,16 +711,16 @@ else:
         styledrift.append("the style has no description: field")
     if not re.search(r"^keep-coding-instructions: true$", style_text, re.MULTILINE):
         styledrift.append("the style does not keep-coding-instructions, so it would replace them")
-    if re.search(r"^force-for-plugin:", style_text, re.MULTILINE):
+    if not re.search(r"^force-for-plugin: true$", style_text, re.MULTILINE):
         styledrift.append(
-            "the style sets force-for-plugin, which overrides the user's own outputStyle in "
-            "every repo - that decision was deliberately not taken"
+            "the style does not set force-for-plugin: true - without it the style is "
+            "unreachable on the desktop app, which has no picker and no /output-style command"
         )
 if not styledrift:
-    report("PASS", "the handover-cards output style is opt-in, not forced")
-    print("          keeps the coding instructions; does not claim the user's output style slot")
+    report("PASS", "the handover-cards output style is forced, so it applies without a picker")
+    print("          keeps the coding instructions; applies on surfaces with no way to select one")
 else:
-    report("FAIL", "the handover-cards output style is opt-in, not forced")
+    report("FAIL", "the handover-cards output style is forced, so it applies without a picker")
     print(f"          {'; '.join(styledrift)}")
 
 # --- the step-card page template exists, is self-contained, and matches the card's fields ----
@@ -732,6 +743,27 @@ if not tpldrift:
 else:
     report("FAIL", "the step-card page template is self-contained and carries every card field")
     print(f"          {'; '.join(tpldrift)}")
+
+# --- the rules teach the anti-patterns, not only the patterns --------------------------------
+# 2.3.0 shipped a template showing only the CORRECT location sentence, and the next real handover
+# reverted to the old shorthand anyway. A positive-only example is what failed, so the negative
+# form and the sequence-vs-menu rule are pinned here rather than trusted to stay.
+teachdrift = []
+for phrase, why in [
+    ("is a label on a command, not a step", "the item-1 anti-pattern example is gone"),
+    ("never the shell I ran it in", "the path-notation rule is gone"),
+    ("does not `cd` there again", "the redundant-cd rule is gone"),
+    ("A card is a sequence, not a menu", "the sequence-vs-menu heading is gone"),
+    ("AskUserQuestion", "the rules no longer say a blocking choice is a question, not a menu"),
+]:
+    if phrase not in rules_text:
+        teachdrift.append(why)
+if not teachdrift:
+    report("PASS", "the rules show the anti-patterns, not only the correct forms")
+    print("          item-1 counter-example, path notation, redundant cd, sequence vs menu")
+else:
+    report("FAIL", "the rules show the anti-patterns, not only the correct forms")
+    print(f"          {'; '.join(teachdrift)}")
 
 # --- every surface the CLAUDE.md table claims has a way to be checked ------------------------
 # The table is a claim about six surfaces; docs/desktop-verification.md is what substantiates it.

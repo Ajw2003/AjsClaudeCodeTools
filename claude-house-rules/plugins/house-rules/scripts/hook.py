@@ -712,8 +712,10 @@ HANDOVER_NOTE = (
     "in prose, one fenced block per step labelled with the shell, and You should see: for the "
     "expected output. If the reply already satisfies all six, stop immediately and "
     "add nothing - do not restate it, do not re-run anything, do not mention this check. If "
-    "something is missing, append one short corrected block covering only what was missing - "
-    "never repeat the whole answer. If this turn handed over no commands, say so in one line "
+    "something is missing, reprint the corrected step in full card shape, introduced by "
+    "Replacing step N: - one step, not the whole handover, so the reader ends on something "
+    "followable rather than a note about what was wrong above it. Never repeat the whole "
+    "answer. If this turn handed over no commands, say so in one line "
     "and stop - do not re-explain the work."
 )
 

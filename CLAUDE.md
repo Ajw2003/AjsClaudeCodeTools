@@ -197,7 +197,7 @@ the `sh`/`bash`-not-on-PATH trap discovered on this machine, is preserved at
   real copy of that text; everything else referencing the rules (this file, `hook.py`'s hardcoded
   reminder strings) is a pointer or a restatement, checked for drift by `verify.py`.
 - **`claude-house-rules/plugins/house-rules/output-styles/`** and **`templates/`** hold the
-  opt-in `handover-cards` output style and `step-card.html`, the page form of the step card.
+  forced `handover-cards` output style and `step-card.html`, the page form of the step card.
   `step-card.html` is self-contained by rule — no external script, stylesheet, font or fetch —
   because a machine mid-install may not have a network, and `verify.py` fails if one appears.
   Claude fills its `STEPS` array and changes nothing else.
@@ -242,24 +242,36 @@ format, and it does not render on iOS or Android at all. What is reachable:
 | Claude Code — web / cloud session | publishing undocumented; treat as unavailable | yes | ships with the repo install; cloud never reads `~/.claude/settings.json` |
 | claude.ai chat — web / desktop | sometimes, model's discretion, unrequestable | yes | [docs/claude-ai-instructions.md](docs/claude-ai-instructions.md) |
 | claude.ai chat — iOS / Android | **never** | yes | same |
+| Claude Code — WSL session | no | **no** | **plugins are unavailable in WSL sessions entirely** |
+| Claude Code — Desktop **Cowork** tab | no | **no** | sources skills and plugins from the claude.ai account, not `~/.claude` — this plugin covers the **Code** tab only |
 
-The markdown card is the only row that is yes everywhere, which is why it is the load-bearing
-deliverable and the published page is an escalation. The page is always additive: the inline card
+The markdown card is the only row that is yes wherever the plugin reaches at all — the last two
+rows are surfaces the plugin does not reach, which is a different failure from a surface that
+cannot render the card. It is still the load-bearing deliverable, and the published page is an
+escalation. The page is always additive: the inline card
 is written first and in full, and if publishing fails or is unavailable the reply still stands on
 its own.
 
-### Why the output style is shipped un-forced
+### Why the output style is forced (reversed in 2.4.0)
 
-`output-styles/handover-cards.md` restates the card format, and deliberately does **not** set
-`force-for-plugin: true`. Only one output style is active at a time, so forcing one silently
-displaces whatever style the user selected — and since this plugin is installed globally on every
-device by design, that override would be permanent, in every repo, with no way to keep the rules
-while dropping the style. The plugin already owns the system-prompt region at `SessionStart` and
-restates the rules on every prompt via `scope`, so forcing the slot buys little. Output styles
-also apply to the main conversation only — a subagent runs its own system prompt, so
-`@house-rules:executor` is governed by the injected rules, not by that file. `verify.py` asserts
-the field is **absent**, the same way it asserts `executor.md` sets no field subagents ignore: the
-decision is the thing under test, not the file's existence.
+`output-styles/handover-cards.md` sets `force-for-plugin: true`, so it applies automatically
+wherever the plugin is enabled.
+
+2.3.0 shipped it **un-forced**, on the argument that forcing silently displaces whatever style the
+user selected. That argument assumed the user could select one, and they cannot: `/output-style`
+was deprecated in v2.1.73 and **removed in v2.1.91**, and the desktop app has no style picker at
+all — `outputStyle` has to be written into a settings file by hand. Un-forced therefore meant
+unreachable on the surface this is actually used on, and reaching it would have required exactly
+the manual config editing the rules forbid. What forcing displaces is a settings-file value, not a
+live choice.
+
+Two limits stand regardless, and are the reason the injected rules remain the primary mechanism
+rather than the style: output styles apply to the **main conversation only** — a subagent runs its
+own system prompt, so `@house-rules:executor` is governed by `inject`, not by the style — and they
+are read once at session start, so a change needs `/clear` or a new session.
+
+`verify.py` asserts the field is **present**. It previously asserted the opposite; either way the
+check exists so the decision cannot flip by accident, in whichever direction it currently points.
 
 ### Editing the rules
 
