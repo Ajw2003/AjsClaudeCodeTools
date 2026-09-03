@@ -196,6 +196,14 @@ the `sh`/`bash`-not-on-PATH trap discovered on this machine, is preserved at
   gets published and installed on another machine. Treat its `rules/house-rules.md` as the only
   real copy of that text; everything else referencing the rules (this file, `hook.py`'s hardcoded
   reminder strings) is a pointer or a restatement, checked for drift by `verify.py`.
+- **`claude-house-rules/plugins/house-rules/output-styles/`** and **`templates/`** hold the
+  opt-in `handover-cards` output style and `step-card.html`, the page form of the step card.
+  `step-card.html` is self-contained by rule — no external script, stylesheet, font or fetch —
+  because a machine mid-install may not have a network, and `verify.py` fails if one appears.
+  Claude fills its `STEPS` array and changes nothing else.
+- **`docs/claude-ai-instructions.md`** is the chat-surface half: the text to paste into
+  claude.ai → Settings → Instructions, which is the only mechanism that reaches plain chat and
+  the phone. Committed so it can be diffed against the rules rather than silently drifting.
 - **`docs/plans/`** holds implementation plans as real, committed files — per the rules
   themselves, artifacts never live only in a chat transcript or a temp directory.
 - **`tools/`** holds device-setup and release-verification scripts, not plugin code — nothing here
@@ -211,6 +219,47 @@ the `sh`/`bash`-not-on-PATH trap discovered on this machine, is preserved at
   in **`.claude/standards`** (one document stem per line) when the `standards` hook's detection
   gets it wrong or a project's needs differ from what got detected — that file, not the vendored
   docs, is the thing worth gitignoring per-project if it's local-only.
+
+### The step-card handover format, and which surfaces it actually reaches
+
+Steps the user has to run are handed over in one fixed shape — the step card — defined in
+`rules/house-rules.md` under `#### The card` and injected into every session by `inject`. The
+format deliberately uses only `---`, `###`, `**bold**`, plain paragraphs and top-level fenced
+blocks: that is the set that survives every renderer this reaches. Box-drawing borders, a fence
+inside a blockquote, a command in a table, and a fence nested in a list item are all banned, each
+because it breaks in at least one of them. Do not paste the template into this file — it lives in
+`house-rules.md` and `verify.py` fails on a second copy here.
+
+The comparison that prompted it — claude.ai chat's interactive step widget — cannot be
+reproduced. It is the **custom visuals** feature: model-discretion, beta, no documented emission
+format, and it does not render on iOS or Android at all. What is reachable:
+
+| Surface | Interactive card | Markdown card | How it gets there |
+|---|---|---|---|
+| Claude Code — CLI | published page, 4+ steps or on request | yes | `inject` + `scope` + `handover` |
+| Claude Code — IDE extension | inherits the CLI; not separately documented | yes | same |
+| Claude Code — Desktop **Code** tab | published page, 4+ steps or on request | yes | same |
+| Claude Code — web / cloud session | publishing undocumented; treat as unavailable | yes | ships with the repo install; cloud never reads `~/.claude/settings.json` |
+| claude.ai chat — web / desktop | sometimes, model's discretion, unrequestable | yes | [docs/claude-ai-instructions.md](docs/claude-ai-instructions.md) |
+| claude.ai chat — iOS / Android | **never** | yes | same |
+
+The markdown card is the only row that is yes everywhere, which is why it is the load-bearing
+deliverable and the published page is an escalation. The page is always additive: the inline card
+is written first and in full, and if publishing fails or is unavailable the reply still stands on
+its own.
+
+### Why the output style is shipped un-forced
+
+`output-styles/handover-cards.md` restates the card format, and deliberately does **not** set
+`force-for-plugin: true`. Only one output style is active at a time, so forcing one silently
+displaces whatever style the user selected — and since this plugin is installed globally on every
+device by design, that override would be permanent, in every repo, with no way to keep the rules
+while dropping the style. The plugin already owns the system-prompt region at `SessionStart` and
+restates the rules on every prompt via `scope`, so forcing the slot buys little. Output styles
+also apply to the main conversation only — a subagent runs its own system prompt, so
+`@house-rules:executor` is governed by the injected rules, not by that file. `verify.py` asserts
+the field is **absent**, the same way it asserts `executor.md` sets no field subagents ignore: the
+decision is the thing under test, not the file's existence.
 
 ### Editing the rules
 
