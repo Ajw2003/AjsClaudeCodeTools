@@ -10,6 +10,12 @@ Run it after a release that touches the handover format. Record the plugin versi
 
 **Version run at:** _not yet run_ · **Date:** _—_ · **Result:** _—_
 
+### Findings so far
+
+- **2026-09-03 — `/artifacts` is CLI only.** It is not available in the desktop app, which answers
+  "isn't available in this environment". That is the listing command, not the publishing
+  capability; §1 was rewritten to test publishing directly instead of inferring it from this.
+
 ## Which section covers which surface
 
 | Surface (as the CLAUDE.md table names it) | Covered by |
@@ -45,10 +51,20 @@ Then **fully quit and restart** every Claude Code session, including any long-ru
 
 ## 1 — Publishing smoke test, before anything depends on it
 
-Run `/artifacts` in the Desktop **Code** tab.
+**Do not use `/artifacts` for this.** That command lists pages you already own, and it is **CLI
+only** — the desktop app answers "isn't available in this environment", which says nothing about
+whether the app can *publish*. Listing and publishing are separate capabilities; conflating them
+would fail this section on a machine where §4 would have worked fine.
 
-**You should see:** either a list (publishing is available) or a message that it is not. §4 and §7
-branch on this answer, and finding out here beats discovering it four tests later.
+Instead ask for a publish directly, in the Desktop **Code** tab: *"publish a one-line test page as
+an artifact."*
+
+**You should see:** a link to a published page, or a specific refusal. A refusal naming the plan,
+the sign-in method (API key and gateway tokens cannot publish — it needs a `/login` session), or
+the surface is the real answer, and §4 and §7 should record it rather than being skipped silently.
+
+To list pages you already own, use `/artifacts` **in the CLI**, not here.
+
 
 ## 2 — Does the format survive without the Stop hook
 
