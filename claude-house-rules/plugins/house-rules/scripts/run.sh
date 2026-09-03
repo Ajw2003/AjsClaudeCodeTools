@@ -31,7 +31,12 @@
 
 set -u
 
-HERE=$(dirname "$0")
+# dirname is an external binary, and a broken PATH is exactly when this file has to still
+# work. Parameter expansion instead, so the shim really does depend on nothing but sh.
+case "$0" in
+  */*) HERE=${0%/*} ;;
+  *)   HERE=. ;;
+esac
 EVENT="${1:-}"
 
 probe() {
@@ -43,7 +48,6 @@ if [ -n "${HOUSE_RULES_PYTHON:-}" ]; then
   # shellcheck disable=SC2086
   set -- $HOUSE_RULES_PYTHON
   if probe "$@"; then
-    PY_ARGS="$*"
     PY=set
   fi
 fi
