@@ -297,22 +297,34 @@ def event_standards():
                     unity_dir = d
                 if node_dir is None and _has_node_markers(d):
                     node_dir = d
+
+            scan_root = project_dir
+            assets_note = None
+            if unity_dir is None and _unity_markers_in_parent(project_dir):
+                # project_dir IS a Unity project's Assets/ folder - rescan from the real
+                # project root one level up, so sibling Node services (e.g. a `controller/`
+                # or `relay/` next to Assets/) are seen too, not just the Unity markers.
+                scan_root = os.path.dirname(os.path.normpath(project_dir))
+                assets_note = "this project's root is a Unity project's `Assets/` folder"
+                dirs = _standards_scan_dirs(scan_root)
+                for d in dirs:
+                    if unity_dir is None and _has_unity_markers(d):
+                        unity_dir = d
+                    if node_dir is None and _has_node_markers(d):
+                        node_dir = d
+
             if unity_dir is not None:
-                where = _standards_location_phrase(unity_dir, project_dir)
-                selected.append(
-                    ("csharp-unity-standards", f"Unity project markers were found {where}")
-                )
-            elif _unity_markers_in_parent(project_dir):
-                selected.append(
-                    (
-                        "csharp-unity-standards",
-                        "Unity project markers were found in the parent directory — this "
-                        "project's root is a Unity project's `Assets/` folder",
-                    )
-                )
+                where = _standards_location_phrase(unity_dir, scan_root)
+                reason = f"Unity project markers were found {where}"
+                if assets_note:
+                    reason += f" ({assets_note})"
+                selected.append(("csharp-unity-standards", reason))
             if node_dir is not None:
-                where = _standards_location_phrase(node_dir, project_dir)
-                selected.append(("web-js-ts-node-standards", f"Node markers were found {where}"))
+                where = _standards_location_phrase(node_dir, scan_root)
+                reason = f"Node markers were found {where}"
+                if assets_note:
+                    reason += " (searched from the Unity project root, not this Assets/ folder)"
+                selected.append(("web-js-ts-node-standards", reason))
 
         if not selected:
             return 0

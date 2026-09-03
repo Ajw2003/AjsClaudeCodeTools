@@ -854,21 +854,32 @@ std_case(
 
 # opening a Unity project at its Assets/ folder (a normal workflow) rather than the project
 # root one level up - the sibling ProjectSettings/*.csproj never show up in the depth-1 scan
-# because they live above project_dir, not inside it. See _unity_markers_in_parent.
+# because they live above project_dir, not inside it. See _unity_markers_in_parent. A sibling
+# Node service (e.g. RockSkipping's controller/) must also be found - it's a depth-1 dir of the
+# real project root, not of project_dir, so detection has to rescan from up there too.
 assets_fixture = make_fixture(
-    {"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"}
+    {
+        "ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n",
+        "controller/package.json": "{}",
+    }
 )
 try:
     env_assets = dict(os.environ)
     env_assets["CLAUDE_PROJECT_DIR"] = os.path.join(assets_fixture, "Assets")
     os.makedirs(env_assets["CLAUDE_PROJECT_DIR"], exist_ok=True)
     code, out, err = run_hook("standards", "", env=env_assets)
-    ok = "### csharp-unity-standards.md" in out and "Assets/` folder" in out
+    ok = (
+        "### csharp-unity-standards.md" in out
+        and "### web-js-ts-node-standards.md" in out
+        and "Assets/` folder" in out
+        and "in `controller/`" in out
+    )
     report(
         "PASS" if ok else "FAIL",
-        "a project rooted at a Unity project's Assets/ folder still injects the C#/Unity document",
+        "a project rooted at a Unity project's Assets/ folder injects both Unity and a "
+        "sibling Node service's standards",
     )
-    print(f"          got: {out[:220]!r}")
+    print(f"          got: {out[:300]!r}")
 finally:
     shutil.rmtree(assets_fixture, ignore_errors=True)
 
