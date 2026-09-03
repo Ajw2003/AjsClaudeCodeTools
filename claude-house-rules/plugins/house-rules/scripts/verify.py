@@ -852,6 +852,26 @@ std_case(
     ),
 )
 
+# opening a Unity project at its Assets/ folder (a normal workflow) rather than the project
+# root one level up - the sibling ProjectSettings/*.csproj never show up in the depth-1 scan
+# because they live above project_dir, not inside it. See _unity_markers_in_parent.
+assets_fixture = make_fixture(
+    {"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"}
+)
+try:
+    env_assets = dict(os.environ)
+    env_assets["CLAUDE_PROJECT_DIR"] = os.path.join(assets_fixture, "Assets")
+    os.makedirs(env_assets["CLAUDE_PROJECT_DIR"], exist_ok=True)
+    code, out, err = run_hook("standards", "", env=env_assets)
+    ok = "### csharp-unity-standards.md" in out and "Assets/` folder" in out
+    report(
+        "PASS" if ok else "FAIL",
+        "a project rooted at a Unity project's Assets/ folder still injects the C#/Unity document",
+    )
+    print(f"          got: {out[:220]!r}")
+finally:
+    shutil.rmtree(assets_fixture, ignore_errors=True)
+
 # run.sh standards with no working interpreter still prints a visible warning and exits 0
 env_nopath = dict(os.environ)
 env_nopath.pop("HOUSE_RULES_PYTHON", None)
