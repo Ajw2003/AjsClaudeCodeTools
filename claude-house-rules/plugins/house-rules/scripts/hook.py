@@ -715,11 +715,31 @@ HANDOVER_NOTE = (
     "something is missing, reprint the corrected step in full card shape, introduced by "
     "Replacing step N: - one step, not the whole handover, so the reader ends on something "
     "followable rather than a note about what was wrong above it. Never repeat the whole "
-    "answer. If this turn handed over no commands, say so in one line "
-    "and stop - do not re-explain the work."
+    "answer. If the reply is already correct, end the turn with no commentary at all: a "
+    "sentence saying it already carries the six fields, or already complies, is itself the "
+    "failure this is guarding against - the user did not ask about the check and should "
+    "never learn it ran. A card never announces its own compliance."
 )
 
 _TOGGLE_OFF = {"off", "0", "false", "no"}
+
+# Same shape as _COMMAND_FIELD_RE: match the raw JSON slice, escapes included, and search inside
+# it. Backticks are not escaped in JSON, so a fenced block survives verbatim in the payload.
+_LAST_MESSAGE_FIELD_RE = re.compile(r'"last_assistant_message"\s*:\s*"(?:[^"\\]|\\.)*"')
+
+
+def _reply_hands_over_a_command(payload):
+    """Three tiers, the same ladder guard uses on its own input.
+
+    Field found  -> True only if the reply contains a fenced block. No fence means no command
+                    was handed over, so there is nothing for this check to be about.
+    Field absent -> True. An older CLI that does not send last_assistant_message must not
+                    silently disable the check; fall back to firing, as it behaved before.
+    """
+    m = _LAST_MESSAGE_FIELD_RE.search(payload)
+    if m is None:
+        return True
+    return "```" in m.group(0)
 
 
 def event_handover():
@@ -746,7 +766,20 @@ def event_handover():
     if re.search(r'"stop_hook_active"\s*:\s*true', payload):
         return 0
 
-    emit({"decision": "block", "reason": HANDOVER_NOTE})
+    if not _reply_hands_over_a_command(payload):
+        return 0
+
+    # additionalContext, not decision: "block". Both continue the turn under the same loop
+    # protections, but this one is labelled Stop hook feedback rather than raising a hook
+    # error - and this hook is guidance working as designed, not a failure.
+    emit(
+        {
+            "hookSpecificOutput": {
+                "hookEventName": "Stop",
+                "additionalContext": HANDOVER_NOTE,
+            }
+        }
+    )
     return 0
 
 

@@ -528,8 +528,10 @@ def hand_case(expect, title, payload, mode=""):
     elif mode == "nopath":
         env["PATH"] = ""
     code, out, err = run_hook("handover", payload, env=env)
-    if '"decision":"block"' in out:
-        got = "block"
+    if '"hookEventName":"Stop"' in out and '"additionalContext"' in out:
+        got = "feedback"
+    elif '"decision":"block"' in out:
+        got = "block (the old shape - additionalContext is what it should emit now)"
     elif "systemMessage" in out:
         got = "offline"
     elif not out.strip():
@@ -542,23 +544,58 @@ def hand_case(expect, title, payload, mode=""):
     print(f"          expected {expect}, got {got}")
 
 
+def stop_payload(**extra):
+    base = {"session_id": "verify", "hook_event_name": "Stop", "stop_hook_active": False}
+    base.update(extra)
+    return json.dumps(base)
+
+
+# The firing condition IS the behaviour under test: this check used to fire on every turn,
+# including turns that handed over nothing, which forced Claude to answer it in the user's
+# view. It now reads last_assistant_message - the documented field for the just-written reply.
 hand_case(
-    "block",
-    "a turn about to end gets the handover checklist",
-    json.dumps({"session_id": "verify", "hook_event_name": "Stop", "stop_hook_active": False}),
+    "feedback",
+    "a reply containing a fenced block gets the handover checklist",
+    stop_payload(
+        last_assistant_message="Run this:\n\n```powershell\nGet-ChildItem\n```\n"
+    ),
 )
 hand_case(
     "silent",
-    "the retry after a block is allowed to finish - it cannot loop",
-    json.dumps({"session_id": "verify", "hook_event_name": "Stop", "stop_hook_active": True}),
+    "a reply with no fenced block handed over nothing, so the check stays quiet",
+    stop_payload(
+        last_assistant_message="I opened the pull request; nothing for you to run."
+    ),
+)
+hand_case(
+    "feedback",
+    "a payload with no last_assistant_message still fires - a CLI without it must not "
+    "silently disable the check",
+    stop_payload(),
+)
+hand_case(
+    "silent",
+    "the retry after the check is allowed to finish - it cannot loop",
+    stop_payload(stop_hook_active=True, last_assistant_message="```sh\nls\n```"),
 )
 hand_case(
     "silent",
     "the toggle switches the check off without touching any file",
-    json.dumps({"session_id": "verify", "hook_event_name": "Stop", "stop_hook_active": False}),
+    stop_payload(last_assistant_message="```sh\nls\n```"),
     mode="toggle",
 )
 hand_case("silent", "an empty payload is nothing to check, not a failed check", "")
+
+# --- the check gives guidance, not a hook error ----------------------------------------------
+code, out, err = run_hook(
+    "handover", stop_payload(last_assistant_message="```powershell\nGet-ChildItem\n```")
+)
+if '"hookEventName":"Stop"' in out and '"decision"' not in out:
+    report("PASS", "the handover check emits Stop feedback, not a blocking hook error")
+    print("          additionalContext on hookEventName Stop; no decision field")
+else:
+    report("FAIL", "the handover check emits Stop feedback, not a blocking hook error")
+    print(f"          got: {out[:200]!r}")
 
 # --- the checklist in hook.py's handover handler has not drifted from the rules document ----
 drift = []
@@ -575,6 +612,7 @@ for phrase in [
     "You should see:",
     "above the fence",
     "Replacing step",
+    "never announces its own compliance",
 ]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
