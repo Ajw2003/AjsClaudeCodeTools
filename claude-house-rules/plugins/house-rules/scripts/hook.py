@@ -180,6 +180,177 @@ def event_inject():
 
 
 # ---------------------------------------------------------------------------------------
+# standards — a second SessionStart handler. Selects and injects the vendored per-ecosystem
+# coding standards docs from rules/standards/. Separate hook entry from inject on purpose:
+# rules injection must never be able to fail on account of standards detection.
+# ---------------------------------------------------------------------------------------
+
+STANDARDS_SKIP_DIRS = {"node_modules", "Library", "Temp", "obj", "bin", ".git"}
+
+STANDARDS_GOVERNS = {
+    "coding-philosophy": "applies to all languages and stacks",
+    "csharp-unity-standards": "governs C# and Unity code",
+    "web-js-ts-node-standards": "governs HTML, CSS, JS, TS and Node code",
+}
+
+
+def _standards_scan_dirs(root):
+    """Repo root plus one level of subdirectories, skipping the usual heavy/vendor dirs.
+
+    Depth is exactly one, never recursive - walking node_modules/ or Unity's Library/ is slow
+    enough to be felt at every session start.
+    """
+    dirs = [root]
+    try:
+        for name in sorted(os.listdir(root)):
+            if name in STANDARDS_SKIP_DIRS:
+                continue
+            full = os.path.join(root, name)
+            if os.path.isdir(full):
+                dirs.append(full)
+    except OSError:
+        pass
+    return dirs
+
+
+def _has_unity_markers(d):
+    if os.path.exists(os.path.join(d, "ProjectSettings", "ProjectVersion.txt")):
+        return True
+    if os.path.isdir(os.path.join(d, "Assets")):
+        return True
+    try:
+        for name in os.listdir(d):
+            if name.lower().endswith(".csproj"):
+                return True
+    except OSError:
+        pass
+    return False
+
+
+def _has_node_markers(d):
+    return any(
+        os.path.exists(os.path.join(d, name))
+        for name in ("package.json", "tsconfig.json", "deno.json")
+    )
+
+
+def _standards_location_phrase(d, root):
+    if os.path.abspath(d) == os.path.abspath(root):
+        return "at the repo root"
+    rel = os.path.relpath(d, root).replace(os.sep, "/")
+    return f"in `{rel}/`"
+
+
+def event_standards():
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        standards_dir = os.path.join(here, "..", "rules", "standards")
+        project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+
+        override_path = os.path.join(project_dir, ".claude", "standards")
+        selected = []  # list of (stem, reason)
+
+        if os.path.isfile(override_path):
+            try:
+                lines = _read_text(override_path).replace("\r\n", "\n").splitlines()
+            except OSError:
+                lines = []
+            for line in lines:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                selected.append((line, "named in `.claude/standards`"))
+        else:
+            selected.append(("coding-philosophy", "always applies"))
+            dirs = _standards_scan_dirs(project_dir)
+            unity_dir = None
+            node_dir = None
+            for d in dirs:
+                if unity_dir is None and _has_unity_markers(d):
+                    unity_dir = d
+                if node_dir is None and _has_node_markers(d):
+                    node_dir = d
+            if unity_dir is not None:
+                where = _standards_location_phrase(unity_dir, project_dir)
+                selected.append(
+                    ("csharp-unity-standards", f"Unity project markers were found {where}")
+                )
+            if node_dir is not None:
+                where = _standards_location_phrase(node_dir, project_dir)
+                selected.append(("web-js-ts-node-standards", f"Node markers were found {where}"))
+
+        if not selected:
+            return 0
+
+        bodies = []
+        missing = []
+        for stem, reason in selected:
+            path = os.path.join(standards_dir, f"{stem}.md")
+            try:
+                text = _read_text(path).replace("\r\n", "\n")
+            except OSError:
+                missing.append(stem)
+                continue
+            bodies.append((stem, reason, text))
+
+        ecosystem = [(s, r) for s, r, _ in bodies if s != "coding-philosophy"]
+        has_philosophy = any(s == "coding-philosophy" for s, _, _ in bodies)
+
+        preamble_parts = []
+        if ecosystem:
+            n = len(ecosystem)
+            word = "One" if n == 1 else "Two"
+            plural = "" if n == 1 else "s"
+            verb = "applies" if n == 1 else "apply"
+            preamble_parts.append(
+                f"{word} coding standards document{plural} {verb} to this project."
+            )
+            for stem, reason in ecosystem:
+                governs = STANDARDS_GOVERNS.get(stem, "governs its own languages")
+                preamble_parts.append(f"`{stem}.md` {governs} — selected because {reason}.")
+            if n > 1:
+                preamble_parts.append(
+                    "Each governs its own languages; do not apply one stack's conventions to "
+                    "the other's files."
+                )
+            if has_philosophy:
+                preamble_parts.append("`coding-philosophy.md` applies to all of it.")
+        elif has_philosophy:
+            preamble_parts.append(
+                "Only `coding-philosophy.md` applies to this project — no ecosystem-specific "
+                "markers were found."
+            )
+
+        result = {}
+        if bodies:
+            sections = [f"### {stem}.md\n\n{text}" for stem, _, text in bodies]
+            content = " ".join(preamble_parts) + "\n\n---\n\n" + "\n\n---\n\n".join(sections)
+            result["hookSpecificOutput"] = {
+                "hookEventName": "SessionStart",
+                "additionalContext": content,
+            }
+        if missing:
+            named = ", ".join(f"{m}.md" for m in missing)
+            result["systemMessage"] = (
+                f"house-rules plugin: could not load {named} — named in .claude/standards but "
+                "not found in rules/standards/."
+            )
+
+        if not result:
+            return 0
+        emit(result)
+        return 0
+    except Exception:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the coding-standards selector hit an "
+                "internal error. No standards documents were injected for this session."
+            }
+        )
+        return 0
+
+
+# ---------------------------------------------------------------------------------------
 # scope — UserPromptSubmit. Must not be able to fail: one fixed string, no file read.
 # ---------------------------------------------------------------------------------------
 
@@ -188,6 +359,8 @@ SCOPE_REMINDER = (
     "- Match response depth to the task - do not reason at length about something simple.\n"
     "- Find out what machine you are on, then build for that - no portability work unless asked.\n"
     "- Build only what was asked. Where it is ambiguous, ask instead of assuming.\n"
+    "- Code follows the standards loaded for this project - the coding standards injected at "
+    "session start are binding, and each governs only its own languages.\n"
     "- Deliver a whole workflow: exact commands to run, no manual config editing, no step the "
     "user has to do by hand.\n"
     "- Artifacts go in the project directory as real files, not in chat and not in a temp "
@@ -520,6 +693,7 @@ def event_handover():
 
 EVENTS = {
     "inject": event_inject,
+    "standards": event_standards,
     "scope": event_scope,
     "guard": event_guard,
     "artifact": event_artifact,

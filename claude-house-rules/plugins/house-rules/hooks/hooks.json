@@ -7,6 +7,11 @@
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" inject",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" standards",
+            "timeout": 10
           }
         ]
       }

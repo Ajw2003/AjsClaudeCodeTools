@@ -13,6 +13,7 @@ working Python interpreter and hands off to
 | Hook event | When | What it does |
 |---|---|---|
 | `SessionStart` | every session, every project | the `inject` handler prints [rules/house-rules.md](plugins/house-rules/rules/house-rules.md) **and** [rules/environment.md](plugins/house-rules/rules/environment.md) into Claude's context. This is the CLAUDE.md replacement — no per-repo file needed. |
+| `SessionStart` | every session, every project | a second entry on the same event, so a detection failure here can never take down the injection above: the `standards` handler selects and prints the coding standards docs from [rules/standards/](plugins/house-rules/rules/standards) that apply to the repo it's sitting in — always the coding philosophy, plus the C#/Unity and/or web/JS/TS/Node docs when their project markers are detected. A repo whose needs differ pins its own set in `.claude/standards` (one document name per line). |
 | `UserPromptSubmit` | before every prompt you send | the `scope` handler restates the short version — match depth to the task, the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
 | `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | the `guard` handler checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. |
 | `Stop` | every turn, just before it ends | the `handover` handler blocks the turn **once** and hands Claude the command-handover checklist: shell named (and correct as the fence label), absolute working directory, exact command, what you will see, `UNTESTED:` if it was not actually run. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
@@ -130,6 +131,24 @@ then drifted past:
 - **"Once the approach is decided, delegate the execution"** — enforced at `PostToolUse` on
   `ExitPlanMode`: the moment a plan is approved, the `delegate` handler names `@house-rules:executor`
   before Claude gets a chance to just start implementing on the planning model.
+
+## Coding standards, per repo
+
+Three ecosystem docs ship vendored in [rules/standards/](plugins/house-rules/rules/standards) —
+`coding-philosophy.md` (always), `csharp-unity-standards.md`, `web-js-ts-node-standards.md`.
+They're vendored copies, not a git submodule: `claude plugin install` does not recurse
+submodules, so the directory would be empty on every fresh machine and every cloud session.
+`Ajw2003/Coding-Standards` stays where they're authored; `tools/sync_standards.py` pulls it and
+copies changes into the plugin, printing which files changed and which were already identical.
+
+The `standards` hook picks which of the ecosystem docs apply, per project: it detects Unity
+project markers (`ProjectSettings/ProjectVersion.txt`, an `Assets/` directory, any `*.csproj`)
+and Node markers (`package.json`, `tsconfig.json`, `deno.json`) across the repo root and one
+level of subdirectories, so a mixed repo (Unity under `Game/`, Node at the root) gets both. If
+detection gets a project wrong, or its needs differ, drop a `.claude/standards` file in the repo
+— one document name per line (`coding-philosophy`, `csharp-unity-standards`,
+`web-js-ts-node-standards`), blank lines and `#` comments ignored — and it overrides detection
+entirely.
 
 ## The machine profile
 
