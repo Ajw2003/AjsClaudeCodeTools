@@ -234,6 +234,33 @@ def _has_node_markers(d):
     )
 
 
+def _unity_markers_in_parent(project_dir):
+    """True when project_dir is itself a Unity project's Assets/ folder.
+
+    Opening a Unity project at its Assets/ folder (rather than the project root one level
+    up) is a normal workflow - `_standards_scan_dirs` never sees the sibling
+    ProjectSettings/*.csproj markers because they live above project_dir, not inside it.
+    Checked narrowly (parent must carry a real Unity marker, not just contain a directory
+    named "Assets") so a coincidentally-named Assets/ folder in a non-Unity repo doesn't
+    false-positive.
+    """
+    normalized = os.path.normpath(project_dir)
+    if os.path.basename(normalized) != "Assets":
+        return False
+    parent = os.path.dirname(normalized)
+    if not parent or parent == normalized:
+        return False
+    if os.path.exists(os.path.join(parent, "ProjectSettings", "ProjectVersion.txt")):
+        return True
+    try:
+        for name in os.listdir(parent):
+            if name.lower().endswith(".csproj"):
+                return True
+    except OSError:
+        pass
+    return False
+
+
 def _standards_location_phrase(d, root):
     if os.path.abspath(d) == os.path.abspath(root):
         return "at the repo root"
@@ -274,6 +301,14 @@ def event_standards():
                 where = _standards_location_phrase(unity_dir, project_dir)
                 selected.append(
                     ("csharp-unity-standards", f"Unity project markers were found {where}")
+                )
+            elif _unity_markers_in_parent(project_dir):
+                selected.append(
+                    (
+                        "csharp-unity-standards",
+                        "Unity project markers were found in the parent directory — this "
+                        "project's root is a Unity project's `Assets/` folder",
+                    )
                 )
             if node_dir is not None:
                 where = _standards_location_phrase(node_dir, project_dir)

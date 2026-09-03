@@ -144,8 +144,11 @@ copies changes into the plugin, printing which files changed and which were alre
 The `standards` hook picks which of the ecosystem docs apply, per project: it detects Unity
 project markers (`ProjectSettings/ProjectVersion.txt`, an `Assets/` directory, any `*.csproj`)
 and Node markers (`package.json`, `tsconfig.json`, `deno.json`) across the repo root and one
-level of subdirectories, so a mixed repo (Unity under `Game/`, Node at the root) gets both. If
-detection gets a project wrong, or its needs differ, drop a `.claude/standards` file in the repo
+level of subdirectories, so a mixed repo (Unity under `Game/`, Node at the root) gets both. It
+also catches opening a Unity project at its `Assets/` folder rather than the project root one
+level up — a normal workflow — by checking one level *up* for `ProjectSettings/`/`*.csproj` when
+the root's own directory name is exactly `Assets`. If detection gets a project wrong, or its
+needs differ, drop a `.claude/standards` file in the repo
 — one document name per line (`coding-philosophy`, `csharp-unity-standards`,
 `web-js-ts-node-standards`), blank lines and `#` comments ignored — and it overrides detection
 entirely.
