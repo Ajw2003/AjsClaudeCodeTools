@@ -629,7 +629,7 @@ for DOC in "$ROOT/CLAUDE.md" "$ROOT/claude-house-rules/README.md"; do
   grep -qiE '(four|five|six|seven|eight|nine) hooks' "$DOC" 2>/dev/null && DOCDRIFT="$DOCDRIFT; $DOCNAME spells out a hook count, which drifts"
 done
 # The "exists but hooks.json does not register it" direction is repo-wide, not per-doc.
-for SCRIPT in $(ls "$HERE"/*.sh | sed 's|.*/||' | grep -v '^verify\.sh$'); do
+for SCRIPT in $(ls "$HERE"/*.sh | sed 's|.*/||' | grep -vE '^(verify|run)\.sh$'); do
   printf '%s' "$REGISTERED" | grep -qx "$SCRIPT" || DOCDRIFT="$DOCDRIFT; $SCRIPT exists but hooks.json does not register it"
 done
 if [ -z "$DOCDRIFT" ]; then
