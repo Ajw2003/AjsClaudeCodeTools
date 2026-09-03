@@ -17,8 +17,10 @@ computed at runtime, so it cannot drift out from under an added case.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOOK = os.path.join(HERE, "hook.py")
@@ -739,6 +741,165 @@ if not docdrift:
 else:
     report("FAIL", "the architecture tables match hooks.json")
     print(f"          {'; '.join(docdrift)}")
+
+# --- the standards handler: selection, detection, override, and the fallbacks around it ------
+def make_fixture(files):
+    d = tempfile.mkdtemp(prefix="house-rules-standards-")
+    for relpath, content in files.items():
+        full = os.path.join(d, relpath)
+        parent = os.path.dirname(full)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(full, "w", encoding="utf-8") as f:
+            f.write(content)
+    return d
+
+
+def std_case(title, files, check):
+    """Build a fixture dir under the scratchpad-style temp dir, run the standards handler
+    with CLAUDE_PROJECT_DIR pointed at it, check the output, then remove the fixture."""
+    d = make_fixture(files)
+    try:
+        env = dict(os.environ)
+        env["CLAUDE_PROJECT_DIR"] = d
+        code, out, err = run_hook("standards", "", env=env)
+        ok, detail = check(out)
+        report("PASS" if ok else "FAIL", title)
+        print(f"          {detail}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+std_case(
+    "a bare directory injects coding-philosophy and neither ecosystem document",
+    {},
+    lambda out: (
+        "### coding-philosophy.md" in out
+        and "### csharp-unity-standards.md" not in out
+        and "### web-js-ts-node-standards.md" not in out,
+        f"philosophy-only preamble: {out[:160]!r}",
+    ),
+)
+
+std_case(
+    "ProjectSettings/ProjectVersion.txt injects the C#/Unity document",
+    {"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"},
+    lambda out: (
+        "### csharp-unity-standards.md" in out and "### web-js-ts-node-standards.md" not in out,
+        f"got: {out[:160]!r}",
+    ),
+)
+
+std_case(
+    "package.json injects the web document",
+    {"package.json": "{}"},
+    lambda out: (
+        "### web-js-ts-node-standards.md" in out and "### csharp-unity-standards.md" not in out,
+        f"got: {out[:160]!r}",
+    ),
+)
+
+std_case(
+    "both markers at the root injects all three documents",
+    {"package.json": "{}", "ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"},
+    lambda out: (
+        "### coding-philosophy.md" in out
+        and "### csharp-unity-standards.md" in out
+        and "### web-js-ts-node-standards.md" in out,
+        f"got: {out[:160]!r}",
+    ),
+)
+
+std_case(
+    "the mixed-repo case (Node at root, Unity one level down) injects all three and names Game/",
+    {"package.json": "{}", "Game/ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"},
+    lambda out: (
+        "### coding-philosophy.md" in out
+        and "### csharp-unity-standards.md" in out
+        and "### web-js-ts-node-standards.md" in out
+        and "in `Game/`" in out,
+        f"got: {out[:400]!r}",
+    ),
+)
+
+std_case(
+    "node_modules/package.json in an otherwise bare directory does not select the web document",
+    {"node_modules/package.json": "{}"},
+    lambda out: (
+        "### web-js-ts-node-standards.md" not in out and "### coding-philosophy.md" in out,
+        f"got: {out[:160]!r}",
+    ),
+)
+
+std_case(
+    ".claude/standards naming only the web document in a Unity-shaped directory overrides detection",
+    {
+        "ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n",
+        ".claude/standards": "web-js-ts-node-standards\n",
+    },
+    lambda out: (
+        "### web-js-ts-node-standards.md" in out and "### csharp-unity-standards.md" not in out,
+        f"got: {out[:160]!r}",
+    ),
+)
+
+std_case(
+    ".claude/standards naming a nonexistent document produces a systemMessage, not silence",
+    {".claude/standards": "nonexistent-doc\n"},
+    lambda out: (
+        '"systemMessage"' in out and out.strip() != "",
+        f"got: {out[:200]!r}",
+    ),
+)
+
+# run.sh standards with no working interpreter still prints a visible warning and exits 0
+env_nopath = dict(os.environ)
+env_nopath.pop("HOUSE_RULES_PYTHON", None)
+env_nopath["PATH"] = ""
+code, out, err = run_shell([RUN, "standards"], env=env_nopath)
+if code == 0 and '"systemMessage"' in out and "No coding standards were loaded" in out:
+    report("PASS", "run.sh standards with no working interpreter still warns visibly and exits 0")
+    print(f"          said: {out}")
+else:
+    report("FAIL", "run.sh standards with no working interpreter still warns visibly and exits 0")
+    print(f"          exit code was {code}; stdout={out!r} stderr={err!r}")
+
+# CLAUDE_PROJECT_DIR unset falls back to os.getcwd() and still detects correctly
+cwd_fixture = make_fixture({"package.json": "{}"})
+try:
+    env_nocwd = dict(os.environ)
+    env_nocwd.pop("CLAUDE_PROJECT_DIR", None)
+    proc = subprocess.run(
+        [sys.executable, HOOK, "standards"],
+        cwd=cwd_fixture,
+        input=b"",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env_nocwd,
+    )
+    out_cwd = proc.stdout.decode("utf-8", "replace")
+    if "### web-js-ts-node-standards.md" in out_cwd:
+        report("PASS", "CLAUDE_PROJECT_DIR unset falls back to the current directory and still detects")
+        print("          detected the web document from os.getcwd() alone")
+    else:
+        report("FAIL", "CLAUDE_PROJECT_DIR unset falls back to the current directory and still detects")
+        print(f"          got: {out_cwd[:200]!r}")
+finally:
+    shutil.rmtree(cwd_fixture, ignore_errors=True)
+
+# Drift: the standards rule heading and the matching SCOPE_REMINDER phrase
+std_drift = []
+if "## Code follows the standards loaded for this project" not in rules_text:
+    std_drift.append("house-rules.md is missing the standards rule heading")
+for phrase in ["standards loaded for this project", "governs only its own"]:
+    if phrase.lower() not in rules_text.lower():
+        std_drift.append(f"scope reminder phrase missing from house-rules.md: {phrase}")
+if not std_drift:
+    report("PASS", "the standards rule heading and its SCOPE_REMINDER phrasing have not drifted")
+    print("          house-rules.md states the rule and the scope reminder echoes it")
+else:
+    report("FAIL", "the standards rule heading and its SCOPE_REMINDER phrasing have not drifted")
+    print(f"          {'; '.join(std_drift)}")
 
 print()
 print("-" * 32)
