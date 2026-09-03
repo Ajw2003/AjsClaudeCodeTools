@@ -29,11 +29,16 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
 AGENT = os.path.join(HERE, "..", "agents", "executor.md")
+STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
+TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
+CHATDOC = os.path.join(ROOT, "docs", "claude-ai-instructions.md")
 
+# Absolute, so the PATH-emptied cases below still find the shell they are testing run.sh with —
+# with a bare "sh" those cases fail to launch at all instead of exercising the fallback.
 SH = (
     r"C:\Program Files\Git\bin\sh.exe"
     if os.path.exists(r"C:\Program Files\Git\bin\sh.exe")
-    else "sh"
+    else (shutil.which("sh") or "sh")
 )
 
 STEP = 0
@@ -253,6 +258,20 @@ else:
     report("FAIL", "SessionStart injects every rule heading into context")
     print(f"          missing: {'; '.join(missing)}")
 
+# --- the step-card template actually REACHES the session, not just the file ------------------
+# Asserting rules/house-rules.md contains the card is not asserting Claude ever sees it - the
+# same distinction the model-split checks exist for. Feed inject and read the injected text.
+cardmissing = []
+for marker in ["#### The card", "### Step 1 of", "**You should see:**", "UNTESTED:"]:
+    if marker not in out:
+        cardmissing.append(marker)
+if not cardmissing:
+    report("PASS", "SessionStart injects the step-card template into context")
+    print("          the card markers arrive in additionalContext, not just in the file")
+else:
+    report("FAIL", "SessionStart injects the step-card template into context")
+    print(f"          missing from the injected text: {'; '.join(cardmissing)}")
+
 # --- inject fail-loud: an internal error must still say something ---------------------------
 crash_snippet2 = (
     "import sys, hook\n"
@@ -358,6 +377,8 @@ for phrase in [
     "ask instead of assuming",
     "project directory",
     "hand over a command",
+    "step-card format",
+    "You should see:",
 ]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
@@ -532,7 +553,19 @@ hand_case("silent", "an empty payload is nothing to check, not a failed check", 
 
 # --- the checklist in hook.py's handover handler has not drifted from the rules document ----
 drift = []
-for phrase in ["fence label", "working directory", "UNTESTED", "Run button", "hand over a command"]:
+for phrase in [
+    "fence label",
+    "working directory",
+    "UNTESTED",
+    "Run button",
+    "hand over a command",
+    "open a terminal or PowerShell there",
+    "One numbered step per action",
+    "step-card format",
+    "Step 1 of",
+    "You should see:",
+    "above the fence",
+]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:
@@ -614,6 +647,23 @@ else:
     report("FAIL", "house-rules.md states the delegation rule exactly once")
     print(f"          found {len(heading_hits)} delegation headings: {[m.group(0) for m in heading_hits]}")
 
+# --- house-rules.md states the card format once, and it has not displaced item 6 -------------
+carddrift = []
+card_hits = [m for m in re.finditer(r"^#### The card$", rules_text, re.MULTILINE)]
+if len(card_hits) != 1:
+    carddrift.append(f"found {len(card_hits)} '#### The card' headings, expected exactly 1")
+if not re.search(r"^6\. \*\*One numbered step per action\*\*", rules_text, re.MULTILINE):
+    carddrift.append("item 6 of the handover format is gone - the card must not displace it")
+if "never inside it" not in rules_text:
+    carddrift.append("item 5 no longer says UNTESTED: goes above the fence, not inside it")
+if not carddrift:
+    report("PASS", "house-rules.md states the card format once, alongside the six items")
+    print("          one '#### The card' heading; item 6 and the UNTESTED: placement intact")
+else:
+    report("FAIL", "house-rules.md states the card format once, alongside the six items")
+    print(f"          {'; '.join(carddrift)}")
+
+
 # --- the executor subagent is pinned to Sonnet ---------------------------------------------
 agentdrift = []
 if not os.path.isfile(AGENT):
@@ -633,6 +683,95 @@ if not agentdrift:
 else:
     report("FAIL", "the executor subagent exists and is pinned to Sonnet")
     print(f"          {'; '.join(agentdrift)}")
+
+# --- the opt-in output style exists and is NOT forced ----------------------------------------
+# The absent field is the point: force-for-plugin would silently displace whatever output style
+# the user selected, in every repo on every machine, since this plugin installs globally. Same
+# shape as the executor dead-field check - assert the decision, not just the file.
+styledrift = []
+if not os.path.isfile(STYLE):
+    styledrift.append("output-styles/handover-cards.md is missing")
+else:
+    style_text = read(STYLE)
+    if not re.search(r"^name: ", style_text, re.MULTILINE):
+        styledrift.append("the style has no name: field")
+    if not re.search(r"^description: ", style_text, re.MULTILINE):
+        styledrift.append("the style has no description: field")
+    if not re.search(r"^keep-coding-instructions: true$", style_text, re.MULTILINE):
+        styledrift.append("the style does not keep-coding-instructions, so it would replace them")
+    if re.search(r"^force-for-plugin:", style_text, re.MULTILINE):
+        styledrift.append(
+            "the style sets force-for-plugin, which overrides the user's own outputStyle in "
+            "every repo - that decision was deliberately not taken"
+        )
+if not styledrift:
+    report("PASS", "the handover-cards output style is opt-in, not forced")
+    print("          keeps the coding instructions; does not claim the user's output style slot")
+else:
+    report("FAIL", "the handover-cards output style is opt-in, not forced")
+    print(f"          {'; '.join(styledrift)}")
+
+# --- the step-card page template exists, is self-contained, and matches the card's fields ----
+tpldrift = []
+if not os.path.isfile(TEMPLATE):
+    tpldrift.append("templates/step-card.html is missing")
+else:
+    tpl = read(TEMPLATE)
+    if "const STEPS" not in tpl:
+        tpldrift.append("no `const STEPS` array for Claude to fill")
+    for external in ["<script src=", '<link rel="stylesheet"', "https://"]:
+        if external in tpl:
+            tpldrift.append(f"contains {external!r} - the page must work offline, with no network")
+    for field in ["title:", "location:", "how:", "shell:", "command:", "expect:", "untested:"]:
+        if field not in tpl:
+            tpldrift.append(f"the STEPS array has no {field} field, so it cannot carry the card")
+if not tpldrift:
+    report("PASS", "the step-card page template is self-contained and carries every card field")
+    print("          no external script, stylesheet or fetch; STEPS mirrors the markdown card")
+else:
+    report("FAIL", "the step-card page template is self-contained and carries every card field")
+    print(f"          {'; '.join(tpldrift)}")
+
+# --- the card template was not duplicated into CLAUDE.md -------------------------------------
+# Same reasoning as the rules-duplication check above: CLAUDE.md is a pointer. A second copy of
+# the template would load twice and drift from the real one unnoticed.
+dupe = []
+if os.path.isfile(root_claude):
+    claude_text = read(root_claude)
+    for marker in ["### Step 1 of", "**You should see:**", "*Next: step 2"]:
+        if marker in claude_text:
+            dupe.append(f"CLAUDE.md contains {marker!r} - the template belongs only in house-rules.md")
+if not dupe:
+    report("PASS", "the card template was not duplicated into CLAUDE.md")
+    print("          CLAUDE.md describes the format and points at rules/house-rules.md for it")
+else:
+    report("FAIL", "the card template was not duplicated into CLAUDE.md")
+    print(f"          {'; '.join(dupe)}")
+
+# --- the claude.ai chat block exists and has not drifted from the rules document -------------
+# Hooks do not run in claude.ai chat, so this file is the only thing covering that surface (and
+# the phone). It is a restatement, so it gets the same drift treatment as hook.py's strings.
+chatdrift = []
+if not os.path.isfile(CHATDOC):
+    chatdrift.append("docs/claude-ai-instructions.md is missing")
+else:
+    chat_text = read(CHATDOC)
+    if chat_text.count("````") != 2:
+        chatdrift.append(
+            f"expected exactly one paste-able block delimited by ````, found "
+            f"{chat_text.count('````')} markers"
+        )
+    for phrase in ["fence label", "UNTESTED:", "You should see:", "Step 1 of", "above the fence"]:
+        if phrase not in chat_text:
+            chatdrift.append(f"the block does not state {phrase!r}")
+        elif phrase not in rules_text:
+            chatdrift.append(f"{phrase!r} is in the chat block but not in house-rules.md")
+if not chatdrift:
+    report("PASS", "the claude.ai chat block exists and matches the rules document")
+    print("          one paste-able block; every phrase in it also appears in house-rules.md")
+else:
+    report("FAIL", "the claude.ai chat block exists and matches the rules document")
+    print(f"          {'; '.join(chatdrift)}")
 
 # --- the executor description authorizes proactive use ----------------------------------------
 if os.path.isfile(AGENT) and "proactiv" in read(AGENT).lower():

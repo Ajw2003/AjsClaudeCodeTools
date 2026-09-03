@@ -1,0 +1,273 @@
+<!doctype html>
+<!--
+  step-card.html - the published form of the step-card handover format.
+
+  HOW TO USE THIS FILE
+  Fill TITLE and the STEPS array below. Change nothing else. Every field maps one-to-one onto a
+  field of the markdown card in rules/house-rules.md, so the page and the inline card cannot
+  disagree about what the user is being asked to do. The one card field with no analogue here is
+  the fence label - this page has no fence, and shows the shell name instead.
+
+  Publishing it as an artifact: keep <title>, <style>, the markup and the script; drop the
+  <!doctype>, <html>, <head> and <body> wrappers, which the artifact host supplies. Opened
+  straight off disk it works as-is, offline - there is no external script, stylesheet, font or
+  fetch anywhere in this file, and there must never be one.
+
+  The page is always additive. The inline markdown card is written first and in full; a reader
+  who never opens this link must still be able to do every step.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run these steps</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f6f3;
+    --card: #ffffff;
+    --ink: #1d1c1a;
+    --muted: #6b6862;
+    --line: #e0ddd6;
+    --accent: #2f6f4f;
+    --code-bg: #f2f0ec;
+    --warn-bg: #fdf3e0;
+    --warn-ink: #7a4a06;
+    --warn-line: #e9c98a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17171a;
+      --card: #201f23;
+      --ink: #eceae5;
+      --muted: #9b978f;
+      --line: #35343a;
+      --accent: #79c79b;
+      --code-bg: #17161a;
+      --warn-bg: #2e2415;
+      --warn-ink: #f0c987;
+      --warn-line: #5c4720;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1rem 4rem;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.35rem; line-height: 1.3; margin: 0 0 .35rem; }
+  .lede { color: var(--muted); margin: 0 0 1.5rem; font-size: .95rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.5rem;
+  }
+  .eyebrow {
+    font-size: .75rem; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 .4rem;
+  }
+  h2 { font-size: 1.1rem; margin: 0 0 .75rem; }
+  .where { margin: 0 0 1rem; }
+  .where code, .expect code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; }
+  .untested {
+    background: var(--warn-bg); color: var(--warn-ink);
+    border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .6rem .8rem; margin: 0 0 1rem; font-size: .9rem;
+  }
+  .untested b { letter-spacing: .04em; }
+  .cmdwrap { position: relative; margin: 0 0 1rem; }
+  .shell {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--code-bg); border: 1px solid var(--line); border-bottom: 0;
+    border-radius: 8px 8px 0 0; padding: .35rem .7rem;
+    font-size: .75rem; color: var(--muted);
+  }
+  pre {
+    margin: 0; padding: .85rem .7rem;
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 0 0 8px 8px;
+    overflow-x: auto;
+    font: .875rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .expect { margin: 0; font-size: .95rem; }
+  .expect b { color: var(--accent); }
+  button {
+    font: inherit; font-size: .875rem; cursor: pointer;
+    background: var(--card); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: .45rem .9rem;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:disabled { opacity: .4; cursor: default; }
+  .copy { background: transparent; border: 0; padding: 0 .2rem; color: var(--muted); font-size: .75rem; }
+  .copy:hover { color: var(--accent); }
+  nav { display: flex; align-items: center; gap: .5rem; margin-top: 1.25rem; flex-wrap: wrap; }
+  .pager { display: flex; gap: .35rem; flex: 1; flex-wrap: wrap; }
+  .dot {
+    width: 1.9rem; height: 1.9rem; border-radius: 50%; padding: 0;
+    display: grid; place-items: center; font-size: .8rem;
+  }
+  .dot[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .dot.done { border-color: var(--accent); color: var(--accent); }
+  .all { border: 0; background: transparent; color: var(--muted); text-decoration: underline; }
+  .all:hover { color: var(--accent); }
+  .allsteps > .card { margin-bottom: 1rem; }
+  @media (max-width: 30rem) { body { padding: 1.25rem .75rem 3rem; } .card { padding: 1.1rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title"></h1>
+  <p class="lede" id="lede"></p>
+  <div id="stage"></div>
+</main>
+
+<script>
+// ---------------------------------------------------------------------------------------
+// FILL THESE TWO. Nothing below them needs editing.
+// ---------------------------------------------------------------------------------------
+const TITLE = "Run these steps";
+
+const STEPS = [
+  {
+    title: "Open a terminal in the repo",
+    location: "C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools",
+    how: "right-click the folder and choose Open in Terminal",
+    shell: "PowerShell",
+    command: "",
+    expect: "a prompt showing the folder you are in.",
+    untested: null
+  },
+  {
+    title: "Update the plugin",
+    location: "C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools",
+    how: null,
+    shell: "PowerShell",
+    command: "claude plugin update house-rules@aj-house-rules",
+    expect: "house-rules reported as updated, not \"already at the latest version\".",
+    untested: "this container has no Claude Code CLI, so the command has not been run here."
+  }
+];
+// ---------------------------------------------------------------------------------------
+
+const KEY = "step-card:" + TITLE;
+const stage = document.getElementById("stage");
+let at = 0;
+try { at = Math.min(Number(localStorage.getItem(KEY)) || 0, STEPS.length - 1); } catch (e) { at = 0; }
+
+document.getElementById("title").textContent = TITLE;
+document.getElementById("lede").textContent =
+  STEPS.length + (STEPS.length === 1 ? " step." : " steps. Do them in order; each step's output tells you it worked.");
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+function cardFor(step, i, withEyebrow) {
+  const card = el("section", "card");
+
+  if (withEyebrow && STEPS.length > 1) {
+    card.append(el("p", "eyebrow", "Step " + (i + 1) + " of " + STEPS.length));
+  }
+  card.append(el("h2", null, step.title));
+
+  if (step.untested) {
+    const u = el("div", "untested");
+    u.append(el("b", null, "UNTESTED:"), document.createTextNode(" " + step.untested));
+    card.append(u);
+  }
+
+  if (step.location) {
+    const where = el("p", "where");
+    where.append(document.createTextNode("Navigate to "));
+    where.append(el("code", null, step.location));
+    where.append(document.createTextNode(" and open " + step.shell + " there"));
+    where.append(document.createTextNode(step.how ? " (" + step.how + ")." : "."));
+    card.append(where);
+  }
+
+  if (step.command) {
+    const wrap = el("div", "cmdwrap");
+    const bar = el("div", "shell");
+    bar.append(el("span", null, step.shell));
+    const copy = el("button", "copy", "Copy");
+    copy.addEventListener("click", () => {
+      navigator.clipboard.writeText(step.command).then(
+        () => { copy.textContent = "Copied"; setTimeout(() => { copy.textContent = "Copy"; }, 1400); },
+        () => { copy.textContent = "Copy failed"; }
+      );
+    });
+    bar.append(copy);
+    const pre = el("pre", null, step.command);
+    wrap.append(bar, pre);
+    card.append(wrap);
+  }
+
+  if (step.expect) {
+    const ex = el("p", "expect");
+    ex.append(el("b", null, "You should see:"), document.createTextNode(" " + step.expect));
+    card.append(ex);
+  }
+  return card;
+}
+
+function renderAll() {
+  stage.replaceChildren();
+  const list = el("div", "allsteps");
+  STEPS.forEach((s, i) => list.append(cardFor(s, i, true)));
+  const back = el("button", null, "Back to one step at a time");
+  back.addEventListener("click", render);
+  list.append(back);
+  stage.append(list);
+}
+
+function render() {
+  stage.replaceChildren();
+  const step = STEPS[at];
+  stage.append(cardFor(step, at, true));
+
+  const nav = el("nav");
+  const prev = el("button", null, "Back");
+  prev.disabled = at === 0;
+  prev.addEventListener("click", () => go(at - 1));
+  nav.append(prev);
+
+  if (STEPS.length > 1) {
+    const pager = el("div", "pager");
+    STEPS.forEach((s, i) => {
+      const d = el("button", "dot" + (i < at ? " done" : ""), String(i + 1));
+      if (i === at) d.setAttribute("aria-current", "step");
+      d.setAttribute("aria-label", "Step " + (i + 1) + ": " + s.title);
+      d.addEventListener("click", () => go(i));
+      pager.append(d);
+    });
+    nav.append(pager);
+
+    const all = el("button", "all", "View all steps");
+    all.addEventListener("click", renderAll);
+    nav.append(all);
+  }
+
+  const next = el("button", null, at === STEPS.length - 1 ? "Done" : "Next");
+  next.disabled = at === STEPS.length - 1;
+  next.addEventListener("click", () => go(at + 1));
+  nav.append(next);
+
+  stage.append(nav);
+}
+
+function go(i) {
+  at = Math.max(0, Math.min(i, STEPS.length - 1));
+  try { localStorage.setItem(KEY, String(at)); } catch (e) { /* private window, or site data blocked */ }
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

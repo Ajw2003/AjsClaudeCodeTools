@@ -134,18 +134,28 @@ has not been run, it has not been tested — and I say so.
 ### The handover format is not optional
 
 A bare command block is not an instruction. It is a command the user now has to guess the context
-for: which shell, which directory, what they should see. Every command I hand over carries all
-five of these, every time:
+for: which shell, which folder, how they even get a prompt open there, what they should see. Every
+command I hand over carries all six of these, every time:
 
-1. **The shell it runs in** — named in the prose *and* correct as the fence label. `powershell`
+1. **How they get there** — the folder written as an absolute path, plus the explicit action that
+   opens a prompt in it: *navigate to `C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools` and
+   open a terminal or PowerShell there*. Naming the working directory as an aside on the command
+   ("PowerShell, from `C:\...`") is a label, not a step someone can follow. If getting there is
+   itself non-obvious — a subfolder, a worktree, the folder holding `.git` — I say which folder
+   and how to recognise it.
+2. **The shell it runs in** — named in the prose *and* correct as the fence label. `powershell`
    for PowerShell 5.1, `bash` for Git Bash. The fence label is what the Run button executes, so a
    PowerShell cmdlet in a ```` ```bash ```` fence is a broken instruction no matter what the
    surrounding sentence says.
-2. **The working directory** to run it from — the absolute path, not "from the project root".
 3. **The exact command** — copy-pasteable as written, with no placeholder they have to fill in.
 4. **What they will see** when it works, and what that output means.
-5. **`UNTESTED:` as the first word of the block** if I have not run that exact command, in that
-   shell, on this machine, against those exact paths — plus one sentence saying why not.
+5. **`UNTESTED:` as the first line of the step, above the fence** — never inside it, where it
+   would break the copy-paste item 3 requires — if I have not run that exact command, in that
+   shell, on this machine, against those exact paths, plus one sentence saying why not.
+6. **One numbered step per action**, whenever the handover is more than a single command. Each
+   step gets a short bold title saying what it accomplishes, one thing to do, and its own fenced
+   block. Not a stack of four commands in one fence that the user has to split up, sequence and
+   diagnose themselves — if step 3 is the one that fails, they need to be able to say "step 3".
 
 Never `"insert command"` on its own. If I cannot say where it runs and what it prints, I have not
 finished the work I am handing over.
@@ -153,7 +163,66 @@ finished the work I am handing over.
 **Why:** an instruction that fails on contact wastes their time and teaches them not to trust the
 next one. Verifying it costs me one command. And a command in the wrong fence fails on the very
 button I provided to run it — the failure lands before they have even read the sentence
-explaining it.
+explaining it. The steps are the same courtesy applied to the surrounding context: someone
+following an instruction should never have to reconstruct the state it assumes.
+
+#### The card
+
+The six items above are what a step contains. The step-card format is the shape they go in —
+one card, the same card, every time, so a handover is recognisable before it is read.
+
+````markdown
+**<What this accomplishes>: <N> steps.** Do them in order; each step's output tells you it worked.
+
+---
+
+### Step 1 of <N> — <short title, what this step accomplishes>
+
+Navigate to `<absolute path>` and open **<shell>** there (<how — right-click the folder →
+*Open in Terminal*, etc.>).
+
+```<fence label: powershell | bash | sh | cmd | zsh>
+<the exact command, copy-pasteable, no placeholders>
+```
+
+**You should see:** <the literal output, or its first line>, and <what that means>.
+
+*Next: step 2 <one clause saying what it does>.*
+
+---
+````
+
+A single command drops the numbering and the `*Next:*` line and keeps every other field.
+
+Three things make this checkable rather than decorative:
+
+- **The field order is fixed.** Title, then `UNTESTED:` if it applies, then location and shell,
+  then the fenced command, then `**You should see:**`, then `*Next:*`. A card with the fields
+  shuffled is not a card.
+- **Nothing sits between the `---` pair but card content.** Commentary goes above the opening
+  rule or below the closing one.
+- **The vocabulary is `---`, `###`, `**bold**`, plain paragraphs and top-level fenced blocks, and
+  nothing else.** Not because it is prettier — because that is the set that survives every
+  renderer this reaches. Box-drawing borders wrap-break below about 80 columns and render as
+  literal junk outside a fence. A fence inside a blockquote makes the Run button and the copy
+  button attach unreliably. A command in a table cannot be copied cleanly. A fence nested in a
+  list item indents differently in every renderer. All four are banned for the same reason.
+
+**Why:** the terminal, the IDE panel, the web and desktop transcripts, and the phone all render
+the same reply differently, and the phone is the one that cannot be checked before sending. A
+format that only holds together in the surface I happen to be running in is a format I am
+guessing about.
+
+#### When a card is worth publishing as a page
+
+At **four or more steps**, or whenever asked, the card is also published as a step-by-step page
+from `templates/step-card.html` — one step at a time, a pager, a copy button per command. Below
+four steps the inline card is enough and the page is not worth the tokens.
+
+The page is always additive. The inline card is written first and in full, every time — never
+replaced by a link, never truncated to "see the page for steps 3 to 6". If publishing fails or
+is not available in this session, I say so in one line and stop: the steps above already stand
+on their own. I do not retry, and I do not re-author the page inline.
 
 ## Code follows the standards loaded for this project
 
