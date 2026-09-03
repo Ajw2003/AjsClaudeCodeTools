@@ -32,6 +32,7 @@ AGENT = os.path.join(HERE, "..", "agents", "executor.md")
 STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
 TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
 CHATDOC = os.path.join(ROOT, "docs", "claude-ai-instructions.md")
+VERIFYDOC = os.path.join(ROOT, "docs", "desktop-verification.md")
 
 # Absolute, so the PATH-emptied cases below still find the shell they are testing run.sh with —
 # with a bare "sh" those cases fail to launch at all instead of exercising the fallback.
@@ -731,6 +732,32 @@ if not tpldrift:
 else:
     report("FAIL", "the step-card page template is self-contained and carries every card field")
     print(f"          {'; '.join(tpldrift)}")
+
+# --- every surface the CLAUDE.md table claims has a way to be checked ------------------------
+# The table is a claim about six surfaces; docs/desktop-verification.md is what substantiates it.
+# A row added to the table with no way to check it is exactly the drift guarded against elsewhere,
+# so the surface names are read out of the table itself rather than hardcoded here.
+surfdrift = []
+surfaces = []
+if not os.path.isfile(VERIFYDOC):
+    surfdrift.append("docs/desktop-verification.md is missing")
+elif os.path.isfile(root_claude):
+    verify_doc = read(VERIFYDOC)
+    for line in read(root_claude).splitlines():
+        m = re.match(r"^\| (?:Claude Code|claude\.ai chat) [-\u2014 ]+([^|]+?) \|", line)
+        if m:
+            surfaces.append(m.group(1).strip())
+    if not surfaces:
+        surfdrift.append("no surface rows found in CLAUDE.md - has the table been renamed?")
+    for s in surfaces:
+        if s not in verify_doc:
+            surfdrift.append(f"{s!r} is in the CLAUDE.md table but has no check in desktop-verification.md")
+if not surfdrift:
+    report("PASS", "every surface in the CLAUDE.md table has a check in desktop-verification.md")
+    print(f"          {len(surfaces)} surfaces claimed, {len(surfaces)} covered: {', '.join(surfaces)}")
+else:
+    report("FAIL", "every surface in the CLAUDE.md table has a check in desktop-verification.md")
+    print(f"          {'; '.join(surfdrift)}")
 
 # --- the card template was not duplicated into CLAUDE.md -------------------------------------
 # Same reasoning as the rules-duplication check above: CLAUDE.md is a pointer. A second copy of
