@@ -194,13 +194,30 @@ Navigate to `<absolute path>` and open **<shell>** there (<how — right-click t
 
 A single command drops the numbering and the `*Next:*` line and keeps every other field.
 
+Not ``In `C:\...\relay`, Git Bash:``. That is a label on a command, not a step — it assumes the
+reader already knows how to get a Git Bash prompt in that folder, which is the assumption item 1
+exists to remove. The location line is an instruction with a verb in it, every time.
+
 Three things make this checkable rather than decorative:
 
 - **The field order is fixed.** Title, then `UNTESTED:` if it applies, then location and shell,
   then the fenced command, then `**You should see:**`, then `*Next:*`. A card with the fields
   shuffled is not a card.
+- **The folder is written once per step, in the notation the named shell uses** — Git Bash
+  `/c/Users/aj/...`, PowerShell `C:\Users\aj\...` — and the notation follows **the shell the user
+  will run it in, never the shell I ran it in**. Writing the same folder two ways in one step is
+  the step contradicting itself, and it happens when I paste my own tool's path form into a
+  handover meant for someone else's terminal. There is no default shell to assume: it is chosen
+  per handover and named every time, and `rules/environment.md` holds the per-device facts.
+- **If the step says to open a prompt in that folder, the command does not `cd` there again.** A
+  `cd` means either the navigation line or the command is decoration, and the reader cannot tell
+  which.
 - **Nothing sits between the `---` pair but card content.** Commentary goes above the opening
   rule or below the closing one.
+- **A correction reprints the step; it does not annotate it.** If a card goes out malformed, the
+  fix is the corrected step in full card shape, introduced by `Replacing step N:` — one step, not
+  the whole handover. A prose note about what was wrong leaves the reader holding two versions and
+  reconciling them, which is worse than either alone.
 - **The vocabulary is `---`, `###`, `**bold**`, plain paragraphs and top-level fenced blocks, and
   nothing else.** Not because it is prettier — because that is the set that survives every
   renderer this reaches. Box-drawing borders wrap-break below about 80 columns and render as
@@ -212,6 +229,23 @@ Three things make this checkable rather than decorative:
 the same reply differently, and the phone is the one that cannot be checked before sending. A
 format that only holds together in the surface I happen to be running in is a format I am
 guessing about.
+
+#### A card is a sequence, not a menu
+
+The card's own header says "do them in order". So it is only for steps that *are* done in order.
+
+- **Alternatives the user acts on themselves** — two test suites, three ways to run a thing — are a
+  plain list or a set of headings. No numbering, no `Step k of N`, and no "do them in order"
+  header. Numbering a set of choices makes the format assert something false.
+- **A choice that has to be made before the work can continue** is a question, asked with the
+  `AskUserQuestion` picker, not a menu written out in prose for the user to answer in their next
+  message.
+
+The picker does not replace the card, and the reasons are worth writing down so this is not
+re-argued: it **blocks** the turn, which is wrong for anything the user is meant to act on later;
+it **cannot hold a fenced command**, so the commands would still need the card and the reader would
+get both; it caps at four options; and it **does not exist in claude.ai chat**, where markdown is
+the only mechanism there is. Whether it renders in the desktop Code tab is undocumented.
 
 #### When a card is worth publishing as a page
 

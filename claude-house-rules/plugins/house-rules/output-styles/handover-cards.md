@@ -2,27 +2,28 @@
 name: Handover cards
 description: Hands every user-run command over as a step card - one card, the same shape, on every surface
 keep-coding-instructions: true
+force-for-plugin: true
 ---
 
 # Hand steps over as cards
 
-This style is **opt-in and deliberately not forced.** It restates the step-card half of
-`rules/house-rules.md`, which the plugin's `SessionStart` hook already injects into every session
-and its `UserPromptSubmit` hook already restates on every prompt. Select it with
-`/output-style` when running with `HOUSE_RULES_HANDOVER=off`, or in a session where you want the
-format without the `Stop` check blocking a turn to correct it.
+This style is **applied automatically** whenever the plugin is enabled, via
+`force-for-plugin: true`. That is a reversal of how it shipped in 2.3.0, and the reason is worth
+recording rather than quietly flipping:
 
-It does **not** set `force-for-plugin`, and that omission is load-bearing enough that `verify.py`
-fails if someone adds it. Only one output style is active at a time, so a forced style silently
-displaces whatever style the user selected — and this plugin is installed globally on every
-device by design, which would make that override permanent, in every repo, with no way to keep
-the rules while dropping the style. The plugin already owns the system-prompt region at
-`SessionStart` and every prompt thereafter; forcing the slot would buy very little and cost the
-user a setting that is theirs.
+The original argument was that forcing a style silently displaces whatever style the user selected.
+That assumed the user could select one. They cannot — `/output-style` was deprecated in v2.1.73 and
+removed in v2.1.91, and the desktop app has no style picker at all: `outputStyle` has to be set in
+a settings file by hand. So un-forced meant unreachable on the surface this is actually used on,
+and reaching it would have required the manual config editing the rules themselves forbid. What
+forcing displaces is a settings-file value, not a live choice.
+
+`verify.py` asserts the field is **present**, and will fail if it is removed. The check exists to
+stop the decision being reversed by accident in whichever direction it currently points.
 
 Note that output styles apply to the main conversation only — a subagent runs its own system
 prompt. Work delegated to `@house-rules:executor` is governed by the injected rules, not by this
-file.
+file. Styles are also read once at session start, so a change needs `/clear` or a new session.
 
 ## The format
 
