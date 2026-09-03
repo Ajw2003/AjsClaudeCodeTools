@@ -45,7 +45,7 @@ covers the CLI and the IDE only, and only at the plan-mode boundary:
   the desktop docs map both `--model` and `ANTHROPIC_MODEL` to that dropdown. `opusplan` is an
   alias rather than a model, so it is not offered there either.
 - Cloud sessions (Code tab or web) run on Anthropic-managed VMs, which never receive a settings
-  file deployed to your device — and your device is the only place `install.ps1` can write.
+  file deployed to your device — and your device is the only place `install.py` can write.
 - Auto and accept-edits sessions never enter plan mode, so the one boundary `opusplan` switches
   at is never crossed. That one applies in the CLI too.
 
@@ -188,12 +188,12 @@ hooks are read at startup, so a stale install passes every file-level check whil
 session uses the old copy. That has already happened once here: the plugin sat three commits
 behind for a whole session, injecting four rules while the repo on disk had eleven.
 
-`tools/clean-install-test.ps1` at the repo root automates the install half. The rest has to be
+`python tools/clean_install_test.py` at the repo root automates the install half. The rest has to be
 observed in a live session, after fully quitting and restarting Claude Code:
 
 | Hook | How to see it | What proves it |
 |---|---|---|
-| `SessionStart` | Ask: *what are my house rules, and what machine am I on?* | It answers both **without opening a file** — names the rules, and says the CPU/OS/shell from `environment.md`. If it goes looking for files, nothing was injected. |
+| `SessionStart` | Ask: *what are my house rules, and what machine am I on?* | It answers both **without opening a file** — names the rules, and says the CPU/OS/shell either from a hand-verified `rules/environment.md` or from live runtime detection if none exists. If it goes looking for files, nothing was injected. |
 | `UserPromptSubmit` | Run `claude --debug`, then send any prompt | The hook runs and injects the line starting `Standing house rules` |
 | `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
 | `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
@@ -222,14 +222,19 @@ the outcome is unambiguous.
 
 ## Install on a new device
 
-One command, from the repo root, in PowerShell:
+One command, from the repo root:
 
 ```bash
-.\tools\install.ps1
+.\tools\bootstrap.ps1
+```
+```bash
+sh tools/bootstrap.sh
 ```
 
-It installs the plugin and applies the settings the plugin cannot apply to itself (see below).
-It is idempotent — running it on a machine that already has the plugin changes nothing.
+`bootstrap.ps1`/`bootstrap.sh` probe for a working Python interpreter (the same probe `run.sh`
+uses) and hand off to `tools/install.py`, which installs the plugin and applies the settings
+the plugin cannot apply to itself (see below). Idempotent — running it on a machine that
+already has the plugin changes nothing.
 
 If you would rather do it by hand, the plugin half is two commands:
 
@@ -250,7 +255,7 @@ reads, because those live in `~/.claude/settings.json` and are read at startup �
 rule text in `house-rules.md` can change how the transcript is rendered or which model runs,
 since rules steer Claude and these are the harness.
 
-So `tools/install.ps1` writes them, preserving every other key in the file:
+So `tools/install.py` (invoked via `bootstrap.ps1`/`bootstrap.sh`) writes them, preserving every other key in the file:
 
 | Key | Value | Why |
 |---|---|---|
@@ -304,7 +309,7 @@ there.
 tab and cloud sessions do not.
 
 `verbose` and `model` are not part of the plugin install — they are the two settings
-`install.ps1` also writes, included here so a shipped settings file configures the machine
+`install.py` also writes, included here so a shipped settings file configures the machine
 completely.
 </details>
 

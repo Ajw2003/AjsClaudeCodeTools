@@ -640,17 +640,17 @@ else:
     report("FAIL", "the executor description authorizes proactive use")
     print('          agents/executor.md description has no "proactively" (or similar) wording')
 
-# --- install.ps1 still writes the model setting the README claims ------------------------------
-install_path = os.path.join(ROOT, "tools", "install.ps1")
+# --- install.py still writes the model setting the README claims ------------------------------
+install_path = os.path.join(ROOT, "tools", "install.py")
 moddrift = []
 if not os.path.isfile(install_path):
-    moddrift.append("tools/install.ps1 is missing")
+    moddrift.append("tools/install.py is missing")
 else:
     install_text = read(install_path)
-    if "Name = 'model'" not in install_text:
-        moddrift.append("install.ps1 no longer writes a model setting")
+    if '"name": "model"' not in install_text:
+        moddrift.append("install.py no longer writes a model setting")
     if "opusplan" not in install_text:
-        moddrift.append("install.ps1 no longer sets opusplan")
+        moddrift.append("install.py no longer sets opusplan")
 readme_path = os.path.join(ROOT, "claude-house-rules", "README.md")
 if os.path.isfile(readme_path) and "opusplan" not in read(readme_path):
     moddrift.append("the README does not document opusplan")
@@ -661,10 +661,10 @@ for docfile in [readme_path, root_claude]:
                 f"{os.path.basename(docfile)} does not say opusplan covers only the CLI and the IDE"
             )
 if not moddrift:
-    report("PASS", "install.ps1 sets model = opusplan and the docs scope it correctly")
+    report("PASS", "install.py sets model = opusplan and the docs scope it correctly")
     print("          opusplan on the CLI and IDE; every other surface via @house-rules:executor")
 else:
-    report("FAIL", "install.ps1 sets model = opusplan and the docs scope it correctly")
+    report("FAIL", "install.py sets model = opusplan and the docs scope it correctly")
     print(f"          {'; '.join(moddrift)}")
 
 # --- preflight warns about a missing dependency, and points at /house-rules:doctor -----------

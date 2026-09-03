@@ -31,27 +31,29 @@ no full-path/short-form split to remember. Exit code 0 means every check passed.
 the case tested, expected vs. actual decision, and PASS/FAIL — read there is what fails, no need
 to open the script.
 
-Install (or update) the plugin on a device, from PowerShell:
+Install (or update) the plugin on a device — `tools/bootstrap.ps1` (PowerShell) or
+`tools/bootstrap.sh` (any POSIX shell) probes for a working Python the same way `run.sh` does,
+then hands off to `tools/install.py`, where the real logic lives:
 
 ```bash
-.\tools\install.ps1
+.\tools\bootstrap.ps1
 ```
 
 Idempotent. Installs via `claude plugin marketplace add` / `claude plugin install`, then sets
-`verbose: true` in `~/.claude/settings.json` (a UI setting the plugin itself cannot ship). Use
-`-NoVerbose` to skip that part.
+`verbose: true` and `model: opusplan` in `~/.claude/settings.json` (settings the plugin itself
+cannot ship). Pass `--no-verbose` / `--no-model` to skip a piece.
 
 Prove the *published* plugin installs cleanly on a fresh machine (strips the local install, backs
 up config, reinstalls from GitHub via the two documented CLI commands, then re-runs the suite
 against the fresh clone):
 
 ```bash
-.\tools\clean-install-test.ps1
+python tools/clean_install_test.py
 ```
 
-Add `-Force` to skip the `STRIP` confirmation prompt, or `-SkipStrip` to only re-verify what's
-currently installed. **`tools/` is still PowerShell** — the plan ports it to Python in a later
-step; only the hooks (`run.sh` + `hook.py`) have moved so far.
+Pass `--force` to skip the `STRIP` confirmation prompt, or `--skip-strip` to only re-verify what's
+currently installed. There is no build step and no linter — this repo is Python scripts, one
+POSIX-sh shim (`run.sh`), and JSON.
 
 ## Architecture
 
@@ -105,11 +107,11 @@ primary one; the setting is a CLI convenience on top.**
   session-level selection and outranks the `model` field in any settings file (the desktop docs
   map both `--model` and `ANTHROPIC_MODEL` to that dropdown); `opusplan` is an alias, not a
   model, so it is not in the picker at all; and cloud sessions run on managed VMs that never
-  receive a settings file deployed to the device, which is the only place `tools/install.ps1`
+  receive a settings file deployed to the device, which is the only place `tools/install.py`
   can write. Auto and accept-edits sessions miss it for a fourth reason that applies even in the
   CLI — they never enter plan mode, so the one boundary `opusplan` switches at is never crossed.
 
-`verify.py` checks all of it: the agent still pins Sonnet, `install.ps1` still writes
+`verify.py` checks all of it: the agent still pins Sonnet, `install.py` still writes
 `opusplan`, the `delegate` handler is still registered on `ExitPlanMode` and still names the
 same agent the rules name, and the docs still say the setting covers only the CLI and the IDE —
 asserting the setting exists is not asserting the split works, which is exactly how this went
