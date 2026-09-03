@@ -1,3 +1,15 @@
+# Example machine profile
+
+**This is a worked example, not live configuration.** It used to live at
+`claude-house-rules/plugins/house-rules/rules/environment.md` and be injected into every
+session; that file is now machine-local and gitignored (each device records its own), and
+`SessionStart` falls back to live runtime detection when it is missing. This copy is kept only
+so the traps discovered while building this record on aj's own machine — most importantly the
+`sh`/`bash`-not-on-PATH one below — are not lost. To set up a real, hand-verified profile on a
+device, write a fresh `rules/environment.md` there following this shape.
+
+---
+
 # This machine
 
 Discovered, not assumed. Recorded 2026-08-25 by running the commands in the last section.

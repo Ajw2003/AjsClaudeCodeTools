@@ -5,23 +5,36 @@ device and every project instead of living in a file you have to copy into each 
 
 ## What it actually does
 
-Every hook, defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json):
+Every hook, defined in [plugins/house-rules/hooks/hooks.json](plugins/house-rules/hooks/hooks.json),
+runs the same command — `sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" <event>` — which resolves a
+working Python interpreter and hands off to
+[scripts/hook.py](plugins/house-rules/scripts/hook.py), where every handler lives:
 
-| Hook | When | What it does |
+| Hook event | When | What it does |
 |---|---|---|
-| `SessionStart` | every session, every project | [inject.sh](plugins/house-rules/scripts/inject.sh) prints [rules/house-rules.md](plugins/house-rules/rules/house-rules.md) **and** [rules/environment.md](plugins/house-rules/rules/environment.md) into Claude's context. This is the CLAUDE.md replacement — no per-repo file needed. |
-| `UserPromptSubmit` | before every prompt you send | [scope.sh](plugins/house-rules/scripts/scope.sh) restates the short version — match depth to the task, the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
-| `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | [guard.sh](plugins/house-rules/scripts/guard.sh) checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. |
-| `Stop` | every turn, just before it ends | [handover.sh](plugins/house-rules/scripts/handover.sh) blocks the turn **once** and hands Claude the command-handover checklist: shell named (and correct as the fence label), absolute working directory, exact command, what you will see, `UNTESTED:` if it was not actually run. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
-| `PostToolUse` on `Write` / `Edit` | after a file is written | [artifact.sh](plugins/house-rules/scripts/artifact.sh) notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
-| `PostToolUse` on `Write` | after a file is created | [runnable.sh](plugins/house-rules/scripts/runnable.sh) notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) created inside the project and tells Claude to run them before finishing — the teeth behind "deliver a whole workflow, not a starting point." `Write` only, never `Edit`. **You are never prompted;** the nudge goes to Claude. |
-| `PostToolUse` on `ExitPlanMode` | the moment a plan is approved | [delegate.sh](plugins/house-rules/scripts/delegate.sh) tells Claude the deliberation is over and the implementation should go to `@house-rules:executor`, which is pinned to Sonnet. This is the model split on surfaces where the `opusplan` setting below does not reach. **You are never prompted;** the nudge goes to Claude. |
+| `SessionStart` | every session, every project | the `inject` handler prints [rules/house-rules.md](plugins/house-rules/rules/house-rules.md) **and** [rules/environment.md](plugins/house-rules/rules/environment.md) into Claude's context. This is the CLAUDE.md replacement — no per-repo file needed. |
+| `UserPromptSubmit` | before every prompt you send | the `scope` handler restates the short version — match depth to the task, the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
+| `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | the `guard` handler checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. |
+| `Stop` | every turn, just before it ends | the `handover` handler blocks the turn **once** and hands Claude the command-handover checklist: shell named (and correct as the fence label), absolute working directory, exact command, what you will see, `UNTESTED:` if it was not actually run. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
+| `PostToolUse` on `Write` / `Edit` | after a file is written | the `artifact` handler notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
+| `PostToolUse` on `Write` | after a file is created | the `runnable` handler notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) created inside the project and tells Claude to run them before finishing — the teeth behind "deliver a whole workflow, not a starting point." `Write` only, never `Edit`. **You are never prompted;** the nudge goes to Claude. |
+| `PostToolUse` on `ExitPlanMode` | the moment a plan is approved | the `delegate` handler tells Claude the deliberation is over and the implementation should go to `@house-rules:executor`, which is pinned to Sonnet. This is the model split on surfaces where the `opusplan` setting below does not reach. **You are never prompted;** the nudge goes to Claude. |
+
+### Why a shim in front of `hook.py`
+
+[scripts/run.sh](plugins/house-rules/scripts/run.sh) is the one POSIX-sh file left in the
+plugin. Its only job is finding a Python interpreter that actually runs code, by **probing**
+each candidate (running it and checking the output) rather than trusting `command -v` — on the
+machine this was built on, `python3` is the Windows Store App Execution Alias stub: on PATH,
+found by `command -v`, but it prints an install nag to stdout and exits 0 instead of running
+anything. See the comments at the top of `run.sh` for the full resolution order and what each
+hook event does when no interpreter probes successfully.
 
 ### And one subagent — the mechanism the model split actually runs on
 
 [agents/executor.md](plugins/house-rules/agents/executor.md) registers `@house-rules:executor`,
 pinned to `model: sonnet` at `effort: low`. It runs a plan that has already been decided,
-without re-deliberating the design. `delegate.sh` (above) is what asks for that delegation.
+without re-deliberating the design. the `delegate` handler (above) is what asks for that delegation.
 
 **This, not the `opusplan` setting below, is what makes "Opus plans, Sonnet executes" actually
 happen.** Agent frontmatter ships with the plugin, so it works on every surface. The setting
@@ -32,12 +45,12 @@ covers the CLI and the IDE only, and only at the plan-mode boundary:
   the desktop docs map both `--model` and `ANTHROPIC_MODEL` to that dropdown. `opusplan` is an
   alias rather than a model, so it is not offered there either.
 - Cloud sessions (Code tab or web) run on Anthropic-managed VMs, which never receive a settings
-  file deployed to your device — and your device is the only place `install.ps1` can write.
+  file deployed to your device — and your device is the only place `install.py` can write.
 - Auto and accept-edits sessions never enter plan mode, so the one boundary `opusplan` switches
   at is never crossed. That one applies in the CLI too.
 
 The subagent was in this repo before any of that was understood, and nothing ever invoked it.
-`delegate.sh` and the delegation rule in `house-rules.md` are what ask for it now. If you would
+the `delegate` handler and the delegation rule in `house-rules.md` are what ask for it now. If you would
 rather force the split by hand in a Code-tab session, pick Sonnet in the dropdown once the plan
 is approved — but you should not have to, and that is the point.
 
@@ -54,32 +67,33 @@ is gone.
 
 ## No runtime dependency, and it cannot fail silently
 
-The hooks need `sh`, `grep`, `sed` and `awk`. **No node, no jq, no python.** Nothing that can
-be absent on a fresh machine and quietly take the rules offline with it.
-
-That is a deliberate constraint, not an accident. An earlier version parsed the hook payload
-as JSON with node, and a missing node meant the guard exited without a decision and every
-command sailed through unchecked — a safety net that disappears exactly when you have not
-noticed it is gone. The fix was to stop parsing: the rule patterns match the raw payload text
-just as well, which costs nothing but a slightly wider net.
+`run.sh` needs POSIX `sh`. `hook.py` needs a working Python 3 interpreter and nothing else -
+no third-party packages, stdlib only. That is a deliberate constraint, not an accident. An
+earlier version parsed the hook payload as JSON with node, and a missing node meant the guard
+exited without a decision and every command sailed through unchecked - a safety net that
+disappears exactly when you have not noticed it is gone. Matching stays textual even in Python,
+for the same reason: the rule patterns match the raw payload text just as well, which costs
+nothing but a slightly wider net. `run.sh`'s own job is not letting the interpreter search
+itself become a silent-failure point - see 'Why a shim in front of hook.py' above.
 
 What is left cannot fail quietly either:
 
-- **guard.sh fails closed.** If `grep` is unreachable or the payload is unreadable, it writes
-  the reason to stderr and exits 2 — a blocking error. The command does not run. There is no
-  path through the script that silently lets a command past.
-- **inject.sh fails loud.** If the rules file or `sed`/`awk` is missing, it still prints a
+- **`guard` fails closed.** If the payload is unreadable or an internal error occurs, it
+  writes the reason to stderr and exits 2 — a blocking error. The command does not run. There is
+  no path through the handler that silently lets a command past. `run.sh` extends this: no
+  working interpreter at all is also a blocking failure for `guard`.
+- **`inject` fails loud.** If the rules file is missing or unreadable, it still prints a
   `systemMessage`, so you see "The rules were NOT loaded into this session" in the session
   instead of the rules just not being there.
 
-- **scope.sh cannot fail at all.** On `UserPromptSubmit` a non-zero exit *erases your prompt*, so
-  that hook is one `printf` of a fixed string — it reads no file and runs no other program, so it
-  has no failure path to hit. Its text is therefore a second copy of some wording, which the
-  suite guards against drifting.
-- **artifact.sh and runnable.sh never obstruct.** `PostToolUse` cannot block anyway (the write
-  already happened), and neither tries to be a gate. Missing `grep` gets you a `systemMessage`
-  saying the reminder is offline, not a broken write.
-- **guard.sh falls back rather than failing either way** when it cannot find the `command` field
+- **`scope` cannot fail at all.** On `UserPromptSubmit` a non-zero exit *erases your prompt*, so
+  that handler is one fixed string — it reads no file and runs no subprocess, so it has no
+  failure path to hit. Its text is therefore a second copy of some wording, which the suite
+  guards against drifting.
+- **`artifact` and `runnable` never obstruct.** `PostToolUse` cannot block anyway (the write
+  already happened), and neither tries to be a gate. Any internal error gets you a
+  `systemMessage` saying the reminder is offline, not a broken write.
+- **`guard` falls back rather than failing either way** when it cannot find the `command` field
   in a payload — a tool whose input field is named something else is matched against the whole
   payload, exactly as the guard behaved before it extracted anything. It is never waved through,
   and never blocked wholesale.
@@ -110,42 +124,41 @@ then drifted past:
 - **"Never hand over a command I have not run"** — enforced at `Stop`, which is the only event
   that happens after the reply exists and before the turn ends. No hook can read the reply, so
   it cannot detect a bad handover; what it can do is put the checklist in front of Claude at the
-  moment the turn would otherwise go out. That is the one command-shaped rule `guard.sh` cannot
-  cover, because `guard.sh` only ever sees commands Claude *runs*, never ones it *types into a
+  moment the turn would otherwise go out. That is the one command-shaped rule the `guard` handler
+  cannot cover, because it only ever sees commands Claude *runs*, never ones it *types into a
   reply*.
 - **"Once the approach is decided, delegate the execution"** — enforced at `PostToolUse` on
-  `ExitPlanMode`: the moment a plan is approved, `delegate.sh` names `@house-rules:executor`
+  `ExitPlanMode`: the moment a plan is approved, the `delegate` handler names `@house-rules:executor`
   before Claude gets a chance to just start implementing on the planning model.
 
 ## The machine profile
 
 Rule one is "build for this machine, not for everywhere" — which is worthless if nobody wrote
-down what this machine is. [rules/environment.md](plugins/house-rules/rules/environment.md) is
-that record: OS, shells, hardware, what is on PATH and what only looks like it is. It is
-injected alongside the rules at every session start.
+down what this machine is. `rules/environment.md`, next to the plugin's other rules, is that
+record: OS, shells, hardware, what is on PATH and what only looks like it is. It is injected
+alongside the rules at every session start, but it is **machine-local and gitignored** — it
+never ships with the plugin, so a fresh install has none.
 
-If it is missing, the injection says **NOT RECORDED YET** and tells the session to go and
-discover the facts rather than assume them. On a new machine that is the correct first move:
-run the commands at the bottom of that file and rewrite it. The suite covers both paths.
+When it's missing, the `inject` handler falls back to live runtime detection instead of a
+hardcoded default or a bare "go find out": OS, Python, and whether `git`, `sh`, `bash`, `pwsh`,
+`powershell`, `node` and `npm` are on PATH, checked for real on the machine the session is
+running on. That's enough to work from immediately; write a hand-verified
+`rules/environment.md` when you also need things detection can't know — RAM, GPU, line-ending
+config. [docs/example-environment.md](../docs/example-environment.md) is a worked example, kept
+for the traps it already caught.
 
 It records one trap in particular, because it has already produced a bad instruction: **`sh`
-and `bash` are not on PATH** on this machine. Git for Windows only adds `C:\Program Files\Git\cmd`,
-which holds `git.exe` and nothing else. The shells exist, but must be called by full path.
+and `bash` are not on PATH** on the machine that example was recorded from. Git for Windows only
+adds `C:\Program Files\Git\cmd`, which holds `git.exe` and nothing else. The shells exist, but
+must be called by full path.
 
 ## Verify it yourself
 
-Do not take any of the above on faith. Run it yourself, from the **repo root**.
-
-In PowerShell — where `sh` is not on PATH, so it needs its full path:
-
-```bash
-& "C:\Program Files\Git\bin\sh.exe" claude-house-rules/plugins/house-rules/scripts/verify.sh
-```
-
-Or from a Git Bash window, where the short form works:
+Do not take any of the above on faith. Run it yourself, from the **repo root**, in PowerShell
+or Git Bash — it's plain Python, no full-path/short-form split to remember:
 
 ```bash
-sh claude-house-rules/plugins/house-rules/scripts/verify.sh
+python claude-house-rules/plugins/house-rules/scripts/verify.py
 ```
 
 Every check is numbered and prints what it tested, what it expected, what it got, and PASS or
@@ -170,17 +183,17 @@ nothing is hidden and nothing is logged to a file only Claude reads.
 
 ## Testing that the hooks are actually live
 
-`verify.sh` proves the scripts are correct. It cannot prove Claude Code **loaded** them —
+`verify.py` proves the handlers are correct. It cannot prove Claude Code **loaded** them —
 hooks are read at startup, so a stale install passes every file-level check while the running
 session uses the old copy. That has already happened once here: the plugin sat three commits
 behind for a whole session, injecting four rules while the repo on disk had eleven.
 
-`tools/clean-install-test.ps1` at the repo root automates the install half. The rest has to be
+`python tools/clean_install_test.py` at the repo root automates the install half. The rest has to be
 observed in a live session, after fully quitting and restarting Claude Code:
 
 | Hook | How to see it | What proves it |
 |---|---|---|
-| `SessionStart` | Ask: *what are my house rules, and what machine am I on?* | It answers both **without opening a file** — names the rules, and says the CPU/OS/shell from `environment.md`. If it goes looking for files, nothing was injected. |
+| `SessionStart` | Ask: *what are my house rules, and what machine am I on?* | It answers both **without opening a file** — names the rules, and says the CPU/OS/shell either from a hand-verified `rules/environment.md` or from live runtime detection if none exists. If it goes looking for files, nothing was injected. |
 | `UserPromptSubmit` | Run `claude --debug`, then send any prompt | The hook runs and injects the line starting `Standing house rules` |
 | `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
 | `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
@@ -209,19 +222,24 @@ the outcome is unambiguous.
 
 ## Install on a new device
 
-One command, from the repo root, in PowerShell:
+One command, from the repo root:
 
 ```bash
-.\tools\install.ps1
+.\tools\bootstrap.ps1
+```
+```bash
+sh tools/bootstrap.sh
 ```
 
-It installs the plugin and applies the settings the plugin cannot apply to itself (see below).
-It is idempotent — running it on a machine that already has the plugin changes nothing.
+`bootstrap.ps1`/`bootstrap.sh` probe for a working Python interpreter (the same probe `run.sh`
+uses) and hand off to `tools/install.py`, which installs the plugin and applies the settings
+the plugin cannot apply to itself (see below). Idempotent — running it on a machine that
+already has the plugin changes nothing.
 
 If you would rather do it by hand, the plugin half is two commands:
 
 ```bash
-claude plugin marketplace add Ajw2003/AjsClaudeCodeTools
+claude plugin marketplace add https://github.com/Ajw2003/AjsClaudeCodeTools.git
 ```
 ```bash
 claude plugin install house-rules@aj-house-rules
@@ -237,7 +255,7 @@ reads, because those live in `~/.claude/settings.json` and are read at startup �
 rule text in `house-rules.md` can change how the transcript is rendered or which model runs,
 since rules steer Claude and these are the harness.
 
-So `tools/install.ps1` writes them, preserving every other key in the file:
+So `tools/install.py` (invoked via `bootstrap.ps1`/`bootstrap.sh`) writes them, preserving every other key in the file:
 
 | Key | Value | Why |
 |---|---|---|
@@ -249,8 +267,8 @@ alone on a device you deliberately run on something else.
 
 **A hook cannot do this.** No hook output sets a model — a `SessionStart` hook may be *told*
 which model is running, and there is no `$CLAUDE_MODEL` — so the split is agent frontmatter plus
-a setting, never script logic. Do not try to add it to `guard.sh`. What a hook *can* do is ask
-for the delegation, which is all `delegate.sh` does: it emits text, and the model change comes
+a setting, never script logic. Do not try to add it to the `guard` handler. What a hook *can*
+do is ask for the delegation, which is all the `delegate` handler does: it emits text, and the model change comes
 from the agent it names.
 
 The marketplace manifest lives at the **repo root** (`.claude-plugin/marketplace.json`), which
@@ -277,7 +295,7 @@ there.
 {
   "extraKnownMarketplaces": {
     "aj-house-rules": {
-      "source": { "source": "github", "repo": "Ajw2003/AjsClaudeCodeTools" },
+      "source": { "source": "git", "url": "https://github.com/Ajw2003/AjsClaudeCodeTools.git" },
       "autoUpdate": true
     }
   },
@@ -291,7 +309,7 @@ there.
 tab and cloud sessions do not.
 
 `verbose` and `model` are not part of the plugin install — they are the two settings
-`install.ps1` also writes, included here so a shipped settings file configures the machine
+`install.py` also writes, included here so a shipped settings file configures the machine
 completely.
 </details>
 
@@ -304,10 +322,16 @@ being right when the manifest moved to the root.)
 
 ## On Windows
 
-Hooks run through Git Bash when Git is installed, which is where `sh`, `grep`, `sed` and `awk`
-come from. On a Windows machine with no Git Bash at all, Claude Code falls back to PowerShell
-and the `sh` invocation fails — visibly, as a hook error on every command, not silently. Install
-Git for Windows and it works.
+Every hook command is `sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" <event>` — `sh` still, even
+after the Python port. "Environment-agnostic" means every OS **given a POSIX shell**, not every
+OS unconditionally: `run.sh` is what resolves a working Python interpreter for `hook.py`, and
+`hooks.json` has to reach `run.sh` itself first, through `sh`.
+
+On Windows that `sh` comes from Git Bash. On a Windows machine with no Git Bash at all, Claude
+Code falls back to PowerShell and the `sh` invocation fails outright — visibly, as a hook error
+on every command, not silently. That has not changed and is not fixed by this port: it is the
+same risk the plugin has always carried on Windows, stated plainly rather than glossed over.
+Install Git for Windows and it works, on every OS including this one.
 
 ## Editing the rules
 
@@ -317,15 +341,15 @@ pointers to it, not duplicates. Claude Code auto-loads every `CLAUDE.md` it find
 there means the rules land in context twice and the two can drift apart unnoticed. The suite
 fails if one reappears.
 
-[plugins/house-rules/scripts/scope.sh](plugins/house-rules/scripts/scope.sh) restates a few
-phrases from the rules inline (it cannot read a file — see above). If you reword one of those
-rules, the suite tells you the reminder no longer matches.
-[plugins/house-rules/scripts/guard.sh](plugins/house-rules/scripts/guard.sh) holds the patterns
-the guard matches. If you add a rule to the markdown that has a shell signature, add a check
-next to it and a case in `verify.sh`.
+[plugins/house-rules/scripts/hook.py](plugins/house-rules/scripts/hook.py)'s `scope` handler
+restates a few phrases from the rules inline (it cannot read a file — see above). If you reword
+one of those rules, the suite tells you the reminder no longer matches. The same file's `guard`
+handler holds the patterns the guard matches. If you add a rule to the markdown that has a
+shell signature, add a check next to it and a case in `verify.py`.
 
 ## Known limitation
 
-Matching is textual and runs against the whole hook payload, so a command that merely mentions
-a tripwire word — `echo "git commit"` — prompts too. An extra keypress is cheaper than a missed
-commit.
+Matching is textual and runs against the extracted `command` field (or the whole payload, on
+the fallback tier when no `command` field is found — see "What trips the guard" above), so a
+command that merely mentions a tripwire word — `echo "git commit"` — prompts too. An extra
+keypress is cheaper than a missed commit.

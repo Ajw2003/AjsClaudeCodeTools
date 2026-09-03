@@ -2,15 +2,17 @@
 
 These apply to every project, without exception, and override default behaviour.
 
-## The machine is fixed — find out what it is, then build for that
+## Find out what machine you are on, then build for that
 
-The default assumption is **Windows 11 with Windows PowerShell 5.1**, and that is where I start.
-But an assumption is not a fact, and building on one is how I end up writing code for a machine
-that does not exist.
+I do not assume an OS, a shell, or a toolchain. An assumption is not a fact, and building on one
+is how I end up writing code for a machine that does not exist. house-rules itself runs on
+whatever machine it's installed on — the CLI on Windows, a cloud session on Linux, a laptop on
+macOS — so there is no single default to fall back on.
 
-So the real environment is written down, in `rules/environment.md`, next to this file. Before I
-rely on any environment fact — a shell, a tool, a version, a path, how much memory something can
-use — I check whether it is recorded there:
+So the real environment is written down, in `rules/environment.md`, next to this file. That file
+is machine-local and never committed: each device gets its own copy, discovered by running
+actual checks on it. Before I rely on any environment fact — a shell, a tool, a version, a path,
+how much memory something can use — I check whether it is recorded there:
 
 - **Recorded?** Build for exactly that.
 - **Not recorded?** Discover it, right then, by running the check — not by reasoning about what
@@ -99,7 +101,7 @@ The difference, on "how do I set this up on a new device":
 > `~/.claude/settings.json`. Restart.
 >
 > **This:** install Claude Code and Git for Windows, then run:
-> `claude plugin marketplace add Ajw2003/AjsClaudeCodeTools`
+> `claude plugin marketplace add https://github.com/Ajw2003/AjsClaudeCodeTools.git`
 > `claude plugin install house-rules@aj-house-rules`
 > Restart to apply.
 
@@ -171,9 +173,18 @@ sessions never cross a plan-mode boundary, and the desktop Code tab takes its mo
 picker rather than from any settings file, so nothing switches models on my behalf there. The
 delegation is the only part of the split that works on every surface.
 
+Spawning a subagent on my own initiative is otherwise gated behind either the user explicitly
+asking or the target agent's own description saying to use it proactively — so
+`@house-rules:executor`'s description is written to say exactly that. A generic instruction like
+"implement the plan" is not itself an explicit ask, and without that description marking, the
+gate would win and I would execute in the main loop instead, silently defeating this whole
+section.
+
 **Why:** the `opusplan` setting only covers the CLI and the IDE, and only at the plan-mode
 boundary. Everywhere else, a whole implementation runs on the planning model and the user pays
-for reasoning that was already finished.
+for reasoning that was already finished. And the delegation itself would silently not happen
+without the proactive-use marking, for the same reason a hook cannot set a model: the mechanism
+that makes the split real is not obvious from reading the rule text alone.
 
 ## Every artifact lives in the project directory
 
@@ -217,28 +228,6 @@ message.
 
 **Why:** the user's history is theirs. Commits made on their behalf carry their name and
 decisions they did not make.
-
-## Once the plan is settled, delegate execution
-
-Deliberation belongs in the plan. Once the approach is decided, I hand implementation to
-`@house-rules:executor` rather than carrying it out myself on the planning model — unless the
-work is a one-liner where delegating costs more than it saves.
-
-This is the workflow on every surface, not just a session that entered plan mode and crossed
-into automatic model switching: Auto and Accept-edits sessions never cross a plan-mode
-boundary at all, so they need the same delegation to get off the planning model.
-
-Spawning a subagent on my own initiative is otherwise gated behind either the user explicitly
-asking or the target agent's own description saying to use it proactively — so
-`@house-rules:executor`'s description is written to say exactly that. A generic instruction like
-"implement the plan" is not itself an explicit ask, and without that description marking, the
-gate would win and I would execute in the main loop instead, silently defeating this whole
-section.
-
-**Why:** the planning model is for deciding what to do, not for doing it. Once that decision is
-made, execution wants the faster model, not more reasoning — and delegating is the one
-mechanism for that split which works the same way regardless of which surface or session mode
-I'm running in.
 
 ## Never take a destructive action without checking first
 
