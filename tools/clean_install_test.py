@@ -56,7 +56,12 @@ def info(msg):
 
 
 def run_claude(args):
-    proc = subprocess.run(["claude"] + args, capture_output=True, text=True)
+    # encoding is explicit: the claude CLI writes UTF-8, and text=True alone decodes with the
+    # locale codec (cp1252 on Windows), which renders its output as mojibake.
+    proc = subprocess.run(
+        ["claude"] + args, capture_output=True, text=True,
+        encoding="utf-8", errors="replace",
+    )
     for line in (proc.stdout + proc.stderr).splitlines():
         info(line)
     return proc.returncode
@@ -90,7 +95,7 @@ def main():
     print()
     print("house-rules - clean install test")
     print("================================")
-    print(f"Source repo : https://github.com/{REPO}")
+    print(f"Source repo : {REPO}")
     print(f"Plugin      : {PLUGIN_ID}")
     print(f"Claude dir  : {claude_dir}")
 
@@ -127,7 +132,7 @@ def main():
     step("What a new device would actually get")
     remote = None
     remote_proc = subprocess.run(
-        ["git", "ls-remote", f"https://github.com/{REPO}.git", "refs/heads/main"],
+        ["git", "ls-remote", REPO, "refs/heads/main"],
         capture_output=True,
         text=True,
     )
@@ -178,10 +183,11 @@ def main():
         print(f"       - the installed plugin {PLUGIN_ID}")
         print(f"       - the marketplace clone at {clone_path}")
         print(f"       - the extracted copy at   {cache_path}")
-        print("       - the keys enabledPlugins and extraKnownMarketplaces from settings.json")
+        print(f"       - the {PLUGIN_ID} entry from enabledPlugins in settings.json")
+        print(f"       - the {MARKETPLACE} entry from extraKnownMarketplaces in settings.json")
         print(f"       - the {MARKETPLACE} entry from known_marketplaces.json")
-        print("     It will NOT touch your theme, enableWorkflows, autoUpdatesChannel, the")
-        print("     claude-plugins-official marketplace, or any CLAUDE.md file.")
+        print("     It will NOT touch your theme, enableWorkflows, autoUpdatesChannel, any")
+        print("     OTHER plugin or marketplace you have installed, or any CLAUDE.md file.")
         if not args.force:
             answer = input("     Type STRIP to continue, anything else to abort: ")
             if answer != "STRIP":
@@ -196,12 +202,22 @@ def main():
 
         step("Strip the declarative keys out of settings.json, keeping everything else")
         if os.path.isfile(settings_path):
+            # Remove OUR entries only. Popping the whole enabledPlugins and
+            # extraKnownMarketplaces keys also deregistered every unrelated plugin and
+            # marketplace on the machine - which the header above promises not to do, and
+            # which the reinstall at the end does not put back.
             s = load_json(settings_path)
-            kept = [k for k in s if k not in ("enabledPlugins", "extraKnownMarketplaces")]
-            for k in ("enabledPlugins", "extraKnownMarketplaces"):
-                s.pop(k, None)
+            removed = []
+            if isinstance(s.get("enabledPlugins"), dict):
+                if s["enabledPlugins"].pop(PLUGIN_ID, None) is not None:
+                    removed.append(f"enabledPlugins[{PLUGIN_ID}]")
+            if isinstance(s.get("extraKnownMarketplaces"), dict):
+                if s["extraKnownMarketplaces"].pop(MARKETPLACE, None) is not None:
+                    removed.append(f"extraKnownMarketplaces[{MARKETPLACE}]")
             save_json(settings_path, s)
-            ok(f"removed the two plugin keys; kept: {', '.join(kept)}")
+            survivors = sorted(s.get("enabledPlugins", {}))
+            ok(f"removed {', '.join(removed) if removed else 'nothing (already absent)'}")
+            info(f"other plugins left registered: {', '.join(survivors) if survivors else 'none'}")
         else:
             info("no settings.json")
 
