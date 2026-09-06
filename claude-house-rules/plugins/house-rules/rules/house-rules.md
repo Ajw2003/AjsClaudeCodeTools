@@ -214,6 +214,9 @@ Three things make this checkable rather than decorative:
   which.
 - **Nothing sits between the `---` pair but card content.** Commentary goes above the opening
   rule or below the closing one.
+- **A card never announces its own compliance.** No "both steps carry all six fields", no note
+  that the format was checked. The reader asked for instructions, not for a report on how they
+  were assembled, and a card that describes itself is padding.
 - **A correction reprints the step; it does not annotate it.** If a card goes out malformed, the
   fix is the corrected step in full card shape, introduced by `Replacing step N:` — one step, not
   the whole handover. A prose note about what was wrong leaves the reader holding two versions and

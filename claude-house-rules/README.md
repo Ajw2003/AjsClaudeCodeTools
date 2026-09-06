@@ -16,7 +16,7 @@ working Python interpreter and hands off to
 | `SessionStart` | every session, every project | a second entry on the same event, so a detection failure here can never take down the injection above: the `standards` handler selects and prints the coding standards docs from [rules/standards/](plugins/house-rules/rules/standards) that apply to the repo it's sitting in — always the coding philosophy, plus the C#/Unity and/or web/JS/TS/Node docs when their project markers are detected. A repo whose needs differ pins its own set in `.claude/standards` (one document name per line). |
 | `UserPromptSubmit` | before every prompt you send | the `scope` handler restates the short version — match depth to the task, the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
 | `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | the `guard` handler checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. |
-| `Stop` | every turn, just before it ends | the `handover` handler blocks the turn **once** and hands Claude the command-handover checklist: how you get there (the folder as an absolute path, plus opening a terminal or PowerShell in it), shell named (and correct as the fence label), exact command, what you will see, `UNTESTED:` above the fence if it was not actually run, and one numbered step per action once there is more than one command — all of it in the step-card format. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
+| `Stop` | a turn ending with a reply that **contains a fenced block** | the `handover` handler hands Claude the command-handover checklist **once**, as Stop hook feedback rather than a blocking error. A reply with no fenced block handed over no commands, so it stays silent instead of making you watch Claude answer a check you never asked about. The checklist: how you get there (the folder as an absolute path, plus opening a terminal or PowerShell in it), shell named (and correct as the fence label), exact command, what you will see, `UNTESTED:` above the fence if it was not actually run, and one numbered step per action once there is more than one command — all of it in the step-card format. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
 | `PostToolUse` on `Write` / `Edit` | after a file is written | the `artifact` handler notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
 | `PostToolUse` on `Write` | after a file is created | the `runnable` handler notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) created inside the project and tells Claude to run them before finishing — the teeth behind "deliver a whole workflow, not a starting point." `Write` only, never `Edit`. **You are never prompted;** the nudge goes to Claude. |
 | `PostToolUse` on `ExitPlanMode` | the moment a plan is approved | the `delegate` handler tells Claude the deliberation is over and the implementation should go to `@house-rules:executor`, which is pinned to Sonnet. This is the model split on surfaces where the `opusplan` setting below does not reach. **You are never prompted;** the nudge goes to Claude. |
@@ -123,9 +123,12 @@ then drifted past:
 - **"Deliver a whole workflow"** — its runnable-file half has a real check, at `PostToolUse`:
   a script created and never run gets a reminder.
 - **"Never hand over a command I have not run"** — enforced at `Stop`, which is the only event
-  that happens after the reply exists and before the turn ends. No hook can read the reply, so
-  it cannot detect a bad handover; what it can do is put the checklist in front of Claude at the
-  moment the turn would otherwise go out. That is the one command-shaped rule the `guard` handler
+  that happens after the reply exists and before the turn ends. A `Stop` hook *can* see the
+  reply, via `last_assistant_message`, and the handler uses it to decide whether to fire at all —
+  but only coarsely: a fenced block means a command was handed over. It still cannot judge
+  whether that command was actually run, or whether the folder is right, so it does not try. What
+  it does is put the checklist in front of Claude at the moment the turn would otherwise go out,
+  and only on the turns where a command is in play. That is the one command-shaped rule the `guard` handler
   cannot cover, because it only ever sees commands Claude *runs*, never ones it *types into a
   reply*.
 - **"Once the approach is decided, delegate the execution"** — enforced at `PostToolUse` on
@@ -221,7 +224,7 @@ observed in a live session, after fully quitting and restarting Claude Code:
 | `UserPromptSubmit` | Run `claude --debug`, then send any prompt | The hook runs and injects the line starting `Standing house rules` |
 | `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
 | `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
-| `Stop` | Ask any trivial question and let the turn end | The turn is blocked exactly once with the command-handover checklist, then ends normally on the retry. Restart with `HOUSE_RULES_HANDOVER=off` set and it ends with no block. |
+| `Stop` | Ask for something that ends in a command to run, and let the turn end | The turn is extended exactly once with the command-handover checklist, then ends normally on the retry. Ask a question whose answer contains **no** fenced block and it stays silent - that is the firing condition, not a bug. Restart with `HOUSE_RULES_HANDOVER=off` set and it never fires. |
 | `PostToolUse` on `ExitPlanMode` | Approve any plan out of plan mode | A delegation nudge naming `@house-rules:executor` comes back **to Claude**; you are not prompted |
 
 ### The guard test needs an uncommitted change — this is the part that catches people

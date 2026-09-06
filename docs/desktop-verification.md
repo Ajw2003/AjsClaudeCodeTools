@@ -21,6 +21,16 @@ Run it after a release that touches the handover format. Record the plugin versi
   with "Correction to Step 1 — how you get there and the shell weren't stated properly". Partial
   evidence for §2b, and the reason 2.4.0 changed corrections to reprint the step. It does **not**
   close §2b, which asks what happens with the hook *off*.
+- **2026-09-03 — a second real handover on 2.3.1 came out correct in every field**: item 1 as a
+  navigate-and-open instruction, no redundant `cd`, PowerShell notation matching the shell that
+  was actually used, `UNTESTED:` above the fence, header and `*Next:*` lines present. None of the
+  four defects from the first observation recurred, and this was *before* 2.4.0's rule changes —
+  so the format wording is working and the remaining problem was hook noise, not the format.
+  Further partial evidence for §2a, which it does not close.
+- **2026-09-03 — the check announced itself on a conforming reply**: the same turn ended with
+  "Both steps already carry all six fields in card shape", and an unrelated turn that handed over
+  no commands had to answer the check in the user's view. Both are why the check now reads
+  `last_assistant_message` and stays silent when the reply has no fenced block.
 - **2026-09-03 — `/output-style` no longer exists on any surface** (deprecated v2.1.73, removed
   v2.1.91), and the desktop app has no style picker. §6 previously told you to run it; that was
   wrong and is rewritten. This is why 2.4.0 forces the style.
