@@ -140,9 +140,10 @@ of these, every time:
 1. **How they get there** — the folder as an absolute path, plus the explicit action that opens a
    prompt in it (*navigate to `<path>` and open a terminal or PowerShell there*), not the
    working directory named as an aside on the command.
-2. **The shell it runs in** — named in the prose *and* correct as the fence label, since the fence
-   label is what the Run button executes. A PowerShell cmdlet in a ```` ```bash ```` fence is
-   broken no matter what the sentence says.
+2. **The shell it runs in** — named in the prose *and* correct as the fence label, since the label
+   tells the reader which shell the syntax is for. A PowerShell cmdlet in a ```` ```bash ```` fence
+   is broken the moment it is pasted into the shell the prose named. The Run button does **not**
+   pick the shell from the label — observed on the desktop Code tab, 2026-09-07.
 3. **The exact command** — copy-pasteable as written, no placeholder to fill in.
 4. **What they will see** when it works, and what that output means.
 5. **`UNTESTED:` as the first line of the step, above the fence** — never inside it, where it
@@ -197,8 +198,13 @@ What makes this checkable rather than decorative:
 - **The folder is written once per step, in the notation of the named shell** (Git Bash
   `/c/Users/...`, PowerShell `C:\Users\...`), matching **the shell the user will run it in,
   never the shell I ran it in**. `rules/environment.md` holds the per-device facts.
-- **No redundant `cd`** — if the step already says to open a prompt there, the command
-  does not `cd` there again.
+- **No redundant `cd`, and the command does not depend on where the prompt is.** If the step
+  already says to open a prompt there, the command does not `cd` there again — but the Run button
+  executes in the session's working directory, not the folder the step names (observed
+  2026-09-07: a step naming `relay` ran from `Assets`, hitting the wrong `package.json`). So
+  prefer location-independent forms — `npm --prefix "<path>" test`, `git -C "<path>" status`,
+  absolute script paths — which behave the same pasted or clicked. The navigate-and-open line
+  still stands, because it is true for whoever pastes.
 - **Nothing sits between the `---` pair but card content.**
 - **A card never announces its own compliance.** No "both steps carry all six fields" — the
   reader asked for instructions, not a report on how they were assembled.
