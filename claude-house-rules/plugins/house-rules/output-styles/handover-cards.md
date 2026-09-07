@@ -25,6 +25,25 @@ Note that output styles apply to the main conversation only — a subagent runs 
 prompt. Work delegated to `@house-rules:executor` is governed by the injected rules, not by this
 file. Styles are also read once at session start, so a change needs `/clear` or a new session.
 
+## The six things every handed-over command carries
+
+Restated from `rules/house-rules.md`, which is the only real copy. `verify.py` fails if this
+list drifts from it — this file fell behind once already, and it is a live carrier whenever the
+`Stop` check is switched off, so drift here is not cosmetic.
+
+1. **How they get there** — the folder as an absolute path, plus the action that opens a prompt
+   in it. Not the working directory named as an aside on the command.
+2. **The shell it runs in** — named in the prose and correct as the fence label, since the label
+   tells the reader which shell the syntax is for. The Run button does not pick the shell from it.
+3. **The exact command** — copy-pasteable, no placeholders, and it **runs from anywhere**. The
+   Run button executes in the session's working directory, not the folder the step names, so use
+   `npm --prefix "<path>" test`, `git -C "<path>" status`, absolute script paths — never a bare
+   command that assumes the reader is already in the right folder.
+4. **What they will see** when it works, and what that output means.
+5. **`UNTESTED:`** as the first line of the step, above the fence and never inside it, when that
+   exact command was not run in that shell against those exact paths.
+6. **One numbered step per action** once there is more than one command.
+
 ## The format
 
 Every command handed to the user to run goes in this shape:

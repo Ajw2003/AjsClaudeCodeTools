@@ -8,8 +8,8 @@ cells as *undocumented*, which is absence of evidence, not evidence.
 
 Run it after a release that touches the handover format. Record the plugin version you ran it at.
 
-**Version run at:** 2.4.0 → 2.5.0 · **Date:** 2026-09-07 · **Result:** §0 passed, §2a and §3
-answered (see Findings) · §2b still open
+**Version run at:** 2.4.0 → 2.9.0 · **Date:** 2026-09-07 · **Result:** §0, §2a, §2b and §3 all
+answered (see Findings). §1, §4–§9 not yet run.
 
 ### Findings so far
 
@@ -75,6 +75,29 @@ answered (see Findings) · §2b still open
   location-independent forms such as `npm --prefix "<absolute path>" test` or
   `git -C "<absolute path>" status`. `rules/house-rules.md`, `hook.py`'s `scope` and `handover`
   reminders, and `docs/claude-ai-instructions.md` were corrected in response.
+
+- **2026-09-07 — §2b PASSES.** With `HOUSE_RULES_HANDOVER=off` and a fresh session, a two-step
+  handover still came back as a full card: header line, `---` rules, `### Step 1 of 2`, the
+  navigate-and-open line with the how, `**You should see:**`, the `*Next:*` line, `UNTESTED:` above
+  step 2, and no correction block. So `inject` and the forced output style carry the format on
+  their own — the `Stop` check is a backstop, not the mechanism. This was the result that would
+  have sent the design back, and it did not. The reply also volunteered "PowerShell works too — the
+  command is identical", which is the corrected item 2 landing.
+- **2026-09-07 — but the Run-button failure recurred verbatim in that same reply**, with 2.8.0
+  installed and the rule loaded (confirmed by `Select-String` finding
+  `does not depend on where the prompt is` at `house-rules.md:201` in the installed copy). The
+  command was a bare `npm test`, which ran from `Assets` and failed again. So the rule was **loaded
+  and ignored** — a stale install was ruled out, not assumed. Three reasons it did not bite, all
+  fixed in 2.9.0:
+  1. It sat as the *second clause* of a bullet titled "No redundant `cd`" — the bullet leads with
+     a prohibition, so the actual requirement read as subordinate.
+  2. It was not in the six-item contract. Item 3 said only "copy-pasteable as written, no
+     placeholder to fill in" — nothing about location. It now says the command **runs from
+     anywhere**, because a command that only works in one folder is not copy-pasteable.
+  3. `output-styles/handover-cards.md` contained none of it, and with the `Stop` check off that
+     style is one of only two carriers — so during this very test the rule's entire presence was
+     the one buried sub-bullet. The style now restates all six items, and `verify.py` gained a
+     drift check (proven to fail before being trusted) so it cannot fall behind again.
 
 ## Which section covers which surface
 
