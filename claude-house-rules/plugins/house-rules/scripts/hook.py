@@ -402,29 +402,28 @@ def event_standards():
 # ---------------------------------------------------------------------------------------
 
 SCOPE_REMINDER = (
+    # The long form fires on roughly 40% of real prompts, so its size is paid often. It was
+    # trimmed from 1,435 chars by merging the two handover bullets: the step-card shape and
+    # the per-command fields are one rule from the model's point of view, and stating them
+    # separately bought nothing. Every rule the old text carried is still here - this is the
+    # same content said once instead of twice, not a shorter list of rules.
     "Standing house rules (full text was injected at session start):\n"
-    "- Match response depth to the task - do not reason at length about something simple.\n"
-    "- Find out what machine you are on, then build for that - no portability work unless asked.\n"
-    "- Build only what was asked. Where it is ambiguous, ask instead of assuming.\n"
-    "- Code follows the standards loaded for this project - the coding standards injected at "
-    "session start are binding, and each governs only its own languages.\n"
-    "- Deliver a whole workflow: exact commands to run, no manual config editing, no step the "
-    "user has to do by hand.\n"
-    "- Artifacts go in the project directory as real files, not in chat and not in a temp "
+    "- Match response depth to the task; build only what was asked, and ask instead of "
+    "assuming.\n"
+    "- Find out what machine you are on and build for that. The coding standards injected "
+    "at session start are binding, each governing only its own languages.\n"
+    "- Deliver a whole workflow: exact commands to run, nothing left for the user to "
+    "configure by hand.\n"
+    "- Artifacts are real files in the project directory, not chat and not a temp "
     "directory.\n"
     "- Never hand over a command you have not run where the user will run it. Running "
     "something similar is not running it.\n"
-    "- Every command you hand over states the shell (named, and correct as the fence label - "
-    "that label is what the Run button executes), the absolute working directory, the exact "
-    "command, and what the user will see. If you did not run it, UNTESTED: is the first line "
-    "of the step, above the fence. A bare command block is not an instruction.\n"
-    "- Hand steps over in the step-card format: --- delimiters, ### Step 1 of N - title, the "
-    "folder and shell in prose, one fenced block per step, then You should see:."
+    "- Hand every command over in the step-card format: --- delimiters, ### Step N of M, "
+    "the absolute folder and the shell named in prose and correct as the fence label, one "
+    "fenced block per step, then You should see:. If you did not run it, UNTESTED: is the "
+    "first line of the step, above the fence."
 )
 
-# Short form: the rules that decay over a long session (the ones a 60-turn session forgets),
-# not a restatement of everything - the full SCOPE_REMINDER above is still injected once at
-# session start via `inject`, so repeating all of it every prompt is pure waste.
 SCOPE_REMINDER_SHORT = (
     "House rules reminder: hand steps over in the step-card format (--- delimiters, ### Step "
     "N of M, one fenced block per step, You should see:). Never hand over a command you have "

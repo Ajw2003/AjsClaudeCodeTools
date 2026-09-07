@@ -70,6 +70,21 @@ def installed_plugin_dir():
     return os.path.join(PLUGIN_CACHE, max(versions)[1])
 
 
+def reminder_text(stdout):
+    """The context a hook actually adds, unwrapped from its JSON envelope.
+
+    Measuring raw stdout would count the envelope's own punctuation and key names, which the
+    model never sees, against BASELINE_SCOPE_CHARS - a plain-text figure. That inflates the
+    apparent saving by roughly 90 chars per prompt. Compare like with like.
+    """
+    try:
+        payload = json.loads(stdout)
+    except ValueError:
+        return stdout
+    hook_out = payload.get("hookSpecificOutput") or {}
+    return hook_out.get("additionalContext") or payload.get("systemMessage") or stdout
+
+
 def run_hook(hook_py, event, payload):
     """Invoke a hook handler the way the harness does and return (exit code, stdout)."""
     proc = subprocess.run(
@@ -182,7 +197,7 @@ def main():
     print("\n1. Per-prompt cost (scope)")
     _, short_out = run_hook(hook_py, "scope", json.dumps({"prompt": "what do you think"}))
     _, long_out = run_hook(hook_py, "scope", json.dumps({"prompt": "run the build script"}))
-    short_chars, long_chars = len(short_out), len(long_out)
+    short_chars, long_chars = len(reminder_text(short_out)), len(reminder_text(long_out))
     print(f"   short form : {short_chars:>6,} chars  (~{tokens(short_chars)} tokens)")
     print(f"   long form  : {long_chars:>6,} chars  (~{tokens(long_chars)} tokens)")
     if short_chars >= long_chars:
@@ -218,9 +233,9 @@ def main():
     print("\n3. Per-session cost (SessionStart)")
     _, inject_out = run_hook(hook_py, "inject", "{}")
     _, standards_out = run_hook(hook_py, "standards", "{}")
-    print(f"   inject     : {len(inject_out):>6,} chars  (~{tokens(len(inject_out)):,} tokens)")
-    print(f"   standards  : {len(standards_out):>6,} chars  "
-          f"(~{tokens(len(standards_out)):,} tokens)")
+    inject_chars, standards_chars = len(reminder_text(inject_out)), len(reminder_text(standards_out))
+    print(f"   inject     : {inject_chars:>6,} chars  (~{tokens(inject_chars):,} tokens)")
+    print(f"   standards  : {standards_chars:>6,} chars  (~{tokens(standards_chars):,} tokens)")
     print("   (re-paid on every subagent spawn, not just once per session)")
 
     # --- 4. the path that must never fail ----------------------------------------------------

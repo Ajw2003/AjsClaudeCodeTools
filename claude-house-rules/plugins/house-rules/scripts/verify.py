@@ -427,6 +427,31 @@ for phrase in [
 ]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
+# The check above reads the rules document only, so it cannot notice a reminder that has been
+# trimmed until it no longer states a rule. The long form was cut from 1,435 to ~915 chars for
+# cost; these are the rules it must still carry after any further trim, since the long form is
+# the only place they are restated once the SessionStart copy has faded from attention.
+long_reminder = run_hook("scope", json.dumps({"prompt": "run the build script"}))[1]
+gutted = []
+for phrase in [
+    "only what was asked",
+    "ask instead of assuming",
+    "whole workflow",
+    "project directory",
+    "have not run",
+    "step-card format",
+    "You should see:",
+    "UNTESTED:",
+]:
+    if phrase.lower() not in long_reminder.lower():
+        gutted.append(phrase)
+if not gutted:
+    report("PASS", "the trimmed long-form reminder still carries every operative rule")
+    print(f"          {len(long_reminder)} chars, all 8 operative phrases present")
+else:
+    report("FAIL", "the trimmed long-form reminder still carries every operative rule")
+    print(f"          trimmed away: {'; '.join(gutted)}")
+
 if not drift:
     report("PASS", "scope reminder still matches the rules document")
     print("          every key phrase in the reminder appears in rules/house-rules.md")

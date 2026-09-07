@@ -55,6 +55,10 @@ command-shaped — and prints the size of each reply. Before 2.6.0 there was a s
 1,435-char string with no branch, so if the two forms come back the same size the gating is not
 in effect, and the tool says so explicitly rather than reporting a meaningless number.
 
+Sizes are of the `additionalContext` the hook adds, unwrapped from its JSON envelope. Counting
+raw stdout would charge the reminder for key names and punctuation the model never sees — about
+90 chars a prompt — against a baseline that is plain text, which flatters the result.
+
 ### 2. Which form your real prompts get
 
 The split is the whole ballgame: a short form that only fires on 5% of prompts saves nothing.
