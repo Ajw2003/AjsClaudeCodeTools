@@ -207,7 +207,9 @@ the `sh`/`bash`-not-on-PATH trap discovered on this machine, is preserved at
 - **`docs/plans/`** holds implementation plans as real, committed files — per the rules
   themselves, artifacts never live only in a chat transcript or a temp directory.
 - **`tools/`** holds device-setup and release-verification scripts, not plugin code — nothing here
-  ships to an installed copy of the plugin.
+  ships to an installed copy of the plugin. `clean_install_test.py` now byte-compares the installed
+  copy against the repo, and `--skip-strip` is the mode that catches a stale install, because a
+  strip deletes the cache and therefore guarantees a fresh clone.
 - **`claude-house-rules/plugins/house-rules/rules/standards/`** holds the vendored per-ecosystem
   coding standards docs (`coding-philosophy.md`, `csharp-unity-standards.md`,
   `web-js-ts-node-standards.md`), **committed** — unlike `rules/environment.md`, these must ship

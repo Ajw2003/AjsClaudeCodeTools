@@ -276,6 +276,62 @@ def main():
     else:
         bad("no installed_plugins.json after install")
 
+    # The SHA check above runs after the strip, when the cache has been deleted and a fresh
+    # clone is therefore guaranteed - it can never see a stale install. This check is what
+    # earns its place under --skip-strip, where nothing was deleted and the installed copy may
+    # be sitting on old content under an unchanged version number (exactly what PR #13 did:
+    # merged a Stop-hook change with no version bump, so a version-keyed cache could keep
+    # serving PR #12's 2.4.0 forever). It byte-compares every file the repo ships against what
+    # is actually on disk, rather than trusting the version number to mean anything.
+    step("Does the installed copy match the repo, byte for byte?")
+    repo_plugin_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "claude-house-rules", "plugins", "house-rules",
+    )
+    if install_path and os.path.isdir(install_path):
+        failures_before = failures
+        for root, dirs, files in os.walk(repo_plugin_dir):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for fname in files:
+                if fname.endswith(".pyc"):
+                    continue
+                repo_file = os.path.join(root, fname)
+                rel = os.path.relpath(repo_file, repo_plugin_dir)
+                if rel == os.path.join("rules", "environment.md"):
+                    continue
+                installed_file = os.path.join(install_path, rel)
+                if not os.path.isfile(installed_file):
+                    bad(f"{rel} is MISSING from the installed copy")
+                    continue
+                with open(repo_file, "rb") as rf, open(installed_file, "rb") as inf:
+                    if rf.read() == inf.read():
+                        ok(rel)
+                    else:
+                        bad(f"{rel} differs from the repo copy")
+
+        installed_version = None
+        if os.path.isfile(installed_path):
+            inst3 = load_json(installed_path)
+            e3 = inst3.get("plugins", {}).get(PLUGIN_ID)
+            if e3:
+                installed_version = e3[0].get("version")
+        repo_plugin_json = os.path.join(repo_plugin_dir, ".claude-plugin", "plugin.json")
+        repo_version = None
+        if os.path.isfile(repo_plugin_json):
+            repo_version = load_json(repo_plugin_json).get("version")
+
+        if installed_version == repo_version:
+            if failures > failures_before:
+                bad(
+                    f"installed copy is stale under unchanged version {installed_version} - "
+                    "the plugin version was probably not bumped when the plugin changed"
+                )
+        else:
+            info(f"installed version {installed_version}")
+            info(f"repo version      {repo_version}")
+    else:
+        bad("cannot find the installed copy on disk")
+
     step("Does the installed copy contain every file the hooks need?")
     expected = [
         os.path.join("hooks", "hooks.json"),
