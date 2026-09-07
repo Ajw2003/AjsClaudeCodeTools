@@ -617,6 +617,13 @@ def _is_outside_project(file_path):
     return any(p.search(file_path) for p in _OUTSIDE_PATTERNS)
 
 
+# The rule is "every artifact lives in the project directory", so this list is every extension a
+# document deliverable actually arrives as. It shipped as md|txt only, which meant an .html report
+# written to the scratchpad was invisible to the one backstop that exists to catch exactly that -
+# a restatement of the rule quietly narrower than the rule. Runnable extensions stay out on
+# purpose: a .py in a temp directory is scratch work, and event_runnable already owns that case.
+_ARTIFACT_EXT_RE = re.compile(r"\.(md|txt|html|csv|json|svg|pdf)$", re.IGNORECASE)
+
 ARTIFACT_NOTE = (
     "House rules, artifact custody: that document was written outside the project "
     "directory, so it is not tracked and will not outlive this session. Before you finish "
@@ -634,7 +641,8 @@ def event_artifact():
         file_path = _extract_file_path(payload)
         if not file_path:
             return 0
-        if not re.search(r"\.(md|txt)$", file_path, re.IGNORECASE):
+        base = re.split(r"[\\/]", file_path)[-1]
+        if not _ARTIFACT_EXT_RE.search(base):
             return 0
         if not _is_outside_project(file_path):
             return 0
