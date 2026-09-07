@@ -10,7 +10,8 @@ Run it after a release that touches the handover format. Record the plugin versi
 
 **Version run at:** 2.4.0 → 2.10.0 · **Date:** 2026-09-07 · **Result:** §0, §2a, §2b and §3 all
 answered, and 2.9.0's location-independence fix verified working on the desktop app (see
-Findings). §1, §4–§9 not yet run, and 2.10.0's handover gate not yet seen on the app.
+Findings). 2.10.0's handover gate is verified on the app for a conforming card (test A); test B
+and §1, §4–§9 are not yet run.
 
 ### Findings so far
 
@@ -129,9 +130,24 @@ Findings). §1, §4–§9 not yet run, and 2.10.0's handover gate not yet seen o
   style) all still state the six before the reply is written. The `Stop` check was always the
   backstop, not the primary carrier.
 
-  Still to verify on the desktop: that a conforming multi-step handover now ends with no trailing
-  commentary at all, and that a fenced command written *outside* card shape still draws the
-  checklist. `verify.py` covers both as unit cases; neither has been seen on the real app.
+- **2026-09-07 — the 2.10.0 gate VERIFIED on the desktop app (test A of two).** On Windows 11,
+  plugin 2.10.0 installed and byte-matching source, a three-step handover came back as a card
+  ending at its closing `---`. What followed it was new information — the marketplace clone
+  reporting 38 commits unpushed to its own upstream, and the restart reminder — not a report on
+  the card's own fields. The "both cards carry all six fields" sentence that 2.9.0 produced on
+  every conforming reply is gone. Note that this result cannot distinguish "the check fired and
+  said nothing" from "the check did not fire"; it does not need to, because the announcement is
+  the only observable either way.
+
+  Recorded incidentally from the same run: `claude plugin update` is **version-gated** and copies
+  nothing while the version string is unchanged, which is why `tools/force_update.py` (uninstall
+  then reinstall) exists rather than being redundant with the CLI verb. It reported
+  `OK: house-rules 2.10.0 matches source, file-for-file`, and `verify.py` on the freshly installed
+  copy reported 101/101.
+
+  **Test B is still outstanding:** a fenced command written *outside* card shape must still draw
+  the checklist, proving the gate narrowed the firing condition rather than switching the check
+  off. `verify.py` covers it as a unit case; it has not been seen on the real app.
 
 ## Which section covers which surface
 
