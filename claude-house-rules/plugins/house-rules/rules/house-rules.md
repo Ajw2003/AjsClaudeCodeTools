@@ -144,7 +144,11 @@ of these, every time:
    tells the reader which shell the syntax is for. A PowerShell cmdlet in a ```` ```bash ```` fence
    is broken the moment it is pasted into the shell the prose named. The Run button does **not**
    pick the shell from the label — observed on the desktop Code tab, 2026-09-07.
-3. **The exact command** — copy-pasteable as written, no placeholder to fill in.
+3. **The exact command** — copy-pasteable as written, no placeholder to fill in, and it
+   **runs from anywhere**. A command that only works from one folder is not copy-pasteable:
+   the Run button executes in the session's working directory, not the folder the step
+   names. Use `npm --prefix "<path>" test`, `git -C "<path>" status`, absolute script
+   paths — never a bare command that assumes the reader is already somewhere.
 4. **What they will see** when it works, and what that output means.
 5. **`UNTESTED:` as the first line of the step, above the fence** — never inside it, where it
    would break the copy-paste — if I have not run that exact command, in that shell, against

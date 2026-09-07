@@ -838,6 +838,14 @@ else:
         styledrift.append("the style has no description: field")
     if not re.search(r"^keep-coding-instructions: true$", style_text, re.MULTILINE):
         styledrift.append("the style does not keep-coding-instructions, so it would replace them")
+    # The style is a live carrier whenever the Stop check is off, so a restatement that has
+    # fallen behind the rules is a real gap, not cosmetic. It fell behind once already:
+    # location-independence shipped in the rules and never reached this file.
+    for phrase in ["runs from anywhere", "One numbered step per action", "UNTESTED:"]:
+        if phrase not in style_text:
+            styledrift.append(f"the style no longer restates {phrase!r} from the six items")
+        elif phrase not in rules_text:
+            styledrift.append(f"{phrase!r} is in the style but not in house-rules.md")
     if not re.search(r"^force-for-plugin: true$", style_text, re.MULTILINE):
         styledrift.append(
             "the style does not set force-for-plugin: true - without it the style is "
