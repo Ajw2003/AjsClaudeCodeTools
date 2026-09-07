@@ -777,18 +777,37 @@ _TOGGLE_OFF = {"off", "0", "false", "no"}
 _LAST_MESSAGE_FIELD_RE = re.compile(r'"last_assistant_message"\s*:\s*"(?:[^"\\]|\\.)*"')
 
 
-def _reply_hands_over_a_command(payload):
+# The three marks a card cannot be missing: the rule that opens and closes it, the step heading,
+# and the expected-output line. A reply carrying all three is already in the shape this check
+# exists to produce, so the check has nothing to add - see _reply_needs_the_handover_check.
+_CARD_MARKERS = ("---", "###", "You should see:")
+
+
+def _reply_is_already_a_card(reply):
+    return all(mark in reply for mark in _CARD_MARKERS)
+
+
+def _reply_needs_the_handover_check(payload):
     """Three tiers, the same ladder guard uses on its own input.
 
-    Field found  -> True only if the reply contains a fenced block. No fence means no command
-                    was handed over, so there is nothing for this check to be about.
+    Field found  -> True only if the reply hands over a command (a fenced block) and is not
+                    already in card shape. Firing on a reply that already complies cannot end
+                    quietly: the turn continues, suppressOutput has no effect, and what the
+                    user gets is Claude announcing its own compliance - the one thing
+                    rules/house-rules.md forbids a card from doing. Not firing is the only
+                    way that rule can hold.
     Field absent -> True. An older CLI that does not send last_assistant_message must not
                     silently disable the check; fall back to firing, as it behaved before.
+
+    The cost is deliberate and worth naming: a reply in card shape but missing a field - no
+    UNTESTED:, no location line - now passes unchecked. That is a silent miss on some turns
+    in exchange for a guaranteed visible defect on every good one.
     """
     m = _LAST_MESSAGE_FIELD_RE.search(payload)
     if m is None:
         return True
-    return "```" in m.group(0)
+    reply = m.group(0)
+    return "```" in reply and not _reply_is_already_a_card(reply)
 
 
 def event_handover():
@@ -815,7 +834,7 @@ def event_handover():
     if re.search(r'"stop_hook_active"\s*:\s*true', payload):
         return 0
 
-    if not _reply_hands_over_a_command(payload):
+    if not _reply_needs_the_handover_check(payload):
         return 0
 
     # additionalContext, not decision: "block". Both continue the turn under the same loop

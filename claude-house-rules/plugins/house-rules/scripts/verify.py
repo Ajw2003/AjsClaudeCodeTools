@@ -629,6 +629,31 @@ hand_case(
         last_assistant_message="I opened the pull request; nothing for you to run."
     ),
 )
+# 2.9.0 shipped "a card never announces its own compliance" as a rule and then violated it on
+# every conforming handover: the check fired, the turn continued, and the only thing left to say
+# was that nothing needed saying. Wording could not fix that - it was tried twice - because a
+# continued turn cannot be silent. Not firing can.
+hand_case(
+    "silent",
+    "a reply already in card shape is not re-checked - firing there can only produce the "
+    "compliance announcement the rules forbid",
+    stop_payload(
+        last_assistant_message=(
+            "**Update the plugin: 1 step.**\n\n---\n\n### Step 1 of 1 - Update\n\n"
+            "Navigate to `C:\\repo` and open **PowerShell** there.\n\n"
+            "```powershell\nclaude plugin update house-rules@aj-house-rules\n```\n\n"
+            "**You should see:** house-rules reported as updated.\n\n---\n"
+        )
+    ),
+)
+hand_case(
+    "feedback",
+    "a fenced command that is not in card shape is still checked - the gate is card markers, "
+    "not the mere presence of a fence",
+    stop_payload(
+        last_assistant_message="Run `claude plugin update` from the repo:\n\n```powershell\nclaude plugin update\n```\n"
+    ),
+)
 hand_case(
     "feedback",
     "a payload with no last_assistant_message still fires - a CLI without it must not "

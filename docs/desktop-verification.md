@@ -8,8 +8,9 @@ cells as *undocumented*, which is absence of evidence, not evidence.
 
 Run it after a release that touches the handover format. Record the plugin version you ran it at.
 
-**Version run at:** 2.4.0 → 2.9.0 · **Date:** 2026-09-07 · **Result:** §0, §2a, §2b and §3 all
-answered (see Findings). §1, §4–§9 not yet run.
+**Version run at:** 2.4.0 → 2.10.0 · **Date:** 2026-09-07 · **Result:** §0, §2a, §2b and §3 all
+answered, and 2.9.0's location-independence fix verified working on the desktop app (see
+Findings). §1, §4–§9 not yet run, and 2.10.0's handover gate not yet seen on the app.
 
 ### Findings so far
 
@@ -98,6 +99,39 @@ answered (see Findings). §1, §4–§9 not yet run.
      style is one of only two carriers — so during this very test the rule's entire presence was
      the one buried sub-bullet. The style now restates all six items, and `verify.py` gained a
      drift check (proven to fail before being trusted) so it cannot fall behind again.
+- **2026-09-07 — 2.9.0's location-independence fix is VERIFIED WORKING.** The same RockSkipping
+  question that failed twice returned
+  `npm --prefix "C:\Users\aj\Desktop\GameDev\RockSkipping\relay" test`, and clicking **Run**
+  executed it from `Assets` — the directory that broke it both previous times — reaching
+  `tests 46 / pass 46 / fail 0`. The reply also volunteered "the command below runs from anywhere,
+  so the session's current folder is fine too", which is item 3's new wording landing verbatim.
+
+  **The lesson is about placement, not wording.** This rule failed twice while it lived as a
+  sub-bullet under `#### The card` — restating it more forcefully changed nothing. It started
+  working the moment it moved into the **six-item contract** (item 3) and into
+  `output-styles/handover-cards.md`. A rule that must change the draft belongs in the six; a rule
+  in a sub-bullet is documentation.
+- **2026-09-07 — the compliance announcement, and the gate that fixed it (2.10.0).** That same
+  reply ended "Both cards carry all six fields — nothing to correct", which `HANDOVER_NOTE` calls
+  "itself the failure this is guarding against" and `house-rules.md` forbids as "A card never
+  announces its own compliance". Wording failed twice (2.4.0 strengthened it; 2.9.0 states it
+  outright), and it cannot succeed by wording at all: the continued turn **cannot be made
+  silent** — `suppressOutput` is documented as having no effect — so once the check fires on a
+  reply needing nothing, something is always emitted. The repo was shipping a rule that its own
+  hook broke on every correct handover.
+
+  2.10.0 fixes it structurally instead: `handover` now stays silent when the reply already
+  carries the card markers (`---`, `###`, `You should see:`), so a conforming reply never fires
+  it and there is nothing to announce. This was considered and declined once, on the grounds that
+  a reply carrying the markers but botching a field would slip through unchecked. That cost is
+  real and still stands — but it is a **silent miss on some turns**, traded against a **visible
+  defect on every good one**, and the drafting-path carriers (`inject`, `scope`, and the output
+  style) all still state the six before the reply is written. The `Stop` check was always the
+  backstop, not the primary carrier.
+
+  Still to verify on the desktop: that a conforming multi-step handover now ends with no trailing
+  commentary at all, and that a fenced command written *outside* card shape still draws the
+  checklist. `verify.py` covers both as unit cases; neither has been seen on the real app.
 
 ## Which section covers which surface
 
@@ -137,7 +171,7 @@ directly for a marker from the newest change:
 
 UNTESTED:
 ```powershell
-Select-String -Path "$env:USERPROFILE\.claude\plugins\cache\aj-house-rules\house-rules\*\scripts\hook.py" -Pattern "_reply_hands_over_a_command"
+Select-String -Path "$env:USERPROFILE\.claude\plugins\cache\aj-house-rules\house-rules\*\scripts\hook.py" -Pattern "_reply_needs_the_handover_check"
 ```
 
 **You should see:** at least one match. No match means the installed copy predates the change even
