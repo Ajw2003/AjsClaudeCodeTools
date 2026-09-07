@@ -410,6 +410,31 @@ art_case(
     "script in a temp directory is scratch work, not an artifact",
     r"C:\Users\aj\AppData\Local\Temp\build.sh",
 )
+# The extension list shipped as md|txt, so an .html report written to the scratchpad was invisible
+# to the one backstop that exists to catch it - the rule says "every artifact", the pattern said
+# two extensions. It happened for real: an architecture review was left in the scratchpad and the
+# hook never fired. One case per extension, so widening cannot silently narrow again.
+art_case(
+    "remind",
+    "an .html report written to the scratchpad is flagged - the case that shipped unguarded",
+    r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\architecture-review.html",
+)
+art_case(
+    "silent",
+    "an .html report written inside the project is left alone",
+    r"C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\docs\architecture-review.html",
+)
+for _ext in ("csv", "json", "svg", "pdf"):
+    art_case(
+        "remind",
+        f"a .{_ext} deliverable written outside the project is flagged",
+        rf"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\report.{_ext}",
+    )
+art_case(
+    "silent",
+    "a .ps1 in the scratchpad is still scratch work - runnables stay out of the artifact list",
+    r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\build.ps1",
+)
 
 # --- the reminder in hook.py's scope handler has not drifted from the rules document --------
 # Covers both forms - the short one is what fires on most prompts now, so its phrases need the
