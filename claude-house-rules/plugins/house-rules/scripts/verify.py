@@ -125,6 +125,25 @@ GUARD_CASES = [
     ("pass", None, "git switch main"),
     ("pass", None, "git branch -d old-feature"),
     ("pass", None, "git tag v1.2.0"),
+    # Ref moves. The case IS the meaning: -b/-d/-m are the safe verbs people use constantly and
+    # must stay silent, while -B/-D/-M discard. These pairs are what stops a later widening of the
+    # pattern (or a stray re.IGNORECASE) from either prompting on everything or catching nothing.
+    (
+        "ask",
+        "Never take a destructive action without checking first",
+        "git checkout -B feature/x origin/main",
+    ),
+    (
+        "ask",
+        "Never take a destructive action without checking first",
+        "git switch -C feature/x origin/main",
+    ),
+    (
+        "ask",
+        "Never take a destructive action without checking first",
+        "git branch -D old-feature",
+    ),
+    ("pass", None, "git branch -m old-name new-name"),
     ("ask", "Never commit without asking", "git reset --hard origin/main"),
     (
         "ask",

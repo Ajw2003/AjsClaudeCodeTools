@@ -525,6 +525,25 @@ GUARD_R4 = [
         r"git\s+(-[^\s]+\s+)*stash\s+(drop|clear)([^0-9A-Za-z-]|$)",
         "deletes stashed work permanently (git stash drop / clear)",
     ),
+    # (?-i:...) because guard matches case-insensitively and the case IS the meaning here:
+    # -b creates a branch, -B resets an existing one; -d refuses on unmerged commits, -D
+    # forces. Matching both cases would prompt on the two safe verbs people use constantly.
+    # A ref move is the destructive operation with no dirty working tree to warn anyone: a commit
+    # only this branch pointed at is unreachable the moment the pointer moves, and git status says
+    # nothing. checkout -- / restore above cover the working tree; these cover the refs.
+    (
+        r"git\s+(-[^\s]+\s+)*(checkout|switch)\s+(-[^\s]+\s+)*(?-i:-[BC])([^0-9A-Za-z-]|$)",
+        "moves a branch pointer, orphaning any commit only that branch held "
+        "(git checkout -B / git switch -C)",
+    ),
+    (
+        r"git\s+(-[^\s]+\s+)*branch\s+(-[^\s]+\s+)*(?-i:-[DM])([^0-9A-Za-z-]|$)",
+        "deletes or renames a branch, which can orphan its commits (git branch -D / -M)",
+    ),
+    (
+        r"git\s+(-[^\s]+\s+)*push\s+[^|;&]*(--force|--force-with-lease|(^|\s)-f)([^0-9A-Za-z-]|$)",
+        "overwrites a remote branch, discarding whatever only the remote held (force push)",
+    ),
 ]
 
 GUARD_BUCKETS = [

@@ -348,3 +348,24 @@ a running process. It applies to my own scratch output too — once a file I cre
 it is their work, and removing it is their call.
 
 **Why:** uncommitted work has no undo. Clearing it with the user first costs one message.
+
+### Never move a branch pointer without proving nothing is lost
+
+`git checkout -B`, `git switch -C`, `git branch -D`, `git reset --hard` and a force-push all move
+or delete a ref. Committed work is safe from an *edit*, but not from these: a commit that only one
+branch pointed at is unreachable the moment that pointer moves, and it does not show up in
+`git status` because nothing is dirty. This is the failure mode that looks safest and is not.
+
+So before moving a branch pointer to a new base, prove the branch holds nothing the new base does
+not. Use `python tools/rebase_branch.py <branch> <base>`, which refuses to move the pointer while
+unmerged commits exist and cherry-picks them onto the new base instead. Comparison is by
+**patch-id**, not by commit sha, so a commit already merged through a squash or a rebase is
+correctly seen as present rather than reported as about-to-be-lost.
+
+Doing it by hand is the same three facts in the same order, and the tool exists so they are never
+skipped: what is on the branch, what of that is missing from the new base, and what happens to it.
+
+**Why:** a merged pull request makes the branch look finished, so resetting it onto main reads as
+routine housekeeping. A commit pushed after that merge is invisible to that reasoning and is
+discarded silently. Ref moves are the one destructive operation with no dirty working tree to warn
+anybody.
