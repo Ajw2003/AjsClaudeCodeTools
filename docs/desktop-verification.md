@@ -8,7 +8,7 @@ cells as *undocumented*, which is absence of evidence, not evidence.
 
 Run it after a release that touches the handover format. Record the plugin version you ran it at.
 
-**Version run at:** _not yet run_ · **Date:** _—_ · **Result:** _—_
+**Version run at:** 2.4.0 → 2.5.0 · **Date:** 2026-09-07 · **Result:** §0 passed; §2b and §3 still open
 
 ### Findings so far
 
@@ -43,6 +43,18 @@ Run it after a release that touches the handover format. Record the plugin versi
   an already-installed copy is UNVERIFIED. 2.5.0 makes the immediate collision moot, and the new
   byte-for-byte content comparison added to `tools/clean_install_test.py` makes a future repeat
   detectable rather than silent.
+- **2026-09-07 — the byte-for-byte install check was proven in both directions.** Run with
+  `--skip-strip` against a stale install it correctly reported FAIL lines for the files that had
+  changed, alongside differing installed and repo versions; run again after
+  `claude plugin marketplace update` + `claude plugin update` + a restart, it reported clean. That
+  is the before-fail/after-pass pair PR #14 named as outstanding — a check that has only ever
+  passed has not been tested, and this one now has been.
+  Still unexercised: the branch that fires on **equal versions with differing content**, which is
+  the exact collision the check was built for. Both runs had differing versions, so that path has
+  never executed. It would need a deliberate same-version change to reach.
+- **2026-09-07 — updating across a version change works on the desktop app.** 2.4.0 → 2.5.0 landed
+  and the content check confirmed it by content, not by the reported version alone. This says
+  nothing about the same-version case, which remains UNVERIFIED.
 
 ## Which section covers which surface
 
