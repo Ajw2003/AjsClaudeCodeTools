@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Architecture review — AjsClaudeCodeTools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .seam { stroke-dasharray: 4 4; }
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .hatch {
+        background-image: repeating-linear-gradient(45deg, #e7e5e4 0 6px, #f5f5f4 6px 12px);
+      }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans antialiased">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-14">
+
+      <!-- ================= HEADER ================= -->
+      <header class="space-y-6">
+        <div>
+          <h1 class="font-serif text-4xl tracking-tight">Architecture review</h1>
+          <p class="mt-1 text-slate-500 text-sm font-mono">AjsClaudeCodeTools &middot; branch <span class="text-slate-800">main</span> &middot; 7 September 2026</p>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="rounded-lg border border-slate-200 bg-white p-3">
+            <div class="text-2xl font-mono">101</div>
+            <div class="text-xs uppercase tracking-wider text-slate-500">checks, all passing</div>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-3">
+            <div class="text-2xl font-mono">1306</div>
+            <div class="text-xs uppercase tracking-wider text-slate-500">lines in verify.py</div>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-3">
+            <div class="text-2xl font-mono">26</div>
+            <div class="text-xs uppercase tracking-wider text-slate-500">hand-rolled accumulators</div>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-3">
+            <div class="text-2xl font-mono">9</div>
+            <div class="text-xs uppercase tracking-wider text-slate-500">restatements of one rules file</div>
+          </div>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm">
+          <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Where the churn is</div>
+          <div class="space-y-1.5 font-mono text-xs">
+            <div class="flex items-center gap-3"><span class="w-64 shrink-0">CLAUDE.md</span><span class="h-3 bg-indigo-600 rounded-sm" style="width:22%"></span><span class="text-slate-500">22</span></div>
+            <div class="flex items-center gap-3"><span class="w-64 shrink-0">claude-house-rules/README.md</span><span class="h-3 bg-indigo-500 rounded-sm" style="width:19%"></span><span class="text-slate-500">19</span></div>
+            <div class="flex items-center gap-3"><span class="w-64 shrink-0">scripts/verify.py</span><span class="h-3 bg-indigo-500 rounded-sm" style="width:18%"></span><span class="text-slate-500">18</span></div>
+            <div class="flex items-center gap-3"><span class="w-64 shrink-0">.claude-plugin/plugin.json</span><span class="h-3 bg-slate-400 rounded-sm" style="width:17%"></span><span class="text-slate-500">17</span></div>
+            <div class="flex items-center gap-3"><span class="w-64 shrink-0">scripts/hook.py</span><span class="h-3 bg-indigo-500 rounded-sm" style="width:15%"></span><span class="text-slate-500">15</span></div>
+            <div class="flex items-center gap-3"><span class="w-64 shrink-0">rules/house-rules.md</span><span class="h-3 bg-indigo-600 rounded-sm" style="width:15%"></span><span class="text-slate-500">15</span></div>
+            <div class="flex items-center gap-3"><span class="w-64 shrink-0">docs/desktop-verification.md</span><span class="h-3 bg-indigo-400 rounded-sm" style="width:13%"></span><span class="text-slate-500">13</span></div>
+          </div>
+          <p class="mt-3 text-slate-600 text-[13px] leading-relaxed">Six of the seven hot files are <em>the rules text, a restatement of it, or the checks that police the two</em>. That is where the deepening opportunities are, so that is where this review looks.</p>
+        </div>
+
+        <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-600 border-t border-slate-200 pt-4">
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 border border-slate-800"></span>module</span>
+          <span class="flex items-center gap-2"><svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="#0f172a" class="seam"/></svg>seam</span>
+          <span class="flex items-center gap-2"><svg width="24" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#dc2626" stroke-width="2"/><path d="M20 1 L24 4 L20 7Z" fill="#dc2626"/></svg>leakage</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 deep rounded-[2px]"></span>deep module</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 hatch border border-stone-300"></span>duplicated implementation</span>
+        </div>
+      </header>
+
+      <!-- ================= CANDIDATES ================= -->
+      <section id="candidates" class="space-y-12">
+
+        <!-- ---------- CANDIDATE 1 ---------- -->
+        <article id="c1" class="space-y-5 border-t-2 border-slate-900 pt-6">
+          <div class="flex items-start justify-between gap-6 flex-wrap">
+            <h2 class="font-serif text-2xl">1 &middot; A Restatement module for the rules text and its nine copies</h2>
+            <div class="flex gap-2 shrink-0">
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-medium">Strong</span>
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-slate-100 text-slate-600 font-mono">in-process</span>
+            </div>
+          </div>
+
+          <div class="font-mono text-sm text-slate-600 space-y-0.5">
+            <div>claude-house-rules/plugins/house-rules/scripts/verify.py <span class="text-slate-400">:418, 544, 574, 688, 834, 869, 960, 983, 1283</span></div>
+            <div>claude-house-rules/plugins/house-rules/scripts/hook.py <span class="text-slate-400">— SCOPE_REMINDER, SCOPE_REMINDER_SHORT, RUNNABLE_NOTE, DELEGATE_NOTE, HANDOVER_NOTE</span></div>
+            <div>rules/house-rules.md &middot; output-styles/handover-cards.md &middot; agents/executor.md &middot; templates/step-card.html &middot; docs/claude-ai-instructions.md</div>
+          </div>
+
+          <!-- diagram: mass diagram, hand-built -->
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-4">Before &mdash; no module, nine open-coded checks</div>
+              <svg viewBox="0 0 360 300" class="w-full" style="max-height:300px">
+                <rect x="130" y="8" width="100" height="34" fill="#0f172a" rx="3"/>
+                <text x="180" y="29" text-anchor="middle" fill="#fff" font-size="10" font-family="ui-monospace" letter-spacing="1">house-rules.md</text>
+                <!-- nine restatements -->
+                <g font-size="8" font-family="ui-monospace" fill="#334155">
+                  <rect x="4"   y="120" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="38" y="136" text-anchor="middle">SCOPE_long</text>
+                  <rect x="80"  y="120" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="114" y="136" text-anchor="middle">SCOPE_short</text>
+                  <rect x="156" y="120" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="190" y="136" text-anchor="middle">RUNNABLE</text>
+                  <rect x="232" y="120" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="266" y="136" text-anchor="middle">DELEGATE</text>
+                  <rect x="4"   y="160" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="38" y="176" text-anchor="middle">HANDOVER</text>
+                  <rect x="80"  y="160" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="114" y="176" text-anchor="middle">style.md</text>
+                  <rect x="156" y="160" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="190" y="176" text-anchor="middle">executor.md</text>
+                  <rect x="232" y="160" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="266" y="176" text-anchor="middle">chat-doc.md</text>
+                  <rect x="118" y="200" width="68" height="26" fill="#f5f5f4" stroke="#d6d3d1"/><text x="152" y="216" text-anchor="middle">step-card</text>
+                </g>
+                <!-- nine separate check arrows -->
+                <g stroke="#94a3b8" stroke-width="1">
+                  <path d="M150 42 L38 118"/><path d="M160 42 L114 118"/><path d="M175 42 L190 118"/>
+                  <path d="M195 42 L266 118"/><path d="M145 42 L38 158"/><path d="M155 42 L114 158"/>
+                  <path d="M200 42 L190 158"/><path d="M210 42 L266 158"/><path d="M180 42 L152 198"/>
+                </g>
+                <g class="hatchg">
+                  <rect x="20" y="58" width="320" height="44" fill="#fef2f2" stroke="#fca5a5" stroke-dasharray="3 3"/>
+                  <text x="180" y="75" text-anchor="middle" font-size="9" font-family="ui-monospace" fill="#b91c1c">9 copy-pasted `drift = []` blocks</text>
+                  <text x="180" y="90" text-anchor="middle" font-size="9" font-family="ui-monospace" fill="#b91c1c">3 of them never read the restatement at all</text>
+                </g>
+                <text x="180" y="256" text-anchor="middle" font-size="9" font-family="ui-monospace" fill="#64748b">interface: 26 accumulator lists &middot; 88 report() sites</text>
+                <rect x="40" y="266" width="280" height="22" fill="none" stroke="#0f172a" stroke-width="2"/>
+                <text x="180" y="281" text-anchor="middle" font-size="9" font-family="ui-monospace" fill="#0f172a">INTERFACE SURFACE (as wide as the implementation)</text>
+              </svg>
+            </div>
+
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-4">After &mdash; one deep module, restatements as data</div>
+              <svg viewBox="0 0 360 300" class="w-full" style="max-height:300px">
+                <rect x="130" y="8" width="100" height="34" fill="#0f172a" rx="3"/>
+                <text x="180" y="29" text-anchor="middle" fill="#fff" font-size="10" font-family="ui-monospace" letter-spacing="1">house-rules.md</text>
+                <path d="M180 42 L180 62" stroke="#0f172a" stroke-width="2"/><path d="M177 58 L180 66 L183 58Z" fill="#0f172a"/>
+                <!-- small interface -->
+                <rect x="90" y="68" width="180" height="26" fill="#065f46" rx="3"/>
+                <text x="180" y="85" text-anchor="middle" fill="#fff" font-size="9" font-family="ui-monospace" letter-spacing="1">RESTATEMENTS &middot; check_all()</text>
+                <!-- deep implementation -->
+                <rect x="40" y="102" width="280" height="150" fill="#1e293b" rx="3"/>
+                <text x="180" y="122" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="ui-monospace" letter-spacing="1">IMPLEMENTATION &mdash; internal, not part of the interface</text>
+                <g font-size="8" font-family="ui-monospace" fill="#cbd5e1" opacity="0.75">
+                  <rect x="54"  y="134" width="80" height="22" fill="none" stroke="#475569"/><text x="94" y="149" text-anchor="middle">scope&times;2</text>
+                  <rect x="140" y="134" width="80" height="22" fill="none" stroke="#475569"/><text x="180" y="149" text-anchor="middle">runnable</text>
+                  <rect x="226" y="134" width="80" height="22" fill="none" stroke="#475569"/><text x="266" y="149" text-anchor="middle">delegate</text>
+                  <rect x="54"  y="164" width="80" height="22" fill="none" stroke="#475569"/><text x="94" y="179" text-anchor="middle">handover</text>
+                  <rect x="140" y="164" width="80" height="22" fill="none" stroke="#475569"/><text x="180" y="179" text-anchor="middle">style.md</text>
+                  <rect x="226" y="164" width="80" height="22" fill="none" stroke="#475569"/><text x="266" y="179" text-anchor="middle">executor</text>
+                  <rect x="54"  y="194" width="80" height="22" fill="none" stroke="#475569"/><text x="94" y="209" text-anchor="middle">chat-doc</text>
+                  <rect x="140" y="194" width="80" height="22" fill="none" stroke="#475569"/><text x="180" y="209" text-anchor="middle">step-card</text>
+                  <rect x="226" y="194" width="80" height="22" fill="none" stroke="#475569"/><text x="266" y="209" text-anchor="middle">+ the next one</text>
+                </g>
+                <text x="180" y="235" text-anchor="middle" fill="#6ee7b7" font-size="8.5" font-family="ui-monospace">every entry checked BOTH ways, by construction</text>
+                <text x="180" y="278" text-anchor="middle" font-size="9" font-family="ui-monospace" fill="#065f46">one row per restatement &mdash; adding one is data, not code</text>
+              </svg>
+            </div>
+          </div>
+
+          <dl class="grid md:grid-cols-2 gap-x-8 gap-y-3 text-[15px]">
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Problem</dt>
+              <dd class="mt-1">The rules file has nine restatements and no module holds that relationship, so each one is policed by a hand-copied block &mdash; and three of them check only that the phrase is still in <span class="font-mono text-[13px]">house-rules.md</span>, never that it is still in the restatement.</dd></div>
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Solution</dt>
+              <dd class="mt-1">One <span class="font-mono text-[13px]">Restatement(source, phrases)</span> table plus a single checker behind it. Each row names where the text lives and which phrases bind it to the canonical rules; the checker asserts both directions for every row.</dd></div>
+          </dl>
+
+          <div class="rounded border border-amber-300 bg-amber-50 p-3 text-[13px]">
+            <span class="font-semibold text-amber-900">Live gap, not hypothetical:</span>
+            <span class="text-amber-900">delete <span class="font-mono">"starting point"</span> and <span class="font-mono">"hand over a command you have not run"</span> from <span class="font-mono">RUNNABLE_NOTE</span> and all 101 checks still pass &mdash; <span class="font-mono">verify.py:545</span> matches those phrases against <span class="font-mono">rules_text</span> only. Same shape at <span class="font-mono">:575</span> (delegate) and <span class="font-mono">:689</span> (handover), the longest checklist in the plugin.</span>
+          </div>
+
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-[15px] list-disc list-inside marker:text-slate-400">
+            <li>locality: drift logic lands in one module</li>
+            <li>leverage: one interface, nine restatements</li>
+            <li>interface shrinks; nine blocks absorbed</li>
+            <li>closes the both-directions gap by construction</li>
+            <li>a tenth restatement is a row, not a block</li>
+            <li>the deletion test: complexity concentrates</li>
+          </ul>
+        </article>
+
+        <!-- ---------- CANDIDATE 2 ---------- -->
+        <article id="c2" class="space-y-5 border-t-2 border-slate-900 pt-6">
+          <div class="flex items-start justify-between gap-6 flex-wrap">
+            <h2 class="font-serif text-2xl">2 &middot; Move the failure-mode contract to the dispatch seam</h2>
+            <div class="flex gap-2 shrink-0">
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-medium">Strong</span>
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-slate-100 text-slate-600 font-mono">in-process</span>
+            </div>
+          </div>
+
+          <div class="font-mono text-sm text-slate-600 space-y-0.5">
+            <div>scripts/hook.py <span class="text-slate-400">:2&ndash;23 (docstring), :121&ndash;140, :390&ndash;397, :446&ndash;477, :545&ndash;560, :649&ndash;656, :696&ndash;703, :820&ndash;829, :854&ndash;891 (main)</span></div>
+            <div>scripts/verify.py <span class="text-slate-400">:186&ndash;203, :286&ndash;305 &mdash; monkeypatch snippets embedded as Python source strings</span></div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Before &mdash; the contract stated in three places</div>
+              <pre class="mermaid">
+flowchart TB
+  D["docstring: the 8 contracts"]:::doc
+  H1["event_guard<br/>own try/except → exit 2"]:::hand
+  H2["event_inject<br/>own try/except → systemMessage"]:::hand
+  H3["event_scope<br/>own try/except → short form"]:::hand
+  H4["event_standards / artifact / runnable<br/>own try/except → silent"]:::hand
+  M["main(): re-implements it<br/>if event == 'guard' … if event == 'inject' …"]:::hand
+  D -.states.-> H1
+  D -.states.-> M
+  H1 --> M
+  H2 --> M
+  H3 --> M
+  H4 --> M
+  T["verify.py monkeypatches<br/>hook.read_payload to test it"]:::leak
+  T -."reaches past the interface".-> H1
+  classDef hand fill:#fef2f2,stroke:#fca5a5;
+  classDef doc fill:#f8fafc,stroke:#cbd5e1,stroke-dasharray:4 4;
+  classDef leak fill:#fff,stroke:#dc2626,stroke-width:2px;
+              </pre>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">After &mdash; policy as data, handlers pure</div>
+              <pre class="mermaid">
+flowchart TB
+  E["EVENTS table<br/>event → (handler, FailurePolicy)"]:::deepc
+  P1["FailClosed(exit 2, stderr)"]:::pol
+  P2["FailLoud(systemMessage)"]:::pol
+  P3["FailQuiet(exit 0)"]:::pol
+  E --> P1
+  E --> P2
+  E --> P3
+  H["8 handlers: compute a decision,<br/>no try/except of their own"]:::plain
+  E --> H
+  T["verify.py drives the table<br/>through the same seam"]:::ok
+  T --> E
+  classDef deepc fill:#1e293b,color:#fff,stroke:#0f172a,stroke-width:2px;
+  classDef pol fill:#ecfdf5,stroke:#6ee7b7;
+  classDef plain fill:#fff,stroke:#94a3b8;
+  classDef ok fill:#fff,stroke:#065f46,stroke-width:2px;
+              </pre>
+            </div>
+          </div>
+
+          <dl class="grid md:grid-cols-2 gap-x-8 gap-y-3 text-[15px]">
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Problem</dt>
+              <dd class="mt-1">Each handler's failure mode is the load-bearing design decision of this plugin, and it is written down three times: the docstring, the handler's own <span class="font-mono text-[13px]">try/except</span>, and <span class="font-mono text-[13px]">main()</span>'s <span class="font-mono text-[13px]">if event ==</span> chain. A new event means remembering all three; nothing fails if you don't.</dd></div>
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Solution</dt>
+              <dd class="mt-1">Make the policy the value in the <span class="font-mono text-[13px]">EVENTS</span> table. Handlers return a decision or raise; the dispatch seam owns fail-closed, fail-loud, and fail-quiet. Tests exercise the policy through that seam instead of monkeypatching <span class="font-mono text-[13px]">read_payload</span> from a source string.</dd></div>
+          </dl>
+
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-[15px] list-disc list-inside marker:text-slate-400">
+            <li>the interface is the test surface again</li>
+            <li>locality: one place decides fail-closed</li>
+            <li>a new event cannot forget its contract</li>
+            <li>drops two embedded monkeypatch snippets</li>
+          </ul>
+        </article>
+
+        <!-- ---------- CANDIDATE 3 ---------- -->
+        <article id="c3" class="space-y-5 border-t-2 border-slate-900 pt-6">
+          <div class="flex items-start justify-between gap-6 flex-wrap">
+            <h2 class="font-serif text-2xl">3 &middot; One payload-field module behind four identical regexes</h2>
+            <div class="flex gap-2 shrink-0">
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-amber-100 text-amber-800 font-medium">Worth exploring</span>
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-slate-100 text-slate-600 font-mono">in-process</span>
+            </div>
+          </div>
+
+          <div class="font-mono text-sm text-slate-600">
+            scripts/hook.py <span class="text-slate-400">:443 _PROMPT_FIELD_RE &middot; :537 _COMMAND_FIELD_RE &middot; :601 _FILE_PATH_RE &middot; :777 _LAST_MESSAGE_FIELD_RE &middot; :540 _guard_subject &middot; :611 _extract_file_path</span>
+          </div>
+
+          <!-- cross-section -->
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Before &mdash; four bands, same job</div>
+              <div class="space-y-2">
+                <div class="hatch border-l-4 border-slate-700 h-11 flex items-center px-3 font-mono text-xs">_PROMPT_FIELD_RE <span class="ml-auto text-slate-500">scope</span></div>
+                <div class="hatch border-l-4 border-slate-700 h-11 flex items-center px-3 font-mono text-xs">_COMMAND_FIELD_RE <span class="ml-auto text-slate-500">guard</span></div>
+                <div class="hatch border-l-4 border-slate-700 h-11 flex items-center px-3 font-mono text-xs">_LAST_MESSAGE_FIELD_RE <span class="ml-auto text-slate-500">handover</span></div>
+                <div class="hatch border-l-4 border-slate-700 h-11 flex items-center px-3 font-mono text-xs">_FILE_PATH_RE <span class="ml-auto text-slate-500">artifact, runnable</span></div>
+                <div class="border-l-4 border-red-500 bg-red-50 h-11 flex items-center px-3 font-mono text-xs text-red-800">3 return the raw slice, 1 returns the group &mdash; silently different</div>
+              </div>
+              <p class="mt-3 text-xs text-slate-500 font-mono">hook.py:777 &mdash; &ldquo;Same shape as _COMMAND_FIELD_RE&rdquo;</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">After &mdash; one band, four callers</div>
+              <div class="space-y-2">
+                <div class="deep rounded h-[188px] flex flex-col items-center justify-center text-white px-4 text-center">
+                  <div class="font-mono text-sm">field_slice(payload, name)</div>
+                  <div class="mt-2 text-[11px] text-slate-400 leading-relaxed font-mono">escape handling &middot; raw-slice vs value &middot;<br/>absent-field fallback tier</div>
+                </div>
+                <div class="border-l-4 border-emerald-600 bg-emerald-50 h-11 flex items-center px-3 font-mono text-xs text-emerald-900">callers: scope &middot; guard &middot; handover &middot; artifact &middot; runnable</div>
+              </div>
+            </div>
+          </div>
+
+          <dl class="grid md:grid-cols-2 gap-x-8 gap-y-3 text-[15px]">
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Problem</dt>
+              <dd class="mt-1">&ldquo;Pull one field out of the payload without trusting it to parse&rdquo; is stated four times, and the fourth quietly differs: three match the raw JSON slice, one captures the value and drops escape handling.</dd></div>
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Solution</dt>
+              <dd class="mt-1">One function at that seam, with the raw-slice-vs-value choice as a parameter. The deliberate fallback tier &mdash; field absent means match the whole payload &mdash; moves inside it, where it can be tested once.</dd></div>
+          </dl>
+
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-[15px] list-disc list-inside marker:text-slate-400">
+            <li>leverage: one interface, five call sites</li>
+            <li>escape handling stops varying per handler</li>
+            <li>the fallback tier gets one test, not three</li>
+            <li>deletion test: complexity concentrates</li>
+          </ul>
+        </article>
+
+        <!-- ---------- CANDIDATE 4 ---------- -->
+        <article id="c4" class="space-y-5 border-t-2 border-slate-900 pt-6">
+          <div class="flex items-start justify-between gap-6 flex-wrap">
+            <h2 class="font-serif text-2xl">4 &middot; Split detection from prose in the standards handler</h2>
+            <div class="flex gap-2 shrink-0">
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-amber-100 text-amber-800 font-medium">Worth exploring</span>
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-slate-100 text-slate-600 font-mono">in-process</span>
+            </div>
+          </div>
+
+          <div class="font-mono text-sm text-slate-600">
+            scripts/hook.py <span class="text-slate-400">:271&ndash;397 event_standards (127 lines) &middot; the rescan at :292&ndash;299 and :309&ndash;314 is the same loop twice</span>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Before &mdash; one function, five responsibilities</div>
+              <div class="space-y-1.5">
+                <div class="border border-slate-300 rounded px-3 h-9 flex items-center text-xs font-mono">parse .claude/standards override</div>
+                <div class="border border-slate-300 rounded px-3 h-9 flex items-center text-xs font-mono">scan depth-1 for markers</div>
+                <div class="hatch border border-red-300 rounded px-3 h-9 flex items-center text-xs font-mono text-red-800">rescan from parent &mdash; same loop, retyped</div>
+                <div class="border border-slate-300 rounded px-3 h-9 flex items-center text-xs font-mono">assemble English grammar (One/Two, plural, verb)</div>
+                <div class="border border-slate-300 rounded px-3 h-9 flex items-center text-xs font-mono">read bodies, build sections, emit</div>
+                <div class="border-2 border-slate-900 rounded px-3 h-9 flex items-center text-xs font-mono">one try/except wraps all five</div>
+              </div>
+              <p class="mt-3 text-xs text-slate-500">Nine tests exist, and every one asserts on the emitted prose &mdash; because prose is the only interface detection has.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">After &mdash; a seam between the two</div>
+              <div class="space-y-2">
+                <div class="deep rounded px-3 h-24 flex flex-col justify-center text-white">
+                  <div class="font-mono text-sm">detect(project_dir) &rarr; [Selection]</div>
+                  <div class="text-[11px] text-slate-400 mt-1 font-mono">override &middot; depth-1 scan &middot; Assets/ rescan &middot; one loop</div>
+                </div>
+                <svg width="100%" height="18"><line x1="0" y1="9" x2="100%" y2="9" stroke="#0f172a" class="seam"/></svg>
+                <div class="border-2 border-slate-900 rounded px-3 h-24 flex flex-col justify-center">
+                  <div class="font-mono text-sm">render(selections) &rarr; additionalContext</div>
+                  <div class="text-[11px] text-slate-500 mt-1 font-mono">grammar &middot; sections &middot; missing-file systemMessage</div>
+                </div>
+              </div>
+              <p class="mt-3 text-xs text-emerald-800">Detection tests assert on <span class="font-mono">Selection</span> values. Prose tests stop being detection tests.</p>
+            </div>
+          </div>
+
+          <dl class="grid md:grid-cols-2 gap-x-8 gap-y-3 text-[15px]">
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Problem</dt>
+              <dd class="mt-1">Marker detection and English sentence assembly sit in one 127-line function, so the only way to test detection is to match strings in the rendered prose &mdash; and the Assets/ rescan duplicates the detection loop verbatim rather than calling it again.</dd></div>
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Solution</dt>
+              <dd class="mt-1">A seam between them. <span class="font-mono text-[13px]">detect</span> returns which documents apply and why; <span class="font-mono text-[13px]">render</span> turns that into the injected text. The rescan becomes a second call to <span class="font-mono text-[13px]">detect</span>.</dd></div>
+          </dl>
+
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-[15px] list-disc list-inside marker:text-slate-400">
+            <li>locality: one scan loop, not two</li>
+            <li>detection testable without prose matching</li>
+            <li>rewording the preamble stops breaking tests</li>
+            <li>interface shrinks: two names, not one blob</li>
+          </ul>
+        </article>
+
+        <!-- ---------- CANDIDATE 5 ---------- -->
+        <article id="c5" class="space-y-5 border-t-2 border-slate-900 pt-6">
+          <div class="flex items-start justify-between gap-6 flex-wrap">
+            <h2 class="font-serif text-2xl">5 &middot; Give verify.py an interface: a Check, and a way to run one</h2>
+            <div class="flex gap-2 shrink-0">
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-amber-100 text-amber-800 font-medium">Worth exploring</span>
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-slate-100 text-slate-600 font-mono">in-process</span>
+            </div>
+          </div>
+
+          <div class="font-mono text-sm text-slate-600">
+            scripts/verify.py <span class="text-slate-400">— whole file: 1306 lines, runs at import, mutates STEP/FAILURES, `drift` rebound at :418 :544 :574 :688</span>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Before &mdash; a script, not a module</div>
+              <svg viewBox="0 0 340 260" class="w-full" style="max-height:260px">
+                <rect x="10" y="10" width="320" height="240" fill="#f5f5f4" stroke="#0f172a" stroke-width="2"/>
+                <text x="170" y="30" text-anchor="middle" font-size="10" font-family="ui-monospace" fill="#0f172a">module scope &mdash; executes on import</text>
+                <g font-size="8" font-family="ui-monospace" fill="#475569">
+                  <rect x="24" y="42" width="292" height="18" fill="#fff" stroke="#cbd5e1"/><text x="32" y="55">28 guard cases … loop, print, report()</text>
+                  <rect x="24" y="64" width="292" height="18" fill="#fff" stroke="#cbd5e1"/><text x="32" y="77">crash_snippet = "import sys, hook\\n…"  ← Python in a string</text>
+                  <rect x="24" y="86" width="292" height="18" fill="#fff" stroke="#cbd5e1"/><text x="32" y="99">drift = []  … PASS/FAIL block  (×9, copy-pasted)</text>
+                  <rect x="24" y="108" width="292" height="18" fill="#fff" stroke="#cbd5e1"/><text x="32" y="121">import re   ← at line 775, mid-file</text>
+                  <rect x="24" y="130" width="292" height="18" fill="#fff" stroke="#cbd5e1"/><text x="32" y="143">26 accumulator lists, 4 of them named `drift`</text>
+                  <rect x="24" y="152" width="292" height="18" fill="#fff" stroke="#cbd5e1"/><text x="32" y="165">global STEP, FAILURES  ← the only shared state</text>
+                </g>
+                <rect x="24" y="184" width="292" height="30" fill="#fef2f2" stroke="#fca5a5"/>
+                <text x="170" y="197" text-anchor="middle" font-size="8.5" font-family="ui-monospace" fill="#b91c1c">no way to run one check. Touch a guard pattern,</text>
+                <text x="170" y="208" text-anchor="middle" font-size="8.5" font-family="ui-monospace" fill="#b91c1c">run all 101, read 300 lines of output.</text>
+                <rect x="24" y="222" width="292" height="18" fill="none" stroke="#0f172a" stroke-width="2"/>
+                <text x="170" y="235" text-anchor="middle" font-size="8.5" font-family="ui-monospace">INTERFACE: `python verify.py`. That is all of it.</text>
+              </svg>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">After &mdash; checks are values</div>
+              <svg viewBox="0 0 340 260" class="w-full" style="max-height:260px">
+                <rect x="60" y="14" width="220" height="26" fill="#065f46" rx="3"/>
+                <text x="170" y="31" text-anchor="middle" fill="#fff" font-size="9" font-family="ui-monospace" letter-spacing="1">run(checks, filter=None) &rarr; Report</text>
+                <rect x="20" y="50" width="300" height="170" fill="#1e293b" rx="3"/>
+                <text x="170" y="68" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="ui-monospace" letter-spacing="1">CHECKS &mdash; one list of values</text>
+                <g font-size="8" font-family="ui-monospace" fill="#cbd5e1" opacity="0.8">
+                  <rect x="36" y="80" width="268" height="17" fill="none" stroke="#475569"/><text x="44" y="92">GuardCase("git push …", expect=ask, rule=…)</text>
+                  <rect x="36" y="101" width="268" height="17" fill="none" stroke="#475569"/><text x="44" y="113">HookCase("handover", payload=…, expect=silent)</text>
+                  <rect x="36" y="122" width="268" height="17" fill="none" stroke="#475569"/><text x="44" y="134">Restatement(RUNNABLE_NOTE, phrases=[…])   ← cand. 1</text>
+                  <rect x="36" y="143" width="268" height="17" fill="none" stroke="#475569"/><text x="44" y="155">FailurePolicy("guard", FailClosed)        ← cand. 2</text>
+                  <rect x="36" y="164" width="268" height="17" fill="none" stroke="#475569"/><text x="44" y="176">StructureCheck(executor.md, model=sonnet)</text>
+                  <rect x="36" y="185" width="268" height="17" fill="none" stroke="#475569"/><text x="44" y="197">DocTable(hooks.json ⇄ CLAUDE.md ⇄ README)</text>
+                </g>
+                <text x="170" y="238" text-anchor="middle" font-size="8.5" font-family="ui-monospace" fill="#065f46">`verify.py guard` runs 28. Count still computed, never written down.</text>
+              </svg>
+            </div>
+          </div>
+
+          <dl class="grid md:grid-cols-2 gap-x-8 gap-y-3 text-[15px]">
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Problem</dt>
+              <dd class="mt-1">The suite is the repo's stated source of truth and has no interface beyond running the whole file. Its 101 checks are 88 open-coded call sites over two module globals, so a check cannot be selected, reused, or counted by kind.</dd></div>
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Solution</dt>
+              <dd class="mt-1">Make each check a value in one list and give the runner a name filter. Candidates 1 and 2 both land as new kinds of value in that list rather than as more blocks.</dd></div>
+          </dl>
+
+          <div class="rounded border border-slate-300 bg-stone-100 p-3 text-[13px] text-slate-700">
+            <span class="font-semibold">Constraint to preserve:</span> the check count must stay computed at runtime, stdlib only, and no test framework &mdash; <span class="font-mono">CLAUDE.md</span> pins all three. Nothing here needs pytest.
+          </div>
+
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-[15px] list-disc list-inside marker:text-slate-400">
+            <li>the interface becomes selectable, not all-or-nothing</li>
+            <li>locality: PASS/FAIL formatting in one place</li>
+            <li>candidates 1 and 2 plug in as values</li>
+            <li>module globals stop being the shared state</li>
+          </ul>
+        </article>
+
+        <!-- ---------- CANDIDATE 6 ---------- -->
+        <article id="c6" class="space-y-5 border-t-2 border-slate-400 pt-6">
+          <div class="flex items-start justify-between gap-6 flex-wrap">
+            <h2 class="font-serif text-2xl">6 &middot; Name the vocabulary: a CONTEXT.md, and ADRs for the reversals</h2>
+            <div class="flex gap-2 shrink-0">
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-slate-200 text-slate-700 font-medium">Speculative</span>
+              <span class="text-xs uppercase tracking-wider px-2 py-1 rounded bg-slate-100 text-slate-600 font-mono">docs</span>
+            </div>
+          </div>
+
+          <div class="font-mono text-sm text-slate-600">
+            no CONTEXT.md &middot; no docs/adr/ &middot; CLAUDE.md (171 lines, 22 touches) &middot; docs/architecture.md &middot; 15 files in docs/plans/
+          </div>
+
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="text-xs uppercase tracking-wider text-slate-500 mb-4">Terms this repo uses precisely, defined nowhere as terms</div>
+            <div class="flex flex-wrap gap-2 font-mono text-[13px]">
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">the card</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">the six</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">restatement</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">drift check</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">surface</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">handler</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">fail closed / open / loud</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">marker</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">the gate</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">the three-tier ladder</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">machine profile</span>
+              <span class="px-2 py-1 rounded bg-stone-100 border border-stone-300">the shim</span>
+            </div>
+            <div class="mt-5 text-xs uppercase tracking-wider text-slate-500 mb-2">Decisions currently recorded only as code comments that argue with themselves</div>
+            <ul class="text-[14px] space-y-1 list-disc list-inside marker:text-slate-400">
+              <li><span class="font-mono text-[13px]">force-for-plugin</span> asserted absent in 2.3.0, asserted present in 2.4.0 &mdash; the reversal lives in a comment at <span class="font-mono text-[13px]">verify.py:850</span> and again in <span class="font-mono text-[13px]">handover-cards.md</span></li>
+              <li>the Stop gate narrowed rather than switched off &mdash; argued at <span class="font-mono text-[13px]">hook.py:790</span>, <span class="font-mono text-[13px]">verify.py:632</span>, and in CLAUDE.md's hook table</li>
+              <li>the stateful deliverable machinery, removed &mdash; still policed by a check at <span class="font-mono text-[13px]">verify.py:715</span></li>
+            </ul>
+          </div>
+
+          <dl class="grid md:grid-cols-2 gap-x-8 gap-y-3 text-[15px]">
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Problem</dt>
+              <dd class="mt-1">CLAUDE.md is the hottest file in the repo partly because it is the only place the vocabulary lives, and it is re-paid on every session and every subagent spawn. Settled reversals are re-argued in comments at three sites each.</dd></div>
+            <div><dt class="text-xs uppercase tracking-wider text-slate-500">Solution</dt>
+              <dd class="mt-1">A CONTEXT.md holding the terms, and one ADR per reversal. The comments shrink to a pointer; CLAUDE.md stops carrying the rationale it explicitly says it does not want to carry.</dd></div>
+          </dl>
+
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-[15px] list-disc list-inside marker:text-slate-400">
+            <li>locality: one definition per term</li>
+            <li>trims the per-session CLAUDE.md cost</li>
+            <li>settled reversals stop being re-argued</li>
+            <li>candidate 1's registry gets its noun</li>
+          </ul>
+        </article>
+
+      </section>
+
+      <!-- ================= TOP RECOMMENDATION ================= -->
+      <section id="top-recommendation" class="rounded-xl deep text-white p-8 space-y-4">
+        <div class="text-xs uppercase tracking-widest text-emerald-300">Top recommendation</div>
+        <h2 class="font-serif text-3xl">Candidate 1 &mdash; the Restatement module</h2>
+        <p class="text-slate-300 text-[15px] leading-relaxed max-w-3xl">
+          Six of the seven hottest files are the rules text, a restatement of it, or a check policing the two &mdash;
+          so this is where deepening pays back fastest. It is also the only candidate closing a live gap:
+          three drift checks match their phrases against <span class="font-mono text-[13px] text-white">house-rules.md</span> alone,
+          so <span class="font-mono text-[13px] text-white">RUNNABLE_NOTE</span>, <span class="font-mono text-[13px] text-white">DELEGATE_NOTE</span>
+          and the handover checklist can each be gutted with all 101 checks still green.
+          One table, one checker, both directions asserted per row.
+        </p>
+        <p class="text-slate-400 text-sm">Then candidate 2 &mdash; it lands as a new kind of value in the same list, and candidate 5 is the list.</p>
+        <a href="#c1" class="inline-block text-emerald-300 text-sm font-mono border-b border-emerald-300/40 hover:border-emerald-300">&rarr; jump to candidate 1</a>
+      </section>
+
+      <footer class="text-xs text-slate-400 font-mono pt-4">
+        Baseline: 101 checks passing at 11b5744. Vocabulary from /codebase-design. No CONTEXT.md or docs/adr/ exists, so no ADR was contradicted.
+      </footer>
+
+    </main>
+  </body>
+</html>
