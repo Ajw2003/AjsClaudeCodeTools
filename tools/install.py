@@ -43,6 +43,25 @@ MARKETPLACE = "aj-house-rules"
 PLUGIN_ID = f"house-rules@{MARKETPLACE}"
 
 
+# The claude CLI writes UTF-8 including check marks. When this script's stdout is a pipe or a
+# file rather than a console, Python picks the locale codec (cp1252 here) and printing that
+# output raised UnicodeEncodeError, crashing the installer mid-run. Degrade the character
+# instead of the install.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
+def repo_plugin_version():
+    """The version this repo ships, read from the plugin manifest next to this script."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    manifest = os.path.join(
+        here, "..", "claude-house-rules", "plugins", "house-rules",
+        ".claude-plugin", "plugin.json",
+    )
+    with open(manifest, "r", encoding="utf-8") as f:
+        return json.load(f).get("version")
+
+
 def home_claude_dir():
     return os.path.join(os.path.expanduser("~"), ".claude")
 
@@ -111,15 +130,33 @@ def main():
     if run_claude(["plugin", "install", PLUGIN_ID, "-y"]) != 0:
         bad("plugin install failed - the lines above say why")
 
+    # install is a no-op when the plugin is already registered - it fetches the new version
+    # into the cache and then leaves the registration pointing at the OLD one. That is a
+    # silent downgrade: the bumped version sits on disk unused while the stale copy keeps
+    # running. update is the verb that re-points the registration, so it always runs.
+    info(f"claude plugin update {PLUGIN_ID}")
+    if run_claude(["plugin", "update", PLUGIN_ID]) != 0:
+        bad("plugin update failed - the lines above say why")
+
     claude_dir = home_claude_dir()
     installed_path = os.path.join(claude_dir, "plugins", "installed_plugins.json")
     if os.path.isfile(installed_path):
         with open(installed_path, "r", encoding="utf-8") as f:
             inst = json.load(f)
-        if inst.get("plugins", {}).get(PLUGIN_ID):
-            ok(f"{PLUGIN_ID} is registered as installed")
-        else:
+        entries = inst.get("plugins", {}).get(PLUGIN_ID)
+        if not entries:
             bad(f"{PLUGIN_ID} did not register - read the lines above")
+        else:
+            # Registered is not the same as current. Asserting the registered version equals
+            # the version this repo ships is what catches a bump that silently did not take.
+            registered = entries[0].get("version")
+            if registered == repo_plugin_version():
+                ok(f"{PLUGIN_ID} is registered at {registered}, matching this repo")
+            else:
+                bad(
+                    f"{PLUGIN_ID} is registered at {registered} but this repo ships "
+                    f"{repo_plugin_version()} - the update did not take"
+                )
     else:
         bad("no installed_plugins.json after install")
 
