@@ -9,7 +9,8 @@ cells as *undocumented*, which is absence of evidence, not evidence.
 Run it after a release that touches the handover format. Record the plugin version you ran it at.
 
 **Version run at:** 2.4.0 → 2.9.0 · **Date:** 2026-09-07 · **Result:** §0, §2a, §2b and §3 all
-answered (see Findings). §1, §4–§9 not yet run.
+answered, and 2.9.0's location-independence fix verified working on the desktop app (see
+Findings). §1, §4–§9 not yet run.
 
 ### Findings so far
 
@@ -98,6 +99,32 @@ answered (see Findings). §1, §4–§9 not yet run.
      style is one of only two carriers — so during this very test the rule's entire presence was
      the one buried sub-bullet. The style now restates all six items, and `verify.py` gained a
      drift check (proven to fail before being trusted) so it cannot fall behind again.
+- **2026-09-07 — 2.9.0's location-independence fix is VERIFIED WORKING.** The same RockSkipping
+  question that failed twice returned
+  `npm --prefix "C:\Users\aj\Desktop\GameDev\RockSkipping\relay" test`, and clicking **Run**
+  executed it from `Assets` — the directory that broke it both previous times — reaching
+  `tests 46 / pass 46 / fail 0`. The reply also volunteered "the command below runs from anywhere,
+  so the session's current folder is fine too", which is item 3's new wording landing verbatim.
+
+  **The lesson is about placement, not wording.** This rule failed twice while it lived as a
+  sub-bullet under `#### The card` — restating it more forcefully changed nothing. It started
+  working the moment it moved into the **six-item contract** (item 3) and into
+  `output-styles/handover-cards.md`. A rule that must change the draft belongs in the six; a rule
+  in a sub-bullet is documentation.
+- **2026-09-07 — the compliance announcement persists, and is ACCEPTED as a known cost.** That
+  same reply ended "Both cards carry all six fields — nothing to correct", which
+  `HANDOVER_NOTE` calls "itself the failure this is guarding against" and `house-rules.md` forbids
+  as "A card never announces its own compliance". Wording has now failed twice (2.4.0 strengthened
+  it; 2.9.0 states it outright), and it cannot succeed by wording alone: the corrected turn
+  **cannot be made silent** — `suppressOutput` is documented as having no effect — so once the
+  check fires on a reply needing nothing, something is always emitted.
+
+  The structural fix would be to gate `handover` on the card markers so a conforming reply never
+  fires it. That was considered and **deliberately declined**: it would let a reply that carries
+  the markers but botches a field slip through unchecked, and the cost is one line of noise on an
+  otherwise correct card. So the prohibition in the rules text is **known-unenforced**. Do not
+  spend a fourth attempt restating it — the decision is to accept the announcement, not to keep
+  trying to word it away.
 
 ## Which section covers which surface
 
