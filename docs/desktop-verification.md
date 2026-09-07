@@ -34,6 +34,15 @@ Run it after a release that touches the handover format. Record the plugin versi
 - **2026-09-03 — `/output-style` no longer exists on any surface** (deprecated v2.1.73, removed
   v2.1.91), and the desktop app has no style picker. §6 previously told you to run it; that was
   wrong and is rewritten. This is why 2.4.0 forces the style.
+- **2026-09-07 — PRs #12 and #13 both shipped under version 2.4.0.** #13 deliberately skipped the
+  version bump on the reasoning that 2.4.0 was unreleased — true when it was written, false once
+  #12 merged first, so #13's `Stop`-hook change landed as a second, different code state under the
+  same version number. The plugin cache is version-keyed
+  (`~/.claude/plugins/cache/aj-house-rules/house-rules/<version>/`) while `installed_plugins.json`
+  separately records a `gitCommitSha`, so whether a same-version change like #13's actually reaches
+  an already-installed copy is UNVERIFIED. 2.5.0 makes the immediate collision moot, and the new
+  byte-for-byte content comparison added to `tools/clean_install_test.py` makes a future repeat
+  detectable rather than silent.
 
 ## Which section covers which surface
 
@@ -67,6 +76,17 @@ claude plugin update house-rules@aj-house-rules
 
 **You should see:** `claude plugin update` reporting a new version number — *not* "already at the
 latest version". If it says the latter, the pull did not land and everything below is invalid.
+
+Do not stop at the version number alone — trust content, not the label. Grep the installed copy
+directly for a marker from the newest change:
+
+UNTESTED:
+```powershell
+Select-String -Path "$env:USERPROFILE\.claude\plugins\cache\aj-house-rules\house-rules\*\scripts\hook.py" -Pattern "_reply_hands_over_a_command"
+```
+
+**You should see:** at least one match. No match means the installed copy predates the change even
+if the reported version number looks current.
 
 Then **fully quit and restart** every Claude Code session, including any long-running one.
 
