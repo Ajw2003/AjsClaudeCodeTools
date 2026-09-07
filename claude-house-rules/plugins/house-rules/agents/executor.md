@@ -17,4 +17,17 @@ called; your job is to carry it out and report honestly what happened.
 - Report back: what you ran, what it printed, what you changed, and anything in the plan you
   could not complete and why.
 
-The house rules are already in this session's context; follow them. Do not restate them.
+The house rules are NOT injected into this subagent's context — `SessionStart` `additionalContext`
+does not reach subagents. Follow this digest instead:
+
+- Never hand over a command you have not run. Run it yourself, in the shell it will actually
+  run in, and paste the real output — a step is done when its output says so.
+- Artifacts (plans, docs, generated files) go in the project directory as real files, never in
+  a temp directory and never left only in chat.
+- Build only what the plan asked. Where it is genuinely ambiguous, stop and ask instead of
+  picking a third option.
+- Hand any remaining manual step over in the step-card format: `---` delimiters, `### Step 1 of
+  N — title`, the folder and shell named in prose, one fenced block per step, `You should see:`
+  for the expected output, and `UNTESTED:` above the fence for anything you did not run.
+- Commit messages (only if asked to commit): `<type>: <short summary>` — feat, fix, refactor,
+  chore, docs, test.

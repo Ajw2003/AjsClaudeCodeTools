@@ -422,16 +422,59 @@ SCOPE_REMINDER = (
     "folder and shell in prose, one fenced block per step, then You should see:."
 )
 
+# Short form: the rules that decay over a long session (the ones a 60-turn session forgets),
+# not a restatement of everything - the full SCOPE_REMINDER above is still injected once at
+# session start via `inject`, so repeating all of it every prompt is pure waste.
+SCOPE_REMINDER_SHORT = (
+    "House rules reminder: hand steps over in the step-card format (--- delimiters, ### Step "
+    "N of M, one fenced block per step, You should see:). Never hand over a command you have "
+    "not run. Build only what was asked - where it is ambiguous, ask instead of assuming."
+)
+
+# Prompt text suggesting this turn will involve commands, files, or builds - the case the full
+# reminder exists for. Deliberately broad (over-triggering here just means the longer, still-
+# correct string fires) - the same "match the extracted field, stay broad within it" posture as
+# guard's patterns.
+_SCOPE_COMMAND_HINT_RE = re.compile(
+    r"\b(run|install|build|deploy|command|script|terminal|shell|powershell|bash|npm|pip|git|"
+    r"file|files|folder|directory|write|edit|create|delete|download|test|config|setup)\b",
+    re.IGNORECASE,
+)
+
+_PROMPT_FIELD_RE = re.compile(r'"prompt"\s*:\s*"(?:[^"\\]|\\.)*"')
+
 
 def event_scope():
-    emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "UserPromptSubmit",
-                "additionalContext": SCOPE_REMINDER,
+    # UserPromptSubmit: a non-zero exit here ERASES THE USER'S PROMPT. Every failure path -
+    # unreadable payload, missing "prompt" key, any exception at all - must fall through to
+    # emitting the safe short reminder and exiting 0. Never raise, never exit non-zero.
+    reminder = SCOPE_REMINDER_SHORT
+    try:
+        payload = read_payload()
+        m = _PROMPT_FIELD_RE.search(payload)
+        if m and _SCOPE_COMMAND_HINT_RE.search(m.group(0)):
+            reminder = SCOPE_REMINDER
+    except Exception:
+        reminder = SCOPE_REMINDER_SHORT
+
+    try:
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": reminder,
+                }
             }
-        }
-    )
+        )
+    except Exception:
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": SCOPE_REMINDER_SHORT,
+                }
+            }
+        )
     return 0
 
 
@@ -668,13 +711,17 @@ def event_runnable():
 DELEGATE_NOTE = (
     "House rules, execution model: the plan is settled, so the implementation is delegated "
     "work now. Hand it to the @house-rules:executor subagent (Task tool, subagent_type "
-    "house-rules:executor) with the plan steps written out, rather than implementing it "
-    "here. That agent is pinned to Sonnet at low effort, which is the whole point: "
-    "deliberation is done, and re-deliberating it on the planning model costs the user for "
-    "nothing. Do not re-plan inside the delegation - give it the decided steps. The "
-    "exception is genuinely trivial work, where handing over the context costs more than "
-    "doing it; say so in one line and just do it. This is a reminder to you; the user was "
-    "not prompted and does not need to do anything."
+    "house-rules:executor). The plan is already committed to the repo as a real file (per the "
+    "artifact rule); pass that file's path in the delegation prompt so the executor reads the "
+    "decided plan instead of re-deriving it from this conversation - the ExitPlanMode payload "
+    "itself carries the plan as inline text, not a path, so naming the file is on you, not "
+    "something to read off the tool call. That agent is pinned to Sonnet at low effort, which "
+    "is the whole point: deliberation is done, and re-deliberating it on the planning model "
+    "costs the user for nothing. Do not re-plan inside the delegation - give it the decided "
+    "steps and the plan file path. Skip the delegation only for genuinely trivial work: a plan "
+    "that touches a single file, or that is a handful of steps or fewer, is cheaper done "
+    "inline than handed over - say so in one line and just do it. This is a reminder to you; "
+    "the user was not prompted and does not need to do anything."
 )
 
 

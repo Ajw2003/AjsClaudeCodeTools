@@ -133,32 +133,27 @@ has not been run, it has not been tested — and I say so.
 
 ### The handover format is not optional
 
-A bare command block is not an instruction. It is a command the user now has to guess the context
-for: which shell, which folder, how they even get a prompt open there, what they should see. Every
-command I hand over carries all six of these, every time:
+A bare command block is not an instruction — the user has to guess the shell, the folder, how to
+even get a prompt open there, and what they should see. Every command I hand over carries all six
+of these, every time:
 
-1. **How they get there** — the folder written as an absolute path, plus the explicit action that
-   opens a prompt in it: *navigate to `C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools` and
-   open a terminal or PowerShell there*. Naming the working directory as an aside on the command
-   ("PowerShell, from `C:\...`") is a label, not a step someone can follow. If getting there is
-   itself non-obvious — a subfolder, a worktree, the folder holding `.git` — I say which folder
-   and how to recognise it.
-2. **The shell it runs in** — named in the prose *and* correct as the fence label. `powershell`
-   for PowerShell 5.1, `bash` for Git Bash. The fence label is what the Run button executes, so a
-   PowerShell cmdlet in a ```` ```bash ```` fence is a broken instruction no matter what the
-   surrounding sentence says.
-3. **The exact command** — copy-pasteable as written, with no placeholder they have to fill in.
+1. **How they get there** — the folder as an absolute path, plus the explicit action that opens a
+   prompt in it (*navigate to `<path>` and open a terminal or PowerShell there*), not the
+   working directory named as an aside on the command.
+2. **The shell it runs in** — named in the prose *and* correct as the fence label, since the fence
+   label is what the Run button executes. A PowerShell cmdlet in a ```` ```bash ```` fence is
+   broken no matter what the sentence says.
+3. **The exact command** — copy-pasteable as written, no placeholder to fill in.
 4. **What they will see** when it works, and what that output means.
 5. **`UNTESTED:` as the first line of the step, above the fence** — never inside it, where it
-   would break the copy-paste item 3 requires — if I have not run that exact command, in that
-   shell, on this machine, against those exact paths, plus one sentence saying why not.
+   would break the copy-paste — if I have not run that exact command, in that shell, against
+   those exact paths, plus one sentence why not.
 6. **One numbered step per action**, whenever the handover is more than a single command. Each
-   step gets a short bold title saying what it accomplishes, one thing to do, and its own fenced
-   block. Not a stack of four commands in one fence that the user has to split up, sequence and
-   diagnose themselves — if step 3 is the one that fails, they need to be able to say "step 3".
+   step gets a short bold title, one thing to do, and its own fenced block — not a stack of
+   commands in one fence the user has to split up and diagnose themselves.
 
-Never `"insert command"` on its own. If I cannot say where it runs and what it prints, I have not
-finished the work I am handing over.
+Never `"insert command"` on its own. If I cannot say where it runs and what it prints, the work
+is not finished.
 
 **Why:** an instruction that fails on contact wastes their time and teaches them not to trust the
 next one. Verifying it costs me one command. And a command in the wrong fence fails on the very
@@ -168,8 +163,8 @@ following an instruction should never have to reconstruct the state it assumes.
 
 #### The card
 
-The six items above are what a step contains. The step-card format is the shape they go in —
-one card, the same card, every time, so a handover is recognisable before it is read.
+The six items above are what a step contains; the step-card format is the shape they go in — one
+card, every time, so a handover is recognisable before it is read.
 
 ````markdown
 **<What this accomplishes>: <N> steps.** Do them in order; each step's output tells you it worked.
@@ -178,8 +173,7 @@ one card, the same card, every time, so a handover is recognisable before it is 
 
 ### Step 1 of <N> — <short title, what this step accomplishes>
 
-Navigate to `<absolute path>` and open **<shell>** there (<how — right-click the folder →
-*Open in Terminal*, etc.>).
+Navigate to `<absolute path>` and open **<shell>** there (<how>).
 
 ```<fence label: powershell | bash | sh | cmd | zsh>
 <the exact command, copy-pasteable, no placeholders>
@@ -192,41 +186,28 @@ Navigate to `<absolute path>` and open **<shell>** there (<how — right-click t
 ---
 ````
 
-A single command drops the numbering and the `*Next:*` line and keeps every other field.
+A single command drops the numbering and the `*Next:*` line and keeps every other field. The
+location line always has a verb in it — not ``In `C:\...\relay`, Git Bash:``, which
+is a label on a command, not a step someone can follow.
 
-Not ``In `C:\...\relay`, Git Bash:``. That is a label on a command, not a step — it assumes the
-reader already knows how to get a Git Bash prompt in that folder, which is the assumption item 1
-exists to remove. The location line is an instruction with a verb in it, every time.
+What makes this checkable rather than decorative:
 
-Three things make this checkable rather than decorative:
-
-- **The field order is fixed.** Title, then `UNTESTED:` if it applies, then location and shell,
-  then the fenced command, then `**You should see:**`, then `*Next:*`. A card with the fields
-  shuffled is not a card.
-- **The folder is written once per step, in the notation the named shell uses** — Git Bash
-  `/c/Users/aj/...`, PowerShell `C:\Users\aj\...` — and the notation follows **the shell the user
-  will run it in, never the shell I ran it in**. Writing the same folder two ways in one step is
-  the step contradicting itself, and it happens when I paste my own tool's path form into a
-  handover meant for someone else's terminal. There is no default shell to assume: it is chosen
-  per handover and named every time, and `rules/environment.md` holds the per-device facts.
-- **If the step says to open a prompt in that folder, the command does not `cd` there again.** A
-  `cd` means either the navigation line or the command is decoration, and the reader cannot tell
-  which.
-- **Nothing sits between the `---` pair but card content.** Commentary goes above the opening
-  rule or below the closing one.
-- **A card never announces its own compliance.** No "both steps carry all six fields", no note
-  that the format was checked. The reader asked for instructions, not for a report on how they
-  were assembled, and a card that describes itself is padding.
-- **A correction reprints the step; it does not annotate it.** If a card goes out malformed, the
-  fix is the corrected step in full card shape, introduced by `Replacing step N:` — one step, not
-  the whole handover. A prose note about what was wrong leaves the reader holding two versions and
-  reconciling them, which is worse than either alone.
+- **Field order is fixed** — title, `UNTESTED:` if it applies, location and shell, fenced command,
+  `**You should see:**`, `*Next:*`. Shuffled fields is not a card.
+- **The folder is written once per step, in the notation of the named shell** (Git Bash
+  `/c/Users/...`, PowerShell `C:\Users\...`), matching **the shell the user will run it in,
+  never the shell I ran it in**. `rules/environment.md` holds the per-device facts.
+- **No redundant `cd`** — if the step already says to open a prompt there, the command
+  does not `cd` there again.
+- **Nothing sits between the `---` pair but card content.**
+- **A card never announces its own compliance.** No "both steps carry all six fields" — the
+  reader asked for instructions, not a report on how they were assembled.
+- **A correction reprints the step, introduced by `Replacing step N:`** — one step, not the whole
+  handover, not a prose note about what was wrong.
 - **The vocabulary is `---`, `###`, `**bold**`, plain paragraphs and top-level fenced blocks, and
-  nothing else.** Not because it is prettier — because that is the set that survives every
-  renderer this reaches. Box-drawing borders wrap-break below about 80 columns and render as
-  literal junk outside a fence. A fence inside a blockquote makes the Run button and the copy
-  button attach unreliably. A command in a table cannot be copied cleanly. A fence nested in a
-  list item indents differently in every renderer. All four are banned for the same reason.
+  nothing else** — the set that survives every renderer this reaches. Box-drawing borders,
+  a fence inside a blockquote, a command in a table, and a fence nested in a list item each break
+  in at least one of them.
 
 **Why:** the terminal, the IDE panel, the web and desktop transcripts, and the phone all render
 the same reply differently, and the phone is the one that cannot be checked before sending. A
@@ -235,31 +216,19 @@ guessing about.
 
 #### A card is a sequence, not a menu
 
-The card's own header says "do them in order". So it is only for steps that *are* done in order.
-
-- **Alternatives the user acts on themselves** — two test suites, three ways to run a thing — are a
-  plain list or a set of headings. No numbering, no `Step k of N`, and no "do them in order"
-  header. Numbering a set of choices makes the format assert something false.
-- **A choice that has to be made before the work can continue** is a question, asked with the
-  `AskUserQuestion` picker, not a menu written out in prose for the user to answer in their next
-  message.
-
-The picker does not replace the card, and the reasons are worth writing down so this is not
-re-argued: it **blocks** the turn, which is wrong for anything the user is meant to act on later;
-it **cannot hold a fenced command**, so the commands would still need the card and the reader would
-get both; it caps at four options; and it **does not exist in claude.ai chat**, where markdown is
-the only mechanism there is. Whether it renders in the desktop Code tab is undocumented.
+The header says "do them in order", so it is only for steps done in order. Alternatives the user
+picks between (two test suites, three ways to run a thing) are a plain list or headings, no
+numbering. A choice that has to be made before work continues is an `AskUserQuestion`, not a menu
+in prose — the picker blocks the turn, cannot hold a fenced command, caps at four options, and
+does not exist in claude.ai chat.
 
 #### When a card is worth publishing as a page
 
 At **four or more steps**, or whenever asked, the card is also published as a step-by-step page
-from `templates/step-card.html` — one step at a time, a pager, a copy button per command. Below
-four steps the inline card is enough and the page is not worth the tokens.
-
-The page is always additive. The inline card is written first and in full, every time — never
-replaced by a link, never truncated to "see the page for steps 3 to 6". If publishing fails or
-is not available in this session, I say so in one line and stop: the steps above already stand
-on their own. I do not retry, and I do not re-author the page inline.
+from `templates/step-card.html`. Below four steps the inline card is enough. The page is always
+additive: the inline card is written first and in full, never replaced by a link or truncated. If
+publishing fails or is unavailable, I say so in one line and stop — I do not retry or re-author
+the page inline.
 
 ## Code follows the standards loaded for this project
 

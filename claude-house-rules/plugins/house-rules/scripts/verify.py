@@ -303,31 +303,65 @@ else:
     report("FAIL", "inject that cannot read the rules file still prints a visible warning")
     print(f"          got: {out2}")
 
-# --- the scope reminder reaches every prompt --------------------------------------------------
-def check_scope(title, empty_path):
+# --- the scope reminder reaches every prompt, gated stateless on the prompt's own content ----
+# scope runs on UserPromptSubmit, where a non-zero exit ERASES THE USER'S PROMPT - every case
+# below asserts exit 0 alongside the expected form, and the no-"prompt"-key case is the one
+# that would catch a regression toward raising instead of falling back.
+def scope_payload(prompt=None):
+    obj = {"session_id": "verify", "hook_event_name": "UserPromptSubmit"}
+    if prompt is not None:
+        obj["prompt"] = prompt
+    return json.dumps(obj)
+
+
+def check_scope(title, payload, expect, empty_path=False):
     env = dict(os.environ)
     if empty_path:
         env["PATH"] = ""
-    code, out, err = run_hook("scope", "", env=env)
+    code, out, err = run_hook("scope", payload, env=env)
     bad = []
+    if code != 0:
+        bad.append(f"exited {code}, not 0 - this would erase the user's prompt")
     if '"hookEventName":"UserPromptSubmit"' not in out:
         bad.append("wrong or missing hookEventName")
-    if "response depth" not in out:
-        bad.append("response-depth line missing")
-    if "only what was asked" not in out:
-        bad.append("scope line missing")
-    if "machine you are on" not in out:
-        bad.append("environment line missing")
+    if expect == "long":
+        if "response depth" not in out or "machine you are on" not in out:
+            bad.append("expected the long form, did not see its content")
+    elif expect == "short":
+        if "response depth" in out or "machine you are on" in out:
+            bad.append("expected the short form, but the long form's content is present")
+        if "step-card format" not in out:
+            bad.append("short form missing the step-card-format line")
     if not bad:
         report("PASS", title)
-        print(f"          {len(out)} characters of reminder injected")
+        print(f"          {len(out)} characters of reminder injected ({expect} form)")
     else:
         report("FAIL", title)
         print(f"          {'; '.join(bad)}")
 
 
-check_scope("scope reminder is emitted ahead of every prompt", False)
-check_scope("scope reminder still works with PATH empty (it depends on nothing)", True)
+check_scope(
+    "a command-shaped prompt gets the full reminder",
+    scope_payload("run the install script and build the project"),
+    "long",
+)
+check_scope(
+    "a plain prompt gets the short reminder",
+    scope_payload("what does this function do?"),
+    "short",
+)
+check_scope(
+    "a payload with no prompt field at all still exits 0 with the short reminder - the "
+    "path that would erase the user's prompt if it regressed",
+    scope_payload(),
+    "short",
+)
+check_scope(
+    "the short reminder still works with PATH empty (it depends on nothing)",
+    scope_payload("what does this function do?"),
+    "short",
+    empty_path=True,
+)
 
 # --- the artifact reminder fires on documents written outside a project ---------------------
 def art_case(expect, title, file_path, extra=""):
@@ -377,6 +411,8 @@ art_case(
 )
 
 # --- the reminder in hook.py's scope handler has not drifted from the rules document --------
+# Covers both forms - the short one is what fires on most prompts now, so its phrases need the
+# same drift protection the long form always had.
 rules_text = read(RULES_FILE)
 drift = []
 for phrase in [
@@ -731,6 +767,32 @@ if not agentdrift:
 else:
     report("FAIL", "the executor subagent exists and is pinned to Sonnet")
     print(f"          {'; '.join(agentdrift)}")
+
+# --- executor.md does not claim the rules are already in its context, and carries a digest ----
+# A clean @house-rules:executor spawn was asked directly and answered no: SessionStart
+# additionalContext does not reach subagents. executor.md used to assert the opposite ("The
+# house rules are already in this session's context"), which is the bug this check catches.
+digestdrift = []
+if not os.path.isfile(AGENT):
+    digestdrift.append("agents/executor.md is missing")
+else:
+    agent_text = read(AGENT)
+    if "already in this session" in agent_text.lower():
+        digestdrift.append("executor.md still claims the rules are already in its context")
+    for phrase in [
+        "not injected",
+        "hand over a command you have not run",
+        "step-card format",
+        "commit messages",
+    ]:
+        if phrase.lower() not in agent_text.lower():
+            digestdrift.append(f"executor.md digest is missing: {phrase!r}")
+if not digestdrift:
+    report("PASS", "executor.md carries its own rules digest instead of assuming inherited context")
+    print("          no 'already in this session' claim; the digest covers the load-bearing rules")
+else:
+    report("FAIL", "executor.md carries its own rules digest instead of assuming inherited context")
+    print(f"          {'; '.join(digestdrift)}")
 
 # --- the output style exists and IS forced ---------------------------------------------------
 # Reversed in 2.4.0. 2.3.0 asserted this field was ABSENT, on the argument that forcing displaces
