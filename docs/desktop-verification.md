@@ -8,9 +8,9 @@ cells as *undocumented*, which is absence of evidence, not evidence.
 
 Run it after a release that touches the handover format. Record the plugin version you ran it at.
 
-**Version run at:** 2.4.0 → 2.9.0 · **Date:** 2026-09-07 · **Result:** §0, §2a, §2b and §3 all
+**Version run at:** 2.4.0 → 2.10.0 · **Date:** 2026-09-07 · **Result:** §0, §2a, §2b and §3 all
 answered, and 2.9.0's location-independence fix verified working on the desktop app (see
-Findings). §1, §4–§9 not yet run.
+Findings). §1, §4–§9 not yet run, and 2.10.0's handover gate not yet seen on the app.
 
 ### Findings so far
 
@@ -111,20 +111,27 @@ Findings). §1, §4–§9 not yet run.
   working the moment it moved into the **six-item contract** (item 3) and into
   `output-styles/handover-cards.md`. A rule that must change the draft belongs in the six; a rule
   in a sub-bullet is documentation.
-- **2026-09-07 — the compliance announcement persists, and is ACCEPTED as a known cost.** That
-  same reply ended "Both cards carry all six fields — nothing to correct", which
-  `HANDOVER_NOTE` calls "itself the failure this is guarding against" and `house-rules.md` forbids
-  as "A card never announces its own compliance". Wording has now failed twice (2.4.0 strengthened
-  it; 2.9.0 states it outright), and it cannot succeed by wording alone: the corrected turn
-  **cannot be made silent** — `suppressOutput` is documented as having no effect — so once the
-  check fires on a reply needing nothing, something is always emitted.
+- **2026-09-07 — the compliance announcement, and the gate that fixed it (2.10.0).** That same
+  reply ended "Both cards carry all six fields — nothing to correct", which `HANDOVER_NOTE` calls
+  "itself the failure this is guarding against" and `house-rules.md` forbids as "A card never
+  announces its own compliance". Wording failed twice (2.4.0 strengthened it; 2.9.0 states it
+  outright), and it cannot succeed by wording at all: the continued turn **cannot be made
+  silent** — `suppressOutput` is documented as having no effect — so once the check fires on a
+  reply needing nothing, something is always emitted. The repo was shipping a rule that its own
+  hook broke on every correct handover.
 
-  The structural fix would be to gate `handover` on the card markers so a conforming reply never
-  fires it. That was considered and **deliberately declined**: it would let a reply that carries
-  the markers but botches a field slip through unchecked, and the cost is one line of noise on an
-  otherwise correct card. So the prohibition in the rules text is **known-unenforced**. Do not
-  spend a fourth attempt restating it — the decision is to accept the announcement, not to keep
-  trying to word it away.
+  2.10.0 fixes it structurally instead: `handover` now stays silent when the reply already
+  carries the card markers (`---`, `###`, `You should see:`), so a conforming reply never fires
+  it and there is nothing to announce. This was considered and declined once, on the grounds that
+  a reply carrying the markers but botching a field would slip through unchecked. That cost is
+  real and still stands — but it is a **silent miss on some turns**, traded against a **visible
+  defect on every good one**, and the drafting-path carriers (`inject`, `scope`, and the output
+  style) all still state the six before the reply is written. The `Stop` check was always the
+  backstop, not the primary carrier.
+
+  Still to verify on the desktop: that a conforming multi-step handover now ends with no trailing
+  commentary at all, and that a fenced command written *outside* card shape still draws the
+  checklist. `verify.py` covers both as unit cases; neither has been seen on the real app.
 
 ## Which section covers which surface
 
@@ -164,7 +171,7 @@ directly for a marker from the newest change:
 
 UNTESTED:
 ```powershell
-Select-String -Path "$env:USERPROFILE\.claude\plugins\cache\aj-house-rules\house-rules\*\scripts\hook.py" -Pattern "_reply_hands_over_a_command"
+Select-String -Path "$env:USERPROFILE\.claude\plugins\cache\aj-house-rules\house-rules\*\scripts\hook.py" -Pattern "_reply_needs_the_handover_check"
 ```
 
 **You should see:** at least one match. No match means the installed copy predates the change even
