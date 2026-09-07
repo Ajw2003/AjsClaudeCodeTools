@@ -10,8 +10,8 @@ Run it after a release that touches the handover format. Record the plugin versi
 
 **Version run at:** 2.4.0 → 2.10.0 · **Date:** 2026-09-07 · **Result:** §0, §2a, §2b and §3 all
 answered, and 2.9.0's location-independence fix verified working on the desktop app (see
-Findings). 2.10.0's handover gate is verified on the app for a conforming card (test A); test B
-and §1, §4–§9 are not yet run.
+Findings). 2.10.0's handover gate is verified on the app both ways — silent on a conforming card
+(test A), still firing on a card missing fields (test B). §1 and §4–§9 are not yet run.
 
 ### Findings so far
 
@@ -145,9 +145,25 @@ and §1, §4–§9 are not yet run.
   `OK: house-rules 2.10.0 matches source, file-for-file`, and `verify.py` on the freshly installed
   copy reported 101/101.
 
-  **Test B is still outstanding:** a fenced command written *outside* card shape must still draw
-  the checklist, proving the gate narrowed the firing condition rather than switching the check
-  off. `verify.py` covers it as a unit case; it has not been seen on the real app.
+- **2026-09-07 — the 2.10.0 gate VERIFIED on the desktop app (test B of two).** The first attempt
+  was **inconclusive by test design, not by defect**: the prompt said *"in one line, no card"*, and
+  the reply ended on a bare fence with *"You asked for one line, no card - that's it above"*.
+  Replaying that exact reply text through the hook shows it **does** fire, so what followed was
+  Claude obeying an explicit user instruction over a Stop-hook reminder. A fired check and an
+  unfired check are indistinguishable under a prompt that forbids the card — do not write a test
+  that way again.
+
+  The retry (*"quick - what do I type to see which house-rules version is installed?"*, no
+  instruction about format) passed. The first draft was card-**shaped** but missing two of the
+  six: no location line (it said "Open PowerShell anywhere" rather than navigate-to-a-path) and no
+  `UNTESTED:`. The checklist fired and the reply appended `Replacing the step above:` with both
+  fields restored.
+
+  That is the risk named when the gate went in — a reply carrying the markers but botching a field
+  slipping through unchecked — and it did **not** materialise, because the draft that skipped
+  fields also skipped a marker (a bold title instead of `###`). Not a guarantee, but evidence the
+  gate is narrower than the failure mode feared. Worth watching: the correction was introduced by
+  `Replacing the step above:` where `house-rules.md` specifies `Replacing step N:`.
 
 ## Which section covers which surface
 
