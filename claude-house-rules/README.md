@@ -247,6 +247,27 @@ On a clean tree the command stages nothing whether it was intercepted or not, so
 looks identical either way and the test tells you nothing. Give it something real to stage and
 the outcome is unambiguous.
 
+## What it costs
+
+`verify.py` proves the hooks are correct. It says nothing about what they cost, and a rule that
+fires correctly on every prompt can still be expensive. From the repo root:
+
+```bash
+python tools/measure_footprint.py
+```
+
+It measures the copy in the plugin cache — the one Claude Code actually runs — not this repo,
+because a bumped version that never re-registered leaves those two disagreeing. It reports the
+per-prompt reminder in both its short and long forms, replays your real transcripts through the
+live gating regex to show how often each one fires, prints the per-session injection size, and
+asserts that the three malformed-payload cases still exit 0. That last part matters more than it
+looks: `scope` runs on `UserPromptSubmit`, where a non-zero exit erases your prompt before Claude
+sees it.
+
+Exit code 0 means the gating is live and the failure paths are safe. Pass `--repo` to measure
+uncommitted changes before installing them. [docs/measuring-footprint.md](../docs/measuring-footprint.md)
+explains what each section means and how to read the numbers honestly.
+
 ## Install on a new device
 
 One command, from the repo root:

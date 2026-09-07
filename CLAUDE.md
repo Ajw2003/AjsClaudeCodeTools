@@ -61,6 +61,18 @@ Pass `--force` to skip the `STRIP` confirmation prompt, or `--skip-strip` to onl
 currently installed. There is no build step and no linter — this repo is Python scripts, one
 POSIX-sh shim (`run.sh`), and JSON.
 
+Measure what the *installed* plugin costs in tokens — the per-prompt `scope` split replayed
+against your real transcripts, the per-session injection, and the failure paths that must never
+exit non-zero:
+
+```bash
+python tools/measure_footprint.py
+```
+
+Reads the installed copy out of the plugin cache, not this repo, because those two can disagree;
+pass `--repo` to measure the working tree before installing it. `verify.py` proves the hooks are
+correct, this proves they are cheap — see [docs/measuring-footprint.md](docs/measuring-footprint.md).
+
 ## Architecture
 
 ### The plugin is one POSIX shim plus one Python file, dispatched by event
