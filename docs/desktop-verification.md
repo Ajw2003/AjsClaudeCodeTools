@@ -180,6 +180,46 @@ Findings). 2.10.0's handover gate is verified on the app both ways — silent on
 
 ---
 
+## The canonical prompts, and the baseline to compare against
+
+Every section below that needs a handover uses **one of these three prompts, pasted verbatim**.
+They are not examples to paraphrase. "Ask for a multi-step handover" is what this section replaces:
+it produces a different card every run, so no two runs can disagree and nothing is actually being
+tested. A fixed prompt with a recorded answer is the only thing that makes a later run comparable.
+
+| Name | Paste this verbatim |
+|---|---|
+| **PROMPT-MULTI** | `give me the steps to update the house-rules plugin from source and re-verify it` |
+| **PROMPT-ONE** | `what do I type to see which house-rules version is installed?` |
+| **PROMPT-LONG** | `give me the steps to set this repo up from scratch on a new Windows machine: clone it, install Python if missing, install the plugin, set verbose and the model, and prove it works` |
+
+`PROMPT-MULTI` is chosen because its answer is **determined by the repo**, not by Claude's
+invention: the three commands are the ones `CLAUDE.md` documents. If a run returns different
+commands, that is a finding about the rules, not prompt variance.
+
+### The recorded baseline for PROMPT-MULTI
+
+Observed 2026-09-07, Windows 11 desktop **Code** tab, plugin 2.10.0 byte-matching source. This is
+the data point later runs are compared against:
+
+- **Three steps**, headed `Step 1 of 3` … `Step 3 of 3`.
+- Step 1 — pull: `git -C "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools" pull --ff-only`
+- Step 2 — force-reinstall: `python "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\force_update.py"`
+- Step 3 — verify: `python "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\verify.py"`
+- Every step: navigate-to-an-absolute-path plus the shell in prose, one ```` ```powershell ```` fence,
+  and a `**You should see:**` line.
+- **No published page** — three steps is under the four-step threshold.
+- The reply ends at the card's closing `---`; the only prose after it was new information (the
+  clone's unpushed commits, the restart reminder), never a report on the card's own fields.
+
+**A later run matches the baseline if** the step count, the three commands, and the per-step fields
+are the same. Wording differences in titles and prose are not failures. Different *commands*, a
+missing field, a published page appearing at three steps, or a trailing compliance sentence are.
+
+`PROMPT-LONG` exists only for the sections that need to cross the four-step publishing threshold
+(§4, §7). It has **no recorded baseline yet** — the first run of §4 establishes one.
+
+
 ## 0 — Get the current plugin onto the machine
 
 Injected context only refreshes at session start, so testing without the restart at the end of this
@@ -232,15 +272,15 @@ To list pages you already own, use `/artifacts` **in the CLI**, not here.
 
 The highest-information test here, which is why it comes before the cosmetic ones.
 
-- **2a — the baseline.** Fresh session, ask for something that hands back two steps.
-  **Pass:** one card, `Step 1 of 2`, and **no published page** — the threshold is four.
-- **2b — the real question.** Fresh session with `HOUSE_RULES_HANDOVER=off`, same ask.
+- **2a — the baseline.** Fresh session, **PROMPT-MULTI**.
+  **Pass:** the recorded baseline above, and **no published page** — the threshold is four.
+- **2b — the real question.** Fresh session with `HOUSE_RULES_HANDOVER=off`, **PROMPT-MULTI** again.
   **Pass:** the card still appears.
   **Fail means:** neither `inject` nor the forced output style is doing the work, and the `Stop`
   backstop is carrying the format alone — so every conforming reply costs a correction turn. Since
   2.4.0 both of those are in play, a failure here would mean the format has to move somewhere the
   model cannot skim past, not just be stated in more places.
-- **2c — proportionality.** Ask for a handover of exactly one command.
+- **2c — proportionality.** **PROMPT-ONE**, whose answer is a single command.
   **Pass:** no numbering, no `*Next:*`, every other field present. Guards against the card
   becoming mandatory ceremony on a one-liner.
 
@@ -274,7 +314,8 @@ shells existed on that machine, which is what made the mismatch detectable.
 
 ## 4 — The published page
 
-Ask for a five-step handover on the Desktop **Code** tab.
+**PROMPT-LONG** on the Desktop **Code** tab — the one prompt here that clears the four-step
+publishing threshold.
 
 **You should see:** the inline card **and** a published page link.
 
@@ -305,7 +346,7 @@ no style picker at all. That is precisely why 2.4.0 sets `force-for-plugin: true
 style was unreachable without hand-editing a settings file.
 
 So the test is that it applies with **nothing selected**. In a fresh Code-tab session, having
-selected no style anywhere, ask for a multi-step handover.
+selected no style anywhere, **PROMPT-MULTI**.
 
 **You should see:** the card. And normal coding behaviour intact — `keep-coding-instructions: true`
 is what preserves it, so a session that has gone oddly non-technical is that field failing.
@@ -319,7 +360,7 @@ style is belt-and-braces. That is the intended reading, not a failure.
 
 ## 7 — The other Claude Code surfaces
 
-Same five-step ask in **Claude Code on the web** (a cloud session), and again in the **IDE
+**PROMPT-LONG** again in **Claude Code on the web** (a cloud session), and again in the **IDE
 extension**. Both resolve table cells: the web row records publishing as undocumented, and the IDE
 row says only that it inherits the CLI.
 
@@ -329,7 +370,7 @@ row says only that it inherits the CLI.
 
 Paste the block from [`claude-ai-instructions.md`](claude-ai-instructions.md) into
 claude.ai → Settings → Instructions. Then start a new chat on the web, and a new chat on the phone,
-and ask each for a multi-step handover.
+and give each **PROMPT-MULTI**.
 
 **You should see:** the same card on both. Note whether the web chat *also* volunteers its own
 interactive step widget — that is model discretion, so not a failure either way, but worth
@@ -345,7 +386,7 @@ table states a checked fact rather than a repeated claim.
   Anthropic documents that plugins are unavailable in WSL sessions. If the rules *do* appear,
   the docs are wrong or the limit has changed, and the table needs updating in the other
   direction.
-- **Desktop Cowork tab.** Ask for a multi-step handover there. **Expected: no card**, because
+- **Desktop Cowork tab.** **PROMPT-MULTI** there. **Expected: no card**, because
   Cowork sources its skills and plugins from the claude.ai account rather than `~/.claude`. If a
   card appears, something is syncing that the docs do not describe — record it.
 
