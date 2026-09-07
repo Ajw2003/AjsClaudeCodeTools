@@ -1,14 +1,15 @@
 # Desktop verification — the step-card handover format
 
 `verify.py` proves the hooks emit what the docs claim. It cannot see whether the format actually
-changes Claude's first draft, whether the fence label really drives the Run button, or whether a
-published page renders anywhere. This checklist covers exactly that gap, and its findings are what
+changes Claude's first draft, or whether a published page renders anywhere. This checklist covers
+exactly that gap, and its findings are what
 the surface table in [`CLAUDE.md`](../CLAUDE.md) should state — that table currently records three
 cells as *undocumented*, which is absence of evidence, not evidence.
 
 Run it after a release that touches the handover format. Record the plugin version you ran it at.
 
-**Version run at:** 2.4.0 → 2.5.0 · **Date:** 2026-09-07 · **Result:** §0 passed; §2b and §3 still open
+**Version run at:** 2.4.0 → 2.5.0 · **Date:** 2026-09-07 · **Result:** §0 passed, §2a and §3
+answered (see Findings) · §2b still open
 
 ### Findings so far
 
@@ -55,6 +56,25 @@ Run it after a release that touches the handover format. Record the plugin versi
 - **2026-09-07 — updating across a version change works on the desktop app.** 2.4.0 → 2.5.0 landed
   and the content check confirmed it by content, not by the reported version alone. This says
   nothing about the same-version case, which remains UNVERIFIED.
+- **2026-09-07 — on the Windows desktop Code tab, a card step said "Navigate to
+  `C:\Users\aj\Desktop\GameDev\RockSkipping\relay` and open **Git Bash** there" with a fenced
+  `npm test`. Clicking Run produced:**
+
+  ```
+  PS C:\Users\aj\Desktop\GameDev\RockSkipping\Assets> npm test
+  > echo "Error: no test specified" && exit 1
+  ```
+
+  Two facts, now observed rather than assumed: (1) **the Run button does not select the shell
+  from the fence label** — the reply named Git Bash, it ran PowerShell; (2) **the Run button
+  executes in the session's working directory, not the folder the step names** — it ran in
+  `\Assets`, not `\relay`, and therefore hit the wrong `package.json` and failed. §3 is answered
+  by fact (1). Fact (2) exposed a conflict between the card's navigate-and-open line (item 1,
+  true for whoever pastes) and the no-`cd` rule (which assumed the reader was already in the
+  named folder): resolved by requiring commands that do not depend on where the prompt is —
+  location-independent forms such as `npm --prefix "<absolute path>" test` or
+  `git -C "<absolute path>" status`. `rules/house-rules.md`, `hook.py`'s `scope` and `handover`
+  reminders, and `docs/claude-ai-instructions.md` were corrected in response.
 
 ## Which section covers which surface
 
@@ -135,30 +155,33 @@ The highest-information test here, which is why it comes before the cosmetic one
   **Pass:** no numbering, no `*Next:*`, every other field present. Guards against the card
   becoming mandatory ceremony on a one-liner.
 
-## 3 — The fence label and the Run button
+## 3 — ANSWERED: the fence label does not drive the Run button
 
-**This section is the only source of truth for the claim, and rules wording is waiting on it.**
-Item 2 of the handover contract says "the fence label is what the Run button executes". A docs
-search found **nothing** — not the button's existence, not how it picks a shell, not whether the
-fence language tag has anything to do with it. Anthropic documents shell selection only for the
-Bash and PowerShell tools *Claude itself* calls, which is a different mechanism and not evidence
-about a button the user clicks. So the rule currently asserts something with nothing behind it,
-and it was deliberately left unedited in 2.4.0 rather than reworded twice.
+On 2026-09-07, on the Windows desktop Code tab, a card step said "Navigate to
+`C:\Users\aj\Desktop\GameDev\RockSkipping\relay` and open **Git Bash** there" with a fenced
+`npm test`. Clicking **Run** produced:
 
-Get a reply containing a `powershell`-labelled fence and click **Run**.
+```
+PS C:\Users\aj\Desktop\GameDev\RockSkipping\Assets> npm test
+> echo "Error: no test specified" && exit 1
+```
 
-**You should see:** it execute in PowerShell, not the default shell.
+**Result: the Run button does not select the shell from the fence label.** The reply named Git
+Bash; the button ran PowerShell. The same observation also showed the Run button executing in the
+session's working directory (`\Assets`) rather than the folder the step named (`\relay`), hitting
+the wrong `package.json` and failing — a second, separate fact, tracked in the Findings list
+above rather than here since it is not about the fence label.
 
-- **If it honours the label** — the rule's stated reason is correct. Record it here and nothing
-  changes.
-- **If it ignores the label** — the rule stays (a mislabelled fence still tells the *reader* the
-  wrong shell) but its justification is folklore and `rules/house-rules.md` must be reworded to
-  stand on the reader rather than the button.
-- **If there is no Run button** on that block — say so; the claim is then vacuous.
+Item 2 of the handover contract previously said "the fence label is what the Run button
+executes" — that justification is now known false and has been reworded to stand on the reader:
+the label tells the reader which shell the command's syntax is for, and a mislabelled fence is
+broken the moment they paste it into the shell the prose named, regardless of what any Run button
+does. `rules/house-rules.md`, `hook.py`'s `scope` and `handover` reminders, and
+`docs/claude-ai-instructions.md` were all updated to match.
 
-Context for interpreting the result: Git for Windows is required for the desktop Code tab, so Git
-Bash is always present, and the PowerShell tool is on by default for claude.ai accounts. Both
-shells exist on that machine, which is what makes the test meaningful.
+Context that shaped the observation: Git for Windows is required for the desktop Code tab, so Git
+Bash is always present, and the PowerShell tool is on by default for claude.ai accounts — both
+shells existed on that machine, which is what made the mismatch detectable.
 
 ## 4 — The published page
 

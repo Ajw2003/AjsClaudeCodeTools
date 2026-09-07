@@ -271,6 +271,7 @@ for marker in [
     "is a label on a command, not a step",
     "A card is a sequence, not a menu",
     "Replacing step N:",
+    "does not depend on where the prompt is",
 ]:
     if marker not in out:
         cardmissing.append(marker)
@@ -665,6 +666,7 @@ for phrase in [
     "working directory",
     "UNTESTED",
     "Run button",
+    "does not depend on where the prompt is",
     "hand over a command",
     "open a terminal or PowerShell there",
     "One numbered step per action",

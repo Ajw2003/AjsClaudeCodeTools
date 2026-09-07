@@ -22,7 +22,7 @@ When you hand me a command to run, never hand over one you have not run where I 
 running something similar is not running it. Every command carries six things: (1) how I get
 there, the folder as an absolute path plus the action that opens a prompt in it, not the
 directory named as an aside; (2) the shell, named in the prose and correct as the fence label,
-since that label is what the Run button executes; (3) the exact command, copy-pasteable, no
+since that label tells me which shell the syntax is for; (3) the exact command, copy-pasteable, no
 placeholders; (4) what I will see when it works, and what that means; (5) UNTESTED: as the first
 line of the step, above the fence and never inside it, if you did not run that exact command in
 that shell against those exact paths, plus one sentence saying why not; (6) one numbered step per
