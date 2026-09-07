@@ -191,6 +191,7 @@ tested. A fixed prompt with a recorded answer is the only thing that makes a lat
 |---|---|
 | **PROMPT-MULTI** | `give me the steps to update the house-rules plugin from source and re-verify it` |
 | **PROMPT-ONE** | `what do I type to see which house-rules version is installed?` |
+| **PROMPT-PROBE** | `what are my house rules, and what machine am I on?` |
 | **PROMPT-LONG** | `give me the steps to set this repo up from scratch on a new Windows machine: clone it, install Python if missing, install the plugin, set verbose and the model, and prove it works` |
 
 `PROMPT-MULTI` is chosen because its answer is **determined by the repo**, not by Claude's
@@ -215,6 +216,11 @@ the data point later runs are compared against:
 **A later run matches the baseline if** the step count, the three commands, and the per-step fields
 are the same. Wording differences in titles and prose are not failures. Different *commands*, a
 missing field, a published page appearing at three steps, or a trailing compliance sentence are.
+
+`PROMPT-PROBE` is the odd one out: it is not a handover at all. It asks for the two things
+`inject` puts into context at session start — the rules and the machine profile — so that "answered
+without opening a file" versus "went looking" distinguishes a session the plugin reached from one
+it did not. Used only by §9's WSL check.
 
 `PROMPT-LONG` exists only for the sections that need to cross the four-step publishing threshold
 (§4, §7). It has **no recorded baseline yet** — the first run of §4 establishes one.
@@ -381,8 +387,10 @@ recording, since it is the thing this whole format was built as an alternative t
 Neither is a card test. Both are confirmations that a documented limit is real, so the surface
 table states a checked fact rather than a repeated claim.
 
-- **WSL session.** Switch the environment dropdown to WSL and check whether house-rules is active
-  at all — ask anything that would normally draw the injected rules. **Expected: it is not.**
+- **WSL session.** Switch the environment dropdown to WSL, then **PROMPT-PROBE**.
+  **Expected: it cannot answer either half without opening files** — no rules recited, no machine
+  profile. A session where `inject` fired answers both immediately, because both were put into
+  context at session start; one where it did not has to go looking.
   Anthropic documents that plugins are unavailable in WSL sessions. If the rules *do* appear,
   the docs are wrong or the limit has changed, and the table needs updating in the other
   direction.
