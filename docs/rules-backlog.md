@@ -42,3 +42,35 @@ an earlier one. "Ask for something like X" is a description of a test, not a tes
 - Can `verify.py` check it at all? The existing drift checks match fixed strings; "is this
   instruction specific enough" is not a string match. It may be a rule with no test, which the repo
   has so far avoided shipping.
+
+---
+
+## Unexplained abbreviations
+
+**Status:** open. Raised 2026-09-07.
+
+**The defect.** Using an abbreviation the user has not seen defined, in an instruction they are
+meant to act on. `docs/desktop-verification.md` §9 said "switch the environment dropdown to WSL"
+with no expansion anywhere in the repo — the reader is told to do a thing to a thing they have no
+name for. Caught by the user asking what it meant.
+
+**Why this is the same defect as the entry above, not a new one.** "Ask for a multi-step handover"
+fails because the *input* is a category rather than a value. "Switch the dropdown to WSL" fails
+because the *object* is a token rather than a referent. Both produce a step that reads as
+actionable and is not, and both were caught by a person rather than by a check.
+
+**What the rule should say.** Roughly: expand an abbreviation on first use in any document or
+handover, unless it has already been defined in this conversation or is domain-standard vocabulary
+the rules already use (`git`, `PowerShell`, `JSON`). Assumed-shared vocabulary is an assumption, and
+the rules already forbid building on those elsewhere — this is that rule applied to prose rather
+than to environments.
+
+**Fixed in place for this instance:** WSL is expanded on first use in `CLAUDE.md` and
+`docs/desktop-verification.md`. Note that `verify.py` matches surface names out of the `CLAUDE.md`
+table as literal substrings, so the row *label* has to stay `WSL session`; the expansion goes in
+the prose beside it.
+
+**Open question.** Whether this and the entry above are one rule or two. They share a cause —
+an instruction that cannot be acted on as written — and a single rule covering both would be
+shorter, which matters for text injected into every session. Two rules would be more checkable.
+Neither is obviously right yet.

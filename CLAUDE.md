@@ -157,7 +157,7 @@ surface named here has a matching check there.
 | Claude Code — web / cloud session | publishing undocumented; treat as unavailable | yes | ships with the repo install; cloud never reads `~/.claude/settings.json` |
 | claude.ai chat — web / desktop | sometimes, model's discretion, unrequestable | yes | [docs/claude-ai-instructions.md](docs/claude-ai-instructions.md) |
 | claude.ai chat — iOS / Android | **never** | yes | same |
-| Claude Code — WSL session | no | **no** | **plugins are unavailable in WSL sessions entirely** |
+| Claude Code — WSL session | no | **no** | **plugins are unavailable in WSL sessions entirely** — WSL is Windows Subsystem for Linux, the Microsoft feature that runs a Linux environment inside Windows; the desktop app's environment dropdown can point a session at it |
 | Claude Code — Desktop **Cowork** tab | no | **no** | sources skills and plugins from the claude.ai account, not `~/.claude` — this plugin covers the **Code** tab only |
 
 ### Editing the rules

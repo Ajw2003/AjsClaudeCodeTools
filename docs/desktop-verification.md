@@ -387,7 +387,10 @@ recording, since it is the thing this whole format was built as an alternative t
 Neither is a card test. Both are confirmations that a documented limit is real, so the surface
 table states a checked fact rather than a repeated claim.
 
-- **WSL session.** Switch the environment dropdown to WSL, then **PROMPT-PROBE**.
+- **WSL session.** WSL is **Windows Subsystem for Linux** — the Microsoft feature that runs a
+  Linux environment inside Windows 11, sharing the filesystem. The desktop app's environment
+  dropdown can point a session at it instead of at Windows. Switch that dropdown to WSL, then
+  **PROMPT-PROBE**.
   **Expected: it cannot answer either half without opening files** — no rules recited, no machine
   profile. A session where `inject` fired answers both immediately, because both were put into
   context at session start; one where it did not has to go looking.
