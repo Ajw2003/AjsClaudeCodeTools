@@ -535,6 +535,31 @@ if os.path.exists(STEPCARD):
                          ("bg", "card", "ink", "muted", "line", "accent")) else "FAIL",
            "step-card.html still uses the shared token names, so it stays themeable")
 
+    # The card's palette IS quarry. That is not a coincidence to be re-noticed later - the theme
+    # was authored from this file so adopting it renamed nothing. Assert it, or the two drift
+    # apart the first time either is nudged and nobody finds out.
+    def _block(pat):
+        m = _re.search(pat + r"\s*\{(.*?)\}", sc, _re.S)
+        return dict(_re.findall(r"--([a-z-]+):\s*(#[0-9a-fA-F]{6})", m.group(1))) if m else {}
+
+    q = LOADED.get("quarry")
+    if q:
+        for scheme, pat in (("light", r":root"),
+                            ("dark", r':root:not\(\[data-theme="light"\]\)')):
+            got = _block(pat)
+            want = q["colour"][scheme]
+            diff = [k for k, v in want.items() if k in got and got[k].lower() != v.lower()]
+            absent = [k for k in want if k not in got]
+            report("PASS" if not diff and not absent else "FAIL",
+                   f"step-card.html's {scheme} palette matches the quarry theme exactly")
+            for k in diff:
+                print(f"          {k}: card {got[k]} vs quarry {want[k]}")
+            if absent:
+                print(f"          in quarry but not the card: {absent}")
+
+    report("PASS" if style.MARKER_PREFIX in sc else "FAIL",
+           "step-card.html carries the marker, so publishing it raises no prompt")
+
 # --- marketplace ----------------------------------------------------------------------
 mk = json.loads(read(MARKETPLACE))
 names = [p["name"] for p in mk["plugins"]]

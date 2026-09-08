@@ -22,6 +22,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Run these steps</title>
 <style>
+  /* house-style: quarry */
+  /* These values ARE the quarry theme - `style.py css quarry --system` emits them, and
+     verify_style.py fails if the two drift apart. --system, always: this page is opened off
+     disk on a machine mid-install that may have no network, so it loads no webfont and must
+     never start. The marker lets the styleguard hook publish it without prompting. */
   :root {
     color-scheme: light dark;
     --bg: #f7f6f3;
@@ -30,6 +35,7 @@
     --muted: #6b6862;
     --line: #e0ddd6;
     --accent: #2f6f4f;
+    --accent-ink: #ffffff;
     --code-bg: #f2f0ec;
     --warn-bg: #fdf3e0;
     --warn-ink: #7a4a06;
@@ -43,6 +49,7 @@
       --muted: #9b978f;
       --line: #35343a;
       --accent: #79c79b;
+      --accent-ink: #10231a;
       --code-bg: #17161a;
       --warn-bg: #2e2415;
       --warn-ink: #f0c987;

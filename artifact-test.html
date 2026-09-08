@@ -1,58 +1,107 @@
 <title>Artifact Smoke Test</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=Space+Mono:wght@400;700&display=swap">
 <style>
-  :root {
-    --ground: #f2f3f0;
-    --panel: #fbfbfa;
-    --ink: #1b1e1a;
-    --muted: #5f665c;
-    --line: #d7dad2;
-    --signal: #3f7d3a;
+/* house-style: signal */
+:root {
+  color-scheme: light dark;
+  --font-display: "Space Grotesk", "Avenir Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --base: 17px;
+  --line-height: 1.55;
+  --step--1: 0.7502rem;
+  --step-0: 1.0rem;
+  --step-1: 1.333rem;
+  --step-2: 1.7769rem;
+  --step-3: 2.3686rem;
+  --step-4: 3.1573rem;
+  --radius: 18px;
+  --border: 0;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08);
+  --space: 2rem;
+  --measure: 40rem;
+  --bg: #fafafa;
+  --card: #ffffff;
+  --ink: #101014;
+  --muted: #62606e;
+  --line: #e6e5ec;
+  --accent: #5b3df5;
+  --accent-ink: #ffffff;
+  --code-bg: #f3f2f7;
+  --warn-bg: #fff3e3;
+  --warn-ink: #7d4a00;
+  --warn-line: #eec894;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0b0f;
+    --card: #15151d;
+    --ink: #f5f4f8;
+    --muted: #9d9aad;
+    --line: #262533;
+    --accent: #8b6bff;
+    --accent-ink: #0b0b0f;
+    --code-bg: #0e0e14;
+    --warn-bg: #2b1f14;
+    --warn-ink: #ffc16b;
+    --warn-line: #5a3f1d;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ground: #14160f;
-      --panel: #1c1f18;
-      --ink: #eef0e9;
-      --muted: #99a293;
-      --line: #2e3328;
-      --signal: #8fce7f;
-    }
-  }
-  :root[data-theme="dark"] {
-    --ground: #14160f;
-    --panel: #1c1f18;
-    --ink: #eef0e9;
-    --muted: #99a293;
-    --line: #2e3328;
-    --signal: #8fce7f;
-  }
-
+}
+:root[data-theme="dark"] {
+  --bg: #0b0b0f;
+  --card: #15151d;
+  --ink: #f5f4f8;
+  --muted: #9d9aad;
+  --line: #262533;
+  --accent: #8b6bff;
+  --accent-ink: #0b0b0f;
+  --code-bg: #0e0e14;
+  --warn-bg: #2b1f14;
+  --warn-ink: #ffc16b;
+  --warn-line: #5a3f1d;
+}
+:root[data-theme="light"] {
+  --bg: #fafafa;
+  --card: #ffffff;
+  --ink: #101014;
+  --muted: #62606e;
+  --line: #e6e5ec;
+  --accent: #5b3df5;
+  --accent-ink: #ffffff;
+  --code-bg: #f3f2f7;
+  --warn-bg: #fff3e3;
+  --warn-ink: #7d4a00;
+  --warn-line: #eec894;
+}
   body {
-    background: var(--ground);
+    background: var(--bg);
     color: var(--ink);
-    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-family: var(--font-body);
+    font-size: var(--base);
+    line-height: var(--line-height);
     min-height: 100vh;
     display: grid;
     place-items: center;
-    padding: 2rem;
+    padding: var(--space);
     box-sizing: border-box;
   }
 
   main {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 2rem 2.25rem;
-    max-width: 34rem;
+    background: var(--card);
+    border: var(--border) solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: var(--space);
+    max-width: var(--measure);
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
 
   .label {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--muted);
@@ -66,19 +115,20 @@
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 50%;
-    background: var(--signal);
+    background: var(--accent);
   }
 
   p {
     margin: 0;
-    font-size: 1.35rem;
-    line-height: 1.45;
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    line-height: 1.25;
     text-wrap: balance;
   }
 
   footer {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
     color: var(--muted);
     border-top: 1px solid var(--line);
     padding-top: 0.9rem;
@@ -89,5 +139,5 @@
 <main>
   <div class="label">Publish check</div>
   <p>If you can read this line, publishing artifacts from this session works.</p>
-  <footer>house-rules · 2026-09-07</footer>
+  <footer>house-style · signal</footer>
 </main>
