@@ -158,24 +158,56 @@ opens in a working state — seeded, specimen already rendering — rather than 
 ### Two colours, not twenty-two
 
 The colour step asks for a ground and an accent. Everything else is derived, and contrast is a
-property of the derivation rather than a warning bolted on after it:
+property of the derivation rather than a warning bolted on after it.
 
-- `solveOn(bg, hue, sat, target)` binary-searches lightness at a fixed hue until the WCAG ratio
-  against the ground meets the target, picking direction from the ground's own luminance. It
-  places `ink` (12:1), `muted` (4.6:1) and the neutrals.
-- Neutrals carry the ground's hue at reduced saturation, so `line` and `code-bg` belong to the
-  theme instead of being grey dropped next to it.
-- `fitAccent` handles the case `solveOn` cannot. An accent has two jobs that pull against each
-  other — it must read on the ground, and text must read *on it*. For a mid-tone accent there is
-  no lightness at a fixed hue that clears 4.5 against it, because the accent sits in the middle
-  where neither white nor black is far enough away. So it picks whichever of white and a
-  hue-tinted near-black contrasts more, and walks the accent's own lightness until that clears —
-  stopping before the accent stops reading on the ground, because the ground matters more.
-- The dark scheme is not an inversion. The ground becomes a very dark form of its own hue and the
-  accent is **lightened** until it clears on it. An accent that works on paper is nearly always
-  too dark on black; that is the single most common way a hand-built dark palette fails.
+**The ground is a tint, not the background.** It supplies hue and chroma; the scheme supplies
+lightness — light lands near `#f5f5f5`, dark near `#0f0f0f`, both carrying the tint.
 
-An accent that already passes is left alone. `verify_style.py` asserts this — otherwise "pick an
+This is not a stylistic choice, it is a correctness one. Used literally, a ground anywhere
+between roughly 12% and 75% lightness **cannot support a readable `ink` at all**:
+
+```
+#f5f5f5 → 19.26 ok        #b3b3b3 → 10.02 impossible      #383838 → 11.73 impossible
+#d9d9d9 → 14.88 ok        #8c8c8c →  6.25 impossible      #1f1f1f → 16.48 ok
+                          #666666 →  5.74 impossible
+```
+
+`#787878` tops out at 4.76:1 against pure black. A "light" scheme built on one was neither light
+nor readable. Deriving the page colour from the ground guarantees headroom in both directions
+while keeping the chosen colour visible in every neutral.
+
+**`solveOn` returns `null` when a target is unreachable.** It binary-searches lightness at a
+fixed hue until the WCAG ratio against the ground is met; when no such lightness exists it says
+so. An earlier version returned the value it was initialised with — white or black — which is how
+a mid-grey ground silently turned `ink`, `muted` *and the user's chosen accent* into `#ffffff`.
+Callers handle `null` explicitly; `solveBest` walks a list of targets best-first so a tight ground
+degrades to a lower ratio rather than to a wrong colour.
+
+**`ink` and `muted` are solved separately and must stay distinct.** When both fell back to white
+the palette had no hierarchy left and nothing noticed. There is now a minimum contrast required
+*between* them.
+
+**`fitAccent` handles what `solveOn` cannot.** An accent has two jobs that pull against each
+other — it must read on the ground, and text must read *on it*. For a mid-tone accent there is no
+lightness at a fixed hue that clears 4.5 against it, because the accent sits in the middle where
+neither white nor black is far enough away. So it picks whichever of white and a hue-tinted
+near-black contrasts more, and walks the accent's own lightness until that clears — stopping
+before the accent stops reading on the ground, because the ground matters more. It reports back
+whether it moved the colour, and the page says so: silently changing someone's accent is what
+made the tool untrustworthy.
+
+**The dark scheme is not an inversion.** The ground becomes a very dark form of its own hue and
+the accent is *lightened* until it clears on it. An accent that works on paper is nearly always
+too dark on black; that is the single most common way a hand-built dark palette fails.
+
+**The warn tokens are semantic.** They lean toward the ground's hue — along the short way round
+the wheel, by at most about 7°, then clamped to the amber band — so they belong to the theme
+without becoming a second accent. An unclamped one-fifth nudge toward a blue ground reached hue
+0.19, chartreuse, which reads as a highlighter pen rather than a warning. The page states this
+explicitly, because "I picked grey and teal, where did the orange come from?" is a fair question
+that the interface previously did not answer.
+
+An accent that already passes is left alone, and the suite asserts it — otherwise "pick an
 accent" would quietly mean "suggest an accent".
 
 The derivation lives only in the page. A second implementation in Python would double the drift
@@ -219,15 +251,31 @@ suite runs offline and cannot.
 
 ### Testing the deriver
 
-`verify_style.py` extracts the deriver from the **generated** page and runs it under node against
-eight ground/accent pairs chosen to break it — a mid-tone ground where neither white nor black is
-far away, a dark ground with a light accent, a fully saturated accent — asserting every contrast
-target in both schemes. Where node is missing the check skips loudly rather than quietly not
-existing.
+`verify_style.py` extracts the deriver from the **generated** page and runs it under node,
+sweeping grounds from 2% to 98% lightness across seven hues and four saturations against six
+accents — around 47,000 contrast assertions over 3,360 ground/accent pairs, both schemes. It also
+asserts that `solveOn` returns `null` for an unreachable target, that `ink` and `muted` never
+collapse, that the accent's hue survives, that an already-passing accent is preserved, and that
+the warn hue stays in the amber band. Where node is missing the check skips loudly rather than
+quietly not existing.
 
-What it cannot check is whether the result is *good*. Contrast is necessary and not sufficient,
-and a palette can clear every ratio and still be ugly. That part is judged by eye, in the
+**The sweep replaced a list of hand-picked cases, and that is the lesson worth keeping.** The old
+list had a "mid-tone" case at `#c9c4b8` — 12.8:1, scraping past the boundary — so it passed while
+the entire unusable band behind it went untested. The cases had been chosen to be *plausible*
+rather than *hostile*. Running the same sweep against the old deriver produces 4,924 failures;
+against the current one, none. A test that only covers the inputs you imagined is a test that
+agrees with you.
+
+What it still cannot check is whether the result is *good*. Contrast is necessary and not
+sufficient, and a palette can clear every ratio and remain ugly. That is judged by eye, in the
 specimen, which is why the specimen is not optional.
+
+### What the page shows about its own working
+
+The colour step displays the resulting light and dark page colours and the accent as it will
+actually appear on each, and every token in the expanded grid carries a line saying where it came
+from — "your ground, lightened", "yours, unchanged", "semantic amber, not your accent". A tool
+that derives has to show its working, or it is indistinguishable from one that ignores you.
 
 ## Editing this plugin
 

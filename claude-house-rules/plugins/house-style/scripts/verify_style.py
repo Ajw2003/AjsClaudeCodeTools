@@ -727,18 +727,17 @@ try:
     else:
         js = html[html.index("function h2r("):html.index(marker)]
         with open(os.path.join(tmp, "d.mjs"), "w", encoding="utf-8") as f:
-            f.write(js + "\nexport { derive, contrast };\n")
-        # Grounds and accents chosen to break it: a mid-tone ground where neither white nor
-        # black is far away, a dark ground with a light accent, and a fully saturated accent.
-        cases = [
-            ["quarry", "#f7f6f3", "#2f6f4f"], ["ledger", "#f4f5f7", "#2c5d8f"],
-            ["signal", "#fafafa", "#5b3df5"], ["seed", "#eef1f4", "#0f766e"],
-            ["mid-tone", "#c9c4b8", "#8a1c3d"], ["dark-ground", "#1a1d22", "#e2643c"],
-            ["saturated", "#fff8e7", "#ff2d55"], ["near-white", "#ffffff", "#767676"],
-        ]
+            f.write(js + "\nexport { derive, contrast, rgb2hsl, solveOn };\n")
+
+        # A SWEEP, not a case list. The hand-picked cases this replaces all happened to sit
+        # outside the band where the derivation was broken: a ground anywhere between roughly
+        # 12% and 75% lightness cannot reach a 12:1 ink at any hue (#787878 tops out at 4.76
+        # against black), and the old solveOn answered an unreachable target with the value it
+        # was initialised with - so ink, muted and the user's chosen accent all silently became
+        # #ffffff. The nearest case in the list scraped past at 12.8:1 and hid the whole band.
+        # Sweeping the full range is what makes that class of bug impossible to miss again.
         runner = """
-import { derive, contrast } from "./d.mjs";
-const cases = %s;
+import { derive, contrast, rgb2hsl, solveOn } from "./d.mjs";
 const REQ = [
   ["ink on bg", (c) => contrast(c.ink, c.bg), 7.0],
   ["muted on bg", (c) => contrast(c.muted, c.bg), 4.5],
@@ -746,20 +745,61 @@ const REQ = [
   ["accent-ink on accent", (c) => contrast(c["accent-ink"], c.accent), 4.5],
   ["ink on card", (c) => contrast(c.ink, c.card), 7.0],
   ["warn-ink on warn-bg", (c) => contrast(c["warn-ink"], c["warn-bg"]), 4.5],
+  ["ink vs muted", (c) => contrast(c.ink, c.muted), 1.6],
 ];
-const bad = [];
-for (const [name, g, a] of cases) {
-  const d = derive(g, a);
-  for (const s of ["light", "dark"]) {
-    for (const [label, fn, min] of REQ) {
-      const r = fn(d[s]);
-      if (r < min) bad.push(`${name}/${s}: ${label} ${r.toFixed(2)} < ${min}`);
+function hsl(h, s, l) {
+  const f = (n) => { const k=(n+h*12)%12, a=s*Math.min(l,1-l);
+    return Math.round((l - a*Math.max(-1,Math.min(k-3,Math.min(9-k,1))))*255); };
+  return "#" + [f(0),f(8),f(4)].map(v=>v.toString(16).padStart(2,"0")).join("");
+}
+let n = 0, bad = [], kept = 0, keptTotal = 0, pairs = 0;
+const hues = [0, 0.08, 0.17, 0.33, 0.5, 0.66, 0.83];
+const sats = [0, 0.15, 0.45, 0.85];
+const accents = ["#0f766e", "#2f6f4f", "#5b3df5", "#b3261e", "#e2643c", "#767676"];
+for (const h of hues) for (const s of sats)
+  for (let L = 0.02; L <= 0.98; L += 0.05) {
+    const ground = hsl(h, s, L);
+    for (const acc of accents) {
+      pairs++;
+      const d = derive(ground, acc);
+      for (const scheme of ["light", "dark"]) {
+        const c = d[scheme];
+        for (const [label, fn, min] of REQ) {
+          n++; const r = fn(c);
+          if (r < min) bad.push(ground+"/"+acc+"/"+scheme+": "+label+" "+r.toFixed(2)+" < "+min);
+        }
+        if (c.ink === c.muted) bad.push(ground+"/"+acc+"/"+scheme+": ink === muted");
+        // The warn tokens lean toward the ground but must stay recognisably amber. An
+        // unclamped nudge toward a blue ground reached 0.19 - chartreuse - which reads as a
+        // highlighter pen, not a warning, and warning is the one job the token has.
+        const wh = rgb2hsl(c["warn-bg"])[0];
+        if (wh < 0.05 || wh > 0.13) {
+          bad.push(ground+"/"+acc+"/"+scheme+": warn hue "+wh.toFixed(3)+" left the amber band");
+        }
+        const dh = Math.abs(rgb2hsl(c.accent)[0] - rgb2hsl(acc)[0]);
+        const spin = Math.min(dh, 1 - dh) * 360;
+        if (spin > 12 && rgb2hsl(acc)[1] > 0.1) {
+          bad.push(ground+"/"+acc+"/"+scheme+": accent hue moved "+spin.toFixed(0)+"deg");
+        }
+        if (scheme === "light" && contrast(acc, c.bg) >= 4.5) {
+          keptTotal++;
+          if (c.accent.toLowerCase() === acc.toLowerCase()) kept++;
+          else bad.push(ground+"/"+acc+": accent passed but was changed to "+c.accent);
+        }
+      }
     }
   }
-}
-console.log(JSON.stringify({ bad, n: cases.length * 2 * REQ.length,
-  quarryAccent: derive("#f7f6f3", "#2f6f4f").light.accent }));
-""" % json.dumps(cases)
+const rep = derive("#787878", "#0f766e");
+console.log(JSON.stringify({
+  bad: bad.slice(0, 12), nbad: bad.length, n: n, pairs: pairs,
+  kept: kept, keptTotal: keptTotal,
+  unreachableIsNull: solveOn("#787878", 0.5, 0.2, 12) === null,
+  reportedAccent: rep.light.accent,
+  reportedBg: rep.light.bg,
+  reportedInk: rep.light.ink,
+  reportedMoved: rep.notes.light.accentMoved
+}));
+"""
         with open(os.path.join(tmp, "run.mjs"), "w", encoding="utf-8") as f:
             f.write(runner)
         proc = subprocess.run([NODE, os.path.join(tmp, "run.mjs")], cwd=tmp,
@@ -769,16 +809,33 @@ console.log(JSON.stringify({ bad, n: cases.length * 2 * REQ.length,
             print(f"          {proc.stderr.decode('utf-8', 'replace').strip()[:300]}")
         else:
             res = json.loads(proc.stdout.decode("utf-8", "replace"))
-            report("PASS" if not res["bad"] else "FAIL",
-                   f"every derived palette meets its contrast targets "
-                   f"({res['n']} assertions over {len(cases)} colour pairs, both schemes)")
+
+            report("PASS" if not res["nbad"] else "FAIL",
+                   f"every derived palette meets every contrast target "
+                   f"({res['n']} assertions over {res['pairs']} ground/accent pairs, "
+                   f"both schemes, grounds swept 2%-98% lightness)")
             for line in res["bad"]:
                 print(f"          {line}")
-            # An accent that already reads on the ground must survive derivation untouched -
-            # otherwise "pick an accent" quietly means "suggest an accent".
-            report("PASS" if res["quarryAccent"].lower() == "#2f6f4f" else "FAIL",
-                   "an accent that already passes is preserved, not adjusted")
-            print(f"          quarry ground+accent derives accent {res['quarryAccent']}")
+            if res["nbad"] > len(res["bad"]):
+                print(f"          ... and {res['nbad'] - len(res['bad'])} more")
+
+            # The defect itself: a search that cannot find an answer must say so rather than
+            # returning the value it started with.
+            report("PASS" if res["unreachableIsNull"] else "FAIL",
+                   "solveOn returns null for an unreachable target, never a silent fallback")
+
+            # An accent that already reads on the ground must survive untouched - otherwise
+            # "pick an accent" quietly means "suggest an accent".
+            report("PASS" if res["kept"] == res["keptTotal"] and res["keptTotal"] else "FAIL",
+                   f"an accent that already passes is preserved, not adjusted "
+                   f"({res['kept']}/{res['keptTotal']})")
+
+            # The exact case that was reported: a mid-grey ground threw the teal away.
+            teal_ok = res["reportedAccent"].lower() == "#0f766e"
+            report("PASS" if teal_ok else "FAIL",
+                   "the reported case keeps its accent: ground #787878 + accent #0f766e")
+            print(f"          bg {res['reportedBg']}  ink {res['reportedInk']}  "
+                  f"accent {res['reportedAccent']}  (moved: {res['reportedMoved']})")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 

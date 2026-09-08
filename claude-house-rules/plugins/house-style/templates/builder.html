@@ -144,12 +144,36 @@
 
   .row { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
 
+  /* ---------- font picker: collapsed row, opens to search ---------- */
+  .fontrow { border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: .5rem; }
+  .fontrow-head {
+    display: flex; align-items: baseline; gap: .6rem; width: 100%; text-align: left;
+    border: 0; border-radius: var(--radius); padding: .55rem .7rem; background: transparent;
+  }
+  .fontrow-head:hover { background: var(--code-bg); color: var(--ink); }
+  .fontrow-head .role {
+    font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); width: 3.6rem; flex: 0 0 auto;
+  }
+  .fontrow-head .chosen {
+    font-size: 1.15rem; flex: 1 1 auto; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .fontrow-head .cat { font-size: .7rem; color: var(--muted); flex: 0 0 auto; }
+  .fontrow-head .chev {
+    font-size: .7rem; color: var(--accent); flex: 0 0 auto;
+    border: 1px solid var(--line); border-radius: 3px; padding: .1rem .4rem;
+  }
+  .fontrow-body { padding: 0 .7rem .7rem; }
+  .fontrow-body .note { margin: .1rem 0 .5rem; font-size: .78rem; color: var(--muted); }
+  details.adv > summary { font-size: .74rem; color: var(--muted); margin-top: .5rem; }
+  details.adv .note { margin: .35rem 0; }
+
   /* ---------- font picker ---------- */
-  .picker { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-  .picker > .head { display: flex; gap: .5rem; align-items: center; padding: .5rem .6rem; border-bottom: 1px solid var(--line); }
-  .picker .chosen { font-size: 1.05rem; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .picker .cat { font-family: var(--font-mono); font-size: .68rem; color: var(--muted); }
-  .results { max-height: 11rem; overflow-y: auto; }
+  .results {
+    max-height: 12rem; overflow-y: auto; margin-top: .4rem;
+    border: 1px solid var(--line); border-radius: var(--radius);
+  }
   .results button {
     display: flex; width: 100%; text-align: left; border: 0; border-radius: 0;
     border-bottom: 1px solid var(--line); padding: .4rem .6rem; gap: .5rem; align-items: baseline;
@@ -170,6 +194,34 @@
   .tok .nm { font-family: var(--font-mono); flex: 1 1 auto; }
   .tok input[type="color"] { width: 1.8rem; height: 1.5rem; }
   .tok .ov { font-size: .62rem; color: var(--accent); letter-spacing: .04em; text-transform: uppercase; }
+
+  .outcome {
+    display: grid; gap: .5rem; margin-top: .9rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (max-width: 34rem) { .outcome { grid-template-columns: minmax(0, 1fr); } }
+  .out-card {
+    display: flex; align-items: center; gap: .6rem;
+    border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem .6rem;
+  }
+  .out-card .chip {
+    width: 2.4rem; height: 2.4rem; border-radius: 4px; border: 1px solid var(--line);
+    flex: 0 0 auto; display: grid; place-items: center; font: 700 .85rem var(--font-mono);
+  }
+  .out-card .txt { min-width: 0; }
+  .out-card .t { font-size: .78rem; font-weight: 600; }
+  .out-card .d { font-size: .72rem; color: var(--muted); }
+  .out-note {
+    grid-column: 1 / -1; font-size: .76rem; color: var(--muted);
+    border-left: 2px solid var(--line); padding-left: .6rem;
+  }
+  .out-note.moved { color: var(--warn-ink); border-left-color: var(--warn-line); }
+  .tokens { margin-top: .6rem; }
+  .tok { flex-wrap: wrap; }
+  .tok .why {
+    flex-basis: 100%; font-size: .7rem; color: var(--muted);
+    padding-left: 1.95rem; margin-top: -.15rem;
+  }
   details > summary { cursor: pointer; font-size: .82rem; color: var(--muted); padding: .3rem 0; }
   details > summary:hover { color: var(--accent); }
 
@@ -285,13 +337,13 @@
 
     <section class="step" data-step="type">
       <header><span class="n">02</span><h2>Type</h2></header>
-      <p class="hint">Three roles. Search any family on Google Fonts &mdash; it is the only font host a published artifact can load, so the list is deliberately limited to it. The fallback stack below each is what pages that cannot load a webfont get; it is pre-filled to keep the theme&rsquo;s character, and you can change it.</p>
+      <p class="hint">Three roles. Tap one to change it.</p>
       <div id="fonts"></div>
     </section>
 
     <section class="step" data-step="colour">
       <header><span class="n">03</span><h2>Colour</h2></header>
-      <p class="hint">Pick a ground and an accent. Everything else is derived to hit real contrast ratios in <em>both</em> schemes &mdash; the dark accent is lightened rather than reused, which is the usual way a hand-built dark palette goes wrong. Override any single token below if you disagree.</p>
+      <p class="hint">Two colours. Everything else is worked out from them, to real contrast ratios, in both schemes.</p>
       <div class="grid">
         <div class="field">
           <label for="f-ground">Ground</label>
@@ -299,7 +351,7 @@
             <input type="color" id="f-ground" aria-label="Ground colour">
             <input type="text" class="mono" id="f-ground-hex" spellcheck="false">
           </div>
-          <span class="note">The page background. Its hue tints every neutral.</span>
+          <span class="note">A tint, not the background itself &mdash; its hue colours every neutral.</span>
         </div>
         <div class="field">
           <label for="f-accent">Accent</label>
@@ -310,8 +362,13 @@
           <span class="note">Links, pills, the eyebrow. One colour, used sparingly.</span>
         </div>
       </div>
+
+      <!-- What the two picks actually produce. Showing the resulting page colour is the
+           difference between a tool that derives and a tool that appears to ignore you. -->
+      <div class="outcome" id="outcome"></div>
+
       <details style="margin-top:.9rem">
-        <summary>All 22 values &mdash; override any of them</summary>
+        <summary>All 22 values, and where each came from</summary>
         <div class="row" style="margin:.5rem 0">
           <button type="button" id="tok-light" aria-pressed="true">Light</button>
           <button type="button" id="tok-dark" aria-pressed="false">Dark</button>
@@ -355,6 +412,10 @@
           </div>
         </div>
       </div>
+      <details class="adv" style="margin-top:.75rem">
+        <summary>Advanced &mdash; border, shadow, spacing</summary>
+        <div class="grid" id="shape-adv" style="margin-top:.5rem"></div>
+      </details>
     </section>
 
     <section class="step" data-step="voice">
@@ -483,10 +544,18 @@ function hsl2hex(h, s, l) {
 /* Binary-search lightness at a fixed hue and saturation until the WCAG ratio against `bg`
    meets `target`. Direction follows the ground: on a light ground contrast rises as the
    colour darkens, so we want the LIGHTEST colour that still passes (closest to the ground
-   while readable); on a dark ground the reverse. */
+   while readable); on a dark ground the reverse.
+
+   RETURNS null WHEN THE TARGET IS UNREACHABLE. This is the whole contract. An earlier version
+   returned the value it was initialised with - white or black - which meant that against a
+   mid-tone ground, where a 12:1 ink is not achievable at ANY lightness, ink, muted and the
+   user's chosen accent all silently became #ffffff. A search that cannot find an answer must
+   say so; every caller below handles null explicitly. */
 function solveOn(bg, h, s, target) {
   const bgLight = lum(bg) > 0.35;
-  let lo = 0, hi = 1, best = bgLight ? "#000000" : "#ffffff";
+  const extreme = bgLight ? "#000000" : "#ffffff";
+  if (contrast(extreme, bg) < target) return null;   // not reachable at any lightness
+  let lo = 0, hi = 1, best = extreme;
   for (let i = 0; i < 26; i++) {
     const mid = (lo + hi) / 2, c = hsl2hex(h, s, mid);
     const ok = contrast(c, bg) >= target;
@@ -495,7 +564,20 @@ function solveOn(bg, h, s, target) {
   }
   return best;
 }
-/* Leave a colour alone when it already passes; only move it when it does not. */
+
+/* Try each target in turn and take the first that is reachable. The list is ordered best to
+   merely-acceptable, so a ground with less headroom degrades to a lower ratio rather than to
+   a wrong colour. The last entry is chosen so it is always reachable on a scheme ground. */
+function solveBest(bg, h, s, targets) {
+  for (let i = 0; i < targets.length; i++) {
+    const c = solveOn(bg, h, s, targets[i]);
+    if (c) return c;
+  }
+  return lum(bg) > 0.35 ? "#000000" : "#ffffff";
+}
+
+/* Leave a colour alone when it already passes; only move it when it does not. Returns null
+   when it cannot be made to pass at its own hue - the caller decides what that means. */
 function ensureOn(colour, bg, target) {
   if (contrast(colour, bg) >= target) return colour;
   const hsl = rgb2hsl(colour);
@@ -508,9 +590,18 @@ function ensureOn(colour, bg, target) {
    the accent sits in the middle where neither white nor black is far enough away.
    So: pick whichever of white and a hue-tinted near-black contrasts more, and if even that
    falls short, walk the accent's own lightness until it does - stopping before the accent
-   stops reading on the ground, because the ground is the more important of the two. */
+   stops reading on the ground, because the ground is the more important of the two.
+
+   `moved` is reported back so the UI can say whether the chosen colour was kept or adjusted.
+   Silently changing someone's accent is the behaviour that made this page untrustworthy. */
 function fitAccent(accent, bg, groundHue, wantLight) {
+  const original = accent;
   let acc = ensureOn(accent, bg, 4.5);
+  if (!acc) {
+    // Cannot reach 4.5 at this hue. Keep the hue, take the best available, and say so.
+    const a0 = rgb2hsl(accent);
+    acc = solveBest(bg, a0[0], a0[1], [4.5, 3.5, 3.0]);
+  }
   const base = rgb2hsl(acc);
   const nearBlack = hsl2hex(groundHue, 0.30, 0.07);
   function bestInk(c) {
@@ -526,55 +617,82 @@ function fitAccent(accent, bg, groundHue, wantLight) {
     acc = cand;
     ink = bestInk(acc);
   }
-  return [acc, ink];
+  return { accent: acc, ink: ink, moved: acc.toLowerCase() !== original.toLowerCase() };
+}
+
+/* The ground is a TINT, not the background itself.
+
+   It supplies hue and chroma; the scheme supplies lightness. This is the fix for the defect
+   above: used literally, a ground anywhere between roughly 12% and 75% lightness cannot
+   support a readable ink at all - #787878 tops out at 4.76:1 against black - so a "light"
+   scheme built on one was neither light nor readable, and the palette collapsed to white.
+   Deriving the page colour from the ground instead guarantees headroom in both directions
+   while keeping the colour the user actually chose visible in every neutral. */
+function schemeGround(ground, scheme) {
+  const g = rgb2hsl(ground);
+  return scheme === "dark"
+    ? hsl2hex(g[0], Math.min(g[1] + 0.02, 0.16), 0.055)
+    : hsl2hex(g[0], Math.min(g[1], 0.10), 0.965);
 }
 
 function derive(ground, accent) {
   const g = rgb2hsl(ground);
   const gh = g[0], gs = Math.min(g[1], 0.30);   // neutrals carry the ground's hue, not its punch
   const a = rgb2hsl(accent);
+  const out = { light: {}, dark: {}, notes: {} };
 
-  // ---- light ----
-  const bg = ground;
-  const card = lum(ground) > 0.5 ? mix(ground, "#ffffff", 0.75) : mix(ground, "#ffffff", 0.10);
-  const ink = solveOn(bg, gh, Math.min(gs, 0.22), 12);
-  const muted = solveOn(bg, gh, Math.min(gs, 0.20), 4.6);
-  const line = mix(bg, ink, 0.13);
-  const codeBg = mix(bg, ink, 0.05);
-  // On a light ground the accent moves darker when it has to; on a dark ground, lighter.
-  const accPair = fitAccent(accent, bg, gh, lum(bg) <= 0.35);
-  const acc = accPair[0], accInk = accPair[1];
-  // The warning colour belongs to the theme without becoming a second accent: a fixed amber
-  // nudged one-fifth of the way toward the ground's hue.
-  const warnH = 0.096 + (gh - 0.096) * 0.2;
-  const warnBg = hsl2hex(warnH, 0.72, 0.94);
-  const warnInk = solveOn(warnBg, warnH, 0.95, 5.5);
-  const warnLine = hsl2hex(warnH, 0.62, 0.74);
+  ["light", "dark"].forEach(function (scheme) {
+    const dark = scheme === "dark";
+    const bg = schemeGround(ground, scheme);
+    const card = dark
+      ? hsl2hex(gh, Math.min(gs + 0.01, 0.14), 0.105)
+      : mix(bg, "#ffffff", 0.75);
 
-  // ---- dark ----
-  // Not an inversion. The ground becomes a very dark form of its own hue, and the accent is
-  // LIGHTENED until it clears on it - an accent that works on paper is nearly always too
-  // dark on black, which is the single most common way a hand-built dark palette fails.
-  const bgD = hsl2hex(gh, Math.min(gs + 0.04, 0.22), 0.055);
-  const cardD = hsl2hex(gh, Math.min(gs + 0.03, 0.20), 0.105);
-  const inkD = solveOn(bgD, gh, Math.min(gs, 0.14), 12);
-  const mutedD = solveOn(bgD, gh, Math.min(gs, 0.16), 5.0);
-  const lineD = mix(bgD, inkD, 0.16);
-  const codeBgD = mix(bgD, "#000000", 0.35);
-  const accPairD = fitAccent(hsl2hex(a[0], Math.max(a[1], 0.45), 0.62), bgD, gh, true);
-  const accD = accPairD[0], accInkD = accPairD[1];
-  const warnBgD = hsl2hex(warnH, 0.34, 0.13);
-  const warnInkD = solveOn(warnBgD, warnH, 0.80, 6);
-  const warnLineD = hsl2hex(warnH, 0.42, 0.24);
+    // ink and muted are solved separately and must not collapse into each other - two tokens
+    // with the same value is a palette with no hierarchy, which is what the bug produced.
+    const ink = solveBest(bg, gh, Math.min(gs, dark ? 0.14 : 0.22), [12, 10, 8, 7]);
+    let muted = solveBest(bg, gh, Math.min(gs, dark ? 0.16 : 0.20), [4.6, 4.5]);
+    if (contrast(muted, ink) < 1.6) {
+      // Push muted toward the ground until it is visibly lighter than ink, without dropping
+      // below its own 4.5 floor against the page.
+      for (let i = 0; i < 40 && contrast(muted, ink) < 1.6; i++) {
+        const L = rgb2hsl(muted)[2];
+        const nextL = dark ? Math.max(0, L - 0.015) : Math.min(1, L + 0.015);
+        const cand = hsl2hex(gh, Math.min(gs, 0.20), nextL);
+        if (contrast(cand, bg) < 4.5) break;
+        muted = cand;
+      }
+    }
 
-  return {
-    light: { "bg": bg, "card": card, "ink": ink, "muted": muted, "line": line,
-             "accent": acc, "accent-ink": accInk, "code-bg": codeBg,
-             "warn-bg": warnBg, "warn-ink": warnInk, "warn-line": warnLine },
-    dark:  { "bg": bgD, "card": cardD, "ink": inkD, "muted": mutedD, "line": lineD,
-             "accent": accD, "accent-ink": accInkD, "code-bg": codeBgD,
-             "warn-bg": warnBgD, "warn-ink": warnInkD, "warn-line": warnLineD }
-  };
+    const line = mix(bg, ink, dark ? 0.16 : 0.13);
+    const codeBg = dark ? mix(bg, "#000000", 0.35) : mix(bg, ink, 0.05);
+
+    const seed = dark ? hsl2hex(a[0], Math.max(a[1], 0.45), 0.62) : accent;
+    const fit = fitAccent(seed, bg, gh, dark);
+
+    // The warning colour is SEMANTIC, not derived from the accent: a warning that took the
+    // accent's colour would stop reading as a warning, which is the one job the token has.
+    // It leans toward the ground's hue so it still belongs to the theme, but only slightly and
+    // along the SHORT way round the wheel, then clamped to the amber band. An unclamped
+    // one-fifth nudge toward a blue ground took it to 0.19 - chartreuse - which reads as a
+    // highlighter pen rather than a warning.
+    let dh = gh - 0.096;
+    if (dh > 0.5) dh -= 1;
+    if (dh < -0.5) dh += 1;
+    const warnH = Math.max(0.055, Math.min(0.125, 0.096 + Math.max(-0.02, Math.min(0.02, dh * 0.2))));
+    const warnBg = dark ? hsl2hex(warnH, 0.34, 0.13) : hsl2hex(warnH, 0.72, 0.94);
+    const warnInk = solveBest(warnBg, warnH, dark ? 0.80 : 0.95, [5.5, 4.5]);
+    const warnLine = dark ? hsl2hex(warnH, 0.42, 0.24) : hsl2hex(warnH, 0.62, 0.74);
+
+    out[scheme] = {
+      "bg": bg, "card": card, "ink": ink, "muted": muted, "line": line,
+      "accent": fit.accent, "accent-ink": fit.ink, "code-bg": codeBg,
+      "warn-bg": warnBg, "warn-ink": warnInk, "warn-line": warnLine
+    };
+    out.notes[scheme] = { accentMoved: fit.moved };
+  });
+
+  return out;
 }
 
 /* ---------------------------------------------------------------------------
@@ -588,12 +706,14 @@ let spScheme = SEED.defaultScheme === "dark" ? "dark" : "light";
 function slug(v) {
   return String(v || "").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
 }
+let lastNotes = { light: {}, dark: {} };
 function colours() {
   const d = derive(S._ground, S._accent);
+  lastNotes = d.notes || { light: {}, dark: {} };
   ["light", "dark"].forEach(function (k) {
     Object.keys(overrides[k]).forEach(function (t) { d[k][t] = overrides[k][t]; });
   });
-  return d;
+  return { light: d.light, dark: d.dark };
 }
 function steps() {
   const r = Number(S.scale.ratio), out = {};
@@ -616,7 +736,7 @@ function build() {
                licence: "OFL-1.1" };
     }).concat([{ what: "Palette, scale, shape and voice",
                  url: "themes/" + (S.name || "theme") + ".json", licence: "in-repo" }]),
-    fonts: {}, colour: c,
+    fonts: {}, colour: { light: c.light, dark: c.dark },
     scale: { base: S.scale.base, ratio: Number(S.scale.ratio), lineHeight: Number(S.scale.lineHeight) },
     shape: JSON.parse(JSON.stringify(S.shape)),
     voice: JSON.parse(JSON.stringify(S.voice))
@@ -633,7 +753,14 @@ function build() {
       weights: w.split(";").map(Number)
     };
   });
+  // Attached for the UI only, and stripped before the theme is saved - see saveable().
+  Object.defineProperty(t, "_notes", { value: lastNotes, enumerable: false });
   return t;
+}
+
+/* The theme as it goes to disk: exactly the enumerable fields, no working notes. */
+function saveable(t) {
+  return JSON.parse(JSON.stringify(t));
 }
 
 /* The page's copy of validate(). It checks against CONSTRAINTS, which style.py exports, so
@@ -705,29 +832,51 @@ function catOf(family) {
   return f ? f.category : "sans-serif";
 }
 
+/* One collapsed row per role. The row shows the family set in its own face - the only thing
+   you actually need to see - and opens to a search. The CSS fallback stack is not something
+   anyone should have to read, so the row states it in plain language ("falls back to Georgia")
+   and the raw string lives behind an Advanced disclosure. */
+function firstFamilyOf(stack) {
+  const m = String(stack || "").split(",")[0].trim().replace(/^["']|["']$/g, "");
+  if (!m) return "the system font";
+  if (m === "system-ui" || m === "-apple-system") return "the system font";
+  if (m === "ui-monospace") return "the system monospace font";
+  return m;
+}
+
 function buildFontPickers() {
   const host = document.getElementById("fonts");
   host.innerHTML = "";
   CONSTRAINTS.fontRoles.forEach(function (role) {
     const wrap = document.createElement("div");
-    wrap.className = "field";
-    wrap.style.marginBottom = ".9rem";
+    wrap.className = "fontrow";
     wrap.innerHTML =
-      '<label for="q-' + role + '">' + role + '</label>' +
-      '<span class="note">' + ROLE_HELP[role] + '</span>' +
-      '<div class="picker">' +
-        '<div class="head">' +
-          '<span class="chosen" id="ch-' + role + '"></span>' +
-          '<span class="cat" id="cat-' + role + '"></span>' +
-        '</div>' +
-        '<div style="padding:.45rem .5rem;border-bottom:1px solid var(--line)">' +
-          '<input type="text" id="q-' + role + '" placeholder="Search families…" spellcheck="false">' +
-        '</div>' +
+      '<button type="button" class="fontrow-head" id="fh-' + role + '" aria-expanded="false">' +
+        '<span class="role">' + role + '</span>' +
+        '<span class="chosen" id="ch-' + role + '"></span>' +
+        '<span class="cat" id="cat-' + role + '"></span>' +
+        '<span class="chev" aria-hidden="true">Change</span>' +
+      '</button>' +
+      '<div class="fontrow-body" id="fb-' + role + '" hidden>' +
+        '<p class="note">' + ROLE_HELP[role] + '</p>' +
+        '<input type="text" id="q-' + role + '" placeholder="Search families…" spellcheck="false">' +
         '<div class="results" id="res-' + role + '"></div>' +
-      '</div>' +
-      '<label for="ss-' + role + '" style="margin-top:.45rem">Fallback stack</label>' +
-      '<input type="text" class="mono" id="ss-' + role + '" spellcheck="false">';
+        '<details class="adv">' +
+          '<summary>Advanced &mdash; fallback stack</summary>' +
+          '<p class="note">Used where a webfont cannot load. Pre-filled to suit the family.</p>' +
+          '<input type="text" class="mono" id="ss-' + role + '" spellcheck="false">' +
+        '</details>' +
+      '</div>';
     host.appendChild(wrap);
+
+    const head = wrap.querySelector("#fh-" + role);
+    const body = wrap.querySelector("#fb-" + role);
+    head.addEventListener("click", function () {
+      const open = body.hidden;
+      body.hidden = !open;
+      head.setAttribute("aria-expanded", String(open));
+      head.querySelector(".chev").textContent = open ? "Done" : "Change";
+    });
 
     const q = wrap.querySelector("#q-" + role);
     const res = wrap.querySelector("#res-" + role);
@@ -742,19 +891,22 @@ function buildFontPickers() {
       }).slice(0, 60);
       res.innerHTML = "";
       if (!list.length) {
-        res.innerHTML = '<p class="empty">No family matches that. The list is Google Fonts only — it is the one font host a published artifact can load.</p>';
+        res.innerHTML = '<p class="empty">Nothing matches. The list is Google Fonts only — it is the one font host a published page can load.</p>';
         return;
       }
       list.forEach(function (f) {
         const b = document.createElement("button");
         b.type = "button";
         b.innerHTML = '<span class="fam">' + f.family + '</span><span class="cat">' +
-                      f.category + (f.variable ? " · var" : "") + '</span>';
+                      f.category + '</span>';
         b.addEventListener("click", function () {
           S.fonts[role].family = f.family;
           S.fonts[role].systemStack = CONSTRAINTS.systemStacks[f.category] ||
                                       CONSTRAINTS.systemStacks["sans-serif"];
           loadFont(f.family);
+          body.hidden = true;
+          head.setAttribute("aria-expanded", "false");
+          head.querySelector(".chev").textContent = "Change";
           render();
         });
         res.appendChild(b);
@@ -772,7 +924,8 @@ function syncFontPickers() {
     const ch = document.getElementById("ch-" + role);
     ch.textContent = f.family;
     ch.style.fontFamily = '"' + f.family + '", ' + f.systemStack;
-    document.getElementById("cat-" + role).textContent = catOf(f.family);
+    document.getElementById("cat-" + role).textContent =
+      catOf(f.family) + " · falls back to " + firstFamilyOf(f.systemStack);
     const ss = document.getElementById("ss-" + role);
     if (document.activeElement !== ss) ss.value = f.systemStack;
     loadFont(f.family);
@@ -783,18 +936,20 @@ function syncFontPickers() {
    shape controls
    --------------------------------------------------------------------------- */
 const SHAPE_CTRL = [
-  { key: "radius", label: "Corner radius", min: 0, max: 28, step: 1, unit: "px",
-    note: "0 is a hard edge; over 20 reads as soft and consumer." },
-  { key: "border", label: "Border width", min: 0, max: 3, step: 1, unit: "px",
+  { key: "radius", label: "Corner radius", min: 0, max: 28, step: 1, unit: "px", adv: false,
+    note: "0 is a hard edge; over 20 reads soft." },
+  { key: "measure", label: "Content width", min: 32, max: 80, step: 2, unit: "rem", adv: false,
+    note: "Around 46rem reads as prose; 70rem+ as reference." },
+  { key: "border", label: "Border width", min: 0, max: 3, step: 1, unit: "px", adv: true,
     note: "0 means things separate by shadow or space instead." },
-  { key: "space", label: "Spacing unit", min: 0.5, max: 3, step: 0.25, unit: "rem",
-    note: "The rhythm everything else is built from." },
-  { key: "measure", label: "Content width", min: 32, max: 80, step: 2, unit: "rem",
-    note: "Around 46rem reads as prose; 70rem+ reads as reference." }
+  { key: "space", label: "Spacing unit", min: 0.5, max: 3, step: 0.25, unit: "rem", adv: true,
+    note: "The rhythm everything else is built from." }
 ];
 function buildShape() {
   const host = document.getElementById("shape");
+  const adv = document.getElementById("shape-adv");
   host.innerHTML = "";
+  adv.innerHTML = "";
   SHAPE_CTRL.forEach(function (c) {
     const d = document.createElement("div");
     d.className = "field";
@@ -803,7 +958,7 @@ function buildShape() {
       '<div class="pair"><input type="range" id="sh-' + c.key + '" min="' + c.min +
       '" max="' + c.max + '" step="' + c.step + '"><span class="val mono" id="shv-' +
       c.key + '"></span></div><span class="note">' + c.note + '</span>';
-    host.appendChild(d);
+    (c.adv ? adv : host).appendChild(d);
     d.querySelector("input").addEventListener("input", function (e) {
       S.shape[c.key] = e.target.value + c.unit;
       render();
@@ -816,7 +971,7 @@ function buildShape() {
     '<option value="0 1px 2px rgba(0,0,0,.05)">Subtle</option>' +
     '<option value="0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08)">Lifted</option>' +
     '</select>';
-  host.appendChild(d);
+  adv.appendChild(d);
   d.querySelector("select").addEventListener("change", function (e) {
     S.shape.shadow = e.target.value; render();
   });
@@ -866,9 +1021,83 @@ function setSpecimen(t) {
   });
 }
 
+/* Where every token comes from, in the user's terms. This is the answer to "I picked grey and
+   teal, where did orange and brown come from?" - the warn tokens are semantic and deliberately
+   not the accent, and nothing on the page said so. */
+const WHY = {
+  "bg": "your ground, lightened to make a readable page",
+  "card": "your ground, one step nearer white",
+  "ink": "your ground's hue, darkened until it reads at 12:1",
+  "muted": "your ground's hue, at 4.6:1 - secondary text",
+  "line": "your ground with a little ink mixed in",
+  "accent": "yours",
+  "accent-ink": "black or white, whichever reads on your accent",
+  "code-bg": "your ground, barely shifted",
+  "warn-bg": "semantic amber, not your accent",
+  "warn-ink": "semantic amber, not your accent",
+  "warn-line": "semantic amber, not your accent"
+};
+const WHY_DARK = {
+  "bg": "your ground's hue, taken almost to black",
+  "card": "your ground's hue, lifted off the page",
+  "ink": "your ground's hue, lightened until it reads at 12:1",
+  "muted": "your ground's hue, at 4.6:1 - secondary text",
+  "accent": "yours, lightened so it reads on a dark page"
+};
+
+function whyFor(tok, scheme, moved) {
+  if (scheme === "dark" && WHY_DARK[tok]) {
+    return tok === "accent" ? WHY_DARK[tok] : WHY_DARK[tok];
+  }
+  if (tok === "accent") {
+    return moved ? "yours, adjusted to reach 4.5:1 on this ground" : "yours, unchanged";
+  }
+  return WHY[tok] || "";
+}
+
+/* The outcome strip: the two colours you picked, and the page they actually produce. */
+function buildOutcome(t) {
+  const host = document.getElementById("outcome");
+  const L = t.colour.light, D = t.colour.dark;
+  const movedL = (t._notes && t._notes.light && t._notes.light.accentMoved) || false;
+  host.innerHTML = "";
+
+  function card(chipBg, chipInk, chipText, title, detail) {
+    const d = document.createElement("div");
+    d.className = "out-card";
+    d.innerHTML =
+      '<span class="chip" style="background:' + chipBg + ';color:' + chipInk + '">' +
+        chipText + '</span>' +
+      '<span class="txt"><span class="t">' + title + '</span><br>' +
+      '<span class="d mono">' + detail + '</span></span>';
+    host.appendChild(d);
+  }
+
+  card(L.bg, L.ink, "Aa", "Light page", L.bg);
+  card(D.bg, D.ink, "Aa", "Dark page", D.bg);
+  card(L.accent, L["accent-ink"], "Aa", "Accent on light", L.accent);
+  card(D.accent, D["accent-ink"], "Aa", "Accent on dark", D.accent);
+
+  const n = document.createElement("p");
+  n.className = "out-note" + (movedL ? " moved" : "");
+  n.innerHTML = movedL
+    ? "Your accent was <strong>darkened</strong> to reach 4.5:1 on this ground &mdash; the " +
+      "colour you picked was too close to the page to read. Lighten the ground to keep it exactly."
+    : "Your ground and accent are used as picked. Everything else is worked out from them.";
+  host.appendChild(n);
+
+  const w = document.createElement("p");
+  w.className = "out-note";
+  w.innerHTML = "The amber in the palette is the <strong>warning</strong> colour. It is " +
+    "deliberately not derived from your accent &mdash; a warning in your brand colour stops " +
+    "reading as a warning.";
+  host.appendChild(w);
+}
+
 function buildTokens(t) {
   const host = document.getElementById("tokens");
   const c = t.colour[tokScheme];
+  const moved = (t._notes && t._notes[tokScheme] && t._notes[tokScheme].accentMoved) || false;
   host.innerHTML = "";
   CONSTRAINTS.colourTokens.forEach(function (tok) {
     const row = document.createElement("div");
@@ -887,6 +1116,10 @@ function buildTokens(t) {
       render();
     });
     row.appendChild(inp);
+    const why = document.createElement("span");
+    why.className = "why";
+    why.textContent = overridden ? "set by you" : whyFor(tok, tokScheme, moved);
+    row.appendChild(why);
     host.appendChild(row);
   });
 }
@@ -899,6 +1132,7 @@ function render() {
 
   syncFontPickers();
   setSpecimen(t);
+  buildOutcome(t);
   buildTokens(t);
 
   // shape sliders + readouts
