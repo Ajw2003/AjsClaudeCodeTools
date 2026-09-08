@@ -143,6 +143,92 @@ not take a session down.
 The catalogue cache under `~/.claude/house-style/cache/` is the one thing written to disk, it is
 machine-local and gitignored, and nothing depends on it existing.
 
+## The builder
+
+Three themes shipped and a picker that chose between them left one gap: authoring a fourth still
+meant hand-writing 22 hex values across two schemes, three font objects with their own fallback
+stacks, and a voice block — then running `validate` and reading the failures back. That is bad
+enough that in practice nobody adds a theme, which quietly turns a three-theme system into a
+fixed one. A format only a script can comfortably write moves authorship straight back out of
+the author's hands, which is the thing this plugin exists to prevent.
+
+`style.py builder` generates a page; publishing it with `capabilities: {db:{}}` gives a tool that
+opens in a working state — seeded, specimen already rendering — rather than an empty form.
+
+### Two colours, not twenty-two
+
+The colour step asks for a ground and an accent. Everything else is derived, and contrast is a
+property of the derivation rather than a warning bolted on after it:
+
+- `solveOn(bg, hue, sat, target)` binary-searches lightness at a fixed hue until the WCAG ratio
+  against the ground meets the target, picking direction from the ground's own luminance. It
+  places `ink` (12:1), `muted` (4.6:1) and the neutrals.
+- Neutrals carry the ground's hue at reduced saturation, so `line` and `code-bg` belong to the
+  theme instead of being grey dropped next to it.
+- `fitAccent` handles the case `solveOn` cannot. An accent has two jobs that pull against each
+  other — it must read on the ground, and text must read *on it*. For a mid-tone accent there is
+  no lightness at a fixed hue that clears 4.5 against it, because the accent sits in the middle
+  where neither white nor black is far enough away. So it picks whichever of white and a
+  hue-tinted near-black contrasts more, and walks the accent's own lightness until that clears —
+  stopping before the accent stops reading on the ground, because the ground matters more.
+- The dark scheme is not an inversion. The ground becomes a very dark form of its own hue and the
+  accent is **lightened** until it clears on it. An accent that works on paper is nearly always
+  too dark on black; that is the single most common way a hand-built dark palette fails.
+
+An accent that already passes is left alone. `verify_style.py` asserts this — otherwise "pick an
+accent" would quietly mean "suggest an accent".
+
+The derivation lives only in the page. A second implementation in Python would double the drift
+surface to buy a headless flag nobody asked for.
+
+### How the page's validation stays honest
+
+The page necessarily re-checks in JS what `validate()` checks in Python. The mitigation is that
+it does not re-*state* it: `constraints()` returns the token names, roles, enum values and
+patterns as data, `cmd_builder` inlines that JSON, and `verify_style.py` asserts the export still
+equals the module constants. A token added to `COLOUR_TOKENS` therefore reaches the builder, or
+the suite fails.
+
+The page's checking is a convenience. `validate()` stays the authority and runs again at install,
+so the worst case is a theme that looks fine in the page and is refused at install with a real
+message — never a bad theme on disk.
+
+### `install` is the only verb that writes a theme
+
+```bash
+python claude-house-rules/plugins/house-style/scripts/style.py install -   # JSON on stdin
+```
+
+It exists rather than having the caller write the file because it is where the gate belongs:
+validate, refuse to clobber, check the variety rule, and only then write. A rejected theme
+produces a message naming what is wrong instead of a file that fails the suite ten minutes later.
+`--force` exists for a collision the author has decided is deliberate; it is not a way past a
+result you did not like.
+
+### The font floor
+
+`cmd_builder` inlines the fetched catalogue, but a builder whose picker is empty is not a
+builder, and `api.fontsource.org` is unreachable from some environments. `FALLBACK_FAMILIES` is
+roughly 60 families with their categories — no metrics, no binaries — used when the fetch and the
+cache both miss. Same shipped-floor / fetched-ceiling shape as the themes.
+
+Every family in it must exist **on Google Fonts**, not merely exist. A face that is only on
+Fontshare or a foundry's own site is blocked by the CSP and fails silently — the page renders in
+a fallback and nothing says why. Check `fonts.google.com/specimen/<Name>` before adding one; the
+suite runs offline and cannot.
+
+### Testing the deriver
+
+`verify_style.py` extracts the deriver from the **generated** page and runs it under node against
+eight ground/accent pairs chosen to break it — a mid-tone ground where neither white nor black is
+far away, a dark ground with a light accent, a fully saturated accent — asserting every contrast
+target in both schemes. Where node is missing the check skips loudly rather than quietly not
+existing.
+
+What it cannot check is whether the result is *good*. Contrast is necessary and not sufficient,
+and a palette can clear every ratio and still be ugly. That part is judged by eye, in the
+specimen, which is why the specimen is not optional.
+
 ## Editing this plugin
 
 - **A new theme** is a new file in `themes/`, and nothing else. Run `style.py validate` and then
@@ -155,3 +241,5 @@ machine-local and gitignored, and nothing depends on it existing.
   (`tokens.css`, `commands/house-style.md`, `themes/schema.md`). There is a drift check for each.
 - **Adding a hook event** means a row in the `CLAUDE.md` house-style table in the same change.
   It is checked in both directions, so a hook without a row and a row without a hook both fail.
+- **Adding a constraint the builder must respect** means adding it to `constraints()` as data and
+  reading it in the page, never typing it into the JS. The export check is what makes that hold.

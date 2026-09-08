@@ -1,0 +1,1107 @@
+<!--
+  builder.html - the shell `style.py builder` fills in.
+
+  Placeholders are double-underscore tokens (TITLE, FONTS, CONSTRAINTS, FAMILIES, THEMES,
+  SEED, META). They are named here without their delimiters on purpose: substitution is a
+  plain string replace over the whole file, so a comment that spelled them out would be
+  filled in too.
+
+  The chrome is the Ledger house theme - the tool that edits the system is built on the
+  system, which is the strongest available proof that it works. The specimen panel is
+  quarantined: its tokens are scoped to #specimen so the theme being designed cannot leak
+  into the controls, and the controls cannot be mistaken for the theme.
+
+  Publishing: keep the title, style, markup and script; drop the doctype/html/head/body
+  wrappers, which the artifact host supplies. Declare capabilities {db:{}} so Save can write
+  the draft. Opened off disk it still works - Save falls back to showing the JSON to copy.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="__FONTS__">
+<style>
+  /* house-style: ledger */
+  :root {
+    color-scheme: light dark;
+    --font-display: "Inter Tight", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #14181f;
+    --muted: #5a6472;
+    --line: #dde1e7;
+    --accent: #2c5d8f;
+    --accent-ink: #ffffff;
+    --code-bg: #eef1f5;
+    --warn-bg: #fff4e5;
+    --warn-ink: #8a5200;
+    --warn-line: #f0cf9a;
+    /* Semantic state, separate from the accent - a validation result must not read as a
+       brand colour, and the accent must not read as "good". */
+    --ok: #1f7a4d;
+    --ok-bg: #e8f4ed;
+    --err: #b3261e;
+    --err-bg: #fdecea;
+    --radius: 4px;
+    --space: 0.75rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1319; --card: #161b23; --ink: #e4e8ee; --muted: #8d97a6;
+      --line: #262d38; --accent: #6ba8e0; --accent-ink: #08131f; --code-bg: #0c1017;
+      --warn-bg: #2a2113; --warn-ink: #ecc07a; --warn-line: #55431f;
+      --ok: #6cc394; --ok-bg: #13251c; --err: #f2938c; --err-bg: #2a1614;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1319; --card: #161b23; --ink: #e4e8ee; --muted: #8d97a6;
+    --line: #262d38; --accent: #6ba8e0; --accent-ink: #08131f; --code-bg: #0c1017;
+    --warn-bg: #2a2113; --warn-ink: #ecc07a; --warn-line: #55431f;
+    --ok: #6cc394; --ok-bg: #13251c; --err: #f2938c; --err-bg: #2a1614;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.2; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  /* ---------- shell ---------- */
+  .top {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+    padding: .85rem 1.25rem;
+    background: var(--card); border-bottom: 1px solid var(--line);
+  }
+  .top h1 { font-size: 1.05rem; letter-spacing: -.01em; }
+  .top .sub { color: var(--muted); font-size: .82rem; }
+  .top .sp { flex: 1 1 auto; }
+
+  .shell {
+    display: grid; gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 84rem; margin: 0 auto; padding: 1.25rem;
+  }
+  @media (min-width: 62rem) {
+    .shell { grid-template-columns: minmax(0, 1fr) minmax(22rem, 27rem); align-items: start; }
+    .preview-col { position: sticky; top: 4.2rem; }
+  }
+
+  /* ---------- steps ---------- */
+  .step {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    margin: 0 0 1rem; padding: 1rem 1.15rem 1.15rem;
+  }
+  .step > header { display: flex; align-items: baseline; gap: .6rem; margin: 0 0 .2rem; }
+  .step h2 { font-size: .95rem; }
+  .step .n {
+    font-family: var(--font-mono); font-size: .72rem; color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .step .hint { color: var(--muted); font-size: .82rem; margin: 0 0 .9rem; max-width: 46rem; }
+
+  .grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+  .field { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+  .field > label { font-size: .74rem; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .field .note { font-size: .74rem; color: var(--muted); }
+
+  input[type="text"], input[type="number"], textarea, select {
+    font: inherit; font-size: .88rem;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: .38rem .5rem; width: 100%; min-width: 0;
+  }
+  textarea { resize: vertical; min-height: 5.5rem; line-height: 1.5; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .mono, input.mono, .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .val { font-size: .78rem; color: var(--muted); }
+
+  button {
+    font: inherit; font-size: .82rem; font-family: var(--font-body); cursor: pointer;
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--line); border-radius: var(--radius); padding: .34rem .7rem;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary {
+    background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+    font-weight: 600; font-size: .9rem; padding: .5rem 1.1rem;
+  }
+  button.primary:hover { color: var(--accent-ink); filter: brightness(1.08); }
+  button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  .row { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+
+  /* ---------- font picker ---------- */
+  .picker { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .picker > .head { display: flex; gap: .5rem; align-items: center; padding: .5rem .6rem; border-bottom: 1px solid var(--line); }
+  .picker .chosen { font-size: 1.05rem; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker .cat { font-family: var(--font-mono); font-size: .68rem; color: var(--muted); }
+  .results { max-height: 11rem; overflow-y: auto; }
+  .results button {
+    display: flex; width: 100%; text-align: left; border: 0; border-radius: 0;
+    border-bottom: 1px solid var(--line); padding: .4rem .6rem; gap: .5rem; align-items: baseline;
+  }
+  .results button:hover { background: var(--code-bg); }
+  .results button .fam { flex: 1 1 auto; }
+  .results .empty { padding: .6rem; color: var(--muted); font-size: .82rem; }
+
+  /* ---------- colour ---------- */
+  .pair { display: flex; gap: .5rem; align-items: center; }
+  input[type="color"] {
+    width: 2.6rem; height: 2.2rem; padding: 0; border: 1px solid var(--line);
+    border-radius: var(--radius); background: var(--card); cursor: pointer; flex: 0 0 auto;
+  }
+  .tokens { display: grid; gap: .35rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin-top: .8rem; }
+  .tok { display: flex; align-items: center; gap: .45rem; font-size: .76rem; }
+  .tok .sw { width: 1.5rem; height: 1.5rem; border-radius: 3px; border: 1px solid var(--line); flex: 0 0 auto; }
+  .tok .nm { font-family: var(--font-mono); flex: 1 1 auto; }
+  .tok input[type="color"] { width: 1.8rem; height: 1.5rem; }
+  .tok .ov { font-size: .62rem; color: var(--accent); letter-spacing: .04em; text-transform: uppercase; }
+  details > summary { cursor: pointer; font-size: .82rem; color: var(--muted); padding: .3rem 0; }
+  details > summary:hover { color: var(--accent); }
+
+  /* ---------- validation ---------- */
+  .verdict { border-radius: var(--radius); padding: .7rem .85rem; font-size: .85rem; border: 1px solid; }
+  .verdict.ok { background: var(--ok-bg); color: var(--ok); border-color: currentColor; }
+  .verdict.bad { background: var(--err-bg); color: var(--err); border-color: currentColor; }
+  .verdict ul { margin: .4rem 0 0; padding-left: 1.1rem; }
+  .verdict li { margin: .15rem 0; }
+  .saidbox { margin-top: .8rem; font-size: .85rem; }
+  pre.out {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: .7rem; font-family: var(--font-mono); font-size: .72rem;
+    max-height: 16rem; overflow: auto; margin: .6rem 0 0;
+  }
+
+  /* ---------- specimen (quarantined) ---------- */
+  .preview-head { display: flex; align-items: center; gap: .5rem; margin: 0 0 .5rem; }
+  .preview-head h2 { font-size: .8rem; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .preview-head .sp { flex: 1 1 auto; }
+  #specimen {
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+    background: var(--sp-bg); color: var(--sp-ink);
+    font-family: var(--sp-font-body); line-height: var(--sp-lh);
+    padding: var(--sp-space);
+  }
+  #specimen .inner { max-width: 100%; }
+  #specimen .eyebrow {
+    font-family: var(--sp-font-mono); font-size: var(--sp-s-1);
+    letter-spacing: .09em; text-transform: uppercase; color: var(--sp-accent); margin: 0 0 .5rem;
+  }
+  #specimen h3 {
+    font-family: var(--sp-font-display); font-size: var(--sp-s3);
+    line-height: 1.15; margin: 0 0 .35rem; color: var(--sp-ink); text-wrap: balance;
+  }
+  #specimen .sub { color: var(--sp-muted); font-size: var(--sp-s1); margin: 0 0 .9rem; }
+  #specimen p { margin: 0 0 .85rem; font-size: var(--sp-base); }
+  #specimen .card {
+    background: var(--sp-card); border: var(--sp-border) solid var(--sp-line);
+    border-radius: var(--sp-radius); box-shadow: var(--sp-shadow);
+    padding: var(--sp-space); margin: 0 0 .85rem;
+  }
+  #specimen code, #specimen pre {
+    font-family: var(--sp-font-mono); background: var(--sp-code-bg);
+    border-radius: calc(var(--sp-radius) / 2); font-size: var(--sp-s-1);
+  }
+  #specimen code { padding: .15em .4em; }
+  #specimen pre { padding: .7rem .85rem; margin: 0 0 .85rem; overflow-x: auto; }
+  #specimen .warn {
+    background: var(--sp-warn-bg); color: var(--sp-warn-ink);
+    border: 1px solid var(--sp-warn-line); border-radius: var(--sp-radius);
+    padding: .6rem .8rem; margin: 0 0 .85rem; font-size: var(--sp-s-1);
+  }
+  #specimen .pill {
+    display: inline-block; background: var(--sp-accent); color: var(--sp-accent-ink);
+    border-radius: 999px; padding: .15em .8em; font-size: var(--sp-s-1); font-weight: 600;
+  }
+  #specimen .swatches { display: flex; flex-wrap: wrap; gap: .3rem; margin: 0; padding: 0; list-style: none; }
+  #specimen .swatches li {
+    width: 2.7rem; height: 2rem; border-radius: 3px; border: 1px solid var(--sp-line);
+    font: 8px/1.1 var(--sp-font-mono); display: flex; align-items: flex-end;
+    padding: .15rem; color: var(--sp-muted); overflow: hidden;
+  }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>House Style Builder</h1>
+  <span class="sub">Design a theme, then say &ldquo;install it&rdquo;</span>
+  <span class="sp"></span>
+  <span class="sub mono" id="meta">__META__</span>
+</div>
+
+<div class="shell">
+  <div class="controls">
+
+    <section class="step" data-step="identity">
+      <header><span class="n">01</span><h2>What is it called, and what is it for?</h2></header>
+      <p class="hint">The name is the filename and the pin value. &ldquo;What it&rsquo;s for&rdquo; is the line that makes this theme easy to choose later &mdash; write it for someone deciding between three options in a hurry.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="f-name">Name</label>
+          <input type="text" id="f-name" class="mono" data-bind="name" placeholder="ashgrove">
+          <span class="note" id="name-note"></span>
+        </div>
+        <div class="field">
+          <label for="f-label">Display name</label>
+          <input type="text" id="f-label" data-bind="label" placeholder="Ashgrove">
+        </div>
+        <div class="field">
+          <label for="f-scheme">Authored in</label>
+          <select id="f-scheme" data-bind="defaultScheme">
+            <option value="light">Light first</option>
+            <option value="dark">Dark first</option>
+          </select>
+          <span class="note">Both schemes are always built. This says which one you designed.</span>
+        </div>
+      </div>
+      <div class="grid" style="margin-top:.75rem">
+        <div class="field" style="grid-column: 1 / -1">
+          <label for="f-summary">One-line summary</label>
+          <input type="text" id="f-summary" data-bind="summary" placeholder="Cool slate and a tight scale, set wide for dense reference.">
+        </div>
+        <div class="field" style="grid-column: 1 / -1">
+          <label for="f-for">What it&rsquo;s for</label>
+          <input type="text" id="f-for" data-bind="for" placeholder="Dashboards and comparison tables - anything scanned rather than read.">
+        </div>
+      </div>
+    </section>
+
+    <section class="step" data-step="type">
+      <header><span class="n">02</span><h2>Type</h2></header>
+      <p class="hint">Three roles. Search any family on Google Fonts &mdash; it is the only font host a published artifact can load, so the list is deliberately limited to it. The fallback stack below each is what pages that cannot load a webfont get; it is pre-filled to keep the theme&rsquo;s character, and you can change it.</p>
+      <div id="fonts"></div>
+    </section>
+
+    <section class="step" data-step="colour">
+      <header><span class="n">03</span><h2>Colour</h2></header>
+      <p class="hint">Pick a ground and an accent. Everything else is derived to hit real contrast ratios in <em>both</em> schemes &mdash; the dark accent is lightened rather than reused, which is the usual way a hand-built dark palette goes wrong. Override any single token below if you disagree.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="f-ground">Ground</label>
+          <div class="pair">
+            <input type="color" id="f-ground" aria-label="Ground colour">
+            <input type="text" class="mono" id="f-ground-hex" spellcheck="false">
+          </div>
+          <span class="note">The page background. Its hue tints every neutral.</span>
+        </div>
+        <div class="field">
+          <label for="f-accent">Accent</label>
+          <div class="pair">
+            <input type="color" id="f-accent" aria-label="Accent colour">
+            <input type="text" class="mono" id="f-accent-hex" spellcheck="false">
+          </div>
+          <span class="note">Links, pills, the eyebrow. One colour, used sparingly.</span>
+        </div>
+      </div>
+      <details style="margin-top:.9rem">
+        <summary>All 22 values &mdash; override any of them</summary>
+        <div class="row" style="margin:.5rem 0">
+          <button type="button" id="tok-light" aria-pressed="true">Light</button>
+          <button type="button" id="tok-dark" aria-pressed="false">Dark</button>
+          <span class="sp" style="flex:1"></span>
+          <button type="button" id="tok-reset">Reset overrides</button>
+        </div>
+        <div class="tokens" id="tokens"></div>
+      </details>
+    </section>
+
+    <section class="step" data-step="shape">
+      <header><span class="n">04</span><h2>Shape &amp; scale</h2></header>
+      <p class="hint">How separate things look, and how far apart the type sizes sit. A wide measure with a tight ratio reads as reference; a narrow measure with a dramatic ratio reads as a poster.</p>
+      <div class="grid" id="shape"></div>
+      <div class="grid" style="margin-top:.75rem">
+        <div class="field">
+          <label for="f-ratio">Type scale</label>
+          <select id="f-ratio">
+            <option value="1.067">Minor second &mdash; 1.067</option>
+            <option value="1.125">Major second &mdash; 1.125 (tight, dense)</option>
+            <option value="1.2">Minor third &mdash; 1.2 (steady)</option>
+            <option value="1.25">Major third &mdash; 1.25</option>
+            <option value="1.333">Perfect fourth &mdash; 1.333 (dramatic)</option>
+            <option value="1.414">Augmented fourth &mdash; 1.414</option>
+            <option value="1.5">Perfect fifth &mdash; 1.5 (very dramatic)</option>
+          </select>
+          <span class="note mono" id="ladder"></span>
+        </div>
+        <div class="field">
+          <label for="f-base">Base size</label>
+          <div class="pair">
+            <input type="range" id="f-base" min="13" max="20" step="1">
+            <span class="val mono" id="f-base-v"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-lh">Line height</label>
+          <div class="pair">
+            <input type="range" id="f-lh" min="1.2" max="1.9" step="0.05">
+            <span class="val mono" id="f-lh-v"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" data-step="voice">
+      <header><span class="n">05</span><h2>Voice</h2></header>
+      <p class="hint">This is the half of a theme that is not CSS. It is injected into every session, so it changes how Claude <em>writes</em> under this theme, not only how the page looks. Without it, picking a theme just repaints the same document.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="f-density">Density</label>
+          <select id="f-density" data-bind="voice.density"></select>
+        </div>
+        <div class="field">
+          <label for="f-heading">Headings</label>
+          <select id="f-heading" data-bind="voice.headingStyle"></select>
+        </div>
+        <div class="field">
+          <label for="f-prefer">Reaches for</label>
+          <select id="f-prefer" data-bind="voice.prefer"></select>
+        </div>
+        <div class="field">
+          <label>Page furniture</label>
+          <div class="row">
+            <button type="button" id="f-eyebrow" aria-pressed="false">Eyebrow</button>
+            <button type="button" id="f-lede" aria-pressed="false">Lede</button>
+          </div>
+          <span class="note">Whether pages open with a label and a standfirst.</span>
+        </div>
+      </div>
+      <div class="field" style="margin-top:.75rem">
+        <label for="f-tone">How Claude should write under this theme</label>
+        <textarea id="f-tone" data-bind="voice.proseTone" placeholder="Lead with the fact, not the framing. Cut every phrase that only signals effort..."></textarea>
+        <div class="row" style="margin-top:.35rem">
+          <span class="note">Start from:</span>
+          <span id="tone-presets" class="row"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" data-step="save">
+      <header><span class="n">06</span><h2>Save it</h2></header>
+      <p class="hint">Saving records the theme. Installing it into the repo is the next step, and Claude does that &mdash; it re-validates with the real validator, checks it is distinct from what already ships, and writes the file.</p>
+      <div id="verdict" class="verdict ok">Checking&hellip;</div>
+      <div class="row" style="margin-top:.85rem">
+        <button type="button" class="primary" id="save">Save theme</button>
+        <button type="button" id="show-json">Show JSON</button>
+      </div>
+      <div class="saidbox" id="said" hidden></div>
+      <pre class="out" id="json" hidden></pre>
+    </section>
+
+  </div>
+
+  <div class="preview-col">
+    <div class="preview-head">
+      <h2>Live specimen</h2>
+      <span class="sp"></span>
+      <button type="button" id="sp-scheme">dark</button>
+    </div>
+    <div id="specimen">
+      <div class="inner">
+        <p class="eyebrow" id="sp-eyebrow"></p>
+        <h3 id="sp-title">Your theme</h3>
+        <p class="sub" id="sp-sub"></p>
+        <p id="sp-body"></p>
+        <div class="card"><span class="pill" id="sp-pill"></span><p style="margin:.6rem 0 0" id="sp-for"></p></div>
+        <pre><code id="sp-code"></code></pre>
+        <p class="warn">Warning styling, shown so the whole token set is visible rather than only the parts a happy page uses.</p>
+        <ul class="swatches" id="sp-swatches"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CONSTRAINTS = __CONSTRAINTS__;
+const FAMILIES = __FAMILIES__;
+const EXISTING = __THEMES__;
+const SEED = __SEED__;
+</script>
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------------------
+   colour: real sRGB relative luminance, so contrast is a property of the output
+   rather than something the page warns you about afterwards.
+   --------------------------------------------------------------------------- */
+function h2r(h) {
+  h = h.replace("#", "");
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function r2h(rgb) {
+  return "#" + rgb.map(function (v) {
+    return Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
+  }).join("");
+}
+function lin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function lum(hex) { const p = h2r(hex); return 0.2126*lin(p[0]) + 0.7152*lin(p[1]) + 0.0722*lin(p[2]); }
+function contrast(a, b) {
+  const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = Math.min(x, y);
+  return (hi + 0.05) / (lo + 0.05);
+}
+function mix(a, b, f) {
+  const A = h2r(a), B = h2r(b);
+  return r2h([0,1,2].map(function (i) { return A[i] + (B[i] - A[i]) * f; }));
+}
+function rgb2hsl(hex) {
+  let [r,g,b] = h2r(hex).map(function (v) { return v/255; });
+  const mx = Math.max(r,g,b), mn = Math.min(r,g,b), d = mx - mn;
+  let h = 0, s = 0, l = (mx + mn) / 2;
+  if (d) {
+    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0));
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return [h, s, l];
+}
+function hsl2hex(h, s, l) {
+  function f(n) {
+    const k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l);
+    return (l - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)))) * 255;
+  }
+  return r2h([f(0), f(8), f(4)]);
+}
+
+/* Binary-search lightness at a fixed hue and saturation until the WCAG ratio against `bg`
+   meets `target`. Direction follows the ground: on a light ground contrast rises as the
+   colour darkens, so we want the LIGHTEST colour that still passes (closest to the ground
+   while readable); on a dark ground the reverse. */
+function solveOn(bg, h, s, target) {
+  const bgLight = lum(bg) > 0.35;
+  let lo = 0, hi = 1, best = bgLight ? "#000000" : "#ffffff";
+  for (let i = 0; i < 26; i++) {
+    const mid = (lo + hi) / 2, c = hsl2hex(h, s, mid);
+    const ok = contrast(c, bg) >= target;
+    if (bgLight) { if (ok) { best = c; lo = mid; } else { hi = mid; } }
+    else { if (ok) { best = c; hi = mid; } else { lo = mid; } }
+  }
+  return best;
+}
+/* Leave a colour alone when it already passes; only move it when it does not. */
+function ensureOn(colour, bg, target) {
+  if (contrast(colour, bg) >= target) return colour;
+  const hsl = rgb2hsl(colour);
+  return solveOn(bg, hsl[0], hsl[1], target);
+}
+
+/* An accent has two jobs and they pull against each other: it must read on the page ground,
+   and text must read ON IT (a pill, a badge). solveOn cannot do the second on its own - for a
+   mid-tone accent there is no lightness at a fixed hue that clears 4.5 against it, because
+   the accent sits in the middle where neither white nor black is far enough away.
+   So: pick whichever of white and a hue-tinted near-black contrasts more, and if even that
+   falls short, walk the accent's own lightness until it does - stopping before the accent
+   stops reading on the ground, because the ground is the more important of the two. */
+function fitAccent(accent, bg, groundHue, wantLight) {
+  let acc = ensureOn(accent, bg, 4.5);
+  const base = rgb2hsl(acc);
+  const nearBlack = hsl2hex(groundHue, 0.30, 0.07);
+  function bestInk(c) {
+    return contrast("#ffffff", c) >= contrast(nearBlack, c) ? "#ffffff" : nearBlack;
+  }
+  let ink = bestInk(acc);
+  for (let i = 0; i < 45 && contrast(ink, acc) < 4.5; i++) {
+    const L = rgb2hsl(acc)[2];
+    const nextL = wantLight ? Math.min(1, L + 0.02) : Math.max(0, L - 0.02);
+    if (nextL === L) break;
+    const cand = hsl2hex(base[0], base[1], nextL);
+    if (contrast(cand, bg) < 4.5) break;
+    acc = cand;
+    ink = bestInk(acc);
+  }
+  return [acc, ink];
+}
+
+function derive(ground, accent) {
+  const g = rgb2hsl(ground);
+  const gh = g[0], gs = Math.min(g[1], 0.30);   // neutrals carry the ground's hue, not its punch
+  const a = rgb2hsl(accent);
+
+  // ---- light ----
+  const bg = ground;
+  const card = lum(ground) > 0.5 ? mix(ground, "#ffffff", 0.75) : mix(ground, "#ffffff", 0.10);
+  const ink = solveOn(bg, gh, Math.min(gs, 0.22), 12);
+  const muted = solveOn(bg, gh, Math.min(gs, 0.20), 4.6);
+  const line = mix(bg, ink, 0.13);
+  const codeBg = mix(bg, ink, 0.05);
+  // On a light ground the accent moves darker when it has to; on a dark ground, lighter.
+  const accPair = fitAccent(accent, bg, gh, lum(bg) <= 0.35);
+  const acc = accPair[0], accInk = accPair[1];
+  // The warning colour belongs to the theme without becoming a second accent: a fixed amber
+  // nudged one-fifth of the way toward the ground's hue.
+  const warnH = 0.096 + (gh - 0.096) * 0.2;
+  const warnBg = hsl2hex(warnH, 0.72, 0.94);
+  const warnInk = solveOn(warnBg, warnH, 0.95, 5.5);
+  const warnLine = hsl2hex(warnH, 0.62, 0.74);
+
+  // ---- dark ----
+  // Not an inversion. The ground becomes a very dark form of its own hue, and the accent is
+  // LIGHTENED until it clears on it - an accent that works on paper is nearly always too
+  // dark on black, which is the single most common way a hand-built dark palette fails.
+  const bgD = hsl2hex(gh, Math.min(gs + 0.04, 0.22), 0.055);
+  const cardD = hsl2hex(gh, Math.min(gs + 0.03, 0.20), 0.105);
+  const inkD = solveOn(bgD, gh, Math.min(gs, 0.14), 12);
+  const mutedD = solveOn(bgD, gh, Math.min(gs, 0.16), 5.0);
+  const lineD = mix(bgD, inkD, 0.16);
+  const codeBgD = mix(bgD, "#000000", 0.35);
+  const accPairD = fitAccent(hsl2hex(a[0], Math.max(a[1], 0.45), 0.62), bgD, gh, true);
+  const accD = accPairD[0], accInkD = accPairD[1];
+  const warnBgD = hsl2hex(warnH, 0.34, 0.13);
+  const warnInkD = solveOn(warnBgD, warnH, 0.80, 6);
+  const warnLineD = hsl2hex(warnH, 0.42, 0.24);
+
+  return {
+    light: { "bg": bg, "card": card, "ink": ink, "muted": muted, "line": line,
+             "accent": acc, "accent-ink": accInk, "code-bg": codeBg,
+             "warn-bg": warnBg, "warn-ink": warnInk, "warn-line": warnLine },
+    dark:  { "bg": bgD, "card": cardD, "ink": inkD, "muted": mutedD, "line": lineD,
+             "accent": accD, "accent-ink": accInkD, "code-bg": codeBgD,
+             "warn-bg": warnBgD, "warn-ink": warnInkD, "warn-line": warnLineD }
+  };
+}
+
+/* ---------------------------------------------------------------------------
+   state
+   --------------------------------------------------------------------------- */
+const S = JSON.parse(JSON.stringify(SEED));
+let overrides = { light: {}, dark: {} };
+let tokScheme = "light";
+let spScheme = SEED.defaultScheme === "dark" ? "dark" : "light";
+
+function slug(v) {
+  return String(v || "").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+function colours() {
+  const d = derive(S._ground, S._accent);
+  ["light", "dark"].forEach(function (k) {
+    Object.keys(overrides[k]).forEach(function (t) { d[k][t] = overrides[k][t]; });
+  });
+  return d;
+}
+function steps() {
+  const r = Number(S.scale.ratio), out = {};
+  [-1, 0, 1, 2, 3, 4].forEach(function (n) {
+    out[n] = +(Math.pow(r, n).toFixed(4));
+  });
+  return out;
+}
+
+/* The theme exactly as it will be written to themes/<name>.json. Everything else on the page
+   is a view of this. */
+function build() {
+  const c = colours();
+  const t = {
+    name: S.name, label: S.label, summary: S.summary, for: S["for"],
+    defaultScheme: S.defaultScheme,
+    sources: CONSTRAINTS.fontRoles.map(function (r) {
+      return { what: S.fonts[r].family,
+               url: "https://fonts.google.com/specimen/" + S.fonts[r].family.replace(/ /g, "+"),
+               licence: "OFL-1.1" };
+    }).concat([{ what: "Palette, scale, shape and voice",
+                 url: "themes/" + (S.name || "theme") + ".json", licence: "in-repo" }]),
+    fonts: {}, colour: c,
+    scale: { base: S.scale.base, ratio: Number(S.scale.ratio), lineHeight: Number(S.scale.lineHeight) },
+    shape: JSON.parse(JSON.stringify(S.shape)),
+    voice: JSON.parse(JSON.stringify(S.voice))
+  };
+  CONSTRAINTS.fontRoles.forEach(function (r) {
+    const f = S.fonts[r];
+    const fam = f.family.replace(/ /g, "+");
+    const w = r === "mono" ? "400;700" : (r === "display" ? "500;700" : "400;600");
+    t.fonts[r] = {
+      family: f.family,
+      googleFontsUrl: "https://fonts.googleapis.com/css2?family=" + fam + ":wght@" + w + "&display=swap",
+      stack: '"' + f.family + '", ' + f.systemStack,
+      systemStack: f.systemStack,
+      weights: w.split(";").map(Number)
+    };
+  });
+  return t;
+}
+
+/* The page's copy of validate(). It checks against CONSTRAINTS, which style.py exports, so
+   it cannot drift from the real rules - and style.py validate() runs again at install, so
+   the worst case here is a false pass that install then refuses with a real message. */
+function problems(t) {
+  const p = [];
+  CONSTRAINTS.identityKeys.forEach(function (k) {
+    if (!t[k] && t[k] !== false) p.push("Fill in " + (k === "for" ? "what it's for" : k));
+  });
+  if (t.name && !new RegExp(CONSTRAINTS.namePattern).test(t.name)) {
+    p.push("Name must be lowercase letters, digits and hyphens");
+  }
+  if (t.name && EXISTING.some(function (e) { return e.name === t.name; })) {
+    p.push("A theme called " + t.name + " already exists");
+  }
+  const hex = new RegExp(CONSTRAINTS.hexPattern);
+  ["light", "dark"].forEach(function (s) {
+    CONSTRAINTS.colourTokens.forEach(function (tok) {
+      if (!hex.test(t.colour[s][tok] || "")) p.push(s + " " + tok + " is not a #rrggbb value");
+    });
+  });
+  CONSTRAINTS.fontRoles.forEach(function (r) {
+    const f = t.fonts[r];
+    if (!f || !f.family) { p.push("Choose a " + r + " font"); return; }
+    if (f.googleFontsUrl.indexOf(CONSTRAINTS.fontUrlPrefix) !== 0) {
+      p.push(r + " font must come from Google Fonts");
+    }
+    if (!String(f.systemStack || "").trim()) p.push(r + " needs a fallback stack");
+  });
+  const r = Number(t.scale.ratio);
+  if (!(r > CONSTRAINTS.ratioRange[0] && r < CONSTRAINTS.ratioRange[1])) {
+    p.push("Type scale ratio must be between 1 and 2");
+  }
+  CONSTRAINTS.shapeKeys.forEach(function (k) {
+    if (!String(t.shape[k] || "").trim()) p.push("Shape: " + k + " is empty");
+  });
+  if (!String(t.voice.proseTone || "").trim()) {
+    p.push("Write the prose voice - it is what makes this a theme rather than a palette");
+  }
+  return p;
+}
+
+/* ---------------------------------------------------------------------------
+   fonts
+   --------------------------------------------------------------------------- */
+const ROLE_CATS = {
+  display: ["serif", "sans-serif", "display", "handwriting"],
+  body: ["serif", "sans-serif"],
+  mono: ["monospace"]
+};
+const ROLE_HELP = {
+  display: "Headings. A face with character - it is seen in large sizes and small doses.",
+  body: "Running text. Chosen for reading, not for impact.",
+  mono: "Code, labels and figures."
+};
+const loadedFonts = {};
+function loadFont(family) {
+  if (loadedFonts[family]) return;
+  loadedFonts[family] = true;
+  const l = document.createElement("link");
+  l.rel = "stylesheet";
+  l.href = "https://fonts.googleapis.com/css2?family=" + family.replace(/ /g, "+") +
+           ":wght@400;600;700&display=swap";
+  document.head.appendChild(l);
+}
+function catOf(family) {
+  const f = FAMILIES.find(function (x) { return x.family === family; });
+  return f ? f.category : "sans-serif";
+}
+
+function buildFontPickers() {
+  const host = document.getElementById("fonts");
+  host.innerHTML = "";
+  CONSTRAINTS.fontRoles.forEach(function (role) {
+    const wrap = document.createElement("div");
+    wrap.className = "field";
+    wrap.style.marginBottom = ".9rem";
+    wrap.innerHTML =
+      '<label for="q-' + role + '">' + role + '</label>' +
+      '<span class="note">' + ROLE_HELP[role] + '</span>' +
+      '<div class="picker">' +
+        '<div class="head">' +
+          '<span class="chosen" id="ch-' + role + '"></span>' +
+          '<span class="cat" id="cat-' + role + '"></span>' +
+        '</div>' +
+        '<div style="padding:.45rem .5rem;border-bottom:1px solid var(--line)">' +
+          '<input type="text" id="q-' + role + '" placeholder="Search families…" spellcheck="false">' +
+        '</div>' +
+        '<div class="results" id="res-' + role + '"></div>' +
+      '</div>' +
+      '<label for="ss-' + role + '" style="margin-top:.45rem">Fallback stack</label>' +
+      '<input type="text" class="mono" id="ss-' + role + '" spellcheck="false">';
+    host.appendChild(wrap);
+
+    const q = wrap.querySelector("#q-" + role);
+    const res = wrap.querySelector("#res-" + role);
+    const ss = wrap.querySelector("#ss-" + role);
+
+    function results() {
+      const term = q.value.trim().toLowerCase();
+      const cats = ROLE_CATS[role];
+      const list = FAMILIES.filter(function (f) {
+        return cats.indexOf(f.category) !== -1 &&
+               (!term || f.family.toLowerCase().indexOf(term) !== -1);
+      }).slice(0, 60);
+      res.innerHTML = "";
+      if (!list.length) {
+        res.innerHTML = '<p class="empty">No family matches that. The list is Google Fonts only — it is the one font host a published artifact can load.</p>';
+        return;
+      }
+      list.forEach(function (f) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.innerHTML = '<span class="fam">' + f.family + '</span><span class="cat">' +
+                      f.category + (f.variable ? " · var" : "") + '</span>';
+        b.addEventListener("click", function () {
+          S.fonts[role].family = f.family;
+          S.fonts[role].systemStack = CONSTRAINTS.systemStacks[f.category] ||
+                                      CONSTRAINTS.systemStacks["sans-serif"];
+          loadFont(f.family);
+          render();
+        });
+        res.appendChild(b);
+      });
+    }
+    q.addEventListener("input", results);
+    ss.addEventListener("input", function () { S.fonts[role].systemStack = ss.value; render(); });
+    results();
+  });
+}
+
+function syncFontPickers() {
+  CONSTRAINTS.fontRoles.forEach(function (role) {
+    const f = S.fonts[role];
+    const ch = document.getElementById("ch-" + role);
+    ch.textContent = f.family;
+    ch.style.fontFamily = '"' + f.family + '", ' + f.systemStack;
+    document.getElementById("cat-" + role).textContent = catOf(f.family);
+    const ss = document.getElementById("ss-" + role);
+    if (document.activeElement !== ss) ss.value = f.systemStack;
+    loadFont(f.family);
+  });
+}
+
+/* ---------------------------------------------------------------------------
+   shape controls
+   --------------------------------------------------------------------------- */
+const SHAPE_CTRL = [
+  { key: "radius", label: "Corner radius", min: 0, max: 28, step: 1, unit: "px",
+    note: "0 is a hard edge; over 20 reads as soft and consumer." },
+  { key: "border", label: "Border width", min: 0, max: 3, step: 1, unit: "px",
+    note: "0 means things separate by shadow or space instead." },
+  { key: "space", label: "Spacing unit", min: 0.5, max: 3, step: 0.25, unit: "rem",
+    note: "The rhythm everything else is built from." },
+  { key: "measure", label: "Content width", min: 32, max: 80, step: 2, unit: "rem",
+    note: "Around 46rem reads as prose; 70rem+ reads as reference." }
+];
+function buildShape() {
+  const host = document.getElementById("shape");
+  host.innerHTML = "";
+  SHAPE_CTRL.forEach(function (c) {
+    const d = document.createElement("div");
+    d.className = "field";
+    d.innerHTML =
+      '<label for="sh-' + c.key + '">' + c.label + '</label>' +
+      '<div class="pair"><input type="range" id="sh-' + c.key + '" min="' + c.min +
+      '" max="' + c.max + '" step="' + c.step + '"><span class="val mono" id="shv-' +
+      c.key + '"></span></div><span class="note">' + c.note + '</span>';
+    host.appendChild(d);
+    d.querySelector("input").addEventListener("input", function (e) {
+      S.shape[c.key] = e.target.value + c.unit;
+      render();
+    });
+  });
+  const d = document.createElement("div");
+  d.className = "field";
+  d.innerHTML = '<label for="sh-shadow">Shadow</label><select id="sh-shadow">' +
+    '<option value="none">None &mdash; separate by line</option>' +
+    '<option value="0 1px 2px rgba(0,0,0,.05)">Subtle</option>' +
+    '<option value="0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08)">Lifted</option>' +
+    '</select>';
+  host.appendChild(d);
+  d.querySelector("select").addEventListener("change", function (e) {
+    S.shape.shadow = e.target.value; render();
+  });
+}
+
+/* ---------------------------------------------------------------------------
+   render
+   --------------------------------------------------------------------------- */
+function setSpecimen(t) {
+  const el = document.getElementById("specimen");
+  const c = t.colour[spScheme];
+  const st = steps();
+  const s = el.style;
+  CONSTRAINTS.fontRoles.forEach(function (r) {
+    s.setProperty("--sp-font-" + r, t.fonts[r].stack);
+  });
+  Object.keys(c).forEach(function (k) { s.setProperty("--sp-" + k, c[k]); });
+  s.setProperty("--sp-base", t.scale.base);
+  s.setProperty("--sp-lh", t.scale.lineHeight);
+  s.setProperty("--sp-radius", t.shape.radius);
+  s.setProperty("--sp-border", t.shape.border);
+  s.setProperty("--sp-shadow", t.shape.shadow);
+  s.setProperty("--sp-space", t.shape.space);
+  [-1, 0, 1, 2, 3, 4].forEach(function (n) {
+    s.setProperty("--sp-s" + (n < 0 ? "-1" : n), st[n] + "rem");
+  });
+
+  const eb = document.getElementById("sp-eyebrow");
+  eb.hidden = !t.voice.useEyebrow;
+  eb.textContent = (t["for"] || "").split(",")[0] || "For";
+  document.getElementById("sp-title").textContent = t.label || "Your theme";
+  const sub = document.getElementById("sp-sub");
+  sub.hidden = !t.voice.useLede;
+  sub.textContent = t.summary || "";
+  document.getElementById("sp-body").textContent =
+    t.voice.proseTone || "Write the prose voice and it appears here, set in your body face.";
+  document.getElementById("sp-pill").textContent = t.voice.density;
+  document.getElementById("sp-for").textContent = t["for"] || "";
+  document.getElementById("sp-code").textContent = "style.py use " + (t.name || "your-theme");
+  const sw = document.getElementById("sp-swatches");
+  sw.innerHTML = "";
+  CONSTRAINTS.colourTokens.forEach(function (tok) {
+    const li = document.createElement("li");
+    li.style.background = c[tok];
+    li.textContent = tok;
+    sw.appendChild(li);
+  });
+}
+
+function buildTokens(t) {
+  const host = document.getElementById("tokens");
+  const c = t.colour[tokScheme];
+  host.innerHTML = "";
+  CONSTRAINTS.colourTokens.forEach(function (tok) {
+    const row = document.createElement("div");
+    row.className = "tok";
+    const overridden = Object.prototype.hasOwnProperty.call(overrides[tokScheme], tok);
+    row.innerHTML =
+      '<span class="sw" style="background:' + c[tok] + '"></span>' +
+      '<span class="nm">' + tok + '</span>' +
+      '<span class="ov">' + (overridden ? "set" : "") + '</span>';
+    const inp = document.createElement("input");
+    inp.type = "color";
+    inp.value = c[tok];
+    inp.setAttribute("aria-label", tokScheme + " " + tok);
+    inp.addEventListener("input", function () {
+      overrides[tokScheme][tok] = inp.value;
+      render();
+    });
+    row.appendChild(inp);
+    host.appendChild(row);
+  });
+}
+
+let lastValid = null;
+function render() {
+  S.name = slug(S.name);
+  const t = build();
+  lastValid = t;
+
+  syncFontPickers();
+  setSpecimen(t);
+  buildTokens(t);
+
+  // shape sliders + readouts
+  SHAPE_CTRL.forEach(function (c) {
+    const v = parseFloat(S.shape[c.key]);
+    const el = document.getElementById("sh-" + c.key);
+    if (el && document.activeElement !== el) el.value = v;
+    document.getElementById("shv-" + c.key).textContent = S.shape[c.key];
+  });
+  const shadowSel = document.getElementById("sh-shadow");
+  if (shadowSel) shadowSel.value = S.shape.shadow;
+
+  document.getElementById("f-base-v").textContent = S.scale.base;
+  document.getElementById("f-lh-v").textContent = Number(S.scale.lineHeight).toFixed(2);
+  const st = steps();
+  document.getElementById("ladder").textContent =
+    [-1,0,1,2,3,4].map(function (n) { return st[n]; }).join("  ");
+
+  const note = document.getElementById("name-note");
+  if (S.name && EXISTING.some(function (e) { return e.name === S.name; })) {
+    note.textContent = "Taken — " + S.name + " already ships.";
+    note.style.color = "var(--err)";
+  } else if (S.name) {
+    note.textContent = "themes/" + S.name + ".json";
+    note.style.color = "var(--muted)";
+  } else {
+    note.textContent = "";
+  }
+
+  const probs = problems(t);
+  const v = document.getElementById("verdict");
+  const btn = document.getElementById("save");
+  if (probs.length) {
+    v.className = "verdict bad";
+    v.innerHTML = "<strong>" + probs.length + " thing" + (probs.length > 1 ? "s" : "") +
+      " left:</strong><ul>" + probs.map(function (p) {
+        return "<li>" + p.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</li>";
+      }).join("") + "</ul>";
+    btn.disabled = true;
+  } else {
+    v.className = "verdict ok";
+    v.textContent = "Valid. " + t.label + " is ready to install.";
+    btn.disabled = false;
+  }
+
+  const j = document.getElementById("json");
+  if (!j.hidden) j.textContent = JSON.stringify(t, null, 2);
+
+  document.getElementById("tok-light").setAttribute("aria-pressed", tokScheme === "light");
+  document.getElementById("tok-dark").setAttribute("aria-pressed", tokScheme === "dark");
+  document.getElementById("sp-scheme").textContent = spScheme;
+}
+
+/* ---------------------------------------------------------------------------
+   wiring
+   --------------------------------------------------------------------------- */
+function bindText(id, path) {
+  const el = document.getElementById(id);
+  el.addEventListener("input", function () {
+    const parts = path.split(".");
+    let node = S;
+    for (let i = 0; i < parts.length - 1; i++) node = node[parts[i]];
+    node[parts[parts.length - 1]] = el.value;
+    if (path === "name") { const p = el.selectionStart; el.value = slug(el.value); el.setSelectionRange(p, p); }
+    render();
+  });
+}
+function fillSelect(id, values, path) {
+  const el = document.getElementById(id);
+  el.innerHTML = values.map(function (v) { return '<option value="' + v + '">' + v + "</option>"; }).join("");
+  el.addEventListener("change", function () {
+    const parts = path.split(".");
+    let node = S;
+    for (let i = 0; i < parts.length - 1; i++) node = node[parts[i]];
+    node[parts[parts.length - 1]] = el.value;
+    render();
+  });
+}
+function toggle(id, key) {
+  const el = document.getElementById(id);
+  el.addEventListener("click", function () {
+    S.voice[key] = !S.voice[key];
+    el.setAttribute("aria-pressed", String(S.voice[key]));
+    render();
+  });
+  el.setAttribute("aria-pressed", String(S.voice[key]));
+}
+
+["name", "label", "summary", "for"].forEach(function (k) { bindText("f-" + k, k); });
+bindText("f-tone", "voice.proseTone");
+fillSelect("f-density", CONSTRAINTS.enums.density, "voice.density");
+fillSelect("f-heading", CONSTRAINTS.enums.headingStyle, "voice.headingStyle");
+fillSelect("f-prefer", CONSTRAINTS.enums.prefer, "voice.prefer");
+document.getElementById("f-scheme").addEventListener("change", function (e) {
+  S.defaultScheme = e.target.value; spScheme = e.target.value; render();
+});
+toggle("f-eyebrow", "useEyebrow");
+toggle("f-lede", "useLede");
+
+function bindColour(inputId, hexId, key) {
+  const a = document.getElementById(inputId), b = document.getElementById(hexId);
+  a.addEventListener("input", function () { S[key] = a.value; b.value = a.value; render(); });
+  b.addEventListener("input", function () {
+    if (/^#[0-9a-fA-F]{6}$/.test(b.value)) { S[key] = b.value.toLowerCase(); a.value = S[key]; render(); }
+  });
+}
+bindColour("f-ground", "f-ground-hex", "_ground");
+bindColour("f-accent", "f-accent-hex", "_accent");
+
+document.getElementById("tok-light").addEventListener("click", function () { tokScheme = "light"; render(); });
+document.getElementById("tok-dark").addEventListener("click", function () { tokScheme = "dark"; render(); });
+document.getElementById("tok-reset").addEventListener("click", function () {
+  overrides = { light: {}, dark: {} }; render();
+});
+document.getElementById("sp-scheme").addEventListener("click", function () {
+  spScheme = spScheme === "dark" ? "light" : "dark"; render();
+});
+document.getElementById("f-ratio").addEventListener("change", function (e) {
+  S.scale.ratio = Number(e.target.value); render();
+});
+document.getElementById("f-base").addEventListener("input", function (e) {
+  S.scale.base = e.target.value + "px"; render();
+});
+document.getElementById("f-lh").addEventListener("input", function (e) {
+  S.scale.lineHeight = Number(e.target.value); render();
+});
+document.getElementById("show-json").addEventListener("click", function () {
+  const j = document.getElementById("json");
+  j.hidden = !j.hidden;
+  this.textContent = j.hidden ? "Show JSON" : "Hide JSON";
+  render();
+});
+
+const TONES = EXISTING.filter(function (e) { return e.proseTone; });
+const tp = document.getElementById("tone-presets");
+TONES.forEach(function (e) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = e.label;
+  b.addEventListener("click", function () {
+    S.voice.proseTone = e.proseTone;
+    document.getElementById("f-tone").value = e.proseTone;
+    render();
+  });
+  tp.appendChild(b);
+});
+
+/* Save. The page must work with no db at all - opened off disk, or published without the
+   capability - so the JSON is always reachable and the button is the shortcut, not the only
+   way through. */
+let dbp = null;
+try { dbp = (window.claude && claude.use) ? claude.use("db") : null; } catch (e) { dbp = null; }
+
+document.getElementById("save").addEventListener("click", async function () {
+  const said = document.getElementById("said");
+  const t = lastValid;
+  said.hidden = false;
+  said.textContent = "Saving…";
+  let db = null;
+  try { db = dbp ? await dbp : null; } catch (e) { db = null; }
+  if (!db) {
+    said.innerHTML = '<div class="verdict ok">Saved locally only — this copy has no store. ' +
+      'Press <strong>Show JSON</strong>, copy it, and paste it to Claude saying ' +
+      '“install this theme”.</div>';
+    const j = document.getElementById("json");
+    j.hidden = false;
+    j.textContent = JSON.stringify(t, null, 2);
+    return;
+  }
+  try {
+    await db.doc("drafts/" + t.name).set({ theme: t, at: new Date().toISOString() });
+    said.innerHTML = '<div class="verdict ok"><strong>Saved as ' + t.name + '.</strong><br>' +
+      'Now tell Claude: “install the ' + t.name + ' theme”. It re-validates, checks ' +
+      'it is distinct from what ships, and writes themes/' + t.name + '.json.</div>';
+  } catch (e) {
+    said.innerHTML = '<div class="verdict bad">Could not save. Press <strong>Show JSON</strong> ' +
+      'and paste it to Claude instead.</div>';
+  }
+});
+
+/* Fonts referenced by the seed have to be requested before the first paint, or the specimen
+   renders in fallbacks for a beat and reads as broken. */
+CONSTRAINTS.fontRoles.forEach(function (r) { loadFont(S.fonts[r].family); });
+
+document.getElementById("f-ground").value = S._ground;
+document.getElementById("f-ground-hex").value = S._ground;
+document.getElementById("f-accent").value = S._accent;
+document.getElementById("f-accent-hex").value = S._accent;
+["name", "label", "summary", "for"].forEach(function (k) {
+  document.getElementById("f-" + k).value = S[k] || "";
+});
+document.getElementById("f-tone").value = S.voice.proseTone || "";
+document.getElementById("f-scheme").value = S.defaultScheme;
+document.getElementById("f-ratio").value = String(S.scale.ratio);
+document.getElementById("f-base").value = parseFloat(S.scale.base);
+document.getElementById("f-lh").value = S.scale.lineHeight;
+["density", "headingStyle", "prefer"].forEach(function (k, i) {
+  document.getElementById(["f-density", "f-heading", "f-prefer"][i]).value = S.voice[k];
+});
+
+buildFontPickers();
+buildShape();
+render();
+</script>
+</body>
+</html>

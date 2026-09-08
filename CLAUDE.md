@@ -149,6 +149,14 @@ Two constraints are worth knowing before touching it:
   and offline, and `verify.py` fails if an external reference appears in it. `style.py css
   <name> --system` emits the second form.
 
+Authoring a new theme is `style.py builder` — a generated page, published with
+`capabilities: {db:{}}`, where you pick a ground and an accent and everything else is derived to
+hit real contrast ratios in both schemes. It writes a draft to db; `style.py install -` is the
+only verb that writes `themes/<name>.json`, and it validates, refuses to clobber, and refuses a
+theme that is not distinct from what ships. The page's own checks come from `constraints()`, an
+export `verify_style.py` pins to the module constants, so they cannot drift from the real
+validator. Long form: [docs/house-style.md](docs/house-style.md).
+
 The catalogue is fetched **in Python at command time and inlined into the generated page**,
 never by the page: the same CSP blocks `fetch` to every host without exception, so a gallery
 that called the APIs itself would silently show nothing. Fetches fall through cache to the three

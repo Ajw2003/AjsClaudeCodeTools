@@ -60,6 +60,17 @@ def report(result, title):
     print(f"{STEP:2d}. {result}  {title}")
 
 
+SKIPPED = 0
+
+
+def skip(title, why):
+    global STEP, SKIPPED
+    STEP += 1
+    SKIPPED += 1
+    print(f"{STEP:2d}. SKIP  {title}")
+    print(f"          {why}")
+
+
 def read(path):
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
@@ -150,15 +161,9 @@ report("PASS" if style.FALLBACK in NAMES else "FAIL",
 # Themes are edited one at a time, each edit individually reasonable, and three distinct looks
 # quietly converge into three tints of whichever was touched last. This cannot prove taste; it
 # proves nobody made the choice meaningless.
-for axis, get in (
-    ("accent", lambda t: t["colour"][t["defaultScheme"]]["accent"]),
-    ("body font", lambda t: t["fonts"]["body"]["family"]),
-    ("display font", lambda t: t["fonts"]["display"]["family"]),
-    ("radius", lambda t: t["shape"]["radius"]),
-    ("scale ratio", lambda t: t["scale"]["ratio"]),
-    ("measure", lambda t: t["shape"]["measure"]),
-    ("prose tone", lambda t: t["voice"]["proseTone"]),
-):
+# The axes come from style.VARIETY_AXES, not a copy of it. install enforces the same rule from
+# the same list, so the suite and the gate cannot disagree about what "distinct" means.
+for axis, get in style.VARIETY_AXES:
     vals = [get(LOADED[n]) for n in NAMES if LOADED[n]]
     uniq = len(set(map(str, vals)))
     report("PASS" if uniq == len(vals) else "FAIL",
@@ -560,6 +565,223 @@ if os.path.exists(STEPCARD):
     report("PASS" if style.MARKER_PREFIX in sc else "FAIL",
            "step-card.html carries the marker, so publishing it raises no prompt")
 
+# --- the constraint export --------------------------------------------------------------
+# The builder page re-checks in JS what validate() checks here. It must not re-STATE it: these
+# assertions are what make the export the single source, so a token added to COLOUR_TOKENS
+# reaches the builder or this fails.
+C = style.constraints()
+for key, want in (
+    ("colourTokens", list(style.COLOUR_TOKENS)),
+    ("fontRoles", list(style.FONT_ROLES)),
+    ("fontKeys", list(style.FONT_KEYS)),
+    ("scaleKeys", list(style.SCALE_KEYS)),
+    ("shapeKeys", list(style.SHAPE_KEYS)),
+    ("voiceKeys", list(style.VOICE_KEYS)),
+    ("identityKeys", list(style.IDENTITY_KEYS)),
+):
+    report("PASS" if C.get(key) == want else "FAIL",
+           f"constraints() exports {key} matching the module constant")
+
+report("PASS" if C.get("marker") == style.MARKER_PREFIX else "FAIL",
+       "constraints() exports the marker the styleguard hook looks for")
+report("PASS" if C.get("varietyAxes") == [n for n, _ in style.VARIETY_AXES] else "FAIL",
+       "constraints() exports the same variety axes install enforces")
+report("PASS" if C.get("fontUrlPrefix") == "https://fonts.googleapis.com/" else "FAIL",
+       "constraints() exports the only font host the CSP allows")
+
+# Every enum in the export must be the set validate() actually accepts - proven by feeding a
+# value outside it and requiring a complaint, rather than by reading both lists.
+for field, path in (("defaultScheme", ("defaultScheme",)),
+                    ("density", ("voice", "density")),
+                    ("headingStyle", ("voice", "headingStyle")),
+                    ("prefer", ("voice", "prefer"))):
+    t = json.loads(json.dumps(LOADED[NAMES[0]]))
+    node = t
+    for k in path[:-1]:
+        node = node[k]
+    node[path[-1]] = "definitely-not-a-valid-value"
+    rejected = any(field in p for p in style.validate(t, NAMES[0]))
+    report("PASS" if rejected and C["enums"].get(field) else "FAIL",
+           f"the {field} enum is exported and validate() enforces it")
+
+# --- install, the gate ------------------------------------------------------------------
+def _install(theme, extra=None):
+    e = dict(os.environ)
+    proc = subprocess.run(
+        [sys.executable, STYLE, "install", "-"] + (extra or []),
+        input=json.dumps(theme).encode("utf-8"),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=e,
+    )
+    return (proc.returncode,
+            proc.stdout.decode("utf-8", "replace"),
+            proc.stderr.decode("utf-8", "replace"))
+
+code, out, err = _install({"name": "broken", "label": "B"})
+report("PASS" if code != 0 and "Refusing to install" in err else "FAIL",
+       "install refuses an invalid theme and says what is wrong")
+
+base = json.loads(json.dumps(LOADED[NAMES[0]]))
+base["name"] = "verify-clone"
+base["label"] = "Verify Clone"
+code, out, err = _install(base)
+report("PASS" if code != 0 and "not distinct enough" in err else "FAIL",
+       "install refuses a theme that collides on the variety axes")
+report("PASS" if not os.path.exists(style.theme_path("verify-clone")) else "FAIL",
+       "a refused install writes no file")
+
+code, out, err = _install(base, ["--force"])
+wrote = os.path.exists(style.theme_path("verify-clone"))
+report("PASS" if code == 0 and wrote else "FAIL",
+       "install --force writes a deliberate collision, and says which axes collided")
+if wrote:
+    try:
+        back = style.load_theme("verify-clone")
+        differing = sorted(k for k in set(back) | set(base) if back.get(k) != base.get(k))
+        report("PASS" if not differing else "FAIL",
+               "an installed theme round-trips byte-for-byte through the format")
+        report("PASS" if not style.validate(back, "verify-clone") else "FAIL",
+               "an installed theme validates when loaded back")
+        code, out, err = _install(base)
+        report("PASS" if code != 0 and "already exists" in err else "FAIL",
+               "install refuses to clobber an existing theme without --force")
+    finally:
+        os.remove(style.theme_path("verify-clone"))
+
+# --- the builder ------------------------------------------------------------------------
+tmp = tempfile.mkdtemp(prefix="house-style-builder-")
+try:
+    b = os.path.join(tmp, "b.html")
+    code, out, err = run_cli(["builder", "--offline", b])
+    ok = code == 0 and os.path.exists(b)
+    report("PASS" if ok else "FAIL", "the builder generates with no network at all")
+    if ok:
+        html = read(b)
+        left = [p for p in ("__TITLE__", "__FONTS__", "__DATA__", "__CONSTRAINTS__",
+                            "__FAMILIES__", "__THEMES__") if p in html]
+        report("PASS" if not left else "FAIL", "every builder placeholder was substituted")
+        if left:
+            print(f"          left behind: {left}")
+
+        import re as _re2
+        # fonts.google.com is the specimen page a theme records in sources[] as provenance -
+        # a string written into JSON, never fetched. The two that ARE loaded are googleapis
+        # (the stylesheet) and gstatic (the font files), and they are the only two the CSP
+        # admits. Checked separately below that the provenance host is never a load.
+        ALLOWED = ("fonts.googleapis.com", "fonts.gstatic.com", "fonts.google.com")
+        urls = [u for u in _re2.findall(r'https?://[^"\'\s)]+', html)
+                if not any(a in u for a in ALLOWED)]
+        report("PASS" if not urls else "FAIL",
+               "the builder references no host outside the artifact CSP allowlist")
+        for u in urls:
+            print(f"          {u}")
+
+        loads = _re2.findall(r'(?:href|src)\s*=\s*["\']?(https?://[^"\'\s>]+)', html)
+        bad_loads = [u for u in loads
+                     if "fonts.googleapis.com" not in u and "fonts.gstatic.com" not in u]
+        report("PASS" if not bad_loads else "FAIL",
+               "every resource the builder actually loads comes from an allowed host")
+        for u in bad_loads:
+            print(f"          {u}")
+
+        # Offline is exactly when the floor matters: a font picker with nothing in it is not a
+        # builder, so the curated families must be there when the catalogue is not.
+        report("PASS" if len(style.FALLBACK_FAMILIES) >= 40 else "FAIL",
+               f"a curated font floor ships ({len(style.FALLBACK_FAMILIES)} families)")
+        fam_ok = all(any(f["category"] == c for f in style.FALLBACK_FAMILIES)
+                     for c in ("serif", "sans-serif", "monospace"))
+        report("PASS" if fam_ok else "FAIL",
+               "the font floor covers every role: serif, sans-serif and monospace")
+        first = style.FALLBACK_FAMILIES[0]["family"].replace(" ", "+")
+        report("PASS" if first in html or "families" in html else "FAIL",
+               "the builder page carries a populated font list when offline")
+
+        report("PASS" if 'claude.use("db")' in html else "FAIL",
+               "the builder reaches db through claude.use, the documented accessor")
+        for step in ("identity", "type", "colour", "shape", "voice", "save"):
+            c = html.count(f'data-step="{step}"')
+            report("PASS" if c == 1 else "FAIL",
+                   f"the builder renders exactly one {step} step (found {c})")
+finally:
+    shutil.rmtree(tmp, ignore_errors=True)
+
+# --- the colour deriver -------------------------------------------------------------------
+# The builder's whole promise is "pick two colours and the rest is derived". If the derivation
+# can produce an unreadable pair, the promise is false and nothing else in the page saves it.
+# Contrast is meant to be a property of the output, so it is asserted on the output.
+#
+# The deriver is JS, so this needs node. It is extracted from the GENERATED page rather than
+# from the template, so what is tested is what ships. Where node is missing the check skips
+# loudly rather than quietly not existing.
+NODE = shutil.which("node")
+tmp = tempfile.mkdtemp(prefix="house-style-derive-")
+try:
+    b = os.path.join(tmp, "b.html")
+    code, out, err = run_cli(["builder", "--offline", b])
+    html = read(b) if code == 0 and os.path.exists(b) else ""
+    marker = "/* ---------------------------------------------------------------------------\n   state"
+    if not html or "function h2r(" not in html or marker not in html:
+        report("FAIL", "the deriver can be located in the generated builder")
+    elif not NODE:
+        skip("the derived palette meets its contrast targets",
+             "node is not on PATH, so the JS deriver could not be executed here")
+    else:
+        js = html[html.index("function h2r("):html.index(marker)]
+        with open(os.path.join(tmp, "d.mjs"), "w", encoding="utf-8") as f:
+            f.write(js + "\nexport { derive, contrast };\n")
+        # Grounds and accents chosen to break it: a mid-tone ground where neither white nor
+        # black is far away, a dark ground with a light accent, and a fully saturated accent.
+        cases = [
+            ["quarry", "#f7f6f3", "#2f6f4f"], ["ledger", "#f4f5f7", "#2c5d8f"],
+            ["signal", "#fafafa", "#5b3df5"], ["seed", "#eef1f4", "#0f766e"],
+            ["mid-tone", "#c9c4b8", "#8a1c3d"], ["dark-ground", "#1a1d22", "#e2643c"],
+            ["saturated", "#fff8e7", "#ff2d55"], ["near-white", "#ffffff", "#767676"],
+        ]
+        runner = """
+import { derive, contrast } from "./d.mjs";
+const cases = %s;
+const REQ = [
+  ["ink on bg", (c) => contrast(c.ink, c.bg), 7.0],
+  ["muted on bg", (c) => contrast(c.muted, c.bg), 4.5],
+  ["accent on bg", (c) => contrast(c.accent, c.bg), 4.5],
+  ["accent-ink on accent", (c) => contrast(c["accent-ink"], c.accent), 4.5],
+  ["ink on card", (c) => contrast(c.ink, c.card), 7.0],
+  ["warn-ink on warn-bg", (c) => contrast(c["warn-ink"], c["warn-bg"]), 4.5],
+];
+const bad = [];
+for (const [name, g, a] of cases) {
+  const d = derive(g, a);
+  for (const s of ["light", "dark"]) {
+    for (const [label, fn, min] of REQ) {
+      const r = fn(d[s]);
+      if (r < min) bad.push(`${name}/${s}: ${label} ${r.toFixed(2)} < ${min}`);
+    }
+  }
+}
+console.log(JSON.stringify({ bad, n: cases.length * 2 * REQ.length,
+  quarryAccent: derive("#f7f6f3", "#2f6f4f").light.accent }));
+""" % json.dumps(cases)
+        with open(os.path.join(tmp, "run.mjs"), "w", encoding="utf-8") as f:
+            f.write(runner)
+        proc = subprocess.run([NODE, os.path.join(tmp, "run.mjs")], cwd=tmp,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if proc.returncode != 0:
+            report("FAIL", "the deriver runs without error")
+            print(f"          {proc.stderr.decode('utf-8', 'replace').strip()[:300]}")
+        else:
+            res = json.loads(proc.stdout.decode("utf-8", "replace"))
+            report("PASS" if not res["bad"] else "FAIL",
+                   f"every derived palette meets its contrast targets "
+                   f"({res['n']} assertions over {len(cases)} colour pairs, both schemes)")
+            for line in res["bad"]:
+                print(f"          {line}")
+            # An accent that already reads on the ground must survive derivation untouched -
+            # otherwise "pick an accent" quietly means "suggest an accent".
+            report("PASS" if res["quarryAccent"].lower() == "#2f6f4f" else "FAIL",
+                   "an accent that already passes is preserved, not adjusted")
+            print(f"          quarry ground+accent derives accent {res['quarryAccent']}")
+finally:
+    shutil.rmtree(tmp, ignore_errors=True)
+
 # --- marketplace ----------------------------------------------------------------------
 mk = json.loads(read(MARKETPLACE))
 names = [p["name"] for p in mk["plugins"]]
@@ -573,9 +795,10 @@ report("PASS" if "Currently one plugin" not in json.dumps(mk) else "FAIL",
        "the marketplace description no longer claims there is only one plugin")
 
 print()
+tail = f" ({SKIPPED} skipped)" if SKIPPED else ""
 if FAILURES:
-    print(f"RESULT: FAIL - {FAILURES} of {STEP} checks failed")
+    print(f"RESULT: FAIL - {FAILURES} of {STEP} checks failed{tail}")
 else:
-    print(f"RESULT: PASS - all {STEP} checks passed")
+    print(f"RESULT: PASS - all {STEP - SKIPPED} checks passed{tail}")
 print()
 sys.exit(0 if FAILURES == 0 else 1)

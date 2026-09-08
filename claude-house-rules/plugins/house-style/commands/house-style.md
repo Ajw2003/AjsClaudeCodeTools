@@ -47,6 +47,12 @@ was built on a house theme, and stays silent when it finds a known one. A page w
 permission prompt in front of the user - so stripping the marker does not make a page cleaner,
 it makes publishing it noisier.
 
+**"new theme", "make a theme", "builder", "I want a different look":** the visual builder.
+See below.
+
+**"install it", "install the X theme", "save that theme":** the other half of the builder. See
+below.
+
 **"refresh", "update the catalogue":** run `refresh`. It reports each source as network, cache or
 unavailable and always exits 0; unavailable is a normal offline state, not a failure.
 
@@ -64,10 +70,43 @@ unavailable and always exits 0; unavailable is a normal offline state, not a fai
    `use <name>` to write the real pin. **The db row is not the pin.** It is what the page could
    reach; the pin is a file on disk, and only `use` writes it.
 
+## The builder
+
+Creating a theme by hand means 22 hex values, three font objects and a voice block. The builder
+is the tool that makes that a few minutes of picking rather than an afternoon of typing.
+
+1. Run `python "${CLAUDE_PLUGIN_ROOT}/scripts/style.py" builder <path>`, writing to the
+   scratchpad. It fetches the font catalogue and inlines it; when the catalogue is unreachable
+   it falls back to a curated list, so the picker is never empty.
+2. Publish that file with the Artifact tool, `capabilities: {"db": {}}`, and a favicon on first
+   publish. Strip the `<!doctype>`/`<html>`/`<head>`/`<body>` wrappers; keep the `<title>`,
+   `<style>`, markup and script.
+3. Give the user the link. Say they can pick two colours and three faces and watch the specimen,
+   and that nothing is saved until they press Save.
+4. When they say it is saved, read `drafts/<name>` back with `read_db` on the builder's URL.
+
+## Installing a theme
+
+Never write `themes/<name>.json` by hand. Pipe the JSON to the installer:
+
+```sh
+python "${CLAUDE_PLUGIN_ROOT}/scripts/style.py" install -
+```
+
+It validates with the real validator, refuses to overwrite an existing theme, and refuses one
+that is not distinct from what already ships - naming the axis it collided on. Then run
+`verify_style.py`, and tell the user the result and how to try it.
+
+If it refuses on the variety rule, do not reach for `--force`. Say which axis collided and offer
+to change it; `--force` is for a collision the user has decided is deliberate, and that is their
+call to make, not yours.
+
 ## Rules for this command
 
 - Never invent a theme, a font, or a hex value. If the user wants a look none of the themes
-  cover, say so and offer to author a new theme file rather than one-off styling a page.
+  cover, open the builder rather than one-off styling a page.
+- Never hand-write a theme file. `install` is the only verb that creates one, because it is the
+  only path that validates before it writes.
 - `use` writes a file. Say which one, and never write the global pin when the user asked about
   this project.
 - The prose voice is part of the theme, not decoration. After a switch, write in the new theme's

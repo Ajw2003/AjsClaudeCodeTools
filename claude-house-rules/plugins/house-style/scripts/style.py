@@ -193,6 +193,80 @@ def validate(theme, name_hint=None):
     return p
 
 
+
+# ---------------------------------------------------------------------------------------
+# constraints — the schema as data, for the builder page to check against
+#
+# The builder necessarily re-checks in JS what validate() checks here. The mitigation is that
+# it does not re-STATE it: this returns the rules as data, cmd_builder inlines the JSON, and
+# verify_style.py asserts the export still equals the module constants. A token added to
+# COLOUR_TOKENS therefore reaches the builder, or the suite fails.
+#
+# The page's checking is a convenience. validate() stays the authority and runs again at
+# install, so the worst case is a theme that looks fine in the page and is refused at install
+# with a real message - never a bad theme on disk.
+# ---------------------------------------------------------------------------------------
+
+# The one axis pair the variety rule compares. Named once, used by install and the suite.
+VARIETY_AXES = (
+    ("accent", lambda t: t["colour"][t["defaultScheme"]]["accent"]),
+    ("body font", lambda t: t["fonts"]["body"]["family"]),
+    ("display font", lambda t: t["fonts"]["display"]["family"]),
+    ("radius", lambda t: t["shape"]["radius"]),
+    ("scale ratio", lambda t: t["scale"]["ratio"]),
+    ("measure", lambda t: t["shape"]["measure"]),
+    ("prose tone", lambda t: t["voice"]["proseTone"]),
+)
+
+
+def constraints():
+    return {
+        "colourTokens": list(COLOUR_TOKENS),
+        "fontRoles": list(FONT_ROLES),
+        "fontKeys": list(FONT_KEYS),
+        "scaleKeys": list(SCALE_KEYS),
+        "shapeKeys": list(SHAPE_KEYS),
+        "voiceKeys": list(VOICE_KEYS),
+        "identityKeys": list(IDENTITY_KEYS),
+        "namePattern": _NAME_RE.pattern,
+        "hexPattern": "^#[0-9a-fA-F]{6}$",
+        "fontUrlPrefix": "https://fonts.googleapis.com/",
+        "enums": {
+            "defaultScheme": ["light", "dark"],
+            "density": ["generous", "balanced", "tight"],
+            "headingStyle": ["sentence", "title"],
+            "prefer": ["prose", "table", "card"],
+        },
+        "ratioRange": [1, 2],
+        "systemStacks": dict(SYSTEM_STACKS),
+        "varietyAxes": [name for name, _ in VARIETY_AXES],
+        "marker": MARKER_PREFIX,
+    }
+
+
+def variety_collisions(theme, others):
+    """Which axes this theme shares with an already-shipped one.
+
+    The rule guards a slow failure that looks reasonable at every step: themes get edited one
+    at a time, each change defensible alone, and three distinct looks converge into three tints
+    of whichever was touched last. It cannot prove taste; it proves nobody made the choice
+    meaningless.
+    """
+    out = []
+    for axis, get in VARIETY_AXES:
+        try:
+            mine = str(get(theme))
+        except Exception:
+            continue
+        for other in others:
+            try:
+                theirs = str(get(other))
+            except Exception:
+                continue
+            if mine.strip().lower() == theirs.strip().lower():
+                out.append((axis, other["name"], mine))
+    return out
+
 # ---------------------------------------------------------------------------------------
 # active-theme resolution — stateless, checked fresh on every call
 # ---------------------------------------------------------------------------------------
@@ -657,6 +731,99 @@ def catalogue(timeout=10):
     }
 
 
+
+# ---------------------------------------------------------------------------------------
+# the font floor
+#
+# The catalogue is fetched, but a builder whose font picker is empty is not a builder, and
+# api.fontsource.org is unreachable from some environments (an egress proxy returning 403 is
+# enough). This is the floor under it: family names and categories only - no metrics, no
+# binaries, nothing that could go stale in a way that matters. Every one is on Google Fonts
+# under OFL or Apache, which is the only place an artifact can load a face from.
+#
+# Same shipped-floor / fetched-ceiling shape as the three themes: committed enough to work
+# with the cable out, and replaced by the live catalogue whenever it is reachable.
+# ---------------------------------------------------------------------------------------
+
+def _fam(name, category, variable=False):
+    return {"family": name, "category": category, "variable": variable}
+
+
+FALLBACK_FAMILIES = [
+    # serif - display and body both live here; a serif theme falls back to a serif
+    _fam("Fraunces", "serif", True), _fam("Source Serif 4", "serif", True),
+    _fam("Playfair Display", "serif", True), _fam("Lora", "serif", True),
+    _fam("Merriweather", "serif"), _fam("EB Garamond", "serif", True),
+    _fam("Libre Baskerville", "serif"), _fam("Crimson Pro", "serif", True),
+    _fam("Bitter", "serif", True), _fam("Cormorant Garamond", "serif"),
+    _fam("Spectral", "serif"), _fam("Newsreader", "serif", True),
+    _fam("Literata", "serif", True), _fam("Petrona", "serif", True),
+    _fam("Zilla Slab", "serif"), _fam("Roboto Slab", "serif", True),
+    _fam("Instrument Serif", "serif"), _fam("DM Serif Display", "serif"),
+    # sans-serif
+    _fam("Inter", "sans-serif", True), _fam("Inter Tight", "sans-serif", True),
+    _fam("IBM Plex Sans", "sans-serif"), _fam("Space Grotesk", "sans-serif", True),
+    _fam("Work Sans", "sans-serif", True), _fam("DM Sans", "sans-serif", True),
+    _fam("Manrope", "sans-serif", True), _fam("Outfit", "sans-serif", True),
+    _fam("Plus Jakarta Sans", "sans-serif", True), _fam("Figtree", "sans-serif", True),
+    _fam("Sora", "sans-serif", True), _fam("Public Sans", "sans-serif", True),
+    _fam("Source Sans 3", "sans-serif", True), _fam("Nunito Sans", "sans-serif", True),
+    _fam("Karla", "sans-serif", True), _fam("Rubik", "sans-serif", True),
+    _fam("Barlow", "sans-serif"), _fam("Archivo", "sans-serif", True),
+    _fam("Chivo", "sans-serif", True), _fam("Epilogue", "sans-serif", True),
+    _fam("Schibsted Grotesk", "sans-serif", True), _fam("Instrument Sans", "sans-serif", True),
+    _fam("Bricolage Grotesque", "sans-serif", True), _fam("Geist", "sans-serif", True),
+    _fam("Lexend", "sans-serif", True), _fam("Urbanist", "sans-serif", True),
+    # monospace
+    _fam("JetBrains Mono", "monospace", True), _fam("IBM Plex Mono", "monospace"),
+    _fam("Space Mono", "monospace"), _fam("Fira Code", "monospace", True),
+    _fam("Source Code Pro", "monospace", True), _fam("Roboto Mono", "monospace", True),
+    _fam("DM Mono", "monospace"), _fam("Geist Mono", "monospace", True),
+    _fam("Martian Mono", "monospace", True), _fam("Azeret Mono", "monospace", True),
+    _fam("Red Hat Mono", "monospace", True), _fam("Spline Sans Mono", "monospace", True),
+    _fam("Courier Prime", "monospace"), _fam("Inconsolata", "monospace", True),
+    # display - deliberately few. A display face is a strong decision and a long list of them
+    # invites picking one for novelty rather than fit.
+    _fam("Bodoni Moda", "serif", True), _fam("Syne", "sans-serif", True),
+    _fam("Unbounded", "sans-serif", True), _fam("Familjen Grotesk", "sans-serif", True),
+]
+
+# Every family above must exist ON GOOGLE FONTS, not merely exist. A face that is only on
+# Fontshare or a foundry's own site is blocked by the artifact CSP and fails silently - the
+# page renders in a fallback and nothing says why. Check a new entry at
+# fonts.google.com/specimen/<Name> before adding it; the suite runs offline and cannot.
+
+# What a system stack should be when a family of each category is chosen. These are proposals
+# the builder pre-fills and the author can edit - the schema's whole point is that this is a
+# decision, so the tool suggests rather than decides.
+SYSTEM_STACKS = {
+    "serif": 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+    "sans-serif": 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+    "monospace": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    "display": '"Avenir Next", "Trebuchet MS", system-ui, sans-serif',
+    "handwriting": '"Segoe Script", cursive',
+}
+
+
+def families(timeout=10):
+    """The font list the builder picks from: live catalogue if reachable, floor if not."""
+    data, origin = fetch("fonts", timeout) if timeout else (None, "skipped")
+    out = []
+    if isinstance(data, list):
+        for f in data:
+            try:
+                if "latin" in (f.get("subsets") or []) and f.get("category"):
+                    out.append({
+                        "family": f["family"],
+                        "category": f["category"],
+                        "variable": bool(f.get("variable")),
+                    })
+            except Exception:
+                continue
+    if not out:
+        return list(FALLBACK_FAMILIES), ("floor" if origin != "skipped" else "floor")
+    return out, origin
+
 # ---------------------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------------------
@@ -971,6 +1138,157 @@ def cmd_gallery(argv):
     print("  <!doctype>/<html>/<head>/<body> wrappers. Then read choice/active for the pick.")
     return 0
 
+
+
+# The builder opens in a working state, not an empty form: a page that shows nothing until you
+# fill it in shows nothing about what it does. The seed is deliberately unlike all three
+# shipped themes on every variety axis, so it is a starting point rather than a near-clone you
+# then have to argue the installer out of.
+BUILDER_SEED = {
+    "name": "",
+    "label": "",
+    "summary": "",
+    "for": "",
+    "defaultScheme": "light",
+    "_ground": "#eef1f4",
+    "_accent": "#0f766e",
+    "fonts": {
+        "display": {"family": "Bricolage Grotesque", "systemStack": SYSTEM_STACKS["sans-serif"]},
+        "body": {"family": "Public Sans", "systemStack": SYSTEM_STACKS["sans-serif"]},
+        "mono": {"family": "Spline Sans Mono", "systemStack": SYSTEM_STACKS["monospace"]},
+    },
+    "scale": {"base": "16px", "ratio": 1.25, "lineHeight": 1.55},
+    "shape": {"radius": "8px", "border": "1px", "shadow": "none",
+              "space": "1.25rem", "measure": "54rem"},
+    "voice": {"density": "balanced", "headingStyle": "sentence",
+              "useEyebrow": True, "useLede": True, "prefer": "prose", "proseTone": ""},
+}
+
+
+def render_builder(fams, origin):
+    """Fill templates/builder.html. Pure string work - no network."""
+    shell = _read_text(os.path.join(TEMPLATES_DIR, "builder.html"))
+
+    # The chrome is Ledger, so the page needs Ledger's three faces plus every family the seed
+    # names. Everything else is loaded on demand when it is picked.
+    chrome = ["Inter+Tight:wght@500;700", "IBM+Plex+Sans:wght@400;600",
+              "IBM+Plex+Mono:wght@400;600"]
+    fonts_url = ("https://fonts.googleapis.com/css2?"
+                 + "&".join("family=" + f for f in chrome) + "&display=swap")
+
+    existing = []
+    for n in all_theme_names():
+        try:
+            t = load_theme(n)
+            existing.append({"name": t["name"], "label": t["label"],
+                             "proseTone": t["voice"]["proseTone"]})
+        except Exception:
+            continue
+
+    meta = f"{len(fams)} families ({origin}) · {len(existing)} themes installed"
+
+    out = shell
+    out = out.replace("__TITLE__", "House Style Builder")
+    out = out.replace("__FONTS__", fonts_url)
+    out = out.replace("__META__", _esc(meta))
+    out = out.replace("__CONSTRAINTS__", json.dumps(constraints(), separators=(",", ":")))
+    out = out.replace("__FAMILIES__", json.dumps(fams, separators=(",", ":")))
+    out = out.replace("__THEMES__", json.dumps(existing, separators=(",", ":")))
+    out = out.replace("__SEED__", json.dumps(BUILDER_SEED, separators=(",", ":")))
+    return out
+
+
+def cmd_builder(argv):
+    positional = [a for a in argv if not a.startswith("-")]
+    out = positional[0] if positional else "house-style-builder.html"
+    timeout = 0 if "--offline" in argv else 10
+    fams, origin = families(timeout)
+    html = render_builder(fams, origin)
+    try:
+        with open(out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(html)
+    except Exception as e:
+        print(f"Could not write {out}: {e}", file=sys.stderr)
+        return 1
+    print(f"Builder written to {out}  ({len(html)} bytes)")
+    print(f"  Font list: {len(fams)} families ({origin})")
+    print("  Publish it with the Artifact tool, capabilities {\"db\":{}}, dropping the")
+    print("  <!doctype>/<html>/<head>/<body> wrappers. Saving writes drafts/<name>;")
+    print("  install it with:  style.py install <(read_db that draft)")
+    return 0
+
+def cmd_install(argv):
+    """Write a theme into themes/ after validating it. The one verb that creates a theme.
+
+    This exists rather than having the caller write the file because it is where the gate
+    belongs: validate, refuse to clobber, check the variety rule, and only then write. A
+    rejected theme produces a message naming what is wrong, instead of a file that fails the
+    suite ten minutes later.
+    """
+    force = "--force" in argv
+    positional = [a for a in argv if not a.startswith("-")]
+    src = positional[0] if positional else "-"
+
+    try:
+        raw = sys.stdin.read() if src == "-" else _read_text(src)
+    except Exception as e:
+        print(f"Could not read {src}: {e}", file=sys.stderr)
+        return 1
+    try:
+        theme = json.loads(raw)
+    except Exception as e:
+        print(f"Not valid JSON: {e}", file=sys.stderr)
+        return 1
+    if not isinstance(theme, dict):
+        print("A theme must be a JSON object.", file=sys.stderr)
+        return 1
+
+    name = theme.get("name")
+    problems = validate(theme, name if isinstance(name, str) else None)
+    if problems:
+        print(f"Refusing to install: {len(problems)} problem(s).", file=sys.stderr)
+        for p in problems:
+            print(f"  {p}", file=sys.stderr)
+        return 1
+
+    dest = theme_path(name)
+    existing = [n for n in all_theme_names() if n != name]
+    if os.path.exists(dest) and not force:
+        print(f"{name} already exists at {dest}. Pass --force to replace it.", file=sys.stderr)
+        return 1
+
+    others = []
+    for n in existing:
+        try:
+            others.append(load_theme(n))
+        except Exception:
+            continue
+    collisions = variety_collisions(theme, others)
+    if collisions and not force:
+        print(f"Refusing to install: {name} is not distinct enough from what ships.",
+              file=sys.stderr)
+        for axis, other, val in collisions:
+            print(f"  same {axis} as {other}: {val}", file=sys.stderr)
+        print("  Change those, or pass --force if the collision is deliberate.",
+              file=sys.stderr)
+        return 1
+
+    try:
+        with open(dest, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(theme, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+    except Exception as e:
+        print(f"Could not write {dest}: {e}", file=sys.stderr)
+        return 1
+
+    print(f"Installed {name} -> {dest}")
+    if collisions:
+        print("  Installed with --force despite these collisions:")
+        for axis, other, val in collisions:
+            print(f"    same {axis} as {other}: {val}")
+    print(f"  Try it with:  style.py use {name}")
+    return 0
+
 COMMANDS = {
     "list": cmd_list,
     "show": cmd_show,
@@ -980,6 +1298,8 @@ COMMANDS = {
     "refresh": cmd_refresh,
     "catalogue": cmd_catalogue,
     "gallery": cmd_gallery,
+    "install": cmd_install,
+    "builder": cmd_builder,
 }
 
 EVENTS = {
