@@ -31,6 +31,7 @@ HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
 AGENT = os.path.join(HERE, "..", "agents", "executor.md")
 STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
 TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
+DOCSKILL = os.path.join(HERE, "..", "skills", "project-docs", "SKILL.md")
 CHATDOC = os.path.join(ROOT, "docs", "claude-ai-instructions.md")
 VERIFYDOC = os.path.join(ROOT, "docs", "desktop-verification.md")
 
@@ -241,6 +242,7 @@ for h in [
     "Match response depth to the task",
     "Build only what was asked",
     "Read the docs first, then check them against the code",
+    "Documentation goes in tiers",
     "Build for a human working alone",
     "hands are for decisions, not labour",
     "Deliver a whole workflow, not a starting point",
@@ -1314,6 +1316,28 @@ if not std_drift:
 else:
     report("FAIL", "the standards rule heading and its SCOPE_REMINDER phrasing have not drifted")
     print(f"          {'; '.join(std_drift)}")
+
+# Drift: the tiered-docs rule names a skill by id, so that skill has to exist. A rule that
+# points at a skill nobody shipped is worse than no rule - it reads as though the detail is
+# somewhere findable. Same class of check as the standards one above.
+docs_drift = []
+if "## Documentation goes in tiers" not in rules_text:
+    docs_drift.append("house-rules.md is missing the tiered-docs rule heading")
+if "house-rules:project-docs" not in rules_text:
+    docs_drift.append("the tiered-docs rule no longer names the project-docs skill")
+if not os.path.isfile(DOCSKILL):
+    docs_drift.append("skills/project-docs/SKILL.md does not exist")
+else:
+    skill_text = read(DOCSKILL)
+    for phrase in ["docs/Roadmap.md", "docs/ProjectState.md", "docs/Today.md", "docs/systems"]:
+        if phrase not in skill_text:
+            docs_drift.append(f"the skill no longer specifies {phrase}")
+if not docs_drift:
+    report("PASS", "the tiered-docs rule and the project-docs skill it names have not drifted")
+    print("          the rule names the skill, the skill exists, and it still specifies all five tiers")
+else:
+    report("FAIL", "the tiered-docs rule and the project-docs skill it names have not drifted")
+    print(f"          {'; '.join(docs_drift)}")
 
 print()
 print("-" * 32)

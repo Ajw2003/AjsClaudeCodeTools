@@ -83,6 +83,15 @@ the `sh`/`bash`-not-on-PATH trap discovered on this machine, is preserved at
   the phone. Committed so it can be diffed against the rules rather than silently drifting.
 - **`docs/plans/`** holds implementation plans as real, committed files — per the rules
   themselves, artifacts never live only in a chat transcript or a temp directory.
+- **`claude-house-rules/plugins/house-rules/skills/`** holds skills carrying the detail behind a
+  rule too large to inject every session. Currently one: **`project-docs/`**, the five-tier
+  documentation structure. The split is deliberate and is the pattern to copy — the rule
+  *Documentation goes in tiers* stays short enough to live in `rules/house-rules.md` and fire
+  unprompted in every session, while the tier spec, the per-tier contents and the scaffolding
+  steps sit in the skill and load only when a repo's docs are actually being built or
+  restructured. `verify.py` checks that the rule still names the skill and the skill still
+  specifies all five tiers, because a rule pointing at a skill nobody shipped reads as though the
+  detail is somewhere findable.
 - **`tools/`** holds device-setup and release-verification scripts, not plugin code — nothing here
   ships to an installed copy of the plugin. `clean_install_test.py` now byte-compares the installed
   copy against the repo, and `--skip-strip` is the mode that catches a stale install, because a
