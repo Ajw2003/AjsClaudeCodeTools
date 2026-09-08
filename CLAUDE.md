@@ -4,10 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A personal Claude Code plugin repo. It ships one plugin, `house-rules`, which turns aj's global
-CLAUDE.md-style rules into a Claude Code plugin so they follow every device and project via hooks
-instead of a file that has to be copied around. The plugin is published as a GitHub marketplace
-(`.claude-plugin/marketplace.json` at the repo root) and installed with `claude plugin install`.
+A personal Claude Code plugin repo. It ships two plugins from one marketplace
+(`.claude-plugin/marketplace.json` at the repo root), both installed with `claude plugin install`:
+
+- **`house-rules`** turns aj's global CLAUDE.md-style rules into a Claude Code plugin so they
+  follow every device and project via hooks instead of a file that has to be copied around.
+- **`house-style`** does the same for the *look*: one pinned theme - fonts, colour, shape and
+  prose voice - injected into every session, so visual work is built on a look that was chosen
+  rather than one the model invented that turn.
 
 **This root `CLAUDE.md` is a pointer, not a copy.** The actual rules text lives at
 [claude-house-rules/plugins/house-rules/rules/house-rules.md](claude-house-rules/plugins/house-rules/rules/house-rules.md)
@@ -61,6 +65,22 @@ Pass `--force` to skip the `STRIP` confirmation prompt, or `--skip-strip` to onl
 currently installed. There is no build step and no linter — this repo is Python scripts, one
 POSIX-sh shim (`run.sh`), and JSON.
 
+Run the house-style suite (proves the themes are valid and varied, and the hooks decide
+correctly). It needs no network - a suite that did would fail on exactly the machines the
+offline fallback exists for:
+
+```bash
+python claude-house-rules/plugins/house-style/scripts/verify_style.py
+```
+
+Show, choose or pin the theme. `list` is the terminal picker, `gallery` writes the visual one:
+
+```bash
+python claude-house-rules/plugins/house-style/scripts/style.py list
+python claude-house-rules/plugins/house-style/scripts/style.py use ledger
+python claude-house-rules/plugins/house-style/scripts/style.py css signal
+```
+
 Measure what the *installed* plugin costs in tokens — the per-prompt `scope` split replayed
 against your real transcripts, the per-session injection, and the failure paths that must never
 exit non-zero:
@@ -99,6 +119,40 @@ The table above is checked against `hooks.json` by `verify.py`: an event registe
 missing from this table, or listed here but not registered, fails the suite. Why one subagent is
 the primary mechanism for the model split (and why `opusplan` alone is not enough): see
 docs/architecture.md.
+
+### The second plugin: `house-style`
+
+`claude-house-rules/plugins/house-style/` is built to the same shape - one `run.sh` shim, one
+stdlib-only Python file (`scripts/style.py`), dispatched by event - and has its own suite,
+`scripts/verify_style.py`. A theme is a JSON file in `themes/`; `themes/schema.md` is the
+contract. Three ship: **Quarry** (warm editorial serif, and the fallback, because it is the
+palette `step-card.html` already uses), **Ledger** (dense cool technical), **Signal**
+(dark-first display).
+
+| Hook event | `run.sh` arg | Fires on | Effect |
+|---|---|---|---|
+| `SessionStart` | `style` | every session | Resolves the active theme (`./.claude/style.json` → `~/.claude/house-style/active.json` → the fallback, checked fresh each call, nothing stored) and injects its tokens, its alternates, and its **prose voice** - the half that is not CSS, and the reason switching theme changes what gets written and not only how it looks. Fails loud, not closed. |
+| `PreToolUse` | `styleguard` | `Artifact` calls | Reads the page about to be published. Carries a known `/* house-style: <name> */` marker → **silent**. No marker, or an unknown one → `permissionDecision: "ask"` naming the active theme and its alternates. Fails **closed** (exit 2) on a payload it cannot read at all, on the same three-tier ladder `guard` uses: parses and names a file → judge it; does not parse but a `file_path` is extractable → judge that; neither → block. |
+| `PostToolUse` | `styled` | `Write` calls | An unthemed `.html`/`.svg`/`.css` written *inside* the project reminds Claude to render the tokens in and stamp the marker. Scratch paths are skipped - `house-rules`' `artifact` hook already owns the question of whether those belong in the project at all. Never obstructs. |
+
+`verify_style.py` checks this table against `house-style/hooks.json` in both directions, exactly
+as `verify.py` does for the table above. The two tables are independent; do not merge them.
+
+Two constraints are worth knowing before touching it:
+
+- **Google Fonts is the only webfont source that works.** Artifacts run under a CSP allowing
+  stylesheets only from `fonts.googleapis.com` and font files only from `fonts.gstatic.com`,
+  with no visible error on a blocked load. Fontsource is used as the keyless *metadata*
+  catalogue; delivery is always Google. `validate()` enforces it, so a theme cannot regress here.
+- **Every theme carries two font stacks.** `stack` for pages that can load a webfont,
+  `systemStack` for those that cannot - `step-card.html` above is required to be self-contained
+  and offline, and `verify.py` fails if an external reference appears in it. `style.py css
+  <name> --system` emits the second form.
+
+The catalogue is fetched **in Python at command time and inlined into the generated page**,
+never by the page: the same CSP blocks `fetch` to every host without exception, so a gallery
+that called the APIs itself would silently show nothing. Fetches fall through cache to the three
+shipped themes and never raise - offline is a normal state, not a failure.
 
 ### Design constraints that shape `hook.py` and `run.sh`
 

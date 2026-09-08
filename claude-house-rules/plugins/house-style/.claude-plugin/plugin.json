@@ -1,0 +1,9 @@
+{
+  "name": "house-style",
+  "description": "aj's house look, applied. Injects the active theme's fonts, colour, shape and prose voice into every session, reminds Claude to build visual work on it, and asks before an unthemed page is published.",
+  "version": "0.1.0",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  }
+}

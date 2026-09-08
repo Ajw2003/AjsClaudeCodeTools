@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""install.py — installs the house-rules plugin on this device and applies the settings it
+"""install.py — installs both plugins on this device and applies the settings they
 expects.
 
 The two `claude plugin` commands in the README install the plugin, but a plugin can only ship
@@ -40,7 +40,12 @@ import sys
 # with a .git URL is a mismatch, and the CLI refuses the add rather than reconciling them.
 REPO = "https://github.com/Ajw2003/AjsClaudeCodeTools.git"
 MARKETPLACE = "aj-house-rules"
-PLUGIN_ID = f"house-rules@{MARKETPLACE}"
+# Both plugins come from the one marketplace. The marketplace is added once; each plugin
+# is installed, updated and version-checked in turn, so a failure on one is reported as a
+# failure on that one rather than taking the other down with it.
+PLUGIN_NAMES = ("house-rules", "house-style")
+PLUGIN_IDS = tuple(f"{n}@{MARKETPLACE}" for n in PLUGIN_NAMES)
+PLUGIN_ID = PLUGIN_IDS[0]  # kept for the messages that name the rules plugin specifically
 
 
 # The claude CLI writes UTF-8 including check marks. When this script's stdout is a pipe or a
@@ -51,11 +56,11 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
-def repo_plugin_version():
-    """The version this repo ships, read from the plugin manifest next to this script."""
+def repo_plugin_version(name="house-rules"):
+    """The version this repo ships for one plugin, read from its manifest next to this script."""
     here = os.path.dirname(os.path.abspath(__file__))
     manifest = os.path.join(
-        here, "..", "claude-house-rules", "plugins", "house-rules",
+        here, "..", "claude-house-rules", "plugins", name,
         ".claude-plugin", "plugin.json",
     )
     with open(manifest, "r", encoding="utf-8") as f:
@@ -105,8 +110,8 @@ def main():
         print(f"        {msg}")
 
     print()
-    print("house-rules - install")
-    print("=====================")
+    print("house-rules + house-style - install")
+    print("===================================")
 
     print()
     print("1. Preflight")
@@ -119,43 +124,47 @@ def main():
         sys.exit(1)
 
     print()
-    print("2. Install the plugin")
+    print("2. Install the plugins")
     # Both return codes are checked. They used to be discarded, so a marketplace add that
     # failed outright still reported PASS as long as a PREVIOUS install had left the plugin
     # registered - a failure reported as a pass, which is the one thing this repo does not do.
     info(f"claude plugin marketplace add {REPO}")
     if run_claude(["plugin", "marketplace", "add", REPO]) != 0:
         bad("marketplace add failed - the lines above say why")
-    info(f"claude plugin install {PLUGIN_ID} -y")
-    if run_claude(["plugin", "install", PLUGIN_ID, "-y"]) != 0:
-        bad("plugin install failed - the lines above say why")
 
-    # install is a no-op when the plugin is already registered - it fetches the new version
-    # into the cache and then leaves the registration pointing at the OLD one. That is a
-    # silent downgrade: the bumped version sits on disk unused while the stale copy keeps
-    # running. update is the verb that re-points the registration, so it always runs.
-    info(f"claude plugin update {PLUGIN_ID}")
-    if run_claude(["plugin", "update", PLUGIN_ID]) != 0:
-        bad("plugin update failed - the lines above say why")
+    for name, plugin_id in zip(PLUGIN_NAMES, PLUGIN_IDS):
+        info(f"claude plugin install {plugin_id} -y")
+        if run_claude(["plugin", "install", plugin_id, "-y"]) != 0:
+            bad(f"{name} install failed - the lines above say why")
+
+        # install is a no-op when the plugin is already registered - it fetches the new version
+        # into the cache and then leaves the registration pointing at the OLD one. That is a
+        # silent downgrade: the bumped version sits on disk unused while the stale copy keeps
+        # running. update is the verb that re-points the registration, so it always runs.
+        info(f"claude plugin update {plugin_id}")
+        if run_claude(["plugin", "update", plugin_id]) != 0:
+            bad(f"{name} update failed - the lines above say why")
 
     claude_dir = home_claude_dir()
     installed_path = os.path.join(claude_dir, "plugins", "installed_plugins.json")
     if os.path.isfile(installed_path):
         with open(installed_path, "r", encoding="utf-8") as f:
             inst = json.load(f)
-        entries = inst.get("plugins", {}).get(PLUGIN_ID)
-        if not entries:
-            bad(f"{PLUGIN_ID} did not register - read the lines above")
-        else:
+        for name, plugin_id in zip(PLUGIN_NAMES, PLUGIN_IDS):
+            entries = inst.get("plugins", {}).get(plugin_id)
+            if not entries:
+                bad(f"{plugin_id} did not register - read the lines above")
+                continue
             # Registered is not the same as current. Asserting the registered version equals
             # the version this repo ships is what catches a bump that silently did not take.
             registered = entries[0].get("version")
-            if registered == repo_plugin_version():
-                ok(f"{PLUGIN_ID} is registered at {registered}, matching this repo")
+            shipped = repo_plugin_version(name)
+            if registered == shipped:
+                ok(f"{plugin_id} is registered at {registered}, matching this repo")
             else:
                 bad(
-                    f"{PLUGIN_ID} is registered at {registered} but this repo ships "
-                    f"{repo_plugin_version()} - the update did not take"
+                    f"{plugin_id} is registered at {registered} but this repo ships "
+                    f"{shipped} - the update did not take"
                 )
     else:
         bad("no installed_plugins.json after install")
@@ -221,7 +230,7 @@ def main():
     print()
     print("---------------------")
     if failures == 0:
-        print("RESULT: PASS - plugin installed and settings applied.")
+        print("RESULT: PASS - plugins installed and settings applied.")
     else:
         print(f"RESULT: FAIL - {failures} check(s) failed.")
     print()

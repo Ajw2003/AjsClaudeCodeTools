@@ -1,0 +1,80 @@
+{
+  "name": "quarry",
+  "label": "Quarry",
+  "summary": "Warm paper and an editorial serif, set narrow for reading at length.",
+  "for": "Prose, handovers, plans and reports someone actually sits down and reads.",
+  "defaultScheme": "light",
+  "sources": [
+    { "what": "Fraunces", "url": "https://fonts.google.com/specimen/Fraunces", "licence": "OFL-1.1" },
+    { "what": "Source Serif 4", "url": "https://fonts.google.com/specimen/Source+Serif+4", "licence": "OFL-1.1" },
+    { "what": "JetBrains Mono", "url": "https://fonts.google.com/specimen/JetBrains+Mono", "licence": "OFL-1.1" },
+    { "what": "Palette, scale, shape and voice", "url": "templates/step-card.html", "licence": "in-repo" }
+  ],
+  "fonts": {
+    "display": {
+      "family": "Fraunces",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+      "stack": "\"Fraunces\", Georgia, \"Iowan Old Style\", \"Times New Roman\", serif",
+      "systemStack": "Georgia, \"Iowan Old Style\", \"Times New Roman\", serif",
+      "weights": [500, 700]
+    },
+    "body": {
+      "family": "Source Serif 4",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap",
+      "stack": "\"Source Serif 4\", Georgia, \"Iowan Old Style\", \"Times New Roman\", serif",
+      "systemStack": "Georgia, \"Iowan Old Style\", \"Times New Roman\", serif",
+      "weights": [400, 600]
+    },
+    "mono": {
+      "family": "JetBrains Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap",
+      "stack": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      "systemStack": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      "weights": [400, 600]
+    }
+  },
+  "colour": {
+    "light": {
+      "bg": "#f7f6f3",
+      "card": "#ffffff",
+      "ink": "#1d1c1a",
+      "muted": "#6b6862",
+      "line": "#e0ddd6",
+      "accent": "#2f6f4f",
+      "accent-ink": "#ffffff",
+      "code-bg": "#f2f0ec",
+      "warn-bg": "#fdf3e0",
+      "warn-ink": "#7a4a06",
+      "warn-line": "#e9c98a"
+    },
+    "dark": {
+      "bg": "#17171a",
+      "card": "#201f23",
+      "ink": "#eceae5",
+      "muted": "#9b978f",
+      "line": "#35343a",
+      "accent": "#79c79b",
+      "accent-ink": "#10231a",
+      "code-bg": "#17161a",
+      "warn-bg": "#2e2415",
+      "warn-ink": "#f0c987",
+      "warn-line": "#5c4720"
+    }
+  },
+  "scale": { "base": "16px", "ratio": 1.2, "lineHeight": 1.65 },
+  "shape": {
+    "radius": "14px",
+    "border": "1px",
+    "shadow": "none",
+    "space": "1.5rem",
+    "measure": "46rem"
+  },
+  "voice": {
+    "density": "generous",
+    "headingStyle": "sentence",
+    "useEyebrow": true,
+    "useLede": true,
+    "prefer": "prose",
+    "proseTone": "Write in measured, complete sentences and let the reasoning show. Say why before what where the why is not obvious. Prefer a paragraph to a bullet list when the ideas connect, and reach for a table only when the data really is tabular. Contractions are fine; hedging is not - if something is uncertain, name the uncertainty rather than softening every sentence around it. Assume the reader has time and wants to understand, not to skim."
+  }
+}

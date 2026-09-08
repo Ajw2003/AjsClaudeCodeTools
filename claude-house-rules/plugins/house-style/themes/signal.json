@@ -1,0 +1,80 @@
+{
+  "name": "signal",
+  "label": "Signal",
+  "summary": "Dark-first, electric violet, generous radius and a dramatic scale.",
+  "for": "Landing pages, one-pagers, launch notes - anything that has to land in one screen.",
+  "defaultScheme": "dark",
+  "sources": [
+    { "what": "Space Grotesk", "url": "https://fonts.google.com/specimen/Space+Grotesk", "licence": "OFL-1.1" },
+    { "what": "Inter", "url": "https://fonts.google.com/specimen/Inter", "licence": "OFL-1.1" },
+    { "what": "Space Mono", "url": "https://fonts.google.com/specimen/Space+Mono", "licence": "OFL-1.1" },
+    { "what": "Palette, scale, shape and voice", "url": "themes/signal.json", "licence": "in-repo" }
+  ],
+  "fonts": {
+    "display": {
+      "family": "Space Grotesk",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap",
+      "stack": "\"Space Grotesk\", \"Avenir Next\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
+      "systemStack": "\"Avenir Next\", \"Trebuchet MS\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
+      "weights": [500, 700]
+    },
+    "body": {
+      "family": "Inter",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap",
+      "stack": "\"Inter\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+      "systemStack": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+      "weights": [400, 600]
+    },
+    "mono": {
+      "family": "Space Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap",
+      "stack": "\"Space Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      "systemStack": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      "weights": [400, 700]
+    }
+  },
+  "colour": {
+    "light": {
+      "bg": "#fafafa",
+      "card": "#ffffff",
+      "ink": "#101014",
+      "muted": "#62606e",
+      "line": "#e6e5ec",
+      "accent": "#5b3df5",
+      "accent-ink": "#ffffff",
+      "code-bg": "#f3f2f7",
+      "warn-bg": "#fff3e3",
+      "warn-ink": "#7d4a00",
+      "warn-line": "#eec894"
+    },
+    "dark": {
+      "bg": "#0b0b0f",
+      "card": "#15151d",
+      "ink": "#f5f4f8",
+      "muted": "#9d9aad",
+      "line": "#262533",
+      "accent": "#8b6bff",
+      "accent-ink": "#0b0b0f",
+      "code-bg": "#0e0e14",
+      "warn-bg": "#2b1f14",
+      "warn-ink": "#ffc16b",
+      "warn-line": "#5a3f1d"
+    }
+  },
+  "scale": { "base": "17px", "ratio": 1.333, "lineHeight": 1.55 },
+  "shape": {
+    "radius": "18px",
+    "border": "0",
+    "shadow": "0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08)",
+    "space": "2rem",
+    "measure": "40rem"
+  },
+  "voice": {
+    "density": "balanced",
+    "headingStyle": "sentence",
+    "useEyebrow": true,
+    "useLede": true,
+    "prefer": "card",
+    "proseTone": "One idea per line. Start sentences with the verb where you can. Keep them short enough to read at a glance and vary the length so it does not read like a list pretending to be prose. Claims land harder without qualifiers, so make fewer claims and stand behind each one. A number beats an adjective. Cut the closing summary - if the page needs one, the page is too long."
+  }
+}

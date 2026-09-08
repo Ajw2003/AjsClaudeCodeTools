@@ -3,3 +3,8 @@ __pycache__/
 
 # Machine-local, discovered per-device - never committed. See docs/example-environment.md.
 claude-house-rules/plugins/house-rules/rules/environment.md
+
+# Machine-local catalogue cache and the machine-wide theme pin - never committed.
+# ~/.claude/house-style/ holds both; this entry covers a cache written inside a checkout.
+claude-house-rules/plugins/house-style/cache/
+house-style-gallery.html

@@ -1,0 +1,112 @@
+/*
+  tokens.css - the shape `style.py css` emits. This file is the reference, not the source:
+  run `style.py css <name>` to get the real thing with a theme's values substituted in.
+
+  WHY THE BLOCKS ARE ARRANGED THIS WAY. A viewer's theme has three states, not two. An explicit
+  choice stamps data-theme="dark" or data-theme="light" on the root element; the default "system"
+  setting stamps nothing at all, and only prefers-color-scheme separates light from dark there.
+  So:
+
+    :root                                          the complete light palette, unconditionally
+    @media (prefers-color-scheme: dark)
+      :root:not([data-theme="light"])              system-dark, unless the viewer chose light
+    :root[data-theme="dark"]                       an explicit dark choice wins
+    :root[data-theme="light"]                      an explicit light choice wins, in dark too
+
+  Never give a colour its only definition inside a media or [data-theme] block - a token defined
+  only under one branch is undefined under the others. And always paint body with an explicit
+  token background: the artifact host paints its own ground behind the page, so a transparent
+  body silently borrows the host's theme and breaks in whichever one you did not test.
+
+  The marker comment on the first line is load-bearing. The styleguard hook reads it to decide
+  whether a page about to be published was built on a house theme, and stays silent when it
+  finds one. A page without it gets a permission prompt.
+*/
+
+/* house-style: <name> */
+@import url('https://fonts.googleapis.com/css2?family=...&display=swap');
+
+:root {
+  color-scheme: light dark;
+
+  --font-display: /* theme fonts.display.stack */;
+  --font-body:    /* theme fonts.body.stack */;
+  --font-mono:    /* theme fonts.mono.stack */;
+
+  --base: 16px;
+  --line-height: 1.65;
+
+  /* Derived from scale.ratio, never stored: a written-down ladder drifts from its own ratio
+     the first time somebody nudges one number. */
+  --step--1: 0.8333rem;
+  --step-0:  1.0rem;
+  --step-1:  1.2rem;
+  --step-2:  1.44rem;
+  --step-3:  1.728rem;
+  --step-4:  2.0736rem;
+
+  --radius: 14px;
+  --border: 1px;
+  --shadow: none;
+  --space: 1.5rem;
+  --measure: 46rem;
+
+  --bg: #f7f6f3;
+  --card: #ffffff;
+  --ink: #1d1c1a;
+  --muted: #6b6862;
+  --line: #e0ddd6;
+  --accent: #2f6f4f;
+  --accent-ink: #ffffff;
+  --code-bg: #f2f0ec;
+  --warn-bg: #fdf3e0;
+  --warn-ink: #7a4a06;
+  --warn-line: #e9c98a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* the same eleven tokens, dark values */
+  }
+}
+
+:root[data-theme="dark"]  { /* the same eleven tokens, dark values  */ }
+:root[data-theme="light"] { /* the same eleven tokens, light values */ }
+
+/*
+  Using them. Nothing below is emitted by style.py - this is how a page is expected to consume
+  the tokens, so that swapping the theme swaps the page rather than requiring it to be rewritten.
+*/
+
+body {
+  margin: 0;
+  background: var(--bg);          /* explicit, always - see the note above */
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--base);
+  line-height: var(--line-height);
+}
+
+main { max-width: var(--measure); margin: 0 auto; padding: var(--space); }
+
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.2; }
+h1 { font-size: var(--step-4); }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+
+code, pre { font-family: var(--font-mono); background: var(--code-bg); }
+
+.card {
+  background: var(--card);
+  border: var(--border) solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space);
+}
+
+a { color: var(--accent); }
+.badge { background: var(--accent); color: var(--accent-ink); }
+.warn { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); }
+
+/* Wide content scrolls inside its own box; the page body must never scroll horizontally. */
+.scroll-x { overflow-x: auto; }

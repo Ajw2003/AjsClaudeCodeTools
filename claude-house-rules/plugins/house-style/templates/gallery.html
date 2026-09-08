@@ -1,0 +1,200 @@
+<!--
+  gallery.html - the shell `style.py gallery` fills in.
+
+  Placeholders are double-underscore tokens (TITLE, FONTS, CARDS, META, DATA) and the
+  per-theme token blocks appended just inside the closing style tag. They are named here
+  without their delimiters on purpose: substitution is a plain string replace over the
+  whole file, so a comment that spelled them out would be filled in too, and every card
+  would appear twice - once in the page and once inside this comment.
+
+  WHY THIS IS GENERATED AND NOT FETCHED. A published artifact runs under a CSP that blocks
+  fetch/XHR to every host without exception, so this page cannot call the font or colour APIs
+  itself. style.py fetches at command time and inlines the result here. The only network this
+  page does is the Google Fonts stylesheet - the one host artifacts are allowed to load a
+  stylesheet from.
+
+  Publishing it: keep <title>, <style>, the markup and the script; drop the <!doctype>, <html>,
+  <head> and <body> wrappers, which the artifact host supplies. Declare capabilities {db:{}} so
+  the Use-this buttons can write the pin. Opened straight off disk it still works - the buttons
+  fall back to showing the terminal command.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="__FONTS__">
+<style>
+  :root {
+    color-scheme: light dark;
+    --page-bg: #ffffff;
+    --page-ink: #16161a;
+    --page-muted: #6a6a75;
+    --page-line: #e4e4ea;
+    --page-accent: #3a3a44;
+    --ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --ui-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #101013;
+      --page-ink: #ecebf0;
+      --page-muted: #94939e;
+      --page-line: #2a2a31;
+      --page-accent: #c9c8d2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #101013; --page-ink: #ecebf0; --page-muted: #94939e;
+    --page-line: #2a2a31; --page-accent: #c9c8d2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.5rem 1rem 5rem;
+    background: var(--page-bg); color: var(--page-ink);
+    font: 15px/1.6 var(--ui);
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; }
+  .lede { color: var(--page-muted); max-width: 42rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  .meta { font: 12px/1.5 var(--ui-mono); color: var(--page-muted); margin-top: 2rem; }
+
+  /* Each specimen is rendered in its OWN tokens. Scoping the theme's custom properties to the
+     section is what makes this a specimen rather than a swatch chart: the type, the spacing,
+     the corner radius and the prose all arrive together, which is the only way to judge them. */
+  .specimen {
+    margin: 2.5rem 0; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--page-line);
+  }
+  .bar {
+    display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+    padding: .6rem .9rem; border-bottom: 1px solid var(--page-line);
+    font: 12px/1.4 var(--ui-mono); color: var(--page-muted);
+    background: color-mix(in srgb, var(--page-ink) 4%, transparent);
+  }
+  .bar .nm { font-weight: 700; color: var(--page-ink); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+  .bar .sp { flex: 1 1 auto; }
+  button {
+    font: inherit; font-family: var(--ui); cursor: pointer;
+    border: 1px solid var(--page-line); background: transparent; color: var(--page-ink);
+    border-radius: 7px; padding: .3rem .7rem; font-size: 12px;
+  }
+  button:hover { border-color: var(--page-accent); }
+  button.pick { background: var(--page-ink); color: var(--page-bg); border-color: var(--page-ink); font-weight: 600; }
+  button[aria-pressed="true"] { background: var(--page-ink); color: var(--page-bg); }
+
+  /* --- inside a specimen: everything below reads only theme tokens --- */
+  .stage {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font-body); font-size: var(--base); line-height: var(--line-height);
+    padding: var(--space);
+  }
+  .stage .inner { max-width: var(--measure); }
+  .stage .eyebrow {
+    font-family: var(--font-mono); font-size: var(--step--1);
+    letter-spacing: .09em; text-transform: uppercase; color: var(--accent); margin: 0 0 .5rem;
+  }
+  .stage h2 {
+    font-family: var(--font-display); font-size: var(--step-3);
+    line-height: 1.15; margin: 0 0 .4rem; color: var(--ink);
+  }
+  .stage .sub { color: var(--muted); font-size: var(--step-1); margin: 0 0 1.1rem; }
+  .stage p { margin: 0 0 1rem; }
+  .stage .card {
+    background: var(--card); border: var(--border) solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: var(--space); margin: 0 0 1rem;
+  }
+  .stage code, .stage pre {
+    font-family: var(--font-mono); background: var(--code-bg);
+    border-radius: calc(var(--radius) / 2); font-size: var(--step--1);
+  }
+  .stage code { padding: .15em .4em; }
+  .stage pre { padding: .8rem 1rem; margin: 0 0 1rem; overflow-x: auto; }
+  .stage .warn {
+    background: var(--warn-bg); color: var(--warn-ink);
+    border: 1px solid var(--warn-line); border-radius: var(--radius);
+    padding: .7rem 1rem; margin: 0 0 1rem; font-size: var(--step--1);
+  }
+  .stage .pill {
+    display: inline-block; background: var(--accent); color: var(--accent-ink);
+    border-radius: 999px; padding: .15em .8em; font-size: var(--step--1); font-weight: 600;
+  }
+  .stage table { border-collapse: collapse; width: 100%; font-size: var(--step--1); margin: 0 0 1rem; }
+  .stage th, .stage td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--line); }
+  .stage th { color: var(--muted); font-weight: 600; }
+  .swatches { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+  .swatches li {
+    width: 3.4rem; height: 2.6rem; border-radius: calc(var(--radius) / 2);
+    border: 1px solid var(--line); font: 9px/1.2 var(--font-mono);
+    display: flex; align-items: flex-end; padding: .2rem; color: var(--muted);
+    overflow: hidden;
+  }
+  .scroll-x { overflow-x: auto; }
+  .note { font-size: 12px; color: var(--page-muted); padding: .6rem .9rem; border-top: 1px solid var(--page-line); }
+  .note code { font-family: var(--ui-mono); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>__TITLE__</h1>
+  <p class="lede">Three house themes, each rendered in its own type, colour, spacing and voice. Pick one and every artifact, page and chart built from here on is built on it — until you pick another.</p>
+  __CARDS__
+  <p class="meta">__META__</p>
+</div>
+<script>
+  const DATA = __DATA__;
+
+  // Per-specimen light/dark toggle. Each theme is shown in the scheme it was authored in;
+  // the toggle proves the other one is complete rather than an afterthought.
+  document.querySelectorAll("[data-scheme-toggle]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const stage = document.getElementById("stage-" + btn.dataset.schemeToggle);
+      const now = stage.dataset.scheme === "dark" ? "light" : "dark";
+      stage.dataset.scheme = now;
+      btn.textContent = now === "dark" ? "dark" : "light";
+    });
+  });
+
+  // The page must work with no db at all - opened off disk, or published without the
+  // capability - so the command is always shown and the button is the shortcut, not the
+  // only way through.
+  let dbp = null;
+  try { dbp = window.claude && claude.use ? claude.use("db") : null; } catch (e) { dbp = null; }
+
+  function say(name, msg) {
+    const el = document.getElementById("said-" + name);
+    if (el) { el.textContent = msg; el.hidden = false; }
+  }
+
+  document.querySelectorAll("[data-pick]").forEach(function (btn) {
+    btn.addEventListener("click", async function () {
+      const name = btn.dataset.pick;
+      say(name, "Saving…");
+      let db = null;
+      try { db = dbp ? await dbp : null; } catch (e) { db = null; }
+      if (!db) {
+        say(name, "Run  /house-style use " + name + "  to pin it.");
+        return;
+      }
+      try {
+        await db.doc("choice/active").set({
+          theme: name,
+          at: new Date().toISOString()
+        });
+        document.querySelectorAll("[data-pick]").forEach(function (b) {
+          b.textContent = b.dataset.pick === name ? "Chosen" : "Use this";
+          b.setAttribute("aria-pressed", b.dataset.pick === name ? "true" : "false");
+        });
+        say(name, "Saved. Claude will pin " + name + " — or run  /house-style use " + name);
+      } catch (e) {
+        say(name, "Could not save. Run  /house-style use " + name + "  to pin it.");
+      }
+    });
+  });
+</script>
+</body>
+</html>

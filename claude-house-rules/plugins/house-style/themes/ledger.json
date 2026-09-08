@@ -1,0 +1,80 @@
+{
+  "name": "ledger",
+  "label": "Ledger",
+  "summary": "Cool slate, hairline rules and a tight scale, set wide for dense reference.",
+  "for": "Dashboards, architecture reviews, comparison tables - anything scanned rather than read.",
+  "defaultScheme": "light",
+  "sources": [
+    { "what": "Inter Tight", "url": "https://fonts.google.com/specimen/Inter+Tight", "licence": "OFL-1.1" },
+    { "what": "IBM Plex Sans", "url": "https://fonts.google.com/specimen/IBM+Plex+Sans", "licence": "OFL-1.1" },
+    { "what": "IBM Plex Mono", "url": "https://fonts.google.com/specimen/IBM+Plex+Mono", "licence": "OFL-1.1" },
+    { "what": "Palette, scale, shape and voice", "url": "themes/ledger.json", "licence": "in-repo" }
+  ],
+  "fonts": {
+    "display": {
+      "family": "Inter Tight",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700&display=swap",
+      "stack": "\"Inter Tight\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+      "systemStack": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+      "weights": [500, 700]
+    },
+    "body": {
+      "family": "IBM Plex Sans",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap",
+      "stack": "\"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+      "systemStack": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+      "weights": [400, 600]
+    },
+    "mono": {
+      "family": "IBM Plex Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap",
+      "stack": "\"IBM Plex Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      "systemStack": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      "weights": [400, 600]
+    }
+  },
+  "colour": {
+    "light": {
+      "bg": "#f4f5f7",
+      "card": "#ffffff",
+      "ink": "#14181f",
+      "muted": "#5a6472",
+      "line": "#dde1e7",
+      "accent": "#2c5d8f",
+      "accent-ink": "#ffffff",
+      "code-bg": "#eef1f5",
+      "warn-bg": "#fff4e5",
+      "warn-ink": "#8a5200",
+      "warn-line": "#f0cf9a"
+    },
+    "dark": {
+      "bg": "#0f1319",
+      "card": "#161b23",
+      "ink": "#e4e8ee",
+      "muted": "#8d97a6",
+      "line": "#262d38",
+      "accent": "#6ba8e0",
+      "accent-ink": "#08131f",
+      "code-bg": "#0c1017",
+      "warn-bg": "#2a2113",
+      "warn-ink": "#ecc07a",
+      "warn-line": "#55431f"
+    }
+  },
+  "scale": { "base": "15px", "ratio": 1.125, "lineHeight": 1.45 },
+  "shape": {
+    "radius": "4px",
+    "border": "1px",
+    "shadow": "none",
+    "space": "0.75rem",
+    "measure": "72rem"
+  },
+  "voice": {
+    "density": "tight",
+    "headingStyle": "sentence",
+    "useEyebrow": false,
+    "useLede": false,
+    "prefer": "table",
+    "proseTone": "Lead with the fact, not the framing. Sentence fragments are fine where they are clearer than a full sentence. Cut every phrase that only signals effort - no 'it is worth noting', no 'importantly', no restating the question before answering it. If the content has more than two parallel items, it is a table. Numbers get units and a basis. Where something is unknown, write unknown rather than a paragraph explaining that it is hard to know."
+  }
+}
