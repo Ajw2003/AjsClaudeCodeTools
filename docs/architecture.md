@@ -7,7 +7,9 @@ this when you need the reasoning behind a constraint, not just the constraint it
 ## Why a shim in front of the Python file, rather than calling `hook.py` directly
 
 `hooks.json` cannot itself probe for an interpreter, and `python`/`python3`/`py` availability
-and naming varies by OS — worse, on this machine `python3` is the Windows Store App Execution
+and naming varies by OS — `py` is the Windows launcher, which ships with the official Python
+installer and picks an installed interpreter for you, so it exists on Windows and nowhere else.
+Worse, on this machine `python3` is the Windows Store App Execution
 Alias stub: on PATH, found by `command -v`, but it prints an install nag to stdout and exits 0
 instead of running anything. Trusting `command -v` would silently disable every hook the same
 way a missing `node` once did. `run.sh` **probes** each candidate — actually runs it and checks

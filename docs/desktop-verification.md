@@ -192,6 +192,9 @@ tested. A fixed prompt with a recorded answer is the only thing that makes a lat
 | **PROMPT-MULTI** | `give me the steps to update the house-rules plugin from source and re-verify it` |
 | **PROMPT-ONE** | `what do I type to see which house-rules version is installed?` |
 | **PROMPT-LONG** | `give me the steps to set this repo up from scratch on a new Windows machine: clone it, install Python if missing, install the plugin, set verbose and the model, and prove it works` |
+| **PROMPT-DOCS** | `where does documentation go in this repo, and which file do I update when a milestone's status changes but the definition of done has not?` |
+| **PROMPT-SKILL** | `how do I decide what counts as a system worth its own doc?` |
+| **PROMPT-NOOP** | `in docs/architecture.md, in the section about the shim in front of the Python file, add a sentence saying that py is the Windows launcher` |
 
 `PROMPT-MULTI` is chosen because its answer is **determined by the repo**, not by Claude's
 invention: the three commands are the ones `CLAUDE.md` documents. If a run returns different
@@ -389,6 +392,125 @@ table states a checked fact rather than a repeated claim.
 - **Desktop Cowork tab.** **PROMPT-MULTI** there. **Expected: no card**, because
   Cowork sources its skills and plugins from the claude.ai account rather than `~/.claude`. If a
   card appears, something is syncing that the docs do not describe — record it.
+
+## 10 — The tiered-documentation rule and the project-docs skill
+
+Added 2.12.0. Three checks, and they are separable on purpose: the rule reaching the session, the
+skill loading on demand, and the pair **not** firing when they should stay quiet. A run that only
+does the first proves the text arrived, not that anything uses it.
+
+Run all three in a **fresh Code-tab session** after §0's restart — injected context refreshes at
+session start, so testing before that tests 2.11.0 and passes for the wrong reason.
+
+### 10a — The rule reached the session
+
+**PROMPT-DOCS**, in any repo.
+
+**You should see:** the five tiers named with their filenames — `docs/README.md`,
+`docs/Roadmap.md`, `docs/ProjectState.md`, `docs/systems/`, `docs/Today.md` — and the direct
+answer that a milestone's *status* moving is a tier-3 change, so `docs/ProjectState.md` is updated
+and `docs/Roadmap.md` is left alone.
+
+**Why this prompt and not a friendlier one:** the answer is only available from the rule. A session
+without it gives generic documentation advice and cannot produce those five filenames or that
+tier-2/tier-3 distinction, because nothing else in the plugin mentions them. That is what makes
+this falsifiable rather than agreeable — a wrong answer looks obviously different, not just
+worse-worded.
+
+**Fails if** the reply gives sensible generic advice with no filenames, or names the tiers but says
+to update the roadmap.
+
+### 10b — The skill loads, and is not just the rule talking
+
+**PROMPT-SKILL**, same session.
+
+**You should see:** the transcript showing `SKILL.md` actually being **read**, and the answer
+citing it by line (`SKILL.md:82`, `SKILL.md:95`, or similar). The substance should turn on
+**runtime-critical** as the filter, and on the four sections a tier-4 doc has to fill.
+
+**Why this discriminates:** `rules/house-rules.md` names the four sections nowhere — it says only
+that systems get a document each. An answer that reasons from those sections, and cites the file
+by line, cannot have come from the rule alone. The tool call is the strongest single signal: the
+skill either got read or it did not, and that is visible in the transcript rather than inferred
+from wording.
+
+**This criterion was rewritten after the first run**, and the reason is worth keeping. It
+originally demanded two verbatim phrases from the skill — *"if this is wrong, does the product
+stop working?"* and *"three and eight"* — on the reasoning that neither appears in the rule. The
+2.12.0 run **passed the underlying claim and failed that wording**: the transcript showed
+`Read SKILL.md` and two accurate line citations, but the answer synthesised from the tier-4
+section at `SKILL.md:82` rather than reciting the sentence at `SKILL.md:42`. The check assumed
+recitation where the model summarises, so it would have reported a false failure on a working
+plugin. **Do not test for a sentence the model has no reason to quote**; test for the file being
+read and the reasoning being traceable to it.
+
+**Fails if** nothing in the transcript reads `SKILL.md`, or the answer is generic enough to have
+come from the rule alone, or if the skill has to be invoked by name
+(`/house-rules:project-docs`) before either appears — the skill's description is
+supposed to earn the load on its own.
+
+### 10c — The negative control
+
+**PROMPT-NOOP**, same session, in this repo.
+
+**You should see:** the sentence added to the existing section. Nothing about tiers, no
+`project-docs` load, no proposal to restructure `docs/`.
+
+The prompt names an edit that is always available — a sentence added to a section that exists —
+rather than a defect that has to be present for the test to run at all. An earlier draft said
+"fix the typo in the second paragraph", and there is no typo there; the step would have been
+unrunnable, which is the failure `rules-backlog.md` records under *Vague statements and
+instructions*.
+
+**The 2.12.0 run's edit was kept, so `PROMPT-NOOP` is now spent.** `docs/architecture.md:9`
+already carries the `py` sentence, and a later run of this prompt would find the work done and
+have nothing to do — which tests nothing. **A later run needs a fresh one-line edit to a section
+that already exists**, anywhere in `docs/`, phrased as concretely as this one was. Record the
+replacement in the prompts table when you use it; do not reuse a prompt whose edit is already in
+the file.
+
+**Why this is a required check, not padding:** the skill's own frontmatter excludes "an ordinary
+edit to a document that already exists", and an always-injected rule about documentation is exactly
+the shape that starts firing on every file with an `.md` extension. Over-triggering here is more
+likely than under-triggering and would be far more annoying, because it turns a one-line fix into a
+restructuring proposal.
+
+**Fails if** the reply reaches for the skill, lectures about tiers, or offers to reorganise the
+folder before doing what was asked.
+
+### Recorded baseline
+
+Observed 2026-09-08, Windows 11 desktop **Code** tab, plugin **2.12.0**. All three passed. This is
+the data point later runs are compared against.
+
+**10a — `PROMPT-DOCS`.** Run twice, in two different repos, and both passed:
+
+- In `RockSkipping/Assets` (a repo that *has* the five tiers): rendered the tier table with all
+  five filenames, answered `../docs/ProjectState.md`, and quoted `docs/README.md:52` as the source
+  of the tier-3/tier-2 split.
+- In `AjsClaudeCodeTools` (a repo that does **not** have them yet): same table, same answer —
+  update `docs/ProjectState.md`, leave `docs/Roadmap.md` alone — and then noted unprompted that
+  this repo's `docs/` is `architecture.md` / `desktop-verification.md` / `rules-backlog.md`, that
+  there is no `ProjectState.md` here to edit, and that scaffolding one is a **restructure** the
+  skill covers rather than an ordinary doc edit. That last part is the rule correctly
+  distinguishing its own trigger conditions without being asked, and is a stronger pass than the
+  criterion required.
+
+**10b — `PROMPT-SKILL`.** Passed, and rewrote the criterion — see the note above. The transcript
+showed `Read SKILL.md`, and the answer cited `SKILL.md:82` and `SKILL.md:95`, both real lines
+(the tier-4 heading and the `systems/README.md` line). It reasoned from **runtime-critical** and
+the four sections, and added a judgement the skill does not state — that a doc which can only fill
+sections 1 and 2 is a paraphrase of the source and should not exist. Neither nominated phrase
+appeared.
+
+**10c — `PROMPT-NOOP`.** Passed cleanly. Added the sentence to `docs/architecture.md:9`, placed so
+`py` is explained before the paragraph reaches the `python3` stub problem. No tier talk, no skill
+load, no restructuring offer.
+
+**A later run matches this baseline if** 10a produces the five filenames and the
+`ProjectState.md`-not-`Roadmap.md` answer, 10b shows `SKILL.md` being read and cited, and 10c
+makes the edit and nothing else. Different wording is not a failure. A missing file read in 10b,
+a roadmap answer in 10a, or any tier commentary in 10c is.
 
 ---
 
