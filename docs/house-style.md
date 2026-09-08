@@ -277,6 +277,25 @@ actually appear on each, and every token in the expanded grid carries a line say
 from — "your ground, lightened", "yours, unchanged", "semantic amber, not your accent". A tool
 that derives has to show its working, or it is indistinguishable from one that ignores you.
 
+## Where the published artefacts live
+
+`docs/artifacts/` holds the generated gallery and builder pages, plus a `manifest.json` recording
+each live URL, the command that produced it and the capabilities it was published with. Its
+README has the regeneration commands.
+
+They are committed rather than left in a scratch directory because an artefact that exists only
+in the session that made it is not an artefact — it is a side effect. An earlier `.gitignore`
+line here (`house-style-gallery.html`) quietly defeated exactly the rule the `artifact` hook
+exists to enforce; it has been removed, and `style.py gallery`/`builder` now default to writing
+into `docs/artifacts/` when that directory exists.
+
+Committed build output rots, so `verify_style.py` holds it to the themes actually on disk: every
+page there must name every theme in `themes/`, and no theme that has been deleted. Adding a theme
+without regenerating fails the suite, and the failure prints the command to fix it. The guard is
+structural rather than byte-exact because both pages embed a generation timestamp and the live
+font catalogue — regenerating never reproduces the same bytes, so a byte comparison would fail
+for reasons that mean nothing.
+
 ## Editing this plugin
 
 - **A new theme** is a new file in `themes/`, and nothing else. Run `style.py validate` and then

@@ -38,6 +38,8 @@ MARKETPLACE = os.path.join(ROOT, ".claude-plugin", "marketplace.json")
 CLAUDEMD = os.path.join(ROOT, "CLAUDE.md")
 STEPCARD = os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules",
                         "templates", "step-card.html")
+ARTIFACTS = os.path.join(ROOT, "docs", "artifacts")
+MANIFEST = os.path.join(ARTIFACTS, "manifest.json")
 
 SH = (
     r"C:\Program Files\Git\bin\sh.exe"
@@ -121,6 +123,7 @@ def write_payload(path):
 
 
 NAMES = style.all_theme_names()
+COMMANDS_IMPLEMENTED = set(style.COMMANDS)
 LOADED = {}
 for _n in NAMES:
     try:
@@ -418,7 +421,10 @@ finally:
 # --- CLI ------------------------------------------------------------------------------
 for args, want in (
     (["list"], NAMES[0]),
-    (["validate"], "3/3"),
+    # Count-agnostic: "N/N themes valid" holds however many ship. Asserting "3/3" made this
+    # check fail the moment a fourth theme was added, which is a suite that breaks on correct
+    # changes - exactly the drift the runtime check count elsewhere exists to avoid.
+    (["validate"], f"{len(NAMES)}/{len(NAMES)} themes valid"),
     (["css", NAMES[0]], "--accent"),
     (["show"], "Active house style"),
 ):
@@ -838,6 +844,71 @@ console.log(JSON.stringify({
                   f"accent {res['reportedAccent']}  (moved: {res['reportedMoved']})")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
+
+# --- the committed artefacts ------------------------------------------------------------
+# docs/artifacts/ holds the generated gallery and builder pages so they outlive the session
+# that made them. A generated file in version control drifts from its generator: add a theme,
+# forget to regenerate, and the committed page describes a world that no longer exists - which
+# is worse than no page, because it looks authoritative. These checks are what stop that.
+#
+# Structural, not byte-exact, on purpose: both pages embed a generation timestamp and the live
+# font catalogue, so regenerating never reproduces the same bytes and a byte comparison would
+# fail for reasons that mean nothing.
+if os.path.isdir(ARTIFACTS):
+    manifest = json.loads(read(MANIFEST))
+    listed = {a["file"]: a for a in manifest.get("artifacts", [])}
+    on_disk = sorted(f for f in os.listdir(ARTIFACTS) if f.endswith(".html"))
+
+    # Both directions, like the CLAUDE.md hook table: a page nobody recorded and a record with
+    # no page are both failures.
+    report("PASS" if set(listed) == set(on_disk) else "FAIL",
+           "every committed artefact is in the manifest, and every manifest entry has a file")
+    print(f"          manifest {sorted(listed)} / on disk {on_disk}")
+
+    for f, entry in sorted(listed.items()):
+        for key in ("title", "url", "command", "published", "what"):
+            if not entry.get(key):
+                report("FAIL", f"{f}'s manifest entry records {key}")
+        report("PASS" if entry.get("command") in COMMANDS_IMPLEMENTED else "FAIL",
+               f"{f} records a real style.py subcommand ({entry.get('command')})")
+        report("PASS" if str(entry.get("url", "")).startswith(
+                   "https://claude.ai/code/artifact/") else "FAIL",
+               f"{f} records where it is published")
+
+    for f in on_disk:
+        page = read(os.path.join(ARTIFACTS, f))
+
+        # THE staleness check. Add a theme without regenerating and this fails.
+        missing = [n for n in NAMES if n not in page]
+        report("PASS" if not missing else "FAIL",
+               f"{f} names every theme that ships (regenerate it if this fails)")
+        if missing:
+            print(f"          not mentioned: {missing}  -> "
+                  f"style.py {listed.get(f, {}).get('command', '?')} docs/artifacts/{f}")
+
+        # And the reverse: a page still advertising a theme that was deleted or renamed.
+        import re as _re3
+        stale = sorted({m for m in _re3.findall(r'id="stage-([a-z0-9-]+)"', page)
+                        if m not in NAMES})
+        report("PASS" if not stale else "FAIL",
+               f"{f} names no theme that no longer exists")
+        if stale:
+            print(f"          stale: {stale}")
+
+        # The same host rule the freshly generated pages are held to, applied to what shipped.
+        ALLOWED_HOSTS = ("fonts.googleapis.com", "fonts.gstatic.com", "fonts.google.com")
+        loads = _re3.findall(r'(?:href|src)\s*=\s*["\']?(https?://[^"\'\s>]+)', page)
+        bad = [u for u in loads if not any(a in u for a in ALLOWED_HOSTS[:2])]
+        report("PASS" if not bad else "FAIL",
+               f"{f} loads no resource from outside the artifact CSP allowlist")
+        for u in bad:
+            print(f"          {u}")
+
+    report("PASS" if os.path.isfile(os.path.join(ARTIFACTS, "README.md")) else "FAIL",
+           "docs/artifacts explains that its HTML is generated, not hand-edited")
+else:
+    skip("the committed artefacts match the themes on disk",
+         "docs/artifacts/ does not exist in this checkout")
 
 # --- marketplace ----------------------------------------------------------------------
 mk = json.loads(read(MARKETPLACE))

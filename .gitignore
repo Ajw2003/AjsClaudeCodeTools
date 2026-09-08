@@ -7,4 +7,8 @@ claude-house-rules/plugins/house-rules/rules/environment.md
 # Machine-local catalogue cache and the machine-wide theme pin - never committed.
 # ~/.claude/house-style/ holds both; this entry covers a cache written inside a checkout.
 claude-house-rules/plugins/house-style/cache/
-house-style-gallery.html
+
+# NOTE: the generated gallery and builder pages are NOT ignored. They live in docs/artifacts/
+# and are committed on purpose - see that directory's README. An earlier ignore line here
+# defeated the rule that every artifact lives in the project, which is the one thing the
+# artifact hook exists to enforce.

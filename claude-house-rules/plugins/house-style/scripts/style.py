@@ -829,6 +829,19 @@ def families(timeout=10):
 # ---------------------------------------------------------------------------------------
 
 
+
+def _default_out(name):
+    """Where a generated page goes when no path is given.
+
+    Prefers docs/artifacts/ when it exists, so in this repo the output lands where it is
+    tracked rather than loose in the root. Outside a checkout - the plugin installed on a
+    device - there is no such directory and the bare filename in the current directory is the
+    only sensible answer. An earlier version solved the clutter by gitignoring the file
+    instead, which defeated the rule that every artifact lives in the project.
+    """
+    d = os.path.join(os.getcwd(), "docs", "artifacts")
+    return os.path.join(d, name) if os.path.isdir(d) else name
+
 def cmd_list(argv):
     theme, active, _origin = resolve_theme()
     names = all_theme_names()
@@ -1118,7 +1131,7 @@ def render_gallery(cat):
 
 def cmd_gallery(argv):
     positional = [a for a in argv if not a.startswith("-")]
-    out = positional[0] if positional else "house-style-gallery.html"
+    out = positional[0] if positional else _default_out("house-style-gallery.html")
     timeout = 0 if "--offline" in argv else 10
     cat = catalogue(timeout) if timeout else {
         "themes": [load_theme(n) for n in all_theme_names()],
@@ -1200,7 +1213,7 @@ def render_builder(fams, origin):
 
 def cmd_builder(argv):
     positional = [a for a in argv if not a.startswith("-")]
-    out = positional[0] if positional else "house-style-builder.html"
+    out = positional[0] if positional else _default_out("house-style-builder.html")
     timeout = 0 if "--offline" in argv else 10
     fams, origin = families(timeout)
     html = render_builder(fams, origin)

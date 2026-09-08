@@ -1,0 +1,440 @@
+<!--
+  gallery.html - the shell `style.py gallery` fills in.
+
+  Placeholders are double-underscore tokens (TITLE, FONTS, CARDS, META, DATA) and the
+  per-theme token blocks appended just inside the closing style tag. They are named here
+  without their delimiters on purpose: substitution is a plain string replace over the
+  whole file, so a comment that spelled them out would be filled in too, and every card
+  would appear twice - once in the page and once inside this comment.
+
+  WHY THIS IS GENERATED AND NOT FETCHED. A published artifact runs under a CSP that blocks
+  fetch/XHR to every host without exception, so this page cannot call the font or colour APIs
+  itself. style.py fetches at command time and inlines the result here. The only network this
+  page does is the Google Fonts stylesheet - the one host artifacts are allowed to load a
+  stylesheet from.
+
+  Publishing it: keep <title>, <style>, the markup and the script; drop the <!doctype>, <html>,
+  <head> and <body> wrappers, which the artifact host supplies. Declare capabilities {db:{}} so
+  the Use-this buttons can write the pin. Opened straight off disk it still works - the buttons
+  fall back to showing the terminal command.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>House Style</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=Space+Mono:wght@400;700&display=swap">
+<style>
+  :root {
+    color-scheme: light dark;
+    --page-bg: #ffffff;
+    --page-ink: #16161a;
+    --page-muted: #6a6a75;
+    --page-line: #e4e4ea;
+    --page-accent: #3a3a44;
+    --ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --ui-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #101013;
+      --page-ink: #ecebf0;
+      --page-muted: #94939e;
+      --page-line: #2a2a31;
+      --page-accent: #c9c8d2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #101013; --page-ink: #ecebf0; --page-muted: #94939e;
+    --page-line: #2a2a31; --page-accent: #c9c8d2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.5rem 1rem 5rem;
+    background: var(--page-bg); color: var(--page-ink);
+    font: 15px/1.6 var(--ui);
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; }
+  .lede { color: var(--page-muted); max-width: 42rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  .meta { font: 12px/1.5 var(--ui-mono); color: var(--page-muted); margin-top: 2rem; }
+
+  /* Each specimen is rendered in its OWN tokens. Scoping the theme's custom properties to the
+     section is what makes this a specimen rather than a swatch chart: the type, the spacing,
+     the corner radius and the prose all arrive together, which is the only way to judge them. */
+  .specimen {
+    margin: 2.5rem 0; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--page-line);
+  }
+  .bar {
+    display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+    padding: .6rem .9rem; border-bottom: 1px solid var(--page-line);
+    font: 12px/1.4 var(--ui-mono); color: var(--page-muted);
+    background: color-mix(in srgb, var(--page-ink) 4%, transparent);
+  }
+  .bar .nm { font-weight: 700; color: var(--page-ink); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+  .bar .sp { flex: 1 1 auto; }
+  button {
+    font: inherit; font-family: var(--ui); cursor: pointer;
+    border: 1px solid var(--page-line); background: transparent; color: var(--page-ink);
+    border-radius: 7px; padding: .3rem .7rem; font-size: 12px;
+  }
+  button:hover { border-color: var(--page-accent); }
+  button.pick { background: var(--page-ink); color: var(--page-bg); border-color: var(--page-ink); font-weight: 600; }
+  button[aria-pressed="true"] { background: var(--page-ink); color: var(--page-bg); }
+
+  /* --- inside a specimen: everything below reads only theme tokens --- */
+  .stage {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font-body); font-size: var(--base); line-height: var(--line-height);
+    padding: var(--space);
+  }
+  .stage .inner { max-width: var(--measure); }
+  .stage .eyebrow {
+    font-family: var(--font-mono); font-size: var(--step--1);
+    letter-spacing: .09em; text-transform: uppercase; color: var(--accent); margin: 0 0 .5rem;
+  }
+  .stage h2 {
+    font-family: var(--font-display); font-size: var(--step-3);
+    line-height: 1.15; margin: 0 0 .4rem; color: var(--ink);
+  }
+  .stage .sub { color: var(--muted); font-size: var(--step-1); margin: 0 0 1.1rem; }
+  .stage p { margin: 0 0 1rem; }
+  .stage .card {
+    background: var(--card); border: var(--border) solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: var(--space); margin: 0 0 1rem;
+  }
+  .stage code, .stage pre {
+    font-family: var(--font-mono); background: var(--code-bg);
+    border-radius: calc(var(--radius) / 2); font-size: var(--step--1);
+  }
+  .stage code { padding: .15em .4em; }
+  .stage pre { padding: .8rem 1rem; margin: 0 0 1rem; overflow-x: auto; }
+  .stage .warn {
+    background: var(--warn-bg); color: var(--warn-ink);
+    border: 1px solid var(--warn-line); border-radius: var(--radius);
+    padding: .7rem 1rem; margin: 0 0 1rem; font-size: var(--step--1);
+  }
+  .stage .pill {
+    display: inline-block; background: var(--accent); color: var(--accent-ink);
+    border-radius: 999px; padding: .15em .8em; font-size: var(--step--1); font-weight: 600;
+  }
+  .stage table { border-collapse: collapse; width: 100%; font-size: var(--step--1); margin: 0 0 1rem; }
+  .stage th, .stage td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--line); }
+  .stage th { color: var(--muted); font-weight: 600; }
+  .swatches { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+  .swatches li {
+    width: 3.4rem; height: 2.6rem; border-radius: calc(var(--radius) / 2);
+    border: 1px solid var(--line); font: 9px/1.2 var(--font-mono);
+    display: flex; align-items: flex-end; padding: .2rem; color: var(--muted);
+    overflow: hidden;
+  }
+  .scroll-x { overflow-x: auto; }
+  .note { font-size: 12px; color: var(--page-muted); padding: .6rem .9rem; border-top: 1px solid var(--page-line); }
+  .note code { font-family: var(--ui-mono); }
+  [hidden] { display: none !important; }
+  #stage-ledger[data-scheme="light"] {
+    --font-display: "Inter Tight", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --base: 15px;
+    --line-height: 1.45;
+    --step--1: 0.8889rem;
+    --step-0: 1.0rem;
+    --step-1: 1.125rem;
+    --step-2: 1.2656rem;
+    --step-3: 1.4238rem;
+    --step-4: 1.6018rem;
+    --radius: 4px;
+    --border: 1px;
+    --shadow: none;
+    --space: 0.75rem;
+    --measure: 72rem;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #14181f;
+    --muted: #5a6472;
+    --line: #dde1e7;
+    --accent: #2c5d8f;
+    --accent-ink: #ffffff;
+    --code-bg: #eef1f5;
+    --warn-bg: #fff4e5;
+    --warn-ink: #8a5200;
+    --warn-line: #f0cf9a;
+  }
+  #stage-ledger[data-scheme="dark"] {
+    --font-display: "Inter Tight", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --base: 15px;
+    --line-height: 1.45;
+    --step--1: 0.8889rem;
+    --step-0: 1.0rem;
+    --step-1: 1.125rem;
+    --step-2: 1.2656rem;
+    --step-3: 1.4238rem;
+    --step-4: 1.6018rem;
+    --radius: 4px;
+    --border: 1px;
+    --shadow: none;
+    --space: 0.75rem;
+    --measure: 72rem;
+    --bg: #0f1319;
+    --card: #161b23;
+    --ink: #e4e8ee;
+    --muted: #8d97a6;
+    --line: #262d38;
+    --accent: #6ba8e0;
+    --accent-ink: #08131f;
+    --code-bg: #0c1017;
+    --warn-bg: #2a2113;
+    --warn-ink: #ecc07a;
+    --warn-line: #55431f;
+  }
+  #stage-quarry[data-scheme="light"] {
+    --font-display: "Fraunces", Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --font-body: "Source Serif 4", Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --base: 16px;
+    --line-height: 1.65;
+    --step--1: 0.8333rem;
+    --step-0: 1.0rem;
+    --step-1: 1.2rem;
+    --step-2: 1.44rem;
+    --step-3: 1.728rem;
+    --step-4: 2.0736rem;
+    --radius: 14px;
+    --border: 1px;
+    --shadow: none;
+    --space: 1.5rem;
+    --measure: 46rem;
+    --bg: #f7f6f3;
+    --card: #ffffff;
+    --ink: #1d1c1a;
+    --muted: #6b6862;
+    --line: #e0ddd6;
+    --accent: #2f6f4f;
+    --accent-ink: #ffffff;
+    --code-bg: #f2f0ec;
+    --warn-bg: #fdf3e0;
+    --warn-ink: #7a4a06;
+    --warn-line: #e9c98a;
+  }
+  #stage-quarry[data-scheme="dark"] {
+    --font-display: "Fraunces", Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --font-body: "Source Serif 4", Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --base: 16px;
+    --line-height: 1.65;
+    --step--1: 0.8333rem;
+    --step-0: 1.0rem;
+    --step-1: 1.2rem;
+    --step-2: 1.44rem;
+    --step-3: 1.728rem;
+    --step-4: 2.0736rem;
+    --radius: 14px;
+    --border: 1px;
+    --shadow: none;
+    --space: 1.5rem;
+    --measure: 46rem;
+    --bg: #17171a;
+    --card: #201f23;
+    --ink: #eceae5;
+    --muted: #9b978f;
+    --line: #35343a;
+    --accent: #79c79b;
+    --accent-ink: #10231a;
+    --code-bg: #17161a;
+    --warn-bg: #2e2415;
+    --warn-ink: #f0c987;
+    --warn-line: #5c4720;
+  }
+  #stage-signal[data-scheme="light"] {
+    --font-display: "Space Grotesk", "Avenir Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --base: 17px;
+    --line-height: 1.55;
+    --step--1: 0.7502rem;
+    --step-0: 1.0rem;
+    --step-1: 1.333rem;
+    --step-2: 1.7769rem;
+    --step-3: 2.3686rem;
+    --step-4: 3.1573rem;
+    --radius: 18px;
+    --border: 0;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08);
+    --space: 2rem;
+    --measure: 40rem;
+    --bg: #fafafa;
+    --card: #ffffff;
+    --ink: #101014;
+    --muted: #62606e;
+    --line: #e6e5ec;
+    --accent: #5b3df5;
+    --accent-ink: #ffffff;
+    --code-bg: #f3f2f7;
+    --warn-bg: #fff3e3;
+    --warn-ink: #7d4a00;
+    --warn-line: #eec894;
+  }
+  #stage-signal[data-scheme="dark"] {
+    --font-display: "Space Grotesk", "Avenir Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --base: 17px;
+    --line-height: 1.55;
+    --step--1: 0.7502rem;
+    --step-0: 1.0rem;
+    --step-1: 1.333rem;
+    --step-2: 1.7769rem;
+    --step-3: 2.3686rem;
+    --step-4: 3.1573rem;
+    --radius: 18px;
+    --border: 0;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08);
+    --space: 2rem;
+    --measure: 40rem;
+    --bg: #0b0b0f;
+    --card: #15151d;
+    --ink: #f5f4f8;
+    --muted: #9d9aad;
+    --line: #262533;
+    --accent: #8b6bff;
+    --accent-ink: #0b0b0f;
+    --code-bg: #0e0e14;
+    --warn-bg: #2b1f14;
+    --warn-ink: #ffc16b;
+    --warn-line: #5a3f1d;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>House Style</h1>
+  <p class="lede">Three house themes, each rendered in its own type, colour, spacing and voice. Pick one and every artifact, page and chart built from here on is built on it — until you pick another.</p>
+    <section class="specimen">
+    <div class="bar">
+      <span class="nm">Ledger</span>
+      <span>Inter Tight / IBM Plex Sans / IBM Plex Mono</span>
+      <span class="sp"></span>
+      <button data-scheme-toggle="ledger">light</button>
+      <button class="pick" data-pick="ledger" aria-pressed="false">Use this</button>
+    </div>
+    <div class="stage" id="stage-ledger" data-scheme="light">
+      <div class="inner">
+      <h2>Ledger</h2>
+      <p>Lead with the fact, not the framing. Sentence fragments are fine where they are clearer than a full sentence. Cut every phrase that only signals effort - no 'it is worth noting', no 'importantly', no restating the question before answering it. If the content has more than two parallel items, it is a table. Numbers get units and a basis. Where something is unknown, write unknown rather than a paragraph explaining that it is hard to know.</p>
+      <div class="scroll-x"><table><thead><tr><th>Token</th><th>Value</th></tr></thead><tbody><tr><td>radius</td><td><code>4px</code></td></tr><tr><td>border</td><td><code>1px</code></td></tr><tr><td>measure</td><td><code>72rem</code></td></tr><tr><td>scale</td><td><code>15px / 1.125</code></td></tr></tbody></table></div>
+      <pre><code>python style.py use ledger</code></pre>
+      <p class="warn">Warning styling, shown so the whole token set is visible rather than only the parts a happy page uses.</p>
+      <ul class="swatches"><li style="background:var(--bg)">bg</li><li style="background:var(--card)">card</li><li style="background:var(--ink)">ink</li><li style="background:var(--muted)">muted</li><li style="background:var(--line)">line</li><li style="background:var(--accent)">accent</li><li style="background:var(--accent-ink)">accent-ink</li><li style="background:var(--code-bg)">code-bg</li><li style="background:var(--warn-bg)">warn-bg</li><li style="background:var(--warn-ink)">warn-ink</li><li style="background:var(--warn-line)">warn-line</li></ul>
+      </div>
+    </div>
+    <p id="said-ledger" class="note" hidden></p>
+    <p class="note">Pin it with <code>/house-style use ledger</code>.</p>
+  </section>
+  <section class="specimen">
+    <div class="bar">
+      <span class="nm">Quarry</span>
+      <span>Fraunces / Source Serif 4 / JetBrains Mono</span>
+      <span class="sp"></span>
+      <button data-scheme-toggle="quarry">light</button>
+      <button class="pick" data-pick="quarry" aria-pressed="false">Use this</button>
+    </div>
+    <div class="stage" id="stage-quarry" data-scheme="light">
+      <div class="inner">
+      <p class="eyebrow">Prose</p>
+      <h2>Quarry</h2>
+      <p class="sub">Warm paper and an editorial serif, set narrow for reading at length.</p>
+      <p>Write in measured, complete sentences and let the reasoning show. Say why before what where the why is not obvious. Prefer a paragraph to a bullet list when the ideas connect, and reach for a table only when the data really is tabular. Contractions are fine; hedging is not - if something is uncertain, name the uncertainty rather than softening every sentence around it. Assume the reader has time and wants to understand, not to skim.</p>
+      <div class="card"><span class="pill">generous</span><p style="margin:.7rem 0 0">Prose, handovers, plans and reports someone actually sits down and reads.</p></div>
+      <pre><code>python style.py use quarry</code></pre>
+      <p class="warn">Warning styling, shown so the whole token set is visible rather than only the parts a happy page uses.</p>
+      <ul class="swatches"><li style="background:var(--bg)">bg</li><li style="background:var(--card)">card</li><li style="background:var(--ink)">ink</li><li style="background:var(--muted)">muted</li><li style="background:var(--line)">line</li><li style="background:var(--accent)">accent</li><li style="background:var(--accent-ink)">accent-ink</li><li style="background:var(--code-bg)">code-bg</li><li style="background:var(--warn-bg)">warn-bg</li><li style="background:var(--warn-ink)">warn-ink</li><li style="background:var(--warn-line)">warn-line</li></ul>
+      </div>
+    </div>
+    <p id="said-quarry" class="note" hidden></p>
+    <p class="note">Pin it with <code>/house-style use quarry</code>.</p>
+  </section>
+  <section class="specimen">
+    <div class="bar">
+      <span class="nm">Signal</span>
+      <span>Space Grotesk / Inter / Space Mono</span>
+      <span class="sp"></span>
+      <button data-scheme-toggle="signal">dark</button>
+      <button class="pick" data-pick="signal" aria-pressed="false">Use this</button>
+    </div>
+    <div class="stage" id="stage-signal" data-scheme="dark">
+      <div class="inner">
+      <p class="eyebrow">Landing pages</p>
+      <h2>Signal</h2>
+      <p class="sub">Dark-first, electric violet, generous radius and a dramatic scale.</p>
+      <p>One idea per line. Start sentences with the verb where you can. Keep them short enough to read at a glance and vary the length so it does not read like a list pretending to be prose. Claims land harder without qualifiers, so make fewer claims and stand behind each one. A number beats an adjective. Cut the closing summary - if the page needs one, the page is too long.</p>
+      <div class="card"><span class="pill">balanced</span><p style="margin:.7rem 0 0">Landing pages, one-pagers, launch notes - anything that has to land in one screen.</p></div>
+      <pre><code>python style.py use signal</code></pre>
+      <p class="warn">Warning styling, shown so the whole token set is visible rather than only the parts a happy page uses.</p>
+      <ul class="swatches"><li style="background:var(--bg)">bg</li><li style="background:var(--card)">card</li><li style="background:var(--ink)">ink</li><li style="background:var(--muted)">muted</li><li style="background:var(--line)">line</li><li style="background:var(--accent)">accent</li><li style="background:var(--accent-ink)">accent-ink</li><li style="background:var(--code-bg)">code-bg</li><li style="background:var(--warn-bg)">warn-bg</li><li style="background:var(--warn-ink)">warn-ink</li><li style="background:var(--warn-line)">warn-line</li></ul>
+      </div>
+    </div>
+    <p id="said-signal" class="note" hidden></p>
+    <p class="note">Pin it with <code>/house-style use signal</code>.</p>
+  </section>
+  <p class="meta">Generated 2026-09-08T09:41:09. 3 shipped themes. Font catalogue: 0 latin families from Fontsource (unavailable); fonts served from fonts.googleapis.com, the only stylesheet host an artifact may load.</p>
+</div>
+<script>
+  const DATA = {"themes":[{"name":"ledger","label":"Ledger","summary":"Cool slate, hairline rules and a tight scale, set wide for dense reference."},{"name":"quarry","label":"Quarry","summary":"Warm paper and an editorial serif, set narrow for reading at length."},{"name":"signal","label":"Signal","summary":"Dark-first, electric violet, generous radius and a dramatic scale."}],"generated":"2026-09-08T09:41:09"};
+
+  // Per-specimen light/dark toggle. Each theme is shown in the scheme it was authored in;
+  // the toggle proves the other one is complete rather than an afterthought.
+  document.querySelectorAll("[data-scheme-toggle]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const stage = document.getElementById("stage-" + btn.dataset.schemeToggle);
+      const now = stage.dataset.scheme === "dark" ? "light" : "dark";
+      stage.dataset.scheme = now;
+      btn.textContent = now === "dark" ? "dark" : "light";
+    });
+  });
+
+  // The page must work with no db at all - opened off disk, or published without the
+  // capability - so the command is always shown and the button is the shortcut, not the
+  // only way through.
+  let dbp = null;
+  try { dbp = window.claude && claude.use ? claude.use("db") : null; } catch (e) { dbp = null; }
+
+  function say(name, msg) {
+    const el = document.getElementById("said-" + name);
+    if (el) { el.textContent = msg; el.hidden = false; }
+  }
+
+  document.querySelectorAll("[data-pick]").forEach(function (btn) {
+    btn.addEventListener("click", async function () {
+      const name = btn.dataset.pick;
+      say(name, "Saving…");
+      let db = null;
+      try { db = dbp ? await dbp : null; } catch (e) { db = null; }
+      if (!db) {
+        say(name, "Run  /house-style use " + name + "  to pin it.");
+        return;
+      }
+      try {
+        await db.doc("choice/active").set({
+          theme: name,
+          at: new Date().toISOString()
+        });
+        document.querySelectorAll("[data-pick]").forEach(function (b) {
+          b.textContent = b.dataset.pick === name ? "Chosen" : "Use this";
+          b.setAttribute("aria-pressed", b.dataset.pick === name ? "true" : "false");
+        });
+        say(name, "Saved. Claude will pin " + name + " — or run  /house-style use " + name);
+      } catch (e) {
+        say(name, "Could not save. Run  /house-style use " + name + "  to pin it.");
+      }
+    });
+  });
+</script>
+</body>
+</html>

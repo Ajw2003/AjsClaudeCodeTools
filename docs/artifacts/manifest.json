@@ -1,0 +1,24 @@
+{
+  "artifacts": [
+    {
+      "file": "house-style-gallery.html",
+      "title": "House Style",
+      "url": "https://claude.ai/code/artifact/8cf92336-519d-4f9e-b24d-8b81750321d5",
+      "command": "gallery",
+      "capabilities": { "db": {} },
+      "favicon": "🎨",
+      "published": "2026-09-08",
+      "what": "The theme picker. One live specimen per shipped theme, rendered in its own type, colour, spacing and prose. Clicking a theme writes choice/active to the artifact's db."
+    },
+    {
+      "file": "house-style-builder.html",
+      "title": "House Style Builder",
+      "url": "https://claude.ai/code/artifact/c48c8819-78fd-4e85-bf76-31c27612603e",
+      "command": "builder",
+      "capabilities": { "db": {} },
+      "favicon": "🎛️",
+      "published": "2026-09-08",
+      "what": "The theme authoring tool. Pick a ground and an accent and the remaining colour tokens are derived to real contrast targets in both schemes. Saving writes drafts/<name> to the artifact's db, which style.py install then validates and writes to themes/."
+    }
+  ]
+}
