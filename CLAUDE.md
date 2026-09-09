@@ -36,6 +36,12 @@ no full-path/short-form split to remember. Exit code 0 means every check passed.
 the case tested, expected vs. actual decision, and PASS/FAIL — read there is what fails, no need
 to open the script.
 
+[`.github/workflows/verify.yml`](.github/workflows/verify.yml) runs exactly this on every push to
+`main` and every pull request, so the suite is not only run when someone remembers to. It needs no
+setup step beyond a Python: `hook.py` and `verify.py` are stdlib-only and `run.sh` is POSIX sh. It
+pins one interpreter (3.12) and therefore does **not** test the CPython 3.8 floor the plugin
+claims — that claim is still unverified.
+
 Install (or update) the plugin on a device — `tools/bootstrap.ps1` (PowerShell) or
 `tools/bootstrap.sh` (any POSIX shell) probes for a working Python the same way `run.sh` does,
 then hands off to `tools/install.py`, where the real logic lives:

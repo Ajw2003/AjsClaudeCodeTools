@@ -1,0 +1,28 @@
+name: verify
+
+# verify.py is this repo's stated source of truth for whether a change took effect
+# (CLAUDE.md), so it runs on every push and every pull request rather than only when
+# somebody remembers. It needs no dependencies: hook.py and verify.py are stdlib-only
+# and run.sh is POSIX sh, both of which a stock ubuntu runner already has.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run the hook test suite
+        run: python claude-house-rules/plugins/house-rules/scripts/verify.py
