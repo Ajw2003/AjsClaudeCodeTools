@@ -154,6 +154,39 @@ silence and the rule that requires it, so this cannot be quietly "fixed" later.
 `harvest` still reminds. `HOUSE_RULES_HARVEST=quiet` drops just harvest's trace;
 `HOUSE_RULES_DEBUG=1` adds harvest's per-run rejection reasons.
 
+## There are two plugin systems, and only one of them is this repo's
+
+Rediscovering this costs an hour on every new machine, so it is written down. Claude Code loads
+plugins from two entirely separate places, and installing into one does nothing for the other.
+
+| | **Machine plugins** | **Account plugins** |
+|---|---|---|
+| Installed by | `claude plugin install`, `/plugin`, the desktop plugin browser, `tools/bootstrap.*` | claude.ai → Settings → **Customize** → Plugins |
+| Stored in | `~/.claude/settings.json` (`enabledPlugins`, `extraKnownMarketplaces`) plus a clone under `~/.claude/plugins/` | the claude.ai account; downloaded per-session into `~/.claude/plugins/synced/` |
+| Named | `<name>@<marketplace>` | `<name>@synced` |
+| Loads in | CLI, IDE extension, desktop **Code** tab | **Cowork and cloud sessions only** |
+| Syncs across machines | **no** — local files, per device | yes, through the account |
+
+**The trap is that neither one covers the other.** The documentation is explicit that account
+plugins are not loaded in a terminal you start yourself, and that a desktop-installed plugin is
+not available to cloud sessions. So:
+
+- A second machine needs `tools/bootstrap.ps1` / `bootstrap.sh` run on it. There is no account
+  setting that delivers house-rules to a CLI or Code-tab session, and waiting for one to sync is
+  waiting for something that will not happen.
+- Cowork is the mirror image: it reads the account configuration and never `~/.claude`, so a CLI
+  install is invisible to it no matter how many times it is repeated.
+- A cloud session can be reached either way — `enabledPlugins` in the repository's
+  `.claude/settings.json`, which is how this repo does it, or an account-enabled synced plugin.
+
+**Observed, 2026-09-09, in a cloud session running Claude Code 2.1.266** (above the v2.1.239 that
+`@synced` naming needs): `~/.claude/plugins/synced/` existed and its bucket directory was
+**empty**, and `claude plugin list` reported **no `@synced` entries** — only the
+`house-rules@aj-house-rules` copy installed from the repo. At the same time the account's
+Customize → Plugins panel listed four plugins including this one. Appearing in that panel is
+therefore not sufficient for a plugin to reach a session; what turns a listing into a running
+plugin is not established here, and this note records the observation rather than a conclusion.
+
 ## The machine profile is data, not code, and is not committed
 
 `claude-house-rules/plugins/house-rules/rules/environment.md` is machine-local and **gitignored**

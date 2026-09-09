@@ -215,11 +215,11 @@ surface named here has a matching check there.
 | Claude Code — CLI | published page, 4+ steps or on request | yes | `inject` + `scope` + `handover` |
 | Claude Code — IDE extension | inherits the CLI; not separately documented | yes | same |
 | Claude Code — Desktop **Code** tab | published page, 4+ steps or on request | yes | same |
-| Claude Code — web / cloud session | publishing undocumented; treat as unavailable | yes | ships with the repo install; cloud never reads `~/.claude/settings.json` |
+| Claude Code — web / cloud session | publishing undocumented; treat as unavailable | yes | **two routes**: `enabledPlugins` in the repo's `.claude/settings.json`, or enabling it for the claude.ai account as a *synced* plugin — cloud never reads `~/.claude/settings.json` |
 | claude.ai chat — web / desktop | sometimes, model's discretion, unrequestable | yes | [docs/claude-ai-instructions.md](docs/claude-ai-instructions.md) |
 | claude.ai chat — iOS / Android | **never** | yes | same |
 | Claude Code — WSL session | no | **no** | **plugins are unavailable in WSL sessions entirely** |
-| Claude Code — Desktop **Cowork** tab | no | **no** | sources skills and plugins from the claude.ai account, not `~/.claude` — this plugin covers the **Code** tab only |
+| Claude Code — Desktop **Cowork** tab | no | **no** | sources skills and plugins from the claude.ai account (Settings → Customize), not `~/.claude`. A CLI install never reaches it; only an account-enabled *synced* plugin does — see docs/architecture.md |
 
 ### Editing the rules
 
