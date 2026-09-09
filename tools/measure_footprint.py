@@ -85,8 +85,10 @@ def reminder_text(stdout):
     return hook_out.get("additionalContext") or payload.get("systemMessage") or stdout
 
 
-def run_hook(hook_py, event, payload):
+def run_hook(hook_py, event, payload, env=None):
     """Invoke a hook handler the way the harness does and return (exit code, stdout)."""
+    child_env = dict(os.environ)
+    child_env.update(env or {})
     proc = subprocess.run(
         [sys.executable, hook_py, event],
         input=payload,
@@ -94,8 +96,33 @@ def run_hook(hook_py, event, payload):
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=child_env,
     )
     return proc.returncode, proc.stdout or ""
+
+
+def split_output(stdout):
+    """(reminder, trace) for one hook call.
+
+    reminder_text() collapses the two into one value, which is right for the per-prompt and
+    per-session figures but wrong here: a PostToolUse handler can emit BOTH an additionalContext
+    reminder and a systemMessage decision trace in the same call, and the trace is the thing
+    this section exists to price. Measuring only the reminder is how the harvest trace went
+    unmeasured through 2.13.0.
+    """
+    try:
+        payload = json.loads(stdout)
+    except ValueError:
+        return stdout, ""
+    if not isinstance(payload, dict):
+        return stdout, ""
+    hook_out = payload.get("hookSpecificOutput") or {}
+    reminder = (
+        hook_out.get("additionalContext")
+        or hook_out.get("permissionDecisionReason")
+        or ""
+    )
+    return reminder, payload.get("systemMessage") or ""
 
 
 def collect_prompts():
@@ -238,8 +265,60 @@ def main():
     print(f"   standards  : {standards_chars:>6,} chars  (~{tokens(standards_chars):,} tokens)")
     print("   (re-paid on every subagent spawn, not just once per session)")
 
-    # --- 4. the path that must never fail ----------------------------------------------------
-    print("\n4. Failure paths (a non-zero exit here erases the user's prompt)")
+    # --- 4. per-tool-call cost ---------------------------------------------------------------
+    # These fire per TOOL CALL, not per turn, so frequency is as much of the cost as size is.
+    # Nothing measured this before: verify.py proves the handlers are correct and sections 1-3
+    # price the per-prompt and per-session hooks, which left every PreToolUse/PostToolUse
+    # handler - and every decision trace - unpriced.
+    print("\n4. Per-tool-call cost (PreToolUse / PostToolUse)")
+    cs = "class A {\n// Must run after Init(). Order matters.\nvoid A() { }\n}\n"
+    essay = "class A {\n" + (
+        "// The integrator is Verlet, not Euler. Euler lost energy visibly over a few\n"
+        "// minutes of play, which showed up as satellites spiralling in with no force\n"
+        "// acting on them. Verlet is symplectic, so the error is bounded rather than\n"
+        "// cumulative. The cost is that velocity is not available at the current step;\n"
+        "// where a caller needs it, it is rebuilt from the two most recent positions.\n"
+    ) + "}\n"
+    calls = [
+        ("guard", "every Bash/PowerShell call",
+         json.dumps({"tool_input": {"command": "git status"}}), "allowed"),
+        ("guard", "every Bash/PowerShell call",
+         json.dumps({"tool_input": {"command": "git commit -m wip"}}), "prompted"),
+        ("artifact", "every Write/Edit",
+         json.dumps({"tool_input": {"file_path": "/proj/a.cs"}}), "not a document"),
+        ("runnable", "every Write",
+         json.dumps({"tool_input": {"file_path": "/proj/notes.md"}}), "not runnable"),
+        ("harvest", "every Write/Edit",
+         json.dumps({"tool_name": "Write",
+                     "tool_input": {"file_path": "/proj/a.cs", "content": cs}}), "nothing found"),
+        ("harvest", "every Write/Edit",
+         json.dumps({"tool_name": "Write",
+                     "tool_input": {"file_path": "/proj/a.cs", "content": essay}}), "one block"),
+        ("delegate", "each approved plan", "{}", "always fires"),
+    ]
+    print(f"   {'handler':<9} {'when':<26} {'reminder':>20} {'trace':>20}")
+    trace_total = 0
+    for event, when, payload, label in calls:
+        _, out = run_hook(hook_py, event, payload)
+        reminder, tr = split_output(out)
+        trace_total += len(tr)
+        r = f"{len(reminder):,} ch (~{tokens(len(reminder)):,} tok)" if reminder else "-"
+        t = f"{len(tr):,} ch (~{tokens(len(tr)):,} tok)" if tr else "-"
+        print(f"   {event:<9} {when:<26} {r:>20} {t:>20}   {label}")
+
+    off_total = 0
+    for event, _, payload, _ in calls:
+        _, out = run_hook(hook_py, event, payload, env={"HOUSE_RULES_TRACE": "off"})
+        off_total += len(split_output(out)[1])
+    print(f"\n   decision traces across those calls : {trace_total:,} chars "
+          f"(~{tokens(trace_total):,} tokens)")
+    print(f"   the same calls with HOUSE_RULES_TRACE=off : {off_total:,} chars")
+    print("   The trace ships ON: stderr from a hook that exits 0 goes to the debug log only,")
+    print("   never the transcript, so a trace written there would be off by default in name")
+    print("   only. HOUSE_RULES_TRACE=off is the lever, and it silences no reminder.")
+
+    # --- 5. the path that must never fail ----------------------------------------------------
+    print("\n5. Failure paths (a non-zero exit here erases the user's prompt)")
     failures = 0
     for name, payload in [
         ("missing prompt key", "{}"),

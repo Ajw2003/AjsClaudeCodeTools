@@ -35,6 +35,7 @@ enabled until someone is already lost.
 """
 
 import json
+import os
 import re
 import sys
 
@@ -54,11 +55,35 @@ def emit(obj):
     sys.stdout.write(json.dumps(obj, separators=(",", ":")))
 
 
+_TRACE_OFF = {"off", "0", "false", "no"}
+
+
+def trace_enabled():
+    """The decision trace ships ON. A diagnostic nobody enables until they are already lost
+    is not a diagnostic - see "nothing fails silently" in rules/house-rules.md. stderr is not
+    an option here: a hook that exits 0 has its stderr sent to the debug log only, never the
+    transcript, so a trace written there would be off by default in everything but name.
+    HOUSE_RULES_TRACE=off is the one lever, and it covers every handler.
+    """
+    return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() not in _TRACE_OFF
+
+
+def trace(message):
+    """Say what this handler decided, on a path that would otherwise emit nothing.
+
+    Only for handlers with a genuinely silent success path - guard's allow, artifact,
+    runnable, handover and harvest. inject, standards, scope and delegate always emit
+    something already, so a trace there would duplicate the proof it exists to provide, at
+    the most expensive possible frequency (scope runs on every prompt).
+    """
+    if trace_enabled():
+        emit({"systemMessage": message})
+
+
 # ---------------------------------------------------------------------------------------
 # inject — SessionStart
 # ---------------------------------------------------------------------------------------
 
-import os
 import platform
 import shutil
 import sys as _sys
@@ -567,6 +592,32 @@ def _guard_subject(payload):
     return m.group(0) if m else payload
 
 
+_COMMAND_VALUE_RE = re.compile(r'"command"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+def _trace_subject(subject, limit=60):
+    """The command as a human reads it, collapsed to one short line.
+
+    _guard_subject deliberately returns the RAW JSON slice, because matching against escapes
+    intact is what keeps the patterns honest. That is the wrong thing to print: it would show
+    the reader `"command": "git status"` rather than `git status`. So decode for the trace
+    only - the matching still runs on the raw slice. The trace is paid on every shell call,
+    so it stays one line however long or multi-line the command was.
+    """
+    m = _COMMAND_VALUE_RE.search(subject)
+    if m:
+        try:
+            text = json.loads('"%s"' % m.group(1))
+        except ValueError:
+            text = m.group(1)
+    else:
+        text = subject
+    flat = " ".join(text.split())
+    if len(flat) > limit:
+        flat = flat[: limit - 1] + "\u2026"
+    return "`%s`" % flat
+
+
 def event_guard():
     try:
         payload = read_payload()
@@ -580,6 +631,7 @@ def event_guard():
         return 2
 
     if not payload:
+        trace("guard: empty payload - nothing was checked for this call.")
         return 0
 
     subject = _guard_subject(payload)
@@ -591,6 +643,10 @@ def event_guard():
                 hits[title].append(reason)
 
     if not any(hits.values()):
+        # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
+        # not to fire" from "never ran" - and it is the security-shaped backstop, so that is
+        # the worst place to leave the ambiguity.
+        trace("guard: checked %s - no house rule matched." % _trace_subject(subject))
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
@@ -676,8 +732,10 @@ def event_artifact():
             return 0
         base = re.split(r"[\\/]", file_path)[-1]
         if not _ARTIFACT_EXT_RE.search(base):
+            trace("artifact: %s is not a document extension - not checked." % base)
             return 0
         if not _is_outside_project(file_path):
+            trace("artifact: %s is inside the project - nothing to copy." % base)
             return 0
         emit(
             {
@@ -701,8 +759,11 @@ RUNNABLE_NOTE = (
     "House rules, whole workflows: you just created a runnable file. A runnable file you "
     "have not run is a starting point, not a whole workflow. Before you finish this task, "
     "run it and confirm it works, or say why running does not apply. Never hand over a "
-    "command you have not run. This is a reminder to you; the user was not prompted and "
-    "does not need to do anything."
+    "command you have not run. One clean run is not proof it works: run it twice, since the "
+    "second run meets the state the first one left behind, and give it a realistic input "
+    "rather than a toy one - a green suite reports only on the cases someone thought to "
+    "write. This is a reminder to you; the user was not prompted and does not need to do "
+    "anything."
 )
 
 _RUNNABLE_EXT_RE = re.compile(
@@ -731,8 +792,10 @@ def event_runnable():
             return 0
         base = re.split(r"[\\/]", file_path)[-1]
         if not (_RUNNABLE_EXT_RE.search(base) or _RUNNABLE_BARE_RE.match(base)):
+            trace("runnable: %s is not a runnable file - nothing to run." % base)
             return 0
         if _is_outside_project(file_path):
+            trace("runnable: %s is outside the project - scratch work, not run." % base)
             return 0
         emit(
             {
@@ -895,9 +958,19 @@ def event_handover():
         return 0
 
     if re.search(r'"stop_hook_active"\s*:\s*true', payload):
+        # The retry after this check already fired. Tracing here would say the same thing
+        # twice for one turn, so this is the one stand-down that stays quiet.
         return 0
 
     if not _reply_needs_the_handover_check(payload):
+        # The one handler that must NOT trace, and the reason is a direct conflict between
+        # two rules rather than a cost argument. This path is reached when the reply hands
+        # over no command, or when it is already in card shape. Tracing the second case is
+        # precisely the "a card never announces its own compliance" defect the Stop gate was
+        # narrowed to remove - the line would appear, visibly, at the end of every correct
+        # handover. And the first case would put a line on the end of every ordinary turn.
+        # Silence here already means "I looked and there was nothing to do", which is what
+        # the rule asks of it; nothing is being hidden.
         return 0
 
     # additionalContext, not decision: "block". Both continue the turn under the same loop
@@ -1164,7 +1237,9 @@ def event_harvest():
         toggle = os.environ.get("HOUSE_RULES_HARVEST", "on").strip().lower()
         if toggle in _TOGGLE_OFF:
             return 0
-        quiet = toggle == "quiet"
+        # HOUSE_RULES_TRACE is the global lever and covers harvest too; HOUSE_RULES_HARVEST
+        # =quiet drops just this handler's trace while keeping its reminder.
+        quiet = toggle == "quiet" or not trace_enabled()
         verbose = os.environ.get("HOUSE_RULES_DEBUG", "").strip() not in ("", "0", "false", "no")
 
         payload = read_payload()

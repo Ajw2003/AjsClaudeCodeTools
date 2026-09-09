@@ -87,6 +87,7 @@ decides whether that default survives. Measured 2026-09-09:
 source writes rather than on every turn. The reminder is in line with `artifact`, `runnable` and
 `delegate`.
 
-`tools/measure_footprint.py` does not cover this: it measures `scope` and the two `SessionStart`
-handlers, and has no `PostToolUse` coverage at all. The figures above were taken by running the
-handler directly. Extending the tool to cover `PostToolUse` is worth doing and has not been done.
+`tools/measure_footprint.py` section 4 now prices this, alongside every other per-tool-call
+handler, so these figures no longer have to be taken by hand. It reports the reminder and the
+trace **separately** — collapsing them into one number is exactly how the harvest trace went
+unmeasured through 2.13.0.

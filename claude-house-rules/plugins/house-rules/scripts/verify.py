@@ -166,10 +166,12 @@ GUARD_CASES = [
 
 for expect, rule, cmd in GUARD_CASES:
     code, out, err = run_hook("guard", payload_for(cmd))
-    if not out.strip():
-        got = "pass"
-    elif '"permissionDecision":"ask"' in out:
+    if '"permissionDecision":"ask"' in out:
         got = "ask"
+    elif not out.strip() or "no house rule matched" in out:
+        # Not prompting is the decision; the allow path now says so out loud rather than
+        # being indistinguishable from the hook never having run.
+        got = "pass"
     else:
         got = "malformed"
     result = "PASS" if got == expect else "FAIL"
@@ -218,9 +220,9 @@ desc_payload = json.dumps(
     }
 )
 code, out, err = run_hook("guard", desc_payload)
-if not out.strip():
+if '"permissionDecision"' not in out and "`npm test`" in out:
     report("PASS", "a harmless command with a git-mentioning description does not prompt")
-    print("          matched the command field only, not the description")
+    print("          no prompt, and the trace names `npm test` - the command, not the description")
 else:
     report("FAIL", "a harmless command with a git-mentioning description does not prompt")
     print(f"          got: {out}")
@@ -381,6 +383,8 @@ def art_case(expect, title, file_path, extra=""):
     code, out, err = run_hook("artifact", payload)
     if "artifact custody" in out:
         got = "remind"
+    elif '"systemMessage"' in out:
+        got = "trace"
     elif not out.strip():
         got = "silent"
     else:
@@ -400,18 +404,18 @@ art_case(
     r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\notes.md",
 )
 art_case(
-    "silent",
+    "trace",
     "document written inside the project is left alone",
     r"C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\docs\plans\x.md",
 )
 art_case(
-    "silent",
+    "trace",
     "file whose CONTENTS mention a temp path is left alone",
     r"C:\Users\aj\Desktop\proj\README.md",
     extra={"content": "put it in /tmp/ or scratchpad"},
 )
 art_case(
-    "silent",
+    "trace",
     "script in a temp directory is scratch work, not an artifact",
     r"C:\Users\aj\AppData\Local\Temp\build.sh",
 )
@@ -425,7 +429,7 @@ art_case(
     r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\architecture-review.html",
 )
 art_case(
-    "silent",
+    "trace",
     "an .html report written inside the project is left alone",
     r"C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\docs\architecture-review.html",
 )
@@ -436,7 +440,7 @@ for _ext in ("csv", "json", "svg", "pdf"):
         rf"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\report.{_ext}",
     )
 art_case(
-    "silent",
+    "trace",
     "a .ps1 in the scratchpad is still scratch work - runnables stay out of the artifact list",
     r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\build.ps1",
 )
@@ -539,6 +543,8 @@ def run_case(expect, title, file_path, extra=""):
     code, out, err = run_hook("runnable", json.dumps(obj))
     if "whole workflows" in out:
         got = "remind"
+    elif '"systemMessage"' in out:
+        got = "trace"
     elif not out.strip():
         got = "silent"
     else:
@@ -552,19 +558,19 @@ run_case(
     "remind", "a runnable .ps1 created in the project is flagged to be run", r"C:\proj\tools\install.ps1"
 )
 run_case("remind", "a bare Dockerfile counts as runnable", r"C:\proj\Dockerfile")
-run_case("silent", "a document is not a runnable file", r"C:\proj\notes.md")
+run_case("trace", "a document is not a runnable file", r"C:\proj\notes.md")
 run_case(
-    "silent",
+    "trace",
     "a script written to a temp directory is scratch work, not a delivery",
     r"C:\Users\aj\AppData\Local\Temp\build.sh",
 )
 run_case(
-    "silent",
+    "trace",
     "a script written to the session scratchpad is scratch work",
     r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\run.py",
 )
 run_case(
-    "silent",
+    "trace",
     "a file whose CONTENTS mention a temp path is judged on where it actually is",
     r"C:\proj\notes.md",
     extra={"content": "write it to /tmp/build.sh first"},
@@ -572,7 +578,14 @@ run_case(
 
 # --- the reminder in hook.py's runnable handler has not drifted from the rules document -----
 drift = []
-for phrase in ["whole workflow", "starting point", "hand over a command"]:
+for phrase in [
+    "whole workflow",
+    "starting point",
+    "hand over a command",
+    "run it twice",
+    "realistic",
+    "not proof it works",
+]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:
@@ -581,6 +594,42 @@ if not drift:
 else:
     report("FAIL", "runnable reminder still matches the rules document")
     print(f"          in runnable reminder but missing from house-rules.md: {'; '.join(drift)}")
+
+# --- and the reverse: the EMITTED runnable note still states the rule ---------------------------
+# The check above reads the rules document only, so on its own it cannot notice a reminder that
+# has been trimmed until it no longer states a rule. This reads what the hook actually emits.
+code, out, err = run_hook(
+    "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\deploy.sh"}})
+)
+drift = []
+for phrase in ["run it twice", "realistic input", "not a whole workflow", "someone thought to write"]:
+    if phrase not in out:
+        drift.append(phrase)
+if not drift:
+    report("PASS", "the emitted runnable note still says one clean run is not proof")
+    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
+else:
+    report("FAIL", "the emitted runnable note still says one clean run is not proof")
+    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+
+# --- the green-suite rule is stated, and states the conditions that actually found the bugs ----
+missing = [
+    p
+    for p in [
+        "A green test suite is not proof it works",
+        "realistic scale",
+        "Twice",
+        "As the thing that ships",
+        "the run wins",
+    ]
+    if p.lower() not in rules_text.lower()
+]
+if not missing:
+    report("PASS", "the green-suite rule names the conditions each real defect was found under")
+    print("          scale, repetition, the shipped artifact, and run-beats-test")
+else:
+    report("FAIL", "the green-suite rule names the conditions each real defect was found under")
+    print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
 # --- the delegate reminder fires after ExitPlanMode -------------------------------------------
 code, out, err = run_hook("delegate", "")
@@ -815,6 +864,81 @@ for payload, label in (
         report("FAIL", f"harvest given {label} says so out loud and still exits 0")
         print(f"          exit {code}, got: {out[:200]!r}")
 
+# --- every handler with a silent success path now says what it decided --------------------------
+# "Nothing fails silently" asks the default output to answer: did this run, on what, and what did
+# it decide. stderr cannot answer it - a hook that exits 0 has its stderr sent to the debug log
+# only, never the transcript - so these are systemMessages or they are nothing.
+trace_cases = [
+    ("guard", json.dumps({"tool_input": {"command": "git status"}}),
+     "`git status`", "the allow path, the plugin's highest-frequency silent decision"),
+    ("artifact", json.dumps({"tool_input": {"file_path": r"C:\proj\a.cs"}}),
+     "a.cs", "a file that is not a document extension"),
+    ("artifact", json.dumps({"tool_input": {"file_path": r"C:\proj\notes.md"}}),
+     "inside the project", "a document that is already in the project"),
+    ("runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\notes.md"}}),
+     "not a runnable file", "a file that cannot be run"),
+]
+for event, payload, needle, why in trace_cases:
+    code, out, err = run_hook(event, payload)
+    if code == 0 and '"systemMessage"' in out and needle in out:
+        report("PASS", f"{event} traces its decision on {why}")
+        print(f"          says what it looked at and what it concluded; names {needle!r}")
+    else:
+        report("FAIL", f"{event} traces its decision on {why}")
+        print(f"          exit {code}, got: {out[:160]!r}")
+
+# --- one lever turns every trace off, and no reminder goes with it -----------------------------
+off = dict(os.environ)
+off["HOUSE_RULES_TRACE"] = "off"
+quiet_failures = []
+for event, payload, _, why in trace_cases:
+    code, out, err = run_hook(event, payload, env=off)
+    if out.strip():
+        quiet_failures.append(f"{event} still emitted with HOUSE_RULES_TRACE=off: {out[:80]}")
+code, out, err = run_hook(
+    "guard", json.dumps({"tool_input": {"command": "git commit -m wip"}}), env=off
+)
+if '"permissionDecision":"ask"' not in out:
+    quiet_failures.append("HOUSE_RULES_TRACE=off also silenced guard's prompt, which it must not")
+code, out, err = run_hook(
+    "harvest",
+    json.dumps({"tool_name": "Write", "tool_input": {"file_path": "/p/a.cs", "content": ESSAY_CS}}),
+    env=off,
+)
+if '"additionalContext"' not in out:
+    quiet_failures.append("HOUSE_RULES_TRACE=off also silenced the harvest reminder")
+if '"systemMessage"' in out:
+    quiet_failures.append("HOUSE_RULES_TRACE=off did not cover harvest's own trace")
+if not quiet_failures:
+    report("PASS", "HOUSE_RULES_TRACE=off silences every trace and no reminder")
+    print("          one lever for the diagnostic; the decisions themselves still speak")
+else:
+    report("FAIL", "HOUSE_RULES_TRACE=off silences every trace and no reminder")
+    for q in quiet_failures:
+        print(f"          {q}")
+
+# --- handover is the deliberate exception, and it is not an oversight --------------------------
+# Tracing its stand-down would announce a compliant card's own compliance, which the rules
+# forbid, and would put a line on the end of every ordinary turn. Silence there already means
+# "I looked and there was nothing to do".
+code, out, err = run_hook(
+    "handover",
+    json.dumps(
+        {
+            "session_id": "verify",
+            "hook_event_name": "Stop",
+            "stop_hook_active": False,
+            "last_assistant_message": "a reply with no fenced block",
+        }
+    ),
+)
+if not out.strip() and "never announces its own compliance" in read(RULES_FILE):
+    report("PASS", "handover stays silent on its stand-down, and the rule that requires it still stands")
+    print("          the one handler where tracing would break a rule rather than cost tokens")
+else:
+    report("FAIL", "handover stays silent on its stand-down, and the rule that requires it still stands")
+    print(f"          got: {out[:160]!r}")
+
 # --- harvest scans a big file rather than skipping it, and does it in linear time -------------
 # Regression: the run accumulator rebuilt its line list per line, which is O(n^2). A 4.8MB file
 # took 22 seconds - past hooks.json's 10s timeout, so in practice the harness killed the hook
@@ -1030,8 +1154,10 @@ def hand_case(expect, title, payload, mode=""):
         got = "feedback"
     elif '"decision":"block"' in out:
         got = "block (the old shape - additionalContext is what it should emit now)"
-    elif "systemMessage" in out:
+    elif "systemMessage" in out and "house-rules plugin:" in out:
         got = "offline"
+    elif "systemMessage" in out:
+        got = "trace"
     elif not out.strip():
         got = "silent"
     else:
