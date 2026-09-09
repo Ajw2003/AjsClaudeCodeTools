@@ -87,6 +87,10 @@ if [ -z "$PY" ]; then
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. No coding standards were loaded into this session. Run /house-rules:doctor."}'
       exit 0
       ;;
+    harvest)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The comment-harvest check did not run for this call. Run /house-rules:doctor."}'
+      exit 0
+      ;;
     *)
       exit 0
       ;;
