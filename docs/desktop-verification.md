@@ -211,16 +211,20 @@ the data point later runs are compared against:
 - Step 3 — verify: `python "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\verify.py"`
 - Every step: navigate-to-an-absolute-path plus the shell in prose, one ```` ```powershell ```` fence,
   and a `**You should see:**` line.
-- **No published page** — three steps is under the four-step threshold.
+- **No published page, but a one-line offer of one** — three steps is at or over the two-step
+  offer threshold, and a page is published only if the offer is taken.
 - The reply ends at the card's closing `---`; the only prose after it was new information (the
   clone's unpushed commits, the restart reminder), never a report on the card's own fields.
 
 **A later run matches the baseline if** the step count, the three commands, and the per-step fields
 are the same. Wording differences in titles and prose are not failures. Different *commands*, a
-missing field, a published page appearing at three steps, or a trailing compliance sentence are.
+missing field, a page published without being asked for, a missing offer at two or more steps, or
+a trailing compliance sentence are.
 
-`PROMPT-LONG` exists only for the sections that need to cross the four-step publishing threshold
-(§4, §7). It has **no recorded baseline yet** — the first run of §4 establishes one.
+`PROMPT-LONG` exists only for the sections that need a longer card than PROMPT-MULTI produces
+(§4, §7). It has **no recorded baseline yet** — the first run of §4 establishes one. Note that
+since 2.17.0 no prompt publishes a page on its own: §4 takes the offer, it does not clear a
+threshold.
 
 
 ## 0 — Get the current plugin onto the machine
@@ -276,7 +280,8 @@ To list pages you already own, use `/artifacts` **in the CLI**, not here.
 The highest-information test here, which is why it comes before the cosmetic ones.
 
 - **2a — the baseline.** Fresh session, **PROMPT-MULTI**.
-  **Pass:** the recorded baseline above, and **no published page** — the threshold is four.
+  **Pass:** the recorded baseline above, and **no published page** — three steps earns an offer,
+  and nothing publishes until the offer is accepted.
 - **2b — the real question.** Fresh session with `HOUSE_RULES_HANDOVER=off`, **PROMPT-MULTI** again.
   **Pass:** the card still appears.
   **Fail means:** neither `inject` nor the forced output style is doing the work, and the `Stop`
@@ -317,10 +322,11 @@ shells existed on that machine, which is what made the mismatch detectable.
 
 ## 4 — The published page
 
-**PROMPT-LONG** on the Desktop **Code** tab — the one prompt here that clears the four-step
-publishing threshold.
+**PROMPT-LONG** on the Desktop **Code** tab, then **accept the offer** — since 2.17.0 nothing
+publishes unasked, so taking the offer is what produces the page.
 
-**You should see:** the inline card **and** a published page link.
+**You should see:** the inline card, then a one-line offer; and after accepting, a published page
+link. A page appearing before the offer is accepted is a failure, not a convenience.
 
 Then, on the page: the pager dots, Next and Back, jumping by clicking a dot, *View all steps*, the
 per-command copy button, the `UNTESTED` badge on a step that carries one, light and dark (toggle the

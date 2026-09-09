@@ -1771,6 +1771,52 @@ else:
     report("FAIL", "every surface in the CLAUDE.md table has a check in desktop-verification.md")
     print(f"          {'; '.join(surfdrift)}")
 
+# --- nothing publishes a page unasked, and the rule and the table say the same thing ---------
+# The threshold used to live in two places that nothing compared: rules/house-rules.md drove the
+# behaviour, CLAUDE.md's table described it, and only the surface NAMES above were ever checked.
+# So the table could have said one number while the rule said another, and the first symptom
+# would have been a page the user did not ask for.
+pubdrift = []
+for phrase in [
+    "I never publish a page unasked",
+    "two or more steps",
+    "A single-step card is not offered a page at all",
+]:
+    if phrase.lower() not in rules_text.lower():
+        pubdrift.append(f"rules/house-rules.md no longer says {phrase!r}")
+# The replaced wording must be GONE from the operative text and PRESENT in the Why - those are
+# two different rules ("nothing stale") and ("when a decision reverses, say what it used to say"),
+# and a check that greps the whole section can only ever satisfy one of them. Splitting the
+# section at its Why is what lets both be enforced at once.
+_sec = rules_text.split("#### When a card is worth publishing as a page", 1)
+if len(_sec) != 2:
+    pubdrift.append("the publishing section is missing from rules/house-rules.md")
+else:
+    _body = _sec[1].split(chr(10) + "## ", 1)[0]
+    _operative, _, _why = _body.partition("**Why:**")
+    for stale in ["four or more steps", "below four steps"]:
+        if stale in _operative.lower():
+            pubdrift.append(f"the operative rule still carries the replaced wording {stale!r}")
+    if "four or more steps" not in _why.lower():
+        pubdrift.append("the Why does not record the four-step rule this replaced")
+if os.path.isfile(root_claude):
+    table_text = read(root_claude)
+    rows = [ln for ln in table_text.splitlines() if ln.startswith("| Claude Code")]
+    offered = [ln for ln in rows if "offered at 2+ steps" in ln]
+    if not offered:
+        pubdrift.append("no CLAUDE.md surface row states 'offered at 2+ steps'")
+    if "4+ steps" in table_text:
+        pubdrift.append("CLAUDE.md still advertises the replaced '4+ steps' threshold")
+else:
+    pubdrift.append("no CLAUDE.md to check")
+if not pubdrift:
+    report("PASS", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    print("          rule: offer at 2+ steps, publish only on request; table says the same")
+else:
+    report("FAIL", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    for p in pubdrift:
+        print(f"          {p}")
+
 # --- the card template was not duplicated into CLAUDE.md -------------------------------------
 # Same reasoning as the rules-duplication check above: CLAUDE.md is a pointer. A second copy of
 # the template would load twice and drift from the real one unnoticed.
