@@ -244,9 +244,17 @@ def main():
         if os.path.isdir(cache_path):
             dirty.append("plugin cache still present")
         if os.path.isfile(settings_path):
+            # Check for OUR entries, not for the keys themselves. Step 7 deliberately leaves
+            # enabledPlugins and extraKnownMarketplaces in place so unrelated plugins survive
+            # the strip - and the CLI's own uninstall leaves an empty enabledPlugins {} behind
+            # regardless. Asserting the key is absent contradicts the step above it, and fails
+            # on any machine that has ever had a plugin installed: the fresh-container run
+            # passed only because it had no settings.json at all.
             s2 = load_json(settings_path)
-            if "enabledPlugins" in s2:
-                dirty.append("enabledPlugins still in settings.json")
+            if PLUGIN_ID in (s2.get("enabledPlugins") or {}):
+                dirty.append(f"enabledPlugins[{PLUGIN_ID}] still in settings.json")
+            if MARKETPLACE in (s2.get("extraKnownMarketplaces") or {}):
+                dirty.append(f"extraKnownMarketplaces[{MARKETPLACE}] still in settings.json")
         if not dirty:
             ok("nothing left behind - this is now a fresh machine")
         else:
