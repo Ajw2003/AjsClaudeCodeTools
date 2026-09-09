@@ -84,7 +84,22 @@ repo: it always injects `coding-philosophy.md` and adds the C#/Unity or web/JS d
 detects those markers, so the same command gives a bigger number inside a Unity project. This is
 the figure that is also re-paid per subagent spawn.
 
-### 4. Failure paths
+### 4. Per-tool-call cost
+
+`guard`, `artifact`, `runnable`, `harvest` and `delegate` fire per **tool call**, not per turn,
+so frequency is as much of the cost as size is. Sections 1–3 price the per-prompt and per-session
+hooks, which left every `PreToolUse`/`PostToolUse` handler unpriced — and with them every decision
+trace.
+
+The reminder and the trace are reported **separately**, because one call can emit both and it is
+the trace this section exists to price. `reminder_text()` collapses them into one value, which is
+right for sections 1–3 and wrong here; `split_output()` is the version that keeps them apart.
+Collapsing them is how the harvest trace shipped unmeasured in 2.13.0.
+
+The last two lines re-run the same calls with `HOUSE_RULES_TRACE=off`, so the trace's whole cost
+is a single number you can compare against zero.
+
+### 5. Failure paths
 
 `scope` runs on `UserPromptSubmit`, where **a non-zero exit erases the user's prompt** before
 Claude ever sees it. That makes a crash here worse than a missing reminder, and it is why the

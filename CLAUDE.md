@@ -137,11 +137,19 @@ docs/architecture.md.
   reminder rather than reporting, because a non-zero exit there erases the user's prompt.
   See the rule in `rules/house-rules.md` and the reversal it forced on `handover`'s
   empty-payload case, recorded in docs/architecture.md.
-- **`harvest` traces every decision, on by default.** One line per source-file write, whether
-  or not it fires, naming what it measured — a diagnostic that ships switched off is never
-  enabled until someone is already lost. `HOUSE_RULES_DEBUG=1` adds per-run rejection reasons,
-  `HOUSE_RULES_HARVEST=quiet` drops the trace, `=off` disables both. It is the only handler
-  that does this so far; docs/architecture-backlog.md §7 queues the rest.
+- **Every handler with a silent success path traces its decision, on by default.** `guard`'s
+  allow, `artifact`, `runnable` and `harvest` each emit a one-line `systemMessage` saying what
+  they looked at and what they concluded, whether or not they fire. `inject`, `standards`,
+  `scope` and `delegate` do **not** — they always emit something already, so a trace there
+  would duplicate the proof it exists to provide, at the most expensive possible frequency
+  (`scope` runs on every prompt). `handover` is the one deliberate exception with a silent
+  path: tracing its stand-down would announce a compliant card's own compliance, which
+  `rules/house-rules.md` forbids, and would put a line on the end of every ordinary turn.
+  **stderr is not an alternative** — a hook that exits 0 has its stderr sent to the debug log
+  only, never the transcript, so a trace written there is off by default in name only.
+  `HOUSE_RULES_TRACE=off` is the single lever and silences no reminder;
+  `HOUSE_RULES_HARVEST=quiet` drops just harvest's; `HOUSE_RULES_DEBUG=1` adds harvest's
+  per-run rejection reasons. `tools/measure_footprint.py` section 4 prices all of it.
 - **Every handler extracts the one field it cares about**, rather than matching the whole
   payload. `artifact` and `runnable` read `file_path`, so a file whose *contents* mention `/tmp`
   doesn't false-trigger on every save. `guard` reads `command`, so a call *described* as

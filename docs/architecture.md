@@ -121,19 +121,38 @@ fallback and carries on — is not the defect and is not flagged; the defect is 
 exit on `UserPromptSubmit` erases the user's prompt, so its contract is to recover to the short
 reminder rather than to report. Emitting that fallback is how it speaks.
 
-### The trace ships on
+### The trace ships on, and which handlers get one is measured, not assumed
 
-`harvest` emits a one-line decision trace on **every source-file write**, whether or not it
-fires, naming what it measured and what it concluded. That is deliberate: a diagnostic that
-ships switched off is never enabled until someone is already lost, so the default has to answer
-"did this run, on what, and what did it decide". `HOUSE_RULES_DEBUG=1` adds per-run rejection
-reasons on top; `HOUSE_RULES_HARVEST=quiet` drops the trace and keeps the reminder; `=off`
-disables both.
+The default output has to answer *did this run, on what, and what did it decide*. A diagnostic
+switched off by default is never enabled until someone is already lost.
 
-The cost is a `systemMessage` on every source write in every session, and it is the part of
-this design most likely to be regretted. Two things bound it: the trace is one line, and a
-write to a non-source file emits nothing at all — that out-of-jurisdiction path is the only
-fully silent exit the handler has.
+**stderr cannot answer it.** The hooks documentation is explicit: stderr from a hook that exits 0
+goes to the debug log only, never the transcript, and Claude never sees it. Every trace path here
+exits 0, so a trace written to stderr would be off by default in everything but name. The choice
+is a `systemMessage` or nothing.
+
+Which handlers need one was settled by running them rather than by argument. Four **already**
+emit on every invocation — `inject`, `standards`, `scope` and `delegate` — so a trace there
+duplicates the proof it exists to provide, at the worst possible frequency: `scope` runs on every
+prompt. Four have a genuinely silent success path and get a trace: `guard`'s allow, `artifact`,
+`runnable`, `harvest`.
+
+`guard` was the real judgement call, because it fires on every shell command. The measurement
+settles it: section 4 of `measure_footprint.py` puts its trace at ~52 chars (~13 tokens) per
+call, against `inject`'s ~6,200 tokens per session, re-paid on every subagent spawn. Frequency
+was the right worry and the number is small.
+
+**`handover` is the one deliberate exception**, and not on cost grounds. Its stand-down fires
+when the reply hands over no command *or is already in card shape*. Tracing the second case is
+exactly the "a card never announces its own compliance" defect the `Stop` gate was narrowed to
+remove — the line would appear, visibly, at the end of every correct handover. The first would
+put a line on the end of every ordinary turn. Silence there already means "I looked and there was
+nothing to do", which is what the rule asks; nothing is hidden. `verify.py` asserts both the
+silence and the rule that requires it, so this cannot be quietly "fixed" later.
+
+`HOUSE_RULES_TRACE=off` is the single lever and silences no reminder — `guard` still prompts,
+`harvest` still reminds. `HOUSE_RULES_HARVEST=quiet` drops just harvest's trace;
+`HOUSE_RULES_DEBUG=1` adds harvest's per-run rejection reasons.
 
 ## The machine profile is data, not code, and is not committed
 
