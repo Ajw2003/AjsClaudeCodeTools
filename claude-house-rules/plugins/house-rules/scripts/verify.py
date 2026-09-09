@@ -121,15 +121,15 @@ GUARD_CASES = [
     ("pass", None, "ls -la src"),
     ("pass", None, r"Get-ChildItem C:\Users"),
     ("pass", None, "npm run build && npm test"),
-    ("ask", "Never commit to `main` without asking", 'git commit -m "wip"'),
+    ("ask", "Commit constantly on my own branches, never on theirs", 'git commit -m "wip"'),
     ("pass", None, "git add -A"),
-    ("ask", "Never commit to `main` without asking", "git push origin main"),
-    ("ask", "Never commit to `main` without asking", "git push --force-with-lease"),
+    ("ask", "Commit constantly on my own branches, never on theirs", "git push origin main"),
+    ("ask", "Commit constantly on my own branches, never on theirs", "git push --force-with-lease"),
     ("pass", None, "git checkout -b feature/x"),
     ("pass", None, "git switch main"),
     ("pass", None, "git branch -d old-feature"),
     ("pass", None, "git tag v1.2.0"),
-    ("ask", "Never commit to `main` without asking", "git reset --hard origin/main"),
+    ("ask", "Commit constantly on my own branches, never on theirs", "git reset --hard origin/main"),
     (
         "ask",
         "Never hide work in a background window or a silent process",
@@ -161,7 +161,7 @@ GUARD_CASES = [
     ("ask", "Never take a destructive action without checking first", "git restore src/app.js"),
     ("ask", "Never take a destructive action without checking first", "git stash drop"),
     ("ask", "Never take a destructive action without checking first", "git stash clear"),
-    ("ask", "Never commit to `main` without asking", 'echo "starting" && git commit -m "wip"'),
+    ("ask", "Commit constantly on my own branches, never on theirs", 'echo "starting" && git commit -m "wip"'),
 ]
 
 for expect, rule, cmd in GUARD_CASES:
@@ -232,7 +232,7 @@ nocmd_payload = json.dumps(
     {"session_id": "verify", "tool_name": "PowerShell", "tool_input": {"script": "git commit -m wip"}}
 )
 code, out, err = run_hook("guard", nocmd_payload)
-if '"permissionDecision":"ask"' in out and "Never commit to `main` without asking" in out:
+if '"permissionDecision":"ask"' in out and "Commit constantly on my own branches, never on theirs" in out:
     report("PASS", "a payload with no command field still gets checked (whole-payload fallback)")
     print("          fell back to the old behaviour rather than passing it unchecked")
 else:
@@ -254,7 +254,7 @@ for h in [
     "Never hand over a command I have not run",
     "Every artifact lives in the project directory",
     "Never hide work in a background window or a silent process",
-    "Never commit to `main` without asking",
+    "Commit constantly on my own branches, never on theirs",
     "Never take a destructive action without checking first",
 ]:
     if h not in out:
@@ -727,17 +727,27 @@ else:
     for v in voice_problems:
         print(f"          {v}")
 
-# --- the commit rule was narrowed, and the reversal is recorded rather than silent -----------
+# --- the commit rule draws the line at branch ownership, and records both reversals ----------
+# It has now been rewritten twice for the same reason, so what is pinned here is the shape that
+# survived: who owns the branch, not whether permission was granted for this change. The earlier
+# "open pull request" wording gated on a state only reachable *after* the first commit, which is
+# exactly the commit that protects a day's work.
 missing = [
     ph
-    for ph in ["Never commit to `main` without asking", "open pull request", "mis-drawn"]
+    for ph in [
+        "On a branch I created",
+        "On a branch the user authored",
+        "I do not finish what the user started",
+        "ephemeral container",
+        "mis-drawn",
+    ]
     if ph.lower() not in rules_text.lower()
 ]
 if not missing:
-    report("PASS", "the commit rule names main/master and records why it was narrowed")
-    print("          a branch under review needs no separate agreement; main still does")
+    report("PASS", "the commit rule draws the line at branch ownership and records both reversals")
+    print("          my branches: commit freely; theirs: mutate nothing; both losses written down")
 else:
-    report("FAIL", "the commit rule names main/master and records why it was narrowed")
+    report("FAIL", "the commit rule draws the line at branch ownership and records both reversals")
     print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
 # --- the guard cites rules that actually exist in the rules document -------------------------
