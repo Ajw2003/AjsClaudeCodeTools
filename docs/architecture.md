@@ -53,6 +53,88 @@ and does nothing is worse than no field.
 Every handler is stateless. Nothing writes to `$TEMP`, and there is no state to reap. That is
 load-bearing, not incidental — see the deliverable note in `CLAUDE.md`'s design constraints.
 
+## `harvest` reads the payload's contents, and every other handler deliberately does not
+
+`artifact` and `runnable` match on `file_path` alone and never look at what was written —
+`verify.py` pins that with a case named *"a file whose CONTENTS mention a temp path is judged
+on where it actually is"*. The reasoning is that a file whose body happens to mention `/tmp`
+should not trip a check about where the file lives.
+
+`harvest` breaks that invariant on purpose, because for it the comment body **is** the subject:
+there is no way to notice an essay from a path. Two properties keep the departure narrow:
+
+- **It reads the payload, not the file on disk.** So it stays stdin-only and stateless like
+  every other handler, and — more usefully — it only ever sees text written *this turn*. A
+  pre-existing essay in a file that was merely touched is invisible to it, which is what stops
+  the reminder becoming a standing nag on legacy code.
+- **`Write` carries the whole file, `Edit` carries a fragment.** For a `Write`, content line
+  numbers are the file's, so the reminder cites `file:a-b`. For an `Edit`, `new_string`'s
+  offsets mean nothing in the file, so the ranges are withheld and the reminder says to find
+  the blocks by reading the file. Emitting them anyway would put a confidently wrong
+  `file:line` into a document whose own convention is to cite `file:line`.
+
+### The scan is budget-bounded, not size-capped
+
+The first draft skipped files over a byte ceiling. That is a silent failure wearing a
+performance argument: the check does not run and nobody is told which file it did not run on.
+Instead there is no ceiling — any file is scanned — and a wall-clock budget bounds the *work*,
+with an overrun emitting a `systemMessage` naming the file and its size.
+
+Hand-testing is what made this real. A 4.8 MB file took **22 seconds**, past `hooks.json`'s 10s
+timeout, so in practice the harness killed the hook rather than the hook reporting anything. The
+cause was an O(n²) accumulator rebuilding each comment run's line list per line; fixed, the same
+file scans in 0.29s. `verify.py` now carries both regressions — a multi-megabyte scan that must
+finish inside the timeout, and a forced overrun that must name the file. Neither was caught by
+the suite as originally written, which is the argument for verification step 3 existing at all.
+
+### Thresholds are tunable because they were guessed, then measured
+
+`HARVEST_MIN_LINES` / `HARVEST_MIN_CHARS` default to 5 / 300 and are overridable per machine.
+The defaults are not a taste call: see
+[`comment-harvest-calibration.md`](comment-harvest-calibration.md) for what 5/300 and 10/600
+each catch in this repository, and why the higher pair was effectively switched off.
+
+## Nothing fails silently, and the plugin's own hooks were violating it
+
+The rule landed with the `harvest` work and immediately indicted existing code, which is the
+only reason it is worth having. Before it:
+
+- `main()`'s last-resort net emitted for `guard` and `inject` and returned 0 **in silence** for
+  every other event, so an internal crash in `scope`, `artifact`, `runnable`, `delegate` or
+  `handover` produced no output at all.
+- `event_delegate` had no `try` at all.
+- Three `except OSError: pass` blocks in the standards scanners treated an unreadable directory
+  as a directory with no markers in it — so a permissions problem made a repo's coding standards
+  quietly not load.
+- `read_payload` returned `""` for both an empty stdin and an unreadable one.
+- `handover` treated an empty payload as "nothing to check" rather than "the check never got its
+  input". **This is a reversal:** `verify.py` previously asserted that silence, under the title
+  *"an empty payload is nothing to check, not a failed check"*. It now asserts the opposite, and
+  the check says so at the call site.
+
+`verify.py` enforces the rule structurally rather than by memory: it reads `hook.py` and fails
+any `except` block whose body returns or passes without emitting, writing to stderr, or
+recording the problem for its caller to report. An `except` that *recovers* — assigns a
+fallback and carries on — is not the defect and is not flagged; the defect is giving up quietly.
+
+`scope` is the one deliberate exception, and its exemption is named in the suite: a non-zero
+exit on `UserPromptSubmit` erases the user's prompt, so its contract is to recover to the short
+reminder rather than to report. Emitting that fallback is how it speaks.
+
+### The trace ships on
+
+`harvest` emits a one-line decision trace on **every source-file write**, whether or not it
+fires, naming what it measured and what it concluded. That is deliberate: a diagnostic that
+ships switched off is never enabled until someone is already lost, so the default has to answer
+"did this run, on what, and what did it decide". `HOUSE_RULES_DEBUG=1` adds per-run rejection
+reasons on top; `HOUSE_RULES_HARVEST=quiet` drops the trace and keeps the reminder; `=off`
+disables both.
+
+The cost is a `systemMessage` on every source write in every session, and it is the part of
+this design most likely to be regretted. Two things bound it: the trace is one line, and a
+write to a non-source file emits nothing at all — that out-of-jurisdiction path is the only
+fully silent exit the handler has.
+
 ## The machine profile is data, not code, and is not committed
 
 `claude-house-rules/plugins/house-rules/rules/environment.md` is machine-local and **gitignored**

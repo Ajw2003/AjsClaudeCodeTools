@@ -93,6 +93,7 @@ every handler lives in that one file. Why a shim rather than calling `hook.py` d
 | `PostToolUse` | `artifact` | `Write`/`Edit` calls | Notices a document write outside the project (temp dir, scratchpad, `~/.claude/plans`) and reminds *Claude* — not the user — to copy it into `docs/` before finishing. The extension list is every form a deliverable arrives as — `md`, `txt`, `html`, `csv`, `json`, `svg`, `pdf` — not the `md`/`txt` it shipped with: the rule says *every* artifact, and a narrower pattern let an `.html` report sit in the scratchpad unnoticed. Runnable extensions stay out; `runnable` owns those. |
 | `Stop` | `handover` | a turn about to end **whose reply hands over a command and is not already in card shape** | Reads `last_assistant_message` — the documented field for the just-written reply — and stays silent when there is no fence, since no fence means no command was handed over and the check would only be noise the user has to watch Claude answer. It also stays silent when the reply already carries the card markers (`---`, `###`, `You should see:`), because firing on a compliant reply cannot end quietly — the turn continues, `suppressOutput` has no effect, and the only thing left to say is that nothing needed saying, which is exactly the *a card never announces its own compliance* rule being broken by the hook that enforces it. The cost is deliberate: a card-shaped reply missing a field now passes unchecked, traded for removing a defect that was visible on every correct handover. When it does fire it emits `hookSpecificOutput.additionalContext`, not `decision: "block"`: both continue the turn under the same loop protections, but the former is labelled *Stop hook feedback* rather than raising a hook error, and this is guidance working as designed. A payload with no `last_assistant_message` (an older CLI) still fires, so a version difference cannot silently disable it. The checklist: how the user gets there (folder as an absolute path, plus opening a prompt in it), shell named and correct as the fence label, exact command, expected output, `UNTESTED:` when it was not run, and one numbered step per action once there is more than one command. Stands down on the retry (`stop_hook_active`), on `HOUSE_RULES_HANDOVER=off`, and on any failure — it fails **open**, since a non-zero exit here would stop the turn ending at all. |
 | `PostToolUse` | `runnable` | `Write` calls only | Notices a runnable file (`.sh`, `.ps1`, `.py`, `Dockerfile`, …) created inside the project and reminds *Claude* to run it before finishing. `Write` only, never `Edit`. |
+| `PostToolUse` | `harvest` | `Write`/`Edit` calls | Reads the body just written (`content`, or `new_string` for an `Edit`) and finds comment blocks that have grown into essays - design rationale, a post-mortem, a derivation, a platform quirk. Reminds *Claude* to move each into the tier-4 system doc that owns that code before the turn ends, leaving a **one-line pointer** at the site, and to hand the mechanical move to `@house-rules:archivist`. This is the one handler that reads a payload's *contents* rather than just its `file_path`, because the comment body is the subject; reading the payload rather than the file on disk keeps it stateless and means it only ever sees text written **this turn**, never a pre-existing essay in a file it merely touched. Source extensions only, so a write to `docs/` is silent by construction. Thresholds (`HARVEST_MIN_LINES`, `HARVEST_MIN_CHARS`, default 5 lines / 300 chars) are tunable via `HOUSE_RULES_HARVEST_MIN_LINES` / `_MIN_CHARS`; a bad value is announced and the default used, never silently ignored. Large files are scanned, not skipped - a wall-clock budget bounds the *work* and an overrun says so by name. Emits a one-line decision **trace on every source-file write whether or not it fires**, naming what it measured, so the near-misses are visible and threshold tuning is evidence rather than guesswork; `HOUSE_RULES_HARVEST=quiet` drops the trace, `=off` disables both, `HOUSE_RULES_DEBUG=1` adds per-run rejection reasons. |
 | `PostToolUse` | `delegate` | `ExitPlanMode` calls | The plan just got approved, so the deliberation is over: reminds *Claude* to hand the implementation to `@house-rules:executor`, naming the plan's file path (the `ExitPlanMode` payload carries the plan as inline text, not a path, so this is on Claude to supply), instead of running it on the planning model. Trivial work (one file, a handful of steps or fewer) is done inline instead. |
 
 The table above is checked against `hooks.json` by `verify.py`: an event registered as a hook but
@@ -117,9 +118,24 @@ docs/architecture.md.
     the short reminder. Its text (both forms) is a restatement of rule phrases; `verify.py`
     checks it hasn't drifted from `house-rules.md`. `runnable`'s reminder text is pinned the
     same way, for the same reason.
-  - `artifact` and `runnable` **never obstruct** — `PostToolUse` can't block anyway (the write
-    already happened); any internal error just means the reminder is offline, reported via
-    `systemMessage`.
+  - `artifact`, `runnable`, `delegate` and `harvest` **never obstruct, and never go quiet** —
+    `PostToolUse` can't block anyway (the write already happened), so they always exit 0; but
+    every path meaning *I could not tell* (empty payload, unparseable JSON, missing field,
+    scan budget exceeded, any internal error) says so via `systemMessage`. Silence from one of
+    these means it looked and there was nothing to do — nothing else.
+- **Nothing fails silently**, and `verify.py` enforces it over `hook.py`'s own source: no
+  `except` block may return or pass without emitting, writing to stderr, or recording the
+  problem for its caller to report. An `except` that *recovers* — assigns a fallback and
+  carries on — is not the defect. `main()`'s last-resort net speaks for **every** event, not
+  just `guard` and `inject`; `scope` is the one deliberate exception, recovering to its short
+  reminder rather than reporting, because a non-zero exit there erases the user's prompt.
+  See the rule in `rules/house-rules.md` and the reversal it forced on `handover`'s
+  empty-payload case, recorded in docs/architecture.md.
+- **`harvest` traces every decision, on by default.** One line per source-file write, whether
+  or not it fires, naming what it measured — a diagnostic that ships switched off is never
+  enabled until someone is already lost. `HOUSE_RULES_DEBUG=1` adds per-run rejection reasons,
+  `HOUSE_RULES_HARVEST=quiet` drops the trace, `=off` disables both. It is the only handler
+  that does this so far; docs/architecture-backlog.md §7 queues the rest.
 - **Every handler extracts the one field it cares about**, rather than matching the whole
   payload. `artifact` and `runnable` read `file_path`, so a file whose *contents* mention `/tmp`
   doesn't false-trigger on every save. `guard` reads `command`, so a call *described* as
@@ -165,7 +181,7 @@ surface named here has a matching check there.
 Edit only [claude-house-rules/plugins/house-rules/rules/house-rules.md](claude-house-rules/plugins/house-rules/rules/house-rules.md).
 If the new rule has a shell signature, add a matching pattern to `hook.py`'s `guard` handler and
 a case to `verify.py`. If you reword a phrase that `hook.py`'s `scope`/`runnable`/`delegate`/
-`handover` handlers also state, update the matching hardcoded string in `hook.py` too —
+`handover`/`harvest` handlers or `agents/archivist.md` also state, update the matching hardcoded string in `hook.py` too —
 `verify.py`'s drift checks will fail otherwise. Run the verify command above before considering
 an edit done; it's the only thing that proves a rule change actually took effect versus just
 reading well.

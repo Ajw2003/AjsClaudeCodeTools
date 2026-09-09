@@ -17,10 +17,12 @@ computed at runtime, so it cannot drift out from under an added case.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOOK = os.path.join(HERE, "hook.py")
@@ -29,6 +31,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
 AGENT = os.path.join(HERE, "..", "agents", "executor.md")
+ARCHIVIST = os.path.join(HERE, "..", "agents", "archivist.md")
 STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
 TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
 DOCSKILL = os.path.join(HERE, "..", "skills", "project-docs", "SKILL.md")
@@ -609,6 +612,412 @@ else:
     report("FAIL", "delegate reminder still matches the rules document")
     print(f"          in delegate reminder but missing from house-rules.md: {'; '.join(drift)}")
 
+# --- harvest: long-form comments are documentation in the wrong file ---------------------------
+CS_HEAD = "using UnityEngine;\n\npublic class Orbit : MonoBehaviour\n{\n"
+ESSAY_CS = CS_HEAD + (
+    "// The orbit integrator uses Verlet rather than Euler. Euler was tried first and lost\n"
+    "// energy visibly over about four minutes of play, which showed up as satellites slowly\n"
+    "// spiralling into the planet with no force acting on them. Verlet is symplectic, so the\n"
+    "// energy error is bounded rather than cumulative, and the artefact goes away entirely.\n"
+    "// The cost is that velocity is not directly available at the current step; where a caller\n"
+    "// needs it, it is reconstructed from the two most recent positions instead.\n"
+    "public void Step(float dt) { }\n"
+)
+SHORT_CS = CS_HEAD + "// Must run after Init(). Order matters here.\nvoid A() { }\n"
+COMMENTED_CODE = CS_HEAD + "".join(
+    "// var x%d = Compute(y, z);\n" % i for i in range(20)
+) + "void B() { }\n"
+LICENSE_CS = CS_HEAD + (
+    "// Copyright 2026 Someone. All rights reserved. Licensed under the Apache License,\n"
+    "// Version 2.0 (the \"License\"); you may not use this file except in compliance with it.\n"
+    "// You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.\n"
+    "// Unless required by applicable law, software distributed under the License is\n"
+    "// distributed on an \"AS IS\" BASIS, without warranties or conditions of any kind.\n"
+    "// See the License for the specific language governing permissions and limitations.\n"
+    "class C { }\n"
+)
+ESSAY_PY = (
+    'import time\n'
+    '\n'
+    'def f():\n'
+    '    """Retries are capped at three because the upstream service rate-limits per minute.\n'
+    '\n'
+    '    A fourth attempt inside the same window is always rejected, so retrying it converts a\n'
+    '    slow failure into a slower one. The backoff is deliberately not jittered: the caller\n'
+    '    is a single cron job, so there is no thundering herd to spread out, and a fixed delay\n'
+    '    makes the failure timeline reproducible when reading logs after the fact.\n'
+    '    """\n'
+    '    return 1\n'
+)
+
+
+def harv_case(expect, title, file_path, content, tool="Write", env=None, expect_in=()):
+    field = "content" if tool == "Write" else "new_string"
+    payload = json.dumps({"tool_name": tool, "tool_input": {"file_path": file_path, field: content}})
+    e = dict(os.environ)
+    e.pop("HOUSE_RULES_HARVEST", None)
+    e.pop("HOUSE_RULES_HARVEST_MIN_LINES", None)
+    e.pop("HOUSE_RULES_HARVEST_MIN_CHARS", None)
+    e.pop("HOUSE_RULES_DEBUG", None)
+    if env:
+        e.update(env)
+    code, out, err = run_hook("harvest", payload, env=e)
+    if '"additionalContext"' in out and "systemMessage" in out:
+        got = "remind+trace"
+    elif '"additionalContext"' in out:
+        got = "remind"
+    elif "systemMessage" in out:
+        got = "trace"
+    elif not out.strip():
+        got = "silent"
+    else:
+        got = "malformed"
+    if code != 0:
+        got = f"{got} (exit {code})"
+    missing = [p for p in expect_in if p not in out]
+    ok = got == expect and not missing
+    report("PASS" if ok else "FAIL", title)
+    detail = f"expected {expect}, got {got}"
+    if missing:
+        detail += f"; missing from output: {'; '.join(missing)}"
+    print(f"          {detail}")
+
+
+harv_case(
+    "remind+trace",
+    "a design essay in a .cs file is flagged for porting into docs/systems/",
+    r"C:\proj\Assets\Orbit.cs",
+    ESSAY_CS,
+    expect_in=["@house-rules:archivist", "one-line pointer", "Orbit.cs:5-10"],
+)
+harv_case(
+    "remind+trace",
+    "a long Python docstring is flagged the same way as a // block",
+    "/proj/svc/retry.py",
+    ESSAY_PY,
+)
+harv_case(
+    "trace",
+    "a short why-comment is left alone",
+    r"C:\proj\A.cs",
+    SHORT_CS,
+)
+harv_case(
+    "trace",
+    "twenty lines of commented-out code is not an essay",
+    r"C:\proj\B.cs",
+    COMMENTED_CODE,
+    expect_in=["commented-out code"],
+)
+harv_case(
+    "trace",
+    "a license header is not an essay",
+    r"C:\proj\C.cs",
+    LICENSE_CS,
+    expect_in=["license header"],
+)
+harv_case(
+    "silent",
+    "a markdown file is out of jurisdiction - the one fully silent path",
+    r"C:\proj\docs\systems\physics.md",
+    "Sentence one. Sentence two. " * 60,
+)
+
+# --- harvest: the trace is on by DEFAULT, and says what it measured ----------------------------
+# A diagnostic that ships switched off is never enabled until someone is already lost, so the
+# default output has to answer "did this run, on what, and what did it decide" with no flags set.
+harv_case(
+    "trace",
+    "the default trace names the measured longest run and the active threshold",
+    r"C:\proj\A.cs",
+    SHORT_CS,
+    expect_in=["A.cs", "5 lines / 300 chars", "longest was 1 line"],
+)
+harv_case(
+    "remind+trace",
+    "HOUSE_RULES_DEBUG=1 adds the per-run rejection reasons on top of the default trace",
+    r"C:\proj\Assets\Orbit.cs",
+    ESSAY_CS + "\n" + SHORT_CS,
+    env={"HOUSE_RULES_DEBUG": "1"},
+    expect_in=["runs considered:"],
+)
+
+# --- harvest: the thresholds are tunable, and a bad value is announced not ignored -------------
+harv_case(
+    "trace",
+    "raising HOUSE_RULES_HARVEST_MIN_LINES stops the essay qualifying",
+    r"C:\proj\Assets\Orbit.cs",
+    ESSAY_CS,
+    env={"HOUSE_RULES_HARVEST_MIN_LINES": "40", "HOUSE_RULES_HARVEST_MIN_CHARS": "9000"},
+)
+harv_case(
+    "remind+trace",
+    "a bad threshold override is named out loud and the default is used anyway",
+    r"C:\proj\Assets\Orbit.cs",
+    ESSAY_CS,
+    env={"HOUSE_RULES_HARVEST_MIN_LINES": "banana"},
+    expect_in=["banana", "using the defaults"],
+)
+
+# --- harvest: toggles --------------------------------------------------------------------------
+harv_case(
+    "remind",
+    "HOUSE_RULES_HARVEST=quiet keeps the reminder and drops the trace",
+    r"C:\proj\Assets\Orbit.cs",
+    ESSAY_CS,
+    env={"HOUSE_RULES_HARVEST": "quiet"},
+)
+harv_case(
+    "silent",
+    "HOUSE_RULES_HARVEST=off disables the reminder and the trace together",
+    r"C:\proj\Assets\Orbit.cs",
+    ESSAY_CS,
+    env={"HOUSE_RULES_HARVEST": "off"},
+)
+
+# --- harvest: an Edit carries a fragment, so its line numbers are withheld ---------------------
+# Reporting new_string offsets as file lines would put a confidently wrong file:line into a
+# document whose own convention is to cite file:line. Better to say the ranges are unavailable.
+harv_case(
+    "remind+trace",
+    "an Edit is flagged but reports no line range, because the fragment's offsets are not the file's",
+    r"C:\proj\Assets\Orbit.cs",
+    ESSAY_CS,
+    tool="Edit",
+    expect_in=["find the blocks by reading the file"],
+)
+edit_payload = json.dumps(
+    {"tool_name": "Edit", "tool_input": {"file_path": r"C:\proj\Assets\Orbit.cs", "new_string": ESSAY_CS}}
+)
+code, out, err = run_hook("harvest", edit_payload)
+if "Orbit.cs:5-10" not in out and "Blocks:" not in out:
+    report("PASS", "an Edit's reminder carries no file:line range at all")
+    print("          no fabricated line numbers in the Edit reminder")
+else:
+    report("FAIL", "an Edit's reminder carries no file:line range at all")
+    print(f"          got: {out[:300]}")
+
+# --- harvest: every "could not tell" path is loud, and none of them obstruct -------------------
+for payload, label in (
+    ("", "an empty payload"),
+    ('{"tool_input": ', "a payload that will not parse"),
+    ('{"tool_name":"Write","tool_input":{}}', "a payload with no file_path"),
+    (
+        '{"tool_name":"Write","tool_input":{"file_path":"/proj/A.cs"}}',
+        "a payload with a source path but no body",
+    ),
+):
+    code, out, err = run_hook("harvest", payload)
+    if code == 0 and "systemMessage" in out and "did not run" in out:
+        report("PASS", f"harvest given {label} says so out loud and still exits 0")
+        print("          never obstructs, never goes quiet")
+    else:
+        report("FAIL", f"harvest given {label} says so out loud and still exits 0")
+        print(f"          exit {code}, got: {out[:200]!r}")
+
+# --- harvest scans a big file rather than skipping it, and does it in linear time -------------
+# Regression: the run accumulator rebuilt its line list per line, which is O(n^2). A 4.8MB file
+# took 22 seconds - past hooks.json's 10s timeout, so in practice the harness killed the hook
+# instead of it reporting anything. Hand-testing caught this; the suite had not.
+big = "using UnityEngine;\n" + ("// Filler line of ordinary prose here. And another sentence.\n" * 60000)
+big_payload = json.dumps({"tool_name": "Write", "tool_input": {"file_path": "/proj/Big.cs", "content": big}})
+started = time.time()
+code, out, err = run_hook("harvest", big_payload)
+elapsed = time.time() - started
+if code == 0 and '"additionalContext"' in out and elapsed < 8:
+    report("PASS", "a multi-megabyte file is scanned, not skipped, and well inside the hook timeout")
+    print(f"          {len(big)} bytes scanned in {elapsed:.2f}s (hooks.json allows 10s)")
+else:
+    report("FAIL", "a multi-megabyte file is scanned, not skipped, and well inside the hook timeout")
+    print(f"          exit {code} after {elapsed:.2f}s, got: {out[:160]!r}")
+
+# --- and when the scan genuinely does run long, it says so by name ----------------------------
+budget_snippet = (
+    "import sys, hook\n"
+    "hook.HARVEST_BUDGET_SECONDS = -1.0\n"
+    "sys.exit(hook.main(['hook.py', 'harvest']))\n"
+)
+proc = subprocess.run(
+    [sys.executable, "-c", budget_snippet],
+    cwd=HERE,
+    input=big_payload.encode("utf-8"),
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    timeout=30,
+)
+out = proc.stdout.decode("utf-8", "replace")
+if proc.returncode == 0 and "exceeded its" in out and "was not checked" in out and "Big.cs" in out:
+    report("PASS", "a scan that runs out of budget names the file and says it was not checked")
+    print("          loud and specific, rather than a silent skip or a harness timeout")
+else:
+    report("FAIL", "a scan that runs out of budget names the file and says it was not checked")
+    print(f"          exit {proc.returncode}, got: {out[:200]!r}")
+
+# --- harvest is wired to Write|Edit, not just present in hook.py -------------------------------
+if 'run.sh\\" harvest' in hooks_json_text and hooks_json_text.count('"matcher": "Write|Edit"') >= 2:
+    report("PASS", "harvest is registered on PostToolUse with matcher Write|Edit")
+    print("          hooks.json wires Write|Edit to run.sh harvest")
+else:
+    report("FAIL", "harvest is registered on PostToolUse with matcher Write|Edit")
+    print("          hooks.json does not wire Write|Edit to run.sh harvest")
+
+# --- run.sh's no-interpreter fallback for harvest is loud, not silent --------------------------
+code, out, err = run_shell([RUN, "harvest"], env={**os.environ, "PATH": ""})
+if code == 0 and "systemMessage" in out and "did not run" in out:
+    report("PASS", "harvest with no working Python says so rather than falling through silently")
+    print("          run.sh's per-event fallback covers harvest by name")
+else:
+    report("FAIL", "harvest with no working Python says so rather than falling through silently")
+    print(f"          exit {code}, got: {out[:200]!r}")
+
+# --- the harvest reminder has not drifted from the rules document ------------------------------
+drift = []
+for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems"]:
+    if phrase.lower() not in rules_text.lower():
+        drift.append(phrase)
+if not drift:
+    report("PASS", "harvest reminder still matches the rules document")
+    print("          every key phrase in the reminder appears in rules/house-rules.md")
+else:
+    report("FAIL", "harvest reminder still matches the rules document")
+    print(f"          in harvest reminder but missing from house-rules.md: {'; '.join(drift)}")
+
+# --- and the reverse: the EMITTED reminder still states the rule -------------------------------
+# The check above reads the rules document only, so on its own it cannot notice a reminder that
+# has been trimmed until it no longer states a rule. This reads what the hook actually emits.
+payload = json.dumps(
+    {"tool_name": "Write", "tool_input": {"file_path": "/proj/Orbit.cs", "content": ESSAY_CS}}
+)
+code, out, err = run_hook("harvest", payload)
+drift = []
+for phrase in [
+    "one-line pointer",
+    "@house-rules:archivist",
+    "docs/systems",
+    "How it works",
+    "Traps",
+    "Invariants",
+    "Do not change how you write",
+    "the user was not prompted",
+]:
+    if phrase not in out:
+        drift.append(phrase)
+if not drift:
+    report("PASS", "the emitted harvest reminder still carries every operative phrase")
+    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
+else:
+    report("FAIL", "the emitted harvest reminder still carries every operative phrase")
+    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+
+# --- the "nothing fails silently" rule, enforced structurally over hook.py source --------------
+# The rule is worthless if the plugin's own hooks break it, so this reads hook.py and fails any
+# except block that returns without first emitting or writing to stderr.
+hook_src = read(HOOK)
+hook_lines = hook_src.split("\n")
+silent_handlers = []
+for i, line in enumerate(hook_lines):
+    stripped = line.strip()
+    if not (stripped.startswith("except ") or stripped == "except:"):
+        continue
+    indent = len(line) - len(line.lstrip())
+    spoke = False
+    bails = False
+    for j in range(i + 1, len(hook_lines)):
+        nxt = hook_lines[j]
+        if not nxt.strip():
+            continue
+        if len(nxt) - len(nxt.lstrip()) <= indent:
+            break
+        body = nxt.strip()
+        if "emit(" in nxt or "stderr.write" in nxt or "problems.append(" in nxt:
+            spoke = True
+        # An except that recovers - assigns a fallback and carries on - is not the defect;
+        # the rule is about a handler that GIVES UP without saying so. Only a body that
+        # returns or passes straight out is one of those.
+        if body == "pass" or body.startswith("return"):
+            bails = True
+    if bails and not spoke:
+        silent_handlers.append(f"hook.py:{i + 1}: {stripped}")
+if not silent_handlers:
+    report("PASS", "no except block in hook.py swallows a failure without saying so")
+    print("          every handler announces a failure it caught; nothing fails silently")
+else:
+    report("FAIL", "no except block in hook.py swallows a failure without saying so")
+    for h in silent_handlers:
+        print(f"          {h}")
+
+# --- and the last-resort net in main() speaks for EVERY event, not just guard and inject -------
+for ev, needle in (
+    ("scope", "scope"),
+    ("artifact", "artifact"),
+    ("runnable", "runnable"),
+    ("delegate", "delegate"),
+    ("handover", "handover"),
+    ("harvest", "harvest"),
+):
+    snippet = (
+        "import sys, hook\n"
+        "real_emit = hook.emit\n"
+        "state = {'first': True}\n"
+        "def one_shot_boom(obj):\n"
+        "    if state['first']:\n"
+        "        state['first'] = False\n"
+        "        raise OSError('simulated internal failure')\n"
+        "    real_emit(obj)\n"
+        "hook.emit = one_shot_boom\n"
+        f"sys.exit(hook.main(['hook.py', '{ev}']))\n"
+    )
+    # stdin must be closed: these handlers really do read the payload now, and an inherited
+    # stdin would block the whole suite waiting for input that never comes.
+    proc = subprocess.run(
+        [sys.executable, "-c", snippet],
+        cwd=HERE,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=30,
+    )
+    out = proc.stdout.decode("utf-8", "replace")
+    err = proc.stderr.decode("utf-8", "replace")
+    if ev == "scope":
+        spoke = bool(out.strip())
+    else:
+        spoke = "systemMessage" in out or err.strip()
+    if proc.returncode == 0 and spoke:
+        report("PASS", f"an internal crash in {ev} is announced rather than swallowed")
+        print("          exits 0 without obstructing, but does not go quiet")
+    else:
+        report("FAIL", f"an internal crash in {ev} is announced rather than swallowed")
+        print(f"          exit {proc.returncode}, stdout {out[:120]!r}, stderr {err[:120]!r}")
+
+# --- the archivist subagent is shaped so the delegation can actually happen --------------------
+archivist = read(ARCHIVIST)
+problems = []
+if not re.search(r"^name: archivist$", archivist, re.MULTILINE):
+    problems.append("name: archivist is missing from the frontmatter")
+if not re.search(r"^model: sonnet$", archivist, re.MULTILINE):
+    problems.append("model: sonnet is missing - the whole point is not running this on Opus")
+for forbidden in ("hooks:", "mcpServers:", "permissionMode:"):
+    if re.search(r"^%s" % re.escape(forbidden), archivist, re.MULTILINE):
+        problems.append(f"{forbidden} is set, and plugin subagents silently ignore it")
+desc = ""
+for line in archivist.split("\n"):
+    if line.startswith("description:"):
+        desc = line
+        break
+if "proactiv" not in desc.lower():
+    problems.append("the description does not say to use it proactively, so the Agent gate wins")
+for phrase in ("not injected", "one-line pointer", "Nothing fails silently", "docs/systems"):
+    if phrase.lower() not in archivist.lower():
+        problems.append(f"the digest no longer states {phrase!r}")
+if not problems:
+    report("PASS", "the archivist subagent is shaped so the harvest delegation can happen")
+    print("          pinned to sonnet, marked proactive, and carries the digest it needs")
+else:
+    report("FAIL", "the archivist subagent is shaped so the harvest delegation can happen")
+    for p in problems:
+        print(f"          {p}")
+
 # --- the command-handover check at Stop --------------------------------------------------------
 def hand_case(expect, title, payload, mode=""):
     env = dict(os.environ)
@@ -698,7 +1107,10 @@ hand_case(
     stop_payload(last_assistant_message="```sh\nls\n```"),
     mode="toggle",
 )
-hand_case("silent", "an empty payload is nothing to check, not a failed check", "")
+# This used to expect silence, on the reasoning that an empty payload is "nothing to check".
+# The "nothing fails silently" rule reverses that: an empty payload is not a turn with no
+# command in it, it is a check that never got its input, and the two must not look the same.
+hand_case("offline", "an empty payload is a check that could not run, and says so", "")
 
 # --- the check gives guidance, not a hook error ----------------------------------------------
 code, out, err = run_hook(
@@ -798,8 +1210,6 @@ if not deldrift:
 else:
     report("FAIL", "delegate runs on ExitPlanMode and matches the rules document")
     print(f"          {'; '.join(deldrift)}")
-
-import re
 
 # --- house-rules.md states the delegation rule exactly once (F6 merge) -----------------------
 heading_hits = [m for m in re.finditer(r"^## .*delegat.*$", rules_text, re.IGNORECASE | re.MULTILINE)]

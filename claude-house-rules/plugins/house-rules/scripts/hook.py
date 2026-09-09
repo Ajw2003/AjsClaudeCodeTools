@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""hook.py — all seven house-rules hook handlers in one stdlib-only file.
+"""hook.py — every house-rules hook handler in one stdlib-only file.
 
 run.sh resolves a working interpreter and execs this with two argv values: the event name
-(one of the seven below) and nothing else — the hook payload always arrives on stdin, exactly
+(one of those below) and nothing else — the hook payload always arrives on stdin, exactly
 as it did for the shell scripts this replaces.
 
 STDLIB ONLY. No third-party imports. That is the same "the checker must not itself be the
@@ -13,13 +13,25 @@ JSON OUTPUT: every hookSpecificOutput/systemMessage/decision payload is emitted 
 json.dumps(obj, separators=(",", ":")) — no space after the colon — because the test suite
 (verify.py) asserts on the literal serialized bytes.
 
+NOTHING FAILS SILENTLY (rules/house-rules.md). Silence from a handler means one thing: it
+looked and there was nothing to do. Every path meaning "I could not tell" — an unreadable
+payload, a field that would not parse, a budget exceeded, an unexpected exception — says so,
+by emitting a systemMessage or writing to stderr. Never obstructing is not the same as never
+speaking: a PostToolUse handler still announces that it did not run. verify.py enforces this
+structurally: no `except` in this file may return without emitting or writing to stderr.
+
 Each event handler mirrors the failure-mode contract its shell predecessor had:
   - guard        (PreToolUse)   fails CLOSED and loud: prints to stderr, exits 2.
   - inject       (SessionStart) fails LOUD, not closed: prints a systemMessage, exits 0.
   - scope        (UserPromptSubmit) cannot fail: never reads a file, never raises.
-  - artifact, runnable, delegate (PostToolUse) never obstruct: any failure is silent, exit 0.
+  - artifact, runnable, delegate, harvest (PostToolUse) never obstruct, but never go quiet:
+                 any failure emits a systemMessage and exits 0.
   - handover     (Stop) fails OPEN, loud: any failure prints a systemMessage and exits 0,
                  because a non-zero exit here would stop the turn from ending at all.
+
+harvest additionally emits a one-line decision TRACE on every source-file write, whether or
+not it fires. That is on by default on purpose: a diagnostic that ships switched off is never
+enabled until someone is already lost.
 """
 
 import json
@@ -30,7 +42,10 @@ import sys
 def read_payload():
     try:
         raw = sys.stdin.buffer.read().decode("utf-8", "replace")
-    except Exception:
+    except Exception as exc:
+        # Loud, not silent: an unreadable stdin and an empty stdin both return "" to the
+        # caller, so without this line the two are indistinguishable downstream.
+        sys.stderr.write("house-rules: could not read the hook payload from stdin: %s\n" % exc)
         return ""
     return raw.strip()
 
@@ -47,6 +62,7 @@ import os
 import platform
 import shutil
 import sys as _sys
+import time as _time
 
 
 def _read_text(path):
@@ -208,8 +224,11 @@ def _standards_scan_dirs(root):
             full = os.path.join(root, name)
             if os.path.isdir(full):
                 dirs.append(full)
-    except OSError:
-        pass
+    except OSError as exc:
+        sys.stderr.write(
+            "house-rules standards: could not scan %r (%s); any markers below it were "
+            "not seen.\n" % (root, exc)
+        )
     return dirs
 
 
@@ -222,8 +241,11 @@ def _has_unity_markers(d):
         for name in os.listdir(d):
             if name.lower().endswith(".csproj"):
                 return True
-    except OSError:
-        pass
+    except OSError as exc:
+        sys.stderr.write(
+            "house-rules standards: could not list %r (%s); treating it as having no "
+            "Unity markers, which may be wrong.\n" % (d, exc)
+        )
     return False
 
 
@@ -256,8 +278,11 @@ def _unity_markers_in_parent(project_dir):
         for name in os.listdir(parent):
             if name.lower().endswith(".csproj"):
                 return True
-    except OSError:
-        pass
+    except OSError as exc:
+        sys.stderr.write(
+            "house-rules standards: could not list the parent directory %r (%s); treating "
+            "it as having no Unity markers, which may be wrong.\n" % (parent, exc)
+        )
     return False
 
 
@@ -637,6 +662,14 @@ def event_artifact():
     try:
         payload = read_payload()
         if not payload:
+            # Not "nothing to do" - "could not tell". An empty payload means the check never
+            # got its input, which is not the same as a file that did not qualify.
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the artifact-location reminder got an "
+                    "empty payload and did not run for this call."
+                }
+            )
             return 0
         file_path = _extract_file_path(payload)
         if not file_path:
@@ -684,6 +717,14 @@ def event_runnable():
     try:
         payload = read_payload()
         if not payload:
+            # Not "nothing to do" - "could not tell". An empty payload means the check never
+            # got its input, which is not the same as a file that did not qualify.
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the run-what-you-wrote reminder got an "
+                    "empty payload and did not run for this call."
+                }
+            )
             return 0
         file_path = _extract_file_path(payload)
         if not file_path:
@@ -733,14 +774,22 @@ DELEGATE_NOTE = (
 
 
 def event_delegate():
-    emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "PostToolUse",
-                "additionalContext": DELEGATE_NOTE,
+    try:
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PostToolUse",
+                    "additionalContext": DELEGATE_NOTE,
+                }
             }
-        }
-    )
+        )
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the delegate reminder hit an error "
+                "(%s) and is offline for this call." % type(exc).__name__
+            }
+        )
     return 0
 
 
@@ -837,6 +886,12 @@ def event_handover():
         return 0
 
     if not payload:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the command-handover check got an "
+                "empty Stop payload and did not run for this turn."
+            }
+        )
         return 0
 
     if re.search(r'"stop_hook_active"\s*:\s*true', payload):
@@ -859,6 +914,392 @@ def event_handover():
     return 0
 
 
+# ---------------------------------------------------------------------------------------
+# harvest - PostToolUse on Write|Edit. Never obstructs, never goes quiet.
+# ---------------------------------------------------------------------------------------
+
+HARVEST_NOTE = (
+    "House rules, long-form reasoning belongs in a document: the file you just wrote carries "
+    "{n} long comment block{s} - design rationale, a post-mortem, a derivation, a platform "
+    "quirk - sitting in the source instead of in docs/. {where} Do not change how you write; "
+    "writing the reasoning down as it occurs is the right habit. What changes is where it "
+    "lands. Before you finish this turn, move each block into the tier-4 system document that "
+    "owns that code (docs/systems/*.md), creating one if none does, under the section that "
+    "fits: rationale into How it works, a post-mortem into Traps, a rule that must stay true "
+    "into Invariants. Leave a one-line pointer at the site naming the document and section, so "
+    "the code still leads to the reasoning. Anything a reader genuinely needs at that exact "
+    "line to not break the code stays an ordinary comment - only the long-form context moves. "
+    "The move is mechanical once the thinking is done, so hand it to the "
+    "@house-rules:archivist subagent (Task tool, subagent_type house-rules:archivist), naming "
+    "the file and the blocks, rather than doing it on the planning model. This is a reminder "
+    "to you; the user was not prompted and does not need to do anything."
+)
+
+# Source files only. A write to a .md or .json file is not a decision this handler makes - it
+# has no business there at all - which is why that path is the one place harvest stays fully
+# silent. Everything in jurisdiction gets a trace line whether or not it fires.
+_HARVEST_EXT_RE = re.compile(
+    r"\.(cs|py|js|mjs|cjs|ts|tsx|jsx|go|rs|java|c|h|cpp|hpp|rb|php|swift|kt|sh|ps1)$",
+    re.IGNORECASE,
+)
+
+# Tunable, and deliberately low. See docs/comment-harvest-calibration.md for what these
+# numbers actually catch in this repo at 5/300 versus 10/600.
+HARVEST_MIN_LINES = 5
+HARVEST_MIN_CHARS = 300
+
+# Wall-clock budget for the scan, well inside hooks.json's 10s timeout. There is no cap on
+# input size: a big file is scanned like any other, and only a scan that actually runs long
+# is abandoned - loudly, naming the file and its size.
+HARVEST_BUDGET_SECONDS = 3.0
+
+_HARVEST_LINE_MARKERS = {
+    "line": ("//", "#", "--"),
+}
+_HARVEST_REJECT_LICENSE = ("copyright", "spdx", "licensed under", "all rights reserved")
+_HARVEST_REJECT_GENERATED = ("<auto-generated", "do not edit", "code generated by")
+
+
+def _harvest_threshold(name, default, problems):
+    """Read one HOUSE_RULES_HARVEST_MIN_* override. A bad value is announced, not ignored."""
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        problems.append("%s=%r is not a whole number" % (name, raw))
+        return default
+    if value <= 0:
+        problems.append("%s=%r is not a positive number" % (name, raw))
+        return default
+    return value
+
+
+def _harvest_comment_runs(text, deadline=None):
+    """Split content into runs of consecutive comment-only lines.
+
+    One linear pass, str.startswith only - no per-line regex, so cost is O(n) in the content
+    and a large file is a slow scan rather than a special case to bail out of. Returns
+    (start_line, end_line, [body lines]) with 1-based line numbers.
+    """
+    runs = []
+    current = None
+    in_block = None  # the closing delimiter we are waiting for, or None
+
+    for idx, raw in enumerate(text.split("\n"), start=1):
+        if deadline is not None and (idx & 0x3FF) == 0 and _time.time() > deadline:
+            # Out of budget mid-scan. Report what was found so far and say so; the caller
+            # turns this into a named systemMessage rather than a hook the harness kills.
+            if current is not None:
+                runs.append(tuple(current))
+            return runs, True
+        line = raw.strip()
+        body = None
+
+        if in_block is not None:
+            body = line
+            if in_block in line:
+                in_block = None
+        elif line.startswith("/*"):
+            body = line[2:].strip()
+            if "*/" not in line[2:]:
+                in_block = "*/"
+        elif line.startswith("<#"):
+            body = line[2:].strip()
+            if "#>" not in line[2:]:
+                in_block = "#>"
+        elif line.startswith('"""') or line.startswith("'''"):
+            quote = line[:3]
+            body = line[3:].strip()
+            if line.count(quote) < 2:
+                in_block = quote
+        elif line.startswith("*") and current is not None:
+            # continuation line of a /* */ block that already closed its delimiter tracking
+            body = line[1:].strip()
+        else:
+            for marker in _HARVEST_LINE_MARKERS["line"]:
+                if line.startswith(marker):
+                    body = line[len(marker) :].strip()
+                    break
+
+        if body is None:
+            if current is not None:
+                runs.append(current)
+                current = None
+            continue
+
+        if body and not body.strip("-=*_#/~ "):
+            # A section divider. It belongs to the run (it does not break it) but it is
+            # decoration, not text, and counting its characters is how a banner gets
+            # mistaken for an essay.
+            body = ""
+
+        if current is None:
+            current = [idx, idx, [body]]
+        else:
+            current[1] = idx
+            current[2].append(body)
+
+    if current is not None:
+        runs.append(tuple(current))
+    return runs, False
+
+
+def _harvest_is_prose(lines):
+    """Reject the things that are long but are not essays. Returns (ok, reason)."""
+    joined = " ".join(lines).strip()
+    low = joined.lower()
+
+    if any(mark in low for mark in _HARVEST_REJECT_GENERATED):
+        return False, "generated-file banner"
+    if any(mark in low for mark in _HARVEST_REJECT_LICENSE):
+        return False, "license header"
+
+    # Shape before prose: commented-out code often has no sentence punctuation at all, and
+    # reporting it as "fewer than two sentences" would name the symptom rather than the cause.
+    # The trace is only worth having if the reason it gives is the real one.
+    codeish = 0
+    real = [ln for ln in lines if ln]
+    for ln in real:
+        if ln.endswith((";", "{", "}", ")", ",")) or ln.startswith(("if ", "for ", "return ")):
+            codeish += 1
+    if real and codeish * 2 > len(real):
+        return False, "looks like commented-out code"
+
+    sentences = low.count(". ") + low.count(".\t") + low.count("? ") + low.count("! ")
+    if low.endswith("."):
+        sentences += 1
+    if sentences < 2:
+        return False, "fewer than two sentences"
+
+    return True, ""
+
+
+def _harvest_is_file_preamble(line):
+    """A line that a module docstring is allowed to sit under: a shebang or an encoding line."""
+    stripped = line.strip()
+    return stripped.startswith("#!") or "coding:" in stripped or "coding=" in stripped
+
+
+def _harvest_blocks(text, min_lines, min_chars, deadline, verbose):
+    """Find the essay-shaped runs. Returns (blocks, near_misses, timed_out)."""
+    first_line = text.split("\n", 1)[0] if text else ""
+    blocks = []
+    misses = []
+    runs, timed_out = _harvest_comment_runs(text, deadline)
+    if timed_out:
+        return blocks, misses, True
+    for start, end, lines in runs:
+        if _time.time() > deadline:
+            return blocks, misses, True
+        if start == 1 or (start == 2 and _harvest_is_file_preamble(first_line)):
+            # A file header - module docstring, shebang, encoding line - is documentation
+            # that is already where it belongs. coding-philosophy.md asks for it. What this
+            # handler is looking for is an essay buried in the body of the code.
+            misses.append((start, end, len(lines), len(" ".join(lines)), "file header"))
+            continue
+        n_lines = len(lines)
+        n_chars = len(" ".join(lines))
+        if n_lines < min_lines and n_chars < min_chars:
+            misses.append((start, end, n_lines, n_chars, "under threshold"))
+            continue
+        ok, reason = _harvest_is_prose(lines)
+        if not ok:
+            misses.append((start, end, n_lines, n_chars, reason))
+            continue
+        blocks.append((start, end, n_lines, n_chars))
+    return blocks, misses, False
+
+
+def _harvest_trace(base, blocks, misses, min_lines, min_chars, ranged, verbose):
+    """The one line this handler always says about a source file it looked at."""
+    if blocks:
+        if ranged:
+            listed = ", ".join("%d-%d" % (b[0], b[1]) for b in blocks[:5])
+        else:
+            listed = "line ranges unavailable for an Edit fragment"
+        more = "" if len(blocks) <= 5 else " (+%d more)" % (len(blocks) - 5)
+        head = "harvest: %s - %d block%s: %s%s" % (
+            base,
+            len(blocks),
+            "" if len(blocks) == 1 else "s",
+            listed,
+            more,
+        )
+    elif misses:
+        longest = max(misses, key=lambda m: (m[2], m[3]))
+        head = (
+            "harvest: %s - %d comment run%s, none met %d lines / %d chars; "
+            "longest was %d line%s, %d chars (%s)"
+            % (
+                base,
+                len(misses),
+                "" if len(misses) == 1 else "s",
+                min_lines,
+                min_chars,
+                longest[2],
+                "" if longest[2] == 1 else "s",
+                longest[3],
+                longest[4],
+            )
+        )
+    else:
+        head = "harvest: %s - no comment runs found (threshold %d lines / %d chars)" % (
+            base,
+            min_lines,
+            min_chars,
+        )
+
+    if not verbose or not misses:
+        return head
+    detail = "; ".join(
+        "%d-%d %dL/%dc %s" % (m[0], m[1], m[2], m[3], m[4]) for m in misses[:20]
+    )
+    return head + " | runs considered: " + detail
+
+
+def event_harvest():
+    try:
+        toggle = os.environ.get("HOUSE_RULES_HARVEST", "on").strip().lower()
+        if toggle in _TOGGLE_OFF:
+            return 0
+        quiet = toggle == "quiet"
+        verbose = os.environ.get("HOUSE_RULES_DEBUG", "").strip() not in ("", "0", "false", "no")
+
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the comment-harvest check got an "
+                    "empty payload and did not run for this call."
+                }
+            )
+            return 0
+
+        try:
+            data = json.loads(payload)
+        except ValueError as exc:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the comment-harvest check could not "
+                    "parse the tool payload (%s) and did not run for this call." % exc
+                }
+            )
+            return 0
+
+        tool_input = (data or {}).get("tool_input") or {}
+        file_path = tool_input.get("file_path") or ""
+        if not file_path:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the comment-harvest check found no "
+                    "file_path in the payload and did not run for this call."
+                }
+            )
+            return 0
+
+        base = re.split(r"[\\/]", file_path)[-1]
+        if not _HARVEST_EXT_RE.search(base):
+            # Out of jurisdiction. The only fully silent path in this handler.
+            return 0
+
+        # Write carries the whole file, so its line numbers are the file's. Edit carries a
+        # fragment in new_string, whose offsets mean nothing in the file - reporting them
+        # would put a confidently wrong file:line into a doc whose own convention is to cite
+        # file:line, so the ranges are withheld instead.
+        ranged = "content" in tool_input
+        text = tool_input.get("content")
+        if text is None:
+            text = tool_input.get("new_string")
+        if text is None:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the comment-harvest check found "
+                    "neither content nor new_string for %s and did not run for this call."
+                    % base
+                }
+            )
+            return 0
+        if not isinstance(text, str):
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the comment-harvest check got a "
+                    "non-text body for %s and did not run for this call." % base
+                }
+            )
+            return 0
+
+        problems = []
+        min_lines = _harvest_threshold(
+            "HOUSE_RULES_HARVEST_MIN_LINES", HARVEST_MIN_LINES, problems
+        )
+        min_chars = _harvest_threshold(
+            "HOUSE_RULES_HARVEST_MIN_CHARS", HARVEST_MIN_CHARS, problems
+        )
+
+        deadline = _time.time() + HARVEST_BUDGET_SECONDS
+        blocks, misses, timed_out = _harvest_blocks(
+            text, min_lines, min_chars, deadline, verbose
+        )
+        if timed_out:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the comment-harvest scan of %s "
+                    "(%d bytes) exceeded its %gs budget and was abandoned, so that file was "
+                    "not checked." % (base, len(text), HARVEST_BUDGET_SECONDS)
+                }
+            )
+            return 0
+
+        out = {}
+        if blocks:
+            if ranged:
+                where = "Blocks: %s." % ", ".join(
+                    "%s:%d-%d" % (base, b[0], b[1]) for b in blocks[:5]
+                )
+                if len(blocks) > 5:
+                    where = where[:-1] + ", and %d more." % (len(blocks) - 5)
+            else:
+                where = (
+                    "This was an Edit, so the payload carries only the replacement fragment "
+                    "and the line numbers within it do not correspond to %s - find the "
+                    "blocks by reading the file." % base
+                )
+            out["hookSpecificOutput"] = {
+                "hookEventName": "PostToolUse",
+                "additionalContext": HARVEST_NOTE.format(
+                    n=len(blocks), s="" if len(blocks) == 1 else "s", where=where
+                ),
+            }
+
+        if not quiet:
+            trace = _harvest_trace(
+                base, blocks, misses, min_lines, min_chars, ranged, verbose
+            )
+            if problems:
+                trace += " | ignoring bad override(s): %s - using the defaults" % "; ".join(
+                    problems
+                )
+            out["systemMessage"] = trace
+        elif problems:
+            out["systemMessage"] = (
+                "house-rules plugin: ignoring bad comment-harvest override(s): %s - using "
+                "the defaults." % "; ".join(problems)
+            )
+
+        if out:
+            emit(out)
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the comment-harvest reminder hit an "
+                "error (%s: %s) and is offline for this call." % (type(exc).__name__, exc)
+            }
+        )
+    return 0
+
+
 EVENTS = {
     "inject": event_inject,
     "standards": event_standards,
@@ -868,6 +1309,7 @@ EVENTS = {
     "runnable": event_runnable,
     "delegate": event_delegate,
     "handover": event_handover,
+    "harvest": event_harvest,
 }
 
 
@@ -878,24 +1320,34 @@ def main(argv):
         return 0
     try:
         return handler()
-    except BaseException:
-        # Never let an unhandled exception crash silently with a stack trace on stdout
-        # (which would be read as a malformed hook decision). Each handler already fails
-        # according to its own event's contract; this is the last-resort net.
+    except BaseException as exc:
+        # The last-resort net. A stack trace on stdout would be read as a malformed hook
+        # decision, so it never goes there - but it never goes nowhere either. Every event
+        # says that it failed and did not run; see "nothing fails silently" in the module
+        # docstring. Before that rule landed this returned 0 in silence for every event
+        # except guard and inject, which made an internal crash in scope, artifact,
+        # runnable, delegate or handover completely invisible.
+        detail = "%s: %s" % (type(exc).__name__, exc)
         if event == "guard":
             sys.stderr.write(
-                "house-rules guard: internal error, blocking rather than letting it "
-                "through unchecked.\n"
+                "house-rules guard: internal error (%s), blocking rather than letting it "
+                "through unchecked.\n" % detail
             )
             return 2
         if event == "inject":
             emit(
                 {
-                    "systemMessage": "house-rules plugin: internal error. The rules were "
-                    "NOT loaded into this session."
+                    "systemMessage": "house-rules plugin: internal error (%s). The rules "
+                    "were NOT loaded into this session." % detail
                 }
             )
             return 0
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the %s hook hit an internal error "
+                "(%s) and did not run for this call." % (event, detail)
+            }
+        )
         return 0
 
 

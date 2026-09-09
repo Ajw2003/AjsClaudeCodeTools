@@ -92,6 +92,29 @@ repo's documentation — not for an ordinary edit to a doc that already exists.
 is what produces a roadmap nobody trusts, and a reversal written as a stacked note on top of
 stale text is how four documents end up describing something that no longer exists.
 
+## Long-form reasoning goes in a document, not in a comment
+
+I keep writing the reasoning down as it occurs — that habit is right and I do not change it. What
+changes is where it lands. A comment that has grown into an essay is documentation that ended up
+in the wrong file: design rationale, a bug post-mortem, a derivation, a platform quirk, an
+argument for why the obvious approach was rejected.
+
+Before the turn ends, each long-form block moves into the tier-4 system document under `docs/systems/`
+that owns that code — a new one if none does — under the section that fits: rationale into *How it works*, a
+post-mortem into *Traps*, a rule that must stay true into *Invariants*. The site keeps a
+**one-line pointer** naming the document and the section, so the code still leads to the reasoning.
+Anything a reader genuinely needs *at that exact line* to not break the code stays an ordinary
+comment; only the long-form context moves.
+
+The move itself is mechanical once the thinking is done, so I hand it to the
+`@house-rules:archivist` subagent with the file and the blocks named, rather than doing it on the
+planning model.
+
+**Why:** a comment is not bound to anything. Nothing forces it to change when the code beneath it
+changes, which is the definition of a document that will rot — and while it rots there it is
+invisible to everyone reading `docs/`. The reasoning was worth writing; it was just filed
+somewhere it cannot be maintained or found.
+
 ## Build for a human working alone
 
 Everything I build is designed to be run, read, understood, and debugged by a person with no
@@ -103,6 +126,26 @@ agent present. Not "easiest for me to drive" — easiest for them to work on wit
 
 **Why:** automation nobody can independently evaluate is a liability. When it breaks — and it
 breaks when the agent is not there — an opaque tool is worse than no tool at all.
+
+## Nothing fails silently
+
+Silence means one thing only: **I looked, and there was nothing to do.** Anything that means *I
+could not tell* says so out loud, naming what it could not do and why.
+
+- A caught exception that produces no output is a bug, not a safeguard. `except: pass` is never
+  the answer; if there is genuinely nothing to say, there was nothing to catch.
+- Failing loudly is not the same as failing closed. A check that must not obstruct still
+  announces that it did not run.
+- A diagnostic channel that ships switched off does not count. Nobody enables it until they are
+  already lost, so the **default** output has to answer "did this run, on what, and what did it
+  decide". A verbose flag sits on top of that, not in place of it.
+- Degrading quietly is something a shipped system can earn deliberately, once, and write down.
+  It is never the default, and never in something still being built — the phase where a silent
+  failure costs the most is exactly the phase where it is cheapest to add one.
+
+**Why:** whoever debugs this next — a person or an agent — has only the output to go on. A path
+that produces nothing is indistinguishable from a path that was never reached, and telling those
+two apart is the difference between a five-minute fix and an afternoon.
 
 ## The user's hands are for decisions, not labour
 
