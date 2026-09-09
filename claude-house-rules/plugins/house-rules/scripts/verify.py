@@ -121,15 +121,15 @@ GUARD_CASES = [
     ("pass", None, "ls -la src"),
     ("pass", None, r"Get-ChildItem C:\Users"),
     ("pass", None, "npm run build && npm test"),
-    ("ask", "Never commit without asking", 'git commit -m "wip"'),
+    ("ask", "Never commit to `main` without asking", 'git commit -m "wip"'),
     ("pass", None, "git add -A"),
-    ("ask", "Never commit without asking", "git push origin main"),
-    ("ask", "Never commit without asking", "git push --force-with-lease"),
+    ("ask", "Never commit to `main` without asking", "git push origin main"),
+    ("ask", "Never commit to `main` without asking", "git push --force-with-lease"),
     ("pass", None, "git checkout -b feature/x"),
     ("pass", None, "git switch main"),
     ("pass", None, "git branch -d old-feature"),
     ("pass", None, "git tag v1.2.0"),
-    ("ask", "Never commit without asking", "git reset --hard origin/main"),
+    ("ask", "Never commit to `main` without asking", "git reset --hard origin/main"),
     (
         "ask",
         "Never hide work in a background window or a silent process",
@@ -161,7 +161,7 @@ GUARD_CASES = [
     ("ask", "Never take a destructive action without checking first", "git restore src/app.js"),
     ("ask", "Never take a destructive action without checking first", "git stash drop"),
     ("ask", "Never take a destructive action without checking first", "git stash clear"),
-    ("ask", "Never commit without asking", 'echo "starting" && git commit -m "wip"'),
+    ("ask", "Never commit to `main` without asking", 'echo "starting" && git commit -m "wip"'),
 ]
 
 for expect, rule, cmd in GUARD_CASES:
@@ -232,7 +232,7 @@ nocmd_payload = json.dumps(
     {"session_id": "verify", "tool_name": "PowerShell", "tool_input": {"script": "git commit -m wip"}}
 )
 code, out, err = run_hook("guard", nocmd_payload)
-if '"permissionDecision":"ask"' in out and "Never commit without asking" in out:
+if '"permissionDecision":"ask"' in out and "Never commit to `main` without asking" in out:
     report("PASS", "a payload with no command field still gets checked (whole-payload fallback)")
     print("          fell back to the old behaviour rather than passing it unchecked")
 else:
@@ -254,7 +254,7 @@ for h in [
     "Never hand over a command I have not run",
     "Every artifact lives in the project directory",
     "Never hide work in a background window or a silent process",
-    "Never commit without asking",
+    "Never commit to `main` without asking",
     "Never take a destructive action without checking first",
 ]:
     if h not in out:
@@ -660,6 +660,103 @@ if not drift:
 else:
     report("FAIL", "delegate reminder still matches the rules document")
     print(f"          in delegate reminder but missing from house-rules.md: {'; '.join(drift)}")
+
+# --- the disclosure rule, and the voice toggle it sits next to ------------------------------
+missing = [
+    ph
+    for ph in [
+        "I say what prompted me",
+        "continue past a visible reply",
+        "from memory when a record exists",
+        "docs/sessions/",
+    ]
+    if ph.lower() not in rules_text.lower()
+]
+if not missing:
+    report("PASS", "the disclosure rule states attribution, continuations, and check-the-record")
+    print("          all three failures it was written for are named")
+else:
+    report("FAIL", "the disclosure rule states attribution, continuations, and check-the-record")
+    print(f"          missing from house-rules.md: {'; '.join(missing)}")
+
+missing = [
+    ph
+    for ph in [
+        "Plain language on the surfaces a human reads",
+        "### The voice",
+        "gloss",
+        "never buys warmth with accuracy",
+        "HOUSE_RULES_VOICE=off",
+    ]
+    if ph.lower() not in rules_text.lower()
+]
+if not missing:
+    report("PASS", "the plain-language rule carries the voice and its hard constraint")
+    print("          tone is a preference; not softening a failure is not")
+else:
+    report("FAIL", "the plain-language rule carries the voice and its hard constraint")
+    print(f"          missing from house-rules.md: {'; '.join(missing)}")
+
+# --- HOUSE_RULES_VOICE=off removes the voice and nothing else -------------------------------
+# The section is cut by locating the next "## " heading. If that boundary is wrong the toggle
+# eats the rule after it, silently, and nobody notices until a rule stops being enforced.
+code, on_out, err = run_hook("inject", "")
+env_off = dict(os.environ)
+env_off["HOUSE_RULES_VOICE"] = "off"
+code_off, off_out, err_off = run_hook("inject", "", env=env_off)
+voice_problems = []
+if "### The voice" not in on_out:
+    voice_problems.append("the voice is missing by default, but it ships on")
+if "### The voice" in off_out:
+    voice_problems.append("HOUSE_RULES_VOICE=off did not remove the voice section")
+for kept in [
+    "Plain language on the surfaces a human reads",
+    "Deliver a whole workflow",
+    "Never hand over a command",
+    "A green test suite is not proof it works",
+]:
+    if kept not in off_out:
+        voice_problems.append(f"turning the voice off also removed {kept!r}")
+if code_off != 0:
+    voice_problems.append(f"exited {code_off} with the voice off")
+if not voice_problems:
+    report("PASS", "HOUSE_RULES_VOICE=off removes the voice and no rule around it")
+    print(f"          on: {len(on_out)} chars, off: {len(off_out)} chars; every neighbouring rule survives")
+else:
+    report("FAIL", "HOUSE_RULES_VOICE=off removes the voice and no rule around it")
+    for v in voice_problems:
+        print(f"          {v}")
+
+# --- the commit rule was narrowed, and the reversal is recorded rather than silent -----------
+missing = [
+    ph
+    for ph in ["Never commit to `main` without asking", "open pull request", "mis-drawn"]
+    if ph.lower() not in rules_text.lower()
+]
+if not missing:
+    report("PASS", "the commit rule names main/master and records why it was narrowed")
+    print("          a branch under review needs no separate agreement; main still does")
+else:
+    report("FAIL", "the commit rule names main/master and records why it was narrowed")
+    print(f"          missing from house-rules.md: {'; '.join(missing)}")
+
+# --- the guard cites rules that actually exist in the rules document -------------------------
+# It cites a rule by its heading, and nothing checked that the heading was still there. Renaming
+# "Never commit without asking" to "Never commit to `main` without asking" would have left the
+# permission prompt naming a rule the user could not find - a silent drift in the one place the
+# plugin speaks directly to them.
+bucket_titles = re.findall(r'^\s*\("([^"]+)", GUARD_R\d+\),', read(HOOK), re.MULTILINE)
+headings = [ln.lstrip("# ").strip() for ln in rules_text.split("\n") if ln.startswith("## ")]
+orphans = [t for t in bucket_titles if t not in headings]
+if bucket_titles and not orphans:
+    report("PASS", "every rule the guard cites is a real heading in the rules document")
+    print(f"          {len(bucket_titles)} bucket titles, all found in house-rules.md")
+else:
+    report("FAIL", "every rule the guard cites is a real heading in the rules document")
+    for o in orphans:
+        print(f"          guard cites {o!r}, which is not a heading in house-rules.md")
+    if not bucket_titles:
+        print("          no GUARD_BUCKETS titles were found at all - the pattern has drifted")
 
 # --- harvest: long-form comments are documentation in the wrong file ---------------------------
 CS_HEAD = "using UnityEngine;\n\npublic class Orbit : MonoBehaviour\n{\n"
