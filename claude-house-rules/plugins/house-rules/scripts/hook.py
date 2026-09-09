@@ -570,12 +570,8 @@ GUARD_R1 = [
     (r'[^&]&\s*\\?"', "backgrounds the command with a trailing ampersand"),
 ]
 
-# `git` plus any run of global options before the subcommand. The alternation's first branch
-# exists because the options that take a *separate* argument (`git -C <path> commit`) would
-# otherwise stop the scan dead at the path: `-[^\s]+\s+` matches `-C ` and then cannot consume
-# `<path>`, so the subcommand after it was never reached. That was silently true of every git
-# pattern here before branch-awareness, and it is the exact shape the -C exemption check has
-# to see, so it is fixed rather than worked around.
+# `git` plus any run of global options before the subcommand.
+# Why the alternation's first branch exists: docs/architecture.md, "The pre-existing hole this exposed".
 _GIT = (
     r"git\s+((?:-[cC]|--git-dir|--work-tree|--namespace|--exec-path|--super-prefix)"
     r"[=\s]\s*[^\s]+\s+|-[^\s]+\s+)*"
@@ -673,11 +669,8 @@ def _git_dir(start):
 def branch_ownership():
     """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
 
-    The branch is read straight out of `.git/HEAD` rather than by running `git rev-parse`,
-    and that is the load-bearing choice here: guard runs on every Bash/PowerShell call and
-    blocks the command when it fails, so a subprocess that hung would wedge the user's shell
-    for as long as it hung. One file read cannot. It also keeps guard free of any dependency
-    on `git` being on PATH, which is the same reasoning that keeps this file stdlib-only.
+    Why a file read and not `git rev-parse`: docs/architecture.md, "Why `.git/HEAD` and not
+    `git rev-parse --abbrev-ref HEAD`".
 
     `is_mine` is True only for a branch named `claude/…`. Everything else — the user's
     branches, a detached HEAD, a directory that is not a repo, an unreadable HEAD — comes
@@ -797,10 +790,7 @@ def event_guard():
             for r in reasons:
                 lines.append(f"    - {r}")
 
-    # Say why the branch exemption did not apply, whenever it plausibly could have. A prompt
-    # that names the branch is the difference between "the hook is noisy" and "I am standing
-    # on main"; and where the branch could not be read at all, saying so is the rule against
-    # failing silently applied to guard's own inputs.
+    # Why the prompt names the branch: docs/architecture.md, "What the exemption does and does not cover".
     if hits["Commit constantly on my own branches, never on theirs"]:
         why_not_exempt = None
         if elsewhere:

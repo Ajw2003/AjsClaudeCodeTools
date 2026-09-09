@@ -117,12 +117,7 @@ RULE_COMMIT = "Commit constantly on my own branches, never on theirs"
 RULE_DESTRUCTIVE = "Never take a destructive action without checking first"
 
 # --- branch fixtures -------------------------------------------------------------------------
-# guard's decision now depends on whose branch the checkout is on, so every guard case names the
-# branch it is judged against instead of inheriting whichever branch this suite happens to be run
-# from. Without that the same suite passes on main, fails on a claude/* branch, and disagrees with
-# CI, which checks out a detached HEAD. A directory with a .git/HEAD in it is the whole fixture -
-# branch_ownership() reads that file and nothing else, which is exactly why it is cheap enough to
-# run on every shell command.
+# Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
 _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
 
@@ -323,9 +318,7 @@ else:
 _hook_src = read(HOOK)
 _own = _hook_src[_hook_src.index("def branch_ownership") :]
 _own = _own[: _own.index("\ndef ", 1)]
-# Call syntax only. The docstring names `git rev-parse` and the word subprocess in order to
-# explain why neither is used, so a plain substring search over the prose reports the opposite
-# of the truth - which it did, the first time this check ran.
+# Call syntax only, not prose. Why the docstring names rev-parse: docs/architecture.md, "Why `.git/HEAD` and not `git rev-parse --abbrev-ref HEAD`".
 _shelling = [c for c in ("subprocess.", "os.popen(", "os.system(", "check_output") if c in _own]
 if not _shelling:
     report("PASS", "branch ownership is read from .git/HEAD, never by shelling out to git")
