@@ -1,7 +1,7 @@
 {
   "name": "house-rules",
   "description": "aj's global rules, enforced. Injects the rules into every session, prompts for approval before hidden background work, destructive commands, or git commands that mutate anything beyond a commit or push on its own branch, and checks every turn for commands handed over untested or without instructions.",
-  "version": "2.16.0",
+  "version": "2.17.0",
   "author": {
     "name": "aj",
     "email": "aydenjwilkins@gmail.com"

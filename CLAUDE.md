@@ -219,9 +219,9 @@ surface named here has a matching check there.
 
 | Surface | Interactive card | Markdown card | How it gets there |
 |---|---|---|---|
-| Claude Code — CLI | published page, 4+ steps or on request | yes | `inject` + `scope` + `handover` |
+| Claude Code — CLI | offered at 2+ steps, published on request | yes | `inject` + `scope` + `handover` |
 | Claude Code — IDE extension | inherits the CLI; not separately documented | yes | same |
-| Claude Code — Desktop **Code** tab | published page, 4+ steps or on request | yes | same |
+| Claude Code — Desktop **Code** tab | offered at 2+ steps, published on request | yes | same |
 | Claude Code — web / cloud session | publishing undocumented; treat as unavailable | yes | ships with the repo install; cloud never reads `~/.claude/settings.json` |
 | claude.ai chat — web / desktop | sometimes, model's discretion, unrequestable | yes | [docs/claude-ai-instructions.md](docs/claude-ai-instructions.md) |
 | claude.ai chat — iOS / Android | **never** | yes | same |

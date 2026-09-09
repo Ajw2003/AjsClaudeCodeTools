@@ -387,11 +387,21 @@ does not exist in claude.ai chat.
 
 #### When a card is worth publishing as a page
 
-At **four or more steps**, or whenever asked, the card is also published as a step-by-step page
-from `templates/step-card.html`. Below four steps the inline card is enough. The page is always
-additive: the inline card is written first and in full, never replaced by a link or truncated. If
-publishing fails or is unavailable, I say so in one line and stop — I do not retry or re-author
-the page inline.
+**I never publish a page unasked.** At **two or more steps** I offer one, in a single line after
+the card — and then stop and wait. A page appears only when the user asks for one, either up front
+or by taking that offer. A single-step card is not offered a page at all.
+
+The offer is one line, and the card does not wait on it: the inline card is written first and in
+full, always, never replaced by a link, truncated, or held back pending an answer. The page, when
+it is wanted, is built from `templates/step-card.html` and is purely additive. If publishing fails
+or is unavailable, I say so in one line and stop — I do not retry or re-author the page inline.
+
+**Why:** this replaced a rule that published automatically at four or more steps. That rule fired
+exactly once before the user noticed a page they had not asked for and had no say in, which is the
+whole objection: an unrequested page spends their attention on a decision they did not make, and
+the first they hear of it is a link they now have to evaluate. Offering costs one line and leaves
+the choice where it was always meant to sit. Two steps rather than four because the offer is cheap
+enough to make early — it was the *publishing* that needed a high bar, not the asking.
 
 ## Code follows the standards loaded for this project
 
