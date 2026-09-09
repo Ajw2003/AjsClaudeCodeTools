@@ -759,8 +759,11 @@ RUNNABLE_NOTE = (
     "House rules, whole workflows: you just created a runnable file. A runnable file you "
     "have not run is a starting point, not a whole workflow. Before you finish this task, "
     "run it and confirm it works, or say why running does not apply. Never hand over a "
-    "command you have not run. This is a reminder to you; the user was not prompted and "
-    "does not need to do anything."
+    "command you have not run. One clean run is not proof it works: run it twice, since the "
+    "second run meets the state the first one left behind, and give it a realistic input "
+    "rather than a toy one - a green suite reports only on the cases someone thought to "
+    "write. This is a reminder to you; the user was not prompted and does not need to do "
+    "anything."
 )
 
 _RUNNABLE_EXT_RE = re.compile(

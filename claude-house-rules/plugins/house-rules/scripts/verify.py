@@ -578,7 +578,14 @@ run_case(
 
 # --- the reminder in hook.py's runnable handler has not drifted from the rules document -----
 drift = []
-for phrase in ["whole workflow", "starting point", "hand over a command"]:
+for phrase in [
+    "whole workflow",
+    "starting point",
+    "hand over a command",
+    "run it twice",
+    "realistic",
+    "not proof it works",
+]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:
@@ -587,6 +594,42 @@ if not drift:
 else:
     report("FAIL", "runnable reminder still matches the rules document")
     print(f"          in runnable reminder but missing from house-rules.md: {'; '.join(drift)}")
+
+# --- and the reverse: the EMITTED runnable note still states the rule ---------------------------
+# The check above reads the rules document only, so on its own it cannot notice a reminder that
+# has been trimmed until it no longer states a rule. This reads what the hook actually emits.
+code, out, err = run_hook(
+    "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\deploy.sh"}})
+)
+drift = []
+for phrase in ["run it twice", "realistic input", "not a whole workflow", "someone thought to write"]:
+    if phrase not in out:
+        drift.append(phrase)
+if not drift:
+    report("PASS", "the emitted runnable note still says one clean run is not proof")
+    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
+else:
+    report("FAIL", "the emitted runnable note still says one clean run is not proof")
+    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+
+# --- the green-suite rule is stated, and states the conditions that actually found the bugs ----
+missing = [
+    p
+    for p in [
+        "A green test suite is not proof it works",
+        "realistic scale",
+        "Twice",
+        "As the thing that ships",
+        "the run wins",
+    ]
+    if p.lower() not in rules_text.lower()
+]
+if not missing:
+    report("PASS", "the green-suite rule names the conditions each real defect was found under")
+    print("          scale, repetition, the shipped artifact, and run-beats-test")
+else:
+    report("FAIL", "the green-suite rule names the conditions each real defect was found under")
+    print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
 # --- the delegate reminder fires after ExitPlanMode -------------------------------------------
 code, out, err = run_hook("delegate", "")
