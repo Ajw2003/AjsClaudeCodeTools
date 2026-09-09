@@ -67,6 +67,27 @@ def run_claude(args):
     return proc.returncode
 
 
+def residual_config(settings):
+    """Which of OUR entries are still in a settings dict. Empty means clean.
+
+    Checks for our entries, not for the container keys. Step 7 deliberately leaves
+    enabledPlugins and extraKnownMarketplaces in place so unrelated plugins survive the strip,
+    and the CLI's own uninstall leaves an empty enabledPlugins {} behind regardless. Asserting
+    the key is absent contradicts the step above it and fails on any machine that has ever had
+    a plugin installed - the fresh-container run passed only because it had no settings.json.
+
+    Lifted out of main() so it can be tested: this is exactly where that bug lived, and it
+    survived because nothing in tools/ was reachable by a test.
+    """
+    residue = []
+    settings = settings or {}
+    if PLUGIN_ID in (settings.get("enabledPlugins") or {}):
+        residue.append(f"enabledPlugins[{PLUGIN_ID}] still in settings.json")
+    if MARKETPLACE in (settings.get("extraKnownMarketplaces") or {}):
+        residue.append(f"extraKnownMarketplaces[{MARKETPLACE}] still in settings.json")
+    return residue
+
+
 def load_json(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -244,17 +265,7 @@ def main():
         if os.path.isdir(cache_path):
             dirty.append("plugin cache still present")
         if os.path.isfile(settings_path):
-            # Check for OUR entries, not for the keys themselves. Step 7 deliberately leaves
-            # enabledPlugins and extraKnownMarketplaces in place so unrelated plugins survive
-            # the strip - and the CLI's own uninstall leaves an empty enabledPlugins {} behind
-            # regardless. Asserting the key is absent contradicts the step above it, and fails
-            # on any machine that has ever had a plugin installed: the fresh-container run
-            # passed only because it had no settings.json at all.
-            s2 = load_json(settings_path)
-            if PLUGIN_ID in (s2.get("enabledPlugins") or {}):
-                dirty.append(f"enabledPlugins[{PLUGIN_ID}] still in settings.json")
-            if MARKETPLACE in (s2.get("extraKnownMarketplaces") or {}):
-                dirty.append(f"extraKnownMarketplaces[{MARKETPLACE}] still in settings.json")
+            dirty.extend(residual_config(load_json(settings_path)))
         if not dirty:
             ok("nothing left behind - this is now a fresh machine")
         else:

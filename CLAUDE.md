@@ -42,6 +42,19 @@ setup step beyond a Python: `hook.py` and `verify.py` are stdlib-only and `run.s
 pins one interpreter (3.12) and therefore does **not** test the CPython 3.8 floor the plugin
 claims — that claim is still unverified.
 
+Run the tools test suite (proves the scripts in `tools/` do what they claim):
+
+```bash
+python tools/verify_tools.py
+```
+
+Same shape as `verify.py` — stdlib only, no test framework, numbered PASS/FAIL, count computed at
+runtime. It covers the decision logic in `session_ledger.py`, `clean_install_test.py` and
+`measure_footprint.py`; it deliberately does **not** cover anything that shells out to the
+`claude` CLI or mutates a real machine's config, and says so in its own output. `tools/` had no
+coverage at all before 2.15.0, which is how `clean_install_test.py`'s cleanliness check managed
+to contradict its own strip step for as long as that file existed.
+
 Install (or update) the plugin on a device — `tools/bootstrap.ps1` (PowerShell) or
 `tools/bootstrap.sh` (any POSIX shell) probes for a working Python the same way `run.sh` does,
 then hands off to `tools/install.py`, where the real logic lives:
