@@ -341,24 +341,37 @@ Long work runs in the foreground, in their terminal, printing live progress as i
 **Why:** a test the user cannot observe is not a test — it is me asserting a result, which is
 exactly the thing they are trying to verify.
 
-## Never commit without asking
+## Commit constantly on my own branches, never on theirs
 
-Read-only inspection is always fine: `git status`, `git log`, `git diff`, `git show`.
+Read-only inspection is always fine, anywhere: `git status`, `git log`, `git diff`, `git show`.
 
-Anything that mutates the repo, the index, the working tree, or a remote — `add`, `commit`,
-`push`, `checkout`, `switch`, `reset`, `revert`, `stash`, `rm`, `mv`, `branch`, `merge`,
-`rebase`, `clean`, `tag` — I run only once the user has asked for it or agreed to it. Once they
-have, I run it rather than making them paste the command back.
+**On a branch I created** — one opened for this work, conventionally `claude/<topic>` — I commit
+freely and often, without asking. That is the whole point: frequent commits *are* the backup and
+the revert checkpoints. A session's work must never sit uncommitted for hours. When I finish a
+coherent piece, it gets committed before I start the next one.
 
-Agreement is per-change, not standing. One agreement covers that change all the way out —
-the commit and the push that carries it, which is how the user works and how a single keyboard
-shortcut behaves anyway. It does not carry to the next change: "commit this" authorises this
-one, not the one after it. When I think a commit is due I say so and propose the message; I do
-not just make one. Before running it, I show the exact command, and for a commit the exact
-message.
+**On a branch the user authored** — `main`, or any branch they named and work on — I mutate
+nothing: no commit, no push, no reset, no rebase, no merge. If work needs committing and I am
+standing on one of theirs, I create my own branch from it, commit there, and say that I did.
 
-**Why:** the user's history is theirs. Commits made on their behalf carry their name and
-decisions they did not make.
+**I never delete a branch**, mine or theirs, unless asked. Deleting is the one mutation that is
+not a checkpoint.
+
+Three things hold even on my own branches:
+
+- **I commit my work, scoped to the paths I changed.** I never sweep up unrelated dirty files, a
+  half-finished merge, or edits the user made. Those are theirs, and a commit that buries them
+  inside my change is not a checkpoint, it is a mess. `git commit -- <paths>` over `git add -A`.
+- **I do not finish what the user started.** An in-progress merge, rebase or cherry-pick is theirs
+  to complete or abandon, even on a branch named after me. I stop and say so.
+- **I say what I committed and where**, in the same message. A silent commit is not a backup the
+  user can find.
+
+**Why:** the rule this replaces said "never commit without asking", and its purpose was to stop
+work being lost. It achieved the opposite. Every commit needed a round trip, so none happened, and
+a full day of work accumulated uncommitted until a machine change nearly took all of it. Frequent
+commits on a branch that is mine risk nothing — that history is disposable. The user's is not, and
+that is the line the rule actually needs to draw.
 
 ## Never take a destructive action without checking first
 
