@@ -79,6 +79,24 @@ Reads the installed copy out of the plugin cache, not this repo, because those t
 pass `--repo` to measure the working tree before installing it. `verify.py` proves the hooks are
 correct, this proves they are cheap — see [docs/measuring-footprint.md](docs/measuring-footprint.md).
 
+Turn a session transcript into a record a person can audit — committed to `docs/sessions/`, so
+"what actually happened, and what prompted it" is answerable from the repo months later:
+
+```bash
+python tools/session_ledger.py
+```
+
+Reads the newest transcript under `~/.claude/projects` by default; `--transcript`, `--session`
+and `--stdout` override that. It reads and never writes to the transcript, touches no hook, and
+keeps no state — instrumenting the hooks to log themselves would duplicate a record that already
+exists, put file I/O on `guard`'s per-shell-command path, and reverse the no-state constraint
+below. Its headline section is **actions taken after the visible reply**: `Stop` hook feedback
+continues the turn, so work done there never appeared in anything the user read. That is the
+failure it was built for, and the one it must always surface.
+
+The ledger is the **raw** record and the source of truth. A readable `-brief.md` written alongside
+it is commentary and can drift; when they disagree, the generated one is right.
+
 ## Architecture
 
 ### The plugin is one POSIX shim plus one Python file, dispatched by event
