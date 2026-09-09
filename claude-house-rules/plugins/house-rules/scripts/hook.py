@@ -221,9 +221,11 @@ def event_inject():
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
         "override default behaviour. They are also enforced by a PreToolUse hook that will "
-        "put a permission prompt in front of the user for mutating git commands, destructive "
-        "commands, and backgrounded or hidden processes. That hook is a backstop, not "
-        "permission to skip asking in chat first.\n\n"
+        "put a permission prompt in front of the user for destructive commands, "
+        "backgrounded or hidden processes, and mutating git commands - except a plain "
+        "commit or push on a `claude/` branch, which the commit rule already allows and "
+        "the hook stands down for. That hook is a backstop, not permission to skip "
+        "asking in chat first.\n\n"
     )
     separator = (
         "\n\n---\n\nThe machine these rules run on, as recorded. The first rule says to "
@@ -568,14 +570,42 @@ GUARD_R1 = [
     (r'[^&]&\s*\\?"', "backgrounds the command with a trailing ampersand"),
 ]
 
+# `git` plus any run of global options before the subcommand.
+# Why the alternation's first branch exists: docs/architecture.md, "The pre-existing hole this exposed".
+_GIT = (
+    r"git\s+((?:-[cC]|--git-dir|--work-tree|--namespace|--exec-path|--super-prefix)"
+    r"[=\s]\s*[^\s]+\s+|-[^\s]+\s+)*"
+)
+
+# Marks a pattern the commit rule stands down for when the checkout is on a branch I created.
+# Everything without it prompts on every branch, mine included. See the ownership helpers below
+# and "Commit constantly on my own branches, never on theirs" in rules/house-rules.md.
+OWNED = "owned-branch-exempt"
+
 GUARD_R3 = [
+    # Force-pushing is not a checkpoint — it rewrites history that was already backed up — so
+    # it prompts even on my own branch. Listed before the plain push so that when both match,
+    # the non-exempt reason is the one that survives into the prompt.
     (
-        r"git\s+(-[^\s]+\s+)*push([^0-9A-Za-z-]|$)",
-        "reaches a remote (push)",
+        _GIT + r"push\b.*(--force|--force-with-lease|(^|\s)-f([^0-9A-Za-z-]|$))",
+        "rewrites remote history (force push)",
     ),
     (
-        r"git\s+(-[^\s]+\s+)*(commit|reset|revert|clean|rebase|merge|filter-branch|cherry-pick|am|apply)([^0-9A-Za-z-]|$)",
-        "writes history, the index, or the working tree",
+        _GIT + r"push([^0-9A-Za-z-]|$)",
+        "reaches a remote (push)",
+        OWNED,
+    ),
+    (
+        _GIT + r"commit([^0-9A-Za-z-]|$)",
+        "writes history (commit)",
+        OWNED,
+    ),
+    # Not exemptible on any branch. reset/clean/revert destroy work that is not yet a
+    # checkpoint, and rebase/merge/cherry-pick/am/apply are how a hook would end up finishing
+    # something the user started — which the rule bans even on a branch named after me.
+    (
+        _GIT + r"(reset|revert|clean|rebase|merge|filter-branch|cherry-pick|am|apply)([^0-9A-Za-z-]|$)",
+        "discards work or finishes an operation you started",
     ),
 ]
 
@@ -592,11 +622,11 @@ GUARD_R4 = [
         "truncates or overwrites file contents in place",
     ),
     (
-        r"git\s+(-[^\s]+\s+)*(checkout\s+(--|\.(\s|$))|restore([^0-9A-Za-z-]|$))",
+        _GIT + r"(checkout\s+(--|\.(\s|$))|restore([^0-9A-Za-z-]|$))",
         "throws away uncommitted edits to a file (git checkout -- / git restore)",
     ),
     (
-        r"git\s+(-[^\s]+\s+)*stash\s+(drop|clear)([^0-9A-Za-z-]|$)",
+        _GIT + r"stash\s+(drop|clear)([^0-9A-Za-z-]|$)",
         "deletes stashed work permanently (git stash drop / clear)",
     ),
 ]
@@ -606,6 +636,66 @@ GUARD_BUCKETS = [
     ("Commit constantly on my own branches, never on theirs", GUARD_R3),
     ("Never take a destructive action without checking first", GUARD_R4),
 ]
+
+OWNED_BRANCH_PREFIX = "claude/"
+
+# A command that names its own repo, git dir or work tree is not talking about the checkout
+# this hook can see, so the branch read below would be the wrong branch to judge it by. Broad
+# on purpose — `grep -C 3` in the same command line costs an extra keypress, and that is the
+# direction guard is allowed to be wrong in.
+_OTHER_REPO_RE = re.compile(r"(^|\s)(-C(\s|=)|--git-dir|--work-tree)")
+
+
+def _git_dir(start):
+    """Walk up from `start` looking for `.git`, returning the resolved git directory."""
+    d = os.path.abspath(start)
+    while True:
+        candidate = os.path.join(d, ".git")
+        if os.path.isdir(candidate):
+            return candidate
+        if os.path.isfile(candidate):
+            # A worktree or submodule: `.git` is a file holding `gitdir: <path>`.
+            for line in _read_text(candidate).splitlines():
+                if line.startswith("gitdir:"):
+                    p = line.split(":", 1)[1].strip()
+                    return os.path.abspath(p if os.path.isabs(p) else os.path.join(d, p))
+            return None
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def branch_ownership():
+    """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
+
+    Why a file read and not `git rev-parse`: docs/architecture.md, "Why `.git/HEAD` and not
+    `git rev-parse --abbrev-ref HEAD`".
+
+    `is_mine` is True only for a branch named `claude/…`. Everything else — the user's
+    branches, a detached HEAD, a directory that is not a repo, an unreadable HEAD — comes
+    back False, so every uncertainty lands on the prompting side. `note` is a short phrase
+    naming what could not be established, present only when something genuinely failed;
+    silence there means the branch was read cleanly.
+    """
+    try:
+        git_dir = _git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if not git_dir:
+            return False, None, "this directory is not inside a git repository"
+        head = _read_text(os.path.join(git_dir, "HEAD")).strip()
+    except Exception as exc:
+        return False, None, "could not read .git/HEAD (%s)" % exc
+
+    if not head.startswith("ref:"):
+        return False, None, "HEAD is detached, so there is no branch to own"
+
+    ref = head.split(":", 1)[1].strip()
+    if not ref.startswith("refs/heads/"):
+        return False, None, "HEAD points at %s, which is not a branch" % ref
+
+    branch = ref[len("refs/heads/") :]
+    return branch.startswith(OWNED_BRANCH_PREFIX), branch, None
+
 
 # tier 3: pull out just "command":"..." — the first one. Allows backslash-escaped quotes.
 _COMMAND_FIELD_RE = re.compile(r'"command"\s*:\s*"(?:[^"\\]|\\.)*"')
@@ -660,17 +750,35 @@ def event_guard():
 
     subject = _guard_subject(payload)
 
+    is_mine, branch, ownership_note = branch_ownership()
+    # A command carrying -C / --git-dir / --work-tree acts on a repo other than the one we
+    # just read the branch from, so the exemption cannot be justified and is withheld.
+    elsewhere = bool(_OTHER_REPO_RE.search(subject))
+    exempting = is_mine and not elsewhere
+
     hits = {title: [] for title, _ in GUARD_BUCKETS}
+    exempted = []
     for title, patterns in GUARD_BUCKETS:
-        for pattern, reason in patterns:
-            if re.search(pattern, subject, re.IGNORECASE):
+        for entry in patterns:
+            pattern, reason = entry[0], entry[1]
+            if not re.search(pattern, subject, re.IGNORECASE):
+                continue
+            if exempting and len(entry) > 2 and entry[2] == OWNED:
+                exempted.append(reason)
+            else:
                 hits[title].append(reason)
 
     if not any(hits.values()):
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
         # not to fire" from "never ran" - and it is the security-shaped backstop, so that is
         # the worst place to leave the ambiguity.
-        trace("guard: checked %s - no house rule matched." % _trace_subject(subject))
+        if exempted:
+            trace(
+                "guard: checked %s - %s on `%s`, which is mine to commit on."
+                % (_trace_subject(subject), " and ".join(exempted), branch)
+            )
+        else:
+            trace("guard: checked %s - no house rule matched." % _trace_subject(subject))
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
@@ -681,6 +789,25 @@ def event_guard():
             lines.append(f"  Rule: {title}")
             for r in reasons:
                 lines.append(f"    - {r}")
+
+    # Why the prompt names the branch: docs/architecture.md, "What the exemption does and does not cover".
+    if hits["Commit constantly on my own branches, never on theirs"]:
+        why_not_exempt = None
+        if elsewhere:
+            why_not_exempt = (
+                "  This command names another repo (-C / --git-dir), so the branch I can see "
+                "is not the one it acts on."
+            )
+        elif ownership_note:
+            why_not_exempt = "  I could not establish branch ownership: %s." % ownership_note
+        elif not is_mine:
+            why_not_exempt = (
+                "  You are on `%s`, which is yours, not a `claude/` branch." % branch
+            )
+        if why_not_exempt:
+            lines.append("")
+            lines.append(why_not_exempt)
+
     lines.append("")
     lines.append(
         "Approve to let it run, or reject and Claude will explain what it was about to do."

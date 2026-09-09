@@ -94,6 +94,75 @@ The defaults are not a taste call: see
 [`comment-harvest-calibration.md`](comment-harvest-calibration.md) for what 5/300 and 10/600
 each catch in this repository, and why the higher pair was effectively switched off.
 
+## `guard` is branch-aware, and reads the branch from a file rather than from `git`
+
+The commit rule was rewritten in 2.16.0 to draw its line at branch *ownership* — commit freely on
+a branch I created, mutate nothing on one the user authored — but `guard` went on prompting for
+every mutating git command regardless of branch. The hook and the rule it cites by name disagreed,
+and the hook was the one the user actually felt. That was left deliberately for one release,
+because making it branch-aware needed doing against an up-to-date checkout rather than bolted onto
+the rule change.
+
+### Why `.git/HEAD` and not `git rev-parse --abbrev-ref HEAD`
+
+`rev-parse` is the obvious way to ask, and it is the wrong one here. `guard` runs on `PreToolUse`
+for every `Bash` and `PowerShell` call, and it is the one handler that **fails closed** — an
+internal error exits 2 and the command does not run. A subprocess on that path is a subprocess on
+the critical path of every shell command the user issues, in the handler whose failure mode is
+"your command does not run". A `git` that hangs — a stale index lock, a network-backed filesystem,
+an antivirus scan on first exec — wedges the shell for as long as it hangs.
+
+Reading `.git/HEAD` cannot hang in any of those ways. It also keeps `guard` working where `git` is
+not on `PATH`, which is the same reasoning that keeps `hook.py` stdlib-only: the checker must not
+be a bigger dependency than the thing it checks. Measured on the Windows desktop, the whole
+ownership read costs **46 µs** from the repo root and **73 µs** from two directories down, against
+roughly 30 ms of interpreter startup that is paid anyway.
+
+`verify.py` fails if `branch_ownership()` ever reaches for `subprocess`, `os.popen`, `os.system` or
+`check_output`. That check was itself wrong on its first run: it searched the function text for the
+string `rev-parse`, which appears in the docstring precisely to say it is not used, so the check
+reported a violation of the thing the code was getting right. It now looks for call syntax only —
+a lesson about greping prose for the absence of an idea.
+
+### What the exemption does and does not cover
+
+Only a plain `commit` and a plain `push`, and only on a branch named `claude/…`. Everything else
+in the bucket prompts on every branch:
+
+- **Force-push** rewrites history that was already safely on the remote. A checkpoint adds; this
+  replaces. It is the one push that can destroy something already backed up.
+- **`reset`, `revert`, `clean`** discard work that is not yet a checkpoint — including the user's
+  uncommitted edits sitting in the same tree, which do not become mine because the branch is.
+- **`rebase`, `merge`, `cherry-pick`, `am`, `apply`** are how a hook would end up finishing an
+  operation the user started, which the rule forbids *even on a branch named after me*.
+- **Any command carrying `-C`, `--git-dir` or `--work-tree`** acts on a repo other than the one the
+  branch was read from, so the exemption cannot be justified and is withheld.
+
+Every way of not knowing — the user's branch, a detached `HEAD`, a directory that is not a repo, an
+unreadable `HEAD` — resolves to *not mine* and therefore to a prompt. That is `guard`'s existing
+fail-closed posture applied to a new input, and the prompt names which of them it was: a rule about
+branch ownership is useless in a prompt that does not say which branch you are on.
+
+### The pre-existing hole this exposed
+
+Every git pattern shared a prefix meant to skip global options: `git\s+(-[^\s]+\s+)*`. It can
+match a flag but not a flag's *argument*, so in `git -C /other/repo commit` the scan consumed
+`-C ` , met `/other/repo`, and stopped — the subcommand was never reached and the command matched
+**nothing**. `git -C <path> commit` and `git -C <path> push` had been walking straight past the
+guard since the patterns were ported from the shell scripts. It was invisible while the answer was
+always "prompt anyway for something", and became load-bearing the moment `-C` was what *withheld*
+an exemption. The prefix is now a shared `_GIT` constant that knows which global options take a
+separate argument, and `GUARD_R4`'s git patterns were fixed with it.
+
+### Fixture repos, not the developer's branch
+
+`verify.py`'s guard cases used to inherit whatever branch the suite happened to be run from. Once
+the decision depends on the branch, that makes the suite's result a property of the developer's
+checkout: it passed on `main`, failed on a `claude/` branch, and would have agreed with neither —
+CI checks out a detached `HEAD`. Each case now names the branch it is judged against, using
+throwaway directories containing nothing but a hand-written `.git/HEAD`. That the fixture is one
+file is not a shortcut; it is the same fact that makes the read cheap enough to do on every call.
+
 ## Nothing fails silently, and the plugin's own hooks were violating it
 
 The rule landed with the `harvest` work and immediately indicted existing code, which is the

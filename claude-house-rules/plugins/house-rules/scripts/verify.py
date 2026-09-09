@@ -15,6 +15,7 @@ The check count is never hardcoded anywhere that references it (here or in any d
 computed at runtime, so it cannot drift out from under an added case.
 """
 
+import atexit
 import json
 import os
 import re
@@ -112,7 +113,41 @@ print("command field rather than the whole payload, and that the scope, artifact
 print("runnable reminders, the machine profile, and the rules-vs-docs drift checks hold.")
 print()
 
+RULE_COMMIT = "Commit constantly on my own branches, never on theirs"
+RULE_DESTRUCTIVE = "Never take a destructive action without checking first"
+
+# --- branch fixtures -------------------------------------------------------------------------
+# Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
+_FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
+atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
+
+
+def _repo_on(name, head_line):
+    path = os.path.join(_FIXTURE_ROOT, name)
+    os.makedirs(os.path.join(path, ".git"))
+    with open(os.path.join(path, ".git", "HEAD"), "w", encoding="utf-8") as f:
+        f.write(head_line)
+    return path
+
+
+REPO_THEIRS = _repo_on("theirs", "ref: refs/heads/main\n")
+REPO_MINE = _repo_on("mine", "ref: refs/heads/claude/some-topic\n")
+REPO_DETACHED = _repo_on("detached", "9f1c0de0000000000000000000000000000000ab\n")
+REPO_NONE = os.path.join(_FIXTURE_ROOT, "not-a-repo")
+os.makedirs(REPO_NONE)
+
+
+def env_in(project_dir, **extra):
+    e = dict(os.environ)
+    e["CLAUDE_PROJECT_DIR"] = project_dir
+    e.update(extra)
+    return e
+
+
 # --- guard cases: 28 commands ---------------------------------------------------------------
+# All judged from REPO_THEIRS, so these pin the behaviour on a branch that is not mine - the
+# conservative baseline the plugin had before branch-awareness. BRANCH_CASES below covers the
+# ownership axis.
 GUARD_CASES = [
     ("pass", None, "git status"),
     ("pass", None, "git log --oneline -n 20"),
@@ -165,7 +200,7 @@ GUARD_CASES = [
 ]
 
 for expect, rule, cmd in GUARD_CASES:
-    code, out, err = run_hook("guard", payload_for(cmd))
+    code, out, err = run_hook("guard", payload_for(cmd), env=env_in(REPO_THEIRS))
     if '"permissionDecision":"ask"' in out:
         got = "ask"
     elif not out.strip() or "no house rule matched" in out:
@@ -184,6 +219,113 @@ for expect, rule, cmd in GUARD_CASES:
             result = "FAIL"
     report(result, cmd)
     print(f"          expected {expect}, got {got}{cited}")
+
+print()
+
+# --- branch-aware guard: the same command, judged by whose branch the checkout is on ---------
+BRANCH_CASES = [
+    # On a branch I created, a commit and an ordinary push are checkpoints, not mutations of
+    # the user's history. These are the only two the exemption covers.
+    (REPO_MINE, "claude/some-topic", "pass", None, 'git commit -m "checkpoint"'),
+    (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),
+    (REPO_MINE, "claude/some-topic", "pass", None, "git -c user.name=x commit -m y"),
+    # Force-pushing rewrites history that was already safe, so it is not a checkpoint and the
+    # exemption does not reach it - on any branch.
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push --force-with-lease"),
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push -f origin HEAD"),
+    # Discarding work, or finishing something the user started, stays a prompt on my branch too.
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git reset --hard origin/main"),
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git rebase -i HEAD~3"),
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git merge main"),
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git cherry-pick abc123"),
+    # A command naming another repo is not talking about the branch we just read.
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, 'git -C /other/repo commit -m "x"'),
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git --git-dir=/other/.git push"),
+    # Ownership buys nothing outside the commit rule.
+    (REPO_MINE, "claude/some-topic", "ask", RULE_DESTRUCTIVE, "rm -rf build"),
+    # Every branch that is not mine, and every branch I could not read, still prompts.
+    (REPO_THEIRS, "main", "ask", RULE_COMMIT, 'git commit -m "wip"'),
+    (REPO_THEIRS, "main", "ask", RULE_COMMIT, "git push origin main"),
+    (REPO_DETACHED, "a detached HEAD", "ask", RULE_COMMIT, 'git commit -m "wip"'),
+    (REPO_NONE, "a directory that is not a repo", "ask", RULE_COMMIT, 'git commit -m "wip"'),
+]
+
+for project_dir, label, expect, rule, cmd in BRANCH_CASES:
+    code, out, err = run_hook("guard", payload_for(cmd), env=env_in(project_dir))
+    if '"permissionDecision":"ask"' in out:
+        got = "ask"
+    elif not out.strip() or "no house rule matched" in out or "mine to commit on" in out:
+        got = "pass"
+    else:
+        got = "malformed"
+    result = "PASS" if got == expect else "FAIL"
+    cited = ""
+    if rule:
+        if rule in out:
+            cited = "; rule cited correctly"
+        else:
+            cited = f"; RULE NOT CITED (wanted: {rule})"
+            result = "FAIL"
+    report(result, f"{cmd}   [on {label}]")
+    print(f"          expected {expect}, got {got}{cited}")
+
+# The prompt has to say why the exemption did not apply, or the user is left reading a rule
+# about branch ownership with no way to tell which branch they are on. Each of the three ways
+# it can fail to apply names itself.
+prompt_problems = []
+for project_dir, cmd, wanted in [
+    (REPO_THEIRS, 'git commit -m "wip"', "You are on `main`, which is yours"),
+    (REPO_DETACHED, 'git commit -m "wip"', "HEAD is detached"),
+    (REPO_NONE, 'git commit -m "wip"', "not inside a git repository"),
+    (REPO_MINE, 'git -C /other/repo commit -m "x"', "names another repo"),
+]:
+    code, out, err = run_hook("guard", payload_for(cmd), env=env_in(project_dir))
+    if wanted not in out:
+        prompt_problems.append(f"{cmd} in {os.path.basename(project_dir)}: no {wanted!r}")
+if not prompt_problems:
+    report("PASS", "a prompt the branch exemption could have silenced says why it did not")
+    print("          names the branch, the detached HEAD, the missing repo, or the other repo")
+else:
+    report("FAIL", "a prompt the branch exemption could have silenced says why it did not")
+    for p in prompt_problems:
+        print(f"          {p}")
+
+# The exemption is a silent success path, and guard's silent paths trace by contract.
+code, out, err = run_hook("guard", payload_for("git commit -m x"), env=env_in(REPO_MINE))
+if '"systemMessage"' in out and "claude/some-topic" in out and "mine to commit on" in out:
+    report("PASS", "an exempted command traces the branch it was exempted on")
+    print(f"          said: {json.loads(out)['systemMessage']}")
+else:
+    report("FAIL", "an exempted command traces the branch it was exempted on")
+    print(f"          got: {out!r}")
+
+# A worktree's .git is a file, not a directory. Getting this wrong would silently downgrade
+# every worktree to "not a repo" - which prompts, so it would never have been noticed.
+_wt = os.path.join(_FIXTURE_ROOT, "worktree")
+os.makedirs(_wt)
+with open(os.path.join(_wt, ".git"), "w", encoding="utf-8") as f:
+    f.write("gitdir: %s\n" % os.path.join(REPO_MINE, ".git"))
+code, out, err = run_hook("guard", payload_for("git commit -m x"), env=env_in(_wt))
+if "mine to commit on" in out:
+    report("PASS", "a linked worktree resolves its branch through the gitdir: pointer")
+    print("          .git as a file is followed, not mistaken for an unreadable repo")
+else:
+    report("FAIL", "a linked worktree resolves its branch through the gitdir: pointer")
+    print(f"          got: {out!r}")
+
+# The branch is read from a file, never by running git. A subprocess here would sit on the
+# critical path of every shell command, in the one handler that blocks when it fails.
+_hook_src = read(HOOK)
+_own = _hook_src[_hook_src.index("def branch_ownership") :]
+_own = _own[: _own.index("\ndef ", 1)]
+# Call syntax only, not prose. Why the docstring names rev-parse: docs/architecture.md, "Why `.git/HEAD` and not `git rev-parse --abbrev-ref HEAD`".
+_shelling = [c for c in ("subprocess.", "os.popen(", "os.system(", "check_output") if c in _own]
+if not _shelling:
+    report("PASS", "branch ownership is read from .git/HEAD, never by shelling out to git")
+    print("          guard blocks on failure, so it must not depend on a process that can hang")
+else:
+    report("FAIL", "branch ownership is read from .git/HEAD, never by shelling out to git")
+    print(f"          branch_ownership() reached for: {', '.join(_shelling)}")
 
 print()
 
@@ -231,7 +373,7 @@ else:
 nocmd_payload = json.dumps(
     {"session_id": "verify", "tool_name": "PowerShell", "tool_input": {"script": "git commit -m wip"}}
 )
-code, out, err = run_hook("guard", nocmd_payload)
+code, out, err = run_hook("guard", nocmd_payload, env=env_in(REPO_THEIRS))
 if '"permissionDecision":"ask"' in out and "Commit constantly on my own branches, never on theirs" in out:
     report("PASS", "a payload with no command field still gets checked (whole-payload fallback)")
     print("          fell back to the old behaviour rather than passing it unchecked")
@@ -995,7 +1137,7 @@ for event, payload, needle, why in trace_cases:
         print(f"          exit {code}, got: {out[:160]!r}")
 
 # --- one lever turns every trace off, and no reminder goes with it -----------------------------
-off = dict(os.environ)
+off = env_in(REPO_THEIRS)
 off["HOUSE_RULES_TRACE"] = "off"
 quiet_failures = []
 for event, payload, _, why in trace_cases:
@@ -1161,6 +1303,14 @@ for i, line in enumerate(hook_lines):
             break
         body = nxt.strip()
         if "emit(" in nxt or "stderr.write" in nxt or "problems.append(" in nxt:
+            spoke = True
+        # Handing the caller something to say is the third shape the rule allows, alongside
+        # emitting and writing to stderr - CLAUDE.md names it "recording the problem for its
+        # caller to report". branch_ownership() is the case: it cannot emit, because guard has
+        # to decide whether to prompt before it knows what to print. A return carrying a
+        # non-empty string literal is that shape; a bare `return`, `return None` or `return ""`
+        # is not, and still counts as giving up silently.
+        if body.startswith("return") and re.search(r'"[^"]+"|\'[^\']+\'', body):
             spoke = True
         # An except that recovers - assigns a fallback and carries on - is not the defect;
         # the rule is about a handler that GIVES UP without saying so. Only a body that

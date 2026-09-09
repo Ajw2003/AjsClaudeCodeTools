@@ -1,0 +1,565 @@
+<title>Branch-Aware Guard Rollout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --paper:      #f1f3f2;
+    --surface:    #fbfcfb;
+    --surface-2:  #e7ebe9;
+    --ink:        #191d1c;
+    --ink-2:      #4a5250;
+    --ink-3:      #737d7a;
+    --rule:       #d3dad7;
+    --rule-2:     #bcc5c1;
+    --accent:     #2c5148;
+    --allow:      #3d6b4a;
+    --allow-bg:   #e2eee5;
+    --prompt:     #8a5a1c;
+    --prompt-bg:  #f4e9d8;
+    --code-bg:    #eef1ef;
+    --shadow:     0 1px 2px rgba(25,29,28,.06), 0 6px 18px rgba(25,29,28,.05);
+
+    --step: clamp(1.35rem, 1.1rem + 1.1vw, 1.7rem);
+    --h1:   clamp(2.1rem, 1.6rem + 2.2vw, 3.05rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:     #131716;
+      --surface:   #1a201e;
+      --surface-2: #232a28;
+      --ink:       #e7ecea;
+      --ink-2:     #aab4b1;
+      --ink-3:     #808b88;
+      --rule:      #2c3533;
+      --rule-2:    #3b4643;
+      --accent:    #7fbcaa;
+      --allow:     #8ac79a;
+      --allow-bg:  #1c2e23;
+      --prompt:    #d9a45f;
+      --prompt-bg: #322616;
+      --code-bg:   #101514;
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.32);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:     #131716;
+    --surface:   #1a201e;
+    --surface-2: #232a28;
+    --ink:       #e7ecea;
+    --ink-2:     #aab4b1;
+    --ink-3:     #808b88;
+    --rule:      #2c3533;
+    --rule-2:    #3b4643;
+    --accent:    #7fbcaa;
+    --allow:     #8ac79a;
+    --allow-bg:  #1c2e23;
+    --prompt:    #d9a45f;
+    --prompt-bg: #322616;
+    --code-bg:   #101514;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.32);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 47rem;
+    margin: 0 auto;
+    padding: clamp(2rem, 1rem + 4vw, 4.5rem) clamp(1.1rem, .6rem + 2.4vw, 2rem) 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25rem;
+  }
+
+  /* ---------- masthead ---------- */
+  .mast { display: flex; flex-direction: column; gap: 1.1rem; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .7rem;
+    font-weight: 500;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  h1 {
+    font-family: Newsreader, ui-serif, Georgia, serif;
+    font-size: var(--h1);
+    font-weight: 500;
+    line-height: 1.08;
+    letter-spacing: -.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    font-size: 1.075rem;
+    color: var(--ink-2);
+    margin: 0;
+    max-width: 40rem;
+  }
+
+  /* ---------- version strip ---------- */
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .strip > div {
+    flex: 1 1 9rem;
+    padding: .85rem 1.05rem;
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: .18rem;
+  }
+  .strip > div:last-child { border-right: 0; }
+  .strip dt {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .655rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .strip dd {
+    margin: 0;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .95rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .strip dd a { color: var(--accent); }
+
+  /* ---------- generic ---------- */
+  h2 {
+    font-family: Newsreader, ui-serif, Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 500;
+    letter-spacing: -.01em;
+    margin: 0 0 .9rem;
+  }
+  p { margin: 0 0 .85rem; }
+  p:last-child { margin-bottom: 0; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .875em;
+    background: var(--code-bg);
+    border-radius: 2px;
+    padding: .08em .32em;
+  }
+  strong { font-weight: 600; }
+
+  /* ---------- behaviour table ---------- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 33rem; }
+  th, td { text-align: left; padding: .7rem 1rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .655rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 500;
+    background: var(--surface-2);
+  }
+  td:first-child { font-family: "IBM Plex Mono", monospace; font-size: .83rem; white-space: nowrap; }
+  td:last-child { color: var(--ink-2); font-size: .93rem; }
+
+  .pill {
+    display: inline-block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .66rem;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    padding: .2rem .5rem;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .pill.allow  { color: var(--allow);  background: var(--allow-bg); }
+  .pill.prompt { color: var(--prompt); background: var(--prompt-bg); }
+
+  /* ---------- steps ---------- */
+  .steps { display: flex; flex-direction: column; gap: 2.4rem; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 0 1.15rem;
+    align-items: start;
+  }
+  .step-n {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    padding-top: .42rem;
+    border-top: 2px solid var(--accent);
+    letter-spacing: .06em;
+  }
+  .step-body { display: flex; flex-direction: column; gap: .8rem; min-width: 0; padding-top: .18rem; }
+  .step h3 {
+    font-family: Newsreader, ui-serif, Georgia, serif;
+    font-size: var(--step);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .step p { margin: 0; color: var(--ink-2); }
+  .step p.where { color: var(--ink); }
+
+  .cmd { position: relative; }
+  .cmd-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-bottom: 0;
+    border-radius: 3px 3px 0 0;
+    padding: .32rem .5rem .32rem .8rem;
+  }
+  .cmd-shell {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .655rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  button.copy {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .655rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--rule-2);
+    border-radius: 2px;
+    padding: .22rem .55rem;
+    cursor: pointer;
+  }
+  button.copy:hover { color: var(--ink); border-color: var(--ink-3); }
+  button.copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  pre {
+    margin: 0;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 0 0 3px 3px;
+    padding: .85rem 1rem;
+    overflow-x: auto;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: .845rem;
+    line-height: 1.6;
+    color: var(--ink);
+    white-space: pre;
+  }
+
+  .expect {
+    border-left: 2px solid var(--rule-2);
+    padding-left: .95rem;
+    font-size: .945rem;
+    color: var(--ink-2);
+  }
+  .expect b { color: var(--ink); font-weight: 600; }
+  .expect .out {
+    display: block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .8rem;
+    color: var(--ink);
+    margin-top: .3rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .untested {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    color: var(--prompt);
+  }
+
+  .nostep {
+    font-size: .93rem;
+    color: var(--ink-3);
+    font-style: italic;
+  }
+
+  /* ---------- closing note ---------- */
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--accent);
+    border-radius: 3px;
+    padding: 1.15rem 1.35rem;
+  }
+  .note h2 { font-size: 1.22rem; margin-bottom: .5rem; }
+  .note p { color: var(--ink-2); font-size: .95rem; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 1.1rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .72rem;
+    color: var(--ink-3);
+    line-height: 1.7;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  @media (max-width: 34rem) {
+    .step { grid-template-columns: 1fr; gap: .55rem; }
+    .step-n { border-top: 0; padding-top: 0; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">house-rules · plugin rollout</div>
+    <h1>Branch-aware guard, 2.16.0</h1>
+    <p class="standfirst">
+      <code>guard</code> prompted on every mutating git command regardless of branch, while the rule it
+      cites by name says a commit on a <code>claude/*</code> branch needs no permission. Five steps to
+      get the fix installed and live on this machine.
+    </p>
+
+    <dl class="strip">
+      <div><dt>Installed now</dt><dd>2.15.0</dd></div>
+      <div><dt>Target</dt><dd>2.16.0</dd></div>
+      <div><dt>Pull request</dt><dd><a href="https://github.com/Ajw2003/AjsClaudeCodeTools/pull/24">#24</a></dd></div>
+      <div><dt>CI</dt><dd>pass · 11s</dd></div>
+      <div><dt>Checks</dt><dd>174 / 174</dd></div>
+    </dl>
+  </header>
+
+  <section>
+    <h2>What changes</h2>
+    <p>
+      On a branch named <code>claude/…</code>, only a plain commit and a plain push stop prompting.
+      The branch comes from reading <code>.git/HEAD</code> — 46&nbsp;µs, no subprocess, because
+      <code>guard</code> is the one handler that blocks the command when it fails.
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Command</th><th>On <code>claude/*</code></th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>git commit</td>
+            <td><span class="pill allow">no prompt</span></td>
+            <td>A checkpoint. Frequent commits on my own branch <em>are</em> the backup.</td>
+          </tr>
+          <tr>
+            <td>git push</td>
+            <td><span class="pill allow">no prompt</span></td>
+            <td>Same — nothing reaches main without your merge.</td>
+          </tr>
+          <tr>
+            <td>git push --force</td>
+            <td><span class="pill prompt">prompts</span></td>
+            <td>Rewrites history that was already safely on the remote.</td>
+          </tr>
+          <tr>
+            <td>reset · revert · clean</td>
+            <td><span class="pill prompt">prompts</span></td>
+            <td>Discards work that is not yet a checkpoint, yours included.</td>
+          </tr>
+          <tr>
+            <td>rebase · merge · cherry-pick</td>
+            <td><span class="pill prompt">prompts</span></td>
+            <td>How a hook ends up finishing an operation you started.</td>
+          </tr>
+          <tr>
+            <td>anything with <code>-C</code></td>
+            <td><span class="pill prompt">prompts</span></td>
+            <td>Names a repo other than the one the branch was read from.</td>
+          </tr>
+          <tr>
+            <td>on main, or detached HEAD</td>
+            <td><span class="pill prompt">prompts</span></td>
+            <td>Every uncertainty lands on the prompting side, and says which.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Getting it live</h2>
+    <div class="steps">
+
+      <article class="step">
+        <div class="step-n">01 / 05</div>
+        <div class="step-body">
+          <h3>Merge pull request #24</h3>
+          <p class="where">
+            Open <a href="https://github.com/Ajw2003/AjsClaudeCodeTools/pull/24">pull request #24</a> and
+            merge it into <code>main</code>. This one is yours — the plugin's own rule says I do not
+            merge on a branch you authored, and the marketplace clone on this machine tracks
+            <code>main</code>, so nothing below works until it lands there.
+          </p>
+          <p class="nostep">No command for this step.</p>
+          <div class="expect">
+            <b>You should see:</b> the pull request marked <b>Merged</b>, and the <code>verify</code>
+            check green on the merge commit.
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="step-n">02 / 05</div>
+        <div class="step-body">
+          <h3>Bring your local main up to date</h3>
+          <p class="where">
+            Navigate to <code>C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools</code> and open
+            <strong>PowerShell</strong> there (right-click the folder → <em>Open in Terminal</em>).
+          </p>
+          <p class="untested">UNTESTED: not run — this moves you off the working branch.</p>
+          <div class="cmd">
+            <div class="cmd-head">
+              <span class="cmd-shell">powershell</span>
+              <button class="copy" type="button">Copy</button>
+            </div>
+<pre><code>git -C "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools" checkout main; git -C "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools" pull --ff-only</code></pre>
+          </div>
+          <div class="expect">
+            <b>You should see:</b> <code>Switched to branch 'main'</code> followed by a fast-forward
+            summary listing <code>hook.py</code>, <code>verify.py</code>, <code>plugin.json</code>,
+            <code>CLAUDE.md</code> and <code>docs/architecture.md</code>. If it says
+            <code>Already up to date</code>, step 1 did not land.
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="step-n">03 / 05</div>
+        <div class="step-body">
+          <h3>Update the marketplace and the plugin</h3>
+          <p class="where">Same <strong>PowerShell</strong> window.</p>
+          <div class="cmd">
+            <div class="cmd-head">
+              <span class="cmd-shell">powershell</span>
+              <button class="copy" type="button">Copy</button>
+            </div>
+<pre><code>claude plugin marketplace update aj-house-rules; claude plugin update house-rules@aj-house-rules</code></pre>
+          </div>
+          <div class="expect">
+            <b>You should see:</b> <code>Successfully updated marketplace</code>, then a line naming
+            <b>2.16.0</b>. Both commands were run here against the pre-merge state and behaved:
+            <span class="out">✔ house-rules is already at the latest version (2.15.0).</span>
+            After the merge that second line becomes the new version instead. If it still says
+            2.15.0, the marketplace clone did not pick up the merge.
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="step-n">04 / 05</div>
+        <div class="step-body">
+          <h3>Check the installed copy by content, not by label</h3>
+          <p class="where">
+            Same <strong>PowerShell</strong> window. A version number is what the plugin claims; this
+            reads the installed <code>hook.py</code> and asks whether the new function is actually in it.
+          </p>
+          <div class="cmd">
+            <div class="cmd-head">
+              <span class="cmd-shell">powershell</span>
+              <button class="copy" type="button">Copy</button>
+            </div>
+<pre><code>Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\aj-house-rules\house-rules" -Directory | ForEach-Object { "installed {0}  branch-aware: {1}" -f $_.Name, $(if (Select-String "$($_.FullName)\scripts\hook.py" -Pattern 'def branch_ownership' -Quiet) {'YES'} else {'NO'}) }</code></pre>
+          </div>
+          <div class="expect">
+            <b>You should see:</b> exactly one line, reading
+            <span class="out">installed 2.16.0  branch-aware: YES</span>
+            Run verbatim here against the current install, it correctly reported
+            <span class="out">installed 2.15.0  branch-aware: NO</span>
+            Two lines means the old version is still cached alongside the new one.
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="step-n">05 / 05</div>
+        <div class="step-body">
+          <h3>Restart the session, then watch one commit</h3>
+          <p class="where">
+            Hooks and injected rules load once, at session start, so this conversation is still running
+            2.15.0 no matter what step 4 says. Start a new session or <code>/clear</code>, then on any
+            <code>claude/*</code> branch let me make a commit.
+          </p>
+          <p class="nostep">No command for this step.</p>
+          <div class="expect">
+            <b>You should see:</b> no permission prompt for the commit, and a one-line trace instead:
+            <span class="out">guard: checked `git commit -m …` - writes history (commit) on `claude/…`, which is mine to commit on.</span>
+            On <code>main</code>, the same commit still prompts — and the prompt now names the branch.
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <div class="note">
+    <h2>One thing this does not cover</h2>
+    <p>
+      Auto mode approves permission prompts without showing them, so the absence of a prompt is not
+      by itself proof the exemption fired. The trace line in step 5 is — it only exists on the
+      branch-aware path.
+    </p>
+  </div>
+
+  <footer>
+    Verified before handover: both suites pass twice over (174 and 17 checks); each guarantee confirmed
+    by deliberately breaking it; the hook exercised directly against main, a claude/* branch, a detached
+    HEAD and a non-repo directory; CI green on Linux. Not verified: the plugin running as an installed
+    copy, which needs the merge first.
+  </footer>
+
+</div>
+
+<script>
+  document.querySelectorAll("button.copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var code = btn.closest(".cmd").querySelector("pre code").textContent;
+      navigator.clipboard.writeText(code).then(function () {
+        var was = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = was; }, 1400);
+      }, function () {
+        btn.textContent = "Ctrl+C";
+      });
+    });
+  });
+</script>
