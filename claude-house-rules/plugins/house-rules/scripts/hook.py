@@ -152,6 +152,29 @@ def _preflight_warnings():
     )
 
 
+# The voice is a preference, so it gets a lever - but it ships ON, for the same reason the
+# decision trace does: a setting nobody enables until they are already unhappy is not a setting.
+# Off removes only the "### The voice" subsection; the plain-language rule above it is not a
+# preference and always loads.
+_VOICE_HEADING = "### The voice"
+
+
+def _apply_voice_toggle(body):
+    if os.environ.get("HOUSE_RULES_VOICE", "on").strip().lower() not in _TRACE_OFF:
+        return body
+    start = body.find(_VOICE_HEADING)
+    if start == -1:
+        # The section this is meant to remove is gone, which means the rules text moved and this
+        # toggle now silently does nothing. Say so rather than pretending it worked.
+        sys.stderr.write(
+            "house-rules inject: HOUSE_RULES_VOICE=off, but the %r section was not found in "
+            "the rules - the toggle had no effect.\n" % _VOICE_HEADING
+        )
+        return body
+    nxt = body.find("\n## ", start)
+    return body[:start] + (body[nxt + 1 :] if nxt != -1 else "")
+
+
 def event_inject():
     here = os.path.dirname(os.path.abspath(__file__))
     rules_path = os.path.join(here, "..", "rules", "house-rules.md")
@@ -171,6 +194,7 @@ def event_inject():
         return 0
 
     body = body.replace("\r\n", "\n")
+    body = _apply_voice_toggle(body)
     if not body.strip():
         emit(
             {
@@ -579,7 +603,7 @@ GUARD_R4 = [
 
 GUARD_BUCKETS = [
     ("Never hide work in a background window or a silent process", GUARD_R1),
-    ("Never commit without asking", GUARD_R3),
+    ("Never commit to `main` without asking", GUARD_R3),
     ("Never take a destructive action without checking first", GUARD_R4),
 ]
 

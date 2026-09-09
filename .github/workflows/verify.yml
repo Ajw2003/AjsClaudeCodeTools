@@ -26,3 +26,9 @@ jobs:
 
       - name: Run the hook test suite
         run: python claude-house-rules/plugins/house-rules/scripts/verify.py
+
+      # tools/ had no automated coverage at all until 2.15.0, and that gap cost something
+      # real: clean_install_test.py's cleanliness check contradicted its own strip step and
+      # was found only by running the script twice by hand.
+      - name: Run the tools test suite
+        run: python tools/verify_tools.py

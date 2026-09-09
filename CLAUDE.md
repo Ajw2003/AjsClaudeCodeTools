@@ -42,6 +42,19 @@ setup step beyond a Python: `hook.py` and `verify.py` are stdlib-only and `run.s
 pins one interpreter (3.12) and therefore does **not** test the CPython 3.8 floor the plugin
 claims — that claim is still unverified.
 
+Run the tools test suite (proves the scripts in `tools/` do what they claim):
+
+```bash
+python tools/verify_tools.py
+```
+
+Same shape as `verify.py` — stdlib only, no test framework, numbered PASS/FAIL, count computed at
+runtime. It covers the decision logic in `session_ledger.py`, `clean_install_test.py` and
+`measure_footprint.py`; it deliberately does **not** cover anything that shells out to the
+`claude` CLI or mutates a real machine's config, and says so in its own output. `tools/` had no
+coverage at all before 2.15.0, which is how `clean_install_test.py`'s cleanliness check managed
+to contradict its own strip step for as long as that file existed.
+
 Install (or update) the plugin on a device — `tools/bootstrap.ps1` (PowerShell) or
 `tools/bootstrap.sh` (any POSIX shell) probes for a working Python the same way `run.sh` does,
 then hands off to `tools/install.py`, where the real logic lives:
@@ -78,6 +91,24 @@ python tools/measure_footprint.py
 Reads the installed copy out of the plugin cache, not this repo, because those two can disagree;
 pass `--repo` to measure the working tree before installing it. `verify.py` proves the hooks are
 correct, this proves they are cheap — see [docs/measuring-footprint.md](docs/measuring-footprint.md).
+
+Turn a session transcript into a record a person can audit — committed to `docs/sessions/`, so
+"what actually happened, and what prompted it" is answerable from the repo months later:
+
+```bash
+python tools/session_ledger.py
+```
+
+Reads the newest transcript under `~/.claude/projects` by default; `--transcript`, `--session`
+and `--stdout` override that. It reads and never writes to the transcript, touches no hook, and
+keeps no state — instrumenting the hooks to log themselves would duplicate a record that already
+exists, put file I/O on `guard`'s per-shell-command path, and reverse the no-state constraint
+below. Its headline section is **actions taken after the visible reply**: `Stop` hook feedback
+continues the turn, so work done there never appeared in anything the user read. That is the
+failure it was built for, and the one it must always surface.
+
+The ledger is the **raw** record and the source of truth. A readable `-brief.md` written alongside
+it is commentary and can drift; when they disagree, the generated one is right.
 
 ## Architecture
 
