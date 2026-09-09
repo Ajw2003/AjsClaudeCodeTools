@@ -476,11 +476,11 @@
 <pre><code>claude plugin marketplace update aj-house-rules; claude plugin update house-rules@aj-house-rules</code></pre>
           </div>
           <div class="expect">
-            <b>You should see:</b> <code>Successfully updated marketplace</code>, then a line naming
-            <b>2.16.0</b>. Both commands were run here against the pre-merge state and behaved:
-            <span class="out">✔ house-rules is already at the latest version (2.15.0).</span>
-            After the merge that second line becomes the new version instead. If it still says
-            2.15.0, the marketplace clone did not pick up the merge.
+            <b>You should see:</b> <code>Successfully updated marketplace</code>, then the version
+            change. Run here after the merge:
+            <span class="out">√ Plugin "house-rules" updated from 2.15.0 to 2.16.0 for scope user. Restart to apply changes.</span>
+            If it says <i>already at the latest version</i>, the marketplace clone did not pick up
+            the merge.
           </div>
         </div>
       </article>
@@ -501,11 +501,14 @@
 <pre><code>Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\aj-house-rules\house-rules" -Directory | ForEach-Object { "installed {0}  branch-aware: {1}" -f $_.Name, $(if (Select-String "$($_.FullName)\scripts\hook.py" -Pattern 'def branch_ownership' -Quiet) {'YES'} else {'NO'}) }</code></pre>
           </div>
           <div class="expect">
-            <b>You should see:</b> exactly one line, reading
-            <span class="out">installed 2.16.0  branch-aware: YES</span>
-            Run verbatim here against the current install, it correctly reported
-            <span class="out">installed 2.15.0  branch-aware: NO</span>
-            Two lines means the old version is still cached alongside the new one.
+            <b>You should see:</b> a <code>branch-aware: YES</code> line against <b>2.16.0</b>. Run
+            after the merge, it reported both versions:
+            <span class="out">installed 2.15.0  branch-aware: NO
+installed 2.16.0  branch-aware: YES</span>
+            <b>Two lines is normal</b> — an update leaves the previous version's directory in the
+            cache rather than deleting it. The active one is named in
+            <code>installed_plugins.json</code>, which reads <code>2.16.0</code> at the merge commit
+            <code>036d7df</code>. What would be wrong is <code>NO</code> on the highest version.
           </div>
         </div>
       </article>
