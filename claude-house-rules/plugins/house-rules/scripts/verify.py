@@ -845,16 +845,33 @@ else:
     print("          hooks.json does not wire ExitPlanMode to run.sh delegate")
 
 # --- the reminder in hook.py's delegate handler has not drifted from the rules document -----
+# BIDIRECTIONAL, and that is the point. This check used to assert only that each phrase was
+# still in house-rules.md, never that it was still in the reminder it is named for - so when
+# ec6105e ported delegate.sh into DELEGATE_NOTE and dropped the sentence saying the delegation
+# is AUTHORIZED (the agent description's proactive-use marking, which is the harness's own gate),
+# every check still passed and the executor quietly stopped firing on generic instructions. The
+# phrase list below must appear in BOTH the canonical rules and the emitted reminder.
+_, delegate_out, _ = run_hook("delegate", "")
 drift = []
-for phrase in ["@house-rules:executor", "plan is settled"]:
+for phrase in [
+    "@house-rules:executor",
+    "plan is settled",
+    "proactiv",               # the authorization; its loss is the regression above
+    "one file",               # the skip-it exception is a count, not a judgement call
+    "three steps or fewer",
+    "one delegation per group",
+]:
     if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
+        drift.append(f"{phrase!r} missing from rules/house-rules.md")
+    if phrase.lower() not in delegate_out.lower():
+        drift.append(f"{phrase!r} missing from the emitted delegate reminder")
 if not drift:
-    report("PASS", "delegate reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
+    report("PASS", "delegate reminder and the rules document state the same thing, both ways")
+    print("          every key phrase appears in house-rules.md AND in what delegate emits")
 else:
-    report("FAIL", "delegate reminder still matches the rules document")
-    print(f"          in delegate reminder but missing from house-rules.md: {'; '.join(drift)}")
+    report("FAIL", "delegate reminder and the rules document state the same thing, both ways")
+    for d in drift:
+        print(f"          {d}")
 
 # --- the disclosure rule, and the voice toggle it sits next to ------------------------------
 missing = [
@@ -1621,8 +1638,10 @@ def check_delegate(title, empty_path):
         bad.append("wrong or missing hookEventName")
     if "@house-rules:executor" not in out:
         bad.append("it does not name the executor subagent")
-    if "trivial" not in out:
-        bad.append("the trivial-work exception is missing")
+    if "one file" not in out or "three steps or fewer" not in out:
+        bad.append("the skip-it exception is not stated as a count (one file, three steps)")
+    if "proactiv" not in out:
+        bad.append("it does not say the delegation is authorized for proactive use")
     if not bad:
         report("PASS", title)
         print(f"          {len(out)} characters of delegation nudge injected")
@@ -2035,7 +2054,7 @@ for doc in ([] if _absent else [root_claude, readme_path]):
     table_lines = "\n".join(
         line
         for line in doc_text.splitlines()
-        if re.match(r"^\| `(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop)`", line)
+        if re.match(r"^\| `(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop|SubagentStart|SubagentStop)`", line)
     )
     for event in registered_events:
         if event not in table_lines:
@@ -2278,6 +2297,273 @@ if not docs_drift:
 else:
     report("FAIL", "the tiered-docs rule and the project-docs skill it names have not drifted")
     print(f"          {'; '.join(docs_drift)}")
+
+# --- scope's go-ahead clause closes the no-plan-mode delegation gap --------------------------
+# delegate only fires on ExitPlanMode. Auto and accept-edits sessions never cross that
+# boundary - and house-rules.md says the delegation rule covers them anyway - so a go-ahead
+# typed into an ordinary session used to get no delegation reminder at all. The prompt text is
+# the only stateless place to notice it.
+def scope_text(prompt):
+    payload = json.dumps(
+        {"session_id": "verify", "hook_event_name": "UserPromptSubmit", "prompt": prompt}
+    )
+    code, out, err = run_hook("scope", payload)
+    try:
+        return code, json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return code, ""
+
+
+goahead = []
+for prompt in ("go ahead", "implement it in two groups", "do it", "proceed", "ship it",
+               "make the changes", "apply those fixes", "execute the plan"):
+    code, text = scope_text(prompt)
+    if code != 0:
+        goahead.append(f"{prompt!r} exited {code} - scope must never exit non-zero")
+    if "@house-rules:executor" not in text:
+        goahead.append(f"{prompt!r} is a go-ahead but got no delegation clause")
+for prompt in ("what does this function do?", "explain the guard handler",
+               "why did the suite fail?"):
+    code, text = scope_text(prompt)
+    if "@house-rules:executor" in text:
+        goahead.append(f"{prompt!r} is a question, not a go-ahead, but got the clause")
+if not goahead:
+    report("PASS", "scope adds the delegation clause on a go-ahead and not on a question")
+    print("          closes the gap where delegate never fires outside plan mode")
+else:
+    report("FAIL", "scope adds the delegation clause on a go-ahead and not on a question")
+    for g in goahead:
+        print(f"          {g}")
+
+# The clause restates the rule, so it is drift-checked in both directions like the delegate
+# reminder - and it must never be able to take the prompt down with it.
+clause_drift = []
+_, goahead_text = scope_text("go ahead and implement it")
+for phrase in ("@house-rules:executor", "proactiv", "one file", "three steps or fewer"):
+    if phrase.lower() not in goahead_text.lower():
+        clause_drift.append(f"{phrase!r} missing from the emitted go-ahead clause")
+    if phrase.lower() not in rules_text.lower():
+        clause_drift.append(f"{phrase!r} missing from rules/house-rules.md")
+for label, payload in (
+    ("empty payload", ""),
+    ("unparseable payload", "not json {{{ go ahead"),
+    ("no prompt field", '{"session_id":"v","hook_event_name":"UserPromptSubmit"}'),
+    ("prompt field with an escaped quote", '{"prompt":"go ahead \\"now\\" implement it"}'),
+):
+    code, out, err = run_hook("scope", payload)
+    if code != 0:
+        clause_drift.append(f"{label} exited {code} - this ERASES the user's prompt")
+    if "additionalContext" not in out:
+        clause_drift.append(f"{label} emitted no reminder at all: {out[:80]!r}")
+if not clause_drift:
+    report("PASS", "the go-ahead clause matches the rules and cannot erase a prompt")
+    print("          same phrases as house-rules.md; every failure path still exits 0 with a reminder")
+else:
+    report("FAIL", "the go-ahead clause matches the rules and cannot erase a prompt")
+    for c in clause_drift:
+        print(f"          {c}")
+
+# --- announce / verdict: a delegation says which agent, which model, which digest -------------
+# Judged against hand-written transcript fixtures, not whatever this session happens to have
+# produced - the same reasoning as the branch fixtures above. A suite that reads the real
+# ~/.claude tree passes or fails on the developer's history rather than on the handler.
+_SUB_ROOT = tempfile.mkdtemp(prefix="house-rules-subagent-")
+atexit.register(shutil.rmtree, _SUB_ROOT, True)
+
+
+def _transcript(agent_id, lines):
+    d = os.path.join(_SUB_ROOT, "sess1", "subagents")
+    if not os.path.isdir(d):
+        os.makedirs(d)
+    path = os.path.join(d, "agent-%s.jsonl" % agent_id)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return path
+
+
+def _assistant(model=None):
+    msg = {"role": "assistant", "content": []}
+    if model:
+        msg["model"] = model
+    return json.dumps({"type": "assistant", "message": msg})
+
+
+_transcript("sonnet", [json.dumps({"type": "user"}), _assistant("claude-sonnet-4-5-20250929"),
+                       _assistant("claude-sonnet-4-5-20250929")])
+_transcript("opus", [_assistant("claude-opus-5")])
+_transcript("nomodel", [_assistant()])
+_PARENT = os.path.join(_SUB_ROOT, "sess1.jsonl")
+with open(_PARENT, "w", encoding="utf-8") as _f:
+    _f.write("")
+
+
+def sub_payload(**kw):
+    base = {"session_id": "sess1", "transcript_path": _PARENT}
+    base.update(kw)
+    return json.dumps(base)
+
+
+# announce names the agent, what it DECLARES, the plugin version and the digest fingerprint.
+code, out, err = run_hook("announce", sub_payload(
+    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1", effort="low"
+))
+ann = []
+if code != 0:
+    ann.append(f"exit {code}, must never be non-zero")
+for needle in ("house-rules:executor", "declared model sonnet", "digest ", "house-rules 2."):
+    if needle not in out:
+        ann.append(f"announce output does not mention {needle!r}")
+if not ann:
+    report("PASS", "announce reports the agent, its declared model and the digest it carries")
+    print(f"          {out[:150]}")
+else:
+    report("FAIL", "announce reports the agent, its declared model and the digest it carries")
+    for a in ann:
+        print(f"          {a}")
+
+# The declared model is READ FROM the agent file, not hardcoded in hook.py - otherwise the
+# line is hook.py's claim about the agent rather than a report of what actually shipped.
+_src = read(HOOK)
+_decl = _src[_src.index("def _declared("):_src.index("def _plugin_version(")]
+litdrift = []
+if "_read_text(path)" not in _decl:
+    litdrift.append("_declared does not read the agent file")
+if not re.search(r'r"\^model:', _decl):
+    litdrift.append("_declared does not parse the frontmatter model field")
+for lit in ('"sonnet"', "'sonnet'", '"opus"', '"haiku"'):
+    if lit in _decl:
+        litdrift.append(f"_declared hardcodes {lit}, so the line is a claim, not a report")
+if not litdrift:
+    report("PASS", "announce reads the declared model from the agent file, not a literal")
+    print("          the value comes from agents/<name>.md frontmatter, so it reports what shipped")
+else:
+    report("FAIL", "announce reads the declared model from the agent file, not a literal")
+    for l in litdrift:
+        print(f"          {l}")
+
+# An agent the plugin does not ship is the common case, not an error.
+code, out, err = run_hook("announce", sub_payload(agent_type="Explore", agent_id="x2"))
+if code == 0 and "Explore" in out and "no declaration" in out:
+    report("PASS", "announce still names an agent the plugin does not ship")
+    print("          reports the agent and says there is no declaration to compare against")
+else:
+    report("FAIL", "announce still names an agent the plugin does not ship")
+    print(f"          exit {code}, out {out[:160]!r}")
+
+# A set model-override env var is the documented way "model: sonnet" is not what runs.
+_ovr = dict(os.environ)
+_ovr["CLAUDE_CODE_SUBAGENT_MODEL_FORCE"] = "opus"
+code, out, err = run_hook("announce", sub_payload(agent_type="house-rules:executor"), env=_ovr)
+if "CLAUDE_CODE_SUBAGENT_MODEL_FORCE" in out and "may not be what runs" in out:
+    report("PASS", "announce warns when a model-override env var is set")
+    print("          names the variable that can silently override the declared model")
+else:
+    report("FAIL", "announce warns when a model-override env var is set")
+    print(f"          out {out[:200]!r}")
+
+# verdict turns the declaration into evidence: the model that actually served the subagent.
+code, out, err = run_hook("verdict", sub_payload(
+    hook_event_name="SubagentStop", agent_type="house-rules:executor", agent_id="sonnet"
+))
+if code == 0 and "claude-sonnet-4-5-20250929" in out and "MATCH" in out and "2 assistant turns" in out:
+    report("PASS", "verdict reports the model that actually served the subagent")
+    print(f"          {out[:150]}")
+else:
+    report("FAIL", "verdict reports the model that actually served the subagent")
+    print(f"          exit {code}, out {out[:200]!r}")
+
+# The case the whole feature exists for: declared Sonnet, actually ran on something else.
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="opus"))
+if code == 0 and "MISMATCH" in out and "claude-opus-5" in out:
+    report("PASS", "verdict reports MISMATCH when the observed model is not the declared one")
+    print("          a delegation that did not run on what it declares is now visible")
+else:
+    report("FAIL", "verdict reports MISMATCH when the observed model is not the declared one")
+    print(f"          exit {code}, out {out[:200]!r}")
+
+# Nothing fails silently: every "I could not tell" path says so, and says what it tried.
+quiet = []
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"))
+if code != 0 or "unverified" not in out or "tried:" not in out:
+    quiet.append(f"missing transcript: exit {code}, out {out[:120]!r}")
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="nomodel"))
+if code != 0 or "unverified" not in out:
+    quiet.append(f"transcript with no model field: exit {code}, out {out[:120]!r}")
+code, out, err = run_hook("verdict", '{"agent_type":"house-rules:executor"}')
+if code != 0 or "unverified" not in out:
+    quiet.append(f"not enough fields to locate one: exit {code}, out {out[:120]!r}")
+for ev in ("announce", "verdict"):
+    code, out, err = run_hook(ev, "")
+    if code != 0 or "systemMessage" not in out:
+        quiet.append(f"{ev} on an empty payload: exit {code}, out {out[:120]!r}")
+    code, out, err = run_hook(ev, "not json at all {{{")
+    if code != 0:
+        quiet.append(f"{ev} on unparseable input: exit {code}")
+if not quiet:
+    report("PASS", "announce and verdict never go quiet and never exit non-zero")
+    print("          every path meaning 'I could not tell' says so, naming what it tried")
+else:
+    report("FAIL", "announce and verdict never go quiet and never exit non-zero")
+    for q in quiet:
+        print(f"          {q}")
+
+# One lever, and it is NOT the trace lever - the report is the feature, not a trace.
+_off = dict(os.environ)
+_off["HOUSE_RULES_DELEGATION"] = "off"
+deloff = []
+for ev, pl in (("announce", sub_payload(agent_type="house-rules:executor")),
+               ("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"))):
+    code, out, err = run_hook(ev, pl, env=_off)
+    if out.strip():
+        deloff.append(f"{ev} still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
+_tron = dict(os.environ)
+_tron["HOUSE_RULES_TRACE"] = "off"
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"), env=_tron)
+if "claude-sonnet" not in out:
+    deloff.append("HOUSE_RULES_TRACE=off silenced the verdict, which is not a trace")
+if not deloff:
+    report("PASS", "HOUSE_RULES_DELEGATION=off silences both, and the trace lever does not")
+    print("          the model report is the deliverable, so it is not trace-gated")
+else:
+    report("FAIL", "HOUSE_RULES_DELEGATION=off silences both, and the trace lever does not")
+    for d in deloff:
+        print(f"          {d}")
+
+# announce/verdict are registered on the subagent lifecycle events, with no matcher - the
+# complaint was "I could not tell which agent", which covers every subagent, not just ours.
+subwire = []
+_hj = json.loads(read(HOOKS_JSON))["hooks"]
+for ev, handler in (("SubagentStart", "announce"), ("SubagentStop", "verdict")):
+    entries = _hj.get(ev)
+    if not entries:
+        subwire.append(f"hooks.json has no {ev} entry")
+        continue
+    if any("matcher" in e for e in entries):
+        subwire.append(f"{ev} is scoped by a matcher, so it misses other agents")
+    if not any(handler in h.get("command", "") for e in entries for h in e.get("hooks", [])):
+        subwire.append(f"{ev} does not dispatch run.sh {handler}")
+if not subwire:
+    report("PASS", "announce and verdict are wired to the subagent lifecycle, unmatched")
+    print("          hooks.json reports every subagent, not only the two this plugin ships")
+else:
+    report("FAIL", "announce and verdict are wired to the subagent lifecycle, unmatched")
+    for s in subwire:
+        print(f"          {s}")
+
+# run.sh's no-interpreter fallback must speak for these two, or a machine with no Python
+# reports a delegation as silently fine.
+shfall = []
+_rs = read(RUN)
+for ev in ("announce", "verdict"):
+    if ("    %s)" % ev) not in _rs:
+        shfall.append(f"run.sh has no per-event fallback for {ev}")
+if not shfall:
+    report("PASS", "run.sh names announce and verdict in its no-interpreter fallback")
+    print("          no working Python still reports that the delegation went unchecked")
+else:
+    report("FAIL", "run.sh names announce and verdict in its no-interpreter fallback")
+    for s in shfall:
+        print(f"          {s}")
 
 print()
 print("-" * 32)

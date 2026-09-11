@@ -295,7 +295,18 @@ def main():
          json.dumps({"tool_name": "Write",
                      "tool_input": {"file_path": "/proj/a.cs", "content": essay}}), "one block"),
         ("delegate", "each approved plan", "{}", "always fires"),
+        ("announce", "each subagent spawn",
+         json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
+                     "effort": "low"}), "always fires"),
+        ("verdict", "each subagent finish",
+         json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
+                     "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
+         "transcript not found"),
     ]
+    # announce and verdict are deliberately NOT trace-gated - the report IS the feature, not a
+    # narration of an otherwise-silent path - so they are excluded from the TRACE=off total
+    # below. Including them would make that line read as a leak when it is the design.
+    not_trace_gated = {"announce", "verdict"}
     print(f"   {'handler':<9} {'when':<26} {'reminder':>20} {'trace':>20}")
     trace_total = 0
     for event, when, payload, label in calls:
@@ -308,6 +319,8 @@ def main():
 
     off_total = 0
     for event, _, payload, _ in calls:
+        if event in not_trace_gated:
+            continue
         _, out = run_hook(hook_py, event, payload, env={"HOUSE_RULES_TRACE": "off"})
         off_total += len(split_output(out)[1])
     print(f"\n   decision traces across those calls : {trace_total:,} chars "
@@ -316,6 +329,8 @@ def main():
     print("   The trace ships ON: stderr from a hook that exits 0 goes to the debug log only,")
     print("   never the transcript, so a trace written there would be off by default in name")
     print("   only. HOUSE_RULES_TRACE=off is the lever, and it silences no reminder.")
+    print("   announce/verdict are excluded from that total: their report is the feature, not a")
+    print("   trace, so HOUSE_RULES_DELEGATION=off is their lever instead.")
 
     # --- 5. the path that must never fail ----------------------------------------------------
     print("\n5. Failure paths (a non-zero exit here erases the user's prompt)")

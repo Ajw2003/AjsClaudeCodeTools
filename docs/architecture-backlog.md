@@ -77,6 +77,14 @@ remembering. Adding a tenth restatement becomes a row, not a block.
 
 **Deletion test.** Passes: delete the module and the both-directions assertion reappears nine times.
 
+**Partly done as of 2.18.0.** The `delegate` row is closed: its check now asserts both
+directions, over `house-rules.md` and over what the handler actually emits. That was not
+tidiness — the one-directional version let the proactive-use authorization fall out of
+`DELEGATE_NOTE` in `ec6105e` and still reported every check passing, which is the gap this entry
+predicted. The remaining eight rows are unchanged, and the `Restatement(source, phrases)` table
+is still the right shape for them; the delegate row is now the worked example of what each row
+has to assert.
+
 **Open questions.**
 
 - Do all nine restatements bind the same way? `templates/step-card.html` is checked for JS field
@@ -235,44 +243,31 @@ shrink to a pointer.
 
 ---
 
-## 7. A delegation is invisible: nothing shows it was the executor, on Sonnet, under the rules
+---
 
-**Status:** open, observation only — **no design decided**. Raised 2026-09-10 by aj, on the
-Windows desktop **Code** tab, plugin **2.17.0** (`claude plugin list`: enabled, user scope), repo
-at `aab3c49`.
+## 7. `verify.py` forbids agent fields the subagent reference documents as supported
 
-**The observation, in aj's words.** Watching a real delegation in the RockSkipping project, *"I
-couldn't tell it was an executor or running sonnet or the correct rules by looking at it."* aj's
-stated direction: this information should be made visible **by the house-rules plugin**. For now
-the ask was to record the observation, not to build anything.
+**Status:** open, `worth exploring`. Raised 2026-09-11, replacing the shipped entry 7.
 
-**What happened.** The main session (Opus) handed a settled plan's group 1 to the executor with
-`subagent_type: house-rules:executor` and a one-line description, `Implement fix group 1 (C1, C4)`,
-running in the background. The work itself was fine — it wrote red tests first, stayed in scope,
-and its `VERIFY PASSED` was reproduced independently afterwards. The gap is purely that none of the
-three properties the delegation exists to guarantee could be seen:
+**The friction.** `verify.py`'s executor and archivist shape checks fail if either agent sets
+`hooks:`, `mcpServers:` or `permissionMode:`, on the stated grounds that "plugin subagents
+silently ignore" them — the reasoning being that a field which reads as configuration and does
+nothing is worse than no field. The current subagent reference documents `permissionMode` (and
+`hooks`, `mcpServers`, and several others: `disallowedTools`, `maxTurns`, `skills`, `memory`,
+`isolation`, `background`, `color`) as **supported** frontmatter fields.
 
-| Property the delegation is for | What was checkable, and only how |
-|---|---|
-| It is **the executor** | Not visible while it ran. Answered only when aj asked, by the main session calling `ListAgents`, which printed `house-rules:executor · running`. |
-| It runs **on Sonnet at low effort** | **Not checkable at all, even by the main session.** `agents/executor.md` *declares* `model: sonnet` / `effort: low` in its frontmatter — a declaration, not evidence of what ran. `ListAgents` shows type and status, no model. The completion notification reports tokens (124,531), tool uses (18) and duration (137 s), and no model or effort field. |
-| It follows **the right rules** | Not visible, and the thing to check is not the full rules. `agents/executor.md` states that the house rules are **not** injected into subagents (`SessionStart` `additionalContext` does not reach them); the executor works from the five-bullet digest in its own body instead. Nothing surfaced which digest, from which plugin version, was in its context. |
+**Evidence.** Noticed while establishing that `effort:` is a documented frontmatter field, during
+the 2.18.0 delegation-visibility work. Both checks were read at that commit; neither was changed,
+because the claim they encode was not re-verified either way and changing a passing check on the
+strength of a docs page would swap one unverified assertion for another.
 
-**Why it matters.** The whole case for the executor — `DELEGATE_NOTE`, the `delegate` hook,
-entry 1's `executor.md` restatement — is cost and discipline: implementation on Sonnet at low
-effort, under a digest of the rules. A user who cannot see either has to take both on trust, and so
-does the orchestrating session, which today can confirm the agent *type* on request and nothing
-else. The failure this invites is silent: a delegation that fell back to the parent model, or a
-digest that drifted, would look identical from the outside.
+**What would change.** Establish, per field and on a surface this plugin actually claims, whether
+it is honoured for a *plugin-shipped* agent — which is not the same question as whether it is
+honoured for a user-level `~/.claude/agents/` one, and the distinction is the whole basis of the
+existing check. Then either narrow the forbidden list to the fields that really are inert, or
+keep it and record the evidence next to it. A third possibility is that the answer differs by
+field, in which case the check needs per-field reasoning rather than one list.
 
-**What would change.** Undecided. The one fixed requirement from aj is that the plugin, not the
-user, makes the three properties above visible. No mechanism has been chosen and none should be
-assumed from this entry.
-
-**Open questions — facts to establish before any design, none of them checked yet.**
-
-- Whether any hook event fires when a subagent starts or stops, and whether its payload carries the
-  agent type, the resolved model or the effort. If none does, the plugin may be unable to observe
-  the model at all, and the entry reduces to what the orchestrating session can report.
-- Whether the frontmatter `model:` is honoured in every surface this plugin claims (desktop Code
-  tab, CLI, IDE), or can be overridden by session settings such as `model: opusplan`.
+**Open question.** If `permissionMode` *is* honoured for plugin agents, is there a reason the
+executor should set it? `acceptEdits` for an agent that runs an already-approved plan is at least
+arguable, and that is a rules decision rather than a checking one.

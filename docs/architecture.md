@@ -50,6 +50,74 @@ unnoticed once already. It also fails if the agent sets `hooks`, `mcpServers` or
 `permissionMode`, which plugin subagents silently ignore — a field that reads as configuration
 and does nothing is worse than no field.
 
+### The model is now observed, not declared
+
+Until 2.18.0 the split rested entirely on a *declaration*. `agents/executor.md` says
+`model: sonnet`; nothing checked it. The agent list shows type and status but no model, and the
+completion notification reports tokens, tool uses and duration and no model either. So a
+delegation that fell back to the parent model, or a digest that had drifted, looked identical
+from outside to one that worked — the failure was silent by construction. That is what the
+`announce` and `verdict` handlers fix, and the distinction between the two is the whole point:
+
+- **`announce` (`SubagentStart`) reports the declaration**, read out of the installed
+  `agents/<name>.md` rather than hardcoded in `hook.py` — so the line is a report of what
+  shipped, not a claim `hook.py` makes about it. It also names the plugin version and an 8-hex
+  fingerprint of the agent definition, which is what answers *which digest was in its context*.
+  And it warns when `CLAUDE_CODE_SUBAGENT_MODEL` or `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` is set,
+  because that is the documented mechanism by which `model: sonnet` is silently not what runs.
+- **`verdict` (`SubagentStop`) reports the evidence** — the model that actually served the
+  subagent, read from the subagent's own transcript, and MATCH or MISMATCH against the
+  declaration.
+
+**The transcript is probed, never assumed, and that is deliberate.** Two candidates are tried in
+order: an `agent_transcript_path` field if the payload carries one, and
+`<dir of transcript_path>/<session>/subagents/agent-<agent_id>.jsonl`. The first is *not* in the
+documented hook reference — it may be there, so it is tried, but nothing rests on it. The second
+is the layout observed live: a subagent gets its own JSONL file, every `assistant` entry carries
+`message.model`, and `isSidechain: true` marks the sidechain. Measured on one session, the parent
+reported `claude-opus-5` across 55 assistant entries while the subagent it spawned reported
+`claude-haiku-4-5-20251001` across 26 — which is also a working demonstration that a declared
+model and a served model are two different facts.
+
+The docs warn that the transcript entry format is internal to Claude Code and changes between
+releases. That is exactly why every path that cannot tell **says what it tried** rather than
+going quiet or guessing: no transcript found (listing the candidate paths), unreadable, or no
+`assistant` entry carrying a model. An `agents/<name>.md` that is shipped but unreadable is
+reported as such rather than collapsing into "no declaration shipped" — a broken install and a
+normal one must not print the same line.
+
+Both fail **open and loud**, like `handover`. A non-zero exit at a subagent lifecycle event must
+never wedge anything, and `decision: "block"` on `SubagentStop` would send the subagent back to
+work rather than reporting anything. Neither is registered with a matcher: the complaint these
+answer was *I could not tell which agent was running*, which is about every subagent, not only
+the two this plugin ships. `HOUSE_RULES_DELEGATION=off` is the single lever, and they are
+deliberately **not** `HOUSE_RULES_TRACE`-gated — the report is the feature, not a narration of an
+otherwise-silent path, and gating it behind the trace lever would make the thing being shipped
+optional by default.
+
+### Why the delegation kept not happening
+
+The other half of 2.18.0 is a regression fix, and it is worth recording how it hid. `77e2141`
+established that the harness gates autonomous subagent spawning behind the user explicitly asking
+**or** the target agent's description marking it for proactive use, and amended the injected note
+to say that the delegation is therefore *authorized*, not merely suggested. `ec6105e` — the
+shell-to-Python port — rewrote `delegate.sh` into `DELEGATE_NOTE` and dropped that sentence. It
+survived in `house-rules.md` and in both agent descriptions, but not in the one text that is in
+context at the moment the model decides whether to spawn.
+
+It passed every check because the delegate drift check ran in **one direction**: it asserted each
+phrase still appeared in `house-rules.md`, never that it still appeared in the restatement it was
+named for. This is the gap `docs/architecture-backlog.md` entry 1 predicted, realised and paid
+for. The check is now bidirectional over the emitted reminder as well, which was confirmed by
+re-introducing the original regression and watching three checks fail.
+
+The skip-it exception moved the same way, from prose to a count. "Work small enough that
+describing it costs more than doing it" is a judgement call, and a judgement call about whether to
+delegate is one the planning model talks itself past. It is now *one file AND three steps or
+fewer*, stated identically in the rules, the reminder and the executor's own description, with the
+skip required to be said out loud in a line that names the count — an exception used silently is
+indistinguishable from the rule being forgotten.
+
 Every handler is stateless. Nothing writes to `$TEMP`, and there is no state to reap. That is
 load-bearing, not incidental — see the deliverable note in `CLAUDE.md`'s design constraints.
 
