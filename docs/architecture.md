@@ -163,6 +163,30 @@ CI checks out a detached `HEAD`. Each case now names the branch it is judged aga
 throwaway directories containing nothing but a hand-written `.git/HEAD`. That the fixture is one
 file is not a shortcut; it is the same fact that makes the read cheap enough to do on every call.
 
+### A repo-only check skips outside the repo, rather than failing
+
+`verify.py` ships inside the plugin, so it runs from two places: this repo, and the installed
+copy in `~/.claude/plugins/cache/`. Seven of its checks read files that only the repo has —
+`CLAUDE.md`, `claude-house-rules/README.md`, `docs/claude-ai-instructions.md`,
+`docs/desktop-verification.md`, `tools/install.py`. Run from the cache, five of those reported
+`FAIL` and two passed vacuously, so the installed copy's verdict was permanently red for a
+reason that had nothing to do with the hooks. A `RESULT` line that is always red is one you
+stop reading, and it takes the real failures down with it.
+
+Those checks now report a third state, `SKIP`, which does not affect the exit code. The
+distinction rests on `IN_REPO` — the presence of `.claude-plugin/marketplace.json` beside the
+plugin directory, which is true in a checkout and false in the cache. **Inside a repo the skip
+is unreachable**: a missing `CLAUDE.md` there is still a `FAIL`, because there it means the
+file was deleted rather than never shipped. That property is what the suite tests when it is
+run from a checkout, and it is checked directly by a case that compares the marker against a
+second, unrelated repo-only file (`tools/verify_tools.py`) — if those two ever disagree, every
+skip below them is untrustworthy and the suite says so instead of skipping quietly.
+
+Two of the seven are half-skips. The page-rule check and the architecture-table check each have
+a half that reads something the plugin *does* ship (`rules/house-rules.md`, `scripts/`); that
+half still runs from the cache, and the check only reports `SKIP` if it passed. A drift in the
+shipped half is still a failure wherever the suite is run.
+
 ## Nothing fails silently, and the plugin's own hooks were violating it
 
 The rule landed with the `harvest` work and immediately indicted existing code, which is the

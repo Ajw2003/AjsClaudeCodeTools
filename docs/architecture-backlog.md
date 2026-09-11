@@ -232,3 +232,47 @@ shrink to a pointer.
   convention.
 - `verify.py` currently reads `CLAUDE.md` for four checks. Anything moved out must not be one of the
   sections those depend on (the hook-event table, the surface table, the two duplication checks).
+
+---
+
+## 7. A delegation is invisible: nothing shows it was the executor, on Sonnet, under the rules
+
+**Status:** open, observation only — **no design decided**. Raised 2026-09-10 by aj, on the
+Windows desktop **Code** tab, plugin **2.17.0** (`claude plugin list`: enabled, user scope), repo
+at `aab3c49`.
+
+**The observation, in aj's words.** Watching a real delegation in the RockSkipping project, *"I
+couldn't tell it was an executor or running sonnet or the correct rules by looking at it."* aj's
+stated direction: this information should be made visible **by the house-rules plugin**. For now
+the ask was to record the observation, not to build anything.
+
+**What happened.** The main session (Opus) handed a settled plan's group 1 to the executor with
+`subagent_type: house-rules:executor` and a one-line description, `Implement fix group 1 (C1, C4)`,
+running in the background. The work itself was fine — it wrote red tests first, stayed in scope,
+and its `VERIFY PASSED` was reproduced independently afterwards. The gap is purely that none of the
+three properties the delegation exists to guarantee could be seen:
+
+| Property the delegation is for | What was checkable, and only how |
+|---|---|
+| It is **the executor** | Not visible while it ran. Answered only when aj asked, by the main session calling `ListAgents`, which printed `house-rules:executor · running`. |
+| It runs **on Sonnet at low effort** | **Not checkable at all, even by the main session.** `agents/executor.md` *declares* `model: sonnet` / `effort: low` in its frontmatter — a declaration, not evidence of what ran. `ListAgents` shows type and status, no model. The completion notification reports tokens (124,531), tool uses (18) and duration (137 s), and no model or effort field. |
+| It follows **the right rules** | Not visible, and the thing to check is not the full rules. `agents/executor.md` states that the house rules are **not** injected into subagents (`SessionStart` `additionalContext` does not reach them); the executor works from the five-bullet digest in its own body instead. Nothing surfaced which digest, from which plugin version, was in its context. |
+
+**Why it matters.** The whole case for the executor — `DELEGATE_NOTE`, the `delegate` hook,
+entry 1's `executor.md` restatement — is cost and discipline: implementation on Sonnet at low
+effort, under a digest of the rules. A user who cannot see either has to take both on trust, and so
+does the orchestrating session, which today can confirm the agent *type* on request and nothing
+else. The failure this invites is silent: a delegation that fell back to the parent model, or a
+digest that drifted, would look identical from the outside.
+
+**What would change.** Undecided. The one fixed requirement from aj is that the plugin, not the
+user, makes the three properties above visible. No mechanism has been chosen and none should be
+assumed from this entry.
+
+**Open questions — facts to establish before any design, none of them checked yet.**
+
+- Whether any hook event fires when a subagent starts or stops, and whether its payload carries the
+  agent type, the resolved model or the effort. If none does, the plugin may be unable to observe
+  the model at all, and the entry reduces to what the orchestrating session can report.
+- Whether the frontmatter `model:` is honoured in every surface this plugin claims (desktop Code
+  tab, CLI, IDE), or can be overridden by session settings such as `model: opusplan`.

@@ -32,9 +32,15 @@ python claude-house-rules/plugins/house-rules/scripts/verify.py
 ```
 
 Works the same from PowerShell or Git Bash — it is plain Python, not a shell script, so there is
-no full-path/short-form split to remember. Exit code 0 means every check passed. Each line prints
+no full-path/short-form split to remember. Exit code 0 means nothing failed. Each line prints
 the case tested, expected vs. actual decision, and PASS/FAIL — read there is what fails, no need
 to open the script.
+
+A check that reads a repo-only file (`CLAUDE.md`, the README, `docs/`, `tools/`) prints `SKIP`
+instead of `FAIL` when the suite is run from the installed copy in the plugin cache, where those
+files do not exist; skips never affect the exit code, and are listed again under the `RESULT`
+line. Inside a repo checkout the skip is unreachable — a missing file there is a real failure.
+See [docs/architecture.md](docs/architecture.md).
 
 [`.github/workflows/verify.yml`](.github/workflows/verify.yml) runs exactly this on every push to
 `main` and every pull request, so the suite is not only run when someone remembers to. It needs no

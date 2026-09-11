@@ -9,6 +9,13 @@ It feeds real hook payloads to hook.py's handlers and prints a numbered PASS/FAI
 each, then a final verdict. Exit code 0 = all passed, 1 = something failed. Nothing is
 hidden: every case tested is printed alongside its result.
 
+A third state, SKIP, exists for the handful of checks that read files the repo ships and the
+plugin package does not (docs/, tools/, CLAUDE.md, the README). Run from the installed plugin
+cache those used to report FAIL, where the honest answer is "not applicable here" - and a
+RESULT line that is always red is one you stop reading. A skip never affects the exit code,
+and it is only ever reached from outside a repo checkout: inside one, a missing file is still
+a failure.
+
 STDLIB ONLY. No third-party imports — the same constraint hook.py is built on.
 
 The check count is never hardcoded anywhere that references it (here or in any doc) — it is
@@ -49,6 +56,15 @@ SH = (
 
 STEP = 0
 FAILURES = 0
+SKIPPED = []
+
+# The repo ships files the plugin package does not - docs/, tools/, CLAUDE.md, the README. Run
+# from the installed cache, every check that reads one of those reported FAIL, where the honest
+# answer is "not applicable here"; a RESULT line that is always red is a RESULT line you learn to
+# ignore, which costs the real failures their only signal. The marker is the repo root's
+# marketplace manifest: it sits beside the plugin directory in the repo and never in the cache,
+# so the two cases can be told apart without guessing.
+IN_REPO = os.path.isfile(os.path.join(ROOT, ".claude-plugin", "marketplace.json"))
 
 
 def report(result, title):
@@ -56,7 +72,27 @@ def report(result, title):
     STEP += 1
     if result == "FAIL":
         FAILURES += 1
+    elif result == "SKIP":
+        SKIPPED.append(title)
     print(f"{STEP:2d}. {result}  {title}")
+
+
+def absent_repo_files(*rel_paths):
+    """Repo-only paths (relative to ROOT) that this copy does not have.
+
+    Returns nothing when this IS the repo working tree - there a missing file is a genuine
+    failure and has to stay a FAIL rather than becoming a skip.
+    """
+    if IN_REPO:
+        return []
+    return [p for p in rel_paths if not os.path.isfile(os.path.join(ROOT, p))]
+
+
+def skip_repo_check(title, absent, extra=""):
+    report("SKIP", title)
+    print(f"          not a repo checkout; {', '.join(absent)} ships in the repo, not the plugin")
+    if extra:
+        print(f"          {extra}")
 
 
 def read(path):
@@ -636,9 +672,26 @@ else:
     report("FAIL", "scope reminder still matches the rules document")
     print(f"          in scope reminder but missing from house-rules.md: {'; '.join(drift)}")
 
+# --- a repo checkout and an installed copy can be told apart ---------------------------------
+# Everything below that skips instead of failing rests on IN_REPO. If that marker ever disagreed
+# with reality, the skips would either hide real drift (in the repo) or come back as noise (in the
+# cache), so it is checked against a second repo-only file that has nothing to do with the marker.
+_independent = os.path.isfile(os.path.join(ROOT, "tools", "verify_tools.py"))
+if IN_REPO == _independent:
+    report("PASS", "the repo-only checks can tell a repo checkout from an installed copy")
+    print(f"          running from {'the repo working tree' if IN_REPO else 'an installed copy'}; "
+          "marketplace.json and tools/verify_tools.py agree")
+else:
+    report("FAIL", "the repo-only checks can tell a repo checkout from an installed copy")
+    print(f"          .claude-plugin/marketplace.json says {IN_REPO}, tools/verify_tools.py says "
+          f"{_independent} - the skip decisions below cannot be trusted")
+
 # --- the rules have not been re-duplicated into CLAUDE.md ------------------------------------
 root_claude = os.path.join(ROOT, "CLAUDE.md")
-if not os.path.isfile(root_claude):
+_absent = absent_repo_files("CLAUDE.md")
+if _absent:
+    skip_repo_check("repo CLAUDE.md is not a second copy of the rules", _absent)
+elif not os.path.isfile(root_claude):
     report("PASS", "repo CLAUDE.md is not a second copy of the rules")
     print("          no CLAUDE.md at the repo root; the plugin is the only source")
 else:
@@ -1751,9 +1804,16 @@ else:
 # so the surface names are read out of the table itself rather than hardcoded here.
 surfdrift = []
 surfaces = []
-if not os.path.isfile(VERIFYDOC):
+_absent = absent_repo_files("docs/desktop-verification.md", "CLAUDE.md")
+if _absent:
+    skip_repo_check(
+        "every surface in the CLAUDE.md table has a check in desktop-verification.md", _absent
+    )
+elif not os.path.isfile(VERIFYDOC):
     surfdrift.append("docs/desktop-verification.md is missing")
-elif os.path.isfile(root_claude):
+elif not os.path.isfile(root_claude):
+    surfdrift.append("CLAUDE.md is missing, so the table it claims cannot be read")
+else:
     verify_doc = read(VERIFYDOC)
     for line in read(root_claude).splitlines():
         m = re.match(r"^\| (?:Claude Code|claude\.ai chat) [-\u2014 ]+([^|]+?) \|", line)
@@ -1764,7 +1824,9 @@ elif os.path.isfile(root_claude):
     for s in surfaces:
         if s not in verify_doc:
             surfdrift.append(f"{s!r} is in the CLAUDE.md table but has no check in desktop-verification.md")
-if not surfdrift:
+if _absent:
+    pass  # already reported as skipped above
+elif not surfdrift:
     report("PASS", "every surface in the CLAUDE.md table has a check in desktop-verification.md")
     print(f"          {len(surfaces)} surfaces claimed, {len(surfaces)} covered: {', '.join(surfaces)}")
 else:
@@ -1799,7 +1861,10 @@ else:
             pubdrift.append(f"the operative rule still carries the replaced wording {stale!r}")
     if "four or more steps" not in _why.lower():
         pubdrift.append("the Why does not record the four-step rule this replaced")
-if os.path.isfile(root_claude):
+_absent = absent_repo_files("CLAUDE.md")
+if _absent:
+    pass  # the rules half above still ran; only the table half is unavailable here
+elif os.path.isfile(root_claude):
     table_text = read(root_claude)
     rows = [ln for ln in table_text.splitlines() if ln.startswith("| Claude Code")]
     offered = [ln for ln in rows if "offered at 2+ steps" in ln]
@@ -1809,7 +1874,17 @@ if os.path.isfile(root_claude):
         pubdrift.append("CLAUDE.md still advertises the replaced '4+ steps' threshold")
 else:
     pubdrift.append("no CLAUDE.md to check")
-if not pubdrift:
+if pubdrift and _absent:
+    report("FAIL", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    for p in pubdrift:
+        print(f"          {p}")
+elif _absent:
+    skip_repo_check(
+        "the page rule and the CLAUDE.md table agree, and nothing publishes unasked",
+        _absent,
+        extra="the rules half was checked here and passed; only the table half is unavailable",
+    )
+elif not pubdrift:
     report("PASS", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
     print("          rule: offer at 2+ steps, publish only on request; table says the same")
 else:
@@ -1821,12 +1896,17 @@ else:
 # Same reasoning as the rules-duplication check above: CLAUDE.md is a pointer. A second copy of
 # the template would load twice and drift from the real one unnoticed.
 dupe = []
-if os.path.isfile(root_claude):
+_absent = absent_repo_files("CLAUDE.md")
+if _absent:
+    skip_repo_check("the card template was not duplicated into CLAUDE.md", _absent)
+elif os.path.isfile(root_claude):
     claude_text = read(root_claude)
     for marker in ["### Step 1 of", "**You should see:**", "*Next: step 2"]:
         if marker in claude_text:
             dupe.append(f"CLAUDE.md contains {marker!r} - the template belongs only in house-rules.md")
-if not dupe:
+if _absent:
+    pass  # already reported as skipped above
+elif not dupe:
     report("PASS", "the card template was not duplicated into CLAUDE.md")
     print("          CLAUDE.md describes the format and points at rules/house-rules.md for it")
 else:
@@ -1837,7 +1917,10 @@ else:
 # Hooks do not run in claude.ai chat, so this file is the only thing covering that surface (and
 # the phone). It is a restatement, so it gets the same drift treatment as hook.py's strings.
 chatdrift = []
-if not os.path.isfile(CHATDOC):
+_absent = absent_repo_files("docs/claude-ai-instructions.md")
+if _absent:
+    skip_repo_check("the claude.ai chat block exists and matches the rules document", _absent)
+elif not os.path.isfile(CHATDOC):
     chatdrift.append("docs/claude-ai-instructions.md is missing")
 else:
     chat_text = read(CHATDOC)
@@ -1851,7 +1934,9 @@ else:
             chatdrift.append(f"the block does not state {phrase!r}")
         elif phrase not in rules_text:
             chatdrift.append(f"{phrase!r} is in the chat block but not in house-rules.md")
-if not chatdrift:
+if _absent:
+    pass  # already reported as skipped above
+elif not chatdrift:
     report("PASS", "the claude.ai chat block exists and matches the rules document")
     print("          one paste-able block; every phrase in it also appears in house-rules.md")
 else:
@@ -1868,8 +1953,12 @@ else:
 
 # --- install.py still writes the model setting the README claims ------------------------------
 install_path = os.path.join(ROOT, "tools", "install.py")
+readme_rel = os.path.join("claude-house-rules", "README.md")
 moddrift = []
-if not os.path.isfile(install_path):
+_absent = absent_repo_files(os.path.join("tools", "install.py"), readme_rel, "CLAUDE.md")
+if _absent:
+    skip_repo_check("install.py sets model = opusplan and the docs scope it correctly", _absent)
+elif not os.path.isfile(install_path):
     moddrift.append("tools/install.py is missing")
 else:
     install_text = read(install_path)
@@ -1886,7 +1975,9 @@ for docfile in [readme_path, root_claude]:
             moddrift.append(
                 f"{os.path.basename(docfile)} does not say opusplan covers only the CLI and the IDE"
             )
-if not moddrift:
+if _absent:
+    pass  # already reported as skipped above
+elif not moddrift:
     report("PASS", "install.py sets model = opusplan and the docs scope it correctly")
     print("          opusplan on the CLI and IDE; every other surface via @house-rules:executor")
 else:
@@ -1934,7 +2025,8 @@ else:
 # there is only one script (run.sh) now, dispatched by event argument.
 registered_events = sorted(set(re.findall(r'run\.sh\\" ([a-z]+)', hooks_json_text)))
 docdrift = []
-for doc in [root_claude, readme_path]:
+_absent = absent_repo_files("CLAUDE.md", readme_rel)
+for doc in ([] if _absent else [root_claude, readme_path]):
     docname = os.path.basename(doc)
     if not os.path.isfile(doc):
         docdrift.append(f"no {docname} to check")
@@ -1959,7 +2051,16 @@ for doc in [root_claude, readme_path]:
 for fname in os.listdir(HERE):
     if fname.endswith(".sh") and fname != "run.sh":
         docdrift.append(f"{fname} exists but is not run.sh - a leftover hook script")
-if not docdrift:
+if docdrift and _absent:
+    report("FAIL", "the architecture tables match hooks.json")
+    print(f"          {'; '.join(docdrift)}")
+elif _absent:
+    skip_repo_check(
+        "the architecture tables match hooks.json",
+        _absent,
+        extra="scripts/ was checked here and holds no stray .sh; only the doc tables are unavailable",
+    )
+elif not docdrift:
     report("PASS", "the architecture tables match hooks.json")
     print("          every registered hook event is documented and no stray .sh script exists")
 else:
@@ -2180,10 +2281,20 @@ else:
 
 print()
 print("-" * 32)
-if FAILURES == 0:
+if FAILURES == 0 and not SKIPPED:
     print(f"RESULT: PASS - all {STEP} checks passed. The hooks are behaving as written.")
+elif FAILURES == 0:
+    print(f"RESULT: PASS - {STEP - len(SKIPPED)} of {STEP} checks passed, {len(SKIPPED)} skipped.")
+    print("        The hooks are behaving as written. Skipped checks read files that ship in the")
+    print("        repo and not in the plugin package, so from an installed copy they are not")
+    print("        applicable rather than failing:")
+    for t in SKIPPED:
+        print(f"          - {t}")
+    print("        Run it from a repo checkout to check those too.")
 else:
     print(f"RESULT: FAIL - {FAILURES} of {STEP} checks failed. See the FAIL lines above.")
+    if SKIPPED:
+        print(f"        {len(SKIPPED)} more were skipped as repo-only; see the SKIP lines.")
 print()
 print("Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.")
 print("No node, no jq required by hook.py itself - stdlib only.")
