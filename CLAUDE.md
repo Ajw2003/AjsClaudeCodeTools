@@ -69,10 +69,19 @@ then hands off to `tools/install.py`, where the real logic lives:
 .\tools\bootstrap.ps1
 ```
 
-Idempotent. Installs via `claude plugin marketplace add` / `claude plugin install`, then sets
-`verbose: true` and `model: opusplan` in `~/.claude/settings.json` (settings the plugin itself
-cannot ship, and which cover only the CLI and the IDE — see docs/architecture.md). Pass
-`--no-verbose` / `--no-model` to skip a piece.
+Idempotent, and it **upgrades** as well as installs. `install_steps()` in `install.py` holds the
+four `claude plugin` commands as a value, in the order that matters: `marketplace add` declares
+the marketplace, **`marketplace update` re-fetches it**, `install` registers the plugin, `update`
+re-points the registration. Each is a no-op on the path where the others matter, so all four
+always run. The refresh is not optional — `marketplace add` answers *already on disk* for a
+marketplace this device has seen and does **not** re-fetch, so without it a machine that already
+had the plugin kept its stale clone and `plugin update` reported *already at the latest version*
+naming the **old** one. `tools/verify_tools.py` pins the order; the bootstrap shims hold no
+marketplace logic at all, so they inherit this rather than restating it.
+
+It then sets `verbose: true` and `model: opusplan` in `~/.claude/settings.json` (settings the
+plugin itself cannot ship, and which cover only the CLI and the IDE — see docs/architecture.md).
+Pass `--no-verbose` / `--no-model` to skip a piece.
 
 Prove the *published* plugin installs cleanly on a fresh machine (strips the local install, backs
 up config, reinstalls from GitHub via the two documented CLI commands, then re-runs the suite

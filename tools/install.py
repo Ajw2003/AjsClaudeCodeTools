@@ -85,6 +85,45 @@ def run_claude(args):
     return proc.returncode
 
 
+def install_steps():
+    """The claude CLI commands that install or upgrade the plugin, in the order they must run.
+
+    A value rather than four inline calls, because the ORDER is the load-bearing part and it
+    was wrong. `marketplace add` answers "already on disk" for a marketplace this device has
+    seen before and does NOT re-fetch it, so on every machine that already had house-rules the
+    cached clone stayed at the old commit, `plugin update` found nothing newer, and the device
+    kept running the old version. Only `marketplace update` re-fetches. The original sequence
+    therefore worked on a fresh machine and could not upgrade an existing one - which is the
+    case that actually matters, since a fresh machine has no old version to be stuck on.
+
+    Order: add declares the marketplace (a no-op once declared), update re-fetches it, install
+    registers the plugin (a no-op once registered), update re-points the registration at the
+    version now on disk. Each of the four is a no-op on the path where the other three matter,
+    which is why all four always run rather than being branched on.
+
+    Exposed as a value so verify_tools.py can assert the order without shelling out to the
+    claude CLI or mutating a real machine's config.
+    """
+    return [
+        (["plugin", "marketplace", "add", REPO],
+         "marketplace add failed - the lines above say why"),
+        # The fix. Loud on failure rather than warned-about: if the refresh did not happen you
+        # do not know which version you have, and the version check below cannot tell you -
+        # it compares against this repo's plugin.json, which may itself be stale.
+        (["plugin", "marketplace", "update", MARKETPLACE],
+         "marketplace update failed - the cached clone may be stale, so the version "
+         "installed below may not be the current one"),
+        (["plugin", "install", PLUGIN_ID, "-y"],
+         "plugin install failed - the lines above say why"),
+        # install is a no-op when the plugin is already registered - it fetches the new version
+        # into the cache and then leaves the registration pointing at the OLD one. That is a
+        # silent downgrade: the bumped version sits on disk unused while the stale copy keeps
+        # running. update is the verb that re-points the registration, so it always runs.
+        (["plugin", "update", PLUGIN_ID],
+         "plugin update failed - the lines above say why"),
+    ]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-verbose", action="store_true")
@@ -120,23 +159,13 @@ def main():
 
     print()
     print("2. Install the plugin")
-    # Both return codes are checked. They used to be discarded, so a marketplace add that
+    # Every return code is checked. They used to be discarded, so a marketplace add that
     # failed outright still reported PASS as long as a PREVIOUS install had left the plugin
     # registered - a failure reported as a pass, which is the one thing this repo does not do.
-    info(f"claude plugin marketplace add {REPO}")
-    if run_claude(["plugin", "marketplace", "add", REPO]) != 0:
-        bad("marketplace add failed - the lines above say why")
-    info(f"claude plugin install {PLUGIN_ID} -y")
-    if run_claude(["plugin", "install", PLUGIN_ID, "-y"]) != 0:
-        bad("plugin install failed - the lines above say why")
-
-    # install is a no-op when the plugin is already registered - it fetches the new version
-    # into the cache and then leaves the registration pointing at the OLD one. That is a
-    # silent downgrade: the bumped version sits on disk unused while the stale copy keeps
-    # running. update is the verb that re-points the registration, so it always runs.
-    info(f"claude plugin update {PLUGIN_ID}")
-    if run_claude(["plugin", "update", PLUGIN_ID]) != 0:
-        bad("plugin update failed - the lines above say why")
+    # run_claude already echoes the command it is about to run, so nothing echoes it twice.
+    for argv, failure in install_steps():
+        if run_claude(argv) != 0:
+            bad(failure)
 
     claude_dir = home_claude_dir()
     installed_path = os.path.join(claude_dir, "plugins", "installed_plugins.json")
