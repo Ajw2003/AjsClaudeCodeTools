@@ -284,20 +284,48 @@ sh tools/bootstrap.sh
 
 `bootstrap.ps1`/`bootstrap.sh` probe for a working Python interpreter (the same probe `run.sh`
 uses) and hand off to `tools/install.py`, which installs the plugin and applies the settings
-the plugin cannot apply to itself (see below). Idempotent — running it on a machine that
-already has the plugin changes nothing.
+the plugin cannot apply to itself (see below). Idempotent, and it **upgrades** an existing
+install as well as creating a new one.
 
-If you would rather do it by hand, the plugin half is two commands:
+If you would rather do it by hand, it is four commands, and on a machine that already has the
+plugin the second one is the one that matters:
 
 ```bash
 claude plugin marketplace add https://github.com/Ajw2003/AjsClaudeCodeTools.git
 ```
 ```bash
+claude plugin marketplace update aj-house-rules
+```
+```bash
 claude plugin install house-rules@aj-house-rules
 ```
+```bash
+claude plugin update house-rules@aj-house-rules
+```
+
+**Why four and not two.** `marketplace add` answers `already on disk` for a marketplace this
+device has seen before and does not re-fetch it, so the cached clone stays on the old commit;
+`plugin install` is a no-op once the plugin is registered. Run only those two on a machine that
+already has house-rules and it stays on its old version, while `plugin update` reports
+`already at the latest version` and names that old version — a confident wrong answer.
+`marketplace update` re-fetches the clone and `plugin update` re-points the registration at it.
+On a fresh machine the two extra commands are harmless no-ops.
 
 Or run `/plugin` in an interactive `claude` terminal and pick it from the menu. Restart to
 load it.
+
+### Updating by double-click (Windows)
+
+`tools\update.bat` runs exactly those four commands and nothing else — **double-click it**.
+
+It deliberately needs no Python and no clone of this repo: copy it to your Desktop and it still
+works. It prints what it is doing at each step, stops with a readable message if a command
+fails, shows you the installed version at the end, and reminds you to fully quit Claude Code —
+hooks and agents are read at startup, so an update is not live in a window that is already open.
+
+It does not apply the `verbose` / `opusplan` settings below; `bootstrap.ps1` is still the full
+install. `.ps1` files are not double-click-runnable by default on Windows, which is why this one
+is a `.bat`.
 
 ### Settings the plugin cannot ship
 

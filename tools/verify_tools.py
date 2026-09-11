@@ -13,7 +13,9 @@ per case, and the count computed at runtime so it cannot drift.
 
 WHAT THIS CANNOT COVER, stated rather than implied: anything that shells out to the `claude` CLI
 or mutates a real machine's config. clean_install_test.py's install and strip steps are exercised
-by running it, not from here; what is covered is the decision logic lifted out of it.
+by running it, not from here; what is covered is the decision logic lifted out of it. install.py
+is covered the same way - install_steps() is asserted as a VALUE, so the order of the four CLI
+commands is pinned without any of them running.
 """
 
 import json
@@ -27,6 +29,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
 import clean_install_test  # noqa: E402
+import install  # noqa: E402
 import measure_footprint  # noqa: E402
 import session_ledger  # noqa: E402
 
@@ -303,6 +306,165 @@ check(
     r4 == "BECAUSE",
     "split_output counts guard's permission prompt as the reminder it is",
     f"reminder={r4!r}",
+)
+
+# --- install.py's upgrade path ----------------------------------------------------------------
+# tools/ had no coverage of install.py at all, and the gap cost something concrete: the command
+# sequence could install the plugin on a fresh machine and was UNABLE to upgrade one that already
+# had it. `claude plugin marketplace add` answers "already on disk" for a marketplace the device
+# has seen before and does not re-fetch, so the cached clone stayed on the old commit and
+# `plugin update` reported "already at the latest version" naming the OLD version - a confident
+# wrong answer. Reproduced against the real CLI before the fix: a stale cache registered 2.17.0;
+# with `marketplace update` inserted, the same stale cache reported "updated from 2.17.0 to
+# 2.18.0". These checks pin the ORDER, which is the load-bearing part, without shelling out to
+# the claude CLI or touching a real machine's config.
+steps = install.install_steps()
+argvs = [argv for argv, _ in steps]
+flat = [" ".join(a) for a in argvs]
+
+
+def step_index(*words):
+    for i, a in enumerate(argvs):
+        if all(w in a for w in words):
+            return i
+    return -1
+
+
+i_add = step_index("marketplace", "add")
+i_mupd = step_index("marketplace", "update")
+i_inst = step_index("install")
+i_pupd = step_index("update", install.PLUGIN_ID)
+
+check(
+    i_mupd != -1,
+    "install.py refreshes the marketplace clone, not just declares it",
+    f"marketplace update present at step {i_mupd + 1} of {len(steps)}" if i_mupd != -1
+    else "NO `plugin marketplace update` - an existing install can never be upgraded",
+)
+
+check(
+    i_add != -1 and i_mupd != -1 and i_add < i_mupd,
+    "marketplace add runs before marketplace update",
+    f"add at {i_add + 1}, update at {i_mupd + 1} - add declares it, update re-fetches it",
+)
+
+check(
+    i_mupd != -1 and i_pupd != -1 and i_mupd < i_pupd,
+    "the clone is refreshed before the plugin registration is re-pointed",
+    f"marketplace update at {i_mupd + 1}, plugin update at {i_pupd + 1} - reversed, the "
+    "registration would be re-pointed at a stale clone",
+)
+
+check(
+    i_inst != -1 and i_pupd != -1 and i_inst < i_pupd,
+    "plugin install runs before plugin update",
+    f"install at {i_inst + 1}, update at {i_pupd + 1} - install is a no-op once registered, "
+    "update is the verb that re-points it",
+)
+
+check(
+    all(a and a[0] == "plugin" for a in argvs),
+    "every install step is a `claude plugin` subcommand",
+    f"{len(argvs)} steps, all under `plugin`: {flat}",
+)
+
+check(
+    all(isinstance(msg, str) and msg.strip() for _, msg in steps),
+    "every install step carries a failure message, so none can fail silently",
+    f"{len(steps)} steps, {len(steps)} non-empty messages",
+)
+
+check(
+    install.MARKETPLACE in " ".join(flat) and install.REPO in " ".join(flat),
+    "the steps name this repo's marketplace and remote, not a hardcoded copy",
+    f"marketplace={install.MARKETPLACE!r}, repo={install.REPO!r}",
+)
+
+# The docstring is the only place the reasoning lives, and the reasoning is the reason the
+# order cannot be rearranged by someone tidying up. Pin that it still says why.
+doc = (install.install_steps.__doc__ or "").lower()
+check(
+    "already on disk" in doc and "re-fetch" in doc,
+    "install_steps explains why the order matters, not just what the order is",
+    "the docstring names the add-does-not-re-fetch trap the order exists to avoid",
+)
+
+# --- update.bat states the same four commands, in the same order -------------------------------
+# The order is now written in TWO places: install_steps() and the double-clickable
+# tools/update.bat. That is a restatement, and this repo's whole recent history is restatements
+# drifting apart unnoticed - the delegate reminder lost a load-bearing sentence exactly this way.
+# So the two are bound here rather than trusted to stay in step. update.bat is deliberately NOT
+# generated from install_steps(): it must run with no Python at all, which is the point of it.
+BAT = os.path.join(HERE, "update.bat")
+bat_present = os.path.isfile(BAT)
+bat_raw = open(BAT, "rb").read() if bat_present else b""
+bat_text = bat_raw.decode("utf-8", "replace")
+
+# Strip the `call ` prefix and the trailing report-only `plugin list`, which is not an
+# install step and deliberately has no counterpart in install_steps().
+bat_cmds = [
+    line.strip()[len("call claude "):]
+    for line in bat_text.splitlines()
+    if line.strip().startswith("call claude plugin")
+    and line.strip() != "call claude plugin list"
+]
+
+check(
+    bat_present,
+    "tools/update.bat exists, so the plugin can be updated by double-click",
+    f"{BAT} present" if bat_present else "update.bat is missing",
+)
+
+check(
+    bat_cmds == flat,
+    "update.bat issues exactly install_steps(), in the same order",
+    f"bat={bat_cmds}" if bat_cmds != flat else
+    f"both run the same {len(flat)} commands in the same order",
+)
+
+# Running a .cmd from a .bat without `call` hands control over and never returns, so the
+# script would stop dead after the first command. On Windows the claude CLI IS claude.cmd.
+bare = [
+    line.strip() for line in bat_text.splitlines()
+    if line.strip().startswith("claude ")
+]
+check(
+    not bare,
+    "every claude invocation in update.bat uses `call`",
+    "without it the batch file stops after the first command, since claude is claude.cmd"
+    if not bare else f"bare invocations that will end the script early: {bare}",
+)
+
+# Double-clicked from Explorer the window closes the instant the script ends, so without a
+# pause the output - including any failure - is unreadable.
+check(
+    "pause" in bat_text.lower(),
+    "update.bat pauses before exiting, so a double-click is readable",
+    "pause present; without it the console closes before the result can be read",
+)
+
+check(
+    "errorlevel" in bat_text.lower() and ":failed" in bat_text,
+    "update.bat checks every command and reports a failure rather than pressing on",
+    "errorlevel checks and a :failed branch are present",
+)
+
+# cmd.exe mis-parses an LF-only batch file with goto labels. .gitattributes pins eol=crlf;
+# this asserts the committed bytes actually are CRLF, since the attribute alone is a promise.
+CRLF = b"\r\n"
+LF = b"\n"
+n_crlf = bat_raw.count(CRLF)
+n_bare_lf = bat_raw.count(LF) - n_crlf
+check(
+    bat_present and n_crlf > 0 and n_bare_lf == 0,
+    "update.bat is CRLF throughout, which cmd.exe needs for its goto labels",
+    "{0} CRLF line endings, {1} bare LF".format(n_crlf, n_bare_lf),
+)
+
+check(
+    "*.bat text eol=crlf" in open(os.path.join(ROOT, ".gitattributes"), encoding="utf-8").read(),
+    ".gitattributes pins *.bat to CRLF so checkout does not depend on core.autocrlf",
+    "the attribute is declared, so a Windows clone gets CRLF regardless of local git config",
 )
 
 print()
