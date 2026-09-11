@@ -389,6 +389,84 @@ check(
     "the docstring names the add-does-not-re-fetch trap the order exists to avoid",
 )
 
+# --- update.bat states the same four commands, in the same order -------------------------------
+# The order is now written in TWO places: install_steps() and the double-clickable
+# tools/update.bat. That is a restatement, and this repo's whole recent history is restatements
+# drifting apart unnoticed - the delegate reminder lost a load-bearing sentence exactly this way.
+# So the two are bound here rather than trusted to stay in step. update.bat is deliberately NOT
+# generated from install_steps(): it must run with no Python at all, which is the point of it.
+BAT = os.path.join(HERE, "update.bat")
+bat_present = os.path.isfile(BAT)
+bat_raw = open(BAT, "rb").read() if bat_present else b""
+bat_text = bat_raw.decode("utf-8", "replace")
+
+# Strip the `call ` prefix and the trailing report-only `plugin list`, which is not an
+# install step and deliberately has no counterpart in install_steps().
+bat_cmds = [
+    line.strip()[len("call claude "):]
+    for line in bat_text.splitlines()
+    if line.strip().startswith("call claude plugin")
+    and line.strip() != "call claude plugin list"
+]
+
+check(
+    bat_present,
+    "tools/update.bat exists, so the plugin can be updated by double-click",
+    f"{BAT} present" if bat_present else "update.bat is missing",
+)
+
+check(
+    bat_cmds == flat,
+    "update.bat issues exactly install_steps(), in the same order",
+    f"bat={bat_cmds}" if bat_cmds != flat else
+    f"both run the same {len(flat)} commands in the same order",
+)
+
+# Running a .cmd from a .bat without `call` hands control over and never returns, so the
+# script would stop dead after the first command. On Windows the claude CLI IS claude.cmd.
+bare = [
+    line.strip() for line in bat_text.splitlines()
+    if line.strip().startswith("claude ")
+]
+check(
+    not bare,
+    "every claude invocation in update.bat uses `call`",
+    "without it the batch file stops after the first command, since claude is claude.cmd"
+    if not bare else f"bare invocations that will end the script early: {bare}",
+)
+
+# Double-clicked from Explorer the window closes the instant the script ends, so without a
+# pause the output - including any failure - is unreadable.
+check(
+    "pause" in bat_text.lower(),
+    "update.bat pauses before exiting, so a double-click is readable",
+    "pause present; without it the console closes before the result can be read",
+)
+
+check(
+    "errorlevel" in bat_text.lower() and ":failed" in bat_text,
+    "update.bat checks every command and reports a failure rather than pressing on",
+    "errorlevel checks and a :failed branch are present",
+)
+
+# cmd.exe mis-parses an LF-only batch file with goto labels. .gitattributes pins eol=crlf;
+# this asserts the committed bytes actually are CRLF, since the attribute alone is a promise.
+CRLF = b"\r\n"
+LF = b"\n"
+n_crlf = bat_raw.count(CRLF)
+n_bare_lf = bat_raw.count(LF) - n_crlf
+check(
+    bat_present and n_crlf > 0 and n_bare_lf == 0,
+    "update.bat is CRLF throughout, which cmd.exe needs for its goto labels",
+    "{0} CRLF line endings, {1} bare LF".format(n_crlf, n_bare_lf),
+)
+
+check(
+    "*.bat text eol=crlf" in open(os.path.join(ROOT, ".gitattributes"), encoding="utf-8").read(),
+    ".gitattributes pins *.bat to CRLF so checkout does not depend on core.autocrlf",
+    "the attribute is declared, so a Windows clone gets CRLF regardless of local git config",
+)
+
 print()
 print("-" * 32)
 if FAILURES:

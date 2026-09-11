@@ -314,6 +314,19 @@ On a fresh machine the two extra commands are harmless no-ops.
 Or run `/plugin` in an interactive `claude` terminal and pick it from the menu. Restart to
 load it.
 
+### Updating by double-click (Windows)
+
+`tools\update.bat` runs exactly those four commands and nothing else — **double-click it**.
+
+It deliberately needs no Python and no clone of this repo: copy it to your Desktop and it still
+works. It prints what it is doing at each step, stops with a readable message if a command
+fails, shows you the installed version at the end, and reminds you to fully quit Claude Code —
+hooks and agents are read at startup, so an update is not live in a window that is already open.
+
+It does not apply the `verbose` / `opusplan` settings below; `bootstrap.ps1` is still the full
+install. `.ps1` files are not double-click-runnable by default on Windows, which is why this one
+is a `.bat`.
+
 ### Settings the plugin cannot ship
 
 A plugin can ship hooks, rules, scripts and agents. It cannot set anything the **harness**

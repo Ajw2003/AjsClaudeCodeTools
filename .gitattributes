@@ -1,2 +1,5 @@
 *.sh text eol=lf
 *.py text eol=lf
+# cmd.exe mis-parses an LF-only batch file with goto labels, and update.bat is full
+# of them. Pinned rather than left to the checking-out machine's core.autocrlf.
+*.bat text eol=crlf

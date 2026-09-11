@@ -83,6 +83,22 @@ It then sets `verbose: true` and `model: opusplan` in `~/.claude/settings.json` 
 plugin itself cannot ship, and which cover only the CLI and the IDE — see docs/architecture.md).
 Pass `--no-verbose` / `--no-model` to skip a piece.
 
+To update the plugin **by double-clicking**, [`tools/update.bat`](tools/update.bat) runs the same
+four `claude plugin` commands and nothing else:
+
+```bat
+tools\update.bat
+```
+
+It needs no Python and no clone — copy it to the Desktop and it still works — which is why it
+restates the four commands rather than calling `install.py`. Three Windows details are
+load-bearing and all three are checked by `verify_tools.py`: every `claude` line uses `call`
+(the CLI is `claude.cmd`, and running one `.cmd` from a `.bat` without `call` ends the script
+after the first command), the file ends in `pause` (double-clicked, the window closes before the
+output can be read), and it is CRLF throughout (`cmd.exe` mis-parses an LF-only batch file with
+`goto` labels, so `.gitattributes` pins `*.bat text eol=crlf`). It does **not** apply the
+settings above; `bootstrap.ps1` is still the full install.
+
 Prove the *published* plugin installs cleanly on a fresh machine (strips the local install, backs
 up config, reinstalls from GitHub via the two documented CLI commands, then re-runs the suite
 against the fresh clone):
