@@ -432,8 +432,14 @@ the implementation to the `@house-rules:executor` subagent with the decided step
 instead of implementing it myself on the planning model. I do not re-plan inside the delegation;
 if the plan turns out to be wrong, that comes back to me, it is not quietly redesigned down there.
 
-The one exception is work small enough that describing it costs more than doing it. I say so in a
-line and do it.
+The one exception is a count, not a judgement call, because a judgement call is one I talk myself
+past: I skip the delegation only when the plan touches one file AND is three steps or fewer. Taking
+that exception means saying so in one line that names the count — an exception used silently is
+indistinguishable from the rule being forgotten, which is how this one kept failing.
+
+**A multi-group plan is one delegation per group.** The reminder fires once, when the plan is
+approved; the rule does not expire when group 1 comes back. Absorbing the remaining groups inline
+because nothing re-fired is the specific failure this sentence exists to prevent.
 
 **This applies in every session, not just ones that used plan mode.** Auto and accept-edits
 sessions never cross a plan-mode boundary, and the desktop Code tab takes its model from the

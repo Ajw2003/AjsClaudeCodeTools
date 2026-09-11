@@ -1,6 +1,6 @@
 ---
 name: executor
-description: Runs an already-decided plan. Use PROACTIVELY the moment a plan is approved (after ExitPlanMode) or when asked to implement/execute/build it out - delegate here without waiting to be asked by name, so implementation runs on Sonnet at low effort instead of re-deliberating on Opus. Skip only for a true one-liner where delegating costs more than it saves.
+description: Runs an already-decided plan. Use PROACTIVELY the moment a plan is approved (after ExitPlanMode) or when asked to implement/execute/build it out - delegate here without waiting to be asked by name, so implementation runs on Sonnet at low effort instead of re-deliberating on Opus. Skip only when the work touches one file and is three steps or fewer.
 model: sonnet
 effort: low
 ---

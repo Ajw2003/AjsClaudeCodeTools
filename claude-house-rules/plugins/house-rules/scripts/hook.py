@@ -506,6 +506,29 @@ SCOPE_REMINDER_SHORT = (
     "not run. Build only what was asked - where it is ambiguous, ask instead of assuming."
 )
 
+# The delegation clause. delegate only fires on ExitPlanMode, so an auto or accept-edits
+# session - which house-rules.md says the rule explicitly covers - never sees it, and neither
+# does a plan simply agreed in conversation. This closes that gap from the prompt side, which
+# is the only stateless place to close it: the go-ahead is in the prompt text.
+SCOPE_DELEGATE_CLAUSE = (
+    "\n- This reads like a go-ahead on settled work. Hand the implementation to the "
+    "@house-rules:executor subagent rather than running it on the planning model; its "
+    "description is marked for proactive use, so that is authorized without a fresh ask. "
+    "Skip it only when the work touches one file AND is three steps or fewer, and say so in "
+    "one line naming the count."
+)
+
+# Prompt text that reads as "go ahead and do the thing we agreed" - the case the delegation
+# clause exists for. Broad within the extracted field, like every other pattern here: a false
+# positive costs one extra sentence of reminder, a false negative costs a whole implementation
+# run on the planning model.
+_SCOPE_GOAHEAD_RE = re.compile(
+    r"\b(implement|execute|go ahead|build it|build that|do it|make the changes?|proceed|"
+    r"ship it|carry it out|get (?:it|that) done|start (?:on )?(?:it|that)|"
+    r"apply (?:the|those) (?:changes?|edits?|fixe?s?))\b",
+    re.IGNORECASE,
+)
+
 # Prompt text suggesting this turn will involve commands, files, or builds - the case the full
 # reminder exists for. Deliberately broad (over-triggering here just means the longer, still-
 # correct string fires) - the same "match the extracted field, stay broad within it" posture as
@@ -527,9 +550,15 @@ def event_scope():
     try:
         payload = read_payload()
         m = _PROMPT_FIELD_RE.search(payload)
-        if m and _SCOPE_COMMAND_HINT_RE.search(m.group(0)):
-            reminder = SCOPE_REMINDER
+        if m:
+            field = m.group(0)
+            if _SCOPE_COMMAND_HINT_RE.search(field):
+                reminder = SCOPE_REMINDER
+            if _SCOPE_GOAHEAD_RE.search(field):
+                reminder = reminder + SCOPE_DELEGATE_CLAUSE
     except Exception:
+        # Whatever went wrong, the safe short reminder still goes out. A non-zero exit or a
+        # raise here would ERASE THE USER'S PROMPT, so this recovers rather than reporting.
         reminder = SCOPE_REMINDER_SHORT
 
     try:
@@ -979,11 +1008,17 @@ DELEGATE_NOTE = (
     "itself carries the plan as inline text, not a path, so naming the file is on you, not "
     "something to read off the tool call. That agent is pinned to Sonnet at low effort, which "
     "is the whole point: deliberation is done, and re-deliberating it on the planning model "
-    "costs the user for nothing. Do not re-plan inside the delegation - give it the decided "
-    "steps and the plan file path. Skip the delegation only for genuinely trivial work: a plan "
-    "that touches a single file, or that is a handful of steps or fewer, is cheaper done "
-    "inline than handed over - say so in one line and just do it. This is a reminder to you; "
-    "the user was not prompted and does not need to do anything."
+    "costs the user for nothing. Its agent description is marked for proactive use, which is "
+    "the harness's own documented basis for invoking a subagent without a fresh per-turn ask "
+    "from the user - so this delegation is authorized, not merely suggested, even when the "
+    "next instruction is as generic as \"implement the plan\". Do not re-plan inside the "
+    "delegation - give it the decided steps and the plan file path. A multi-group plan is "
+    "one delegation per group: this reminder fires once, but the rule does not expire when "
+    "group 1 comes back, and absorbing the rest inline is the failure it exists to prevent. "
+    "Skip the delegation only when the plan touches one file AND is three steps or fewer; "
+    "that is the whole exception, it is a count and not a judgement call, and taking it means "
+    "saying so in one line that names the count. This is a reminder to you; the user was not "
+    "prompted and does not need to do anything."
 )
 
 
