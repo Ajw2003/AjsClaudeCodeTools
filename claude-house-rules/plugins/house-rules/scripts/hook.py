@@ -1008,6 +1008,355 @@ def event_delegate():
 
 
 # ---------------------------------------------------------------------------------------
+# announce / verdict - the two subagent-lifecycle handlers. Both fail OPEN and loud.
+#
+# WHY THESE EXIST. A delegation used to be invisible: nothing showed that the executor was
+# the agent that ran, that it ran on Sonnet, or which rules digest was in its context. The
+# frontmatter "model: sonnet" is a DECLARATION, not evidence - CLAUDE_CODE_SUBAGENT_MODEL_FORCE
+# can override it, and neither the agent list nor the completion notification reports a model.
+# announce says what was declared at spawn; verdict says what actually served it, read out of
+# the subagent's own transcript. See docs/architecture.md.
+#
+# FAILURE CONTRACT: same as handover, for the same reason. A non-zero exit at a subagent
+# lifecycle event must never wedge anything, and decision:"block" on SubagentStop would send
+# the subagent back to work. So every path exits 0, and every path meaning "I could not tell"
+# says so by name - silence from either handler means only that it looked and found nothing.
+# ---------------------------------------------------------------------------------------
+
+# Same shape as _PROMPT_FIELD_RE / _COMMAND_FIELD_RE: pull one field out of the raw payload
+# without trusting the whole thing to parse. Value-capturing, and escape-aware - NOT the
+# _FILE_PATH_RE shape, which drops escape handling and is the known-divergent one.
+_AGENT_TYPE_RE = re.compile(r'"agent_type"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_AGENT_ID_RE = re.compile(r'"agent_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_EFFORT_RE = re.compile(r'"effort"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_TRANSCRIPT_RE = re.compile(r'"transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_AGENT_TRANSCRIPT_RE = re.compile(r'"agent_transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+# Documented as forcing every subagent onto one model, ignoring frontmatter - the named
+# mechanism by which "model: sonnet" is silently not what runs. Worth reporting when set.
+_MODEL_OVERRIDE_VARS = ("CLAUDE_CODE_SUBAGENT_MODEL_FORCE", "CLAUDE_CODE_SUBAGENT_MODEL")
+
+
+def _delegation_enabled():
+    """HOUSE_RULES_DELEGATION=off disables both handlers.
+
+    Deliberately NOT HOUSE_RULES_TRACE-gated. The trace lever covers handlers whose output
+    merely narrates an otherwise-silent path; here the report IS the feature, and hiding it
+    behind the trace lever would make the thing being shipped optional by default.
+    """
+    return os.environ.get("HOUSE_RULES_DELEGATION", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _field(pattern, payload, problems=None):
+    """The extracted value, or "" for a field that is simply absent.
+
+    A field that is not there is an ordinary answer, not a failure - the callers below
+    report it as "not in payload". An actual failure while extracting is different, and is
+    recorded for the caller to report rather than collapsing into the same empty string:
+    see "nothing fails silently" in the module docstring.
+    """
+    value = ""
+    try:
+        m = pattern.search(payload or "")
+        if m:
+            value = m.group(1).replace('\\"', '"').replace("\\\\", "\\").strip()
+    except Exception as exc:
+        if problems is not None:
+            problems.append("could not extract a payload field (%s)" % type(exc).__name__)
+    return value
+
+
+def _agent_file(agent_type):
+    """The shipped definition for this agent, or "" if the plugin does not ship it.
+
+    agent_type arrives plugin-scoped ("house-rules:executor"), so the scope prefix is
+    stripped before looking for agents/<name>.md. An agent the plugin does not ship is not
+    an error - it is the common case (Explore, Plan, general-purpose) and is reported as
+    "no declaration", which is still the useful half of the answer.
+    """
+    name = (agent_type or "").split(":")[-1].strip()
+    if not name or "/" in name or "\\" in name or name.startswith("."):
+        return ""
+    here = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(here, "..", "agents", name + ".md")
+    return path if os.path.isfile(path) else ""
+
+
+def _declared(agent_type, problems=None):
+    """(model, effort, fingerprint) declared by the installed agent definition.
+
+    Read out of the file rather than hardcoded here, so the line reports the copy actually
+    sitting in the plugin cache - the whole point is that it is not a claim hook.py makes.
+
+    The fingerprint covers the WHOLE file, not just the digest section. Any digest change
+    changes the file, so parsing out a section would add a failure mode and buy nothing.
+    """
+    path = _agent_file(agent_type)
+    if not path:
+        return "", "", ""
+    body = ""
+    try:
+        body = _read_text(path)
+    except OSError as exc:
+        # NOT the same as "the plugin does not ship this agent" - it ships it and we could
+        # not read it. Collapsing the two would report a broken install as a normal one.
+        if problems is not None:
+            problems.append(
+                "agents/%s.md is shipped but unreadable (%s), so its declared model is unknown"
+                % (os.path.basename(path)[:-3], type(exc).__name__)
+            )
+        return "", "", ""
+    model = ""
+    effort = ""
+    m = re.search(r"^model:\s*(\S+)\s*$", body, re.MULTILINE)
+    if m:
+        model = m.group(1)
+    m = re.search(r"^effort:\s*(\S+)\s*$", body, re.MULTILINE)
+    if m:
+        effort = m.group(1)
+    digest = ""
+    try:
+        import hashlib
+
+        digest = hashlib.sha256(body.encode("utf-8", "replace")).hexdigest()[:8]
+    except Exception as exc:
+        if problems is not None:
+            problems.append("could not fingerprint the digest (%s)" % type(exc).__name__)
+    return model, effort, digest
+
+
+def _plugin_version(problems=None):
+    here = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(here, "..", ".claude-plugin", "plugin.json")
+    version = ""
+    try:
+        version = json.loads(_read_text(path)).get("version", "") or ""
+    except Exception as exc:
+        if problems is not None:
+            problems.append("could not read the plugin version (%s)" % type(exc).__name__)
+    return version
+
+
+def event_announce():
+    """SubagentStart: say which agent is starting, and what it is DECLARED to run on."""
+    try:
+        if not _delegation_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: a subagent started but the "
+                    "SubagentStart payload was empty, so nothing could be reported about "
+                    "which agent, model or digest it is running."
+                }
+            )
+            return 0
+
+        problems = []
+        agent_type = _field(_AGENT_TYPE_RE, payload, problems)
+        agent_id = _field(_AGENT_ID_RE, payload, problems)
+        effort = _field(_EFFORT_RE, payload, problems)
+        version = _plugin_version(problems)
+        model, decl_effort, digest = _declared(agent_type, problems)
+
+        bits = ["house-rules: subagent starting - %s" % (agent_type or "agent type not in payload")]
+        if agent_id:
+            bits.append("id %s" % agent_id)
+        if model or decl_effort:
+            bits.append(
+                "declared %s"
+                % ", ".join(x for x in ("model " + model if model else "", "effort " + decl_effort if decl_effort else "") if x)
+            )
+        else:
+            bits.append("no declaration shipped by this plugin to compare against")
+        if effort:
+            # The docs do not say whether this is the subagent's effort or the session's.
+            # Name the field it came from and claim nothing more.
+            bits.append("payload effort field says %s" % effort)
+        if version:
+            bits.append("house-rules %s" % version)
+        if digest:
+            bits.append("digest %s" % digest)
+        overrides = [v for v in _MODEL_OVERRIDE_VARS if os.environ.get(v, "").strip()]
+        if overrides:
+            bits.append(
+                "WARNING: %s is set, so the declared model may not be what runs"
+                % " and ".join(overrides)
+            )
+        if problems:
+            bits.append("COULD NOT TELL: %s" % "; ".join(problems))
+        emit({"systemMessage": " | ".join(bits)})
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the subagent-start report hit an error "
+                "(%s) and is offline for this call." % type(exc).__name__
+            }
+        )
+    return 0
+
+
+def _transcript_candidates(payload):
+    """Where the subagent's own transcript might be, most authoritative first.
+
+    The first candidate is a payload field that is NOT in the documented reference - it may
+    be there, so it is tried, but nothing depends on it. The rest reconstruct the layout
+    observed live: <dir of parent transcript>/<session>/subagents/agent-<id>.jsonl. The docs
+    warn the transcript format is internal and changes between releases, which is exactly why
+    this probes and then says what it tried rather than assuming any of it.
+    """
+    out = []
+    direct = _field(_AGENT_TRANSCRIPT_RE, payload)
+    if direct:
+        out.append(direct)
+    agent_id = _field(_AGENT_ID_RE, payload)
+    parent = _field(_TRANSCRIPT_RE, payload)
+    session = _field(_SESSION_ID_RE, payload)
+    if agent_id and parent:
+        base = os.path.dirname(parent)
+        stem = os.path.basename(parent)
+        if stem.endswith(".jsonl"):
+            stem = stem[: -len(".jsonl")]
+        leaf = os.path.join("subagents", "agent-%s.jsonl" % agent_id)
+        for sess in [s for s in (session, stem) if s]:
+            cand = os.path.join(base, sess, leaf)
+            if cand not in out:
+                out.append(cand)
+    return out
+
+
+def _observed_models(path):
+    """(models in first-seen order, assistant-entry count) from a transcript JSONL."""
+    models = []
+    turns = 0
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            if not isinstance(obj, dict) or obj.get("type") != "assistant":
+                continue
+            msg = obj.get("message")
+            if not isinstance(msg, dict):
+                continue
+            turns += 1
+            model = msg.get("model")
+            if model and model not in models:
+                models.append(model)
+    return models, turns
+
+
+def event_verdict():
+    """SubagentStop: say which model ACTUALLY served the subagent, from its transcript."""
+    try:
+        if not _delegation_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: a subagent finished but the "
+                    "SubagentStop payload was empty, so the model it actually ran on could "
+                    "not be checked."
+                }
+            )
+            return 0
+
+        problems = []
+        raw_type = _field(_AGENT_TYPE_RE, payload, problems)
+        agent_type = raw_type or "agent type not in payload"
+        declared, _decl_effort, _digest = _declared(raw_type, problems)
+
+        candidates = _transcript_candidates(payload)
+        if not candidates:
+            emit(
+                {
+                    "systemMessage": "house-rules: %s finished, but its transcript could not "
+                    "be located - the payload carried no agent_transcript_path and not enough "
+                    "of agent_id/transcript_path to reconstruct one, so the model it ran on is "
+                    "unverified." % agent_type
+                }
+            )
+            return 0
+
+        found = ""
+        models = []
+        turns = 0
+        unreadable = []
+        for cand in candidates:
+            if not os.path.isfile(cand):
+                continue
+            try:
+                models, turns = _observed_models(cand)
+            except OSError as exc:
+                unreadable.append("%s (%s)" % (cand, type(exc).__name__))
+                continue
+            found = cand
+            break
+
+        if not found:
+            detail = "; tried: %s" % ", ".join(candidates)
+            if unreadable:
+                detail += "; unreadable: %s" % ", ".join(unreadable)
+            emit(
+                {
+                    "systemMessage": "house-rules: %s finished, but no transcript was readable "
+                    "at any known location, so the model it ran on is unverified%s"
+                    % (agent_type, detail)
+                }
+            )
+            return 0
+
+        if not models:
+            emit(
+                {
+                    "systemMessage": "house-rules: %s finished; its transcript at %s had no "
+                    "assistant entry carrying a model field (%d assistant entr%s seen), so "
+                    "the model it ran on is unverified." % (agent_type, found, turns, "y" if turns == 1 else "ies")
+                }
+            )
+            return 0
+
+        observed = ", ".join(models)
+        bits = [
+            "house-rules: %s finished" % agent_type,
+            "observed model %s" % observed,
+            "%d assistant turn%s" % (turns, "" if turns == 1 else "s"),
+        ]
+        if declared:
+            # "sonnet" against "claude-sonnet-4-5-20250929", or a full model id against
+            # itself. Every observed model must match, so a subagent that started on the
+            # declared model and fell back mid-run still reads as a mismatch.
+            low = declared.lower()
+            if models and all(low in m.lower() for m in models):
+                bits.append("declared %s - MATCH" % declared)
+            else:
+                bits.append(
+                    "declared %s - MISMATCH, the delegation did not run on what it declares"
+                    % declared
+                )
+        else:
+            bits.append("no declared model shipped for this agent, so nothing to compare")
+        if problems:
+            bits.append("COULD NOT TELL: %s" % "; ".join(problems))
+        emit({"systemMessage": " | ".join(bits)})
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the subagent-stop model check hit an "
+                "error (%s) and is offline for this call." % type(exc).__name__
+            }
+        )
+    return 0
+
+
+# ---------------------------------------------------------------------------------------
 # handover — Stop. Fails OPEN, loud: never wedge the turn.
 # ---------------------------------------------------------------------------------------
 
@@ -1534,6 +1883,8 @@ EVENTS = {
     "artifact": event_artifact,
     "runnable": event_runnable,
     "delegate": event_delegate,
+    "announce": event_announce,
+    "verdict": event_verdict,
     "handover": event_handover,
     "harvest": event_harvest,
 }
