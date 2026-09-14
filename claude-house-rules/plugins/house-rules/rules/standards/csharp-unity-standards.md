@@ -71,6 +71,28 @@ Assets/
 - Keep gameplay logic in plain C# classes where possible (not `MonoBehaviour`s) so it's
   testable without a scene.
 
+## Verifying compilation
+
+"Compiles fine" is not a claim to make from reading the code — see "A shim that compiles is not
+proof the real code does" in the global rules. Before saying Unity/C# code builds, verify it
+against the real toolchain, not a stand-in for Unity's own APIs.
+
+- **Preferred: Unity itself, in batch mode.** Against the real project:
+  `Unity -batchmode -quit -projectPath <path> -logFile <logPath>` (or the platform's Unity
+  executable, e.g. `Unity.exe` on Windows), then check `<logPath>` for `error CS` — Unity can
+  exit 0 with compile errors logged, so the exit code alone is not enough. Slower than a script
+  check, but it is the actual compiler against the actual assembly definitions.
+- **Fallback: `dotnet build`/`msbuild` against the project's own generated `.csproj`/`.sln`**
+  (Unity generates one per assembly definition) when the Unity Editor itself isn't installed or
+  reachable here. This still resolves against the real Unity DLLs referenced in that `.csproj`,
+  so it remains a real check.
+- **Never a substitute for either:** a fake `UnityEngine` namespace, a reimplemented
+  `MonoBehaviour`, or any other hand-rolled stand-in for the engine, built so a file compiles
+  standalone outside Unity. That proves the stand-in compiles, not the code — do not report a
+  result from it.
+- **Nothing available** — no Unity install, no matching SDK, no way to invoke either from this
+  machine: say so explicitly and label the code `UNTESTED:` rather than asserting it compiles.
+
 ## Tooling (Rider)
 
 - Commit a shared `.editorconfig` at the repo root so Rider's formatter matches these
