@@ -771,6 +771,85 @@ run_case(
     extra={"content": "write it to /tmp/build.sh first"},
 )
 
+# --- the compile-verification reminder for compiled-language (.cs) files ---------------------
+def compile_case(expect, title, file_path):
+    obj = {"tool_name": "Write", "tool_input": {"file_path": file_path}}
+    code, out, err = run_hook("runnable", json.dumps(obj))
+    if "should compile" in out.lower():
+        got = "remind"
+    elif '"systemMessage"' in out:
+        got = "trace"
+    elif not out.strip():
+        got = "silent"
+    else:
+        got = "malformed"
+    report("PASS" if got == expect else "FAIL", title)
+    print(f"          expected {expect}, got {got}")
+
+
+compile_case(
+    "remind",
+    "a .cs file created in the project is flagged to compile against the real toolchain",
+    r"C:\proj\Assets\Scripts\Player.cs",
+)
+compile_case(
+    "trace",
+    "a .cs file written to a temp directory is scratch work, not compiled",
+    r"C:\Users\aj\AppData\Local\Temp\Player.cs",
+)
+
+# --- the reminder in hook.py's compile-verification note has not drifted from the rules doc ---
+drift = []
+for phrase in [
+    "should compile",
+    "stand-in",
+    "real compiler",
+    "batch mode",
+    "dotnet build",
+]:
+    if phrase.lower() not in rules_text.lower():
+        drift.append(phrase)
+if not drift:
+    report("PASS", "compile-verification reminder still matches the rules document")
+    print("          every key phrase in the reminder appears in rules/house-rules.md")
+else:
+    report("FAIL", "compile-verification reminder still matches the rules document")
+    print(f"          in compile reminder but missing from house-rules.md: {'; '.join(drift)}")
+
+# --- and the reverse: the EMITTED compile note still states the rule -------------------------
+code, out, err = run_hook(
+    "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\Assets\Scripts\Enemy.cs"}})
+)
+drift = []
+for phrase in ["Should compile", "stand-in", "real compiler", "UNTESTED"]:
+    if phrase not in out:
+        drift.append(phrase)
+if not drift:
+    report("PASS", "the emitted compile note still says a stand-in is not a compiler")
+    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
+else:
+    report("FAIL", "the emitted compile note still says a stand-in is not a compiler")
+    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+
+# --- the shim-is-not-a-compiler rule is stated in full, not just as scattered phrases ---------
+missing = [
+    p
+    for p in [
+        "A shim that compiles is not proof the real code does",
+        "hand-rolled stand-in",
+        "batch mode",
+        "dotnet build",
+        "UNTESTED",
+    ]
+    if p.lower() not in rules_text.lower()
+]
+if not missing:
+    report("PASS", "the shim-is-not-a-compiler rule states the check, the fallback, and the honest-gap case")
+    print("          real toolchain, dotnet build fallback, and the UNTESTED label are all named")
+else:
+    report("FAIL", "the shim-is-not-a-compiler rule states the check, the fallback, and the honest-gap case")
+    print(f"          missing from house-rules.md: {'; '.join(missing)}")
+
 # --- the reminder in hook.py's runnable handler has not drifted from the rules document -----
 drift = []
 for phrase in [

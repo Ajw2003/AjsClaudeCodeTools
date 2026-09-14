@@ -953,6 +953,25 @@ _RUNNABLE_BARE_RE = re.compile(
     r"^(dockerfile|docker-compose\.ya?ml)$", re.IGNORECASE
 )
 
+# A .cs file is not "run" the way a script is - there is no interpreter to invoke - so it never
+# matched _RUNNABLE_EXT_RE, and Unity code written by Claude got no PostToolUse nudge at all.
+# That gap is exactly what let "should compile" ship unchecked. Handled here rather than as a
+# separate hook event: same trigger (PostToolUse on Write), same "never obstruct, never go
+# quiet" contract, and it reuses the existing outside-project scratch-work check.
+_COMPILED_EXT_RE = re.compile(r"\.cs$", re.IGNORECASE)
+
+COMPILE_NOTE = (
+    "House rules, compiled code: you just created a compiled-language file. \"Should compile\" "
+    "is a guess, not a result. A hand-rolled stand-in for the real API surface (a fake "
+    "UnityEngine, a stub assembly) proves the stand-in compiles, not that this code does. "
+    "Compile the real thing with the real compiler before you say it builds: Unity in batch "
+    "mode against the real project, or dotnet build/msbuild against the project's own .csproj "
+    "- never one generated to make the check pass. Where nothing here can invoke the real "
+    "toolchain, say exactly that and hand the code over as UNTESTED: rather than reporting an "
+    "outcome the check never produced. This is a reminder to you; the user was not prompted "
+    "and does not need to do anything."
+)
+
 
 def event_runnable():
     try:
@@ -971,6 +990,19 @@ def event_runnable():
         if not file_path:
             return 0
         base = re.split(r"[\\/]", file_path)[-1]
+        if _COMPILED_EXT_RE.search(base):
+            if _is_outside_project(file_path):
+                trace("runnable: %s is outside the project - scratch work, not compiled." % base)
+                return 0
+            emit(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PostToolUse",
+                        "additionalContext": COMPILE_NOTE,
+                    }
+                }
+            )
+            return 0
         if not (_RUNNABLE_EXT_RE.search(base) or _RUNNABLE_BARE_RE.match(base)):
             trace("runnable: %s is not a runnable file - nothing to run." % base)
             return 0
