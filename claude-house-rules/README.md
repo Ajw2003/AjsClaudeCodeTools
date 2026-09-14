@@ -109,11 +109,14 @@ Every one of these properties is tested by the suite below.
 | Rule | Patterns |
 |---|---|
 | Never hide work in a background window or a silent process | `-WindowStyle Hidden`, `Start-Process`, `Start-Job`, `-AsJob`, `nohup`, `setsid`, `disown`, a trailing `&` |
-| Never commit without asking | `git` + `add commit push checkout switch reset revert stash rm mv branch merge rebase clean tag cherry-pick am apply remote submodule filter-branch` |
-| Never take a destructive action without checking first | `rm -r/-f`, `Remove-Item`, `del /f`, `rmdir /s`, `Stop-Process`, `taskkill`, `pkill`, `kill -9`, `Clear-Content`, `truncate -s` |
+| Commit constantly on my own branches, never on theirs | `git push` and `git commit` (force push always prompts; a plain push or commit stands down on a `claude/` branch); `reset`, `revert`, `clean`, `rebase`, `merge`, `filter-branch`, `cherry-pick`, `am`, `apply` (these seven prompt on every branch, mine included — they discard work or finish something the user started) |
+| Never take a destructive action without checking first | `rm -r/-f`, `Remove-Item`, `del /f`, `rmdir /s`, `Stop-Process`, `taskkill`, `pkill`, `kill -9`, `Clear-Content`, `truncate -s`, `git checkout --`/`git restore` (discards uncommitted edits), `git stash drop`/`clear` (deletes stashed work permanently) |
 
 `git status`, `git log`, `git diff`, `git show` and every ordinary command pass through
-silently — read-only inspection is explicitly fine under the rules.
+silently — read-only inspection is explicitly fine under the rules. So do the navigational git
+verbs (`add`, a bare `checkout`/`switch` to change branches, `branch`, `tag`, `remote`,
+`submodule`, a bare `stash`): none of them write history, the index, or the remote, so prompting
+on them was pure noise and they were deliberately dropped from the pattern set.
 
 The other rules — match response depth to the task, the fixed environment, build only what was
 asked, docs-before-research, build for a human working alone, the user's hands are for decisions
@@ -228,20 +231,26 @@ observed in a live session, after fully quitting and restarting Claude Code:
 | `SessionStart` | Ask: *what are my house rules, and what machine am I on?* | It answers both **without opening a file** — names the rules, and says the CPU/OS/shell either from a hand-verified `rules/environment.md` or from live runtime detection if none exists. If it goes looking for files, nothing was injected. |
 | `UserPromptSubmit` | Run `claude --debug`, then send any prompt | The hook runs and injects the line starting `Standing house rules` |
 | `PostToolUse` | Ask it to write a `.md` file into a temp directory | A reminder about artifact custody comes back **to Claude**; you are not prompted |
-| `PreToolUse` | See the constraint below | A permission prompt naming *Never commit without asking* |
+| `PreToolUse` | See the constraint below | A permission prompt naming *Commit constantly on my own branches, never on theirs* |
 | `Stop` | Ask for something that ends in a command to run, and let the turn end | The turn is extended exactly once with the command-handover checklist, then ends normally on the retry. Ask a question whose answer contains **no** fenced block and it stays silent - that is the firing condition, not a bug. Restart with `HOUSE_RULES_HANDOVER=off` set and it never fires. |
 | `PostToolUse` on `ExitPlanMode` | Approve any plan out of plan mode | A delegation nudge naming `@house-rules:executor` comes back **to Claude**; you are not prompted |
 
-### The guard test needs an uncommitted change — this is the part that catches people
+### The guard test needs an uncommitted change, and a branch that isn't mine
 
-Testing the guard with `git add -A` on a **clean worktree does not work as a test**. Make a
-change first, so there is something to stage:
+`git add` isn't gated at all — it's a navigational verb, not one that writes history, so it
+was deliberately dropped from the pattern set (see "What trips the guard" above). `git commit`
+is, but only on a branch I did not create: the commit rule stands down on a `claude/`-prefixed
+branch by design, so testing this on one of my own branches will show no prompt and prove
+nothing. Run this on `main` (or any branch you named). Make a change first, so there is
+something to commit — a clean worktree does not work as a test, because Claude has nothing to
+commit and so never attempts the command:
 
 ```bash
 echo scratch > guard-test.txt
+git add guard-test.txt
 ```
 
-Then ask Claude to run `git add -A`. The prompt should appear, naming the rule and quoting the
+Then ask Claude to commit it. The prompt should appear, naming the rule and quoting the
 command. Deny it, and clean up:
 
 ```bash

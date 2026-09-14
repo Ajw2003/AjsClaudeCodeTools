@@ -2165,6 +2165,52 @@ else:
     report("FAIL", "the architecture tables match hooks.json")
     print(f"          {'; '.join(docdrift)}")
 
+# --- the "What trips the guard" README table matches GUARD_R3/GUARD_R4's actual git verbs -----
+# guard's git patterns keep only the verbs that actually write history, the index, or the
+# remote - navigational verbs (add, a bare checkout/switch, branch, tag, remote, submodule, a
+# bare stash) were deliberately left unmatched, because they produced nothing but noise. The
+# README's table listed the old, broader verb set for months after that narrowing shipped: a
+# reader who tested with `git add -A`, expecting a prompt, saw none and could reasonably
+# conclude the hook was broken rather than working as designed. This tokenizes the backtick
+# code spans in the table itself, rather than hand-copying the verb list a second time, so a
+# future re-narrowing (or re-widening) of GUARD_R3/GUARD_R4 breaks this check instead of
+# silently leaving the table wrong again.
+GUARDED_GIT_VERBS = [
+    "push", "commit", "reset", "revert", "clean", "rebase", "merge",
+    "filter-branch", "cherry-pick", "am", "apply", "checkout", "restore", "stash",
+]
+NAVIGATIONAL_GIT_VERBS = ["add", "switch", "branch", "tag", "remote", "submodule"]
+
+guarddrift = []
+_guard_table_absent = absent_repo_files(readme_rel)
+if _guard_table_absent:
+    skip_repo_check(
+        "the 'What trips the guard' table matches GUARD_R3/GUARD_R4's actual git verbs",
+        _guard_table_absent,
+    )
+else:
+    readme_text_guard = read(readme_path)
+    table_match = re.search(r"### What trips the guard\n\n(?:\|.*\n)+", readme_text_guard)
+    if not table_match:
+        guarddrift.append("no 'What trips the guard' table found under that heading")
+    else:
+        table_tokens = set()
+        for span in re.findall(r"`([^`]+)`", table_match.group(0)):
+            table_tokens.update(re.split(r"[\s/,]+", span.strip()))
+        for verb in GUARDED_GIT_VERBS:
+            if verb not in table_tokens:
+                guarddrift.append(f"the table does not mention `{verb}`, which hook.py actually matches")
+        for verb in NAVIGATIONAL_GIT_VERBS:
+            if verb in table_tokens:
+                guarddrift.append(f"the table claims `{verb}` trips the guard, but hook.py deliberately does not match it")
+    if not guarddrift:
+        report("PASS", "the 'What trips the guard' table matches GUARD_R3/GUARD_R4's actual git verbs")
+        print(f"          all {len(GUARDED_GIT_VERBS)} guarded verbs present, "
+              f"all {len(NAVIGATIONAL_GIT_VERBS)} deliberately-dropped verbs absent")
+    else:
+        report("FAIL", "the 'What trips the guard' table matches GUARD_R3/GUARD_R4's actual git verbs")
+        print(f"          {'; '.join(guarddrift)}")
+
 # --- the standards handler: selection, detection, override, and the fallbacks around it ------
 def make_fixture(files):
     d = tempfile.mkdtemp(prefix="house-rules-standards-")
