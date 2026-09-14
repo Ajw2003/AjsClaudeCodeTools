@@ -1,0 +1,9 @@
+{
+  "name": "agent-router",
+  "description": "STATUS: shell/v0.1. Classifies each prompt's complexity and nudges Claude to delegate to a model-pinned subagent - haiku for simple doc/comms work, sonnet for recon and code implementation, opus for planning, architecture, and management. Cannot switch the live session's own model; see docs/offshoots-plan.md for what a hook can and can't do here.",
+  "version": "0.1.0",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  }
+}

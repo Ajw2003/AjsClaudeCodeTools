@@ -61,21 +61,63 @@ full methodology text), `commands/workshop.md`, a 22-case `verify.py`, and a REA
 real, runnable v0.1 — not stub code — but the heuristic and the "did the refined prompt actually
 get followed" question are both still open, see below.
 
-## Offshoot 2: unnamed / undefined
+## Offshoot 2: `agent-router`
 
-The task named the second offshoot as TBD and asked for a shell regardless. What shipped is
-exactly that: a plugin (`claude-offshoot-2/plugins/offshoot-2/`) with the same structural
-pieces as the other two — `plugin.json`, `hooks.json` registering one `SessionStart` hook,
-`run.sh`, a `hook.py` whose only handler announces "this is a placeholder" via `systemMessage`,
-an empty `rules/` directory with a note explaining what goes there, and a `verify.py` proving
-the placeholder announces itself correctly and never fails. It is wired into the root
-`marketplace.json` and this repo's CI (`.github/workflows/verify.yml`) exactly like the other
-two, so it's a real, checked artifact rather than dead scaffolding nobody will notice broke.
+Originally scaffolded as an unnamed placeholder (`offshoot-2`) while its purpose was still TBD.
+The purpose since given: route each prompt to the model tier that fits its complexity — Haiku
+for simple doc writing, Sonnet for recon and code implementation, Opus for planning,
+architecture, and management — instead of running everything on whatever model the session
+happens to be on. The placeholder was renamed in place (`claude-offshoot-2/` →
+`claude-agent-router/`, `offshoot-2` → `agent-router`) rather than left to accumulate content
+under its old name — its own README had already said to do exactly that once a purpose existed.
 
-Nothing about its purpose was assumed. `claude-offshoot-2/README.md` spells out the four steps
-to turn it into a real plugin once a purpose exists: write the rules doc, add handlers the way
-`prompt-workshop` added `event_workshop` next to `event_inject`, register the new hook events,
-extend `verify.py`, then rename it away from the `offshoot-2` placeholder name.
+**The load-bearing correction, made before anything else here matters.** The ask was to have
+"the plugin leverage hooks to route" — read literally, that could mean a hook switches which
+model the live session runs on mid-turn. **No hook can do that.** `UserPromptSubmit` hooks emit
+`additionalContext` or block the prompt; there is no hook output that changes a running
+session's model. What genuinely is enforced, the same way `house-rules` already uses it for
+`@house-rules:executor`, is a subagent's `model:` frontmatter — so "routing" here means: a hook
+classifies the prompt and *suggests* Claude delegate to a subagent pinned to the right tier.
+Claude decides whether to actually delegate. This is a real mechanism, not a workaround — it's
+the same shape `house-rules`' `delegate` hook already uses (nudge toward a pinned subagent
+rather than performing the work itself) — but it's a suggestion, not an enforced switch, and
+that gap needed to be named rather than built over silently.
+
+**Decisions made, and why:**
+
+- **Three subagents, one per tier, each with only a `model:` pin as their real teeth** —
+  `@agent-router:scribe` (haiku), `@agent-router:operative` (sonnet),
+  `@agent-router:architect` (opus). `house-rules`' own `opusplan` + `@house-rules:executor` split
+  is the two-tier version of this; `agent-router` generalizes it to three explicit tiers and
+  makes the routing decision per-prompt instead of per-session.
+- **`route` reads each agent's declared model live, off disk, every time it fires** — never a
+  hardcoded model name in `hook.py` — the same "declaration read from the file it actually
+  ships, not restated" discipline `house-rules`' `announce` handler uses for exactly this reason:
+  a hook that hardcodes what a subagent declares can drift from what the subagent actually
+  declares.
+- **Classification precedence is architecture > doc > recon/code > silent.** An ambiguous prompt
+  reading as either "just do it" or "decide how to do it" is resolved toward the stronger model —
+  over-routing a simple ask to Opus costs more compute than it should; under-routing a real
+  architecture decision to Sonnet risks a worse decision. The asymmetry in what a wrong guess
+  costs picked the tie-breaker.
+- **Doc-tier is noun-triggered (`readme`, `changelog`, `docstring`, ...), not verb-triggered.**
+  A bare verb like "write" is ambiguous between "write the README" (doc) and "write a rate
+  limiter" (implementation); the noun is the disambiguating signal, so doc-tier requires one.
+- **Silent when the prompt already names `@agent-router:` or fits no tier at all** — a routing
+  suggestion on top of an already-explicit delegation, or on a plain question, is noise the
+  classifier should not add.
+- **`route` never blocks, on the same contract as `prompt-workshop`'s `workshop` handler** — a
+  non-zero exit on `UserPromptSubmit` erases the user's prompt, so every failure path in
+  `event_route` recovers silently rather than reporting.
+
+**What shipped in this pass:** `plugin.json`, `hooks.json` (`SessionStart` → `inject`,
+`UserPromptSubmit` → `route`), `hook.py` with both handlers, `rules/agent-router.md` (the
+methodology, including the surfaces table and the "what a hook can't do" section above in short
+form), three agent files with real `model:` pins, `commands/route.md`, a 32-case `verify.py`
+(including checks that each agent's declared model matches what the rules doc promises, and
+that `route`'s suggestions read that declaration live rather than restating it), and a README
+that opens with the same correction made above. Real, runnable v0.1 — not stub code — but see
+"Open questions" for what a suggestion-only mechanism still can't guarantee.
 
 ## Open questions (not resolved by this shell)
 
@@ -90,7 +132,20 @@ extend `verify.py`, then rename it away from the `offshoot-2` placeholder name.
   closing this gap, if it's worth closing — it would mean a new hook event, most plausibly on
   `Stop`, verifying the turn's transcript mentions the workshop ran when the `UserPromptSubmit`
   hook flagged it.
-- **`offshoot-2`'s purpose.** Entirely open. The shell imposes no constraint on what it becomes.
-- **Marketplace naming.** `offshoot-2` is a placeholder plugin name, not a shipped one — rename
-  it (directory, `plugin.json`, the marketplace entry) once it has a real purpose, per its own
-  README.
+- **`agent-router`'s classifier needs real tuning data**, for the same reason
+  `prompt-workshop`'s does — the 12 cases in `verify.py` are hand-picked, not drawn from real
+  prompt traffic.
+- **Nothing verifies a routing suggestion was acted on, or that a delegated subagent actually
+  ran on its declared model.** `route` can only suggest; whether Claude delegates, and whether
+  `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` or similar quietly overrides the declared model if it does,
+  is exactly the gap `house-rules`' `announce`/`verdict` pair closes for its own subagent
+  (`executor`) — extending that pair to cover `agent-router`'s three agents (or having
+  `agent-router` ship its own `SubagentStart`/`SubagentStop` handlers) is the template if this
+  is worth closing, and is the most-open question either offshoot currently has.
+- **No handling yet for a prompt that genuinely spans two tiers** (part doc fix, part redesign) —
+  the classifier picks the highest-precedence tier that matches and says nothing about the mix,
+  rather than flagging that the prompt should probably be split.
+- **Surface reach is inherited, not new**, from the same limits `house-rules`' own CLAUDE.md
+  documents — no plugin hooks in WSL sessions, and the Desktop Cowork tab sources skills from
+  the claude.ai account rather than `~/.claude`. `agent-router` does nothing on either, same as
+  if it weren't installed there.

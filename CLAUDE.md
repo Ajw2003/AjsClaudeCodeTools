@@ -11,9 +11,11 @@ GitHub marketplace (`.claude-plugin/marketplace.json` at the repo root) and inst
 `claude plugin install`.
 
 The repo also carries two younger offshoots of that same plugin formula — `prompt-workshop`
-(`claude-prompt-workshop/`) and a still-undefined `offshoot-2` (`claude-offshoot-2/`) — each its
-own sibling directory with the same one-shim-plus-one-Python-file shape and its own `verify.py`.
-Both are shells, not yet as load-bearing as `house-rules`; see
+(`claude-prompt-workshop/`) and `agent-router` (`claude-agent-router/`) — each its own sibling
+directory with the same one-shim-plus-one-Python-file shape and its own `verify.py`.
+`agent-router` classifies a prompt's complexity and nudges delegation to a model-pinned subagent
+(haiku/sonnet/opus); it cannot switch the live session's own model — no hook can. Both offshoots
+are shells, not yet as load-bearing as `house-rules`; see
 [docs/offshoots-plan.md](docs/offshoots-plan.md) for what they're for and what's still open. The
 rest of this file, and the commands below, describe `house-rules` specifically unless stated
 otherwise.

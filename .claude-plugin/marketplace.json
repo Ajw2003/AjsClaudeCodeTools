@@ -1,6 +1,6 @@
 {
   "name": "aj-house-rules",
-  "description": "aj's Claude Code tools. house-rules enforces the global CLAUDE.md rules as hooks on every device and in every project; prompt-workshop and offshoot-2 are newer offshoots of the same plugin formula, both still shells (see docs/offshoots-plan.md).",
+  "description": "aj's Claude Code tools. house-rules enforces the global CLAUDE.md rules as hooks on every device and in every project; prompt-workshop and agent-router are newer offshoots of the same plugin formula, both still shells (see docs/offshoots-plan.md).",
   "owner": {
     "name": "aj",
     "email": ""
@@ -17,9 +17,9 @@
       "description": "STATUS: shell/v0.1. Notices an under-specified prompt and walks the user through goal, constraints, success criteria and gating before Claude runs with an inferred reading of it."
     },
     {
-      "name": "offshoot-2",
-      "source": "./claude-offshoot-2/plugins/offshoot-2",
-      "description": "STATUS: placeholder shell, purpose not yet defined. See docs/offshoots-plan.md."
+      "name": "agent-router",
+      "source": "./claude-agent-router/plugins/agent-router",
+      "description": "STATUS: shell/v0.1. Classifies each prompt's complexity and nudges Claude to delegate to a model-pinned subagent - haiku for simple doc/comms work, sonnet for recon and code implementation, opus for planning, architecture, and management. Cannot switch the live session's own model."
     }
   ]
 }

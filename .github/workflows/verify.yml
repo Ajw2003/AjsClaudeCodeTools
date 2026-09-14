@@ -39,5 +39,5 @@ jobs:
       - name: Run the prompt-workshop test suite
         run: python claude-prompt-workshop/plugins/prompt-workshop/scripts/verify.py
 
-      - name: Run the offshoot-2 test suite
-        run: python claude-offshoot-2/plugins/offshoot-2/scripts/verify.py
+      - name: Run the agent-router test suite
+        run: python claude-agent-router/plugins/agent-router/scripts/verify.py

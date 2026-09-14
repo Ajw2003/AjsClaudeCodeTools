@@ -3,11 +3,7 @@
 # hook.py. Ported unchanged in shape from house-rules'/prompt-workshop's run.sh — see those
 # files for the full rationale on why this probes instead of trusting `command -v`.
 #
-# This plugin is a placeholder: one event (`inject`) so far. When this offshoot gets a real
-# purpose, extend the EVENT case below the same way house-rules and prompt-workshop do — one
-# fallback message per event, matched to that event's fail-open/fail-loud contract.
-#
-# Resolution order: $OFFSHOOT2_PYTHON (if set, probed too), python3, python, py -3.
+# Resolution order: $AGENT_ROUTER_PYTHON (if set, probed too), python3, python, py -3.
 
 set -u
 
@@ -22,9 +18,9 @@ probe() {
 }
 
 PY=''
-if [ -n "${OFFSHOOT2_PYTHON:-}" ]; then
+if [ -n "${AGENT_ROUTER_PYTHON:-}" ]; then
   # shellcheck disable=SC2086
-  set -- $OFFSHOOT2_PYTHON
+  set -- $AGENT_ROUTER_PYTHON
   if probe "$@"; then
     PY=set
   fi
@@ -50,17 +46,20 @@ fi
 if [ -z "$PY" ]; then
   case "$EVENT" in
     inject)
-      printf '{"systemMessage":"offshoot-2 plugin: no working Python interpreter found on PATH. Nothing was loaded into this session."}'
+      printf '{"systemMessage":"agent-router plugin: no working Python interpreter found on PATH. Routing guidance was NOT loaded into this session."}'
       exit 0
       ;;
     *)
+      # route (UserPromptSubmit) must never block or erase the prompt - same contract as
+      # house-rules' scope and prompt-workshop's workshop handlers. Going quiet here just
+      # means no routing suggestion was made for this prompt.
       exit 0
       ;;
   esac
 fi
 
-if [ "${OFFSHOOT2_DEBUG:-}" = 1 ]; then
-  echo "offshoot-2 run.sh: HERE=$HERE interpreter=$* event=$EVENT" >&2
+if [ "${AGENT_ROUTER_DEBUG:-}" = 1 ]; then
+  echo "agent-router run.sh: HERE=$HERE interpreter=$* event=$EVENT" >&2
 fi
 
 exec "$@" "$HERE/hook.py" "$EVENT"
