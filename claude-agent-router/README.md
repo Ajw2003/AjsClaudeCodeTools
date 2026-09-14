@@ -76,5 +76,13 @@ Not yet published as an everyday-installable marketplace entry — listed in
 
 ```bash
 claude plugin marketplace add ajw2003/ajsclaudecodetools
+claude plugin marketplace update aj-house-rules
 claude plugin install agent-router@aj-house-rules
 ```
+
+`update` takes the marketplace's registered name (`aj-house-rules`, from `.claude-plugin/marketplace.json`'s
+own `name` field), not the `owner/repo` shorthand `add` takes — the two commands don't share an
+argument form. It matters on a machine that has already seen this marketplace: `add` alone
+answers "already on disk" without re-fetching (see [`tools/install.py`](../tools/install.py)),
+so `update` is the step that actually pulls the current commit before `install` registers the
+plugin from it.
