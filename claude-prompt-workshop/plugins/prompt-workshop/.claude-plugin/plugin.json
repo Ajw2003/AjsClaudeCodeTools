@@ -1,0 +1,9 @@
+{
+  "name": "prompt-workshop",
+  "description": "STATUS: shell/v0.1. Notices an under-specified prompt and walks the user through goal, constraints, success criteria and gating before Claude runs with an inferred reading of it, instead of guessing and building the wrong thing.",
+  "version": "0.1.0",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  }
+}

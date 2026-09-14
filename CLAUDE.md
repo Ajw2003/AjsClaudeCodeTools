@@ -4,10 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A personal Claude Code plugin repo. It ships one plugin, `house-rules`, which turns aj's global
-CLAUDE.md-style rules into a Claude Code plugin so they follow every device and project via hooks
-instead of a file that has to be copied around. The plugin is published as a GitHub marketplace
-(`.claude-plugin/marketplace.json` at the repo root) and installed with `claude plugin install`.
+A personal Claude Code plugin repo. Its original and only mature plugin is `house-rules`, which
+turns aj's global CLAUDE.md-style rules into a Claude Code plugin so they follow every device and
+project via hooks instead of a file that has to be copied around. The plugin is published as a
+GitHub marketplace (`.claude-plugin/marketplace.json` at the repo root) and installed with
+`claude plugin install`.
+
+The repo also carries two younger offshoots of that same plugin formula — `prompt-workshop`
+(`claude-prompt-workshop/`) and a still-undefined `offshoot-2` (`claude-offshoot-2/`) — each its
+own sibling directory with the same one-shim-plus-one-Python-file shape and its own `verify.py`.
+Both are shells, not yet as load-bearing as `house-rules`; see
+[docs/offshoots-plan.md](docs/offshoots-plan.md) for what they're for and what's still open. The
+rest of this file, and the commands below, describe `house-rules` specifically unless stated
+otherwise.
 
 **This root `CLAUDE.md` is a pointer, not a copy.** The actual rules text lives at
 [claude-house-rules/plugins/house-rules/rules/house-rules.md](claude-house-rules/plugins/house-rules/rules/house-rules.md)

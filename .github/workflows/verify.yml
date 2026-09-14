@@ -32,3 +32,12 @@ jobs:
       # was found only by running the script twice by hand.
       - name: Run the tools test suite
         run: python tools/verify_tools.py
+
+      # Both offshoots below are shells (docs/offshoots-plan.md) but ship the same
+      # fail-open/fail-loud contracts house-rules does, so they get the same CI coverage from
+      # day one rather than waiting until they feel load-bearing enough to bother.
+      - name: Run the prompt-workshop test suite
+        run: python claude-prompt-workshop/plugins/prompt-workshop/scripts/verify.py
+
+      - name: Run the offshoot-2 test suite
+        run: python claude-offshoot-2/plugins/offshoot-2/scripts/verify.py

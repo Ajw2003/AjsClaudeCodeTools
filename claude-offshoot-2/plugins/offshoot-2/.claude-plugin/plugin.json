@@ -1,0 +1,9 @@
+{
+  "name": "offshoot-2",
+  "description": "STATUS: placeholder shell, purpose not yet defined. Structural twin of house-rules/prompt-workshop (one POSIX shim, one stdlib Python file, verify.py proving the fail-open/fail-loud contracts) so the next offshoot can be filled in without re-deriving the scaffolding. See docs/offshoots-plan.md at the repo root.",
+  "version": "0.0.1",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  }
+}
