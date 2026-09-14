@@ -153,8 +153,13 @@ ROUTE_CASES = [
     ("operative", "investigate why the login test is flaky"),
     ("operative", "fix the null pointer in the parser"),
     (None, "what time is it"),
+    ("operative", "why is the login test flaky?"),
+    ("operative", "how does the auth flow work across these services?"),
+    ("operative", "what's causing the memory leak in the worker process?"),
+    ("architect", "why should we consolidate these two services?"),
     (None, "thanks, that looks right"),
     (None, "please delegate this to @agent-router:operative"),
+    (None, "what does this variable represent in the code we just looked at?"),
 ]
 
 for expect_tier, text in ROUTE_CASES:

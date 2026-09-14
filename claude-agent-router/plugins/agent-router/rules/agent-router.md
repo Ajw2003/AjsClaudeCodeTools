@@ -22,7 +22,10 @@ tier of work it is — so the *right* amount of model gets spent, not the same a
 2. **Recon & implementation** (`sonnet`) — the bulk of engineering work: searching/reading a
    codebase to understand it, writing or fixing code against a plan that's already been decided,
    debugging, running tests. Real judgment, bounded scope, the plan (if one exists) does the
-   hard thinking already.
+   hard thinking already. Recon in particular is as often a *question* as an instruction — "why
+   is this test flaky", "how does the auth flow work across these services" — and routes here
+   the same as an imperative "investigate why..." would; see "When to stay silent" below for the
+   line between this and a quick contextual question that shouldn't be routed at all.
 3. **Planning, architecture & management** (`opus`) — deciding what to build and why: system
    design, weighing tradeoffs, roadmaps, cross-cutting migrations, anything where getting the
    *framing* wrong costs more than getting an implementation detail wrong. "Management" here
@@ -89,10 +92,17 @@ session runs on whatever model it's already on, same as if this plugin weren't i
 
 ## When to stay silent
 
-A prompt that is a question, a reply to something Claude just asked, a one-line confirmation, or
-already names which agent/model to use should get no routing suggestion at all. Routing every
-message would be noise; the point is to catch task-shaped prompts whose tier is clear enough to
-name, not to annotate every utterance.
+Not every question is a routing candidate, but "it's phrased as a question" isn't the test — an
+investigative question ("why is this test flaky", "how does the auth flow work") is recon work
+and routes to `operative` the same as an imperative version would. What should get no routing
+suggestion at all: a quick contextual question that depends on the conversation so far ("what
+does *this* do", pointing at something just discussed), a reply to something Claude just asked,
+a one-line confirmation, or a prompt that already names which agent/model to use. The distinction
+is whether delegating would lose context the question actually depends on, not whether a
+question mark is present — a subagent doesn't inherit this conversation, so a question that
+only makes sense *within* it should stay here rather than being routed away from the context it
+needs. Routing every message would still be noise regardless; the point is to catch prompts —
+question-shaped or not — whose tier is clear and self-contained enough to name.
 
 ## What this is not
 

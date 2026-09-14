@@ -121,6 +121,23 @@ _TASK_VERB_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Also Tier 2: investigative questions. "Recon" is operative's own stated job, but recon
+# naturally comes phrased as an inquiry ("why is this flaky") rather than an imperative
+# ("investigate why this is flaky") - without this, the classifier missed exactly the
+# phrasing its own recon definition should cover. Kept separate from _TASK_VERB_RE, not
+# folded in, so a bare "why"/"how" without investigative shape (see _looks_underspecified-
+# style false positives) stays cheap to reason about on its own. Checked after _ARCH_RE, so
+# a decision phrased as a question ("why should we consolidate these") still routes to
+# architect - "should" isn't in the why-clause list below on purpose.
+_RECON_QUESTION_RE = re.compile(
+    r"\bwhy (?:is|does|are|do|isn'?t|doesn'?t|aren'?t|don'?t|won'?t|did|wasn'?t|weren'?t)\b|"
+    r"\bhow (?:does|do|did|is|are)\b.{0,60}\b(?:work|works|working|worked|fail|fails|failing|"
+    r"failed|happen|happens|happened|break|breaks|breaking|broke|connect|connects|interact|"
+    r"interacts|communicate|communicates)\b|"
+    r"\bwhat(?:'s| is) causing\b|\bwhat causes\b",
+    re.IGNORECASE,
+)
+
 # If the prompt already names a subagent, routing was either already decided or is being
 # discussed directly — adding another suggestion on top would be noise, not help.
 _ALREADY_ROUTED_RE = re.compile(r"@agent-router:", re.IGNORECASE)
@@ -161,7 +178,7 @@ def _classify(field_text):
         return "architect"
     if _DOC_RE.search(field_text):
         return "scribe"
-    if _TASK_VERB_RE.search(field_text):
+    if _TASK_VERB_RE.search(field_text) or _RECON_QUESTION_RE.search(field_text):
         return "operative"
     return None
 
