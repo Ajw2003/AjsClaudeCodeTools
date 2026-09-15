@@ -2865,6 +2865,17 @@ else:
     for s in shfall:
         print(f"          {s}")
 
+# --- the "reported update" rule is present, in its own words -----------------------------------
+# Not a drift check - nothing else in hook.py restates this rule's wording, since it's a
+# verification habit like its two neighbors, not something mechanically checkable at a hook
+# boundary. A straightforward presence check, same shape as the standards/tiered-docs ones above.
+if "## A reported update is not a completed one" in rules_text:
+    report("PASS", "house-rules.md states the reported-update-is-not-a-completed-one rule")
+    print("          the rule heading is present")
+else:
+    report("FAIL", "house-rules.md states the reported-update-is-not-a-completed-one rule")
+    print("          heading missing from rules/house-rules.md")
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:

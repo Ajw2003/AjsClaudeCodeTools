@@ -20,6 +20,7 @@ commands is pinned without any of them running.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
+import check_plugin_version_bump  # noqa: E402
 import clean_install_test  # noqa: E402
 import install  # noqa: E402
 import measure_footprint  # noqa: E402
@@ -466,6 +468,172 @@ check(
     ".gitattributes pins *.bat to CRLF so checkout does not depend on core.autocrlf",
     "the attribute is declared, so a Windows clone gets CRLF regardless of local git config",
 )
+
+# --- check_plugin_version_bump.decide(): pure policy, no git, no subprocess ----------------
+decide_cases = [
+    ([], "1.0.0", "1.0.0", True, "no plugin files"),
+    (["claude-house-rules/plugins/house-rules/rules/house-rules.md"], "1.0.0", "1.0.0",
+     False, "changed, version unmoved"),
+    (["claude-house-rules/plugins/house-rules/rules/house-rules.md"], "1.0.0", "1.1.0",
+     True, "changed, version increased"),
+    (["claude-house-rules/plugins/house-rules/rules/house-rules.md"], "1.1.0", "1.0.0",
+     False, "changed, version decreased"),
+    (["README.md"], "1.0.0", "1.0.0", True, "non-plugin file changed, version unmoved"),
+]
+decide_wrong = []
+for changed, old, new, expect_ok, label in decide_cases:
+    ok_, msg_ = check_plugin_version_bump.decide(changed, old, new)
+    if ok_ != expect_ok:
+        decide_wrong.append(f"{label}: expected ok={expect_ok}, got ok={ok_} ({msg_!r})")
+check(
+    not decide_wrong,
+    "check_plugin_version_bump.decide() gates on a real increase, not just a change",
+    f"{len(decide_cases)} cases matched" if not decide_wrong else "; ".join(decide_wrong),
+)
+
+invalid_version_raised = False
+try:
+    check_plugin_version_bump.decide(
+        ["claude-house-rules/plugins/house-rules/rules/house-rules.md"], "1.0.0", "not-a-version",
+    )
+except check_plugin_version_bump.VersionBumpCheckError:
+    invalid_version_raised = True
+check(
+    invalid_version_raised,
+    "decide() names an unparseable version as a failure rather than silently passing",
+    "VersionBumpCheckError raised for a non-semver version string" if invalid_version_raised
+    else "no exception raised - an unparseable version was silently accepted",
+)
+
+# --- check_plugin_version_bump: a real end-to-end case against actual git ------------------
+# The pure decide() tests above never touch changed_paths()/plugin_version_at() at all - this
+# repo's own testing rule ("against the mechanism, not my model of it") applies here precisely
+# because the original bug was a mismatch between "how a version string is compared" as assumed
+# versus how `claude plugin update`'s real gate behaves.
+git_fixture = tempfile.mkdtemp(prefix="version-bump-fixture-")
+try:
+    def run_git(*args):
+        proc = subprocess.run(
+            ["git"] + list(args), cwd=git_fixture,
+            capture_output=True, text=True,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"git {args} failed: {proc.stderr}")
+        return proc.stdout
+
+    run_git("init", "-q")
+    run_git("config", "user.email", "test@example.com")
+    run_git("config", "user.name", "Test")
+
+    plugin_json_rel = check_plugin_version_bump.PLUGIN_JSON_PATH
+    plugin_json_abs = os.path.join(git_fixture, plugin_json_rel)
+    os.makedirs(os.path.dirname(plugin_json_abs), exist_ok=True)
+    with open(plugin_json_abs, "w", encoding="utf-8") as f:
+        json.dump({"name": "house-rules", "version": "1.0.0"}, f)
+    run_git("add", ".")
+    run_git("commit", "-q", "-m", "base")
+    run_git("branch", "-q", "-f", "base-ref")
+
+    rules_rel = "claude-house-rules/plugins/house-rules/rules/house-rules.md"
+    rules_abs = os.path.join(git_fixture, rules_rel)
+    os.makedirs(os.path.dirname(rules_abs), exist_ok=True)
+    with open(rules_abs, "w", encoding="utf-8") as f:
+        f.write("a new rule\n")
+    with open(plugin_json_abs, "w", encoding="utf-8") as f:
+        json.dump({"name": "house-rules", "version": "1.1.0"}, f)
+    run_git("add", ".")
+    run_git("commit", "-q", "-m", "bump")
+
+    real_cwd = os.getcwd()
+    os.chdir(git_fixture)
+    try:
+        real_changed = check_plugin_version_bump.changed_paths("base-ref", "HEAD")
+        real_old = check_plugin_version_bump.plugin_version_at("base-ref")
+        real_new = check_plugin_version_bump.plugin_version_at("HEAD")
+    finally:
+        os.chdir(real_cwd)
+
+    real_ok, real_msg = check_plugin_version_bump.decide(real_changed, real_old, real_new)
+    check(
+        rules_rel in real_changed and real_old == "1.0.0" and real_new == "1.1.0" and real_ok,
+        "changed_paths()/plugin_version_at() against real git match a real bumped commit",
+        f"changed={real_changed}, old={real_old}, new={real_new}, ok={real_ok} ({real_msg})",
+    )
+
+    bad_ref_raised = False
+    try:
+        check_plugin_version_bump.plugin_version_at("this-ref-does-not-exist")
+    except check_plugin_version_bump.VersionBumpCheckError:
+        bad_ref_raised = True
+    check(
+        bad_ref_raised,
+        "plugin_version_at() fails loud on a bad ref rather than returning None",
+        "VersionBumpCheckError raised for a nonexistent ref" if bad_ref_raised
+        else "no exception raised for a bad ref",
+    )
+finally:
+    shutil.rmtree(git_fixture, ignore_errors=True)
+
+# --- install.py's hash-verify-and-self-heal step --------------------------------------------
+def _make_tree(root, files):
+    os.makedirs(root, exist_ok=True)
+    for rel, content in files.items():
+        full = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w", encoding="utf-8") as f:
+            f.write(content)
+
+
+heal_root = tempfile.mkdtemp(prefix="install-self-heal-")
+try:
+    src_dir = os.path.join(heal_root, "source")
+    dst_dir = os.path.join(heal_root, "installed")
+    _make_tree(src_dir, {"a.txt": "same", "b.txt": "same"})
+    _make_tree(dst_dir, {"a.txt": "same", "b.txt": "same"})
+
+    reinstall_calls = []
+    matched = install.verify_and_self_heal(
+        src_dir, dst_dir, lambda: reinstall_calls.append(1),
+        ok=lambda m: None, bad=lambda m: None, info=lambda m: None,
+    )
+    check(
+        matched and not reinstall_calls,
+        "install.py's self-heal step does not reinstall when the cache already matches source",
+        f"matched={matched}, reinstall attempted={bool(reinstall_calls)}",
+    )
+
+    # Now make them differ, and give the reinstall a fake that actually fixes it.
+    _make_tree(dst_dir, {"a.txt": "STALE", "b.txt": "same"})
+    reinstall_calls = []
+
+    def fake_reinstall_fixes_it():
+        reinstall_calls.append(1)
+        _make_tree(dst_dir, {"a.txt": "same", "b.txt": "same"})
+
+    healed = install.verify_and_self_heal(
+        src_dir, dst_dir, fake_reinstall_fixes_it,
+        ok=lambda m: None, bad=lambda m: None, info=lambda m: None,
+    )
+    check(
+        healed and len(reinstall_calls) == 1,
+        "install.py's self-heal step reinstalls on a mismatch and re-verifies",
+        f"healed={healed}, reinstall attempted {len(reinstall_calls)} time(s)",
+    )
+
+    # And when the reinstall does NOT fix it, the step must report failure, not silently pass.
+    _make_tree(dst_dir, {"a.txt": "STILL STALE", "b.txt": "same"})
+    bad_messages = []
+    still_broken = install.verify_and_self_heal(
+        src_dir, dst_dir, lambda: None,
+        ok=lambda m: None, bad=lambda m: bad_messages.append(m), info=lambda m: None,
+    )
+    check(
+        not still_broken and bad_messages,
+        "install.py's self-heal step reports failure loudly when the reinstall does not fix it",
+        f"still_broken(ok)={still_broken}, bad() called {len(bad_messages)} time(s)",
+    )
+finally:
+    shutil.rmtree(heal_root, ignore_errors=True)
 
 print()
 print("-" * 32)
