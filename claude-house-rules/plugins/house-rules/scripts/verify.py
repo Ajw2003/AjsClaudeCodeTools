@@ -550,7 +550,7 @@ check_scope(
 )
 
 # --- the artifact reminder fires on documents written outside a project ---------------------
-def art_case(expect, title, file_path, extra=""):
+def art_case(expect, title, file_path, extra="", contains=None, excludes=None):
     payload = json.dumps(
         {"tool_name": "Write", "tool_input": {"file_path": file_path}}
     )
@@ -567,7 +567,12 @@ def art_case(expect, title, file_path, extra=""):
         got = "silent"
     else:
         got = "malformed"
-    report("PASS" if got == expect else "FAIL", title)
+    ok = got == expect
+    if ok and contains is not None and contains not in out:
+        ok = False
+    if ok and excludes is not None and excludes in out:
+        ok = False
+    report("PASS" if ok else "FAIL", title)
     print(f"          expected {expect}, got {got}")
 
 
@@ -575,11 +580,15 @@ art_case(
     "remind",
     "plan written to ~/.claude/plans is flagged for copying into the project",
     r"C:\Users\aj\.claude\plans\some-plan.md",
+    contains="docs/",
+    excludes="docs/generated",
 )
 art_case(
     "remind",
     "document written to the session scratchpad is flagged",
     r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\notes.md",
+    contains="docs/",
+    excludes="docs/generated",
 )
 art_case(
     "trace",
@@ -605,6 +614,7 @@ art_case(
     "remind",
     "an .html report written to the scratchpad is flagged - the case that shipped unguarded",
     r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\architecture-review.html",
+    contains="docs/generated",
 )
 art_case(
     "trace",
@@ -616,12 +626,45 @@ for _ext in ("csv", "json", "svg", "pdf"):
         "remind",
         f"a .{_ext} deliverable written outside the project is flagged",
         rf"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\report.{_ext}",
+        contains="docs/generated",
     )
 art_case(
     "trace",
     "a .ps1 in the scratchpad is still scratch work - runnables stay out of the artifact list",
     r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\build.ps1",
 )
+
+# --- docs/generated/ has not drifted between the rules, the project-docs skill, and the -----
+# --- text hook.py actually emits for a generated-extension artifact -------------------------
+gendrift = []
+_art_rules_text = read(RULES_FILE)
+if "docs/generated" not in _art_rules_text:
+    gendrift.append("house-rules.md no longer mentions docs/generated/")
+if not os.path.isfile(DOCSKILL):
+    gendrift.append("skills/project-docs/SKILL.md does not exist")
+else:
+    _art_skill_text = read(DOCSKILL)
+    if "docs/generated" not in _art_skill_text:
+        gendrift.append("skills/project-docs/SKILL.md no longer mentions docs/generated/")
+_gen_code, _gen_out, _gen_err = run_hook(
+    "artifact",
+    json.dumps(
+        {
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": r"C:\Users\aj\AppData\Local\Temp\claude\scratchpad\report.html"
+            },
+        }
+    ),
+)
+if "docs/generated" not in _gen_out:
+    gendrift.append("hook.py's emitted ARTIFACT_NOTE no longer names docs/generated/ for an .html case")
+if not gendrift:
+    report("PASS", "docs/generated has not drifted across house-rules.md, SKILL.md, and the emitted ARTIFACT_NOTE")
+    print("          all three name docs/generated/ for generated artifacts")
+else:
+    report("FAIL", "docs/generated has not drifted across house-rules.md, SKILL.md, and the emitted ARTIFACT_NOTE")
+    print(f"          {'; '.join(gendrift)}")
 
 # --- the reminder in hook.py's scope handler has not drifted from the rules document --------
 # Covers both forms - the short one is what fires on most prompts now, so its phrases need the
@@ -1394,7 +1437,7 @@ else:
 
 # --- the harvest reminder has not drifted from the rules document ------------------------------
 drift = []
-for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems"]:
+for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md"]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:
@@ -1416,6 +1459,7 @@ for phrase in [
     "one-line pointer",
     "@house-rules:archivist",
     "docs/systems",
+    "docs/Decisions.md",
     "How it works",
     "Traps",
     "Invariants",
@@ -2409,16 +2453,18 @@ if "## Documentation goes in tiers" not in rules_text:
     docs_drift.append("house-rules.md is missing the tiered-docs rule heading")
 if "house-rules:project-docs" not in rules_text:
     docs_drift.append("the tiered-docs rule no longer names the project-docs skill")
+if "docs/Decisions.md" not in rules_text:
+    docs_drift.append("house-rules.md no longer mentions docs/Decisions.md")
 if not os.path.isfile(DOCSKILL):
     docs_drift.append("skills/project-docs/SKILL.md does not exist")
 else:
     skill_text = read(DOCSKILL)
-    for phrase in ["docs/Roadmap.md", "docs/ProjectState.md", "docs/Today.md", "docs/systems"]:
+    for phrase in ["docs/Roadmap.md", "docs/ProjectState.md", "docs/Today.md", "docs/systems", "docs/Decisions.md"]:
         if phrase not in skill_text:
             docs_drift.append(f"the skill no longer specifies {phrase}")
 if not docs_drift:
     report("PASS", "the tiered-docs rule and the project-docs skill it names have not drifted")
-    print("          the rule names the skill, the skill exists, and it still specifies all five tiers")
+    print("          the rule names the skill, the skill exists, and it still specifies all six tiers")
 else:
     report("FAIL", "the tiered-docs rule and the project-docs skill it names have not drifted")
     print(f"          {'; '.join(docs_drift)}")
