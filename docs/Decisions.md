@@ -7,6 +7,45 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-15 — Enforce the version bump instead of trusting it, in this repo and on the desktop
+
+**Context.** Two merged PRs (#33, #34) changed files under
+`claude-house-rules/plugins/house-rules/` without bumping `.claude-plugin/plugin.json`'s
+`version`. Every prior content-changing commit had bumped it; nothing enforced the convention, so
+it silently lapsed. The result: `claude plugin update` — version-gated — reported "already at the
+latest version" on the desktop after a full `tools/bootstrap.ps1` run, while the installed cache
+still held the pre-#33/#34 content. `tools/force_update.py` (a pre-existing manual escape hatch
+that hash-compares the installed cache against the marketplace source tree) confirmed the mismatch
+and, once run, confirmed the fix after #35 bumped the version. The real failure was not "forgot to
+bump a number" — it was that a tool's own "already up to date" message was trusted without
+checking whether the underlying content actually matched. Full design:
+[`docs/plans/2026-09-15-plugin-version-bump-guard.md`](plans/2026-09-15-plugin-version-bump-guard.md).
+
+**Decision.** Two separable fixes for the two places this failed. (1) This repo: a new
+`tools/check_plugin_version_bump.py` compares `plugin.json`'s version between a PR's base and
+head whenever a file under the plugin changed, and fails the change if the version did not
+strictly increase; wired into the existing `verify` CI job (`fetch-depth: 0` plus a
+pull-request-only step), with branch protection on `main` requiring that check to follow in a
+separate step once this PR merges. (2) Any project: a new house rule, "A reported update is not
+a completed one," naming this failure shape by pattern rather than by PR number. (3) Local
+tooling: `tools/install.py`'s install steps now hash-compare the installed cache against source
+after every install/update, using `tree_hash()`/`diff_trees()` factored out of
+`tools/force_update.py` into `tools/_plugin_sync.py` so the two scripts share one implementation;
+on a mismatch it automatically runs the same uninstall+reinstall sequence `force_update.py` used
+manually, re-verifies, and only surfaces to the user if that self-heal still doesn't match.
+
+**Why.** The convention ("bump the version when you touch the plugin") was correct but
+unenforced, so it lapsed exactly once and nothing caught it before it shipped. A reminder to
+"remember next time" would have the same shelf life as the original convention. Enforcement — a
+CI gate that blocks the merge, and local tooling that verifies rather than trusts — closes the gap
+structurally instead of relying on memory a second time. The house rule generalizes the lesson
+beyond this repo: any version-gated updater can report "no-op" truthfully about the one field it
+compared while being wrong about whether the underlying content changed.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-15 — Distinguish "the machine I run on" from "the machine a handover targets"
 
 **Context.** A Step 2 command handed over earlier the same day assumed Linux/bash — wrong, the

@@ -13,10 +13,15 @@ Usage:
 """
 
 import argparse
-import hashlib
 import os
 import subprocess
 import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+
+from _plugin_sync import tree_hash, diff_trees  # noqa: E402
 
 
 def invoke_claude(args, activity):
@@ -24,21 +29,6 @@ def invoke_claude(args, activity):
     proc = subprocess.run(["claude"] + args)
     if proc.returncode != 0:
         raise SystemExit(f"{activity} failed (exit {proc.returncode}).")
-
-
-def tree_hash(root):
-    if not os.path.isdir(root):
-        return None
-    out = {}
-    for dirpath, dirnames, filenames in os.walk(root):
-        if os.sep + ".in_use" + os.sep in dirpath + os.sep:
-            continue
-        for fname in filenames:
-            full = os.path.join(dirpath, fname)
-            rel = os.path.relpath(full, root)
-            with open(full, "rb") as f:
-                out[rel] = hashlib.md5(f.read()).hexdigest()
-    return out
 
 
 def main():
@@ -119,14 +109,9 @@ def main():
         print("Restart Claude Code to load the new version.")
         return
 
-    diff = []
     src_hash = tree_hash(source)
     dst_hash = tree_hash(installed)
-    all_paths = set(src_hash) | set(dst_hash)
-    for path in sorted(all_paths):
-        if src_hash.get(path) != dst_hash.get(path):
-            where = "source only" if path not in dst_hash else ("cache only" if path not in src_hash else "differs")
-            diff.append((where, path))
+    diff = diff_trees(src_hash, dst_hash)
 
     if diff:
         print()
