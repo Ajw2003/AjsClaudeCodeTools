@@ -885,12 +885,18 @@ def _is_outside_project(file_path):
 # purpose: a .py in a temp directory is scratch work, and event_runnable already owns that case.
 _ARTIFACT_EXT_RE = re.compile(r"\.(md|txt|html|csv|json|svg|pdf)$", re.IGNORECASE)
 
+# Two destination groups within that union: hand-authored documents stay in docs/, but tool
+# output (a report, an export, anything from the Artifact tool) goes to docs/generated/ instead
+# so docs/ stays readable as documentation rather than mixed with regenerated deliverables.
+_DOC_EXT_RE = re.compile(r"\.(md|txt)$", re.IGNORECASE)
+_GENERATED_EXT_RE = re.compile(r"\.(html|csv|json|svg|pdf)$", re.IGNORECASE)
+
 ARTIFACT_NOTE = (
     "House rules, artifact custody: that document was written outside the project "
     "directory, so it is not tracked and will not outlive this session. Before you finish "
-    "this task, copy it into the project as a real file - docs/ for documents, docs/plans/ "
-    "for plans - and tell the user the path. This is a reminder to you; the user was not "
-    "prompted and does not need to do anything."
+    "this task, copy it into the project as a real file - {where} - and tell the user the "
+    "path. This is a reminder to you; the user was not prompted and does not need to do "
+    "anything."
 )
 
 
@@ -917,11 +923,15 @@ def event_artifact():
         if not _is_outside_project(file_path):
             trace("artifact: %s is inside the project - nothing to copy." % base)
             return 0
+        if _GENERATED_EXT_RE.search(base):
+            where = "docs/generated/ for generated or visual artifacts"
+        else:
+            where = "docs/ for documents, docs/plans/ for plans"
         emit(
             {
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": ARTIFACT_NOTE,
+                    "additionalContext": ARTIFACT_NOTE.format(where=where),
                 }
             }
         )

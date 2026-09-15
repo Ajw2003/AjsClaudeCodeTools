@@ -23,7 +23,7 @@ ones; it needs those fifteen sorted, merged, and the dead ones moved to `archive
 | 5 | `docs/Today.md` | What is being worked on today, and why that | Every working session |
 | 6 | `docs/Decisions.md` | Why a decision was made, and what it replaced | Never rewritten — only appended to |
 
-Plus two folders that are not tiers:
+Plus three folders that are not tiers:
 
 - **`docs/plans/`** — a plan for a specific piece of work, live until executed. Named for the
   work, not the date: `presentation-and-ui.md`, not `2026-09-08-notes.md`. A plan that has been
@@ -31,6 +31,9 @@ Plus two folders that are not tiers:
 - **`docs/archive/`** — documents that were correct when written and are now inert. **Nothing in
   `archive/` describes current behaviour**, by definition, and it carries a `README.md` saying
   why each item is inert. Things move here; they do not get deleted.
+- **`docs/generated/`** — tool-produced deliverables: HTML reports, exported diagrams/images,
+  anything from the Artifact tool or a generated-report script. Not hand-edited once written; if
+  it needs to change, it gets regenerated.
 
 ### Every project gets all six
 
@@ -171,7 +174,8 @@ reverse.
 1. **Read the code first.** The milestone list, the system list and the state section all come
    from the repo, not from a template. A scaffold filled with placeholders is worse than no
    scaffold: it looks like documentation and answers nothing.
-2. Create `docs/`, `docs/systems/`, `docs/plans/`, `docs/archive/`, and `docs/Decisions.md`. If
+2. Create `docs/`, `docs/systems/`, `docs/plans/`, `docs/archive/`, `docs/generated/`, and
+   `docs/Decisions.md`. If
    the repo already has ad hoc decision records — a backlog doc, a CHANGELOG with rationale —
    transcribe the real decisions in it as dated entries; never invent placeholders, same rule as
    every other tier. Otherwise start it with just a header; an empty log is honest for a project
