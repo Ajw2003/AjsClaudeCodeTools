@@ -7,6 +7,37 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-15 — A third non-tier folder, `docs/generated/`, for generated artifacts
+
+**Context.** The tiered-docs system had two non-tier folders: `docs/plans/` (forward intent) and
+`docs/archive/` (inert docs) — both hand-written. The `artifact` hook already caught a document
+written outside the project and reminded Claude to copy it in, but it sent every extension to the
+same place: "docs/ for documents, docs/plans/ for plans." Nothing distinguished a hand-written
+markdown doc from an HTML report or other tool output, so both landed in `docs/`. This repo had
+two loose examples proving the gap: `docs/architecture-review-2026-09-07.html` and
+`docs/2026-09-09-branch-aware-guard-rollout.html`, sitting directly in `docs/` with no other
+document like them. Full design and exact wording constraints are in the plan this decision
+executed: [`docs/plans/2026-09-15-generated-artifacts-directory.md`](plans/2026-09-15-generated-artifacts-directory.md).
+
+**Decision.** Add `docs/generated/` — a third non-tier folder for tool-produced deliverables:
+HTML reports, exported diagrams/images, anything from the Artifact tool or a generated-report
+script. Made the `artifact` hook's routing extension-aware: hand-authored `md`/`txt` still go to
+`docs/` (or `docs/plans/` for a plan), while tool-produced `html`/`csv`/`json`/`svg`/`pdf` now go
+to `docs/generated/` instead. Updated `rules/house-rules.md`, the `project-docs` skill, and
+`CLAUDE.md`'s hook table to match, and moved this repo's two loose HTML files into the new
+folder with a `README.md` explaining it.
+
+**Why.** `docs/plans/` and `docs/archive/` are both hand-written; a generated HTML report is
+neither forward-looking intent nor a formerly-true document — it's tool output that gets
+regenerated, not edited, when it needs to change. Mixing it into `docs/` made `docs/` unreliable
+as "documentation" versus "whatever a tool happened to produce." Giving generated artifacts their
+own folder keeps `docs/` readable as hand-authored documentation while still backing up generated
+output as a tracked, committable file instead of leaving it in a scratchpad or temp directory.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-15 — Add a sixth documentation tier, `docs/Decisions.md`
 
 **Context.** `house-rules:project-docs` defined five tiers (`README.md`, `Roadmap.md`,
