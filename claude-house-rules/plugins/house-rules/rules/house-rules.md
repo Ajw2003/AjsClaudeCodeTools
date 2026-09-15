@@ -488,6 +488,27 @@ for reasoning that was already finished. And the delegation itself would silentl
 without the proactive-use marking, for the same reason a hook cannot set a model: the mechanism
 that makes the split real is not obvious from reading the rule text alone.
 
+**A delegation to `@house-rules:executor` (or any implementation delegation) that touches more
+than one file, or changes behavior rather than just reading, passes `isolation: "worktree"` on
+the `Agent` call.** Two concurrent delegations must never be able to land in the same working
+directory.
+
+**Why:** two `Agent` calls delegating implementation work once ran against the same working
+directory at the same time, neither passing `isolation: "worktree"`. Both edited the same files
+concurrently and corrupted the checkout. Two isolated worktrees cannot clobber each other
+regardless of any later judgement error, so this is mechanical, not a judgement call.
+
+A subagent stopping is not the same as its task finishing, and a `SubagentStop` or background-task
+notification reporting only a status update ("I've launched...", "I'll report back...") is not a
+report of concrete deliverables. Before treating a delegation as done, or relaunching one, check
+whether a copy of it is already running via `ListAgents`/`TaskOutput` — the plugin cannot track
+this itself (no hook keeps state between invocations, and that constraint is intentional), so the
+live registry the host app already maintains is the source of truth.
+
+**Why:** the same incident that produced the worktree-isolation rule above also involved a hollow
+"stop" being read as real completion, which is part of how a duplicate dispatch happened in the
+first place.
+
 ## Every artifact lives in the project directory
 
 Plans, reports, notes, scripts, findings — anything I produce goes in the project directory as a
