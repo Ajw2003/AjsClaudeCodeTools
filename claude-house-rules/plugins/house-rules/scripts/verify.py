@@ -773,6 +773,69 @@ else:
     report("FAIL", "a missing machine profile becomes an instruction to discover it")
     print("          the injection said nothing about the profile being absent")
 
+# --- handover-target: a local session (no CLAUDE_CODE_REMOTE) adds nothing -------------------
+# house-rules.md's own rule text legitimately says "handover" and names rules/handover-target.md
+# unconditionally (it explains the local-vs-remote distinction itself), so checking for the word
+# "handover" anywhere in the output would false-fail here. What must be absent on a local session
+# is hook.py's *injected block* - checked by its two block-specific openings instead.
+env = dict(os.environ)
+env.pop("CLAUDE_CODE_REMOTE", None)
+code, out, err = run_hook("inject", "", env=env)
+if "for anything I hand over to them" not in out.lower() and "this session is remote:" not in out.lower():
+    report("PASS", "a local session's injection carries no handover-target block")
+    print("          no CLAUDE_CODE_REMOTE in the test env, no handover block emitted")
+else:
+    report("FAIL", "a local session's injection carries no handover-target block")
+    print("          handover-target block leaked into a non-remote injection")
+
+# --- handover-target: remote + no file recorded -> told to find out and record ---------------
+env = dict(os.environ)
+env["CLAUDE_CODE_REMOTE"] = "true"
+env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = "/nonexistent-on-purpose-handover"
+code, out, err = run_hook("inject", "", env=env)
+if "rules/handover-target.md" in out and "find out" in out.lower():
+    report("PASS", "a remote session with no recorded handover target is told to find one out")
+    print("          the injection points at docs/example-environment.md / asking, then recording")
+else:
+    report("FAIL", "a remote session with no recorded handover target is told to find one out")
+    print("          the injection did not carry the find-out-and-record instruction")
+
+# --- handover-target: remote + a recorded file -> that content is injected -------------------
+handover_fixture = os.path.join(_FIXTURE_ROOT, "handover-target.md")
+with open(handover_fixture, "w", encoding="utf-8") as f:
+    f.write("# The human's machine\n\nWindows 11, PowerShell, Git Bash for POSIX.\n")
+env = dict(os.environ)
+env["CLAUDE_CODE_REMOTE"] = "true"
+env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = handover_fixture
+code, out, err = run_hook("inject", "", env=env)
+if "Git Bash for POSIX" in out:
+    report("PASS", "a remote session injects a recorded handover-target file's content")
+    print("          fixture content reached additionalContext")
+else:
+    report("FAIL", "a remote session injects a recorded handover-target file's content")
+    print("          fixture content did not appear in the injection")
+
+# --- the handover-target clause has not drifted between house-rules.md and hook.py -----------
+handover_drift = []
+for phrase in [
+    "handed-over command targets",
+    "rules/handover-target.md",
+]:
+    if phrase.lower() not in rules_text.lower():
+        handover_drift.append(f"missing from house-rules.md: {phrase}")
+env = dict(os.environ)
+env["CLAUDE_CODE_REMOTE"] = "true"
+env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = "/nonexistent-on-purpose-handover"
+_, handover_out, _ = run_hook("inject", "", env=env)
+if "rules/handover-target.md" not in handover_out:
+    handover_drift.append("hook.py's find-out instruction no longer names rules/handover-target.md")
+if not handover_drift:
+    report("PASS", "the handover-target clause has not drifted between house-rules.md and hook.py")
+    print("          both name rules/handover-target.md and the handed-over-command distinction")
+else:
+    report("FAIL", "the handover-target clause has not drifted between house-rules.md and hook.py")
+    print(f"          {'; '.join(handover_drift)}")
+
 # --- the run-what-you-wrote reminder ----------------------------------------------------------
 def run_case(expect, title, file_path, extra=""):
     obj = {"tool_name": "Write", "tool_input": {"file_path": file_path}}
