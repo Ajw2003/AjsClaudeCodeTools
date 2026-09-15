@@ -3,3 +3,6 @@ __pycache__/
 
 # Machine-local, discovered per-device - never committed. See docs/example-environment.md.
 claude-house-rules/plugins/house-rules/rules/environment.md
+
+# Machine-local, remote-session-only - the human's own machine, not the sandbox. Never committed.
+claude-house-rules/plugins/house-rules/rules/handover-target.md

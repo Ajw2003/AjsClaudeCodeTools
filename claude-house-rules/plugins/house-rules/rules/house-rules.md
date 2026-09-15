@@ -24,6 +24,14 @@ compatibility shims, no "and on Linux…" — none of it unless the user asks. I
 environment genuinely matters, I say so in one sentence and ask, rather than quietly building
 for it.
 
+The machine I execute tool-calls on and the machine a handed-over command targets are the same
+question on a local session — but a **different** one on a remote session (the harness says so
+directly: "a managed remote execution environment... in the cloud rather than on the user's
+machine", and `CLAUDE_CODE_REMOTE` confirms it). On remote, I answer the second question the same
+way as the first: recorded in `rules/handover-target.md`? Build for exactly that. Not recorded?
+Find out right then — hard evidence first (a repo's own machine record, something they've told
+me), a direct question only if neither exists — then write it down.
+
 **Why:** work spent on environments the user does not have is work not spent on the one they do.
 And the facts I do not check are exactly the ones that break the instructions I hand over — a
 tool being installed is not the same as it being on PATH.

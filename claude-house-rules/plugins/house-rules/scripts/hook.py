@@ -234,12 +234,41 @@ def event_inject():
 
     preflight = _preflight_warnings()
 
+    handover_block = ""
+    if os.environ.get("CLAUDE_CODE_REMOTE"):
+        # Only a remote session's tool-calls run somewhere other than the user's own machine, so
+        # this is the only case where "the machine I execute on" and "the machine a handed-over
+        # command targets" can differ. A local session must add zero text and zero cost here -
+        # the two questions are the same one there, already answered by envbody above.
+        handover_file = os.environ.get("HOUSE_RULES_HANDOVER_TARGET_FILE") or os.path.join(
+            here, "..", "rules", "handover-target.md"
+        )
+        try:
+            handover_body = _read_text(handover_file).replace("\r\n", "\n")
+        except OSError:
+            handover_body = ""
+
+        if handover_body.strip():
+            handover_block = (
+                "\n\n---\n\nThe human's own machine (for anything I hand over to them), as "
+                "recorded. Recorded? Build for exactly that:\n\n" + handover_body
+            )
+        else:
+            handover_block = (
+                "\n\n---\n\nThis session is remote: the machine profile above is the sandbox "
+                "hook.py runs on, not necessarily the user's own machine. Before the first "
+                "command I hand over, find out theirs - check docs/example-environment.md if "
+                "present (say it's inferred, and from when, not confirmed), or ask - then "
+                "record the confirmed answer into rules/handover-target.md so a later session "
+                "does not have to ask again.\n"
+            )
+
     emit(
         {
             "suppressOutput": True,
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
-                "additionalContext": preamble + body + separator + envbody + preflight,
+                "additionalContext": preamble + body + separator + envbody + preflight + handover_block,
             },
         }
     )
