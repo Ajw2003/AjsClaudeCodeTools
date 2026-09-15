@@ -7,6 +7,45 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-15 — Distinguish "the machine I run on" from "the machine a handover targets"
+
+**Context.** A Step 2 command handed over earlier the same day assumed Linux/bash — wrong, the
+user is on Windows/PowerShell. Root cause, confirmed by reading the code: `rules/house-rules.md`'s
+"Find out what machine you are on, then build for that" rule and `hook.py`'s
+`_detect_environment()` only ever described **the machine executing this session's tool-calls**.
+For a local CLI/IDE/Desktop-Code-tab session that machine and the user's own machine are the same
+box, so the rule had always been correct there. The session that made the mistake was remote
+(`CLAUDE_CODE_REMOTE=true`, `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE=cloud_default`): the sandbox
+`hook.py` ran on was Linux, the user's actual machine was Windows, and nothing in the rule or the
+injected "This machine" profile ever flagged that these could differ. The rule's own example text
+even listed "a cloud session on Linux" as just another machine to build for, reinforcing the
+conflation instead of catching it. The evidence needed to fix this without guessing already
+existed in the repo: `docs/example-environment.md`, a committed worked-example record of aj's real
+machine (Windows 11 Pro, PowerShell, Git Bash for POSIX, `sh`/`bash` not on PATH), dated
+2026-08-25 — and the user separately confirmed PowerShell was in fact right. Full design in
+[`docs/plans/2026-09-15-handover-target-machine.md`](plans/2026-09-15-handover-target-machine.md).
+
+**Decision.** Give the plugin a second, distinct machine-local record —
+`rules/handover-target.md`, gitignored, same shape and lifecycle as `rules/environment.md` — that
+answers "what machine will a human run a step-card's command on," never confused with the
+sandbox's own profile. `hook.py`'s `event_inject()` only reads and injects it when
+`CLAUDE_CODE_REMOTE` is set, so a local session pays nothing: recorded content is injected under a
+heading distinct from "This machine"; missing content becomes an instruction to find out (check
+`docs/example-environment.md`, or ask) and record it, so a later session in the same remote
+environment does not have to ask again. Extended the "Find out what machine you are on" rule in
+`rules/house-rules.md` with a clause naming the local/remote distinction, added matching
+`verify.py` cases and a drift check, and updated `.gitignore` and the root `CLAUDE.md` hook table.
+
+**Why.** The two questions — where do my tool-calls run, and where will the user run what I hand
+them — are the same question on every local session, which is why the conflation was invisible
+until a remote session exposed it. Detecting the user's actual machine at runtime is impossible
+from inside the sandbox; the fix is to make the gap askable and rememberable exactly once per
+remote environment, rather than silently building for the wrong machine.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-15 — A third non-tier folder, `docs/generated/`, for generated artifacts
 
 **Context.** The tiered-docs system had two non-tier folders: `docs/plans/` (forward intent) and
