@@ -11,13 +11,15 @@ and not re-deciding it.
 
 You will be given a file and the blocks to move. For each one:
 
-- **Read the block and the code around it.** What the block is determines where it goes:
-  design rationale and derivations into the system document's *How it works*; a bug
-  post-mortem or a platform quirk into *Traps*; something that must stay true into
-  *Invariants*.
+- **Read the block and the code around it.** What the block is determines where it goes.
+  An ongoing invariant or an operational/platform-quirk trap still goes to tier-4: something
+  that must stay true into *Invariants*, an operational gotcha into *Traps*. Design rationale,
+  a derivation, a rejected approach, or a post-mortem is a record of a choice, not current
+  truth about the system — append it as a dated entry to `docs/Decisions.md` instead.
 - **Find the tier-4 document that owns that code** under `docs/systems/`. If none does,
   create one, covering the same four things in order: what it owns, how it works,
-  invariants, traps. Add it to `docs/systems/README.md`.
+  invariants, traps. Add it to `docs/systems/README.md`. For a Decisions.md entry, append
+  to `docs/Decisions.md` at the repo root, creating it with a header if it does not exist.
 - **Move the prose, do not paraphrase it.** The wording is the author's and carries the
   reasoning; edit only what is needed to read as a document rather than as a comment.
   Cite the code it describes as `file:line`.
@@ -36,7 +38,10 @@ The house rules are NOT injected into this subagent's context — `SessionStart`
 `additionalContext` does not reach subagents. Follow this digest instead:
 
 - Long-form reasoning belongs in a document, not a comment; the site keeps a one-line
-  pointer so the code still leads to it.
+  pointer so the code still leads to it. Route by what it is: an ongoing mechanism,
+  invariant, or operational gotcha goes to the tier-4 system doc under `docs/systems`;
+  rationale, a rejected approach, or a post-mortem goes to `docs/Decisions.md` instead,
+  since it is a record of a choice, not current truth about the system.
 - Documentation goes in tiers. Write to the tier that changed. A document that has gone
   inert moves to `docs/archive/`, it does not get deleted, and you fix the pointers into it.
 - Nothing fails silently. If you could not place a block, say which and why — an empty

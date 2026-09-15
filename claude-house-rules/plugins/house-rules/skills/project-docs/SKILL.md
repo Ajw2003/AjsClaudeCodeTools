@@ -1,9 +1,9 @@
 ---
 name: project-docs
-description: The five-tier documentation structure every repo uses - the tier spec, the per-tier templates, the conventions that keep it honest, and scaffolding for a repo that has none of it yet. Use when creating a repo's documentation, restructuring docs that grew without a shape, auditing docs against the code, or when the house rule "Documentation goes in tiers" needs its detail. Not for an ordinary edit to a document that already exists and already sits in the right tier.
+description: The six-tier documentation structure every repo uses - the tier spec, the per-tier templates, the conventions that keep it honest, and scaffolding for a repo that has none of it yet. Use when creating a repo's documentation, restructuring docs that grew without a shape, auditing docs against the code, or when the house rule "Documentation goes in tiers" needs its detail. Not for an ordinary edit to a document that already exists and already sits in the right tier.
 ---
 
-# Project documentation: the five tiers
+# Project documentation: the six tiers
 
 The short version is a house rule and always loaded. This is the detail behind it.
 
@@ -21,6 +21,7 @@ ones; it needs those fifteen sorted, merged, and the dead ones moved to `archive
 | 3 | `docs/ProjectState.md` | Where it stands *right now* against tier 2 | A milestone's status changes |
 | 4 | `docs/systems/*.md` | How each runtime-critical system works | That system changes |
 | 5 | `docs/Today.md` | What is being worked on today, and why that | Every working session |
+| 6 | `docs/Decisions.md` | Why a decision was made, and what it replaced | Never rewritten — only appended to |
 
 Plus two folders that are not tiers:
 
@@ -31,12 +32,14 @@ Plus two folders that are not tiers:
   `archive/` describes current behaviour**, by definition, and it carries a `README.md` saying
   why each item is inert. Things move here; they do not get deleted.
 
-### Every project gets all five
+### Every project gets all six
 
 A project too small for ten milestones still has a roadmap — it just has three milestones. A
-project with two runtime-critical systems still has `systems/`, with two files in it. **Scale
-the contents; never drop a tier.** A missing tier is a question nobody can answer; a small tier
-is just a small project honestly described.
+project with two runtime-critical systems still has `systems/`, with two files in it. A brand-new
+project still gets `docs/Decisions.md` — an empty log with just a header is honest for a project
+with no history yet, not a placeholder problem, since there is no rule that history must be
+non-empty. **Scale the contents; never drop a tier.** A missing tier is a question nobody can
+answer; a small tier is just a small project honestly described.
 
 The judgement call is what counts as a *system*. The test: **if this is wrong, does the product
 stop working?** Not "is it a folder" — an event bus that four scenes depend on is a system, a
@@ -107,6 +110,40 @@ today's job; and "what to do next, in order" — ranked by what unblocks what, n
 A day whose plan is "routine audit, check for drift" is a legitimate plan and should be written
 down as one. If today's work maps to no milestone, say so explicitly and say why.
 
+### Tier 6 — `docs/Decisions.md`
+
+The paper trail: one running, dated, append-mostly log of what was decided, when, why, what
+alternatives were rejected, and what it superseded. It is the one tier that is **not** rewritten
+to stay current — it only grows. An entry is never rewritten or deleted; the one allowed edit to
+an existing entry is flipping its `Status` line to `Superseded`, with a pointer, when a later
+entry replaces it — the *new* reasoning goes in the new entry, not by editing the old one.
+Newest entry at the top.
+
+Entry shape:
+
+```
+## <date> — <short decision title>
+
+**Context.** What prompted this — the observation, the problem, the plan or session it came out of.
+
+**Decision.** What was actually decided or chosen.
+
+**Why.** The reasoning, the alternatives considered, and why they were rejected.
+
+**Status.** Standing. / Superseded by [<date> — <title>](#anchor) on <date>.
+```
+
+**Boundaries with what already exists**, so this tier doesn't get reinvented:
+
+- `docs/plans/` stays forward-looking intent, live until executed, then archived — unchanged. A
+  Decisions.md entry may point back at the plan that produced it.
+- `docs/archive/` stays "no longer true" — unchanged. A superseded decision is **not** moved
+  there; it stays in Decisions.md with its Status flipped, because the fact that it was once
+  decided (and why it changed) remains true history, unlike an inert doc.
+- Tier 4 system docs keep *How it works* / *Invariants* / *Traps* — current, operational,
+  rewritten in place. They stop being where rationale and post-mortems live; those go here
+  instead.
+
 ## The conventions that keep it honest
 
 These are the part that actually works. The folder layout is the easy half.
@@ -134,7 +171,11 @@ reverse.
 1. **Read the code first.** The milestone list, the system list and the state section all come
    from the repo, not from a template. A scaffold filled with placeholders is worse than no
    scaffold: it looks like documentation and answers nothing.
-2. Create `docs/`, `docs/systems/`, `docs/plans/`, `docs/archive/`.
+2. Create `docs/`, `docs/systems/`, `docs/plans/`, `docs/archive/`, and `docs/Decisions.md`. If
+   the repo already has ad hoc decision records — a backlog doc, a CHANGELOG with rationale —
+   transcribe the real decisions in it as dated entries; never invent placeholders, same rule as
+   every other tier. Otherwise start it with just a header; an empty log is honest for a project
+   with no recorded history yet.
 3. Write tier 4 first — one document per system, derived by reading the code. This is the
    expensive part and everything else references it.
 4. Write tier 2, then tier 3. The roadmap defines done; the state measures against it.

@@ -67,20 +67,22 @@ drift and recording it is worth more than either source alone.
 
 ## Documentation goes in tiers, and I update the tier that changed
 
-Every repo's `docs/` is the same five tiers: **landing** (what this is, where everything is),
+Every repo's `docs/` is the same six tiers: **landing** (what this is, where everything is),
 **roadmap** (what done means), **state** (where it stands right now), **systems** (how each
-runtime-critical piece works, one document each), **today** (what is being worked on and why).
-Every project gets all five — a project too small for milestones still has milestones, it just
-has fewer of them. Scale the contents, never drop a tier.
+runtime-critical piece works, one document each), **today** (what is being worked on and why),
+**decisions** (why a decision was made, and what it replaced). Every project gets all six — a
+project too small for milestones still has milestones, it just has fewer of them. Scale the
+contents, never drop a tier.
 
 Three habits, and they matter more than the layout:
 
 - **Write to the tier that changed.** State moved, not the definition of done — so update state
   and leave the roadmap alone. Changing the roadmap means the *definition* moved, which is rare
   and worth saying out loud.
-- **When a decision reverses, fix the body and leave a pointer.** Never stack a "superseded"
-  note on top of text that still says the old thing, and never silently overwrite — say what it
-  used to say and why it changed.
+- **When a decision reverses, fix the body and leave a pointer.** Add a dated entry to
+  `docs/Decisions.md` recording what changed and why, then fix the tier document's body to state
+  the new truth and leave a one-line pointer into that entry — never stack a "superseded" note on
+  top of text that still says the old thing, and never silently overwrite.
 - **Cite claims to `file:line`.** It is what makes an audit mechanical instead of a matter of
   opinion.
 
@@ -99,12 +101,16 @@ changes is where it lands. A comment that has grown into an essay is documentati
 in the wrong file: design rationale, a bug post-mortem, a derivation, a platform quirk, an
 argument for why the obvious approach was rejected.
 
-Before the turn ends, each long-form block moves into the tier-4 system document under `docs/systems/`
-that owns that code — a new one if none does — under the section that fits: rationale into *How it works*, a
-post-mortem into *Traps*, a rule that must stay true into *Invariants*. The site keeps a
-**one-line pointer** naming the document and the section, so the code still leads to the reasoning.
-Anything a reader genuinely needs *at that exact line* to not break the code stays an ordinary
-comment; only the long-form context moves.
+Before the turn ends, each long-form block moves — where depends on what it is. An ongoing
+mechanism, invariant, or operational gotcha moves into the tier-4 system document under
+`docs/systems/` that owns that code — a new one if none does — under the section that fits:
+the design into *How it works*, a rule that must stay true into *Invariants*, an operational
+trap into *Traps*. Design rationale, a rejected approach, or a post-mortem is different: it is
+a record of a choice, not current truth about the system, so it becomes a dated entry in
+`docs/Decisions.md` instead. Either way the site keeps a **one-line pointer** naming the
+document and section, so the code still leads to the reasoning. Anything a reader genuinely
+needs *at that exact line* to not break the code stays an ordinary comment; only the long-form
+context moves.
 
 The move itself is mechanical once the thinking is done, so I hand it to the
 `@house-rules:archivist` subagent with the file and the blocks named, rather than doing it on the

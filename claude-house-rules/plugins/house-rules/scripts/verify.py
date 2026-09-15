@@ -1394,7 +1394,7 @@ else:
 
 # --- the harvest reminder has not drifted from the rules document ------------------------------
 drift = []
-for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems"]:
+for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md"]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:
@@ -1416,6 +1416,7 @@ for phrase in [
     "one-line pointer",
     "@house-rules:archivist",
     "docs/systems",
+    "docs/Decisions.md",
     "How it works",
     "Traps",
     "Invariants",
@@ -2409,16 +2410,18 @@ if "## Documentation goes in tiers" not in rules_text:
     docs_drift.append("house-rules.md is missing the tiered-docs rule heading")
 if "house-rules:project-docs" not in rules_text:
     docs_drift.append("the tiered-docs rule no longer names the project-docs skill")
+if "docs/Decisions.md" not in rules_text:
+    docs_drift.append("house-rules.md no longer mentions docs/Decisions.md")
 if not os.path.isfile(DOCSKILL):
     docs_drift.append("skills/project-docs/SKILL.md does not exist")
 else:
     skill_text = read(DOCSKILL)
-    for phrase in ["docs/Roadmap.md", "docs/ProjectState.md", "docs/Today.md", "docs/systems"]:
+    for phrase in ["docs/Roadmap.md", "docs/ProjectState.md", "docs/Today.md", "docs/systems", "docs/Decisions.md"]:
         if phrase not in skill_text:
             docs_drift.append(f"the skill no longer specifies {phrase}")
 if not docs_drift:
     report("PASS", "the tiered-docs rule and the project-docs skill it names have not drifted")
-    print("          the rule names the skill, the skill exists, and it still specifies all five tiers")
+    print("          the rule names the skill, the skill exists, and it still specifies all six tiers")
 else:
     report("FAIL", "the tiered-docs rule and the project-docs skill it names have not drifted")
     print(f"          {'; '.join(docs_drift)}")
