@@ -31,3 +31,6 @@ does not reach subagents. Follow this digest instead:
   for the expected output, and `UNTESTED:` above the fence for anything you did not run.
 - Commit messages (only if asked to commit): `<type>: <short summary>` — feat, fix, refactor,
   chore, docs, test.
+- For multi-file work you run inside an isolated worktree: uncommitted changes already there
+  that you did not make yourself mean another delegation's work is already in progress — stop
+  and ask rather than build on top of it.

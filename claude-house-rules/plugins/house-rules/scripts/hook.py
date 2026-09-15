@@ -1059,8 +1059,10 @@ DELEGATE_NOTE = (
     "group 1 comes back, and absorbing the rest inline is the failure it exists to prevent. "
     "Skip the delegation only when the plan touches one file AND is three steps or fewer; "
     "that is the whole exception, it is a count and not a judgement call, and taking it means "
-    "saying so in one line that names the count. This is a reminder to you; the user was not "
-    "prompted and does not need to do anything."
+    "saying so in one line that names the count. A delegation that touches more than one file, "
+    "or changes behavior rather than just reading, passes isolation: \"worktree\" on the Agent "
+    "call - two concurrent delegations must never be able to land in the same working directory. "
+    "This is a reminder to you; the user was not prompted and does not need to do anything."
 )
 
 
@@ -1304,10 +1306,25 @@ def _transcript_candidates(payload):
     return out
 
 
+_DEFERRAL_PHRASES = (
+    "i'll report back",
+    "i will report back",
+    "i've launched",
+    "i have launched",
+    "i'll get started",
+    "i will get started",
+    "i'm about to start",
+    "i am about to start",
+)
+
+
 def _observed_models(path):
-    """(models in first-seen order, assistant-entry count) from a transcript JSONL."""
+    """(models, assistant-entry count, total tool_use blocks, last assistant text) from a
+    transcript JSONL. The last two feed event_verdict()'s completion-sanity check."""
     models = []
     turns = 0
+    tool_calls = 0
+    last_text = ""
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             line = line.strip()
@@ -1326,7 +1343,19 @@ def _observed_models(path):
             model = msg.get("model")
             if model and model not in models:
                 models.append(model)
-    return models, turns
+            content = msg.get("content")
+            if isinstance(content, list):
+                text_bits = []
+                for block in content:
+                    if not isinstance(block, dict):
+                        continue
+                    if block.get("type") == "tool_use":
+                        tool_calls += 1
+                    elif block.get("type") == "text" and isinstance(block.get("text"), str):
+                        text_bits.append(block["text"])
+                if text_bits:
+                    last_text = "\n".join(text_bits)
+    return models, turns, tool_calls, last_text
 
 
 def event_verdict():
@@ -1365,12 +1394,14 @@ def event_verdict():
         found = ""
         models = []
         turns = 0
+        tool_calls = 0
+        last_text = ""
         unreadable = []
         for cand in candidates:
             if not os.path.isfile(cand):
                 continue
             try:
-                models, turns = _observed_models(cand)
+                models, turns, tool_calls, last_text = _observed_models(cand)
             except OSError as exc:
                 unreadable.append("%s (%s)" % (cand, type(exc).__name__))
                 continue
@@ -1420,6 +1451,21 @@ def event_verdict():
                 )
         else:
             bits.append("no declared model shipped for this agent, so nothing to compare")
+        if turns and tool_calls == 0:
+            bits.append(
+                "SUSPICIOUS COMPLETION: 0 tool calls across %d assistant turn%s - this may "
+                "be a status update, not finished work; verify concrete deliverables before "
+                "trusting it" % (turns, "" if turns == 1 else "s")
+            )
+        else:
+            low_text = last_text.lower()
+            hit = next((p for p in _DEFERRAL_PHRASES if p in low_text), "")
+            if hit:
+                bits.append(
+                    "SUSPICIOUS COMPLETION: last message matches deferral phrase %r - this "
+                    "may be a status update, not finished work; verify concrete deliverables "
+                    "before trusting it" % hit
+                )
         if problems:
             bits.append("COULD NOT TELL: %s" % "; ".join(problems))
         emit({"systemMessage": " | ".join(bits)})

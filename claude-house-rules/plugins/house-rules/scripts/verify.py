@@ -995,6 +995,23 @@ else:
     for d in drift:
         print(f"          {d}")
 
+# --- the worktree-isolation mandate has not drifted between DELEGATE_NOTE and house-rules.md ---
+# Same bidirectional shape as the delegate drift check above: a concurrent-edit corruption
+# incident is what this rule exists to prevent, and it only prevents it if both copies say so.
+drift = []
+for phrase in ("isolation", "worktree"):
+    if phrase.lower() not in rules_text.lower():
+        drift.append(f"{phrase!r} missing from rules/house-rules.md")
+    if phrase.lower() not in delegate_out.lower():
+        drift.append(f"{phrase!r} missing from the emitted delegate reminder")
+if not drift:
+    report("PASS", "worktree-isolation mandate is stated the same way in both places")
+    print("          'isolation' and 'worktree' appear in house-rules.md AND in what delegate emits")
+else:
+    report("FAIL", "worktree-isolation mandate is stated the same way in both places")
+    for d in drift:
+        print(f"          {d}")
+
 # --- the disclosure rule, and the voice toggle it sits next to ------------------------------
 missing = [
     ph
@@ -2552,8 +2569,8 @@ def _transcript(agent_id, lines):
     return path
 
 
-def _assistant(model=None):
-    msg = {"role": "assistant", "content": []}
+def _assistant(model=None, content=None):
+    msg = {"role": "assistant", "content": content if content is not None else []}
     if model:
         msg["model"] = model
     return json.dumps({"type": "assistant", "message": msg})
@@ -2563,6 +2580,19 @@ _transcript("sonnet", [json.dumps({"type": "user"}), _assistant("claude-sonnet-4
                        _assistant("claude-sonnet-4-5-20250929")])
 _transcript("opus", [_assistant("claude-opus-5")])
 _transcript("nomodel", [_assistant()])
+_transcript("notools", [
+    _assistant("claude-sonnet-4-5-20250929", [{"type": "text", "text": "I've launched the fix."}]),
+    _assistant("claude-sonnet-4-5-20250929", [{"type": "text", "text": "I'll report back once it's done."}]),
+])
+_transcript("deferral", [
+    _assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "name": "Edit"}]),
+    _assistant("claude-sonnet-4-5-20250929", [{"type": "text", "text": "I'll report back shortly."}]),
+])
+_transcript("normal", [
+    _assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "name": "Edit"}]),
+    _assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "name": "Bash"},
+                                               {"type": "text", "text": "Done - ran the tests, all green."}]),
+])
 _PARENT = os.path.join(_SUB_ROOT, "sess1.jsonl")
 with open(_PARENT, "w", encoding="utf-8") as _f:
     _f.write("")
@@ -2652,6 +2682,36 @@ else:
     report("FAIL", "verdict reports MISMATCH when the observed model is not the declared one")
     print(f"          exit {code}, out {out[:200]!r}")
 
+# The completion-sanity check: zero tool calls across the whole transcript is exactly the
+# hollow "stop" that let a duplicate delegation get dispatched.
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"))
+if code == 0 and "SUSPICIOUS COMPLETION" in out and "0 tool calls" in out:
+    report("PASS", "verdict flags a completion with zero tool calls")
+    print("          a status-update-only finish is now visible, not read as done work")
+else:
+    report("FAIL", "verdict flags a completion with zero tool calls")
+    print(f"          exit {code}, out {out[:200]!r}")
+
+# One tool call present (so the zero-tool-calls path does not fire), but the last message
+# still reads like a deferral - the other half of the same signal.
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="deferral"))
+if code == 0 and "SUSPICIOUS COMPLETION" in out and "i'll report back" in out.lower():
+    report("PASS", "verdict flags a last message that matches a deferral phrase")
+    print("          names the phrase, does not fire the zero-tool-calls branch instead")
+else:
+    report("FAIL", "verdict flags a last message that matches a deferral phrase")
+    print(f"          exit {code}, out {out[:200]!r}")
+
+# An ordinary finish - tool calls present, last message an ordinary summary - must not
+# false-positive as a suspicious completion.
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="normal"))
+if code == 0 and "SUSPICIOUS COMPLETION" not in out:
+    report("PASS", "verdict does not flag an ordinary did-the-work-then-reported-back finish")
+    print("          no false positive on a normal completion")
+else:
+    report("FAIL", "verdict does not flag an ordinary did-the-work-then-reported-back finish")
+    print(f"          exit {code}, out {out[:200]!r}")
+
 # Nothing fails silently: every "I could not tell" path says so, and says what it tried.
 quiet = []
 code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"))
@@ -2692,6 +2752,12 @@ _tron["HOUSE_RULES_TRACE"] = "off"
 code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"), env=_tron)
 if "claude-sonnet" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the verdict, which is not a trace")
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"), env=_off)
+if out.strip():
+    deloff.append(f"suspicious-completion report still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"), env=_tron)
+if "SUSPICIOUS COMPLETION" not in out:
+    deloff.append("HOUSE_RULES_TRACE=off silenced the suspicious-completion report, which is not a trace")
 if not deloff:
     report("PASS", "HOUSE_RULES_DELEGATION=off silences both, and the trace lever does not")
     print("          the model report is the deliverable, so it is not trace-gated")
