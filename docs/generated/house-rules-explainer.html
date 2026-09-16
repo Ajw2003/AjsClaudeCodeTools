@@ -1,0 +1,350 @@
+<title>House Rules, Plainly</title>
+<meta name="description" content="What the house-rules Claude Code plugin actually does, in plain language.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f5f7;
+    --surface:#ffffff;
+    --surface-2:#eceef2;
+    --ink:#1a1d29;
+    --muted:#5b6472;
+    --faint:#8a92a1;
+    --line:#dde1e8;
+    --accent:#2f6f5e;
+    --accent-ink:#f4f9f7;
+    --warn:#a85a2c;
+    --warn-bg:#f7ede3;
+    --code-bg:#eef0f4;
+    --code-ink:#2a3142;
+    --shadow: 0 1px 2px rgba(20,24,34,.04), 0 8px 24px rgba(20,24,34,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14161c;
+      --surface:#1b1e26;
+      --surface-2:#20242e;
+      --ink:#e9ebf1;
+      --muted:#a7adba;
+      --faint:#767d8c;
+      --line:#2c313d;
+      --accent:#6fc8ae;
+      --accent-ink:#0e1f19;
+      --warn:#e2a878;
+      --warn-bg:#2a2018;
+      --code-bg:#242833;
+      --code-ink:#dfe3ec;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161c;
+    --surface:#1b1e26;
+    --surface-2:#20242e;
+    --ink:#e9ebf1;
+    --muted:#a7adba;
+    --faint:#767d8c;
+    --line:#2c313d;
+    --accent:#6fc8ae;
+    --accent-ink:#0e1f19;
+    --warn:#e2a878;
+    --warn-bg:#2a2018;
+    --code-bg:#242833;
+    --code-ink:#dfe3ec;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding:0 16px;
+    line-height:1.6;
+  }
+  h1,h2,h3{
+    font-family:"Fraunces", "Iowan Old Style", Georgia, serif;
+    font-weight:600;
+    letter-spacing:-0.01em;
+    text-wrap:balance;
+    color:var(--ink);
+  }
+  code, .mono, .badge, .cmd{
+    font-family:"IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  }
+
+  .wrap{max-width:720px; margin:0 auto; padding-block:56px 96px;}
+
+  header.top{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    flex-wrap:wrap;
+    padding-bottom:28px; margin-bottom:36px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand .mark{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:7px;
+    background:var(--accent); color:var(--accent-ink);
+    font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:700;
+    flex:none;
+  }
+  .brand .name{font-size:17px; font-weight:600; letter-spacing:-0.01em;}
+  .top .tagline{font-size:13px; color:var(--faint);}
+
+  .kicker{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--accent); margin:0 0 10px;
+  }
+  h1.title{font-size:clamp(28px,5vw,38px); line-height:1.15; margin:0 0 16px;}
+  p.lede{font-size:17px; color:var(--muted); max-width:60ch; margin:0;}
+
+  section{margin-top:64px;}
+  section > h2{font-size:22px; margin:0 0 14px;}
+  section > p{margin:0 0 14px; max-width:64ch;}
+  section > p + p{margin-top:12px;}
+
+  .callout{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:20px 22px; box-shadow:var(--shadow); margin-top:18px;
+  }
+  .callout p{margin:0; max-width:none;}
+  .callout + .callout{margin-top:12px;}
+
+  /* moment-by-moment timeline */
+  .timeline{
+    position:relative;
+    margin-top:28px;
+    padding-left:34px;
+    border-left:2px solid var(--line);
+  }
+  .moment{position:relative; padding-bottom:34px;}
+  .moment:last-child{padding-bottom:0;}
+  .moment::before{
+    content:"";
+    position:absolute; left:-40.5px; top:2px;
+    width:15px; height:15px; border-radius:50%;
+    background:var(--surface); border:2px solid var(--accent);
+  }
+  .moment .when{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .moment .when strong{font-size:15px; font-weight:700;}
+  .badge{
+    font-size:11px; padding:2px 8px; border-radius:100px;
+    background:var(--surface-2); color:var(--muted);
+    border:1px solid var(--line);
+    white-space:nowrap;
+  }
+  .moment p{margin:0; color:var(--muted); max-width:60ch; font-size:15px;}
+
+  /* what it never does */
+  .never-list{list-style:none; margin:18px 0 0; padding:0; display:grid; gap:10px;}
+  .never-list li{
+    display:flex; gap:10px; align-items:flex-start;
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px; font-size:14.5px; color:var(--muted);
+  }
+  .never-list li::before{
+    content:"—"; color:var(--warn); flex:none; font-weight:700;
+  }
+
+  /* siblings */
+  .siblings{display:grid; gap:14px; margin-top:18px; grid-template-columns:repeat(2,1fr);}
+  @media (max-width:560px){.siblings{grid-template-columns:1fr;}}
+  .sib{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:18px 20px; box-shadow:var(--shadow);
+  }
+  .sib .sname{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent); font-weight:700;}
+  .sib p{margin:8px 0 0; font-size:14.5px; color:var(--muted);}
+
+  .cmd-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--code-bg); color:var(--code-ink);
+    border-radius:10px; padding:12px 16px; margin-top:16px;
+    font-size:13.5px;
+  }
+  .cmd-row .pill{
+    background:var(--accent); color:var(--accent-ink); font-weight:700;
+    border-radius:6px; padding:1px 7px; font-size:11px; letter-spacing:.03em;
+  }
+
+  footer{
+    margin-top:72px; padding-top:24px; border-top:1px solid var(--line);
+    color:var(--faint); font-size:13px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <span class="mark">$_</span>
+      <span class="name">house-rules</span>
+    </div>
+    <span class="tagline">a Claude Code plugin</span>
+  </header>
+
+  <p class="kicker">What it does, no prior context needed</p>
+  <h1 class="title">Your rules, followed on every machine, without a file to keep copying.</h1>
+  <p class="lede">
+    house-rules is an add-on for Claude Code — the way a browser extension is an add-on for a
+    browser — that makes the assistant follow one person's standing preferences automatically,
+    in every project, on every device, from the moment a session opens.
+  </p>
+
+  <section>
+    <h2>The problem it replaces</h2>
+    <p>
+      The old way to give an AI coding assistant standing preferences — commit often, ask before
+      anything destructive, never hide a running command, hand over instructions that actually
+      work when pasted — was a text file pasted into every project by hand. It had to be copied to
+      every device, and it drifted the moment one copy was edited and the others weren't.
+    </p>
+    <p>
+      Install house-rules once on a device and every session on it already knows the rules — a
+      work laptop, a cloud session, a project never opened before. Nothing to paste, nothing to
+      keep in sync.
+    </p>
+  </section>
+
+  <section>
+    <h2>How it actually reaches Claude</h2>
+    <p>
+      Claude Code exposes a handful of moments during a session — starting up, receiving a
+      message, calling a tool, finishing a reply — where an installed plugin is allowed to run a
+      small check and feed something back into the conversation. Those moments are called
+      <strong>hooks</strong>. house-rules attaches one narrow, specific check to several of them.
+      None of it needs a person to do anything; it just runs.
+    </p>
+  </section>
+
+  <section>
+    <h2>A session, moment by moment</h2>
+    <p>What actually happens, in the order it happens, across one ordinary session.</p>
+
+    <div class="timeline">
+
+      <div class="moment">
+        <div class="when"><strong>Session opens</strong><span class="badge">SessionStart</span></div>
+        <p>
+          The rules get printed straight into Claude's context, already read before anyone has
+          typed a word — the same effect as pasting a rules file in, except automatic and
+          impossible to let go stale. The coding conventions for whatever kind of project just got
+          opened come along with it — Unity/C# gets Unity conventions, JS/TypeScript gets its own.
+        </p>
+      </div>
+
+      <div class="moment">
+        <div class="when"><strong>Every message you send</strong><span class="badge">UserPromptSubmit</span></div>
+        <p>
+          A short reminder rides along, so the rules haven't faded from view two hundred messages
+          into a long conversation — the way fine print from an hour ago quietly stops registering.
+        </p>
+      </div>
+
+      <div class="moment">
+        <div class="when"><strong>Before a terminal command runs</strong><span class="badge">PreToolUse</span></div>
+        <p>
+          The command's text gets checked against a list of things worth a heads-up first —
+          deleting things, rewriting git history, force-pushing, running something hidden in the
+          background. A match asks for approval before it runs; nothing is ever blocked outright,
+          it just can't slip past unnoticed. An ordinary save-my-work commit or push goes through
+          without asking, but only on a branch Claude opened for its own work, never on your main
+          branch.
+        </p>
+      </div>
+
+      <div class="moment">
+        <div class="when"><strong>Every file write or edit</strong><span class="badge">PostToolUse</span></div>
+        <p>
+          One check notices a report or plan that landed in a scratch folder instead of the actual
+          project, and flags it before the turn ends — a file that only exists in a temp directory
+          isn't really a deliverable. A second notices a script that just got written and flags
+          that it should actually be run, not just claimed to work. A third notices a comment
+          that's grown into a small essay explaining a decision, and flags it for a move into
+          proper documentation, where it can stay in sync with the code and be found again.
+        </p>
+      </div>
+
+      <div class="moment">
+        <div class="when"><strong>Right before the reply goes out</strong><span class="badge">Stop</span></div>
+        <p>
+          If the reply hands over a command to run, this checks that the instruction is actually
+          usable — where to run it, in which shell, the exact text, what to expect back — rather
+          than a bare command left for someone to guess at.
+        </p>
+      </div>
+
+      <div class="moment">
+        <div class="when"><strong>Handing work to a helper</strong><span class="badge">SubagentStart / SubagentStop</span></div>
+        <p>
+          When Claude delegates a job to a smaller helper assigned to one task — carrying out an
+          already-agreed plan, say — the handoff gets announced, and afterwards it's confirmed
+          which model the helper actually ran on. A request quietly running on the wrong model
+          stops being invisible.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Keeping itself honest</h2>
+    <p>
+      On every session start, the plugin compares its own version against the copy it was
+      installed from and the latest copy on GitHub. If they've drifted, it says so immediately and
+      loudly, with the exact commands to bring things back in sync — a plugin quietly running on a
+      stale copy of its own rules would defeat the entire point of having it.
+    </p>
+    <div class="cmd-row">
+      <span class="pill">fix</span>
+      <span class="mono">claude plugin marketplace update &amp;&amp; claude plugin update house-rules</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>What it deliberately never does</h2>
+    <ul class="never-list">
+      <li>Block a command outright — the strongest thing it ever does is ask for confirmation.</li>
+      <li>Edit a file on its own initiative — every check only flags and reminds.</li>
+      <li>Act on a branch someone else authored without being told to.</li>
+      <li>Remember much between one check and the next — each one reacts to what's happening right now, not to accumulated state that could quietly drift from reality. One narrow exception exists, just to avoid repeating the same out-of-date-version warning twice in a session.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Two younger siblings</h2>
+    <p>The same repository carries two smaller, newer experiments built the same way — neither as depended-on yet as house-rules itself.</p>
+    <div class="siblings">
+      <div class="sib">
+        <div class="sname">prompt-workshop</div>
+        <p>Watches for a prompt that's grown complicated enough to be worth refining before it's sent.</p>
+      </div>
+      <div class="sib">
+        <div class="sname">agent-router</div>
+        <p>Reads how complex a request seems and nudges it toward a helper pinned to an appropriately sized model — cheap for a simple job, capable for a hard one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How you'd know it's actually working</h2>
+    <p>
+      An automated suite feeds realistic examples through every check above and confirms each one
+      makes the decision it's supposed to. Nobody needs to run it day to day — it exists so a
+      change to the rules can be proven to have taken effect, rather than just read like it should
+      have.
+    </p>
+  </section>
+
+  <footer>
+    <span>house-rules — a personal Claude Code plugin</span>
+    <span>Ajw2003/AjsClaudeCodeTools</span>
+  </footer>
+
+</div>
