@@ -7,6 +7,39 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-15 — Widen the version-bump gate to root CLAUDE.md and docs/, not just PLUGIN_ROOT
+
+**Context.** While preparing to merge the docs-tier-scaffolding PR (the one that added
+`docs/README.md`, `Roadmap.md`, `ProjectState.md`, `Today.md`, and `docs/systems/*`),
+`tools/check_plugin_version_bump.py` (added the same day; see the entry below) reported "no
+plugin files changed, no bump required" for a PR that changed only root `CLAUDE.md` and files
+under `docs/`. The user objected: both are directly used by the plugin and change as the plugin
+is worked on and used live in this repo — `CLAUDE.md` is auto-loaded into every session here, and
+`docs/` is read and written continuously while following the rules — even though neither ships
+inside the installed plugin package the check's `PLUGIN_ROOT` constant was scoped to.
+
+**Decision.** Widened `check_plugin_version_bump.py`'s notion of "plugin-relevant" beyond
+`PLUGIN_ROOT` to also cover the root `CLAUDE.md` file (exact match) and everything under `docs/`
+(prefix match), via a `PLUGIN_RELEVANT_PREFIXES`/`PLUGIN_RELEVANT_EXACT` pair and an
+`_is_plugin_relevant()` helper. Added matching cases to `tools/verify_tools.py`'s `decide()`
+table. Bumped `plugin.json` 2.24.0 → 2.24.1 for the PR this was raised against, now that it
+requires one under the widened rule.
+
+**Why.** The check exists to stop the exact failure the entry below describes — a version-gated
+updater reporting "already at the latest version" while content the user actually relies on has
+changed underneath it. Root `CLAUDE.md` and `docs/` are exactly that kind of content for this
+repo: they're not packaged into what `claude plugin install` ships, but they're what a live
+session in this repo actually reads and is governed by, which is the same "did the thing I rely
+on change" question the original incident was about. Scoping the check to `PLUGIN_ROOT` alone
+answered a narrower question than the one it was built to answer. The alternative — leave the
+check as-is and just bump the version for this one PR without changing the check's logic — was
+rejected because it would have left the same gap open for the next PR that touches only
+`CLAUDE.md` or `docs/`.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-15 — Enforce the version bump instead of trusting it, in this repo and on the desktop
 
 **Context.** Two merged PRs (#33, #34) changed files under

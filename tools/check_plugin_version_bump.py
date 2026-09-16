@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-"""check_plugin_version_bump.py — refuses a PR that changes plugin-shipped files without
+"""check_plugin_version_bump.py — refuses a PR that changes plugin-relevant files without
 bumping the plugin's version.
 
 Two merged PRs changed files under claude-house-rules/plugins/house-rules/ without bumping
 .claude-plugin/plugin.json's `version`. Nothing enforced the convention, so it silently lapsed,
 and claude plugin update (version-gated) reported "already at the latest version" while the
 installed cache held stale content. See docs/Decisions.md for the full incident.
+
+"Plugin-relevant" is wider than "ships inside the installed plugin package": root CLAUDE.md is
+auto-loaded into every live session working in this repo, and docs/ is what a session reads (and,
+per house-rules' own artifact rule, writes) while following the rules — both are as directly used
+by the plugin, live, as the files under PLUGIN_ROOT itself, even though neither is packaged into
+the install. A PR that only touches one of these still needs the same version bump this check
+exists to enforce; see docs/Decisions.md for that decision too.
 
 Usage:
     python tools/check_plugin_version_bump.py [--base origin/main] [--head HEAD]
@@ -21,6 +28,18 @@ import sys
 
 PLUGIN_ROOT = "claude-house-rules/plugins/house-rules/"
 PLUGIN_JSON_PATH = "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json"
+
+# Directory prefixes and exact root files that count as plugin-relevant beyond PLUGIN_ROOT
+# itself. "docs/" is a prefix (everything under it); "CLAUDE.md" is the root file only — not a
+# prefix, so a hypothetical CLAUDE.md.bak or similar doesn't accidentally match.
+PLUGIN_RELEVANT_PREFIXES = (PLUGIN_ROOT, "docs/")
+PLUGIN_RELEVANT_EXACT = ("CLAUDE.md",)
+
+
+def _is_plugin_relevant(path):
+    return path in PLUGIN_RELEVANT_EXACT or any(
+        path.startswith(prefix) for prefix in PLUGIN_RELEVANT_PREFIXES
+    )
 
 
 class VersionBumpCheckError(Exception):
@@ -80,15 +99,15 @@ def decide(changed, old_version, new_version):
 
     Returns (ok: bool, message: str).
     """
-    plugin_changed = [p for p in changed if p.startswith(PLUGIN_ROOT)]
+    plugin_changed = [p for p in changed if _is_plugin_relevant(p)]
     if not plugin_changed:
-        return True, "no plugin files changed, no bump required"
+        return True, "no plugin-relevant files changed, no bump required"
 
     changed_list = ", ".join(sorted(plugin_changed))
 
     if old_version == new_version:
         return False, (
-            f"{changed_list} changed under the plugin, but plugin.json's version is still "
+            f"{changed_list} changed, but plugin.json's version is still "
             f"{old_version} - bump it"
         )
 
@@ -96,11 +115,11 @@ def decide(changed, old_version, new_version):
     new_tuple = _parse_semver(new_version)
     if not (new_tuple > old_tuple):
         return False, (
-            f"{changed_list} changed under the plugin, and plugin.json's version moved from "
+            f"{changed_list} changed, and plugin.json's version moved from "
             f"{old_version} to {new_version}, which is not an increase"
         )
 
-    return True, f"{changed_list} changed under the plugin, and the version bumped from {old_version} to {new_version}"
+    return True, f"{changed_list} changed, and the version bumped from {old_version} to {new_version}"
 
 
 def main():
