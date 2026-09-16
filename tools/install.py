@@ -35,6 +35,12 @@ import os
 import subprocess
 import sys
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+
+from _plugin_sync import tree_hash, diff_trees  # noqa: E402
+
 # The full git URL, not the Ajw2003/AjsClaudeCodeTools shorthand. The shorthand resolves to
 # marketplace kind "github"; a settings file that already declares this name as kind "git"
 # with a .git URL is a mismatch, and the CLI refuses the add rather than reconciling them.
@@ -70,6 +76,67 @@ def which(cmd):
     from shutil import which as _which
 
     return _which(cmd)
+
+
+def locate_source_and_installed(plugins_root, market, name):
+    """Find the marketplace's source tree and the newest matching installed cache dir.
+
+    Same lookup force_update.py already does. Returns (source_root, installed_root), either
+    of which may be None if it could not be found.
+    """
+    market_root = os.path.join(plugins_root, "marketplaces", market)
+    source = None
+    if os.path.isdir(market_root):
+        for dirpath, dirnames, filenames in os.walk(market_root):
+            if os.path.basename(dirpath) == ".claude-plugin" and "plugin.json" in filenames:
+                with open(os.path.join(dirpath, "plugin.json"), "r", encoding="utf-8") as f:
+                    if json.load(f).get("name") == name:
+                        source = os.path.dirname(dirpath)
+                        break
+
+    cache_root = os.path.join(plugins_root, "cache", market, name)
+    installed = None
+    if os.path.isdir(cache_root):
+        candidates = [
+            os.path.join(cache_root, d)
+            for d in os.listdir(cache_root)
+            if os.path.isdir(os.path.join(cache_root, d))
+        ]
+        if candidates:
+            installed = max(candidates, key=os.path.getmtime)
+
+    return source, installed
+
+
+def verify_and_self_heal(source_root, installed_root, reinstall_fn, ok, bad, info):
+    """Hash-compare the installed cache against source. On mismatch, run `reinstall_fn()` (the
+    uninstall+reinstall sequence force_update.py already uses) and re-verify once.
+
+    Returns True if the cache matches source by the end (whether or not a reinstall ran),
+    False if it still mismatches after the self-heal attempt.
+    """
+    src_hash = tree_hash(source_root)
+    dst_hash = tree_hash(installed_root)
+    diff = diff_trees(src_hash, dst_hash)
+
+    if not diff:
+        ok("installed cache matches source, file-for-file - no reinstall needed")
+        return True
+
+    info(f"installed cache does not match source ({len(diff)} path(s) differ) - self-healing")
+    reinstall_fn()
+
+    dst_hash2 = tree_hash(installed_root)
+    diff2 = diff_trees(src_hash, dst_hash2)
+    if not diff2:
+        ok("self-heal reinstall brought the installed cache back in sync with source")
+        return True
+
+    bad("installed cache still does not match source after the self-heal reinstall")
+    for where, path in diff2:
+        info(f"  {where:12s} {path}")
+    info("run tools/force_update.py for manual investigation")
+    return False
 
 
 def run_claude(args):
@@ -190,7 +257,28 @@ def main():
         bad("no installed_plugins.json after install")
 
     print()
-    print("3. Settings the plugin cannot set itself")
+    print("3. Verify the installed cache actually matches source")
+    # "Registered at the right version" (above) is not "holds the right content" - that's the
+    # exact gap this step closes: a reported update is not a completed one. Hash-compare the
+    # installed cache against the marketplace source tree, the same check force_update.py makes,
+    # and self-heal automatically on a mismatch instead of leaving it to a human to notice.
+    plugins_root = os.path.join(claude_dir, "plugins")
+    source_root, installed_root = locate_source_and_installed(plugins_root, MARKETPLACE, "house-rules")
+    if not source_root or not installed_root:
+        bad(
+            "could not locate both the source tree and the installed cache to verify - "
+            f"source={source_root!r}, installed={installed_root!r}"
+        )
+    else:
+        def reinstall():
+            run_claude(["plugin", "uninstall", PLUGIN_ID])
+            run_claude(["plugin", "install", PLUGIN_ID, "-y"])
+
+        if not verify_and_self_heal(source_root, installed_root, reinstall, ok, bad, info):
+            failures += 1
+
+    print()
+    print("4. Settings the plugin cannot set itself")
 
     wanted = [
         {

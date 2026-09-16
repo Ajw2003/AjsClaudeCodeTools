@@ -19,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # check_plugin_version_bump.py diffs against origin/main, which needs history the
+          # default shallow clone does not have.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -32,6 +36,12 @@ jobs:
       # was found only by running the script twice by hand.
       - name: Run the tools test suite
         run: python tools/verify_tools.py
+
+      # A push to main only happens via an already-checked PR merge, so re-checking there is
+      # redundant noise rather than a gap - this only runs on the PR itself.
+      - name: Block a plugin-file change with no version bump
+        if: github.event_name == 'pull_request'
+        run: python tools/check_plugin_version_bump.py --base ${{ github.event.pull_request.base.sha }}
 
       # Both offshoots below are shells (docs/offshoots-plan.md) but ship the same
       # fail-open/fail-loud contracts house-rules does, so they get the same CI coverage from
