@@ -1,0 +1,56 @@
+#!/bin/sh
+# pre-push — git calls this by name (no extension) when core.hooksPath points at this
+# directory. Its only job is finding a working Python and handing it stdin unchanged; the
+# actual check lives in pre_push_check.py. Same probe-don't-trust-PATH shape as the house-rules
+# plugin's run.sh, and for the same reason: a `python3` that's actually a stub prints a nag and
+# exits 0, which would silently disable this hook. See pre_push_check.py for what this checks
+# and why it lives here rather than in a PreToolUse hook.
+#
+# FAILS OPEN if no interpreter is found: this hook is a backstop, not the only thing standing
+# between a push and a merged PR, and a hook that blocks every push on a machine with a broken
+# Python install is worse than one that occasionally misses a check it can't run.
+
+set -u
+
+case "$0" in
+  */*) HERE=${0%/*} ;;
+  *)   HERE=. ;;
+esac
+
+probe() {
+  [ "$("$@" -c 'print(9)' 2>/dev/null)" = 9 ]
+}
+
+PY=''
+if [ -n "${HOUSE_RULES_PYTHON:-}" ]; then
+  # shellcheck disable=SC2086
+  set -- $HOUSE_RULES_PYTHON
+  if probe "$@"; then
+    PY=set
+  fi
+fi
+
+if [ -z "$PY" ]; then
+  set -- python3
+  if probe "$@"; then
+    PY=set
+  else
+    set -- python
+    if probe "$@"; then
+      PY=set
+    else
+      set -- py -3
+      if probe "$@"; then
+        PY=set
+      fi
+    fi
+  fi
+fi
+
+if [ -z "$PY" ]; then
+  echo "pre-push check: no working Python interpreter found on PATH - skipping (fail open)." >&2
+  echo "Run /house-rules:doctor, or set HOUSE_RULES_PYTHON to a working interpreter." >&2
+  exit 0
+fi
+
+exec "$@" "$HERE/pre_push_check.py"

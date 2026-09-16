@@ -35,6 +35,9 @@ import install  # noqa: E402
 import measure_footprint  # noqa: E402
 import session_ledger  # noqa: E402
 
+sys.path.insert(0, os.path.join(HERE, "git-hooks"))
+import pre_push_check  # noqa: E402
+
 STEP = 0
 FAILURES = 0
 
@@ -638,6 +641,75 @@ try:
     )
 finally:
     shutil.rmtree(heal_root, ignore_errors=True)
+
+# --- pre_push_check.py's decision logic (the merged-PR pre-push backstop) -------------------
+check(
+    pre_push_check._GITHUB_REMOTE_RE.match("https://github.com/Ajw2003/AjsClaudeCodeTools.git")
+    is not None
+    and pre_push_check._GITHUB_REMOTE_RE.match("git@github.com:Ajw2003/AjsClaudeCodeTools.git")
+    is not None
+    and pre_push_check._GITHUB_REMOTE_RE.match("https://gitlab.com/foo/bar.git") is None,
+    "pre_push_check recognizes github.com https/ssh remotes and rejects non-GitHub ones",
+    "matched both GitHub forms, rejected a GitLab remote",
+)
+
+branches = pre_push_check.branches_to_check(
+    [
+        "refs/heads/claude/my-branch abc123 refs/heads/claude/my-branch def456",
+        "refs/heads/deleted-branch 0000000000000000000000000000000000000000 "
+        "refs/heads/deleted-branch 0000000000000000000000000000000000000000",
+        "not a well formed line",
+        "",
+    ]
+)
+check(
+    branches == ["claude/my-branch"],
+    "branches_to_check() extracts the pushed branch and skips deletes/malformed lines",
+    f"branches={branches}",
+)
+
+fake_merged_prs = {"claude/already-merged": "https://github.com/Ajw2003/AjsClaudeCodeTools/pull/12"}
+real_merged_pr_for_branch = pre_push_check.merged_pr_for_branch
+real_owner_repo_from_remote = pre_push_check.owner_repo_from_remote
+pre_push_check.owner_repo_from_remote = lambda remote_name="origin": ("Ajw2003", "AjsClaudeCodeTools")
+pre_push_check.merged_pr_for_branch = lambda owner, repo, branch: fake_merged_prs.get(branch)
+try:
+    blocked_rc = pre_push_check.main(
+        [],
+        ["refs/heads/claude/already-merged abc123 refs/heads/claude/already-merged def456"],
+    )
+    check(
+        blocked_rc != 0,
+        "pre_push_check.main() rejects a push to a branch with a merged PR",
+        f"exit code={blocked_rc}",
+    )
+
+    allowed_rc = pre_push_check.main(
+        [],
+        ["refs/heads/claude/still-open abc123 refs/heads/claude/still-open def456"],
+    )
+    check(
+        allowed_rc == 0,
+        "pre_push_check.main() allows a push to a branch with no merged PR",
+        f"exit code={allowed_rc}",
+    )
+finally:
+    pre_push_check.merged_pr_for_branch = real_merged_pr_for_branch
+    pre_push_check.owner_repo_from_remote = real_owner_repo_from_remote
+
+no_remote_rc_calls = []
+pre_push_check.owner_repo_from_remote = lambda remote_name="origin": no_remote_rc_calls.append(1) or None
+try:
+    no_remote_rc = pre_push_check.main(
+        [], ["refs/heads/whatever abc123 refs/heads/whatever def456"]
+    )
+    check(
+        no_remote_rc == 0 and no_remote_rc_calls,
+        "pre_push_check.main() fails OPEN (allows the push) when the remote can't be identified",
+        f"exit code={no_remote_rc}",
+    )
+finally:
+    pre_push_check.owner_repo_from_remote = real_owner_repo_from_remote
 
 print()
 print("-" * 32)

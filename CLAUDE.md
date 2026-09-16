@@ -157,6 +157,31 @@ failure it was built for, and the one it must always surface.
 The ledger is the **raw** record and the source of truth. A readable `-brief.md` written alongside
 it is commentary and can drift; when they disagree, the generated one is right.
 
+Install the mechanical backstop for "pushed to a branch whose PR is already merged" — a real git
+`pre-push` hook, not a Claude Code hook, because `guard` (below) deliberately never hits the
+network on a shell call and this check needs to:
+
+```bash
+python tools/install_git_hooks.py
+```
+
+Points `git config --global core.hooksPath` at `tools/git-hooks/`, so every `git push` on this
+machine, in every repo, runs [`tools/git-hooks/pre_push_check.py`](tools/git-hooks/pre_push_check.py)
+first: it reads the branch(es) being pushed off stdin (the pre-push hook protocol), asks GitHub's
+API whether any of them already has a **merged** PR, and refuses the push if so, with the restart
+command in the error. It is a real OS-level git hook, so it fires whether the push comes from a
+Claude Code session, another tool, or the terminal by hand — the guarantee `guard`'s text-matching
+can't offer. Global rather than per-repo for the same reason the plugin itself is a plugin and not
+a copied `CLAUDE.md`: a `.git/hooks/pre-push` file would have to be re-installed in every clone by
+hand and silently stop covering a repo cloned later. It fails **open**: no GitHub remote, no
+network, a rate-limited or malformed API response all print why to stderr and let the push through
+— the one thing it blocks is an unambiguous merged-PR match. `python tools/verify_tools.py`
+(above) covers its branch-parsing and block/allow decisions with the network call stubbed out;
+nothing exercises the real GitHub API call, the same "not covered" carve-out the rest of `tools/`
+takes for anything that talks to a real remote. `python tools/install_git_hooks.py --uninstall`
+reverses it, and refuses to touch a `core.hooksPath` that points anywhere else, since that means
+something else set it up.
+
 ## Architecture
 
 ### The plugin is one POSIX shim plus one Python file, dispatched by event
