@@ -38,6 +38,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 
 
 def read_payload():
@@ -503,6 +504,232 @@ def event_standards():
 
 
 # ---------------------------------------------------------------------------------------
+# versioncheck — a third SessionStart handler. Why three version copies, and why guard holds a
+# marker for this: docs/architecture.md, "versioncheck checks three copies of the version".
+# ---------------------------------------------------------------------------------------
+
+# A fork of this repo under a different owner should point this at its own copy - hence the
+# env override rather than only a hardcoded constant.
+_GITHUB_PLUGIN_JSON_URL = (
+    "https://raw.githubusercontent.com/Ajw2003/AjsClaudeCodeTools/main/"
+    "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json"
+)
+_GITHUB_FETCH_TIMEOUT = 4.0
+
+# Relative to a marketplace clone's root (~/.claude/plugins/marketplaces/<name>/...) - matches
+# the "source" field the plugin's own .claude-plugin/marketplace.json declares for itself.
+_MARKETPLACE_PLUGIN_JSON_REL = os.path.join(
+    "claude-house-rules", "plugins", "house-rules", ".claude-plugin", "plugin.json"
+)
+
+
+def _version_check_enabled():
+    return os.environ.get("HOUSE_RULES_VERSION_CHECK", "on").strip().lower() not in _TRACE_OFF
+
+
+def _marketplace_plugin_json_path(problems):
+    """The marketplace clone's plugin.json, or "" if none found (see docs/architecture.md)."""
+    marketplaces_root = os.path.join(
+        os.path.expanduser("~"), ".claude", "plugins", "marketplaces"
+    )
+    try:
+        names = sorted(os.listdir(marketplaces_root)) if os.path.isdir(marketplaces_root) else []
+    except OSError as exc:
+        problems.append(
+            "could not list ~/.claude/plugins/marketplaces (%s)" % type(exc).__name__
+        )
+        return ""
+    for market in names:
+        candidate = os.path.join(marketplaces_root, market, _MARKETPLACE_PLUGIN_JSON_REL)
+        if os.path.isfile(candidate):
+            return candidate
+    return ""
+
+
+def _marketplace_version(problems):
+    override = os.environ.get("HOUSE_RULES_VC_MARKETPLACE")
+    if override is not None:
+        return override
+    path = _marketplace_plugin_json_path(problems)
+    if not path:
+        return ""
+    try:
+        return json.loads(_read_text(path)).get("version", "") or ""
+    except Exception as exc:
+        problems.append(
+            "could not read the marketplace clone's plugin.json (%s)" % type(exc).__name__
+        )
+        return ""
+
+
+def _github_version(problems):
+    override = os.environ.get("HOUSE_RULES_VC_GITHUB")
+    if override is not None:
+        return override
+    url = os.environ.get("HOUSE_RULES_VC_GITHUB_URL") or _GITHUB_PLUGIN_JSON_URL
+    try:
+        import urllib.request
+
+        with urllib.request.urlopen(url, timeout=_GITHUB_FETCH_TIMEOUT) as resp:
+            data = json.loads(resp.read().decode("utf-8", "replace"))
+        return data.get("version", "") or ""
+    except Exception as exc:
+        problems.append(
+            "could not reach GitHub to check the published version (%s)" % type(exc).__name__
+        )
+        return ""
+
+
+_VC_SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+def _vc_session_id(payload):
+    m = _VC_SESSION_ID_RE.search(payload or "")
+    if not m:
+        return ""
+    return m.group(1).replace('\\"', '"').replace("\\\\", "\\").strip()
+
+
+def _outdated_marker_path(session_id):
+    if not session_id:
+        return ""
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id)[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-outdated-%s.json" % safe)
+
+
+def _write_outdated_marker(session_id, reasons):
+    path = _outdated_marker_path(session_id)
+    if not path:
+        return
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"reasons": reasons}, f)
+    except OSError as exc:
+        sys.stderr.write(
+            "house-rules versioncheck: could not write the session marker (%s); the guard "
+            "prompt on the first shell command will not fire, only the SessionStart "
+            "warning.\n" % exc
+        )
+
+
+def _read_and_clear_outdated_marker(session_id):
+    """Read this session's out-of-date marker once, then delete it.
+
+    Consumed rather than merely read, so the guard prompt it drives fires on the first
+    Bash/PowerShell call of the session only - not every call after it, which would make
+    every command in an out-of-date session carry an extra prompt instead of one.
+    """
+    path = _outdated_marker_path(session_id)
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        data = json.loads(_read_text(path))
+    except Exception:
+        data = None
+    try:
+        os.remove(path)
+    except OSError as exc:
+        # Not fatal - the marker just lingers and gets ignored by every future session, whose
+        # own session_id will not match its filename. Worth a line so a permissions problem on
+        # the temp dir is not invisible, but never worth failing the command over.
+        sys.stderr.write(
+            "house-rules guard: could not remove the out-of-date marker %r (%s); it will be "
+            "ignored on future calls anyway.\n" % (path, exc)
+        )
+    return data
+
+
+_VC_UPDATE_CMD = "claude plugin update house-rules@aj-house-rules"
+_VC_MARKETPLACE_CMD = "claude plugin marketplace update aj-house-rules"
+
+
+def event_versioncheck():
+    try:
+        if not _version_check_enabled():
+            return 0
+
+        payload = read_payload()
+        session_id = _vc_session_id(payload)
+
+        problems = []
+        installed = _plugin_version(problems)
+        market_version = _marketplace_version(problems)
+        github_version = _github_version(problems)
+
+        reasons = []
+        if installed and market_version and installed != market_version:
+            reasons.append(
+                "installed copy is %s but the local marketplace clone has %s - run `%s`."
+                % (installed, market_version, _VC_UPDATE_CMD)
+            )
+        if market_version and github_version and market_version != github_version:
+            reasons.append(
+                "the local marketplace clone is %s but GitHub's default branch has %s - the "
+                "marketplace clone itself has not synced. Run `%s`, then `%s`."
+                % (market_version, github_version, _VC_MARKETPLACE_CMD, _VC_UPDATE_CMD)
+            )
+        elif not market_version and installed and github_version and installed != github_version:
+            # The marketplace clone could not be found/read at all - fall back to comparing
+            # the installed copy straight against GitHub so a mismatch is still caught.
+            reasons.append(
+                "installed copy is %s but GitHub's default branch has %s (the local "
+                "marketplace clone could not be checked). Run `%s`, then `%s`."
+                % (installed, github_version, _VC_MARKETPLACE_CMD, _VC_UPDATE_CMD)
+            )
+
+        if not reasons:
+            if problems:
+                trace(
+                    "versioncheck: could not fully verify the plugin is current - %s"
+                    % "; ".join(problems)
+                )
+            else:
+                trace(
+                    "versioncheck: installed %s matches the marketplace clone and GitHub's "
+                    "default branch." % (installed or "unknown")
+                )
+            return 0
+
+        _write_outdated_marker(session_id, reasons)
+
+        banner_lines = [
+            "",
+            "=" * 70,
+            "HOUSE-RULES PLUGIN IS OUT OF DATE",
+            "=" * 70,
+            "",
+            "Before doing any other work this session, tell the user plainly that this "
+            "session is running an out-of-date copy of the house-rules plugin, and give them "
+            "the update command(s) below. Do not silently continue on the stale version.",
+            "",
+        ]
+        banner_lines.extend("- %s" % r for r in reasons)
+        banner_lines.append("")
+        banner_lines.append(
+            "As a second, harness-enforced signal in case this context gets missed, the "
+            "first Bash/PowerShell command run this session will also carry a permission "
+            "prompt repeating this notice, once."
+        )
+        banner_lines.append("=" * 70)
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "SessionStart",
+                    "additionalContext": "\n".join(banner_lines),
+                }
+            }
+        )
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the version-freshness check hit an "
+                "internal error (%s) and could not run for this session." % type(exc).__name__
+            }
+        )
+    return 0
+
+
+# ---------------------------------------------------------------------------------------
 # scope — UserPromptSubmit. Must not be able to fail: one fixed string, no file read.
 # ---------------------------------------------------------------------------------------
 
@@ -807,6 +1034,7 @@ def event_guard():
         return 0
 
     subject = _guard_subject(payload)
+    outdated = _read_and_clear_outdated_marker(_vc_session_id(payload))
 
     is_mine, branch, ownership_note = branch_ownership()
     # A command carrying -C / --git-dir / --work-tree acts on a repo other than the one we
@@ -826,7 +1054,7 @@ def event_guard():
             else:
                 hits[title].append(reason)
 
-    if not any(hits.values()):
+    if not any(hits.values()) and not outdated:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
         # not to fire" from "never ran" - and it is the security-shaped backstop, so that is
         # the worst place to leave the ambiguity.
@@ -840,6 +1068,11 @@ def event_guard():
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
+    if outdated:
+        lines.append("")
+        lines.append("  PLUGIN OUT OF DATE (found at session start, not by this command):")
+        for r in outdated.get("reasons", []):
+            lines.append("    - %s" % r)
     for title, _ in GUARD_BUCKETS:
         reasons = hits[title]
         if reasons:
@@ -2034,6 +2267,7 @@ def event_harvest():
 EVENTS = {
     "inject": event_inject,
     "standards": event_standards,
+    "versioncheck": event_versioncheck,
     "scope": event_scope,
     "guard": event_guard,
     "artifact": event_artifact,

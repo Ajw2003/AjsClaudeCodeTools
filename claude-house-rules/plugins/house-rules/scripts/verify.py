@@ -2876,6 +2876,135 @@ else:
     report("FAIL", "house-rules.md states the reported-update-is-not-a-completed-one rule")
     print("          heading missing from rules/house-rules.md")
 
+# --- versioncheck: the three-way plugin freshness check -----------------------------------------
+# HOUSE_RULES_VC_MARKETPLACE/_GITHUB are test seams so this never touches real network or disk.
+with open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), "r", encoding="utf-8") as f:
+    _installed_version = json.load(f).get("version", "")
+
+
+def vc_payload(session_id):
+    return json.dumps({"session_id": session_id, "hook_event_name": "SessionStart"})
+
+
+def vc_env(**overrides):
+    e = dict(os.environ)
+    e.update(overrides)
+    return e
+
+
+def vc_marker_path(session_id):
+    return os.path.join(tempfile.gettempdir(), f"house-rules-outdated-{session_id}.json")
+
+
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload("vc-clean"),
+    vc_env(HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB=_installed_version),
+)
+if rc == 0 and "OUT OF DATE" not in out and not os.path.isfile(vc_marker_path("vc-clean")):
+    report("PASS", "versioncheck is quiet when installed, marketplace and GitHub all agree")
+    print("          no banner, no marker file - matching versions leave nothing to say")
+else:
+    report("FAIL", "versioncheck is quiet when installed, marketplace and GitHub all agree")
+    print(f"          rc={rc} out={out[:200]!r}")
+
+session_a = "vc-installed-stale"
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(session_a),
+    vc_env(HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"),
+)
+marker_a = vc_marker_path(session_a)
+ok = (
+    rc == 0
+    and "OUT OF DATE" in out
+    and "claude plugin update house-rules@aj-house-rules" in out
+    and os.path.isfile(marker_a)
+)
+if ok:
+    report("PASS", "versioncheck flags installed lagging the marketplace clone, and arms a marker")
+    print("          banner names the update command; marker written for guard's first-call prompt")
+else:
+    report("FAIL", "versioncheck flags installed lagging the marketplace clone, and arms a marker")
+    print(f"          rc={rc} out={out[:300]!r}")
+if os.path.isfile(marker_a):
+    os.remove(marker_a)
+
+session_b = "vc-marketplace-stale"
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(session_b),
+    vc_env(HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB="99.0.0"),
+)
+marker_b = vc_marker_path(session_b)
+ok = (
+    rc == 0
+    and "marketplace clone itself has not synced" in out
+    and "claude plugin marketplace update aj-house-rules" in out
+    and os.path.isfile(marker_b)
+)
+if ok:
+    report(
+        "PASS",
+        "versioncheck catches a marketplace clone stale against GitHub even when installed matches it",
+    )
+    print("          the exact gap `plugin update` alone would miss - the marketplace never re-fetched")
+else:
+    report(
+        "FAIL",
+        "versioncheck catches a marketplace clone stale against GitHub even when installed matches it",
+    )
+    print(f"          rc={rc} out={out[:300]!r}")
+if os.path.isfile(marker_b):
+    os.remove(marker_b)
+
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload("vc-off"),
+    vc_env(
+        HOUSE_RULES_VERSION_CHECK="off",
+        HOUSE_RULES_VC_MARKETPLACE="99.0.0",
+        HOUSE_RULES_VC_GITHUB="99.0.0",
+    ),
+)
+if rc == 0 and out == "":
+    report("PASS", "HOUSE_RULES_VERSION_CHECK=off disables the freshness check entirely")
+    print("          exits 0 with nothing emitted, even with a manufactured mismatch")
+else:
+    report("FAIL", "HOUSE_RULES_VERSION_CHECK=off disables the freshness check entirely")
+    print(f"          rc={rc} out={out[:200]!r}")
+
+session_c = "vc-guard-consumes"
+run_hook(
+    "versioncheck",
+    vc_payload(session_c),
+    vc_env(HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"),
+)
+marker_c = vc_marker_path(session_c)
+guard_payload = json.dumps(
+    {"session_id": session_c, "tool_name": "Bash", "tool_input": {"command": "ls"}}
+)
+rc1, out1, err1 = run_hook("guard", guard_payload)
+rc2, out2, err2 = run_hook("guard", guard_payload)
+ok = (
+    "PLUGIN OUT OF DATE" in out1
+    and '"permissionDecision":"ask"' in out1
+    and "PLUGIN OUT OF DATE" not in out2
+    and '"permissionDecision":"ask"' not in out2
+    and not os.path.isfile(marker_c)
+)
+if ok:
+    report("PASS", "guard surfaces versioncheck's marker once, on the first shell call, then stops")
+    print("          first `ls` call prompts for the stale plugin alone; the second call is silent")
+else:
+    report("FAIL", "guard surfaces versioncheck's marker once, on the first shell call, then stops")
+    print(
+        f"          out1={out1[:200]!r} out2={out2[:200]!r} "
+        f"marker exists after: {os.path.isfile(marker_c)}"
+    )
+if os.path.isfile(marker_c):
+    os.remove(marker_c)
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:

@@ -413,3 +413,52 @@ are read once at session start, so a change needs `/clear` or a new session.
 
 `verify.py` asserts the field is **present**. It previously asserted the opposite; either way the
 check exists so the decision cannot flip by accident, in whichever direction it currently points.
+
+## `versioncheck` checks three copies of the version, not two
+
+`inject` and `standards` assume the plugin they are running as is the one to trust. `versioncheck`
+exists because that assumption broke on a real machine: `claude plugin marketplace add` answers
+"already on disk" for a marketplace the device has seen before and does not re-fetch it, so a
+machine that never separately ran `marketplace update` can sit on an old marketplace clone
+indefinitely — and `claude plugin update` in that state reports "already at the latest version,"
+naming the **old** version, because it never saw a newer one to update to (see `install_steps()`
+in `tools/install.py` and the Commands section of `CLAUDE.md`). Comparing only the installed copy
+against GitHub would miss this failure mode entirely on a machine where `plugin update` itself
+lies; comparing installed against the local marketplace clone alone would miss it too, since both
+can be stale together. Three copies — installed, the local marketplace clone, and GitHub's default
+branch — is the minimum that can distinguish "you haven't run `plugin update`" from "your
+marketplace clone itself never re-fetched" and point at the right one of the two commands.
+
+The marketplace clone's plugin.json is found at a fixed relative path
+(`claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json`) under whichever directory
+sits inside `~/.claude/plugins/marketplaces/`, matching the `source` field this plugin's own
+`marketplace.json` declares for itself. Only the top level of that directory is scanned, one
+entry per marketplace a device has ever added — never deep — so a marketplace clone with a
+different repo layout is reported as "could not tell," not treated as a mismatch.
+
+### Why versioncheck's marker is a deliberate exception, not a reversal
+
+`SessionStart` hooks cannot block a session — they can only add `additionalContext`, which is
+easy to miss deep in a long transcript. The only hook event that can actually raise a real
+permission prompt is `PreToolUse`, i.e. `guard`, but `guard`'s own design deliberately never
+shells out or reaches the network on its hot path (it reads `.git/HEAD` directly rather than
+calling `git`, precisely so a hung subprocess can never wedge every command in the session) — so
+`guard` cannot redo the three-way version check itself on every call.
+
+The reconciliation: `versioncheck` runs the check once, at `SessionStart`, and when it finds a
+mismatch it writes a small marker file keyed by `session_id` under the OS temp directory. `guard`
+reads that one file on the session's first `Bash`/`PowerShell` call, folds its reasons into the
+permission prompt (even when the command itself trips no other rule), and deletes the file — so
+the prompt fires once, not on every subsequent command.
+
+This is new state, and CLAUDE.md's "no hook keeps state between invocations" bullet used to be
+unconditional. It is kept as a scoped exception rather than reversed outright because the earlier
+stateful design this repo removed (`track-write.sh` / `clear-pending.sh` / `deliverable.sh`,
+recorded above) failed for a specific, avoidable reason: its `$TEMP` state file was shared rather
+than session-scoped, so it leaked across sessions and went stale in ways nothing ever cleaned up.
+`versioncheck`'s marker avoids exactly that failure mode: it is keyed to one `session_id`, so a
+stray file from a crashed session is simply never read by any other session's `guard` call, and
+the common path deletes it immediately after `guard` consumes it. `verify.py` tests both the
+write and the consume-once behavior directly (`run_hook("versioncheck", ...)` then two
+back-to-back `run_hook("guard", ...)` calls with the same `session_id`), rather than only
+asserting the marker file's absence the way the old regression check does for the removed design.
