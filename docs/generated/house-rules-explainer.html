@@ -177,6 +177,55 @@
     margin-top:72px; padding-top:24px; border-top:1px solid var(--line);
     color:var(--faint); font-size:13px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
   }
+
+  /* documentation tiers */
+  .tiers{
+    display:grid; gap:10px; margin-top:20px;
+    grid-template-columns:auto 1fr auto;
+    align-items:stretch;
+  }
+  .tier{
+    display:grid; grid-template-columns:subgrid; grid-column:1/-1;
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:13px 16px; align-items:center; gap:14px;
+  }
+  .tier .num{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:700;
+    color:var(--accent); background:var(--surface-2);
+    border-radius:6px; padding:2px 8px; white-space:nowrap; align-self:flex-start;
+  }
+  .tier .body strong{font-size:14.5px; display:block; margin-bottom:2px;}
+  .tier .body span{font-size:13.5px; color:var(--muted);}
+  .tier .loc{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--faint);
+    white-space:nowrap; text-align:right; align-self:center;
+  }
+  .tier.missing{border-style:dashed; border-color:var(--warn);}
+  .tier.missing .loc{color:var(--warn);}
+  @media (max-width:560px){
+    .tiers{grid-template-columns:1fr;}
+    .tier{grid-template-columns:1fr;}
+    .tier .num{width:fit-content;}
+    .tier .loc{text-align:left;}
+  }
+
+  .loop{
+    counter-reset:loopstep;
+    list-style:none; margin:18px 0 0; padding:0; display:grid; gap:12px;
+  }
+  .loop li{
+    position:relative; padding-left:34px;
+    font-size:14.5px; color:var(--muted);
+  }
+  .loop li strong{color:var(--ink);}
+  .loop li::before{
+    counter-increment:loopstep; content:counter(loopstep);
+    position:absolute; left:0; top:0;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--accent); color:var(--accent-ink);
+    font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
 </style>
 
 <div class="wrap">
@@ -330,6 +379,72 @@
         <p>Reads how complex a request seems and nudges it toward a helper pinned to an appropriately sized model — cheap for a simple job, capable for a hard one.</p>
       </div>
     </div>
+  </section>
+
+  <section>
+    <h2>The other rule it enforces on itself: keeping the docs honest</h2>
+    <p>
+      Separately from the checks above, house-rules also carries a rule about how documentation
+      should be organised — and, as of this pass, it now applies that rule to its own repository
+      too, not only to the projects it's installed in. The idea: every project's <code>docs/</code>
+      folder gets the same six kinds of document, called <strong>tiers</strong>, each answering a
+      different question, so anyone — a person or Claude — always knows exactly where a fact
+      belongs and where to look for it.
+    </p>
+
+    <div class="tiers">
+      <div class="tier">
+        <span class="num">1 · Landing</span>
+        <div class="body"><strong>What is this, where is everything</strong><span>One page, meant to answer that without anyone searching.</span></div>
+        <span class="loc">docs/README.md</span>
+      </div>
+      <div class="tier missing">
+        <span class="num">2 · Roadmap</span>
+        <div class="body"><strong>What "done" means</strong><span>Not written as its own document yet — a named gap, not a silent one.</span></div>
+        <span class="loc">— missing —</span>
+      </div>
+      <div class="tier">
+        <span class="num">3 · State</span>
+        <div class="body"><strong>Where things stand right now</strong><span>Measured against the roadmap, updated as status actually changes.</span></div>
+        <span class="loc">docs/ProjectState.md</span>
+      </div>
+      <div class="tier">
+        <span class="num">4 · Systems</span>
+        <div class="body"><strong>How each critical piece works</strong><span>What must stay true, and what's already gone wrong before.</span></div>
+        <span class="loc">docs/architecture.md</span>
+      </div>
+      <div class="tier">
+        <span class="num">5 · Today</span>
+        <div class="body"><strong>What's being worked on, and why</strong><span>One dated file per piece of work, not one file rewritten each time.</span></div>
+        <span class="loc">docs/plans/</span>
+      </div>
+      <div class="tier">
+        <span class="num">6 · Decisions</span>
+        <div class="body"><strong>Why a decision was made, what it replaced</strong><span>Append-only. An old entry is marked superseded, never deleted.</span></div>
+        <span class="loc">docs/Decisions.md</span>
+      </div>
+    </div>
+
+    <p style="margin-top:20px;">
+      <strong>Every project gets all six, scaled to its size — never fewer.</strong> A small
+      project doesn't skip a tier, it just has a short version of it. That's exactly why it was
+      worth noticing that this repository — the one that hands that rule to every other project —
+      was, until this pass, quietly missing two of its own six tiers. Not a deliberate exception
+      recorded anywhere; a plain gap. Landing and State are fixed now; Roadmap is still open.
+    </p>
+
+    <p style="margin-top:14px;">The <strong>loop</strong> the rule creates — the discipline that keeps six documents from silently drifting apart, run every time something changes:</p>
+    <ol class="loop">
+      <li><strong>Work out which tier actually moved, and touch only that one.</strong> Status changing updates State; the Roadmap only moves when the definition of "done" itself changes, which should be rare.</li>
+      <li><strong>When a decision reverses,</strong> add a dated entry to Decisions <em>and</em> fix the body of whatever tier stated the old truth, leaving a one-line pointer back — never a "this is outdated" note stacked on top of text that still reads as current.</li>
+      <li><strong>A document gone genuinely stale moves to an archive folder</strong> rather than being deleted, and whatever pointed at it gets fixed rather than left broken.</li>
+      <li><strong>Every claim about the code cites the exact file and line</strong> it comes from, so it can be checked directly rather than taken on trust.</li>
+    </ol>
+    <p style="margin-top:14px; color:var(--faint); font-size:13.5px;">
+      None of this runs as a hook the way the checks earlier on this page do — there's no program
+      watching for a stale document. It's a discipline that has to actually be followed, and the
+      six-tier shape exists to make it obvious the moment it hasn't been.
+    </p>
   </section>
 
   <section>

@@ -95,6 +95,58 @@ The same repository also carries two newer, smaller experiments built the same w
 
 Neither is as mature or as depended-on as `house-rules` itself; they're both still being shaped.
 
+## The other rule this repo enforces on itself: how documentation gets kept honest
+
+Separately from the checks above, house-rules also carries a rule about how *documentation*
+should be organised — not just for other projects, but, as of this pass, for this repo too. The
+idea: every project's `docs/` folder should have the same six kinds of document, called **tiers**,
+each answering a different question, so that anyone (a person or Claude) always knows exactly
+where a given fact belongs and where to go looking for it.
+
+The six tiers, in plain terms:
+
+1. **Landing** — what is this project, and where does everything live. One page, meant to answer
+   that without anyone having to search. This repo's copy is `docs/README.md`.
+2. **Roadmap** — what "done" actually means, milestone by milestone.
+3. **State** — where things actually stand right now, measured against the roadmap. This repo's
+   copy is `docs/ProjectState.md`.
+4. **Systems** — one document per piece of the project that would break the whole thing if it
+   were wrong. How it works, what must stay true about it, and what's already gone wrong with it
+   before.
+5. **Today** — what's being worked on right now, and why that instead of something else.
+6. **Decisions** — a permanent, append-only paper trail: what was decided, why, and what it
+   replaced. Never edited except to mark an old entry superseded and point at the new one.
+
+**Every project gets all six, scaled to its size — never fewer.** A small project doesn't skip a
+tier, it just has a short version of it. That's the rule, and it's meant to apply everywhere,
+which is exactly why it was worth noticing that this repository — the one that hands that rule to
+every other project — was, until this pass, quietly missing two of its own six tiers (Landing and
+State). Not a deliberate exception on record anywhere, just a plain gap. It's fixed now.
+
+**The "loop" the rule creates** is the ongoing discipline that keeps six documents from silently
+drifting apart, and it runs every time something changes:
+
+- **Figure out which tier actually moved, and touch only that one.** If where the project stands
+  changed, update State. The Roadmap only changes when the actual *definition* of done changes,
+  which should be rare and worth a comment when it happens — updating it every time something
+  ships is a sign the two tiers have been confused with each other.
+- **If a decision gets reversed later,** two things happen, not one: a new dated entry goes into
+  Decisions saying what changed and why, *and* the tier document that stated the old truth gets
+  its body corrected to say the new one, with a one-line pointer back to that entry. Never just a
+  "this is now outdated, see below" note stacked on top of text that still reads as if it's true —
+  that leaves two different answers sitting in the same document.
+- **A document that's gone genuinely stale moves to an `archive/` folder rather than being
+  deleted**, and whatever pointed at it gets fixed to point somewhere else, so nothing is left
+  linking to a page that no longer exists.
+- **Every factual claim about the code is expected to cite the exact file and line it comes
+  from**, so a reader — or a future Claude — can check it directly rather than trusting the
+  document's word for it.
+
+None of this is enforced by a hook the way the checks earlier in this document are — there's no
+program watching for a stale document the way `guard` watches for a risky command. It's a
+discipline that has to actually be followed, and the six-tier structure exists specifically to
+make it obvious when it hasn't been.
+
 ## How you'd know it's actually working
 
 There's an automated test suite that feeds realistic examples through every check above and
