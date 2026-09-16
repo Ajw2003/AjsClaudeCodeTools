@@ -20,6 +20,11 @@ are shells, not yet as load-bearing as `house-rules`; see
 rest of this file, and the commands below, describe `house-rules` specifically unless stated
 otherwise.
 
+This repo also carries its own tiered documentation, per the `house-rules:project-docs` skill.
+**[docs/README.md](docs/README.md) is the entry point** — what's built, where it stands, how each
+system works, and why past decisions were made. Read it before this file for anything not about
+running commands in this specific repo.
+
 **This root `CLAUDE.md` is a pointer, not a copy.** The actual rules text lives at
 [claude-house-rules/plugins/house-rules/rules/house-rules.md](claude-house-rules/plugins/house-rules/rules/house-rules.md)
 and is injected into every session by the plugin's `SessionStart` hook. Do not paste the rules

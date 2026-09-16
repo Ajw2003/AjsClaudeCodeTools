@@ -479,6 +479,10 @@ decide_cases = [
     (["claude-house-rules/plugins/house-rules/rules/house-rules.md"], "1.1.0", "1.0.0",
      False, "changed, version decreased"),
     (["README.md"], "1.0.0", "1.0.0", True, "non-plugin file changed, version unmoved"),
+    (["CLAUDE.md"], "1.0.0", "1.0.0", False, "root CLAUDE.md changed, version unmoved"),
+    (["CLAUDE.md"], "1.0.0", "1.1.0", True, "root CLAUDE.md changed, version increased"),
+    (["docs/README.md"], "1.0.0", "1.0.0", False, "docs/ file changed, version unmoved"),
+    (["docs/README.md"], "1.0.0", "1.1.0", True, "docs/ file changed, version increased"),
 ]
 decide_wrong = []
 for changed, old, new, expect_ok, label in decide_cases:
