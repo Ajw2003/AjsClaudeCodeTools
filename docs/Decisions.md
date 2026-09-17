@@ -7,6 +7,40 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-17 — Route a hook-relayed command through the same verified-command rule as any other
+
+**Context.** A live session hit `versioncheck`'s out-of-date banner (installed plugin behind the
+marketplace clone), printed the exact fix command as a plain fenced block with no `UNTESTED:`
+label, and moved straight into unrelated repo exploration in the same reply — the command had
+never been run on that machine, and the turn never paused for an answer. `rules/house-rules.md`
+already had a rule against handing over an unverified command, and a narrower rule about stopping
+after a page offer; neither said a command relayed from a hook's own diagnostic got the same
+treatment, so `event_versioncheck()`'s banner text told Claude only to "tell the user plainly ...
+and give them the update command(s)," with no card/`UNTESTED:` instruction and no instruction to
+stop.
+
+**Decision.** Extended "Never hand over a command I have not run" in `rules/house-rules.md` to
+cover a command relayed from a hook, tool, or diagnostic explicitly — same card, same `UNTESTED:`
+marker unless actually run this session on this machine — and added "Telling them is not the same
+as stopping for them": once something needs the user's answer before I continue, I say so and then
+stop, rather than continuing into unrelated work in the same turn. Reworded `event_versioncheck()`'s
+banner in `hook.py` to instruct exactly that (card format, `UNTESTED:`, then stop and wait), and
+updated `CLAUDE.md`'s hooks table to match. Added a `verify.py` check that the banner actually
+carries those instructions (not just the right command), and a bidirectional drift check between
+`rules/house-rules.md` and the banner text so a future reword on either side gets caught — see
+`docs/systems/verify-suites.md`, "Traps". Bumped `plugin.json` 2.24.1 → 2.24.2 for the rule/hook
+change.
+
+**Why.** The command-verification rule and the page-offer stop-and-wait rule already existed
+separately; a command that arrived via a hook's own diagnostic fell through the gap between them
+because neither one said it applied to a relayed command. Naming the problem out loud and then
+continuing into unrelated work is functionally the same failure as never naming it — the user
+still has to notice, on their own, that nothing is actually waiting on their answer.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-15 — Widen the version-bump gate to root CLAUDE.md and docs/, not just PLUGIN_ROOT
 
 **Context.** While preparing to merge the docs-tier-scaffolding PR (the one that added

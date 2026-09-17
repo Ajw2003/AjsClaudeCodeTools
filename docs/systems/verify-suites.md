@@ -6,9 +6,9 @@ Proving, mechanically, that each plugin's hook payloads produce the JSON decisio
 claim — not that the code reads well, that it *decides correctly* when fed a real payload. Three
 suites, one per plugin, same shape:
 
-| Suite | Lines | Checks (last run 2026-09-15) |
+| Suite | Lines | Checks (last run 2026-09-17) |
 |---|---|---|
-| [`house-rules/scripts/verify.py`](../../claude-house-rules/plugins/house-rules/scripts/verify.py) | 2891 | 203 PASS |
+| [`house-rules/scripts/verify.py`](../../claude-house-rules/plugins/house-rules/scripts/verify.py) | 3063 | 211 PASS |
 | [`agent-router/scripts/verify.py`](../../claude-agent-router/plugins/agent-router/scripts/verify.py) | 245 | 41 PASS |
 | [`prompt-workshop/scripts/verify.py`](../../claude-prompt-workshop/plugins/prompt-workshop/scripts/verify.py) | 228 | 22 PASS |
 
@@ -61,17 +61,26 @@ file there is still a real failure.
 
 ## Traps
 
-- **Most drift checks run in one direction only.** Eight of the nine restatement checks in
-  `house-rules`' suite assert that a phrase still appears in `house-rules.md`; they do not assert
-  that the phrase still appears in the *restatement* the check is named for. So a phrase can be
-  quietly deleted from `RUNNABLE_NOTE`, `DELEGATE_NOTE`, or `HANDOVER_NOTE` and the suite still
-  reports every check passing. This already happened once for real: the `delegate` restatement
-  lost its proactive-use authorization sentence during the shell-to-Python port, survived in
-  `house-rules.md` and both agent descriptions, and every check still passed — because the check
-  never looked at what `event_delegate` actually emits. The `delegate` row is now bidirectional
-  (checked over both `house-rules.md` and the emitted reminder); the other eight restatements are
-  still one-directional as of this writing. Treat "the drift check passes" as weaker evidence for
-  those eight than it looks.
+- **Most drift checks run in one direction only.** Most restatement checks in `house-rules`' suite
+  assert that a phrase still appears in `house-rules.md`; they do not assert that the phrase still
+  appears in the *restatement* the check is named for. So a phrase can be quietly deleted from
+  `RUNNABLE_NOTE` or `HANDOVER_NOTE` and the suite still reports every check passing. This already
+  happened once for real: the `delegate` restatement lost its proactive-use authorization sentence
+  during the shell-to-Python port, survived in `house-rules.md` and both agent descriptions, and
+  every check still passed — because the check never looked at what `event_delegate` actually
+  emits. `delegate` and `versioncheck` are now bidirectional (checked over both `house-rules.md`
+  and the emitted text); the remaining restatements are still one-directional as of this writing.
+  Treat "the drift check passes" as weaker evidence for those than it looks.
+- **Naming a command is not the same as verifying it will be handled correctly.** `versioncheck`'s
+  out-of-date banner is checked twice, separately, on purpose: one case proves the banner still
+  names the right fix command (the mismatch case), a second proves the banner still tells Claude
+  to route that command through the card format, marked `UNTESTED:`, and then stop and wait rather
+  than continuing into unrelated work. A real session hit exactly the gap the second check exists
+  to close: the banner printed the raw fix command with no `UNTESTED:`/card instruction and no
+  "then stop," so the reply relayed it as a ready-to-run block and moved straight into unrelated
+  repo exploration in the same turn (2026-09-17). The two checks are kept separate rather than
+  merged, because a banner that names the right command but drops the handling instructions (or
+  the reverse) should fail exactly one of them, not neither.
 - **There is no way to run one check or one category.** Editing a single `guard` pattern means
   re-running all 203 `house-rules` checks and reading the output to find the ~28 that were
   actually relevant. Nothing prevents this today; it's a known friction, not a bug.

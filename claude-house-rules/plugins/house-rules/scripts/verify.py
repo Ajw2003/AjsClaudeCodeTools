@@ -2927,6 +2927,38 @@ if ok:
 else:
     report("FAIL", "versioncheck flags installed lagging the marketplace clone, and arms a marker")
     print(f"          rc={rc} out={out[:300]!r}")
+
+# --- the out-of-date banner tells Claude to hand the command over properly and then stop -----
+# Why this is its own check, not folded into the mismatch check above: docs/systems/verify-suites.md, "Traps".
+vc_banner_out = out
+banner_ok = (
+    "UNTESTED" in vc_banner_out
+    and "step-card" in vc_banner_out
+    and "stop and wait" in vc_banner_out
+)
+if banner_ok:
+    report("PASS", "the out-of-date banner tells Claude to hand the command over via the card, marked UNTESTED, then stop and wait")
+    print("          banner carries the card/UNTESTED instruction and the stop-and-wait instruction")
+else:
+    report("FAIL", "the out-of-date banner tells Claude to hand the command over via the card, marked UNTESTED, then stop and wait")
+    print(f"          out={vc_banner_out[:400]!r}")
+
+# --- that same instruction has not drifted from the rules document, bidirectionally ----------
+# Same shape as the delegate/harvest drift checks: the phrase must appear in BOTH house-rules.md
+# and what versioncheck actually emits, or a reword on one side silently stops matching the other.
+drift = []
+for phrase in ("relayed", "step-card", "UNTESTED", "stop and wait"):
+    if phrase.lower() not in rules_text.lower():
+        drift.append(f"{phrase!r} missing from rules/house-rules.md")
+    if phrase.lower() not in vc_banner_out.lower():
+        drift.append(f"{phrase!r} missing from the emitted versioncheck banner")
+if not drift:
+    report("PASS", "the versioncheck banner and the rules document state the relay/stop rule the same way, both ways")
+else:
+    report("FAIL", "the versioncheck banner and the rules document state the relay/stop rule the same way, both ways")
+    for d in drift:
+        print(f"          {d}")
+
 if os.path.isfile(marker_a):
     os.remove(marker_a)
 
