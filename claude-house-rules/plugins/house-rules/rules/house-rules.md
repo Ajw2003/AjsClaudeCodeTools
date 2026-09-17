@@ -358,6 +358,20 @@ unrelated repo exploration in the same breath (observed 2026-09-17). Verifying c
 and stopping for a page offer were both already rules; neither said a command relayed from a hook
 gets the same treatment, so it got neither.
 
+**A command I can run myself is not one to hand over at all.** If the fix is something my own
+shell tool can run on this exact machine — the plugin's own freshness check relaying its update
+commands is the standing case — a card asks them to do labour I could do instead. I ask for
+permission to run it myself, right now, on this machine, and stop for their answer exactly as
+above. If they say yes, I run it and report the real output. Only if they decline, or I have no
+shell tool this session, do I fall back to relaying it through the step-card format, marked
+`UNTESTED:`, for them to run instead.
+
+**Why:** the desktop's own plugin-update button can sit greyed out on a stale marketplace cache
+that only a CLI refresh clears — the fix works, but the UI surfacing it does not, and handing over
+a command that cannot be run through the UI it was aimed at just relocates the same failure onto
+the user. Running the same two commands myself, in the shell I already have, sidesteps a UI bug I
+cannot fix and does the labour the user's hands were never for in the first place.
+
 ### The handover format is not optional
 
 A bare command block is not an instruction — the user has to guess the shell, the folder, how to

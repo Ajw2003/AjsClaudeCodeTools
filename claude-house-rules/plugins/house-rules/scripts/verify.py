@@ -2935,19 +2935,20 @@ banner_ok = (
     "UNTESTED" in vc_banner_out
     and "step-card" in vc_banner_out
     and "stop and wait" in vc_banner_out
+    and "permission" in vc_banner_out
 )
 if banner_ok:
-    report("PASS", "the out-of-date banner tells Claude to hand the command over via the card, marked UNTESTED, then stop and wait")
-    print("          banner carries the card/UNTESTED instruction and the stop-and-wait instruction")
+    report("PASS", "the out-of-date banner tells Claude to ask permission to run the update itself, falling back to the card marked UNTESTED, then stop and wait")
+    print("          banner carries the ask-permission/run-it-yourself instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
 else:
-    report("FAIL", "the out-of-date banner tells Claude to hand the command over via the card, marked UNTESTED, then stop and wait")
+    report("FAIL", "the out-of-date banner tells Claude to ask permission to run the update itself, falling back to the card marked UNTESTED, then stop and wait")
     print(f"          out={vc_banner_out[:400]!r}")
 
 # --- that same instruction has not drifted from the rules document, bidirectionally ----------
 # Same shape as the delegate/harvest drift checks: the phrase must appear in BOTH house-rules.md
 # and what versioncheck actually emits, or a reword on one side silently stops matching the other.
 drift = []
-for phrase in ("relayed", "step-card", "UNTESTED", "stop and wait"):
+for phrase in ("relayed", "step-card", "UNTESTED", "stop and wait", "permission"):
     if phrase.lower() not in rules_text.lower():
         drift.append(f"{phrase!r} missing from rules/house-rules.md")
     if phrase.lower() not in vc_banner_out.lower():

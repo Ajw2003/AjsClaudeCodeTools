@@ -699,12 +699,17 @@ def event_versioncheck():
             "=" * 70,
             "",
             "Before doing any other work this session: tell the user plainly that this "
-            "session is running an out-of-date copy of the house-rules plugin. Hand the "
-            "update command(s) below over exactly like any other command - through the "
+            "session is running an out-of-date copy of the house-rules plugin, and ask for "
+            "permission to update it yourself, right now, on this machine - the same machine "
+            "the check above just read, so your own shell tool reaches the exact install that "
+            "needs fixing. Then stop and wait for the user's answer. Reporting the problem and "
+            "continuing into unrelated work in the same turn is not the same as asking.",
+            "",
+            "If they say yes: run the command(s) below yourself, in order, right now, and "
+            "report the real output rather than the command. If they say no, or this session "
+            "has no shell tool to run them with, relay the command(s) instead - through the "
             "step-card format, marked `UNTESTED:` since this hook relayed them and they have "
-            "not been run on this machine - and then stop and wait for the user's answer. "
-            "Reporting the problem and continuing into unrelated work in the same turn is not "
-            "the same as asking.",
+            "not been run on this machine.",
             "",
         ]
         banner_lines.extend("- %s" % r for r in reasons)
