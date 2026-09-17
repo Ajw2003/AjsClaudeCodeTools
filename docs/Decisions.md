@@ -7,6 +7,37 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-17 — Ask permission to run the plugin's own update commands, rather than only relaying them
+
+**Context.** The previous entry above fixed *how* a hook-relayed command gets handed over (card,
+`UNTESTED:`, then stop and wait) but not *whether* handing it over was the right move at all. A
+real user hit exactly that card on the desktop Code tab and could not act on it: the desktop's own
+plugin-update button was greyed out on a stale marketplace cache, and the card's fix commands ran
+into the same wall the button did, because both routes required the user's own hands. Meanwhile
+`rules/house-rules.md` already says "the user's hands are for decisions, not labour" and Claude's
+own shell tool, in that same session, reaches the exact machine the freshness check just read —
+running the two refresh commands itself was always possible, and never attempted.
+
+**Decision.** Extended `event_versioncheck()`'s banner in `hook.py` to instruct Claude to ask the
+user's permission to run the marketplace-refresh and plugin-update commands itself, on this
+machine, right now, and only fall back to relaying them through the step-card format (unchanged
+from the previous entry) if the user declines or the session has no shell tool. Added a matching
+paragraph to `rules/house-rules.md` under "Never hand over a command I have not run where they
+will run it," updated `CLAUDE.md`'s hooks table, and extended `verify.py`'s banner and drift checks
+to require the new ask-permission instruction alongside the existing card/`UNTESTED:`/stop-and-wait
+ones. Bumped the plugin version 2.24.2 → 2.24.3.
+
+**Why.** A command handed over for the user to run is still labour if Claude could have run it
+instead — the card format exists for commands only the user's own hands can execute (a different
+shell, a different machine, credentials Claude doesn't hold), not as a default for every relayed
+fix. It's also the more reliable path here specifically: the CLI refresh works even when the
+surface that would otherwise run it (a greyed-out desktop button) does not, so offering to run it
+directly sidesteps a UI bug rather than routing the user straight into it.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-17 — Route a hook-relayed command through the same verified-command rule as any other
 
 **Context.** A live session hit `versioncheck`'s out-of-date banner (installed plugin behind the
