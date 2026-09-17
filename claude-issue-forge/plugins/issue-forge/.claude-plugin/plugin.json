@@ -1,0 +1,9 @@
+{
+  "name": "issue-forge",
+  "description": "STATUS: shell/v0.1. Scans this repo's backlog docs and session ledgers for issue-worthy items, drafts scoped GitHub issues, and creates them only after explicit confirmation in chat. Creating a GitHub issue is a publish/post-public-content action under the standing safety rules; the hook only ever notices and suggests, it never shells out to gh itself.",
+  "version": "0.1.0",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  }
+}
