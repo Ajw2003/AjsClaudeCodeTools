@@ -157,10 +157,29 @@ the suite as originally written, which is the argument for verification step 3 e
 
 ### Thresholds are tunable because they were guessed, then measured
 
-`HARVEST_MIN_LINES` / `HARVEST_MIN_CHARS` default to 5 / 300 and are overridable per machine.
+`HARVEST_MIN_LINES` / `HARVEST_MIN_CHARS` default to 3 / 150 and are overridable per machine.
 The defaults are not a taste call: see
-[`comment-harvest-calibration.md`](comment-harvest-calibration.md) for what 5/300 and 10/600
-each catch in this repository, and why the higher pair was effectively switched off.
+[`comment-harvest-calibration.md`](comment-harvest-calibration.md) for what different pairs each
+catch in this repository, and why the higher ones were effectively switched off.
+
+### The file-header exemption is Write-only, and the trace names the real rejection reason
+
+`_harvest_blocks()` exempts a comment run starting at line 1 (or line 2 under a shebang or
+encoding line) as a module docstring rather than an essay buried in the body of the file. That
+is only true when the text really is the whole file — a `Write`'s `content`, or a standalone
+scan of a file on disk. An `Edit`'s `new_string` is a replacement fragment with its own line
+numbering starting from wherever the edit begins, so a comment block placed at the top of an
+edit was getting exempted purely by coincidence of where the edit started. `_harvest_blocks()`
+takes a `full_file` flag now, and `event_harvest()` passes `full_file=ranged` — true only for a
+`Write` — so an `Edit` never gets the exemption. See `docs/Decisions.md`, "Fix the harvest
+handler treating an Edit fragment's line 1 as the file's header".
+
+The same entry fixed `_harvest_trace()`'s summary line, which always read "none met N lines / M
+chars" regardless of *why* a run was rejected — including when a run was long enough to clear
+the threshold but excluded for cause (a file header, a license block, commented-out code). That
+produced a self-contradictory trace: a measured run bigger than the stated threshold, right next
+to a claim that nothing reached it. The trace now only says "none met" when the longest run's
+own rejection reason genuinely was its size; otherwise it names the real reason.
 
 ## `guard` is branch-aware, and reads the branch from a file rather than from `git`
 

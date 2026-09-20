@@ -1277,14 +1277,14 @@ harv_case(
     "twenty lines of commented-out code is not an essay",
     r"C:\proj\B.cs",
     COMMENTED_CODE,
-    expect_in=["commented-out code"],
+    expect_in=["rejected: looks like commented-out code"],
 )
 harv_case(
     "trace",
     "a license header is not an essay",
     r"C:\proj\C.cs",
     LICENSE_CS,
-    expect_in=["license header"],
+    expect_in=["rejected: license header"],
 )
 harv_case(
     "silent",
@@ -1292,6 +1292,22 @@ harv_case(
     r"C:\proj\docs\systems\physics.md",
     "Sentence one. Sentence two. " * 60,
 )
+
+# --- harvest: the trace never claims "none met the threshold" for a run that did meet it -------
+# The bug this guards: a run long enough to clear the threshold but rejected for cause (a file
+# header, commented-out code, a license block) was reported as "none met N lines / M chars" -
+# self-contradictory once the run's own size was printed right next to that claim.
+for label, payload_content in (("commented-out code", COMMENTED_CODE), ("license header", LICENSE_CS)):
+    payload = json.dumps(
+        {"tool_name": "Write", "tool_input": {"file_path": r"C:\proj\D.cs", "content": payload_content}}
+    )
+    code, out, err = run_hook("harvest", payload)
+    if "none met" not in out:
+        report("PASS", f"a run that met the size threshold but was rejected ({label}) is not reported as 'none met'")
+        print(f"          {label}: no self-contradictory 'none met' phrasing in the trace")
+    else:
+        report("FAIL", f"a run that met the size threshold but was rejected ({label}) is not reported as 'none met'")
+        print(f"          got: {out[:300]}")
 
 # --- harvest: the trace is on by DEFAULT, and says what it measured ----------------------------
 # A diagnostic that ships switched off is never enabled until someone is already lost, so the
@@ -1301,7 +1317,7 @@ harv_case(
     "the default trace names the measured longest run and the active threshold",
     r"C:\proj\A.cs",
     SHORT_CS,
-    expect_in=["A.cs", "5 lines / 300 chars", "longest was 1 line"],
+    expect_in=["A.cs", "3 lines / 150 chars", "longest was 1 line"],
 )
 harv_case(
     "remind+trace",
@@ -1366,6 +1382,62 @@ if "Orbit.cs:5-10" not in out and "Blocks:" not in out:
 else:
     report("FAIL", "an Edit's reminder carries no file:line range at all")
     print(f"          got: {out[:300]}")
+
+# --- harvest: an Edit fragment's own line 1 is not the file's line 1 ---------------------------
+# Regression for docs/Decisions.md, "Fix the harvest handler treating an Edit fragment's line 1
+# as the file's header".
+EDIT_ESSAY_AT_FRAGMENT_START = (
+    "// The orbit integrator uses Verlet rather than Euler. Euler was tried first and lost\n"
+    "// energy visibly over about four minutes of play, which showed up as satellites slowly\n"
+    "// spiralling into the planet with no force acting on them. Verlet is symplectic, so the\n"
+    "// energy error is bounded rather than cumulative, and the artefact goes away entirely.\n"
+    "// The cost is that velocity is not directly available at the current step; where a caller\n"
+    "// needs it, it is reconstructed from the two most recent positions instead.\n"
+    "public void Step(float dt) { }\n"
+)
+harv_case(
+    "remind+trace",
+    "an essay at the very start of an Edit's new_string is still flagged, not exempted as a file header",
+    r"C:\proj\Assets\Orbit.cs",
+    EDIT_ESSAY_AT_FRAGMENT_START,
+    tool="Edit",
+    expect_in=["@house-rules:archivist"],
+)
+edit_head_payload = json.dumps(
+    {
+        "tool_name": "Edit",
+        "tool_input": {"file_path": r"C:\proj\Assets\Orbit.cs", "new_string": EDIT_ESSAY_AT_FRAGMENT_START},
+    }
+)
+code, out, err = run_hook("harvest", edit_head_payload)
+if "file header" not in out:
+    report("PASS", "an Edit fragment starting on a comment is not classified as a file header")
+    print("          the fragment's line 1 was not mistaken for the file's line 1")
+else:
+    report("FAIL", "an Edit fragment starting on a comment is not classified as a file header")
+    print(f"          got: {out[:300]}")
+
+# --- harvest: a genuine file header (Write, real line 1) is still exempted ---------------------
+# The other half of the same fix: full_file=True must still exempt a real module docstring when
+# the content really is the whole file, so the fix narrows the bug rather than removing the
+# exemption outright.
+PY_MODULE_DOCSTRING = (
+    '"""Orbit decay is modelled with an inverse-square drag term rather than a constant one.\n'
+    '\n'
+    'A constant term made outer satellites decay at the same rate as inner ones, which reads as\n'
+    'wrong to anyone who has watched a real orbit - drag falls off with altitude, and the model\n'
+    'should too. The inverse-square term was chosen over inverse-cube because it matches the\n'
+    'reference atmosphere table closely enough over the altitudes this game actually uses.\n'
+    '"""\n'
+    'import time\n'
+)
+harv_case(
+    "trace",
+    "a real module docstring at the file's actual line 1 is still exempted as a file header",
+    "/proj/svc/decay.py",
+    PY_MODULE_DOCSTRING,
+    expect_in=["file header"],
+)
 
 # --- harvest: every "could not tell" path is loud, and none of them obstruct -------------------
 for payload, label in (
