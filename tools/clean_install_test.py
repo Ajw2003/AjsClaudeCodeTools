@@ -393,7 +393,7 @@ def main():
         out = subprocess.run(
             [sys.executable, hook_path, "inject"], input=b"", capture_output=True
         ).stdout.decode("utf-8", "replace")
-        if "Never commit without asking" in out:
+        if "Commit constantly on my own branches, never on theirs" in out:
             ok("inject emits the rules")
         else:
             bad("inject did not emit the rules")
@@ -436,14 +436,15 @@ def main():
     print("       That must run with NO permission prompt.")
     print()
     print("    5. The guard test needs an uncommitted change to be meaningful.")
-    print("       On a clean worktree, git add -A stages nothing whether the guard")
-    print("       intercepted it or not, so the result looks the same either way and")
-    print("       proves nothing. Give it something real to stage first:")
+    print("       On a clean worktree, a commit attempt has nothing to commit whether the")
+    print("       guard intercepted it or not, so the result looks the same either way and")
+    print("       proves nothing. Give it something real to commit first:")
     print()
     print("         echo scratch > guard-test.txt")
     print()
-    print("       Then ask Claude to run:  git add -A")
-    print('       That MUST raise a prompt naming "Never commit without asking".')
+    print('       Then ask Claude to run:  git add -A && git commit -m "test"')
+    print('       That MUST raise a prompt naming "Commit constantly on my own branches,')
+    print('       never on theirs" - `add` alone is not guarded, only commit/push/reset/etc.')
     print("       Deny it, then clean up:")
     print()
     print("         del guard-test.txt")
