@@ -58,12 +58,8 @@ STEP = 0
 FAILURES = 0
 SKIPPED = []
 
-# The repo ships files the plugin package does not - docs/, tools/, CLAUDE.md, the README. Run
-# from the installed cache, every check that reads one of those reported FAIL, where the honest
-# answer is "not applicable here"; a RESULT line that is always red is a RESULT line you learn to
-# ignore, which costs the real failures their only signal. The marker is the repo root's
-# marketplace manifest: it sits beside the plugin directory in the repo and never in the cache,
-# so the two cases can be told apart without guessing.
+# Why SKIP exists and what it's gated on: docs/systems/verify-suites.md, "How it works"
+# (the IN_REPO paragraph) and Invariants ("A repo-only check SKIPs outside a checkout...").
 IN_REPO = os.path.isfile(os.path.join(ROOT, ".claude-plugin", "marketplace.json"))
 
 
@@ -1030,12 +1026,8 @@ else:
     print("          hooks.json does not wire ExitPlanMode to run.sh delegate")
 
 # --- the reminder in hook.py's delegate handler has not drifted from the rules document -----
-# BIDIRECTIONAL, and that is the point. This check used to assert only that each phrase was
-# still in house-rules.md, never that it was still in the reminder it is named for - so when
-# ec6105e ported delegate.sh into DELEGATE_NOTE and dropped the sentence saying the delegation
-# is AUTHORIZED (the agent description's proactive-use marking, which is the harness's own gate),
-# every check still passed and the executor quietly stopped firing on generic instructions. The
-# phrase list below must appear in BOTH the canonical rules and the emitted reminder.
+# Why this must be bidirectional: docs/systems/verify-suites.md, Traps ("Most drift checks
+# run in one direction only") and docs/architecture.md, "Why the delegation kept not happening".
 _, delegate_out, _ = run_hook("delegate", "")
 drift = []
 for phrase in [
@@ -2014,11 +2006,7 @@ else:
     print(f"          {'; '.join(digestdrift)}")
 
 # --- the output style exists and IS forced ---------------------------------------------------
-# Reversed in 2.4.0. 2.3.0 asserted this field was ABSENT, on the argument that forcing displaces
-# a style the user selected - which assumed a picker that does not exist: /output-style was
-# removed in v2.1.91 and the desktop app has no style picker, so un-forced meant unreachable
-# without hand-editing a settings file. Same shape as the executor dead-field check either way:
-# assert the decision, not just the file, so it cannot flip back by accident.
+# Why this was reversed in 2.4.0: docs/architecture.md, "Why the output style is forced".
 styledrift = []
 if not os.path.isfile(STYLE):
     styledrift.append("output-styles/handover-cards.md is missing")
@@ -2382,15 +2370,9 @@ else:
     print(f"          {'; '.join(docdrift)}")
 
 # --- the "What trips the guard" README table matches GUARD_R3/GUARD_R4's actual git verbs -----
-# guard's git patterns keep only the verbs that actually write history, the index, or the
-# remote - navigational verbs (add, a bare checkout/switch, branch, tag, remote, submodule, a
-# bare stash) were deliberately left unmatched, because they produced nothing but noise. The
-# README's table listed the old, broader verb set for months after that narrowing shipped: a
-# reader who tested with `git add -A`, expecting a prompt, saw none and could reasonably
-# conclude the hook was broken rather than working as designed. This tokenizes the backtick
-# code spans in the table itself, rather than hand-copying the verb list a second time, so a
-# future re-narrowing (or re-widening) of GUARD_R3/GUARD_R4 breaks this check instead of
-# silently leaving the table wrong again.
+# Why this tokenizes the table instead of hand-copying the verb list, and the incident that
+# made it necessary: docs/systems/verify-suites.md, Invariants ("The guarded-verb list is
+# never hand-copied into a doc").
 GUARDED_GIT_VERBS = [
     "push", "commit", "reset", "revert", "clean", "rebase", "merge",
     "filter-branch", "cherry-pick", "am", "apply", "checkout", "restore", "stash",

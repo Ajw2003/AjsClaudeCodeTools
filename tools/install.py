@@ -155,21 +155,10 @@ def run_claude(args):
 def install_steps():
     """The claude CLI commands that install or upgrade the plugin, in the order they must run.
 
-    A value rather than four inline calls, because the ORDER is the load-bearing part and it
-    was wrong. `marketplace add` answers "already on disk" for a marketplace this device has
-    seen before and does NOT re-fetch it, so on every machine that already had house-rules the
-    cached clone stayed at the old commit, `plugin update` found nothing newer, and the device
-    kept running the old version. Only `marketplace update` re-fetches. The original sequence
-    therefore worked on a fresh machine and could not upgrade an existing one - which is the
-    case that actually matters, since a fresh machine has no old version to be stuck on.
-
-    Order: add declares the marketplace (a no-op once declared), update re-fetches it, install
-    registers the plugin (a no-op once registered), update re-points the registration at the
-    version now on disk. Each of the four is a no-op on the path where the other three matter,
-    which is why all four always run rather than being branched on.
-
-    Exposed as a value so verify_tools.py can assert the order without shelling out to the
-    claude CLI or mutating a real machine's config.
+    `marketplace add` answers "already on disk" for a marketplace this device has seen before
+    and does NOT re-fetch it, which is why `marketplace update` must run too. Full rationale and
+    why this is a value rather than four inline calls: docs/systems/plugin-distribution.md,
+    "How it works" (the four-command sequence).
     """
     return [
         (["plugin", "marketplace", "add", REPO],

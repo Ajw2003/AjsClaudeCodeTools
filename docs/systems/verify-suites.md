@@ -58,6 +58,18 @@ file there is still a real failure.
   printed, and a doc that hardcodes one is itself a drift check failure.
 - **A repo-only check `SKIP`s outside a checkout and `FAIL`s inside one** — the distinction is
   `IN_REPO`, and a check that can't tell which state it's in must fail rather than guess.
+- **The guarded-verb list is never hand-copied into a doc.** The README's "What trips the
+  guard" table is checked by tokenizing the backtick code spans in the table itself against
+  `GUARD_R3`/`GUARD_R4`'s actual verb lists (`GUARDED_GIT_VERBS`, `NAVIGATIONAL_GIT_VERBS` in
+  `verify.py`), rather than by hand-copying the verb list into a second check. The README's
+  table listed the old, broader verb set for months after `guard`'s git patterns were narrowed
+  to only the verbs that write history, the index, or the remote (navigational verbs — `add`, a
+  bare `checkout`/`switch`, `branch`, `tag`, `remote`, `submodule`, a bare `stash` — were
+  deliberately left unmatched, since matching them produced only noise). A reader who tested
+  with `git add -A`, expecting a prompt, saw none and could reasonably conclude the hook was
+  broken rather than working as designed. Tokenizing the table means a future re-narrowing (or
+  re-widening) of the guarded verbs breaks this check instead of silently leaving the table
+  wrong again (`verify.py:2372-2393`).
 
 ## Traps
 

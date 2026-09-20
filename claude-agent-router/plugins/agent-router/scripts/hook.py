@@ -121,14 +121,9 @@ _TASK_VERB_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Also Tier 2: investigative questions. "Recon" is operative's own stated job, but recon
-# naturally comes phrased as an inquiry ("why is this flaky") rather than an imperative
-# ("investigate why this is flaky") - without this, the classifier missed exactly the
-# phrasing its own recon definition should cover. Kept separate from _TASK_VERB_RE, not
-# folded in, so a bare "why"/"how" without investigative shape (see _looks_underspecified-
-# style false positives) stays cheap to reason about on its own. Checked after _ARCH_RE, so
-# a decision phrased as a question ("why should we consolidate these") still routes to
-# architect - "should" isn't in the why-clause list below on purpose.
+# Also Tier 2: investigative questions. Why this exists, why it's kept separate from
+# _TASK_VERB_RE, and why it's checked after _ARCH_RE: docs/systems/offshoot-plugins.md,
+# Invariants ("agent-router's recon-question regex is checked after the architecture regex").
 _RECON_QUESTION_RE = re.compile(
     r"\bwhy (?:is|does|are|do|isn'?t|doesn'?t|aren'?t|don'?t|won'?t|did|wasn'?t|weren'?t)\b|"
     r"\bhow (?:does|do|did|is|are)\b.{0,60}\b(?:work|works|working|worked|fail|fails|failing|"

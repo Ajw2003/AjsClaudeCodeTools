@@ -59,6 +59,16 @@ presented — both READMEs describe installing them the same way, once ready, vi
   the parent session's injected `additionalContext`, so each of `agent-router`'s three agents
   (`scribe`, `operative`, `architect`) carries its own short, self-contained digest rather than
   assuming `rules/agent-router.md` reached it.
+- **`agent-router`'s recon-question regex is checked after the architecture regex, and kept
+  separate from the general task-verb regex, on purpose.** `_RECON_QUESTION_RE`
+  (`hook.py:124-131`) exists because "recon" — `operative`'s own stated job — naturally comes
+  phrased as an inquiry ("why is this flaky") rather than an imperative ("investigate why this
+  is flaky"); without a dedicated pattern the classifier missed exactly that phrasing. It's kept
+  separate from the task-verb regex rather than folded in, so a bare "why"/"how" with no
+  investigative shape stays cheap to reason about on its own. And it's checked after the
+  architecture regex so a decision phrased as a question ("why should we consolidate these")
+  still routes to `architect` — "should" is deliberately absent from the why-clause list so that
+  case doesn't get claimed here first.
 
 ## Traps
 

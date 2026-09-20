@@ -7,6 +7,35 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-20 — Reproduce the install-upgrade fix against the real CLI before trusting it
+
+**Context.** `tools/` had no coverage of `install.py` at all before 2.15.0, and the gap cost
+something concrete: `claude plugin marketplace add` answers "already on disk" for a marketplace
+the device has already seen and does not re-fetch it, so the cached clone stayed on the old
+commit and `claude plugin update` afterward reported "already at the latest version" — naming
+the **old** version, a confident wrong answer. Unit-testing `install.py`'s `install_steps()`
+order in isolation would prove the sequence was internally consistent without proving it fixed
+anything a real machine would hit.
+
+**Decision.** Before trusting the fix (inserting `plugin marketplace update` into the sequence),
+it was reproduced against the real `claude` CLI: a stale cache registered version 2.17.0; running
+the *old* three-command sequence against it reproduced the "already at the latest version"
+lie naming 2.17.0; running the fixed four-command sequence against the same stale cache reported
+"updated from 2.17.0 to 2.18.0" correctly. `tools/verify_tools.py`'s install-upgrade-path checks
+(`verify_tools.py:313-322`) pin the resulting **order** of `install_steps()`'s four commands,
+without shelling out to the real CLI or mutating a machine's config on every test run — that
+real-CLI reproduction was a one-time manual step, not something the automated suite repeats.
+
+**Why.** `install_steps()`'s docstring and `docs/systems/plugin-distribution.md` already record
+*why* the order must be add/update/install/update. What wasn't recorded anywhere is that the fix
+was confirmed against the actual failure mode on the actual CLI, not just argued for — and that
+distinction matters because the argument alone ("marketplace add doesn't re-fetch") could be
+right in theory and still miss some other reason `plugin update` reports what it does. Recording
+the reproduction is what lets a later reader trust the checks are testing the right thing, not
+just a plausible-sounding invariant.
+
+---
+
 ## 2026-09-20 — Give the archivist a two-pass process for batch harvests
 
 **Context.** Running `/house-rules:harvest-scan` against this repo at the harvest hook's own

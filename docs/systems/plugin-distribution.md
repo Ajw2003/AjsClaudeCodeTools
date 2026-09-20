@@ -54,6 +54,12 @@ proof against what a stranger's machine would actually get, not just the working
 2026-09-15: all PASS) covers the logic inside `session_ledger.py`, `clean_install_test.py`, and
 `measure_footprint.py` — deliberately *not* anything that shells out to the real `claude` CLI or
 mutates a real machine's config, which is what `clean_install_test.py` itself is for.
+`measure_footprint.py`'s `split_output` (`measure_footprint.py:104-112`) is part of what that
+coverage protects: `reminder_text()` collapses a hook call's `additionalContext` and
+`systemMessage` into one value, which is right for the per-prompt/per-session figures but wrong
+for pricing a trace, because a `PostToolUse` handler can emit *both* a reminder and a trace in
+the same call — measuring only the collapsed value is how the `harvest` trace went unmeasured
+through 2.13.0. `split_output` keeps the two apart so the trace has a price of its own.
 
 ## Invariants
 
@@ -89,3 +95,19 @@ mutates a real machine's config, which is what `clean_install_test.py` itself is
 - **`clean_install_test.py`'s cleanliness check can contradict its own strip step** if the strip
   doesn't fully clear the cache before reinstalling — this class of bug is exactly why
   `tools/verify_tools.py` exists: `tools/` had no coverage at all before 2.15.0.
+- **`residual_config` (`clean_install_test.py:70-81`) checks for OUR entries, not for the
+  container keys being absent.** Step 7 of the strip deliberately leaves `enabledPlugins` and
+  `extraKnownMarketplaces` in place so unrelated plugins survive it, and the CLI's own uninstall
+  leaves an empty `enabledPlugins: {}` behind regardless — asserting the key itself is absent
+  contradicts that and fails on any machine that has ever had a plugin installed. The
+  fresh-container run only ever passed because it had no `settings.json` to begin with. Lifted
+  out of `main()` specifically so it's testable — this is exactly where that bug lived, and it
+  survived because nothing in `tools/` was reachable by a test before 2.15.0.
+- **A version-keyed install can serve stale content under an unchanged version number.** The
+  byte-for-byte comparison in `clean_install_test.py` (`clean_install_test.py:298-304`) exists
+  because the SHA check that runs right after a strip can never catch this — the cache is
+  deleted and a fresh clone is guaranteed by construction. It's `--skip-strip`, where nothing
+  gets deleted, where a stale install can hide: this is exactly what PR #13 did, merging a
+  `Stop`-hook change with no version bump, so a version-keyed cache kept serving the previous
+  PR's content forever. The byte-for-byte check compares every file the repo ships against what
+  is actually on disk, rather than trusting the version number to mean anything.

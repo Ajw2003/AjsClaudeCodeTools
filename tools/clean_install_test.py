@@ -70,14 +70,8 @@ def run_claude(args):
 def residual_config(settings):
     """Which of OUR entries are still in a settings dict. Empty means clean.
 
-    Checks for our entries, not for the container keys. Step 7 deliberately leaves
-    enabledPlugins and extraKnownMarketplaces in place so unrelated plugins survive the strip,
-    and the CLI's own uninstall leaves an empty enabledPlugins {} behind regardless. Asserting
-    the key is absent contradicts the step above it and fails on any machine that has ever had
-    a plugin installed - the fresh-container run passed only because it had no settings.json.
-
-    Lifted out of main() so it can be tested: this is exactly where that bug lived, and it
-    survived because nothing in tools/ was reachable by a test.
+    Why this checks entries and not container keys: docs/systems/plugin-distribution.md, Traps
+    ("residual_config checks for OUR entries, not for the container keys being absent").
     """
     residue = []
     settings = settings or {}
@@ -295,13 +289,9 @@ def main():
     else:
         bad("no installed_plugins.json after install")
 
-    # The SHA check above runs after the strip, when the cache has been deleted and a fresh
-    # clone is therefore guaranteed - it can never see a stale install. This check is what
-    # earns its place under --skip-strip, where nothing was deleted and the installed copy may
-    # be sitting on old content under an unchanged version number (exactly what PR #13 did:
-    # merged a Stop-hook change with no version bump, so a version-keyed cache could keep
-    # serving PR #12's 2.4.0 forever). It byte-compares every file the repo ships against what
-    # is actually on disk, rather than trusting the version number to mean anything.
+    # Why this byte-compares instead of trusting the SHA/version check above, and the PR #13
+    # incident that made it necessary: docs/systems/plugin-distribution.md, Traps ("A
+    # version-keyed install can serve stale content under an unchanged version number").
     step("Does the installed copy match the repo, byte for byte?")
     repo_plugin_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
