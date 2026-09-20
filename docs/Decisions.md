@@ -27,7 +27,10 @@ reason (file header, license header, commented-out code, etc.) when a run met th
 but was rejected for cause. Also lowered the defaults from 5 lines/300 chars to 3 lines/150 chars
 per direct request, and normalized C#'s `///` doc-comments (and `////` dividers) by stripping all
 leading slashes rather than just the two the `//` marker consumes. Added `harvest_scan.py` for a
-manual, project-wide sweep using the same detection code. Bumped the plugin version.
+manual, project-wide sweep using the same detection code, and wrapped it in a rerunnable
+`/house-rules:harvest-scan` command (`commands/harvest-scan.md`) so it resolves the installed
+plugin's script via `$CLAUDE_PLUGIN_ROOT` instead of requiring a hand-built plugin-cache path.
+Bumped the plugin version.
 
 **Why.** The bug meant `Edit` calls — the common case for touching an existing file, as opposed
 to `Write`'s full-file rewrite — could silently exempt exactly the comment blocks the handler

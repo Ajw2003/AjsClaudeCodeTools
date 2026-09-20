@@ -2314,6 +2314,26 @@ else:
     report("FAIL", "/house-rules:doctor maps every interpreter gap to an OS-specific install command")
     print(f"          {'; '.join(doctordrift)}")
 
+# --- /house-rules:harvest-scan exists and actually invokes harvest_scan.py ---------------------
+HARVEST_SCAN_CMD = os.path.join(HERE, "..", "commands", "harvest-scan.md")
+HARVEST_SCAN_PY = os.path.join(HERE, "harvest_scan.py")
+hsdrift = []
+if not os.path.isfile(HARVEST_SCAN_CMD):
+    hsdrift.append("commands/harvest-scan.md is missing")
+if not os.path.isfile(HARVEST_SCAN_PY):
+    hsdrift.append("scripts/harvest_scan.py is missing")
+if not hsdrift:
+    cmd_text = read(HARVEST_SCAN_CMD)
+    for needle in ["harvest_scan.py", "$CLAUDE_PLUGIN_ROOT", "$ARGUMENTS"]:
+        if needle not in cmd_text:
+            hsdrift.append(f"harvest-scan.md is missing {needle!r}")
+if not hsdrift:
+    report("PASS", "/house-rules:harvest-scan exists and runs the installed harvest_scan.py")
+    print("          resolves via $CLAUDE_PLUGIN_ROOT, never a hand-built cache path")
+else:
+    report("FAIL", "/house-rules:harvest-scan exists and runs the installed harvest_scan.py")
+    print(f"          {'; '.join(hsdrift)}")
+
 # --- the architecture tables in CLAUDE.md and the README match hooks.json ----------------------
 # Registered dispatch events, read from hooks.json's run.sh invocations rather than filenames -
 # there is only one script (run.sh) now, dispatched by event argument.
