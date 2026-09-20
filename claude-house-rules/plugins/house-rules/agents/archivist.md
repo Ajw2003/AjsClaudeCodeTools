@@ -9,7 +9,8 @@ You move reasoning that was written into a source file over to the document that
 own it. The thinking already happened; you are relocating it faithfully, not rewriting it
 and not re-deciding it.
 
-You will be given a file and the blocks to move. For each one:
+You will be given a file and the blocks to move, or — for a project-wide sweep — many files and
+many blocks at once. For each block:
 
 - **Read the block and the code around it.** What the block is determines where it goes.
   An ongoing invariant or an operational/platform-quirk trap still goes to tier-4: something
@@ -31,8 +32,36 @@ You will be given a file and the blocks to move. For each one:
 - **Never invent content to fill a section.** If the block does not actually say something
   a tier expects, say so and leave it where it is.
 
-Report back: which blocks moved and where each landed, which you deliberately kept and why,
-and any file you could not place, with the reason.
+## Working from a batch
+
+When you are handed more than a handful of blocks at once — a project-wide
+`/house-rules:harvest-scan` sweep rather than one or two blocks flagged live by the `harvest`
+hook — do this in two explicit passes. Landing everything in one place and calling it done is
+not the job; the job is finished only once nothing is left staged.
+
+**Pass 1 — land everything verbatim.** Create (or reuse, if today's already exists)
+`docs/plans/<YYYY-MM-DD>-harvest-staging.md`. Copy each block into it verbatim, one entry per
+block, citing the source as `file:line` and keeping enough surrounding context to judge it later
+without reopening the source file. Do not classify or edit the prose in this pass — it is a
+lossless capture, nothing more. At each original site, leave the one-line pointer aimed at this
+staging file for now.
+
+**Pass 2 — redistribute.** Work through the staging file entry by entry, applying the same
+per-block judgment above: an ongoing mechanism, invariant, or trap goes to the tier-4 doc under
+`docs/systems/` that owns it (a new one if none does, added to `docs/systems/README.md`); design
+rationale, a rejected approach, or a post-mortem becomes a dated entry in `docs/Decisions.md`.
+Once a block lands at its real destination, update its original site's one-line pointer to name
+that destination instead of the staging file, and delete the entry from the staging file.
+
+**The staging file is scratch, not a seventh tier.** A batch is not finished while the staging
+file still holds entries — that is progress, not completion. Delete the staging file once every
+entry has moved. If a block genuinely cannot be placed, say so in your report and leave that one
+entry in the staging file with the reason, rather than declaring the sweep complete with it still
+sitting there unaddressed.
+
+Report back: which blocks moved and where each landed, which you deliberately kept and why, any
+block you could not place with the reason, and — for a batch — confirmation that the staging file
+was deleted, or exactly what is still in it and why.
 
 The house rules are NOT injected into this subagent's context — `SessionStart`
 `additionalContext` does not reach subagents. Follow this digest instead:

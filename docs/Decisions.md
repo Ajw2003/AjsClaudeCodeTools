@@ -7,6 +7,40 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-20 — Give the archivist a two-pass process for batch harvests
+
+**Context.** Running `/house-rules:harvest-scan` against this repo at the harvest hook's own
+default thresholds (3 lines / 150 chars — see
+[`comment-harvest-calibration.md`](comment-harvest-calibration.md)) found 162 blocks across 16
+files. The archivist agent's instructions describe per-block judgment (tier-4 systems doc vs.
+`docs/Decisions.md`) but say nothing about how to behave at that scale. Dispatched with 162
+blocks in one shot, nothing stopped a plausible shortcut: paste everything into one tier-4 doc,
+verbatim, with pointers, and report the sweep done — which is capture, not the actual
+redistribution the harvest rule asks for (see "Long-form reasoning goes in a document, not in a
+comment" in `rules/house-rules.md`).
+
+**Decision.** Added a "Working from a batch" section to
+[`agents/archivist.md`](../claude-house-rules/plugins/house-rules/agents/archivist.md) requiring
+two explicit passes whenever more than a handful of blocks are handed over at once: Pass 1 lands
+every block verbatim, with `file:line` citations, into a dated scratch file at
+`docs/plans/<date>-harvest-staging.md`; Pass 2 works through that staging file entry by entry,
+applying the existing per-block classification, moving each into its real tier-4 doc or a dated
+`Decisions.md` entry, updating the original site's pointer to the final destination, and deleting
+the entry from staging. The staging file is explicitly scratch, not a seventh tier — the report
+must confirm it was deleted, or say exactly what is still in it and why. A single block flagged
+live by the `harvest` hook is unaffected; it still goes straight to its final destination in one
+pass, per the agent's original instructions.
+
+**Why.** The whole point of the harvest rule is that reasoning ends up somewhere it can be
+maintained and found — a tier-4 doc or a dated decision, not a comment nobody re-reads. A batch
+run that dumps 162 blocks into one document with pointers satisfies "verbatim" and "pointer" but
+not "found where it belongs," and nothing in the agent's prior instructions would have caught
+that as incomplete. Splitting capture from redistribution, and making the staging file's own
+emptiness the completion signal, closes that gap without changing how a single live-flagged block
+is handled.
+
+---
+
 ## 2026-09-20 — Fix the harvest handler treating an Edit fragment's line 1 as the file's header
 
 **Context.** A user's screenshot showed a trace reading "2 comment runs, none met 5 lines / 300
