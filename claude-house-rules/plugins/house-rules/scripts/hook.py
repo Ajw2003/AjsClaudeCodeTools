@@ -99,12 +99,8 @@ def _read_text(path):
 def _detect_environment():
     """Runtime detection used when rules/environment.md is missing or empty.
 
-    rules/environment.md is machine-local and gitignored (F2 in the port plan) - on a fresh
-    clone there is nothing recorded, and the old fallback text just said "go find out" without
-    saying anything concrete. This actually runs the checks: OS, Python, and which of the
-    tools the hooks/tools care about are on PATH. It is not a substitute for a hand-verified
-    rules/environment.md (things like RAM, GPU, and the CRLF/autocrlf trap need a human to
-    write down), but it means the injection carries live facts rather than nothing at all.
+    Why this exists and what it can't replace: docs/architecture.md, "The machine profile is
+    data, not code, and is not committed".
     """
     lines = ["# This machine (runtime-detected - not yet hand-verified)", ""]
     lines.append(f"OS: {platform.system()} {platform.release()} ({platform.platform()})")
@@ -340,12 +336,8 @@ def _has_node_markers(d):
 def _unity_markers_in_parent(project_dir):
     """True when project_dir is itself a Unity project's Assets/ folder.
 
-    Opening a Unity project at its Assets/ folder (rather than the project root one level
-    up) is a normal workflow - `_standards_scan_dirs` never sees the sibling
-    ProjectSettings/*.csproj markers because they live above project_dir, not inside it.
-    Checked narrowly (parent must carry a real Unity marker, not just contain a directory
-    named "Assets") so a coincidentally-named Assets/ folder in a non-Unity repo doesn't
-    false-positive.
+    Why and how: docs/systems/hook-engine.md, Invariants ("standards detects a Unity project
+    opened at its Assets/ folder").
     """
     normalized = os.path.normpath(project_dir)
     if os.path.basename(normalized) != "Assets":
@@ -963,14 +955,8 @@ def _git_dir(start):
 def branch_ownership():
     """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
 
-    Why a file read and not `git rev-parse`: docs/architecture.md, "Why `.git/HEAD` and not
-    `git rev-parse --abbrev-ref HEAD`".
-
-    `is_mine` is True only for a branch named `claude/…`. Everything else — the user's
-    branches, a detached HEAD, a directory that is not a repo, an unreadable HEAD — comes
-    back False, so every uncertainty lands on the prompting side. `note` is a short phrase
-    naming what could not be established, present only when something genuinely failed;
-    silence there means the branch was read cleanly.
+    Mechanism and invariants: docs/systems/hook-engine.md, Invariants ("guard reads the branch
+    from .git/HEAD...") and "Every uncertainty in branch ownership resolves to 'not mine'".
     """
     try:
         git_dir = _git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
@@ -1006,11 +992,8 @@ _COMMAND_VALUE_RE = re.compile(r'"command"\s*:\s*"((?:[^"\\]|\\.)*)"')
 def _trace_subject(subject, limit=60):
     """The command as a human reads it, collapsed to one short line.
 
-    _guard_subject deliberately returns the RAW JSON slice, because matching against escapes
-    intact is what keeps the patterns honest. That is the wrong thing to print: it would show
-    the reader `"command": "git status"` rather than `git status`. So decode for the trace
-    only - the matching still runs on the raw slice. The trace is paid on every shell call,
-    so it stays one line however long or multi-line the command was.
+    Why this decodes separately from matching: docs/systems/hook-engine.md, Invariants
+    ("the trace decodes the command for display; matching still runs on the raw slice").
     """
     m = _COMMAND_VALUE_RE.search(subject)
     if m:
@@ -1357,21 +1340,10 @@ def event_delegate():
     return 0
 
 
-# ---------------------------------------------------------------------------------------
-# announce / verdict - the two subagent-lifecycle handlers. Both fail OPEN and loud.
-#
-# WHY THESE EXIST. A delegation used to be invisible: nothing showed that the executor was
-# the agent that ran, that it ran on Sonnet, or which rules digest was in its context. The
-# frontmatter "model: sonnet" is a DECLARATION, not evidence - CLAUDE_CODE_SUBAGENT_MODEL_FORCE
-# can override it, and neither the agent list nor the completion notification reports a model.
-# announce says what was declared at spawn; verdict says what actually served it, read out of
-# the subagent's own transcript. See docs/architecture.md.
-#
-# FAILURE CONTRACT: same as handover, for the same reason. A non-zero exit at a subagent
-# lifecycle event must never wedge anything, and decision:"block" on SubagentStop would send
-# the subagent back to work. So every path exits 0, and every path meaning "I could not tell"
-# says so by name - silence from either handler means only that it looked and found nothing.
-# ---------------------------------------------------------------------------------------
+# announce / verdict - the two subagent-lifecycle handlers. Both fail OPEN and loud, same
+# contract as handover (a decision:"block" here would wedge a subagent mid-run).
+# Why these exist and how the transcript is probed: docs/architecture.md, "announce and
+# verdict handlers fix" / "The transcript is probed, never assumed".
 
 # Same shape as _PROMPT_FIELD_RE / _COMMAND_FIELD_RE: pull one field out of the raw payload
 # without trusting the whole thing to parse. Value-capturing, and escape-aware - NOT the
@@ -1436,11 +1408,8 @@ def _agent_file(agent_type):
 def _declared(agent_type, problems=None):
     """(model, effort, fingerprint) declared by the installed agent definition.
 
-    Read out of the file rather than hardcoded here, so the line reports the copy actually
-    sitting in the plugin cache - the whole point is that it is not a claim hook.py makes.
-
-    The fingerprint covers the WHOLE file, not just the digest section. Any digest change
-    changes the file, so parsing out a section would add a failure mode and buy nothing.
+    Why this reads the file instead of hardcoding a claim: docs/architecture.md,
+    "announce (SubagentStart) reports the declaration".
     """
     path = _agent_file(agent_type)
     if not path:
@@ -1551,11 +1520,8 @@ def event_announce():
 def _transcript_candidates(payload):
     """Where the subagent's own transcript might be, most authoritative first.
 
-    The first candidate is a payload field that is NOT in the documented reference - it may
-    be there, so it is tried, but nothing depends on it. The rest reconstruct the layout
-    observed live: <dir of parent transcript>/<session>/subagents/agent-<id>.jsonl. The docs
-    warn the transcript format is internal and changes between releases, which is exactly why
-    this probes and then says what it tried rather than assuming any of it.
+    Why this probes rather than assumes: docs/architecture.md, "The transcript is probed,
+    never assumed, and that is deliberate."
     """
     out = []
     direct = _field(_AGENT_TRANSCRIPT_RE, payload)
@@ -1804,18 +1770,8 @@ def _reply_is_already_a_card(reply):
 def _reply_needs_the_handover_check(payload):
     """Three tiers, the same ladder guard uses on its own input.
 
-    Field found  -> True only if the reply hands over a command (a fenced block) and is not
-                    already in card shape. Firing on a reply that already complies cannot end
-                    quietly: the turn continues, suppressOutput has no effect, and what the
-                    user gets is Claude announcing its own compliance - the one thing
-                    rules/house-rules.md forbids a card from doing. Not firing is the only
-                    way that rule can hold.
-    Field absent -> True. An older CLI that does not send last_assistant_message must not
-                    silently disable the check; fall back to firing, as it behaved before.
-
-    The cost is deliberate and worth naming: a reply in card shape but missing a field - no
-    UNTESTED:, no location line - now passes unchecked. That is a silent miss on some turns
-    in exchange for a guaranteed visible defect on every good one.
+    Why not firing on a compliant reply is the point, and the cost that trades away:
+    docs/architecture.md, "handover is the one deliberate exception".
     """
     m = _LAST_MESSAGE_FIELD_RE.search(payload)
     if m is None:
@@ -1857,14 +1813,8 @@ def event_handover():
         return 0
 
     if not _reply_needs_the_handover_check(payload):
-        # The one handler that must NOT trace, and the reason is a direct conflict between
-        # two rules rather than a cost argument. This path is reached when the reply hands
-        # over no command, or when it is already in card shape. Tracing the second case is
-        # precisely the "a card never announces its own compliance" defect the Stop gate was
-        # narrowed to remove - the line would appear, visibly, at the end of every correct
-        # handover. And the first case would put a line on the end of every ordinary turn.
-        # Silence here already means "I looked and there was nothing to do", which is what
-        # the rule asks of it; nothing is being hidden.
+        # The one handler that must NOT trace - direct rule conflict, not a cost argument.
+        # docs/architecture.md, "handover is the one deliberate exception".
         return 0
 
     # additionalContext, not decision: "block". Both continue the turn under the same loop

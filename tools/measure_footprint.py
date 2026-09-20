@@ -104,11 +104,8 @@ def run_hook(hook_py, event, payload, env=None):
 def split_output(stdout):
     """(reminder, trace) for one hook call.
 
-    reminder_text() collapses the two into one value, which is right for the per-prompt and
-    per-session figures but wrong here: a PostToolUse handler can emit BOTH an additionalContext
-    reminder and a systemMessage decision trace in the same call, and the trace is the thing
-    this section exists to price. Measuring only the reminder is how the harvest trace went
-    unmeasured through 2.13.0.
+    Why this exists instead of reusing reminder_text(): docs/systems/plugin-distribution.md,
+    "How it works" (the split_output paragraph under "Proving the tools' own decision logic").
     """
     try:
         payload = json.loads(stdout)

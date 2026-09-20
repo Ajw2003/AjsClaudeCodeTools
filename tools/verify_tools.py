@@ -311,15 +311,8 @@ check(
 )
 
 # --- install.py's upgrade path ----------------------------------------------------------------
-# tools/ had no coverage of install.py at all, and the gap cost something concrete: the command
-# sequence could install the plugin on a fresh machine and was UNABLE to upgrade one that already
-# had it. `claude plugin marketplace add` answers "already on disk" for a marketplace the device
-# has seen before and does not re-fetch, so the cached clone stayed on the old commit and
-# `plugin update` reported "already at the latest version" naming the OLD version - a confident
-# wrong answer. Reproduced against the real CLI before the fix: a stale cache registered 2.17.0;
-# with `marketplace update` inserted, the same stale cache reported "updated from 2.17.0 to
-# 2.18.0". These checks pin the ORDER, which is the load-bearing part, without shelling out to
-# the claude CLI or touching a real machine's config.
+# Why this exists and how the fix was reproduced against the real CLI before being trusted:
+# docs/Decisions.md, "Reproduce the install-upgrade fix against the real CLI before trusting it".
 steps = install.install_steps()
 argvs = [argv for argv, _ in steps]
 flat = [" ".join(a) for a in argvs]
@@ -392,11 +385,9 @@ check(
 )
 
 # --- update.bat states the same four commands, in the same order -------------------------------
-# The order is now written in TWO places: install_steps() and the double-clickable
-# tools/update.bat. That is a restatement, and this repo's whole recent history is restatements
-# drifting apart unnoticed - the delegate reminder lost a load-bearing sentence exactly this way.
-# So the two are bound here rather than trusted to stay in step. update.bat is deliberately NOT
-# generated from install_steps(): it must run with no Python at all, which is the point of it.
+# Why update.bat restates rather than calls install_steps(), and why the two are bound here:
+# docs/systems/plugin-distribution.md, Invariants ("update.bat needs no Python and no repo
+# clone").
 BAT = os.path.join(HERE, "update.bat")
 bat_present = os.path.isfile(BAT)
 bat_raw = open(BAT, "rb").read() if bat_present else b""

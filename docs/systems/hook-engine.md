@@ -89,6 +89,20 @@ on purpose — `verify.py` fails if it reappears.
   event.
 - **Matching is textual**, not semantic, even where it costs a false positive (`echo "git
   commit"` still prompts) — an extra keypress is cheaper than a missed commit.
+- **The `guard` trace decodes the command for display; matching still runs on the raw JSON
+  slice.** `_guard_subject` deliberately returns the raw slice with escapes intact, because
+  matching against escapes intact is what keeps the patterns honest. Printing that raw slice to
+  the user would show `"command": "git status"` rather than `git status`, so `_trace_subject`
+  (`hook.py:1006-1014`) decodes a copy for the one-line trace only; the match itself never sees
+  the decoded form.
+- **`standards` detects a Unity project opened at its `Assets/` folder, not just at its root.**
+  Opening a Unity project directly at `Assets/` is a normal workflow, but `_standards_scan_dirs`
+  never sees the sibling `ProjectSettings/`/`*.csproj` markers one level up. `_unity_markers_in_
+  parent` (`hook.py:340-349`) checks narrowly — the directory must be named exactly `Assets` and
+  its parent must carry a real Unity marker (`ProjectSettings/ProjectVersion.txt`, or another
+  Unity-marker file) — so a coincidentally-named `Assets/` folder in a non-Unity repo doesn't
+  false-positive. When it matches, detection re-scans from that real project root instead of
+  `Assets/`, so a sibling Node service next to `Assets/` is still found too.
 
 ## Traps
 
