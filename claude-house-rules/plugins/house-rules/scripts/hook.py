@@ -1915,9 +1915,9 @@ _HARVEST_EXT_RE = re.compile(
 )
 
 # Tunable, and deliberately low. See docs/comment-harvest-calibration.md for what these
-# numbers actually catch in this repo at 5/300 versus 10/600.
-HARVEST_MIN_LINES = 5
-HARVEST_MIN_CHARS = 300
+# numbers actually catch in this repo.
+HARVEST_MIN_LINES = 3
+HARVEST_MIN_CHARS = 150
 
 # Wall-clock budget for the scan, well inside hooks.json's 10s timeout. There is no cap on
 # input size: a big file is scanned like any other, and only a scan that actually runs long
@@ -1991,7 +1991,14 @@ def _harvest_comment_runs(text, deadline=None):
         else:
             for marker in _HARVEST_LINE_MARKERS["line"]:
                 if line.startswith(marker):
-                    body = line[len(marker) :].strip()
+                    rest = line[len(marker) :]
+                    if marker == "//":
+                        # C#'s /// doc-comment (and a plain //// divider) both start with
+                        # more slashes than the marker itself - strip all of them, not just
+                        # the first two, so a /// <summary> line reads as text, not as text
+                        # with a stray slash glued to the front.
+                        rest = rest.lstrip("/")
+                    body = rest.strip()
                     break
 
         if body is None:
@@ -2053,8 +2060,12 @@ def _harvest_is_file_preamble(line):
     return stripped.startswith("#!") or "coding:" in stripped or "coding=" in stripped
 
 
-def _harvest_blocks(text, min_lines, min_chars, deadline, verbose):
-    """Find the essay-shaped runs. Returns (blocks, near_misses, timed_out)."""
+def _harvest_blocks(text, min_lines, min_chars, deadline, verbose, full_file=True):
+    """Find the essay-shaped runs. Returns (blocks, near_misses, timed_out).
+
+    full_file must be False for an Edit's new_string fragment. See docs/Decisions.md,
+    "Fix the harvest handler treating an Edit fragment's line 1 as the file's header".
+    """
     first_line = text.split("\n", 1)[0] if text else ""
     blocks = []
     misses = []
@@ -2064,7 +2075,7 @@ def _harvest_blocks(text, min_lines, min_chars, deadline, verbose):
     for start, end, lines in runs:
         if _time.time() > deadline:
             return blocks, misses, True
-        if start == 1 or (start == 2 and _harvest_is_file_preamble(first_line)):
+        if full_file and (start == 1 or (start == 2 and _harvest_is_file_preamble(first_line))):
             # A file header - module docstring, shebang, encoding line - is documentation
             # that is already where it belongs. coding-philosophy.md asks for it. What this
             # handler is looking for is an essay buried in the body of the code.
@@ -2100,21 +2111,40 @@ def _harvest_trace(base, blocks, misses, min_lines, min_chars, ranged, verbose):
         )
     elif misses:
         longest = max(misses, key=lambda m: (m[2], m[3]))
-        head = (
-            "harvest: %s - %d comment run%s, none met %d lines / %d chars; "
-            "longest was %d line%s, %d chars (%s)"
-            % (
-                base,
-                len(misses),
-                "" if len(misses) == 1 else "s",
-                min_lines,
-                min_chars,
-                longest[2],
-                "" if longest[2] == 1 else "s",
-                longest[3],
-                longest[4],
+        plural = "" if len(misses) == 1 else "s"
+        # "none met" only holds when the longest run's own rejection reason was the size
+        # check. See docs/Decisions.md, "Fix the harvest handler treating an Edit fragment's
+        # line 1 as the file's header".
+        met_threshold = longest[2] >= min_lines or longest[3] >= min_chars
+        if not met_threshold:
+            head = (
+                "harvest: %s - %d comment run%s, none met %d lines / %d chars; "
+                "longest was %d line%s, %d chars"
+                % (
+                    base,
+                    len(misses),
+                    plural,
+                    min_lines,
+                    min_chars,
+                    longest[2],
+                    "" if longest[2] == 1 else "s",
+                    longest[3],
+                )
             )
-        )
+        else:
+            head = (
+                "harvest: %s - %d comment run%s; largest was %d line%s, %d chars but "
+                "rejected: %s"
+                % (
+                    base,
+                    len(misses),
+                    plural,
+                    longest[2],
+                    "" if longest[2] == 1 else "s",
+                    longest[3],
+                    longest[4],
+                )
+            )
     else:
         head = "harvest: %s - no comment runs found (threshold %d lines / %d chars)" % (
             base,
@@ -2213,7 +2243,7 @@ def event_harvest():
 
         deadline = _time.time() + HARVEST_BUDGET_SECONDS
         blocks, misses, timed_out = _harvest_blocks(
-            text, min_lines, min_chars, deadline, verbose
+            text, min_lines, min_chars, deadline, verbose, full_file=ranged
         )
         if timed_out:
             emit(

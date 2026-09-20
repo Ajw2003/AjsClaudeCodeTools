@@ -7,6 +7,43 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-20 — Fix the harvest handler treating an Edit fragment's line 1 as the file's header
+
+**Context.** A user's screenshot showed a trace reading "2 comment runs, none met 5 lines / 300
+chars; longest was 7 lines, 397 chars (file header)" — self-contradictory, since 7/397 clears
+5/300. `_harvest_blocks()` exempts a comment run starting at line 1 as a module docstring/file
+header, which is correct for a `Write` (whose `content` is the whole file, so line 1 really is
+the file's first line) but was applied unconditionally, including to `Edit`'s `new_string`. An
+Edit's fragment has its own line numbering starting from wherever the replacement begins — so an
+Edit that happened to insert or replace a comment block at the top of its fragment got exempted
+as a "file header" purely by coincidence of where the edit started, not because it was one.
+
+**Decision.** Added a `full_file` parameter to `_harvest_blocks()` (default `True`, preserving
+`Write` and standalone full-file-scan behaviour); `event_harvest()` now passes `full_file=ranged`
+so an `Edit` never gets the file-header exemption. Separately, fixed `_harvest_trace()`'s summary
+line, which always said "none met N lines / M chars" regardless of the actual rejection reason —
+now it only says that when the longest run genuinely failed the size check, and names the real
+reason (file header, license header, commented-out code, etc.) when a run met the size threshold
+but was rejected for cause. Also lowered the defaults from 5 lines/300 chars to 3 lines/150 chars
+per direct request, and normalized C#'s `///` doc-comments (and `////` dividers) by stripping all
+leading slashes rather than just the two the `//` marker consumes. Added `harvest_scan.py` for a
+manual, project-wide sweep using the same detection code, and wrapped it in a rerunnable
+`/house-rules:harvest-scan` command (`commands/harvest-scan.md`) so it resolves the installed
+plugin's script via `$CLAUDE_PLUGIN_ROOT` instead of requiring a hand-built plugin-cache path.
+Bumped the plugin version.
+
+**Why.** The bug meant `Edit` calls — the common case for touching an existing file, as opposed
+to `Write`'s full-file rewrite — could silently exempt exactly the comment blocks the handler
+exists to catch, whenever the edit happened to start on one. The trace wording bug compounded it:
+even where the file-header exemption was correct (a real `Write`), or where a different exemption
+fired (license, commented-out code), the message claimed "none met the threshold," which reads as
+the detector missing an essay rather than deliberately setting it aside — the exact confusion that
+surfaced the bug in the first place.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-17 — Ask permission to run the plugin's own update commands, rather than only relaying them
 
 **Context.** The previous entry above fixed *how* a hook-relayed command gets handed over (card,
