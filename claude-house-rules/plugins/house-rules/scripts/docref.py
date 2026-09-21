@@ -221,6 +221,9 @@ def new_id(used, rng=random):
 def cmd_new(root, excludes):
     res = scan(root, excludes)
     used = set(res["markers"]) | {p[2] for p in res["pointers"]}
+    for rel, msg in res["unreadable"]:
+        print("docref: warning: %s could not be read (%s); the id may collide with one used inside it"
+              % (rel, msg), file=sys.stderr)
     print(new_id(used))
     return 0
 
@@ -230,8 +233,16 @@ def cmd_fix(root, excludes, write):
     fixes = {pid: where[0][0] for pid, where in res["markers"].items() if len(where) == 1}
     verb = "rewrote" if write else "would rewrite"
     total = 0
+    failed = 0
+    for rel, msg in res["unreadable"]:
+        print("%s  UNREADABLE  %s" % (rel, msg))
     for rel, full in res["pointer_files"]:
-        text = _read_bytes(full).decode("utf-8")
+        try:
+            text = _read_bytes(full).decode("utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            print("%s  UNREADABLE  %s" % (rel, e))
+            failed += 1
+            continue
         edits = []
 
         def repl(m, text=text, edits=edits):
@@ -245,18 +256,28 @@ def cmd_fix(root, excludes, write):
             return head + target + raw[pm.end():]
 
         new_text = POINTER_RE.sub(repl, text)
+        if edits and write:
+            try:
+                with open(full, "w", encoding="utf-8", newline="") as f:
+                    f.write(new_text)
+            except OSError as e:
+                print("%s  UNWRITABLE  %s" % (rel, e))
+                failed += 1
+                continue
         for line, old, target in edits:
             print("%s:%d  %s  %s -> %s" % (rel, line, verb, old, target))
-        if edits and write:
-            with open(full, "w", encoding="utf-8", newline="") as f:
-                f.write(new_text)
         total += len(edits)
     print("docref: %s %d pointer(s)%s" % (verb, total, "" if write or not total else "; nothing written, pass --write to apply"))
     _, counts, _ = classify(res)
-    left = counts["dangling"] + counts["ambiguous"] + len(res["malformed"])
+    unread = len(res["unreadable"])
+    left = counts["dangling"] + counts["ambiguous"] + len(res["malformed"]) + unread
     if left:
-        print("docref: still unresolved: %d dangling, %d ambiguous (duplicate id), %d malformed - "
-              "run docref.py check for the list" % (counts["dangling"], counts["ambiguous"], len(res["malformed"])))
+        print("docref: still unresolved: %d dangling, %d ambiguous (duplicate id), %d malformed, "
+              "%d unreadable - run docref.py check for the list"
+              % (counts["dangling"], counts["ambiguous"], len(res["malformed"]), unread))
+    if failed:
+        print("docref: %d file(s) failed to read or write; see the lines above" % failed)
+        return 2
     return 0
 
 

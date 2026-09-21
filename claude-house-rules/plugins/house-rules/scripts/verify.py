@@ -3525,6 +3525,71 @@ else:
     report("FAIL", "docref check: a --root that is not a directory exits 2 and says why on stderr")
     print(f"          rc={_proc.returncode} stderr={_proc.stderr[:160]!r}")
 
+
+def _dr_run_patched(argv, files, fail_for):
+    """Run docref_mod.main with _read_bytes patched; return (rc, stdout, stderr, dir)."""
+    d = make_fixture(files)
+    orig = docref_mod._read_bytes
+    seen = {}
+
+    def patched(path):
+        seen[path] = seen.get(path, 0) + 1
+        if fail_for(path, seen[path]):
+            raise PermissionError("denied on purpose")
+        return orig(path)
+
+    out, err = io.StringIO(), io.StringIO()
+    docref_mod._read_bytes = patched
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = docref_mod.main(argv(d))
+    finally:
+        docref_mod._read_bytes = orig
+    return rc, out.getvalue(), err.getvalue(), d
+
+
+_DR_TWO = {
+    "docs/systems/new.md": DR_DOC,
+    "src/a.c": "// doc-ref a3f9 docs/old.md\n",
+    "src/b.c": "// doc-ref a3f9 docs/old.md\n",
+}
+
+_title = "docref fix: an unreadable file is named, the readable one is still repaired, exit stays 0"
+_rc, _o, _e, _d = _dr_run_patched(
+    lambda d: ["fix", "--write", "--root", d], _DR_TWO, lambda p, n: p.endswith("b.c"))
+try:
+    _ok, _detail = _dr_file_has("src/a.c", "docs/systems/new.md", absent="docs/old.md")(_d)
+    if _rc == 0 and "src/b.c  UNREADABLE  denied on purpose" in _o and "still unresolved" in _o and _ok:
+        report("PASS", _title)
+    else:
+        report("FAIL", _title)
+        print(f"          rc={_rc} {_detail} stdout={_o[:300]!r}")
+finally:
+    shutil.rmtree(_d, ignore_errors=True)
+
+_title = "docref new: an unreadable file is warned about on stderr and stdout stays one bare id"
+_rc, _o, _e, _d = _dr_run_patched(
+    lambda d: ["new", "--root", d], _DR_TWO, lambda p, n: p.endswith("b.c"))
+shutil.rmtree(_d, ignore_errors=True)
+if _rc == 0 and re.fullmatch(r"[0-9a-f]{4}\n", _o) and "src/b.c" in _e and "collide" in _e:
+    report("PASS", _title)
+else:
+    report("FAIL", _title)
+    print(f"          rc={_rc} stdout={_o[:80]!r} stderr={_e[:200]!r}")
+
+_title = "docref fix: a file that fails on re-read is named, others are processed, exit 2, count reported"
+_rc, _o, _e, _d = _dr_run_patched(
+    lambda d: ["fix", "--write", "--root", d], _DR_TWO, lambda p, n: p.endswith("a.c") and n >= 2)
+try:
+    _ok, _detail = _dr_file_has("src/b.c", "docs/systems/new.md", absent="docs/old.md")(_d)
+    if _rc == 2 and "src/a.c  UNREADABLE  denied on purpose" in _o and "1 file(s) failed" in _o and _ok:
+        report("PASS", _title)
+    else:
+        report("FAIL", _title)
+        print(f"          rc={_rc} {_detail} stdout={_o[:300]!r}")
+finally:
+    shutil.rmtree(_d, ignore_errors=True)
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:
