@@ -21,7 +21,8 @@ MARKER_RE = re.compile(r"^[ \t]*<!--[ \t]*ref:([0-9A-Za-z]+)[ \t]*-->[ \t\r]*$")
 POINTER_RE = re.compile(r"doc-ref[ \t]+([0-9A-Za-z]+)[ \t]+(?=\S*(?:/|\.md))(\S+)")
 PATH_RE = re.compile(r"[\w./-]+?\.md(?![\w.-])")
 ID_RE = re.compile(r"[0-9a-f]{4}\Z")
-FENCE_RE = re.compile(r"^[ \t]*(?:" + "`" * 3 + "|~~~)")
+FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+TRAIL_PUNCT = ".,;:)]\"'"
 LEGACY_RE = re.compile(r"docs/(?:systems/[\w.-]+\.md|Decisions\.md)")
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv"}
 
@@ -75,13 +76,32 @@ def project_files(root):
     return "directory walk", sorted(names), reason, errors
 
 
+def _fence_step(line, open_fence):
+    """CommonMark fences. Returns (new open_fence, is_fence_line); open_fence is (char, run) or None."""
+    m = FENCE_RE.match(line.rstrip("\r"))
+    if not m:
+        return open_fence, False
+    run, rest = m.group(1), m.group(2)
+    if open_fence is None:
+        if run[0] == "`" and "`" in rest:
+            return None, False  # an info string may not hold a backtick: not a fence
+        return (run[0], len(run)), True
+    if run[0] == open_fence[0] and len(run) >= open_fence[1] and not rest.strip():
+        return None, True
+    return open_fence, True  # any other fence-looking line is content
+
+
 def _scan_doc(rel, lines, res):
-    in_fence = False
+    open_fence = None
+    opened_at = 0
     for n, line in enumerate(lines, 1):
-        if FENCE_RE.match(line):
-            in_fence = not in_fence
+        was_open = open_fence
+        open_fence, is_fence = _fence_step(line, open_fence)
+        if is_fence:
+            if was_open is None and open_fence is not None:
+                opened_at = n
             continue
-        if in_fence:
+        if open_fence is not None:
             continue
         m = MARKER_RE.match(line)
         if not m:
@@ -90,6 +110,13 @@ def _scan_doc(rel, lines, res):
             res["markers"].setdefault(m.group(1), []).append((rel, n))
         else:
             res["malformed"].append((rel, n, "marker id %r is not 4 lowercase hex characters" % m.group(1)))
+    if open_fence is not None:
+        res["malformed"].append((rel, opened_at, "fence opened here is never closed"))
+
+
+def _path_match(raw):
+    """PATH_RE match on `raw` minus trailing sentence punctuation (scan and fix must agree)."""
+    return PATH_RE.match(raw.rstrip(TRAIL_PUNCT))
 
 
 def _scan_code(rel, full, lines, res):
@@ -99,7 +126,7 @@ def _scan_code(rel, full, lines, res):
         for m in POINTER_RE.finditer(line):
             found = True
             pid, raw = m.group(1), m.group(2)
-            pm = PATH_RE.match(raw)
+            pm = _path_match(raw)
             if not ID_RE.match(pid):
                 res["malformed"].append((rel, n, "pointer id %r is not 4 lowercase hex characters" % pid))
             elif not pm:
@@ -117,13 +144,18 @@ def scan(root, excludes=()):
     source, names, reason, walk_errors = project_files(root)
     res = {
         "markers": {}, "pointers": [], "pointer_files": [], "malformed": [], "unreadable": list(walk_errors),
+        "undecodable": [], "not_files": 0, "unmatched_excludes": [],
         "legacy": 0, "files": 0, "docs": 0, "binary": 0, "source": source, "fallback_reason": reason,
     }
+    hit = set()
     for rel in names:
         full = os.path.join(root, rel)
+        matched = [pat for pat in excludes if fnmatch.fnmatchcase(rel, pat)]
+        hit.update(matched)
         if not os.path.isfile(full):
-            continue  # listed by git but deleted from the work tree: nothing to read
-        if any(fnmatch.fnmatch(rel, pat) for pat in excludes):
+            res["not_files"] += 1  # deleted, submodule or nested repo: nothing to read
+            continue
+        if matched:
             continue
         in_docs = rel.startswith("docs/")
         if in_docs and not rel.endswith(".md"):
@@ -131,7 +163,10 @@ def scan(root, excludes=()):
         try:
             text = _read_bytes(full).decode("utf-8")
         except UnicodeDecodeError:
-            res["binary"] += 1
+            if in_docs:
+                res["undecodable"].append(rel)
+            else:
+                res["binary"] += 1
             continue
         except OSError as e:
             res["unreadable"].append((rel, str(e)))
@@ -143,7 +178,13 @@ def scan(root, excludes=()):
             _scan_doc(rel, lines, res)
         else:
             _scan_code(rel, full, lines, res)
+    res["unmatched_excludes"] = [pat for pat in excludes if pat not in hit]
     return res
+
+
+def _print_notes(res, stream=None):
+    for pat in res["unmatched_excludes"]:
+        print("docref: note: --exclude %r matched no file" % pat, file=stream or sys.stdout)
 
 
 def classify(res):
@@ -175,6 +216,8 @@ def classify(res):
         findings.append((rel, n, "malformed", msg))
     for rel, msg in res["unreadable"]:
         findings.append((rel, 0, "unreadable", msg))
+    for rel in res["undecodable"]:
+        findings.append((rel, 0, "undecodable", "not valid UTF-8; its markers cannot be read"))
     for pid, where in sorted(markers.items()):
         if pid not in pointed:
             info.append((where[0][0], where[0][1], "unreferenced marker ref:%s (no code points at it)" % pid))
@@ -192,14 +235,18 @@ def cmd_check(root, excludes):
         print("%s:%d  INFO  %s" % (rel, n, msg))
     via = res["source"]
     if res["fallback_reason"]:
-        via += " (git unavailable: %s)" % res["fallback_reason"]
+        via += " (git did not list files: %s)" % res["fallback_reason"]
     print("docref: scanned %d files (%d docs) via %s; %d binary skipped"
           % (res["files"], res["docs"], via, res["binary"]))
+    if res["not_files"]:
+        print("docref: %d path(s) listed by git are not readable files (deleted, submodule or nested repo)"
+              % res["not_files"])
+    _print_notes(res)
     print("docref: %d pointers found: %d ok, %d stale, %d dangling, %d ambiguous"
           % (len(res["pointers"]), counts["ok"], counts["stale"], counts["dangling"], counts["ambiguous"]))
     duplicates = sum(1 for f in findings if f[2] == "duplicate")
     print("docref: %d malformed, %d duplicate ids, %d unreadable"
-          % (len(res["malformed"]), duplicates, len(res["unreadable"])))
+          % (len(res["malformed"]), duplicates, len(res["unreadable"]) + len(res["undecodable"])))
     print("docref: %d line(s) mention docs/systems/ or docs/Decisions.md with no doc-ref "
           "(legacy prose pointers, not tracked)" % res["legacy"])
     if res["docs"] == 0:
@@ -221,6 +268,10 @@ def new_id(used, rng=random):
 def cmd_new(root, excludes):
     res = scan(root, excludes)
     used = set(res["markers"]) | {p[2] for p in res["pointers"]}
+    _print_notes(res, sys.stderr)
+    for rel in res["undecodable"]:
+        print("docref: warning: %s is not valid UTF-8; the id may collide with one used inside it" % rel,
+              file=sys.stderr)
     for rel, msg in res["unreadable"]:
         print("docref: warning: %s could not be read (%s); the id may collide with one used inside it"
               % (rel, msg), file=sys.stderr)
@@ -234,8 +285,11 @@ def cmd_fix(root, excludes, write):
     verb = "rewrote" if write else "would rewrite"
     total = 0
     failed = 0
+    _print_notes(res)
     for rel, msg in res["unreadable"]:
         print("%s  UNREADABLE  %s" % (rel, msg))
+    for rel in res["undecodable"]:
+        print("%s  UNDECODABLE  not valid UTF-8; its markers cannot be read" % rel)
     for rel, full in res["pointer_files"]:
         try:
             text = _read_bytes(full).decode("utf-8")
@@ -248,7 +302,7 @@ def cmd_fix(root, excludes, write):
         def repl(m, text=text, edits=edits):
             pid, raw = m.group(1), m.group(2)
             target = fixes.get(pid)
-            pm = PATH_RE.match(raw)
+            pm = _path_match(raw)
             if not target or not pm or _norm(pm.group(0)) == target:
                 return m.group(0)
             edits.append((text.count("\n", 0, m.start()) + 1, pm.group(0), target))
@@ -257,10 +311,17 @@ def cmd_fix(root, excludes, write):
 
         new_text = POINTER_RE.sub(repl, text)
         if edits and write:
+            tmp = full + ".docref.tmp"
             try:
-                with open(full, "w", encoding="utf-8", newline="") as f:
+                with open(tmp, "w", encoding="utf-8", newline="") as f:
                     f.write(new_text)
+                os.replace(tmp, full)
             except OSError as e:
+                if os.path.exists(tmp):
+                    try:
+                        os.remove(tmp)
+                    except OSError:
+                        pass  # the UNWRITABLE line below already reports the failure
                 print("%s  UNWRITABLE  %s" % (rel, e))
                 failed += 1
                 continue
@@ -269,7 +330,7 @@ def cmd_fix(root, excludes, write):
         total += len(edits)
     print("docref: %s %d pointer(s)%s" % (verb, total, "" if write or not total else "; nothing written, pass --write to apply"))
     _, counts, _ = classify(res)
-    unread = len(res["unreadable"])
+    unread = len(res["unreadable"]) + len(res["undecodable"])
     left = counts["dangling"] + counts["ambiguous"] + len(res["malformed"]) + unread
     if left:
         print("docref: still unresolved: %d dangling, %d ambiguous (duplicate id), %d malformed, "

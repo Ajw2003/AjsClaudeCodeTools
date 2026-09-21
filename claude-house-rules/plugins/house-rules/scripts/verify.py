@@ -3593,6 +3593,169 @@ try:
 finally:
     shutil.rmtree(_d, ignore_errors=True)
 
+# --- docref.py final-review fixes: fences, atomic write, punctuation, --exclude, git entries ---
+FENCE4 = "`" * 4
+TILDES = "~" * 3
+
+docref_case(
+    "docref check: a four-backtick block holding an unclosed three-backtick line ends at the four, so the marker after it is seen",
+    {
+        "docs/a.md": FENCE4 + "\n" + FENCE + "md\nx\n" + FENCE4 + "\n<!-- ref:a3f9 -->\n",
+        "src/a.c": "// doc-ref a3f9 docs/a.md\n",
+    },
+    ["check"], 0,
+    expect_in=["1 ok, 0 stale, 0 dangling", "docref: OK"],
+)
+
+docref_case(
+    "docref check: a marker inside a four-backtick block, after a nested three-backtick line, is not a marker",
+    {
+        "docs/a.md": FENCE4 + "\n" + FENCE + "\n<!-- ref:a3f9 -->\n" + FENCE4 + "\n",
+        "src/a.c": "// doc-ref a3f9 docs/a.md\n",
+    },
+    ["check"], 1,
+    expect_in=["src/a.c:1  DANGLING"],
+)
+
+docref_case(
+    "docref check: a tilde fence is not closed by a backtick fence line inside it",
+    {
+        "docs/a.md": (TILDES + "\n" + FENCE + "\n<!-- ref:a3f9 -->\n" + FENCE + "\n" + TILDES
+                      + "\n<!-- ref:b4b4 -->\n"),
+        "src/a.c": "// doc-ref a3f9 docs/a.md\n// doc-ref b4b4 docs/a.md\n",
+    },
+    ["check"], 1,
+    expect_in=["src/a.c:1  DANGLING", "1 ok, 0 stale, 1 dangling"],
+    expect_out=["src/a.c:2"],
+)
+
+docref_case(
+    "docref check: a fence indented four spaces is not a fence, so the marker after it is seen",
+    {
+        "docs/a.md": "    " + FENCE + "\n<!-- ref:a3f9 -->\n",
+        "src/a.c": "// doc-ref a3f9 docs/a.md\n",
+    },
+    ["check"], 0,
+    expect_in=["1 ok"],
+)
+
+docref_case(
+    "docref check: a doc that ends inside a fence is MALFORMED on the opening fence line",
+    {"docs/a.md": "Text\n" + FENCE + "\ncode\n"},
+    ["check"], 1,
+    expect_in=["docs/a.md:2  MALFORMED", "never closed"],
+)
+
+docref_case(
+    "docref fix --write: leaves no temp file behind after a successful write",
+    DR_STALE, ["fix", "--write"], 0,
+    after=lambda d: (
+        not any(n.endswith(".docref.tmp") for _r, _ds, fs in os.walk(d) for n in fs),
+        "a *.docref.tmp file was left behind",
+    ),
+)
+
+docref_case(
+    "docref check: a pointer path followed by a sentence period is a valid pointer",
+    {
+        "docs/systems/physics.md": DR_DOC,
+        "src/a.c": "// See doc-ref a3f9 docs/systems/physics.md.\n// (doc-ref a3f9 docs/systems/physics.md)\n",
+    },
+    ["check"], 0,
+    expect_in=["2 ok, 0 stale, 0 dangling", "0 malformed"],
+)
+
+docref_case(
+    "docref fix --write: keeps the sentence period it did not use",
+    {"docs/systems/new.md": DR_DOC, "src/a.c": "// See doc-ref a3f9 docs/old.md.\n"},
+    ["fix", "--write"], 0,
+    after=_dr_file_has("src/a.c", "doc-ref a3f9 docs/systems/new.md.", absent="docs/old.md"),
+)
+
+docref_case(
+    "docref check: --exclude that matches a file prints no note",
+    {"src/bad.c": "// doc-ref beef docs/none.md\n"},
+    ["check", "--exclude", "src/bad.c"], 0,
+    expect_out=["matched no file"],
+)
+
+docref_case(
+    "docref check: --exclude that matches nothing is noted and does not change the exit code",
+    {"src/a.c": "int x;\n"},
+    ["check", "--exclude", "nope/*.c"], 0,
+    expect_in=["docref: note: --exclude 'nope/*.c' matched no file", "docref: OK"],
+)
+
+docref_case(
+    "docref check: --exclude is case-sensitive on every OS",
+    {"src/bad.c": "// doc-ref beef docs/none.md\n"},
+    ["check", "--exclude", "SRC/BAD.C"], 1,
+    expect_in=["src/bad.c:1  DANGLING", "--exclude 'SRC/BAD.C' matched no file"],
+)
+
+
+def _dr_git_deleted_setup(d):
+    for args in (["init", "-q"], ["add", "-A"]):
+        subprocess.run(["git", "-C", d] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    os.remove(os.path.join(d, "src", "gone.c"))
+
+
+def _dr_git_nested_setup(d):
+    subprocess.run(["git", "-C", d, "init", "-q"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    os.makedirs(os.path.join(d, "inner"))
+    subprocess.run(["git", "-C", os.path.join(d, "inner"), "init", "-q"],
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    with open(os.path.join(d, "inner", "f.c"), "w", encoding="utf-8") as f:
+        f.write("int y;\n")
+
+
+if shutil.which("git"):
+    docref_case(
+        "docref check: a file git lists but that is deleted is counted in a note, not silent",
+        {"src/a.c": "int x;\n", "src/gone.c": "int z;\n"},
+        ["check"], 0,
+        expect_in=["1 path(s) listed by git are not readable files", "via git"],
+        setup=_dr_git_deleted_setup,
+    )
+    docref_case(
+        "docref check: a nested repo git lists as a directory is counted in a note, not silent",
+        {"src/a.c": "int x;\n"},
+        ["check"], 0,
+        expect_in=["path(s) listed by git are not readable files"],
+        setup=_dr_git_nested_setup,
+    )
+
+
+def _dr_write_utf16_doc(d):
+    with open(os.path.join(d, "docs", "x.md"), "wb") as f:
+        f.write("## T\n<!-- ref:a3f9 -->\n".encode("utf-16"))
+
+
+docref_case(
+    "docref check: an undecodable doc under docs/ is named UNDECODABLE and fails, not just counted",
+    {"docs/y.md": "## T\n", "src/a.c": "// doc-ref a3f9 docs/x.md\n"},
+    ["check"], 1,
+    expect_in=["docs/x.md  UNDECODABLE  not valid UTF-8; its markers cannot be read"],
+    setup=_dr_write_utf16_doc,
+)
+
+docref_case(
+    "docref check: an undecodable non-doc file is still only counted as binary skipped",
+    {"src/a.c": "int x;\n"},
+    ["check"], 0,
+    expect_in=["1 binary skipped"],
+    expect_out=["UNDECODABLE"],
+    setup=_dr_write_binary,
+)
+
+docref_case(
+    "docref check: the fallback line says git did not list files, not that git is unavailable",
+    {"src/a.c": "int x;\n"},
+    ["check"], 0,
+    expect_in=["via directory walk (git did not list files:"],
+    expect_out=["git unavailable"],
+)
+
 # --- /house-rules:docref exists and runs the installed docref.py -------------------------------
 DOCREF_CMD = os.path.join(HERE, "..", "commands", "docref.md")
 drdrift = []
