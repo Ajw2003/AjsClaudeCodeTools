@@ -14,7 +14,7 @@ import json, sys
 sys.path.insert(0, "claude-house-rules/plugins/house-rules/scripts")
 import hook
 src = open("claude-house-rules/plugins/house-rules/scripts/hook.py", encoding="utf-8").read()
-blocks, misses, _ = hook._harvest_blocks(src, 3, 150, 1e18, False, full_file=True)
+blocks, misses, _ = hook._harvest_blocks(src, 500, 1e18, False, full_file=True)
 for start, end, n_lines, n_chars in blocks:
     print("%4d-%-4d %2dL/%4dc  %s" % (start, end, n_lines, n_chars, src.split("\n")[start-1].strip()[:70]))
 ```
@@ -26,7 +26,41 @@ Or run it over an entire project rather than one file at a time: `/house-rules:h
 ever sees text written in the current turn, so this manual, project-wide sweep is the only way
 to ask "does this codebase already have any" rather than "did this edit just add one."
 
-## The measurement
+## Current default: 500 characters, no line criterion (2026-09-20)
+
+The size test was `lines >= 3 OR chars >= 150`. Scanning a real Unity project with it flagged
+**831 blocks** — a number nobody can act on. Two defects, both in the test rather than the
+number:
+
+- **The OR.** A block qualified on either axis, so three short lines qualified. The line count
+  added false positives and nothing the character count did not already catch.
+- **Lines are the wrong unit.** Characters are counted over the joined text, so wrapping and
+  indentation do not move a comment across the threshold; a line count does.
+
+The line criterion is gone (`HARVEST_MIN_LINES` and `HOUSE_RULES_HARVEST_MIN_LINES` no longer
+exist; `--min-lines` is gone from `harvest_scan.py`) and the default is
+`HARVEST_MIN_CHARS = 500`, about 80 words. Measured with that test:
+
+| Min chars | That Unity project (blocks flagged) | This repo |
+|---|---|---|
+| 150 | 820 | 145 |
+| 300 | 483 | 53 |
+| 400 | — | 14 |
+| **500** | **218** | **0** |
+| 800 | 105 | 0 |
+| 1200 | 35 | 0 |
+| 2000 | 3 | 0 |
+
+The threshold only narrows what gets *looked at*. Whether a flagged block moves to a doc is
+still decided per block: a 600-character comment guarding a subtle ordering bug may need to
+stay where it is, and a pointer is left behind either way. If 218 still reads as too many
+essays' worth of noise, raise `HOUSE_RULES_HARVEST_MIN_CHARS` to 800 rather than editing the
+constant.
+
+The tables below predate this change and use the old lines / chars pair; they are kept as the
+record of why 5 / 300 and 10 / 600 were rejected, not as current behaviour.
+
+## The measurement (historical: lines / chars pairs)
 
 Original pass taken 2026-09-09, against the tree at the commit that added the handler, at the
 then-default of 5 lines / 300 chars. Re-measured 2026-09-20 against the current tree, with the
@@ -106,7 +140,7 @@ the thresholds behave on C#, TypeScript or shell, on a codebase with a different
 culture, or on generated code. The extension gate and prose tests are exercised by `verify.py`
 against synthetic fixtures in those languages; their *thresholds* have only been calibrated
 here. If the defaults turn out wrong elsewhere, the levers are
-`HOUSE_RULES_HARVEST_MIN_LINES` and `HOUSE_RULES_HARVEST_MIN_CHARS` — and a second table in
+`HOUSE_RULES_HARVEST_MIN_CHARS` — and a second table in
 this document, rather than a quiet change to the constants.
 
 ## What the trace costs

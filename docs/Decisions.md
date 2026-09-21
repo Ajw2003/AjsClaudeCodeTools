@@ -7,6 +7,32 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-20 — Size the harvest threshold by characters alone, default 500
+
+**Context.** `/house-rules:harvest-scan` on a real Unity project returned 831 blocks. The size
+test in `_harvest_blocks` was `lines >= 3 OR chars >= 150`, so a block qualified on either axis:
+three short lines were enough, and 150 characters (about 25 words) is an ordinary "why this line
+is odd" note, not an essay. About 99% of that project's comment blocks tripped it.
+
+**Decision.** Characters are the only size criterion, default `HARVEST_MIN_CHARS = 500` (about 80
+words). `HARVEST_MIN_LINES`, `HOUSE_RULES_HARVEST_MIN_LINES` and `harvest_scan.py --min-lines` are
+removed. Characters are counted over the joined text, so wrapping and indentation cannot move a
+comment across the line; a line count can. Plugin version bumped to 2.27.0 for the removed knob.
+On that project 500 flags 218 blocks (820 at 150); on this repo it flags 0.
+
+**Alternatives rejected.** Keeping the lines knob and setting `MIN_LINES` very high per machine —
+works without a code change, but leaves a dead criterion in the handler and a default that is still
+wrong for everyone else. Words instead of characters — same signal, needs a tokenizer for no gain.
+
+**Why.** The threshold only narrows what gets looked at; each flagged block is still moved or kept
+by judgement (a subtle-ordering-bug comment can stay in place with a pointer). The table is in
+[comment-harvest-calibration.md](comment-harvest-calibration.md); if 218 is still noise, raise
+`HOUSE_RULES_HARVEST_MIN_CHARS` to 800 rather than editing the constant.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-20 — Use the braced `${CLAUDE_PLUGIN_ROOT}` in `/house-rules:harvest-scan`
 
 **Context.** `/house-rules:harvest-scan` failed in a real session: `commands/harvest-scan.md` ran
