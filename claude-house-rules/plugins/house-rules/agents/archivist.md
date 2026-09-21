@@ -28,9 +28,11 @@ many blocks at once. For each block:
   `python "${CLAUDE_PLUGIN_ROOT}/scripts/docref.py" new`. In the doc, put `<!-- ref:<id> -->` on
   its own line directly under the moved note's heading. At the site, in that language's comment
   syntax, leave `doc-ref <id> <path>` (the path is the doc, from the project root, ending in
-  `.md`) — the code must still lead to the reasoning. If that path does not begin with a real
-  absolute plugin directory (it is empty, or still shows `${CLAUDE_PLUGIN_ROOT}`), say so in your
-  report and leave the id for the caller to allocate; do not invent one.
+  `.md`) — the code must still lead to the reasoning. If the `docref.py` script path above does
+  not begin with a real absolute plugin directory (it is empty, or still shows
+  `${CLAUDE_PLUGIN_ROOT}`), you cannot allocate an id: leave that block where it is in the
+  source, do not move it, do not invent an id, and list it in your report as not moved for that
+  reason so the caller can allocate an id and re-run.
 - **Keep what a reader needs at that exact line.** An ordering constraint, a gotcha, a
   "must be called after Init()" — that stays as an ordinary comment. Only the long-form
   context moves.
