@@ -122,8 +122,8 @@ _TASK_VERB_RE = re.compile(
 )
 
 # Also Tier 2: investigative questions. Why this exists, why it's kept separate from
-# _TASK_VERB_RE, and why it's checked after _ARCH_RE: docs/systems/offshoot-plugins.md,
-# Invariants ("agent-router's recon-question regex is checked after the architecture regex").
+# _TASK_VERB_RE, and why it's checked after _ARCH_RE:
+# doc-ref ac58 docs/systems/offshoot-plugins.md (Invariants).
 _RECON_QUESTION_RE = re.compile(
     r"\bwhy (?:is|does|are|do|isn'?t|doesn'?t|aren'?t|don'?t|won'?t|did|wasn'?t|weren'?t)\b|"
     r"\bhow (?:does|do|did|is|are)\b.{0,60}\b(?:work|works|working|worked|fail|fails|failing|"

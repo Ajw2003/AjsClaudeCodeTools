@@ -29,6 +29,7 @@ the fix: `marketplace add` answers "already on disk" for a marketplace the devic
 seen and does **not** re-fetch, so on a machine that already had the plugin, the cached clone
 stayed on the old commit, `plugin update` found nothing newer, and `install` alone would have
 left the registration silently pointed at the stale copy.
+<!-- ref:db64 -->
 
 **Three ways this sequence reaches a machine:**
 
@@ -60,6 +61,7 @@ coverage protects: `reminder_text()` collapses a hook call's `additionalContext`
 for pricing a trace, because a `PostToolUse` handler can emit *both* a reminder and a trace in
 the same call — measuring only the collapsed value is how the `harvest` trace went unmeasured
 through 2.13.0. `split_output` keeps the two apart so the trace has a price of its own.
+<!-- ref:312e -->
 
 ## Invariants
 
@@ -68,6 +70,7 @@ through 2.13.0. `split_output` keeps the two apart so the trace has a price of i
   invisible on a fresh machine, which is exactly the case that doesn't expose it.
 - **`update.bat` needs no Python and no repo clone** — it must keep restating the four commands
   literally rather than calling into `install.py`, or it stops being double-click-portable.
+  <!-- ref:20e2 -->
 - **Every `claude` line in `update.bat` uses `call`** — the CLI is `claude.cmd`, and running one
   `.cmd` from a `.bat` without `call` ends the script after the first command.
 - **`update.bat` is CRLF throughout and ends in `pause`** — `cmd.exe` mis-parses an LF-only batch
@@ -103,6 +106,7 @@ through 2.13.0. `split_output` keeps the two apart so the trace has a price of i
   fresh-container run only ever passed because it had no `settings.json` to begin with. Lifted
   out of `main()` specifically so it's testable — this is exactly where that bug lived, and it
   survived because nothing in `tools/` was reachable by a test before 2.15.0.
+  <!-- ref:47f6 -->
 - **A version-keyed install can serve stale content under an unchanged version number.** The
   byte-for-byte comparison in `clean_install_test.py` (`clean_install_test.py:298-304`) exists
   because the SHA check that runs right after a strip can never catch this — the cache is
@@ -111,3 +115,4 @@ through 2.13.0. `split_output` keeps the two apart so the trace has a price of i
   `Stop`-hook change with no version bump, so a version-keyed cache kept serving the previous
   PR's content forever. The byte-for-byte check compares every file the repo ships against what
   is actually on disk, rather than trusting the version number to mean anything.
+  <!-- ref:3470 -->

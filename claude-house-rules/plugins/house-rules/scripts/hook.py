@@ -336,8 +336,7 @@ def _has_node_markers(d):
 def _unity_markers_in_parent(project_dir):
     """True when project_dir is itself a Unity project's Assets/ folder.
 
-    Why and how: docs/systems/hook-engine.md, Invariants ("standards detects a Unity project
-    opened at its Assets/ folder").
+    Why and how: doc-ref 0d4d docs/systems/hook-engine.md (Invariants).
     """
     normalized = os.path.normpath(project_dir)
     if os.path.basename(normalized) != "Assets":
@@ -955,8 +954,8 @@ def _git_dir(start):
 def branch_ownership():
     """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
 
-    Mechanism and invariants: docs/systems/hook-engine.md, Invariants ("guard reads the branch
-    from .git/HEAD...") and "Every uncertainty in branch ownership resolves to 'not mine'".
+    Mechanism and invariants: doc-ref ee0f docs/systems/hook-engine.md (Invariants) and
+    doc-ref d2a4 docs/systems/hook-engine.md (Traps).
     """
     try:
         git_dir = _git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
@@ -992,8 +991,8 @@ _COMMAND_VALUE_RE = re.compile(r'"command"\s*:\s*"((?:[^"\\]|\\.)*)"')
 def _trace_subject(subject, limit=60):
     """The command as a human reads it, collapsed to one short line.
 
-    Why this decodes separately from matching: docs/systems/hook-engine.md, Invariants
-    ("the trace decodes the command for display; matching still runs on the raw slice").
+    Why this decodes separately from matching: doc-ref 361f docs/systems/hook-engine.md
+    (Invariants).
     """
     m = _COMMAND_VALUE_RE.search(subject)
     if m:

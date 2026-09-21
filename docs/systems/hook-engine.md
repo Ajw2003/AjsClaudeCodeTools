@@ -84,6 +84,7 @@ on purpose — `verify.py` fails if it reappears.
   way, and it keeps `guard` working where `git` isn't on `PATH`. `verify.py` fails if
   `branch_ownership()` ever reaches for `subprocess`, `os.popen`, `os.system`, or
   `check_output`.
+  <!-- ref:ee0f -->
 - **No hook keeps state between invocations** — `verify.py` fails if a dead state file or a
   stray `.sh` hook script reappears, or if anything other than `run.sh` is registered on any
   event.
@@ -95,6 +96,7 @@ on purpose — `verify.py` fails if it reappears.
   the user would show `"command": "git status"` rather than `git status`, so `_trace_subject`
   (`hook.py:1006-1014`) decodes a copy for the one-line trace only; the match itself never sees
   the decoded form.
+  <!-- ref:361f -->
 - **`standards` detects a Unity project opened at its `Assets/` folder, not just at its root.**
   Opening a Unity project directly at `Assets/` is a normal workflow, but `_standards_scan_dirs`
   never sees the sibling `ProjectSettings/`/`*.csproj` markers one level up. `_unity_markers_in_
@@ -103,6 +105,7 @@ on purpose — `verify.py` fails if it reappears.
   Unity-marker file) — so a coincidentally-named `Assets/` folder in a non-Unity repo doesn't
   false-positive. When it matches, detection re-scans from that real project root instead of
   `Assets/`, so a sibling Node service next to `Assets/` is still found too.
+  <!-- ref:0d4d -->
 
 ## Traps
 
@@ -133,3 +136,4 @@ on purpose — `verify.py` fails if it reappears.
   The user's branch, a detached `HEAD`, a directory that isn't a repo, an unreadable `HEAD` all
   fall through to a prompt. A change that adds a new "can't tell" case must route it the same
   way, not default it open.
+  <!-- ref:d2a4 -->

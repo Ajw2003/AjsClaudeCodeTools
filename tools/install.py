@@ -157,8 +157,8 @@ def install_steps():
 
     `marketplace add` answers "already on disk" for a marketplace this device has seen before
     and does NOT re-fetch it, which is why `marketplace update` must run too. Full rationale and
-    why this is a value rather than four inline calls: docs/systems/plugin-distribution.md,
-    "How it works" (the four-command sequence).
+    why this is a value rather than four inline calls:
+    doc-ref db64 docs/systems/plugin-distribution.md (How it works).
     """
     return [
         (["plugin", "marketplace", "add", REPO],

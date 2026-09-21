@@ -69,6 +69,7 @@ presented — both READMEs describe installing them the same way, once ready, vi
   architecture regex so a decision phrased as a question ("why should we consolidate these")
   still routes to `architect` — "should" is deliberately absent from the why-clause list so that
   case doesn't get claimed here first.
+  <!-- ref:ac58 -->
 
 ## Traps
 
