@@ -7,6 +7,33 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-20 — Issue and pull-request text never names a local path
+
+**Context.** Issue #65 on this public repository was published with the user's local project
+path in its body. The user closed the issue and asked for a standing rule.
+
+**Decision.** A new rule in `rules/house-rules.md`: titles, descriptions, comments and review
+comments on issues and pull requests never contain a path from the user's machine (a drive letter,
+a home directory, another project's folder, a scratchpad or temp file). Files are named by
+repo-relative path, other repositories by name or `owner/repo`. The check covers a body file
+passed with `--body-file`. Commands handed to the user to run keep their absolute local paths,
+since that text never leaves their machine. Commit messages are not covered: the user did not ask.
+Plugin bumped to 2.29.0 for the added rule.
+
+**Alternatives rejected.** A `guard` pattern on `gh issue`/`gh pr` commands: the local path lives in
+the body file's contents, not in the command line, and a `--body-file` argument is itself a local
+path, so the pattern would prompt on every legitimate call. Restating the rule in the `scope`
+per-prompt reminder: it would cost tokens on every prompt for a rule that only matters when
+publishing.
+
+**Why.** A local path tells another reader nothing, discloses how the user's machine is laid
+out, and stays in the edit history after the text is corrected. The rule is carried by the
+session injection alone, so the check is the model's.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-20 — Pointers carry a stable id, and a command keeps them true
 
 **Context.** The archivist left "a one-line pointer naming the document and section". Nothing

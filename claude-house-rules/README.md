@@ -121,8 +121,8 @@ on them was pure noise and they were deliberately dropped from the pattern set.
 
 The other rules — match response depth to the task, the fixed environment, build only what was
 asked, docs-before-research, build for a human working alone, the user's hands are for decisions
-not labour, once the approach is decided, delegate the execution — have no shell signature to
-match on. They are carried by the SessionStart injection and the per-prompt reminder.
+not labour, once the approach is decided, delegate the execution, never name a local path in an
+issue or a pull request — have no shell signature to match on. They are carried by the SessionStart injection and the per-prompt reminder.
 
 Three are exceptions, because a rule carried only by injected text is a rule that gets read and
 then drifted past:
