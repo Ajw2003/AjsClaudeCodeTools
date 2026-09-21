@@ -37,16 +37,23 @@ def _norm(path):
 
 def _walk_names(root):
     names = []
-    for dirpath, dirnames, filenames in os.walk(root):
+    errors = []
+
+    def _on_error(err):
+        where = _norm(os.path.relpath(err.filename, root)) if getattr(err, "filename", None) else "."
+        errors.append((where, str(err)))
+
+    for dirpath, dirnames, filenames in os.walk(root, onerror=_on_error):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         rel_dir = os.path.relpath(dirpath, root)
         for name in filenames:
             names.append(_norm(os.path.join(rel_dir, name)))
-    return names
+    return names, errors
 
 
 def project_files(root):
-    """(source, sorted relative paths): what git says is the project, else a directory walk."""
+    """(source, sorted paths, fallback reason, walk errors): git's file list, else a directory walk."""
+    reason = ""
     try:
         proc = subprocess.run(
             ["git", "-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
@@ -56,10 +63,13 @@ def project_files(root):
         )
         if proc.returncode == 0:
             raw = proc.stdout.decode("utf-8", "replace").split("\0")
-            return "git", sorted(set(_norm(n) for n in raw if n))
-    except (OSError, subprocess.TimeoutExpired):
-        pass  # no usable git: the walk below is named as the file source in the output
-    return "directory walk", sorted(_walk_names(root))
+            return "git", sorted(set(_norm(n) for n in raw if n)), "", []
+        err_lines = proc.stderr.decode("utf-8", "replace").strip().splitlines()
+        reason = err_lines[0] if err_lines else "git returned %d" % proc.returncode
+    except (OSError, subprocess.TimeoutExpired) as e:
+        reason = "%s: %s" % (type(e).__name__, e)
+    names, errors = _walk_names(root)
+    return "directory walk", sorted(names), reason, errors
 
 
 def _scan_doc(rel, lines, res):
@@ -101,10 +111,10 @@ def _scan_code(rel, full, lines, res):
 
 
 def scan(root, excludes=()):
-    source, names = project_files(root)
+    source, names, reason, walk_errors = project_files(root)
     res = {
-        "markers": {}, "pointers": [], "pointer_files": [], "malformed": [], "unreadable": [],
-        "legacy": 0, "files": 0, "docs": 0, "binary": 0, "source": source,
+        "markers": {}, "pointers": [], "pointer_files": [], "malformed": [], "unreadable": list(walk_errors),
+        "legacy": 0, "files": 0, "docs": 0, "binary": 0, "source": source, "fallback_reason": reason,
     }
     for rel in names:
         full = os.path.join(root, rel)
@@ -177,8 +187,11 @@ def cmd_check(root, excludes):
         print("%s  %s  %s" % (where, kind.upper(), msg))
     for rel, n, msg in info:
         print("%s:%d  INFO  %s" % (rel, n, msg))
+    via = res["source"]
+    if res["fallback_reason"]:
+        via += " (git unavailable: %s)" % res["fallback_reason"]
     print("docref: scanned %d files (%d docs) via %s; %d binary skipped"
-          % (res["files"], res["docs"], res["source"], res["binary"]))
+          % (res["files"], res["docs"], via, res["binary"]))
     print("docref: %d pointers found: %d ok, %d stale, %d dangling, %d ambiguous"
           % (len(res["pointers"]), counts["ok"], counts["stale"], counts["dangling"], counts["ambiguous"]))
     duplicates = sum(1 for f in findings if f[2] == "duplicate")

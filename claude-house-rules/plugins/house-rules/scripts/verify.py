@@ -3181,6 +3181,13 @@ def docref_case(title, files, args, expect_rc, expect_in=(), expect_out=(), afte
         shutil.rmtree(d, ignore_errors=True)
 
 
+import importlib.util as _dr_importlib_util
+
+_dr_spec = _dr_importlib_util.spec_from_file_location("docref_mod", DOCREF)
+docref_mod = _dr_importlib_util.module_from_spec(_dr_spec)
+if os.path.isfile(DOCREF):
+    _dr_spec.loader.exec_module(docref_mod)
+
 DR_DOC = "## Traps\n<!-- ref:a3f9 -->\nBody.\n"
 
 docref_case(
@@ -3316,6 +3323,45 @@ if shutil.which("git"):
 else:
     report("FAIL", "docref check: in a git work tree it reads tracked and untracked files")
     print("          git is not on PATH; this machine's environment says it should be")
+
+
+def _dr_unreadable_dir_case():
+    import contextlib
+    import io
+
+    title = "docref check: a directory the walk cannot list is named UNREADABLE and forces exit 1"
+    d = make_fixture({"src/a.c": "int x;\n"})
+    real_walk = docref_mod.os.walk
+
+    def failing_walk(top, *a, **kw):
+        cb = kw.get("onerror")
+        if cb is not None:
+            cb(OSError("denied on purpose"))
+        return iter(())
+
+    buf = io.StringIO()
+    try:
+        docref_mod.os.walk = failing_walk
+        try:
+            with contextlib.redirect_stdout(buf):
+                rc = docref_mod.main(["check", "--root", d])
+        finally:
+            docref_mod.os.walk = real_walk
+        out = buf.getvalue()
+        if rc == 1 and "UNREADABLE" in out and "denied on purpose" in out:
+            report("PASS", title)
+        else:
+            report("FAIL", title)
+            print(f"          exit {rc}, expected 1; stdout: {out[:400]!r}")
+    except Exception as e:
+        report("FAIL", title)
+        print(f"          raised {type(e).__name__}: {e}")
+    finally:
+        docref_mod.os.walk = real_walk
+        shutil.rmtree(d, ignore_errors=True)
+
+
+_dr_unreadable_dir_case()
 
 print()
 print("-" * 32)
