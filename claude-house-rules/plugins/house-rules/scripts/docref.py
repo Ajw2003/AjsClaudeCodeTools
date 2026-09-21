@@ -2,6 +2,8 @@
 """docref.py - keeps the doc-ref pointers the archivist leaves in code true.
 
     docref.py check [--root DIR] [--exclude GLOB ...]
+    docref.py fix   [--root DIR] [--exclude GLOB ...] [--write]
+    docref.py new   [--root DIR] [--exclude GLOB ...]
 
 Design: docs/superpowers/specs/2026-09-20-pointer-integrity-design.md
 STDLIB ONLY, Python 3.8+, no state kept between runs.
@@ -10,6 +12,7 @@ STDLIB ONLY, Python 3.8+, no state kept between runs.
 import argparse
 import fnmatch
 import os
+import random
 import re
 import subprocess
 import sys
@@ -205,22 +208,86 @@ def cmd_check(root, excludes):
     return 1 if findings else 0
 
 
+def new_id(used, rng=random):
+    """A 4-hex id not in `used`. Raises when the whole space is taken."""
+    if len(used) >= 0x10000:
+        raise RuntimeError("all 65536 ids are already in use")
+    while True:
+        candidate = "%04x" % rng.randrange(0x10000)
+        if candidate not in used:
+            return candidate
+
+
+def cmd_new(root, excludes):
+    res = scan(root, excludes)
+    used = set(res["markers"]) | {p[2] for p in res["pointers"]}
+    print(new_id(used))
+    return 0
+
+
+def cmd_fix(root, excludes, write):
+    res = scan(root, excludes)
+    fixes = {pid: where[0][0] for pid, where in res["markers"].items() if len(where) == 1}
+    verb = "rewrote" if write else "would rewrite"
+    total = 0
+    for rel, full in res["pointer_files"]:
+        text = _read_bytes(full).decode("utf-8")
+        edits = []
+
+        def repl(m, text=text, edits=edits):
+            pid, raw = m.group(1), m.group(2)
+            target = fixes.get(pid)
+            pm = PATH_RE.match(raw)
+            if not target or not pm or _norm(pm.group(0)) == target:
+                return m.group(0)
+            edits.append((text.count("\n", 0, m.start()) + 1, pm.group(0), target))
+            head = m.group(0)[: m.start(2) - m.start(0)]
+            return head + target + raw[pm.end():]
+
+        new_text = POINTER_RE.sub(repl, text)
+        for line, old, target in edits:
+            print("%s:%d  %s  %s -> %s" % (rel, line, verb, old, target))
+        if edits and write:
+            with open(full, "w", encoding="utf-8", newline="") as f:
+                f.write(new_text)
+        total += len(edits)
+    print("docref: %s %d pointer(s)%s" % (verb, total, "" if write or not total else "; nothing written, pass --write to apply"))
+    _, counts, _ = classify(res)
+    left = counts["dangling"] + counts["ambiguous"] + len(res["malformed"])
+    if left:
+        print("docref: still unresolved: %d dangling, %d ambiguous (duplicate id), %d malformed - "
+              "run docref.py check for the list" % (counts["dangling"], counts["ambiguous"], len(res["malformed"])))
+    return 0
+
+
 def main(argv=None):
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(prog="docref.py", description="Keep doc-ref pointers true.")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    check = sub.add_parser("check", help="report every pointer as ok, stale, dangling or malformed")
-    check.add_argument("--root", default=".")
-    check.add_argument("--exclude", action="append", default=[], metavar="GLOB")
+    helps = {
+        "check": "report every pointer as ok, stale, dangling or malformed",
+        "fix": "rewrite stale pointer paths by id (dry run unless --write)",
+        "new": "print a 4-hex id no doc or pointer uses",
+    }
+    for name in ("check", "fix", "new"):
+        p = sub.add_parser(name, help=helps[name])
+        p.add_argument("--root", default=".")
+        p.add_argument("--exclude", action="append", default=[], metavar="GLOB")
+        if name == "fix":
+            p.add_argument("--write", action="store_true")
     args = parser.parse_args(argv)
     root = os.path.abspath(args.root)
     try:
         if not os.path.isdir(root):
             print("docref: --root %s is not a directory" % root, file=sys.stderr)
             return 2
-        return cmd_check(root, args.exclude)
+        if args.cmd == "check":
+            return cmd_check(root, args.exclude)
+        if args.cmd == "fix":
+            return cmd_fix(root, args.exclude, args.write)
+        return cmd_new(root, args.exclude)
     except Exception as e:  # last resort: say what broke, never a bare traceback or a silent 0
         print("docref: internal error: %s: %s" % (type(e).__name__, e), file=sys.stderr)
         return 2

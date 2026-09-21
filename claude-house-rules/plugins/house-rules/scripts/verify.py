@@ -3363,6 +3363,168 @@ def _dr_unreadable_dir_case():
 
 _dr_unreadable_dir_case()
 
+DR_STALE = {"docs/systems/new.md": DR_DOC, "src/a.c": "int x;\n// doc-ref a3f9 docs/old.md\n"}
+
+
+def _dr_file_has(rel, needle, absent=None):
+    def _check(d):
+        with open(os.path.join(d, rel), "rb") as f:
+            data = f.read().decode("utf-8")
+        if needle not in data:
+            return False, f"{rel} does not contain {needle!r}"
+        if absent is not None and absent in data:
+            return False, f"{rel} still contains {absent!r}"
+        return True, ""
+    return _check
+
+
+docref_case(
+    "docref fix: without --write it reports what it would change and writes nothing",
+    DR_STALE, ["fix"], 0,
+    expect_in=["would rewrite", "docs/old.md -> docs/systems/new.md", "nothing written"],
+    after=_dr_file_has("src/a.c", "docs/old.md"),
+)
+
+
+def _dr_fixed_then_clean(d):
+    ok, detail = _dr_file_has("src/a.c", "docs/systems/new.md", absent="docs/old.md")(d)
+    if not ok:
+        return ok, detail
+    rc, out, err = docref_run(d, "check")
+    return (rc == 0, f"check still exits {rc} after fix: {out[-200:]!r}")
+
+
+docref_case(
+    "docref fix --write: repairs a stale path by id, and check is clean afterwards",
+    DR_STALE, ["fix", "--write"], 0,
+    expect_in=["rewrote", "docs/old.md -> docs/systems/new.md"],
+    after=_dr_fixed_then_clean,
+)
+
+
+def _dr_write_crlf(d):
+    with open(os.path.join(d, "src", "a.c"), "wb") as f:
+        f.write(b"int x;\r\n// doc-ref a3f9 docs/old.md\r\n")
+
+
+def _dr_crlf_kept(d):
+    with open(os.path.join(d, "src", "a.c"), "rb") as f:
+        got = f.read()
+    want = b"int x;\r\n// doc-ref a3f9 docs/systems/new.md\r\n"
+    return got == want, f"bytes after fix were {got!r}, wanted {want!r}"
+
+
+docref_case(
+    "docref fix --write: keeps CRLF line endings byte-for-byte",
+    DR_STALE, ["fix", "--write"], 0,
+    after=_dr_crlf_kept, setup=_dr_write_crlf,
+)
+
+docref_case(
+    "docref fix --write: keeps a trailing comment closer on the same line",
+    {"docs/systems/new.md": DR_DOC, "src/a.c": "/* doc-ref a3f9 docs/old.md */\n"},
+    ["fix", "--write"], 0,
+    after=_dr_file_has("src/a.c", "/* doc-ref a3f9 docs/systems/new.md */"),
+)
+
+docref_case(
+    "docref fix --write: leaves a dangling pointer alone and says it is unresolved",
+    {
+        "docs/systems/new.md": DR_DOC,
+        "src/a.c": "// doc-ref a3f9 docs/old.md\n// doc-ref beef docs/gone.md\n",
+    },
+    ["fix", "--write"], 0,
+    expect_in=["still unresolved: 1 dangling"],
+    after=_dr_file_has("src/a.c", "doc-ref beef docs/gone.md"),
+)
+
+docref_case(
+    "docref fix --write: refuses to touch pointers to a duplicated id",
+    {"docs/a.md": DR_DOC, "docs/b.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/zzz.md\n"},
+    ["fix", "--write"], 0,
+    expect_in=["still unresolved", "1 ambiguous"],
+    after=_dr_file_has("src/a.c", "docs/zzz.md"),
+)
+
+docref_case(
+    "docref fix: with nothing stale it says so and exits 0",
+    {"docs/systems/physics.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/systems/physics.md\n"},
+    ["fix", "--write"], 0,
+    expect_in=["0 pointer(s)"],
+)
+
+_d = make_fixture({"docs/a.md": DR_DOC, "src/a.c": "// doc-ref beef docs/none.md\n"})
+try:
+    _rc, _out, _err = docref_run(_d, "new")
+    _id = _out.strip()
+    if _rc == 0 and re.fullmatch(r"[0-9a-f]{4}", _id) and _id not in ("a3f9", "beef"):
+        report("PASS", "docref new: prints a 4-hex id not used by any marker or pointer")
+        print(f"          printed {_id}")
+    else:
+        report("FAIL", "docref new: prints a 4-hex id not used by any marker or pointer")
+        print(f"          rc={_rc} stdout={_out[:80]!r} stderr={_err[:120]!r}")
+finally:
+    shutil.rmtree(_d, ignore_errors=True)
+
+
+class _SeqRng:
+    def __init__(self, seq):
+        self.seq = list(seq)
+
+    def randrange(self, n):
+        return self.seq.pop(0)
+
+
+if docref_mod.new_id({"a3f9"}, _SeqRng([0xA3F9, 0xA3F9, 0x0001])) == "0001":
+    report("PASS", "docref new_id: skips ids that are already used and returns the first free one")
+else:
+    report("FAIL", "docref new_id: skips ids that are already used and returns the first free one")
+
+try:
+    docref_mod.new_id({"%04x" % i for i in range(0x10000)})
+    report("FAIL", "docref new_id: says so when all 65536 ids are used")
+except RuntimeError as _e:
+    report("PASS", "docref new_id: says so when all 65536 ids are used")
+    print(f"          {_e}")
+
+# An unreadable file must be named and must fail the check - not be skipped quietly.
+import contextlib
+import io
+
+_d = make_fixture({"docs/a.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/a.md\n"})
+_orig_read = docref_mod._read_bytes
+
+
+def _boom(path):
+    if path.endswith("a.c"):
+        raise PermissionError("denied on purpose")
+    return _orig_read(path)
+
+
+docref_mod._read_bytes = _boom
+_buf = io.StringIO()
+try:
+    with contextlib.redirect_stdout(_buf):
+        _rc = docref_mod.main(["check", "--root", _d])
+finally:
+    docref_mod._read_bytes = _orig_read
+    shutil.rmtree(_d, ignore_errors=True)
+if _rc == 1 and "src/a.c  UNREADABLE  denied on purpose" in _buf.getvalue():
+    report("PASS", "docref check: an unreadable file is named and fails the check")
+else:
+    report("FAIL", "docref check: an unreadable file is named and fails the check")
+    print(f"          rc={_rc} stdout={_buf.getvalue()[:300]!r}")
+
+_proc = subprocess.run(
+    [sys.executable, DOCREF, "check", "--root", os.path.join(ROOT, "no", "such", "dir")],
+    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+)
+if _proc.returncode == 2 and b"is not a directory" in _proc.stderr:
+    report("PASS", "docref check: a --root that is not a directory exits 2 and says why on stderr")
+else:
+    report("FAIL", "docref check: a --root that is not a directory exits 2 and says why on stderr")
+    print(f"          rc={_proc.returncode} stderr={_proc.stderr[:160]!r}")
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:
