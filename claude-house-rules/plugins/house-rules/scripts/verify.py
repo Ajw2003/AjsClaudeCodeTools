@@ -3134,6 +3134,189 @@ else:
 if os.path.isfile(marker_c):
     os.remove(marker_c)
 
+# --- docref.py: the doc-ref pointer checker ----------------------------------------------------
+# Design: docs/superpowers/specs/2026-09-20-pointer-integrity-design.md
+DOCREF = os.path.join(HERE, "docref.py")
+FENCE = "`" * 3
+
+
+def docref_run(root, *args):
+    cmd = [sys.executable, DOCREF, args[0], "--root", root] + list(args[1:])
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return (
+        proc.returncode,
+        proc.stdout.decode("utf-8", "replace"),
+        proc.stderr.decode("utf-8", "replace"),
+    )
+
+
+def docref_case(title, files, args, expect_rc, expect_in=(), expect_out=(), after=None, setup=None):
+    d = make_fixture(files)
+    try:
+        if setup is not None:
+            setup(d)
+        rc, out, err = docref_run(d, *args)
+        problems = []
+        if rc != expect_rc:
+            problems.append(f"exit {rc}, expected {expect_rc}")
+        for needle in expect_in:
+            if needle not in out:
+                problems.append(f"output is missing {needle!r}")
+        for needle in expect_out:
+            if needle in out:
+                problems.append(f"output should not contain {needle!r}")
+        if after is not None:
+            ok, detail = after(d)
+            if not ok:
+                problems.append(detail)
+        if not problems:
+            report("PASS", title)
+            print("          " + (out.strip().splitlines() or ["(no output)"])[-1][:100])
+        else:
+            report("FAIL", title)
+            for p in problems:
+                print(f"          {p}")
+            print(f"          stdout: {out[:400]!r} stderr: {err[:200]!r}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+DR_DOC = "## Traps\n<!-- ref:a3f9 -->\nBody.\n"
+
+docref_case(
+    "docref check: a pointer whose id is in exactly one doc, at the recorded path, is ok",
+    {"docs/systems/physics.md": DR_DOC, "src/a.c": "int x;\n// doc-ref a3f9 docs/systems/physics.md\n"},
+    ["check"], 0,
+    expect_in=["1 ok, 0 stale, 0 dangling", "docref: OK"],
+)
+
+docref_case(
+    "docref check: a pointer whose doc moved is reported stale, naming the doc it moved to",
+    {"docs/systems/new.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/old.md\n"},
+    ["check"], 1,
+    expect_in=["src/a.c:1  STALE", "docs/systems/new.md", "1 stale"],
+)
+
+docref_case(
+    "docref check: a pointer whose id no doc carries is dangling, with file and line",
+    {"docs/systems/physics.md": DR_DOC, "src/a.c": "int x;\n// doc-ref beef docs/systems/physics.md\n"},
+    ["check"], 1,
+    expect_in=["src/a.c:2  DANGLING", "1 dangling", "docref: PROBLEMS"],
+)
+
+docref_case(
+    "docref check: one id claimed by two markers is a duplicate, and pointers to it are ambiguous",
+    {"docs/a.md": DR_DOC, "docs/b.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/a.md\n"},
+    ["check"], 1,
+    expect_in=["DUPLICATE", "a3f9", "1 ambiguous"],
+)
+
+docref_case(
+    "docref check: an uppercase pointer id is malformed, not silently ignored",
+    {"docs/a.md": DR_DOC, "src/a.c": "// doc-ref A3F9 docs/a.md\n"},
+    ["check"], 1,
+    expect_in=["src/a.c:1  MALFORMED", "not 4 lowercase hex"],
+)
+
+docref_case(
+    "docref check: a marker with a 3-character id is malformed",
+    {"docs/a.md": "## T\n<!-- ref:abc -->\n"},
+    ["check"], 1,
+    expect_in=["docs/a.md:2  MALFORMED"],
+)
+
+docref_case(
+    "docref check: a marker inside a fenced code block is ignored",
+    {
+        "docs/a.md": "Example:\n" + FENCE + "\n<!-- ref:a3f9 -->\n" + FENCE + "\n",
+        "src/a.c": "// doc-ref a3f9 docs/a.md\n",
+    },
+    ["check"], 1,
+    expect_in=["DANGLING"],
+)
+
+docref_case(
+    "docref check: a marker quoted inline in prose is not a marker",
+    {"docs/a.md": "Put `<!-- ref:a3f9 -->` under the heading.\n", "src/a.c": "// doc-ref a3f9 docs/a.md\n"},
+    ["check"], 1,
+    expect_in=["DANGLING"],
+)
+
+docref_case(
+    "docref check: a marker nobody points at is information, not a failure",
+    {"docs/a.md": DR_DOC},
+    ["check"], 0,
+    expect_in=["docs/a.md:2  INFO", "unreferenced", "docref: OK"],
+)
+
+docref_case(
+    "docref check: a project with no docs and no pointers says so and passes",
+    {"src/a.c": "int x;\n"},
+    ["check"], 0,
+    expect_in=["0 pointers found", "no docs/**/*.md", "docref: OK"],
+)
+
+docref_case(
+    "docref check: prose pointers are counted as legacy, not judged",
+    {"docs/systems/physics.md": "## T\n", "src/a.c": "// see docs/systems/physics.md, Traps\n"},
+    ["check"], 0,
+    expect_in=["1 line(s) mention docs/systems/", "legacy prose pointers"],
+)
+
+docref_case(
+    "docref check: the words doc-ref in ordinary prose are not a pointer",
+    {"src/a.c": "// the doc-ref token is what carries the id\n"},
+    ["check"], 0,
+    expect_in=["0 pointers found"],
+)
+
+docref_case(
+    "docref check: --exclude skips a matching file",
+    {"src/bad.c": "// doc-ref beef docs/none.md\n"},
+    ["check", "--exclude", "src/bad.c"], 0,
+    expect_in=["0 pointers found"],
+)
+
+
+def _dr_write_binary(d):
+    with open(os.path.join(d, "blob.bin"), "wb") as f:
+        f.write(b"\xff\xfe\x00\x01")
+
+
+docref_case(
+    "docref check: a binary file is counted as skipped, not read and not an error",
+    {"src/a.c": "int x;\n"},
+    ["check"], 0,
+    expect_in=["1 binary skipped", "via directory walk"],
+    setup=_dr_write_binary,
+)
+
+
+def _dr_git_setup(d):
+    for args in (["init", "-q"], ["add", "-A"]):
+        subprocess.run(["git", "-C", d] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    with open(os.path.join(d, "src", "untracked.c"), "w", encoding="utf-8") as f:
+        f.write("// doc-ref beef docs/none.md\n")
+
+
+if shutil.which("git"):
+    docref_case(
+        "docref check: in a git work tree it reads tracked and untracked files and skips ignored ones",
+        {
+            ".gitignore": "ignored/\n",
+            "docs/x.md": "## T\n<!-- ref:a3f9 -->\n",
+            "src/tracked.c": "// doc-ref a3f9 docs/x.md\n",
+            "ignored/bad.c": "// doc-ref beef docs/none.md\n",
+        },
+        ["check"], 1,
+        expect_in=["src/untracked.c:1  DANGLING", "via git"],
+        expect_out=["ignored/bad.c"],
+        setup=_dr_git_setup,
+    )
+else:
+    report("FAIL", "docref check: in a git work tree it reads tracked and untracked files")
+    print("          git is not on PATH; this machine's environment says it should be")
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:
