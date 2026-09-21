@@ -14,8 +14,13 @@ Run, in this project's own root, using the installed plugin's own copy of the sc
 always matches whatever version is actually installed — never a path you construct by hand:
 
 ```
-python "$CLAUDE_PLUGIN_ROOT/scripts/harvest_scan.py" $ARGUMENTS
+python "${CLAUDE_PLUGIN_ROOT}/scripts/harvest_scan.py" $ARGUMENTS
 ```
+
+If the path in the command you are about to run does not begin with a real absolute plugin
+directory (it is empty, still shows `${CLAUDE_PLUGIN_ROOT}`, or begins with `/scripts`), STOP and
+tell the user the plugin root did not resolve. Do not search `~/.claude/plugins` for a copy or
+guess a path — the cache holds several versions.
 
 If `$ARGUMENTS` is empty, this scans the current directory with the built-in or
 `HOUSE_RULES_HARVEST_MIN_LINES`/`HOUSE_RULES_HARVEST_MIN_CHARS`-overridden thresholds — the

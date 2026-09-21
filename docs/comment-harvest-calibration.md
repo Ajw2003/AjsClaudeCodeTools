@@ -22,7 +22,7 @@ for start, end, n_lines, n_chars in blocks:
 Or run it over an entire project rather than one file at a time: `/house-rules:harvest-scan
 [path]`, from any Claude Code session — a rerunnable slash command
 (`commands/harvest-scan.md`) that shells out to `scripts/harvest_scan.py` via
-`$CLAUDE_PLUGIN_ROOT`, so it always uses whatever version is actually installed. The hook only
+`${CLAUDE_PLUGIN_ROOT}`, so it always uses whatever version is actually installed. The hook only
 ever sees text written in the current turn, so this manual, project-wide sweep is the only way
 to ask "does this codebase already have any" rather than "did this edit just add one."
 
