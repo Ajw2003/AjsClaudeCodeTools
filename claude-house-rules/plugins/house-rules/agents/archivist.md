@@ -24,8 +24,17 @@ many blocks at once. For each block:
 - **Move the prose, do not paraphrase it.** The wording is the author's and carries the
   reasoning; edit only what is needed to read as a document rather than as a comment.
   Cite the code it describes as `file:line`.
-- **Leave a one-line pointer** at the site, in that language's comment syntax, naming the
-  document and the section — the code must still lead to the reasoning.
+- **Give the moved note an id, and leave a one-line pointer** at the site. Get an unused id with
+  `python "${CLAUDE_PLUGIN_ROOT}/scripts/docref.py" new`. In the doc, put `<!-- ref:<id> -->` on
+  its own line directly under the moved note's heading. At the site, in that language's comment
+  syntax, leave `doc-ref <id> <path>` (the path is the doc, from the project root, ending in
+  `.md`) — the code must still lead to the reasoning. If the `docref.py` script path above does
+  not begin with a real absolute plugin directory (it is empty, or still shows
+  `${CLAUDE_PLUGIN_ROOT}`), you cannot allocate an id: leave that block where it is in the
+  source, do not move it, do not invent an id, and list it in your report as not moved for that
+  reason so the caller can allocate an id and re-run. Better than stopping: ask the caller (the
+  agent that delegated to you) to supply an id from `docref.py new`, and carry on with the blocks
+  that already have ids.
 - **Keep what a reader needs at that exact line.** An ordering constraint, a gotcha, a
   "must be called after Init()" — that stays as an ordinary comment. Only the long-form
   context moves.
@@ -43,15 +52,16 @@ not the job; the job is finished only once nothing is left staged.
 `docs/plans/<YYYY-MM-DD>-harvest-staging.md`. Copy each block into it verbatim, one entry per
 block, citing the source as `file:line` and keeping enough surrounding context to judge it later
 without reopening the source file. Do not classify or edit the prose in this pass — it is a
-lossless capture, nothing more. At each original site, leave the one-line pointer aimed at this
-staging file for now.
+lossless capture, nothing more. At each original site, leave `doc-ref <id> <path>` aimed at this staging file for now; the
+staging entry carries its `<!-- ref:<id> -->` marker line from the start.
 
 **Pass 2 — redistribute.** Work through the staging file entry by entry, applying the same
 per-block judgment above: an ongoing mechanism, invariant, or trap goes to the tier-4 doc under
 `docs/systems/` that owns it (a new one if none does, added to `docs/systems/README.md`); design
 rationale, a rejected approach, or a post-mortem becomes a dated entry in `docs/Decisions.md`.
-Once a block lands at its real destination, update its original site's one-line pointer to name
-that destination instead of the staging file, and delete the entry from the staging file.
+Once a block lands at its real destination, move its marker line with it, then run
+`python "${CLAUDE_PLUGIN_ROOT}/scripts/docref.py" fix --write`, which repoints every site by id
+instead of you editing each one. Delete the entry from the staging file.
 
 **The staging file is scratch, not a seventh tier.** A batch is not finished while the staging
 file still holds entries — that is progress, not completion. Delete the staging file once every
@@ -67,7 +77,8 @@ The house rules are NOT injected into this subagent's context — `SessionStart`
 `additionalContext` does not reach subagents. Follow this digest instead:
 
 - Long-form reasoning belongs in a document, not a comment; the site keeps a one-line
-  pointer so the code still leads to it. Route by what it is: an ongoing mechanism,
+  pointer, `doc-ref <id> <path>`, backed by a `<!-- ref:<id> -->` marker under the note's
+  heading, so the code still leads to it. Route by what it is: an ongoing mechanism,
   invariant, or operational gotcha goes to the tier-4 system doc under `docs/systems`;
   rationale, a rejected approach, or a post-mortem goes to `docs/Decisions.md` instead,
   since it is a record of a choice, not current truth about the system.

@@ -115,8 +115,10 @@ mechanism, invariant, or operational gotcha moves into the tier-4 system documen
 the design into *How it works*, a rule that must stay true into *Invariants*, an operational
 trap into *Traps*. Design rationale, a rejected approach, or a post-mortem is different: it is
 a record of a choice, not current truth about the system, so it becomes a dated entry in
-`docs/Decisions.md` instead. Either way the site keeps a **one-line pointer** naming the
-document and section, so the code still leads to the reasoning. Anything a reader genuinely
+`docs/Decisions.md` instead. Either way the site keeps a **one-line pointer**
+`doc-ref <id> <path>` (in that language's comment syntax), where `<id>` is the 4-hex marker
+`<!-- ref:<id> -->` on its own line under the moved note's heading, made with `docref.py new` —
+so the code still leads to the reasoning and `docref.py check` can prove it still does. Anything a reader genuinely
 needs *at that exact line* to not break the code stays an ordinary comment; only the long-form
 context moves.
 

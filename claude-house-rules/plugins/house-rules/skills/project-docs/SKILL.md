@@ -161,7 +161,8 @@ These are the part that actually works. The folder layout is the easy half.
   stacked note leaves two answers in one document.
 - **A doc that has gone inert moves to `archive/`. It does not get deleted.** Deleting documents
   that other documents point at is how a link graph breaks in twenty places at once. Move, then
-  fix the pointers.
+  fix the pointers — `/house-rules:docref fix --write` does it for code pointers in the
+  `doc-ref` form.
 - **Update the tier that changed, not every tier.** Tier 3 moving is routine. Tier 2 moving means
   the definition of done moved, and that is worth announcing rather than slipping in.
 
@@ -186,7 +187,8 @@ reverse.
 5. Write tier 1 last of the four, so its index describes what actually exists.
 6. Write tier 5, and say in it that today was a documentation day.
 7. Move anything inert into `docs/archive/` with a `README.md` saying why each item is there.
-   Fix every pointer into the moved documents — do not leave the link graph broken.
+   Fix every pointer into the moved documents — do not leave the link graph broken. Code
+   pointers in the `doc-ref` form are repaired mechanically by `/house-rules:docref fix --write`.
 8. If the repo has a `CLAUDE.md`, point it at `docs/README.md` as the entry point rather than
    duplicating any of this into it. Two copies drift.
 

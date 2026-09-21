@@ -482,3 +482,16 @@ the common path deletes it immediately after `guard` consumes it. `verify.py` te
 write and the consume-once behavior directly (`run_hook("versioncheck", ...)` then two
 back-to-back `run_hook("guard", ...)` calls with the same `session_id`), rather than only
 asserting the marker file's absence the way the old regression check does for the removed design.
+
+## `docref.py` is a command, not a hook
+
+`scripts/docref.py` checks and repairs the `doc-ref` pointers the archivist leaves in code (see
+the Decisions entry of 2026-09-20). It is stdlib-only and keeps no state, like `hook.py`, but it
+is deliberately not registered on any event: `hooks.json` is unchanged and the events table in
+`CLAUDE.md` stays as it was. It reads the file list from `git ls-files` (tracked plus untracked
+non-ignored) so build output is never scanned, falling back to a directory walk outside a git
+work tree, and says which it used; a fallback names the reason git was unavailable, and walk
+errors (unreadable directories) are UNREADABLE findings that fail the check. `fix` exits 2 if any
+pointer file it found could not be read or written, and `new` warns on stderr when a file was
+unreadable, since the id it prints may then collide. A doc-write hook that calls it is a possible
+follow-up, to be priced with `tools/measure_footprint.py` before it is built.

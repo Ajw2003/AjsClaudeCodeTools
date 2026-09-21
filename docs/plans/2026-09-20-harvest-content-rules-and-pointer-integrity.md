@@ -1,9 +1,11 @@
 # Content-based harvest and self-maintaining doc pointers
 
 Handoff from a session in the RockSkipping repo (2026-09-20), which exposed the problem. **Status:
-brainstorming stopped after decomposing the work; nothing below B and C is designed or built.**
-This document is the brief for an agent working in this repo. It replaces a scratch copy in the OS
-temp directory.
+piece B (pointer integrity) is designed and built; pieces A and C are still open.** This document
+is the brief for an agent working in this repo. It replaces a scratch copy in the OS temp
+directory. For B, see [the design spec](../superpowers/specs/2026-09-20-pointer-integrity-design.md)
+and [its implementation plan](2026-09-20-pointer-integrity-implementation.md). A and C are not yet
+designed or built.
 
 ## Status of the working tree when this was written
 

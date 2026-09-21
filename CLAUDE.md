@@ -157,6 +157,17 @@ failure it was built for, and the one it must always surface.
 The ledger is the **raw** record and the source of truth. A readable `-brief.md` written alongside
 it is commentary and can drift; when they disagree, the generated one is right.
 
+Check that the code-to-doc pointers still lead somewhere — the `doc-ref <id> <path>` lines the
+archivist leaves, resolved against `<!-- ref:<id> -->` markers in `docs/`:
+
+```bash
+python claude-house-rules/plugins/house-rules/scripts/docref.py check
+```
+
+`fix --write` repairs pointers whose doc moved, by id only; `new` prints an unused id. Also
+available as `/house-rules:docref`. It is a command, not a hook, and `verify.py` runs it against
+this repo's own files (excluding itself and `docref.py`, which hold example pointers on purpose).
+
 ## Architecture
 
 ### The plugin is one POSIX shim plus one Python file, dispatched by event
