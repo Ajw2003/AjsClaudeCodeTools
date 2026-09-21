@@ -294,3 +294,13 @@ a case to `verify.py`. If you reword a phrase that `hook.py`'s `scope`/`runnable
 `verify.py`'s drift checks will fail otherwise. Run the verify command above before considering
 an edit done; it's the only thing that proves a rule change actually took effect versus just
 reading well.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub issues via `gh` CLI. See [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` and `docs/adr/`). See [docs/agents/domain.md](docs/agents/domain.md).
