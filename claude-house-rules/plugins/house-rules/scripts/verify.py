@@ -1596,7 +1596,7 @@ else:
 
 # --- the harvest reminder has not drifted from the rules document ------------------------------
 drift = []
-for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md"]:
+for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md", "doc-ref", "docref.py"]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:
@@ -1615,6 +1615,8 @@ payload = json.dumps(
 code, out, err = run_hook("harvest", payload)
 drift = []
 for phrase in [
+    "doc-ref",
+    "docref.py",
     "one-line pointer",
     "@house-rules:archivist",
     "docs/systems",
@@ -1740,7 +1742,8 @@ for line in archivist.split("\n"):
         break
 if "proactiv" not in desc.lower():
     problems.append("the description does not say to use it proactively, so the Agent gate wins")
-for phrase in ("not injected", "one-line pointer", "Nothing fails silently", "docs/systems"):
+for phrase in ("not injected", "one-line pointer", "Nothing fails silently", "docs/systems",
+               "doc-ref", "<!-- ref:", "${CLAUDE_PLUGIN_ROOT}/scripts/docref.py", "fix --write"):
     if phrase.lower() not in archivist.lower():
         problems.append(f"the digest no longer states {phrase!r}")
 if not problems:
