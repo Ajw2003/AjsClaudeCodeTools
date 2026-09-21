@@ -2312,12 +2312,19 @@ if not os.path.isfile(HARVEST_SCAN_PY):
     hsdrift.append("scripts/harvest_scan.py is missing")
 if not hsdrift:
     cmd_text = read(HARVEST_SCAN_CMD)
-    for needle in ["harvest_scan.py", "$CLAUDE_PLUGIN_ROOT", "$ARGUMENTS"]:
+    for needle in ["harvest_scan.py", "${CLAUDE_PLUGIN_ROOT}", "$ARGUMENTS",
+                   "the plugin root did not resolve"]:
         if needle not in cmd_text:
             hsdrift.append(f"harvest-scan.md is missing {needle!r}")
+    # The bare form is never substituted and is not exported to the Bash tool's shell.
+    CMDS_DIR = os.path.dirname(HARVEST_SCAN_CMD)
+    for name in sorted(os.listdir(CMDS_DIR)):
+        path = os.path.join(CMDS_DIR, name)
+        if os.path.isfile(path) and re.search(r"\$CLAUDE_PLUGIN_ROOT", read(path)):
+            hsdrift.append(f"commands/{name} uses bare $CLAUDE_PLUGIN_ROOT (must be braced)")
 if not hsdrift:
     report("PASS", "/house-rules:harvest-scan exists and runs the installed harvest_scan.py")
-    print("          resolves via $CLAUDE_PLUGIN_ROOT, never a hand-built cache path")
+    print("          resolves via ${CLAUDE_PLUGIN_ROOT}, never a hand-built cache path")
 else:
     report("FAIL", "/house-rules:harvest-scan exists and runs the installed harvest_scan.py")
     print(f"          {'; '.join(hsdrift)}")

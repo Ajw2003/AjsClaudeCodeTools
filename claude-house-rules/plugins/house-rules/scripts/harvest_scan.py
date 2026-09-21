@@ -9,7 +9,7 @@ directory and it walks every source file, running the same detection code the ho
 (`hook._harvest_blocks`), so the two can never disagree about what counts as an essay.
 
 Usage:
-    python "$CLAUDE_PLUGIN_ROOT/scripts/harvest_scan.py" [path] [--min-lines N] [--min-chars N] [--verbose]
+    python "${CLAUDE_PLUGIN_ROOT}/scripts/harvest_scan.py" [path] [--min-lines N] [--min-chars N] [--verbose]
 
     path          Directory to scan. Defaults to the current directory.
     --min-lines   Overrides HOUSE_RULES_HARVEST_MIN_LINES / the built-in default.

@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-20 — Use the braced `${CLAUDE_PLUGIN_ROOT}` in `/house-rules:harvest-scan`
+
+**Context.** `/house-rules:harvest-scan` failed in a real session: `commands/harvest-scan.md` ran
+`python "$CLAUDE_PLUGIN_ROOT/scripts/harvest_scan.py"`. Claude Code substitutes only the braced
+form `${CLAUDE_PLUGIN_ROOT}` inline in plugin content (every `hooks.json` entry uses it) and does
+not export the variable to the Bash tool's shell, so the bare form expanded to empty, giving
+`/scripts/harvest_scan.py`, which Git Bash mapped to `C:\Program Files\Git\scripts\...` (exit 2).
+`verify.py` only checked that the literal text `$CLAUDE_PLUGIN_ROOT` appeared, so it passed while
+the command was broken.
+
+**Decision.** The command now uses `${CLAUDE_PLUGIN_ROOT}` and tells Claude to stop and report if
+the path did not resolve, rather than searching `~/.claude/plugins` or guessing (the cache holds
+several versions). `verify.py` now requires the braced form and the stop instruction, and fails if
+any file under `commands/` contains a bare `$CLAUDE_PLUGIN_ROOT`. Plugin version bumped to 2.26.2.
+
+**Why.** A check that only proves a string is present cannot catch a string that is present but
+never substituted. The bare-form ban is the assertion that would have failed on the original.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-20 — Reproduce the install-upgrade fix against the real CLI before trusting it
 
 **Context.** `tools/` had no coverage of `install.py` at all before 2.15.0, and the gap cost
