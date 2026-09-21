@@ -157,10 +157,11 @@ the suite as originally written, which is the argument for verification step 3 e
 
 ### Thresholds are tunable because they were guessed, then measured
 
-`HARVEST_MIN_LINES` / `HARVEST_MIN_CHARS` default to 3 / 150 and are overridable per machine.
-The defaults are not a taste call: see
-[`comment-harvest-calibration.md`](comment-harvest-calibration.md) for what different pairs each
-catch in this repository, and why the higher ones were effectively switched off.
+`HARVEST_MIN_CHARS` defaults to 500 and is overridable per machine. There is no line-count
+threshold: it was 3 lines OR 150 chars, and the OR made three short lines qualify.
+The default is not a taste call: see
+[`comment-harvest-calibration.md`](comment-harvest-calibration.md) for what different values
+catch, and why the earlier 3 / 150 default flagged 831 blocks in a real project.
 
 ### The file-header exemption is Write-only, and the trace names the real rejection reason
 

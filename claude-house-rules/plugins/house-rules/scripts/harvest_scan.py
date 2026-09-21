@@ -9,10 +9,9 @@ directory and it walks every source file, running the same detection code the ho
 (`hook._harvest_blocks`), so the two can never disagree about what counts as an essay.
 
 Usage:
-    python "${CLAUDE_PLUGIN_ROOT}/scripts/harvest_scan.py" [path] [--min-lines N] [--min-chars N] [--verbose]
+    python "${CLAUDE_PLUGIN_ROOT}/scripts/harvest_scan.py" [path] [--min-chars N] [--verbose]
 
     path          Directory to scan. Defaults to the current directory.
-    --min-lines   Overrides HOUSE_RULES_HARVEST_MIN_LINES / the built-in default.
     --min-chars   Overrides HOUSE_RULES_HARVEST_MIN_CHARS / the built-in default.
     --verbose     Also print files where nothing qualified, and why the closest run missed.
 
@@ -50,7 +49,6 @@ def main(argv):
         description="Scan a project for long-form comments the harvest hook would flag."
     )
     parser.add_argument("path", nargs="?", default=".")
-    parser.add_argument("--min-lines", type=int, default=None)
     parser.add_argument("--min-chars", type=int, default=None)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv[1:])
@@ -61,11 +59,6 @@ def main(argv):
         return 1
 
     problems = []
-    min_lines = args.min_lines
-    if min_lines is None:
-        min_lines = hook._harvest_threshold(
-            "HOUSE_RULES_HARVEST_MIN_LINES", hook.HARVEST_MIN_LINES, problems
-        )
     min_chars = args.min_chars
     if min_chars is None:
         min_chars = hook._harvest_threshold(
@@ -89,7 +82,7 @@ def main(argv):
         rel = os.path.relpath(path, root)
         deadline = _time.time() + hook.HARVEST_BUDGET_SECONDS
         blocks, misses, timed_out = hook._harvest_blocks(
-            text, min_lines, min_chars, deadline, args.verbose, full_file=True
+            text, min_chars, deadline, args.verbose, full_file=True
         )
         if timed_out:
             print(
@@ -103,7 +96,7 @@ def main(argv):
             for start, end, n_lines, n_chars in blocks:
                 print("%s:%d-%d  %dL/%dc" % (rel, start, end, n_lines, n_chars))
         elif args.verbose and misses:
-            longest = max(misses, key=lambda m: (m[2], m[3]))
+            longest = max(misses, key=lambda m: m[3])
             print(
                 "%s: no block - longest run %dL/%dc (%s)"
                 % (rel, longest[2], longest[3], longest[4])
@@ -111,7 +104,7 @@ def main(argv):
 
     print("---")
     print(
-        "%d source file%s scanned under %s, %d block%s in %d file%s at %d lines / %d chars."
+        "%d source file%s scanned under %s, %d block%s in %d file%s at %d chars."
         % (
             total_files,
             "" if total_files == 1 else "s",
@@ -120,7 +113,6 @@ def main(argv):
             "" if total_blocks == 1 else "s",
             flagged_files,
             "" if flagged_files == 1 else "s",
-            min_lines,
             min_chars,
         )
     )

@@ -1,6 +1,6 @@
 ---
 description: Scan a project, project-wide, for long-form comments the harvest hook would flag
-argument-hint: [path] [--verbose] [--min-lines N] [--min-chars N]
+argument-hint: [path] [--verbose] [--min-chars N]
 ---
 
 The `harvest` `PostToolUse` hook only ever looks at text written in the current turn — by
@@ -23,7 +23,7 @@ tell the user the plugin root did not resolve. Do not search `~/.claude/plugins`
 guess a path — the cache holds several versions.
 
 If `$ARGUMENTS` is empty, this scans the current directory with the built-in or
-`HOUSE_RULES_HARVEST_MIN_LINES`/`HOUSE_RULES_HARVEST_MIN_CHARS`-overridden thresholds — the
+`HOUSE_RULES_HARVEST_MIN_CHARS`-overridden threshold — the
 script's own defaults, unrelated to whatever project this command happens to run in.
 
 Report the output as it comes back: each `file:start-end  LlinesLc` block found, and the final

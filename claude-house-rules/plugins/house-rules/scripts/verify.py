@@ -1183,11 +1183,13 @@ ESSAY_CS = CS_HEAD + (
     "// energy error is bounded rather than cumulative, and the artefact goes away entirely.\n"
     "// The cost is that velocity is not directly available at the current step; where a caller\n"
     "// needs it, it is reconstructed from the two most recent positions instead.\n"
+    "// A fixed timestep would sidestep the problem, but the game runs its physics on the\n"
+    "// render clock, so the integrator has to tolerate a varying dt without drifting.\n"
     "public void Step(float dt) { }\n"
 )
 SHORT_CS = CS_HEAD + "// Must run after Init(). Order matters here.\nvoid A() { }\n"
 COMMENTED_CODE = CS_HEAD + "".join(
-    "// var x%d = Compute(y, z);\n" % i for i in range(20)
+    "// var x%d = Compute(y, z);\n" % i for i in range(30)
 ) + "void B() { }\n"
 LICENSE_CS = CS_HEAD + (
     "// Copyright 2026 Someone. All rights reserved. Licensed under the Apache License,\n"
@@ -1196,6 +1198,7 @@ LICENSE_CS = CS_HEAD + (
     "// Unless required by applicable law, software distributed under the License is\n"
     "// distributed on an \"AS IS\" BASIS, without warranties or conditions of any kind.\n"
     "// See the License for the specific language governing permissions and limitations.\n"
+    "// Unless required by applicable law or agreed to in writing, this file is provided as is.\n"
     "class C { }\n"
 )
 ESSAY_PY = (
@@ -1207,7 +1210,9 @@ ESSAY_PY = (
     '    A fourth attempt inside the same window is always rejected, so retrying it converts a\n'
     '    slow failure into a slower one. The backoff is deliberately not jittered: the caller\n'
     '    is a single cron job, so there is no thundering herd to spread out, and a fixed delay\n'
-    '    makes the failure timeline reproducible when reading logs after the fact.\n'
+    '    makes the failure timeline reproducible when reading logs after the fact. Raising the\n'
+    '    cap needs the upstream owner to raise the limit first, otherwise the extra attempts are\n'
+    '    simply wasted requests that count against the same per-minute budget.\n'
     '    """\n'
     '    return 1\n'
 )
@@ -1218,7 +1223,6 @@ def harv_case(expect, title, file_path, content, tool="Write", env=None, expect_
     payload = json.dumps({"tool_name": tool, "tool_input": {"file_path": file_path, field: content}})
     e = dict(os.environ)
     e.pop("HOUSE_RULES_HARVEST", None)
-    e.pop("HOUSE_RULES_HARVEST_MIN_LINES", None)
     e.pop("HOUSE_RULES_HARVEST_MIN_CHARS", None)
     e.pop("HOUSE_RULES_DEBUG", None)
     if env:
@@ -1250,7 +1254,7 @@ harv_case(
     "a design essay in a .cs file is flagged for porting into docs/systems/",
     r"C:\proj\Assets\Orbit.cs",
     ESSAY_CS,
-    expect_in=["@house-rules:archivist", "one-line pointer", "Orbit.cs:5-10"],
+    expect_in=["@house-rules:archivist", "one-line pointer", "Orbit.cs:5-12"],
 )
 harv_case(
     "remind+trace",
@@ -1266,7 +1270,14 @@ harv_case(
 )
 harv_case(
     "trace",
-    "twenty lines of commented-out code is not an essay",
+    "many short comment lines are not an essay - characters decide, not line count",
+    r"C:\proj\A.cs",
+    CS_HEAD + "".join("// Order matters %d.\n" % i for i in range(12)) + "void A() { }\n",
+    expect_in=["none met 500 chars"],
+)
+harv_case(
+    "trace",
+    "thirty lines of commented-out code is not an essay",
     r"C:\proj\B.cs",
     COMMENTED_CODE,
     expect_in=["rejected: looks like commented-out code"],
@@ -1309,7 +1320,7 @@ harv_case(
     "the default trace names the measured longest run and the active threshold",
     r"C:\proj\A.cs",
     SHORT_CS,
-    expect_in=["A.cs", "3 lines / 150 chars", "longest was 1 line"],
+    expect_in=["A.cs", "500 chars", "longest was 1 line"],
 )
 harv_case(
     "remind+trace",
@@ -1323,17 +1334,17 @@ harv_case(
 # --- harvest: the thresholds are tunable, and a bad value is announced not ignored -------------
 harv_case(
     "trace",
-    "raising HOUSE_RULES_HARVEST_MIN_LINES stops the essay qualifying",
+    "raising HOUSE_RULES_HARVEST_MIN_CHARS stops the essay qualifying",
     r"C:\proj\Assets\Orbit.cs",
     ESSAY_CS,
-    env={"HOUSE_RULES_HARVEST_MIN_LINES": "40", "HOUSE_RULES_HARVEST_MIN_CHARS": "9000"},
+    env={"HOUSE_RULES_HARVEST_MIN_CHARS": "9000"},
 )
 harv_case(
     "remind+trace",
     "a bad threshold override is named out loud and the default is used anyway",
     r"C:\proj\Assets\Orbit.cs",
     ESSAY_CS,
-    env={"HOUSE_RULES_HARVEST_MIN_LINES": "banana"},
+    env={"HOUSE_RULES_HARVEST_MIN_CHARS": "banana"},
     expect_in=["banana", "using the defaults"],
 )
 
@@ -1368,7 +1379,7 @@ edit_payload = json.dumps(
     {"tool_name": "Edit", "tool_input": {"file_path": r"C:\proj\Assets\Orbit.cs", "new_string": ESSAY_CS}}
 )
 code, out, err = run_hook("harvest", edit_payload)
-if "Orbit.cs:5-10" not in out and "Blocks:" not in out:
+if "Orbit.cs:5-12" not in out and "Blocks:" not in out:
     report("PASS", "an Edit's reminder carries no file:line range at all")
     print("          no fabricated line numbers in the Edit reminder")
 else:
@@ -1385,6 +1396,8 @@ EDIT_ESSAY_AT_FRAGMENT_START = (
     "// energy error is bounded rather than cumulative, and the artefact goes away entirely.\n"
     "// The cost is that velocity is not directly available at the current step; where a caller\n"
     "// needs it, it is reconstructed from the two most recent positions instead.\n"
+    "// A fixed timestep would sidestep the problem, but the game runs its physics on the\n"
+    "// render clock, so the integrator has to tolerate a varying dt without drifting.\n"
     "public void Step(float dt) { }\n"
 )
 harv_case(
@@ -1420,6 +1433,8 @@ PY_MODULE_DOCSTRING = (
     'wrong to anyone who has watched a real orbit - drag falls off with altitude, and the model\n'
     'should too. The inverse-square term was chosen over inverse-cube because it matches the\n'
     'reference atmosphere table closely enough over the altitudes this game actually uses.\n'
+    'Above the model ceiling the drag term is simply zero, since the table stops there and\n'
+    'extrapolating past it would invent numbers nobody has measured.\n'
     '"""\n'
     'import time\n'
 )
