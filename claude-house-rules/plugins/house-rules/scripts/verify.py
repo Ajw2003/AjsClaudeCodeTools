@@ -3610,6 +3610,30 @@ else:
     report("FAIL", "/house-rules:docref exists and runs the installed docref.py")
     print(f"          {'; '.join(drdrift)}")
 
+def _dr_failure_detail(rc, out, err):
+    """FAIL detail for the live check: the finding lines themselves (everything that is not a
+    'docref:' summary line, capped), then the verdict line, so the flagged file:line survives."""
+    lines = out.splitlines()
+    findings = chr(10).join(l for l in lines if not l.startswith("docref:"))[:1500]
+    verdicts = [l for l in lines if l.startswith("docref:")]
+    verdict = verdicts[-1] if verdicts else "(no docref: line)"
+    return "\n".join([f"exit {rc}", findings, verdict, repr(err[:200])])
+
+
+# --- the live check's failure output names the flagged line, not just a tail of the summary ----
+_title = "docref live check: failure detail names the flagged file:line and the exit code"
+_d = make_fixture({"src/a.c": "// doc-ref beef docs/none.md\n"})
+try:
+    _rc, _o, _e = docref_run(_d, "check")
+    _detail = _dr_failure_detail(_rc, _o, _e)
+    if _rc == 1 and "src/a.c:1  DANGLING" in _detail and "exit 1" in _detail:
+        report("PASS", _title)
+    else:
+        report("FAIL", _title)
+        print(f"          rc={_rc} detail={_detail[:300]!r}")
+finally:
+    shutil.rmtree(_d, ignore_errors=True)
+
 # --- the repo's own docs and code pass docref check ----------------------------------------------
 # verify.py and docref.py are excluded: they hold well-formed example pointers on purpose.
 _dr_live = "docref check passes on this repo's own docs and code"
@@ -3627,7 +3651,7 @@ else:
         print("          " + [l for l in _out.splitlines() if "pointers found" in l][0])
     else:
         report("FAIL", _dr_live)
-        print(f"          exit {_rc}: {_out[-500:]!r} {_err[:200]!r}")
+        print("          " + _dr_failure_detail(_rc, _out, _err).replace("\n", "\n          "))
 
 print()
 print("-" * 32)
