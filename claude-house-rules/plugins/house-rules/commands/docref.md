@@ -27,6 +27,11 @@ If `$ARGUMENTS` is empty, run it with `check`.
 - `fix` — shows the stale paths it would rewrite. `fix --write` rewrites them. It resolves by id
   only, and never touches a dangling, ambiguous or malformed pointer.
 - `new` — prints an unused 4-hex id, for the archivist to put on a new marker.
+- `--exclude` patterns match the whole relative posix path, case-sensitively, and `*` matches across
+  `/`; a pattern that matches no file is reported as a note. Besides the states above, findings
+  can be `duplicate` (two markers claim one id, which is what makes a pointer to it ambiguous),
+  `unreadable` or `undecodable` (a file it could not read or decode). Exit 2 means the run itself
+  failed (bad `--root`, an internal error, or `fix --write` could not rewrite a file).
 
 Report the output as it comes back. Then:
 

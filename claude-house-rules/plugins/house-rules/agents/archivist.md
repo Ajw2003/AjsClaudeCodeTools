@@ -32,7 +32,9 @@ many blocks at once. For each block:
   not begin with a real absolute plugin directory (it is empty, or still shows
   `${CLAUDE_PLUGIN_ROOT}`), you cannot allocate an id: leave that block where it is in the
   source, do not move it, do not invent an id, and list it in your report as not moved for that
-  reason so the caller can allocate an id and re-run.
+  reason so the caller can allocate an id and re-run. Better than stopping: ask the caller (the
+  agent that delegated to you) to supply an id from `docref.py new`, and carry on with the blocks
+  that already have ids.
 - **Keep what a reader needs at that exact line.** An ordering constraint, a gotcha, a
   "must be called after Init()" — that stays as an ordinary comment. Only the long-form
   context moves.

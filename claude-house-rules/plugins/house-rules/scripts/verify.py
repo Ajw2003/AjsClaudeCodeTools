@@ -1596,7 +1596,7 @@ else:
 
 # --- the harvest reminder has not drifted from the rules document ------------------------------
 drift = []
-for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md", "doc-ref", "docref.py"]:
+for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md", "doc-ref", "docref.py", "<!-- ref:"]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:
@@ -1617,6 +1617,7 @@ drift = []
 for phrase in [
     "doc-ref",
     "docref.py",
+    "<!-- ref:",
     "one-line pointer",
     "@house-rules:archivist",
     "docs/systems",

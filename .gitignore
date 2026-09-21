@@ -6,3 +6,6 @@ claude-house-rules/plugins/house-rules/rules/environment.md
 
 # Machine-local, remote-session-only - the human's own machine, not the sandbox. Never committed.
 claude-house-rules/plugins/house-rules/rules/handover-target.md
+
+# Subagent-driven-development workspace: machine-local scratch, briefs full of example pointers.
+.superpowers/

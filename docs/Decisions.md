@@ -20,14 +20,26 @@ syntax. `scripts/docref.py` has `check` (ok / stale / dangling / ambiguous / mal
 `verify.py` and `/house-rules:docref`, **not a hook**: a doc-write hook is deferred until its cost
 can be measured against a working checker. Existing prose pointers are left alone and only counted.
 
-Two refinements over the spec, found while writing the plan: (1) a marker must be alone on its
+Three refinements over the spec, found while writing the plan: (1) a marker must be alone on its
 line, so a doc that quotes one inline does not register a fake marker; (2) the file list is
 `git ls-files --cached --others --exclude-standard` when the root is a git work tree, else a
 directory walk, and the output names which — so ignored build output is never read and a note
-moved into an uncommitted doc is still seen.
+moved into an uncommitted doc is still seen; (3) `--exclude GLOB` (recorded in the spec), matched
+case-sensitively against the whole relative posix path, with a note when a pattern matches nothing.
+
+Fences in docs follow the CommonMark opening/closing rule: a fence closes only on the same
+character with a run at least as long, any other fence-looking line inside is content, and a doc
+that ends inside a fence is reported MALFORMED at the line that opened it. `fix --write` writes a
+temp file beside the source and `os.replace`s it, so an interrupted write never truncates code.
+The states a run can report are ok, stale, dangling, ambiguous, malformed, duplicate (two markers
+claim one id), unreadable and undecodable (a doc under `docs/` that is not valid UTF-8).
+
+`fix`'s exit code is not a proxy for `check`'s. `fix --write` exits 0 when it could not read a file
+at scan time (it names the file), and exits 2 only when a file it found fails at rewrite time,
+while `check` exits 1 for that same unreadable file.
 
 Three behaviours were added in review. When the directory-walk fallback is used, the "scanned"
-line says why (`via directory walk (git unavailable: <reason>)`), and walk errors such as
+line says why (`via directory walk (git did not list files: <reason>)`), and walk errors such as
 unreadable directories are reported as UNREADABLE findings and fail the check. `fix` names
 unreadable files (UNREADABLE lines, counted in its "still unresolved" summary) and keeps exit 0
 for that, but handles each pointer file's read and write separately and returns 2 if any file
