@@ -386,8 +386,7 @@ check(
 
 # --- update.bat states the same four commands, in the same order -------------------------------
 # Why update.bat restates rather than calls install_steps(), and why the two are bound here:
-# docs/systems/plugin-distribution.md, Invariants ("update.bat needs no Python and no repo
-# clone").
+# doc-ref 20e2 docs/systems/plugin-distribution.md (Invariants).
 BAT = os.path.join(HERE, "update.bat")
 bat_present = os.path.isfile(BAT)
 bat_raw = open(BAT, "rb").read() if bat_present else b""

@@ -104,8 +104,8 @@ def run_hook(hook_py, event, payload, env=None):
 def split_output(stdout):
     """(reminder, trace) for one hook call.
 
-    Why this exists instead of reusing reminder_text(): docs/systems/plugin-distribution.md,
-    "How it works" (the split_output paragraph under "Proving the tools' own decision logic").
+    Why this exists instead of reusing reminder_text():
+    doc-ref 312e docs/systems/plugin-distribution.md (How it works).
     """
     try:
         payload = json.loads(stdout)
