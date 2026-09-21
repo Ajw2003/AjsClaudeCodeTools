@@ -3157,7 +3157,15 @@ def docref_case(title, files, args, expect_rc, expect_in=(), expect_out=(), afte
     d = make_fixture(files)
     try:
         if setup is not None:
-            setup(d)
+            try:
+                setup(d)
+            except Exception as e:
+                report("FAIL", title)
+                stderr = getattr(e, "stderr", b"") or b""
+                if isinstance(stderr, bytes):
+                    stderr = stderr.decode("utf-8", "replace")
+                print(f"          setup raised {type(e).__name__}: {e} {stderr.strip()[:200]}")
+                return
         rc, out, err = docref_run(d, *args)
         problems = []
         if rc != expect_rc:
@@ -3188,8 +3196,12 @@ import importlib.util as _dr_importlib_util
 
 _dr_spec = _dr_importlib_util.spec_from_file_location("docref_mod", DOCREF)
 docref_mod = _dr_importlib_util.module_from_spec(_dr_spec)
-if os.path.isfile(DOCREF):
+DR_MOD_OK = os.path.isfile(DOCREF)
+if DR_MOD_OK:
     _dr_spec.loader.exec_module(docref_mod)
+else:
+    report("FAIL", "docref.py is missing")
+    print(f"          expected {DOCREF}; the docref tests that import it are skipped")
 
 DR_DOC = "## Traps\n<!-- ref:a3f9 -->\nBody.\n"
 
@@ -3334,22 +3346,19 @@ def _dr_unreadable_dir_case():
 
     title = "docref check: a directory the walk cannot list is named UNREADABLE and forces exit 1"
     d = make_fixture({"src/a.c": "int x;\n"})
-    real_walk = docref_mod.os.walk
+    real_walk = docref_mod._walk_names
 
-    def failing_walk(top, *a, **kw):
-        cb = kw.get("onerror")
-        if cb is not None:
-            cb(OSError("denied on purpose"))
-        return iter(())
+    def failing_walk(root):
+        return [], [("src", "denied on purpose")]
 
     buf = io.StringIO()
     try:
-        docref_mod.os.walk = failing_walk
+        docref_mod._walk_names = failing_walk
         try:
             with contextlib.redirect_stdout(buf):
                 rc = docref_mod.main(["check", "--root", d])
         finally:
-            docref_mod.os.walk = real_walk
+            docref_mod._walk_names = real_walk
         out = buf.getvalue()
         if rc == 1 and "UNREADABLE" in out and "denied on purpose" in out:
             report("PASS", title)
@@ -3360,11 +3369,12 @@ def _dr_unreadable_dir_case():
         report("FAIL", title)
         print(f"          raised {type(e).__name__}: {e}")
     finally:
-        docref_mod.os.walk = real_walk
+        docref_mod._walk_names = real_walk
         shutil.rmtree(d, ignore_errors=True)
 
 
-_dr_unreadable_dir_case()
+if DR_MOD_OK:
+    _dr_unreadable_dir_case()
 
 DR_STALE = {"docs/systems/new.md": DR_DOC, "src/a.c": "int x;\n// doc-ref a3f9 docs/old.md\n"}
 
@@ -3478,45 +3488,47 @@ class _SeqRng:
         return self.seq.pop(0)
 
 
-if docref_mod.new_id({"a3f9"}, _SeqRng([0xA3F9, 0xA3F9, 0x0001])) == "0001":
-    report("PASS", "docref new_id: skips ids that are already used and returns the first free one")
-else:
-    report("FAIL", "docref new_id: skips ids that are already used and returns the first free one")
+if DR_MOD_OK:
+    if docref_mod.new_id({"a3f9"}, _SeqRng([0xA3F9, 0xA3F9, 0x0001])) == "0001":
+        report("PASS", "docref new_id: skips ids that are already used and returns the first free one")
+    else:
+        report("FAIL", "docref new_id: skips ids that are already used and returns the first free one")
 
-try:
-    docref_mod.new_id({"%04x" % i for i in range(0x10000)})
-    report("FAIL", "docref new_id: says so when all 65536 ids are used")
-except RuntimeError as _e:
-    report("PASS", "docref new_id: says so when all 65536 ids are used")
-    print(f"          {_e}")
+    try:
+        docref_mod.new_id({"%04x" % i for i in range(0x10000)})
+        report("FAIL", "docref new_id: says so when all 65536 ids are used")
+    except RuntimeError as _e:
+        report("PASS", "docref new_id: says so when all 65536 ids are used")
+        print(f"          {_e}")
 
 # An unreadable file must be named and must fail the check - not be skipped quietly.
 import contextlib
 import io
 
-_d = make_fixture({"docs/a.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/a.md\n"})
-_orig_read = docref_mod._read_bytes
+if DR_MOD_OK:
+    _d = make_fixture({"docs/a.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/a.md\n"})
+    _orig_read = docref_mod._read_bytes
 
 
-def _boom(path):
-    if path.endswith("a.c"):
-        raise PermissionError("denied on purpose")
-    return _orig_read(path)
+    def _boom(path):
+        if path.endswith("a.c"):
+            raise PermissionError("denied on purpose")
+        return _orig_read(path)
 
 
-docref_mod._read_bytes = _boom
-_buf = io.StringIO()
-try:
-    with contextlib.redirect_stdout(_buf):
-        _rc = docref_mod.main(["check", "--root", _d])
-finally:
-    docref_mod._read_bytes = _orig_read
-    shutil.rmtree(_d, ignore_errors=True)
-if _rc == 1 and "src/a.c  UNREADABLE  denied on purpose" in _buf.getvalue():
-    report("PASS", "docref check: an unreadable file is named and fails the check")
-else:
-    report("FAIL", "docref check: an unreadable file is named and fails the check")
-    print(f"          rc={_rc} stdout={_buf.getvalue()[:300]!r}")
+    docref_mod._read_bytes = _boom
+    _buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(_buf):
+            _rc = docref_mod.main(["check", "--root", _d])
+    finally:
+        docref_mod._read_bytes = _orig_read
+        shutil.rmtree(_d, ignore_errors=True)
+    if _rc == 1 and "src/a.c  UNREADABLE  denied on purpose" in _buf.getvalue():
+        report("PASS", "docref check: an unreadable file is named and fails the check")
+    else:
+        report("FAIL", "docref check: an unreadable file is named and fails the check")
+        print(f"          rc={_rc} stdout={_buf.getvalue()[:300]!r}")
 
 _proc = subprocess.run(
     [sys.executable, DOCREF, "check", "--root", os.path.join(ROOT, "no", "such", "dir")],
@@ -3557,41 +3569,42 @@ _DR_TWO = {
     "src/b.c": "// doc-ref a3f9 docs/old.md\n",
 }
 
-_title = "docref fix: an unreadable file is named, the readable one is still repaired, exit stays 0"
-_rc, _o, _e, _d = _dr_run_patched(
-    lambda d: ["fix", "--write", "--root", d], _DR_TWO, lambda p, n: p.endswith("b.c"))
-try:
-    _ok, _detail = _dr_file_has("src/a.c", "docs/systems/new.md", absent="docs/old.md")(_d)
-    if _rc == 0 and "src/b.c  UNREADABLE  denied on purpose" in _o and "still unresolved" in _o and _ok:
+if DR_MOD_OK:
+    _title = "docref fix: an unreadable file is named, the readable one is still repaired, exit stays 0"
+    _rc, _o, _e, _d = _dr_run_patched(
+        lambda d: ["fix", "--write", "--root", d], _DR_TWO, lambda p, n: p.endswith("b.c"))
+    try:
+        _ok, _detail = _dr_file_has("src/a.c", "docs/systems/new.md", absent="docs/old.md")(_d)
+        if _rc == 0 and "src/b.c  UNREADABLE  denied on purpose" in _o and "still unresolved" in _o and _ok:
+            report("PASS", _title)
+        else:
+            report("FAIL", _title)
+            print(f"          rc={_rc} {_detail} stdout={_o[:300]!r}")
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _title = "docref new: an unreadable file is warned about on stderr and stdout stays one bare id"
+    _rc, _o, _e, _d = _dr_run_patched(
+        lambda d: ["new", "--root", d], _DR_TWO, lambda p, n: p.endswith("b.c"))
+    shutil.rmtree(_d, ignore_errors=True)
+    if _rc == 0 and re.fullmatch(r"[0-9a-f]{4}\n", _o) and "src/b.c" in _e and "collide" in _e:
         report("PASS", _title)
     else:
         report("FAIL", _title)
-        print(f"          rc={_rc} {_detail} stdout={_o[:300]!r}")
-finally:
-    shutil.rmtree(_d, ignore_errors=True)
+        print(f"          rc={_rc} stdout={_o[:80]!r} stderr={_e[:200]!r}")
 
-_title = "docref new: an unreadable file is warned about on stderr and stdout stays one bare id"
-_rc, _o, _e, _d = _dr_run_patched(
-    lambda d: ["new", "--root", d], _DR_TWO, lambda p, n: p.endswith("b.c"))
-shutil.rmtree(_d, ignore_errors=True)
-if _rc == 0 and re.fullmatch(r"[0-9a-f]{4}\n", _o) and "src/b.c" in _e and "collide" in _e:
-    report("PASS", _title)
-else:
-    report("FAIL", _title)
-    print(f"          rc={_rc} stdout={_o[:80]!r} stderr={_e[:200]!r}")
-
-_title = "docref fix: a file that fails on re-read is named, others are processed, exit 2, count reported"
-_rc, _o, _e, _d = _dr_run_patched(
-    lambda d: ["fix", "--write", "--root", d], _DR_TWO, lambda p, n: p.endswith("a.c") and n >= 2)
-try:
-    _ok, _detail = _dr_file_has("src/b.c", "docs/systems/new.md", absent="docs/old.md")(_d)
-    if _rc == 2 and "src/a.c  UNREADABLE  denied on purpose" in _o and "1 file(s) failed" in _o and _ok:
-        report("PASS", _title)
-    else:
-        report("FAIL", _title)
-        print(f"          rc={_rc} {_detail} stdout={_o[:300]!r}")
-finally:
-    shutil.rmtree(_d, ignore_errors=True)
+    _title = "docref fix: a file that fails on re-read is named, others are processed, exit 2, count reported"
+    _rc, _o, _e, _d = _dr_run_patched(
+        lambda d: ["fix", "--write", "--root", d], _DR_TWO, lambda p, n: p.endswith("a.c") and n >= 2)
+    try:
+        _ok, _detail = _dr_file_has("src/b.c", "docs/systems/new.md", absent="docs/old.md")(_d)
+        if _rc == 2 and "src/a.c  UNREADABLE  denied on purpose" in _o and "1 file(s) failed" in _o and _ok:
+            report("PASS", _title)
+        else:
+            report("FAIL", _title)
+            print(f"          rc={_rc} {_detail} stdout={_o[:300]!r}")
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
 
 # --- docref.py final-review fixes: fences, atomic write, punctuation, --exclude, git entries ---
 FENCE4 = "`" * 4
