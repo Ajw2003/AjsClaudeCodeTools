@@ -955,7 +955,7 @@ def branch_ownership():
     """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
 
     Mechanism and invariants: doc-ref ee0f docs/systems/hook-engine.md (Invariants) and
-    doc-ref d2a4 docs/systems/hook-engine.md (Invariants).
+    doc-ref d2a4 docs/systems/hook-engine.md (Traps).
     """
     try:
         git_dir = _git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
