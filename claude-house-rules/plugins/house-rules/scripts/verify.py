@@ -3590,6 +3590,45 @@ try:
 finally:
     shutil.rmtree(_d, ignore_errors=True)
 
+# --- /house-rules:docref exists and runs the installed docref.py -------------------------------
+DOCREF_CMD = os.path.join(HERE, "..", "commands", "docref.md")
+drdrift = []
+if not os.path.isfile(DOCREF_CMD):
+    drdrift.append("commands/docref.md is missing")
+else:
+    _dr_cmd_text = read(DOCREF_CMD)
+    for needle in ["docref.py", "${CLAUDE_PLUGIN_ROOT}", "$ARGUMENTS",
+                   "the plugin root did not resolve", "fix --write"]:
+        if needle not in _dr_cmd_text:
+            drdrift.append(f"docref.md is missing {needle!r}")
+    if re.search(r"\$CLAUDE_PLUGIN_ROOT", _dr_cmd_text):
+        drdrift.append("docref.md uses bare $CLAUDE_PLUGIN_ROOT (must be braced)")
+if not drdrift:
+    report("PASS", "/house-rules:docref exists and runs the installed docref.py")
+    print("          resolves via ${CLAUDE_PLUGIN_ROOT}, never a hand-built cache path")
+else:
+    report("FAIL", "/house-rules:docref exists and runs the installed docref.py")
+    print(f"          {'; '.join(drdrift)}")
+
+# --- the repo's own docs and code pass docref check ----------------------------------------------
+# verify.py and docref.py are excluded: they hold well-formed example pointers on purpose.
+_dr_live = "docref check passes on this repo's own docs and code"
+_absent = absent_repo_files("docs/Decisions.md", "docs/README.md")
+if _absent:
+    skip_repo_check(_dr_live, _absent)
+else:
+    _rc, _out, _err = docref_run(
+        ROOT, "check",
+        "--exclude", "claude-house-rules/plugins/house-rules/scripts/verify.py",
+        "--exclude", "claude-house-rules/plugins/house-rules/scripts/docref.py",
+    )
+    if _rc == 0:
+        report("PASS", _dr_live)
+        print("          " + [l for l in _out.splitlines() if "pointers found" in l][0])
+    else:
+        report("FAIL", _dr_live)
+        print(f"          exit {_rc}: {_out[-500:]!r} {_err[:200]!r}")
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:
