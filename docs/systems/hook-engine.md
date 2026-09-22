@@ -40,6 +40,7 @@ name as `argv[1]`; the payload always arrives on stdin
 | `SessionStart` | `event_standards` | every session — prints applicable per-repo coding standards |
 | `UserPromptSubmit` | `event_scope` | every prompt — restates the short rule reminder |
 | `PreToolUse` (`Bash`/`PowerShell`) | `event_guard` | before a shell command runs |
+| `PreToolUse` (`Write`) | `event_guardwrite` | before a `Write` would replace an existing file's entire contents |
 | `PostToolUse` (`Write`/`Edit`) | `event_artifact` | a document written outside the project |
 | `PostToolUse` (`Write`) | `event_runnable` | a runnable file just created |
 | `PostToolUse` (`Write`/`Edit`) | `event_harvest` | a comment block has grown into an essay |
@@ -106,6 +107,20 @@ on purpose — `verify.py` fails if it reappears.
   false-positive. When it matches, detection re-scans from that real project root instead of
   `Assets/`, so a sibling Node service next to `Assets/` is still found too.
   <!-- ref:0d4d -->
+- **`guardwrite` treats any `Write` to a file that already exists as a full-file replacement,
+  full stop — there is no size threshold or content diff that lets a "small" rewrite through.**
+  `Write` always replaces a file's entire contents; there is no partial form. A full rewrite is a
+  delete and a recreate wearing a single tool call, whether it goes through `rm` (which `guard`'s
+  broadened `rm` pattern also now catches with no flag needed) or through `Write` targeting a path
+  that is already on disk. Git being able to recover the old blob afterward does not make the loss
+  safe, because nobody reviews the diff line by line before an unattended write ships — which is
+  the exact failure this hook exists to catch: a scheduled, unattended task once rewrote a CSS file
+  wholesale instead of touching the one rule that needed to change, and the regression sat
+  unnoticed until someone found it later. `event_guardwrite` (`hook.py`, after `event_guard`) always
+  asks in this case; it cannot know *why* a rewrite is happening, only *that* one is about to, so
+  the reason it names is what will be discarded, and the "why" is left to whatever Claude has
+  already said in chat, per the rule in `rules/house-rules.md`.
+  <!-- ref:bf94 -->
 
 ## Traps
 

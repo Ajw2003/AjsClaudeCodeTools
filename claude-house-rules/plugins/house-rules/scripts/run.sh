@@ -23,6 +23,8 @@
 # FALLBACK WHEN NOTHING PROBES. What happens depends on which hook is calling, because the
 # hook events have different failure contracts:
 #   - guard (PreToolUse)      -> fails CLOSED: 3 lines on stderr, exit 2. Blocks the command.
+#   - guardwrite (PreToolUse) -> fails CLOSED, same as guard: 3 lines on stderr, exit 2.
+#                              Blocks the Write rather than letting an overwrite through unchecked.
 #   - inject (SessionStart)   -> fails LOUD, not closed: a systemMessage JSON on stdout, exit 0.
 #   - standards (SessionStart)-> fails LOUD, not closed, same as inject: a systemMessage JSON
 #                              on stdout, exit 0. Never blocks - there is nothing to block.
@@ -79,6 +81,12 @@ if [ -z "$PY" ]; then
     guard)
       echo "house-rules guard: no working Python interpreter found on PATH." >&2
       echo "Blocking this command rather than letting it through unchecked." >&2
+      echo "Run /house-rules:doctor, or set HOUSE_RULES_PYTHON to a working interpreter." >&2
+      exit 2
+      ;;
+    guardwrite)
+      echo "house-rules guardwrite: no working Python interpreter found on PATH." >&2
+      echo "Blocking this write rather than letting an unchecked overwrite through." >&2
       echo "Run /house-rules:doctor, or set HOUSE_RULES_PYTHON to a working interpreter." >&2
       exit 2
       ;;
