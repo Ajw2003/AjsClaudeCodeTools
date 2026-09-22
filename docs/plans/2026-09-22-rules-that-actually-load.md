@@ -55,6 +55,19 @@ plan (20.8KB → 43KB), and the repo `CLAUDE.md` is 32KB despite claiming to "st
   fail-open, keeps `stop_hook_active`.
 - **`scope`:** the card line is replaced by a docs-tier line and an evidence line, same size.
 - **Unchanged:** traces; offshoots stay separate and uninstalled.
+- **Subagents get the rules (added 2026-09-22, after a tested finding).** SessionStart context never
+  reaches a subagent; `SubagentStart` context does, and `PreToolUse` guards already fire on
+  subagent tool calls (both probed with `claude -p`). A `SubagentStart` handler injects a
+  *subagent core*: the sections of `house-rules.md` marked as applying to subagents (docs tiers,
+  evidence before claims, edit in place, commit only on own branches, artifacts in the project,
+  nothing fails silently), generated from that one file, with its own size limit. It mandates that
+  the final report lists every command run and its result verbatim.
+- **Subagent work is checkable.** At `SubagentStart` the user is told the transcript's path. At
+  `SubagentStop`, `verdict` also emits an audit summary built from the transcript itself - commands
+  with exit status, files written/edited, tools used - shown to the user, plus an instruction to the
+  main session to reconcile the subagent's report against it and flag every mismatch before relaying.
+  `HOUSE_RULES_SUBAGENT_LEDGER=on` additionally renders the full transcript into `docs/sessions/`
+  with `tools/session_ledger.py`'s renderer; off by default.
 
 ## Steps — one commit each, one PR, one version bump at the end
 
@@ -63,10 +76,12 @@ plan (20.8KB → 43KB), and the repo `CLAUDE.md` is 32KB despite claiming to "st
 2. Root `CLAUDE.md` → pointer; hook table to `docs/architecture.md`; move its verify check; cap it.
    Correct the "re-paid per subagent spawn" claim wherever it appears.
 3. SessionStart docs-tier check, including the `.git/info/exclude` handling for repos you don't own; verify cases.
-4. Commit-time docs reminder in `guard`; verify cases on fixture repos (`claude/` branch and `main`).
-5. `handover`: shell-fence gating + evidence check; verify cases.
-6. `scope` rebalance; update its drift checks.
-7. Version bump, `docs/ProjectState.md` / `Today.md` updated, `measure_footprint.py --repo` re-run
+4. Subagents: `SubagentStart` subagent core + report mandate + transcript path; `verdict` audit
+   summary + reconcile instruction; ledger toggle; verify cases.
+5. Commit-time docs reminder in `guard`; verify cases on fixture repos (`claude/` branch and `main`).
+6. `handover`: shell-fence gating + evidence check; verify cases.
+7. `scope` rebalance; update its drift checks.
+8. Version bump, `docs/ProjectState.md` / `Today.md` updated, `measure_footprint.py --repo` re-run
    and the before/after recorded.
 
 Afterwards, as a separate PR: repo-wide `/house-rules:harvest-scan` and archivist pass.
