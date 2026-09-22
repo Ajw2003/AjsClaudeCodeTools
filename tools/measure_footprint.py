@@ -11,7 +11,9 @@ Three measurements, in order of how much they matter:
   1. scope gating - the per-prompt cost, which accumulates in context and is never cached away.
      Replays the user's own past prompts through the real gating regex to get a long/short
      split from actual usage rather than a guess.
-  2. SessionStart injection - the fixed per-session cost, also re-paid on every subagent spawn.
+  2. SessionStart injection - the fixed per-session cost. Paid ONCE per session, not per
+     subagent spawn: a spawned subagent never sees SessionStart's additionalContext at all
+     (docs/architecture.md, "SessionStart is not re-paid on subagent spawn" - tested directly).
   3. Failure paths - scope runs on UserPromptSubmit, where a non-zero exit erases the user's
      prompt. A malformed payload must still exit 0.
 
@@ -256,11 +258,15 @@ def main():
     # --- 3. per-session cost -----------------------------------------------------------------
     print("\n3. Per-session cost (SessionStart)")
     _, inject_out = run_hook(hook_py, "inject", "{}")
+    _, profile_out = run_hook(hook_py, "profile", "{}")
     _, standards_out = run_hook(hook_py, "standards", "{}")
-    inject_chars, standards_chars = len(reminder_text(inject_out)), len(reminder_text(standards_out))
+    inject_chars = len(reminder_text(inject_out))
+    profile_chars = len(reminder_text(profile_out))
+    standards_chars = len(reminder_text(standards_out))
     print(f"   inject     : {inject_chars:>6,} chars  (~{tokens(inject_chars):,} tokens)")
+    print(f"   profile    : {profile_chars:>6,} chars  (~{tokens(profile_chars):,} tokens)")
     print(f"   standards  : {standards_chars:>6,} chars  (~{tokens(standards_chars):,} tokens)")
-    print("   (re-paid on every subagent spawn, not just once per session)")
+    print("   (paid once per session - a spawned subagent never sees this at all, see docs/architecture.md)")
 
     # --- 4. per-tool-call cost ---------------------------------------------------------------
     # These fire per TOOL CALL, not per turn, so frequency is as much of the cost as size is.

@@ -45,6 +45,7 @@ TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
 DOCSKILL = os.path.join(HERE, "..", "skills", "project-docs", "SKILL.md")
 CHATDOC = os.path.join(ROOT, "docs", "claude-ai-instructions.md")
 VERIFYDOC = os.path.join(ROOT, "docs", "desktop-verification.md")
+ARCHDOC = os.path.join(ROOT, "docs", "architecture.md")
 
 # Absolute, so the PATH-emptied cases below still find the shell they are testing run.sh with —
 # with a bare "sh" those cases fail to launch at all instead of exercising the fallback.
@@ -897,6 +898,23 @@ else:
     else:
         report("PASS", "repo CLAUDE.md is not a second copy of the rules")
         print(f"          it is a pointer ({len(claude_text.encode('utf-8'))} bytes), not a copy")
+
+# --- CLAUDE.md stays a real pointer, not a growing document ----------------------------------
+CLAUDE_MD_BYTE_LIMIT = 4_000
+_absent = absent_repo_files("CLAUDE.md")
+if _absent:
+    skip_repo_check(f"CLAUDE.md stays at or under {CLAUDE_MD_BYTE_LIMIT} bytes", _absent)
+elif not os.path.isfile(root_claude):
+    report("PASS", f"CLAUDE.md stays at or under {CLAUDE_MD_BYTE_LIMIT} bytes")
+    print("          no CLAUDE.md at the repo root")
+else:
+    _claude_bytes = len(read(root_claude).encode("utf-8"))
+    if _claude_bytes <= CLAUDE_MD_BYTE_LIMIT:
+        report("PASS", f"CLAUDE.md stays at or under {CLAUDE_MD_BYTE_LIMIT} bytes")
+        print(f"          {_claude_bytes} bytes <= {CLAUDE_MD_BYTE_LIMIT}")
+    else:
+        report("FAIL", f"CLAUDE.md stays at or under {CLAUDE_MD_BYTE_LIMIT} bytes")
+        print(f"          {_claude_bytes} bytes > {CLAUDE_MD_BYTE_LIMIT} - it has grown past a pointer again")
 
 # --- the recorded machine profile actually reaches the session -------------------------------
 # A real rules/environment.md fixture, not a coincidental phrase in the rules body - the rules
@@ -2280,39 +2298,38 @@ else:
     report("FAIL", "the rules show the anti-patterns, not only the correct forms")
     print(f"          {'; '.join(teachdrift)}")
 
-# --- every surface the CLAUDE.md table claims has a way to be checked ------------------------
-# The table is a claim about six surfaces; docs/desktop-verification.md is what substantiates it.
-# A row added to the table with no way to check it is exactly the drift guarded against elsewhere,
-# so the surface names are read out of the table itself rather than hardcoded here.
+# --- every surface the architecture.md table claims has a way to be checked ------------------
+# The table moved from CLAUDE.md to docs/architecture.md (docs/Decisions.md, 2026-09-22, step 2);
+# surface names are read out of the table itself rather than hardcoded here.
 surfdrift = []
 surfaces = []
-_absent = absent_repo_files("docs/desktop-verification.md", "CLAUDE.md")
+_absent = absent_repo_files("docs/desktop-verification.md", "docs/architecture.md")
 if _absent:
     skip_repo_check(
-        "every surface in the CLAUDE.md table has a check in desktop-verification.md", _absent
+        "every surface in the architecture.md table has a check in desktop-verification.md", _absent
     )
 elif not os.path.isfile(VERIFYDOC):
     surfdrift.append("docs/desktop-verification.md is missing")
-elif not os.path.isfile(root_claude):
-    surfdrift.append("CLAUDE.md is missing, so the table it claims cannot be read")
+elif not os.path.isfile(ARCHDOC):
+    surfdrift.append("docs/architecture.md is missing, so the table it claims cannot be read")
 else:
     verify_doc = read(VERIFYDOC)
-    for line in read(root_claude).splitlines():
+    for line in read(ARCHDOC).splitlines():
         m = re.match(r"^\| (?:Claude Code|claude\.ai chat) [-\u2014 ]+([^|]+?) \|", line)
         if m:
             surfaces.append(m.group(1).strip())
     if not surfaces:
-        surfdrift.append("no surface rows found in CLAUDE.md - has the table been renamed?")
+        surfdrift.append("no surface rows found in docs/architecture.md - has the table been renamed?")
     for s in surfaces:
         if s not in verify_doc:
-            surfdrift.append(f"{s!r} is in the CLAUDE.md table but has no check in desktop-verification.md")
+            surfdrift.append(f"{s!r} is in the architecture.md table but has no check in desktop-verification.md")
 if _absent:
     pass  # already reported as skipped above
 elif not surfdrift:
-    report("PASS", "every surface in the CLAUDE.md table has a check in desktop-verification.md")
+    report("PASS", "every surface in the architecture.md table has a check in desktop-verification.md")
     print(f"          {len(surfaces)} surfaces claimed, {len(surfaces)} covered: {', '.join(surfaces)}")
 else:
-    report("FAIL", "every surface in the CLAUDE.md table has a check in desktop-verification.md")
+    report("FAIL", "every surface in the architecture.md table has a check in desktop-verification.md")
     print(f"          {'; '.join(surfdrift)}")
 
 # --- nothing publishes a page unasked, and the rule and the table say the same thing ---------
@@ -2343,34 +2360,34 @@ else:
             pubdrift.append(f"the operative rule still carries the replaced wording {stale!r}")
     if "four or more steps" not in _why.lower():
         pubdrift.append("the Why does not record the four-step rule this replaced")
-_absent = absent_repo_files("CLAUDE.md")
+_absent = absent_repo_files("docs/architecture.md")
 if _absent:
     pass  # the rules half above still ran; only the table half is unavailable here
-elif os.path.isfile(root_claude):
-    table_text = read(root_claude)
+elif os.path.isfile(ARCHDOC):
+    table_text = read(ARCHDOC)
     rows = [ln for ln in table_text.splitlines() if ln.startswith("| Claude Code")]
     offered = [ln for ln in rows if "offered at 2+ steps" in ln]
     if not offered:
-        pubdrift.append("no CLAUDE.md surface row states 'offered at 2+ steps'")
+        pubdrift.append("no architecture.md surface row states 'offered at 2+ steps'")
     if "4+ steps" in table_text:
-        pubdrift.append("CLAUDE.md still advertises the replaced '4+ steps' threshold")
+        pubdrift.append("docs/architecture.md still advertises the replaced '4+ steps' threshold")
 else:
-    pubdrift.append("no CLAUDE.md to check")
+    pubdrift.append("no docs/architecture.md to check")
 if pubdrift and _absent:
-    report("FAIL", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    report("FAIL", "the page rule and the architecture.md table agree, and nothing publishes unasked")
     for p in pubdrift:
         print(f"          {p}")
 elif _absent:
     skip_repo_check(
-        "the page rule and the CLAUDE.md table agree, and nothing publishes unasked",
+        "the page rule and the architecture.md table agree, and nothing publishes unasked",
         _absent,
         extra="the rules half was checked here and passed; only the table half is unavailable",
     )
 elif not pubdrift:
-    report("PASS", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    report("PASS", "the page rule and the architecture.md table agree, and nothing publishes unasked")
     print("          rule: offer at 2+ steps, publish only on request; table says the same")
 else:
-    report("FAIL", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    report("FAIL", "the page rule and the architecture.md table agree, and nothing publishes unasked")
     for p in pubdrift:
         print(f"          {p}")
 
@@ -2437,7 +2454,7 @@ else:
 install_path = os.path.join(ROOT, "tools", "install.py")
 readme_rel = os.path.join("claude-house-rules", "README.md")
 moddrift = []
-_absent = absent_repo_files(os.path.join("tools", "install.py"), readme_rel, "CLAUDE.md")
+_absent = absent_repo_files(os.path.join("tools", "install.py"), readme_rel, "docs/architecture.md")
 if _absent:
     skip_repo_check("install.py sets model = opusplan and the docs scope it correctly", _absent)
 elif not os.path.isfile(install_path):
@@ -2451,7 +2468,7 @@ else:
 readme_path = os.path.join(ROOT, "claude-house-rules", "README.md")
 if os.path.isfile(readme_path) and "opusplan" not in read(readme_path):
     moddrift.append("the README does not document opusplan")
-for docfile in [readme_path, root_claude]:
+for docfile in [readme_path, ARCHDOC]:
     if os.path.isfile(docfile):
         if "cli and the ide" not in read(docfile).lower():
             moddrift.append(
@@ -2484,6 +2501,38 @@ if "Preflight gaps found" not in out:
 else:
     report("FAIL", "SessionStart preflight is silent when there is nothing to warn about")
     print(f"          got: {out[-400:]!r}")
+
+# --- profile truncates only the environment body, never preflight or the handover block -------
+# Coordinator review of 9e7e780: the first cut truncated the WHOLE assembled profile text, which
+# could in principle have cut into preflight warnings or the remote handover-target block instead
+# of just the oversized profile. Fixed to truncate envbody alone; this proves it.
+_oversized_env = os.path.join(_FIXTURE_ROOT, "oversized-environment.md")
+with open(_oversized_env, "w", encoding="utf-8") as _f:
+    _f.write("# Huge profile\n\n" + ("filler line about this machine\n" * 2000))
+_handover_fixture2 = os.path.join(_FIXTURE_ROOT, "handover-target-2.md")
+with open(_handover_fixture2, "w", encoding="utf-8") as _f:
+    _f.write("# The human's machine\n\nWindows 11, PowerShell, Git Bash for POSIX.\n")
+_env = env_in(
+    ROOT,
+    PATH="",  # also forces a preflight warning, so both survivors are exercised at once
+    HOUSE_RULES_ENV_FILE=_oversized_env,
+    CLAUDE_CODE_REMOTE="true",
+    HOUSE_RULES_HANDOVER_TARGET_FILE=_handover_fixture2,
+)
+_code, _trunc_out, _err = run_hook("profile", "", env=_env)
+_trunc_problems = []
+if "Git Bash for POSIX" not in _trunc_out:
+    _trunc_problems.append("the handover-target block did not survive truncation intact")
+if "Preflight gaps found" not in _trunc_out:
+    _trunc_problems.append("preflight warnings did not survive truncation intact")
+if os.path.basename(_oversized_env) not in _trunc_out and _oversized_env not in _trunc_out:
+    _trunc_problems.append("the truncation notice does not name the oversized file")
+if not _trunc_problems:
+    report("PASS", "profile truncates only the environment body, never preflight or the handover block")
+    print(f"          {len(_trunc_out)} chars total; handover block and preflight both intact")
+else:
+    report("FAIL", "profile truncates only the environment body, never preflight or the handover block")
+    print(f"          {'; '.join(_trunc_problems)}")
 
 # --- /house-rules:doctor exists and maps gaps to an install command per OS --------------------
 DOCTOR = os.path.join(HERE, "..", "commands", "doctor.md")
@@ -2529,13 +2578,14 @@ else:
     report("FAIL", "/house-rules:harvest-scan exists and runs the installed harvest_scan.py")
     print(f"          {'; '.join(hsdrift)}")
 
-# --- the architecture tables in CLAUDE.md and the README match hooks.json ----------------------
+# --- the architecture tables in docs/architecture.md and the README match hooks.json ----------
 # Registered dispatch events, read from hooks.json's run.sh invocations rather than filenames -
-# there is only one script (run.sh) now, dispatched by event argument.
+# there is only one script (run.sh) now, dispatched by event argument. The table moved from
+# CLAUDE.md to docs/architecture.md (docs/Decisions.md, 2026-09-22, step 2).
 registered_events = sorted(set(re.findall(r'run\.sh\\" ([a-z]+)', hooks_json_text)))
 docdrift = []
-_absent = absent_repo_files("CLAUDE.md", readme_rel)
-for doc in ([] if _absent else [root_claude, readme_path]):
+_absent = absent_repo_files("docs/architecture.md", readme_rel)
+for doc in ([] if _absent else [ARCHDOC, readme_path]):
     docname = os.path.basename(doc)
     if not os.path.isfile(doc):
         docdrift.append(f"no {docname} to check")
@@ -2561,19 +2611,19 @@ for fname in os.listdir(HERE):
     if fname.endswith(".sh") and fname != "run.sh":
         docdrift.append(f"{fname} exists but is not run.sh - a leftover hook script")
 if docdrift and _absent:
-    report("FAIL", "the architecture tables match hooks.json")
+    report("FAIL", "the architecture tables in docs/architecture.md and the README match hooks.json")
     print(f"          {'; '.join(docdrift)}")
 elif _absent:
     skip_repo_check(
-        "the architecture tables match hooks.json",
+        "the architecture tables in docs/architecture.md and the README match hooks.json",
         _absent,
         extra="scripts/ was checked here and holds no stray .sh; only the doc tables are unavailable",
     )
 elif not docdrift:
-    report("PASS", "the architecture tables match hooks.json")
+    report("PASS", "the architecture tables in docs/architecture.md and the README match hooks.json")
     print("          every registered hook event is documented and no stray .sh script exists")
 else:
-    report("FAIL", "the architecture tables match hooks.json")
+    report("FAIL", "the architecture tables in docs/architecture.md and the README match hooks.json")
     print(f"          {'; '.join(docdrift)}")
 
 # --- the "What trips the guard" README table matches GUARD_R3/GUARD_R4's actual git verbs -----

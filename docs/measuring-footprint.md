@@ -21,8 +21,15 @@ Three facts about how the plugin reaches a session make its cost non-obvious:
 - **`UserPromptSubmit` output lands at the tail, on every prompt, and accumulates.** It never
   caches away, and every prompt's copy is re-read on every later request. This is the cost that
   compounds, and the one worth measuring.
-- **Both are re-paid in full on every subagent spawn.** A subagent that answers a question with
-  zero tool calls still pays the whole prefix — one probe measured at 65,318 tokens.
+- **`SessionStart`'s output is NOT re-paid on subagent spawn — it is never given to a subagent at
+  all.** Tested directly (docs/plans/2026-09-22-rules-that-actually-load.md): a spawned
+  `general-purpose` subagent could not see a word planted by a SessionStart hook in the parent
+  session. This corrects an earlier, wrong version of this doc that claimed the opposite. A
+  subagent's context is its own agent file plus whatever the delegation prompt passes it, full
+  stop — see docs/architecture.md for the consequence (`@house-rules:executor` and
+  `@house-rules:archivist` carry their own rules digest for exactly this reason). Whether
+  `UserPromptSubmit`'s output (the bullet above) reaches a subagent has not been tested the same
+  way and is not claimed here either way.
 
 So "how big is `house-rules.md`" is the wrong question. The right one is how often the expensive
 branch is taken, on real prompts, by the copy that is actually installed.
@@ -79,10 +86,11 @@ or the numbers stop being comparable to earlier runs.
 
 ### 3. Per-session cost
 
-Runs `inject` and `standards` and reports their sizes. Note that `standards` output varies by
-repo: it always injects `coding-philosophy.md` and adds the C#/Unity or web/JS docs only when it
-detects those markers, so the same command gives a bigger number inside a Unity project. This is
-the figure that is also re-paid per subagent spawn.
+Runs `inject`, `profile` and `standards` and reports their sizes. Note that `standards` output
+varies by repo: it always injects `coding-philosophy.md` and adds the C#/Unity or web/JS docs
+only when it detects those markers, so the same command gives a bigger number inside a Unity
+project. This is the figure paid once per session — not re-paid per subagent spawn, see "Why
+this needed its own tool" above.
 
 ### 4. Per-tool-call cost
 

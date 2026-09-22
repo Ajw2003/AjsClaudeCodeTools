@@ -1,8 +1,130 @@
 # Architecture rationale
 
-This is the long-form "why" behind `CLAUDE.md`'s design constraints — moved here so the root
-`CLAUDE.md` (auto-loaded every session, and re-paid on every subagent spawn) stays small. Read
-this when you need the reasoning behind a constraint, not just the constraint itself.
+This is the hook-by-hook reference, the design constraints `hook.py`/`run.sh` are built on, and
+the long-form "why" behind them — moved here (2026-09-22, "rules that actually load") so the root
+`CLAUDE.md` (auto-loaded every session) stays small. Read this when you need the table, the
+constraint, or the reasoning behind it.
+
+**SessionStart's `additionalContext` is not re-paid on subagent spawn — it is never given to a
+subagent at all.** Tested directly: a spawned `general-purpose` subagent could not see a word
+planted by a SessionStart hook in the parent session (docs/plans/2026-09-22-rules-that-actually-load.md).
+A subagent's context is its own agent file plus whatever the `Agent`/`Task` call passes it, full
+stop — not `inject`'s ~6,200 tokens, not `profile`'s, not `standards`'. This is why
+`@house-rules:executor` and `@house-rules:archivist` carry their own rules digest in their own
+`agents/*.md` file instead of assuming the injected rules reached them (`verify.py`'s
+`digestdrift` check enforces it) — without that digest, a subagent runs with none of the standing
+rules in context, only whatever the delegation prompt happened to restate.
+
+## The plugin is one POSIX shim plus one Python file, dispatched by event
+
+Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](../claude-house-rules/plugins/house-rules/hooks/hooks.json),
+every hook command is `sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" <event>`. `run.sh` resolves a
+working Python interpreter and execs
+[scripts/hook.py](../claude-house-rules/plugins/house-rules/scripts/hook.py) with that event name;
+every handler lives in that one file. Why a shim rather than calling `hook.py` directly, and how
+`run.sh` probes for a working interpreter: see the section right below this one.
+
+| Hook event | `run.sh` arg | Fires on | Effect |
+|---|---|---|---|
+| `SessionStart` | `inject` | every session | Prints `rules/house-rules.md` into context as `additionalContext`, with every `${CLAUDE_PLUGIN_ROOT}` in it substituted for the real absolute plugin path so the `rules/detail/*.md` pointers it names are actually openable. This *is* the CLAUDE.md replacement. |
+| `SessionStart` | `profile` | every session | Second entry on the same event, split out of `inject` in 2.17.1 because the per-hook `additionalContext` limit is 10,000 chars and a recorded `rules/environment.md` can by itself be large enough to push a combined block over it — see docs/Decisions.md. Prints the machine profile (a hand-verified `rules/environment.md`, or a runtime-detected fallback) plus preflight warnings. On a remote session (`CLAUDE_CODE_REMOTE` set) it also appends a distinct block for `rules/handover-target.md` — the human's own machine, as opposed to the sandbox `hook.py` runs on — recorded content when present, or an instruction to find out and record it when not; a local session adds nothing here. Truncates only the machine-profile portion of its own output with a visible notice naming the oversized file, rather than silently exceeding the limit, if the recorded profile is itself too large — the preflight warnings and the remote handover-target block are never the part cut. A failure here cannot take `inject` down with it — separate hook entry, same fail-loud pattern. |
+| `SessionStart` | `standards` | every session | Third entry on the same event, so a detection failure here can never take down the rules injection above. Selects and prints the coding standards docs from `rules/standards/` that apply to the repo it's sitting in — always `coding-philosophy.md`, plus `csharp-unity-standards.md` and/or `web-js-ts-node-standards.md` when their markers are detected across the repo root and one level of subdirectories, or an explicit `.claude/standards` override. Also catches the project root itself being a Unity project's `Assets/` folder (a normal way to open a Unity project) by checking one level *up* for `ProjectSettings/`/`*.csproj` when the root's directory name is exactly `Assets` — when that's true, detection re-scans from that real project root instead of `Assets/`, so a sibling Node service next to `Assets/` (not just the Unity markers) is still found. |
+| `SessionStart` | `versioncheck` | every session | Fourth entry on the same event. Compares three copies of the plugin version — installed, the local marketplace clone, and GitHub's default branch — because the marketplace clone can itself go stale independently of the installed copy (`marketplace add` does not re-fetch a marketplace the device has already seen). A mismatch prints a loud, impossible-to-miss `additionalContext` banner naming which copies disagree and the exact `claude plugin marketplace update` / `claude plugin update` commands to fix it, and telling Claude to ask the user's permission to run those commands itself on this exact machine, then stop and wait for the user's answer instead of continuing into unrelated work; only if the user declines, or the session has no shell tool, does Claude fall back to handing them over through the normal step-card format, marked `UNTESTED:` since the hook relayed them rather than Claude running them on this machine. It also writes a session-keyed marker file so `guard` can also surface it as a real permission prompt on the session's first `Bash`/`PowerShell` call — the one deliberate, scoped exception to "no hook keeps state between invocations" (see below). `HOUSE_RULES_VERSION_CHECK=off` disables the whole check; `HOUSE_RULES_VC_GITHUB_URL` points a fork at its own repo instead of `Ajw2003/AjsClaudeCodeTools`. Network failures are best-effort and never treated as "out of date" — only an actual version mismatch is. |
+| `UserPromptSubmit` | `scope` | every prompt | Restates a short reminder so the rules stay live 200 messages into a long session, after the SessionStart copy has faded from attention. Emits a short pointer form by default and the full form only when the prompt looks command/file/build-shaped, gated statelessly on the payload's `prompt` field — every failure path falls back to the short form and exits 0, since a non-zero exit here erases the user's prompt. |
+| `PreToolUse` | `guard` | `Bash`/`PowerShell` calls | Extracts the `command` field and textually matches it against rule patterns (hidden/background work, git history/index/remote writes, destructive deletes and discards). A match returns `permissionDecision: "ask"` — it never blocks outright, only prompts. **Branch-aware since 2.16.0:** a plain `commit` or `push` stops prompting when `.git/HEAD` says the checkout is on a `claude/…` branch, because the commit rule already allows those there. Nothing else is exempt — force-push, `reset`, `revert`, `clean`, `rebase`, `merge`, `cherry-pick`, `am` and `apply` prompt on every branch, and so does any command carrying `-C`/`--git-dir`/`--work-tree`, which names a repo other than the one the branch was read from. Every uncertainty (their branch, a detached HEAD, an unreadable or absent repo) lands on the prompting side and the prompt says which. Also consumes `versioncheck`'s session-keyed out-of-date marker if one is waiting: the first `Bash`/`PowerShell` call of an out-of-date session prompts once for that reason alone, even if the command itself trips no other rule, then the marker is deleted so later calls don't repeat it. |
+| `PreToolUse` | `guardwrite` | `Write` calls | The other half of the destructive-action rule: `guard` catches a shell command deleting a file, this catches `Write` doing the same thing under a different name. `Write` always replaces a file's entire contents, so any call that targets a path already on disk is a full-file replacement by definition — this checks only whether the target already exists, never the size of the change, because there is no such thing as a small `Write`. When it does, it asks every time, naming the path and (when both counts are readable) how many existing lines would be discarded for how many new ones. It cannot know *why* a rewrite is happening, only *that* one is about to — the reason is left to whatever Claude has already said in chat, per the "Edit in place" rule. Fails closed like `guard`: an unreadable payload or internal error blocks the write rather than letting it through unchecked. A brand-new path is not a replacement and is never asked about. |
+| `PostToolUse` | `artifact` | `Write`/`Edit` calls | Notices a document write outside the project (temp dir, scratchpad, `~/.claude/plans`) and reminds *Claude* — not the user — to copy it into the project before finishing. The extension list is every form a deliverable arrives as — `md`, `txt`, `html`, `csv`, `json`, `svg`, `pdf` — not the `md`/`txt` it shipped with: the rule says *every* artifact, and a narrower pattern let an `.html` report sit in the scratchpad unnoticed. Routing is extension-aware: hand-authored `md`/`txt` go to `docs/` (or `docs/plans/` for a plan), while tool-produced `html`/`csv`/`json`/`svg`/`pdf` go to `docs/generated/` instead, so generated deliverables don't mix into hand-written documentation. Runnable extensions stay out; `runnable` owns those. |
+| `Stop` | `handover` | a turn about to end **whose reply hands over a command and is not already in card shape** | Reads `last_assistant_message` — the documented field for the just-written reply — and stays silent when there is no fence, since no fence means no command was handed over and the check would only be noise the user has to watch Claude answer. It also stays silent when the reply already carries the card markers (`---`, `###`, `You should see:`), because firing on a compliant reply cannot end quietly — the turn continues, `suppressOutput` has no effect, and the only thing left to say is that nothing needed saying, which is exactly the *a card never announces its own compliance* rule being broken by the hook that enforces it. The cost is deliberate: a card-shaped reply missing a field now passes unchecked, traded for removing a defect that was visible on every correct handover. When it does fire it emits `hookSpecificOutput.additionalContext`, not `decision: "block"`: both continue the turn under the same loop protections, but the former is labelled *Stop hook feedback* rather than raising a hook error, and this is guidance working as designed. A payload with no `last_assistant_message` (an older CLI) still fires, so a version difference cannot silently disable it. The checklist: how the user gets there (folder as an absolute path, plus opening a prompt in it), shell named and correct as the fence label, exact command, expected output, `UNTESTED:` when it was not run, and one numbered step per action once there is more than one command. Stands down on the retry (`stop_hook_active`), on `HOUSE_RULES_HANDOVER=off`, and on any failure — it fails **open**, since a non-zero exit here would stop the turn ending at all. |
+| `PostToolUse` | `runnable` | `Write` calls only | Notices a runnable file (`.sh`, `.ps1`, `.py`, `Dockerfile`, …) created inside the project and reminds *Claude* to run it before finishing. A compiled-language file (`.cs`) gets a different reminder instead: compile it with the real toolchain — Unity in batch mode, or `dotnet build`/`msbuild` against the project's own `.csproj` — never a hand-rolled stand-in for the engine's APIs (a fake `UnityEngine`, a stub assembly) that only proves the stand-in compiles. `Write` only, never `Edit`. |
+| `PostToolUse` | `harvest` | `Write`/`Edit` calls | Reads the body just written (`content`, or `new_string` for an `Edit`) and finds comment blocks that have grown into essays - design rationale, a post-mortem, a derivation, a platform quirk. Reminds *Claude* to move each into the tier-4 system doc that owns that code before the turn ends, leaving a **one-line pointer** at the site, and to hand the mechanical move to `@house-rules:archivist`. This is the one handler that reads a payload's *contents* rather than just its `file_path`, because the comment body is the subject; reading the payload rather than the file on disk keeps it stateless and means it only ever sees text written **this turn**, never a pre-existing essay in a file it merely touched. Source extensions only, so a write to `docs/` is silent by construction. The threshold (`HARVEST_MIN_CHARS`, default 500 - characters are the only size criterion, so wrapping and indentation cannot move a comment across it) is tunable via `HOUSE_RULES_HARVEST_MIN_CHARS`; a bad value is announced and the default used, never silently ignored. Large files are scanned, not skipped - a wall-clock budget bounds the *work* and an overrun says so by name. Emits a one-line decision **trace on every source-file write whether or not it fires**, naming what it measured, so the near-misses are visible and threshold tuning is evidence rather than guesswork; the trace never claims a run failed the size threshold when it actually met it and was rejected for another reason (a file header, a license block, commented-out code). `HOUSE_RULES_HARVEST=quiet` drops the trace, `=off` disables both, `HOUSE_RULES_DEBUG=1` adds per-run rejection reasons. The file-header exemption applies only to a `Write`'s whole-file `content` — never to an `Edit`'s `new_string` fragment, whose own line 1 is wherever the edit starts, not the file's. `/house-rules:harvest-scan` (`commands/harvest-scan.md`) runs the same detection code by hand across a whole project via `scripts/harvest_scan.py` (the hook only ever sees text written in the current turn), see [comment-harvest-calibration.md](comment-harvest-calibration.md). |
+| `PostToolUse` | `delegate` | `ExitPlanMode` calls | The plan just got approved, so the deliberation is over: reminds *Claude* to hand the implementation to `@house-rules:executor`, naming the plan's file path (the `ExitPlanMode` payload carries the plan as inline text, not a path, so this is on Claude to supply), instead of running it on the planning model. Trivial work (one file, a handful of steps or fewer) is done inline instead. |
+| `SubagentStart` | `announce` | every subagent spawn | Says out loud what a delegation used to keep to itself: which agent is starting, what the **installed** `agents/<name>.md` *declares* it should run on (model and effort, parsed from that file, never a literal in `hook.py`), the effort the payload's own `effort` field reports, the plugin version, and an 8-hex fingerprint of the agent definition — which answers *which digest, from which version, was in its context*. Registered with **no matcher**, so every subagent is reported, not only the two this plugin ships; an agent it does not ship is named and reported as having no declaration to compare against, which is still the useful half. If `CLAUDE_CODE_SUBAGENT_MODEL` or `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` is set it says so — that is the documented way a declared model silently is not what runs. |
+| `SubagentStop` | `verdict` | every subagent finish | Turns the declaration into **evidence**: reports the model that actually served the subagent, read out of the subagent's own transcript, and MATCH/MISMATCH against what the agent declares. The transcript is **probed, never assumed** — an `agent_transcript_path` field if the payload carries one (it is not in the documented reference), then `<dir of transcript_path>/<session>/subagents/agent-<agent_id>.jsonl`, the layout observed live; the docs warn the entry format is internal and changes between releases, so every path that cannot tell names what it tried. Fails **open and loud** like `handover`: `decision: "block"` here would send the subagent back to work. |
+
+The table above is checked against `hooks.json` by `verify.py`: an event registered as a hook but
+missing from this table, or listed here but not registered, fails the suite. Why one subagent is
+the primary mechanism for the model split (and why `opusplan` alone is not enough): see the
+section right below.
+
+## Design constraints that shape `hook.py` and `run.sh`
+
+- **`hook.py` is stdlib-only Python.** No third-party imports, no pip install, nothing beyond
+  what ships with CPython 3.8+. `run.sh` is the one POSIX-sh dependency left in the whole
+  plugin, and its only job is finding a working interpreter — it does no rule matching itself.
+- **Each handler's failure mode is deliberate and matches what that hook event allows:**
+  - `guard` and `guardwrite` **fail closed, loudly** (`PreToolUse` can block) — an unreadable
+    payload or any internal error writes to stderr and exits 2, so the command or write does not
+    run. `run.sh` extends this all the way down: no working interpreter at all is also a blocking
+    failure for either one.
+  - `inject` **fails loud, not closed** — a missing/unreadable rules file still emits a
+    `systemMessage`, since there's nothing to block. `run.sh` does the same when no interpreter
+    can be found at all.
+  - `scope` **must never raise or exit non-zero** — on `UserPromptSubmit` a non-zero exit
+    *erases the user's prompt*, so every branch of its gating logic is wrapped to fall back to
+    the short reminder. Its text (both forms) is a restatement of rule phrases; `verify.py`
+    checks it hasn't drifted from `house-rules.md`. `runnable`'s reminder text is pinned the
+    same way, for the same reason.
+  - `artifact`, `runnable`, `delegate` and `harvest` **never obstruct, and never go quiet** —
+    `PostToolUse` can't block anyway (the write already happened), so they always exit 0; but
+    every path meaning *I could not tell* (empty payload, unparseable JSON, missing field,
+    scan budget exceeded, any internal error) says so via `systemMessage`. Silence from one of
+    these means it looked and there was nothing to do — nothing else.
+- **Nothing fails silently**, and `verify.py` enforces it over `hook.py`'s own source: no
+  `except` block may return or pass without emitting, writing to stderr, or recording the
+  problem for its caller to report. An `except` that *recovers* — assigns a fallback and
+  carries on — is not the defect. `main()`'s last-resort net speaks for **every** event, not
+  just `guard` and `inject`; `scope` is the one deliberate exception, recovering to its short
+  reminder rather than reporting, because a non-zero exit there erases the user's prompt.
+  See the rule in `rules/house-rules.md` and the reversal it forced on `handover`'s
+  empty-payload case, recorded further down this document.
+- **Every handler with a silent success path traces its decision, on by default.** `guard`'s
+  allow, `artifact`, `runnable` and `harvest` each emit a one-line `systemMessage` saying what
+  they looked at and what they concluded, whether or not they fire. `inject`, `standards`,
+  `scope` and `delegate` do **not** — they always emit something already, so a trace there
+  would duplicate the proof it exists to provide, at the most expensive possible frequency
+  (`scope` runs on every prompt). `handover` is the one deliberate exception with a silent
+  path: tracing its stand-down would announce a compliant card's own compliance, which
+  `rules/house-rules.md` forbids, and would put a line on the end of every ordinary turn.
+  **stderr is not an alternative** — a hook that exits 0 has its stderr sent to the debug log
+  only, never the transcript, so a trace written there is off by default in name only.
+  `HOUSE_RULES_TRACE=off` is the single lever and silences no reminder;
+  `HOUSE_RULES_HARVEST=quiet` drops just harvest's; `HOUSE_RULES_DEBUG=1` adds harvest's
+  per-run rejection reasons. `tools/measure_footprint.py` section 4 prices all of it.
+- **Every handler extracts the one field it cares about**, rather than matching the whole
+  payload. `artifact` and `runnable` read `file_path`, so a file whose *contents* mention `/tmp`
+  doesn't false-trigger on every save. `guard` reads `command`, so a call *described* as
+  "check for uncommitted changes before we commit" doesn't prompt on the word commit. Matching
+  stays deliberately broad *within* the extracted field — over-triggering there is cheap.
+- **`guard` reads the branch from `.git/HEAD`, never from `git rev-parse`.** It runs on every
+  shell call and blocks the command when it fails, so a subprocess that hung would wedge the
+  user's shell for as long as it hung; one file read cannot, and it keeps guard working where
+  `git` is not on PATH. `verify.py` fails if `branch_ownership()` ever reaches for a subprocess.
+  Guard cases are judged against fixture repos with a hand-written `.git/HEAD`, not against
+  whichever branch the suite happens to be run from — otherwise the same suite passes on `main`,
+  fails on a `claude/` branch, and agrees with neither CI nor a developer.
+- **`guard`'s three-tier ladder is the shape to preserve** if you touch its input handling.
+  Unreadable payload or any internal error → stderr and `exit 2`, blocking. Payload readable but
+  no `command` field → fall back to matching the whole payload, exactly as it behaved before the
+  extraction existed. Field found → match that alone. The middle tier is what keeps a tool whose
+  input field is named something else from being either waved through *or* blocked outright.
+- **No hook keeps state between invocations, with one deliberate, scoped exception.**
+  `handover` runs at `Stop` and stores nothing, because the one fact it needs — has it already
+  fired this turn — is held by the harness and arrives in the payload as `stop_hook_active`.
+  `verify.py` fails if a dead state file from the old design (`track-write.sh`,
+  `clear-pending.sh`, `deliverable.sh`) or a stray `.sh` hook script return, or if anything other
+  than `run.sh` is registered on any event. `versioncheck` is the one hook allowed to write new
+  state: a session-keyed marker file, read and deleted by `guard` on the session's first
+  `Bash`/`PowerShell` call. The state is stateless in every way that mattered for the old
+  design's failure — it never grows unboundedly (`guard` deletes it on read), it is keyed to one
+  session (`session_id`), and a stray leftover from a crashed session simply never gets read by
+  any other session, unlike the old shared `$TEMP` file that leaked across them. Why this is a
+  scoped exception rather than a reversal, and what the old stateful design cost: see the
+  `versioncheck` section further down.
+- **`verify.py` is the source of truth for "does this actually work"**, not the README. It feeds
+  real hook payloads through `hook.py` and asserts on the JSON decision returned. When adding a
+  rule with a shell signature, add both a `guard` pattern and a `verify.py` case in the same
+  change — untested rule text has no effect. It computes its own check count at runtime; don't
+  write that number down anywhere, it will drift.
 
 ## Why a shim in front of the Python file, rather than calling `hook.py` directly
 
@@ -320,7 +442,8 @@ prompt. Four have a genuinely silent success path and get a trace: `guard`'s all
 
 `guard` was the real judgement call, because it fires on every shell command. The measurement
 settles it: section 4 of `measure_footprint.py` puts its trace at ~52 chars (~13 tokens) per
-call, against `inject`'s ~6,200 tokens per session, re-paid on every subagent spawn. Frequency
+call, against `inject`'s ~6,200 tokens paid once per session (not per subagent spawn — see the
+correction above). Frequency
 was the right worry and the number is small.
 
 **`handover` is the one deliberate exception**, and not on cost grounds. Its stand-down fires
@@ -338,8 +461,10 @@ silence and the rule that requires it, so this cannot be quietly "fixed" later.
 ## The machine profile is data, not code, and is not committed
 
 `claude-house-rules/plugins/house-rules/rules/environment.md` is machine-local and **gitignored**
-— each device records its own, and it never ships with the plugin. `inject` reads it alongside
-the rules; if it's missing (a fresh clone, always), `inject` falls back to live runtime
+— each device records its own, and it never ships with the plugin. `profile` (a separate
+`SessionStart` entry from `inject` since 2.17.1, so a large recorded profile can never push the
+rules core over the per-hook limit) reads it; if it's missing (a fresh clone, always), `profile`
+falls back to live runtime
 detection (`hook.py`'s `_detect_environment`: OS, Python, and whether `git`/`sh`/`bash`/`pwsh`/
 `powershell`/`node`/`npm` are on PATH) rather than a static "go find out" message or a Windows-11
 default. A hand-written `rules/environment.md` still wins when present — runtime detection
@@ -404,8 +529,20 @@ in `house-rules.md` and `verify.py` fails on a second copy there.
 
 The comparison that prompted it — claude.ai chat's interactive step widget — cannot be
 reproduced. It is the **custom visuals** feature: model-discretion, beta, no documented emission
-format, and it does not render on iOS or Android at all. The surface table in `CLAUDE.md` records
-what is actually reachable.
+format, and it does not render on iOS or Android at all. The table below records what is
+actually reachable, and `docs/desktop-verification.md` is what substantiates each row —
+`verify.py` checks that every surface named here has a matching check there.
+
+| Surface | Interactive card | Markdown card | How it gets there |
+|---|---|---|---|
+| Claude Code — CLI | offered at 2+ steps, published on request | yes | `inject` + `scope` + `handover` |
+| Claude Code — IDE extension | inherits the CLI; not separately documented | yes | same |
+| Claude Code — Desktop **Code** tab | offered at 2+ steps, published on request | yes | same |
+| Claude Code — web / cloud session | publishing undocumented; treat as unavailable | yes | ships with the repo install; cloud never reads `~/.claude/settings.json` |
+| claude.ai chat — web / desktop | sometimes, model's discretion, unrequestable | yes | [claude-ai-instructions.md](claude-ai-instructions.md) |
+| claude.ai chat — iOS / Android | **never** | yes | same |
+| Claude Code — WSL session | no | **no** | **plugins are unavailable in WSL sessions entirely** |
+| Claude Code — Desktop **Cowork** tab | no | **no** | sources skills and plugins from the claude.ai account, not `~/.claude` — this plugin covers the **Code** tab only |
 
 The markdown card is the only row that is yes wherever the plugin reaches at all — the last two
 rows of that table are surfaces the plugin does not reach, which is a different failure from a

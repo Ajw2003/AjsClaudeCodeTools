@@ -321,15 +321,20 @@ def event_profile():
                 "does not have to ask again.\n"
             )
 
-    full = preamble + envbody + preflight + handover_block
-    trimmed = _truncate_with_notice(full, PROFILE_SOFT_LIMIT, envfile)
+    # Truncate only the environment body if it runs the whole thing over budget - preflight
+    # warnings and the remote handover-target block are never the part that gets cut, since
+    # either one going missing silently would hide something actionable, not just verbose.
+    fixed_len = len(preamble) + len(preflight) + len(handover_block)
+    env_budget = max(0, PROFILE_SOFT_LIMIT - fixed_len)
+    trimmed_envbody = _truncate_with_notice(envbody, env_budget, envfile)
+    full = preamble + trimmed_envbody + preflight + handover_block
 
     emit(
         {
             "suppressOutput": True,
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
-                "additionalContext": trimmed,
+                "additionalContext": full,
             },
         }
     )

@@ -7,6 +7,52 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-22 — CLAUDE.md becomes a real pointer; correct the "re-paid on every subagent spawn" claim; profile truncates only the environment body
+
+**Context.** Step 2 of the rules-that-actually-load plan. Root `CLAUDE.md` had grown to 33,083
+bytes despite its own header claiming it "stays short on purpose" — it carried the full hook
+table, the design-constraints list, and the surfaces table verbatim, none of which changes when
+someone opens an unrelated repo file, and all of which already had a home (or belonged in one) in
+`docs/architecture.md`. Separately, `CLAUDE.md` and several docs (`docs/measuring-footprint.md`,
+`docs/architecture-backlog.md`, `tools/measure_footprint.py`'s own output) asserted that
+SessionStart's injected text is "re-paid on every subagent spawn" — this was never tested and is
+false: a spawned subagent's context is its own agent file plus whatever the delegation prompt
+passes it; SessionStart's `additionalContext` never reaches it at all
+(docs/plans/2026-09-22-rules-that-actually-load.md records the probe). Coordinator review of the
+prior commit also found `profile`'s truncation cut the whole assembled profile text, which could
+in principle cut into the preflight warnings or the remote handover-target block instead of just
+the oversized environment body.
+
+**Decision.** `CLAUDE.md` is now 3,151 bytes: what the repo is, a pointer to `docs/README.md`,
+the rules-pointer paragraph, and the command list as one line plus one clause each. The hook
+table, the design-constraints list, and the surfaces table moved into `docs/architecture.md` —
+the surfaces table merged into its existing "step-card handover format" section rather than
+adding a duplicate. `verify.py` gained a named `CLAUDE_MD_BYTE_LIMIT = 4_000` check, and every
+check that used to read CLAUDE.md's hook/surfaces/constraints tables (the architecture-tables
+check, the surface-coverage check, the publish-a-page table check, the opusplan-scoping check)
+now reads `docs/architecture.md` instead — none deleted or narrowed. The false subagent-spawn
+claim is corrected everywhere it appeared, with the tested fact stated plainly and a pointer to
+where the consequence is documented (`@house-rules:executor`/`@house-rules:archivist` carrying
+their own rules digest). `profile` now computes a budget for the environment body alone
+(`PROFILE_SOFT_LIMIT` minus the fixed preamble/preflight/handover length) and truncates only
+that piece; a new `verify.py` case feeds it an oversized environment file plus a remote handover
+fixture and asserts both the handover block and the preflight warning survive intact while the
+truncation notice still names the oversized file.
+
+**Why.** A root `CLAUDE.md` that says "stays short on purpose" while carrying 33KB is the exact
+kind of drift the rules exist to catch elsewhere — the fix here is the same discipline applied to
+the file that states it. A wrong claim about subagent context is not cosmetic: a session claiming
+"the rules are re-paid on every subagent spawn" is a session that will not think to ask whether
+`@house-rules:executor` actually has them, and the two subagent files that matter here already
+had to compensate for the real answer with their own digest. And truncating the wrong part of
+`profile`'s output — the handover-target block, say, instead of an oversized environment.md — is
+a strictly worse failure than the one the truncation was added to prevent: silence about a fact
+the user could act on, in a hook whose whole job is telling Claude what machine it's on.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-22 — Split the machine profile into its own SessionStart hook, and expand ${CLAUDE_PLUGIN_ROOT} at emit time
 
 **Context.** Step-1 review of the rules split above found two defects the suite did not catch.
