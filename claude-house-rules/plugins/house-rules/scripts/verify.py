@@ -191,12 +191,11 @@ def env_in(project_dir, **extra):
     return e
 
 
-# --- inject and standards stay under the per-hook additionalContext limit --------------------
-# hook.py's INJECT_CHAR_LIMIT (10,000) is where Claude Code stops delivering additionalContext in
-# full and starts saving it to a file with only a preview in context - past it the rules are
-# invisible. Checked with a safety margin (9,500) against the REAL emitted output of each hook
-# (not the source file size), each measured separately since the limit is per hook, not combined.
-INJECT_MARGIN = 9_500
+# --- inject, profile and standards each stay under the per-hook additionalContext limit ------
+# Margins per docs/Decisions.md, 2026-09-22 (second entry): inject 9,000, profile/standards 9,500,
+# each measured on the REAL emitted output, not source file size. profile is measured with
+# docs/example-environment.md standing in for a recorded profile.
+EXAMPLE_ENV = os.path.join(ROOT, "docs", "example-environment.md")
 
 
 def _additional_context(event, payload="", env=None):
@@ -208,17 +207,22 @@ def _additional_context(event, payload="", env=None):
         return code, None, f"{err}\ncould not parse {event} output as JSON: {exc}"
 
 
-for _event in ("inject", "standards"):
-    _code, _ctx, _err = _additional_context(_event, "", env=env_in(ROOT))
+_size_cases = [
+    ("inject", 9_000, env_in(ROOT)),
+    ("standards", 9_500, env_in(ROOT)),
+    ("profile", 9_500, env_in(ROOT, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV)),
+]
+for _event, _margin, _env in _size_cases:
+    _code, _ctx, _err = _additional_context(_event, "", env=_env)
     if _ctx is None:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
         print(f"          could not read additionalContext: {_err.strip()}")
-    elif len(_ctx) <= INJECT_MARGIN:
+    elif len(_ctx) <= _margin:
         report("PASS", f"{_event} stays under the per-hook additionalContext limit")
-        print(f"          {len(_ctx)} chars <= {INJECT_MARGIN} margin (hard limit 10,000)")
+        print(f"          {len(_ctx)} chars <= {_margin} margin (hard limit 10,000)")
     else:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
-        print(f"          {len(_ctx)} chars > {INJECT_MARGIN} margin - Claude Code will truncate this")
+        print(f"          {len(_ctx)} chars > {_margin} margin - Claude Code will truncate this")
 
 
 # --- guard cases: 29 commands ---------------------------------------------------------------
@@ -574,6 +578,27 @@ else:
     report("FAIL", "SessionStart injects every rule heading into context")
     print(f"          missing: {'; '.join(missing)}")
 
+# --- ${CLAUDE_PLUGIN_ROOT} is expanded to a real, openable path before injection --------------
+# additionalContext is plain text nothing expands - only hooks.json's own command strings get
+# ${CLAUDE_PLUGIN_ROOT} substituted by the harness. A literal ${CLAUDE_PLUGIN_ROOT} left in the
+# injected text is a path Claude cannot open.
+_detail_marker = "/rules/detail/edit-place.md"
+if "${CLAUDE_PLUGIN_ROOT}" in out:
+    report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
+    print("          the literal placeholder reached additionalContext unexpanded")
+elif _detail_marker not in out:
+    report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
+    print(f"          no expanded path containing {_detail_marker!r} found in the injection")
+else:
+    _expanded = re.search(r"([^\s`]*" + re.escape(_detail_marker) + r")", out)
+    _expanded_path = _expanded.group(1) if _expanded else None
+    if _expanded_path and os.path.isfile(_expanded_path):
+        report("PASS", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
+        print(f"          {_expanded_path} exists on disk")
+    else:
+        report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
+        print(f"          expanded path {_expanded_path!r} does not exist on disk")
+
 # --- the step-card POINTER actually REACHES the session, not just the file --------------------
 # Since 2.17.0 ("rules that actually load") the full card template is deliberately NOT injected -
 # it lives once in the forced handover-cards output style, which is what stays under the per-hook
@@ -880,7 +905,7 @@ else:
 _envfixture = os.path.join(_FIXTURE_ROOT, "environment.md")
 with open(_envfixture, "w", encoding="utf-8") as _f:
     _f.write("# This machine (hand-verified)\n\nShell: PowerShell\nsh: NOT on PATH\n")
-code, out, err = run_hook("inject", "", env=env_in(ROOT, HOUSE_RULES_ENV_FILE=_envfixture))
+code, out, err = run_hook("profile", "", env=env_in(ROOT, HOUSE_RULES_ENV_FILE=_envfixture))
 missing_env = []
 if "This machine" not in out:
     missing_env.append("no machine profile in the injection")
@@ -898,7 +923,7 @@ else:
 # --- an unrecorded machine reads as "go and find out", never as "assume" ---------------------
 env = dict(os.environ)
 env["HOUSE_RULES_ENV_FILE"] = "/nonexistent-on-purpose"
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "NOT RECORDED YET" in out:
     report("PASS", "a missing machine profile becomes an instruction to discover it")
     print("          the session is told to go and find the facts, not to assume them")
@@ -913,7 +938,7 @@ else:
 # is hook.py's *injected block* - checked by its two block-specific openings instead.
 env = dict(os.environ)
 env.pop("CLAUDE_CODE_REMOTE", None)
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "for anything I hand over to them" not in out.lower() and "this session is remote:" not in out.lower():
     report("PASS", "a local session's injection carries no handover-target block")
     print("          no CLAUDE_CODE_REMOTE in the test env, no handover block emitted")
@@ -925,7 +950,7 @@ else:
 env = dict(os.environ)
 env["CLAUDE_CODE_REMOTE"] = "true"
 env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = "/nonexistent-on-purpose-handover"
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "rules/handover-target.md" in out and "find out" in out.lower():
     report("PASS", "a remote session with no recorded handover target is told to find one out")
     print("          the injection points at docs/example-environment.md / asking, then recording")
@@ -940,7 +965,7 @@ with open(handover_fixture, "w", encoding="utf-8") as f:
 env = dict(os.environ)
 env["CLAUDE_CODE_REMOTE"] = "true"
 env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = handover_fixture
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "Git Bash for POSIX" in out:
     report("PASS", "a remote session injects a recorded handover-target file's content")
     print("          fixture content reached additionalContext")
@@ -959,7 +984,7 @@ for phrase in [
 env = dict(os.environ)
 env["CLAUDE_CODE_REMOTE"] = "true"
 env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = "/nonexistent-on-purpose-handover"
-_, handover_out, _ = run_hook("inject", "", env=env)
+_, handover_out, _ = run_hook("profile", "", env=env)
 if "rules/handover-target.md" not in handover_out:
     handover_drift.append("hook.py's find-out instruction no longer names rules/handover-target.md")
 if not handover_drift:
@@ -2444,7 +2469,7 @@ else:
 # --- preflight warns about a missing dependency, and points at /house-rules:doctor -----------
 env = dict(os.environ)
 env["PATH"] = ""
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "Preflight gaps found" in out and "git is not on PATH" in out and "/house-rules:doctor" in out:
     report("PASS", "SessionStart preflight warns when git is missing and points at /house-rules:doctor")
     print("          a broken PATH produces a visible, actionable preflight warning")
@@ -2452,7 +2477,7 @@ else:
     report("FAIL", "SessionStart preflight warns when git is missing and points at /house-rules:doctor")
     print(f"          got: {out[-400:]!r}")
 
-code, out, err = run_hook("inject", "")
+code, out, err = run_hook("profile", "")
 if "Preflight gaps found" not in out:
     report("PASS", "SessionStart preflight is silent when there is nothing to warn about")
     print("          a clean machine adds nothing to the injection")

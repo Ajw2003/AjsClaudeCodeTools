@@ -7,6 +7,44 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-22 — Split the machine profile into its own SessionStart hook, and expand ${CLAUDE_PLUGIN_ROOT} at emit time
+
+**Context.** Step-1 review of the rules split above found two defects the suite did not catch.
+First, the size check measured `inject` with no recorded `rules/environment.md`, so it missed
+that a *real* recorded profile pushes the combined text over budget: fed a copy of
+`docs/example-environment.md`, `inject` emitted 12,695 chars — over Claude Code's 10,000-char
+per-hook limit, so on a real machine with a hand-verified profile the rules would again be
+persisted to a file instead of reaching the model in full. Second, the trimmed core's detail
+pointers read literally as `${CLAUDE_PLUGIN_ROOT}/rules/detail/<file>.md` in the emitted text —
+that variable is expanded by the harness inside `hooks.json`'s own command strings, but never in
+`additionalContext`, so Claude was being handed a path it could not open.
+
+**Decision.** The machine profile (a recorded `rules/environment.md` or its runtime-detected
+fallback, preflight warnings, and the remote handover-target block) moved out of `inject` into a
+new `profile` SessionStart handler, registered as its own `hooks.json` entry right after `inject`
+so a failure in one can never take the other down — same fail-loud (`systemMessage`) pattern.
+`inject` now carries only the rules core, and substitutes `${CLAUDE_PLUGIN_ROOT}` for the real
+absolute plugin root (derived from `hook.py`'s own location) before emitting. `profile` truncates
+its own output with a visible notice naming the oversized file if a recorded profile would itself
+push it over budget, rather than silently overflowing. `verify.py`'s size check now asserts
+`inject` ≤ 9,000 chars (tighter than before, since it no longer carries runtime-varying content)
+and `profile` ≤ 9,500 chars fed `docs/example-environment.md` as a stand-in for a real recorded
+profile — the realistic case that actually overflowed. Added a case asserting no literal
+`${CLAUDE_PLUGIN_ROOT}` reaches the injected text and that one named detail path resolves on
+disk. Updated the `CLAUDE.md` and `claude-house-rules/README.md` hook tables for the new entry.
+
+**Why.** The size check the first pass shipped measured a scenario (no recorded profile) that
+understated the real one — the whole point of a recorded `rules/environment.md` is that most
+users who bother to write one will have more to say than the runtime-detected fallback, not less.
+Splitting the hook, not just trimming further, is the structural fix: the limit is per hook, so
+the machine profile competing with the rules core for the same 10,000-char budget was always
+going to reproduce the original bug the moment either side grew. And a pointer variable nothing
+expands is not a pointer, it is a string that looks like one.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-22 — Split house-rules.md into an imperative core and rules/detail/*.md, so the rules actually reach the model
 
 **Context.** A grilling session on 2026-09-22 found that `inject` emitted 44,506 chars.

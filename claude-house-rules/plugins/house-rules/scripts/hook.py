@@ -61,11 +61,27 @@ def emit(obj):
 
 _TRACE_OFF = {"off", "0", "false", "no"}
 
-# Claude Code saves any single hook's additionalContext over 10,000 chars to a file and shows
-# only a preview - past this, the injected rules are invisible to the model. verify.py checks
-# the real emitted inject/standards output against this with a safety margin (9,500), not the
-# raw 10,000, so a small future addition does not silently tip a passing check into truncation.
+# Claude Code's per-hook additionalContext limit is 10,000 chars (docs/Decisions.md, 2026-09-22).
+# The machine profile lives in its own SessionStart entry (profile), not appended to inject's
+# text, because the limit is per hook and a recorded environment.md can be large on its own.
 INJECT_CHAR_LIMIT = 10_000
+# The soft budget profile truncates itself against, well under the hard limit above so the
+# truncation notice it appends never itself pushes the total back over 10,000.
+PROFILE_SOFT_LIMIT = 9_500
+
+
+def _truncate_with_notice(text, limit, label):
+    """Cut text to fit limit, appending a notice that names what was cut and why - truncation
+    that happens without saying so is exactly what "nothing fails silently" forbids."""
+    if len(text) <= limit:
+        return text
+    notice = (
+        "\n\n[house-rules profile: %s is %d chars and was truncated to stay under the "
+        "SessionStart context limit - %d chars shown here. Read %s directly for the rest.]\n"
+        % (label, len(text), limit, label)
+    )
+    room = max(0, limit - len(notice))
+    return text[:room] + notice
 
 
 def trace_enabled():
@@ -181,12 +197,13 @@ def _apply_voice_toggle(body):
     return body[:start] + (body[nxt + 1 :] if nxt != -1 else "")
 
 
+def _plugin_root():
+    return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
+
 def event_inject():
     here = os.path.dirname(os.path.abspath(__file__))
     rules_path = os.path.join(here, "..", "rules", "house-rules.md")
-    envfile = os.environ.get("HOUSE_RULES_ENV_FILE") or os.path.join(
-        here, "..", "rules", "environment.md"
-    )
 
     try:
         body = _read_text(rules_path)
@@ -210,6 +227,49 @@ def event_inject():
         )
         return 0
 
+    # The rules text names its detail files as ${CLAUDE_PLUGIN_ROOT}/rules/detail/<file>.md -
+    # that variable is expanded by the harness in hooks.json's own command strings, but this
+    # text is going into additionalContext, which nothing expands. Substitute the real absolute
+    # path here so the path Claude reads is one Claude can actually open.
+    body = body.replace("${CLAUDE_PLUGIN_ROOT}", _plugin_root())
+
+    preamble = (
+        "The following are the user standing house rules. They apply to every project and "
+        "override default behaviour. They are also enforced by a PreToolUse hook that will "
+        "put a permission prompt in front of the user for destructive commands, "
+        "backgrounded or hidden processes, and mutating git commands - except a plain "
+        "commit or push on a `claude/` branch, which the commit rule already allows and "
+        "the hook stands down for. That hook is a backstop, not permission to skip "
+        "asking in chat first. The machine profile is injected separately (profile hook).\n\n"
+    )
+
+    emit(
+        {
+            "suppressOutput": True,
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": preamble + body,
+            },
+        }
+    )
+    return 0
+
+
+# ---------------------------------------------------------------------------------------
+# profile — a third SessionStart handler, split out of inject in 2.17.1 (docs/Decisions.md,
+# 2026-09-22): the per-hook additionalContext limit is 10,000 chars, and a recorded
+# rules/environment.md can by itself be large enough that appending it to inject's own text
+# risked pushing inject over the limit. Registered with no matcher gate of its own (SessionStart
+# only), right after inject in hooks.json, so a failure here can never take inject down with it.
+# ---------------------------------------------------------------------------------------
+
+
+def event_profile():
+    here = os.path.dirname(os.path.abspath(__file__))
+    envfile = os.environ.get("HOUSE_RULES_ENV_FILE") or os.path.join(
+        here, "..", "rules", "environment.md"
+    )
+
     try:
         envbody = _read_text(envfile).replace("\r\n", "\n")
     except OSError:
@@ -225,17 +285,9 @@ def event_inject():
         )
 
     preamble = (
-        "The following are the user standing house rules. They apply to every project and "
-        "override default behaviour. They are also enforced by a PreToolUse hook that will "
-        "put a permission prompt in front of the user for destructive commands, "
-        "backgrounded or hidden processes, and mutating git commands - except a plain "
-        "commit or push on a `claude/` branch, which the commit rule already allows and "
-        "the hook stands down for. That hook is a backstop, not permission to skip "
-        "asking in chat first.\n\n"
-    )
-    separator = (
-        "\n\n---\n\nThe machine these rules run on, as recorded. The first rule says to "
-        "build for what is written here rather than what seems likely:\n\n"
+        "The machine profile, as recorded (rules/house-rules.md is injected separately by "
+        "the inject hook). The first rule says to build for what is written here rather "
+        "than what seems likely:\n\n"
     )
 
     preflight = _preflight_warnings()
@@ -269,12 +321,15 @@ def event_inject():
                 "does not have to ask again.\n"
             )
 
+    full = preamble + envbody + preflight + handover_block
+    trimmed = _truncate_with_notice(full, PROFILE_SOFT_LIMIT, envfile)
+
     emit(
         {
             "suppressOutput": True,
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
-                "additionalContext": preamble + body + separator + envbody + preflight + handover_block,
+                "additionalContext": trimmed,
             },
         }
     )
@@ -2372,6 +2427,7 @@ def event_harvest():
 
 EVENTS = {
     "inject": event_inject,
+    "profile": event_profile,
     "standards": event_standards,
     "versioncheck": event_versioncheck,
     "scope": event_scope,
