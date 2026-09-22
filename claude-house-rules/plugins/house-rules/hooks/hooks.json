@@ -43,6 +43,17 @@
             "statusMessage": "Checking house rules..."
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" guardwrite",
+            "timeout": 10,
+            "statusMessage": "Checking file-deletion safeguards..."
+          }
+        ]
       }
     ],
     "Stop": [

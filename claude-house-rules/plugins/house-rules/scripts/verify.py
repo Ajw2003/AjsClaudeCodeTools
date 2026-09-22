@@ -176,7 +176,7 @@ def env_in(project_dir, **extra):
     return e
 
 
-# --- guard cases: 28 commands ---------------------------------------------------------------
+# --- guard cases: 29 commands ---------------------------------------------------------------
 # All judged from REPO_THEIRS, so these pin the behaviour on a branch that is not mine - the
 # conservative baseline the plugin had before branch-awareness. BRANCH_CASES below covers the
 # ownership axis.
@@ -214,6 +214,11 @@ GUARD_CASES = [
         "Start-Job -ScriptBlock { ./build.ps1 }",
     ),
     ("ask", "Never take a destructive action without checking first", "rm -rf node_modules"),
+    (
+        "ask",
+        "Never take a destructive action without checking first",
+        "rm styles.css",
+    ),
     (
         "ask",
         "Never take a destructive action without checking first",
@@ -413,6 +418,89 @@ else:
     report("FAIL", "a payload with no command field still gets checked (whole-payload fallback)")
     print(f"          got: {out}")
 
+print()
+
+# --- guardwrite: a Write that would replace an existing file's entire contents asks first ----
+RULE_EDIT_IN_PLACE = "Edit in place; a full rewrite is a delete, not an edit"
+
+
+def guardwrite_payload(file_path, content="new content\n"):
+    return json.dumps(
+        {
+            "session_id": "verify",
+            "tool_name": "Write",
+            "tool_input": {"file_path": file_path, "content": content},
+        }
+    )
+
+
+_gw_dir = tempfile.mkdtemp(prefix="house-rules-guardwrite-")
+atexit.register(shutil.rmtree, _gw_dir, True)
+_gw_existing = os.path.join(_gw_dir, "styles.css")
+with open(_gw_existing, "w", encoding="utf-8") as f:
+    f.write("body { color: red; }\n.header { margin: 0; }\n")
+_gw_new = os.path.join(_gw_dir, "new-file.css")
+
+code, out, err = run_hook("guardwrite", guardwrite_payload(_gw_existing))
+if (
+    '"permissionDecision":"ask"' in out
+    and RULE_EDIT_IN_PLACE in out
+    and os.path.basename(_gw_existing) in out
+    and "2 existing line(s)" in out
+):
+    report("PASS", "Write to a file that already exists asks before replacing it")
+    print("          names the file, cites the rule, and counts the discarded lines")
+else:
+    report("FAIL", "Write to a file that already exists asks before replacing it")
+    print(f"          got: {out}")
+
+code, out, err = run_hook("guardwrite", guardwrite_payload(_gw_new))
+if '"permissionDecision"' not in out:
+    report("PASS", "Write to a brand-new path does not ask - there is nothing to discard yet")
+    print("          no prompt for a file that does not already exist")
+else:
+    report("FAIL", "Write to a brand-new path does not ask - there is nothing to discard yet")
+    print(f"          got: {out}")
+
+code, out, err = run_hook("guardwrite", "")
+if code == 0 and '"permissionDecision"' not in out:
+    report("PASS", "guardwrite with an empty payload does not crash or silently allow-by-default")
+    print("          exits 0 with no permission decision, same contract as guard's empty case")
+else:
+    report("FAIL", "guardwrite with an empty payload does not crash or silently allow-by-default")
+    print(f"          exit code {code}, got: {out}")
+
+nofile_payload = json.dumps({"session_id": "verify", "tool_name": "Write", "tool_input": {"content": "x"}})
+code, out, err = run_hook("guardwrite", nofile_payload)
+if code == 0 and '"permissionDecision"' not in out:
+    report("PASS", "guardwrite with no file_path field does not ask")
+    print("          nothing to resolve on disk, so nothing to check")
+else:
+    report("FAIL", "guardwrite with no file_path field does not ask")
+    print(f"          exit code {code}, got: {out}")
+
+# fail-closed: an internal error in guardwrite must BLOCK, not shrug - same contract as guard,
+# since this is also a PreToolUse hook that can stop a tool call from running.
+crash_snippet_gw = (
+    "import sys, hook\n"
+    "def boom():\n"
+    "    raise OSError('simulated stdin failure')\n"
+    "hook.read_payload = boom\n"
+    "sys.exit(hook.main(['hook.py', 'guardwrite']))\n"
+)
+proc = subprocess.run(
+    [sys.executable, "-c", crash_snippet_gw], cwd=HERE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+)
+code, out, err = proc.returncode, proc.stdout.decode("utf-8", "replace"), proc.stderr.decode(
+    "utf-8", "replace"
+)
+if code == 2 and err.strip() and not out.strip():
+    report("PASS", "guardwrite that hits an internal error exits 2 (blocking) and explains itself on stderr")
+    print(f"          said: {err.strip().splitlines()[0]}")
+else:
+    report("FAIL", "guardwrite that hits an internal error exits 2 (blocking) and explains itself on stderr")
+    print(f"          exit code was {code}; stdout={out!r} stderr={err!r}")
+
 # --- the rules actually reach the session ----------------------------------------------------
 code, out, err = run_hook("inject", "")
 missing = []
@@ -430,6 +518,7 @@ for h in [
     "Never hide work in a background window or a silent process",
     "Commit constantly on my own branches, never on theirs",
     "Never take a destructive action without checking first",
+    "Edit in place; a full rewrite is a delete, not an edit",
 ]:
     if h not in out:
         missing.append(h)

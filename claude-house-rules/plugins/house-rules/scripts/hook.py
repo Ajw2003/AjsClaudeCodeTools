@@ -22,6 +22,9 @@ structurally: no `except` in this file may return without emitting or writing to
 
 Each event handler mirrors the failure-mode contract its shell predecessor had:
   - guard        (PreToolUse)   fails CLOSED and loud: prints to stderr, exits 2.
+  - guardwrite   (PreToolUse)   fails CLOSED and loud, same contract as guard: a Write that
+                 would replace an existing file's entire contents is asked about, never let
+                 through unchecked just because an internal error occurred.
   - inject       (SessionStart) fails LOUD, not closed: prints a systemMessage, exits 0.
   - scope        (UserPromptSubmit) cannot fail: never reads a file, never raises.
   - artifact, runnable, delegate, harvest (PostToolUse) never obstruct, but never go quiet:
@@ -896,8 +899,11 @@ GUARD_R3 = [
 
 GUARD_R4 = [
     (
-        r"(^|[^0-9A-Za-z_./-])rm\s+-[^\s]*[rf]",
-        "deletes files recursively or by force",
+        # Was -r/-f only, so a plain `rm styles.css` - no recursive or force flag needed to
+        # delete a single existing file - slipped through unasked. Deleting one file this way is
+        # exactly the mechanism behind the CSS-file regression this rule now also has to catch.
+        r"(^|[^0-9A-Za-z_./-])rm\s+\S",
+        "deletes one or more files",
     ),
     (r"Remove-Item", "deletes files (Remove-Item)"),
     (r"(del|erase)\s+/[fqs]|rmdir\s+/s", "deletes files (del /f or rmdir /s)"),
@@ -1090,6 +1096,118 @@ def event_guard():
             lines.append("")
             lines.append(why_not_exempt)
 
+    lines.append("")
+    lines.append(
+        "Approve to let it run, or reject and Claude will explain what it was about to do."
+    )
+    reason_text = "\n".join(lines)
+
+    emit(
+        {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "ask",
+                "permissionDecisionReason": reason_text,
+            }
+        }
+    )
+    return 0
+
+
+# ---------------------------------------------------------------------------------------
+# guardwrite — PreToolUse on Write. Fails closed and loud, same contract as guard.
+# doc-ref bf94 docs/systems/hook-engine.md (Invariants)
+# ---------------------------------------------------------------------------------------
+
+RULE_EDIT_IN_PLACE = "Edit in place; a full rewrite is a delete, not an edit"
+
+
+def _guardwrite_resolve(file_path):
+    if not file_path or os.path.isabs(file_path):
+        return file_path
+    base = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    return os.path.join(base, file_path)
+
+
+_WRITE_CONTENT_RE = re.compile(r'"content"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+def _guardwrite_new_line_count(payload):
+    m = _WRITE_CONTENT_RE.search(payload)
+    if not m:
+        return None
+    try:
+        text = json.loads('"%s"' % m.group(1))
+    except ValueError:
+        text = m.group(1)
+    return len(text.splitlines())
+
+
+def event_guardwrite():
+    try:
+        payload = read_payload()
+    except Exception:
+        sys.stderr.write(
+            "house-rules guardwrite: could not read the hook payload from stdin.\n"
+        )
+        sys.stderr.write("Blocking this write rather than letting it through unchecked.\n")
+        return 2
+
+    if not payload:
+        trace("guardwrite: empty payload - nothing was checked for this call.")
+        return 0
+
+    file_path = _extract_file_path(payload)
+    if not file_path:
+        trace("guardwrite: no file_path field found - nothing was checked for this call.")
+        return 0
+
+    resolved = _guardwrite_resolve(file_path)
+    try:
+        exists = os.path.isfile(resolved)
+    except OSError as exc:
+        sys.stderr.write(
+            "house-rules guardwrite: could not check whether %r already exists (%s); "
+            "blocking rather than letting an unchecked overwrite through.\n" % (resolved, exc)
+        )
+        return 2
+
+    if not exists:
+        trace("guardwrite: %s does not exist yet - a new file, not an overwrite." % file_path)
+        return 0
+
+    old_lines = None
+    try:
+        old_lines = len(_read_text(resolved).splitlines())
+    except OSError as exc:
+        sys.stderr.write(
+            "house-rules guardwrite: %s exists but could not be read (%s) to count its "
+            "existing lines; asking anyway, with that count left out.\n" % (resolved, exc)
+        )
+
+    new_lines = _guardwrite_new_line_count(payload)
+
+    lines = [
+        "Your house rules want you asked before this runs:",
+        "",
+        "  Rule: %s" % RULE_EDIT_IN_PLACE,
+        "    - This Write replaces the ENTIRE existing contents of `%s`." % file_path,
+    ]
+    if old_lines is not None and new_lines is not None:
+        lines.append(
+            "    - %d existing line(s) would be discarded and replaced with %d new line(s)."
+            % (old_lines, new_lines)
+        )
+    lines.append(
+        "    - Editing in place (the Edit tool, or a targeted patch) changes only the lines "
+        "that need to change. Write throws away everything else in the file, whether or not "
+        "this call meant to touch it."
+    )
+    lines.append("")
+    lines.append(
+        "Before approving, Claude should already have said, in chat, exactly what existing "
+        "content this discards and why an in-place edit will not do."
+    )
     lines.append("")
     lines.append(
         "Approve to let it run, or reject and Claude will explain what it was about to do."
@@ -2252,6 +2370,7 @@ EVENTS = {
     "versioncheck": event_versioncheck,
     "scope": event_scope,
     "guard": event_guard,
+    "guardwrite": event_guardwrite,
     "artifact": event_artifact,
     "runnable": event_runnable,
     "delegate": event_delegate,
@@ -2281,6 +2400,12 @@ def main(argv):
             sys.stderr.write(
                 "house-rules guard: internal error (%s), blocking rather than letting it "
                 "through unchecked.\n" % detail
+            )
+            return 2
+        if event == "guardwrite":
+            sys.stderr.write(
+                "house-rules guardwrite: internal error (%s), blocking rather than letting "
+                "an unchecked overwrite through.\n" % detail
             )
             return 2
         if event == "inject":

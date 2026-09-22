@@ -17,6 +17,7 @@ working Python interpreter and hands off to
 | `SessionStart` | every session, every project | a third entry: the `versioncheck` handler compares the installed plugin version against the local marketplace clone **and** GitHub's default branch — the marketplace clone can go stale on its own, independently of the installed copy. A mismatch prints a loud warning naming the exact `claude plugin marketplace update` / `claude plugin update` commands to run, and also arms `guard` to prompt for it once on your next shell command, in case the warning gets missed. `HOUSE_RULES_VERSION_CHECK=off` disables it; a network failure is never treated as "out of date." |
 | `UserPromptSubmit` | before every prompt you send | the `scope` handler restates the short version — match depth to the task, the environment is fixed, the request is the scope, deliver something runnable, artifacts go in the project. The SessionStart copy fades over a long session; this is what keeps it true at message 200. |
 | `PreToolUse` on `Bash` / `PowerShell` | before any shell command runs | the `guard` handler checks the pending command. If it trips a rule, Claude Code shows you a permission prompt naming the rule and quoting the command. It also checks for a pending `versioncheck` warning and prompts once for that, on the first command of an out-of-date session, even if the command itself is otherwise fine. |
+| `PreToolUse` on `Write` | before a `Write` runs | the `guardwrite` handler checks whether the target file already exists. `Write` always replaces a file's *entire* contents, so a call that targets an existing path is a full-file replacement by definition — there is no such thing as a small one. When it is, Claude Code shows you a permission prompt naming the file and, where it can, how many existing lines would be discarded for how many new ones. A brand-new path is never prompted about; only an overwrite is. This is the other half of "never take a destructive action without checking first" — `guard` catches a shell command deleting a file, this catches `Write` doing the same thing under a different name. |
 | `Stop` | a turn ending with a reply that **contains a fenced block** | the `handover` handler hands Claude the command-handover checklist **once**, as Stop hook feedback rather than a blocking error. A reply with no fenced block handed over no commands, so it stays silent instead of making you watch Claude answer a check you never asked about. The checklist: how you get there (the folder as an absolute path, plus opening a terminal or PowerShell in it), shell named (and correct as the fence label), exact command, what you will see, `UNTESTED:` above the fence if it was not actually run, and one numbered step per action once there is more than one command — all of it in the step-card format. The retry goes through, so it cannot loop. **You are never prompted;** set `HOUSE_RULES_HANDOVER=off` to disable it. |
 | `PostToolUse` on `Write` / `Edit` | after a file is written | the `artifact` handler notices documents written outside a project — plan files, scratchpad notes — and tells Claude to copy them into the repo. **You are never prompted;** the nudge goes to Claude. |
 | `PostToolUse` on `Write` | after a file is created | the `runnable` handler notices runnable files (`.py .js .ts .sh .ps1 .bat .cmd`, `Dockerfile`, `docker-compose.yml`) created inside the project and tells Claude to run them before finishing — the teeth behind "deliver a whole workflow, not a starting point." A compiled-language file (`.cs`) gets a different reminder: compile it with the real toolchain (Unity batch mode, or `dotnet build`/`msbuild` against the project's own `.csproj`) instead of a hand-rolled stand-in for the engine's APIs, which only proves the stand-in compiles. `Write` only, never `Edit`. **You are never prompted;** the nudge goes to Claude. |
@@ -111,7 +112,7 @@ Every one of these properties is tested by the suite below.
 |---|---|
 | Never hide work in a background window or a silent process | `-WindowStyle Hidden`, `Start-Process`, `Start-Job`, `-AsJob`, `nohup`, `setsid`, `disown`, a trailing `&` |
 | Commit constantly on my own branches, never on theirs | `git push` and `git commit` (force push always prompts; a plain push or commit stands down on a `claude/` branch); `reset`, `revert`, `clean`, `rebase`, `merge`, `filter-branch`, `cherry-pick`, `am`, `apply` (these seven prompt on every branch, mine included — they discard work or finish something the user started) |
-| Never take a destructive action without checking first | `rm -r/-f`, `Remove-Item`, `del /f`, `rmdir /s`, `Stop-Process`, `taskkill`, `pkill`, `kill -9`, `Clear-Content`, `truncate -s`, `git checkout --`/`git restore` (discards uncommitted edits), `git stash drop`/`clear` (deletes stashed work permanently) |
+| Never take a destructive action without checking first | `rm` (any form, not just `-r`/`-f` — a plain `rm file` deletes just as permanently), `Remove-Item`, `del /f`, `rmdir /s`, `Stop-Process`, `taskkill`, `pkill`, `kill -9`, `Clear-Content`, `truncate -s`, `git checkout --`/`git restore` (discards uncommitted edits), `git stash drop`/`clear` (deletes stashed work permanently) |
 
 `git status`, `git log`, `git diff`, `git show` and every ordinary command pass through
 silently — read-only inspection is explicitly fine under the rules. So do the navigational git
@@ -124,7 +125,7 @@ asked, docs-before-research, build for a human working alone, the user's hands a
 not labour, once the approach is decided, delegate the execution, never name a local path in an
 issue or a pull request — have no shell signature to match on. They are carried by the SessionStart injection and the per-prompt reminder.
 
-Three are exceptions, because a rule carried only by injected text is a rule that gets read and
+Four are exceptions, because a rule carried only by injected text is a rule that gets read and
 then drifted past:
 
 - **"Deliver a whole workflow"** — its runnable-file half has a real check, at `PostToolUse`:
@@ -143,6 +144,10 @@ then drifted past:
 - **"Once the approach is decided, delegate the execution"** — enforced at `PostToolUse` on
   `ExitPlanMode`: the moment a plan is approved, the `delegate` handler names `@house-rules:executor`
   before Claude gets a chance to just start implementing on the planning model.
+- **"Edit in place; a full rewrite is a delete, not an edit"** — enforced at `PreToolUse` on
+  `Write`, not on `guard`'s Bash/PowerShell matcher, because the mechanism this rule is actually
+  about is the `Write` tool overwriting a file wholesale, not a shell command. The `guardwrite`
+  handler asks every time a `Write` targets a path that already exists.
 
 ## Coding standards, per repo
 

@@ -7,6 +7,43 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-22 — Guard against a full-file rewrite standing in for an in-place edit
+
+**Context.** In a separate project, a scheduled, unattended task rewrote a CSS file wholesale
+instead of touching the one thing that needed to change. Nobody was watching that run in real
+time, so the regression it introduced sat unnoticed until someone found it later. The existing
+destructive-action rule did not catch this: it explicitly carves out "ordinary edits to tracked,
+committed files" because git already holds them, and a full-file rewrite of a tracked file fell
+inside that carve-out even though it discards everything the change was never meant to touch. The
+`guard` hook's `rm` pattern had a matching gap of its own — it only matched `rm -r`/`rm -f`, so a
+plain `rm styles.css` (no flag needed to delete a single existing file) went unmatched too.
+
+**Decision.** A new rule in `rules/house-rules.md`, "Edit in place; a full rewrite is a delete,
+not an edit": changing only the lines that need to change is the default, and a full rewrite of a
+file that already exists is a manually approved exception, named by what it discards and why,
+whether or not the run is attended. Enforced by a new hook, `guardwrite`, registered at
+`PreToolUse` on `Write` — since `Write` always replaces a file's entire contents, any call
+targeting a path already on disk is a full-file replacement by definition, and `guardwrite` asks
+every time, naming the path and the line counts where it can read both. It fails closed like
+`guard`: an unreadable payload or internal error blocks the write rather than letting an
+unchecked overwrite through. Also broadened `guard`'s `rm` pattern from `rm -r`/`rm -f` only to
+any `rm <target>`, closing the plain-single-file-delete gap the same incident exposed on the
+shell side. Updated `CLAUDE.md`'s hook table, `claude-house-rules/README.md`'s hook table and
+"What trips the guard" table, and `docs/systems/hook-engine.md`. Bumped the plugin version
+2.29.0 → 2.30.0.
+
+**Why.** Git being able to recover the old blob after the fact is not the same as the regression
+being caught before it ships — especially on a run nobody was watching. The destructive-action
+rule's tracked-file carve-out was written for edits that change a few lines under version control,
+not for a rewrite that discards the whole file and gambles that the new version is complete and
+correct. Closing the gap needed both a rule (what "ordinary edit" excludes) and a mechanism
+(`guardwrite`), because a rule with no shell or tool signature to match on is exactly the kind
+that gets read once and then drifted past.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-20 — Issue and pull-request text never names a local path
 
 **Context.** Issue #65 on this public repository was published with the user's local project
