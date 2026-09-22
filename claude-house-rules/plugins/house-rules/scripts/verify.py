@@ -192,6 +192,50 @@ def env_in(project_dir, **extra):
     return e
 
 
+# --- docstiers fixtures ------------------------------------------------------------------
+_DOCS_TIER_FILE_NAMES = ["README.md", "Roadmap.md", "ProjectState.md", "Today.md", "Decisions.md"]
+
+
+def _docstiers_repo(name, all_tiers, git_config_text=None, config_is_dir=False, no_git=False):
+    path = os.path.join(_FIXTURE_ROOT, name)
+    docs = os.path.join(path, "docs")
+    os.makedirs(os.path.join(docs, "systems"), exist_ok=True)
+    if all_tiers:
+        for fname in _DOCS_TIER_FILE_NAMES:
+            with open(os.path.join(docs, fname), "w", encoding="utf-8") as f:
+                f.write("x\n")
+        with open(os.path.join(docs, "systems", "core.md"), "w", encoding="utf-8") as f:
+            f.write("x\n")
+    if not no_git:
+        git_dir = os.path.join(path, ".git")
+        os.makedirs(git_dir, exist_ok=True)
+        if config_is_dir:
+            os.makedirs(os.path.join(git_dir, "config"), exist_ok=True)
+        elif git_config_text is not None:
+            with open(os.path.join(git_dir, "config"), "w", encoding="utf-8") as f:
+                f.write(git_config_text)
+    return path
+
+
+DOCSTIERS_COMPLETE = _docstiers_repo(
+    "docstiers-complete", True, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n'
+)
+DOCSTIERS_OWNED = _docstiers_repo(
+    "docstiers-owned", False, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n'
+)
+DOCSTIERS_NOT_OWNED = _docstiers_repo(
+    "docstiers-not-owned", False, '[remote "origin"]\n\turl = https://github.com/SomeoneElse/repo.git\n'
+)
+DOCSTIERS_SSH_OWNED = _docstiers_repo(
+    "docstiers-ssh-owned", False, '[remote "origin"]\n\turl = git@github.com:Ajw2003/repo.git\n'
+)
+DOCSTIERS_NO_GIT = _docstiers_repo("docstiers-no-git", False, no_git=True)
+DOCSTIERS_GARBAGE_CONFIG = _docstiers_repo(
+    "docstiers-garbage-config", False, "not an ini file\njust some random text\n"
+)
+DOCSTIERS_UNREADABLE_CONFIG = _docstiers_repo("docstiers-unreadable-config", False, config_is_dir=True)
+
+
 # --- inject, profile and standards each stay under the per-hook additionalContext limit ------
 # Margins per docs/Decisions.md, 2026-09-22 (second entry): inject 9,000, profile/standards 9,500,
 # each measured on the REAL emitted output, not source file size. profile is measured with
@@ -212,6 +256,7 @@ _size_cases = [
     ("inject", 9_000, env_in(ROOT)),
     ("standards", 9_500, env_in(ROOT)),
     ("profile", 9_500, env_in(ROOT, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV)),
+    ("docstiers", 9_500, env_in(DOCSTIERS_NOT_OWNED)),
 ]
 for _event, _margin, _env in _size_cases:
     _code, _ctx, _err = _additional_context(_event, "", env=_env)
@@ -224,6 +269,92 @@ for _event, _margin, _env in _size_cases:
     else:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
         print(f"          {len(_ctx)} chars > {_margin} margin - Claude Code will truncate this")
+
+# --- docstiers: complete/missing, owned/not-owned, ssh, no .git, unreadable/garbage config ----
+_docstiers_cases = [
+    (
+        "all six tiers present - silent",
+        DOCSTIERS_COMPLETE,
+        {"empty": True},
+    ),
+    (
+        "missing tiers, https remote owned by the configured account - no exclude instruction",
+        DOCSTIERS_OWNED,
+        {"missing": True, "exclude": False, "owned": True},
+    ),
+    (
+        "missing tiers, https remote NOT owned - exclude instruction present",
+        DOCSTIERS_NOT_OWNED,
+        {"missing": True, "exclude": True, "owned": False},
+    ),
+    (
+        "missing tiers, ssh-form remote owned by the configured account",
+        DOCSTIERS_SSH_OWNED,
+        {"missing": True, "exclude": False, "owned": True},
+    ),
+    (
+        "missing tiers, not a git repository at all - no exclude instruction",
+        DOCSTIERS_NO_GIT,
+        {"missing": True, "exclude": False, "not_git": True},
+    ),
+    (
+        "missing tiers, garbage .git/config - falls to not-owned and says so",
+        DOCSTIERS_GARBAGE_CONFIG,
+        {"missing": True, "exclude": True, "owned": False},
+    ),
+    (
+        "missing tiers, unreadable .git/config - falls to not-owned and says so",
+        DOCSTIERS_UNREADABLE_CONFIG,
+        {"missing": True, "exclude": True, "owned": False},
+    ),
+]
+for _title, _path, _expect in _docstiers_cases:
+    _code, _out, _err = run_hook("docstiers", "", env=env_in(_path))
+    _problems = []
+    if _code != 0:
+        _problems.append(f"exited {_code}, expected 0")
+    if _expect.get("empty"):
+        if _out.strip():
+            _problems.append(f"expected a fully silent stdout, got: {_out[:200]!r}")
+    else:
+        if "house-rules:project-docs" not in _out:
+            _problems.append("missing the load-and-scaffold instruction")
+        _exclude_instruction = "add every scaffolded path to .git/info/exclude" in _out
+        if _expect.get("exclude") and not _exclude_instruction:
+            _problems.append("expected the .git/info/exclude instruction, not present")
+        if not _expect.get("exclude") and _exclude_instruction:
+            _problems.append("the .git/info/exclude instruction leaked into an owned/no-git case")
+        if _expect.get("not_git") and "not a git repository" not in _out.lower():
+            _problems.append("expected a not-a-git-repository note")
+    if not _problems:
+        report("PASS", f"docstiers: {_title}")
+        print(f"          {len(_out)} chars emitted")
+    else:
+        report("FAIL", f"docstiers: {_title}")
+        print(f"          {'; '.join(_problems)}")
+
+# docstiers's fail-loud path (systemMessage on an internal error, like inject) is covered by
+# main()'s generic exception net, proven generically further down this file rather than with a
+# docstiers-specific fixture - every input docstiers actually reads already degrades gracefully
+# by design (a garbage/unreadable .git/config falls to not-owned, not a crash - proven above).
+
+_skill_drift = []
+if not os.path.isfile(DOCSKILL):
+    _skill_drift.append("skills/project-docs/SKILL.md is missing")
+else:
+    _skill_text = read(DOCSKILL)
+    for _tier_phrase in [
+        "docs/README.md", "docs/Roadmap.md", "docs/ProjectState.md",
+        "docs/systems/*.md", "docs/Today.md", "docs/Decisions.md",
+    ]:
+        if _tier_phrase not in _skill_text:
+            _skill_drift.append(f"{_tier_phrase!r} is not named in SKILL.md - docstiers may be inventing tier names")
+if not _skill_drift:
+    report("PASS", "docstiers's hardcoded tier list matches skills/project-docs/SKILL.md")
+    print("          all six tier paths docstiers checks are the ones SKILL.md names")
+else:
+    report("FAIL", "docstiers's hardcoded tier list matches skills/project-docs/SKILL.md")
+    print(f"          {'; '.join(_skill_drift)}")
 
 
 # --- guard cases: 29 commands ---------------------------------------------------------------
@@ -1870,6 +2001,7 @@ for ev, needle in (
     ("delegate", "delegate"),
     ("handover", "handover"),
     ("harvest", "harvest"),
+    ("docstiers", "docstiers"),
 ):
     snippet = (
         "import sys, hook\n"

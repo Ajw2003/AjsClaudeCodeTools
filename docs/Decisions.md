@@ -7,6 +7,48 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-22 — A SessionStart check for the six documentation tiers, in every repo
+
+**Context.** Step 3 of the rules-that-actually-load plan. The "Documentation goes in tiers" rule
+was purely aspirational: nothing noticed a repo missing `docs/` entirely, or missing a tier,
+until a person happened to look. The `house-rules:project-docs` skill already carries the full
+tier spec and scaffolding steps, but a skill only loads when something tells Claude to load it.
+
+**Decision.** A new `SessionStart` handler, `docstiers`, registered as its own `hooks.json` entry
+(right after `standards`, before `versioncheck`) so a failure here can never affect
+`inject`/`profile`/`standards`. It checks the project root (`CLAUDE_PROJECT_DIR`, else `cwd`) for
+the six tiers exactly as `skills/project-docs/SKILL.md` names them: `docs/README.md`,
+`docs/Roadmap.md`, `docs/ProjectState.md`, at least one file under `docs/systems/`,
+`docs/Today.md`, `docs/Decisions.md`. All present: it emits nothing at all — the second
+deliberate silent exception in the plugin besides `handover`, since it runs every session and a
+trace would cost something on every one of them for what is usually true. Any missing: it names
+exactly which and instructs loading `house-rules:project-docs` and scaffolding before any other
+work, in every repo, including one that is not a git repository. In a git repository, it also
+reads the remote's owner from `.git/config` directly (no subprocess — handles `https://` and
+`git@host:` URL forms, and a worktree's `.git` file redirect via the existing `_git_dir` helper)
+against `HOUSE_RULES_GITHUB_OWNER` (default `Ajw2003`, case-insensitive); not owned, or the
+remote can't be read at all (garbage or unreadable `.git/config` — both treated as not-owned,
+since scaffolding into a repo of unknown ownership is the riskier default), adds one more
+instruction: add every scaffolded path to `.git/info/exclude`, so the new docs never leave the
+machine or enter that repo's history. Fails loud via `systemMessage` on an internal error, like
+`inject`. `verify.py` gained fixture-backed cases for all six named scenarios (complete, missing
++ owned, missing + not-owned, ssh-form remote, no `.git`, garbage/unreadable config), a size-limit
+case (≤9,500 chars, fed the worst-case not-owned fixture), and a drift check that the six
+hardcoded tier paths still match what `SKILL.md` names.
+
+**Why.** The docs-tier rule already existed; what was missing was anything that acted on it
+without being asked. A silent, every-session check that only ever speaks when something is
+actually wrong is the same shape `handover` already uses, extended to a second case where it's
+provably the cheaper choice — this runs on every session, unconditionally, so a trace on the
+common (complete) case would be paid far more often than the harvest/artifact traces it's
+modeled after. The ownership check exists because scaffolding is a write: creating files nobody
+asked for in a repo you don't own is the wrong default, so the safer path is to make the write
+invisible to that repo's history until someone deliberately commits it.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-22 — CLAUDE.md becomes a real pointer; correct the "re-paid on every subagent spawn" claim; profile truncates only the environment body
 
 **Context.** Step 2 of the rules-that-actually-load plan. Root `CLAUDE.md` had grown to 33,083

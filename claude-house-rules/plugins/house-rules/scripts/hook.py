@@ -564,7 +564,118 @@ def event_standards():
 
 
 # ---------------------------------------------------------------------------------------
-# versioncheck — a third SessionStart handler. Why three version copies, and why guard holds a
+# docstiers — a fourth SessionStart handler, its own entry so a failure here can never affect
+# inject/profile/standards. Tier names are read out of
+# skills/project-docs/SKILL.md by a human (this list), never invented at runtime; verify.py's
+# drift check keeps the two from disagreeing. Full rationale: docs/Decisions.md, 2026-09-22, and
+# rules/detail/docs-tiers.md.
+# ---------------------------------------------------------------------------------------
+
+DOCS_TIER_FILES = [
+    "docs/README.md",
+    "docs/Roadmap.md",
+    "docs/ProjectState.md",
+    "docs/Today.md",
+    "docs/Decisions.md",
+]
+DOCS_TIER4_DIR = "docs/systems"
+DEFAULT_GITHUB_OWNER = "Ajw2003"
+
+
+def _tier4_present(root):
+    d = os.path.join(root, *DOCS_TIER4_DIR.split("/"))
+    if not os.path.isdir(d):
+        return False
+    return any(name.lower().endswith(".md") for name in os.listdir(d))
+
+
+def _repo_owner_from_config(git_dir):
+    """Read the GitHub owner out of .git/config's remote URL(s), no subprocess.
+
+    Returns (owner_or_None, note). note is set whenever owner is None, explaining why - an
+    absent/unreadable/garbage config and "no owner found" all read the same to the caller
+    (not owned), but the reason differs and gets stated in the emitted text either way.
+    """
+    config_path = os.path.join(git_dir, "config")
+    try:
+        text = _read_text(config_path)
+    except OSError as exc:
+        return None, "could not read .git/config (%s)" % exc
+
+    urls = re.findall(r"(?m)^\s*url\s*=\s*(\S+)", text)
+    if not urls:
+        return None, ".git/config has no remote url"
+
+    for url in urls:
+        m = re.match(r"^https?://[^/]+/([^/]+)/", url)
+        if not m:
+            m = re.match(r"^(?:ssh://)?[^@/]+@[^:/]+[:/]([^/]+)/", url)
+        if m:
+            return m.group(1), None
+    return None, "no remote url matched a recognizable owner/repo form (%s)" % urls[0]
+
+
+def event_docstiers():
+    try:
+        root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        missing = [f for f in DOCS_TIER_FILES if not os.path.isfile(os.path.join(root, *f.split("/")))]
+        if not _tier4_present(root):
+            missing.insert(3, "docs/systems/*.md (at least one system document)")
+
+        if not missing:
+            # All six tiers present - the one other deliberate silent exception besides
+            # handover. This runs every session; a trace here costs something on every one of
+            # them for a fact that is true almost always.
+            return 0
+
+        git_dir = _git_dir(root)
+        configured_owner = os.environ.get("HOUSE_RULES_GITHUB_OWNER", "").strip() or DEFAULT_GITHUB_OWNER
+        if git_dir is None:
+            ownership_note = "This is not a git repository, so no ownership check applies."
+        else:
+            owner, note = _repo_owner_from_config(git_dir)
+            if owner is not None and owner.strip().lower() == configured_owner.lower():
+                ownership_note = (
+                    "This repo's remote is owned by %s (the configured owner), so no "
+                    ".git/info/exclude step is needed." % configured_owner
+                )
+            else:
+                reason = note or ("the remote owner is %r, not %r" % (owner, configured_owner))
+                ownership_note = (
+                    "This repo is not owned by the configured account (%s) - %s. Also add "
+                    "every scaffolded path to .git/info/exclude, so the new docs never leave "
+                    "this machine and never enter this repo's history."
+                    % (configured_owner, reason)
+                )
+
+        text = (
+            "House rules, documentation goes in tiers: this project is missing %d of the six "
+            "documentation tiers - %s. Load house-rules:project-docs and scaffold the missing "
+            "tiers before any other work, in every repo. %s"
+            % (len(missing), ", ".join(missing), ownership_note)
+        )
+        emit(
+            {
+                "suppressOutput": True,
+                "hookSpecificOutput": {
+                    "hookEventName": "SessionStart",
+                    "additionalContext": text,
+                },
+            }
+        )
+        return 0
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the docs-tier check hit an internal "
+                "error (%s: %s) and did not run for this session." % (type(exc).__name__, exc)
+            }
+        )
+        return 0
+
+
+# ---------------------------------------------------------------------------------------
+# versioncheck — a fifth SessionStart handler. Why three version copies, and why guard holds a
 # marker for this: docs/architecture.md, "versioncheck checks three copies of the version".
 # ---------------------------------------------------------------------------------------
 
@@ -2434,6 +2545,7 @@ EVENTS = {
     "inject": event_inject,
     "profile": event_profile,
     "standards": event_standards,
+    "docstiers": event_docstiers,
     "versioncheck": event_versioncheck,
     "scope": event_scope,
     "guard": event_guard,

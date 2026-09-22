@@ -17,14 +17,14 @@ The request is the scope; ambiguous → ask. See `${CLAUDE_PLUGIN_ROOT}/rules/de
 
 ## Read the docs first, then check them against the code
 
-Read existing docs, verify against code/tree/history; disagree → say so, follow observed
-behaviour. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/read-docs-first.md`.
+Verify docs against code/tree/history; disagree → say so, follow observed behaviour. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/read-docs-first.md`.
 
 ## Documentation goes in tiers, and I update the tier that changed
 
-`docs/` has six tiers: landing, roadmap, state, systems, today, decisions. Write to the tier
-that changed. Reversal: dated `docs/Decisions.md` entry, tier fixed, pointer left. Cite to
-`file:line`. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/docs-tiers.md`.
+`docs/` has six tiers: landing, roadmap, state, systems, today, decisions — a missing one is
+caught every session by the `docstiers` hook. Write to the tier that changed. Reversal: dated
+`docs/Decisions.md` entry, tier fixed, pointer left. Cite to `file:line`. See
+`${CLAUDE_PLUGIN_ROOT}/rules/detail/docs-tiers.md`.
 
 ## Long-form reasoning goes in a document, not in a comment
 
@@ -50,7 +50,7 @@ pass` is never the answer; a non-blocking check still announces it ran. See `${C
 ## The user's hands are for decisions, not labour
 
 Their intervention is only for what they can do: approve something destructive, a plan, clarify
-intent — never work I could do myself. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
+intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
 ## Plain language on the surfaces a human reads
 
@@ -102,8 +102,7 @@ publish-a-page rule: `${CLAUDE_PLUGIN_ROOT}/rules/detail/handover-command.md`.
 
 ## Code follows the standards loaded for this project
 
-Standards injected at session start bind; existing file style wins. A differing repo pins its own
-set. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/code-standards.md`.
+Standards injected at session start bind; existing file style wins. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/code-standards.md`.
 
 ## Once the approach is decided, delegate the execution
 
@@ -117,8 +116,8 @@ Plans, reports, scripts, findings: real files under `docs/`, never chat-only or 
 
 ## Never hide work in a background window or a silent process
 
-Nothing runs where the user can't see it: no hidden windows, detached jobs, `nohup`, trailing
-`&`; long work runs foreground, printing live. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
+Nothing runs where the user can't see it: no hidden windows, detached jobs, `nohup`; long work
+runs foreground, printing live. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
 
 ## Never name a local path in an issue or a pull request
 

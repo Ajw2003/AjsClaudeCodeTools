@@ -20,6 +20,11 @@
           },
           {
             "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" docstiers",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" versioncheck",
             "timeout": 10
           }

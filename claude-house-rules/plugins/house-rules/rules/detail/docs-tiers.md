@@ -28,3 +28,18 @@ repo's documentation — not for an ordinary edit to a doc that already exists.
 is what produces a roadmap nobody trusts, and a reversal written as a stacked note on top of
 stale text is how four documents end up describing something that no longer exists.
 
+**Enforcement.** A `SessionStart` handler, `docstiers`, checks the project root every session
+for `docs/README.md`, `docs/Roadmap.md`, `docs/ProjectState.md`, at least one file under
+`docs/systems/`, `docs/Today.md` and `docs/Decisions.md`. All six present: it emits nothing at
+all — this is the one other deliberate silent exception besides `handover`, because it runs every
+session and a trace here would cost something on every single one for a fact that is true almost
+always. Any missing: it names exactly which tiers are missing and instructs loading
+`house-rules:project-docs` and scaffolding them before any other work, in every repo — including
+one that is not a git repository at all. When the repo *is* a git repository, it also checks
+whether the remote's owner (read from `.git/config`, both the `https://` and `git@host:` URL
+forms, and a worktree's `.git` file redirect) matches `HOUSE_RULES_GITHUB_OWNER` (default
+`Ajw2003`, case-insensitive). Not owned — or the remote can't be read at all, which is treated the
+same as not owned, since scaffolding into a repo whose ownership is unknown is the riskier
+default — and the instruction adds one more step: add every scaffolded path to
+`.git/info/exclude`, so the new docs never leave the machine and never enter that repo's history.
+
