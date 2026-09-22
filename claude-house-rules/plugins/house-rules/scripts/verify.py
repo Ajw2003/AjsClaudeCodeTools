@@ -96,6 +96,21 @@ def read(path):
         return f.read()
 
 
+DETAIL_DIR = os.path.join(HERE, "..", "rules", "detail")
+
+
+def rules_corpus():
+    """house-rules.md (the injected core) plus every rules/detail/*.md file it points to.
+    See docs/Decisions.md, 2026-09-22, for why drift checks read this instead of the core alone.
+    """
+    corpus = read(RULES_FILE)
+    if os.path.isdir(DETAIL_DIR):
+        for name in sorted(os.listdir(DETAIL_DIR)):
+            if name.endswith(".md"):
+                corpus += "\n\n" + read(os.path.join(DETAIL_DIR, name))
+    return corpus
+
+
 def run_hook(event, payload="", env=None):
     e = dict(os.environ) if env is None else env
     proc = subprocess.run(
@@ -174,6 +189,36 @@ def env_in(project_dir, **extra):
     e["CLAUDE_PROJECT_DIR"] = project_dir
     e.update(extra)
     return e
+
+
+# --- inject and standards stay under the per-hook additionalContext limit --------------------
+# hook.py's INJECT_CHAR_LIMIT (10,000) is where Claude Code stops delivering additionalContext in
+# full and starts saving it to a file with only a preview in context - past it the rules are
+# invisible. Checked with a safety margin (9,500) against the REAL emitted output of each hook
+# (not the source file size), each measured separately since the limit is per hook, not combined.
+INJECT_MARGIN = 9_500
+
+
+def _additional_context(event, payload="", env=None):
+    code, out, err = run_hook(event, payload, env=env)
+    try:
+        parsed = json.loads(out)
+        return code, parsed["hookSpecificOutput"]["additionalContext"], err
+    except Exception as exc:
+        return code, None, f"{err}\ncould not parse {event} output as JSON: {exc}"
+
+
+for _event in ("inject", "standards"):
+    _code, _ctx, _err = _additional_context(_event, "", env=env_in(ROOT))
+    if _ctx is None:
+        report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
+        print(f"          could not read additionalContext: {_err.strip()}")
+    elif len(_ctx) <= INJECT_MARGIN:
+        report("PASS", f"{_event} stays under the per-hook additionalContext limit")
+        print(f"          {len(_ctx)} chars <= {INJECT_MARGIN} margin (hard limit 10,000)")
+    else:
+        report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
+        print(f"          {len(_ctx)} chars > {INJECT_MARGIN} margin - Claude Code will truncate this")
 
 
 # --- guard cases: 29 commands ---------------------------------------------------------------
@@ -529,27 +574,24 @@ else:
     report("FAIL", "SessionStart injects every rule heading into context")
     print(f"          missing: {'; '.join(missing)}")
 
-# --- the step-card template actually REACHES the session, not just the file ------------------
-# Asserting rules/house-rules.md contains the card is not asserting Claude ever sees it - the
-# same distinction the model-split checks exist for. Feed inject and read the injected text.
+# --- the step-card POINTER actually REACHES the session, not just the file --------------------
+# Since 2.17.0 ("rules that actually load") the full card template is deliberately NOT injected -
+# it lives once in the forced handover-cards output style, which is what stays under the per-hook
+# context limit. So this no longer asserts the template's own markers arrive in additionalContext
+# (they intentionally do not); it asserts the POINTER to where the template lives does.
 cardmissing = []
 for marker in [
     "#### The card",
-    "### Step 1 of",
-    "**You should see:**",
+    "handover-cards",
     "UNTESTED:",
-    "is a label on a command, not a step",
-    "A card is a sequence, not a menu",
-    "Replacing step N:",
-    "does not depend on where the prompt is",
 ]:
     if marker not in out:
         cardmissing.append(marker)
 if not cardmissing:
-    report("PASS", "SessionStart injects the step-card template into context")
-    print("          the card markers arrive in additionalContext, not just in the file")
+    report("PASS", "SessionStart injects the step-card pointer into context")
+    print("          the card heading and a pointer to handover-cards.md arrive in additionalContext")
 else:
-    report("FAIL", "SessionStart injects the step-card template into context")
+    report("FAIL", "SessionStart injects the step-card pointer into context")
     print(f"          missing from the injected text: {'; '.join(cardmissing)}")
 
 # --- inject fail-loud: an internal error must still say something ---------------------------
@@ -722,7 +764,7 @@ art_case(
 # --- docs/generated/ has not drifted between the rules, the project-docs skill, and the -----
 # --- text hook.py actually emits for a generated-extension artifact -------------------------
 gendrift = []
-_art_rules_text = read(RULES_FILE)
+_art_rules_text = rules_corpus()
 if "docs/generated" not in _art_rules_text:
     gendrift.append("house-rules.md no longer mentions docs/generated/")
 if not os.path.isfile(DOCSKILL):
@@ -754,7 +796,7 @@ else:
 # --- the reminder in hook.py's scope handler has not drifted from the rules document --------
 # Covers both forms - the short one is what fires on most prompts now, so its phrases need the
 # same drift protection the long form always had.
-rules_text = read(RULES_FILE)
+rules_text = rules_corpus()
 drift = []
 for phrase in [
     "response depth",
@@ -832,7 +874,13 @@ else:
         print(f"          it is a pointer ({len(claude_text.encode('utf-8'))} bytes), not a copy")
 
 # --- the recorded machine profile actually reaches the session -------------------------------
-code, out, err = run_hook("inject", "")
+# A real rules/environment.md fixture, not a coincidental phrase in the rules body - the rules
+# split (docs/Decisions.md, 2026-09-22) moved the PowerShell/Git-Bash path-notation example this
+# used to piggyback on out of the injected text on purpose, so this now supplies its own fixture.
+_envfixture = os.path.join(_FIXTURE_ROOT, "environment.md")
+with open(_envfixture, "w", encoding="utf-8") as _f:
+    _f.write("# This machine (hand-verified)\n\nShell: PowerShell\nsh: NOT on PATH\n")
+code, out, err = run_hook("inject", "", env=env_in(ROOT, HOUSE_RULES_ENV_FILE=_envfixture))
 missing_env = []
 if "This machine" not in out:
     missing_env.append("no machine profile in the injection")
@@ -1621,7 +1669,7 @@ code, out, err = run_hook(
         }
     ),
 )
-if not out.strip() and "never announces its own compliance" in read(RULES_FILE):
+if not out.strip() and "never announces its own compliance" in rules_corpus():
     report("PASS", "handover stays silent on its stand-down, and the rule that requires it still stands")
     print("          the one handler where tracing would break a rule rather than cost tokens")
 else:
@@ -2126,14 +2174,11 @@ else:
         styledrift.append("the style has no description: field")
     if not re.search(r"^keep-coding-instructions: true$", style_text, re.MULTILINE):
         styledrift.append("the style does not keep-coding-instructions, so it would replace them")
-    # The style is a live carrier whenever the Stop check is off, so a restatement that has
-    # fallen behind the rules is a real gap, not cosmetic. It fell behind once already:
-    # location-independence shipped in the rules and never reached this file.
+    # The style is now the single copy of the six-field checklist (docs/Decisions.md,
+    # 2026-09-22); the check below this one proves the core points here instead of restating it.
     for phrase in ["runs from anywhere", "One numbered step per action", "UNTESTED:"]:
         if phrase not in style_text:
             styledrift.append(f"the style no longer restates {phrase!r} from the six items")
-        elif phrase not in rules_text:
-            styledrift.append(f"{phrase!r} is in the style but not in house-rules.md")
     if not re.search(r"^force-for-plugin: true$", style_text, re.MULTILINE):
         styledrift.append(
             "the style does not set force-for-plugin: true - without it the style is "
@@ -2145,6 +2190,28 @@ if not styledrift:
 else:
     report("FAIL", "the handover-cards output style is forced, so it applies without a picker")
     print(f"          {'; '.join(styledrift)}")
+
+# --- the core's card section points at the output style instead of restating it --------------
+# Moved out of house-rules.md 2.17.0 to stay under the per-hook context limit (docs/Decisions.md,
+# 2026-09-22): the core keeps a one-line pointer, the output style keeps the actual checklist.
+cardptr = []
+_core_text = read(RULES_FILE)
+_card_sec = _core_text.split("#### The card", 1)
+if len(_card_sec) != 2:
+    cardptr.append("'#### The card' heading is missing from house-rules.md")
+else:
+    _pointer_body = _card_sec[1].split("\n## ", 1)[0]
+    if "handover-cards" not in _pointer_body:
+        cardptr.append("the core's card section does not name the handover-cards output style")
+    for phrase in ["runs from anywhere", "One numbered step per action", "UNTESTED:"]:
+        if phrase in _pointer_body:
+            cardptr.append(f"{phrase!r} is restated in the core instead of pointed at")
+if not cardptr:
+    report("PASS", "the core's card section points at the output style instead of restating it")
+    print("          house-rules.md names handover-cards.md; the six-field text lives there only")
+else:
+    report("FAIL", "the core's card section points at the output style instead of restating it")
+    print(f"          {'; '.join(cardptr)}")
 
 # --- the step-card page template exists, is self-contained, and matches the card's fields ----
 tpldrift = []

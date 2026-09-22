@@ -61,6 +61,12 @@ def emit(obj):
 
 _TRACE_OFF = {"off", "0", "false", "no"}
 
+# Claude Code saves any single hook's additionalContext over 10,000 chars to a file and shows
+# only a preview - past this, the injected rules are invisible to the model. verify.py checks
+# the real emitted inject/standards output against this with a safety margin (9,500), not the
+# raw 10,000, so a small future addition does not silently tip a passing check into truncation.
+INJECT_CHAR_LIMIT = 10_000
+
 
 def trace_enabled():
     """The decision trace ships ON. A diagnostic nobody enables until they are already lost

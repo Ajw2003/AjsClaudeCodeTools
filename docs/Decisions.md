@@ -7,6 +7,41 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-22 — Split house-rules.md into an imperative core and rules/detail/*.md, so the rules actually reach the model
+
+**Context.** A grilling session on 2026-09-22 found that `inject` emitted 44,506 chars.
+Claude Code saves any single hook's `additionalContext` over 10,000 chars to a file and puts only
+a ~2KB preview in context — everything past the first section of `house-rules.md`, including the
+docs-tier rule, was invisible in that session. `house-rules.md` had doubled since the 2026-09-07
+footprint work (20.8KB → 43KB), because that earlier pass's practice was to keep every "Why:"
+rationale block inline rather than move it out — a reasonable call at 20.8KB, wrong at 43KB.
+
+**Decision.** `house-rules.md` is now an imperative-only core: one to three sentences per rule,
+plus a pointer naming `${CLAUDE_PLUGIN_ROOT}/rules/detail/<topic>.md` for that rule's full
+rationale, "Why:" block and examples, moved there verbatim. `#### The card` collapses to a
+pointer at the forced `handover-cards` output style, which is now the single copy of the
+step-card checklist — the core no longer restates it. A new `INJECT_CHAR_LIMIT = 10_000` constant
+in `hook.py` documents the hard limit; `verify.py` checks the real emitted `inject` and
+`standards` `additionalContext` (not source file size) against a 9,500-char safety margin, each
+checked separately since Claude Code's limit is per hook. Every verify.py drift check that used
+to grep `house-rules.md` alone for a phrase now greps a corpus of `house-rules.md` plus every
+`rules/detail/*.md` file — the phrase still has to exist somewhere the rules own, it no longer has
+to survive being injected. The one check that could not be satisfied this way (the six-field
+step-card checklist, since it deliberately left the injected text) was repointed instead: it now
+checks that the core's `#### The card` section names `handover-cards.md` and does not restate the
+checklist, rather than requiring the checklist phrases to appear in the injected text.
+
+**Why.** A rule nobody's context contains is not a rule, it is a file. Keeping every rationale
+block inline reversed the 2026-09-07 decision to do exactly that, because the number that mattered
+— total injected size, not "does this file still read well" — had moved past the point where the
+choice was free. Moving detail out loses nothing: `docref.py check`-style corpus checking means
+every phrase a test ever pinned is still provably present, just no longer paid for on every
+session start.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-22 — Guard against a full-file rewrite standing in for an in-place edit
 
 **Context.** In a separate project, a scheduled, unattended task rewrote a CSS file wholesale
