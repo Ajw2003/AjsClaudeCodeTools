@@ -28,9 +28,10 @@
 #   - inject (SessionStart)   -> fails LOUD, not closed: a systemMessage JSON on stdout, exit 0.
 #   - standards (SessionStart)-> fails LOUD, not closed, same as inject: a systemMessage JSON
 #                              on stdout, exit 0. Never blocks - there is nothing to block.
-#   - announce/verdict        -> fails LOUD, not closed, same as harvest: a systemMessage on
-#                              stdout, exit 0. These two exist to make a delegation visible,
-#                              so going quiet here would be the exact failure they fix.
+#   - announce/verdict/       -> fails LOUD, not closed, same as harvest: a systemMessage on
+#     subagentrules              stdout, exit 0. These exist to make a delegation visible and
+#                              re-inject the rules into it, so going quiet here would be the
+#                              exact failure they fix.
 #   - everything else         -> nothing on stdout, exit 0. PostToolUse/Stop/UserPromptSubmit
 #                              hooks either cannot block (PostToolUse) or must never block
 #                              (UserPromptSubmit erases the prompt on non-zero exit; Stop
@@ -104,6 +105,10 @@ if [ -z "$PY" ]; then
       ;;
     announce)
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. This subagent started unreported - which agent, model and digest it is running are unknown. Run /house-rules:doctor."}'
+      exit 0
+      ;;
+    subagentrules)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. This subagent did NOT receive the house rules core. Run /house-rules:doctor."}'
       exit 0
       ;;
     verdict)

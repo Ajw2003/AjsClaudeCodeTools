@@ -3119,6 +3119,32 @@ _transcript("normal", [
     _assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "name": "Bash"},
                                                {"type": "text", "text": "Done - ran the tests, all green."}]),
 ])
+def _user_result(tool_use_id, is_error=False):
+    return json.dumps({
+        "type": "user",
+        "message": {"content": [{"type": "tool_result", "tool_use_id": tool_use_id, "is_error": is_error}]},
+    })
+
+
+# audit1: the case the audit summary exists for - one ok command, one failing command, one
+# write, seen from the transcript itself, never from what the subagent says about itself.
+_transcript("audit1", [
+    _assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "id": "t1", "name": "Bash",
+                                                "input": {"command": "pytest -q"}}]),
+    _user_result("t1", is_error=False),
+    _assistant("claude-sonnet-4-5-20250929", [
+        {"type": "tool_use", "id": "t2", "name": "Write", "input": {"file_path": "/proj/a.py"}},
+        {"type": "tool_use", "id": "t3", "name": "Bash", "input": {"command": "false"}},
+    ]),
+    _user_result("t3", is_error=True),
+])
+# auditbig: 45 commands, to prove the 40-command cap and the "N more" line.
+_transcript("auditbig", sum((
+    [_assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "id": "b%d" % i, "name": "Bash",
+                                                 "input": {"command": "echo %d" % i}}]),
+     _user_result("b%d" % i)]
+    for i in range(45)
+), []))
 _PARENT = os.path.join(_SUB_ROOT, "sess1.jsonl")
 with open(_PARENT, "w", encoding="utf-8") as _f:
     _f.write("")
@@ -3327,6 +3353,172 @@ else:
     report("FAIL", "run.sh names announce and verdict in its no-interpreter fallback")
     for s in shfall:
         print(f"          {s}")
+
+# --- subagentrules: a subagent core, generated from house-rules.md, injected at SubagentStart --
+# Judged against the real rules file, since a hand-copied fixture core would only prove the
+# handler can read a fixture, not that it stays in sync with the rules a human session sees.
+code, out, err = run_hook("subagentrules", sub_payload(
+    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1"
+))
+sar = []
+if code != 0:
+    sar.append(f"exit {code}, must never be non-zero")
+try:
+    parsed = json.loads(out)
+    core = parsed["hookSpecificOutput"]["additionalContext"]
+except Exception as exc:
+    sar.append(f"could not parse subagentrules output: {exc}")
+    core = ""
+for needle in (
+    "Documentation goes in tiers", "Nothing fails silently", "Evidence before claims",
+    "Every artifact lives in the project directory", "Commit constantly on my own branches",
+    "Never take a destructive action", "Edit in place",
+    "final report must list every command you ran and its result verbatim",
+):
+    if needle not in core:
+        sar.append(f"subagent core is missing {needle!r}")
+if "${CLAUDE_PLUGIN_ROOT}" in core:
+    sar.append("subagent core still carries a literal ${CLAUDE_PLUGIN_ROOT}")
+if "<!-- subagent -->" in core:
+    sar.append("subagent core leaked the <!-- subagent --> marker into the subagent's own text")
+if len(core) > 4_500:
+    sar.append(f"subagent core is {len(core)} chars, over its own 4,500-char budget")
+if not sar:
+    report("PASS", "subagentrules generates a subagent core from house-rules.md's marked sections")
+    print(f"          {len(core)} chars, all marked sections present, no literal placeholder")
+else:
+    report("FAIL", "subagentrules generates a subagent core from house-rules.md's marked sections")
+    for s in sar:
+        print(f"          {s}")
+
+# A section NOT marked <!-- subagent --> (e.g. "Match response depth to the task") must not
+# appear as its own heading in the core - otherwise "marked sections only" is not what ships.
+if "## Match response depth to the task" in core:
+    report("FAIL", "subagentrules includes only the sections marked <!-- subagent -->")
+    print("          an unmarked heading leaked into the subagent core")
+else:
+    report("PASS", "subagentrules includes only the sections marked <!-- subagent -->")
+    print("          an unmarked rule (response depth) is absent from the subagent core")
+
+# SubagentStart also tells the user the transcript's EXPECTED path, before it exists.
+if code == 0 and "systemMessage" in parsed and "transcript expected at" in parsed["systemMessage"] \
+        and os.path.join("sess1", "subagents", "agent-x1.jsonl") in parsed["systemMessage"]:
+    report("PASS", "subagentrules tells the user the expected transcript path at SubagentStart")
+    print(f"          {parsed['systemMessage'][:150]}")
+else:
+    report("FAIL", "subagentrules tells the user the expected transcript path at SubagentStart")
+    print(f"          out {out[:200]!r}")
+
+# Never blocks a spawn: empty payload and unparseable input both still exit 0.
+sarq = []
+code, out, err = run_hook("subagentrules", "")
+if code != 0 or "systemMessage" not in out:
+    sarq.append(f"empty payload: exit {code}, out {out[:120]!r}")
+code, out, err = run_hook("subagentrules", "not json at all {{{")
+if code != 0:
+    sarq.append(f"unparseable payload: exit {code}")
+if not sarq:
+    report("PASS", "subagentrules never blocks a subagent spawn")
+    print("          empty and unparseable payloads both still exit 0")
+else:
+    report("FAIL", "subagentrules never blocks a subagent spawn")
+    for s in sarq:
+        print(f"          {s}")
+
+# Registered as its OWN SubagentStart entry, unmatched, separate from announce.
+_hj2 = json.loads(read(HOOKS_JSON))["hooks"]
+sarwire = []
+starts = _hj2.get("SubagentStart") or []
+if not any("subagentrules" in h.get("command", "") for e in starts for h in e.get("hooks", [])):
+    sarwire.append("hooks.json's SubagentStart has no subagentrules dispatch")
+announce_entries = [e for e in starts if any("announce" in h.get("command", "") for h in e.get("hooks", []))]
+subagentrules_entries = [e for e in starts if any("subagentrules" in h.get("command", "") for h in e.get("hooks", []))]
+if announce_entries and subagentrules_entries and announce_entries[0] is subagentrules_entries[0]:
+    sarwire.append("announce and subagentrules share one hook entry instead of two separate ones")
+if any("matcher" in e for e in starts):
+    sarwire.append("SubagentStart is scoped by a matcher, so it misses other agents")
+if not sarwire:
+    report("PASS", "subagentrules is its own SubagentStart entry, separate from announce")
+    print("          both fire, unmatched, on every subagent spawn")
+else:
+    report("FAIL", "subagentrules is its own SubagentStart entry, separate from announce")
+    for s in sarwire:
+        print(f"          {s}")
+
+if ("    subagentrules)" in read(RUN)):
+    report("PASS", "run.sh names subagentrules in its no-interpreter fallback")
+    print("          no working Python still reports the subagent got no rules")
+else:
+    report("FAIL", "run.sh names subagentrules in its no-interpreter fallback")
+
+# --- verdict's audit summary: built from the transcript, not the subagent's own report --------
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"))
+audit = []
+if code != 0:
+    audit.append(f"exit {code}, must never be non-zero")
+for needle in (
+    "transcript found at", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "Reconcile the subagent's report against this record",
+):
+    if needle not in out:
+        audit.append(f"audit summary is missing {needle!r}")
+if not audit:
+    report("PASS", "verdict's audit summary reports commands with exit status and files written")
+    print("          built from the transcript itself: one ok, one ERROR, one write")
+else:
+    report("FAIL", "verdict's audit summary reports commands with exit status and files written")
+    for a in audit:
+        print(f"          {a}")
+
+# The cap: 45 commands in the fixture, at most 40 shown plus an explicit "N more".
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="auditbig"))
+if code == 0 and out.count("cmd: Bash [ok]: echo") <= 40 and "5 more" in out:
+    report("PASS", "verdict's audit summary caps the command list and says how many more")
+    print(f"          {out.count('cmd: Bash [ok]: echo')} commands shown, '5 more' present")
+else:
+    report("FAIL", "verdict's audit summary caps the command list and says how many more")
+    print(f"          exit {code}, shown={out.count('cmd: Bash [ok]: echo')}, out[-200:]={out[-200:]!r}")
+
+# --- HOUSE_RULES_SUBAGENT_LEDGER: off by default, renders docs/sessions/<...> when on ---------
+_ledger_root = tempfile.mkdtemp(prefix="house-rules-ledger-")
+atexit.register(shutil.rmtree, _ledger_root, True)
+_ledger_off = dict(os.environ)
+_ledger_off["CLAUDE_PROJECT_DIR"] = _ledger_root
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_off)
+_ledger_dir = os.path.join(_ledger_root, "docs", "sessions")
+if "LEDGER" not in out and not os.path.isdir(_ledger_dir):
+    report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER is off by default - no docs/sessions/ write")
+    print("          no LEDGER line, no docs/sessions/ directory created")
+else:
+    report("FAIL", "HOUSE_RULES_SUBAGENT_LEDGER is off by default - no docs/sessions/ write")
+    print(f"          out {out[:150]!r}, ledger dir exists={os.path.isdir(_ledger_dir)}")
+
+_ledger_on = dict(_ledger_off)
+_ledger_on["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_on)
+_written = [f for f in os.listdir(_ledger_dir)] if os.path.isdir(_ledger_dir) else []
+if code == 0 and "LEDGER: rendered" in out and any(f.endswith(".md") for f in _written):
+    report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
+    print(f"          wrote {_written}")
+else:
+    report("FAIL", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
+    print(f"          exit {code}, out {out[:200]!r}, dir listing {_written}")
+
+# A failure rendering the ledger (unreadable transcript) says so and never crashes verdict.
+_ledger_bad_root = tempfile.mkdtemp(prefix="house-rules-ledger-bad-")
+atexit.register(shutil.rmtree, _ledger_bad_root, True)
+_ledger_bad = dict(os.environ)
+_ledger_bad["CLAUDE_PROJECT_DIR"] = _ledger_bad_root
+_ledger_bad["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"), env=_ledger_bad)
+# "ghost" has no transcript file at all, so verdict returns before ever reaching the ledger
+# step - this proves that early return, not the ledger call, never crashes.
+if code == 0 and "unverified" in out:
+    report("PASS", "an unreadable/missing subagent transcript never crashes verdict, ledger or not")
+    print("          missing-transcript path returns before the ledger step, exit 0")
+else:
+    report("FAIL", "an unreadable/missing subagent transcript never crashes verdict, ledger or not")
+    print(f"          exit {code}, out {out[:150]!r}")
 
 # --- the "reported update" rule is present, in its own words -----------------------------------
 # Not a drift check - nothing else in hook.py restates this rule's wording, since it's a

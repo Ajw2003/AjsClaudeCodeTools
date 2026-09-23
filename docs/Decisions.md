@@ -675,3 +675,37 @@ conflates "what is true now" with "what we chose and why," which is exactly the 
 tier fixes.
 
 **Status.** Standing.
+
+## 2026-09-23 — Subagents get the rules, and their work becomes checkable
+<!-- ref:c67d -->
+
+**Context.** SessionStart's `additionalContext` never reaches a spawned subagent (probed with
+`claude -p`, docs/plans/2026-09-22-rules-that-actually-load.md); a subagent that never saw the
+house rules had no docs-tier discipline, no commit-branch discipline, nothing. Probing further
+(same method): `SubagentStart`'s `additionalContext` DOES reach the subagent, but neither
+`SubagentStop`'s `additionalContext` nor its `systemMessage` reaches the PARENT session's model
+context in the same turn — only the interactive UI shows a `SubagentStop` `systemMessage`, the
+same channel `announce`/`verdict` already relied on.
+
+**Decision.** A third `SubagentStart` handler, `subagentrules`, its own hooks.json entry
+(separate from `announce`): generates a *subagent core* from the sections of
+`rules/house-rules.md` marked `<!-- subagent -->` (docs tiers, nothing fails silently, evidence
+before claims, artifacts in the project, commit on own branches, destructive actions, edit in
+place), plus a fixed mandate that the final report list every command run and its result
+verbatim. Own budget, `SUBAGENT_CORE_CHAR_LIMIT = 4,500`. At `SubagentStart` it also tells the
+user the transcript's expected path, before the transcript exists. At `SubagentStop`, `verdict`
+now also states the path it actually found and an audit summary built from that transcript
+(commands with exit status, files written/edited, tool-use counts, capped), carried on the one
+proven channel, `systemMessage`, with an instruction to reconcile the subagent's own report
+against it. `HOUSE_RULES_SUBAGENT_LEDGER=on` additionally renders the transcript into
+`docs/sessions/` via the renderer moved to `scripts/session_ledger_render.py`, importable from
+inside the plugin cache where `tools/` does not exist; off by default.
+
+**Why.** A subagent that never saw the rules and whose finished work nobody could check against
+its own transcript was invisible on both ends. `SubagentStart` is the one lifecycle event proven
+to reach the subagent's own context, so that is where the rules have to be re-injected, generated
+from one file so the subagent core cannot drift from the rules a human session sees. `verdict`
+already existed to check which model actually ran; extending it to also state what actually
+happened turns "trust the subagent's report" into "check the subagent's report."
+
+**Status.** Standing.

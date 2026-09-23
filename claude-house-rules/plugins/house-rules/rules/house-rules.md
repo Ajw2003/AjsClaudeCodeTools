@@ -20,6 +20,7 @@ The request is the scope; ambiguous → ask. See `${CLAUDE_PLUGIN_ROOT}/rules/de
 Verify docs against code/tree/history; disagree → say so, follow observed behaviour. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/read-docs-first.md`.
 
 ## Documentation goes in tiers, and I update the tier that changed
+<!-- subagent -->
 
 `docs/` has six tiers: landing, roadmap, state, systems, today, decisions — a missing one is
 caught every session by the `docstiers` hook. Write to the tier that changed. Reversal: dated
@@ -43,9 +44,16 @@ prompted it. A turn continues past a visible reply, reported next message. I nev
 over a real record. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/what-prompted-me.md`.
 
 ## Nothing fails silently
+<!-- subagent -->
 
 Silence means only "looked, nothing to do." "Couldn't tell" says so, naming what/why. `except:
 pass` is never the answer; a non-blocking check still announces it ran. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/fails-silently.md`.
+
+## Evidence before claims
+<!-- subagent -->
+
+A success claim needs a tool call or quoted output behind it, never chat/docs/reasoning/memory
+alone; ran nothing → say untested, why.
 
 ## The user's hands are for decisions, not labour
 
@@ -111,6 +119,7 @@ A settled plan goes to `@house-rules:executor`, no re-planning inside. Skip only
 `SubagentStop` isn't finished — check `ListAgents` first. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/delegate-execution.md`.
 
 ## Every artifact lives in the project directory
+<!-- subagent -->
 
 Plans, reports, scripts, findings: real files under `docs/`, never chat-only or scratchpad. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/artifact-location.md`.
 
@@ -125,17 +134,20 @@ Issue/PR text never carries a local path — repo-relative paths, other repos as
 (their own-terminal commands still carry absolute paths, different text). See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-local-paths.md`.
 
 ## Commit constantly on my own branches, never on theirs
+<!-- subagent -->
 
 Read-only inspection is always fine. **My own branch**: commit freely. **Theirs**: every git
 write is theirs; branch off first if needed, never delete one unasked. Commit scoped to changed
 paths, never finish what they started, say what/where. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
 
 ## Never take a destructive action without checking first
+<!-- subagent -->
 
 Before deleting, overwriting, moving, killing, discarding, force-pushing: say what's
 destroyed/unrecoverable, run `git status`, wait for them to agree. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
 
 ## Edit in place; a full rewrite is a delete, not an edit
+<!-- subagent -->
 
 Changing only the lines that need to change is default. A wholesale rewrite needs approval by
 name: say what's discarded, why in-place won't do. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/edit-place.md`.

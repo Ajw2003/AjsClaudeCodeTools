@@ -29,6 +29,8 @@ Each event handler mirrors the failure-mode contract its shell predecessor had:
   - scope        (UserPromptSubmit) cannot fail: never reads a file, never raises.
   - artifact, runnable, delegate, harvest (PostToolUse) never obstruct, but never go quiet:
                  any failure emits a systemMessage and exits 0.
+  - announce, subagentrules (SubagentStart), verdict (SubagentStop) never obstruct a
+                 delegation: any failure emits a systemMessage and exits 0.
   - handover     (Stop) fails OPEN, loud: any failure prints a systemMessage and exits 0,
                  because a non-zero exit here would stop the turn from ending at all.
 
@@ -218,6 +220,13 @@ def event_inject():
 
     body = body.replace("\r\n", "\n")
     body = _apply_voice_toggle(body)
+    # The <!-- subagent --> markers are a build-time signal for _subagent_core() (which
+    # sections of this same file to re-inject at a subagent's own SubagentStart), not
+    # something the main session needs to read - stripping them here keeps this file the
+    # single source for both without paying for the markers twice.
+    body = "\n".join(
+        line for line in body.split("\n") if line.strip() != SUBAGENT_SECTION_MARKER
+    )
     if not body.strip():
         emit(
             {
@@ -235,12 +244,10 @@ def event_inject():
 
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
-        "override default behaviour. They are also enforced by a PreToolUse hook that will "
-        "put a permission prompt in front of the user for destructive commands, "
-        "backgrounded or hidden processes, and mutating git commands - except a plain "
-        "commit or push on a `claude/` branch, which the commit rule already allows and "
-        "the hook stands down for. That hook is a backstop, not permission to skip "
-        "asking in chat first. The machine profile is injected separately (profile hook).\n\n"
+        "override default behaviour. A PreToolUse hook also prompts for destructive "
+        "commands, backgrounded/hidden processes, and mutating git commands - except a "
+        "plain commit or push on a `claude/` branch. That hook is a backstop, not "
+        "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
 
     emit(
@@ -1664,6 +1671,114 @@ def _delegation_enabled():
     return os.environ.get("HOUSE_RULES_DELEGATION", "on").strip().lower() not in _TOGGLE_OFF
 
 
+# subagentrules — a third subagent-lifecycle handler, its own SubagentStart entry, separate
+# from announce. doc-ref c67d docs/Decisions.md
+SUBAGENT_SECTION_MARKER = "<!-- subagent -->"
+SUBAGENT_CORE_CHAR_LIMIT = 4_500
+
+SUBAGENT_MANDATE = (
+    "\nYour final report must list every command you ran and its result verbatim, every file "
+    "you wrote or edited, and anything you could not do.\n"
+)
+
+
+def _subagent_core(rules_path=None):
+    """The marked sections of house-rules.md, in file order, plus SUBAGENT_MANDATE.
+
+    Returns (text, problems). A section is a "## " heading through the next "## " heading (or
+    end of file); it is included only when the line immediately after the heading is
+    SUBAGENT_SECTION_MARKER, which is then stripped from the emitted text - the marker is a
+    build-time signal, not something the subagent needs to read.
+    """
+    problems = []
+    if rules_path is None:
+        here = os.path.dirname(os.path.abspath(__file__))
+        rules_path = os.path.join(here, "..", "rules", "house-rules.md")
+    try:
+        body = _read_text(rules_path)
+    except OSError as exc:
+        problems.append("could not read rules/house-rules.md (%s)" % type(exc).__name__)
+        return "", problems
+
+    body = body.replace("\r\n", "\n")
+    lines = body.split("\n")
+    sections = []
+    current = None
+    for line in lines:
+        if line.startswith("## "):
+            current = {"heading": line, "body": []}
+            sections.append(current)
+        elif current is not None:
+            current["body"].append(line)
+
+    kept = []
+    for sec in sections:
+        body_lines = sec["body"]
+        if body_lines and body_lines[0].strip() == SUBAGENT_SECTION_MARKER:
+            kept.append(sec["heading"] + "\n" + "\n".join(body_lines[1:]).strip())
+
+    if not kept:
+        problems.append("no section in house-rules.md is marked %s" % SUBAGENT_SECTION_MARKER)
+        return "", problems
+
+    text = "\n\n".join(kept).strip() + "\n" + SUBAGENT_MANDATE
+    # ${CLAUDE_PLUGIN_ROOT} is expanded the same way inject does it: additionalContext is
+    # plain text nothing else expands, so a literal placeholder here would be an unopenable
+    # path for the subagent, exactly the bug inject fixed for the main session.
+    text = text.replace("${CLAUDE_PLUGIN_ROOT}", _plugin_root())
+    return _truncate_with_notice(text, SUBAGENT_CORE_CHAR_LIMIT, "the subagent rules core"), problems
+
+
+def event_subagentrules():
+    """SubagentStart: inject the subagent core, and tell the user where its transcript will
+    land, before it exists - so it is findable without waiting for verdict to say so."""
+    try:
+        if not _delegation_enabled():
+            return 0
+        payload = read_payload()
+        core, problems = _subagent_core()
+        bits = []
+        if not payload:
+            problems.append("the SubagentStart payload was empty")
+        else:
+            candidates = _transcript_candidates(payload)
+            expected = candidates[-1] if candidates else ""
+            if expected:
+                bits.append(
+                    "house-rules: subagent transcript expected at %s (verdict will report "
+                    "the path it actually finds when this agent stops)" % expected
+                )
+            else:
+                problems.append(
+                    "not enough of agent_id/transcript_path/session_id in the payload to "
+                    "predict the transcript path"
+                )
+        if problems:
+            bits.append("house-rules subagentrules COULD NOT TELL: %s" % "; ".join(problems))
+        out = {}
+        if bits:
+            out["systemMessage"] = " | ".join(bits)
+        if core:
+            out["hookSpecificOutput"] = {
+                "hookEventName": "SubagentStart",
+                "additionalContext": core,
+            }
+        if not out:
+            out["systemMessage"] = (
+                "house-rules plugin: subagentrules had nothing to report or inject for this "
+                "subagent start."
+            )
+        emit(out)
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the subagent-rules injector hit an "
+                "error (%s) and did not run for this call." % type(exc).__name__
+            }
+        )
+    return 0
+
+
 def _field(pattern, payload, problems=None):
     """The extracted value, or "" for a field that is simply absent.
 
@@ -1889,6 +2004,126 @@ def _observed_models(path):
     return models, turns, tool_calls, last_text
 
 
+# Caps on the audit summary below: a subagent that ran hundreds of commands must not produce
+# a systemMessage so large it becomes unreadable (or gets truncated) itself.
+AUDIT_MAX_COMMANDS = 40
+AUDIT_COMMAND_CHARS = 160
+_AUDIT_COMMAND_TOOLS = ("Bash", "PowerShell")
+_AUDIT_WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
+
+
+def _audit_summary(path):
+    """(command lines, file lines, tool_counts) read straight from a subagent transcript.
+
+    A command line pairs each Bash/PowerShell tool_use with its matching tool_result (by
+    tool_use_id), so the reported exit status is what the transcript actually recorded, not
+    an inference. Tool uses whose result never arrives (the run was cut short) are reported
+    as such rather than silently dropped.
+    """
+    pending = {}
+    commands = []
+    files = []
+    tool_counts = {}
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            if not isinstance(obj, dict):
+                continue
+            msg = obj.get("message")
+            content = msg.get("content") if isinstance(msg, dict) else None
+            if not isinstance(content, list):
+                continue
+            if obj.get("type") == "assistant":
+                for block in content:
+                    if not isinstance(block, dict) or block.get("type") != "tool_use":
+                        continue
+                    name = block.get("name") or "?"
+                    tool_counts[name] = tool_counts.get(name, 0) + 1
+                    inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+                    tid = block.get("id")
+                    if name in _AUDIT_COMMAND_TOOLS and tid:
+                        cmd = inp.get("command") or inp.get("script") or ""
+                        pending[tid] = (name, cmd)
+                    elif name in _AUDIT_WRITE_TOOLS:
+                        fp = inp.get("file_path") or inp.get("notebook_path") or "(no file_path)"
+                        files.append("%s %s" % (name, fp))
+            elif obj.get("type") == "user":
+                for block in content:
+                    if not isinstance(block, dict) or block.get("type") != "tool_result":
+                        continue
+                    tid = block.get("tool_use_id")
+                    entry = pending.pop(tid, None) if tid else None
+                    if entry is None:
+                        continue
+                    name, cmd = entry
+                    status = "ERROR" if block.get("is_error") else "ok"
+                    commands.append("%s [%s]: %s" % (name, status, cmd))
+    for name, cmd in pending.values():
+        commands.append("%s [NO RESULT RECORDED]: %s" % (name, cmd))
+    return commands, files, tool_counts
+
+
+def _capped_lines(lines, max_count, max_chars):
+    shown = [
+        (l if len(l) <= max_chars else l[: max_chars - 3] + "...") for l in lines[:max_count]
+    ]
+    if len(lines) > max_count:
+        shown.append("...%d more" % (len(lines) - max_count))
+    return shown
+
+
+def _subagent_ledger_enabled():
+    """HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/.
+    Off by default: it writes a file on every subagent stop, which nobody asked for as the
+    default cost of delegating."""
+    return os.environ.get("HOUSE_RULES_SUBAGENT_LEDGER", "off").strip().lower() not in _TOGGLE_OFF
+
+
+def _write_subagent_ledger(transcript_path, payload):
+    """Render transcript_path into docs/sessions/ with the shared renderer. Returns a short
+    status string for the systemMessage - never raises, since this is an opt-in extra, never
+    allowed to take the whole verdict report down with it."""
+    try:
+        import session_ledger_render as slr
+
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            records = []
+            bad = 0
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    records.append(json.loads(line))
+                except ValueError:
+                    bad += 1
+        session_id = os.path.splitext(os.path.basename(transcript_path))[0]
+        turns = slr.build_turns(records)
+        body = slr.render(turns, transcript_path, session_id, bad)
+
+        root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        outdir = os.path.join(root, "docs", "sessions")
+        os.makedirs(outdir, exist_ok=True)
+        import datetime
+
+        stamp = datetime.date.today().isoformat()
+        dest = os.path.join(outdir, "%s-subagent-%s.md" % (stamp, session_id))
+        with open(dest, "w", encoding="utf-8", newline="\n") as f:
+            f.write(body)
+        return "LEDGER: rendered subagent transcript to %s" % dest
+    except Exception as exc:
+        return "LEDGER COULD NOT TELL: failed to render the subagent transcript (%s: %s)" % (
+            type(exc).__name__,
+            exc,
+        )
+
+
 def event_verdict():
     """SubagentStop: say which model ACTUALLY served the subagent, from its transcript."""
     try:
@@ -1965,6 +2200,7 @@ def event_verdict():
         observed = ", ".join(models)
         bits = [
             "house-rules: %s finished" % agent_type,
+            "transcript found at %s" % found,
             "observed model %s" % observed,
             "%d assistant turn%s" % (turns, "" if turns == 1 else "s"),
         ]
@@ -1997,6 +2233,37 @@ def event_verdict():
                     "may be a status update, not finished work; verify concrete deliverables "
                     "before trusting it" % hit
                 )
+        # The audit summary: built from the transcript itself, not from anything the
+        # subagent said about itself. A failure building it is reported, never silent, and
+        # never drops the model-check report already gathered above (probed: neither a
+        # SubagentStop additionalContext nor systemMessage reaches the parent session's
+        # model context in-turn - docs/Decisions.md, 2026-09-23, doc-ref c67d - so this
+        # rides the one channel proven to work, the same one announce/verdict already use).
+        try:
+            commands, wrote, tool_counts = _audit_summary(found)
+            summary_lines = ["AUDIT (from the transcript, not the subagent's own report):"]
+            summary_lines.extend("  cmd: %s" % l for l in _capped_lines(commands, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
+            summary_lines.extend("  wrote: %s" % l for l in _capped_lines(wrote, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
+            if tool_counts:
+                summary_lines.append(
+                    "  tool uses: %s" % ", ".join("%s x%d" % (n, c) for n, c in sorted(tool_counts.items()))
+                )
+            summary_lines.append(
+                "Reconcile the subagent's report against this record; flag every claim the "
+                "record does not support before relaying."
+            )
+            bits.append("\n".join(summary_lines))
+        except OSError as exc:
+            bits.append(
+                "AUDIT COULD NOT TELL: transcript at %s could not be re-read for the audit "
+                "summary (%s)" % (found, type(exc).__name__)
+            )
+
+        if _subagent_ledger_enabled():
+            ledger_note = _write_subagent_ledger(found, payload)
+            if ledger_note:
+                bits.append(ledger_note)
+
         if problems:
             bits.append("COULD NOT TELL: %s" % "; ".join(problems))
         emit({"systemMessage": " | ".join(bits)})
@@ -2554,6 +2821,7 @@ EVENTS = {
     "runnable": event_runnable,
     "delegate": event_delegate,
     "announce": event_announce,
+    "subagentrules": event_subagentrules,
     "verdict": event_verdict,
     "handover": event_handover,
     "harvest": event_harvest,

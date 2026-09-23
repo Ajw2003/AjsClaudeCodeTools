@@ -267,6 +267,7 @@ def main():
     print(f"   profile    : {profile_chars:>6,} chars  (~{tokens(profile_chars):,} tokens)")
     print(f"   standards  : {standards_chars:>6,} chars  (~{tokens(standards_chars):,} tokens)")
     print("   (paid once per session - a spawned subagent never sees this at all, see docs/architecture.md)")
+    print("   (a subagent's own per-spawn cost is the 'subagentrules' row in section 4 below)")
 
     # --- 4. per-tool-call cost ---------------------------------------------------------------
     # These fire per TOOL CALL, not per turn, so frequency is as much of the cost as size is.
@@ -301,15 +302,20 @@ def main():
         ("announce", "each subagent spawn",
          json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
                      "effort": "low"}), "always fires"),
+        ("subagentrules", "each subagent spawn",
+         json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
+                     "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
+         "the ONLY additionalContext a subagent ever sees - inject/profile/standards above never reach it"),
         ("verdict", "each subagent finish",
          json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
                      "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
          "transcript not found"),
     ]
-    # announce and verdict are deliberately NOT trace-gated - the report IS the feature, not a
-    # narration of an otherwise-silent path - so they are excluded from the TRACE=off total
-    # below. Including them would make that line read as a leak when it is the design.
-    not_trace_gated = {"announce", "verdict"}
+    # announce, subagentrules and verdict are deliberately NOT trace-gated - the report IS the
+    # feature, not a narration of an otherwise-silent path - so they are excluded from the
+    # TRACE=off total below. Including them would make that line read as a leak when it is the
+    # design.
+    not_trace_gated = {"announce", "subagentrules", "verdict"}
     print(f"   {'handler':<9} {'when':<26} {'reminder':>20} {'trace':>20}")
     trace_total = 0
     for event, when, payload, label in calls:

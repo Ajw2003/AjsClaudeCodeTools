@@ -17,8 +17,10 @@ called; your job is to carry it out and report honestly what happened.
 - Report back: what you ran, what it printed, what you changed, and anything in the plan you
   could not complete and why.
 
-The house rules are NOT injected into this subagent's context — `SessionStart` `additionalContext`
-does not reach subagents. Follow this digest instead:
+The house rules are NOT injected into this subagent's context by `SessionStart` — that
+`additionalContext` does not reach subagents. A `SubagentStart` hook (`subagentrules`) separately
+re-injects a subagent core at spawn time, so this digest is belt-and-braces, not the only copy.
+Follow this digest instead:
 
 - Never hand over a command you have not run. Run it yourself, in the shell it will actually
   run in, and paste the real output — a step is done when its output says so.
