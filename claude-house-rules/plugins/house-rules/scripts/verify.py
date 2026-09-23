@@ -688,6 +688,9 @@ if shutil.which("git"):
         return d
 
     DOCSGUARD_AM_SOURCE_ONLY = _docs_guard_repo_with_tracked_change("docsguard-am-source-only")
+    DOCSGUARD_QUOTED_PATH = _docs_guard_repo(
+        "docsguard-quoted-path", "claude/topic", {"my file.py": "print(1)\n"}, staged=[]
+    )
 
     effective_cases = [
         (
@@ -710,6 +713,11 @@ if shutil.which("git"):
             "-am against a tracked, modified source file with nothing under docs/ gets the reminder",
             DOCSGUARD_AM_SOURCE_ONLY, True,
         ),
+        (
+            'git add "my file.py" && git commit -m x',
+            "a quoted add path with a space is tokenized as one argument (shlex), and gets the reminder",
+            DOCSGUARD_QUOTED_PATH, True,
+        ),
     ]
     for cmd, title, repo, expect_reminder in effective_cases:
         code, out, err = run_hook("guard", payload_for(cmd), env=env_in(repo))
@@ -720,6 +728,18 @@ if shutil.which("git"):
         else:
             report("FAIL", title)
             print(f"          exit {code}, expected reminder={expect_reminder}, out {out[:250]!r}")
+
+    # Unbalanced quotes in an add statement: shlex.split raises ValueError, which must read as
+    # "could not tell" - never a guess, and never a change to guard's own decision.
+    code, out, err = run_hook(
+        "guard", payload_for('git add "unbalanced.py && git commit -m x'), env=env_in(DOCSGUARD_QUOTED_PATH)
+    )
+    if code == 0 and '"permissionDecision":"ask"' not in out and "mine to commit on" in out and "could not tell" in out.lower():
+        report("PASS", "an add statement with unbalanced quotes is a could-not-tell, not a guess")
+        print(f"          {out[:200]}")
+    else:
+        report("FAIL", "an add statement with unbalanced quotes is a could-not-tell, not a guess")
+        print(f"          exit {code}, out {out[:250]!r}")
 else:
     report("SKIP", "guard's commit-time docs-tier reminder (real git fixtures)")
     print("          no git binary on PATH")

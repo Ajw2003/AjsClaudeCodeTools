@@ -1139,6 +1139,25 @@ _ADD_ALL_RE = re.compile(r"(^|\s)(-A\b|--all\b)|(^|\s)\.(\s|$)", re.IGNORECASE)
 _ADD_UPDATE_RE = re.compile(r"(^|\s)(-u\b|--update\b)", re.IGNORECASE)
 
 
+def _unquote_git_path(path):
+    """git quotes a path in porcelain output (surrounding double quotes, C-style backslash
+    escapes) whenever it contains a space or other "unusual" byte - core.quotePath's default.
+    A plain path is returned unchanged. A quoted path that fails to parse is a recovered case,
+    not a silent bail: the still-quoted string is kept and used as-is (it simply will not
+    prefix-match a literal `git add` argument), same posture as a decode that falls back
+    rather than giving up."""
+    unquoted = path
+    if len(path) >= 2 and path[0] == '"' and path[-1] == '"':
+        try:
+            unquoted = json.loads(path)
+        except ValueError as exc:
+            sys.stderr.write(
+                "house-rules: could not unquote git status path %r (%s); using it as-is.\n"
+                % (path, exc)
+            )
+    return unquoted
+
+
 def _parse_status_porcelain(lines):
     """[(path, tracked)] from `git status --porcelain -uall` output. Best-effort on a rename
     line ("R  old -> new"): keeps the new path, which is what a fresh `git add` would stage."""
@@ -1149,7 +1168,7 @@ def _parse_status_porcelain(lines):
         code, path = line[:2], line[3:]
         if " -> " in path:
             path = path.split(" -> ", 1)[1]
-        out.append((path.strip(), code != "??"))
+        out.append((_unquote_git_path(path.strip()), code != "??"))
     return out
 
 
@@ -1166,8 +1185,14 @@ def _staged_docs_status(subject, elsewhere):
         return "unknown", "the command names another repo (-C/--git-dir/--work-tree)"
     root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
+    import shlex
     import subprocess
     import time as _t
+
+    # subject is the raw, still-JSON-escaped "command":"..." field slice - fine for every
+    # regex below (none of them need real quote characters), but wrong for shlex, which has
+    # to see the actual command text to tokenize a quoted path like "my file.py" correctly.
+    decoded = _field(_COMMAND_VALUE_RE, subject) or subject
 
     deadline = _t.time() + DOCS_CHECK_TIMEOUT
 
@@ -1185,7 +1210,7 @@ def _staged_docs_status(subject, elsewhere):
     try:
         effective = set(p.strip() for p in run_git(["diff", "--cached", "--name-only"]))
 
-        statements = _STATEMENT_SPLIT_RE.split(subject)
+        statements = _STATEMENT_SPLIT_RE.split(decoded)
         commit_stmt = next((s for s in statements if _GIT_COMMIT_RE.search(s)), "")
         commit_all = bool(_COMMIT_ALL_RE.search(commit_stmt))
 
@@ -1202,7 +1227,13 @@ def _staged_docs_status(subject, elsewhere):
             elif _ADD_UPDATE_RE.search(args_part):
                 add_tracked_only = True
             else:
-                literal_paths.extend(tok for tok in args_part.split() if not tok.startswith("-"))
+                # shlex, not .split(): a quoted path with a space ("my file.py") is one
+                # argument, not two. posix=True so quotes/backslashes resolve the way a real
+                # shell would read them. Unbalanced quotes raise ValueError, which the outer
+                # try/except below turns into "unknown" - never a guess at what was meant.
+                literal_paths.extend(
+                    tok for tok in shlex.split(args_part, posix=True) if not tok.startswith("-")
+                )
 
         status = None  # lazy: only fetched if something below actually needs it
         if commit_all:
