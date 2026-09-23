@@ -926,6 +926,8 @@ else:
     print(f"          missing: {'; '.join(missing)}")
 
 # --- ${CLAUDE_PLUGIN_ROOT} is expanded to a real, openable path before injection --------------
+_root = None
+_ctx_text = ""
 # additionalContext is plain text nothing expands - only hooks.json's own command strings get
 # ${CLAUDE_PLUGIN_ROOT} substituted by the harness. A literal ${CLAUDE_PLUGIN_ROOT} left in the
 # injected text is a path Claude cannot open.
@@ -933,18 +935,31 @@ _detail_marker = "/rules/detail/edit-place.md"
 if "${CLAUDE_PLUGIN_ROOT}" in out:
     report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
     print("          the literal placeholder reached additionalContext unexpanded")
-elif _detail_marker not in out:
+elif _detail_marker.lstrip("/") not in out:
     report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
-    print(f"          no expanded path containing {_detail_marker!r} found in the injection")
+    print(f"          no detail pointer {_detail_marker.lstrip('/')!r} found in the injection")
 else:
-    _expanded = re.search(r"([^\s`]*" + re.escape(_detail_marker) + r")", out)
-    _expanded_path = _expanded.group(1) if _expanded else None
+    try:
+        _ctx_text = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        _ctx_text = ""
+    _root_line = re.search(r"is the plugin root: ([^\n]+)", _ctx_text)
+    _root = _root_line.group(1) if _root_line else None
+    _expanded_path = os.path.join(_root, *_detail_marker.lstrip("/").split("/")) if _root else None
     if _expanded_path and os.path.isfile(_expanded_path):
         report("PASS", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
         print(f"          {_expanded_path} exists on disk")
     else:
         report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
-        print(f"          expanded path {_expanded_path!r} does not exist on disk")
+        print(f"          plugin root {_root!r} + detail pointer does not exist on disk")
+# The install path's length must not scale the injection: stated once, never per pointer.
+_root_count = _ctx_text.count(_root) if _root else 0
+if _root_count == 1:
+    report("PASS", "inject states the plugin root once, so its size is independent of the install path")
+    print(f"          root appears once; {len(_ctx_text)} chars total")
+else:
+    report("FAIL", "inject states the plugin root once, so its size is independent of the install path")
+    print(f"          root appears {_root_count} times - each copy grows with the install path")
 
 # --- the step-card POINTER actually REACHES the session, not just the file --------------------
 # Since 2.17.0 ("rules that actually load") the full card template is deliberately NOT injected -

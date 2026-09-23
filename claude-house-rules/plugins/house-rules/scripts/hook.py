@@ -205,6 +205,16 @@ def _plugin_root():
     return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 
+def _expand_detail_paths(text):
+    """Write every plugin path as <plugin>/... and state the absolute plugin root once, so the
+    injected size does not grow with the install path's length or the number of pointers."""
+    root = _plugin_root()
+    if "${CLAUDE_PLUGIN_ROOT}" not in text:
+        return text
+    text = text.replace("${CLAUDE_PLUGIN_ROOT}", "<plugin>")
+    return "<plugin> in the paths below is the plugin root: %s\n\n%s" % (root, text)
+
+
 def event_inject():
     here = os.path.dirname(os.path.abspath(__file__))
     rules_path = os.path.join(here, "..", "rules", "house-rules.md")
@@ -240,9 +250,10 @@ def event_inject():
 
     # The rules text names its detail files as ${CLAUDE_PLUGIN_ROOT}/rules/detail/<file>.md -
     # that variable is expanded by the harness in hooks.json's own command strings, but this
-    # text is going into additionalContext, which nothing expands. Substitute the real absolute
-    # path here so the path Claude reads is one Claude can actually open.
-    body = body.replace("${CLAUDE_PLUGIN_ROOT}", _plugin_root())
+    # text is going into additionalContext, which nothing expands. The root is stated once
+    # rather than substituted into every pointer: 26 copies of a long install path pushed this
+    # past its size margin on a CI runner whose checkout path was merely 26 chars longer.
+    body = _expand_detail_paths(body)
 
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
@@ -1926,7 +1937,7 @@ def _subagent_core(rules_path=None):
     # ${CLAUDE_PLUGIN_ROOT} is expanded the same way inject does it: additionalContext is
     # plain text nothing else expands, so a literal placeholder here would be an unopenable
     # path for the subagent, exactly the bug inject fixed for the main session.
-    text = text.replace("${CLAUDE_PLUGIN_ROOT}", _plugin_root())
+    text = _expand_detail_paths(text)
     return _truncate_with_notice(text, SUBAGENT_CORE_CHAR_LIMIT, "the subagent rules core"), problems
 
 
