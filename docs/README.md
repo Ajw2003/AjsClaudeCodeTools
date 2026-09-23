@@ -53,6 +53,8 @@ hand-edited).
   [`ProjectState.md`](ProjectState.md#cross-cutting-issues-that-belong-to-no-milestone).
 - [`desktop-verification.md`](desktop-verification.md) — which surfaces actually receive the
   step-card handover format, and how each row was checked.
+- [`acceptance-2.31.0.md`](acceptance-2.31.0.md) — a hands-on pass/fail checklist for every
+  feature 2.31.0 added, run in a fresh session on the real machine.
 - [`claude-ai-instructions.md`](claude-ai-instructions.md) — the text to paste into claude.ai's
   own Settings → Instructions, the one surface the plugin's hooks cannot reach.
 - [`measuring-footprint.md`](measuring-footprint.md) — how to read `tools/measure_footprint.py`'s
