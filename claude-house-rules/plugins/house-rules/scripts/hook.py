@@ -27,10 +27,12 @@ Each event handler mirrors the failure-mode contract its shell predecessor had:
                  through unchecked just because an internal error occurred.
   - inject       (SessionStart) fails LOUD, not closed: prints a systemMessage, exits 0.
   - scope        (UserPromptSubmit) cannot fail: never reads a file, never raises.
-  - artifact, runnable, delegate, harvest (PostToolUse) never obstruct, but never go quiet:
-                 any failure emits a systemMessage and exits 0.
+  - artifact, runnable, delegate, harvest, audit (PostToolUse) never obstruct, but never go
+                 quiet: any failure emits a systemMessage and exits 0.
   - announce, subagentrules (SubagentStart), verdict (SubagentStop) never obstruct a
                  delegation: any failure emits a systemMessage and exits 0.
+  - userpromptaudit (UserPromptSubmit) can never erase the user's prompt: any failure
+                 emits a systemMessage (never additionalContext) and exits 0.
   - handover     (Stop) fails OPEN, loud: any failure prints a systemMessage and exits 0,
                  because a non-zero exit here would stop the turn from ending at all.
 
@@ -1656,6 +1658,18 @@ _SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _TRANSCRIPT_RE = re.compile(r'"transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _AGENT_TRANSCRIPT_RE = re.compile(r'"agent_transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
+# Agent/Task's PostToolUse tool_response uses its own camelCase names - doc-ref 8313 docs/Decisions.md.
+_RESPONSE_STATUS_RE = re.compile(r'"status"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_RESPONSE_AGENT_ID_RE = re.compile(r'"agentId"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_RESPONSE_AGENT_TYPE_RE = re.compile(r'"agentType"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_TOOL_INPUT_SUBAGENT_TYPE_RE = re.compile(r'"subagent_type"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+# A backgrounded call's hand-back prompt shape, probed live - doc-ref 8313 docs/Decisions.md.
+_PROMPT_VALUE_RE = re.compile(r'"prompt"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_TASK_NOTIFICATION_RE = re.compile(r"<task-notification>")
+_TASK_ID_RE = re.compile(r"<task-id>([0-9A-Za-z]+)</task-id>")
+_TASK_STATUS_RE = re.compile(r"<status>([^<]*)</status>")
+
 # Documented as forcing every subagent onto one model, ignoring frontmatter - the named
 # mechanism by which "model: sonnet" is silently not what runs. Worth reporting when set.
 _MODEL_OVERRIDE_VARS = ("CLAUDE_CODE_SUBAGENT_MODEL_FORCE", "CLAUDE_CODE_SUBAGENT_MODEL")
@@ -1926,17 +1940,20 @@ def event_announce():
     return 0
 
 
-def _transcript_candidates(payload):
+def _transcript_candidates(payload, agent_id=None):
     """Where the subagent's own transcript might be, most authoritative first.
 
     Why this probes rather than assumes: docs/architecture.md, "The transcript is probed,
-    never assumed, and that is deliberate."
+    never assumed, and that is deliberate." agent_id is normally read out of the payload's
+    own "agent_id" field (SubagentStart/SubagentStop); callers reading a differently-shaped
+    payload (PostToolUse's "agentId", a hand-back prompt's <task-id>) pass it in directly.
     """
     out = []
     direct = _field(_AGENT_TRANSCRIPT_RE, payload)
     if direct:
         out.append(direct)
-    agent_id = _field(_AGENT_ID_RE, payload)
+    if agent_id is None:
+        agent_id = _field(_AGENT_ID_RE, payload)
     parent = _field(_TRANSCRIPT_RE, payload)
     session = _field(_SESSION_ID_RE, payload)
     if agent_id and parent:
@@ -2076,6 +2093,32 @@ def _capped_lines(lines, max_count, max_chars):
     if len(lines) > max_count:
         shown.append("...%d more" % (len(lines) - max_count))
     return shown
+
+
+def _audit_report(found):
+    """The multi-line AUDIT block - commands with exit status, files written/edited, tool-use
+    counts, then the reconcile instruction - shared by verdict, audit and userpromptaudit, so
+    all three read a transcript the same way and say the same thing about it. A transcript that
+    cannot be re-read says so instead of raising - this is called from three fail-open handlers
+    that must never let an audit failure take the rest of their report down with it.
+    """
+    try:
+        commands, wrote, tool_counts = _audit_summary(found)
+    except OSError as exc:
+        return "AUDIT COULD NOT TELL: transcript at %s could not be re-read for the audit " \
+            "summary (%s)" % (found, type(exc).__name__)
+    lines = ["AUDIT (from the transcript, not the subagent's own report):"]
+    lines.extend("  cmd: %s" % l for l in _capped_lines(commands, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
+    lines.extend("  wrote: %s" % l for l in _capped_lines(wrote, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
+    if tool_counts:
+        lines.append(
+            "  tool uses: %s" % ", ".join("%s x%d" % (n, c) for n, c in sorted(tool_counts.items()))
+        )
+    lines.append(
+        "Reconcile the subagent's report against this record; flag every claim the record "
+        "does not support before relaying."
+    )
+    return "\n".join(lines)
 
 
 def _subagent_ledger_enabled():
@@ -2234,30 +2277,12 @@ def event_verdict():
                     "before trusting it" % hit
                 )
         # The audit summary: built from the transcript itself, not from anything the
-        # subagent said about itself. A failure building it is reported, never silent, and
-        # never drops the model-check report already gathered above (probed: neither a
-        # SubagentStop additionalContext nor systemMessage reaches the parent session's
-        # model context in-turn - docs/Decisions.md, 2026-09-23, doc-ref c67d - so this
-        # rides the one channel proven to work, the same one announce/verdict already use).
-        try:
-            commands, wrote, tool_counts = _audit_summary(found)
-            summary_lines = ["AUDIT (from the transcript, not the subagent's own report):"]
-            summary_lines.extend("  cmd: %s" % l for l in _capped_lines(commands, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
-            summary_lines.extend("  wrote: %s" % l for l in _capped_lines(wrote, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
-            if tool_counts:
-                summary_lines.append(
-                    "  tool uses: %s" % ", ".join("%s x%d" % (n, c) for n, c in sorted(tool_counts.items()))
-                )
-            summary_lines.append(
-                "Reconcile the subagent's report against this record; flag every claim the "
-                "record does not support before relaying."
-            )
-            bits.append("\n".join(summary_lines))
-        except OSError as exc:
-            bits.append(
-                "AUDIT COULD NOT TELL: transcript at %s could not be re-read for the audit "
-                "summary (%s)" % (found, type(exc).__name__)
-            )
+        # subagent said about itself. Delivered here on systemMessage because that is the
+        # one channel probed to reach the USER for a SubagentStop (neither additionalContext
+        # nor systemMessage reaches the PARENT MODEL's context in-turn at SubagentStop -
+        # doc-ref 8313 docs/Decisions.md). audit/userpromptaudit cover reaching the model
+        # itself, on the channels that were probed to actually do that.
+        bits.append(_audit_report(found))
 
         if _subagent_ledger_enabled():
             ledger_note = _write_subagent_ledger(found, payload)
@@ -2272,6 +2297,156 @@ def event_verdict():
             {
                 "systemMessage": "house-rules plugin: the subagent-stop model check hit an "
                 "error (%s) and is offline for this call." % type(exc).__name__
+            }
+        )
+    return 0
+
+
+# audit — PostToolUse on Agent|Task, its own hooks.json entry. doc-ref 8313 docs/Decisions.md.
+
+
+def event_audit():
+    """PostToolUse (Agent|Task): hand the audit summary + reconcile instruction straight to
+    the parent model as additionalContext when a FOREGROUND subagent call returns."""
+    try:
+        if not _delegation_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: a subagent tool call returned but "
+                    "the PostToolUse payload was empty, so it could not be audited."
+                }
+            )
+            return 0
+
+        status = _field(_RESPONSE_STATUS_RE, payload)
+        if status != "completed":
+            # "async_launched" (a backgrounded call, still running) or an unrecognised shape:
+            # genuinely nothing to audit yet, not a failure to report - userpromptaudit picks
+            # up a backgrounded call's eventual hand-back.
+            return 0
+
+        problems = []
+        agent_id = _field(_RESPONSE_AGENT_ID_RE, payload, problems)
+        agent_type = (
+            _field(_RESPONSE_AGENT_TYPE_RE, payload)
+            or _field(_TOOL_INPUT_SUBAGENT_TYPE_RE, payload)
+            or "agent type not in payload"
+        )
+        if not agent_id:
+            emit(
+                {
+                    "systemMessage": "house-rules: a subagent tool call completed but the "
+                    "payload carried no agentId, so its transcript could not be located to "
+                    "audit."
+                }
+            )
+            return 0
+
+        candidates = _transcript_candidates(payload, agent_id=agent_id)
+        found = next((c for c in candidates if os.path.isfile(c)), "")
+        if not found:
+            emit(
+                {
+                    "systemMessage": "house-rules: %s (agent %s) finished, but its transcript "
+                    "could not be located to audit - tried: %s"
+                    % (agent_type, agent_id, ", ".join(candidates) or "(no candidates - not "
+                       "enough of session_id/transcript_path in the payload)")
+                }
+            )
+            return 0
+
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PostToolUse",
+                    "additionalContext": (
+                        "house-rules: %s (agent %s) finished (foreground) - %s"
+                        % (agent_type, agent_id, _audit_report(found))
+                    ),
+                }
+            }
+        )
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the foreground subagent audit hit an "
+                "error (%s) and did not run for this call." % type(exc).__name__
+            }
+        )
+    return 0
+
+
+# userpromptaudit — UserPromptSubmit, its own entry, separate from scope. doc-ref 8313 docs/Decisions.md.
+
+
+def event_userpromptaudit():
+    """UserPromptSubmit: when this turn's prompt IS a background subagent's hand-back
+    notification, hand the audit summary + reconcile instruction to the parent model as
+    additionalContext - the completion this backgrounded call's own PostToolUse never saw."""
+    try:
+        if not _delegation_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            return 0
+        m = _PROMPT_VALUE_RE.search(payload)
+        if not m:
+            return 0
+        prompt_field = m.group(1)
+        if not _TASK_NOTIFICATION_RE.search(prompt_field):
+            # The ordinary case, every other prompt: nothing to do, and nothing to say -
+            # this handler exists for exactly one shape of prompt, not every one.
+            return 0
+        status_m = _TASK_STATUS_RE.search(prompt_field)
+        if not status_m or status_m.group(1) != "completed":
+            # A notification for a still-running or failed task carries no finished work to
+            # audit yet; a later notification for the same task-id covers it when it does.
+            return 0
+        id_m = _TASK_ID_RE.search(prompt_field)
+        if not id_m:
+            emit(
+                {
+                    "systemMessage": "house-rules: a background subagent hand-back arrived "
+                    "with no <task-id>, so its transcript could not be located to audit."
+                }
+            )
+            return 0
+        agent_id = id_m.group(1)
+
+        candidates = _transcript_candidates(payload, agent_id=agent_id)
+        found = next((c for c in candidates if os.path.isfile(c)), "")
+        if not found:
+            emit(
+                {
+                    "systemMessage": "house-rules: background subagent %s finished, but its "
+                    "transcript could not be located to audit - tried: %s"
+                    % (agent_id, ", ".join(candidates) or "(no candidates)")
+                }
+            )
+            return 0
+
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": (
+                        "house-rules: subagent %s finished (background) - %s"
+                        % (agent_id, _audit_report(found))
+                    ),
+                }
+            }
+        )
+    except Exception as exc:
+        # Silence-plus-systemMessage, never additionalContext and never a non-zero exit -
+        # additionalContext built from a half-formed state here could be worse than nothing,
+        # and a raise or non-zero exit would erase the user's prompt.
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the background subagent audit hit an "
+                "error (%s) and did not run for this call." % type(exc).__name__
             }
         )
     return 0
@@ -2823,6 +2998,8 @@ EVENTS = {
     "announce": event_announce,
     "subagentrules": event_subagentrules,
     "verdict": event_verdict,
+    "audit": event_audit,
+    "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,
     "harvest": event_harvest,
 }

@@ -3520,6 +3520,176 @@ else:
     report("FAIL", "an unreadable/missing subagent transcript never crashes verdict, ledger or not")
     print(f"          exit {code}, out {out[:150]!r}")
 
+# --- audit: the foreground half of the audit summary, PostToolUse on Agent|Task ---------------
+def post_agent_payload(**kw):
+    base = {
+        "session_id": "sess1",
+        "transcript_path": _PARENT,
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Agent",
+        "tool_input": {"subagent_type": "general-purpose"},
+        "tool_response": {"status": "completed", "agentId": "audit1", "agentType": "general-purpose"},
+    }
+    base.update(kw)
+    return json.dumps(base)
+
+
+code, out, err = run_hook("audit", post_agent_payload())
+aud = []
+if code != 0:
+    aud.append(f"exit {code}, must never be non-zero")
+try:
+    core_ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+except Exception as exc:
+    aud.append(f"could not parse audit output: {exc}")
+    core_ctx = ""
+for needle in (
+    "finished (foreground)", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "Reconcile the subagent's report against this record",
+):
+    if needle not in core_ctx:
+        aud.append(f"audit's additionalContext is missing {needle!r}")
+if not aud:
+    report("PASS", "audit hands the subagent's audit summary to the parent MODEL after a foreground return")
+    print(f"          {core_ctx[:150]}")
+else:
+    report("FAIL", "audit hands the subagent's audit summary to the parent MODEL after a foreground return")
+    for a in aud:
+        print(f"          {a}")
+
+# A backgrounded call's PostToolUse fires immediately with status "async_launched" - nothing
+# has happened yet, so audit must say nothing at all, not report an empty/wrong audit.
+code, out, err = run_hook("audit", post_agent_payload(
+    tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}
+))
+if code == 0 and not out.strip():
+    report("PASS", "audit stays silent for a backgrounded call's async_launched PostToolUse")
+    print("          nothing to audit yet - userpromptaudit covers its later hand-back")
+else:
+    report("FAIL", "audit stays silent for a backgrounded call's async_launched PostToolUse")
+    print(f"          exit {code}, out {out[:150]!r}")
+
+audq = []
+code, out, err = run_hook("audit", "")
+if code != 0 or "systemMessage" not in out:
+    audq.append(f"empty payload: exit {code}, out {out[:120]!r}")
+code, out, err = run_hook("audit", "not json at all {{{")
+if code != 0:
+    audq.append(f"unparseable payload: exit {code}")
+if not audq:
+    report("PASS", "audit never blocks a PostToolUse call, even on a bad payload")
+    print("          empty and unparseable payloads both still exit 0")
+else:
+    report("FAIL", "audit never blocks a PostToolUse call, even on a bad payload")
+    for a in audq:
+        print(f"          {a}")
+
+_hj3 = json.loads(read(HOOKS_JSON))["hooks"]
+audwire = []
+posts = _hj3.get("PostToolUse") or []
+audit_entries = [e for e in posts if any("audit" in h.get("command", "") and "\" audit" in h.get("command", "") for h in e.get("hooks", []))]
+if not any(e.get("matcher") == "Agent|Task" for e in posts):
+    audwire.append("hooks.json's PostToolUse has no Agent|Task matcher for audit")
+if not any("\" audit" in h.get("command", "") for e in posts for h in e.get("hooks", [])):
+    audwire.append("hooks.json's PostToolUse has no audit dispatch")
+if not audwire:
+    report("PASS", "audit is its own PostToolUse entry matched on Agent|Task")
+    print("          separate from artifact/runnable/harvest/delegate")
+else:
+    report("FAIL", "audit is its own PostToolUse entry matched on Agent|Task")
+    for a in audwire:
+        print(f"          {a}")
+
+if ("    audit)" in read(RUN)):
+    report("PASS", "run.sh names audit in its no-interpreter fallback")
+else:
+    report("FAIL", "run.sh names audit in its no-interpreter fallback")
+
+# --- userpromptaudit: the background half, UserPromptSubmit --------------------------------
+def _task_notification(task_id, status="completed"):
+    return (
+        "<task-notification>\n<task-id>%s</task-id>\n<tool-use-id>toolu_x</tool-use-id>\n"
+        "<output-file>/x</output-file>\n<status>%s</status>\n<summary>Agent finished</summary>\n"
+        "<result>done</result>\n</task-notification>" % (task_id, status)
+    )
+
+
+def userprompt_payload(prompt, **kw):
+    base = {"session_id": "sess1", "transcript_path": _PARENT, "hook_event_name": "UserPromptSubmit", "prompt": prompt}
+    base.update(kw)
+    return json.dumps(base)
+
+
+code, out, err = run_hook("userpromptaudit", userprompt_payload(_task_notification("audit1")))
+upa = []
+if code != 0:
+    upa.append(f"exit {code}, must never be non-zero")
+try:
+    up_ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+except Exception as exc:
+    upa.append(f"could not parse userpromptaudit output: {exc}")
+    up_ctx = ""
+for needle in (
+    "finished (background)", "Bash [ok]: pytest -q", "Bash [ERROR]: false",
+    "Reconcile the subagent's report against this record",
+):
+    if needle not in up_ctx:
+        upa.append(f"userpromptaudit's additionalContext is missing {needle!r}")
+if not upa:
+    report("PASS", "userpromptaudit hands the audit summary to the parent model on a background hand-back")
+    print(f"          {up_ctx[:150]}")
+else:
+    report("FAIL", "userpromptaudit hands the audit summary to the parent model on a background hand-back")
+    for a in upa:
+        print(f"          {a}")
+
+# The ordinary case: a ordinary prompt must never be touched, and never even emit anything -
+# a non-zero exit or a wrong additionalContext here would corrupt or erase the user's prompt.
+code, out, err = run_hook("userpromptaudit", userprompt_payload("please fix the failing test"))
+if code == 0 and not out.strip():
+    report("PASS", "userpromptaudit is silent on an ordinary prompt")
+    print("          no additionalContext, no systemMessage - nothing to say")
+else:
+    report("FAIL", "userpromptaudit is silent on an ordinary prompt")
+    print(f"          exit {code}, out {out[:150]!r}")
+
+# A notification for a still-running task carries nothing finished to audit yet.
+code, out, err = run_hook("userpromptaudit", userprompt_payload(_task_notification("audit1", status="running")))
+if code == 0 and not out.strip():
+    report("PASS", "userpromptaudit is silent on a not-yet-completed task notification")
+else:
+    report("FAIL", "userpromptaudit is silent on a not-yet-completed task notification")
+    print(f"          exit {code}, out {out[:150]!r}")
+
+upq = []
+code, out, err = run_hook("userpromptaudit", "")
+if code != 0 or out.strip():
+    upq.append(f"empty payload: exit {code}, out {out[:120]!r} (must be silent, exit 0)")
+code, out, err = run_hook("userpromptaudit", "not json at all {{{")
+if code != 0 or out.strip():
+    upq.append(f"unparseable payload: exit {code}, out {out[:120]!r}")
+if not upq:
+    report("PASS", "userpromptaudit never erases the prompt - exit 0 and silent on bad payloads")
+else:
+    report("FAIL", "userpromptaudit never erases the prompt - exit 0 and silent on bad payloads")
+    for u in upq:
+        print(f"          {u}")
+
+upwire = []
+prompts = _hj3.get("UserPromptSubmit") or []
+if not any("\" userpromptaudit" in h.get("command", "") for e in prompts for h in e.get("hooks", [])):
+    upwire.append("hooks.json's UserPromptSubmit has no userpromptaudit dispatch")
+scope_entries = [e for e in prompts if any("\" scope" in h.get("command", "") for h in e.get("hooks", []))]
+upa_entries = [e for e in prompts if any("\" userpromptaudit" in h.get("command", "") for h in e.get("hooks", []))]
+if scope_entries and upa_entries and scope_entries[0] is upa_entries[0]:
+    upwire.append("scope and userpromptaudit share one hook entry instead of two separate ones")
+if not upwire:
+    report("PASS", "userpromptaudit is its own UserPromptSubmit entry, separate from scope")
+else:
+    report("FAIL", "userpromptaudit is its own UserPromptSubmit entry, separate from scope")
+    for u in upwire:
+        print(f"          {u}")
+
 # --- the "reported update" rule is present, in its own words -----------------------------------
 # Not a drift check - nothing else in hook.py restates this rule's wording, since it's a
 # verification habit like its two neighbors, not something mechanically checkable at a hook

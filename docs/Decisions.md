@@ -709,3 +709,38 @@ already existed to check which model actually ran; extending it to also state wh
 happened turns "trust the subagent's report" into "check the subagent's report."
 
 **Status.** Standing.
+
+## 2026-09-23 — The audit summary also reaches the parent MODEL, not just the user
+<!-- ref:8313 -->
+
+**Context.** The earlier entry this session (doc-ref c67d) found that neither `SubagentStop`'s
+`additionalContext` nor its `systemMessage` reaches the parent session's model context in the
+same turn - only the interactive UI shows the `systemMessage`. That left `verdict`'s audit
+summary and reconcile instruction visible to the person, but not to the model that is supposed
+to act on "reconcile the subagent's report against this record." Further probing (same method,
+`claude -p` with a planted marker) found two channels that DO reach the parent model: a
+`PostToolUse` hook matched on `Agent|Task` sees a **foreground** subagent's return
+(`tool_response.status: "completed"`) and its `additionalContext` reaches the parent in-turn. A
+**backgrounded** call (`run_in_background: true`) returns immediately with
+`tool_response.status: "async_launched"` - its `PostToolUse` fires before the work exists - and
+its real completion later arrives as a fresh `UserPromptSubmit` turn whose `prompt` field is a
+`<task-notification>` carrying `<task-id>` and `<status>`; `UserPromptSubmit`'s
+`additionalContext` also reaches the model.
+
+**Decision.** Two new handlers, both reusing the audit logic `verdict` already built
+(`_audit_summary`/`_audit_report`, one source): `audit`, its own `PostToolUse` entry matched on
+`Agent|Task`, fires only when `tool_response.status == "completed"` (a foreground return) and
+emits the audit as `additionalContext`. `userpromptaudit`, its own `UserPromptSubmit` entry
+(never inside `scope`), fires only when the prompt is a `<task-notification>` whose `<status>`
+is `completed`, extracts the `<task-id>`, and emits the same audit shape. The two never double-
+report: a foreground return's `PostToolUse` status is `"completed"` and it has no later hand-
+back turn; a backgrounded call's `PostToolUse` status is `"async_launched"` and `audit` stays
+silent for it, so only `userpromptaudit`'s later hand-back turn reports it. `verdict` keeps its
+own audit summary on `systemMessage`, for the person, on the channel already proven to reach them.
+
+**Why.** The reconcile instruction is an instruction to the model doing the reconciling, not to
+the person watching. A channel that only reaches the person satisfies half the design. Reusing
+`_audit_summary`/`_audit_report` rather than re-deriving the audit from each payload shape keeps
+one source for what counts as evidence, across all three delivery points.
+
+**Status.** Standing.
