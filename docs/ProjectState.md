@@ -1,23 +1,31 @@
 # Project state
 
-Where things actually stand against [`Roadmap.md`](Roadmap.md), as of 2026-09-15.
+Where things actually stand against [`Roadmap.md`](Roadmap.md), as of 2026-09-23.
 
 **Headline: ~85%.** Three of four milestones are done against their acceptance criterion; the
 fourth (offshoot plugins) ships and verifies but its actual judgment quality is unmeasured.
 
 | Milestone | Status |
 |---|---|
-| 1. Hook engine | 100% — `verify.py` 203/203 PASS (2026-09-15) |
+| 1. Hook engine | 100% — `verify.py` 336/336 PASS (2026-09-23) |
 | 2. Six-tier docs convention | 100% as a mechanism; this repo's own adoption tracked below |
 | 3. Offshoot plugins | 50% — mechanism verified, classifiers unvalidated |
-| 4. Distribution & install tooling | 100% — `verify_tools.py` 32/32 PASS (2026-09-15) |
+| 4. Distribution & install tooling | 100% — `verify_tools.py` 39/39 PASS (2026-09-23) |
 
 ## 1. Hook engine — built and verified
 
-What's built: all eleven handlers, dispatched statelessly, each with the fail-mode its rule
-requires (`guard` closed, `inject` loud, `scope` unable to fail, the four `PostToolUse` handlers
-never obstructing, `handover`/`announce`/`verdict` open and loud). What's not built: nothing
-against the current rule set — the seven candidate refactors in
+What's built: nineteen handlers, dispatched statelessly, each with the fail-mode its rule
+requires (`guard`/`guardwrite` closed, `inject`/`standards`/`docstiers`/`versioncheck` loud,
+`scope`/`userpromptaudit` unable to erase the prompt, the `PostToolUse` handlers never
+obstructing, `handover`/`announce`/`subagentrules`/`verdict`/`audit` open and loud). The
+2026-09-22 "rules that actually load" plan (`docs/plans/2026-09-22-rules-that-actually-load.md`,
+see its own `## Result`) closed the gap where `inject` emitted 44,506 chars against a proven
+10,000-char per-hook limit ([`claude-house-rules/plugins/house-rules/scripts/hook.py:71`](../claude-house-rules/plugins/house-rules/scripts/hook.py#L71),
+`INJECT_CHAR_LIMIT`), added a `SubagentStart` handler that re-injects a subagent-scoped core of
+the rules (`hook.py:1886`, `_subagent_core`) since `SessionStart`'s own `additionalContext` never
+reaches a spawned subagent, and added a commit-time docs-tier reminder to `guard` itself
+(`hook.py:1174`, `_staged_docs_status`) rather than only once per session. What's not built:
+nothing against the current rule set — the seven candidate refactors in
 [`docs/architecture-backlog.md`](architecture-backlog.md) are real friction (see Cross-cutting,
 below) but none blocks this milestone's own acceptance criterion, which is about behavior, not
 code shape.

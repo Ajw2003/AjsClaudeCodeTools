@@ -91,3 +91,40 @@ Afterwards, as a separate PR: repo-wide `/house-rules:harvest-scan` and archivis
 `python claude-house-rules/plugins/house-rules/scripts/verify.py` and
 `python tools/verify_tools.py` exit 0; `inject` output ≤ the limit; a fresh `claude -p` probe
 confirms the injected core arrives in full (no "Output too large").
+
+## Result
+
+All 8 steps landed, `9e7e780`..`555129c` (11 commits: the size-constant split that started this
+plan, through `scope`'s rebalance), plugin version bumped 2.30.0 → 2.31.0 in the commit that
+closes this plan out. `python
+claude-house-rules/plugins/house-rules/scripts/verify.py` and `python tools/verify_tools.py`
+both exit 0 (336 and 39 checks respectively as of the closing commit).
+
+`python tools/measure_footprint.py --repo`, before this plan (2026-09-22) vs. now:
+
+| | Before | Now |
+|---|---|---|
+| `inject` (SessionStart) | 44,507 chars, combined with `profile` | 8,917 chars, `profile` split into its own hook (1,316 chars) - 10,233 combined, still under the two hooks' separate 9,000/9,500-char margins |
+| `standards` (SessionStart) | 3,765 chars | 3,765 chars (unchanged - this hook was never part of the size problem) |
+| root `CLAUDE.md` | 33,083 bytes | 3,151 bytes - a real pointer, not a second copy of the rules |
+| `scope` short form | 260 chars | 222 chars (step-card line traded for a docs-tier line + an evidence line, doc-ref in `docs/Decisions.md`, 2026-09-23) |
+| `scope` long form | 909 chars | 795 chars |
+
+New per-hook costs this plan added, none of which existed on 2026-09-22:
+
+| Handler | Event | Cost | Notes |
+|---|---|---|---|
+| `subagentrules` | `SubagentStart` | 2,324 chars (~581 tok) | The ONLY `additionalContext` a subagent ever sees - `inject`/`profile`/`standards` never reach it. Own budget, 4,500-char limit. |
+| `announce` | `SubagentStart` | 168 chars (~42 tok) trace | Unchanged from before this plan. |
+| `verdict` | `SubagentStop` | 175 chars (~43 tok) trace (no-transcript case; the audit summary is larger when one is found) | |
+| `audit` | `PostToolUse` (`Agent`\|`Task`) | 126 chars (~31 tok) trace (no-transcript case) | Foreground half of the audit summary - reaches the parent MODEL, not just the user. |
+| `userpromptaudit` | `UserPromptSubmit` | 136 chars (~34 tok) trace (no-transcript case) | Background half - a `run_in_background` call's hand-back turn. |
+
+The headline finding this plan started from - `inject` emitting 44,506 chars against a proven
+10,000-char per-hook limit, and `house-rules.md` doubling since the 2026-09-07 footprint plan -
+is fixed: every `SessionStart` hook now measures well under its margin, verified by `verify.py`
+on the real emitted output, not source file size, on every run.
+
+`docs/ProjectState.md` and `docs/Today.md` updated to describe what this branch built, citing
+`file:line` per the docs-tiers convention (`rules/detail/docs-tiers.md`: "Cite claims to
+`file:line`. It is what makes an audit mechanical instead of a matter of opinion.").
