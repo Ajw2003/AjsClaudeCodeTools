@@ -650,6 +650,76 @@ if shutil.which("git"):
     else:
         report("FAIL", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
         print(f"          out {out[:250]!r}")
+
+    # --- what a commit will ACTUALLY include, not just what is already staged -----------------
+    # doc-ref c79f docs/Decisions.md: guard fires before the command it judges runs, so a
+    # docs-only-staged-right-now check misses an add-then-commit or an -a/-am commit entirely.
+    DOCSGUARD_ADD_THEN_COMMIT_SOURCE = _docs_guard_repo(
+        "docsguard-add-then-commit-source", "claude/topic", {"f.py": "print(1)\n"}, staged=[]
+    )
+    DOCSGUARD_ADD_THEN_COMMIT_WITH_DOCS = _docs_guard_repo(
+        "docsguard-add-then-commit-with-docs", "claude/topic",
+        {"f.py": "print(1)\n", "docs/ProjectState.md": "state\n"}, staged=[],
+    )
+    DOCSGUARD_ADD_DOT_WITH_DOCS = _docs_guard_repo(
+        "docsguard-add-dot-with-docs", "claude/topic",
+        {"f.py": "print(1)\n", "docs/ProjectState.md": "state\n"}, staged=[],
+    )
+
+    def _docs_guard_repo_with_tracked_change(name):
+        # -am needs a file that is TRACKED and modified, not staged - a plain new file (never
+        # committed) is not what -a stages.
+        d = os.path.join(_FIXTURE_ROOT, name)
+        os.makedirs(d)
+        _git(d, "init", "-q")
+        _git(d, "config", "user.email", "t@t.com")
+        _git(d, "config", "user.name", "t")
+        with open(os.path.join(d, "README.md"), "w", encoding="utf-8") as f:
+            f.write("x\n")
+        _git(d, "add", "README.md")
+        _git(d, "commit", "-q", "-m", "init")
+        _git(d, "checkout", "-q", "-b", "claude/topic")
+        with open(os.path.join(d, "tracked.py"), "w", encoding="utf-8") as f:
+            f.write("print(1)\n")
+        _git(d, "add", "tracked.py")
+        _git(d, "commit", "-q", "-m", "add tracked")
+        with open(os.path.join(d, "tracked.py"), "w", encoding="utf-8") as f:
+            f.write("print(2)\n")
+        return d
+
+    DOCSGUARD_AM_SOURCE_ONLY = _docs_guard_repo_with_tracked_change("docsguard-am-source-only")
+
+    effective_cases = [
+        (
+            "git add f.py && git commit -m f",
+            "add-then-commit of a new source file, nothing under docs/, gets the reminder",
+            DOCSGUARD_ADD_THEN_COMMIT_SOURCE, True,
+        ),
+        (
+            "git add f.py docs/ProjectState.md && git commit -m f",
+            "add-then-commit that also adds a docs/ path gets no reminder",
+            DOCSGUARD_ADD_THEN_COMMIT_WITH_DOCS, False,
+        ),
+        (
+            "git add . && git commit -m f",
+            "git add . with an untracked docs/ change present gets no reminder",
+            DOCSGUARD_ADD_DOT_WITH_DOCS, False,
+        ),
+        (
+            "git commit -am f",
+            "-am against a tracked, modified source file with nothing under docs/ gets the reminder",
+            DOCSGUARD_AM_SOURCE_ONLY, True,
+        ),
+    ]
+    for cmd, title, repo, expect_reminder in effective_cases:
+        code, out, err = run_hook("guard", payload_for(cmd), env=env_in(repo))
+        has_reminder = "documentation goes in tiers" in out.lower()
+        if code == 0 and has_reminder == expect_reminder:
+            report("PASS", title)
+            print(f"          {out[:200]}")
+        else:
+            report("FAIL", title)
+            print(f"          exit {code}, expected reminder={expect_reminder}, out {out[:250]!r}")
 else:
     report("SKIP", "guard's commit-time docs-tier reminder (real git fixtures)")
     print("          no git binary on PATH")

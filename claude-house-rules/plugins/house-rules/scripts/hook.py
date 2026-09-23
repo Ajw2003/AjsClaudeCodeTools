@@ -1125,37 +1125,102 @@ _GIT_COMMIT_RE = re.compile(_GIT + r"commit([^0-9A-Za-z-]|$)", re.IGNORECASE)
 DOCS_CHECK_TIMEOUT = 2.0
 
 
-def _staged_docs_status(elsewhere):
-    """('needs-docs'|'clear'|'unknown', detail) for the commit about to run.
+# `git add` split off the same way a compound command is read for other purposes - on &&, ||,
+# ; and newlines - so "git add f.py && git commit -m x" is seen as two statements, not one
+# unmatched blob. Reuses _GIT (git plus any run of global options) the same way _GIT_COMMIT_RE
+# does; "is this an add" and "is this a commit" are two independent questions on two possibly
+# different statements of the same command.
+_GIT_ADD_RE = re.compile(_GIT + r"add([^0-9A-Za-z-]|$)", re.IGNORECASE)
+_STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
+# -a/--all/-am/-ma on the COMMIT statement: git stages every tracked, modified/deleted file at
+# commit time, before the commit itself runs - doc-ref c79f docs/Decisions.md.
+_COMMIT_ALL_RE = re.compile(r"(^|\s)(-a\b|--all\b|-am\b|-ma\b)", re.IGNORECASE)
+_ADD_ALL_RE = re.compile(r"(^|\s)(-A\b|--all\b)|(^|\s)\.(\s|$)", re.IGNORECASE)
+_ADD_UPDATE_RE = re.compile(r"(^|\s)(-u\b|--update\b)", re.IGNORECASE)
+
+
+def _parse_status_porcelain(lines):
+    """[(path, tracked)] from `git status --porcelain -uall` output. Best-effort on a rename
+    line ("R  old -> new"): keeps the new path, which is what a fresh `git add` would stage."""
+    out = []
+    for line in lines:
+        if len(line) < 4:
+            continue
+        code, path = line[:2], line[3:]
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        out.append((path.strip(), code != "??"))
+    return out
+
+
+def _staged_docs_status(subject, elsewhere):
+    """('needs-docs'|'clear'|'unknown', detail) for what this commit will ACTUALLY include -
+    not just what is staged right now, since guard runs before the command it is judging.
 
     'unknown' on anything that could make guard's own decision unreliable: a command naming
-    another repo (elsewhere), no working git, a timeout, undecodable output. The caller's
-    existing decision is never changed by this - only the message it shows may gain a line.
+    another repo (elsewhere), no working git, the shared time budget running out, undecodable
+    output. The caller's existing decision is never changed by this - only the message it
+    shows may gain a line. doc-ref c79f docs/Decisions.md.
     """
     if elsewhere:
         return "unknown", "the command names another repo (-C/--git-dir/--work-tree)"
     root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
-    try:
-        import subprocess
 
+    import subprocess
+    import time as _t
+
+    deadline = _t.time() + DOCS_CHECK_TIMEOUT
+
+    def run_git(args):
+        remaining = deadline - _t.time()
+        if remaining <= 0:
+            raise RuntimeError("the docs check's time budget ran out")
         proc = subprocess.run(
-            ["git", "diff", "--cached", "--name-only"],
-            cwd=root,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=DOCS_CHECK_TIMEOUT,
+            ["git"] + args, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=remaining
         )
-    except Exception as exc:
-        return "unknown", "could not run git diff --cached --name-only (%s)" % type(exc).__name__
-    if proc.returncode != 0:
-        return "unknown", "git diff --cached --name-only exited %d" % proc.returncode
-    try:
-        paths = [p.strip() for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
-    except Exception as exc:
-        return "unknown", "could not decode the staged file list (%s)" % type(exc).__name__
+        if proc.returncode != 0:
+            raise RuntimeError("git %s exited %d" % (" ".join(args), proc.returncode))
+        return [p for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
 
-    has_source = any(_HARVEST_EXT_RE.search(p) for p in paths)
-    has_docs = any(p == "docs" or p.startswith("docs/") for p in paths)
+    try:
+        effective = set(p.strip() for p in run_git(["diff", "--cached", "--name-only"]))
+
+        statements = _STATEMENT_SPLIT_RE.split(subject)
+        commit_stmt = next((s for s in statements if _GIT_COMMIT_RE.search(s)), "")
+        commit_all = bool(_COMMIT_ALL_RE.search(commit_stmt))
+
+        add_all = False
+        add_tracked_only = False
+        literal_paths = []
+        for s in statements:
+            m = _GIT_ADD_RE.search(s)
+            if not m:
+                continue
+            args_part = s[m.end() :]
+            if _ADD_ALL_RE.search(args_part):
+                add_all = True
+            elif _ADD_UPDATE_RE.search(args_part):
+                add_tracked_only = True
+            else:
+                literal_paths.extend(tok for tok in args_part.split() if not tok.startswith("-"))
+
+        status = None  # lazy: only fetched if something below actually needs it
+        if commit_all:
+            effective.update(p.strip() for p in run_git(["diff", "HEAD", "--name-only"]))
+        if add_all or add_tracked_only or literal_paths:
+            status = _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))
+        if add_all:
+            effective.update(p for p, _tracked in status)
+        elif add_tracked_only:
+            effective.update(p for p, tracked in status if tracked)
+        for lp in literal_paths:
+            lp_norm = lp.rstrip("/")
+            effective.update(p for p, _tracked in status if p == lp_norm or p.startswith(lp_norm + "/"))
+    except Exception as exc:
+        return "unknown", "could not resolve what this commit will include (%s)" % exc
+
+    has_source = any(_HARVEST_EXT_RE.search(p) for p in effective)
+    has_docs = any(p == "docs" or p.startswith("docs/") for p in effective)
     if has_source and not has_docs:
         return "needs-docs", None
     return "clear", None
@@ -1292,7 +1357,7 @@ def event_guard():
                 hits[title].append(reason)
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
-    docs_status, docs_detail = _staged_docs_status(elsewhere) if is_commit else (None, None)
+    docs_status, docs_detail = _staged_docs_status(subject, elsewhere) if is_commit else (None, None)
 
     if not any(hits.values()) and not outdated:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided

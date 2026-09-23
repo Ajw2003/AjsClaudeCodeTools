@@ -776,3 +776,32 @@ timeout, whose failure never changes the real decision, keeps `guard`'s fail-clo
 intact everywhere else.
 
 **Status.** Standing.
+
+## 2026-09-23 — The docs-tier commit check reads what WILL be committed, not what already is
+<!-- ref:c79f -->
+
+**Context.** The commit-time docs reminder landed (doc-ref 8713) reading only
+`git diff --cached --name-only` - what is staged at the moment `guard` fires, which runs
+*before* the tool call it is judging. The coordinator reproduced that `git add f.py && git commit
+-m f` on a `claude/` branch, with `f.py` a new source file, got no reminder: the index guard read
+was the one from before the `add` in the same command ran. That is the commit form used most, so
+the check as built almost never fired.
+
+**Decision.** `_staged_docs_status` now computes the effective path set a commit will actually
+include, from the command text itself, still under the same 2-second total time budget and the
+same "never changes guard's own decision" contract: `-a`/`--all`/`-am`/`-ma` on the commit
+statement unions in `git diff HEAD --name-only` (every tracked, modified/deleted path); an
+earlier `git add <paths>` in the same command (split on `&&`, `||`, `;`, newlines, the same way a
+compound command is read elsewhere) adds those literal paths, resolved against
+`git status --porcelain -uall` by prefix match so a directory argument expands to the files under
+it; `git add .`/`-A`/`--all` unions in every path from that same status listing, `-u`/`--update`
+only the tracked ones. Each `git` call shares one deadline computed once, so several calls in
+sequence cannot each get their own fresh 2 seconds.
+
+**Why.** A check that reads the state from before the command it judges runs is answering the
+wrong question - "what is staged right now" instead of "what is this commit about to include."
+Parsing the command text for `add`/`-a` is more code than reading the index once, but the
+alternative (skip `-a` and pre-`add`, cover only an already-staged `git commit` with nothing
+else) covers a minority of how commits are actually written.
+
+**Status.** Standing.
