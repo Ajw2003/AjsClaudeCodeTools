@@ -2648,29 +2648,149 @@ _TOGGLE_OFF = {"off", "0", "false", "no"}
 # Same shape as _COMMAND_FIELD_RE: match the raw JSON slice, escapes included, and search inside
 # it. Backticks are not escaped in JSON, so a fenced block survives verbatim in the payload.
 _LAST_MESSAGE_FIELD_RE = re.compile(r'"last_assistant_message"\s*:\s*"(?:[^"\\]|\\.)*"')
+_LAST_MESSAGE_VALUE_RE = re.compile(r'"last_assistant_message"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
 
 # The three marks a card cannot be missing: the rule that opens and closes it, the step heading,
 # and the expected-output line. A reply carrying all three is already in the shape this check
-# exists to produce, so the check has nothing to add - see _reply_needs_the_handover_check.
+# exists to produce, so the check has nothing to add - see _reply_needs_card_check.
 _CARD_MARKERS = ("---", "###", "You should see:")
+
+# Only a SHELL-labelled fence hands over a command - a fence in another language, or with no
+# label at all, is not the thing this check exists to correct. doc-ref 6534 docs/Decisions.md
+_SHELL_FENCE_LANGS = ("bash", "sh", "zsh", "shell", "console", "powershell", "pwsh", "ps1", "cmd", "bat", "fish")
+_SHELL_FENCE_RE = re.compile(r"```\s*(%s)\b" % "|".join(_SHELL_FENCE_LANGS), re.IGNORECASE)
 
 
 def _reply_is_already_a_card(reply):
     return all(mark in reply for mark in _CARD_MARKERS)
 
 
-def _reply_needs_the_handover_check(payload):
+def _reply_needs_card_check(payload):
     """Three tiers, the same ladder guard uses on its own input.
 
     Why not firing on a compliant reply is the point, and the cost that trades away:
-    docs/architecture.md, "handover is the one deliberate exception".
+    docs/architecture.md, "handover is the one deliberate exception". A reply with no
+    last_assistant_message at all (an older CLI) still needs the check - a version gap must
+    not silently disable it.
     """
     m = _LAST_MESSAGE_FIELD_RE.search(payload)
     if m is None:
         return True
     reply = m.group(0)
-    return "```" in reply and not _reply_is_already_a_card(reply)
+    return bool(_SHELL_FENCE_RE.search(reply)) and not _reply_is_already_a_card(reply)
+
+
+# --- evidence check: independent of the fence gate above ---------------------------------------
+# Word-boundary catches these forms; it naturally MISSES "untested"/"unverified" ("un" + word has
+# no boundary between them, so \btested\b never matches inside "untested") without extra logic.
+_CLAIM_WORD_RE = re.compile(
+    r"\b(works|working|fixed|passes|passing|passed|verified|tested|confirmed|succeeded)\b",
+    re.IGNORECASE,
+)
+# Explicit negation forms word-boundary alone cannot catch: "not tested", "haven't verified".
+_NEGATION_RE = re.compile(
+    r"\b(not|never|no longer|hasn't|haven't|didn't|isn't|wasn't|won't|can't|cannot|couldn't)\b",
+    re.IGNORECASE,
+)
+# A reply that quotes real output does not need the reminder - a fenced block (any language),
+# or a line shaped like real captured output: this repo's own RESULT: PASS/FAIL convention, an
+# exit code, or a test runner's "N passed" summary line. Deliberately NOT the bare word "passed"
+# on its own - that would treat the prose claim "the tests passed" as its own evidence.
+_EVIDENCE_QUOTE_RE = re.compile(
+    r"(?m)```|RESULT:\s*(PASS|FAIL)|\bexit\s+0\b|^\s*\d+\s+passed\b", re.IGNORECASE
+)
+
+
+def _claim_words(text):
+    """Claim words found in text, each checked against the ~25 chars right before it for a
+    negation cue - a window, not a full-sentence parse, same posture as every other regex here."""
+    found = []
+    for m in _CLAIM_WORD_RE.finditer(text or ""):
+        window = text[max(0, m.start() - 25) : m.start()]
+        if _NEGATION_RE.search(window):
+            continue
+        found.append(m.group(1).lower())
+    return found
+
+
+def _is_genuine_user_message(record):
+    """A real human turn - not a tool_result carrier, not Stop hook feedback, not a background
+    task's <task-notification> hand-back, and (when the field is present) not attributed to a
+    non-human origin. "Genuine user message" definition: doc-ref 25b2 docs/Decisions.md
+    """
+    if not isinstance(record, dict) or record.get("type") != "user":
+        return False
+    msg = record.get("message")
+    if not isinstance(msg, dict):
+        return False
+    content = msg.get("content")
+    if isinstance(content, list):
+        if content and all(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
+            return False
+        text = " ".join(
+            b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"
+        )
+    elif isinstance(content, str):
+        text = content
+    else:
+        return False
+    if re.match(r"^\s*Stop hook feedback", text or "", re.IGNORECASE):
+        return False
+    if "<task-notification>" in (text or ""):
+        return False
+    origin = record.get("origin")
+    if isinstance(origin, dict) and origin.get("kind") not in (None, "human"):
+        return False
+    return True
+
+
+def _tool_use_since_last_user_message(transcript_path):
+    """(True/False/None, detail). None means could not tell - an unreadable transcript, or no
+    genuine user message found in it at all."""
+    try:
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            raw_lines = f.readlines()
+    except OSError as exc:
+        return None, "could not read the transcript (%s)" % type(exc).__name__
+
+    records = []
+    for line in raw_lines:
+        line = line.strip()
+        if not line:
+            records.append(None)
+            continue
+        try:
+            records.append(json.loads(line))
+        except Exception:
+            records.append(None)
+
+    last_user_idx = None
+    for i, rec in enumerate(records):
+        if rec is not None and _is_genuine_user_message(rec):
+            last_user_idx = i
+    if last_user_idx is None:
+        return None, "no genuine user message found in the transcript"
+
+    for rec in records[last_user_idx + 1 :]:
+        if not isinstance(rec, dict) or rec.get("type") != "assistant":
+            continue
+        content = (rec.get("message") or {}).get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    return True, None
+    return False, None
+
+
+def _evidence_note(claim_words):
+    words = ", ".join(sorted(set(claim_words)))
+    return (
+        "House rules, evidence before claims: this reply claims success (%s), but no tool ran "
+        "since your last real message and the reply does not quote any command output. Before "
+        "this turn ends, either run the check and quote its real output, or restate the claim "
+        "as untested and say why." % words
+    )
 
 
 def event_handover():
@@ -2705,22 +2825,63 @@ def event_handover():
         # twice for one turn, so this is the one stand-down that stays quiet.
         return 0
 
-    if not _reply_needs_the_handover_check(payload):
-        # The one handler that must NOT trace - direct rule conflict, not a cost argument.
-        # docs/architecture.md, "handover is the one deliberate exception".
+    needs_card = _reply_needs_card_check(payload)
+
+    # The evidence check is independent of the fence gate above - a reply can claim success
+    # with no fence in it at all.
+    needs_evidence = False
+    evidence_words = []
+    could_not_tell = None
+    vm = _LAST_MESSAGE_VALUE_RE.search(payload)
+    if vm is not None:
+        try:
+            reply_text = json.loads('"%s"' % vm.group(1))
+        except ValueError:
+            reply_text = vm.group(1)
+        claims = _claim_words(reply_text)
+        if claims and not _EVIDENCE_QUOTE_RE.search(reply_text):
+            transcript_path = _field(_TRANSCRIPT_RE, payload)
+            if not transcript_path:
+                could_not_tell = "the Stop payload carried no transcript_path"
+            else:
+                has_tool, detail = _tool_use_since_last_user_message(transcript_path)
+                if has_tool is None:
+                    could_not_tell = detail
+                elif has_tool is False:
+                    needs_evidence = True
+                    evidence_words = claims
+
+    if not needs_card and not needs_evidence:
+        if could_not_tell:
+            # Fail open, loud: a claim was made and this could not confirm or deny it, so it
+            # says so rather than silently assuming either answer - but it never blocks, and
+            # it never asserts the claim is wrong.
+            emit(
+                {
+                    "systemMessage": "house-rules: evidence check could not tell whether a "
+                    "tool ran for this reply's claim (%s)." % could_not_tell
+                }
+            )
+        # The one handler that must NOT trace when neither check fires - direct rule conflict,
+        # not a cost argument. docs/architecture.md, "handover is the one deliberate exception".
         return 0
 
     # additionalContext, not decision: "block". Both continue the turn under the same loop
     # protections, but this one is labelled Stop hook feedback rather than raising a hook
-    # error - and this hook is guidance working as designed, not a failure.
-    emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "Stop",
-                "additionalContext": HANDOVER_NOTE,
-            }
-        }
-    )
+    # error - and this hook is guidance working as designed, not a failure. Both checks share
+    # ONE emission when both fire - two emit() calls would be two concatenated JSON objects.
+    parts = []
+    if needs_card:
+        parts.append(HANDOVER_NOTE)
+    if needs_evidence:
+        parts.append(_evidence_note(evidence_words))
+    out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}
+    if could_not_tell:
+        out["systemMessage"] = (
+            "house-rules: evidence check could not tell whether a tool ran for this reply's "
+            "claim (%s)." % could_not_tell
+        )
+    emit(out)
     return 0
 
 

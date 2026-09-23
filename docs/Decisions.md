@@ -805,3 +805,52 @@ alternative (skip `-a` and pre-`add`, cover only an already-staged `git commit` 
 else) covers a minority of how commits are actually written.
 
 **Status.** Standing.
+
+## 2026-09-23 — handover narrows to shell fences, and gains an independent evidence check
+<!-- ref:6534 -->
+<!-- ref:25b2 -->
+
+**Context.** `handover` (`Stop`) fired the step-card checklist on ANY fenced block, including a
+fence with no shell in it at all (a `json` snippet, a diff, an unlabelled example) - noise that
+was never a command handover to begin with. Separately, nothing in the plugin checked whether a
+reply *claiming* success ("fixed", "it works", "tests passed") was backed by anything - a
+confident-sounding reply and a verified one read identically.
+
+**Decision.** Fence gating narrows to a fence whose info-string is a recognized shell (`bash`,
+`sh`, `zsh`, `shell`, `console`, `powershell`, `pwsh`, `ps1`, `cmd`, `bat`, `fish`) - the
+already-card-shaped stand-down is unchanged. A second, independent check: a reply matching a
+claim word (`works`, `working`, `fixed`, `passes`, `passing`, `passed`, `verified`, `tested`,
+`confirmed`, `succeeded`, word-boundary so "untested"/"unverified" never match, plus an explicit
+negation-window check for "not tested"/"haven't verified") fires when there was no `tool_use` in
+the transcript since the last **genuine user message** and the reply quotes no evidence (a fenced
+block of any kind, or a line shaped like real captured output - this repo's own `RESULT: PASS`
+convention, an exit code, or a test runner's "N passed" summary - deliberately not the bare word
+"passed" alone, which would treat the prose claim itself as its own evidence).
+
+**"Genuine user message" definition.** A transcript record with `"type": "user"` whose
+`message.content` is not a list made entirely of `tool_result` blocks (a tool-result-carrying
+turn, not a person writing), whose text does not start with `Stop hook feedback` (case-
+insensitive) and does not contain `<task-notification>` (a background subagent's hand-back,
+`doc-ref 8713`/`c79f docs/Decisions.md`'s siblings), and whose `origin.kind`, when the field is
+present at all, is `"human"` (absent `origin` reads as human too, matching
+`scripts/session_ledger_render.py`'s own `build_turns` - the one other place in this plugin
+already keys on the same field for the same reason).
+
+Both checks share exactly one `additionalContext` emission when both fire (two `emit()` calls
+would be two concatenated JSON objects on stdout, not valid hook output) - though in practice a
+shell fence always satisfies the evidence check's own "quotes evidence" exemption (any fence
+counts, including the handed-over command's own), so the two conditions cannot both be true live
+on the same reply; the shared-emission code path exists for correctness, not because it fires
+today. A transcript that
+cannot be read, or that carries no genuine user message at all, never fires the evidence note -
+it fails open with a `systemMessage` naming what it could not tell, the same "never assert what
+was not confirmed" posture the commit-time docs check (`doc-ref 8713`) already uses.
+`stop_hook_active`, `HOUSE_RULES_HANDOVER=off`, and never `decision: "block"` are all unchanged.
+
+**Why.** A fence check that fires on every fence trains the eye to skip the reminder; narrowing
+it to shell fences keeps it firing exactly where a command really was handed over. The evidence
+check exists because "evidence before claims" (this session's own earlier addition, `doc-ref
+c67d`) was, until now, a rule stated in the subagent core and nowhere enforced in the main
+session's own replies.
+
+**Status.** Standing.

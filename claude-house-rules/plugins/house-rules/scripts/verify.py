@@ -2358,6 +2358,110 @@ hand_case(
 # command in it, it is a check that never got its input, and the two must not look the same.
 hand_case("offline", "an empty payload is a check that could not run, and says so", "")
 
+# --- fence gating narrows to a SHELL-labelled fence, not any fence -----------------------------
+hand_case(
+    "feedback",
+    "a shell-labelled fence (bash) still fires the card check",
+    stop_payload(last_assistant_message="Run this:\n\n```bash\nls -la\n```\n"),
+)
+hand_case(
+    "silent",
+    "a python-labelled fence is not a command handover, so the card check stays quiet",
+    stop_payload(last_assistant_message="```python\nprint('hi')\n```\n"),
+)
+hand_case(
+    "silent",
+    "an unlabelled fence is not a command handover, so the card check stays quiet",
+    stop_payload(last_assistant_message="```\nsome output\n```\n"),
+)
+
+# --- the evidence check: an independent trigger from the fence gate above ----------------------
+_HAND_ROOT = os.path.join(_FIXTURE_ROOT, "handover-transcripts")
+os.makedirs(_HAND_ROOT, exist_ok=True)
+
+
+def _hand_transcript(name, lines):
+    path = os.path.join(_HAND_ROOT, "%s.jsonl" % name)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return path
+
+
+_HAND_NO_TOOL = _hand_transcript("no-tool", [
+    json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "please fix the bug"}}),
+    json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Looking into it."}]}}),
+])
+_HAND_WITH_TOOL = _hand_transcript("with-tool", [
+    json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "please fix the bug"}}),
+    json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": "pytest -q"}}]}}),
+    json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": "5 passed"}]}}),
+])
+
+hand_case(
+    "feedback",
+    "a success claim with no tool run since the last real message gets the evidence reminder",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="Fixed the bug, it works now.",
+    ),
+)
+hand_case(
+    "silent",
+    "a success claim backed by a tool call since the last real message stays quiet",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="Fixed the bug, it works now.",
+    ),
+)
+hand_case(
+    "silent",
+    "a success claim that quotes real RESULT: output stays quiet, even with no tool this turn",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="It works now.\n\nRESULT: PASS",
+    ),
+)
+hand_case(
+    "silent",
+    "an explicit UNTESTED claim never matches a success word to begin with",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="This is untested; I have not run it.",
+    ),
+)
+hand_case(
+    "silent",
+    "a reply naming no claim word at all is untouched by the evidence check",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="I opened the pull request; nothing for you to run.",
+    ),
+)
+hand_case(
+    "trace",
+    "a success claim whose transcript cannot be read fails open with a systemMessage, never a block",
+    stop_payload(
+        transcript_path=os.path.join(_HAND_ROOT, "does-not-exist.jsonl"),
+        last_assistant_message="Fixed the bug, it works now.",
+    ),
+)
+
+# A shell fence always satisfies the evidence check's own "quotes evidence" exemption, so the
+# two checks can never both fire live on one reply - see doc-ref 6534 docs/Decisions.md.
+code, out, err = run_hook(
+    "handover",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="Fixed the bug, it works now:\n\n```bash\ndeploy.sh\n```\n",
+    ),
+)
+if '"hookEventName":"Stop"' in out and '"additionalContext"' in out and out.count('"hookSpecificOutput"') == 1:
+    report("PASS", "a reply with both a shell fence and a claim still emits exactly one valid JSON object")
+    print("          the fence's own evidence-quote exemption means only the card note fires here")
+else:
+    report("FAIL", "a reply with both a shell fence and a claim still emits exactly one valid JSON object")
+    print(f"          out {out[:200]!r}")
+
 # --- the check gives guidance, not a hook error ----------------------------------------------
 code, out, err = run_hook(
     "handover", stop_payload(last_assistant_message="```powershell\nGet-ChildItem\n```")
