@@ -854,3 +854,27 @@ c67d`) was, until now, a rule stated in the subagent core and nowhere enforced i
 session's own replies.
 
 **Status.** Standing.
+
+## 2026-09-23 — scope trades its step-card line for a docs-tier line and an evidence line
+
+**Context.** `scope`'s periodic per-prompt reminder (both its short and long forms) restated the
+step-card handover format on every command-shaped prompt. That enforcement now has a live check
+at the point it actually matters - `handover` (`Stop`) fires its own card check on a shell-fenced
+reply and, independently, an evidence check on an unbacked success claim - so restating it in
+`scope` too was paying for the same rule twice, while two rules with no enforcement point at all
+(the docs tiers, and evidence before claims) had no per-prompt reminder.
+
+**Decision.** Replaced the step-card line in both `SCOPE_REMINDER` (long form) and
+`SCOPE_REMINDER_SHORT` with a docs-tier line ("update the docs tier that changed... or say why
+none did") and an evidence line ("no success claim without a run you can quote"), pinned to the
+same wording the rules corpus already uses (`tier that changed`, `success claim`) so drift
+between the reminder and the rules document is still caught. Both forms shrank rather than grew
+(long: 909 → 795 chars; short: 260 → 222), well inside the +10%-of-baseline budget `verify.py`
+now checks explicitly. The executor-delegation clause `scope` adds on a go-ahead-shaped prompt is
+unchanged.
+
+**Why.** A reminder that keeps restating a rule with its own live enforcement is paying twice for
+one thing; the two rules that had no enforcement point at all are the ones worth the recurring
+nudge.
+
+**Status.** Standing.

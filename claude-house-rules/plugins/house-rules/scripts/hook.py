@@ -939,16 +939,15 @@ SCOPE_REMINDER = (
     "directory.\n"
     "- Never hand over a command you have not run where the user will run it. Running "
     "something similar is not running it.\n"
-    "- Hand every command over in the step-card format: --- delimiters, ### Step N of M, "
-    "the absolute folder and the shell named in prose and correct as the fence label, one "
-    "fenced block per step, then You should see:. If you did not run it, UNTESTED: is the "
-    "first line of the step, above the fence."
+    "- Update the docs tier that changed before this turn ends - state usually - or say why "
+    "none did.\n"
+    "- No success claim without a run you can quote: evidence before claims, every time."
 )
 
 SCOPE_REMINDER_SHORT = (
-    "House rules reminder: hand steps over in the step-card format (--- delimiters, ### Step "
-    "N of M, one fenced block per step, You should see:). Never hand over a command you have "
-    "not run. Build only what was asked - where it is ambiguous, ask instead of assuming."
+    "House rules reminder: update the docs tier that changed; no success claim without a run "
+    "you can quote. Never hand over a command you have not run. Build only what was asked - "
+    "where it is ambiguous, ask instead of assuming."
 )
 
 # The delegation clause. delegate only fires on ExitPlanMode, so an auto or accept-edits

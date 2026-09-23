@@ -1015,8 +1015,10 @@ def check_scope(title, payload, expect, empty_path=False):
     elif expect == "short":
         if "response depth" in out or "machine you are on" in out:
             bad.append("expected the short form, but the long form's content is present")
-        if "step-card format" not in out:
-            bad.append("short form missing the step-card-format line")
+        if "docs tier that changed" not in out:
+            bad.append("short form missing the docs-tier line")
+        if "run you can quote" not in out:
+            bad.append("short form missing the evidence line")
     if not bad:
         report("PASS", title)
         print(f"          {len(out)} characters of reminder injected ({expect} form)")
@@ -1047,6 +1049,26 @@ check_scope(
     "short",
     empty_path=True,
 )
+
+# --- both scope forms stay within +10% of their 2026-09-23 baseline size --------------------
+# Baselines recorded the day the step-card line was swapped for a docs-tier line and an
+# evidence line (docs/Decisions.md): long form was 909 chars, short form 260. +10% margin, not
+# a floor - shrinking is fine, growing past it is the thing this catches.
+_SCOPE_SIZE_BASELINES = {"long": (909, 1.10), "short": (260, 1.10)}
+for form, payload_prompt in (("long", "run the build script"), ("short", "what does this function do?")):
+    _, out, _ = run_hook("scope", scope_payload(payload_prompt))
+    try:
+        actual = len(json.loads(out)["hookSpecificOutput"]["additionalContext"])
+    except Exception as exc:
+        actual = -1
+    base, margin = _SCOPE_SIZE_BASELINES[form]
+    cap = int(base * margin)
+    if 0 <= actual <= cap:
+        report("PASS", f"scope's {form} form stays within +10% of its baseline size")
+        print(f"          {actual} chars <= {cap} (baseline {base})")
+    else:
+        report("FAIL", f"scope's {form} form stays within +10% of its baseline size")
+        print(f"          {actual} chars > {cap} (baseline {base}) or output unparseable")
 
 # --- the artifact reminder fires on documents written outside a project ---------------------
 def art_case(expect, title, file_path, extra="", contains=None, excludes=None):
@@ -1177,8 +1199,8 @@ for phrase in [
     "ask instead of assuming",
     "project directory",
     "hand over a command",
-    "step-card format",
-    "You should see:",
+    "tier that changed",
+    "success claim",
 ]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
@@ -1194,15 +1216,14 @@ for phrase in [
     "whole workflow",
     "project directory",
     "have not run",
-    "step-card format",
-    "You should see:",
-    "UNTESTED:",
+    "tier that changed",
+    "success claim",
 ]:
     if phrase.lower() not in long_reminder.lower():
         gutted.append(phrase)
 if not gutted:
     report("PASS", "the trimmed long-form reminder still carries every operative rule")
-    print(f"          {len(long_reminder)} chars, all 8 operative phrases present")
+    print(f"          {len(long_reminder)} chars, all 7 operative phrases present")
 else:
     report("FAIL", "the trimmed long-form reminder still carries every operative rule")
     print(f"          trimmed away: {'; '.join(gutted)}")
