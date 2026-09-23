@@ -73,8 +73,10 @@ Report back: which blocks moved and where each landed, which you deliberately ke
 block you could not place with the reason, and — for a batch — confirmation that the staging file
 was deleted, or exactly what is still in it and why.
 
-The house rules are NOT injected into this subagent's context — `SessionStart`
-`additionalContext` does not reach subagents. Follow this digest instead:
+The house rules are NOT injected into this subagent's context by `SessionStart` — that
+`additionalContext` does not reach subagents. A `SubagentStart` hook (`subagentrules`) separately
+re-injects a subagent core at spawn time, so this digest is belt-and-braces, not the only copy.
+Follow this digest instead:
 
 - Long-form reasoning belongs in a document, not a comment; the site keeps a one-line
   pointer, `doc-ref <id> <path>`, backed by a `<!-- ref:<id> -->` marker under the note's

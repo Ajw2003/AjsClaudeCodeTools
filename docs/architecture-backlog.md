@@ -217,8 +217,9 @@ open the script when something fails. A filter changes the numbering, which may 
 *the card*, *the six*, *restatement*, *drift check*, *surface*, *handler*, *fail closed / open /
 loud*, *marker*, *the gate*, *the three-tier ladder*, *machine profile*, *the shim*. There is no
 `CONTEXT.md` and no `docs/adr/`. `CLAUDE.md` is the hottest file in the repo (22 touches) partly
-because it is the only place any of this lives — and it is auto-loaded every session and re-paid on
-every subagent spawn, which its own header says it is trying to avoid.
+because it is the only place any of this lives — and it is auto-loaded every session, though not
+re-paid on subagent spawn (that earlier claim was wrong; corrected 2026-09-22, see
+docs/Decisions.md), which its own header says it is trying to avoid.
 
 **Evidence.** Settled reversals are re-argued in comments at three sites each:
 

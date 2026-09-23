@@ -27,8 +27,12 @@ Each event handler mirrors the failure-mode contract its shell predecessor had:
                  through unchecked just because an internal error occurred.
   - inject       (SessionStart) fails LOUD, not closed: prints a systemMessage, exits 0.
   - scope        (UserPromptSubmit) cannot fail: never reads a file, never raises.
-  - artifact, runnable, delegate, harvest (PostToolUse) never obstruct, but never go quiet:
-                 any failure emits a systemMessage and exits 0.
+  - artifact, runnable, delegate, harvest, audit (PostToolUse) never obstruct, but never go
+                 quiet: any failure emits a systemMessage and exits 0.
+  - announce, subagentrules (SubagentStart), verdict (SubagentStop) never obstruct a
+                 delegation: any failure emits a systemMessage and exits 0.
+  - userpromptaudit (UserPromptSubmit) can never erase the user's prompt: any failure
+                 emits a systemMessage (never additionalContext) and exits 0.
   - handover     (Stop) fails OPEN, loud: any failure prints a systemMessage and exits 0,
                  because a non-zero exit here would stop the turn from ending at all.
 
@@ -60,6 +64,28 @@ def emit(obj):
 
 
 _TRACE_OFF = {"off", "0", "false", "no"}
+
+# Claude Code's per-hook additionalContext limit is 10,000 chars (docs/Decisions.md, 2026-09-22).
+# The machine profile lives in its own SessionStart entry (profile), not appended to inject's
+# text, because the limit is per hook and a recorded environment.md can be large on its own.
+INJECT_CHAR_LIMIT = 10_000
+# The soft budget profile truncates itself against, well under the hard limit above so the
+# truncation notice it appends never itself pushes the total back over 10,000.
+PROFILE_SOFT_LIMIT = 9_500
+
+
+def _truncate_with_notice(text, limit, label):
+    """Cut text to fit limit, appending a notice that names what was cut and why - truncation
+    that happens without saying so is exactly what "nothing fails silently" forbids."""
+    if len(text) <= limit:
+        return text
+    notice = (
+        "\n\n[house-rules profile: %s is %d chars and was truncated to stay under the "
+        "SessionStart context limit - %d chars shown here. Read %s directly for the rest.]\n"
+        % (label, len(text), limit, label)
+    )
+    room = max(0, limit - len(notice))
+    return text[:room] + notice
 
 
 def trace_enabled():
@@ -175,12 +201,23 @@ def _apply_voice_toggle(body):
     return body[:start] + (body[nxt + 1 :] if nxt != -1 else "")
 
 
+def _plugin_root():
+    return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
+
+def _expand_detail_paths(text):
+    """Write every plugin path as <plugin>/... and state the absolute plugin root once, so the
+    injected size does not grow with the install path's length or the number of pointers."""
+    root = _plugin_root()
+    if "${CLAUDE_PLUGIN_ROOT}" not in text:
+        return text
+    text = text.replace("${CLAUDE_PLUGIN_ROOT}", "<plugin>")
+    return "<plugin> in the paths below is the plugin root: %s\n\n%s" % (root, text)
+
+
 def event_inject():
     here = os.path.dirname(os.path.abspath(__file__))
     rules_path = os.path.join(here, "..", "rules", "house-rules.md")
-    envfile = os.environ.get("HOUSE_RULES_ENV_FILE") or os.path.join(
-        here, "..", "rules", "environment.md"
-    )
 
     try:
         body = _read_text(rules_path)
@@ -195,6 +232,13 @@ def event_inject():
 
     body = body.replace("\r\n", "\n")
     body = _apply_voice_toggle(body)
+    # The <!-- subagent --> markers are a build-time signal for _subagent_core() (which
+    # sections of this same file to re-inject at a subagent's own SubagentStart), not
+    # something the main session needs to read - stripping them here keeps this file the
+    # single source for both without paying for the markers twice.
+    body = "\n".join(
+        line for line in body.split("\n") if line.strip() != SUBAGENT_SECTION_MARKER
+    )
     if not body.strip():
         emit(
             {
@@ -203,6 +247,48 @@ def event_inject():
             }
         )
         return 0
+
+    # The rules text names its detail files as ${CLAUDE_PLUGIN_ROOT}/rules/detail/<file>.md -
+    # that variable is expanded by the harness in hooks.json's own command strings, but this
+    # text is going into additionalContext, which nothing expands. The root is stated once
+    # rather than substituted into every pointer: 26 copies of a long install path pushed this
+    # past its size margin on a CI runner whose checkout path was merely 26 chars longer.
+    body = _expand_detail_paths(body)
+
+    preamble = (
+        "The following are the user standing house rules. They apply to every project and "
+        "override default behaviour. A PreToolUse hook also prompts for destructive "
+        "commands, backgrounded/hidden processes, and mutating git commands - except a "
+        "plain commit or push on a `claude/` branch. That hook is a backstop, not "
+        "permission to skip asking first. Machine profile: injected separately.\n\n"
+    )
+
+    emit(
+        {
+            "suppressOutput": True,
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": preamble + body,
+            },
+        }
+    )
+    return 0
+
+
+# ---------------------------------------------------------------------------------------
+# profile — a third SessionStart handler, split out of inject in 2.17.1 (docs/Decisions.md,
+# 2026-09-22): the per-hook additionalContext limit is 10,000 chars, and a recorded
+# rules/environment.md can by itself be large enough that appending it to inject's own text
+# risked pushing inject over the limit. Registered with no matcher gate of its own (SessionStart
+# only), right after inject in hooks.json, so a failure here can never take inject down with it.
+# ---------------------------------------------------------------------------------------
+
+
+def event_profile():
+    here = os.path.dirname(os.path.abspath(__file__))
+    envfile = os.environ.get("HOUSE_RULES_ENV_FILE") or os.path.join(
+        here, "..", "rules", "environment.md"
+    )
 
     try:
         envbody = _read_text(envfile).replace("\r\n", "\n")
@@ -219,17 +305,9 @@ def event_inject():
         )
 
     preamble = (
-        "The following are the user standing house rules. They apply to every project and "
-        "override default behaviour. They are also enforced by a PreToolUse hook that will "
-        "put a permission prompt in front of the user for destructive commands, "
-        "backgrounded or hidden processes, and mutating git commands - except a plain "
-        "commit or push on a `claude/` branch, which the commit rule already allows and "
-        "the hook stands down for. That hook is a backstop, not permission to skip "
-        "asking in chat first.\n\n"
-    )
-    separator = (
-        "\n\n---\n\nThe machine these rules run on, as recorded. The first rule says to "
-        "build for what is written here rather than what seems likely:\n\n"
+        "The machine profile, as recorded (rules/house-rules.md is injected separately by "
+        "the inject hook). The first rule says to build for what is written here rather "
+        "than what seems likely:\n\n"
     )
 
     preflight = _preflight_warnings()
@@ -263,12 +341,20 @@ def event_inject():
                 "does not have to ask again.\n"
             )
 
+    # Truncate only the environment body if it runs the whole thing over budget - preflight
+    # warnings and the remote handover-target block are never the part that gets cut, since
+    # either one going missing silently would hide something actionable, not just verbose.
+    fixed_len = len(preamble) + len(preflight) + len(handover_block)
+    env_budget = max(0, PROFILE_SOFT_LIMIT - fixed_len)
+    trimmed_envbody = _truncate_with_notice(envbody, env_budget, envfile)
+    full = preamble + trimmed_envbody + preflight + handover_block
+
     emit(
         {
             "suppressOutput": True,
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
-                "additionalContext": preamble + body + separator + envbody + preflight + handover_block,
+                "additionalContext": full,
             },
         }
     )
@@ -498,7 +584,118 @@ def event_standards():
 
 
 # ---------------------------------------------------------------------------------------
-# versioncheck — a third SessionStart handler. Why three version copies, and why guard holds a
+# docstiers — a fourth SessionStart handler, its own entry so a failure here can never affect
+# inject/profile/standards. Tier names are read out of
+# skills/project-docs/SKILL.md by a human (this list), never invented at runtime; verify.py's
+# drift check keeps the two from disagreeing. Full rationale: docs/Decisions.md, 2026-09-22, and
+# rules/detail/docs-tiers.md.
+# ---------------------------------------------------------------------------------------
+
+DOCS_TIER_FILES = [
+    "docs/README.md",
+    "docs/Roadmap.md",
+    "docs/ProjectState.md",
+    "docs/Today.md",
+    "docs/Decisions.md",
+]
+DOCS_TIER4_DIR = "docs/systems"
+DEFAULT_GITHUB_OWNER = "Ajw2003"
+
+
+def _tier4_present(root):
+    d = os.path.join(root, *DOCS_TIER4_DIR.split("/"))
+    if not os.path.isdir(d):
+        return False
+    return any(name.lower().endswith(".md") for name in os.listdir(d))
+
+
+def _repo_owner_from_config(git_dir):
+    """Read the GitHub owner out of .git/config's remote URL(s), no subprocess.
+
+    Returns (owner_or_None, note). note is set whenever owner is None, explaining why - an
+    absent/unreadable/garbage config and "no owner found" all read the same to the caller
+    (not owned), but the reason differs and gets stated in the emitted text either way.
+    """
+    config_path = os.path.join(git_dir, "config")
+    try:
+        text = _read_text(config_path)
+    except OSError as exc:
+        return None, "could not read .git/config (%s)" % exc
+
+    urls = re.findall(r"(?m)^\s*url\s*=\s*(\S+)", text)
+    if not urls:
+        return None, ".git/config has no remote url"
+
+    for url in urls:
+        m = re.match(r"^https?://[^/]+/([^/]+)/", url)
+        if not m:
+            m = re.match(r"^(?:ssh://)?[^@/]+@[^:/]+[:/]([^/]+)/", url)
+        if m:
+            return m.group(1), None
+    return None, "no remote url matched a recognizable owner/repo form (%s)" % urls[0]
+
+
+def event_docstiers():
+    try:
+        root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        missing = [f for f in DOCS_TIER_FILES if not os.path.isfile(os.path.join(root, *f.split("/")))]
+        if not _tier4_present(root):
+            missing.insert(3, "docs/systems/*.md (at least one system document)")
+
+        if not missing:
+            # All six tiers present - the one other deliberate silent exception besides
+            # handover. This runs every session; a trace here costs something on every one of
+            # them for a fact that is true almost always.
+            return 0
+
+        git_dir = _git_dir(root)
+        configured_owner = os.environ.get("HOUSE_RULES_GITHUB_OWNER", "").strip() or DEFAULT_GITHUB_OWNER
+        if git_dir is None:
+            ownership_note = "This is not a git repository, so no ownership check applies."
+        else:
+            owner, note = _repo_owner_from_config(git_dir)
+            if owner is not None and owner.strip().lower() == configured_owner.lower():
+                ownership_note = (
+                    "This repo's remote is owned by %s (the configured owner), so no "
+                    ".git/info/exclude step is needed." % configured_owner
+                )
+            else:
+                reason = note or ("the remote owner is %r, not %r" % (owner, configured_owner))
+                ownership_note = (
+                    "This repo is not owned by the configured account (%s) - %s. Also add "
+                    "every scaffolded path to .git/info/exclude, so the new docs never leave "
+                    "this machine and never enter this repo's history."
+                    % (configured_owner, reason)
+                )
+
+        text = (
+            "House rules, documentation goes in tiers: this project is missing %d of the six "
+            "documentation tiers - %s. Load house-rules:project-docs and scaffold the missing "
+            "tiers before any other work, in every repo. %s"
+            % (len(missing), ", ".join(missing), ownership_note)
+        )
+        emit(
+            {
+                "suppressOutput": True,
+                "hookSpecificOutput": {
+                    "hookEventName": "SessionStart",
+                    "additionalContext": text,
+                },
+            }
+        )
+        return 0
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the docs-tier check hit an internal "
+                "error (%s: %s) and did not run for this session." % (type(exc).__name__, exc)
+            }
+        )
+        return 0
+
+
+# ---------------------------------------------------------------------------------------
+# versioncheck — a fifth SessionStart handler. Why three version copies, and why guard holds a
 # marker for this: docs/architecture.md, "versioncheck checks three copies of the version".
 # ---------------------------------------------------------------------------------------
 
@@ -753,16 +950,15 @@ SCOPE_REMINDER = (
     "directory.\n"
     "- Never hand over a command you have not run where the user will run it. Running "
     "something similar is not running it.\n"
-    "- Hand every command over in the step-card format: --- delimiters, ### Step N of M, "
-    "the absolute folder and the shell named in prose and correct as the fence label, one "
-    "fenced block per step, then You should see:. If you did not run it, UNTESTED: is the "
-    "first line of the step, above the fence."
+    "- Update the docs tier that changed before this turn ends - state usually - or say why "
+    "none did.\n"
+    "- No success claim without a run you can quote: evidence before claims, every time."
 )
 
 SCOPE_REMINDER_SHORT = (
-    "House rules reminder: hand steps over in the step-card format (--- delimiters, ### Step "
-    "N of M, one fenced block per step, You should see:). Never hand over a command you have "
-    "not run. Build only what was asked - where it is ambiguous, ask instead of assuming."
+    "House rules reminder: update the docs tier that changed; no success claim without a run "
+    "you can quote. Never hand over a command you have not run. Build only what was asked - "
+    "where it is ambiguous, ask instead of assuming."
 )
 
 # The delegation clause. delegate only fires on ExitPlanMode, so an auto or accept-edits
@@ -928,6 +1124,156 @@ GUARD_BUCKETS = [
     ("Never take a destructive action without checking first", GUARD_R4),
 ]
 
+# Reuses GUARD_R3's own commit pattern rather than a second copy - "is this a commit" and "is
+# this exempt from asking" are different questions, and the docs check needs the first one
+# independent of the second (a commit on my own branch is exempt from asking but still needs
+# the docs reminder).
+_GIT_COMMIT_RE = re.compile(_GIT + r"commit([^0-9A-Za-z-]|$)", re.IGNORECASE)
+
+# git diff --cached is the ONE deliberate, narrowly-scoped exception to "no subprocess in
+# guard" - branch_ownership() stays subprocess-free. doc-ref 8713 docs/Decisions.md.
+DOCS_CHECK_TIMEOUT = 2.0
+
+
+# `git add` split off the same way a compound command is read for other purposes - on &&, ||,
+# ; and newlines - so "git add f.py && git commit -m x" is seen as two statements, not one
+# unmatched blob. Reuses _GIT (git plus any run of global options) the same way _GIT_COMMIT_RE
+# does; "is this an add" and "is this a commit" are two independent questions on two possibly
+# different statements of the same command.
+_GIT_ADD_RE = re.compile(_GIT + r"add([^0-9A-Za-z-]|$)", re.IGNORECASE)
+_STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
+# -a/--all/-am/-ma on the COMMIT statement: git stages every tracked, modified/deleted file at
+# commit time, before the commit itself runs - doc-ref c79f docs/Decisions.md.
+_COMMIT_ALL_RE = re.compile(r"(^|\s)(-a\b|--all\b|-am\b|-ma\b)", re.IGNORECASE)
+_ADD_ALL_RE = re.compile(r"(^|\s)(-A\b|--all\b)|(^|\s)\.(\s|$)", re.IGNORECASE)
+_ADD_UPDATE_RE = re.compile(r"(^|\s)(-u\b|--update\b)", re.IGNORECASE)
+
+
+def _unquote_git_path(path):
+    """git quotes a path in porcelain output (surrounding double quotes, C-style backslash
+    escapes) whenever it contains a space or other "unusual" byte - core.quotePath's default.
+    A plain path is returned unchanged. A quoted path that fails to parse is a recovered case,
+    not a silent bail: the still-quoted string is kept and used as-is (it simply will not
+    prefix-match a literal `git add` argument), same posture as a decode that falls back
+    rather than giving up."""
+    unquoted = path
+    if len(path) >= 2 and path[0] == '"' and path[-1] == '"':
+        try:
+            unquoted = json.loads(path)
+        except ValueError as exc:
+            sys.stderr.write(
+                "house-rules: could not unquote git status path %r (%s); using it as-is.\n"
+                % (path, exc)
+            )
+    return unquoted
+
+
+def _parse_status_porcelain(lines):
+    """[(path, tracked)] from `git status --porcelain -uall` output. Best-effort on a rename
+    line ("R  old -> new"): keeps the new path, which is what a fresh `git add` would stage."""
+    out = []
+    for line in lines:
+        if len(line) < 4:
+            continue
+        code, path = line[:2], line[3:]
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        out.append((_unquote_git_path(path.strip()), code != "??"))
+    return out
+
+
+def _staged_docs_status(subject, elsewhere):
+    """('needs-docs'|'clear'|'unknown', detail) for what this commit will ACTUALLY include -
+    not just what is staged right now, since guard runs before the command it is judging.
+
+    'unknown' on anything that could make guard's own decision unreliable: a command naming
+    another repo (elsewhere), no working git, the shared time budget running out, undecodable
+    output. The caller's existing decision is never changed by this - only the message it
+    shows may gain a line. doc-ref c79f docs/Decisions.md.
+    """
+    if elsewhere:
+        return "unknown", "the command names another repo (-C/--git-dir/--work-tree)"
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+
+    import shlex
+    import subprocess
+    import time as _t
+
+    # subject is the raw, still-JSON-escaped "command":"..." field slice - fine for every
+    # regex below (none of them need real quote characters), but wrong for shlex, which has
+    # to see the actual command text to tokenize a quoted path like "my file.py" correctly.
+    decoded = _field(_COMMAND_VALUE_RE, subject) or subject
+
+    deadline = _t.time() + DOCS_CHECK_TIMEOUT
+
+    def run_git(args):
+        remaining = deadline - _t.time()
+        if remaining <= 0:
+            raise RuntimeError("the docs check's time budget ran out")
+        proc = subprocess.run(
+            ["git"] + args, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=remaining
+        )
+        if proc.returncode != 0:
+            raise RuntimeError("git %s exited %d" % (" ".join(args), proc.returncode))
+        return [p for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
+
+    try:
+        effective = set(p.strip() for p in run_git(["diff", "--cached", "--name-only"]))
+
+        statements = _STATEMENT_SPLIT_RE.split(decoded)
+        commit_stmt = next((s for s in statements if _GIT_COMMIT_RE.search(s)), "")
+        commit_all = bool(_COMMIT_ALL_RE.search(commit_stmt))
+
+        add_all = False
+        add_tracked_only = False
+        literal_paths = []
+        for s in statements:
+            m = _GIT_ADD_RE.search(s)
+            if not m:
+                continue
+            args_part = s[m.end() :]
+            if _ADD_ALL_RE.search(args_part):
+                add_all = True
+            elif _ADD_UPDATE_RE.search(args_part):
+                add_tracked_only = True
+            else:
+                # shlex, not .split(): a quoted path with a space ("my file.py") is one
+                # argument, not two. posix=True so quotes/backslashes resolve the way a real
+                # shell would read them. Unbalanced quotes raise ValueError, which the outer
+                # try/except below turns into "unknown" - never a guess at what was meant.
+                literal_paths.extend(
+                    tok for tok in shlex.split(args_part, posix=True) if not tok.startswith("-")
+                )
+
+        status = None  # lazy: only fetched if something below actually needs it
+        if commit_all:
+            effective.update(p.strip() for p in run_git(["diff", "HEAD", "--name-only"]))
+        if add_all or add_tracked_only or literal_paths:
+            status = _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))
+        if add_all:
+            effective.update(p for p, _tracked in status)
+        elif add_tracked_only:
+            effective.update(p for p, tracked in status if tracked)
+        for lp in literal_paths:
+            lp_norm = lp.rstrip("/")
+            effective.update(p for p, _tracked in status if p == lp_norm or p.startswith(lp_norm + "/"))
+    except Exception as exc:
+        return "unknown", "could not resolve what this commit will include (%s)" % exc
+
+    has_source = any(_HARVEST_EXT_RE.search(p) for p in effective)
+    has_docs = any(p == "docs" or p.startswith("docs/") for p in effective)
+    if has_source and not has_docs:
+        return "needs-docs", None
+    return "clear", None
+
+
+DOCS_COMMIT_REMINDER = (
+    "House rules, documentation goes in tiers: this commit stages a source file with nothing "
+    "staged under docs/. Before committing, update the tier that changed - usually "
+    "docs/ProjectState.md, for what's built and where it stands - or say in the commit "
+    "message why none needed updating."
+)
+
 OWNED_BRANCH_PREFIX = "claude/"
 
 # A command that names its own repo, git dir or work tree is not talking about the checkout
@@ -1051,17 +1397,42 @@ def event_guard():
             else:
                 hits[title].append(reason)
 
+    is_commit = bool(_GIT_COMMIT_RE.search(subject))
+    docs_status, docs_detail = _staged_docs_status(subject, elsewhere) if is_commit else (None, None)
+
     if not any(hits.values()) and not outdated:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
         # not to fire" from "never ran" - and it is the security-shaped backstop, so that is
-        # the worst place to leave the ambiguity.
+        # the worst place to leave the ambiguity. Exactly one emit() call either way - two
+        # would be two concatenated JSON objects on stdout, which is not valid hook output.
         if exempted:
-            trace(
+            allow_trace = (
                 "guard: checked %s - %s on `%s`, which is mine to commit on."
                 % (_trace_subject(subject), " and ".join(exempted), branch)
             )
         else:
-            trace("guard: checked %s - no house rule matched." % _trace_subject(subject))
+            allow_trace = "guard: checked %s - no house rule matched." % _trace_subject(subject)
+
+        if docs_status == "needs-docs":
+            # Still an allow - the commit rule already lets this through - but Claude gets a
+            # reminder in-context. PreToolUse's additionalContext reaches the model on an
+            # "allow" decision (probed live, doc-ref 8713 docs/Decisions.md), the channel
+            # guard did not otherwise use before this.
+            out = {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "allow",
+                    "additionalContext": DOCS_COMMIT_REMINDER,
+                }
+            }
+            if trace_enabled():
+                out["systemMessage"] = allow_trace
+            emit(out)
+            return 0
+        if docs_status == "unknown":
+            trace("%s - docs check could not tell: %s." % (allow_trace, docs_detail))
+        else:
+            trace(allow_trace)
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
@@ -1095,6 +1466,19 @@ def event_guard():
         if why_not_exempt:
             lines.append("")
             lines.append(why_not_exempt)
+
+    if docs_status == "needs-docs":
+        lines.append("")
+        lines.append("  Rule: Documentation goes in tiers, and I update the tier that changed")
+        lines.append(
+            "    - this commit stages a source file with nothing staged under docs/ - "
+            "update the tier that changed, or say why none did"
+        )
+    elif docs_status == "unknown":
+        lines.append("")
+        lines.append(
+            "  Could not tell whether docs need updating for this commit: %s." % docs_detail
+        )
 
     lines.append("")
     lines.append(
@@ -1472,6 +1856,18 @@ _SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _TRANSCRIPT_RE = re.compile(r'"transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _AGENT_TRANSCRIPT_RE = re.compile(r'"agent_transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
+# Agent/Task's PostToolUse tool_response uses its own camelCase names - doc-ref 8313 docs/Decisions.md.
+_RESPONSE_STATUS_RE = re.compile(r'"status"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_RESPONSE_AGENT_ID_RE = re.compile(r'"agentId"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_RESPONSE_AGENT_TYPE_RE = re.compile(r'"agentType"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_TOOL_INPUT_SUBAGENT_TYPE_RE = re.compile(r'"subagent_type"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+# A backgrounded call's hand-back prompt shape, probed live - doc-ref 8313 docs/Decisions.md.
+_PROMPT_VALUE_RE = re.compile(r'"prompt"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_TASK_NOTIFICATION_RE = re.compile(r"<task-notification>")
+_TASK_ID_RE = re.compile(r"<task-id>([0-9A-Za-z]+)</task-id>")
+_TASK_STATUS_RE = re.compile(r"<status>([^<]*)</status>")
+
 # Documented as forcing every subagent onto one model, ignoring frontmatter - the named
 # mechanism by which "model: sonnet" is silently not what runs. Worth reporting when set.
 _MODEL_OVERRIDE_VARS = ("CLAUDE_CODE_SUBAGENT_MODEL_FORCE", "CLAUDE_CODE_SUBAGENT_MODEL")
@@ -1485,6 +1881,114 @@ def _delegation_enabled():
     behind the trace lever would make the thing being shipped optional by default.
     """
     return os.environ.get("HOUSE_RULES_DELEGATION", "on").strip().lower() not in _TOGGLE_OFF
+
+
+# subagentrules — a third subagent-lifecycle handler, its own SubagentStart entry, separate
+# from announce. doc-ref c67d docs/Decisions.md
+SUBAGENT_SECTION_MARKER = "<!-- subagent -->"
+SUBAGENT_CORE_CHAR_LIMIT = 4_500
+
+SUBAGENT_MANDATE = (
+    "\nYour final report must list every command you ran and its result verbatim, every file "
+    "you wrote or edited, and anything you could not do.\n"
+)
+
+
+def _subagent_core(rules_path=None):
+    """The marked sections of house-rules.md, in file order, plus SUBAGENT_MANDATE.
+
+    Returns (text, problems). A section is a "## " heading through the next "## " heading (or
+    end of file); it is included only when the line immediately after the heading is
+    SUBAGENT_SECTION_MARKER, which is then stripped from the emitted text - the marker is a
+    build-time signal, not something the subagent needs to read.
+    """
+    problems = []
+    if rules_path is None:
+        here = os.path.dirname(os.path.abspath(__file__))
+        rules_path = os.path.join(here, "..", "rules", "house-rules.md")
+    try:
+        body = _read_text(rules_path)
+    except OSError as exc:
+        problems.append("could not read rules/house-rules.md (%s)" % type(exc).__name__)
+        return "", problems
+
+    body = body.replace("\r\n", "\n")
+    lines = body.split("\n")
+    sections = []
+    current = None
+    for line in lines:
+        if line.startswith("## "):
+            current = {"heading": line, "body": []}
+            sections.append(current)
+        elif current is not None:
+            current["body"].append(line)
+
+    kept = []
+    for sec in sections:
+        body_lines = sec["body"]
+        if body_lines and body_lines[0].strip() == SUBAGENT_SECTION_MARKER:
+            kept.append(sec["heading"] + "\n" + "\n".join(body_lines[1:]).strip())
+
+    if not kept:
+        problems.append("no section in house-rules.md is marked %s" % SUBAGENT_SECTION_MARKER)
+        return "", problems
+
+    text = "\n\n".join(kept).strip() + "\n" + SUBAGENT_MANDATE
+    # ${CLAUDE_PLUGIN_ROOT} is expanded the same way inject does it: additionalContext is
+    # plain text nothing else expands, so a literal placeholder here would be an unopenable
+    # path for the subagent, exactly the bug inject fixed for the main session.
+    text = _expand_detail_paths(text)
+    return _truncate_with_notice(text, SUBAGENT_CORE_CHAR_LIMIT, "the subagent rules core"), problems
+
+
+def event_subagentrules():
+    """SubagentStart: inject the subagent core, and tell the user where its transcript will
+    land, before it exists - so it is findable without waiting for verdict to say so."""
+    try:
+        if not _delegation_enabled():
+            return 0
+        payload = read_payload()
+        core, problems = _subagent_core()
+        bits = []
+        if not payload:
+            problems.append("the SubagentStart payload was empty")
+        else:
+            candidates = _transcript_candidates(payload)
+            expected = candidates[-1] if candidates else ""
+            if expected:
+                bits.append(
+                    "house-rules: subagent transcript expected at %s (verdict will report "
+                    "the path it actually finds when this agent stops)" % expected
+                )
+            else:
+                problems.append(
+                    "not enough of agent_id/transcript_path/session_id in the payload to "
+                    "predict the transcript path"
+                )
+        if problems:
+            bits.append("house-rules subagentrules COULD NOT TELL: %s" % "; ".join(problems))
+        out = {}
+        if bits:
+            out["systemMessage"] = " | ".join(bits)
+        if core:
+            out["hookSpecificOutput"] = {
+                "hookEventName": "SubagentStart",
+                "additionalContext": core,
+            }
+        if not out:
+            out["systemMessage"] = (
+                "house-rules plugin: subagentrules had nothing to report or inject for this "
+                "subagent start."
+            )
+        emit(out)
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the subagent-rules injector hit an "
+                "error (%s) and did not run for this call." % type(exc).__name__
+            }
+        )
+    return 0
 
 
 def _field(pattern, payload, problems=None):
@@ -1634,17 +2138,20 @@ def event_announce():
     return 0
 
 
-def _transcript_candidates(payload):
+def _transcript_candidates(payload, agent_id=None):
     """Where the subagent's own transcript might be, most authoritative first.
 
     Why this probes rather than assumes: docs/architecture.md, "The transcript is probed,
-    never assumed, and that is deliberate."
+    never assumed, and that is deliberate." agent_id is normally read out of the payload's
+    own "agent_id" field (SubagentStart/SubagentStop); callers reading a differently-shaped
+    payload (PostToolUse's "agentId", a hand-back prompt's <task-id>) pass it in directly.
     """
     out = []
     direct = _field(_AGENT_TRANSCRIPT_RE, payload)
     if direct:
         out.append(direct)
-    agent_id = _field(_AGENT_ID_RE, payload)
+    if agent_id is None:
+        agent_id = _field(_AGENT_ID_RE, payload)
     parent = _field(_TRANSCRIPT_RE, payload)
     session = _field(_SESSION_ID_RE, payload)
     if agent_id and parent:
@@ -1710,6 +2217,152 @@ def _observed_models(path):
                 if text_bits:
                     last_text = "\n".join(text_bits)
     return models, turns, tool_calls, last_text
+
+
+# Caps on the audit summary below: a subagent that ran hundreds of commands must not produce
+# a systemMessage so large it becomes unreadable (or gets truncated) itself.
+AUDIT_MAX_COMMANDS = 40
+AUDIT_COMMAND_CHARS = 160
+_AUDIT_COMMAND_TOOLS = ("Bash", "PowerShell")
+_AUDIT_WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
+
+
+def _audit_summary(path):
+    """(command lines, file lines, tool_counts) read straight from a subagent transcript.
+
+    A command line pairs each Bash/PowerShell tool_use with its matching tool_result (by
+    tool_use_id), so the reported exit status is what the transcript actually recorded, not
+    an inference. Tool uses whose result never arrives (the run was cut short) are reported
+    as such rather than silently dropped.
+    """
+    pending = {}
+    commands = []
+    files = []
+    tool_counts = {}
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            if not isinstance(obj, dict):
+                continue
+            msg = obj.get("message")
+            content = msg.get("content") if isinstance(msg, dict) else None
+            if not isinstance(content, list):
+                continue
+            if obj.get("type") == "assistant":
+                for block in content:
+                    if not isinstance(block, dict) or block.get("type") != "tool_use":
+                        continue
+                    name = block.get("name") or "?"
+                    tool_counts[name] = tool_counts.get(name, 0) + 1
+                    inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+                    tid = block.get("id")
+                    if name in _AUDIT_COMMAND_TOOLS and tid:
+                        cmd = inp.get("command") or inp.get("script") or ""
+                        pending[tid] = (name, cmd)
+                    elif name in _AUDIT_WRITE_TOOLS:
+                        fp = inp.get("file_path") or inp.get("notebook_path") or "(no file_path)"
+                        files.append("%s %s" % (name, fp))
+            elif obj.get("type") == "user":
+                for block in content:
+                    if not isinstance(block, dict) or block.get("type") != "tool_result":
+                        continue
+                    tid = block.get("tool_use_id")
+                    entry = pending.pop(tid, None) if tid else None
+                    if entry is None:
+                        continue
+                    name, cmd = entry
+                    status = "ERROR" if block.get("is_error") else "ok"
+                    commands.append("%s [%s]: %s" % (name, status, cmd))
+    for name, cmd in pending.values():
+        commands.append("%s [NO RESULT RECORDED]: %s" % (name, cmd))
+    return commands, files, tool_counts
+
+
+def _capped_lines(lines, max_count, max_chars):
+    shown = [
+        (l if len(l) <= max_chars else l[: max_chars - 3] + "...") for l in lines[:max_count]
+    ]
+    if len(lines) > max_count:
+        shown.append("...%d more" % (len(lines) - max_count))
+    return shown
+
+
+def _audit_report(found):
+    """The multi-line AUDIT block - commands with exit status, files written/edited, tool-use
+    counts, then the reconcile instruction - shared by verdict, audit and userpromptaudit, so
+    all three read a transcript the same way and say the same thing about it. A transcript that
+    cannot be re-read says so instead of raising - this is called from three fail-open handlers
+    that must never let an audit failure take the rest of their report down with it.
+    """
+    try:
+        commands, wrote, tool_counts = _audit_summary(found)
+    except OSError as exc:
+        return "AUDIT COULD NOT TELL: transcript at %s could not be re-read for the audit " \
+            "summary (%s)" % (found, type(exc).__name__)
+    lines = ["AUDIT (from the transcript, not the subagent's own report):"]
+    lines.extend("  cmd: %s" % l for l in _capped_lines(commands, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
+    lines.extend("  wrote: %s" % l for l in _capped_lines(wrote, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
+    if tool_counts:
+        lines.append(
+            "  tool uses: %s" % ", ".join("%s x%d" % (n, c) for n, c in sorted(tool_counts.items()))
+        )
+    lines.append(
+        "Reconcile the subagent's report against this record; flag every claim the record "
+        "does not support before relaying."
+    )
+    return "\n".join(lines)
+
+
+def _subagent_ledger_enabled():
+    """HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/.
+    Off by default: it writes a file on every subagent stop, which nobody asked for as the
+    default cost of delegating."""
+    return os.environ.get("HOUSE_RULES_SUBAGENT_LEDGER", "off").strip().lower() not in _TOGGLE_OFF
+
+
+def _write_subagent_ledger(transcript_path, payload):
+    """Render transcript_path into docs/sessions/ with the shared renderer. Returns a short
+    status string for the systemMessage - never raises, since this is an opt-in extra, never
+    allowed to take the whole verdict report down with it."""
+    try:
+        import session_ledger_render as slr
+
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            records = []
+            bad = 0
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    records.append(json.loads(line))
+                except ValueError:
+                    bad += 1
+        session_id = os.path.splitext(os.path.basename(transcript_path))[0]
+        turns = slr.build_turns(records)
+        body = slr.render(turns, transcript_path, session_id, bad)
+
+        root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        outdir = os.path.join(root, "docs", "sessions")
+        os.makedirs(outdir, exist_ok=True)
+        import datetime
+
+        stamp = datetime.date.today().isoformat()
+        dest = os.path.join(outdir, "%s-subagent-%s.md" % (stamp, session_id))
+        with open(dest, "w", encoding="utf-8", newline="\n") as f:
+            f.write(body)
+        return "LEDGER: rendered subagent transcript to %s" % dest
+    except Exception as exc:
+        return "LEDGER COULD NOT TELL: failed to render the subagent transcript (%s: %s)" % (
+            type(exc).__name__,
+            exc,
+        )
 
 
 def event_verdict():
@@ -1788,6 +2441,7 @@ def event_verdict():
         observed = ", ".join(models)
         bits = [
             "house-rules: %s finished" % agent_type,
+            "transcript found at %s" % found,
             "observed model %s" % observed,
             "%d assistant turn%s" % (turns, "" if turns == 1 else "s"),
         ]
@@ -1820,6 +2474,19 @@ def event_verdict():
                     "may be a status update, not finished work; verify concrete deliverables "
                     "before trusting it" % hit
                 )
+        # The audit summary: built from the transcript itself, not from anything the
+        # subagent said about itself. Delivered here on systemMessage because that is the
+        # one channel probed to reach the USER for a SubagentStop (neither additionalContext
+        # nor systemMessage reaches the PARENT MODEL's context in-turn at SubagentStop -
+        # doc-ref 8313 docs/Decisions.md). audit/userpromptaudit cover reaching the model
+        # itself, on the channels that were probed to actually do that.
+        bits.append(_audit_report(found))
+
+        if _subagent_ledger_enabled():
+            ledger_note = _write_subagent_ledger(found, payload)
+            if ledger_note:
+                bits.append(ledger_note)
+
         if problems:
             bits.append("COULD NOT TELL: %s" % "; ".join(problems))
         emit({"systemMessage": " | ".join(bits)})
@@ -1828,6 +2495,156 @@ def event_verdict():
             {
                 "systemMessage": "house-rules plugin: the subagent-stop model check hit an "
                 "error (%s) and is offline for this call." % type(exc).__name__
+            }
+        )
+    return 0
+
+
+# audit — PostToolUse on Agent|Task, its own hooks.json entry. doc-ref 8313 docs/Decisions.md.
+
+
+def event_audit():
+    """PostToolUse (Agent|Task): hand the audit summary + reconcile instruction straight to
+    the parent model as additionalContext when a FOREGROUND subagent call returns."""
+    try:
+        if not _delegation_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: a subagent tool call returned but "
+                    "the PostToolUse payload was empty, so it could not be audited."
+                }
+            )
+            return 0
+
+        status = _field(_RESPONSE_STATUS_RE, payload)
+        if status != "completed":
+            # "async_launched" (a backgrounded call, still running) or an unrecognised shape:
+            # genuinely nothing to audit yet, not a failure to report - userpromptaudit picks
+            # up a backgrounded call's eventual hand-back.
+            return 0
+
+        problems = []
+        agent_id = _field(_RESPONSE_AGENT_ID_RE, payload, problems)
+        agent_type = (
+            _field(_RESPONSE_AGENT_TYPE_RE, payload)
+            or _field(_TOOL_INPUT_SUBAGENT_TYPE_RE, payload)
+            or "agent type not in payload"
+        )
+        if not agent_id:
+            emit(
+                {
+                    "systemMessage": "house-rules: a subagent tool call completed but the "
+                    "payload carried no agentId, so its transcript could not be located to "
+                    "audit."
+                }
+            )
+            return 0
+
+        candidates = _transcript_candidates(payload, agent_id=agent_id)
+        found = next((c for c in candidates if os.path.isfile(c)), "")
+        if not found:
+            emit(
+                {
+                    "systemMessage": "house-rules: %s (agent %s) finished, but its transcript "
+                    "could not be located to audit - tried: %s"
+                    % (agent_type, agent_id, ", ".join(candidates) or "(no candidates - not "
+                       "enough of session_id/transcript_path in the payload)")
+                }
+            )
+            return 0
+
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PostToolUse",
+                    "additionalContext": (
+                        "house-rules: %s (agent %s) finished (foreground) - %s"
+                        % (agent_type, agent_id, _audit_report(found))
+                    ),
+                }
+            }
+        )
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the foreground subagent audit hit an "
+                "error (%s) and did not run for this call." % type(exc).__name__
+            }
+        )
+    return 0
+
+
+# userpromptaudit — UserPromptSubmit, its own entry, separate from scope. doc-ref 8313 docs/Decisions.md.
+
+
+def event_userpromptaudit():
+    """UserPromptSubmit: when this turn's prompt IS a background subagent's hand-back
+    notification, hand the audit summary + reconcile instruction to the parent model as
+    additionalContext - the completion this backgrounded call's own PostToolUse never saw."""
+    try:
+        if not _delegation_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            return 0
+        m = _PROMPT_VALUE_RE.search(payload)
+        if not m:
+            return 0
+        prompt_field = m.group(1)
+        if not _TASK_NOTIFICATION_RE.search(prompt_field):
+            # The ordinary case, every other prompt: nothing to do, and nothing to say -
+            # this handler exists for exactly one shape of prompt, not every one.
+            return 0
+        status_m = _TASK_STATUS_RE.search(prompt_field)
+        if not status_m or status_m.group(1) != "completed":
+            # A notification for a still-running or failed task carries no finished work to
+            # audit yet; a later notification for the same task-id covers it when it does.
+            return 0
+        id_m = _TASK_ID_RE.search(prompt_field)
+        if not id_m:
+            emit(
+                {
+                    "systemMessage": "house-rules: a background subagent hand-back arrived "
+                    "with no <task-id>, so its transcript could not be located to audit."
+                }
+            )
+            return 0
+        agent_id = id_m.group(1)
+
+        candidates = _transcript_candidates(payload, agent_id=agent_id)
+        found = next((c for c in candidates if os.path.isfile(c)), "")
+        if not found:
+            emit(
+                {
+                    "systemMessage": "house-rules: background subagent %s finished, but its "
+                    "transcript could not be located to audit - tried: %s"
+                    % (agent_id, ", ".join(candidates) or "(no candidates)")
+                }
+            )
+            return 0
+
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": (
+                        "house-rules: subagent %s finished (background) - %s"
+                        % (agent_id, _audit_report(found))
+                    ),
+                }
+            }
+        )
+    except Exception as exc:
+        # Silence-plus-systemMessage, never additionalContext and never a non-zero exit -
+        # additionalContext built from a half-formed state here could be worse than nothing,
+        # and a raise or non-zero exit would erase the user's prompt.
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the background subagent audit hit an "
+                "error (%s) and did not run for this call." % type(exc).__name__
             }
         )
     return 0
@@ -1872,29 +2689,149 @@ _TOGGLE_OFF = {"off", "0", "false", "no"}
 # Same shape as _COMMAND_FIELD_RE: match the raw JSON slice, escapes included, and search inside
 # it. Backticks are not escaped in JSON, so a fenced block survives verbatim in the payload.
 _LAST_MESSAGE_FIELD_RE = re.compile(r'"last_assistant_message"\s*:\s*"(?:[^"\\]|\\.)*"')
+_LAST_MESSAGE_VALUE_RE = re.compile(r'"last_assistant_message"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
 
 # The three marks a card cannot be missing: the rule that opens and closes it, the step heading,
 # and the expected-output line. A reply carrying all three is already in the shape this check
-# exists to produce, so the check has nothing to add - see _reply_needs_the_handover_check.
+# exists to produce, so the check has nothing to add - see _reply_needs_card_check.
 _CARD_MARKERS = ("---", "###", "You should see:")
+
+# Only a SHELL-labelled fence hands over a command - a fence in another language, or with no
+# label at all, is not the thing this check exists to correct. doc-ref 6534 docs/Decisions.md
+_SHELL_FENCE_LANGS = ("bash", "sh", "zsh", "shell", "console", "powershell", "pwsh", "ps1", "cmd", "bat", "fish")
+_SHELL_FENCE_RE = re.compile(r"```\s*(%s)\b" % "|".join(_SHELL_FENCE_LANGS), re.IGNORECASE)
 
 
 def _reply_is_already_a_card(reply):
     return all(mark in reply for mark in _CARD_MARKERS)
 
 
-def _reply_needs_the_handover_check(payload):
+def _reply_needs_card_check(payload):
     """Three tiers, the same ladder guard uses on its own input.
 
     Why not firing on a compliant reply is the point, and the cost that trades away:
-    docs/architecture.md, "handover is the one deliberate exception".
+    docs/architecture.md, "handover is the one deliberate exception". A reply with no
+    last_assistant_message at all (an older CLI) still needs the check - a version gap must
+    not silently disable it.
     """
     m = _LAST_MESSAGE_FIELD_RE.search(payload)
     if m is None:
         return True
     reply = m.group(0)
-    return "```" in reply and not _reply_is_already_a_card(reply)
+    return bool(_SHELL_FENCE_RE.search(reply)) and not _reply_is_already_a_card(reply)
+
+
+# --- evidence check: independent of the fence gate above ---------------------------------------
+# Word-boundary catches these forms; it naturally MISSES "untested"/"unverified" ("un" + word has
+# no boundary between them, so \btested\b never matches inside "untested") without extra logic.
+_CLAIM_WORD_RE = re.compile(
+    r"\b(works|working|fixed|passes|passing|passed|verified|tested|confirmed|succeeded)\b",
+    re.IGNORECASE,
+)
+# Explicit negation forms word-boundary alone cannot catch: "not tested", "haven't verified".
+_NEGATION_RE = re.compile(
+    r"\b(not|never|no longer|hasn't|haven't|didn't|isn't|wasn't|won't|can't|cannot|couldn't)\b",
+    re.IGNORECASE,
+)
+# A reply that quotes real output does not need the reminder - a fenced block (any language),
+# or a line shaped like real captured output: this repo's own RESULT: PASS/FAIL convention, an
+# exit code, or a test runner's "N passed" summary line. Deliberately NOT the bare word "passed"
+# on its own - that would treat the prose claim "the tests passed" as its own evidence.
+_EVIDENCE_QUOTE_RE = re.compile(
+    r"(?m)```|RESULT:\s*(PASS|FAIL)|\bexit\s+0\b|^\s*\d+\s+passed\b", re.IGNORECASE
+)
+
+
+def _claim_words(text):
+    """Claim words found in text, each checked against the ~25 chars right before it for a
+    negation cue - a window, not a full-sentence parse, same posture as every other regex here."""
+    found = []
+    for m in _CLAIM_WORD_RE.finditer(text or ""):
+        window = text[max(0, m.start() - 25) : m.start()]
+        if _NEGATION_RE.search(window):
+            continue
+        found.append(m.group(1).lower())
+    return found
+
+
+def _is_genuine_user_message(record):
+    """A real human turn - not a tool_result carrier, not Stop hook feedback, not a background
+    task's <task-notification> hand-back, and (when the field is present) not attributed to a
+    non-human origin. "Genuine user message" definition: doc-ref 25b2 docs/Decisions.md
+    """
+    if not isinstance(record, dict) or record.get("type") != "user":
+        return False
+    msg = record.get("message")
+    if not isinstance(msg, dict):
+        return False
+    content = msg.get("content")
+    if isinstance(content, list):
+        if content and all(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
+            return False
+        text = " ".join(
+            b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"
+        )
+    elif isinstance(content, str):
+        text = content
+    else:
+        return False
+    if re.match(r"^\s*Stop hook feedback", text or "", re.IGNORECASE):
+        return False
+    if "<task-notification>" in (text or ""):
+        return False
+    origin = record.get("origin")
+    if isinstance(origin, dict) and origin.get("kind") not in (None, "human"):
+        return False
+    return True
+
+
+def _tool_use_since_last_user_message(transcript_path):
+    """(True/False/None, detail). None means could not tell - an unreadable transcript, or no
+    genuine user message found in it at all."""
+    try:
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            raw_lines = f.readlines()
+    except OSError as exc:
+        return None, "could not read the transcript (%s)" % type(exc).__name__
+
+    records = []
+    for line in raw_lines:
+        line = line.strip()
+        if not line:
+            records.append(None)
+            continue
+        try:
+            records.append(json.loads(line))
+        except Exception:
+            records.append(None)
+
+    last_user_idx = None
+    for i, rec in enumerate(records):
+        if rec is not None and _is_genuine_user_message(rec):
+            last_user_idx = i
+    if last_user_idx is None:
+        return None, "no genuine user message found in the transcript"
+
+    for rec in records[last_user_idx + 1 :]:
+        if not isinstance(rec, dict) or rec.get("type") != "assistant":
+            continue
+        content = (rec.get("message") or {}).get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    return True, None
+    return False, None
+
+
+def _evidence_note(claim_words):
+    words = ", ".join(sorted(set(claim_words)))
+    return (
+        "House rules, evidence before claims: this reply claims success (%s), but no tool ran "
+        "since your last real message and the reply does not quote any command output. Before "
+        "this turn ends, either run the check and quote its real output, or restate the claim "
+        "as untested and say why." % words
+    )
 
 
 def event_handover():
@@ -1929,22 +2866,63 @@ def event_handover():
         # twice for one turn, so this is the one stand-down that stays quiet.
         return 0
 
-    if not _reply_needs_the_handover_check(payload):
-        # The one handler that must NOT trace - direct rule conflict, not a cost argument.
-        # docs/architecture.md, "handover is the one deliberate exception".
+    needs_card = _reply_needs_card_check(payload)
+
+    # The evidence check is independent of the fence gate above - a reply can claim success
+    # with no fence in it at all.
+    needs_evidence = False
+    evidence_words = []
+    could_not_tell = None
+    vm = _LAST_MESSAGE_VALUE_RE.search(payload)
+    if vm is not None:
+        try:
+            reply_text = json.loads('"%s"' % vm.group(1))
+        except ValueError:
+            reply_text = vm.group(1)
+        claims = _claim_words(reply_text)
+        if claims and not _EVIDENCE_QUOTE_RE.search(reply_text):
+            transcript_path = _field(_TRANSCRIPT_RE, payload)
+            if not transcript_path:
+                could_not_tell = "the Stop payload carried no transcript_path"
+            else:
+                has_tool, detail = _tool_use_since_last_user_message(transcript_path)
+                if has_tool is None:
+                    could_not_tell = detail
+                elif has_tool is False:
+                    needs_evidence = True
+                    evidence_words = claims
+
+    if not needs_card and not needs_evidence:
+        if could_not_tell:
+            # Fail open, loud: a claim was made and this could not confirm or deny it, so it
+            # says so rather than silently assuming either answer - but it never blocks, and
+            # it never asserts the claim is wrong.
+            emit(
+                {
+                    "systemMessage": "house-rules: evidence check could not tell whether a "
+                    "tool ran for this reply's claim (%s)." % could_not_tell
+                }
+            )
+        # The one handler that must NOT trace when neither check fires - direct rule conflict,
+        # not a cost argument. docs/architecture.md, "handover is the one deliberate exception".
         return 0
 
     # additionalContext, not decision: "block". Both continue the turn under the same loop
     # protections, but this one is labelled Stop hook feedback rather than raising a hook
-    # error - and this hook is guidance working as designed, not a failure.
-    emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "Stop",
-                "additionalContext": HANDOVER_NOTE,
-            }
-        }
-    )
+    # error - and this hook is guidance working as designed, not a failure. Both checks share
+    # ONE emission when both fire - two emit() calls would be two concatenated JSON objects.
+    parts = []
+    if needs_card:
+        parts.append(HANDOVER_NOTE)
+    if needs_evidence:
+        parts.append(_evidence_note(evidence_words))
+    out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}
+    if could_not_tell:
+        out["systemMessage"] = (
+            "house-rules: evidence check could not tell whether a tool ran for this reply's "
+            "claim (%s)." % could_not_tell
+        )
+    emit(out)
     return 0
 
 
@@ -2366,7 +3344,9 @@ def event_harvest():
 
 EVENTS = {
     "inject": event_inject,
+    "profile": event_profile,
     "standards": event_standards,
+    "docstiers": event_docstiers,
     "versioncheck": event_versioncheck,
     "scope": event_scope,
     "guard": event_guard,
@@ -2375,7 +3355,10 @@ EVENTS = {
     "runnable": event_runnable,
     "delegate": event_delegate,
     "announce": event_announce,
+    "subagentrules": event_subagentrules,
     "verdict": event_verdict,
+    "audit": event_audit,
+    "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,
     "harvest": event_harvest,
 }

@@ -11,7 +11,9 @@ Three measurements, in order of how much they matter:
   1. scope gating - the per-prompt cost, which accumulates in context and is never cached away.
      Replays the user's own past prompts through the real gating regex to get a long/short
      split from actual usage rather than a guess.
-  2. SessionStart injection - the fixed per-session cost, also re-paid on every subagent spawn.
+  2. SessionStart injection - the fixed per-session cost. Paid ONCE per session, not per
+     subagent spawn: a spawned subagent never sees SessionStart's additionalContext at all
+     (docs/architecture.md, "SessionStart is not re-paid on subagent spawn" - tested directly).
   3. Failure paths - scope runs on UserPromptSubmit, where a non-zero exit erases the user's
      prompt. A malformed payload must still exit 0.
 
@@ -256,11 +258,16 @@ def main():
     # --- 3. per-session cost -----------------------------------------------------------------
     print("\n3. Per-session cost (SessionStart)")
     _, inject_out = run_hook(hook_py, "inject", "{}")
+    _, profile_out = run_hook(hook_py, "profile", "{}")
     _, standards_out = run_hook(hook_py, "standards", "{}")
-    inject_chars, standards_chars = len(reminder_text(inject_out)), len(reminder_text(standards_out))
+    inject_chars = len(reminder_text(inject_out))
+    profile_chars = len(reminder_text(profile_out))
+    standards_chars = len(reminder_text(standards_out))
     print(f"   inject     : {inject_chars:>6,} chars  (~{tokens(inject_chars):,} tokens)")
+    print(f"   profile    : {profile_chars:>6,} chars  (~{tokens(profile_chars):,} tokens)")
     print(f"   standards  : {standards_chars:>6,} chars  (~{tokens(standards_chars):,} tokens)")
-    print("   (re-paid on every subagent spawn, not just once per session)")
+    print("   (paid once per session - a spawned subagent never sees this at all, see docs/architecture.md)")
+    print("   (a subagent's own per-spawn cost is the 'subagentrules' row in section 4 below)")
 
     # --- 4. per-tool-call cost ---------------------------------------------------------------
     # These fire per TOOL CALL, not per turn, so frequency is as much of the cost as size is.
@@ -295,15 +302,28 @@ def main():
         ("announce", "each subagent spawn",
          json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
                      "effort": "low"}), "always fires"),
+        ("subagentrules", "each subagent spawn",
+         json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
+                     "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
+         "the ONLY additionalContext a subagent ever sees - inject/profile/standards above never reach it"),
         ("verdict", "each subagent finish",
          json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
                      "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
          "transcript not found"),
+        ("audit", "each FOREGROUND subagent return",
+         json.dumps({"tool_response": {"status": "completed", "agentId": "m1", "agentType": "x"},
+                     "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
+         "transcript not found"),
+        ("userpromptaudit", "each BACKGROUND subagent hand-back prompt",
+         json.dumps({"prompt": "<task-notification><task-id>m1</task-id><status>completed</status>"
+                                "</task-notification>", "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
+         "transcript not found"),
     ]
-    # announce and verdict are deliberately NOT trace-gated - the report IS the feature, not a
-    # narration of an otherwise-silent path - so they are excluded from the TRACE=off total
-    # below. Including them would make that line read as a leak when it is the design.
-    not_trace_gated = {"announce", "verdict"}
+    # announce, subagentrules and verdict are deliberately NOT trace-gated - the report IS the
+    # feature, not a narration of an otherwise-silent path - so they are excluded from the
+    # TRACE=off total below. Including them would make that line read as a leak when it is the
+    # design.
+    not_trace_gated = {"announce", "subagentrules", "verdict", "audit", "userpromptaudit"}
     print(f"   {'handler':<9} {'when':<26} {'reminder':>20} {'trace':>20}")
     trace_total = 0
     for event, when, payload, label in calls:

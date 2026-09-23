@@ -7,6 +7,167 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-22 — A SessionStart check for the six documentation tiers, in every repo
+
+**Context.** Step 3 of the rules-that-actually-load plan. The "Documentation goes in tiers" rule
+was purely aspirational: nothing noticed a repo missing `docs/` entirely, or missing a tier,
+until a person happened to look. The `house-rules:project-docs` skill already carries the full
+tier spec and scaffolding steps, but a skill only loads when something tells Claude to load it.
+
+**Decision.** A new `SessionStart` handler, `docstiers`, registered as its own `hooks.json` entry
+(right after `standards`, before `versioncheck`) so a failure here can never affect
+`inject`/`profile`/`standards`. It checks the project root (`CLAUDE_PROJECT_DIR`, else `cwd`) for
+the six tiers exactly as `skills/project-docs/SKILL.md` names them: `docs/README.md`,
+`docs/Roadmap.md`, `docs/ProjectState.md`, at least one file under `docs/systems/`,
+`docs/Today.md`, `docs/Decisions.md`. All present: it emits nothing at all — the second
+deliberate silent exception in the plugin besides `handover`, since it runs every session and a
+trace would cost something on every one of them for what is usually true. Any missing: it names
+exactly which and instructs loading `house-rules:project-docs` and scaffolding before any other
+work, in every repo, including one that is not a git repository. In a git repository, it also
+reads the remote's owner from `.git/config` directly (no subprocess — handles `https://` and
+`git@host:` URL forms, and a worktree's `.git` file redirect via the existing `_git_dir` helper)
+against `HOUSE_RULES_GITHUB_OWNER` (default `Ajw2003`, case-insensitive); not owned, or the
+remote can't be read at all (garbage or unreadable `.git/config` — both treated as not-owned,
+since scaffolding into a repo of unknown ownership is the riskier default), adds one more
+instruction: add every scaffolded path to `.git/info/exclude`, so the new docs never leave the
+machine or enter that repo's history. Fails loud via `systemMessage` on an internal error, like
+`inject`. `verify.py` gained fixture-backed cases for all six named scenarios (complete, missing
++ owned, missing + not-owned, ssh-form remote, no `.git`, garbage/unreadable config), a size-limit
+case (≤9,500 chars, fed the worst-case not-owned fixture), and a drift check that the six
+hardcoded tier paths still match what `SKILL.md` names.
+
+**Why.** The docs-tier rule already existed; what was missing was anything that acted on it
+without being asked. A silent, every-session check that only ever speaks when something is
+actually wrong is the same shape `handover` already uses, extended to a second case where it's
+provably the cheaper choice — this runs on every session, unconditionally, so a trace on the
+common (complete) case would be paid far more often than the harvest/artifact traces it's
+modeled after. The ownership check exists because scaffolding is a write: creating files nobody
+asked for in a repo you don't own is the wrong default, so the safer path is to make the write
+invisible to that repo's history until someone deliberately commits it.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-22 — CLAUDE.md becomes a real pointer; correct the "re-paid on every subagent spawn" claim; profile truncates only the environment body
+
+**Context.** Step 2 of the rules-that-actually-load plan. Root `CLAUDE.md` had grown to 33,083
+bytes despite its own header claiming it "stays short on purpose" — it carried the full hook
+table, the design-constraints list, and the surfaces table verbatim, none of which changes when
+someone opens an unrelated repo file, and all of which already had a home (or belonged in one) in
+`docs/architecture.md`. Separately, `CLAUDE.md` and several docs (`docs/measuring-footprint.md`,
+`docs/architecture-backlog.md`, `tools/measure_footprint.py`'s own output) asserted that
+SessionStart's injected text is "re-paid on every subagent spawn" — this was never tested and is
+false: a spawned subagent's context is its own agent file plus whatever the delegation prompt
+passes it; SessionStart's `additionalContext` never reaches it at all
+(docs/plans/2026-09-22-rules-that-actually-load.md records the probe). Coordinator review of the
+prior commit also found `profile`'s truncation cut the whole assembled profile text, which could
+in principle cut into the preflight warnings or the remote handover-target block instead of just
+the oversized environment body.
+
+**Decision.** `CLAUDE.md` is now 3,151 bytes: what the repo is, a pointer to `docs/README.md`,
+the rules-pointer paragraph, and the command list as one line plus one clause each. The hook
+table, the design-constraints list, and the surfaces table moved into `docs/architecture.md` —
+the surfaces table merged into its existing "step-card handover format" section rather than
+adding a duplicate. `verify.py` gained a named `CLAUDE_MD_BYTE_LIMIT = 4_000` check, and every
+check that used to read CLAUDE.md's hook/surfaces/constraints tables (the architecture-tables
+check, the surface-coverage check, the publish-a-page table check, the opusplan-scoping check)
+now reads `docs/architecture.md` instead — none deleted or narrowed. The false subagent-spawn
+claim is corrected everywhere it appeared, with the tested fact stated plainly and a pointer to
+where the consequence is documented (`@house-rules:executor`/`@house-rules:archivist` carrying
+their own rules digest). `profile` now computes a budget for the environment body alone
+(`PROFILE_SOFT_LIMIT` minus the fixed preamble/preflight/handover length) and truncates only
+that piece; a new `verify.py` case feeds it an oversized environment file plus a remote handover
+fixture and asserts both the handover block and the preflight warning survive intact while the
+truncation notice still names the oversized file.
+
+**Why.** A root `CLAUDE.md` that says "stays short on purpose" while carrying 33KB is the exact
+kind of drift the rules exist to catch elsewhere — the fix here is the same discipline applied to
+the file that states it. A wrong claim about subagent context is not cosmetic: a session claiming
+"the rules are re-paid on every subagent spawn" is a session that will not think to ask whether
+`@house-rules:executor` actually has them, and the two subagent files that matter here already
+had to compensate for the real answer with their own digest. And truncating the wrong part of
+`profile`'s output — the handover-target block, say, instead of an oversized environment.md — is
+a strictly worse failure than the one the truncation was added to prevent: silence about a fact
+the user could act on, in a hook whose whole job is telling Claude what machine it's on.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-22 — Split the machine profile into its own SessionStart hook, and expand ${CLAUDE_PLUGIN_ROOT} at emit time
+
+**Context.** Step-1 review of the rules split above found two defects the suite did not catch.
+First, the size check measured `inject` with no recorded `rules/environment.md`, so it missed
+that a *real* recorded profile pushes the combined text over budget: fed a copy of
+`docs/example-environment.md`, `inject` emitted 12,695 chars — over Claude Code's 10,000-char
+per-hook limit, so on a real machine with a hand-verified profile the rules would again be
+persisted to a file instead of reaching the model in full. Second, the trimmed core's detail
+pointers read literally as `${CLAUDE_PLUGIN_ROOT}/rules/detail/<file>.md` in the emitted text —
+that variable is expanded by the harness inside `hooks.json`'s own command strings, but never in
+`additionalContext`, so Claude was being handed a path it could not open.
+
+**Decision.** The machine profile (a recorded `rules/environment.md` or its runtime-detected
+fallback, preflight warnings, and the remote handover-target block) moved out of `inject` into a
+new `profile` SessionStart handler, registered as its own `hooks.json` entry right after `inject`
+so a failure in one can never take the other down — same fail-loud (`systemMessage`) pattern.
+`inject` now carries only the rules core, and substitutes `${CLAUDE_PLUGIN_ROOT}` for the real
+absolute plugin root (derived from `hook.py`'s own location) before emitting. `profile` truncates
+its own output with a visible notice naming the oversized file if a recorded profile would itself
+push it over budget, rather than silently overflowing. `verify.py`'s size check now asserts
+`inject` ≤ 9,000 chars (tighter than before, since it no longer carries runtime-varying content)
+and `profile` ≤ 9,500 chars fed `docs/example-environment.md` as a stand-in for a real recorded
+profile — the realistic case that actually overflowed. Added a case asserting no literal
+`${CLAUDE_PLUGIN_ROOT}` reaches the injected text and that one named detail path resolves on
+disk. Updated the `CLAUDE.md` and `claude-house-rules/README.md` hook tables for the new entry.
+
+**Why.** The size check the first pass shipped measured a scenario (no recorded profile) that
+understated the real one — the whole point of a recorded `rules/environment.md` is that most
+users who bother to write one will have more to say than the runtime-detected fallback, not less.
+Splitting the hook, not just trimming further, is the structural fix: the limit is per hook, so
+the machine profile competing with the rules core for the same 10,000-char budget was always
+going to reproduce the original bug the moment either side grew. And a pointer variable nothing
+expands is not a pointer, it is a string that looks like one.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-22 — Split house-rules.md into an imperative core and rules/detail/*.md, so the rules actually reach the model
+
+**Context.** A grilling session on 2026-09-22 found that `inject` emitted 44,506 chars.
+Claude Code saves any single hook's `additionalContext` over 10,000 chars to a file and puts only
+a ~2KB preview in context — everything past the first section of `house-rules.md`, including the
+docs-tier rule, was invisible in that session. `house-rules.md` had doubled since the 2026-09-07
+footprint work (20.8KB → 43KB), because that earlier pass's practice was to keep every "Why:"
+rationale block inline rather than move it out — a reasonable call at 20.8KB, wrong at 43KB.
+
+**Decision.** `house-rules.md` is now an imperative-only core: one to three sentences per rule,
+plus a pointer naming `${CLAUDE_PLUGIN_ROOT}/rules/detail/<topic>.md` for that rule's full
+rationale, "Why:" block and examples, moved there verbatim. `#### The card` collapses to a
+pointer at the forced `handover-cards` output style, which is now the single copy of the
+step-card checklist — the core no longer restates it. A new `INJECT_CHAR_LIMIT = 10_000` constant
+in `hook.py` documents the hard limit; `verify.py` checks the real emitted `inject` and
+`standards` `additionalContext` (not source file size) against a 9,500-char safety margin, each
+checked separately since Claude Code's limit is per hook. Every verify.py drift check that used
+to grep `house-rules.md` alone for a phrase now greps a corpus of `house-rules.md` plus every
+`rules/detail/*.md` file — the phrase still has to exist somewhere the rules own, it no longer has
+to survive being injected. The one check that could not be satisfied this way (the six-field
+step-card checklist, since it deliberately left the injected text) was repointed instead: it now
+checks that the core's `#### The card` section names `handover-cards.md` and does not restate the
+checklist, rather than requiring the checklist phrases to appear in the injected text.
+
+**Why.** A rule nobody's context contains is not a rule, it is a file. Keeping every rationale
+block inline reversed the 2026-09-07 decision to do exactly that, because the number that mattered
+— total injected size, not "does this file still read well" — had moved past the point where the
+choice was free. Moving detail out loses nothing: `docref.py check`-style corpus checking means
+every phrase a test ever pinned is still provably present, just no longer paid for on every
+session start.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-22 — Guard against a full-file rewrite standing in for an in-place edit
 
 **Context.** In a separate project, a scheduled, unattended task rewrote a CSS file wholesale
@@ -512,5 +673,208 @@ inline — they rewrite cleanly to state current truth and leave a one-line poin
 The alternative of folding decisions into tier-4 `Traps`/`How it works` was rejected because it
 conflates "what is true now" with "what we chose and why," which is exactly the misfiling this
 tier fixes.
+
+**Status.** Standing.
+
+## 2026-09-23 — Subagents get the rules, and their work becomes checkable
+<!-- ref:c67d -->
+
+**Context.** SessionStart's `additionalContext` never reaches a spawned subagent (probed with
+`claude -p`, docs/plans/2026-09-22-rules-that-actually-load.md); a subagent that never saw the
+house rules had no docs-tier discipline, no commit-branch discipline, nothing. Probing further
+(same method): `SubagentStart`'s `additionalContext` DOES reach the subagent, but neither
+`SubagentStop`'s `additionalContext` nor its `systemMessage` reaches the PARENT session's model
+context in the same turn — only the interactive UI shows a `SubagentStop` `systemMessage`, the
+same channel `announce`/`verdict` already relied on.
+
+**Decision.** A third `SubagentStart` handler, `subagentrules`, its own hooks.json entry
+(separate from `announce`): generates a *subagent core* from the sections of
+`rules/house-rules.md` marked `<!-- subagent -->` (docs tiers, nothing fails silently, evidence
+before claims, artifacts in the project, commit on own branches, destructive actions, edit in
+place), plus a fixed mandate that the final report list every command run and its result
+verbatim. Own budget, `SUBAGENT_CORE_CHAR_LIMIT = 4,500`. At `SubagentStart` it also tells the
+user the transcript's expected path, before the transcript exists. At `SubagentStop`, `verdict`
+now also states the path it actually found and an audit summary built from that transcript
+(commands with exit status, files written/edited, tool-use counts, capped), carried on the one
+proven channel, `systemMessage`, with an instruction to reconcile the subagent's own report
+against it. `HOUSE_RULES_SUBAGENT_LEDGER=on` additionally renders the transcript into
+`docs/sessions/` via the renderer moved to `scripts/session_ledger_render.py`, importable from
+inside the plugin cache where `tools/` does not exist; off by default.
+
+**Why.** A subagent that never saw the rules and whose finished work nobody could check against
+its own transcript was invisible on both ends. `SubagentStart` is the one lifecycle event proven
+to reach the subagent's own context, so that is where the rules have to be re-injected, generated
+from one file so the subagent core cannot drift from the rules a human session sees. `verdict`
+already existed to check which model actually ran; extending it to also state what actually
+happened turns "trust the subagent's report" into "check the subagent's report."
+
+**Status.** Standing.
+
+## 2026-09-23 — The audit summary also reaches the parent MODEL, not just the user
+<!-- ref:8313 -->
+
+**Context.** The earlier entry this session (doc-ref c67d) found that neither `SubagentStop`'s
+`additionalContext` nor its `systemMessage` reaches the parent session's model context in the
+same turn - only the interactive UI shows the `systemMessage`. That left `verdict`'s audit
+summary and reconcile instruction visible to the person, but not to the model that is supposed
+to act on "reconcile the subagent's report against this record." Further probing (same method,
+`claude -p` with a planted marker) found two channels that DO reach the parent model: a
+`PostToolUse` hook matched on `Agent|Task` sees a **foreground** subagent's return
+(`tool_response.status: "completed"`) and its `additionalContext` reaches the parent in-turn. A
+**backgrounded** call (`run_in_background: true`) returns immediately with
+`tool_response.status: "async_launched"` - its `PostToolUse` fires before the work exists - and
+its real completion later arrives as a fresh `UserPromptSubmit` turn whose `prompt` field is a
+`<task-notification>` carrying `<task-id>` and `<status>`; `UserPromptSubmit`'s
+`additionalContext` also reaches the model.
+
+**Decision.** Two new handlers, both reusing the audit logic `verdict` already built
+(`_audit_summary`/`_audit_report`, one source): `audit`, its own `PostToolUse` entry matched on
+`Agent|Task`, fires only when `tool_response.status == "completed"` (a foreground return) and
+emits the audit as `additionalContext`. `userpromptaudit`, its own `UserPromptSubmit` entry
+(never inside `scope`), fires only when the prompt is a `<task-notification>` whose `<status>`
+is `completed`, extracts the `<task-id>`, and emits the same audit shape. The two never double-
+report: a foreground return's `PostToolUse` status is `"completed"` and it has no later hand-
+back turn; a backgrounded call's `PostToolUse` status is `"async_launched"` and `audit` stays
+silent for it, so only `userpromptaudit`'s later hand-back turn reports it. `verdict` keeps its
+own audit summary on `systemMessage`, for the person, on the channel already proven to reach them.
+
+**Why.** The reconcile instruction is an instruction to the model doing the reconciling, not to
+the person watching. A channel that only reaches the person satisfies half the design. Reusing
+`_audit_summary`/`_audit_report` rather than re-deriving the audit from each payload shape keeps
+one source for what counts as evidence, across all three delivery points.
+
+**Status.** Standing.
+
+## 2026-09-23 — A commit-time docs-tier reminder, and the one subprocess guard is allowed
+<!-- ref:8713 -->
+
+**Context.** `guard` (PreToolUse) previously had no opinion on documentation at all - only
+`docstiers` (SessionStart) did, and only once per session. A source file could be committed with
+no doc updated and nothing would say so until the next session, if ever. `branch_ownership()`
+reads `.git/HEAD` directly and is asserted subprocess-free by `verify.py` (`guard` fails closed,
+so it must not depend on a process that can hang) - the `git index` formats (v2/v3/v4, prefix-
+compressed paths in v4) could in principle be parsed with the standard library, but the index
+lists every tracked file, not what's staged; answering "staged" needs a diff against `HEAD`'s
+tree, which means reading git objects (zlib, and packfiles) - too heavy for a check that runs on
+every commit. A probe (`claude -p`, planted marker) confirmed a `PreToolUse` `allow` decision's
+`additionalContext` reaches the model in the same turn, the channel this reminder needed.
+
+**Decision.** `guard` now recognizes a `git commit` command (reusing `GUARD_R3`'s own commit
+pattern) and, only then, runs `git diff --cached --name-only` as a subprocess under a 2-second
+timeout - the one deliberate, narrowly-scoped exception to "no subprocess in guard",
+`branch_ownership()` itself stays exactly as before. If the staged paths include a source file
+(the `harvest` extension list) and nothing under `docs/`: on a `claude/` branch, the commit still
+allows, but gains an `additionalContext` reminder naming the tier to update; on any other branch,
+the existing prompt's reason gains the same line. A command naming another repo
+(`-C`/`--git-dir`/`--work-tree`), a missing `git`, a timeout, or any other failure never changes
+guard's own decision - it only adds "could not tell" to whichever message was already going out.
+
+**Why.** The reminder needed the channel actually proven to reach the model, not the one assumed
+to (`systemMessage`, `docs/Decisions.md`'s two other 2026-09-23 entries record that assumption
+failing for `SubagentStop`). Scoping the subprocess to exactly one command shape, under a hard
+timeout, whose failure never changes the real decision, keeps `guard`'s fail-closed contract
+intact everywhere else.
+
+**Status.** Standing.
+
+## 2026-09-23 — The docs-tier commit check reads what WILL be committed, not what already is
+<!-- ref:c79f -->
+
+**Context.** The commit-time docs reminder landed (doc-ref 8713) reading only
+`git diff --cached --name-only` - what is staged at the moment `guard` fires, which runs
+*before* the tool call it is judging. The coordinator reproduced that `git add f.py && git commit
+-m f` on a `claude/` branch, with `f.py` a new source file, got no reminder: the index guard read
+was the one from before the `add` in the same command ran. That is the commit form used most, so
+the check as built almost never fired.
+
+**Decision.** `_staged_docs_status` now computes the effective path set a commit will actually
+include, from the command text itself, still under the same 2-second total time budget and the
+same "never changes guard's own decision" contract: `-a`/`--all`/`-am`/`-ma` on the commit
+statement unions in `git diff HEAD --name-only` (every tracked, modified/deleted path); an
+earlier `git add <paths>` in the same command (split on `&&`, `||`, `;`, newlines, the same way a
+compound command is read elsewhere) adds those literal paths, resolved against
+`git status --porcelain -uall` by prefix match so a directory argument expands to the files under
+it; `git add .`/`-A`/`--all` unions in every path from that same status listing, `-u`/`--update`
+only the tracked ones. Each `git` call shares one deadline computed once, so several calls in
+sequence cannot each get their own fresh 2 seconds.
+
+**Why.** A check that reads the state from before the command it judges runs is answering the
+wrong question - "what is staged right now" instead of "what is this commit about to include."
+Parsing the command text for `add`/`-a` is more code than reading the index once, but the
+alternative (skip `-a` and pre-`add`, cover only an already-staged `git commit` with nothing
+else) covers a minority of how commits are actually written.
+
+**Status.** Standing.
+
+## 2026-09-23 — handover narrows to shell fences, and gains an independent evidence check
+<!-- ref:6534 -->
+<!-- ref:25b2 -->
+
+**Context.** `handover` (`Stop`) fired the step-card checklist on ANY fenced block, including a
+fence with no shell in it at all (a `json` snippet, a diff, an unlabelled example) - noise that
+was never a command handover to begin with. Separately, nothing in the plugin checked whether a
+reply *claiming* success ("fixed", "it works", "tests passed") was backed by anything - a
+confident-sounding reply and a verified one read identically.
+
+**Decision.** Fence gating narrows to a fence whose info-string is a recognized shell (`bash`,
+`sh`, `zsh`, `shell`, `console`, `powershell`, `pwsh`, `ps1`, `cmd`, `bat`, `fish`) - the
+already-card-shaped stand-down is unchanged. A second, independent check: a reply matching a
+claim word (`works`, `working`, `fixed`, `passes`, `passing`, `passed`, `verified`, `tested`,
+`confirmed`, `succeeded`, word-boundary so "untested"/"unverified" never match, plus an explicit
+negation-window check for "not tested"/"haven't verified") fires when there was no `tool_use` in
+the transcript since the last **genuine user message** and the reply quotes no evidence (a fenced
+block of any kind, or a line shaped like real captured output - this repo's own `RESULT: PASS`
+convention, an exit code, or a test runner's "N passed" summary - deliberately not the bare word
+"passed" alone, which would treat the prose claim itself as its own evidence).
+
+**"Genuine user message" definition.** A transcript record with `"type": "user"` whose
+`message.content` is not a list made entirely of `tool_result` blocks (a tool-result-carrying
+turn, not a person writing), whose text does not start with `Stop hook feedback` (case-
+insensitive) and does not contain `<task-notification>` (a background subagent's hand-back,
+`doc-ref 8713`/`c79f docs/Decisions.md`'s siblings), and whose `origin.kind`, when the field is
+present at all, is `"human"` (absent `origin` reads as human too, matching
+`scripts/session_ledger_render.py`'s own `build_turns` - the one other place in this plugin
+already keys on the same field for the same reason).
+
+Both checks share exactly one `additionalContext` emission when both fire (two `emit()` calls
+would be two concatenated JSON objects on stdout, not valid hook output) - though in practice a
+shell fence always satisfies the evidence check's own "quotes evidence" exemption (any fence
+counts, including the handed-over command's own), so the two conditions cannot both be true live
+on the same reply; the shared-emission code path exists for correctness, not because it fires
+today. A transcript that
+cannot be read, or that carries no genuine user message at all, never fires the evidence note -
+it fails open with a `systemMessage` naming what it could not tell, the same "never assert what
+was not confirmed" posture the commit-time docs check (`doc-ref 8713`) already uses.
+`stop_hook_active`, `HOUSE_RULES_HANDOVER=off`, and never `decision: "block"` are all unchanged.
+
+**Why.** A fence check that fires on every fence trains the eye to skip the reminder; narrowing
+it to shell fences keeps it firing exactly where a command really was handed over. The evidence
+check exists because "evidence before claims" (this session's own earlier addition, `doc-ref
+c67d`) was, until now, a rule stated in the subagent core and nowhere enforced in the main
+session's own replies.
+
+**Status.** Standing.
+
+## 2026-09-23 — scope trades its step-card line for a docs-tier line and an evidence line
+
+**Context.** `scope`'s periodic per-prompt reminder (both its short and long forms) restated the
+step-card handover format on every command-shaped prompt. That enforcement now has a live check
+at the point it actually matters - `handover` (`Stop`) fires its own card check on a shell-fenced
+reply and, independently, an evidence check on an unbacked success claim - so restating it in
+`scope` too was paying for the same rule twice, while two rules with no enforcement point at all
+(the docs tiers, and evidence before claims) had no per-prompt reminder.
+
+**Decision.** Replaced the step-card line in both `SCOPE_REMINDER` (long form) and
+`SCOPE_REMINDER_SHORT` with a docs-tier line ("update the docs tier that changed... or say why
+none did") and an evidence line ("no success claim without a run you can quote"), pinned to the
+same wording the rules corpus already uses (`tier that changed`, `success claim`) so drift
+between the reminder and the rules document is still caught. Both forms shrank rather than grew
+(long: 909 → 795 chars; short: 260 → 222), well inside the +10%-of-baseline budget `verify.py`
+now checks explicitly. The executor-delegation clause `scope` adds on a go-ahead-shaped prompt is
+unchanged.
+
+**Why.** A reminder that keeps restating a rule with its own live enforcement is paying twice for
+one thing; the two rules that had no enforcement point at all are the ones worth the recurring
+nudge.
 
 **Status.** Standing.

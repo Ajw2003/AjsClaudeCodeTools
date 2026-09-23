@@ -45,6 +45,7 @@ TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
 DOCSKILL = os.path.join(HERE, "..", "skills", "project-docs", "SKILL.md")
 CHATDOC = os.path.join(ROOT, "docs", "claude-ai-instructions.md")
 VERIFYDOC = os.path.join(ROOT, "docs", "desktop-verification.md")
+ARCHDOC = os.path.join(ROOT, "docs", "architecture.md")
 
 # Absolute, so the PATH-emptied cases below still find the shell they are testing run.sh with —
 # with a bare "sh" those cases fail to launch at all instead of exercising the fallback.
@@ -94,6 +95,21 @@ def skip_repo_check(title, absent, extra=""):
 def read(path):
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
+
+
+DETAIL_DIR = os.path.join(HERE, "..", "rules", "detail")
+
+
+def rules_corpus():
+    """house-rules.md (the injected core) plus every rules/detail/*.md file it points to.
+    See docs/Decisions.md, 2026-09-22, for why drift checks read this instead of the core alone.
+    """
+    corpus = read(RULES_FILE)
+    if os.path.isdir(DETAIL_DIR):
+        for name in sorted(os.listdir(DETAIL_DIR)):
+            if name.endswith(".md"):
+                corpus += "\n\n" + read(os.path.join(DETAIL_DIR, name))
+    return corpus
 
 
 def run_hook(event, payload="", env=None):
@@ -174,6 +190,171 @@ def env_in(project_dir, **extra):
     e["CLAUDE_PROJECT_DIR"] = project_dir
     e.update(extra)
     return e
+
+
+# --- docstiers fixtures ------------------------------------------------------------------
+_DOCS_TIER_FILE_NAMES = ["README.md", "Roadmap.md", "ProjectState.md", "Today.md", "Decisions.md"]
+
+
+def _docstiers_repo(name, all_tiers, git_config_text=None, config_is_dir=False, no_git=False):
+    path = os.path.join(_FIXTURE_ROOT, name)
+    docs = os.path.join(path, "docs")
+    os.makedirs(os.path.join(docs, "systems"), exist_ok=True)
+    if all_tiers:
+        for fname in _DOCS_TIER_FILE_NAMES:
+            with open(os.path.join(docs, fname), "w", encoding="utf-8") as f:
+                f.write("x\n")
+        with open(os.path.join(docs, "systems", "core.md"), "w", encoding="utf-8") as f:
+            f.write("x\n")
+    if not no_git:
+        git_dir = os.path.join(path, ".git")
+        os.makedirs(git_dir, exist_ok=True)
+        if config_is_dir:
+            os.makedirs(os.path.join(git_dir, "config"), exist_ok=True)
+        elif git_config_text is not None:
+            with open(os.path.join(git_dir, "config"), "w", encoding="utf-8") as f:
+                f.write(git_config_text)
+    return path
+
+
+DOCSTIERS_COMPLETE = _docstiers_repo(
+    "docstiers-complete", True, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n'
+)
+DOCSTIERS_OWNED = _docstiers_repo(
+    "docstiers-owned", False, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n'
+)
+DOCSTIERS_NOT_OWNED = _docstiers_repo(
+    "docstiers-not-owned", False, '[remote "origin"]\n\turl = https://github.com/SomeoneElse/repo.git\n'
+)
+DOCSTIERS_SSH_OWNED = _docstiers_repo(
+    "docstiers-ssh-owned", False, '[remote "origin"]\n\turl = git@github.com:Ajw2003/repo.git\n'
+)
+DOCSTIERS_NO_GIT = _docstiers_repo("docstiers-no-git", False, no_git=True)
+DOCSTIERS_GARBAGE_CONFIG = _docstiers_repo(
+    "docstiers-garbage-config", False, "not an ini file\njust some random text\n"
+)
+DOCSTIERS_UNREADABLE_CONFIG = _docstiers_repo("docstiers-unreadable-config", False, config_is_dir=True)
+
+
+# --- inject, profile and standards each stay under the per-hook additionalContext limit ------
+# Margins per docs/Decisions.md, 2026-09-22 (second entry): inject 9,000, profile/standards 9,500,
+# each measured on the REAL emitted output, not source file size. profile is measured with
+# docs/example-environment.md standing in for a recorded profile.
+EXAMPLE_ENV = os.path.join(ROOT, "docs", "example-environment.md")
+
+
+def _additional_context(event, payload="", env=None):
+    code, out, err = run_hook(event, payload, env=env)
+    try:
+        parsed = json.loads(out)
+        return code, parsed["hookSpecificOutput"]["additionalContext"], err
+    except Exception as exc:
+        return code, None, f"{err}\ncould not parse {event} output as JSON: {exc}"
+
+
+_size_cases = [
+    ("inject", 9_000, env_in(ROOT)),
+    ("standards", 9_500, env_in(ROOT)),
+    ("profile", 9_500, env_in(ROOT, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV)),
+    ("docstiers", 9_500, env_in(DOCSTIERS_NOT_OWNED)),
+]
+for _event, _margin, _env in _size_cases:
+    _code, _ctx, _err = _additional_context(_event, "", env=_env)
+    if _ctx is None:
+        report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
+        print(f"          could not read additionalContext: {_err.strip()}")
+    elif len(_ctx) <= _margin:
+        report("PASS", f"{_event} stays under the per-hook additionalContext limit")
+        print(f"          {len(_ctx)} chars <= {_margin} margin (hard limit 10,000)")
+    else:
+        report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
+        print(f"          {len(_ctx)} chars > {_margin} margin - Claude Code will truncate this")
+
+# --- docstiers: complete/missing, owned/not-owned, ssh, no .git, unreadable/garbage config ----
+_docstiers_cases = [
+    (
+        "all six tiers present - silent",
+        DOCSTIERS_COMPLETE,
+        {"empty": True},
+    ),
+    (
+        "missing tiers, https remote owned by the configured account - no exclude instruction",
+        DOCSTIERS_OWNED,
+        {"missing": True, "exclude": False, "owned": True},
+    ),
+    (
+        "missing tiers, https remote NOT owned - exclude instruction present",
+        DOCSTIERS_NOT_OWNED,
+        {"missing": True, "exclude": True, "owned": False},
+    ),
+    (
+        "missing tiers, ssh-form remote owned by the configured account",
+        DOCSTIERS_SSH_OWNED,
+        {"missing": True, "exclude": False, "owned": True},
+    ),
+    (
+        "missing tiers, not a git repository at all - no exclude instruction",
+        DOCSTIERS_NO_GIT,
+        {"missing": True, "exclude": False, "not_git": True},
+    ),
+    (
+        "missing tiers, garbage .git/config - falls to not-owned and says so",
+        DOCSTIERS_GARBAGE_CONFIG,
+        {"missing": True, "exclude": True, "owned": False},
+    ),
+    (
+        "missing tiers, unreadable .git/config - falls to not-owned and says so",
+        DOCSTIERS_UNREADABLE_CONFIG,
+        {"missing": True, "exclude": True, "owned": False},
+    ),
+]
+for _title, _path, _expect in _docstiers_cases:
+    _code, _out, _err = run_hook("docstiers", "", env=env_in(_path))
+    _problems = []
+    if _code != 0:
+        _problems.append(f"exited {_code}, expected 0")
+    if _expect.get("empty"):
+        if _out.strip():
+            _problems.append(f"expected a fully silent stdout, got: {_out[:200]!r}")
+    else:
+        if "house-rules:project-docs" not in _out:
+            _problems.append("missing the load-and-scaffold instruction")
+        _exclude_instruction = "add every scaffolded path to .git/info/exclude" in _out
+        if _expect.get("exclude") and not _exclude_instruction:
+            _problems.append("expected the .git/info/exclude instruction, not present")
+        if not _expect.get("exclude") and _exclude_instruction:
+            _problems.append("the .git/info/exclude instruction leaked into an owned/no-git case")
+        if _expect.get("not_git") and "not a git repository" not in _out.lower():
+            _problems.append("expected a not-a-git-repository note")
+    if not _problems:
+        report("PASS", f"docstiers: {_title}")
+        print(f"          {len(_out)} chars emitted")
+    else:
+        report("FAIL", f"docstiers: {_title}")
+        print(f"          {'; '.join(_problems)}")
+
+# docstiers's fail-loud path (systemMessage on an internal error, like inject) is covered by
+# main()'s generic exception net, proven generically further down this file rather than with a
+# docstiers-specific fixture - every input docstiers actually reads already degrades gracefully
+# by design (a garbage/unreadable .git/config falls to not-owned, not a crash - proven above).
+
+_skill_drift = []
+if not os.path.isfile(DOCSKILL):
+    _skill_drift.append("skills/project-docs/SKILL.md is missing")
+else:
+    _skill_text = read(DOCSKILL)
+    for _tier_phrase in [
+        "docs/README.md", "docs/Roadmap.md", "docs/ProjectState.md",
+        "docs/systems/*.md", "docs/Today.md", "docs/Decisions.md",
+    ]:
+        if _tier_phrase not in _skill_text:
+            _skill_drift.append(f"{_tier_phrase!r} is not named in SKILL.md - docstiers may be inventing tier names")
+if not _skill_drift:
+    report("PASS", "docstiers's hardcoded tier list matches skills/project-docs/SKILL.md")
+    print("          all six tier paths docstiers checks are the ones SKILL.md names")
+else:
+    report("FAIL", "docstiers's hardcoded tier list matches skills/project-docs/SKILL.md")
+    print(f"          {'; '.join(_skill_drift)}")
 
 
 # --- guard cases: 29 commands ---------------------------------------------------------------
@@ -349,6 +530,221 @@ if "mine to commit on" in out:
 else:
     report("FAIL", "a linked worktree resolves its branch through the gitdir: pointer")
     print(f"          got: {out!r}")
+
+# --- guard's commit-time docs-tier reminder: real git fixtures, since this path itself uses -----
+# git diff --cached, unlike the rest of guard which stays subprocess-free.
+if shutil.which("git"):
+    def _git(d, *args):
+        subprocess.run(
+            ["git", "-C", d] + list(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
+
+    def _docs_guard_repo(name, branch, files, staged):
+        d = os.path.join(_FIXTURE_ROOT, name)
+        os.makedirs(d)
+        _git(d, "init", "-q")
+        _git(d, "config", "user.email", "t@t.com")
+        _git(d, "config", "user.name", "t")
+        with open(os.path.join(d, "README.md"), "w", encoding="utf-8") as f:
+            f.write("x\n")
+        _git(d, "add", "README.md")
+        _git(d, "commit", "-q", "-m", "init")
+        if branch != "main" and branch != "master":
+            _git(d, "checkout", "-q", "-b", branch)
+        for path, content in files.items():
+            full = os.path.join(d, path)
+            os.makedirs(os.path.dirname(full), exist_ok=True)
+            with open(full, "w", encoding="utf-8") as f:
+                f.write(content)
+        if staged:
+            _git(d, "add", *staged)
+        return d
+
+    DOCSGUARD_CLAUDE_SOURCE_ONLY = _docs_guard_repo(
+        "docsguard-claude-source-only", "claude/topic", {"a.py": "print(1)\n"}, ["a.py"]
+    )
+    DOCSGUARD_CLAUDE_SOURCE_AND_DOCS = _docs_guard_repo(
+        "docsguard-claude-source-and-docs", "claude/topic",
+        {"a.py": "print(1)\n", "docs/ProjectState.md": "state\n"}, ["a.py", "docs/ProjectState.md"],
+    )
+    DOCSGUARD_CLAUDE_CONFIG_ONLY = _docs_guard_repo(
+        "docsguard-claude-config-only", "claude/topic", {"config.json": "{}\n"}, ["config.json"]
+    )
+    DOCSGUARD_MAIN_SOURCE_ONLY = _docs_guard_repo(
+        "docsguard-main-source-only", "main", {"a.py": "print(1)\n"}, ["a.py"]
+    )
+
+    docsguard_cases = [
+        (
+            "a claude/ branch commit with a staged source file and nothing under docs/ gets a "
+            "docs reminder, still allowed",
+            DOCSGUARD_CLAUDE_SOURCE_ONLY, "allow", True,
+        ),
+        (
+            "a claude/ branch commit with a staged source file AND a staged docs/ file gets no "
+            "reminder",
+            DOCSGUARD_CLAUDE_SOURCE_AND_DOCS, "allow", False,
+        ),
+        (
+            "a claude/ branch commit with no staged source file (config only) gets no reminder",
+            DOCSGUARD_CLAUDE_CONFIG_ONLY, "allow", False,
+        ),
+        (
+            "a non-owned branch commit with a staged source file gets the docs reason appended "
+            "to guard's existing prompt",
+            DOCSGUARD_MAIN_SOURCE_ONLY, "ask", True,
+        ),
+    ]
+    for title, repo, expect_decision, expect_reminder in docsguard_cases:
+        code, out, err = run_hook("guard", payload_for('git commit -m "wip"'), env=env_in(repo))
+        problems = []
+        if code != 0:
+            problems.append(f"exit {code}, must never be non-zero")
+        if expect_decision == "allow":
+            if '"permissionDecision":"ask"' in out:
+                problems.append("guard asked, expected a silent/allow decision")
+        else:
+            if '"permissionDecision":"ask"' not in out:
+                problems.append("guard did not ask, expected it to (non-owned branch always asks on a commit)")
+        has_reminder = "documentation goes in tiers" in out.lower() or "Documentation goes in tiers" in out
+        if expect_reminder and not has_reminder:
+            problems.append("no docs-tier reminder in the output, expected one")
+        if not expect_reminder and has_reminder:
+            problems.append("a docs-tier reminder fired, expected none")
+        if not problems:
+            report("PASS", title)
+            print(f"          {out[:200]}")
+        else:
+            report("FAIL", title)
+            for p in problems:
+                print(f"          {p}")
+
+    # git missing/unusable: guard's decision must be UNCHANGED (still exempted-allow on a
+    # claude/ branch commit), with a "could not tell" note replacing the reminder, not silence.
+    _no_git_env = env_in(DOCSGUARD_CLAUDE_SOURCE_ONLY)
+    _no_git_env["PATH"] = _FIXTURE_ROOT  # a directory with no git binary in it
+    code, out, err = run_hook("guard", payload_for('git commit -m "wip"'), env=_no_git_env)
+    if (
+        code == 0
+        and '"permissionDecision":"ask"' not in out
+        and "mine to commit on" in out
+        and "could not tell" in out
+    ):
+        report("PASS", "a missing git binary leaves guard's own decision unchanged, and says so")
+        print(f"          {out[:200]}")
+    else:
+        report("FAIL", "a missing git binary leaves guard's own decision unchanged, and says so")
+        print(f"          exit {code}, out {out[:200]!r}")
+
+    # A command naming another repo: guard already prompts (RULE_COMMIT); the docs check must
+    # not try to resolve that other repo's staged files, and says it could not tell rather than
+    # silently assuming either answer.
+    code, out, err = run_hook(
+        "guard",
+        payload_for('git -C /some/other/repo commit -m "wip"'),
+        env=env_in(DOCSGUARD_CLAUDE_SOURCE_ONLY),
+    )
+    if '"permissionDecision":"ask"' in out and "could not tell" in out.lower() and "another repo" in out:
+        report("PASS", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
+        print(f"          {out[:250]}")
+    else:
+        report("FAIL", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
+        print(f"          out {out[:250]!r}")
+
+    # --- what a commit will ACTUALLY include, not just what is already staged -----------------
+    # doc-ref c79f docs/Decisions.md: guard fires before the command it judges runs, so a
+    # docs-only-staged-right-now check misses an add-then-commit or an -a/-am commit entirely.
+    DOCSGUARD_ADD_THEN_COMMIT_SOURCE = _docs_guard_repo(
+        "docsguard-add-then-commit-source", "claude/topic", {"f.py": "print(1)\n"}, staged=[]
+    )
+    DOCSGUARD_ADD_THEN_COMMIT_WITH_DOCS = _docs_guard_repo(
+        "docsguard-add-then-commit-with-docs", "claude/topic",
+        {"f.py": "print(1)\n", "docs/ProjectState.md": "state\n"}, staged=[],
+    )
+    DOCSGUARD_ADD_DOT_WITH_DOCS = _docs_guard_repo(
+        "docsguard-add-dot-with-docs", "claude/topic",
+        {"f.py": "print(1)\n", "docs/ProjectState.md": "state\n"}, staged=[],
+    )
+
+    def _docs_guard_repo_with_tracked_change(name):
+        # -am needs a file that is TRACKED and modified, not staged - a plain new file (never
+        # committed) is not what -a stages.
+        d = os.path.join(_FIXTURE_ROOT, name)
+        os.makedirs(d)
+        _git(d, "init", "-q")
+        _git(d, "config", "user.email", "t@t.com")
+        _git(d, "config", "user.name", "t")
+        with open(os.path.join(d, "README.md"), "w", encoding="utf-8") as f:
+            f.write("x\n")
+        _git(d, "add", "README.md")
+        _git(d, "commit", "-q", "-m", "init")
+        _git(d, "checkout", "-q", "-b", "claude/topic")
+        with open(os.path.join(d, "tracked.py"), "w", encoding="utf-8") as f:
+            f.write("print(1)\n")
+        _git(d, "add", "tracked.py")
+        _git(d, "commit", "-q", "-m", "add tracked")
+        with open(os.path.join(d, "tracked.py"), "w", encoding="utf-8") as f:
+            f.write("print(2)\n")
+        return d
+
+    DOCSGUARD_AM_SOURCE_ONLY = _docs_guard_repo_with_tracked_change("docsguard-am-source-only")
+    DOCSGUARD_QUOTED_PATH = _docs_guard_repo(
+        "docsguard-quoted-path", "claude/topic", {"my file.py": "print(1)\n"}, staged=[]
+    )
+
+    effective_cases = [
+        (
+            "git add f.py && git commit -m f",
+            "add-then-commit of a new source file, nothing under docs/, gets the reminder",
+            DOCSGUARD_ADD_THEN_COMMIT_SOURCE, True,
+        ),
+        (
+            "git add f.py docs/ProjectState.md && git commit -m f",
+            "add-then-commit that also adds a docs/ path gets no reminder",
+            DOCSGUARD_ADD_THEN_COMMIT_WITH_DOCS, False,
+        ),
+        (
+            "git add . && git commit -m f",
+            "git add . with an untracked docs/ change present gets no reminder",
+            DOCSGUARD_ADD_DOT_WITH_DOCS, False,
+        ),
+        (
+            "git commit -am f",
+            "-am against a tracked, modified source file with nothing under docs/ gets the reminder",
+            DOCSGUARD_AM_SOURCE_ONLY, True,
+        ),
+        (
+            'git add "my file.py" && git commit -m x',
+            "a quoted add path with a space is tokenized as one argument (shlex), and gets the reminder",
+            DOCSGUARD_QUOTED_PATH, True,
+        ),
+    ]
+    for cmd, title, repo, expect_reminder in effective_cases:
+        code, out, err = run_hook("guard", payload_for(cmd), env=env_in(repo))
+        has_reminder = "documentation goes in tiers" in out.lower()
+        if code == 0 and has_reminder == expect_reminder:
+            report("PASS", title)
+            print(f"          {out[:200]}")
+        else:
+            report("FAIL", title)
+            print(f"          exit {code}, expected reminder={expect_reminder}, out {out[:250]!r}")
+
+    # Unbalanced quotes in an add statement: shlex.split raises ValueError, which must read as
+    # "could not tell" - never a guess, and never a change to guard's own decision.
+    code, out, err = run_hook(
+        "guard", payload_for('git add "unbalanced.py && git commit -m x'), env=env_in(DOCSGUARD_QUOTED_PATH)
+    )
+    if code == 0 and '"permissionDecision":"ask"' not in out and "mine to commit on" in out and "could not tell" in out.lower():
+        report("PASS", "an add statement with unbalanced quotes is a could-not-tell, not a guess")
+        print(f"          {out[:200]}")
+    else:
+        report("FAIL", "an add statement with unbalanced quotes is a could-not-tell, not a guess")
+        print(f"          exit {code}, out {out[:250]!r}")
+else:
+    report("SKIP", "guard's commit-time docs-tier reminder (real git fixtures)")
+    print("          no git binary on PATH")
+
+print()
 
 # The branch is read from a file, never by running git. A subprocess here would sit on the
 # critical path of every shell command, in the one handler that blocks when it fails.
@@ -529,27 +925,60 @@ else:
     report("FAIL", "SessionStart injects every rule heading into context")
     print(f"          missing: {'; '.join(missing)}")
 
-# --- the step-card template actually REACHES the session, not just the file ------------------
-# Asserting rules/house-rules.md contains the card is not asserting Claude ever sees it - the
-# same distinction the model-split checks exist for. Feed inject and read the injected text.
+# --- ${CLAUDE_PLUGIN_ROOT} is expanded to a real, openable path before injection --------------
+_root = None
+_ctx_text = ""
+# additionalContext is plain text nothing expands - only hooks.json's own command strings get
+# ${CLAUDE_PLUGIN_ROOT} substituted by the harness. A literal ${CLAUDE_PLUGIN_ROOT} left in the
+# injected text is a path Claude cannot open.
+_detail_marker = "/rules/detail/edit-place.md"
+if "${CLAUDE_PLUGIN_ROOT}" in out:
+    report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
+    print("          the literal placeholder reached additionalContext unexpanded")
+elif _detail_marker.lstrip("/") not in out:
+    report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
+    print(f"          no detail pointer {_detail_marker.lstrip('/')!r} found in the injection")
+else:
+    try:
+        _ctx_text = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        _ctx_text = ""
+    _root_line = re.search(r"is the plugin root: ([^\n]+)", _ctx_text)
+    _root = _root_line.group(1) if _root_line else None
+    _expanded_path = os.path.join(_root, *_detail_marker.lstrip("/").split("/")) if _root else None
+    if _expanded_path and os.path.isfile(_expanded_path):
+        report("PASS", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
+        print(f"          {_expanded_path} exists on disk")
+    else:
+        report("FAIL", "inject expands ${CLAUDE_PLUGIN_ROOT} to a real path")
+        print(f"          plugin root {_root!r} + detail pointer does not exist on disk")
+# The install path's length must not scale the injection: stated once, never per pointer.
+_root_count = _ctx_text.count(_root) if _root else 0
+if _root_count == 1:
+    report("PASS", "inject states the plugin root once, so its size is independent of the install path")
+    print(f"          root appears once; {len(_ctx_text)} chars total")
+else:
+    report("FAIL", "inject states the plugin root once, so its size is independent of the install path")
+    print(f"          root appears {_root_count} times - each copy grows with the install path")
+
+# --- the step-card POINTER actually REACHES the session, not just the file --------------------
+# Since 2.17.0 ("rules that actually load") the full card template is deliberately NOT injected -
+# it lives once in the forced handover-cards output style, which is what stays under the per-hook
+# context limit. So this no longer asserts the template's own markers arrive in additionalContext
+# (they intentionally do not); it asserts the POINTER to where the template lives does.
 cardmissing = []
 for marker in [
     "#### The card",
-    "### Step 1 of",
-    "**You should see:**",
+    "handover-cards",
     "UNTESTED:",
-    "is a label on a command, not a step",
-    "A card is a sequence, not a menu",
-    "Replacing step N:",
-    "does not depend on where the prompt is",
 ]:
     if marker not in out:
         cardmissing.append(marker)
 if not cardmissing:
-    report("PASS", "SessionStart injects the step-card template into context")
-    print("          the card markers arrive in additionalContext, not just in the file")
+    report("PASS", "SessionStart injects the step-card pointer into context")
+    print("          the card heading and a pointer to handover-cards.md arrive in additionalContext")
 else:
-    report("FAIL", "SessionStart injects the step-card template into context")
+    report("FAIL", "SessionStart injects the step-card pointer into context")
     print(f"          missing from the injected text: {'; '.join(cardmissing)}")
 
 # --- inject fail-loud: an internal error must still say something ---------------------------
@@ -601,8 +1030,10 @@ def check_scope(title, payload, expect, empty_path=False):
     elif expect == "short":
         if "response depth" in out or "machine you are on" in out:
             bad.append("expected the short form, but the long form's content is present")
-        if "step-card format" not in out:
-            bad.append("short form missing the step-card-format line")
+        if "docs tier that changed" not in out:
+            bad.append("short form missing the docs-tier line")
+        if "run you can quote" not in out:
+            bad.append("short form missing the evidence line")
     if not bad:
         report("PASS", title)
         print(f"          {len(out)} characters of reminder injected ({expect} form)")
@@ -633,6 +1064,26 @@ check_scope(
     "short",
     empty_path=True,
 )
+
+# --- both scope forms stay within +10% of their 2026-09-23 baseline size --------------------
+# Baselines recorded the day the step-card line was swapped for a docs-tier line and an
+# evidence line (docs/Decisions.md): long form was 909 chars, short form 260. +10% margin, not
+# a floor - shrinking is fine, growing past it is the thing this catches.
+_SCOPE_SIZE_BASELINES = {"long": (909, 1.10), "short": (260, 1.10)}
+for form, payload_prompt in (("long", "run the build script"), ("short", "what does this function do?")):
+    _, out, _ = run_hook("scope", scope_payload(payload_prompt))
+    try:
+        actual = len(json.loads(out)["hookSpecificOutput"]["additionalContext"])
+    except Exception as exc:
+        actual = -1
+    base, margin = _SCOPE_SIZE_BASELINES[form]
+    cap = int(base * margin)
+    if 0 <= actual <= cap:
+        report("PASS", f"scope's {form} form stays within +10% of its baseline size")
+        print(f"          {actual} chars <= {cap} (baseline {base})")
+    else:
+        report("FAIL", f"scope's {form} form stays within +10% of its baseline size")
+        print(f"          {actual} chars > {cap} (baseline {base}) or output unparseable")
 
 # --- the artifact reminder fires on documents written outside a project ---------------------
 def art_case(expect, title, file_path, extra="", contains=None, excludes=None):
@@ -722,7 +1173,7 @@ art_case(
 # --- docs/generated/ has not drifted between the rules, the project-docs skill, and the -----
 # --- text hook.py actually emits for a generated-extension artifact -------------------------
 gendrift = []
-_art_rules_text = read(RULES_FILE)
+_art_rules_text = rules_corpus()
 if "docs/generated" not in _art_rules_text:
     gendrift.append("house-rules.md no longer mentions docs/generated/")
 if not os.path.isfile(DOCSKILL):
@@ -754,7 +1205,7 @@ else:
 # --- the reminder in hook.py's scope handler has not drifted from the rules document --------
 # Covers both forms - the short one is what fires on most prompts now, so its phrases need the
 # same drift protection the long form always had.
-rules_text = read(RULES_FILE)
+rules_text = rules_corpus()
 drift = []
 for phrase in [
     "response depth",
@@ -763,8 +1214,8 @@ for phrase in [
     "ask instead of assuming",
     "project directory",
     "hand over a command",
-    "step-card format",
-    "You should see:",
+    "tier that changed",
+    "success claim",
 ]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
@@ -780,15 +1231,14 @@ for phrase in [
     "whole workflow",
     "project directory",
     "have not run",
-    "step-card format",
-    "You should see:",
-    "UNTESTED:",
+    "tier that changed",
+    "success claim",
 ]:
     if phrase.lower() not in long_reminder.lower():
         gutted.append(phrase)
 if not gutted:
     report("PASS", "the trimmed long-form reminder still carries every operative rule")
-    print(f"          {len(long_reminder)} chars, all 8 operative phrases present")
+    print(f"          {len(long_reminder)} chars, all 7 operative phrases present")
 else:
     report("FAIL", "the trimmed long-form reminder still carries every operative rule")
     print(f"          trimmed away: {'; '.join(gutted)}")
@@ -831,8 +1281,31 @@ else:
         report("PASS", "repo CLAUDE.md is not a second copy of the rules")
         print(f"          it is a pointer ({len(claude_text.encode('utf-8'))} bytes), not a copy")
 
+# --- CLAUDE.md stays a real pointer, not a growing document ----------------------------------
+CLAUDE_MD_BYTE_LIMIT = 4_000
+_absent = absent_repo_files("CLAUDE.md")
+if _absent:
+    skip_repo_check(f"CLAUDE.md stays at or under {CLAUDE_MD_BYTE_LIMIT} bytes", _absent)
+elif not os.path.isfile(root_claude):
+    report("PASS", f"CLAUDE.md stays at or under {CLAUDE_MD_BYTE_LIMIT} bytes")
+    print("          no CLAUDE.md at the repo root")
+else:
+    _claude_bytes = len(read(root_claude).encode("utf-8"))
+    if _claude_bytes <= CLAUDE_MD_BYTE_LIMIT:
+        report("PASS", f"CLAUDE.md stays at or under {CLAUDE_MD_BYTE_LIMIT} bytes")
+        print(f"          {_claude_bytes} bytes <= {CLAUDE_MD_BYTE_LIMIT}")
+    else:
+        report("FAIL", f"CLAUDE.md stays at or under {CLAUDE_MD_BYTE_LIMIT} bytes")
+        print(f"          {_claude_bytes} bytes > {CLAUDE_MD_BYTE_LIMIT} - it has grown past a pointer again")
+
 # --- the recorded machine profile actually reaches the session -------------------------------
-code, out, err = run_hook("inject", "")
+# A real rules/environment.md fixture, not a coincidental phrase in the rules body - the rules
+# split (docs/Decisions.md, 2026-09-22) moved the PowerShell/Git-Bash path-notation example this
+# used to piggyback on out of the injected text on purpose, so this now supplies its own fixture.
+_envfixture = os.path.join(_FIXTURE_ROOT, "environment.md")
+with open(_envfixture, "w", encoding="utf-8") as _f:
+    _f.write("# This machine (hand-verified)\n\nShell: PowerShell\nsh: NOT on PATH\n")
+code, out, err = run_hook("profile", "", env=env_in(ROOT, HOUSE_RULES_ENV_FILE=_envfixture))
 missing_env = []
 if "This machine" not in out:
     missing_env.append("no machine profile in the injection")
@@ -850,7 +1323,7 @@ else:
 # --- an unrecorded machine reads as "go and find out", never as "assume" ---------------------
 env = dict(os.environ)
 env["HOUSE_RULES_ENV_FILE"] = "/nonexistent-on-purpose"
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "NOT RECORDED YET" in out:
     report("PASS", "a missing machine profile becomes an instruction to discover it")
     print("          the session is told to go and find the facts, not to assume them")
@@ -865,7 +1338,7 @@ else:
 # is hook.py's *injected block* - checked by its two block-specific openings instead.
 env = dict(os.environ)
 env.pop("CLAUDE_CODE_REMOTE", None)
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "for anything I hand over to them" not in out.lower() and "this session is remote:" not in out.lower():
     report("PASS", "a local session's injection carries no handover-target block")
     print("          no CLAUDE_CODE_REMOTE in the test env, no handover block emitted")
@@ -877,7 +1350,7 @@ else:
 env = dict(os.environ)
 env["CLAUDE_CODE_REMOTE"] = "true"
 env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = "/nonexistent-on-purpose-handover"
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "rules/handover-target.md" in out and "find out" in out.lower():
     report("PASS", "a remote session with no recorded handover target is told to find one out")
     print("          the injection points at docs/example-environment.md / asking, then recording")
@@ -892,7 +1365,7 @@ with open(handover_fixture, "w", encoding="utf-8") as f:
 env = dict(os.environ)
 env["CLAUDE_CODE_REMOTE"] = "true"
 env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = handover_fixture
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "Git Bash for POSIX" in out:
     report("PASS", "a remote session injects a recorded handover-target file's content")
     print("          fixture content reached additionalContext")
@@ -911,7 +1384,7 @@ for phrase in [
 env = dict(os.environ)
 env["CLAUDE_CODE_REMOTE"] = "true"
 env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = "/nonexistent-on-purpose-handover"
-_, handover_out, _ = run_hook("inject", "", env=env)
+_, handover_out, _ = run_hook("profile", "", env=env)
 if "rules/handover-target.md" not in handover_out:
     handover_drift.append("hook.py's find-out instruction no longer names rules/handover-target.md")
 if not handover_drift:
@@ -1621,7 +2094,7 @@ code, out, err = run_hook(
         }
     ),
 )
-if not out.strip() and "never announces its own compliance" in read(RULES_FILE):
+if not out.strip() and "never announces its own compliance" in rules_corpus():
     report("PASS", "handover stays silent on its stand-down, and the rule that requires it still stands")
     print("          the one handler where tracing would break a rule rather than cost tokens")
 else:
@@ -1779,6 +2252,7 @@ for ev, needle in (
     ("delegate", "delegate"),
     ("handover", "handover"),
     ("harvest", "harvest"),
+    ("docstiers", "docstiers"),
 ):
     snippet = (
         "import sys, hook\n"
@@ -1939,6 +2413,110 @@ hand_case(
 # The "nothing fails silently" rule reverses that: an empty payload is not a turn with no
 # command in it, it is a check that never got its input, and the two must not look the same.
 hand_case("offline", "an empty payload is a check that could not run, and says so", "")
+
+# --- fence gating narrows to a SHELL-labelled fence, not any fence -----------------------------
+hand_case(
+    "feedback",
+    "a shell-labelled fence (bash) still fires the card check",
+    stop_payload(last_assistant_message="Run this:\n\n```bash\nls -la\n```\n"),
+)
+hand_case(
+    "silent",
+    "a python-labelled fence is not a command handover, so the card check stays quiet",
+    stop_payload(last_assistant_message="```python\nprint('hi')\n```\n"),
+)
+hand_case(
+    "silent",
+    "an unlabelled fence is not a command handover, so the card check stays quiet",
+    stop_payload(last_assistant_message="```\nsome output\n```\n"),
+)
+
+# --- the evidence check: an independent trigger from the fence gate above ----------------------
+_HAND_ROOT = os.path.join(_FIXTURE_ROOT, "handover-transcripts")
+os.makedirs(_HAND_ROOT, exist_ok=True)
+
+
+def _hand_transcript(name, lines):
+    path = os.path.join(_HAND_ROOT, "%s.jsonl" % name)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return path
+
+
+_HAND_NO_TOOL = _hand_transcript("no-tool", [
+    json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "please fix the bug"}}),
+    json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Looking into it."}]}}),
+])
+_HAND_WITH_TOOL = _hand_transcript("with-tool", [
+    json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "please fix the bug"}}),
+    json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": "pytest -q"}}]}}),
+    json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": "5 passed"}]}}),
+])
+
+hand_case(
+    "feedback",
+    "a success claim with no tool run since the last real message gets the evidence reminder",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="Fixed the bug, it works now.",
+    ),
+)
+hand_case(
+    "silent",
+    "a success claim backed by a tool call since the last real message stays quiet",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="Fixed the bug, it works now.",
+    ),
+)
+hand_case(
+    "silent",
+    "a success claim that quotes real RESULT: output stays quiet, even with no tool this turn",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="It works now.\n\nRESULT: PASS",
+    ),
+)
+hand_case(
+    "silent",
+    "an explicit UNTESTED claim never matches a success word to begin with",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="This is untested; I have not run it.",
+    ),
+)
+hand_case(
+    "silent",
+    "a reply naming no claim word at all is untouched by the evidence check",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="I opened the pull request; nothing for you to run.",
+    ),
+)
+hand_case(
+    "trace",
+    "a success claim whose transcript cannot be read fails open with a systemMessage, never a block",
+    stop_payload(
+        transcript_path=os.path.join(_HAND_ROOT, "does-not-exist.jsonl"),
+        last_assistant_message="Fixed the bug, it works now.",
+    ),
+)
+
+# A shell fence always satisfies the evidence check's own "quotes evidence" exemption, so the
+# two checks can never both fire live on one reply - see doc-ref 6534 docs/Decisions.md.
+code, out, err = run_hook(
+    "handover",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="Fixed the bug, it works now:\n\n```bash\ndeploy.sh\n```\n",
+    ),
+)
+if '"hookEventName":"Stop"' in out and '"additionalContext"' in out and out.count('"hookSpecificOutput"') == 1:
+    report("PASS", "a reply with both a shell fence and a claim still emits exactly one valid JSON object")
+    print("          the fence's own evidence-quote exemption means only the card note fires here")
+else:
+    report("FAIL", "a reply with both a shell fence and a claim still emits exactly one valid JSON object")
+    print(f"          out {out[:200]!r}")
 
 # --- the check gives guidance, not a hook error ----------------------------------------------
 code, out, err = run_hook(
@@ -2126,14 +2704,11 @@ else:
         styledrift.append("the style has no description: field")
     if not re.search(r"^keep-coding-instructions: true$", style_text, re.MULTILINE):
         styledrift.append("the style does not keep-coding-instructions, so it would replace them")
-    # The style is a live carrier whenever the Stop check is off, so a restatement that has
-    # fallen behind the rules is a real gap, not cosmetic. It fell behind once already:
-    # location-independence shipped in the rules and never reached this file.
+    # The style is now the single copy of the six-field checklist (docs/Decisions.md,
+    # 2026-09-22); the check below this one proves the core points here instead of restating it.
     for phrase in ["runs from anywhere", "One numbered step per action", "UNTESTED:"]:
         if phrase not in style_text:
             styledrift.append(f"the style no longer restates {phrase!r} from the six items")
-        elif phrase not in rules_text:
-            styledrift.append(f"{phrase!r} is in the style but not in house-rules.md")
     if not re.search(r"^force-for-plugin: true$", style_text, re.MULTILINE):
         styledrift.append(
             "the style does not set force-for-plugin: true - without it the style is "
@@ -2145,6 +2720,28 @@ if not styledrift:
 else:
     report("FAIL", "the handover-cards output style is forced, so it applies without a picker")
     print(f"          {'; '.join(styledrift)}")
+
+# --- the core's card section points at the output style instead of restating it --------------
+# Moved out of house-rules.md 2.17.0 to stay under the per-hook context limit (docs/Decisions.md,
+# 2026-09-22): the core keeps a one-line pointer, the output style keeps the actual checklist.
+cardptr = []
+_core_text = read(RULES_FILE)
+_card_sec = _core_text.split("#### The card", 1)
+if len(_card_sec) != 2:
+    cardptr.append("'#### The card' heading is missing from house-rules.md")
+else:
+    _pointer_body = _card_sec[1].split("\n## ", 1)[0]
+    if "handover-cards" not in _pointer_body:
+        cardptr.append("the core's card section does not name the handover-cards output style")
+    for phrase in ["runs from anywhere", "One numbered step per action", "UNTESTED:"]:
+        if phrase in _pointer_body:
+            cardptr.append(f"{phrase!r} is restated in the core instead of pointed at")
+if not cardptr:
+    report("PASS", "the core's card section points at the output style instead of restating it")
+    print("          house-rules.md names handover-cards.md; the six-field text lives there only")
+else:
+    report("FAIL", "the core's card section points at the output style instead of restating it")
+    print(f"          {'; '.join(cardptr)}")
 
 # --- the step-card page template exists, is self-contained, and matches the card's fields ----
 tpldrift = []
@@ -2188,39 +2785,38 @@ else:
     report("FAIL", "the rules show the anti-patterns, not only the correct forms")
     print(f"          {'; '.join(teachdrift)}")
 
-# --- every surface the CLAUDE.md table claims has a way to be checked ------------------------
-# The table is a claim about six surfaces; docs/desktop-verification.md is what substantiates it.
-# A row added to the table with no way to check it is exactly the drift guarded against elsewhere,
-# so the surface names are read out of the table itself rather than hardcoded here.
+# --- every surface the architecture.md table claims has a way to be checked ------------------
+# The table moved from CLAUDE.md to docs/architecture.md (docs/Decisions.md, 2026-09-22, step 2);
+# surface names are read out of the table itself rather than hardcoded here.
 surfdrift = []
 surfaces = []
-_absent = absent_repo_files("docs/desktop-verification.md", "CLAUDE.md")
+_absent = absent_repo_files("docs/desktop-verification.md", "docs/architecture.md")
 if _absent:
     skip_repo_check(
-        "every surface in the CLAUDE.md table has a check in desktop-verification.md", _absent
+        "every surface in the architecture.md table has a check in desktop-verification.md", _absent
     )
 elif not os.path.isfile(VERIFYDOC):
     surfdrift.append("docs/desktop-verification.md is missing")
-elif not os.path.isfile(root_claude):
-    surfdrift.append("CLAUDE.md is missing, so the table it claims cannot be read")
+elif not os.path.isfile(ARCHDOC):
+    surfdrift.append("docs/architecture.md is missing, so the table it claims cannot be read")
 else:
     verify_doc = read(VERIFYDOC)
-    for line in read(root_claude).splitlines():
+    for line in read(ARCHDOC).splitlines():
         m = re.match(r"^\| (?:Claude Code|claude\.ai chat) [-\u2014 ]+([^|]+?) \|", line)
         if m:
             surfaces.append(m.group(1).strip())
     if not surfaces:
-        surfdrift.append("no surface rows found in CLAUDE.md - has the table been renamed?")
+        surfdrift.append("no surface rows found in docs/architecture.md - has the table been renamed?")
     for s in surfaces:
         if s not in verify_doc:
-            surfdrift.append(f"{s!r} is in the CLAUDE.md table but has no check in desktop-verification.md")
+            surfdrift.append(f"{s!r} is in the architecture.md table but has no check in desktop-verification.md")
 if _absent:
     pass  # already reported as skipped above
 elif not surfdrift:
-    report("PASS", "every surface in the CLAUDE.md table has a check in desktop-verification.md")
+    report("PASS", "every surface in the architecture.md table has a check in desktop-verification.md")
     print(f"          {len(surfaces)} surfaces claimed, {len(surfaces)} covered: {', '.join(surfaces)}")
 else:
-    report("FAIL", "every surface in the CLAUDE.md table has a check in desktop-verification.md")
+    report("FAIL", "every surface in the architecture.md table has a check in desktop-verification.md")
     print(f"          {'; '.join(surfdrift)}")
 
 # --- nothing publishes a page unasked, and the rule and the table say the same thing ---------
@@ -2251,34 +2847,34 @@ else:
             pubdrift.append(f"the operative rule still carries the replaced wording {stale!r}")
     if "four or more steps" not in _why.lower():
         pubdrift.append("the Why does not record the four-step rule this replaced")
-_absent = absent_repo_files("CLAUDE.md")
+_absent = absent_repo_files("docs/architecture.md")
 if _absent:
     pass  # the rules half above still ran; only the table half is unavailable here
-elif os.path.isfile(root_claude):
-    table_text = read(root_claude)
+elif os.path.isfile(ARCHDOC):
+    table_text = read(ARCHDOC)
     rows = [ln for ln in table_text.splitlines() if ln.startswith("| Claude Code")]
     offered = [ln for ln in rows if "offered at 2+ steps" in ln]
     if not offered:
-        pubdrift.append("no CLAUDE.md surface row states 'offered at 2+ steps'")
+        pubdrift.append("no architecture.md surface row states 'offered at 2+ steps'")
     if "4+ steps" in table_text:
-        pubdrift.append("CLAUDE.md still advertises the replaced '4+ steps' threshold")
+        pubdrift.append("docs/architecture.md still advertises the replaced '4+ steps' threshold")
 else:
-    pubdrift.append("no CLAUDE.md to check")
+    pubdrift.append("no docs/architecture.md to check")
 if pubdrift and _absent:
-    report("FAIL", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    report("FAIL", "the page rule and the architecture.md table agree, and nothing publishes unasked")
     for p in pubdrift:
         print(f"          {p}")
 elif _absent:
     skip_repo_check(
-        "the page rule and the CLAUDE.md table agree, and nothing publishes unasked",
+        "the page rule and the architecture.md table agree, and nothing publishes unasked",
         _absent,
         extra="the rules half was checked here and passed; only the table half is unavailable",
     )
 elif not pubdrift:
-    report("PASS", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    report("PASS", "the page rule and the architecture.md table agree, and nothing publishes unasked")
     print("          rule: offer at 2+ steps, publish only on request; table says the same")
 else:
-    report("FAIL", "the page rule and the CLAUDE.md table agree, and nothing publishes unasked")
+    report("FAIL", "the page rule and the architecture.md table agree, and nothing publishes unasked")
     for p in pubdrift:
         print(f"          {p}")
 
@@ -2345,7 +2941,7 @@ else:
 install_path = os.path.join(ROOT, "tools", "install.py")
 readme_rel = os.path.join("claude-house-rules", "README.md")
 moddrift = []
-_absent = absent_repo_files(os.path.join("tools", "install.py"), readme_rel, "CLAUDE.md")
+_absent = absent_repo_files(os.path.join("tools", "install.py"), readme_rel, "docs/architecture.md")
 if _absent:
     skip_repo_check("install.py sets model = opusplan and the docs scope it correctly", _absent)
 elif not os.path.isfile(install_path):
@@ -2359,7 +2955,7 @@ else:
 readme_path = os.path.join(ROOT, "claude-house-rules", "README.md")
 if os.path.isfile(readme_path) and "opusplan" not in read(readme_path):
     moddrift.append("the README does not document opusplan")
-for docfile in [readme_path, root_claude]:
+for docfile in [readme_path, ARCHDOC]:
     if os.path.isfile(docfile):
         if "cli and the ide" not in read(docfile).lower():
             moddrift.append(
@@ -2377,7 +2973,7 @@ else:
 # --- preflight warns about a missing dependency, and points at /house-rules:doctor -----------
 env = dict(os.environ)
 env["PATH"] = ""
-code, out, err = run_hook("inject", "", env=env)
+code, out, err = run_hook("profile", "", env=env)
 if "Preflight gaps found" in out and "git is not on PATH" in out and "/house-rules:doctor" in out:
     report("PASS", "SessionStart preflight warns when git is missing and points at /house-rules:doctor")
     print("          a broken PATH produces a visible, actionable preflight warning")
@@ -2385,13 +2981,45 @@ else:
     report("FAIL", "SessionStart preflight warns when git is missing and points at /house-rules:doctor")
     print(f"          got: {out[-400:]!r}")
 
-code, out, err = run_hook("inject", "")
+code, out, err = run_hook("profile", "")
 if "Preflight gaps found" not in out:
     report("PASS", "SessionStart preflight is silent when there is nothing to warn about")
     print("          a clean machine adds nothing to the injection")
 else:
     report("FAIL", "SessionStart preflight is silent when there is nothing to warn about")
     print(f"          got: {out[-400:]!r}")
+
+# --- profile truncates only the environment body, never preflight or the handover block -------
+# Coordinator review of 9e7e780: the first cut truncated the WHOLE assembled profile text, which
+# could in principle have cut into preflight warnings or the remote handover-target block instead
+# of just the oversized profile. Fixed to truncate envbody alone; this proves it.
+_oversized_env = os.path.join(_FIXTURE_ROOT, "oversized-environment.md")
+with open(_oversized_env, "w", encoding="utf-8") as _f:
+    _f.write("# Huge profile\n\n" + ("filler line about this machine\n" * 2000))
+_handover_fixture2 = os.path.join(_FIXTURE_ROOT, "handover-target-2.md")
+with open(_handover_fixture2, "w", encoding="utf-8") as _f:
+    _f.write("# The human's machine\n\nWindows 11, PowerShell, Git Bash for POSIX.\n")
+_env = env_in(
+    ROOT,
+    PATH="",  # also forces a preflight warning, so both survivors are exercised at once
+    HOUSE_RULES_ENV_FILE=_oversized_env,
+    CLAUDE_CODE_REMOTE="true",
+    HOUSE_RULES_HANDOVER_TARGET_FILE=_handover_fixture2,
+)
+_code, _trunc_out, _err = run_hook("profile", "", env=_env)
+_trunc_problems = []
+if "Git Bash for POSIX" not in _trunc_out:
+    _trunc_problems.append("the handover-target block did not survive truncation intact")
+if "Preflight gaps found" not in _trunc_out:
+    _trunc_problems.append("preflight warnings did not survive truncation intact")
+if os.path.basename(_oversized_env) not in _trunc_out and _oversized_env not in _trunc_out:
+    _trunc_problems.append("the truncation notice does not name the oversized file")
+if not _trunc_problems:
+    report("PASS", "profile truncates only the environment body, never preflight or the handover block")
+    print(f"          {len(_trunc_out)} chars total; handover block and preflight both intact")
+else:
+    report("FAIL", "profile truncates only the environment body, never preflight or the handover block")
+    print(f"          {'; '.join(_trunc_problems)}")
 
 # --- /house-rules:doctor exists and maps gaps to an install command per OS --------------------
 DOCTOR = os.path.join(HERE, "..", "commands", "doctor.md")
@@ -2437,13 +3065,14 @@ else:
     report("FAIL", "/house-rules:harvest-scan exists and runs the installed harvest_scan.py")
     print(f"          {'; '.join(hsdrift)}")
 
-# --- the architecture tables in CLAUDE.md and the README match hooks.json ----------------------
+# --- the architecture tables in docs/architecture.md and the README match hooks.json ----------
 # Registered dispatch events, read from hooks.json's run.sh invocations rather than filenames -
-# there is only one script (run.sh) now, dispatched by event argument.
+# there is only one script (run.sh) now, dispatched by event argument. The table moved from
+# CLAUDE.md to docs/architecture.md (docs/Decisions.md, 2026-09-22, step 2).
 registered_events = sorted(set(re.findall(r'run\.sh\\" ([a-z]+)', hooks_json_text)))
 docdrift = []
-_absent = absent_repo_files("CLAUDE.md", readme_rel)
-for doc in ([] if _absent else [root_claude, readme_path]):
+_absent = absent_repo_files("docs/architecture.md", readme_rel)
+for doc in ([] if _absent else [ARCHDOC, readme_path]):
     docname = os.path.basename(doc)
     if not os.path.isfile(doc):
         docdrift.append(f"no {docname} to check")
@@ -2469,19 +3098,19 @@ for fname in os.listdir(HERE):
     if fname.endswith(".sh") and fname != "run.sh":
         docdrift.append(f"{fname} exists but is not run.sh - a leftover hook script")
 if docdrift and _absent:
-    report("FAIL", "the architecture tables match hooks.json")
+    report("FAIL", "the architecture tables in docs/architecture.md and the README match hooks.json")
     print(f"          {'; '.join(docdrift)}")
 elif _absent:
     skip_repo_check(
-        "the architecture tables match hooks.json",
+        "the architecture tables in docs/architecture.md and the README match hooks.json",
         _absent,
         extra="scripts/ was checked here and holds no stray .sh; only the doc tables are unavailable",
     )
 elif not docdrift:
-    report("PASS", "the architecture tables match hooks.json")
+    report("PASS", "the architecture tables in docs/architecture.md and the README match hooks.json")
     print("          every registered hook event is documented and no stray .sh script exists")
 else:
-    report("FAIL", "the architecture tables match hooks.json")
+    report("FAIL", "the architecture tables in docs/architecture.md and the README match hooks.json")
     print(f"          {'; '.join(docdrift)}")
 
 # --- the "What trips the guard" README table matches GUARD_R3/GUARD_R4's actual git verbs -----
@@ -2845,6 +3474,32 @@ _transcript("normal", [
     _assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "name": "Bash"},
                                                {"type": "text", "text": "Done - ran the tests, all green."}]),
 ])
+def _user_result(tool_use_id, is_error=False):
+    return json.dumps({
+        "type": "user",
+        "message": {"content": [{"type": "tool_result", "tool_use_id": tool_use_id, "is_error": is_error}]},
+    })
+
+
+# audit1: the case the audit summary exists for - one ok command, one failing command, one
+# write, seen from the transcript itself, never from what the subagent says about itself.
+_transcript("audit1", [
+    _assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "id": "t1", "name": "Bash",
+                                                "input": {"command": "pytest -q"}}]),
+    _user_result("t1", is_error=False),
+    _assistant("claude-sonnet-4-5-20250929", [
+        {"type": "tool_use", "id": "t2", "name": "Write", "input": {"file_path": "/proj/a.py"}},
+        {"type": "tool_use", "id": "t3", "name": "Bash", "input": {"command": "false"}},
+    ]),
+    _user_result("t3", is_error=True),
+])
+# auditbig: 45 commands, to prove the 40-command cap and the "N more" line.
+_transcript("auditbig", sum((
+    [_assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "id": "b%d" % i, "name": "Bash",
+                                                 "input": {"command": "echo %d" % i}}]),
+     _user_result("b%d" % i)]
+    for i in range(45)
+), []))
 _PARENT = os.path.join(_SUB_ROOT, "sess1.jsonl")
 with open(_PARENT, "w", encoding="utf-8") as _f:
     _f.write("")
@@ -3053,6 +3708,342 @@ else:
     report("FAIL", "run.sh names announce and verdict in its no-interpreter fallback")
     for s in shfall:
         print(f"          {s}")
+
+# --- subagentrules: a subagent core, generated from house-rules.md, injected at SubagentStart --
+# Judged against the real rules file, since a hand-copied fixture core would only prove the
+# handler can read a fixture, not that it stays in sync with the rules a human session sees.
+code, out, err = run_hook("subagentrules", sub_payload(
+    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1"
+))
+sar = []
+if code != 0:
+    sar.append(f"exit {code}, must never be non-zero")
+try:
+    parsed = json.loads(out)
+    core = parsed["hookSpecificOutput"]["additionalContext"]
+except Exception as exc:
+    sar.append(f"could not parse subagentrules output: {exc}")
+    core = ""
+for needle in (
+    "Documentation goes in tiers", "Nothing fails silently", "Evidence before claims",
+    "Every artifact lives in the project directory", "Commit constantly on my own branches",
+    "Never take a destructive action", "Edit in place",
+    "final report must list every command you ran and its result verbatim",
+):
+    if needle not in core:
+        sar.append(f"subagent core is missing {needle!r}")
+if "${CLAUDE_PLUGIN_ROOT}" in core:
+    sar.append("subagent core still carries a literal ${CLAUDE_PLUGIN_ROOT}")
+if "<!-- subagent -->" in core:
+    sar.append("subagent core leaked the <!-- subagent --> marker into the subagent's own text")
+if len(core) > 4_500:
+    sar.append(f"subagent core is {len(core)} chars, over its own 4,500-char budget")
+if not sar:
+    report("PASS", "subagentrules generates a subagent core from house-rules.md's marked sections")
+    print(f"          {len(core)} chars, all marked sections present, no literal placeholder")
+else:
+    report("FAIL", "subagentrules generates a subagent core from house-rules.md's marked sections")
+    for s in sar:
+        print(f"          {s}")
+
+# A section NOT marked <!-- subagent --> (e.g. "Match response depth to the task") must not
+# appear as its own heading in the core - otherwise "marked sections only" is not what ships.
+if "## Match response depth to the task" in core:
+    report("FAIL", "subagentrules includes only the sections marked <!-- subagent -->")
+    print("          an unmarked heading leaked into the subagent core")
+else:
+    report("PASS", "subagentrules includes only the sections marked <!-- subagent -->")
+    print("          an unmarked rule (response depth) is absent from the subagent core")
+
+# SubagentStart also tells the user the transcript's EXPECTED path, before it exists.
+if code == 0 and "systemMessage" in parsed and "transcript expected at" in parsed["systemMessage"] \
+        and os.path.join("sess1", "subagents", "agent-x1.jsonl") in parsed["systemMessage"]:
+    report("PASS", "subagentrules tells the user the expected transcript path at SubagentStart")
+    print(f"          {parsed['systemMessage'][:150]}")
+else:
+    report("FAIL", "subagentrules tells the user the expected transcript path at SubagentStart")
+    print(f"          out {out[:200]!r}")
+
+# Never blocks a spawn: empty payload and unparseable input both still exit 0.
+sarq = []
+code, out, err = run_hook("subagentrules", "")
+if code != 0 or "systemMessage" not in out:
+    sarq.append(f"empty payload: exit {code}, out {out[:120]!r}")
+code, out, err = run_hook("subagentrules", "not json at all {{{")
+if code != 0:
+    sarq.append(f"unparseable payload: exit {code}")
+if not sarq:
+    report("PASS", "subagentrules never blocks a subagent spawn")
+    print("          empty and unparseable payloads both still exit 0")
+else:
+    report("FAIL", "subagentrules never blocks a subagent spawn")
+    for s in sarq:
+        print(f"          {s}")
+
+# Registered as its OWN SubagentStart entry, unmatched, separate from announce.
+_hj2 = json.loads(read(HOOKS_JSON))["hooks"]
+sarwire = []
+starts = _hj2.get("SubagentStart") or []
+if not any("subagentrules" in h.get("command", "") for e in starts for h in e.get("hooks", [])):
+    sarwire.append("hooks.json's SubagentStart has no subagentrules dispatch")
+announce_entries = [e for e in starts if any("announce" in h.get("command", "") for h in e.get("hooks", []))]
+subagentrules_entries = [e for e in starts if any("subagentrules" in h.get("command", "") for h in e.get("hooks", []))]
+if announce_entries and subagentrules_entries and announce_entries[0] is subagentrules_entries[0]:
+    sarwire.append("announce and subagentrules share one hook entry instead of two separate ones")
+if any("matcher" in e for e in starts):
+    sarwire.append("SubagentStart is scoped by a matcher, so it misses other agents")
+if not sarwire:
+    report("PASS", "subagentrules is its own SubagentStart entry, separate from announce")
+    print("          both fire, unmatched, on every subagent spawn")
+else:
+    report("FAIL", "subagentrules is its own SubagentStart entry, separate from announce")
+    for s in sarwire:
+        print(f"          {s}")
+
+if ("    subagentrules)" in read(RUN)):
+    report("PASS", "run.sh names subagentrules in its no-interpreter fallback")
+    print("          no working Python still reports the subagent got no rules")
+else:
+    report("FAIL", "run.sh names subagentrules in its no-interpreter fallback")
+
+# --- verdict's audit summary: built from the transcript, not the subagent's own report --------
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"))
+audit = []
+if code != 0:
+    audit.append(f"exit {code}, must never be non-zero")
+for needle in (
+    "transcript found at", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "Reconcile the subagent's report against this record",
+):
+    if needle not in out:
+        audit.append(f"audit summary is missing {needle!r}")
+if not audit:
+    report("PASS", "verdict's audit summary reports commands with exit status and files written")
+    print("          built from the transcript itself: one ok, one ERROR, one write")
+else:
+    report("FAIL", "verdict's audit summary reports commands with exit status and files written")
+    for a in audit:
+        print(f"          {a}")
+
+# The cap: 45 commands in the fixture, at most 40 shown plus an explicit "N more".
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="auditbig"))
+if code == 0 and out.count("cmd: Bash [ok]: echo") <= 40 and "5 more" in out:
+    report("PASS", "verdict's audit summary caps the command list and says how many more")
+    print(f"          {out.count('cmd: Bash [ok]: echo')} commands shown, '5 more' present")
+else:
+    report("FAIL", "verdict's audit summary caps the command list and says how many more")
+    print(f"          exit {code}, shown={out.count('cmd: Bash [ok]: echo')}, out[-200:]={out[-200:]!r}")
+
+# --- HOUSE_RULES_SUBAGENT_LEDGER: off by default, renders docs/sessions/<...> when on ---------
+_ledger_root = tempfile.mkdtemp(prefix="house-rules-ledger-")
+atexit.register(shutil.rmtree, _ledger_root, True)
+_ledger_off = dict(os.environ)
+_ledger_off["CLAUDE_PROJECT_DIR"] = _ledger_root
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_off)
+_ledger_dir = os.path.join(_ledger_root, "docs", "sessions")
+if "LEDGER" not in out and not os.path.isdir(_ledger_dir):
+    report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER is off by default - no docs/sessions/ write")
+    print("          no LEDGER line, no docs/sessions/ directory created")
+else:
+    report("FAIL", "HOUSE_RULES_SUBAGENT_LEDGER is off by default - no docs/sessions/ write")
+    print(f"          out {out[:150]!r}, ledger dir exists={os.path.isdir(_ledger_dir)}")
+
+_ledger_on = dict(_ledger_off)
+_ledger_on["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_on)
+_written = [f for f in os.listdir(_ledger_dir)] if os.path.isdir(_ledger_dir) else []
+if code == 0 and "LEDGER: rendered" in out and any(f.endswith(".md") for f in _written):
+    report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
+    print(f"          wrote {_written}")
+else:
+    report("FAIL", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
+    print(f"          exit {code}, out {out[:200]!r}, dir listing {_written}")
+
+# A failure rendering the ledger (unreadable transcript) says so and never crashes verdict.
+_ledger_bad_root = tempfile.mkdtemp(prefix="house-rules-ledger-bad-")
+atexit.register(shutil.rmtree, _ledger_bad_root, True)
+_ledger_bad = dict(os.environ)
+_ledger_bad["CLAUDE_PROJECT_DIR"] = _ledger_bad_root
+_ledger_bad["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"), env=_ledger_bad)
+# "ghost" has no transcript file at all, so verdict returns before ever reaching the ledger
+# step - this proves that early return, not the ledger call, never crashes.
+if code == 0 and "unverified" in out:
+    report("PASS", "an unreadable/missing subagent transcript never crashes verdict, ledger or not")
+    print("          missing-transcript path returns before the ledger step, exit 0")
+else:
+    report("FAIL", "an unreadable/missing subagent transcript never crashes verdict, ledger or not")
+    print(f"          exit {code}, out {out[:150]!r}")
+
+# --- audit: the foreground half of the audit summary, PostToolUse on Agent|Task ---------------
+def post_agent_payload(**kw):
+    base = {
+        "session_id": "sess1",
+        "transcript_path": _PARENT,
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Agent",
+        "tool_input": {"subagent_type": "general-purpose"},
+        "tool_response": {"status": "completed", "agentId": "audit1", "agentType": "general-purpose"},
+    }
+    base.update(kw)
+    return json.dumps(base)
+
+
+code, out, err = run_hook("audit", post_agent_payload())
+aud = []
+if code != 0:
+    aud.append(f"exit {code}, must never be non-zero")
+try:
+    core_ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+except Exception as exc:
+    aud.append(f"could not parse audit output: {exc}")
+    core_ctx = ""
+for needle in (
+    "finished (foreground)", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "Reconcile the subagent's report against this record",
+):
+    if needle not in core_ctx:
+        aud.append(f"audit's additionalContext is missing {needle!r}")
+if not aud:
+    report("PASS", "audit hands the subagent's audit summary to the parent MODEL after a foreground return")
+    print(f"          {core_ctx[:150]}")
+else:
+    report("FAIL", "audit hands the subagent's audit summary to the parent MODEL after a foreground return")
+    for a in aud:
+        print(f"          {a}")
+
+# A backgrounded call's PostToolUse fires immediately with status "async_launched" - nothing
+# has happened yet, so audit must say nothing at all, not report an empty/wrong audit.
+code, out, err = run_hook("audit", post_agent_payload(
+    tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}
+))
+if code == 0 and not out.strip():
+    report("PASS", "audit stays silent for a backgrounded call's async_launched PostToolUse")
+    print("          nothing to audit yet - userpromptaudit covers its later hand-back")
+else:
+    report("FAIL", "audit stays silent for a backgrounded call's async_launched PostToolUse")
+    print(f"          exit {code}, out {out[:150]!r}")
+
+audq = []
+code, out, err = run_hook("audit", "")
+if code != 0 or "systemMessage" not in out:
+    audq.append(f"empty payload: exit {code}, out {out[:120]!r}")
+code, out, err = run_hook("audit", "not json at all {{{")
+if code != 0:
+    audq.append(f"unparseable payload: exit {code}")
+if not audq:
+    report("PASS", "audit never blocks a PostToolUse call, even on a bad payload")
+    print("          empty and unparseable payloads both still exit 0")
+else:
+    report("FAIL", "audit never blocks a PostToolUse call, even on a bad payload")
+    for a in audq:
+        print(f"          {a}")
+
+_hj3 = json.loads(read(HOOKS_JSON))["hooks"]
+audwire = []
+posts = _hj3.get("PostToolUse") or []
+audit_entries = [e for e in posts if any("audit" in h.get("command", "") and "\" audit" in h.get("command", "") for h in e.get("hooks", []))]
+if not any(e.get("matcher") == "Agent|Task" for e in posts):
+    audwire.append("hooks.json's PostToolUse has no Agent|Task matcher for audit")
+if not any("\" audit" in h.get("command", "") for e in posts for h in e.get("hooks", [])):
+    audwire.append("hooks.json's PostToolUse has no audit dispatch")
+if not audwire:
+    report("PASS", "audit is its own PostToolUse entry matched on Agent|Task")
+    print("          separate from artifact/runnable/harvest/delegate")
+else:
+    report("FAIL", "audit is its own PostToolUse entry matched on Agent|Task")
+    for a in audwire:
+        print(f"          {a}")
+
+if ("    audit)" in read(RUN)):
+    report("PASS", "run.sh names audit in its no-interpreter fallback")
+else:
+    report("FAIL", "run.sh names audit in its no-interpreter fallback")
+
+# --- userpromptaudit: the background half, UserPromptSubmit --------------------------------
+def _task_notification(task_id, status="completed"):
+    return (
+        "<task-notification>\n<task-id>%s</task-id>\n<tool-use-id>toolu_x</tool-use-id>\n"
+        "<output-file>/x</output-file>\n<status>%s</status>\n<summary>Agent finished</summary>\n"
+        "<result>done</result>\n</task-notification>" % (task_id, status)
+    )
+
+
+def userprompt_payload(prompt, **kw):
+    base = {"session_id": "sess1", "transcript_path": _PARENT, "hook_event_name": "UserPromptSubmit", "prompt": prompt}
+    base.update(kw)
+    return json.dumps(base)
+
+
+code, out, err = run_hook("userpromptaudit", userprompt_payload(_task_notification("audit1")))
+upa = []
+if code != 0:
+    upa.append(f"exit {code}, must never be non-zero")
+try:
+    up_ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+except Exception as exc:
+    upa.append(f"could not parse userpromptaudit output: {exc}")
+    up_ctx = ""
+for needle in (
+    "finished (background)", "Bash [ok]: pytest -q", "Bash [ERROR]: false",
+    "Reconcile the subagent's report against this record",
+):
+    if needle not in up_ctx:
+        upa.append(f"userpromptaudit's additionalContext is missing {needle!r}")
+if not upa:
+    report("PASS", "userpromptaudit hands the audit summary to the parent model on a background hand-back")
+    print(f"          {up_ctx[:150]}")
+else:
+    report("FAIL", "userpromptaudit hands the audit summary to the parent model on a background hand-back")
+    for a in upa:
+        print(f"          {a}")
+
+# The ordinary case: a ordinary prompt must never be touched, and never even emit anything -
+# a non-zero exit or a wrong additionalContext here would corrupt or erase the user's prompt.
+code, out, err = run_hook("userpromptaudit", userprompt_payload("please fix the failing test"))
+if code == 0 and not out.strip():
+    report("PASS", "userpromptaudit is silent on an ordinary prompt")
+    print("          no additionalContext, no systemMessage - nothing to say")
+else:
+    report("FAIL", "userpromptaudit is silent on an ordinary prompt")
+    print(f"          exit {code}, out {out[:150]!r}")
+
+# A notification for a still-running task carries nothing finished to audit yet.
+code, out, err = run_hook("userpromptaudit", userprompt_payload(_task_notification("audit1", status="running")))
+if code == 0 and not out.strip():
+    report("PASS", "userpromptaudit is silent on a not-yet-completed task notification")
+else:
+    report("FAIL", "userpromptaudit is silent on a not-yet-completed task notification")
+    print(f"          exit {code}, out {out[:150]!r}")
+
+upq = []
+code, out, err = run_hook("userpromptaudit", "")
+if code != 0 or out.strip():
+    upq.append(f"empty payload: exit {code}, out {out[:120]!r} (must be silent, exit 0)")
+code, out, err = run_hook("userpromptaudit", "not json at all {{{")
+if code != 0 or out.strip():
+    upq.append(f"unparseable payload: exit {code}, out {out[:120]!r}")
+if not upq:
+    report("PASS", "userpromptaudit never erases the prompt - exit 0 and silent on bad payloads")
+else:
+    report("FAIL", "userpromptaudit never erases the prompt - exit 0 and silent on bad payloads")
+    for u in upq:
+        print(f"          {u}")
+
+upwire = []
+prompts = _hj3.get("UserPromptSubmit") or []
+if not any("\" userpromptaudit" in h.get("command", "") for e in prompts for h in e.get("hooks", [])):
+    upwire.append("hooks.json's UserPromptSubmit has no userpromptaudit dispatch")
+scope_entries = [e for e in prompts if any("\" scope" in h.get("command", "") for h in e.get("hooks", []))]
+upa_entries = [e for e in prompts if any("\" userpromptaudit" in h.get("command", "") for h in e.get("hooks", []))]
+if scope_entries and upa_entries and scope_entries[0] is upa_entries[0]:
+    upwire.append("scope and userpromptaudit share one hook entry instead of two separate ones")
+if not upwire:
+    report("PASS", "userpromptaudit is its own UserPromptSubmit entry, separate from scope")
+else:
+    report("FAIL", "userpromptaudit is its own UserPromptSubmit entry, separate from scope")
+    for u in upwire:
+        print(f"          {u}")
 
 # --- the "reported update" rule is present, in its own words -----------------------------------
 # Not a drift check - nothing else in hook.py restates this rule's wording, since it's a
