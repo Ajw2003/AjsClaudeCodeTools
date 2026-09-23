@@ -744,3 +744,35 @@ the person watching. A channel that only reaches the person satisfies half the d
 one source for what counts as evidence, across all three delivery points.
 
 **Status.** Standing.
+
+## 2026-09-23 — A commit-time docs-tier reminder, and the one subprocess guard is allowed
+<!-- ref:8713 -->
+
+**Context.** `guard` (PreToolUse) previously had no opinion on documentation at all - only
+`docstiers` (SessionStart) did, and only once per session. A source file could be committed with
+no doc updated and nothing would say so until the next session, if ever. `branch_ownership()`
+reads `.git/HEAD` directly and is asserted subprocess-free by `verify.py` (`guard` fails closed,
+so it must not depend on a process that can hang) - the `git index` formats (v2/v3/v4, prefix-
+compressed paths in v4) could in principle be parsed with the standard library, but the index
+lists every tracked file, not what's staged; answering "staged" needs a diff against `HEAD`'s
+tree, which means reading git objects (zlib, and packfiles) - too heavy for a check that runs on
+every commit. A probe (`claude -p`, planted marker) confirmed a `PreToolUse` `allow` decision's
+`additionalContext` reaches the model in the same turn, the channel this reminder needed.
+
+**Decision.** `guard` now recognizes a `git commit` command (reusing `GUARD_R3`'s own commit
+pattern) and, only then, runs `git diff --cached --name-only` as a subprocess under a 2-second
+timeout - the one deliberate, narrowly-scoped exception to "no subprocess in guard",
+`branch_ownership()` itself stays exactly as before. If the staged paths include a source file
+(the `harvest` extension list) and nothing under `docs/`: on a `claude/` branch, the commit still
+allows, but gains an `additionalContext` reminder naming the tier to update; on any other branch,
+the existing prompt's reason gains the same line. A command naming another repo
+(`-C`/`--git-dir`/`--work-tree`), a missing `git`, a timeout, or any other failure never changes
+guard's own decision - it only adds "could not tell" to whichever message was already going out.
+
+**Why.** The reminder needed the channel actually proven to reach the model, not the one assumed
+to (`systemMessage`, `docs/Decisions.md`'s two other 2026-09-23 entries record that assumption
+failing for `SubagentStop`). Scoping the subprocess to exactly one command shape, under a hard
+timeout, whose failure never changes the real decision, keeps `guard`'s fail-closed contract
+intact everywhere else.
+
+**Status.** Standing.

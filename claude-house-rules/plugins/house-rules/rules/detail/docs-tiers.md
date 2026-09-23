@@ -43,3 +43,12 @@ same as not owned, since scaffolding into a repo whose ownership is unknown is t
 default — and the instruction adds one more step: add every scaffolded path to
 `.git/info/exclude`, so the new docs never leave the machine and never enter that repo's history.
 
+A second, commit-time check closes the gap between sessions: `guard` (`PreToolUse`) recognizes a
+`git commit` command and, only then, checks the staged files (`git diff --cached --name-only`,
+under a hard timeout - the one place in `guard` that shells out). A staged source file with
+nothing staged under `docs/` gets a reminder naming the tier to update - on my own branch the
+commit still runs, with the reminder attached as `additionalContext`; anywhere else it is folded
+into the prompt `guard` already shows. It can never block on its own and never changes `guard`'s
+underlying decision - a missing `git`, a timeout, or a command naming another repo all say "could
+not tell" rather than guessing.
+

@@ -1114,6 +1114,60 @@ GUARD_BUCKETS = [
     ("Never take a destructive action without checking first", GUARD_R4),
 ]
 
+# Reuses GUARD_R3's own commit pattern rather than a second copy - "is this a commit" and "is
+# this exempt from asking" are different questions, and the docs check needs the first one
+# independent of the second (a commit on my own branch is exempt from asking but still needs
+# the docs reminder).
+_GIT_COMMIT_RE = re.compile(_GIT + r"commit([^0-9A-Za-z-]|$)", re.IGNORECASE)
+
+# git diff --cached is the ONE deliberate, narrowly-scoped exception to "no subprocess in
+# guard" - branch_ownership() stays subprocess-free. doc-ref 8713 docs/Decisions.md.
+DOCS_CHECK_TIMEOUT = 2.0
+
+
+def _staged_docs_status(elsewhere):
+    """('needs-docs'|'clear'|'unknown', detail) for the commit about to run.
+
+    'unknown' on anything that could make guard's own decision unreliable: a command naming
+    another repo (elsewhere), no working git, a timeout, undecodable output. The caller's
+    existing decision is never changed by this - only the message it shows may gain a line.
+    """
+    if elsewhere:
+        return "unknown", "the command names another repo (-C/--git-dir/--work-tree)"
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    try:
+        import subprocess
+
+        proc = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=DOCS_CHECK_TIMEOUT,
+        )
+    except Exception as exc:
+        return "unknown", "could not run git diff --cached --name-only (%s)" % type(exc).__name__
+    if proc.returncode != 0:
+        return "unknown", "git diff --cached --name-only exited %d" % proc.returncode
+    try:
+        paths = [p.strip() for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
+    except Exception as exc:
+        return "unknown", "could not decode the staged file list (%s)" % type(exc).__name__
+
+    has_source = any(_HARVEST_EXT_RE.search(p) for p in paths)
+    has_docs = any(p == "docs" or p.startswith("docs/") for p in paths)
+    if has_source and not has_docs:
+        return "needs-docs", None
+    return "clear", None
+
+
+DOCS_COMMIT_REMINDER = (
+    "House rules, documentation goes in tiers: this commit stages a source file with nothing "
+    "staged under docs/. Before committing, update the tier that changed - usually "
+    "docs/ProjectState.md, for what's built and where it stands - or say in the commit "
+    "message why none needed updating."
+)
+
 OWNED_BRANCH_PREFIX = "claude/"
 
 # A command that names its own repo, git dir or work tree is not talking about the checkout
@@ -1237,17 +1291,42 @@ def event_guard():
             else:
                 hits[title].append(reason)
 
+    is_commit = bool(_GIT_COMMIT_RE.search(subject))
+    docs_status, docs_detail = _staged_docs_status(elsewhere) if is_commit else (None, None)
+
     if not any(hits.values()) and not outdated:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
         # not to fire" from "never ran" - and it is the security-shaped backstop, so that is
-        # the worst place to leave the ambiguity.
+        # the worst place to leave the ambiguity. Exactly one emit() call either way - two
+        # would be two concatenated JSON objects on stdout, which is not valid hook output.
         if exempted:
-            trace(
+            allow_trace = (
                 "guard: checked %s - %s on `%s`, which is mine to commit on."
                 % (_trace_subject(subject), " and ".join(exempted), branch)
             )
         else:
-            trace("guard: checked %s - no house rule matched." % _trace_subject(subject))
+            allow_trace = "guard: checked %s - no house rule matched." % _trace_subject(subject)
+
+        if docs_status == "needs-docs":
+            # Still an allow - the commit rule already lets this through - but Claude gets a
+            # reminder in-context. PreToolUse's additionalContext reaches the model on an
+            # "allow" decision (probed live, doc-ref 8713 docs/Decisions.md), the channel
+            # guard did not otherwise use before this.
+            out = {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "allow",
+                    "additionalContext": DOCS_COMMIT_REMINDER,
+                }
+            }
+            if trace_enabled():
+                out["systemMessage"] = allow_trace
+            emit(out)
+            return 0
+        if docs_status == "unknown":
+            trace("%s - docs check could not tell: %s." % (allow_trace, docs_detail))
+        else:
+            trace(allow_trace)
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
@@ -1281,6 +1360,19 @@ def event_guard():
         if why_not_exempt:
             lines.append("")
             lines.append(why_not_exempt)
+
+    if docs_status == "needs-docs":
+        lines.append("")
+        lines.append("  Rule: Documentation goes in tiers, and I update the tier that changed")
+        lines.append(
+            "    - this commit stages a source file with nothing staged under docs/ - "
+            "update the tier that changed, or say why none did"
+        )
+    elif docs_status == "unknown":
+        lines.append("")
+        lines.append(
+            "  Could not tell whether docs need updating for this commit: %s." % docs_detail
+        )
 
     lines.append("")
     lines.append(

@@ -310,12 +310,20 @@ def main():
          json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
                      "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
          "transcript not found"),
+        ("audit", "each FOREGROUND subagent return",
+         json.dumps({"tool_response": {"status": "completed", "agentId": "m1", "agentType": "x"},
+                     "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
+         "transcript not found"),
+        ("userpromptaudit", "each BACKGROUND subagent hand-back prompt",
+         json.dumps({"prompt": "<task-notification><task-id>m1</task-id><status>completed</status>"
+                                "</task-notification>", "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
+         "transcript not found"),
     ]
     # announce, subagentrules and verdict are deliberately NOT trace-gated - the report IS the
     # feature, not a narration of an otherwise-silent path - so they are excluded from the
     # TRACE=off total below. Including them would make that line read as a leak when it is the
     # design.
-    not_trace_gated = {"announce", "subagentrules", "verdict"}
+    not_trace_gated = {"announce", "subagentrules", "verdict", "audit", "userpromptaudit"}
     print(f"   {'handler':<9} {'when':<26} {'reminder':>20} {'trace':>20}")
     trace_total = 0
     for event, when, payload, label in calls:

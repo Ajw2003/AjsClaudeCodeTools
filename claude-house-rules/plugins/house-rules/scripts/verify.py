@@ -531,6 +531,131 @@ else:
     report("FAIL", "a linked worktree resolves its branch through the gitdir: pointer")
     print(f"          got: {out!r}")
 
+# --- guard's commit-time docs-tier reminder: real git fixtures, since this path itself uses -----
+# git diff --cached, unlike the rest of guard which stays subprocess-free.
+if shutil.which("git"):
+    def _git(d, *args):
+        subprocess.run(
+            ["git", "-C", d] + list(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
+
+    def _docs_guard_repo(name, branch, files, staged):
+        d = os.path.join(_FIXTURE_ROOT, name)
+        os.makedirs(d)
+        _git(d, "init", "-q")
+        _git(d, "config", "user.email", "t@t.com")
+        _git(d, "config", "user.name", "t")
+        with open(os.path.join(d, "README.md"), "w", encoding="utf-8") as f:
+            f.write("x\n")
+        _git(d, "add", "README.md")
+        _git(d, "commit", "-q", "-m", "init")
+        if branch != "main" and branch != "master":
+            _git(d, "checkout", "-q", "-b", branch)
+        for path, content in files.items():
+            full = os.path.join(d, path)
+            os.makedirs(os.path.dirname(full), exist_ok=True)
+            with open(full, "w", encoding="utf-8") as f:
+                f.write(content)
+        if staged:
+            _git(d, "add", *staged)
+        return d
+
+    DOCSGUARD_CLAUDE_SOURCE_ONLY = _docs_guard_repo(
+        "docsguard-claude-source-only", "claude/topic", {"a.py": "print(1)\n"}, ["a.py"]
+    )
+    DOCSGUARD_CLAUDE_SOURCE_AND_DOCS = _docs_guard_repo(
+        "docsguard-claude-source-and-docs", "claude/topic",
+        {"a.py": "print(1)\n", "docs/ProjectState.md": "state\n"}, ["a.py", "docs/ProjectState.md"],
+    )
+    DOCSGUARD_CLAUDE_CONFIG_ONLY = _docs_guard_repo(
+        "docsguard-claude-config-only", "claude/topic", {"config.json": "{}\n"}, ["config.json"]
+    )
+    DOCSGUARD_MAIN_SOURCE_ONLY = _docs_guard_repo(
+        "docsguard-main-source-only", "main", {"a.py": "print(1)\n"}, ["a.py"]
+    )
+
+    docsguard_cases = [
+        (
+            "a claude/ branch commit with a staged source file and nothing under docs/ gets a "
+            "docs reminder, still allowed",
+            DOCSGUARD_CLAUDE_SOURCE_ONLY, "allow", True,
+        ),
+        (
+            "a claude/ branch commit with a staged source file AND a staged docs/ file gets no "
+            "reminder",
+            DOCSGUARD_CLAUDE_SOURCE_AND_DOCS, "allow", False,
+        ),
+        (
+            "a claude/ branch commit with no staged source file (config only) gets no reminder",
+            DOCSGUARD_CLAUDE_CONFIG_ONLY, "allow", False,
+        ),
+        (
+            "a non-owned branch commit with a staged source file gets the docs reason appended "
+            "to guard's existing prompt",
+            DOCSGUARD_MAIN_SOURCE_ONLY, "ask", True,
+        ),
+    ]
+    for title, repo, expect_decision, expect_reminder in docsguard_cases:
+        code, out, err = run_hook("guard", payload_for('git commit -m "wip"'), env=env_in(repo))
+        problems = []
+        if code != 0:
+            problems.append(f"exit {code}, must never be non-zero")
+        if expect_decision == "allow":
+            if '"permissionDecision":"ask"' in out:
+                problems.append("guard asked, expected a silent/allow decision")
+        else:
+            if '"permissionDecision":"ask"' not in out:
+                problems.append("guard did not ask, expected it to (non-owned branch always asks on a commit)")
+        has_reminder = "documentation goes in tiers" in out.lower() or "Documentation goes in tiers" in out
+        if expect_reminder and not has_reminder:
+            problems.append("no docs-tier reminder in the output, expected one")
+        if not expect_reminder and has_reminder:
+            problems.append("a docs-tier reminder fired, expected none")
+        if not problems:
+            report("PASS", title)
+            print(f"          {out[:200]}")
+        else:
+            report("FAIL", title)
+            for p in problems:
+                print(f"          {p}")
+
+    # git missing/unusable: guard's decision must be UNCHANGED (still exempted-allow on a
+    # claude/ branch commit), with a "could not tell" note replacing the reminder, not silence.
+    _no_git_env = env_in(DOCSGUARD_CLAUDE_SOURCE_ONLY)
+    _no_git_env["PATH"] = _FIXTURE_ROOT  # a directory with no git binary in it
+    code, out, err = run_hook("guard", payload_for('git commit -m "wip"'), env=_no_git_env)
+    if (
+        code == 0
+        and '"permissionDecision":"ask"' not in out
+        and "mine to commit on" in out
+        and "could not tell" in out
+    ):
+        report("PASS", "a missing git binary leaves guard's own decision unchanged, and says so")
+        print(f"          {out[:200]}")
+    else:
+        report("FAIL", "a missing git binary leaves guard's own decision unchanged, and says so")
+        print(f"          exit {code}, out {out[:200]!r}")
+
+    # A command naming another repo: guard already prompts (RULE_COMMIT); the docs check must
+    # not try to resolve that other repo's staged files, and says it could not tell rather than
+    # silently assuming either answer.
+    code, out, err = run_hook(
+        "guard",
+        payload_for('git -C /some/other/repo commit -m "wip"'),
+        env=env_in(DOCSGUARD_CLAUDE_SOURCE_ONLY),
+    )
+    if '"permissionDecision":"ask"' in out and "could not tell" in out.lower() and "another repo" in out:
+        report("PASS", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
+        print(f"          {out[:250]}")
+    else:
+        report("FAIL", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
+        print(f"          out {out[:250]!r}")
+else:
+    report("SKIP", "guard's commit-time docs-tier reminder (real git fixtures)")
+    print("          no git binary on PATH")
+
+print()
+
 # The branch is read from a file, never by running git. A subprocess here would sit on the
 # critical path of every shell command, in the one handler that blocks when it fails.
 _hook_src = read(HOOK)
