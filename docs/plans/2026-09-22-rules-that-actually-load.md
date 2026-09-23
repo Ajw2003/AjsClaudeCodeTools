@@ -94,7 +94,7 @@ confirms the injected core arrives in full (no "Output too large").
 
 ## Result
 
-All 8 steps landed, `9e7e780`..`555129c` (11 commits: the size-constant split that started this
+All 8 steps landed, `45a2bc8`..`555129c` (12 commits, one a plan update: the size-constant split that started this
 plan, through `scope`'s rebalance), plugin version bumped 2.30.0 → 2.31.0 in the commit that
 closes this plan out. `python
 claude-house-rules/plugins/house-rules/scripts/verify.py` and `python tools/verify_tools.py`
