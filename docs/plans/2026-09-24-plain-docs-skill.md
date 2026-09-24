@@ -80,7 +80,19 @@ Pointers get upgraded, not left behind. Two things keep them current:
    when a plain copy of that doc exists, and on any link that doesn't resolve. It also lists every
    *(no plain copy yet)* line, which doubles as the to-do list of plain copies still to write.
 
-A related system with no technical doc at all is left out rather than linked to nothing.
+**A related system with no technical doc at all** gets checked before it is dropped:
+
+1. **Already decided?** `docs/systems/README.md` lists systems that were deliberately left without
+   a doc, with the reason. If it is on that list, leave it out of **Related**.
+2. **Not decided yet?** Judge it by the tier 4 test in the `project-docs` skill: is it
+   critical to the product at runtime, with rules that must hold or mistakes that have already
+   cost time?
+   - **No, it is simple enough.** Leave it out, and add it to the left-out list in
+     `docs/systems/README.md` with a one-line reason, so the question is not asked again.
+   - **Yes, it should have a doc.** The skill does not write the technical doc itself, since that
+     is a bigger job than a plain copy. It lists the system under **Related** with no link, marked
+     *(needs a doc)*, and names it to the user at the end of the run. The checker lists every
+     *(needs a doc)* line alongside the *(no plain copy yet)* ones.
 
 ## What gets a plain copy
 
