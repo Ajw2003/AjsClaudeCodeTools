@@ -7,6 +7,38 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-24 — Give each documentation tier its own numbered folder
+
+**Context.** The six tiers all lived as flat files directly under `docs/` (`docs/Roadmap.md`,
+`docs/ProjectState.md`, `docs/Today.md`, `docs/Decisions.md`, plus a `docs/systems/` folder), with
+no signal in the filesystem itself that they sort in tier order or that they're a fixed set of
+six. See [docs/plans/tiered-doc-folders.md](../plans/tiered-doc-folders.md) for the plan this
+carried out.
+
+**Decision.** Each tier now gets its own numbered folder: `docs/1-landing/`, `docs/2-roadmap/`,
+`docs/3-state/`, `docs/4-systems/`, `docs/5-today/`, `docs/6-decisions/`, with the same filenames
+inside them (so `docs/Roadmap.md` becomes `docs/2-roadmap/Roadmap.md`, and so on). The full tier-1
+index moved into its folder as `docs/1-landing/README.md`; a new, short, human-facing
+`docs/README.md` now sits at the top of `docs/` in its place, pointing back at the full index.
+`docs/plain/` mirrors the same folder layout, so `docs/plain/systems/hook-engine.md` became
+`docs/plain/4-systems/hook-engine.md`. This repo migrated its own docs at the same time as the
+tooling changed, rather than leaving them on the old layout: every link and `doc-ref` pointer was
+fixed, except inside `docs/archive/` and `docs/sessions/`, which stay untouched as historical
+record, and except that old `docs/6-decisions/Decisions.md` entries below only had their link
+paths repaired, not their prose — they describe what was true when they were written.
+
+**Why.** Numbered folders sort in tier order in any file browser or `ls`, which a flat pile of
+similarly-named files does not. Splitting the tier-1 index out from a short, people-facing landing
+page lets each serve its own reader: `docs/README.md` for a person skimming the repo, and
+`docs/1-landing/README.md` for the full technical index. The `docstiers` `SessionStart` hook and
+the `plain_docs_check.py`/`docref.py` scripts were updated to the new paths in the same change; a
+project still on the old flat layout is told which file moves to which new path, rather than
+being told to scaffold tiers it already has.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-22 — A SessionStart check for the six documentation tiers, in every repo
 
 **Context.** Step 3 of the rules-that-actually-load plan. The "Documentation goes in tiers" rule
@@ -303,7 +335,7 @@ wrong for everyone else. Words instead of characters — same signal, needs a to
 
 **Why.** The threshold only narrows what gets looked at; each flagged block is still moved or kept
 by judgement (a subtle-ordering-bug comment can stay in place with a pointer). The table is in
-[comment-harvest-calibration.md](comment-harvest-calibration.md); if 218 is still noise, raise
+[comment-harvest-calibration.md](../comment-harvest-calibration.md); if 218 is still noise, raise
 `HOUSE_RULES_HARVEST_MIN_CHARS` to 800 rather than editing the constant.
 
 **Status.** Standing.
@@ -365,7 +397,7 @@ just a plausible-sounding invariant.
 
 **Context.** Running `/house-rules:harvest-scan` against this repo at the harvest hook's own
 default thresholds (3 lines / 150 chars — see
-[`comment-harvest-calibration.md`](comment-harvest-calibration.md)) found 162 blocks across 16
+[`comment-harvest-calibration.md`](../comment-harvest-calibration.md)) found 162 blocks across 16
 files. The archivist agent's instructions describe per-block judgment (tier-4 systems doc vs.
 `docs/Decisions.md`) but say nothing about how to behave at that scale. Dispatched with 162
 blocks in one shot, nothing stopped a plausible shortcut: paste everything into one tier-4 doc,
@@ -374,7 +406,7 @@ redistribution the harvest rule asks for (see "Long-form reasoning goes in a doc
 comment" in `rules/house-rules.md`).
 
 **Decision.** Added a "Working from a batch" section to
-[`agents/archivist.md`](../claude-house-rules/plugins/house-rules/agents/archivist.md) requiring
+[`agents/archivist.md`](../../claude-house-rules/plugins/house-rules/agents/archivist.md) requiring
 two explicit passes whenever more than a handful of blocks are handed over at once: Pass 1 lands
 every block verbatim, with `file:line` citations, into a dated scratch file at
 `docs/plans/<date>-harvest-staging.md`; Pass 2 works through that staging file entry by entry,
@@ -542,7 +574,7 @@ that hash-compares the installed cache against the marketplace source tree) conf
 and, once run, confirmed the fix after #35 bumped the version. The real failure was not "forgot to
 bump a number" — it was that a tool's own "already up to date" message was trusted without
 checking whether the underlying content actually matched. Full design:
-[`docs/plans/2026-09-15-plugin-version-bump-guard.md`](plans/2026-09-15-plugin-version-bump-guard.md).
+[`docs/plans/2026-09-15-plugin-version-bump-guard.md`](../plans/2026-09-15-plugin-version-bump-guard.md).
 
 **Decision.** Two separable fixes for the two places this failed. (1) This repo: a new
 `tools/check_plugin_version_bump.py` compares `plugin.json`'s version between a PR's base and
@@ -585,7 +617,7 @@ conflation instead of catching it. The evidence needed to fix this without guess
 existed in the repo: `docs/example-environment.md`, a committed worked-example record of aj's real
 machine (Windows 11 Pro, PowerShell, Git Bash for POSIX, `sh`/`bash` not on PATH), dated
 2026-08-25 — and the user separately confirmed PowerShell was in fact right. Full design in
-[`docs/plans/2026-09-15-handover-target-machine.md`](plans/2026-09-15-handover-target-machine.md).
+[`docs/plans/2026-09-15-handover-target-machine.md`](../plans/2026-09-15-handover-target-machine.md).
 
 **Decision.** Give the plugin a second, distinct machine-local record —
 `rules/handover-target.md`, gitignored, same shape and lifecycle as `rules/environment.md` — that
@@ -618,7 +650,7 @@ markdown doc from an HTML report or other tool output, so both landed in `docs/`
 two loose examples proving the gap: `docs/architecture-review-2026-09-07.html` and
 `docs/2026-09-09-branch-aware-guard-rollout.html`, sitting directly in `docs/` with no other
 document like them. Full design and exact wording constraints are in the plan this decision
-executed: [`docs/plans/2026-09-15-generated-artifacts-directory.md`](plans/2026-09-15-generated-artifacts-directory.md).
+executed: [`docs/plans/2026-09-15-generated-artifacts-directory.md`](../plans/2026-09-15-generated-artifacts-directory.md).
 
 **Decision.** Add `docs/generated/` — a third non-tier folder for tool-produced deliverables:
 HTML reports, exported diagrams/images, anything from the Artifact tool or a generated-report
@@ -646,14 +678,14 @@ output as a tracked, committable file instead of leaving it in a scratchpad or t
 None of the five was *why*: tier 3 says where things stand, tier 4 says how a system works
 *today*, but nothing durable recorded why a choice was made, what was tried and rejected, or what
 an earlier decision used to say before it was reversed. That gap was already visible as ad hoc
-workarounds in this repo — [`docs/rules-backlog.md`](rules-backlog.md) and
-[`docs/architecture-backlog.md`](architecture-backlog.md) are hand-rolled decision logs (Status /
+workarounds in this repo — [`docs/rules-backlog.md`](../rules-backlog.md) and
+[`docs/architecture-backlog.md`](../architecture-backlog.md) are hand-rolled decision logs (Status /
 Defect / Evidence / "what the rule should say" per entry) that exist only because nothing in the
 shipped tier system covered this. The `harvest` hook and `archivist` subagent also misfiled this
 material — design rationale or a bug post-mortem got routed into a tier-4 system doc's *How it
 works*/*Traps*, which is supposed to describe current truth, not carry historical narrative. Full
 design and the exact wording constraints are in the plan this decision executed:
-[`docs/archive/2026-09-15-sixth-documentation-tier.md`](archive/2026-09-15-sixth-documentation-tier.md).
+[`docs/archive/2026-09-15-sixth-documentation-tier.md`](../archive/2026-09-15-sixth-documentation-tier.md).
 
 **Decision.** Add Tier 6 — `docs/Decisions.md` — to the house-rules tiered-docs system: one
 running, dated, append-mostly log (Context/Decision/Why/Status per entry), as designed in the

@@ -52,7 +52,7 @@ name as `argv[1]`; the payload always arrives on stdin
 Full per-handler behavior, including *why* each one is shaped the way it is, is the subject of
 [`docs/architecture.md`](../architecture.md) — this doc states what's true now and what breaks it;
 that one carries the reasoning and post-mortems, per the [[sixth-documentation-tier]] boundary
-between tier 4 and `docs/Decisions.md`.
+between tier 4 and `docs/6-decisions/Decisions.md`.
 
 Every handler is **stateless**: nothing is written to disk between invocations, nothing carries
 over between turns. An earlier version enforced the deliver-a-whole-workflow rule with a `Stop`

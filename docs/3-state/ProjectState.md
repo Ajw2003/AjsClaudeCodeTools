@@ -1,13 +1,13 @@
 # Project state
 
-Where things actually stand against [`Roadmap.md`](Roadmap.md), as of 2026-09-23.
+Where things actually stand against [`Roadmap.md`](../2-roadmap/Roadmap.md), as of 2026-09-23.
 
 **Headline: ~85%.** Three of four milestones are done against their acceptance criterion; the
 fourth (offshoot plugins) ships and verifies but its actual judgment quality is unmeasured.
 
 | Milestone | Status |
 |---|---|
-| 1. Hook engine | 100% — `verify.py` 365/365 PASS (2026-09-24) |
+| 1. Hook engine | 100% — `verify.py` 366/366 PASS (2026-09-24) |
 | 2. Six-tier docs convention | 100% as a mechanism; this repo's own adoption tracked below |
 | 3. Offshoot plugins | 50% — mechanism verified, classifiers unvalidated |
 | 4. Distribution & install tooling | 100% — `verify_tools.py` 39/39 PASS (2026-09-23) |
@@ -20,25 +20,28 @@ requires (`guard`/`guardwrite` closed, `inject`/`standards`/`docstiers`/`version
 obstructing, `handover`/`announce`/`subagentrules`/`verdict`/`audit` open and loud). The
 2026-09-22 "rules that actually load" plan (`docs/plans/2026-09-22-rules-that-actually-load.md`,
 see its own `## Result`) closed the gap where `inject` emitted 44,506 chars against a proven
-10,000-char per-hook limit ([`claude-house-rules/plugins/house-rules/scripts/hook.py:71`](../claude-house-rules/plugins/house-rules/scripts/hook.py#L71),
+10,000-char per-hook limit ([`claude-house-rules/plugins/house-rules/scripts/hook.py:71`](../../claude-house-rules/plugins/house-rules/scripts/hook.py#L71),
 `INJECT_CHAR_LIMIT`), added a `SubagentStart` handler that re-injects a subagent-scoped core of
 the rules (`hook.py:1886`, `_subagent_core`) since `SessionStart`'s own `additionalContext` never
 reaches a spawned subagent, and added a commit-time docs-tier reminder to `guard` itself
 (`hook.py:1174`, `_staged_docs_status`) rather than only once per session. What's not built:
 nothing against the current rule set — the seven candidate refactors in
-[`docs/architecture-backlog.md`](architecture-backlog.md) are real friction (see Cross-cutting,
+[`docs/architecture-backlog.md`](../architecture-backlog.md) are real friction (see Cross-cutting,
 below) but none blocks this milestone's own acceptance criterion, which is about behavior, not
 code shape.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
-document existed. This repo's own `docs/` did **not** carry tiers 1, 2, 3, 4, or 5 until today —
-only tier 6 (`Decisions.md`, added 2026-09-15) and the three non-tier folders (`plans/`,
-`archive/`, `generated/`) existed. Today's session scaffolded the other five
-(`README.md`, `Roadmap.md`, this file, `systems/*.md`, `Today.md`) by reading the code directly,
-per the skill's own scaffolding order (tier 4 first, tier 5 last). That scaffolding is what
-this document is part of.
+document existed. This repo's own `docs/` did **not** carry tiers 1, 2, 3, 4, or 5 until the
+2026-09-24 scaffolding session — only tier 6 (`Decisions.md`, added 2026-09-15) and the three
+non-tier folders (`plans/`, `archive/`, `generated/`) existed. That session scaffolded the other
+five (`README.md`, `Roadmap.md`, this file, `systems/*.md`, `Today.md`) by reading the code
+directly, per the skill's own scaffolding order (tier 4 first, tier 5 last). A later 2026-09-24
+session then gave each tier its own numbered folder (`docs/1-landing/` through
+`docs/6-decisions/`) and added the short, plain-English `docs/README.md` at the top of `docs/` —
+see [`docs/6-decisions/Decisions.md`](../6-decisions/Decisions.md), "Give each documentation tier
+its own numbered folder".
 
 ## 3. Offshoot plugins — real but unvalidated
 
@@ -47,7 +50,7 @@ suites pass. What's missing is everything that would turn "the mechanism works" 
 mechanism is worth trusting": no tuning against real prompt traffic, no
 `SubagentStart`/`SubagentStop` visibility parity with `house-rules`, no handling for a prompt
 that spans two of `agent-router`'s tiers. These are stated as open by
-[`docs/offshoots-plan.md`](offshoots-plan.md), not discovered here.
+[`docs/offshoots-plan.md`](../offshoots-plan.md), not discovered here.
 
 ## 4. Distribution & install tooling — built and verified
 
@@ -76,16 +79,16 @@ invocation.
 
 ## Cross-cutting issues that belong to no milestone
 
-- **[`docs/architecture-backlog.md`](architecture-backlog.md)** — seven open refactor candidates
+- **[`docs/architecture-backlog.md`](../architecture-backlog.md)** — seven open refactor candidates
   against `hook.py`/`verify.py` (deduplicating nine restatement checks, unifying the three
   places the failure-mode contract is stated, one open item about agent frontmatter fields
   `verify.py` currently forbids). None are commitments; none block any milestone above.
-- **[`docs/rules-backlog.md`](rules-backlog.md)** — one open item (vague, unrunnable handover
+- **[`docs/rules-backlog.md`](../rules-backlog.md)** — one open item (vague, unrunnable handover
   instructions caught once in `docs/desktop-verification.md`), not yet written into
   `rules/house-rules.md`.
 - **Both backlog docs are the exact kind of ad hoc decision log that Tier 6
-  (`docs/Decisions.md`) was built to replace**, per
-  [`docs/archive/2026-09-15-sixth-documentation-tier.md`](archive/2026-09-15-sixth-documentation-tier.md#context) —
+  (`docs/6-decisions/Decisions.md`) was built to replace**, per
+  [`docs/archive/2026-09-15-sixth-documentation-tier.md`](../archive/2026-09-15-sixth-documentation-tier.md#context) —
   but their entries haven't been transcribed into `Decisions.md` yet. They still function as
   backlogs (open items awaiting a decision), which is a different thing from `Decisions.md`'s
   append-only *record* of decisions already made — so this isn't necessarily a migration to do,
