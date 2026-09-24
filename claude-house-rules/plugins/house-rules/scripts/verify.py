@@ -4913,6 +4913,318 @@ else:
         report("FAIL", _dr_live)
         print("          " + _dr_failure_detail(_rc, _out, _err).replace("\n", "\n          "))
 
+# --- plain_docs_check.py: the plain-English doc copy checker -----------------------------------
+# Design: docs/plans/2026-09-24-plain-docs-skill.md
+PLAIN_CHECK = os.path.join(HERE, "plain_docs_check.py")
+
+PD_HASH_RE = re.compile(r"@HASHOF:([\w./-]+)@")
+
+
+def _pd_prepare(d):
+    """git init the fixture, then resolve every @HASHOF:<relpath>@ token in every file to that
+    file's real git blob hash, so header lines can reference a source's actual current hash
+    without the test data hardcoding one."""
+    subprocess.run(["git", "init", "-q"], cwd=d, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    for dirpath, _dirnames, filenames in os.walk(d):
+        if ".git" in dirpath.split(os.sep):
+            continue
+        for name in filenames:
+            full = os.path.join(dirpath, name)
+            with open(full, "r", encoding="utf-8") as f:
+                text = f.read()
+            if "@HASHOF:" not in text:
+                continue
+
+            def repl(m, d=d):
+                target = os.path.join(d, m.group(1))
+                proc = subprocess.run(
+                    ["git", "hash-object", target], cwd=d,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+                )
+                return proc.stdout.decode("utf-8", "replace").strip()
+
+            new_text = PD_HASH_RE.sub(repl, text)
+            if new_text != text:
+                with open(full, "w", encoding="utf-8") as f:
+                    f.write(new_text)
+
+
+def pd_run(root, *args):
+    cmd = [sys.executable, PLAIN_CHECK, "--root", root] + list(args)
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return (
+        proc.returncode,
+        proc.stdout.decode("utf-8", "replace"),
+        proc.stderr.decode("utf-8", "replace"),
+    )
+
+
+def pd_case(title, files, args=(), expect_rc=0, expect_in=(), expect_out=()):
+    d = make_fixture(files)
+    try:
+        _pd_prepare(d)
+        resolved_args = [a.replace("{ROOT}", d) if isinstance(a, str) else a for a in args]
+        rc, out, err = pd_run(d, *resolved_args)
+        problems = []
+        if rc != expect_rc:
+            problems.append(f"exit {rc}, expected {expect_rc}")
+        for needle in expect_in:
+            if needle not in out:
+                problems.append(f"output is missing {needle!r}")
+        for needle in expect_out:
+            if needle in out:
+                problems.append(f"output should not contain {needle!r}")
+        if not problems:
+            report("PASS", title)
+            print("          " + (out.strip().splitlines() or ["(no output)"])[-1][:100])
+        else:
+            report("FAIL", title)
+            for p in problems:
+                print(f"          {p}")
+            print(f"          stdout: {out[:500]!r} stderr: {err[:200]!r}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+PD_OK_HEADER = "<!-- plain copy of: docs/systems/x.md @ @HASHOF:docs/systems/x.md@ -->\n"
+PD_SOURCE = (
+    "# X\n\nA source doc with a decent number of words in it so the ratio math has room to work. "
+    + " ".join(f"word{i}" for i in range(1, 300))
+    + "\n"
+)
+PD_OK_BODY = (
+    "\n# X, in plain English\n\n"
+    "Full technical doc: [x.md](../../systems/x.md)\n\n"
+    "**What it is.** A short, clean plain copy.\n\n"
+    "**Why it matters.** Nothing breaks if this one is missing.\n\n"
+    "**How it works.**\n\n1. Step one.\n\n"
+    "**Risks and safeguards.**\n\n- **Nothing.** No known risk.\n\n"
+    "**Related.**\n\n- **Nothing.** No related systems.\n\n"
+    "**Left out**, see the full doc: nothing.\n"
+)
+
+CHECK_NO_PLUGIN_FILE = "plain_docs_check.py is missing"
+if not os.path.isfile(PLAIN_CHECK):
+    report("FAIL", CHECK_NO_PLUGIN_FILE)
+    print(f"          expected {PLAIN_CHECK}; the plain-docs tests that run it are skipped")
+else:
+    pd_case(
+        "plain_docs_check: a well-formed plain copy passes clean",
+        {"docs/systems/x.md": PD_SOURCE, "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY},
+        expect_rc=0,
+        expect_in=["0 fail", "plain_docs_check: OK"],
+    )
+
+    pd_case(
+        "plain_docs_check: no docs/plain/ folder is reported plainly and still exits 0",
+        {"docs/systems/x.md": PD_SOURCE},
+        expect_rc=0,
+        expect_in=["no docs/plain/ folder", "nothing to check"],
+    )
+
+    pd_case(
+        "plain_docs_check: an em dash fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "A short plain copy — written badly."
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "em dash or en dash"],
+    )
+
+    pd_case(
+        "plain_docs_check: a banned word fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "A short plain copy, built from the payload."
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "banned word 'payload'"],
+    )
+
+    pd_case(
+        "plain_docs_check: a code block fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY + "\n```\ncode here\n```\n",
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "fenced code block"],
+    )
+
+    pd_case(
+        "plain_docs_check: a file path in prose fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "See scripts/hook.py for the real code."
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "a file path in prose"],
+    )
+
+    pd_case(
+        "plain_docs_check: a file:line reference fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "See hook.py:71 for the real code."
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "file:line reference"],
+    )
+
+    pd_case(
+        "plain_docs_check: a missing header fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_BODY.lstrip("\n"),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "missing or malformed header"],
+    )
+
+    pd_case(
+        "plain_docs_check: a missing full-doc link fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "Full technical doc: [x.md](../../systems/x.md)\n\n", ""
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "missing the 'Full technical doc:"],
+    )
+
+    pd_case(
+        "plain_docs_check: a source file that no longer exists fails",
+        {"docs/plain/systems/x.md": PD_OK_HEADER.replace("@HASHOF:docs/systems/x.md@", "0" * 40) + PD_OK_BODY},
+        expect_rc=1,
+        expect_in=["FAIL", "does not exist"],
+    )
+
+    pd_case(
+        "plain_docs_check: a word count over a third of the source's fails",
+        {
+            "docs/systems/x.md": "# X\n\n" + " ".join(f"w{i}" for i in range(1, 13)) + "\n",
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "over a third of the source's"],
+    )
+
+    pd_case(
+        "plain_docs_check: a word count over a quarter (but not a third) only warns",
+        {
+            # source has 183 words, plain body has 55 -> 30%, between a quarter and a third
+            "docs/systems/x.md": "# X\n\n" + " ".join(f"w{i}" for i in range(1, 183)) + "\n",
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+        },
+        expect_rc=0,
+        expect_in=["WARN", "over a quarter of the source's", "plain_docs_check: OK"],
+    )
+
+    pd_case(
+        "plain_docs_check: a broken relative link fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "- **Nothing.** No related systems.\n",
+                "- **Missing.** [missing.md](../../systems/missing.md)\n",
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "broken relative link"],
+    )
+
+    pd_case(
+        "plain_docs_check: a stale source blob hash warns, not fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER.replace("@HASHOF:docs/systems/x.md@", "f" * 40) + PD_OK_BODY,
+        },
+        expect_rc=0,
+        expect_in=["WARN", "stale: source", "plain_docs_check: OK"],
+    )
+
+    pd_case(
+        "plain_docs_check: a related link to a doc that already has a plain copy fails",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/systems/y.md": (
+                "<!-- plain copy of: docs/systems/y.md @ @HASHOF:docs/systems/y.md@ -->\n\n"
+                "# Y, in plain English\n\nFull technical doc: [y.md](../../systems/y.md)\n\n"
+                "**What it is.** Stub.\n"
+            ),
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "- **Nothing.** No related systems.\n",
+                "- **Y.** The y system.\n  [y.md](../../systems/y.md)\n",
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "already has a plain copy", "link to the plain copy instead"],
+    )
+
+    pd_case(
+        "plain_docs_check: an unupgraded '(no plain copy yet)' pointer fails once the plain copy exists",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/systems/y.md": (
+                "<!-- plain copy of: docs/systems/y.md @ @HASHOF:docs/systems/y.md@ -->\n\n"
+                "# Y, in plain English\n\nFull technical doc: [y.md](../../systems/y.md)\n\n"
+                "**What it is.** Stub.\n"
+            ),
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "- **Nothing.** No related systems.\n",
+                "- **Y.** The y system.\n  [y.md](../../systems/y.md) *(no plain copy yet)*\n",
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "upgrade the pointer"],
+    )
+
+    pd_case(
+        "plain_docs_check: '(no plain copy yet)' and '(needs a doc)' lines are listed as to-do items",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "- **Nothing.** No related systems.\n",
+                "- **Y.** The y system.\n  [y.md](../../systems/y.md) *(no plain copy yet)*\n"
+                "- **Z.** No doc yet.\n  Z *(needs a doc)*\n",
+            ),
+        },
+        expect_rc=0,
+        expect_in=[
+            "to-do, plain copies not yet written",
+            "docs/systems/y.md",
+            "to-do, systems that need a technical doc first",
+            "(needs a doc)",
+        ],
+    )
+
+    pd_case(
+        "plain_docs_check: a single file path argument checks only that file",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+            "docs/plain/systems/y.md": "not a header at all\n",
+        },
+        args=("{ROOT}/docs/plain/systems/x.md",),
+        expect_rc=0,
+        expect_in=["checked 1 file(s)", "plain_docs_check: OK"],
+        expect_out=["docs/plain/systems/y.md"],
+    )
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:

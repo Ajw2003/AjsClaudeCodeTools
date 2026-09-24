@@ -1,46 +1,42 @@
-# Today — 2026-09-23
+# Today — 2026-09-24
 
-Executed [`docs/plans/2026-09-22-rules-that-actually-load.md`](plans/2026-09-22-rules-that-actually-load.md)
-end to end, all 8 steps, across 11 commits (`9e7e780`..`555129c`; this file's own update is the
-closing one). See that plan's own `## Result` section for the full before/after footprint numbers.
+Executed [`docs/plans/2026-09-24-plain-docs-skill.md`](plans/2026-09-24-plain-docs-skill.md):
+built the `house-rules:plain-docs` skill and its checker. Did not write any actual plain copies
+of this repo's docs — that's explicitly out of scope for the plan, left for a follow-up.
 
 ## What was done
 
-- **Size fix (steps 1-3).** Split `inject` from `profile` (separate `SessionStart` entries, each
-  under its own per-hook budget), moved the hook table from `CLAUDE.md` to
-  [`docs/architecture.md`](architecture.md) and shrank `CLAUDE.md` to a 3,151-byte pointer (from
-  33,083), and added `docstiers`, a stateless `SessionStart` check for the six documentation
-  tiers.
-- **Subagent visibility (step 4).** A `SubagentStart` handler (`subagentrules`) re-injects a
-  subagent-scoped core of the rules — `SessionStart`'s own `additionalContext` never reaches a
-  spawned subagent, probed with `claude -p`. `verdict` (`SubagentStop`) gained an audit summary
-  built from the subagent's own transcript, and two more handlers (`audit` on `PostToolUse`,
-  `userpromptaudit` on `UserPromptSubmit`) carry that summary to the parent MODEL, not just the
-  user, since `SubagentStop`'s own output was found not to reach it in-turn.
-- **Commit-time docs check (step 5).** `guard` now recognizes a `git commit` and computes the
-  EFFECTIVE set of files it will include — not just what's staged right now, since `guard` fires
-  before the command it judges runs — covering `-a`/`-am`, an earlier `git add` in the same
-  command (`shlex`-tokenized), and `git add .`/`-A`/`-u`. A staged source file with nothing under
-  `docs/` gets a reminder; the one place `guard` shells out, under a shared 2-second budget that
-  never changes its own decision on failure.
-- **`handover` narrowed and extended (step 6).** Its card check now fires only on a
-  shell-labelled fence, not any fence. An independent evidence check fires when a reply claims
-  success with no tool run since the last genuine user message and no quoted evidence.
-- **`scope` rebalanced (step 7).** Traded its step-card line (now enforced live by `handover`
-  itself) for a docs-tier line and an evidence line, in both forms, within 10% of each form's
-  prior size.
-- **Version bump and this file (step 8).** Plugin version 2.30.0 → 2.31.0;
-  [`docs/ProjectState.md`](ProjectState.md) updated with the new check counts and what changed.
+- **The skill.** `claude-house-rules/plugins/house-rules/skills/plain-docs/SKILL.md` — what gets
+  a plain copy and in what order, the fixed shape (title, full-doc link, five sections, Left
+  out), the writing-rules table, the header format (source path + git blob hash), and the steps
+  for upgrading `*(no plain copy yet)*` pointers and handling a related system with no doc.
+- **The checker.** `claude-house-rules/plugins/house-rules/scripts/plain_docs_check.py` —
+  stdlib-only, runs from anywhere, checks a whole `docs/plain/` tree or a single file. Fails on
+  em/en dashes, an over-a-third word count, banned jargon, code blocks/file paths/`file:line`
+  refs in prose, a missing or malformed header, a missing full-doc link, a missing source, a
+  broken relative link, and a related link that should point at an existing plain copy but
+  doesn't. Warns on an over-a-quarter word count and a stale source hash. Always prints average
+  sentence length and the running to-do lists (`*(no plain copy yet)*`, `*(needs a doc)*`).
+- **The command wrapper.** `commands/plain-docs.md`, same shape as `commands/docref.md`.
+- **Tests.** 18 new cases in `scripts/verify.py` (`pd_case`), one per failure/warning type plus a
+  clean pass, the to-do listing, pointer-upgrade detection, and the single-file-path mode. Suite
+  is now 355/355 PASS.
+- **Docs.** `docs/README.md` and the `project-docs` skill now list `docs/plain/` as a fourth
+  non-tier folder. `docs/systems/verify-suites.md` and `docs/ProjectState.md` updated with the
+  new check count. `CLAUDE.md`'s command list gained the checker.
+- **Version bump.** `2.31.0` → `2.32.0` in `plugin.json`, per the version-bump guard.
 
 ## What was deliberately not done
 
-- **The repo-wide `/house-rules:harvest-scan` and archivist pass** the plan names as a follow-up
-  is explicitly a separate PR, not part of this one.
-- **No new offshoot-plugin work.** This plan touched only `house-rules`.
+- **No plain copies of this repo's own docs.** Out of scope per the plan; a real run of the
+  skill against `docs/systems/*.md` is follow-up work.
+- **No new tier-4 system doc for `plain-docs` itself.** Judged the same way `docref.py` was:
+  covered by `verify-suites.md`/`hook-engine.md`'s existing scope rather than a document of its
+  own, since nothing about it is a runtime-critical system in the tier-4 sense.
 
 ## What to do next, in order
 
-1. The separate PR: `/house-rules:harvest-scan` across the repo, then an archivist pass on
-   anything it flags.
+1. Run `/house-rules:plain-docs` for real against `docs/systems/*.md`, starting with
+   `hook-engine.md` (the plan's own reasoning for why that one's need is greatest).
 2. Everything still open in [`ProjectState.md`](ProjectState.md)'s Cross-cutting section — none
    of it was touched by this plan.

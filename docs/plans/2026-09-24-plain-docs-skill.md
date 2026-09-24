@@ -171,3 +171,38 @@ so CI proves the checker catches what it claims to. CI then runs the checker ove
 - A hook that reminds Claude to refresh a plain copy when its source is edited. Worth adding only
   if the stale warning turns out to be ignored.
 - Plain copies of code comments or commit messages.
+
+## Result
+
+Executed 2026-09-24, on branch `claude/intelligent-davinci-bxeni1`. The open questions above were
+answered before this pass started (see the commits under this plan's own filename): folder is
+`docs/plain/`, stale is a warning not a fail, it ships in the plugin (tests in `verify.py`), and
+the sample (`docs/plans/2026-09-24-plain-docs-example-castle.md`) came first.
+
+Built:
+
+- `claude-house-rules/plugins/house-rules/skills/plain-docs/SKILL.md` — the skill.
+- `claude-house-rules/plugins/house-rules/scripts/plain_docs_check.py` — the checker. Header
+  format settled on `<!-- plain copy of: <source path> @ <40-hex git blob hash> -->`, one line,
+  first line of the file; the hash comes from `git hash-object <source>`, which works on the
+  file's current on-disk content whether or not it is committed.
+- `claude-house-rules/plugins/house-rules/commands/plain-docs.md` — the command wrapper, same
+  shape as `commands/docref.md`.
+- 18 cases in `scripts/verify.py` (the `pd_case` helper, fixtures built with a real `git init` so
+  blob hashes are real): one per failure type and warning type, plus a clean pass, the to-do
+  listing, pointer-upgrade detection, and single-file-path mode. Suite: 355/355 PASS.
+- Docs: `docs/README.md` and the `project-docs` skill now list `docs/plain/` as a fourth non-tier
+  folder; `docs/systems/verify-suites.md` and `docs/ProjectState.md` carry the new check count;
+  `CLAUDE.md`'s command list gained the checker; `docs/Today.md` rewritten for this session.
+- Plugin version bumped `2.31.0` → `2.32.0`.
+
+Deliberately not done: no plain copies of this repo's own docs were written (explicitly out of
+scope for this plan) and no new tier-4 system doc was written for `plain-docs` itself — judged
+the same way `docref.py` was, covered by the existing hook-engine/verify-suites scope rather than
+a system of its own.
+
+Verification: `python claude-house-rules/plugins/house-rules/scripts/verify.py` exits 0 (355/355);
+`python tools/verify_tools.py` exits 0 (39/39); `plain_docs_check.py` run against a scratch
+fixture built from the sample above passed with one expected warning (word count over a quarter)
+and correctly listed all four `*(no plain copy yet)*` to-do entries; run against this repo's own
+root (no `docs/plain/` yet) it reported that plainly and exited 0.
