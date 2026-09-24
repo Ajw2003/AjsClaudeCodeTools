@@ -28,15 +28,17 @@ of this repo's docs — that's explicitly out of scope for the plan, left for a 
 
 ## What was deliberately not done
 
-- **No plain copies of this repo's own docs.** Out of scope per the plan; a real run of the
-  skill against `docs/systems/*.md` is follow-up work.
+- **Only one plain copy so far.** The first real run of the skill wrote
+  [`docs/plain/systems/hook-engine.md`](plain/systems/hook-engine.md). The checker passes it with
+  one warning (27% of the source, over the quarter target, under the one-third cap), kept because
+  cutting further would drop real safeguards. The other three system docs have no plain copy yet.
 - **No new tier-4 system doc for `plain-docs` itself.** Judged the same way `docref.py` was:
   covered by `verify-suites.md`/`hook-engine.md`'s existing scope rather than a document of its
   own, since nothing about it is a runtime-critical system in the tier-4 sense.
 
 ## What to do next, in order
 
-1. Run `/house-rules:plain-docs` for real against `docs/systems/*.md`, starting with
-   `hook-engine.md` (the plan's own reasoning for why that one's need is greatest).
+1. Run `/house-rules:plain-docs` on the remaining system docs. `verify-suites.md` and
+   `plugin-distribution.md` first: the hook-engine plain copy already points at both.
 2. Everything still open in [`ProjectState.md`](ProjectState.md)'s Cross-cutting section — none
    of it was touched by this plan.
