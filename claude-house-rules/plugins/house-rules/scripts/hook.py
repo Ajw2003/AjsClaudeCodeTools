@@ -804,22 +804,77 @@ def _marketplace_version(problems):
         return ""
 
 
+_RAW_URL_RE = re.compile(
+    r"^https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/([^/]+)/(.+)$"
+)
+
+
+def _github_api_url(raw_url):
+    """The contents-API URL for the same owner/repo/ref/path as a raw.githubusercontent URL, or
+    "" if raw_url is not in that shape. Derived, not a second constant, so a fork's
+    HOUSE_RULES_VC_GITHUB_URL gets a working fallback without setting anything else."""
+    override = os.environ.get("HOUSE_RULES_VC_GITHUB_API_URL")
+    if override:
+        return override
+    m = _RAW_URL_RE.match(raw_url)
+    if not m:
+        return ""
+    owner, repo, ref, path = m.groups()
+    return "https://api.github.com/repos/%s/%s/contents/%s?ref=%s" % (owner, repo, path, ref)
+
+
+def _fetch_version(url, headers, timeout):
+    import urllib.request
+
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8", "replace"))
+    return data.get("version", "") or ""
+
+
+def _describe_fetch_error(exc):
+    detail = str(getattr(exc, "reason", "") or exc).strip()
+    if len(detail) > 120:
+        detail = detail[:117] + "..."
+    return "%s: %s" % (type(exc).__name__, detail) if detail else type(exc).__name__
+
+
 def _github_version(problems):
+    """GitHub's published version: raw.githubusercontent first, then the contents API, both
+    inside one _GITHUB_FETCH_TIMEOUT budget. Two routes because some sandboxes reset
+    connections to raw.githubusercontent.com while api.github.com works (docs/architecture.md,
+    "versioncheck checks three copies of the version"). Each failed route goes into problems."""
     override = os.environ.get("HOUSE_RULES_VC_GITHUB")
     if override is not None:
         return override
-    url = os.environ.get("HOUSE_RULES_VC_GITHUB_URL") or _GITHUB_PLUGIN_JSON_URL
-    try:
-        import urllib.request
+    import time
 
-        with urllib.request.urlopen(url, timeout=_GITHUB_FETCH_TIMEOUT) as resp:
-            data = json.loads(resp.read().decode("utf-8", "replace"))
-        return data.get("version", "") or ""
+    deadline = time.monotonic() + _GITHUB_FETCH_TIMEOUT
+    raw_url = os.environ.get("HOUSE_RULES_VC_GITHUB_URL") or _GITHUB_PLUGIN_JSON_URL
+    failures = []
+    try:
+        return _fetch_version(raw_url, {}, _GITHUB_FETCH_TIMEOUT)
     except Exception as exc:
-        problems.append(
-            "could not reach GitHub to check the published version (%s)" % type(exc).__name__
-        )
-        return ""
+        failures.append("raw.githubusercontent.com (%s)" % _describe_fetch_error(exc))
+
+    api_url = _github_api_url(raw_url)
+    remaining = deadline - time.monotonic()
+    if not api_url:
+        failures.append("no GitHub API fallback (HOUSE_RULES_VC_GITHUB_URL is not a raw URL)")
+    elif remaining < 0.5:
+        failures.append("GitHub API not tried (the %gs budget ran out)" % _GITHUB_FETCH_TIMEOUT)
+    else:
+        try:
+            return _fetch_version(
+                api_url, {"Accept": "application/vnd.github.raw"}, remaining
+            )
+        except Exception as exc:
+            failures.append("api.github.com (%s)" % _describe_fetch_error(exc))
+
+    problems.append(
+        "could not reach GitHub to check the published version - %s" % "; ".join(failures)
+    )
+    return ""
 
 
 _VC_SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
@@ -921,10 +976,28 @@ def event_versioncheck():
 
         if not reasons:
             if problems:
-                trace(
-                    "versioncheck: could not fully verify the plugin is current - %s"
-                    % "; ".join(problems)
-                )
+                # Said to the model, not only the UI: a systemMessage never reaches the model,
+                # so an unverified check used to look identical to a verified one. Still not
+                # "out of date" - no banner, no marker (docs/6-decisions/Decisions.md, 2026-09-24).
+                out = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "SessionStart",
+                        "additionalContext": (
+                            "house-rules versioncheck could not confirm the plugin is current. "
+                            "Installed version: %s. What failed: %s. In your first reply this "
+                            "session, tell the user in one or two sentences that the plugin's "
+                            "freshness could not be checked, naming what failed. This is not an "
+                            "out-of-date result - do not ask to update and do not stop work."
+                            % (installed or "unknown", "; ".join(problems))
+                        ),
+                    }
+                }
+                if trace_enabled():
+                    out["systemMessage"] = (
+                        "versioncheck: could not fully verify the plugin is current - %s"
+                        % "; ".join(problems)
+                    )
+                emit(out)
             else:
                 trace(
                     "versioncheck: installed %s matches the marketplace clone and GitHub's "

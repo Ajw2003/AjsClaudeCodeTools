@@ -25,6 +25,7 @@ computed at runtime, so it cannot drift out from under an added case.
 import atexit
 import json
 import os
+import pathlib
 import re
 import shutil
 import subprocess
@@ -4253,6 +4254,87 @@ else:
     )
 if os.path.isfile(marker_c):
     os.remove(marker_c)
+
+# --- versioncheck: the GitHub fetch falls back to the API, and a failure reaches the model ------
+# 2026-09-24: raw.githubusercontent.com was reset by a sandbox while api.github.com worked, and the
+# "couldn't verify" result went only to a systemMessage the model never sees. file:// URLs stand in
+# for both routes, so these cases never touch the network: a missing file is a failed fetch.
+_vc_dir = tempfile.mkdtemp(prefix="house-rules-vc-")
+_vc_dead_url = pathlib.Path(_vc_dir, "missing.json").as_uri()
+_vc_api_json = pathlib.Path(_vc_dir, "api-plugin.json")
+_vc_api_json.write_text(json.dumps({"version": "99.0.0"}), encoding="utf-8")
+
+session_d = "vc-raw-fails-api-works"
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(session_d),
+    vc_env(
+        HOUSE_RULES_VC_MARKETPLACE=_installed_version,
+        HOUSE_RULES_VC_GITHUB_URL=_vc_dead_url,
+        HOUSE_RULES_VC_GITHUB_API_URL=_vc_api_json.as_uri(),
+    ),
+)
+marker_d = vc_marker_path(session_d)
+ok = (
+    rc == 0
+    and "OUT OF DATE" in out
+    and "GitHub's default branch has 99.0.0" in out
+    and os.path.isfile(marker_d)
+)
+if ok:
+    report("PASS", "versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy")
+    print("          raw route dead, API route reports 99.0.0 - banner fires and the marker is armed")
+else:
+    report("FAIL", "versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy")
+    print(f"          rc={rc} out={out[:300]!r} err={err[:200]!r}")
+if os.path.isfile(marker_d):
+    os.remove(marker_d)
+
+session_e = "vc-both-routes-fail"
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(session_e),
+    vc_env(
+        HOUSE_RULES_VC_MARKETPLACE=_installed_version,
+        HOUSE_RULES_VC_GITHUB_URL=_vc_dead_url,
+        HOUSE_RULES_VC_GITHUB_API_URL=_vc_dead_url,
+    ),
+)
+marker_e = vc_marker_path(session_e)
+try:
+    _vc_ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+except Exception:
+    _vc_ctx = ""
+ok = (
+    rc == 0
+    and "could not confirm the plugin is current" in _vc_ctx
+    and "raw.githubusercontent.com (URLError" in _vc_ctx
+    and "api.github.com (URLError" in _vc_ctx
+    and _installed_version in _vc_ctx
+    and "OUT OF DATE" not in out
+    and not os.path.isfile(marker_e)
+)
+if ok:
+    report("PASS", "versioncheck tells the model, not just the UI, when neither GitHub route could be reached")
+    print("          additionalContext names both failed routes and the installed version; no banner, no marker")
+else:
+    report("FAIL", "versioncheck tells the model, not just the UI, when neither GitHub route could be reached")
+    print(f"          rc={rc} out={out[:400]!r} marker exists: {os.path.isfile(marker_e)}")
+if os.path.isfile(marker_e):
+    os.remove(marker_e)
+
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload("vc-agree-no-context"),
+    vc_env(HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB=_installed_version),
+)
+if rc == 0 and "additionalContext" not in out:
+    report("PASS", "versioncheck adds nothing to the model's context when all three copies agree")
+    print("          a verified-current plugin stays a UI-only trace line")
+else:
+    report("FAIL", "versioncheck adds nothing to the model's context when all three copies agree")
+    print(f"          rc={rc} out={out[:200]!r}")
+shutil.rmtree(_vc_dir, ignore_errors=True)
 
 # --- docref.py: the doc-ref pointer checker ----------------------------------------------------
 # Design: docs/superpowers/specs/2026-09-20-pointer-integrity-design.md
