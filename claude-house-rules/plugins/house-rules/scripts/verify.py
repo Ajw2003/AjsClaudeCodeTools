@@ -59,7 +59,7 @@ STEP = 0
 FAILURES = 0
 SKIPPED = []
 
-# Why SKIP exists and what it's gated on: docs/systems/verify-suites.md, "How it works"
+# Why SKIP exists and what it's gated on: docs/4-systems/verify-suites.md, "How it works"
 # (the IN_REPO paragraph) and Invariants ("A repo-only check SKIPs outside a checkout...").
 IN_REPO = os.path.isfile(os.path.join(ROOT, ".claude-plugin", "marketplace.json"))
 
@@ -102,7 +102,7 @@ DETAIL_DIR = os.path.join(HERE, "..", "rules", "detail")
 
 def rules_corpus():
     """house-rules.md (the injected core) plus every rules/detail/*.md file it points to.
-    See docs/Decisions.md, 2026-09-22, for why drift checks read this instead of the core alone.
+    See docs/6-decisions/Decisions.md, 2026-09-22, for why drift checks read this instead of the core alone.
     """
     corpus = read(RULES_FILE)
     if os.path.isdir(DETAIL_DIR):
@@ -193,19 +193,34 @@ def env_in(project_dir, **extra):
 
 
 # --- docstiers fixtures ------------------------------------------------------------------
-_DOCS_TIER_FILE_NAMES = ["README.md", "Roadmap.md", "ProjectState.md", "Today.md", "Decisions.md"]
+_DOCS_TIER_FOLDER_FILES = [
+    "1-landing/README.md", "2-roadmap/Roadmap.md", "3-state/ProjectState.md",
+    "5-today/Today.md", "6-decisions/Decisions.md",
+]
+_DOCS_OLD_TIER_FILE_NAMES = ["README.md", "Roadmap.md", "ProjectState.md", "Today.md", "Decisions.md"]
 
 
-def _docstiers_repo(name, all_tiers, git_config_text=None, config_is_dir=False, no_git=False):
+def _docstiers_repo(name, all_tiers, git_config_text=None, config_is_dir=False, no_git=False, old_layout=False):
     path = os.path.join(_FIXTURE_ROOT, name)
     docs = os.path.join(path, "docs")
-    os.makedirs(os.path.join(docs, "systems"), exist_ok=True)
-    if all_tiers:
-        for fname in _DOCS_TIER_FILE_NAMES:
-            with open(os.path.join(docs, fname), "w", encoding="utf-8") as f:
+    if old_layout:
+        os.makedirs(os.path.join(docs, "systems"), exist_ok=True)
+        if all_tiers:
+            for fname in _DOCS_OLD_TIER_FILE_NAMES:
+                with open(os.path.join(docs, fname), "w", encoding="utf-8") as f:
+                    f.write("x\n")
+            with open(os.path.join(docs, "systems", "core.md"), "w", encoding="utf-8") as f:
                 f.write("x\n")
-        with open(os.path.join(docs, "systems", "core.md"), "w", encoding="utf-8") as f:
-            f.write("x\n")
+    else:
+        os.makedirs(os.path.join(docs, "4-systems"), exist_ok=True)
+        if all_tiers:
+            for rel in _DOCS_TIER_FOLDER_FILES:
+                full = os.path.join(docs, *rel.split("/"))
+                os.makedirs(os.path.dirname(full), exist_ok=True)
+                with open(full, "w", encoding="utf-8") as f:
+                    f.write("x\n")
+            with open(os.path.join(docs, "4-systems", "core.md"), "w", encoding="utf-8") as f:
+                f.write("x\n")
     if not no_git:
         git_dir = os.path.join(path, ".git")
         os.makedirs(git_dir, exist_ok=True)
@@ -234,10 +249,14 @@ DOCSTIERS_GARBAGE_CONFIG = _docstiers_repo(
     "docstiers-garbage-config", False, "not an ini file\njust some random text\n"
 )
 DOCSTIERS_UNREADABLE_CONFIG = _docstiers_repo("docstiers-unreadable-config", False, config_is_dir=True)
+DOCSTIERS_OLD_LAYOUT = _docstiers_repo(
+    "docstiers-old-layout", True, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n',
+    old_layout=True,
+)
 
 
 # --- inject, profile and standards each stay under the per-hook additionalContext limit ------
-# Margins per docs/Decisions.md, 2026-09-22 (second entry): inject 9,000, profile/standards 9,500,
+# Margins per docs/6-decisions/Decisions.md, 2026-09-22 (second entry): inject 9,000, profile/standards 9,500,
 # each measured on the REAL emitted output, not source file size. profile is measured with
 # docs/example-environment.md standing in for a recorded profile.
 EXAMPLE_ENV = os.path.join(ROOT, "docs", "example-environment.md")
@@ -307,6 +326,11 @@ _docstiers_cases = [
         DOCSTIERS_UNREADABLE_CONFIG,
         {"missing": True, "exclude": True, "owned": False},
     ),
+    (
+        "old flat layout, all tiers present under it - reported as moves, not missing",
+        DOCSTIERS_OLD_LAYOUT,
+        {"old_layout": True},
+    ),
 ]
 for _title, _path, _expect in _docstiers_cases:
     _code, _out, _err = run_hook("docstiers", "", env=env_in(_path))
@@ -316,6 +340,15 @@ for _title, _path, _expect in _docstiers_cases:
     if _expect.get("empty"):
         if _out.strip():
             _problems.append(f"expected a fully silent stdout, got: {_out[:200]!r}")
+    elif _expect.get("old_layout"):
+        if "old flat layout" not in _out:
+            _problems.append("expected the old-flat-layout move message, not present")
+        if "docs/Roadmap.md to docs/2-roadmap/Roadmap.md" not in _out:
+            _problems.append("expected a named move for docs/Roadmap.md")
+        if "docs/systems/*.md to docs/4-systems/*.md" not in _out:
+            _problems.append("expected a named move for docs/systems/*.md")
+        if "missing" in _out.lower() and "outright" in _out.lower():
+            _problems.append("an all-present old layout should not also claim tiers are missing")
     else:
         if "house-rules:project-docs" not in _out:
             _problems.append("missing the load-and-scaffold instruction")
@@ -344,8 +377,8 @@ if not os.path.isfile(DOCSKILL):
 else:
     _skill_text = read(DOCSKILL)
     for _tier_phrase in [
-        "docs/README.md", "docs/Roadmap.md", "docs/ProjectState.md",
-        "docs/systems/*.md", "docs/Today.md", "docs/Decisions.md",
+        "docs/1-landing/README.md", "docs/2-roadmap/Roadmap.md", "docs/3-state/ProjectState.md",
+        "docs/4-systems/*.md", "docs/5-today/Today.md", "docs/6-decisions/Decisions.md",
     ]:
         if _tier_phrase not in _skill_text:
             _skill_drift.append(f"{_tier_phrase!r} is not named in SKILL.md - docstiers may be inventing tier names")
@@ -652,7 +685,7 @@ if shutil.which("git"):
         print(f"          out {out[:250]!r}")
 
     # --- what a commit will ACTUALLY include, not just what is already staged -----------------
-    # doc-ref c79f docs/Decisions.md: guard fires before the command it judges runs, so a
+    # doc-ref c79f docs/6-decisions/Decisions.md: guard fires before the command it judges runs, so a
     # docs-only-staged-right-now check misses an add-then-commit or an -a/-am commit entirely.
     DOCSGUARD_ADD_THEN_COMMIT_SOURCE = _docs_guard_repo(
         "docsguard-add-then-commit-source", "claude/topic", {"f.py": "print(1)\n"}, staged=[]
@@ -1067,7 +1100,7 @@ check_scope(
 
 # --- both scope forms stay within +10% of their 2026-09-23 baseline size --------------------
 # Baselines recorded the day the step-card line was swapped for a docs-tier line and an
-# evidence line (docs/Decisions.md): long form was 909 chars, short form 260. +10% margin, not
+# evidence line (docs/6-decisions/Decisions.md): long form was 909 chars, short form 260. +10% margin, not
 # a floor - shrinking is fine, growing past it is the thing this catches.
 _SCOPE_SIZE_BASELINES = {"long": (909, 1.10), "short": (260, 1.10)}
 for form, payload_prompt in (("long", "run the build script"), ("short", "what does this function do?")):
@@ -1300,7 +1333,7 @@ else:
 
 # --- the recorded machine profile actually reaches the session -------------------------------
 # A real rules/environment.md fixture, not a coincidental phrase in the rules body - the rules
-# split (docs/Decisions.md, 2026-09-22) moved the PowerShell/Git-Bash path-notation example this
+# split (docs/6-decisions/Decisions.md, 2026-09-22) moved the PowerShell/Git-Bash path-notation example this
 # used to piggyback on out of the injected text on purpose, so this now supplies its own fixture.
 _envfixture = os.path.join(_FIXTURE_ROOT, "environment.md")
 with open(_envfixture, "w", encoding="utf-8") as _f:
@@ -1588,7 +1621,7 @@ else:
     print("          hooks.json does not wire ExitPlanMode to run.sh delegate")
 
 # --- the reminder in hook.py's delegate handler has not drifted from the rules document -----
-# Why this must be bidirectional: docs/systems/verify-suites.md, Traps ("Most drift checks
+# Why this must be bidirectional: docs/4-systems/verify-suites.md, Traps ("Most drift checks
 # run in one direction only") and docs/architecture.md, "Why the delegation kept not happening".
 _, delegate_out, _ = run_hook("delegate", "")
 drift = []
@@ -1813,7 +1846,7 @@ def harv_case(expect, title, file_path, content, tool="Write", env=None, expect_
 
 harv_case(
     "remind+trace",
-    "a design essay in a .cs file is flagged for porting into docs/systems/",
+    "a design essay in a .cs file is flagged for porting into docs/4-systems/",
     r"C:\proj\Assets\Orbit.cs",
     ESSAY_CS,
     expect_in=["@house-rules:archivist", "one-line pointer", "Orbit.cs:5-12"],
@@ -1949,7 +1982,7 @@ else:
     print(f"          got: {out[:300]}")
 
 # --- harvest: an Edit fragment's own line 1 is not the file's line 1 ---------------------------
-# Regression for docs/Decisions.md, "Fix the harvest handler treating an Edit fragment's line 1
+# Regression for docs/6-decisions/Decisions.md, "Fix the harvest handler treating an Edit fragment's line 1
 # as the file's header".
 EDIT_ESSAY_AT_FRAGMENT_START = (
     "// The orbit integrator uses Verlet rather than Euler. Euler was tried first and lost\n"
@@ -2158,7 +2191,7 @@ else:
 
 # --- the harvest reminder has not drifted from the rules document ------------------------------
 drift = []
-for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md", "doc-ref", "docref.py", "<!-- ref:"]:
+for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/4-systems", "docs/6-decisions/Decisions.md", "doc-ref", "docref.py", "<!-- ref:"]:
     if phrase.lower() not in rules_text.lower():
         drift.append(phrase)
 if not drift:
@@ -2182,8 +2215,8 @@ for phrase in [
     "<!-- ref:",
     "one-line pointer",
     "@house-rules:archivist",
-    "docs/systems",
-    "docs/Decisions.md",
+    "docs/4-systems",
+    "docs/6-decisions/Decisions.md",
     "How it works",
     "Traps",
     "Invariants",
@@ -2306,7 +2339,7 @@ for line in archivist.split("\n"):
         break
 if "proactiv" not in desc.lower():
     problems.append("the description does not say to use it proactively, so the Agent gate wins")
-for phrase in ("not injected", "one-line pointer", "Nothing fails silently", "docs/systems",
+for phrase in ("not injected", "one-line pointer", "Nothing fails silently", "docs/4-systems",
                "doc-ref", "<!-- ref:", "${CLAUDE_PLUGIN_ROOT}/scripts/docref.py", "fix --write"):
     if phrase.lower() not in archivist.lower():
         problems.append(f"the digest no longer states {phrase!r}")
@@ -2503,7 +2536,7 @@ hand_case(
 )
 
 # A shell fence always satisfies the evidence check's own "quotes evidence" exemption, so the
-# two checks can never both fire live on one reply - see doc-ref 6534 docs/Decisions.md.
+# two checks can never both fire live on one reply - see doc-ref 6534 docs/6-decisions/Decisions.md.
 code, out, err = run_hook(
     "handover",
     stop_payload(
@@ -2704,7 +2737,7 @@ else:
         styledrift.append("the style has no description: field")
     if not re.search(r"^keep-coding-instructions: true$", style_text, re.MULTILINE):
         styledrift.append("the style does not keep-coding-instructions, so it would replace them")
-    # The style is now the single copy of the six-field checklist (docs/Decisions.md,
+    # The style is now the single copy of the six-field checklist (docs/6-decisions/Decisions.md,
     # 2026-09-22); the check below this one proves the core points here instead of restating it.
     for phrase in ["runs from anywhere", "One numbered step per action", "UNTESTED:"]:
         if phrase not in style_text:
@@ -2722,7 +2755,7 @@ else:
     print(f"          {'; '.join(styledrift)}")
 
 # --- the core's card section points at the output style instead of restating it --------------
-# Moved out of house-rules.md 2.17.0 to stay under the per-hook context limit (docs/Decisions.md,
+# Moved out of house-rules.md 2.17.0 to stay under the per-hook context limit (docs/6-decisions/Decisions.md,
 # 2026-09-22): the core keeps a one-line pointer, the output style keeps the actual checklist.
 cardptr = []
 _core_text = read(RULES_FILE)
@@ -2786,7 +2819,7 @@ else:
     print(f"          {'; '.join(teachdrift)}")
 
 # --- every surface the architecture.md table claims has a way to be checked ------------------
-# The table moved from CLAUDE.md to docs/architecture.md (docs/Decisions.md, 2026-09-22, step 2);
+# The table moved from CLAUDE.md to docs/architecture.md (docs/6-decisions/Decisions.md, 2026-09-22, step 2);
 # surface names are read out of the table itself rather than hardcoded here.
 surfdrift = []
 surfaces = []
@@ -3068,7 +3101,7 @@ else:
 # --- the architecture tables in docs/architecture.md and the README match hooks.json ----------
 # Registered dispatch events, read from hooks.json's run.sh invocations rather than filenames -
 # there is only one script (run.sh) now, dispatched by event argument. The table moved from
-# CLAUDE.md to docs/architecture.md (docs/Decisions.md, 2026-09-22, step 2).
+# CLAUDE.md to docs/architecture.md (docs/6-decisions/Decisions.md, 2026-09-22, step 2).
 registered_events = sorted(set(re.findall(r'run\.sh\\" ([a-z]+)', hooks_json_text)))
 docdrift = []
 _absent = absent_repo_files("docs/architecture.md", readme_rel)
@@ -3115,7 +3148,7 @@ else:
 
 # --- the "What trips the guard" README table matches GUARD_R3/GUARD_R4's actual git verbs -----
 # Why this tokenizes the table instead of hand-copying the verb list, and the incident that
-# made it necessary: docs/systems/verify-suites.md, Invariants ("The guarded-verb list is
+# made it necessary: docs/4-systems/verify-suites.md, Invariants ("The guarded-verb list is
 # never hand-copied into a doc").
 GUARDED_GIT_VERBS = [
     "push", "commit", "reset", "revert", "clean", "rebase", "merge",
@@ -3351,13 +3384,16 @@ if "## Documentation goes in tiers" not in rules_text:
     docs_drift.append("house-rules.md is missing the tiered-docs rule heading")
 if "house-rules:project-docs" not in rules_text:
     docs_drift.append("the tiered-docs rule no longer names the project-docs skill")
-if "docs/Decisions.md" not in rules_text:
-    docs_drift.append("house-rules.md no longer mentions docs/Decisions.md")
+if "docs/6-decisions/Decisions.md" not in rules_text:
+    docs_drift.append("house-rules.md no longer mentions docs/6-decisions/Decisions.md")
 if not os.path.isfile(DOCSKILL):
     docs_drift.append("skills/project-docs/SKILL.md does not exist")
 else:
     skill_text = read(DOCSKILL)
-    for phrase in ["docs/Roadmap.md", "docs/ProjectState.md", "docs/Today.md", "docs/systems", "docs/Decisions.md"]:
+    for phrase in [
+        "docs/2-roadmap/Roadmap.md", "docs/3-state/ProjectState.md", "docs/5-today/Today.md",
+        "docs/4-systems", "docs/6-decisions/Decisions.md",
+    ]:
         if phrase not in skill_text:
             docs_drift.append(f"the skill no longer specifies {phrase}")
 if not docs_drift:
@@ -4109,7 +4145,7 @@ else:
     print(f"          rc={rc} out={out[:300]!r}")
 
 # --- the out-of-date banner tells Claude to hand the command over properly and then stop -----
-# Why this is its own check, not folded into the mismatch check above: docs/systems/verify-suites.md, "Traps".
+# Why this is its own check, not folded into the mismatch check above: docs/4-systems/verify-suites.md, "Traps".
 vc_banner_out = out
 banner_ok = (
     "UNTESTED" in vc_banner_out
@@ -4361,9 +4397,9 @@ docref_case(
 
 docref_case(
     "docref check: prose pointers are counted as legacy, not judged",
-    {"docs/systems/physics.md": "## T\n", "src/a.c": "// see docs/systems/physics.md, Traps\n"},
+    {"docs/4-systems/physics.md": "## T\n", "src/a.c": "// see docs/4-systems/physics.md, Traps\n"},
     ["check"], 0,
-    expect_in=["1 line(s) mention docs/systems/", "legacy prose pointers"],
+    expect_in=["1 line(s) mention docs/4-systems/", "legacy prose pointers"],
 )
 
 docref_case(
@@ -4897,7 +4933,7 @@ finally:
 # --- the repo's own docs and code pass docref check ----------------------------------------------
 # verify.py and docref.py are excluded: they hold well-formed example pointers on purpose.
 _dr_live = "docref check passes on this repo's own docs and code"
-_absent = absent_repo_files("docs/Decisions.md", "docs/README.md")
+_absent = absent_repo_files("docs/6-decisions/Decisions.md", "docs/README.md")
 if _absent:
     skip_repo_check(_dr_live, _absent)
 else:
@@ -4986,7 +5022,7 @@ def pd_case(title, files, args=(), expect_rc=0, expect_in=(), expect_out=()):
         shutil.rmtree(d, ignore_errors=True)
 
 
-PD_OK_HEADER = "<!-- plain copy of: docs/systems/x.md @ @HASHOF:docs/systems/x.md@ -->\n"
+PD_OK_HEADER = "<!-- plain copy of: docs/4-systems/x.md @ @HASHOF:docs/4-systems/x.md@ -->\n"
 PD_SOURCE = (
     "# X\n\nA source doc with a decent number of words in it so the ratio math has room to work. "
     + " ".join(f"word{i}" for i in range(1, 300))
@@ -4994,7 +5030,7 @@ PD_SOURCE = (
 )
 PD_OK_BODY = (
     "\n# X, in plain English\n\n"
-    "Full technical doc: [x.md](../../systems/x.md)\n\n"
+    "Full technical doc: [x.md](../../4-systems/x.md)\n\n"
     "**What it is.** A short, clean plain copy.\n\n"
     "**Why it matters.** Nothing breaks if this one is missing.\n\n"
     "**How it works.**\n\n1. Step one.\n\n"
@@ -5010,14 +5046,14 @@ if not os.path.isfile(PLAIN_CHECK):
 else:
     pd_case(
         "plain_docs_check: a well-formed plain copy passes clean",
-        {"docs/systems/x.md": PD_SOURCE, "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY},
+        {"docs/4-systems/x.md": PD_SOURCE, "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY},
         expect_rc=0,
         expect_in=["0 fail", "plain_docs_check: OK"],
     )
 
     pd_case(
         "plain_docs_check: no docs/plain/ folder is reported plainly and still exits 0",
-        {"docs/systems/x.md": PD_SOURCE},
+        {"docs/4-systems/x.md": PD_SOURCE},
         expect_rc=0,
         expect_in=["no docs/plain/ folder", "nothing to check"],
     )
@@ -5025,8 +5061,8 @@ else:
     pd_case(
         "plain_docs_check: an em dash fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "A short, clean plain copy.", "A short plain copy — written badly."
             ),
         },
@@ -5037,8 +5073,8 @@ else:
     pd_case(
         "plain_docs_check: a banned word fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "A short, clean plain copy.", "A short plain copy, built from the payload."
             ),
         },
@@ -5049,8 +5085,8 @@ else:
     pd_case(
         "plain_docs_check: a code block fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY + "\n```\ncode here\n```\n",
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY + "\n```\ncode here\n```\n",
         },
         expect_rc=1,
         expect_in=["FAIL", "fenced code block"],
@@ -5059,8 +5095,8 @@ else:
     pd_case(
         "plain_docs_check: a file path in prose fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "A short, clean plain copy.", "See scripts/hook.py for the real code."
             ),
         },
@@ -5071,8 +5107,8 @@ else:
     pd_case(
         "plain_docs_check: a file:line reference fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "A short, clean plain copy.", "See hook.py:71 for the real code."
             ),
         },
@@ -5083,8 +5119,8 @@ else:
     pd_case(
         "plain_docs_check: a missing header fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_BODY.lstrip("\n"),
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_BODY.lstrip("\n"),
         },
         expect_rc=1,
         expect_in=["FAIL", "missing or malformed header"],
@@ -5093,9 +5129,9 @@ else:
     pd_case(
         "plain_docs_check: a missing full-doc link fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
-                "Full technical doc: [x.md](../../systems/x.md)\n\n", ""
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "Full technical doc: [x.md](../../4-systems/x.md)\n\n", ""
             ),
         },
         expect_rc=1,
@@ -5104,7 +5140,7 @@ else:
 
     pd_case(
         "plain_docs_check: a source file that no longer exists fails",
-        {"docs/plain/systems/x.md": PD_OK_HEADER.replace("@HASHOF:docs/systems/x.md@", "0" * 40) + PD_OK_BODY},
+        {"docs/plain/4-systems/x.md": PD_OK_HEADER.replace("@HASHOF:docs/4-systems/x.md@", "0" * 40) + PD_OK_BODY},
         expect_rc=1,
         expect_in=["FAIL", "does not exist"],
     )
@@ -5112,8 +5148,8 @@ else:
     pd_case(
         "plain_docs_check: a word count over a third of the source's fails",
         {
-            "docs/systems/x.md": "# X\n\n" + " ".join(f"w{i}" for i in range(1, 13)) + "\n",
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+            "docs/4-systems/x.md": "# X\n\n" + " ".join(f"w{i}" for i in range(1, 13)) + "\n",
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY,
         },
         expect_rc=1,
         expect_in=["FAIL", "over a third of the source's"],
@@ -5123,8 +5159,8 @@ else:
         "plain_docs_check: a word count over a quarter (but not a third) only warns",
         {
             # source has 183 words, plain body has 55 -> 30%, between a quarter and a third
-            "docs/systems/x.md": "# X\n\n" + " ".join(f"w{i}" for i in range(1, 183)) + "\n",
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+            "docs/4-systems/x.md": "# X\n\n" + " ".join(f"w{i}" for i in range(1, 183)) + "\n",
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY,
         },
         expect_rc=0,
         expect_in=["WARN", "over a quarter of the source's", "plain_docs_check: OK"],
@@ -5133,10 +5169,10 @@ else:
     pd_case(
         "plain_docs_check: a broken relative link fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "- **Nothing.** No related systems.\n",
-                "- **Missing.** [missing.md](../../systems/missing.md)\n",
+                "- **Missing.** [missing.md](../../4-systems/missing.md)\n",
             ),
         },
         expect_rc=1,
@@ -5146,8 +5182,8 @@ else:
     pd_case(
         "plain_docs_check: a stale source blob hash warns, not fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER.replace("@HASHOF:docs/systems/x.md@", "f" * 40) + PD_OK_BODY,
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER.replace("@HASHOF:docs/4-systems/x.md@", "f" * 40) + PD_OK_BODY,
         },
         expect_rc=0,
         expect_in=["WARN", "stale: source", "plain_docs_check: OK"],
@@ -5156,16 +5192,16 @@ else:
     pd_case(
         "plain_docs_check: a related link to a doc that already has a plain copy fails",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/systems/y.md": "# Y\n\nStub.\n",
-            "docs/plain/systems/y.md": (
-                "<!-- plain copy of: docs/systems/y.md @ @HASHOF:docs/systems/y.md@ -->\n\n"
-                "# Y, in plain English\n\nFull technical doc: [y.md](../../systems/y.md)\n\n"
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/4-systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/4-systems/y.md": (
+                "<!-- plain copy of: docs/4-systems/y.md @ @HASHOF:docs/4-systems/y.md@ -->\n\n"
+                "# Y, in plain English\n\nFull technical doc: [y.md](../../4-systems/y.md)\n\n"
                 "**What it is.** Stub.\n"
             ),
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "- **Nothing.** No related systems.\n",
-                "- **Y.** The y system.\n  [y.md](../../systems/y.md)\n",
+                "- **Y.** The y system.\n  [y.md](../../4-systems/y.md)\n",
             ),
         },
         expect_rc=1,
@@ -5175,16 +5211,16 @@ else:
     pd_case(
         "plain_docs_check: an unupgraded '(no plain copy yet)' pointer fails once the plain copy exists",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/systems/y.md": "# Y\n\nStub.\n",
-            "docs/plain/systems/y.md": (
-                "<!-- plain copy of: docs/systems/y.md @ @HASHOF:docs/systems/y.md@ -->\n\n"
-                "# Y, in plain English\n\nFull technical doc: [y.md](../../systems/y.md)\n\n"
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/4-systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/4-systems/y.md": (
+                "<!-- plain copy of: docs/4-systems/y.md @ @HASHOF:docs/4-systems/y.md@ -->\n\n"
+                "# Y, in plain English\n\nFull technical doc: [y.md](../../4-systems/y.md)\n\n"
                 "**What it is.** Stub.\n"
             ),
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "- **Nothing.** No related systems.\n",
-                "- **Y.** The y system.\n  [y.md](../../systems/y.md) *(no plain copy yet)*\n",
+                "- **Y.** The y system.\n  [y.md](../../4-systems/y.md) *(no plain copy yet)*\n",
             ),
         },
         expect_rc=1,
@@ -5194,18 +5230,18 @@ else:
     pd_case(
         "plain_docs_check: '(no plain copy yet)' and '(needs a doc)' lines are listed as to-do items",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/systems/y.md": "# Y\n\nStub.\n",
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/4-systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "- **Nothing.** No related systems.\n",
-                "- **Y.** The y system.\n  [y.md](../../systems/y.md) *(no plain copy yet)*\n"
+                "- **Y.** The y system.\n  [y.md](../../4-systems/y.md) *(no plain copy yet)*\n"
                 "- **Z.** No doc yet.\n  Z *(needs a doc)*\n",
             ),
         },
         expect_rc=0,
         expect_in=[
             "to-do, plain copies not yet written",
-            "docs/systems/y.md",
+            "docs/4-systems/y.md",
             "to-do, systems that need a technical doc first",
             "(needs a doc)",
         ],
@@ -5214,24 +5250,24 @@ else:
     QUEUE_SYSTEM_A = "# A\n\nStub source.\n"
     QUEUE_SYSTEM_B = "# B\n\nStub source, different content.\n"
     QUEUE_ROOT_README = "# Project\n\nStub root README.\n"
-    QUEUE_STALE_HEADER = "<!-- plain copy of: docs/systems/a.md @ " + "f" * 40 + " -->\n\nStale.\n"
-    QUEUE_CURRENT_BODY = "<!-- plain copy of: docs/systems/a.md @ @HASHOF:docs/systems/a.md@ -->\n\nCurrent.\n"
+    QUEUE_STALE_HEADER = "<!-- plain copy of: docs/4-systems/a.md @ " + "f" * 40 + " -->\n\nStale.\n"
+    QUEUE_CURRENT_BODY = "<!-- plain copy of: docs/4-systems/a.md @ @HASHOF:docs/4-systems/a.md@ -->\n\nCurrent.\n"
 
     pd_case(
         "plain_docs_check --queue: ordering, MISSING/STALE/CURRENT, and the summary line",
         {
-            "docs/systems/README.md": "# Systems\n\nIndex, not a system.\n",
-            "docs/systems/b.md": QUEUE_SYSTEM_B,  # MISSING, but alphabetically after a.md
-            "docs/systems/a.md": QUEUE_SYSTEM_A,  # CURRENT
-            "docs/plain/systems/a.md": QUEUE_CURRENT_BODY,
-            "docs/README.md": QUEUE_ROOT_README,  # MISSING
+            "docs/4-systems/README.md": "# Systems\n\nIndex, not a system.\n",
+            "docs/4-systems/b.md": QUEUE_SYSTEM_B,  # MISSING, but alphabetically after a.md
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,  # CURRENT
+            "docs/plain/4-systems/a.md": QUEUE_CURRENT_BODY,
+            "docs/1-landing/README.md": QUEUE_ROOT_README,  # MISSING
         },
         args=("--queue",),
         expect_rc=0,
         expect_in=[
-            "docs/systems/a.md  CURRENT  docs/plain/systems/a.md",
-            "docs/systems/b.md  MISSING  docs/plain/systems/b.md",
-            "docs/README.md  MISSING  docs/plain/README.md",
+            "docs/4-systems/a.md  CURRENT  docs/plain/4-systems/a.md",
+            "docs/4-systems/b.md  MISSING  docs/plain/4-systems/b.md",
+            "docs/1-landing/README.md  MISSING  docs/plain/1-landing/README.md",
             "plain_docs_check: queue: 2 missing, 0 stale, 1 current, 0 deferred",
         ],
     )
@@ -5239,34 +5275,34 @@ else:
     pd_case(
         "plain_docs_check --queue: a plain copy with a stale header is STALE, not CURRENT",
         {
-            "docs/systems/a.md": QUEUE_SYSTEM_A,
-            "docs/plain/systems/a.md": QUEUE_STALE_HEADER,
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
+            "docs/plain/4-systems/a.md": QUEUE_STALE_HEADER,
         },
         args=("--queue",),
         expect_rc=0,
         expect_in=[
-            "docs/systems/a.md  STALE  docs/plain/systems/a.md",
+            "docs/4-systems/a.md  STALE  docs/plain/4-systems/a.md",
             "plain_docs_check: queue: 0 missing, 1 stale, 0 current, 0 deferred",
         ],
     )
 
     pd_case(
-        "plain_docs_check --queue: docs/systems/README.md is never queued, itself an index",
+        "plain_docs_check --queue: docs/4-systems/README.md is never queued, itself an index",
         {
-            "docs/systems/README.md": "# Systems\n\nIndex, not a system.\n",
-            "docs/systems/a.md": QUEUE_SYSTEM_A,
+            "docs/4-systems/README.md": "# Systems\n\nIndex, not a system.\n",
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
         },
         args=("--queue",),
         expect_rc=0,
-        expect_in=["docs/systems/a.md  MISSING"],
-        expect_out=["docs/systems/README.md  MISSING", "docs/systems/README.md  CURRENT",
-                    "docs/systems/README.md  STALE"],
+        expect_in=["docs/4-systems/a.md  MISSING"],
+        expect_out=["docs/4-systems/README.md  MISSING", "docs/4-systems/README.md  CURRENT",
+                    "docs/4-systems/README.md  STALE"],
     )
 
     pd_case(
         "plain_docs_check --queue: docs/architecture.md is shown as DEFERRED, never queued",
         {
-            "docs/systems/a.md": QUEUE_SYSTEM_A,
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
             "docs/architecture.md": "# Architecture\n\nStub.\n",
         },
         args=("--queue",),
@@ -5281,8 +5317,8 @@ else:
     pd_case(
         "plain_docs_check --queue: excluded folders are named, not queued",
         {
-            "docs/systems/a.md": QUEUE_SYSTEM_A,
-            "docs/Decisions.md": "# Decisions\n\nStub.\n",
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
+            "docs/6-decisions/Decisions.md": "# Decisions\n\nStub.\n",
             "docs/plans/2026-01-01-x.md": "# X\n\nStub.\n",
             "docs/archive/old.md": "# Old\n\nStub.\n",
             "docs/sessions/2026-01-01.md": "# Session\n\nStub.\n",
@@ -5291,17 +5327,17 @@ else:
         args=("--queue",),
         expect_rc=0,
         expect_in=[
-            "EXCLUDED: docs/Decisions.md, docs/plans/, docs/archive/, docs/sessions/, "
-            "docs/generated/, docs/plain/, docs/systems/README.md",
+            "EXCLUDED: docs/6-decisions/Decisions.md, docs/plans/, docs/archive/, docs/sessions/, "
+            "docs/generated/, docs/plain/, docs/4-systems/README.md",
         ],
-        expect_out=["docs/Decisions.md  MISSING", "docs/plans/2026-01-01-x.md",
+        expect_out=["docs/6-decisions/Decisions.md  MISSING", "docs/plans/2026-01-01-x.md",
                     "docs/archive/old.md", "docs/sessions/2026-01-01.md", "docs/generated/gen.md"],
     )
 
     pd_case(
         "plain_docs_check --queue: an unlisted docs/*.md is named in the EXCLUDED summary",
         {
-            "docs/systems/a.md": QUEUE_SYSTEM_A,
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
             "docs/some-other-note.md": "# Note\n\nStub.\n",
         },
         args=("--queue",),
@@ -5314,11 +5350,11 @@ else:
     pd_case(
         "plain_docs_check --queue: honours --root",
         {
-            "sub/docs/systems/a.md": QUEUE_SYSTEM_A,
+            "sub/docs/4-systems/a.md": QUEUE_SYSTEM_A,
         },
         args=("--queue", "--root", "{ROOT}/sub"),
         expect_rc=0,
-        expect_in=["docs/systems/a.md  MISSING  docs/plain/systems/a.md"],
+        expect_in=["docs/4-systems/a.md  MISSING  docs/plain/4-systems/a.md"],
     )
 
     pd_case(
@@ -5332,15 +5368,15 @@ else:
     pd_case(
         "plain_docs_check: a single file path argument checks only that file",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/systems/y.md": "# Y\n\nStub.\n",
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY,
-            "docs/plain/systems/y.md": "not a header at all\n",
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/4-systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+            "docs/plain/4-systems/y.md": "not a header at all\n",
         },
-        args=("{ROOT}/docs/plain/systems/x.md",),
+        args=("{ROOT}/docs/plain/4-systems/x.md",),
         expect_rc=0,
         expect_in=["checked 1 file(s)", "plain_docs_check: OK"],
-        expect_out=["docs/plain/systems/y.md"],
+        expect_out=["docs/plain/4-systems/y.md"],
     )
 
     def pd_closed_reader_case(title, files, args, expect_rc):
@@ -5367,7 +5403,7 @@ else:
 
     pd_closed_reader_case(
         "plain_docs_check --queue: a reader that stops early (| head) is not an internal error",
-        {"docs/systems/x.md": PD_SOURCE, "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY},
+        {"docs/4-systems/x.md": PD_SOURCE, "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY},
         args=("--queue",),
         expect_rc=0,
     )
@@ -5375,8 +5411,8 @@ else:
     pd_closed_reader_case(
         "plain_docs_check: a reader that stops early still gets the real failing exit code",
         {
-            "docs/systems/x.md": PD_SOURCE,
-            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
                 "A short, clean plain copy.", "A short plain copy, built from the payload."
             ),
         },

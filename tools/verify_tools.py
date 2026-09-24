@@ -312,7 +312,7 @@ check(
 
 # --- install.py's upgrade path ----------------------------------------------------------------
 # Why this exists and how the fix was reproduced against the real CLI before being trusted:
-# docs/Decisions.md, "Reproduce the install-upgrade fix against the real CLI before trusting it".
+# docs/6-decisions/Decisions.md, "Reproduce the install-upgrade fix against the real CLI before trusting it".
 steps = install.install_steps()
 argvs = [argv for argv, _ in steps]
 flat = [" ".join(a) for a in argvs]
@@ -386,7 +386,7 @@ check(
 
 # --- update.bat states the same four commands, in the same order -------------------------------
 # Why update.bat restates rather than calls install_steps(), and why the two are bound here:
-# doc-ref 20e2 docs/systems/plugin-distribution.md (Invariants).
+# doc-ref 20e2 docs/4-systems/plugin-distribution.md (Invariants).
 BAT = os.path.join(HERE, "update.bat")
 bat_present = os.path.isfile(BAT)
 bat_raw = open(BAT, "rb").read() if bat_present else b""

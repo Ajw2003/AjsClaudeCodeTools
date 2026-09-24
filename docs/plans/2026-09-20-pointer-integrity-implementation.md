@@ -40,7 +40,7 @@
 | `claude-house-rules/plugins/house-rules/scripts/hook.py` | modify | the same wording in the harvest reminder string |
 | `claude-house-rules/plugins/house-rules/skills/project-docs/SKILL.md` | modify | mention `docref fix` where it says "fix the pointers" |
 | `claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json` | modify | 2.27.0 to 2.28.0 |
-| `docs/Decisions.md`, `docs/architecture.md`, `CLAUDE.md`, `claude-house-rules/README.md`, the spec, the handoff plan | modify | record the decisions, document the command |
+| `docs/6-decisions/Decisions.md`, `docs/architecture.md`, `CLAUDE.md`, `claude-house-rules/README.md`, the spec, the handoff plan | modify | record the decisions, document the command |
 
 `docref.py` is one file on purpose: it is about 250 lines with one responsibility, and it must be a single script the command can invoke.
 
@@ -118,21 +118,21 @@ DR_DOC = "## Traps\n<!-- ref:a3f9 -->\nBody.\n"
 
 docref_case(
     "docref check: a pointer whose id is in exactly one doc, at the recorded path, is ok",
-    {"docs/systems/physics.md": DR_DOC, "src/a.c": "int x;\n// doc-ref a3f9 docs/systems/physics.md\n"},
+    {"docs/4-systems/physics.md": DR_DOC, "src/a.c": "int x;\n// doc-ref a3f9 docs/4-systems/physics.md\n"},
     ["check"], 0,
     expect_in=["1 ok, 0 stale, 0 dangling", "docref: OK"],
 )
 
 docref_case(
     "docref check: a pointer whose doc moved is reported stale, naming the doc it moved to",
-    {"docs/systems/new.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/old.md\n"},
+    {"docs/4-systems/new.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/old.md\n"},
     ["check"], 1,
-    expect_in=["src/a.c:1  STALE", "docs/systems/new.md", "1 stale"],
+    expect_in=["src/a.c:1  STALE", "docs/4-systems/new.md", "1 stale"],
 )
 
 docref_case(
     "docref check: a pointer whose id no doc carries is dangling, with file and line",
-    {"docs/systems/physics.md": DR_DOC, "src/a.c": "int x;\n// doc-ref beef docs/systems/physics.md\n"},
+    {"docs/4-systems/physics.md": DR_DOC, "src/a.c": "int x;\n// doc-ref beef docs/4-systems/physics.md\n"},
     ["check"], 1,
     expect_in=["src/a.c:2  DANGLING", "1 dangling", "docref: PROBLEMS"],
 )
@@ -191,9 +191,9 @@ docref_case(
 
 docref_case(
     "docref check: prose pointers are counted as legacy, not judged",
-    {"docs/systems/physics.md": "## T\n", "src/a.c": "// see docs/systems/physics.md, Traps\n"},
+    {"docs/4-systems/physics.md": "## T\n", "src/a.c": "// see docs/4-systems/physics.md, Traps\n"},
     ["check"], 0,
-    expect_in=["1 line(s) mention docs/systems/", "legacy prose pointers"],
+    expect_in=["1 line(s) mention docs/4-systems/", "legacy prose pointers"],
 )
 
 docref_case(
@@ -452,7 +452,7 @@ def cmd_check(root, excludes):
     duplicates = sum(1 for f in findings if f[2] == "duplicate")
     print("docref: %d malformed, %d duplicate ids, %d unreadable"
           % (len(res["malformed"]), duplicates, len(res["unreadable"])))
-    print("docref: %d line(s) mention docs/systems/ or docs/Decisions.md with no doc-ref "
+    print("docref: %d line(s) mention docs/4-systems/ or docs/6-decisions/Decisions.md with no doc-ref "
           "(legacy prose pointers, not tracked)" % res["legacy"])
     if res["docs"] == 0:
         print("docref: note: no docs/**/*.md found under this root, so every pointer reads as dangling")
@@ -525,7 +525,7 @@ git -C "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools" commit -m "feat: add d
 Append to `verify.py`, directly after Task 1's block:
 
 ```python
-DR_STALE = {"docs/systems/new.md": DR_DOC, "src/a.c": "int x;\n// doc-ref a3f9 docs/old.md\n"}
+DR_STALE = {"docs/4-systems/new.md": DR_DOC, "src/a.c": "int x;\n// doc-ref a3f9 docs/old.md\n"}
 
 
 def _dr_file_has(rel, needle, absent=None):
@@ -543,13 +543,13 @@ def _dr_file_has(rel, needle, absent=None):
 docref_case(
     "docref fix: without --write it reports what it would change and writes nothing",
     DR_STALE, ["fix"], 0,
-    expect_in=["would rewrite", "docs/old.md -> docs/systems/new.md", "nothing written"],
+    expect_in=["would rewrite", "docs/old.md -> docs/4-systems/new.md", "nothing written"],
     after=_dr_file_has("src/a.c", "docs/old.md"),
 )
 
 
 def _dr_fixed_then_clean(d):
-    ok, detail = _dr_file_has("src/a.c", "docs/systems/new.md", absent="docs/old.md")(d)
+    ok, detail = _dr_file_has("src/a.c", "docs/4-systems/new.md", absent="docs/old.md")(d)
     if not ok:
         return ok, detail
     rc, out, err = docref_run(d, "check")
@@ -559,7 +559,7 @@ def _dr_fixed_then_clean(d):
 docref_case(
     "docref fix --write: repairs a stale path by id, and check is clean afterwards",
     DR_STALE, ["fix", "--write"], 0,
-    expect_in=["rewrote", "docs/old.md -> docs/systems/new.md"],
+    expect_in=["rewrote", "docs/old.md -> docs/4-systems/new.md"],
     after=_dr_fixed_then_clean,
 )
 
@@ -572,7 +572,7 @@ def _dr_write_crlf(d):
 def _dr_crlf_kept(d):
     with open(os.path.join(d, "src", "a.c"), "rb") as f:
         got = f.read()
-    want = b"int x;\r\n// doc-ref a3f9 docs/systems/new.md\r\n"
+    want = b"int x;\r\n// doc-ref a3f9 docs/4-systems/new.md\r\n"
     return got == want, f"bytes after fix were {got!r}, wanted {want!r}"
 
 
@@ -584,15 +584,15 @@ docref_case(
 
 docref_case(
     "docref fix --write: keeps a trailing comment closer on the same line",
-    {"docs/systems/new.md": DR_DOC, "src/a.c": "/* doc-ref a3f9 docs/old.md */\n"},
+    {"docs/4-systems/new.md": DR_DOC, "src/a.c": "/* doc-ref a3f9 docs/old.md */\n"},
     ["fix", "--write"], 0,
-    after=_dr_file_has("src/a.c", "/* doc-ref a3f9 docs/systems/new.md */"),
+    after=_dr_file_has("src/a.c", "/* doc-ref a3f9 docs/4-systems/new.md */"),
 )
 
 docref_case(
     "docref fix --write: leaves a dangling pointer alone and says it is unresolved",
     {
-        "docs/systems/new.md": DR_DOC,
+        "docs/4-systems/new.md": DR_DOC,
         "src/a.c": "// doc-ref a3f9 docs/old.md\n// doc-ref beef docs/gone.md\n",
     },
     ["fix", "--write"], 0,
@@ -610,7 +610,7 @@ docref_case(
 
 docref_case(
     "docref fix: with nothing stale it says so and exits 0",
-    {"docs/systems/physics.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/systems/physics.md\n"},
+    {"docs/4-systems/physics.md": DR_DOC, "src/a.c": "// doc-ref a3f9 docs/4-systems/physics.md\n"},
     ["fix", "--write"], 0,
     expect_in=["0 pointer(s)"],
 )
@@ -882,7 +882,7 @@ else:
 # --- the repo's own docs and code pass docref check ----------------------------------------------
 # verify.py and docref.py are excluded: they hold well-formed example pointers on purpose.
 _dr_live = "docref check passes on this repo's own docs and code"
-_absent = absent_repo_files("docs/Decisions.md", "docs/README.md")
+_absent = absent_repo_files("docs/6-decisions/Decisions.md", "docs/1-landing/README.md")
 if _absent:
     skip_repo_check(_dr_live, _absent)
 else:
@@ -996,10 +996,10 @@ Order matters here: the drift lists change first, so the test fails until every 
 
 In `verify.py`:
 
-1. The rules-drift list (the line beginning `for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md"]:`). Add `"doc-ref"` and `"docref.py"`:
+1. The rules-drift list (the line beginning `for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/6-decisions/Decisions.md"]:`). Add `"doc-ref"` and `"docref.py"`:
 
 ```python
-for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md", "doc-ref", "docref.py"]:
+for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/6-decisions/Decisions.md", "doc-ref", "docref.py"]:
 ```
 
 2. The emitted-reminder list (the `for phrase in [` block containing `"one-line pointer",` and `"the user was not prompted",`). Add two entries:
@@ -1029,14 +1029,14 @@ Expected: three FAILs, each naming the missing phrase (`doc-ref`, `docref.py`, a
 **`rules/house-rules.md`.** Replace:
 
 ```
-`docs/Decisions.md` instead. Either way the site keeps a **one-line pointer** naming the
+`docs/6-decisions/Decisions.md` instead. Either way the site keeps a **one-line pointer** naming the
 document and section, so the code still leads to the reasoning. Anything a reader genuinely
 ```
 
 with:
 
 ```
-`docs/Decisions.md` instead. Either way the site keeps a **one-line pointer**
+`docs/6-decisions/Decisions.md` instead. Either way the site keeps a **one-line pointer**
 `doc-ref <id> <path>` (in that language's comment syntax), where `<id>` is the 4-hex marker
 `<!-- ref:<id> -->` on its own line under the moved note's heading, made with `docref.py new` —
 so the code still leads to the reasoning and `docref.py check` can prove it still does. Anything a reader genuinely
@@ -1045,14 +1045,14 @@ so the code still leads to the reasoning and `docref.py check` can prove it stil
 **`hook.py`.** In the harvest reminder string, replace the two adjacent string literals:
 
 ```python
-    "a dated entry in docs/Decisions.md instead. Either way, leave a one-line pointer at the "
+    "a dated entry in docs/6-decisions/Decisions.md instead. Either way, leave a one-line pointer at the "
     "site naming the document and section, so the code still leads to the reasoning. Anything "
 ```
 
 with:
 
 ```python
-    "a dated entry in docs/Decisions.md instead. Either way, leave a one-line pointer at the "
+    "a dated entry in docs/6-decisions/Decisions.md instead. Either way, leave a one-line pointer at the "
     "site: doc-ref <id> <path>, where <id> is a 4-hex ref marker on its own line under the "
     "moved note's heading in the doc, made with docref.py new, so the code still leads to the "
     "reasoning and docref.py check can prove it still does. Anything "
@@ -1158,7 +1158,7 @@ git -C "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools" commit -m "feat: archi
 
 **Files:**
 - Modify: `claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json`
-- Modify: `docs/Decisions.md`, `docs/architecture.md`, `CLAUDE.md`, `claude-house-rules/README.md`
+- Modify: `docs/6-decisions/Decisions.md`, `docs/architecture.md`, `CLAUDE.md`, `claude-house-rules/README.md`
 - Modify: `docs/superpowers/specs/2026-09-20-pointer-integrity-design.md`, `docs/plans/2026-09-20-harvest-content-rules-and-pointer-integrity.md`
 
 **Interfaces:**
@@ -1170,12 +1170,12 @@ git -C "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools" commit -m "feat: archi
 In `plugin.json` change `"version": "2.27.0"` to `"version": "2.28.0"`. Then check whether any other file records the plugin version:
 
 ```powershell
-git -C "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools" grep -n "2\.27\.0" -- ":!docs/sessions" ":!docs/Decisions.md"
+git -C "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools" grep -n "2\.27\.0" -- ":!docs/sessions" ":!docs/6-decisions/Decisions.md"
 ```
 
 Expected: no hits other than `plugin.json`'s old value (already changed) and historical mentions in docs. If `.claude-plugin/marketplace.json` or another file pins `2.27.0` as the current version, update it too.
 
-- [ ] **Step 2: Record the decision in `docs/Decisions.md`**
+- [ ] **Step 2: Record the decision in `docs/6-decisions/Decisions.md`**
 
 Insert a new entry as the first one (immediately after the header's `---` line, above the existing `## 2026-09-20 — Size the harvest threshold by characters alone, default 500` entry), in the same format:
 

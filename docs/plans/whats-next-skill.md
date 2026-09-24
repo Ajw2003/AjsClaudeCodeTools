@@ -3,7 +3,7 @@
 ## Context
 
 The house-rules plugin's six-tier docs structure (`house-rules:project-docs`) ends with tier 5,
-`docs/Today.md` — "what to do next, in order" — but the tier spec only says the file gets
+`docs/5-today/Today.md` — "what to do next, in order" — but the tier spec only says the file gets
 rewritten every session; it doesn't help a user who is staring at a blank or stale `Today.md` and
 genuinely doesn't know what to fill in. The user wants a mechanism that reads across the tiers a
 repo actually has and suggests what to work on.
@@ -13,7 +13,7 @@ unconditionally, priced by `tools/measure_footprint.py`) and skills (invoked on 
 model matching a description). The user chose **on-demand skill**, matching how the plugin's only
 other skill (`project-docs`) already works, and avoiding token cost on the many sessions where
 nobody is stuck. This also sidesteps a real problem a hook would have to solve: most repos —
-including this one — only adopt some of the six tiers (this repo has only `docs/Decisions.md`,
+including this one — only adopt some of the six tiers (this repo has only `docs/6-decisions/Decisions.md`,
 `docs/plans/`, `docs/archive/`, `docs/generated/`; no `README.md`/`Roadmap.md`/`ProjectState.md`/
 `systems/`/`Today.md`), so any automatic per-session firing would need to stay silent on most
 repos most of the time — exactly the shape a hook in this plugin is designed to avoid.
@@ -32,7 +32,7 @@ not a script.
 ```yaml
 ---
 name: whats-next
-description: Reads whatever docs tiers, plans, and git history a repo actually has and synthesizes a ranked suggestion for what to work on this session — surfacing docs/Today.md as-is when it's current, or reconstructing the same "what to do next, in order" ranking from ProjectState/Roadmap/plans/Decisions when Today.md is missing, stale, or every item in it is blocked. Falls back to git log/status, README, and TODO/FIXME grep when a repo has none of the docs tiers at all, and says so plainly rather than fabricating structure. Use when the user seems stuck, asks what to work on, or opens a session with no stated task. Not for creating, restructuring, or auditing the docs/ tiers themselves — use house-rules:project-docs for that — and not for an ordinary question about what a specific file or function does.
+description: Reads whatever docs tiers, plans, and git history a repo actually has and synthesizes a ranked suggestion for what to work on this session — surfacing docs/5-today/Today.md as-is when it's current, or reconstructing the same "what to do next, in order" ranking from ProjectState/Roadmap/plans/Decisions when Today.md is missing, stale, or every item in it is blocked. Falls back to git log/status, README, and TODO/FIXME grep when a repo has none of the docs tiers at all, and says so plainly rather than fabricating structure. Use when the user seems stuck, asks what to work on, or opens a session with no stated task. Not for creating, restructuring, or auditing the docs/ tiers themselves — use house-rules:project-docs for that — and not for an ordinary question about what a specific file or function does.
 ---
 ```
 
@@ -46,7 +46,7 @@ sequential):
   `docs/plans/`/`archive/`/`systems/` individually (a repo can have some tiers and not others —
   this repo has 6/`plans`/`archive`/`generated` but not 1/2/3/4/5, so "all or nothing" checks are
   wrong). Classify full / partial / zero — gates which later steps run.
-- **Step 1 — `docs/Today.md` first, if it exists.** Extract its "what to do next, in order" list
+- **Step 1 — `docs/5-today/Today.md` first, if it exists.** Extract its "what to do next, in order" list
   verbatim. Sanity-check each item against current reality (does a referenced `docs/plans/*.md`
   still exist there rather than having moved to `archive/`? does `git log` already show the work
   done? does `ProjectState.md` still agree?) before trusting it, citing file:line. If ≥1 item is
@@ -56,10 +56,10 @@ sequential):
   cited to file:line, in priority order: `docs/plans/*.md` (designed-but-unexecuted work — verify
   each plan is actually still unexecuted by checking `git log` for its filename/title, since a
   plan whose work already shipped but wasn't archived is a real failure mode — see Verification
-  step 2 below for a live example already sitting in this repo); `docs/ProjectState.md`'s "the one
-  thing that is not what it looks like" and cross-cutting issues; `docs/Roadmap.md`'s current
+  step 2 below for a live example already sitting in this repo); `docs/3-state/ProjectState.md`'s "the one
+  thing that is not what it looks like" and cross-cutting issues; `docs/2-roadmap/Roadmap.md`'s current
   (not-100%) milestone's unmet Acceptance criterion, cross-referenced against ProjectState; recent
-  `docs/Decisions.md` entries (newest few) for implied follow-up work; `docs/systems/*.md` Traps
+  `docs/6-decisions/Decisions.md` entries (newest few) for implied follow-up work; `docs/4-systems/*.md` Traps
   sections as the lowest-priority signal.
 - **Step 3 — rank, don't just list.** State the rule explicitly (unblocking power, not size — same
   principle `Today.md` itself states). Tie-breakers: nothing blocks it right now > a `docs/plans/`
@@ -73,7 +73,7 @@ sequential):
   apply Step 2a's plan-freshness check if `docs/plans/` exists even when other tiers don't (this
   repo's real case). Close with exactly one pointer to `house-rules:project-docs` to scaffold real
   tiers — stated once, not repeated.
-- **Step 5 — offer to write `docs/Today.md`.** Only after the user has picked a direction. One
+- **Step 5 — offer to write `docs/5-today/Today.md`.** Only after the user has picked a direction. One
   line, never auto-write ("ask instead of assuming"). If accepted, draft per tier 5's required
   contents (what's being worked on and why; what's deliberately not; what got surfaced that isn't
   today's job — e.g. a stale-plan finding from Step 2a; what to do next after this). Decline means
@@ -92,9 +92,9 @@ sentence on what it does and that — unlike everything else that paragraph's su
 ### 3. `plugin.json` version bump
 
 `2.21.0` → `2.22.0`, matching the precedent of the tier-6 addition bumping the version
-([docs/Decisions.md:62](../Decisions.md)).
+([docs/6-decisions/Decisions.md:62](../6-decisions/Decisions.md)).
 
-### 4. New `docs/Decisions.md` entry (newest-first, top of file)
+### 4. New `docs/6-decisions/Decisions.md` entry (newest-first, top of file)
 
 Record: Context (tier 5 says what `Today.md` should contain but nothing helps reconstruct or
 sanity-check it when stale/absent/blocked), Decision (added the on-demand `whats-next` skill),
@@ -123,7 +123,7 @@ hook would have to silently no-op around on every session), Status: Standing.
 - [claude-house-rules/plugins/house-rules/skills/project-docs/SKILL.md](../../claude-house-rules/plugins/house-rules/skills/project-docs/SKILL.md) — pattern to match (frontmatter shape, tier semantics, negative-trigger convention)
 - [docs/architecture.md:350-358](../architecture.md) — skills-directory paragraph, needs the new skill added and "five"→"six" fixed
 - [claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json](../../claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json) — version bump
-- [docs/Decisions.md](../Decisions.md) — new entry
+- [docs/6-decisions/Decisions.md](../6-decisions/Decisions.md) — new entry
 
 ## Verification
 
@@ -140,14 +140,14 @@ No code runs here — verification is the suite (to prove nothing broke) plus ma
    commit `20738b4` (which names the plan file in its own commit body) but the plan file was never
    moved to `docs/archive/`. Pass/fail signal: does the skill surface that specific plan as stale
    (already-shipped, mis-filed) rather than presenting it as live unexecuted work? Does it cite
-   `docs/Decisions.md:<line>` and the commit hash rather than paraphrasing without citation?
+   `docs/6-decisions/Decisions.md:<line>` and the commit hash rather than paraphrasing without citation?
 3. **Manual dry-run, zero-adoption repo:** point the skill at a throwaway scratch repo with no
    `docs/` at all (outside this project, per the artifact-custody rule). Expect: plain statement of
    which tiers are absent, fallback to git log/status/README/TODO-grep, exactly one
    `project-docs` pointer at the end — not fabricated tier-shaped content.
 4. **Manual dry-run, `Today.md` present and current:** hand-construct a minimal scratch
-   `docs/Today.md` fixture (outside the project) with one unblocked ranked item. Confirm the skill
+   `docs/5-today/Today.md` fixture (outside the project) with one unblocked ranked item. Confirm the skill
    restates/confirms it rather than re-deriving from scratch — the cheap-path behavior that's easy
    to skip past accidentally.
 5. **Confirm offer-not-write:** in at least one dry-run, confirm the skill ends with a one-line
-   offer to draft/update `docs/Today.md` and stops there without writing anything unprompted.
+   offer to draft/update `docs/5-today/Today.md` and stops there without writing anything unprompted.

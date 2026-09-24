@@ -107,7 +107,7 @@ def split_output(stdout):
     """(reminder, trace) for one hook call.
 
     Why this exists instead of reusing reminder_text():
-    doc-ref 312e docs/systems/plugin-distribution.md (How it works).
+    doc-ref 312e docs/4-systems/plugin-distribution.md (How it works).
     """
     try:
         payload = json.loads(stdout)

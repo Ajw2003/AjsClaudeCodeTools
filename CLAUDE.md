@@ -11,9 +11,9 @@ and project instead of a file that has to be copied around. Published as a GitHu
 not-yet-load-bearing offshoots (`claude-prompt-workshop/`, `claude-agent-router/`) share its
 shim-plus-Python-file shape; see [docs/offshoots-plan.md](docs/offshoots-plan.md).
 
-**[docs/README.md](docs/README.md) is the entry point** for everything except running a command
-in this repo — what's built, where it stands, how each system works, why past decisions were
-made.
+**[docs/1-landing/README.md](docs/1-landing/README.md) is the entry point** for everything except
+running a command in this repo — what's built, where it stands, how each system works, why past
+decisions were made. (`docs/README.md` is the short, plain-English version, for people.)
 
 **This file is a pointer, not a copy.** The actual rules text lives at
 [claude-house-rules/plugins/house-rules/rules/house-rules.md](claude-house-rules/plugins/house-rules/rules/house-rules.md),

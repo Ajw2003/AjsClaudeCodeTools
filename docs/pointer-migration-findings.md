@@ -58,8 +58,8 @@ every one of them ok. Behavior of the code is unchanged; only comments and docst
 
 4. **verify.py's real pointers cannot be migrated (confirmed).** Prose pointers in
    `claude-house-rules/plugins/house-rules/scripts/verify.py` (near lines 61, 1029, 2400 and
-   3032 into `docs/systems/verify-suites.md`, others into `docs/architecture.md` and
-   `docs/Decisions.md`) can never be checked. The live check is run with
+   3032 into `docs/4-systems/verify-suites.md`, others into `docs/architecture.md` and
+   `docs/6-decisions/Decisions.md`) can never be checked. The live check is run with
    `--exclude` on that file because it holds dozens of deliberately fake pointer fixtures
    (`a3f9`, `beef` and others) that would otherwise read as dangling. So a real pointer added
    there is never checked, and the tool cannot tell a fixture from a real one. Smallest fix: a
@@ -68,7 +68,7 @@ every one of them ok. Behavior of the code is unchanged; only comments and docst
    prose. Related: `docref.py` itself must also be excluded, for the same reason.
 
 5. **Pointers into Decisions.md need a decision (confirmed, not acted on).** The only real code
-   pointer into `docs/Decisions.md` is the regression comment in verify.py near line 1390, out
+   pointer into `docs/6-decisions/Decisions.md` is the regression comment in verify.py near line 1390, out
    of reach anyway (finding 4). The file is append-mostly and entries are "never rewritten", so a
    marker would have to be added to a finished entry, which the file's own header forbids except
    for flipping `Status`.

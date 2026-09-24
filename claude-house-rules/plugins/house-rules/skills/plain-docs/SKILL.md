@@ -8,8 +8,8 @@ description: Write a plain-English copy of a tier-4 system doc (or another eligi
 
 # Plain copies of the docs
 
-The technical docs (`docs/systems/*.md`, `docs/README.md`, `docs/ProjectState.md`,
-`docs/Roadmap.md`) are written for precision, which makes them slow for a person to read. This
+The technical docs (`docs/4-systems/*.md`, `docs/1-landing/README.md`, `docs/3-state/ProjectState.md`,
+`docs/2-roadmap/Roadmap.md`) are written for precision, which makes them slow for a person to read. This
 skill writes a **second, plain copy** of one of those docs, for people. The original is never
 rewritten by this skill.
 
@@ -19,18 +19,18 @@ to run project-wide, one doc after another. See "Project-wide mode" below for `a
 
 ## What gets a plain copy, and in what order
 
-1. `docs/systems/*.md` - the system docs. This is where the need is greatest.
-2. `docs/README.md`, `docs/ProjectState.md`, `docs/Roadmap.md`.
+1. `docs/4-systems/*.md` - the system docs. This is where the need is greatest.
+2. `docs/1-landing/README.md`, `docs/3-state/ProjectState.md`, `docs/2-roadmap/Roadmap.md`.
 3. `docs/architecture.md`, split by section, only once 1 and 2 have proven useful.
 
-Left out, never given a plain copy: `docs/Decisions.md`, `docs/plans/`, `docs/archive/`,
+Left out, never given a plain copy: `docs/6-decisions/Decisions.md`, `docs/plans/`, `docs/archive/`,
 `docs/sessions/`, `docs/generated/`. These are history or working notes; a plain copy of one
 would go stale as fast as it was written.
 
 ## Where copies live
 
-`docs/plain/`, mirroring the original layout exactly: `docs/plain/systems/hook-engine.md` is the
-plain copy of `docs/systems/hook-engine.md`. It is a non-tier folder, like `docs/generated/` -
+`docs/plain/`, mirroring the original layout exactly: `docs/plain/4-systems/hook-engine.md` is the
+plain copy of `docs/4-systems/hook-engine.md`. It is a non-tier folder, like `docs/generated/` -
 see `docs/README.md` and the `project-docs` skill for where it's listed.
 
 ## The header
@@ -51,7 +51,7 @@ written.
 
 1. **Read the source doc in full.**
 2. **List every section heading in it**, and every other system doc it cross-references (a
-   `docs/systems/*.md` file it links or names). Each heading must end up either covered in the
+   `docs/4-systems/*.md` file it links or names). Each heading must end up either covered in the
    plain copy or named in the closing **Left out** note - this is how "covers everything
    necessary" gets checked instead of hoped for. Each cross-referenced system becomes a
    **Related** entry.
@@ -62,11 +62,11 @@ written.
    (drop the `*(no plain copy yet)*` marker). Creating `raid` in plain English upgrades the
    pointer in `castle` in the same change.
 5. **Handle a related system with no technical doc at all** before dropping it from **Related**:
-   - Check `docs/systems/README.md`'s left-out list first. Already listed there with a reason?
+   - Check `docs/4-systems/README.md`'s left-out list first. Already listed there with a reason?
      Leave it out of **Related** and move on.
    - Not listed yet? Judge it by the tier-4 test in the `project-docs` skill: is it critical to
      the product at runtime, with rules that must hold or mistakes that have already cost time?
-     - No: leave it out of **Related**, and add it to `docs/systems/README.md`'s left-out list
+     - No: leave it out of **Related**, and add it to `docs/4-systems/README.md`'s left-out list
        with a one-line reason, so the question isn't asked again.
      - Yes: this skill does not write the technical doc itself - that's a bigger job than a plain
        copy. List the system under **Related** with no link, marked `*(needs a doc)*`, and name
@@ -121,7 +121,7 @@ entries the checker reports as `STALE`.
    each: do Steps 1-6 above in full, including upgrading any `*(no plain copy yet)*` pointer left
    by a copy written earlier in this same run. Run the checker on that one file until it reports
    no `FAIL`. Then commit that doc alone (its plain copy, any pointer upgrades, and any
-   `docs/systems/README.md` left-out-list edit it caused) with a message like
+   `docs/4-systems/README.md` left-out-list edit it caused) with a message like
    `docs: add plain copy of <source>` (`refresh` in place of `add` for a stale one), before
    starting the next doc. Commit only when on a branch this session owns, per the house rules
    ("Commit constantly on my own branches, never on theirs"); on any other branch, stop and ask

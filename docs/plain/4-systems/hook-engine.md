@@ -1,8 +1,8 @@
-<!-- plain copy of: docs/systems/hook-engine.md @ c0c6dc86556037e9917334bb2dcf3dbc76189bf5 -->
+<!-- plain copy of: docs/4-systems/hook-engine.md @ a4e4e388f19c51989b9c23d6e46dd3f01cad28c4 -->
 
 # The hook engine, in plain English
 
-Full technical doc: [hook-engine.md](../../systems/hook-engine.md)
+Full technical doc: [hook-engine.md](../../4-systems/hook-engine.md)
 
 **What it is.** Makes the rules actually happen. Claude Code lets a plugin step in at set moments,
 called hooks, such as when a session starts or before a command runs. The hook engine runs the
@@ -44,9 +44,9 @@ unchallenged and reminders never reach Claude.
 **Related.**
 
 - **Verify suites.** Proves the checks do what the docs say.
-  [verify-suites.md](../../systems/verify-suites.md) *(no plain copy yet)*
+  [verify-suites.md](../../4-systems/verify-suites.md) *(no plain copy yet)*
 - **Plugin distribution.** Gets the plugin onto a machine and keeps it updated.
-  [plugin-distribution.md](../../systems/plugin-distribution.md) *(no plain copy yet)*
+  [plugin-distribution.md](../../4-systems/plugin-distribution.md) *(no plain copy yet)*
 
 **Left out**, see the full doc: the full list of moments and checks, file and line references,
 how commands are tidied for display, past bugs and how tests avoid depending on your setup, and

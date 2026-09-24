@@ -412,10 +412,11 @@ session start, so testing before that tests 2.11.0 and passes for the wrong reas
 
 **PROMPT-DOCS**, in any repo.
 
-**You should see:** the five tiers named with their filenames — `docs/README.md`,
-`docs/Roadmap.md`, `docs/ProjectState.md`, `docs/systems/`, `docs/Today.md` — and the direct
-answer that a milestone's *status* moving is a tier-3 change, so `docs/ProjectState.md` is updated
-and `docs/Roadmap.md` is left alone.
+**You should see:** the five tiers named with their filenames — `docs/1-landing/README.md`,
+`docs/2-roadmap/Roadmap.md`, `docs/3-state/ProjectState.md`, `docs/4-systems/`,
+`docs/5-today/Today.md` — and the direct answer that a milestone's *status* moving is a tier-3
+change, so `docs/3-state/ProjectState.md` is updated and `docs/2-roadmap/Roadmap.md` is left
+alone.
 
 **Why this prompt and not a friendlier one:** the answer is only available from the rule. A session
 without it gives generic documentation advice and cannot produce those five filenames or that

@@ -9,11 +9,11 @@ Enforces aj's global CLAUDE.md rules as Claude Code hooks, on every device and e
 without a per-repo file to copy around.
 
 **Contains.** Eleven hook handlers dispatched from
-[`hooks.json`](../claude-house-rules/plugins/house-rules/hooks/hooks.json) through
-[`hook.py`](../claude-house-rules/plugins/house-rules/scripts/hook.py)'s `EVENTS` table —
+[`hooks.json`](../../claude-house-rules/plugins/house-rules/hooks/hooks.json) through
+[`hook.py`](../../claude-house-rules/plugins/house-rules/scripts/hook.py)'s `EVENTS` table —
 `inject`, `standards`, `scope`, `guard`, `artifact`, `runnable`, `delegate`, `announce`,
 `verdict`, `handover`, `harvest`. The `@house-rules:executor` subagent that the model-split rule
-actually runs on. Full detail in [`docs/systems/hook-engine.md`](systems/hook-engine.md).
+actually runs on. Full detail in [`docs/4-systems/hook-engine.md`](../4-systems/hook-engine.md).
 
 **Acceptance.** `python claude-house-rules/plugins/house-rules/scripts/verify.py` exits 0.
 **Checked 2026-09-15: 203/203 PASS.**
@@ -21,10 +21,10 @@ actually runs on. Full detail in [`docs/systems/hook-engine.md`](systems/hook-en
 ## 2. The six-tier documentation convention — 100% as a mechanism
 
 `house-rules:project-docs` defines the tier structure this very file is part of, and the plugin
-routes rationale/post-mortems into `docs/Decisions.md` rather than into a tier-4 system doc.
+routes rationale/post-mortems into `docs/6-decisions/Decisions.md` rather than into a tier-4 system doc.
 
 **Contains.** The `house-rules:project-docs` skill, the tier list and card format in
-`rules/house-rules.md`, `hook.py`'s `harvest`/archivist routing to `docs/Decisions.md`, and
+`rules/house-rules.md`, `hook.py`'s `harvest`/archivist routing to `docs/6-decisions/Decisions.md`, and
 `verify.py`'s tiered-docs drift checks (the rule names the skill, the skill specifies all six
 tiers, the routing text agrees in both directions).
 
@@ -32,9 +32,9 @@ tiers, the routing text agrees in both directions).
 the 203 above, checked 2026-09-15). This criterion is about the **mechanism** — a repo *can*
 adopt the six tiers and the plugin routes correctly if it does. Whether *this* repo's own
 `docs/` actually instantiates all six is tracked separately, in
-[`ProjectState.md`](ProjectState.md), because "the mechanism works" and "every repo has adopted
+[`ProjectState.md`](../3-state/ProjectState.md), because "the mechanism works" and "every repo has adopted
 it" are different claims — the second was explicitly deferred as its own follow-up in
-[`docs/archive/2026-09-15-sixth-documentation-tier.md`](archive/2026-09-15-sixth-documentation-tier.md).
+[`docs/archive/2026-09-15-sixth-documentation-tier.md`](../archive/2026-09-15-sixth-documentation-tier.md).
 
 ## 3. Offshoot plugins (`prompt-workshop`, `agent-router`) — 50%
 
@@ -43,7 +43,7 @@ of "how should it be handed back." Both plugin.json versions read `0.1.0`.
 
 **Contains.** `prompt-workshop`'s under-specification nudge and `agent-router`'s three-tier
 model-routing nudge, each a full shim+hook.py+verify.py+agents set, not stub code. Detail in
-[`docs/systems/offshoot-plugins.md`](systems/offshoot-plugins.md).
+[`docs/4-systems/offshoot-plugins.md`](../4-systems/offshoot-plugins.md).
 
 **Acceptance, split because the mechanism and the judgment quality are different claims:**
 
@@ -54,7 +54,7 @@ model-routing nudge, each a full shim+hook.py+verify.py+agents set, not stub cod
   real prompt traffic; neither ships `SubagentStart`/`SubagentStop` visibility to confirm a
   suggestion was acted on or that a routed subagent ran on its declared model. These are named as
   open questions by the plan that built them
-  ([`docs/offshoots-plan.md`](offshoots-plan.md#open-questions-not-resolved-by-this-shell)), not
+  ([`docs/offshoots-plan.md`](../offshoots-plan.md#open-questions-not-resolved-by-this-shell)), not
   newly discovered here.
 
 50% reflects "the mechanism is real and passes its own tests" against "the actual value
@@ -67,11 +67,11 @@ an old version, and writing the two settings only a machine-level install can wr
 
 **Contains.** `tools/install.py`'s four-command `install_steps()`, `bootstrap.ps1`/`bootstrap.sh`,
 `tools/update.bat`, `tools/clean_install_test.py`, and `tools/verify_tools.py`. Detail in
-[`docs/systems/plugin-distribution.md`](systems/plugin-distribution.md).
+[`docs/4-systems/plugin-distribution.md`](../4-systems/plugin-distribution.md).
 
 **Acceptance.** `python tools/verify_tools.py` exits 0 — **checked 2026-09-15: 32/32 PASS.**
 Additionally, per prior recorded verification on this machine, the real `bootstrap`/`plugin
 update` command sequence has actually been run against the live `claude` CLI on this device (not
 just its decision logic in isolation) — the higher bar `clean_install_test.py` exists for. Not
-re-run as part of writing this roadmap; see [`ProjectState.md`](ProjectState.md) for what that
+re-run as part of writing this roadmap; see [`ProjectState.md`](../3-state/ProjectState.md) for what that
 means for how fresh this claim is.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """session_ledger_render.py — turns transcript records into the session-ledger markdown.
 
-Split out of tools/session_ledger.py (docs/Decisions.md, 2026-09-23, doc-ref c67d) so hook.py's
+Split out of tools/session_ledger.py (docs/6-decisions/Decisions.md, 2026-09-23, doc-ref c67d) so hook.py's
 verdict handler can render a subagent's transcript into docs/sessions/ from inside the plugin
 cache, where tools/ does not exist - only the shipped plugin package does. tools/session_ledger.py
 imports build_turns/render/is_github_write/GIT_MUTATING from here, so there is exactly one copy
