@@ -24,13 +24,13 @@ Verify docs against code/tree/history; disagree → say so, follow observed beha
 
 `docs/` has six tiers: landing, roadmap, state, systems, today, decisions — a missing one is
 caught every session by the `docstiers` hook. Write to the tier that changed. Reversal: dated
-`docs/Decisions.md` entry, tier fixed, pointer left. Cite to `file:line`. See
+`docs/6-decisions/Decisions.md` entry, tier fixed, pointer left. Cite to `file:line`. See
 `${CLAUDE_PLUGIN_ROOT}/rules/detail/docs-tiers.md`.
 
 ## Long-form reasoning goes in a document, not in a comment
 
-A comment grown into an essay moves before turn end: mechanism → `docs/systems/`, post-mortem →
-dated `docs/Decisions.md`, leaving `doc-ref <id> <path>`. Hand the move to
+A comment grown into an essay moves before turn end: mechanism → `docs/4-systems/`, post-mortem →
+dated `docs/6-decisions/Decisions.md`, leaving `doc-ref <id> <path>`. Hand the move to
 `@house-rules:archivist`. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/long-form-reasoning.md`.
 
 ## Build for a human working alone
