@@ -5343,6 +5343,47 @@ else:
         expect_out=["docs/plain/systems/y.md"],
     )
 
+    def pd_closed_reader_case(title, files, args, expect_rc):
+        """Run the checker with stdout already closed at the reading end, the way `| head` leaves
+        it, and check the exit code is still the real result with no internal error."""
+        d = make_fixture(files)
+        read_end, write_end = os.pipe()
+        os.close(read_end)
+        try:
+            _pd_prepare(d)
+            proc = subprocess.run(
+                [sys.executable, PLAIN_CHECK, "--root", d] + list(args),
+                stdout=write_end, stderr=subprocess.PIPE,
+            )
+            err = proc.stderr.decode("utf-8", "replace")
+            if proc.returncode == expect_rc and "internal error" not in err:
+                report("PASS", title)
+            else:
+                report("FAIL", title)
+                print(f"          exit {proc.returncode}, expected {expect_rc}; stderr: {err[:300]!r}")
+        finally:
+            os.close(write_end)
+            shutil.rmtree(d, ignore_errors=True)
+
+    pd_closed_reader_case(
+        "plain_docs_check --queue: a reader that stops early (| head) is not an internal error",
+        {"docs/systems/x.md": PD_SOURCE, "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY},
+        args=("--queue",),
+        expect_rc=0,
+    )
+
+    pd_closed_reader_case(
+        "plain_docs_check: a reader that stops early still gets the real failing exit code",
+        {
+            "docs/systems/x.md": PD_SOURCE,
+            "docs/plain/systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "A short plain copy, built from the payload."
+            ),
+        },
+        args=(),
+        expect_rc=1,
+    )
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:

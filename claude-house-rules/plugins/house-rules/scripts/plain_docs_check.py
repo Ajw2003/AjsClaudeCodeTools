@@ -460,10 +460,42 @@ def print_queue(root):
     return 0
 
 
+class _StopWhenReaderLeaves:
+    """Wraps stdout so a reader that stops early (`| head`) ends the printing, not the run.
+
+    The check still finishes and exits with its real result, so a caller reading only the first
+    lines never gets a false failure, and never a false pass either.
+    """
+
+    def __init__(self, stream):
+        self._stream = stream
+        self._gone = False
+
+    def write(self, text):
+        if not self._gone:
+            try:
+                return self._stream.write(text)
+            except (BrokenPipeError, OSError):
+                self._gone = True
+        return len(text)
+
+    def flush(self):
+        if not self._gone:
+            try:
+                self._stream.flush()
+            except (BrokenPipeError, OSError):
+                self._gone = True
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
 def main(argv=None):
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="replace")
+    if not isinstance(sys.stdout, _StopWhenReaderLeaves):
+        sys.stdout = _StopWhenReaderLeaves(sys.stdout)
     parser = argparse.ArgumentParser(
         prog="plain_docs_check.py",
         description="Check plain-English doc copies under docs/plain/ against the plain-docs rules.",

@@ -32,6 +32,10 @@ on this repo — no new plain copies were written by this pass either.
   new check count. `CLAUDE.md`'s command list gained the checker.
 - **Version bump.** `2.31.0` → `2.32.0` in `plugin.json`, per the version-bump guard. A second
   bump, `2.32.0` → `2.33.0`, went with the `--queue`/`all` mode addition.
+- **Closed-reader fix.** A reader that stops early (`| head`) no longer makes the checker report
+  `internal error: BrokenPipeError` and exit 2. Printing stops, but the check still finishes and
+  exits with its real result. Two new `verify.py` cases prove it, and both fail without the fix.
+  Suite is now 365/365.
 
 ## What was deliberately not done
 
