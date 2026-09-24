@@ -26,11 +26,11 @@ Exit 0 means no FAIL-level problem was found (warnings do not affect the exit co
 means at least one FAIL was found. Exit 2 means the run itself could not proceed (bad --root, an
 unreadable file passed directly, or an internal error) - never a silent 0.
 
---queue prints the project-wide work list instead: every eligible source (docs/systems/*.md
-except README.md, then docs/README.md, docs/ProjectState.md, docs/Roadmap.md, in that order),
-each with MISSING/STALE/CURRENT and its mirrored plain-copy path, a DEFERRED line for
-docs/architecture.md if present, and an EXCLUDED summary naming what's left out and why. It is a
-listing, not a check - it always exits 0.
+--queue prints the project-wide work list instead: every eligible source (docs/4-systems/*.md
+except README.md, then docs/1-landing/README.md, docs/3-state/ProjectState.md,
+docs/2-roadmap/Roadmap.md, in that order), each with MISSING/STALE/CURRENT and its mirrored
+plain-copy path, a DEFERRED line for docs/architecture.md if present, and an EXCLUDED summary
+naming what's left out and why. It is a listing, not a check - it always exits 0.
 """
 
 import argparse
@@ -72,10 +72,11 @@ RELATED_ENTRY_RE = re.compile(
 )
 
 # The project-wide queue's source list and order, shared with the plain-docs skill's "all"/
-# "stale" modes so the two never drift apart. docs/systems/*.md (except README.md, an index, not
-# a system) sorted by name, then these three root docs in this fixed order, each only if present.
-QUEUE_FIXED_SOURCES = ["docs/README.md", "docs/ProjectState.md", "docs/Roadmap.md"]
-QUEUE_SYSTEMS_INDEX = "docs/systems/README.md"
+# "stale" modes so the two never drift apart. docs/4-systems/*.md (except README.md, an index,
+# not a system) sorted by name, then these three root docs in this fixed order, each only if
+# present.
+QUEUE_FIXED_SOURCES = ["docs/1-landing/README.md", "docs/3-state/ProjectState.md", "docs/2-roadmap/Roadmap.md"]
+QUEUE_SYSTEMS_INDEX = "docs/4-systems/README.md"
 
 # Shown as DEFERRED: eligible in principle, but the skill only takes it on once the others have
 # proven useful; never queued automatically.
@@ -83,13 +84,14 @@ QUEUE_DEFERRED_SOURCE = "docs/architecture.md"
 
 # Folders/files left out of the queue entirely, with the reason shown in the EXCLUDED summary.
 QUEUE_EXCLUDED_GROUPS = [
-    ("docs/Decisions.md", "history, would go stale as fast as it was written"),
+    ("docs/6-decisions/Decisions.md", "history, would go stale as fast as it was written"),
     ("docs/plans/", "working notes, would go stale as fast as it was written"),
     ("docs/archive/", "history, would go stale as fast as it was written"),
     ("docs/sessions/", "per-session audit records, not documentation of the system"),
     ("docs/generated/", "generated output, not authored documentation"),
     ("docs/plain/", "the plain copies themselves"),
-    ("docs/systems/README.md", "an index, not a system"),
+    ("docs/4-systems/README.md", "an index, not a system"),
+    ("docs/README.md", "already the plain version"),
 ]
 
 
@@ -337,7 +339,7 @@ def check_file(root, rel_path, todo_no_plain, todo_needs_doc):
 
 
 def _plain_equivalent(root, technical_rel):
-    """docs/systems/x.md -> docs/plain/systems/x.md, else None if it's not under docs/."""
+    """docs/4-systems/x.md -> docs/plain/4-systems/x.md, else None if it's not under docs/."""
     technical_rel = _norm(technical_rel)
     if not technical_rel.startswith("docs/"):
         return None
@@ -372,12 +374,12 @@ def build_queue(root):
         return None
 
     sources = []
-    systems_dir = os.path.join(docs_dir, "systems")
+    systems_dir = os.path.join(docs_dir, "4-systems")
     if os.path.isdir(systems_dir):
         for name in sorted(os.listdir(systems_dir)):
             if not name.endswith(".md") or name == "README.md":
                 continue
-            sources.append(_norm(os.path.join("docs", "systems", name)))
+            sources.append(_norm(os.path.join("docs", "4-systems", name)))
     for rel in QUEUE_FIXED_SOURCES:
         if os.path.isfile(os.path.join(root, rel)):
             sources.append(rel)
@@ -410,7 +412,7 @@ def build_queue(root):
     # docs/*.md at the top level, not README/ProjectState/Roadmap, not Decisions.md, not
     # architecture.md (named separately as DEFERRED) - named explicitly so nothing is silently
     # skipped.
-    named_elsewhere = set(QUEUE_FIXED_SOURCES) | {"docs/Decisions.md", QUEUE_DEFERRED_SOURCE}
+    named_elsewhere = set(QUEUE_FIXED_SOURCES) | {"docs/6-decisions/Decisions.md", QUEUE_DEFERRED_SOURCE, "docs/README.md"}
     unlisted_md = []
     for name in sorted(os.listdir(docs_dir)):
         full = os.path.join(docs_dir, name)

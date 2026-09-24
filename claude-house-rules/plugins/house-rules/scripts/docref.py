@@ -23,7 +23,7 @@ PATH_RE = re.compile(r"[\w./-]+?\.md(?![\w.-])")
 ID_RE = re.compile(r"[0-9a-f]{4}\Z")
 FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 TRAIL_PUNCT = ".,;:)]\"'"
-LEGACY_RE = re.compile(r"docs/(?:systems/[\w.-]+\.md|Decisions\.md)")
+LEGACY_RE = re.compile(r"docs/(?:4-systems/[\w.-]+\.md|6-decisions/Decisions\.md)")
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv"}
 
 
@@ -247,7 +247,7 @@ def cmd_check(root, excludes):
     duplicates = sum(1 for f in findings if f[2] == "duplicate")
     print("docref: %d malformed, %d duplicate ids, %d unreadable"
           % (len(res["malformed"]), duplicates, len(res["unreadable"]) + len(res["undecodable"])))
-    print("docref: %d line(s) mention docs/systems/ or docs/Decisions.md with no doc-ref "
+    print("docref: %d line(s) mention docs/4-systems/ or docs/6-decisions/Decisions.md with no doc-ref "
           "(legacy prose pointers, not tracked)" % res["legacy"])
     if res["docs"] == 0:
         print("docref: note: no docs/**/*.md found under this root, so every pointer reads as dangling")

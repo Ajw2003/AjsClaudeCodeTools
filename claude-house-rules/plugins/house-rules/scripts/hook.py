@@ -65,7 +65,7 @@ def emit(obj):
 
 _TRACE_OFF = {"off", "0", "false", "no"}
 
-# Claude Code's per-hook additionalContext limit is 10,000 chars (docs/Decisions.md, 2026-09-22).
+# Claude Code's per-hook additionalContext limit is 10,000 chars (docs/6-decisions/Decisions.md, 2026-09-22).
 # The machine profile lives in its own SessionStart entry (profile), not appended to inject's
 # text, because the limit is per hook and a recorded environment.md can be large on its own.
 INJECT_CHAR_LIMIT = 10_000
@@ -276,7 +276,7 @@ def event_inject():
 
 
 # ---------------------------------------------------------------------------------------
-# profile — a third SessionStart handler, split out of inject in 2.17.1 (docs/Decisions.md,
+# profile — a third SessionStart handler, split out of inject in 2.17.1 (docs/6-decisions/Decisions.md,
 # 2026-09-22): the per-hook additionalContext limit is 10,000 chars, and a recorded
 # rules/environment.md can by itself be large enough that appending it to inject's own text
 # risked pushing inject over the limit. Registered with no matcher gate of its own (SessionStart
@@ -425,7 +425,7 @@ def _has_node_markers(d):
 def _unity_markers_in_parent(project_dir):
     """True when project_dir is itself a Unity project's Assets/ folder.
 
-    Why and how: doc-ref 0d4d docs/systems/hook-engine.md (Invariants).
+    Why and how: doc-ref 0d4d docs/4-systems/hook-engine.md (Invariants).
     """
     normalized = os.path.normpath(project_dir)
     if os.path.basename(normalized) != "Assets":
@@ -587,23 +587,34 @@ def event_standards():
 # docstiers — a fourth SessionStart handler, its own entry so a failure here can never affect
 # inject/profile/standards. Tier names are read out of
 # skills/project-docs/SKILL.md by a human (this list), never invented at runtime; verify.py's
-# drift check keeps the two from disagreeing. Full rationale: docs/Decisions.md, 2026-09-22, and
+# drift check keeps the two from disagreeing. Full rationale: docs/6-decisions/Decisions.md, 2026-09-22, and
 # rules/detail/docs-tiers.md.
 # ---------------------------------------------------------------------------------------
 
 DOCS_TIER_FILES = [
+    "docs/1-landing/README.md",
+    "docs/2-roadmap/Roadmap.md",
+    "docs/3-state/ProjectState.md",
+    "docs/5-today/Today.md",
+    "docs/6-decisions/Decisions.md",
+]
+DOCS_TIER4_DIR = "docs/4-systems"
+# The pre-folder layout, kept only so a project still on it gets a "move X to Y" message
+# instead of being told to scaffold tiers it already has. See docs/6-decisions/Decisions.md,
+# 2026-09-24.
+OLD_DOCS_TIER_FILES = [
     "docs/README.md",
     "docs/Roadmap.md",
     "docs/ProjectState.md",
     "docs/Today.md",
     "docs/Decisions.md",
 ]
-DOCS_TIER4_DIR = "docs/systems"
+OLD_DOCS_TIER4_DIR = "docs/systems"
 DEFAULT_GITHUB_OWNER = "Ajw2003"
 
 
-def _tier4_present(root):
-    d = os.path.join(root, *DOCS_TIER4_DIR.split("/"))
+def _tier4_present(root, tier4_dir=DOCS_TIER4_DIR):
+    d = os.path.join(root, *tier4_dir.split("/"))
     if not os.path.isdir(d):
         return False
     return any(name.lower().endswith(".md") for name in os.listdir(d))
@@ -638,9 +649,49 @@ def _repo_owner_from_config(git_dir):
 def event_docstiers():
     try:
         root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
-        missing = [f for f in DOCS_TIER_FILES if not os.path.isfile(os.path.join(root, *f.split("/")))]
-        if not _tier4_present(root):
-            missing.insert(3, "docs/systems/*.md (at least one system document)")
+        missing = []
+        moves = []
+        for new_path, old_path in zip(DOCS_TIER_FILES, OLD_DOCS_TIER_FILES):
+            if os.path.isfile(os.path.join(root, *new_path.split("/"))):
+                continue
+            if os.path.isfile(os.path.join(root, *old_path.split("/"))):
+                moves.append("%s to %s" % (old_path, new_path))
+            else:
+                missing.append(new_path)
+
+        tier4_new = _tier4_present(root)
+        if not tier4_new:
+            if _tier4_present(root, OLD_DOCS_TIER4_DIR):
+                moves.insert(3, "%s/*.md to %s/*.md" % (OLD_DOCS_TIER4_DIR, DOCS_TIER4_DIR))
+            else:
+                missing.insert(3, "%s/*.md (at least one system document)" % DOCS_TIER4_DIR)
+
+        if moves:
+            text = (
+                "House rules, documentation goes in tiers: this project still has %d "
+                "documentation tier(s) in the old flat layout - move %s. %s"
+                % (
+                    len(moves),
+                    "; ".join(moves),
+                    (
+                        "It is also missing %d tier(s) outright - %s. Load "
+                        "house-rules:project-docs and scaffold those before any other work."
+                        % (len(missing), ", ".join(missing))
+                        if missing
+                        else "Load house-rules:project-docs for the current folder layout."
+                    ),
+                )
+            )
+            emit(
+                {
+                    "suppressOutput": True,
+                    "hookSpecificOutput": {
+                        "hookEventName": "SessionStart",
+                        "additionalContext": text,
+                    },
+                }
+            )
+            return 0
 
         if not missing:
             # All six tiers present - the one other deliberate silent exception besides
@@ -1131,7 +1182,7 @@ GUARD_BUCKETS = [
 _GIT_COMMIT_RE = re.compile(_GIT + r"commit([^0-9A-Za-z-]|$)", re.IGNORECASE)
 
 # git diff --cached is the ONE deliberate, narrowly-scoped exception to "no subprocess in
-# guard" - branch_ownership() stays subprocess-free. doc-ref 8713 docs/Decisions.md.
+# guard" - branch_ownership() stays subprocess-free. doc-ref 8713 docs/6-decisions/Decisions.md.
 DOCS_CHECK_TIMEOUT = 2.0
 
 
@@ -1143,7 +1194,7 @@ DOCS_CHECK_TIMEOUT = 2.0
 _GIT_ADD_RE = re.compile(_GIT + r"add([^0-9A-Za-z-]|$)", re.IGNORECASE)
 _STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
 # -a/--all/-am/-ma on the COMMIT statement: git stages every tracked, modified/deleted file at
-# commit time, before the commit itself runs - doc-ref c79f docs/Decisions.md.
+# commit time, before the commit itself runs - doc-ref c79f docs/6-decisions/Decisions.md.
 _COMMIT_ALL_RE = re.compile(r"(^|\s)(-a\b|--all\b|-am\b|-ma\b)", re.IGNORECASE)
 _ADD_ALL_RE = re.compile(r"(^|\s)(-A\b|--all\b)|(^|\s)\.(\s|$)", re.IGNORECASE)
 _ADD_UPDATE_RE = re.compile(r"(^|\s)(-u\b|--update\b)", re.IGNORECASE)
@@ -1189,7 +1240,7 @@ def _staged_docs_status(subject, elsewhere):
     'unknown' on anything that could make guard's own decision unreliable: a command naming
     another repo (elsewhere), no working git, the shared time budget running out, undecodable
     output. The caller's existing decision is never changed by this - only the message it
-    shows may gain a line. doc-ref c79f docs/Decisions.md.
+    shows may gain a line. doc-ref c79f docs/6-decisions/Decisions.md.
     """
     if elsewhere:
         return "unknown", "the command names another repo (-C/--git-dir/--work-tree)"
@@ -1270,7 +1321,7 @@ def _staged_docs_status(subject, elsewhere):
 DOCS_COMMIT_REMINDER = (
     "House rules, documentation goes in tiers: this commit stages a source file with nothing "
     "staged under docs/. Before committing, update the tier that changed - usually "
-    "docs/ProjectState.md, for what's built and where it stands - or say in the commit "
+    "docs/3-state/ProjectState.md, for what's built and where it stands - or say in the commit "
     "message why none needed updating."
 )
 
@@ -1306,8 +1357,8 @@ def _git_dir(start):
 def branch_ownership():
     """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
 
-    Mechanism and invariants: doc-ref ee0f docs/systems/hook-engine.md (Invariants) and
-    doc-ref d2a4 docs/systems/hook-engine.md (Traps).
+    Mechanism and invariants: doc-ref ee0f docs/4-systems/hook-engine.md (Invariants) and
+    doc-ref d2a4 docs/4-systems/hook-engine.md (Traps).
     """
     try:
         git_dir = _git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
@@ -1343,7 +1394,7 @@ _COMMAND_VALUE_RE = re.compile(r'"command"\s*:\s*"((?:[^"\\]|\\.)*)"')
 def _trace_subject(subject, limit=60):
     """The command as a human reads it, collapsed to one short line.
 
-    Why this decodes separately from matching: doc-ref 361f docs/systems/hook-engine.md
+    Why this decodes separately from matching: doc-ref 361f docs/4-systems/hook-engine.md
     (Invariants).
     """
     m = _COMMAND_VALUE_RE.search(subject)
@@ -1416,7 +1467,7 @@ def event_guard():
         if docs_status == "needs-docs":
             # Still an allow - the commit rule already lets this through - but Claude gets a
             # reminder in-context. PreToolUse's additionalContext reaches the model on an
-            # "allow" decision (probed live, doc-ref 8713 docs/Decisions.md), the channel
+            # "allow" decision (probed live, doc-ref 8713 docs/6-decisions/Decisions.md), the channel
             # guard did not otherwise use before this.
             out = {
                 "hookSpecificOutput": {
@@ -1500,7 +1551,7 @@ def event_guard():
 
 # ---------------------------------------------------------------------------------------
 # guardwrite — PreToolUse on Write. Fails closed and loud, same contract as guard.
-# doc-ref bf94 docs/systems/hook-engine.md (Invariants)
+# doc-ref bf94 docs/4-systems/hook-engine.md (Invariants)
 # ---------------------------------------------------------------------------------------
 
 RULE_EDIT_IN_PLACE = "Edit in place; a full rewrite is a delete, not an edit"
@@ -1856,13 +1907,13 @@ _SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _TRANSCRIPT_RE = re.compile(r'"transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _AGENT_TRANSCRIPT_RE = re.compile(r'"agent_transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
-# Agent/Task's PostToolUse tool_response uses its own camelCase names - doc-ref 8313 docs/Decisions.md.
+# Agent/Task's PostToolUse tool_response uses its own camelCase names - doc-ref 8313 docs/6-decisions/Decisions.md.
 _RESPONSE_STATUS_RE = re.compile(r'"status"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _RESPONSE_AGENT_ID_RE = re.compile(r'"agentId"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _RESPONSE_AGENT_TYPE_RE = re.compile(r'"agentType"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _TOOL_INPUT_SUBAGENT_TYPE_RE = re.compile(r'"subagent_type"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
-# A backgrounded call's hand-back prompt shape, probed live - doc-ref 8313 docs/Decisions.md.
+# A backgrounded call's hand-back prompt shape, probed live - doc-ref 8313 docs/6-decisions/Decisions.md.
 _PROMPT_VALUE_RE = re.compile(r'"prompt"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _TASK_NOTIFICATION_RE = re.compile(r"<task-notification>")
 _TASK_ID_RE = re.compile(r"<task-id>([0-9A-Za-z]+)</task-id>")
@@ -1884,7 +1935,7 @@ def _delegation_enabled():
 
 
 # subagentrules — a third subagent-lifecycle handler, its own SubagentStart entry, separate
-# from announce. doc-ref c67d docs/Decisions.md
+# from announce. doc-ref c67d docs/6-decisions/Decisions.md
 SUBAGENT_SECTION_MARKER = "<!-- subagent -->"
 SUBAGENT_CORE_CHAR_LIMIT = 4_500
 
@@ -2478,7 +2529,7 @@ def event_verdict():
         # subagent said about itself. Delivered here on systemMessage because that is the
         # one channel probed to reach the USER for a SubagentStop (neither additionalContext
         # nor systemMessage reaches the PARENT MODEL's context in-turn at SubagentStop -
-        # doc-ref 8313 docs/Decisions.md). audit/userpromptaudit cover reaching the model
+        # doc-ref 8313 docs/6-decisions/Decisions.md). audit/userpromptaudit cover reaching the model
         # itself, on the channels that were probed to actually do that.
         bits.append(_audit_report(found))
 
@@ -2500,7 +2551,7 @@ def event_verdict():
     return 0
 
 
-# audit — PostToolUse on Agent|Task, its own hooks.json entry. doc-ref 8313 docs/Decisions.md.
+# audit — PostToolUse on Agent|Task, its own hooks.json entry. doc-ref 8313 docs/6-decisions/Decisions.md.
 
 
 def event_audit():
@@ -2577,7 +2628,7 @@ def event_audit():
     return 0
 
 
-# userpromptaudit — UserPromptSubmit, its own entry, separate from scope. doc-ref 8313 docs/Decisions.md.
+# userpromptaudit — UserPromptSubmit, its own entry, separate from scope. doc-ref 8313 docs/6-decisions/Decisions.md.
 
 
 def event_userpromptaudit():
@@ -2698,7 +2749,7 @@ _LAST_MESSAGE_VALUE_RE = re.compile(r'"last_assistant_message"\s*:\s*"((?:[^"\\]
 _CARD_MARKERS = ("---", "###", "You should see:")
 
 # Only a SHELL-labelled fence hands over a command - a fence in another language, or with no
-# label at all, is not the thing this check exists to correct. doc-ref 6534 docs/Decisions.md
+# label at all, is not the thing this check exists to correct. doc-ref 6534 docs/6-decisions/Decisions.md
 _SHELL_FENCE_LANGS = ("bash", "sh", "zsh", "shell", "console", "powershell", "pwsh", "ps1", "cmd", "bat", "fish")
 _SHELL_FENCE_RE = re.compile(r"```\s*(%s)\b" % "|".join(_SHELL_FENCE_LANGS), re.IGNORECASE)
 
@@ -2758,7 +2809,7 @@ def _claim_words(text):
 def _is_genuine_user_message(record):
     """A real human turn - not a tool_result carrier, not Stop hook feedback, not a background
     task's <task-notification> hand-back, and (when the field is present) not attributed to a
-    non-human origin. "Genuine user message" definition: doc-ref 25b2 docs/Decisions.md
+    non-human origin. "Genuine user message" definition: doc-ref 25b2 docs/6-decisions/Decisions.md
     """
     if not isinstance(record, dict) or record.get("type") != "user":
         return False
@@ -2937,11 +2988,11 @@ HARVEST_NOTE = (
     "writing the reasoning down as it occurs is the right habit. What changes is where it "
     "lands. Before you finish this turn, move each block to where it belongs: an ongoing "
     "mechanism, invariant, or operational gotcha still goes into the tier-4 system document "
-    "that owns that code (docs/systems/*.md), creating one if none does, under the section "
+    "that owns that code (docs/4-systems/*.md), creating one if none does, under the section "
     "that fits - the design into How it works, an operational gotcha into Traps, a rule that "
     "must stay true into Invariants. Design rationale, a rejected approach, or a post-mortem is "
     "different - it is a record of a choice, not current truth about the system - so it becomes "
-    "a dated entry in docs/Decisions.md instead. Either way, leave a one-line pointer at the "
+    "a dated entry in docs/6-decisions/Decisions.md instead. Either way, leave a one-line pointer at the "
     "site: doc-ref <id> <path>, where <id> is a 4-hex id whose <!-- ref:<id> --> marker sits "
     "alone on its own line under the moved note's heading in the doc, made with docref.py new, "
     "so the code still leads to the "
@@ -3112,7 +3163,7 @@ def _harvest_is_file_preamble(line):
 def _harvest_blocks(text, min_chars, deadline, verbose, full_file=True):
     """Find the essay-shaped runs. Returns (blocks, near_misses, timed_out).
 
-    full_file must be False for an Edit's new_string fragment. See docs/Decisions.md,
+    full_file must be False for an Edit's new_string fragment. See docs/6-decisions/Decisions.md,
     "Fix the harvest handler treating an Edit fragment's line 1 as the file's header".
     """
     first_line = text.split("\n", 1)[0] if text else ""
@@ -3162,7 +3213,7 @@ def _harvest_trace(base, blocks, misses, min_chars, ranged, verbose):
         longest = max(misses, key=lambda m: m[3])
         plural = "" if len(misses) == 1 else "s"
         # "none met" only holds when the longest run's own rejection reason was the size
-        # check. See docs/Decisions.md, "Fix the harvest handler treating an Edit fragment's
+        # check. See docs/6-decisions/Decisions.md, "Fix the harvest handler treating an Edit fragment's
         # line 1 as the file's header".
         met_threshold = longest[3] >= min_chars
         if not met_threshold:
