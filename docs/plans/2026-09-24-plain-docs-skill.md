@@ -3,7 +3,7 @@
 ## Context
 
 The docs are written for precision. That makes them good for Claude and for checking claims against
-the code, but slow for a person. `docs/systems/hook-engine.md` alone is 1,624 words, full of file
+the code, but slow for a person. `docs/4-systems/hook-engine.md` alone is 1,624 words, full of file
 paths, line numbers and event names. `architecture.md` is 10,240 words. Reading the code can be
 faster than reading its doc, which defeats the point of having one.
 
@@ -50,9 +50,9 @@ Example of the register, for the hook engine (illustration only, not final text)
 
 ## Where the copies live
 
-`docs/plain/`, mirroring the original layout: `docs/plain/systems/hook-engine.md` is the plain copy
-of `docs/systems/hook-engine.md`. It is a non-tier folder, like `generated/`, and gets a line in
-`docs/README.md` and in the `project-docs` skill.
+`docs/plain/`, mirroring the original layout: `docs/plain/4-systems/hook-engine.md` is the plain copy
+of `docs/4-systems/hook-engine.md`. It is a non-tier folder, like `generated/`, and gets a line in
+`docs/1-landing/README.md` and in the `project-docs` skill.
 
 Each plain copy starts with a one-line header naming its source file and the source's git blob hash
 at the time it was written. That hash is how staleness gets caught.
@@ -82,13 +82,13 @@ Pointers get upgraded, not left behind. Two things keep them current:
 
 **A related system with no technical doc at all** gets checked before it is dropped:
 
-1. **Already decided?** `docs/systems/README.md` lists systems that were deliberately left without
+1. **Already decided?** `docs/4-systems/README.md` lists systems that were deliberately left without
    a doc, with the reason. If it is on that list, leave it out of **Related**.
 2. **Not decided yet?** Judge it by the tier 4 test in the `project-docs` skill: is it
    critical to the product at runtime, with rules that must hold or mistakes that have already
    cost time?
    - **No, it is simple enough.** Leave it out, and add it to the left-out list in
-     `docs/systems/README.md` with a one-line reason, so the question is not asked again.
+     `docs/4-systems/README.md` with a one-line reason, so the question is not asked again.
    - **Yes, it should have a doc.** The skill does not write the technical doc itself, since that
      is a bigger job than a plain copy. It lists the system under **Related** with no link, marked
      *(needs a doc)*, and names it to the user at the end of the run. The checker lists every
@@ -98,8 +98,8 @@ Pointers get upgraded, not left behind. Two things keep them current:
 
 In order:
 
-1. `docs/systems/*.md` (the four system docs). This is where the need is greatest.
-2. `docs/README.md`, `docs/ProjectState.md`, `docs/Roadmap.md`.
+1. `docs/4-systems/*.md` (the four system docs). This is where the need is greatest.
+2. `docs/1-landing/README.md`, `docs/3-state/ProjectState.md`, `docs/2-roadmap/Roadmap.md`.
 3. `docs/architecture.md`, split by its sections, if 1 and 2 prove useful.
 
 Left out: `Decisions.md`, `plans/`, `archive/`, `sessions/`, `generated/`. These are history or
@@ -191,9 +191,9 @@ Built:
 - 18 cases in `scripts/verify.py` (the `pd_case` helper, fixtures built with a real `git init` so
   blob hashes are real): one per failure type and warning type, plus a clean pass, the to-do
   listing, pointer-upgrade detection, and single-file-path mode. Suite: 355/355 PASS.
-- Docs: `docs/README.md` and the `project-docs` skill now list `docs/plain/` as a fourth non-tier
-  folder; `docs/systems/verify-suites.md` and `docs/ProjectState.md` carry the new check count;
-  `CLAUDE.md`'s command list gained the checker; `docs/Today.md` rewritten for this session.
+- Docs: `docs/1-landing/README.md` and the `project-docs` skill now list `docs/plain/` as a fourth non-tier
+  folder; `docs/4-systems/verify-suites.md` and `docs/3-state/ProjectState.md` carry the new check count;
+  `CLAUDE.md`'s command list gained the checker; `docs/5-today/Today.md` rewritten for this session.
 - Plugin version bumped `2.31.0` → `2.32.0`.
 
 Deliberately not done: no plain copies of this repo's own docs were written (explicitly out of
@@ -209,9 +209,9 @@ root (no `docs/plain/` yet) it reported that plainly and exited 0.
 
 ### Follow-up: project-wide mode
 
-`plain_docs_check.py` gained `--queue`: it prints every eligible source (`docs/systems/*.md`
-except `README.md`, sorted by name, then `docs/README.md`, `docs/ProjectState.md`,
-`docs/Roadmap.md`) with its status (`MISSING`/`STALE`/`CURRENT`) and mirrored plain-copy path, a
+`plain_docs_check.py` gained `--queue`: it prints every eligible source (`docs/4-systems/*.md`
+except `README.md`, sorted by name, then `docs/1-landing/README.md`, `docs/3-state/ProjectState.md`,
+`docs/2-roadmap/Roadmap.md`) with its status (`MISSING`/`STALE`/`CURRENT`) and mirrored plain-copy path, a
 `DEFERRED` line for `docs/architecture.md`, and an `EXCLUDED` summary naming every excluded group
 and any unlisted `docs/*.md` file by name. It always exits 0, since it is a listing, not a check.
 The `house-rules:plain-docs` skill gained `/house-rules:plain-docs all` (project-wide, one doc at

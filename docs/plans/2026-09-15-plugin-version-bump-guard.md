@@ -121,7 +121,7 @@ in the first place.
 
 ## D. Record the decision
 
-`docs/Decisions.md` (tier 6): a dated entry recording why the version-bump gate and the
+`docs/6-decisions/Decisions.md` (tier 6): a dated entry recording why the version-bump gate and the
 install.py self-verification exist — that "the version-gated `claude plugin update` reporting
 success was trusted without checking" was the actual failure, not just "forgot to bump a number,"
 and that the fix is enforcement (branch protection + automatic hash-verification) rather than a
