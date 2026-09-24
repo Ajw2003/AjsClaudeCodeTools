@@ -23,19 +23,27 @@ the game falls apart. If the castle has no way out, players get trapped inside.
    not, it tries the next seed along and checks again.
 6. Loot goes on furniture like tables, chests and shelves. Never on the floor, never in the
    gatehouse.
-7. When the alarm goes up, the doors lock, then bar. They never unlock again.
+7. When the alarm goes up, the doors lock, then bar.
 
-**What can go wrong.**
+**Risks and safeguards.**
 
-- Any randomness that doesn't come from the seed, such as the clock, makes machines build
-  different castles. Nothing warns you. Players just quietly see different things.
-- The old castle must be switched off before the new one is built. Otherwise the game's walking
-  map sees both, and old walls block new doorways.
-- The same seed builds a different castle depending on whether the room designs are loaded. Only
-  compare two castles set up the same way.
-- The walk check can't see furniture, so a separate tool tests real walking routes.
-- Stairs need open floor at the bottom. A staircase that starts against a wall can't be climbed.
+- **Players trapped with no way out.** Every castle is walk-tested before a raid. A failing one is
+  rebuilt from the next seed.
+- **Machines build different castles.** Only the seed is sent, and building uses nothing else.
+  *Still open:* nothing catches it if this slips, so a mistake shows up as silent drift.
+- **Rooms that don't connect.** Every room opens on all four sides, and dead-end doorways are
+  bricked up. A test checks it.
+- **A gap in the outer wall.** A test checks every seed gives a closed wall with one gate.
+- **Too few or too many rooms.** A test keeps it between 40 and 60.
+- **A piece spilling into the next square.** The art build fails if any piece is too big.
+- **Old walls blocking the new castle.** The old castle is switched off before the new one is
+  built.
+- **Furniture blocking paths or loot.** A separate tool walks real routes on five seeds.
+- **Stairs nobody can climb.** Every staircase starts facing open floor.
+- **Doors reopening mid-raid.** Doors can only lock, never unlock.
+- **Same seed, different castle.** Happens when room designs aren't loaded. *Still open:* only
+  compare castles set up the same way.
 
 **Left out**, see the full doc: exact sizes and settings, how wall pieces are turned to face
 outward, furniture and colour rules for rooms, how loot spots come across from the art tool, and
-the names of the tests that hold each promise.
+the names of the tests.

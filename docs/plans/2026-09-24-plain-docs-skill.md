@@ -18,7 +18,10 @@ Every plain copy uses the same short shape, so a reader always knows where to lo
 1. **What it is.** One or two sentences.
 2. **Why it matters.** What breaks, in everyday terms, if this goes wrong.
 3. **How it works.** Numbered steps, seven at most.
-4. **What can go wrong.** Short list of known failure points.
+4. **Risks and safeguards.** One line per risk, covering both known failure points and the
+   promises the system keeps. Name the risk in a few words, then say what prevents it. Where
+   nothing does yet, mark it *Still open* and say what is needed. Focus on the safeguard, not
+   on how the failure happens.
 5. **Where to go for more.** One link to the full doc.
 
 Writing rules:
