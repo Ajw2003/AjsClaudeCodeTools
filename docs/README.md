@@ -30,9 +30,11 @@ holds the scripts that get all three onto a machine and prove they still work on
 | 5 | [Today.md](Today.md) | What's being worked on today, and why |
 | 6 | [Decisions.md](Decisions.md) | Why a decision was made, and what it replaced |
 
-Plus three non-tier folders: [`plans/`](plans) (live intent until executed), [`archive/`](archive)
+Plus four non-tier folders: [`plans/`](plans) (live intent until executed), [`archive/`](archive)
 (inert docs, moved not deleted), [`generated/`](generated) (tool-produced output, regenerated not
-hand-edited).
+hand-edited), and [`plain/`](plain) (plain-English copies of eligible docs, written by the
+`house-rules:plain-docs` skill and checked by `plain_docs_check.py`; mirrors the layout of the
+doc each copy is drawn from).
 
 ## Systems (tier 4)
 

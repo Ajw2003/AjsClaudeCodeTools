@@ -7,7 +7,7 @@ fourth (offshoot plugins) ships and verifies but its actual judgment quality is 
 
 | Milestone | Status |
 |---|---|
-| 1. Hook engine | 100% — `verify.py` 336/336 PASS (2026-09-23) |
+| 1. Hook engine | 100% — `verify.py` 365/365 PASS (2026-09-24) |
 | 2. Six-tier docs convention | 100% as a mechanism; this repo's own adoption tracked below |
 | 3. Offshoot plugins | 50% — mechanism verified, classifiers unvalidated |
 | 4. Distribution & install tooling | 100% — `verify_tools.py` 39/39 PASS (2026-09-23) |

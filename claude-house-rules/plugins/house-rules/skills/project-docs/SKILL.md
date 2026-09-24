@@ -23,7 +23,7 @@ ones; it needs those fifteen sorted, merged, and the dead ones moved to `archive
 | 5 | `docs/Today.md` | What is being worked on today, and why that | Every working session |
 | 6 | `docs/Decisions.md` | Why a decision was made, and what it replaced | Never rewritten — only appended to |
 
-Plus three folders that are not tiers:
+Plus four folders that are not tiers:
 
 - **`docs/plans/`** — a plan for a specific piece of work, live until executed. Named for the
   work, not the date: `presentation-and-ui.md`, not `2026-09-08-notes.md`. A plan that has been
@@ -34,6 +34,10 @@ Plus three folders that are not tiers:
 - **`docs/generated/`** — tool-produced deliverables: HTML reports, exported diagrams/images,
   anything from the Artifact tool or a generated-report script. Not hand-edited once written; if
   it needs to change, it gets regenerated.
+- **`docs/plain/`** — plain-English copies of eligible docs, mirroring the layout of the doc each
+  is drawn from (`docs/plain/systems/x.md` is the plain copy of `docs/systems/x.md`). Written by
+  the `house-rules:plain-docs` skill, checked by `plain_docs_check.py`. The original tier doc is
+  never rewritten to produce one.
 
 ### Every project gets all six
 

@@ -6,9 +6,9 @@ Proving, mechanically, that each plugin's hook payloads produce the JSON decisio
 claim — not that the code reads well, that it *decides correctly* when fed a real payload. Three
 suites, one per plugin, same shape:
 
-| Suite | Lines | Checks (last run 2026-09-17) |
+| Suite | Lines | Checks (last run 2026-09-24) |
 |---|---|---|
-| [`house-rules/scripts/verify.py`](../../claude-house-rules/plugins/house-rules/scripts/verify.py) | 3063 | 211 PASS |
+| [`house-rules/scripts/verify.py`](../../claude-house-rules/plugins/house-rules/scripts/verify.py) | 5300+ | 365 PASS |
 | [`agent-router/scripts/verify.py`](../../claude-agent-router/plugins/agent-router/scripts/verify.py) | 245 | 41 PASS |
 | [`prompt-workshop/scripts/verify.py`](../../claude-prompt-workshop/plugins/prompt-workshop/scripts/verify.py) | 228 | 22 PASS |
 
