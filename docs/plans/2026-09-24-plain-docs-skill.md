@@ -24,11 +24,12 @@ Every plain copy uses the same short shape, so a reader always knows where to lo
    on how the failure happens.
 5. **Where to go for more.** One link to the full doc.
 
-Writing rules:
+Writing rules. The goal above all of them: the shortest, easiest read that still covers
+everything necessary.
 
 | Rule | Limit |
 |---|---|
-| Length | Around a quarter of the original. Hard cap of 300 words for a system doc |
+| Length | Aim for a quarter of the original's word count. Up to a third only when the system is too dense to cover in less. Never over a third |
 | Sentences | 20 words or fewer as a target |
 | Dashes | No em dashes (`—`) and no en dashes (`–`) used as punctuation. Use a full stop, comma or colon |
 | Jargon | None. If a technical word cannot be avoided (like "hook"), explain it in plain words the first time, in the same sentence |
@@ -91,7 +92,8 @@ check, a script checks. Lives beside the skill, so installed copies have it too.
 It fails on:
 
 - any em dash or en dash
-- a word count over the cap
+- a word count over a third of the source's (hard fail), or over a quarter (a warning, so the
+  extra length has to be a choice)
 - a banned word from a small, editable list (starting with things like `payload`, `stdin`,
   `dispatch`, `handler`, `idempotent`, `shim`, `argv`)
 - a code block, file path or `file:line` reference
