@@ -3,6 +3,7 @@
 the house-rules:plain-docs skill writes to.
 
     plain_docs_check.py [--root DIR] [FILE]
+    plain_docs_check.py [--root DIR] --queue
 
 Design: docs/plans/2026-09-24-plain-docs-skill.md
 STDLIB ONLY, Python 3.8+, no state kept between runs.
@@ -24,6 +25,12 @@ in one line, and the run still exits 0, since there is nothing to check.
 Exit 0 means no FAIL-level problem was found (warnings do not affect the exit code). Exit 1
 means at least one FAIL was found. Exit 2 means the run itself could not proceed (bad --root, an
 unreadable file passed directly, or an internal error) - never a silent 0.
+
+--queue prints the project-wide work list instead: every eligible source (docs/systems/*.md
+except README.md, then docs/README.md, docs/ProjectState.md, docs/Roadmap.md, in that order),
+each with MISSING/STALE/CURRENT and its mirrored plain-copy path, a DEFERRED line for
+docs/architecture.md if present, and an EXCLUDED summary naming what's left out and why. It is a
+listing, not a check - it always exits 0.
 """
 
 import argparse
@@ -63,6 +70,27 @@ WORD_RE = re.compile(r"[A-Za-z0-9']+")
 RELATED_ENTRY_RE = re.compile(
     r"\[([^\]]+\.md)\]\(([^)]+)\)\s*(\*\(no plain copy yet\)\*)?"
 )
+
+# The project-wide queue's source list and order, shared with the plain-docs skill's "all"/
+# "stale" modes so the two never drift apart. docs/systems/*.md (except README.md, an index, not
+# a system) sorted by name, then these three root docs in this fixed order, each only if present.
+QUEUE_FIXED_SOURCES = ["docs/README.md", "docs/ProjectState.md", "docs/Roadmap.md"]
+QUEUE_SYSTEMS_INDEX = "docs/systems/README.md"
+
+# Shown as DEFERRED: eligible in principle, but the skill only takes it on once the others have
+# proven useful; never queued automatically.
+QUEUE_DEFERRED_SOURCE = "docs/architecture.md"
+
+# Folders/files left out of the queue entirely, with the reason shown in the EXCLUDED summary.
+QUEUE_EXCLUDED_GROUPS = [
+    ("docs/Decisions.md", "history, would go stale as fast as it was written"),
+    ("docs/plans/", "working notes, would go stale as fast as it was written"),
+    ("docs/archive/", "history, would go stale as fast as it was written"),
+    ("docs/sessions/", "per-session audit records, not documentation of the system"),
+    ("docs/generated/", "generated output, not authored documentation"),
+    ("docs/plain/", "the plain copies themselves"),
+    ("docs/systems/README.md", "an index, not a system"),
+]
 
 
 def _norm(path):
@@ -333,6 +361,105 @@ def find_plain_files(root):
     return sorted(found)
 
 
+def build_queue(root):
+    """The project-wide list of eligible sources, in fixed order, each with its status
+    (MISSING / STALE / CURRENT) and its mirrored plain-copy path. Returns
+    (entries, deferred_present, excluded_lines, unlisted_md) where entries is a list of
+    (source_rel, status, plain_rel) and unlisted_md is the sorted list of docs/*.md files not in
+    the eligible list and not one of the named excluded files."""
+    docs_dir = os.path.join(root, "docs")
+    if not os.path.isdir(docs_dir):
+        return None
+
+    sources = []
+    systems_dir = os.path.join(docs_dir, "systems")
+    if os.path.isdir(systems_dir):
+        for name in sorted(os.listdir(systems_dir)):
+            if not name.endswith(".md") or name == "README.md":
+                continue
+            sources.append(_norm(os.path.join("docs", "systems", name)))
+    for rel in QUEUE_FIXED_SOURCES:
+        if os.path.isfile(os.path.join(root, rel)):
+            sources.append(rel)
+
+    entries = []
+    for source_rel in sources:
+        plain_rel = _plain_equivalent(root, source_rel)
+        plain_full = os.path.join(root, plain_rel)
+        if not os.path.isfile(plain_full):
+            status = "MISSING"
+        else:
+            current_hash = blob_hash(os.path.join(root, source_rel))
+            header_hash = None
+            try:
+                with open(plain_full, "r", encoding="utf-8") as f:
+                    first_line = f.readline()
+                m = HEADER_RE.match(first_line.rstrip("\n"))
+                if m:
+                    header_hash = m.group("hash")
+            except OSError:
+                pass
+            if header_hash is None or (current_hash and current_hash != header_hash):
+                status = "STALE"
+            else:
+                status = "CURRENT"
+        entries.append((source_rel, status, plain_rel))
+
+    deferred_present = os.path.isfile(os.path.join(root, QUEUE_DEFERRED_SOURCE))
+
+    # docs/*.md at the top level, not README/ProjectState/Roadmap, not Decisions.md, not
+    # architecture.md (named separately as DEFERRED) - named explicitly so nothing is silently
+    # skipped.
+    named_elsewhere = set(QUEUE_FIXED_SOURCES) | {"docs/Decisions.md", QUEUE_DEFERRED_SOURCE}
+    unlisted_md = []
+    for name in sorted(os.listdir(docs_dir)):
+        full = os.path.join(docs_dir, name)
+        if not os.path.isfile(full) or not name.endswith(".md"):
+            continue
+        rel = _norm(os.path.join("docs", name))
+        if rel in named_elsewhere:
+            continue
+        unlisted_md.append(rel)
+
+    return entries, deferred_present, unlisted_md
+
+
+def print_queue(root):
+    result = build_queue(root)
+    if result is None:
+        print("plain_docs_check: no docs/ folder under %s - nothing to queue" % root)
+        return 0
+
+    entries, deferred_present, unlisted_md = result
+
+    missing = stale = current = 0
+    for source_rel, status, plain_rel in entries:
+        print("%s  %s  %s" % (source_rel, status, plain_rel))
+        if status == "MISSING":
+            missing += 1
+        elif status == "STALE":
+            stale += 1
+        else:
+            current += 1
+
+    deferred = 0
+    if deferred_present:
+        print("%s  DEFERRED  done only once the others have proven useful" % QUEUE_DEFERRED_SOURCE)
+        deferred = 1
+
+    excluded_names = [group for group, _reason in QUEUE_EXCLUDED_GROUPS]
+    print("EXCLUDED: %s" % ", ".join(excluded_names)
+          + (" - and %s (not in the eligible list)" % ", ".join(unlisted_md) if unlisted_md else ""))
+    for group, reason in QUEUE_EXCLUDED_GROUPS:
+        print("  %s: %s" % (group, reason))
+    if unlisted_md:
+        print("  any other docs/*.md not in the eligible list: %s" % ", ".join(unlisted_md))
+
+    print("plain_docs_check: queue: %d missing, %d stale, %d current, %d deferred"
+          % (missing, stale, current, deferred))
+    return 0
+
+
 def main(argv=None):
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
@@ -342,6 +469,9 @@ def main(argv=None):
         description="Check plain-English doc copies under docs/plain/ against the plain-docs rules.",
     )
     parser.add_argument("--root", default=None)
+    parser.add_argument("--queue", action="store_true",
+                         help="print the project-wide work list (MISSING/STALE/CURRENT/DEFERRED/"
+                              "EXCLUDED) instead of checking anything; always exits 0")
     parser.add_argument("file", nargs="?", default=None,
                          help="check only this one file, instead of every .md under docs/plain/")
     args = parser.parse_args(argv)
@@ -351,6 +481,9 @@ def main(argv=None):
         if not os.path.isdir(root):
             print("plain_docs_check: --root %s is not a directory" % root, file=sys.stderr)
             return 2
+
+        if args.queue:
+            return print_queue(root)
 
         if args.file:
             file_full = os.path.abspath(args.file)

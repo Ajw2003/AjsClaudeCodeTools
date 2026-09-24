@@ -4,6 +4,12 @@ Executed [`docs/plans/2026-09-24-plain-docs-skill.md`](plans/2026-09-24-plain-do
 built the `house-rules:plain-docs` skill and its checker. Did not write any actual plain copies
 of this repo's docs — that's explicitly out of scope for the plan, left for a follow-up.
 
+Then extended the skill to run project-wide: `plain_docs_check.py --queue` lists every eligible
+source with its status (`MISSING`/`STALE`/`CURRENT`), a `DEFERRED` line for
+`docs/architecture.md`, and an `EXCLUDED` summary; the skill's new `all` mode (and the redefined
+`stale` mode) work the queue one doc at a time, committing each doc on its own. Did not run `all`
+on this repo — no new plain copies were written by this pass either.
+
 ## What was done
 
 - **The skill.** `claude-house-rules/plugins/house-rules/skills/plain-docs/SKILL.md` — what gets
@@ -24,7 +30,8 @@ of this repo's docs — that's explicitly out of scope for the plan, left for a 
 - **Docs.** `docs/README.md` and the `project-docs` skill now list `docs/plain/` as a fourth
   non-tier folder. `docs/systems/verify-suites.md` and `docs/ProjectState.md` updated with the
   new check count. `CLAUDE.md`'s command list gained the checker.
-- **Version bump.** `2.31.0` → `2.32.0` in `plugin.json`, per the version-bump guard.
+- **Version bump.** `2.31.0` → `2.32.0` in `plugin.json`, per the version-bump guard. A second
+  bump, `2.32.0` → `2.33.0`, went with the `--queue`/`all` mode addition.
 
 ## What was deliberately not done
 

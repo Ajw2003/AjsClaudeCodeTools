@@ -13,8 +13,9 @@ The technical docs (`docs/systems/*.md`, `docs/README.md`, `docs/ProjectState.md
 skill writes a **second, plain copy** of one of those docs, for people. The original is never
 rewritten by this skill.
 
-Usage: `/house-rules:plain-docs <path>` for one doc, or `/house-rules:plain-docs stale` to redo
-every plain copy whose source has changed since it was written.
+Usage: `/house-rules:plain-docs <path>` for one doc, `/house-rules:plain-docs stale` to redo
+every plain copy whose source has changed since it was written, or `/house-rules:plain-docs all`
+to run project-wide, one doc after another. See "Project-wide mode" below for `all` and `stale`.
 
 ## What gets a plain copy, and in what order
 
@@ -107,6 +108,33 @@ settings, exact numbers, test names, code detail - so the reader knows where to 
 
 The goal above all of them: the shortest, easiest read that still covers everything necessary.
 
+## Project-wide mode: `all` and `stale`
+
+`/house-rules:plain-docs all` runs the skill project-wide, one doc after another, honouring the
+same exclusions as a single-doc run. `/house-rules:plain-docs stale` is the same loop, limited to
+entries the checker reports as `STALE`.
+
+1. **Run `plain_docs_check.py --queue` first** and show the user the list it prints:
+   `MISSING`/`STALE`/`CURRENT` for every eligible source, a `DEFERRED` line for
+   `docs/architecture.md`, and the `EXCLUDED` summary.
+2. **Work through MISSING then STALE entries, strictly in queue order, one doc at a time.** For
+   each: do Steps 1-6 above in full, including upgrading any `*(no plain copy yet)*` pointer left
+   by a copy written earlier in this same run. Run the checker on that one file until it reports
+   no `FAIL`. Then commit that doc alone (its plain copy, any pointer upgrades, and any
+   `docs/systems/README.md` left-out-list edit it caused) with a message like
+   `docs: add plain copy of <source>` (`refresh` in place of `add` for a stale one), before
+   starting the next doc. Commit only when on a branch this session owns, per the house rules
+   ("Commit constantly on my own branches, never on theirs"); on any other branch, stop and ask
+   instead of committing.
+3. **Skip `CURRENT` entries.** Never touch `DEFERRED` or `EXCLUDED` ones; `all` does not mean
+   "everything in docs/", it means everything the queue lists.
+4. **A doc that still fails after three honest rewrite attempts** is left uncommitted, not written
+   as a failing copy: note which doc and why, then move on to the next one rather than stopping
+   the whole run.
+5. **End with one full checker run** (`plain_docs_check.py`, no path) and a short summary:
+   how many were written, refreshed, skipped as current, and failed; which warnings were kept and
+   why; and the current `*(needs a doc)*` / `*(no plain copy yet)*` to-do lists.
+
 ## The checker: `plain_docs_check.py`
 
 Lives beside this skill at `scripts/plain_docs_check.py`, stdlib-only Python, so an installed
@@ -118,7 +146,8 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/plain_docs_check.py"
 
 With no path it checks every `.md` under `docs/plain/`; pass a path to check one file only.
 `--root` overrides the repo root it checks against (default: the git top level, else the current
-directory).
+directory). `--queue` prints the project-wide work list instead of checking anything (see
+"Project-wide mode" above); it always exits 0, since it is a listing, not a check.
 
 It fails (`FAIL`, exit 1) on:
 

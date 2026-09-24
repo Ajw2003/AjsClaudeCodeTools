@@ -5211,6 +5211,124 @@ else:
         ],
     )
 
+    QUEUE_SYSTEM_A = "# A\n\nStub source.\n"
+    QUEUE_SYSTEM_B = "# B\n\nStub source, different content.\n"
+    QUEUE_ROOT_README = "# Project\n\nStub root README.\n"
+    QUEUE_STALE_HEADER = "<!-- plain copy of: docs/systems/a.md @ " + "f" * 40 + " -->\n\nStale.\n"
+    QUEUE_CURRENT_BODY = "<!-- plain copy of: docs/systems/a.md @ @HASHOF:docs/systems/a.md@ -->\n\nCurrent.\n"
+
+    pd_case(
+        "plain_docs_check --queue: ordering, MISSING/STALE/CURRENT, and the summary line",
+        {
+            "docs/systems/README.md": "# Systems\n\nIndex, not a system.\n",
+            "docs/systems/b.md": QUEUE_SYSTEM_B,  # MISSING, but alphabetically after a.md
+            "docs/systems/a.md": QUEUE_SYSTEM_A,  # CURRENT
+            "docs/plain/systems/a.md": QUEUE_CURRENT_BODY,
+            "docs/README.md": QUEUE_ROOT_README,  # MISSING
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "docs/systems/a.md  CURRENT  docs/plain/systems/a.md",
+            "docs/systems/b.md  MISSING  docs/plain/systems/b.md",
+            "docs/README.md  MISSING  docs/plain/README.md",
+            "plain_docs_check: queue: 2 missing, 0 stale, 1 current, 0 deferred",
+        ],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: a plain copy with a stale header is STALE, not CURRENT",
+        {
+            "docs/systems/a.md": QUEUE_SYSTEM_A,
+            "docs/plain/systems/a.md": QUEUE_STALE_HEADER,
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "docs/systems/a.md  STALE  docs/plain/systems/a.md",
+            "plain_docs_check: queue: 0 missing, 1 stale, 0 current, 0 deferred",
+        ],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: docs/systems/README.md is never queued, itself an index",
+        {
+            "docs/systems/README.md": "# Systems\n\nIndex, not a system.\n",
+            "docs/systems/a.md": QUEUE_SYSTEM_A,
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=["docs/systems/a.md  MISSING"],
+        expect_out=["docs/systems/README.md  MISSING", "docs/systems/README.md  CURRENT",
+                    "docs/systems/README.md  STALE"],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: docs/architecture.md is shown as DEFERRED, never queued",
+        {
+            "docs/systems/a.md": QUEUE_SYSTEM_A,
+            "docs/architecture.md": "# Architecture\n\nStub.\n",
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "docs/architecture.md  DEFERRED  done only once the others have proven useful",
+            "plain_docs_check: queue: 1 missing, 0 stale, 0 current, 1 deferred",
+        ],
+        expect_out=["docs/architecture.md  MISSING", "docs/architecture.md  CURRENT"],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: excluded folders are named, not queued",
+        {
+            "docs/systems/a.md": QUEUE_SYSTEM_A,
+            "docs/Decisions.md": "# Decisions\n\nStub.\n",
+            "docs/plans/2026-01-01-x.md": "# X\n\nStub.\n",
+            "docs/archive/old.md": "# Old\n\nStub.\n",
+            "docs/sessions/2026-01-01.md": "# Session\n\nStub.\n",
+            "docs/generated/gen.md": "# Gen\n\nStub.\n",
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "EXCLUDED: docs/Decisions.md, docs/plans/, docs/archive/, docs/sessions/, "
+            "docs/generated/, docs/plain/, docs/systems/README.md",
+        ],
+        expect_out=["docs/Decisions.md  MISSING", "docs/plans/2026-01-01-x.md",
+                    "docs/archive/old.md", "docs/sessions/2026-01-01.md", "docs/generated/gen.md"],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: an unlisted docs/*.md is named in the EXCLUDED summary",
+        {
+            "docs/systems/a.md": QUEUE_SYSTEM_A,
+            "docs/some-other-note.md": "# Note\n\nStub.\n",
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "any other docs/*.md not in the eligible list: docs/some-other-note.md",
+        ],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: honours --root",
+        {
+            "sub/docs/systems/a.md": QUEUE_SYSTEM_A,
+        },
+        args=("--queue", "--root", "{ROOT}/sub"),
+        expect_rc=0,
+        expect_in=["docs/systems/a.md  MISSING  docs/plain/systems/a.md"],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: no docs/ folder is reported plainly and still exits 0",
+        {"README.md": "# Not docs\n"},
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=["no docs/ folder", "nothing to queue"],
+    )
+
     pd_case(
         "plain_docs_check: a single file path argument checks only that file",
         {

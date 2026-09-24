@@ -1,7 +1,7 @@
 {
   "name": "house-rules",
   "description": "aj's global rules, enforced. Injects the rules into every session and into every subagent it spawns, audits a subagent's own transcript against its report, reminds at commit time when a source change has no docs update, prompts for approval before hidden background work, destructive commands, or git commands that mutate anything beyond a commit or push on its own branch, and checks every turn for commands handed over untested or success claimed with nothing to back it.",
-  "version": "2.32.0",
+  "version": "2.33.0",
   "author": {
     "name": "aj",
     "email": "aydenjwilkins@gmail.com"

@@ -21,7 +21,9 @@ tell the user the plugin root did not resolve. Do not search `~/.claude/plugins`
 guess a path - the cache holds several versions.
 
 If `$ARGUMENTS` is empty, it checks every `.md` under `docs/plain/` in this project. Pass a
-single file path to check just that one file instead.
+single file path to check just that one file instead. Pass `--queue` to print the project-wide
+work list (`MISSING`/`STALE`/`CURRENT`/`DEFERRED`/`EXCLUDED`) instead of checking anything; this
+is what the `house-rules:plain-docs` skill's `all` and `stale` modes run first, one doc at a time.
 
 Report the output as it comes back. Then:
 

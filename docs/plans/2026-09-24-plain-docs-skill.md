@@ -206,3 +206,16 @@ Verification: `python claude-house-rules/plugins/house-rules/scripts/verify.py` 
 fixture built from the sample above passed with one expected warning (word count over a quarter)
 and correctly listed all four `*(no plain copy yet)*` to-do entries; run against this repo's own
 root (no `docs/plain/` yet) it reported that plainly and exited 0.
+
+### Follow-up: project-wide mode
+
+`plain_docs_check.py` gained `--queue`: it prints every eligible source (`docs/systems/*.md`
+except `README.md`, sorted by name, then `docs/README.md`, `docs/ProjectState.md`,
+`docs/Roadmap.md`) with its status (`MISSING`/`STALE`/`CURRENT`) and mirrored plain-copy path, a
+`DEFERRED` line for `docs/architecture.md`, and an `EXCLUDED` summary naming every excluded group
+and any unlisted `docs/*.md` file by name. It always exits 0, since it is a listing, not a check.
+The `house-rules:plain-docs` skill gained `/house-rules:plain-docs all` (project-wide, one doc at
+a time, committing each doc separately) and redefined `stale` as the same loop limited to `STALE`
+entries. 8 new `pd_case` tests in `verify.py` cover `--queue`; suite is now 363/363 PASS. Version
+bumped `2.32.0` → `2.33.0`. `all` was not run on this repo in this pass; no new plain copies were
+written.
