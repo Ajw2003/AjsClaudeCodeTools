@@ -13,7 +13,9 @@ The fix is not to rewrite the originals. They stay as they are, because `verify.
 
 ## What a plain copy looks like
 
-Every plain copy uses the same short shape, so a reader always knows where to look:
+Every plain copy uses the same short shape, so a reader always knows where to look.
+
+Under the title, one line links to the full technical doc it was written from.
 
 1. **What it is.** One or two sentences.
 2. **Why it matters.** What breaks, in everyday terms, if this goes wrong.
@@ -22,7 +24,8 @@ Every plain copy uses the same short shape, so a reader always knows where to lo
    promises the system keeps. Name the risk in a few words, then say what prevents it. Where
    nothing does yet, mark it *Still open* and say what is needed. Focus on the safeguard, not
    on how the failure happens.
-5. **Where to go for more.** One link to the full doc.
+5. **Related.** One line per related system: what it does in a few words, and a link. See
+   "Pointers" below for how these links are chosen and kept current.
 
 Writing rules. The goal above all of them: the shortest, easiest read that still covers
 everything necessary.
@@ -33,7 +36,7 @@ everything necessary.
 | Sentences | 20 words or fewer as a target |
 | Dashes | No em dashes (`—`) and no en dashes (`–`) used as punctuation. Use a full stop, comma or colon |
 | Jargon | None. If a technical word cannot be avoided (like "hook"), explain it in plain words the first time, in the same sentence |
-| Code detail | No file paths, line numbers, function names or code blocks. The one link to the full doc covers that |
+| Code detail | No file paths, line numbers, function names or code blocks. The link to the full doc covers that |
 | Filler | No intros, no "in summary", no restating the heading |
 
 Example of the register, for the hook engine (illustration only, not final text):
@@ -53,6 +56,31 @@ of `docs/systems/hook-engine.md`. It is a non-tier folder, like `generated/`, an
 
 Each plain copy starts with a one-line header naming its source file and the source's git blob hash
 at the time it was written. That hash is how staleness gets caught.
+
+## Pointers
+
+Every plain copy carries two kinds of link.
+
+**The full technical doc.** One line under the title, always. This is the way back to the detail
+the plain copy leaves out.
+
+**Related systems.** Built from the technical doc's own cross-references. If the technical doc
+points at another system doc, the plain copy lists that system under **Related**. Each entry links
+to the best copy that exists right now:
+
+- If the related system already has a plain copy, link to that.
+- If it doesn't, link to its technical doc and mark the line *(no plain copy yet)*.
+
+Pointers get upgraded, not left behind. Two things keep them current:
+
+1. **When the skill writes a new plain copy**, it searches every existing plain copy for a
+   *(no plain copy yet)* link to the same technical doc, and switches each one to the new plain
+   copy. Creating `raid` in plain English upgrades the pointer in `castle` in the same change.
+2. **The checker backs this up.** It fails on any related link that points at a technical doc
+   when a plain copy of that doc exists, and on any link that doesn't resolve. It also lists every
+   *(no plain copy yet)* line, which doubles as the to-do list of plain copies still to write.
+
+A related system with no technical doc at all is left out rather than linked to nothing.
 
 ## What gets a plain copy
 
@@ -78,11 +106,15 @@ every copy whose source has changed.
 What it tells Claude to do:
 
 1. Read the source doc in full.
-2. List every section heading in it. Each one must end up either covered in the plain copy or
-   named in a short "Left out" note at the bottom (for example, "exact event list: see full doc").
-   This is how "covers everything necessary" gets checked instead of hoped for.
-3. Write the copy in the fixed shape above.
-4. Run the checker (below). Fix anything it flags, then run it again until it passes.
+2. List every section heading in it. Each heading must end up either covered in the plain copy
+   or named in a short "Left out" note at the bottom (for example, "exact event list: see full
+   doc"). This is how "covers everything necessary" gets checked instead of hoped for. Also list
+   every other system doc it points at; each becomes a **Related** entry.
+3. Write the copy in the fixed shape above, with the full-doc link under the title and a
+   **Related** entry for each system it points at.
+4. Upgrade any *(no plain copy yet)* pointers in other plain copies that this new copy now
+   satisfies.
+5. Run the checker (below). Fix anything it flags, then run it again until it passes.
 
 ### 2. The checker: `plain_docs_check.py`
 
@@ -97,7 +129,8 @@ It fails on:
 - a banned word from a small, editable list (starting with things like `payload`, `stdin`,
   `dispatch`, `handler`, `idempotent`, `shim`, `argv`)
 - a code block, file path or `file:line` reference
-- a missing or malformed source header
+- a missing or malformed source header, or a missing full-doc link under the title
+- a broken link, or a related link to a technical doc that already has a plain copy
 - **stale**: the source's current blob hash no longer matches the header
 
 It reports average sentence length but does not fail on it, since a hard limit there produces

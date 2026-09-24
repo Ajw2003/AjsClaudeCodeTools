@@ -2,6 +2,8 @@
 
 # Castle, in plain English
 
+Full technical doc: [castle.md](../../systems/castle.md)
+
 **What it is.** Builds the castle each raid happens in, from one number called the seed. The same
 seed gives the same castle on every player's machine.
 
@@ -33,6 +35,17 @@ out, players get trapped.
 - **Doors reopening mid-raid.** Doors can only lock, never unlock.
 - **Same seed, different castle.** Happens when room designs aren't loaded. *Still open:* only
   compare castles set up the same way.
+
+**Related.**
+
+- **Raid.** Places loot and guards in the castle.
+  [raid.md](../../systems/raid.md) *(no plain copy yet)*
+- **Alarm.** Decides when the alarm goes up, which locks the doors.
+  [alarm.md](../../systems/alarm.md) *(no plain copy yet)*
+- **Scale.** Room and doorway sizes, and where the raid starts.
+  [scale.md](../../systems/scale.md) *(no plain copy yet)*
+- **Game overview.** The ground rules, including why all randomness must come from the seed.
+  [plunderspell.md](../../systems/plunderspell.md) *(no plain copy yet)*
 
 **Left out**, see the full doc: sizes and settings, how wall pieces are turned, room furniture and
 colour rules, how loot spots are imported, and test names.
