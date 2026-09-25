@@ -1,42 +1,25 @@
-# Today — 2026-09-24 (session 2)
+# Today — 2026-09-24 (session 3)
 
-Executed [`docs/plans/tiered-doc-folders.md`](../plans/tiered-doc-folders.md): gave each of the
-six documentation tiers its own numbered folder, so they sort in tier order in any file browser,
-and migrated this repo's own docs onto the new layout rather than leaving them flat.
+Fixed `versioncheck` staying silent to the model when it could not reach GitHub — the reason a
+session ran on house-rules 2.31.0 while GitHub had 2.33.0 and nobody was told. See the dated
+entry in [`Decisions.md`](../6-decisions/Decisions.md).
 
 ## What was done
 
-- **The layout.** Each tier moved into its own folder: `docs/1-landing/README.md`,
-  `docs/2-roadmap/Roadmap.md`, `docs/3-state/ProjectState.md`, `docs/4-systems/*.md`,
-  `docs/5-today/Today.md`, `docs/6-decisions/Decisions.md`. `docs/plain/` mirrors the same
-  layout (`docs/plain/4-systems/hook-engine.md`). A new, short, human-facing `docs/README.md`
-  now sits at the top of `docs/`, pointing at the full index.
-- **`hook.py`'s `docstiers`.** Checks the new paths; a project still on the old flat layout is
-  told which file moves to which new path, rather than being told to scaffold tiers it already
-  has. The commit-time reminder and the harvest long-form-reasoning text were updated to the new
-  paths too.
-- **`plain_docs_check.py`.** The queue reads `docs/4-systems/`; the fixed sources are
-  `docs/1-landing/README.md`, `docs/3-state/ProjectState.md`, `docs/2-roadmap/Roadmap.md`; the
-  excluded list names `docs/6-decisions/Decisions.md`, `docs/4-systems/README.md`, and the new
-  `docs/README.md` (already the plain version).
-- **`docref.py`.** The legacy-prose-pointer pattern matches the new folder names; `fix --write`
-  repaired every stale `doc-ref` pointer across the repo mechanically.
-- **Plugin text.** `rules/house-rules.md`, `rules/detail/docs-tiers.md`,
-  `rules/detail/long-form-reasoning.md`, `agents/archivist.md`,
-  `skills/project-docs/SKILL.md` (tier table, scaffolding steps now create the six folders plus
-  the short `docs/README.md` as its own step before tier 5), `skills/plain-docs/SKILL.md`, and
-  `commands/harvest-scan.md` all point at the new paths.
-- **Version bump.** `2.33.0` → `2.34.0` in `plugin.json`.
-- **Verified.** `verify.py` 366/366 PASS, `verify_tools.py` 39/39 PASS, `docref.py check` clean
-  outside `verify.py`'s own fixtures, `plain_docs_check.py` OK. The `docstiers` hook prints
-  nothing against this repo and the move message against a scratch old-flat-layout copy.
-
-## What was deliberately not done
-
-- **`docs/archive/` and `docs/sessions/`** were left untouched, as historical record.
-- **Old `docs/6-decisions/Decisions.md` entries** had only their link paths repaired, not their
-  prose — they describe what was true when they were written; a new dated entry at the top
-  records this change.
+- **API fallback.** `_github_version()` in `hook.py` tries `raw.githubusercontent.com`, then the
+  `api.github.com` contents endpoint derived from the same owner/repo/path, in one 4 s budget.
+  `HOUSE_RULES_VC_GITHUB_API_URL` overrides the derived URL.
+- **Model-visible "couldn't verify".** If the check can't finish and finds no mismatch, it emits
+  `additionalContext` naming each failed route and the installed version. No banner, no marker.
+- **Tests.** Three new `verify.py` cases (raw fails + API newer → banner; both fail →
+  `additionalContext`, no marker; all agree → no `additionalContext`), using `file://` URLs.
+  The first two fail against the previous `hook.py`.
+- **Docs.** `docs/architecture.md` (row and section), `claude-house-rules/README.md`,
+  `Decisions.md`.
+- **Version bump.** `2.34.0` → `2.35.0` in `plugin.json`.
+- **Verified against the real network.** Default run: raw route answered, `2.34.0` matched.
+  Raw forced dead: the real `api.github.com` answered `2.34.0`. Both routes blocked via a dead
+  proxy: the `additionalContext` notice named both `Connection refused` failures.
 
 ## What to do next, in order
 

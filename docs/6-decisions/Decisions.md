@@ -7,6 +7,34 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-24 — versioncheck falls back to the GitHub API, and tells the model when it cannot verify
+
+**Context.** On 2026-09-24 a session started with house-rules 2.31.0 installed while GitHub had
+2.33.0, and nothing told the model. Two causes in `hook.py`: `_github_version()` fetched only
+`raw.githubusercontent.com`, which that machine's sandbox reset while `api.github.com` worked; and
+when installed and the marketplace clone agreed (both stale) and GitHub was unreachable, the
+handler emitted only a `systemMessage` — shown in the UI, never seen by the model, easy to miss in
+the desktop app. An unverified result looked the same as a verified one from the model's side.
+
+**Decision.** `_github_version()` now tries the raw URL, then the contents API derived from the
+same owner/repo/ref/path (`Accept: application/vnd.github.raw`, `HOUSE_RULES_VC_GITHUB_API_URL`
+to override), both inside the existing 4-second budget, and records each failed route and why.
+When the check could not finish and found no mismatch, it now also emits `additionalContext`
+telling the model to say in its first reply that freshness could not be checked, naming each
+failure and the installed version. It is still not "out of date": no banner, no `guard` marker.
+The all-agree path stays a `systemMessage` trace only. Shipped in 2.35.0.
+
+**Why.** "Nothing fails silently": a best-effort check that fails is fine, one that fails without
+anyone who can act on it being told is not. A second route is cheaper than asking users to
+diagnose a blocked host. Rejected: treating "couldn't verify" as "out of date" — it would block
+every offline session on a question the user can't answer.
+
+**Supersedes.** The previous behaviour, in which an unverifiable check told the model nothing.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-24 — Give each documentation tier its own numbered folder
 
 **Context.** The six tiers all lived as flat files directly under `docs/` (`docs/Roadmap.md`,
