@@ -1,30 +1,34 @@
-# Today — 2026-09-24 (session 3)
+# Today — 2026-09-26
 
-Fixed `versioncheck` staying silent to the model when it could not reach GitHub — the reason a
-session ran on house-rules 2.31.0 while GitHub had 2.33.0 and nobody was told. See the dated
-entry in [`Decisions.md`](../6-decisions/Decisions.md).
+Made `versioncheck` install the plugin update itself, and stopped it asking for an update that
+was already installed. See the dated entry in [`Decisions.md`](../6-decisions/Decisions.md).
 
 ## What was done
 
-- **API fallback.** `_github_version()` in `hook.py` tries `raw.githubusercontent.com`, then the
-  `api.github.com` contents endpoint derived from the same owner/repo/path, in one 4 s budget.
-  `HOUSE_RULES_VC_GITHUB_API_URL` overrides the derived URL.
-- **Model-visible "couldn't verify".** If the check can't finish and finds no mismatch, it emits
-  `additionalContext` naming each failed route and the installed version. No banner, no marker.
-- **Tests.** Three new `verify.py` cases (raw fails + API newer → banner; both fail →
-  `additionalContext`, no marker; all agree → no `additionalContext`), using `file://` URLs.
-  The first two fail against the previous `hook.py`.
-- **Docs.** `docs/architecture.md` (row and section), `claude-house-rules/README.md`,
+- **Reads the install on disk.** `_installed_on_disk()` in `hook.py` reads
+  `~/.claude/plugins/installed_plugins.json`. Newest version already installed but an older copy
+  running → a one-line "start a new session" notice, no banner, no marker.
+- **Updates itself.** When an update is needed, the hook runs `claude plugin marketplace update`
+  (only if that clone is stale) and `claude plugin update`, in a 60 s budget, then re-reads
+  `installed_plugins.json`. Success is a one-line notice. The hook's timeout went 10 → 90 s.
+- **Failure path.** The banner now names what failed and tells Claude to run the commands
+  without asking in chat first; `guard`'s first-command prompt is the user's yes.
+  `HOUSE_RULES_AUTO_UPDATE=off` skips the automatic run.
+- **Rules.** `rules/detail/handover-command.md` says the plugin's own update is already answered.
+- **Tests.** Every `versioncheck` case in `verify.py` now uses a fake `claude`
+  (`HOUSE_RULES_VC_CLAUDE`) and its own `installed_plugins.json`. Four new cases: restart-only,
+  update works, update exits 0 but nothing installed, auto-update off. They and the reworded
+  banner check fail against the previous `hook.py`.
+- **Docs.** `docs/architecture.md` (row and new section), `claude-house-rules/README.md`,
   `Decisions.md`.
-- **Version bump.** `2.34.0` → `2.35.0` in `plugin.json`.
-- **Verified against the real network.** Default run: raw route answered, `2.34.0` matched.
-  Raw forced dead: the real `api.github.com` answered `2.34.0`. Both routes blocked via a dead
-  proxy: the `additionalContext` notice named both `Connection refused` failures.
+- **Version bump.** `2.36.0` → `2.37.0` in `plugin.json`.
+- **Verified for real.** In a cloud session with 2.30.0 installed and GitHub on 2.36.0, the new
+  hook refreshed the marketplace, installed 2.36.0 in about 3 s, and `claude plugin list` showed
+  2.36.0. A second run from the same old copy gave the "start a new session" notice.
 
 ## What to do next, in order
 
 1. Run `/house-rules:plain-docs` on the remaining system docs (`verify-suites.md`,
-   `plugin-distribution.md`, `offshoot-plugins.md`) — unchanged from before this session, still
-   open.
+   `plugin-distribution.md`, `offshoot-plugins.md`) — still open.
 2. Everything still open in [`ProjectState.md`](../3-state/ProjectState.md)'s Cross-cutting
-   section — none of it was touched by this plan.
+   section.

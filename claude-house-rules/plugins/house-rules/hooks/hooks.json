@@ -26,7 +26,7 @@
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" versioncheck",
-            "timeout": 10
+            "timeout": 90
           }
         ]
       }
