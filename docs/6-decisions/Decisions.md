@@ -7,6 +7,39 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-26 — versioncheck installs the update itself, and reads the install on disk
+
+**Context.** A cloud session opened with the out-of-date banner: running 2.29.0, marketplace
+2.36.0. Claude stopped and asked to run `claude plugin update`. But 2.36.0 was already installed
+— something had updated it after the Claude process started — and `/clear` re-ran the check from
+the old loaded copy. The update would have done nothing; a restart was the fix. Separately, the
+user's environment setup script, which runs the update commands, is skipped when a cloud session
+resumes from a cached environment, so it cannot keep the plugin current. The user asked for the
+update prompt to do everything itself and install the update properly.
+
+**Decision.** `event_versioncheck()` now reads `~/.claude/plugins/installed_plugins.json`. If the
+newest version is already installed and only the running copy is old, it says "start a new
+session" — no banner, no marker, no command. If an update is needed, the hook runs
+`claude plugin marketplace update` (only if that clone is stale) and `claude plugin update`
+itself, in a 60 s budget (hook timeout raised 10 → 90 s), then re-reads `installed_plugins.json`.
+Only the new version appearing there counts as success, which is a one-line notice. On failure
+the banner fires as before, now naming the failure, and tells Claude to run the commands itself
+without asking in chat first — the `guard` prompt on that first command is the user's yes. The
+card-and-stop fallback is kept for a declined prompt or no shell tool.
+`HOUSE_RULES_AUTO_UPDATE=off` skips the automatic run. Shipped in 2.37.0.
+
+**Why.** Asking permission for an update the user always wants is a question with one answer.
+Re-reading the install, not the exit code, follows "a reported update is not a completed one".
+Rejected: a detached background update — faster to start, but its result could not be checked
+or reported. Rejected: relying on the setup script — it does not run on a cached resume.
+
+**Supersedes.** 2026-09-17, "Ask permission to run the plugin's own update commands", for the
+plugin's own update only; the general rule for other commands is unchanged.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-24 — versioncheck falls back to the GitHub API, and tells the model when it cannot verify
 
 **Context.** On 2026-09-24 a session started with house-rules 2.31.0 installed while GitHub had
@@ -519,7 +552,7 @@ fix. It's also the more reliable path here specifically: the CLI refresh works e
 surface that would otherwise run it (a greyed-out desktop button) does not, so offering to run it
 directly sidesteps a UI bug rather than routing the user straight into it.
 
-**Status.** Standing.
+**Status.** Superseded for the plugin's own update by 2026-09-26, "versioncheck installs the update itself"; standing for every other command.
 
 ---
 

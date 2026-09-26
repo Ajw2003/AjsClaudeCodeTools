@@ -4103,8 +4103,57 @@ def vc_payload(session_id):
     return json.dumps({"session_id": session_id, "hook_event_name": "SessionStart"})
 
 
-def vc_env(**overrides):
+# Every case gets a fake `claude` and its own installed_plugins.json, so no case can run a real
+# update or read this machine's real install. The fake logs each call and, when told to, writes
+# the "updated" version into that JSON the way a real `claude plugin update` would.
+_vc_fake_dir = tempfile.mkdtemp(prefix="house-rules-vc-fake-")
+_vc_fake_claude = os.path.join(_vc_fake_dir, "fake_claude.py")
+with open(_vc_fake_claude, "w", encoding="utf-8") as f:
+    f.write(
+        "import json, os, sys\n"
+        "with open(os.environ['VC_FAKE_LOG'], 'a', encoding='utf-8') as log:\n"
+        "    log.write(' '.join(sys.argv[1:]) + '\\n')\n"
+        "target = os.environ.get('VC_FAKE_INSTALLS', '')\n"
+        "if sys.argv[1:3] == ['plugin', 'update'] and target:\n"
+        "    with open(os.environ['HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON'], 'w', encoding='utf-8') as out:\n"
+        "        json.dump({'version': 2, 'plugins': {sys.argv[3]: [{'version': target}]}}, out)\n"
+        "print('fake claude: ' + ' '.join(sys.argv[1:]))\n"
+        "sys.exit(int(os.environ.get('VC_FAKE_EXIT', '1')))\n"
+    )
+
+
+def vc_installed_json(case, version=None):
+    path = os.path.join(_vc_fake_dir, f"installed-{case}.json")
+    if version is not None:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(
+                {"version": 2, "plugins": {"house-rules@aj-house-rules": [{"version": version}]}}, f
+            )
+    return path
+
+
+def vc_clear(case):
+    """Remove what an earlier run left for this case, so a stale marker or log cannot pass or
+    fail it."""
+    for path in (vc_marker_path(case), os.path.join(_vc_fake_dir, f"calls-{case}.log")):
+        if os.path.isfile(path):
+            os.remove(path)
+
+
+def vc_fake_calls(case):
+    path = os.path.join(_vc_fake_dir, f"calls-{case}.log")
+    if not os.path.isfile(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
+
+
+def vc_env(case="default", **overrides):
     e = dict(os.environ)
+    e["HOUSE_RULES_VC_CLAUDE"] = json.dumps([sys.executable, _vc_fake_claude])
+    e["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = vc_installed_json(case)
+    e["VC_FAKE_LOG"] = os.path.join(_vc_fake_dir, f"calls-{case}.log")
+    e.pop("HOUSE_RULES_AUTO_UPDATE", None)
     e.update(overrides)
     return e
 
@@ -4153,12 +4202,15 @@ banner_ok = (
     and "step-card" in vc_banner_out
     and "stop and wait" in vc_banner_out
     and "permission" in vc_banner_out
+    and "run the command(s) below yourself" in vc_banner_out
+    and "Do not ask in chat" in vc_banner_out
+    and "could not finish" in vc_banner_out
 )
 if banner_ok:
-    report("PASS", "the out-of-date banner tells Claude to ask permission to run the update itself, falling back to the card marked UNTESTED, then stop and wait")
-    print("          banner carries the ask-permission/run-it-yourself instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
+    report("PASS", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
+    print("          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
 else:
-    report("FAIL", "the out-of-date banner tells Claude to ask permission to run the update itself, falling back to the card marked UNTESTED, then stop and wait")
+    report("FAIL", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
     print(f"          out={vc_banner_out[:400]!r}")
 
 # --- that same instruction has not drifted from the rules document, bidirectionally ----------
@@ -4335,6 +4387,120 @@ else:
     report("FAIL", "versioncheck adds nothing to the model's context when all three copies agree")
     print(f"          rc={rc} out={out[:200]!r}")
 shutil.rmtree(_vc_dir, ignore_errors=True)
+
+# --- versioncheck updates the plugin itself, and reads what is installed, not only what runs -----
+# 2026-09-26: a session ran 2.29.0 while 2.36.0 was already installed on disk, and the banner asked
+# for an update that would have done nothing; the fix is a restart. And the update is now run by
+# the hook itself, confirmed by re-reading installed_plugins.json rather than trusting exit 0.
+case = "vc-restart-needed"
+vc_clear(case)
+vc_installed_json(case, "99.0.0")
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(case, HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"),
+)
+ok = (
+    rc == 0
+    and "OUT OF DATE" not in out
+    and "start a new session" in out
+    and "Do not run any update command" in out
+    and vc_fake_calls(case) == []
+    and not os.path.isfile(vc_marker_path(case))
+)
+if ok:
+    report("PASS", "versioncheck says 'start a new session', not 'update', when the newer version is already installed on disk")
+    print("          running copy is old, installed_plugins.json has 99.0.0: no banner, no marker, no update run")
+else:
+    report("FAIL", "versioncheck says 'start a new session', not 'update', when the newer version is already installed on disk")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+
+case = "vc-auto-update-works"
+vc_clear(case)
+vc_installed_json(case, _installed_version)
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(
+        case,
+        HOUSE_RULES_VC_MARKETPLACE=_installed_version,
+        HOUSE_RULES_VC_GITHUB="99.0.0",
+        VC_FAKE_EXIT="0",
+        VC_FAKE_INSTALLS="99.0.0",
+    ),
+)
+ok = (
+    rc == 0
+    and vc_fake_calls(case)
+    == ["plugin marketplace update aj-house-rules", "plugin update house-rules@aj-house-rules"]
+    and "updated automatically at session start" in out
+    and "99.0.0" in out
+    and "OUT OF DATE" not in out
+    and not os.path.isfile(vc_marker_path(case))
+)
+if ok:
+    report("PASS", "versioncheck refreshes the stale marketplace, runs the update itself, and confirms it on disk")
+    print("          both commands ran in order; installed_plugins.json then read 99.0.0, so no banner and no marker")
+else:
+    report("FAIL", "versioncheck refreshes the stale marketplace, runs the update itself, and confirms it on disk")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+
+case = "vc-update-exits-0-but-nothing-installed"
+vc_clear(case)
+vc_installed_json(case, _installed_version)
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(
+        case,
+        HOUSE_RULES_VC_MARKETPLACE="99.0.0",
+        HOUSE_RULES_VC_GITHUB="99.0.0",
+        VC_FAKE_EXIT="0",
+    ),
+)
+ok = (
+    rc == 0
+    and vc_fake_calls(case) == ["plugin update house-rules@aj-house-rules"]
+    and "OUT OF DATE" in out
+    and "exited 0, but installed_plugins.json lists" in out
+    and os.path.isfile(vc_marker_path(case))
+)
+if ok:
+    report("PASS", "versioncheck does not trust an update's exit code: nothing new on disk still means out of date")
+    print("          only `plugin update` ran (marketplace already current); exit 0 with no new install -> banner and marker")
+else:
+    report("FAIL", "versioncheck does not trust an update's exit code: nothing new on disk still means out of date")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+if os.path.isfile(vc_marker_path(case)):
+    os.remove(vc_marker_path(case))
+
+case = "vc-auto-update-off"
+vc_clear(case)
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(
+        case,
+        HOUSE_RULES_VC_MARKETPLACE="99.0.0",
+        HOUSE_RULES_VC_GITHUB="99.0.0",
+        HOUSE_RULES_AUTO_UPDATE="off",
+    ),
+)
+ok = (
+    rc == 0
+    and vc_fake_calls(case) == []
+    and "OUT OF DATE" in out
+    and "HOUSE_RULES_AUTO_UPDATE=off" in out
+)
+if ok:
+    report("PASS", "HOUSE_RULES_AUTO_UPDATE=off keeps the check but never runs the update")
+    print("          no `claude` call; the banner says automatic updating is off")
+else:
+    report("FAIL", "HOUSE_RULES_AUTO_UPDATE=off keeps the check but never runs the update")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+if os.path.isfile(vc_marker_path(case)):
+    os.remove(vc_marker_path(case))
+shutil.rmtree(_vc_fake_dir, ignore_errors=True)
 
 # --- docref.py: the doc-ref pointer checker ----------------------------------------------------
 # Design: docs/superpowers/specs/2026-09-20-pointer-integrity-design.md

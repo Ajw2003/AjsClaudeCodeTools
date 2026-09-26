@@ -936,8 +936,123 @@ def _read_and_clear_outdated_marker(session_id):
     return data
 
 
-_VC_UPDATE_CMD = "claude plugin update house-rules@aj-house-rules"
-_VC_MARKETPLACE_CMD = "claude plugin marketplace update aj-house-rules"
+_VC_PLUGIN_NAME = "house-rules"
+_VC_DEFAULT_MARKETPLACE = "aj-house-rules"
+# One budget for every update command together. hooks.json gives versioncheck 90 s, so this
+# leaves the version reads and the re-check room to finish inside it.
+_VC_UPDATE_BUDGET = 60.0
+
+
+def _auto_update_enabled():
+    return os.environ.get("HOUSE_RULES_AUTO_UPDATE", "on").strip().lower() not in _TRACE_OFF
+
+
+def _installed_plugins_path():
+    return os.environ.get("HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON") or os.path.join(
+        os.path.expanduser("~"), ".claude", "plugins", "installed_plugins.json"
+    )
+
+
+def _installed_on_disk(problems):
+    """(plugin id, versions) for house-rules as installed_plugins.json records it.
+
+    This is what the NEXT session will load. _plugin_version() is the copy running right now,
+    which stays the same until Claude Code restarts, even after an update (a /clear does not
+    reload it). Comparing only the running copy is what made versioncheck ask for an update
+    that was already installed (docs/6-decisions/Decisions.md, 2026-09-26).
+    """
+    path = _installed_plugins_path()
+    if not os.path.isfile(path):
+        return "", []
+    try:
+        data = json.loads(_read_text(path))
+    except Exception as exc:
+        problems.append("could not read installed_plugins.json (%s)" % type(exc).__name__)
+        return "", []
+    plugins = data.get("plugins", {}) if isinstance(data, dict) else {}
+    for plugin_id, entries in sorted(plugins.items()):
+        if plugin_id.split("@", 1)[0] != _VC_PLUGIN_NAME:
+            continue
+        if isinstance(entries, dict):
+            entries = [entries]
+        versions = [
+            e.get("version", "")
+            for e in entries
+            if isinstance(e, dict) and e.get("version")
+        ]
+        return plugin_id, versions
+    return "", []
+
+
+def _claude_command():
+    """The argv prefix that runs the `claude` CLI, or [] if it is not on PATH.
+    HOUSE_RULES_VC_CLAUDE (a JSON list) replaces it, so verify.py never runs a real update."""
+    override = os.environ.get("HOUSE_RULES_VC_CLAUDE")
+    if override:
+        return json.loads(override)
+    found = shutil.which("claude")
+    return [found] if found else []
+
+
+def _tail(text, limit=300):
+    text = " ".join((text or "").split())
+    return text if len(text) <= limit else "..." + text[-(limit - 3):]
+
+
+def _run_update_commands(commands):
+    """Run each `claude ...` command in order inside _VC_UPDATE_BUDGET, stopping at the first
+    failure. Returns (log lines, error or "")."""
+    import subprocess
+
+    try:
+        base = _claude_command()
+    except ValueError as exc:
+        return [], "HOUSE_RULES_VC_CLAUDE is not a JSON list (%s)" % exc
+    if not base:
+        return [], "the `claude` command is not on PATH for this hook"
+    deadline = _time.monotonic() + _VC_UPDATE_BUDGET
+    log = []
+    for args in commands:
+        shown = "claude " + " ".join(args)
+        remaining = deadline - _time.monotonic()
+        if remaining < 1:
+            return log, "ran out of time before `%s`" % shown
+        try:
+            proc = subprocess.run(
+                base + args,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=remaining,
+            )
+        except subprocess.TimeoutExpired:
+            return log, "`%s` did not finish within %gs" % (shown, _VC_UPDATE_BUDGET)
+        except OSError as exc:
+            return log, "could not start `%s` (%s)" % (shown, exc)
+        output = proc.stdout.decode("utf-8", "replace")
+        log.append("`%s` exited %d: %s" % (shown, proc.returncode, _tail(output) or "(no output)"))
+        if proc.returncode != 0:
+            return log, "`%s` failed with exit code %d" % (shown, proc.returncode)
+    return log, ""
+
+
+def _vc_restart_notice(on_disk, running, how):
+    """The context for "the right version is on disk, this process just predates it"."""
+    return {
+        "systemMessage": "house-rules %s is installed%s. This session is still running %s - "
+        "start a new session to load it." % (on_disk, how, running),
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": (
+                "house-rules %s is installed on this machine%s, but this session is still "
+                "running %s: plugins load when Claude Code starts, and a /clear does not reload "
+                "them. Nothing needs updating. In your first reply, tell the user in one "
+                "sentence that %s is installed and loads when they start a new session. Do not "
+                "run any update command, do not ask about updating, and do not stop work."
+                % (on_disk, how, running, on_disk)
+            ),
+        },
+    }
 
 
 def event_versioncheck():
@@ -950,20 +1065,34 @@ def event_versioncheck():
 
         problems = []
         installed = _plugin_version(problems)
+        plugin_id, on_disk = _installed_on_disk(problems)
         market_version = _marketplace_version(problems)
         github_version = _github_version(problems)
+        latest = github_version or market_version
+
+        market_name = plugin_id.split("@", 1)[1] if "@" in plugin_id else _VC_DEFAULT_MARKETPLACE
+        plugin_ref = plugin_id or "%s@%s" % (_VC_PLUGIN_NAME, market_name)
+        update_cmd = "claude plugin update %s" % plugin_ref
+        marketplace_cmd = "claude plugin marketplace update %s" % market_name
+
+        marketplace_stale = bool(
+            github_version and (not market_version or market_version != github_version)
+        )
+        if latest and installed != latest and latest in on_disk and not marketplace_stale:
+            emit(_vc_restart_notice(latest, installed, ""))
+            return 0
 
         reasons = []
         if installed and market_version and installed != market_version:
             reasons.append(
                 "installed copy is %s but the local marketplace clone has %s - run `%s`."
-                % (installed, market_version, _VC_UPDATE_CMD)
+                % (installed, market_version, update_cmd)
             )
         if market_version and github_version and market_version != github_version:
             reasons.append(
                 "the local marketplace clone is %s but GitHub's default branch has %s - the "
                 "marketplace clone itself has not synced. Run `%s`, then `%s`."
-                % (market_version, github_version, _VC_MARKETPLACE_CMD, _VC_UPDATE_CMD)
+                % (market_version, github_version, marketplace_cmd, update_cmd)
             )
         elif not market_version and installed and github_version and installed != github_version:
             # The marketplace clone could not be found/read at all - fall back to comparing
@@ -971,7 +1100,7 @@ def event_versioncheck():
             reasons.append(
                 "installed copy is %s but GitHub's default branch has %s (the local "
                 "marketplace clone could not be checked). Run `%s`, then `%s`."
-                % (installed, github_version, _VC_MARKETPLACE_CMD, _VC_UPDATE_CMD)
+                % (installed, github_version, marketplace_cmd, update_cmd)
             )
 
         if not reasons:
@@ -1005,6 +1134,33 @@ def event_versioncheck():
                 )
             return 0
 
+        # Out of date: update it here rather than asking, then check the result on disk rather
+        # than trusting the exit code (docs/6-decisions/Decisions.md, 2026-09-26).
+        failure = "automatic updating is switched off (HOUSE_RULES_AUTO_UPDATE=off)"
+        log = []
+        if _auto_update_enabled():
+            commands = []
+            if marketplace_stale or not market_version:
+                commands.append(["plugin", "marketplace", "update", market_name])
+            commands.append(["plugin", "update", plugin_ref])
+            log, failure = _run_update_commands(commands)
+            after_id, after = _installed_on_disk([])
+            if not failure and latest and latest in after:
+                if installed == latest:
+                    trace(
+                        "versioncheck: refreshed the stale marketplace clone; %s was already "
+                        "installed and running." % installed
+                    )
+                else:
+                    emit(_vc_restart_notice(latest, installed, " - updated automatically at "
+                                            "session start, up from %s" % installed))
+                return 0
+            if not failure:
+                failure = (
+                    "the update commands exited 0, but installed_plugins.json lists %s, not %s"
+                    % (", ".join(after) or "no house-rules install", latest or "a newer version")
+                )
+
         _write_outdated_marker(session_id, reasons)
 
         banner_lines = [
@@ -1013,20 +1169,29 @@ def event_versioncheck():
             "HOUSE-RULES PLUGIN IS OUT OF DATE",
             "=" * 70,
             "",
-            "Before doing any other work this session: tell the user plainly that this "
-            "session is running an out-of-date copy of the house-rules plugin, and ask for "
-            "permission to update it yourself, right now, on this machine - the same machine "
-            "the check above just read, so your own shell tool reaches the exact install that "
-            "needs fixing. Then stop and wait for the user's answer. Reporting the problem and "
-            "continuing into unrelated work in the same turn is not the same as asking.",
-            "",
-            "If they say yes: run the command(s) below yourself, in order, right now, and "
-            "report the real output rather than the command. If they say no, or this session "
-            "has no shell tool to run them with, relay the command(s) instead - through the "
-            "step-card format, marked `UNTESTED:` since this hook relayed them and they have "
-            "not been run on this machine.",
-            "",
+            "versioncheck tried to update the plugin itself at session start and could not "
+            "finish: %s." % failure,
         ]
+        banner_lines.extend("  %s" % line for line in log)
+        banner_lines.extend(
+            [
+                "",
+                "Before doing any other work this session: run the command(s) below yourself, "
+                "in order, right now, on this machine - the same machine the check above just "
+                "read - and report the real output rather than the command. Do not ask in chat "
+                "first: the user has asked for the plugin's own update to just happen, and the "
+                "permission prompt the harness puts on your first shell command is where they "
+                "say yes or no. Check the result with `claude plugin list`; a reported update "
+                "is not a completed one. Once it is installed, tell the user it loads in a new "
+                "session (a /clear does not reload plugins) and carry on with their request.",
+                "",
+                "If they decline that prompt, or this session has no shell tool to run them "
+                "with, relay the command(s) instead - through the step-card format, marked "
+                "`UNTESTED:` since this hook relayed them and they have not been run on this "
+                "machine - then stop and wait for the user's answer.",
+                "",
+            ]
+        )
         banner_lines.extend("- %s" % r for r in reasons)
         banner_lines.append("")
         banner_lines.append(
@@ -1037,10 +1202,12 @@ def event_versioncheck():
         banner_lines.append("=" * 70)
         emit(
             {
+                "systemMessage": "house-rules is out of date and could not update itself: %s."
+                % failure,
                 "hookSpecificOutput": {
                     "hookEventName": "SessionStart",
                     "additionalContext": "\n".join(banner_lines),
-                }
+                },
             }
         )
     except Exception as exc:
