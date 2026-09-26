@@ -7,10 +7,10 @@ fourth (offshoot plugins) ships and verifies but its actual judgment quality is 
 
 | Milestone | Status |
 |---|---|
-| 1. Hook engine | 100% — `verify.py` 366/366 PASS (2026-09-24) |
+| 1. Hook engine | 100% — `verify.py` 373/373 PASS (2026-09-26) |
 | 2. Six-tier docs convention | 100% as a mechanism; this repo's own adoption tracked below |
 | 3. Offshoot plugins | 50% — mechanism verified, classifiers unvalidated |
-| 4. Distribution & install tooling | 100% — `verify_tools.py` 39/39 PASS (2026-09-23) |
+| 4. Distribution & install tooling | 100% — `verify_tools.py` 39/39 PASS (2026-09-26) |
 
 ## 1. Hook engine — built and verified
 
@@ -59,6 +59,11 @@ verification scripts (`clean_install_test.py`'s logic, `verify_tools.py` itself)
 place and `verify_tools.py` passes. The one thing this document does *not* claim: that the real
 `claude` CLI sequence was re-run today. It wasn't — see "the one thing that is not what it looks
 like," below.
+
+`tools/measure_footprint.py` prices every handler registered in `hooks.json` — as of 2026-09-26,
+when `docstiers`, `versioncheck`, `guardwrite` and `handover` were added (issue #74); before that
+four of the eighteen had no measured cost. `handover` turned out to be the largest per-turn
+injection when it fires (~556 tokens for a reply with an uncarded shell fence).
 
 ## The one thing that is not what it looks like
 

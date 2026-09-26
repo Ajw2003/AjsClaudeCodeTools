@@ -6,7 +6,7 @@ different question and the one a version number cannot answer. It runs the INSTA
 hook.py rather than the repo's, because the installed copy is what a real session executes -
 a repo edit that never got registered would pass every check here if we read the repo instead.
 
-Three measurements, in order of how much they matter:
+Four measurements, in order of how much they matter:
 
   1. scope gating - the per-prompt cost, which accumulates in context and is never cached away.
      Replays the user's own past prompts through the real gating regex to get a long/short
@@ -14,7 +14,9 @@ Three measurements, in order of how much they matter:
   2. SessionStart injection - the fixed per-session cost. Paid ONCE per session, not per
      subagent spawn: a spawned subagent never sees SessionStart's additionalContext at all
      (docs/architecture.md, "SessionStart is not re-paid on subagent spawn" - tested directly).
-  3. Failure paths - scope runs on UserPromptSubmit, where a non-zero exit erases the user's
+  3. Per-tool-call and per-turn handlers - every other hook in hooks.json, reminder and
+     decision trace priced separately.
+  4. Failure paths - scope runs on UserPromptSubmit, where a non-zero exit erases the user's
      prompt. A malformed payload must still exit 0.
 
 Usage:
@@ -27,8 +29,10 @@ Usage:
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 # Rough and deliberately so: the exact ratio varies by tokenizer, and every number here is a
 # comparison against a baseline measured the same way, so a constant factor cancels out.
@@ -266,6 +270,35 @@ def main():
     print(f"   inject     : {inject_chars:>6,} chars  (~{tokens(inject_chars):,} tokens)")
     print(f"   profile    : {profile_chars:>6,} chars  (~{tokens(profile_chars):,} tokens)")
     print(f"   standards  : {standards_chars:>6,} chars  (~{tokens(standards_chars):,} tokens)")
+
+    # docstiers and versioncheck are silent in the common case and large in the rare one, so
+    # each is priced in every state it can be in rather than as one number.
+    with tempfile.TemporaryDirectory() as bare_project:
+        session_states = [
+            ("docstiers", "this repo", {"CLAUDE_PROJECT_DIR": repo_root()}),
+            ("docstiers", "a project with no docs", {"CLAUDE_PROJECT_DIR": bare_project}),
+        ]
+        # versioncheck is fed fixed versions through its own overrides - the ones verify.py
+        # uses - because run for real it reaches GitHub and, when out of date, runs
+        # `claude plugin update`. A cost measurement must never update the plugin it measures.
+        no_update = {
+            "HOUSE_RULES_AUTO_UPDATE": "off",
+            "HOUSE_RULES_VC_CLAUDE": '["false"]',
+            "HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON": os.path.join(bare_project, "none.json"),
+        }
+        session_states += [
+            ("versioncheck", "up to date",
+             dict(no_update, HOUSE_RULES_VC_MARKETPLACE=version, HOUSE_RULES_VC_GITHUB=version)),
+            ("versioncheck", "GitHub unreachable",
+             dict(no_update, HOUSE_RULES_VC_MARKETPLACE=version,
+                  HOUSE_RULES_VC_GITHUB_URL="http://127.0.0.1:9/plugin.json")),
+            ("versioncheck", "out of date",
+             dict(no_update, HOUSE_RULES_VC_MARKETPLACE="0.0.1", HOUSE_RULES_VC_GITHUB="0.0.1")),
+        ]
+        for event, state, env in session_states:
+            _, out = run_hook(hook_py, event, "{}", env=env)
+            chars = len(split_output(out)[0])
+            print(f"   {event:<12} {state:<24}: {chars:>6,} chars  (~{tokens(chars):,} tokens)")
     print("   (paid once per session - a spawned subagent never sees this at all, see docs/architecture.md)")
     print("   (a subagent's own per-spawn cost is the 'subagentrules' row in section 4 below)")
 
@@ -274,7 +307,18 @@ def main():
     # Nothing measured this before: verify.py proves the handlers are correct and sections 1-3
     # price the per-prompt and per-session hooks, which left every PreToolUse/PostToolUse
     # handler - and every decision trace - unpriced.
-    print("\n4. Per-tool-call cost (PreToolUse / PostToolUse)")
+    print("\n4. Per-tool-call and per-turn cost (PreToolUse / PostToolUse / Subagent / Stop)")
+    scratch = tempfile.mkdtemp()
+    existing = os.path.join(scratch, "existing.md")
+    with open(existing, "w", encoding="utf-8") as f:
+        f.write("one\ntwo\nthree\n")
+    # handover's evidence check reads the transcript to see whether a tool ran this turn; this
+    # one holds a user message and a reply with none, the case where the reminder fires.
+    no_tool_transcript = os.path.join(scratch, "no-tool.jsonl")
+    with open(no_tool_transcript, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"type": "user", "message": {"role": "user", "content": "fix it"}}) + "\n")
+        f.write(json.dumps({"type": "assistant", "message": {
+            "role": "assistant", "content": [{"type": "text", "text": "It works now."}]}}) + "\n")
     cs = "class A {\n// Must run after Init(). Order matters.\nvoid A() { }\n}\n"
     essay = "class A {\n" + (
         "// The integrator is Verlet, not Euler. Euler lost energy visibly over a few\n"
@@ -288,6 +332,12 @@ def main():
          json.dumps({"tool_input": {"command": "git status"}}), "allowed"),
         ("guard", "every Bash/PowerShell call",
          json.dumps({"tool_input": {"command": "git commit -m wip"}}), "prompted"),
+        ("guardwrite", "every Write",
+         json.dumps({"tool_input": {"file_path": os.path.join(scratch, "new.md"),
+                                    "content": "a\n"}}), "new file"),
+        ("guardwrite", "every Write",
+         json.dumps({"tool_input": {"file_path": existing, "content": "a\n"}}),
+         "overwrite - prompted"),
         ("artifact", "every Write/Edit",
          json.dumps({"tool_input": {"file_path": "/proj/a.cs"}}), "not a document"),
         ("runnable", "every Write",
@@ -318,13 +368,22 @@ def main():
          json.dumps({"prompt": "<task-notification><task-id>m1</task-id><status>completed</status>"
                                 "</task-notification>", "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
          "transcript not found"),
+        ("handover", "every turn's end",
+         json.dumps({"last_assistant_message": "Sounds good.",
+                     "transcript_path": no_tool_transcript}), "plain reply - silent"),
+        ("handover", "every turn's end",
+         json.dumps({"last_assistant_message": "Run this:\n```bash\nnpm test\n```",
+                     "transcript_path": no_tool_transcript}), "uncarded shell fence"),
+        ("handover", "every turn's end",
+         json.dumps({"last_assistant_message": "It works now.",
+                     "transcript_path": no_tool_transcript}), "claim, no tool ran"),
     ]
     # announce, subagentrules and verdict are deliberately NOT trace-gated - the report IS the
     # feature, not a narration of an otherwise-silent path - so they are excluded from the
     # TRACE=off total below. Including them would make that line read as a leak when it is the
     # design.
     not_trace_gated = {"announce", "subagentrules", "verdict", "audit", "userpromptaudit"}
-    print(f"   {'handler':<9} {'when':<26} {'reminder':>20} {'trace':>20}")
+    print(f"   {'handler':<15} {'when':<26} {'reminder':>20} {'trace':>20}")
     trace_total = 0
     for event, when, payload, label in calls:
         _, out = run_hook(hook_py, event, payload)
@@ -332,7 +391,7 @@ def main():
         trace_total += len(tr)
         r = f"{len(reminder):,} ch (~{tokens(len(reminder)):,} tok)" if reminder else "-"
         t = f"{len(tr):,} ch (~{tokens(len(tr)):,} tok)" if tr else "-"
-        print(f"   {event:<9} {when:<26} {r:>20} {t:>20}   {label}")
+        print(f"   {event:<15} {when:<26} {r:>20} {t:>20}   {label}")
 
     off_total = 0
     for event, _, payload, _ in calls:
@@ -340,6 +399,7 @@ def main():
             continue
         _, out = run_hook(hook_py, event, payload, env={"HOUSE_RULES_TRACE": "off"})
         off_total += len(split_output(out)[1])
+    shutil.rmtree(scratch, ignore_errors=True)
     print(f"\n   decision traces across those calls : {trace_total:,} chars "
           f"(~{tokens(trace_total):,} tokens)")
     print(f"   the same calls with HOUSE_RULES_TRACE=off : {off_total:,} chars")
