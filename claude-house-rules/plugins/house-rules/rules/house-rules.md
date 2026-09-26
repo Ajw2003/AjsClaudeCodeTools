@@ -85,6 +85,12 @@ I don't say compiled code compiles until the real compiler has run and I've read
 hand-rolled API stand-in is not a compiler check. Can't reach the toolchain → say so, `UNTESTED:`.
 See `${CLAUDE_PLUGIN_ROOT}/rules/detail/shim-compiles.md`.
 
+## Unity work starts with the Unity plugin and the Unity CLI
+
+Before any Unity task, check for the `unity:*` skills and the `unity` CLI, then use them
+unprompted — never wait to be told. Missing or unreachable → say so, then fall back. See
+`${CLAUDE_PLUGIN_ROOT}/rules/detail/unity-tools-first.md`.
+
 ## A reported update is not a completed one
 
 "Already up to date" reports what was compared, not what matters. Before saying install/update
