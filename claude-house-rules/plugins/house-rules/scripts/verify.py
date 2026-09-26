@@ -2381,7 +2381,10 @@ else:
 # --- the restatement table --------------------------------------------------------------------
 # Each restatement of a house rule is one row, checked both directions at once (rules corpus and
 # its own emitted source) - adding a restatement to check is a row here, not a new drift block.
-Restatement = namedtuple("Restatement", "name source phrases case_sensitive")
+# emitted_only holds phrases about the note's own behaviour that the rules never state, so they
+# can only be checked one way - but deleting one from the emitted note must still fail.
+Restatement = namedtuple("Restatement", "name source phrases case_sensitive emitted_only")
+Restatement.__new__.__defaults__ = ((),)
 
 RESTATEMENTS = [
     Restatement(
@@ -2410,6 +2413,7 @@ RESTATEMENTS = [
             "realistic", "not proof it works",
         ],
         False,
+        ("someone thought to write",),
     ),
     Restatement(
         "the delegate reminder (ExitPlanMode, including the worktree-isolation mandate)",
@@ -2432,6 +2436,7 @@ RESTATEMENTS = [
             "How it works", "Traps", "Invariants",
         ],
         False,
+        ("Do not change how you write", "the user was not prompted"),
     ),
     Restatement(
         "the command-handover checklist (Stop hook)",
@@ -2466,7 +2471,9 @@ for _restatement in RESTATEMENTS:
         _in_rules = lambda p: p.lower() in rules_text.lower()
         _in_source = lambda p: p.lower() in _source_text.lower()
     _missing_rules = [p for p in _restatement.phrases if not _in_rules(p)]
-    _missing_source = [p for p in _restatement.phrases if not _in_source(p)]
+    _missing_source = [
+        p for p in list(_restatement.phrases) + list(_restatement.emitted_only) if not _in_source(p)
+    ]
     if not _missing_rules and not _missing_source:
         report("PASS", f"{_restatement.name} matches the rules document, both ways")
         print("          every phrase appears in house-rules.md AND in what it emits")
