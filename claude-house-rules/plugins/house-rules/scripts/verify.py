@@ -23,6 +23,7 @@ computed at runtime, so it cannot drift out from under an added case.
 """
 
 import atexit
+from collections import namedtuple
 import json
 import os
 import pathlib
@@ -1236,53 +1237,10 @@ else:
     report("FAIL", "docs/generated has not drifted across house-rules.md, SKILL.md, and the emitted ARTIFACT_NOTE")
     print(f"          {'; '.join(gendrift)}")
 
-# --- the reminder in hook.py's scope handler has not drifted from the rules document --------
-# Covers both forms - the short one is what fires on most prompts now, so its phrases need the
-# same drift protection the long form always had.
 rules_text = rules_corpus()
-drift = []
-for phrase in [
-    "response depth",
-    "portability work",
-    "only what was asked",
-    "ask instead of assuming",
-    "project directory",
-    "hand over a command",
-    "tier that changed",
-    "success claim",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-# The check above reads the rules document only, so it cannot notice a reminder that has been
-# trimmed until it no longer states a rule. The long form was cut from 1,435 to ~915 chars for
-# cost; these are the rules it must still carry after any further trim, since the long form is
-# the only place they are restated once the SessionStart copy has faded from attention.
-long_reminder = run_hook("scope", json.dumps({"prompt": "run the build script"}))[1]
-gutted = []
-for phrase in [
-    "only what was asked",
-    "ask instead of assuming",
-    "whole workflow",
-    "project directory",
-    "have not run",
-    "tier that changed",
-    "success claim",
-]:
-    if phrase.lower() not in long_reminder.lower():
-        gutted.append(phrase)
-if not gutted:
-    report("PASS", "the trimmed long-form reminder still carries every operative rule")
-    print(f"          {len(long_reminder)} chars, all 7 operative phrases present")
-else:
-    report("FAIL", "the trimmed long-form reminder still carries every operative rule")
-    print(f"          trimmed away: {'; '.join(gutted)}")
-
-if not drift:
-    report("PASS", "scope reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
-else:
-    report("FAIL", "scope reminder still matches the rules document")
-    print(f"          in scope reminder but missing from house-rules.md: {'; '.join(drift)}")
+# The scope reminder's own drift check now lives in the RESTATEMENTS table below (see
+# "the restatement table" further down this file), which checks it - and every other
+# restatement - both ways: rules corpus and emitted text, not the rules corpus alone.
 
 # --- a repo checkout and an installed copy can be told apart ---------------------------------
 # Everything below that skips instead of failing rests on IN_REPO. If that marker ever disagreed
@@ -1496,38 +1454,7 @@ compile_case(
     r"C:\Users\aj\AppData\Local\Temp\Player.cs",
 )
 
-# --- the reminder in hook.py's compile-verification note has not drifted from the rules doc ---
-drift = []
-for phrase in [
-    "should compile",
-    "stand-in",
-    "real compiler",
-    "batch mode",
-    "dotnet build",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-if not drift:
-    report("PASS", "compile-verification reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
-else:
-    report("FAIL", "compile-verification reminder still matches the rules document")
-    print(f"          in compile reminder but missing from house-rules.md: {'; '.join(drift)}")
-
-# --- and the reverse: the EMITTED compile note still states the rule -------------------------
-code, out, err = run_hook(
-    "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\Assets\Scripts\Enemy.cs"}})
-)
-drift = []
-for phrase in ["Should compile", "stand-in", "real compiler", "UNTESTED"]:
-    if phrase not in out:
-        drift.append(phrase)
-if not drift:
-    report("PASS", "the emitted compile note still says a stand-in is not a compiler")
-    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
-else:
-    report("FAIL", "the emitted compile note still says a stand-in is not a compiler")
-    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+# The compile-verification note's drift check is a row in the RESTATEMENTS table below.
 
 # --- the shim-is-not-a-compiler rule is stated in full, not just as scattered phrases ---------
 missing = [
@@ -1548,41 +1475,7 @@ else:
     report("FAIL", "the shim-is-not-a-compiler rule states the check, the fallback, and the honest-gap case")
     print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
-# --- the reminder in hook.py's runnable handler has not drifted from the rules document -----
-drift = []
-for phrase in [
-    "whole workflow",
-    "starting point",
-    "hand over a command",
-    "run it twice",
-    "realistic",
-    "not proof it works",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-if not drift:
-    report("PASS", "runnable reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
-else:
-    report("FAIL", "runnable reminder still matches the rules document")
-    print(f"          in runnable reminder but missing from house-rules.md: {'; '.join(drift)}")
-
-# --- and the reverse: the EMITTED runnable note still states the rule ---------------------------
-# The check above reads the rules document only, so on its own it cannot notice a reminder that
-# has been trimmed until it no longer states a rule. This reads what the hook actually emits.
-code, out, err = run_hook(
-    "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\deploy.sh"}})
-)
-drift = []
-for phrase in ["run it twice", "realistic input", "not a whole workflow", "someone thought to write"]:
-    if phrase not in out:
-        drift.append(phrase)
-if not drift:
-    report("PASS", "the emitted runnable note still says one clean run is not proof")
-    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
-else:
-    report("FAIL", "the emitted runnable note still says one clean run is not proof")
-    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+# The runnable note's drift check is a row in the RESTATEMENTS table below.
 
 # --- the green-suite rule is stated, and states the conditions that actually found the bugs ----
 missing = [
@@ -1621,47 +1514,10 @@ else:
     report("FAIL", "delegate is registered on PostToolUse with matcher ExitPlanMode")
     print("          hooks.json does not wire ExitPlanMode to run.sh delegate")
 
-# --- the reminder in hook.py's delegate handler has not drifted from the rules document -----
-# Why this must be bidirectional: docs/4-systems/verify-suites.md, Traps ("Most drift checks
-# run in one direction only") and docs/architecture.md, "Why the delegation kept not happening".
-_, delegate_out, _ = run_hook("delegate", "")
-drift = []
-for phrase in [
-    "@house-rules:executor",
-    "plan is settled",
-    "proactiv",               # the authorization; its loss is the regression above
-    "one file",               # the skip-it exception is a count, not a judgement call
-    "three steps or fewer",
-    "one delegation per group",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(f"{phrase!r} missing from rules/house-rules.md")
-    if phrase.lower() not in delegate_out.lower():
-        drift.append(f"{phrase!r} missing from the emitted delegate reminder")
-if not drift:
-    report("PASS", "delegate reminder and the rules document state the same thing, both ways")
-    print("          every key phrase appears in house-rules.md AND in what delegate emits")
-else:
-    report("FAIL", "delegate reminder and the rules document state the same thing, both ways")
-    for d in drift:
-        print(f"          {d}")
-
-# --- the worktree-isolation mandate has not drifted between DELEGATE_NOTE and house-rules.md ---
-# Same bidirectional shape as the delegate drift check above: a concurrent-edit corruption
-# incident is what this rule exists to prevent, and it only prevents it if both copies say so.
-drift = []
-for phrase in ("isolation", "worktree"):
-    if phrase.lower() not in rules_text.lower():
-        drift.append(f"{phrase!r} missing from rules/house-rules.md")
-    if phrase.lower() not in delegate_out.lower():
-        drift.append(f"{phrase!r} missing from the emitted delegate reminder")
-if not drift:
-    report("PASS", "worktree-isolation mandate is stated the same way in both places")
-    print("          'isolation' and 'worktree' appear in house-rules.md AND in what delegate emits")
-else:
-    report("FAIL", "worktree-isolation mandate is stated the same way in both places")
-    for d in drift:
-        print(f"          {d}")
+# The delegate reminder's drift check (including the worktree-isolation mandate it carries) is
+# a row in the RESTATEMENTS table below. Why this must be bidirectional: docs/4-systems/
+# verify-suites.md, Traps ("Most drift checks run in one direction only") and
+# docs/architecture.md, "Why the delegation kept not happening".
 
 # --- the disclosure rule, and the voice toggle it sits next to ------------------------------
 missing = [
@@ -2190,48 +2046,7 @@ else:
     report("FAIL", "harvest with no working Python says so rather than falling through silently")
     print(f"          exit {code}, got: {out[:200]!r}")
 
-# --- the harvest reminder has not drifted from the rules document ------------------------------
-drift = []
-for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/4-systems", "docs/6-decisions/Decisions.md", "doc-ref", "docref.py", "<!-- ref:"]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-if not drift:
-    report("PASS", "harvest reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
-else:
-    report("FAIL", "harvest reminder still matches the rules document")
-    print(f"          in harvest reminder but missing from house-rules.md: {'; '.join(drift)}")
-
-# --- and the reverse: the EMITTED reminder still states the rule -------------------------------
-# The check above reads the rules document only, so on its own it cannot notice a reminder that
-# has been trimmed until it no longer states a rule. This reads what the hook actually emits.
-payload = json.dumps(
-    {"tool_name": "Write", "tool_input": {"file_path": "/proj/Orbit.cs", "content": ESSAY_CS}}
-)
-code, out, err = run_hook("harvest", payload)
-drift = []
-for phrase in [
-    "doc-ref",
-    "docref.py",
-    "<!-- ref:",
-    "one-line pointer",
-    "@house-rules:archivist",
-    "docs/4-systems",
-    "docs/6-decisions/Decisions.md",
-    "How it works",
-    "Traps",
-    "Invariants",
-    "Do not change how you write",
-    "the user was not prompted",
-]:
-    if phrase not in out:
-        drift.append(phrase)
-if not drift:
-    report("PASS", "the emitted harvest reminder still carries every operative phrase")
-    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
-else:
-    report("FAIL", "the emitted harvest reminder still carries every operative phrase")
-    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+# The harvest reminder's drift check is a row in the RESTATEMENTS table below.
 
 # --- the "nothing fails silently" rule, enforced structurally over hook.py source --------------
 # The rule is worthless if the plugin's own hooks break it, so this reads hook.py and fails any
@@ -2563,32 +2378,104 @@ else:
     report("FAIL", "the handover check emits Stop feedback, not a blocking hook error")
     print(f"          got: {out[:200]!r}")
 
-# --- the checklist in hook.py's handover handler has not drifted from the rules document ----
-drift = []
-for phrase in [
-    "fence label",
-    "working directory",
-    "UNTESTED",
-    "Run button",
-    "does not depend on where the prompt is",
-    "hand over a command",
-    "open a terminal or PowerShell there",
-    "One numbered step per action",
-    "step-card format",
-    "Step 1 of",
-    "You should see:",
-    "above the fence",
-    "Replacing step",
-    "never announces its own compliance",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-if not drift:
-    report("PASS", "handover checklist still matches the rules document")
-    print("          every key phrase in the checklist appears in rules/house-rules.md")
-else:
-    report("FAIL", "handover checklist still matches the rules document")
-    print(f"          in handover checklist but missing from house-rules.md: {'; '.join(drift)}")
+# --- the restatement table --------------------------------------------------------------------
+# Each restatement of a house rule is one row, checked both directions at once (rules corpus and
+# its own emitted source) - adding a restatement to check is a row here, not a new drift block.
+Restatement = namedtuple("Restatement", "name source phrases case_sensitive")
+
+RESTATEMENTS = [
+    Restatement(
+        "the scope reminder (long form)",
+        lambda: run_hook("scope", json.dumps({"prompt": "run the build script"}))[1],
+        [
+            "response depth", "only what was asked", "ask instead of assuming",
+            "project directory", "hand over a command", "tier that changed",
+            "success claim", "whole workflow", "have not run",
+        ],
+        False,
+    ),
+    Restatement(
+        "the compile-verification note (runnable handler, .cs files)",
+        lambda: run_hook(
+            "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\Assets\Scripts\Enemy.cs"}})
+        )[1],
+        ["should compile", "stand-in", "real compiler", "batch mode", "dotnet build"],
+        False,
+    ),
+    Restatement(
+        "the runnable note (runnable handler, scripts)",
+        lambda: run_hook("runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\deploy.sh"}}))[1],
+        [
+            "whole workflow", "starting point", "hand over a command", "run it twice",
+            "realistic", "not proof it works",
+        ],
+        False,
+    ),
+    Restatement(
+        "the delegate reminder (ExitPlanMode, including the worktree-isolation mandate)",
+        lambda: run_hook("delegate", "")[1],
+        [
+            "@house-rules:executor", "plan is settled", "proactiv", "one file",
+            "three steps or fewer", "one delegation per group", "isolation", "worktree",
+        ],
+        False,
+    ),
+    Restatement(
+        "the harvest reminder (long-form comments)",
+        lambda: run_hook(
+            "harvest",
+            json.dumps({"tool_name": "Write", "tool_input": {"file_path": "/proj/Orbit.cs", "content": ESSAY_CS}}),
+        )[1],
+        [
+            "long-form", "one-line pointer", "@house-rules:archivist", "docs/4-systems",
+            "docs/6-decisions/Decisions.md", "doc-ref", "docref.py", "<!-- ref:",
+            "How it works", "Traps", "Invariants",
+        ],
+        False,
+    ),
+    Restatement(
+        "the command-handover checklist (Stop hook)",
+        lambda: run_hook(
+            "handover",
+            json.dumps(
+                {
+                    "session_id": "verify",
+                    "hook_event_name": "Stop",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "```powershell\nGet-ChildItem\n```",
+                }
+            ),
+        )[1],
+        [
+            "fence label", "working directory", "UNTESTED", "Run button",
+            "not depend on where the prompt is", "open a terminal or PowerShell there",
+            "One numbered step per action", "step-card format", "Step 1 of",
+            "You should see:", "above the fence", "Replacing step",
+            "never announces its own compliance",
+        ],
+        False,
+    ),
+]
+
+for _restatement in RESTATEMENTS:
+    _source_text = _restatement.source()
+    if _restatement.case_sensitive:
+        _in_rules = lambda p: p in rules_text
+        _in_source = lambda p: p in _source_text
+    else:
+        _in_rules = lambda p: p.lower() in rules_text.lower()
+        _in_source = lambda p: p.lower() in _source_text.lower()
+    _missing_rules = [p for p in _restatement.phrases if not _in_rules(p)]
+    _missing_source = [p for p in _restatement.phrases if not _in_source(p)]
+    if not _missing_rules and not _missing_source:
+        report("PASS", f"{_restatement.name} matches the rules document, both ways")
+        print("          every phrase appears in house-rules.md AND in what it emits")
+    else:
+        report("FAIL", f"{_restatement.name} matches the rules document, both ways")
+        if _missing_rules:
+            print(f"          missing from house-rules.md: {'; '.join(_missing_rules)}")
+        if _missing_source:
+            print(f"          missing from the emitted restatement: {'; '.join(_missing_source)}")
 
 # --- the state machine this replaced is really gone, and no *.sh hook script survives --------
 gone = []
