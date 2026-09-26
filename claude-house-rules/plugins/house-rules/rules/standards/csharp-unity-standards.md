@@ -77,16 +77,21 @@ Assets/
 proof the real code does" in the global rules. Before saying Unity/C# code builds, verify it
 against the real toolchain, not a stand-in for Unity's own APIs.
 
-- **Preferred: Unity itself, in batch mode.** Against the real project:
-  `Unity -batchmode -quit -projectPath <path> -logFile <logPath>` (or the platform's Unity
-  executable, e.g. `Unity.exe` on Windows), then check `<logPath>` for `error CS` — Unity can
-  exit 0 with compile errors logged, so the exit code alone is not enough. Slower than a script
-  check, but it is the actual compiler against the actual assembly definitions.
-- **Fallback: `dotnet build`/`msbuild` against the project's own generated `.csproj`/`.sln`**
+- **First: the `unity` CLI and the Unity plugin, where they apply.** Check for the `unity`
+  CLI on `PATH` and the `unity:*` skills (see "Unity work starts with the Unity plugin and the
+  Unity CLI" in the global rules), and use them to compile and read errors through the real
+  Editor, including one that is already open.
+- **Fallback only: Unity itself, in batch mode.** Use this only when that check found no CLI
+  and no plugin, and I cannot install them myself. Say so first, then run against the real
+  project: `Unity -batchmode -quit -projectPath <path> -logFile <logPath>` (or the platform's
+  Unity executable, e.g. `Unity.exe` on Windows), then check `<logPath>` for `error CS` — Unity
+  can exit 0 with compile errors logged, so the exit code alone is not enough. Batch mode cannot
+  open a project the Editor already has open.
+- **Last fallback: `dotnet build`/`msbuild` against the project's own generated `.csproj`/`.sln`**
   (Unity generates one per assembly definition) when the Unity Editor itself isn't installed or
   reachable here. This still resolves against the real Unity DLLs referenced in that `.csproj`,
   so it remains a real check.
-- **Never a substitute for either:** a fake `UnityEngine` namespace, a reimplemented
+- **Never a substitute for any of these:** a fake `UnityEngine` namespace, a reimplemented
   `MonoBehaviour`, or any other hand-rolled stand-in for the engine, built so a file compiles
   standalone outside Unity. That proves the stand-in compiles, not the code — do not report a
   result from it.

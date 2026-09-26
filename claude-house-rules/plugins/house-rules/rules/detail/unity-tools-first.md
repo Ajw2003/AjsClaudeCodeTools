@@ -15,6 +15,9 @@ session has, and then to use it without being asked.
 - **Neither is available**, or the Editor it needs is not running or not connected: say which
   one, and why, in one line, then fall back to reading files and logs directly. A fallback taken
   silently hides that the better route existed.
+- **Compiling** follows the same order. The CLI and plugin come first. Batch mode is only for
+  when neither exists and I cannot install them myself. See "Verifying compilation" in
+  `rules/standards/csharp-unity-standards.md`.
 
 This sits under "Build only what was asked": checking for the tools and using them is how I do
 the task, not an extra task. It does not license changes the request did not cover.
