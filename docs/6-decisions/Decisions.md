@@ -971,3 +971,29 @@ one thing; the two rules that had no enforcement point at all are the ones worth
 nudge.
 
 **Status.** Standing.
+
+## 2026-09-26 — Evidence before claims covers any claim of fact, and a doc is not a test
+
+**Context.** Issue #72 asked that Claude never assert something is correct without verifying it,
+and that statements in chat, memory or docs not count as verification — only an applied test
+does. The rule as written already refused chat/docs/reasoning/memory, but it had two gaps against
+that ask: it covered *success* claims only ("it works"), not plain statements of fact ("this API
+accepts X"), and it accepted "a tool call" as evidence, so reading a README with the Read tool
+technically satisfied it.
+
+**Decision.** Rule text only. `rules/house-rules.md` now says any claim that something is true or
+correct — a success claim included — needs an applied test behind it: run it, or read the thing
+itself. `rules/detail/evidence-before-claims.md` defines what counts (running, calling, loading,
+reading the source or config the claim names, observing output) and what does not (a doc,
+README, comment, commit message, memory, an earlier chat message, reasoning — even when read with
+a tool), and says an unverified fact is attributed to its source and marked unverified. The
+`handover` evidence check was deliberately left unchanged: telling "read a doc" apart from
+"tested the thing" in a transcript needs a heuristic, and widening its claim-word list to words
+like "correct" would fire on ordinary replies. `success claim` stays in the rule text, so the
+`scope` reminder's drift pin in `verify.py` still holds.
+
+**Why.** The distinction the issue draws is between a statement about a thing and a test of it;
+"a tool call" drew the line in the wrong place. Enforcement can follow if the text alone proves
+insufficient.
+
+**Status.** Standing.

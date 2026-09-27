@@ -52,8 +52,9 @@ pass` is never the answer; a non-blocking check still announces it ran. See `${C
 ## Evidence before claims
 <!-- subagent -->
 
-A success claim needs a tool call or quoted output behind it, never chat/docs/reasoning/memory
-alone; ran nothing → say untested, why.
+Any claim that something is true or correct — a success claim included — needs an applied test
+behind it: run it, or read the thing itself. Chat, docs, comments, memory, reasoning are not
+tests; tested nothing → say unverified, why. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/evidence-before-claims.md`.
 
 ## The user's hands are for decisions, not labour
 
