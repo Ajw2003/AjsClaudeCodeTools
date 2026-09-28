@@ -41,7 +41,8 @@ and its `guard` pattern. 2.42.0 (#47) adds "an instruction names its exact input
 the roadmap is complete. 2.43.0 makes subagents commit as they go, with a `subagentcommit`
 hook that sends one back once if it finishes with unsaved work (verified end to end with a
 control run). 2.44.0 (group B: #90, #87, #88, #96) adds the parity-inventory and visual-check rules
-with `scope`, `delegate` and Stop checks.
+with `scope`, `delegate` and Stop checks. 2.45.0 (#98) adds "plain summary first" for work reports,
+checked at Stop.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

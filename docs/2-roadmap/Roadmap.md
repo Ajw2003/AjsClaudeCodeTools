@@ -98,6 +98,9 @@ The rules text covers these; what's missing is a hook that fires when the rule i
 - **#47 Vague instructions.** Built in 2.42.0: "An instruction names its exact input", under
   "Deliver a whole workflow".
 
+- **#98 Plain summary first.** Built in 2.45.0, taken ahead of group C at the user's request: a
+  work report opens with a plain summary readable on a phone, checked at Stop.
+
 ### B. Guard against silently dropped features
 
 - **#90 (lead), #87 Parity inventory before a rewrite, port, restructure or migration.** Built in

@@ -3687,6 +3687,57 @@ SCOPE_PARITY_CLAUSE = (
 )
 
 
+# --- plain summary first (#98) -------------------------------------------------------------
+# A reply reporting finished work opens with a plain summary a person can read on a phone. What
+# can be checked from text: the opening is not code, not a table, not a pile of `names`, and no
+# table anywhere is too wide for a phone screen. Measured on this repo's own session before
+# shipping: the 4 real end-of-work replies all passed.
+PLAIN_SUMMARY_MIN_CHARS = 600
+PLAIN_OPENING_CHARS = 500
+PLAIN_OPENING_MAX_CODE_SPANS = 3
+PLAIN_MAX_TABLE_COLUMNS = 3
+_GIT_COMMIT_OR_PUSH_RE = re.compile(r"\bgit\b[^|;&\n]*\b(commit|push)\b")
+_MD_FENCE_RE = re.compile(r"```")
+_MD_TABLE_ROW_RE = re.compile(r"(?m)^\s*\|.*\|\s*$")
+_MD_CODE_SPAN_RE = re.compile(r"`[^`\n]+`")
+_MD_LEADING_HEADING_RE = re.compile(r"^\s*#+ .*\n+")
+
+
+def _plain_summary_enabled():
+    return os.environ.get("HOUSE_RULES_PLAIN_SUMMARY", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _plain_summary_problems(reply):
+    """What stops this reply's opening reading as a plain summary on a phone - [] when nothing
+    does, or when the reply is too short to need one."""
+    if len(reply or "") < PLAIN_SUMMARY_MIN_CHARS:
+        return []
+    body = _MD_LEADING_HEADING_RE.sub("", reply, count=1)
+    opening = body[:PLAIN_OPENING_CHARS].split("\n\n")[0]
+    problems = []
+    if _MD_FENCE_RE.search(opening):
+        problems.append("it opens with a code block")
+    if _MD_TABLE_ROW_RE.search(opening):
+        problems.append("it opens with a table")
+    spans = len(_MD_CODE_SPAN_RE.findall(opening))
+    if spans > PLAIN_OPENING_MAX_CODE_SPANS:
+        problems.append("its first paragraph carries %d code names" % spans)
+    widest = max((l.count("|") - 1 for l in reply.splitlines() if _MD_TABLE_ROW_RE.match(l)), default=0)
+    if widest > PLAIN_MAX_TABLE_COLUMNS:
+        problems.append("it has a %d-column table, too wide for a phone" % widest)
+    return problems
+
+
+def _plain_summary_note(problems):
+    return (
+        "House rules, plain summary first: this reply reports finished work, but %s. Rewrite it "
+        "so it opens with a short plain-English summary - what is done, what it changes for the "
+        "user, what is waiting on them - before any technical detail, in short paragraphs that "
+        "read on a phone, with no table wider than three columns and jargon glossed on first "
+        "use. Keep the technical detail; put it after the summary." % "; ".join(problems)
+    )
+
+
 def _parity_enabled():
     return os.environ.get("HOUSE_RULES_PARITY", "on").strip().lower() not in _TOGGLE_OFF
 
@@ -3812,20 +3863,26 @@ def event_handover():
             elif written is None:
                 commit_could_not_tell = detail
 
-    # Parity and visual checks share the transcript the commit check already read.
+    # Parity, visual and plain-summary checks share the transcript the commit check already read.
     parity_word = None
     visual_files = []
+    plain_problems = []
     transcript_path = _field(_TRANSCRIPT_RE, payload)
-    if transcript_path and (_parity_enabled() or _visual_check_enabled()):
+    if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()):
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
             written_now = []
+            committed_now = False
             for block in _turn_tool_uses(turn_records):
+                inp = block.get("input") if isinstance(block.get("input"), dict) else {}
                 if block.get("name") in _AUDIT_WRITE_TOOLS:
-                    inp = block.get("input") if isinstance(block.get("input"), dict) else {}
                     fp = inp.get("file_path") or inp.get("notebook_path")
                     if fp and fp not in written_now:
                         written_now.append(fp)
+                elif block.get("name") in _AUDIT_COMMAND_TOOLS and _GIT_COMMIT_OR_PUSH_RE.search(inp.get("command") or ""):
+                    committed_now = True
+            if (written_now or committed_now) and _plain_summary_enabled() and vm is not None:
+                plain_problems = _plain_summary_problems(reply_text)
             if written_now and _parity_enabled():
                 pm = _PARITY_RE.search(_last_user_text(transcript_path))
                 reply_for_parity = reply_text if vm is not None else ""
@@ -3852,7 +3909,7 @@ def event_handover():
         )
 
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
-            and not parity_word and not visual_files):
+            and not parity_word and not visual_files and not plain_problems):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -3870,6 +3927,8 @@ def event_handover():
         parts.append(_evidence_note(evidence_words, impossible_words))
     if not_checked:
         parts.append(_not_checked_note(not_checked))
+    if plain_problems:
+        parts.append(_plain_summary_note(plain_problems))
     if parity_word:
         parts.append(_parity_report_note(parity_word))
     if visual_files:

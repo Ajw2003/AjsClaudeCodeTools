@@ -2509,6 +2509,34 @@ _, out, _ = run_hook("delegate", json.dumps({"tool_name": "ExitPlanMode", "tool_
 pv_case("delegate: a port plan that carries its inventory does not", "carries no keep/change/drop" not in out,
         "note=%s" % ("carries no keep/change/drop" in out))
 
+# --- plain summary first (#98) ------------------------------------------------------------
+_PS_PLAIN = ("The commit hooks are done and pushed. Claude now gets reminded to save its work, and "
+             "nothing is waiting on you.\n\n" + "More detail follows here. " * 40)
+_PS_TECH = ("`hook.py`: added `_dirty_paths`, `_uncommitted_among`, `branch_ownership` and "
+            "`event_branchnudge`.\n\n" + "More detail follows here. " * 40)
+_PS_WIDE = _PS_PLAIN + "\n\n| a | b | c | d |\n|---|---|---|---|\n| 1 | 2 | 3 | 4 |\n"
+_ps_wrote = _turn_transcript("ps-wrote", "add the commit hooks", [("Edit", "/proj/src/app.py")])
+_ps_read = _turn_transcript("ps-read", "what does this do?", [("Bash", "cat app.py")])
+_ps_commit = _turn_transcript("ps-commit", "commit it", [("Bash", "git commit -m x -- a.py && git push")])
+
+
+def _ps(transcript, reply, **env_extra):
+    return "plain summary first" in _stop_notes(transcript, reply, **env_extra)[2]
+
+
+pv_case("Stop: a work report opening with a pile of code names is sent back to lead with a plain summary (#98)",
+        _ps(_ps_wrote, _PS_TECH), "fired=%s" % _ps(_ps_wrote, _PS_TECH))
+pv_case("Stop: a work report that opens plainly is left alone", not _ps(_ps_wrote, _PS_PLAIN),
+        "fired=%s" % _ps(_ps_wrote, _PS_PLAIN))
+pv_case("Stop: a plain opening with a 4-column table still fires - too wide for a phone", _ps(_ps_wrote, _PS_WIDE),
+        "fired=%s" % _ps(_ps_wrote, _PS_WIDE))
+pv_case("Stop: a turn that only committed counts as reporting work", _ps(_ps_commit, _PS_TECH),
+        "fired=%s" % _ps(_ps_commit, _PS_TECH))
+pv_case("Stop: a turn that changed nothing is not a work report, so a technical answer is fine",
+        not _ps(_ps_read, _PS_TECH), "fired=%s" % _ps(_ps_read, _PS_TECH))
+pv_case("Stop: HOUSE_RULES_PLAIN_SUMMARY=off switches it off",
+        not _ps(_ps_wrote, _PS_TECH, HOUSE_RULES_PLAIN_SUMMARY="off"), "")
+
 # --- the commit rule's obligation half (#97): Stop, branchnudge, audit, stale memories -------
 # Each case gets its own throwaway repo, so the branch and the dirty set are exactly what the
 # case says they are. The hook is pointed at it through CLAUDE_PROJECT_DIR, the same variable
