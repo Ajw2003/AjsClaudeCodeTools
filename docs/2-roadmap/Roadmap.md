@@ -79,18 +79,17 @@ means for how fresh this claim is.
 ## Open issues, in the order to take them
 
 Triaged 2026-09-28 against the code on `main` (`a5bde41`, house-rules 2.38.0). #48, #50 and #70
-were closed as stale and #75 as a duplicate of #72; each closing comment gives the evidence. The
-23 still open are grouped below. Within a group they're listed roughly in priority order, and
+were closed as stale, #75 as a duplicate of #72 and #86 as a duplicate of #90; each closing
+comment gives the evidence. The 22 still open are grouped below. Within a group they're listed roughly in priority order, and
 issues that overlap are named so they can be done as one change.
 
 ### A. Enforce the rules that already exist (highest: failures are happening now)
 
 The rules text covers these; what's missing is a hook that fires when the rule is skipped.
 
-- **#97 Commit rule has no hook for the obligation half.** Add a `Stop` dirty-tree check, a
-  first-write nudge off a non-`claude/` branch, and a check for memories that contradict a rule.
-  The issue lists acceptance criteria. `hook.py` already parses `git status --porcelain`, so the
-  check can reuse that code.
+- **#97 Commit rule has no hook for the obligation half.** Built in 2.39.0: a `Stop` commit
+  check, the `branchnudge` handler, an `uncommitted:` line in `audit`, and a stale-memory
+  preflight warning (`docs/6-decisions/Decisions.md`, 2026-09-28). Closes when its PR merges.
 - **#93, #91, #92, #89 Verification required, not suggested.** The rule was widened in 2.38.0
   (#72, PR #84), and these issues report the model still breaks it. Do them as one change: a
   `Stop`-side check that flags unsupported claims ("can't be done", "not checked") with no tool
@@ -103,9 +102,9 @@ The rules text covers these; what's missing is a hook that fires when the rule i
 
 ### B. Guard against silently dropped features
 
-- **#90 (lead), #86, #87 Parity inventory before a rewrite, port, restructure or migration.**
-  #90 is the full write-up; #86 is the same ask, and #87 adds opening issues for features to be
-  re-added. One change: widen `rules/detail/edit-place.md`, add the parity-inventory rule, then
+- **#90 (lead), #87 Parity inventory before a rewrite, port, restructure or migration.**
+  #90 is the full write-up (#86 was closed as its duplicate), and #87 adds opening issues for
+  features to be re-added. One change: widen `rules/detail/edit-place.md`, add the parity-inventory rule, then
   the hook ideas in #90.
 - **#88, #96 Screenshots for visual changes.** Capture old and new flows and compare them. This
   fits under #90's "compare against the original, not itself", so do it after #90.

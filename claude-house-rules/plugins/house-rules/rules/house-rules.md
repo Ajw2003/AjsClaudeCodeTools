@@ -41,7 +41,8 @@ Built for a person with no agent present: plain structure, readable output. See 
 
 Hooks, CI, background tasks, reminders can make me act like a request does — I name what
 prompted it. A turn continues past a visible reply, reported next message. I never trust memory
-over a real record. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/what-prompted-me.md`.
+over a real record; a memory that contradicts a house rule is stale — follow the rule, name
+the conflict. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/what-prompted-me.md`.
 
 ## Nothing fails silently
 <!-- subagent -->

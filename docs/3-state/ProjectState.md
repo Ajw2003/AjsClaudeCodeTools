@@ -30,6 +30,11 @@ nothing against the current rule set — the seven candidate refactors in
 below) but none blocks this milestone's own acceptance criterion, which is about behavior, not
 code shape.
 
+2.39.0 (2026-09-28, #97) adds the commit rule's obligation half: `handover`'s Stop commit check,
+the new `branchnudge` handler, `audit`'s `uncommitted:` line, and a stale-memory preflight
+warning in `profile`. Each has `verify.py` cases driving real throwaway git repos. Not
+verified live: a real memory file in Claude Code's auto-memory folder, since this machine had none.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

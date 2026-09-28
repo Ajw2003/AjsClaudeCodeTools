@@ -7,6 +7,42 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-28 — The commit rule's obligation half gets hooks: Stop, first change, audit, memory
+
+**Context.** Issue #97: a multi-day task finished with nothing committed, on the user's `main`,
+and no hook fired, because the plugin only enforced the *prohibition* half of the commit rule
+(`guard` judges git commands that are run; a session that runs none gets no signal). A saved
+memory restating the replaced "never commit without asking" rule had quietly won over the current
+rule, and three executor runs told "no git" left the commit to a parent that never made it.
+
+**Decision.** Four signals, all stateless and all behind `HOUSE_RULES_COMMIT_CHECK=off`:
+- `handover` (Stop) gains a commit check: the `Write`/`Edit`/`NotebookEdit` paths since the last
+  genuine user message, intersected with `git status --porcelain -uall`. Any left → a note naming
+  them, with branch-aware advice. Only files this turn wrote count, so the user's own edits never
+  trip it.
+- A new `branchnudge` handler (`PostToolUse` `Write|Edit`) fires when the path just written is the
+  **only** dirty path on a non-`claude/` branch — that is what makes it the first change, with no
+  state kept.
+- `audit`'s summary names files a subagent wrote that are still uncommitted: the parent owns them.
+- `profile`'s preflight warnings flag an auto-memory file whose wording restates the old commit
+  rule, and the rules core says a memory contradicting a rule is stale.
+Both `scope` forms gain a commit line (long 911 chars, short 263, inside the +10% budgets).
+
+**Why.** The failure was an omission, and only a check that looks for the omission can see it.
+Rejected: a `PreToolUse` first-write nudge — its context reaches the model only alongside a
+permission decision, and `allow` would skip the user's own write prompt. Rejected: a per-session
+marker for "first write" — a second exception to the no-state rule, when "the only dirty path is
+this one" answers the same question. Accepted limitation: `branchnudge` stays quiet when the user
+already has uncommitted edits (the Stop check still covers the turn), and neither hook can tell a
+harness-assigned session branch from the user's, so both say "if this branch was opened for this
+session's work, commit there". The memory folder path (`<config>/projects/<project, non-alphanumerics
+as ->/memory`) matched this machine's project folder naming; the `memory/` subfolder itself was not
+present here to confirm.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-26 — versioncheck installs the update itself, and reads the install on disk
 
 **Context.** A cloud session opened with the out-of-date banner: running 2.29.0, marketplace

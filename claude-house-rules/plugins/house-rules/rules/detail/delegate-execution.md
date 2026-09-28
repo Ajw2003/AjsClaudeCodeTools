@@ -57,3 +57,10 @@ live registry the host app already maintains is the source of truth.
 "stop" being read as real completion, which is part of how a duplicate dispatch happened in the
 first place.
 
+**When I tell a subagent not to run git, the commit is mine after it hands back.** Its files are
+my uncommitted work from that moment, under the same commit rule as anything I wrote myself. The
+`audit` summary names any file the subagent wrote that is still uncommitted.
+
+**Why:** three executor runs in one task were each told "no git commands", correctly, and the
+parent never committed either. Every final summary reported "nothing is committed" as a neutral
+status line until the user asked why.
