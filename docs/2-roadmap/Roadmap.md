@@ -75,3 +75,71 @@ update` command sequence has actually been run against the live `claude` CLI on 
 just its decision logic in isolation) — the higher bar `clean_install_test.py` exists for. Not
 re-run as part of writing this roadmap; see [`ProjectState.md`](../3-state/ProjectState.md) for what that
 means for how fresh this claim is.
+
+## Open issues, in the order to take them
+
+Triaged 2026-09-28 against the code on `main` (`a5bde41`, house-rules 2.38.0). #48, #50 and #70
+were closed as stale and #75 as a duplicate of #72; each closing comment gives the evidence. The
+23 still open are grouped below. Within a group they're listed roughly in priority order, and
+issues that overlap are named so they can be done as one change.
+
+### A. Enforce the rules that already exist (highest: failures are happening now)
+
+The rules text covers these; what's missing is a hook that fires when the rule is skipped.
+
+- **#97 Commit rule has no hook for the obligation half.** Add a `Stop` dirty-tree check, a
+  first-write nudge off a non-`claude/` branch, and a check for memories that contradict a rule.
+  The issue lists acceptance criteria. `hook.py` already parses `git status --porcelain`, so the
+  check can reuse that code.
+- **#93, #91, #92, #89 Verification required, not suggested.** The rule was widened in 2.38.0
+  (#72, PR #84), and these issues report the model still breaks it. Do them as one change: a
+  `Stop`-side check that flags unsupported claims ("can't be done", "not checked") with no tool
+  output in the turn, plus #89's default of checking instead of disclosing "not checked" when
+  the check is cheap.
+- **#85 Verify a wait's target before leaving it.** A new rule next to "Nothing fails silently",
+  plus a `guard` pattern for a wait loop piped through `tail`/`head`.
+- **#47 Vague instructions.** A rule: an instruction the user acts on names the exact input.
+  Written up in `docs/rules-backlog.md`.
+
+### B. Guard against silently dropped features
+
+- **#90 (lead), #86, #87 Parity inventory before a rewrite, port, restructure or migration.**
+  #90 is the full write-up; #86 is the same ask, and #87 adds opening issues for features to be
+  re-added. One change: widen `rules/detail/edit-place.md`, add the parity-inventory rule, then
+  the hook ideas in #90.
+- **#88, #96 Screenshots for visual changes.** Capture old and new flows and compare them. This
+  fits under #90's "compare against the original, not itself", so do it after #90.
+
+### C. The hook engine's own structure (from `docs/architecture-backlog.md`)
+
+Refactors with no change in behaviour, needed before group A adds more handlers. Suggested order:
+
+1. **#41 One failure-mode contract.** Put each event's fail policy in the `EVENTS` table so
+   `verify.py` no longer builds `crash_snippet` source strings. Still open: `main()` still has
+   its `if event ==` chain (`hook.py` ~3673).
+2. **#42 One payload-field extractor.** `_FILE_PATH_RE` still drops escape handling (`hook.py`
+   ~1908).
+3. **#44 `verify.py` gets a name filter.** It is now 5,588 lines and still runs all of its checks
+   every time.
+4. **#43 Split `event_standards` into detect and render.**
+5. **#46 Re-check the agent fields `verify.py` forbids.** The ban is still at `verify.py` ~2148
+   and ~2586.
+6. **#45 Vocabulary and ADRs.** Half done: `docs/6-decisions/Decisions.md` now holds decisions.
+   Still missing: a glossary (`CONTEXT.md`) and entries for the `force-for-plugin` and `Stop`
+   narrowing reversals.
+
+### D. New tools and features
+
+- **#94 Open issues automatically for work in progress.** Related: `claude/issue-forge-offshoot`
+  (not merged) turns backlog docs into issues but doesn't track changes as they happen.
+- **#71 Archive a whole session.** `tools/session_ledger.py` covers the main transcript but skips
+  subagent transcripts (line ~65), so this is an extension of it.
+- **#95 Cost of delegating to the executor versus doing the work on the main thread, with a
+  chart.** Builds on `tools/measure_footprint.py`, which prices every hook since #74.
+
+### E. Research, with nothing to build yet
+
+- **#69** How the superpowers subagent-driven-development workflow could be ported. #63 (auto
+  push/PR) already took part of it.
+- **#62** Dynamic subagent generation in the agyrules plugin, and its CLAUDE.md equivalent.
+  Nothing about it is in this repo yet; it needs the agyrules source.
