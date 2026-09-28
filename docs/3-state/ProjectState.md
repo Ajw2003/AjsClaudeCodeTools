@@ -38,7 +38,9 @@ verified live: a real memory file in Claude Code's auto-memory folder, since thi
 2.40.0 (2026-09-28, #89/#91/#92/#93) widens `handover`'s evidence check to impossibility
 claims and unreasoned "not checked" disclosures; 0 of this session's 49 real replies trip it. 2.41.0 (#85) adds the verify-a-wait rule
 and its `guard` pattern. 2.42.0 (#47) adds "an instruction names its exact input"; group A of
-the roadmap is complete.
+the roadmap is complete. 2.43.0 makes subagents commit as they go, with a `subagentcommit`
+hook that sends one back once if it finishes with unsaved work (verified end to end with a
+control run).
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

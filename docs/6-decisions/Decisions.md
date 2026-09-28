@@ -7,6 +7,32 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-28 — Subagents commit as they go, and cannot finish with unsaved work
+
+**Context.** The user reported subagents committing less often than the main session. The cause
+was in the agents' own instructions: `executor.md` and `archivist.md` both said "Commit messages
+(only if asked to commit)", so a subagent never told to commit never did. 2.39.0's `audit` line
+only named the leftovers to the parent afterwards. The user suggested either the same save logic
+for subagents or a 1-minute autosave timer run by the main session.
+
+**Decision.** The same save logic, at the subagent's own finish line. Both agents now commit each
+finished piece as they go, scoped, unless the delegation said not to run git. A new
+`subagentcommit` handler on `SubagentStop` returns `decision: "block"` when files the subagent
+wrote are still uncommitted, judging each file in its own repo so worktrees are covered, and only
+reports on the retry. Its own hook entry, so `verdict`'s report never depends on it.
+
+**Why.** Probed live on CLI 2.1.284 before building: a `SubagentStop` block sent the subagent back
+with the reason as its instruction, and the retry's payload carried `stop_hook_active: true`.
+End to end in a throwaway repo, a subagent asked only to write a file committed it with the hook
+(`Add hello.py`, clean tree) and left `?? hello.py` without it — one run each. Rejected: a
+1-minute timer — it commits whatever state the files are in mid-edit, cannot tell the subagent's
+edits from the user's, and would be exactly the unwatched background process "never hide work"
+forbids. A hook at the point a piece of work finishes is the save point a timer approximates.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-28 — An instruction names its exact input (#47)
 
 **Context.** Queued in `docs/rules-backlog.md` since 2026-09-07: verification steps whose whole

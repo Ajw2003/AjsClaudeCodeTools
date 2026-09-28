@@ -2625,6 +2625,74 @@ commit_case(
     "audit: %r" % _aout[-200:],
 )
 
+# subagentcommit: a subagent cannot finish with files it wrote still uncommitted - it is sent
+# back once (decision "block", probed on CLI 2.1.284), and the retry is let through.
+def _subagent_stop(paths, active=False, **env_extra):
+    tr = _hand_transcript("subcommit-%d" % len(os.listdir(_HAND_ROOT)), [
+        json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "s%d" % i, "name": "Write", "input": {"file_path": p}}]}})
+        for i, p in enumerate(paths)
+    ])
+    payload = json.dumps({"hook_event_name": "SubagentStop", "agent_type": "house-rules:executor",
+                          "agent_transcript_path": tr, "stop_hook_active": active})
+    return run_hook("subagentcommit", payload, env=_project_env(_FIXTURE_ROOT, **env_extra))[1]
+
+
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")])
+commit_case(
+    "subagentcommit: a subagent finishing with a file it wrote still uncommitted is sent back to commit it",
+    '"decision": "block"' in out.replace('":"', '": "') and "a.py" in out and "commit on your own branch" in out,
+    "stdout: %r" % out[:160],
+)
+commit_case(
+    "subagentcommit: its instruction respects a 'do not run git' delegation",
+    "told you not to run git" in out,
+    "stdout: %r" % out[:160],
+)
+out = _subagent_stop([os.path.join(_r, "a.py")], active=True)
+commit_case(
+    "subagentcommit: the retry (stop_hook_active) is never blocked again - it only reports",
+    '"decision"' not in out and "still uncommitted after being asked once" in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("claude/topic", committed=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")])
+commit_case(
+    "subagentcommit: a subagent that committed what it wrote finishes without being held",
+    '"decision"' not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")], HOUSE_RULES_COMMIT_CHECK="off")
+commit_case(
+    "subagentcommit: HOUSE_RULES_COMMIT_CHECK=off switches it off",
+    out.strip() == "",
+    "stdout: %r" % out[:160],
+)
+# The project dir is _FIXTURE_ROOT (not a repo); the file lives in its own repo, like a worktree.
+_wt = _commit_repo("worktree-agent-1", committed=["w.py"], dirty=["w.py"])
+out = _subagent_stop([os.path.join(_wt, "w.py")])
+commit_case(
+    "subagentcommit: a file in a separate worktree is judged in that worktree's repo, not the project dir",
+    '"decision"' in out and "w.py" in out and "worktree-agent-1" in out,
+    "stdout: %r" % out[:200],
+)
+commit_case(
+    "subagentcommit is wired to SubagentStop in hooks.json",
+    'run.sh\\" subagentcommit' in hooks_json_text,
+    "hooks.json SubagentStop entry",
+)
+commit_case(
+    "the executor and archivist commit as they go, not only if asked",
+    all(
+        "Commit each finished piece as you go" in read(os.path.join(HERE, "..", "agents", n))
+        and "only if asked to commit" not in read(os.path.join(HERE, "..", "agents", n))
+        for n in ("executor.md", "archivist.md")
+    ),
+    "agents/executor.md, agents/archivist.md",
+)
+
 # profile: a saved memory restating the replaced commit rule is flagged at session start.
 _mem = tempfile.mkdtemp(prefix="house-rules-memory-", dir=_FIXTURE_ROOT)
 with open(os.path.join(_mem, "MEMORY.md"), "w", encoding="utf-8") as f:

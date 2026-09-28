@@ -177,6 +177,15 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" subagentcommit",
+            "timeout": 10
+          }
+        ]
       }
     ]
   }

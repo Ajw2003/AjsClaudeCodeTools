@@ -2955,6 +2955,130 @@ def event_verdict():
     return 0
 
 
+# subagentcommit — SubagentStop, its own hooks.json entry so verdict's report never depends on
+# it. The one handler that returns decision "block" on purpose: probed on CLI 2.1.284, a block
+# sends the subagent back to work with the reason as its instruction, and the retry's payload
+# carries stop_hook_active: true, which is what stops it looping.
+
+SUBAGENT_COMMIT_REASON = (
+    "House rules, commit on your own branch: before you finish, commit the files you wrote "
+    "that git still shows uncommitted - {files}. {advice} If whoever delegated this told you "
+    "not to run git, do not; say in your final report exactly which files are uncommitted "
+    "instead. Then finish."
+)
+
+
+def _repo_top(path, cache):
+    """The git top level holding `path`, or None when it is not in a repo. Walks up to the
+    nearest directory that exists, since a written file may since have been moved."""
+    import subprocess
+
+    d = os.path.dirname(os.path.abspath(path))
+    while d and not os.path.isdir(d):
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+    if d in cache:
+        return cache[d]
+    proc = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], cwd=d, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, timeout=COMMIT_CHECK_TIMEOUT,
+    )
+    top = proc.stdout.decode("utf-8", "replace").strip() if proc.returncode == 0 else None
+    cache[d] = top
+    return top
+
+
+def _repo_branch(top):
+    import subprocess
+
+    proc = subprocess.run(
+        ["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=top, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, timeout=COMMIT_CHECK_TIMEOUT,
+    )
+    return proc.stdout.decode("utf-8", "replace").strip() if proc.returncode == 0 else None
+
+
+def _uncommitted_by_repo(paths):
+    """[(repo top, branch or None, [uncommitted repo-relative paths])], one entry per repo that
+    has any. Each file is judged in its OWN repo, so a subagent working in an isolated worktree
+    is checked against that worktree, not the session's project directory."""
+    cache = {}
+    by_top = {}
+    for p in paths:
+        top = _repo_top(p, cache)
+        if top:
+            by_top.setdefault(top, []).append(p)
+    out = []
+    for top, ps in sorted(by_top.items()):
+        left = _uncommitted_among(ps, top)
+        if left:
+            out.append((top, _repo_branch(top), left))
+    return out
+
+
+def event_subagentcommit():
+    try:
+        if not _commit_check_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the subagent commit check got an "
+                    "empty SubagentStop payload and did not run for this call."
+                }
+            )
+            return 0
+        agent_type = _field(_AGENT_TYPE_RE, payload) or "a subagent"
+        found = next((c for c in _transcript_candidates(payload) if os.path.isfile(c)), "")
+        if not found:
+            emit(
+                {
+                    "systemMessage": "house-rules: commit check could not tell whether %s "
+                    "left files uncommitted - no readable transcript." % agent_type
+                }
+            )
+            return 0
+        _commands, wrote, _counts = _audit_summary(found)
+        paths = [w.split(" ", 1)[1] for w in wrote if " " in w]
+        if not paths:
+            return 0
+        left = _uncommitted_by_repo(paths)
+        if not left:
+            trace("subagentcommit: %s committed everything it wrote." % agent_type)
+            return 0
+        shown = "; ".join(
+            "%s in %s" % (", ".join(files[:8]) + (" and %d more" % (len(files) - 8) if len(files) > 8 else ""), top)
+            for top, _branch, files in left
+        )
+        if re.search(r'"stop_hook_active"\s*:\s*true', payload):
+            # The retry. Blocking again could loop; the parent's audit line names the files.
+            emit(
+                {
+                    "systemMessage": "house-rules: %s finished with files still uncommitted "
+                    "after being asked once: %s." % (agent_type, shown)
+                }
+            )
+            return 0
+        advice = " ".join(
+            _branch_advice(bool(branch and branch.startswith(OWNED_BRANCH_PREFIX)), branch,
+                           "HEAD is detached in %s" % top)
+            for top, branch, _files in left
+        )
+        emit({"decision": "block", "reason": SUBAGENT_COMMIT_REASON.format(files=shown, advice=advice)})
+    except Exception as exc:
+        # Fails open: a crash here must never hold a subagent back.
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the subagent commit check hit an error "
+                "(%s: %s) and did not run for this call." % (type(exc).__name__, exc)
+            }
+        )
+    return 0
+
+
 # audit — PostToolUse on Agent|Task, its own hooks.json entry. doc-ref 8313 docs/6-decisions/Decisions.md.
 
 
@@ -4044,6 +4168,7 @@ EVENTS = {
     "announce": event_announce,
     "subagentrules": event_subagentrules,
     "verdict": event_verdict,
+    "subagentcommit": event_subagentcommit,
     "audit": event_audit,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,

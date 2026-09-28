@@ -57,6 +57,10 @@ live registry the host app already maintains is the source of truth.
 "stop" being read as real completion, which is part of how a duplicate dispatch happened in the
 first place.
 
+**A subagent commits its own work as it goes**, scoped to what it changed, on its own branch or
+the worktree opened for it — the same rule as mine. The `subagentcommit` hook sends it back once
+if it tries to finish with files it wrote still uncommitted.
+
 **When I tell a subagent not to run git, the commit is mine after it hands back.** Its files are
 my uncommitted work from that moment, under the same commit rule as anything I wrote myself. The
 `audit` summary names any file the subagent wrote that is still uncommitted.
