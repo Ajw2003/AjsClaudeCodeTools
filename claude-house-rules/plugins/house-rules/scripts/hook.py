@@ -1368,6 +1368,8 @@ def event_scope():
                 reminder = SCOPE_REMINDER
             if _SCOPE_GOAHEAD_RE.search(field):
                 reminder = reminder + SCOPE_DELEGATE_CLAUSE
+            if _PARITY_RE.search(field) and _parity_enabled():
+                reminder = reminder + SCOPE_PARITY_CLAUSE
     except Exception:
         # Whatever went wrong, the safe short reminder still goes out. A non-zero exit or a
         # raise here would ERASE THE USER'S PROMPT, so this recovers rather than reporting.
@@ -2263,13 +2265,27 @@ DELEGATE_NOTE = (
 )
 
 
+DELEGATE_PARITY_NOTE = (
+    " This plan reads like re-creating existing behaviour and carries no keep/change/drop "
+    "inventory of the original. Before delegating, inventory what the original does from its "
+    "code, show it to the user, and pass it - or an instruction to read the original first - "
+    "in the delegation prompt: a spec written from memory is how a regression gets specified."
+)
+_PLAN_VALUE_RE = re.compile(r'"plan"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
 def event_delegate():
     try:
+        note = DELEGATE_NOTE
+        if _parity_enabled():
+            plan = _field(_PLAN_VALUE_RE, read_payload() or "") or ""
+            if _PARITY_RE.search(plan) and not _PARITY_ACCOUNTED_RE.search(plan):
+                note = note + DELEGATE_PARITY_NOTE
         emit(
             {
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": DELEGATE_NOTE,
+                    "additionalContext": note,
                 }
             }
         )
@@ -3433,14 +3449,44 @@ def _is_genuine_user_message(record):
     return True
 
 
+_TURN_CACHE = {}
+
+
 def _records_since_last_user_message(transcript_path):
     """(records after the last genuine user message, None) or (None, detail) when that cannot
     be told - an unreadable transcript, or no genuine user message in it at all."""
+    records, _user, detail = _load_turn(transcript_path)
+    return records, detail
+
+
+def _last_user_text(transcript_path):
+    """The text of the last genuine user message, or "" when there is none to read."""
+    _records, user, _detail = _load_turn(transcript_path)
+    if not user:
+        return ""
+    content = (user.get("message") or {}).get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text")
+    return ""
+
+
+def _load_turn(transcript_path):
+    """(records after the last genuine user message, that message, None), or (None, None,
+    detail). Read once per process: the Stop checks each need it, and a long session's
+    transcript is megabytes."""
+    if transcript_path not in _TURN_CACHE:
+        _TURN_CACHE[transcript_path] = _read_turn(transcript_path)
+    return _TURN_CACHE[transcript_path]
+
+
+def _read_turn(transcript_path):
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             raw_lines = f.readlines()
     except OSError as exc:
-        return None, "could not read the transcript (%s)" % type(exc).__name__
+        return None, None, "could not read the transcript (%s)" % type(exc).__name__
 
     records = []
     for line in raw_lines:
@@ -3458,8 +3504,8 @@ def _records_since_last_user_message(transcript_path):
         if rec is not None and _is_genuine_user_message(rec):
             last_user_idx = i
     if last_user_idx is None:
-        return None, "no genuine user message found in the transcript"
-    return records[last_user_idx + 1 :], None
+        return None, None, "no genuine user message found in the transcript"
+    return records[last_user_idx + 1 :], records[last_user_idx], None
 
 
 def _turn_tool_uses(records):
@@ -3612,6 +3658,78 @@ def _not_checked_note(phrases):
     )
 
 
+# --- parity (#90/#87) and visual (#88/#96) checks --------------------------------------------
+# Wording that re-creates existing behaviour rather than editing it. "replace" and "move to" are
+# left out on purpose: they are everyday edit words, and a false positive at Stop costs a whole
+# continuation.
+_PARITY_RE = re.compile(
+    r"\b(port(?:ing|ed)?|rewrit\w*|rebuild\w*|re-?do|from scratch|restructur\w*|"
+    r"split (?:\w+ ){0,2}into|merg\w* (?:\w+ ){0,2}into|reorgani[sz]\w*|consolidat\w*|"
+    r"migrat\w*|rework\w*|v2)\b",
+    re.IGNORECASE,
+)
+# A reply or plan that already accounts for what was kept and dropped.
+_PARITY_ACCOUNTED_RE = re.compile(
+    r"parity|\bkeep\b.{0,400}\bdrop|\bkept\b.{0,400}\bdropped|nothing (?:was )?dropped|"
+    r"no (?:features? |behaviou?rs? )?(?:were |was )?(?:dropped|lost|removed)",
+    re.IGNORECASE | re.DOTALL,
+)
+_VISUAL_EXT_RE = re.compile(
+    r"\.(css|scss|sass|less|html?|jsx|tsx|vue|svelte|astro|uss|uxml|xaml|unity|prefab)$", re.IGNORECASE
+)
+_IMAGE_EXT_RE = re.compile(r"\.(png|jpe?g|gif|webp|bmp)$", re.IGNORECASE)
+_SCREENSHOT_WORD_RE = re.compile(r"screenshot|playwright|puppeteer|capture|browser|computer", re.IGNORECASE)
+
+SCOPE_PARITY_CLAUSE = (
+    "\n- This reads like re-creating existing behaviour (a port, rewrite, restructure or "
+    "migration). Inventory what the original does from its code first - keep/change/drop, "
+    "shown before building - verify against the original, and name every drop."
+)
+
+
+def _parity_enabled():
+    return os.environ.get("HOUSE_RULES_PARITY", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _visual_check_enabled():
+    return os.environ.get("HOUSE_RULES_VISUAL_CHECK", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _parity_report_note(word):
+    return (
+        "House rules, re-creating existing behaviour: this turn was a %s and wrote files, but "
+        "the reply names nothing kept or dropped. Before this turn ends, report against the "
+        "original: the keep/change/drop inventory with the original's file:line, every dropped "
+        "feature named plainly - not only the ones the new platform forced - and a GitHub issue "
+        "for each feature to be re-added later. If nothing was dropped, say so and say how you "
+        "compared old and new." % word.lower()
+    )
+
+
+def _looked_at_result(tool_uses):
+    """True when the turn captured or read an image of the result."""
+    for block in tool_uses:
+        name = block.get("name") or ""
+        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+        if _SCREENSHOT_WORD_RE.search(name):
+            return True
+        if name == "Read" and _IMAGE_EXT_RE.search(inp.get("file_path") or ""):
+            return True
+        if name in _AUDIT_COMMAND_TOOLS and _SCREENSHOT_WORD_RE.search(inp.get("command") or ""):
+            return True
+    return False
+
+
+def _visual_note(files):
+    return (
+        "House rules, a visual change is checked by looking at it: this turn changed %s, but "
+        "nothing in it captured or looked at the result. Before this turn ends, screenshot the "
+        "same flow before (the committed version) and after, plus any flow the change adds, and "
+        "say what the images show. If nothing can render here, say what stops it and name the "
+        "screenshot the user should take." % ", ".join(files[:6])
+    )
+
+
 def event_handover():
     import os as _os
 
@@ -3694,6 +3812,30 @@ def event_handover():
             elif written is None:
                 commit_could_not_tell = detail
 
+    # Parity and visual checks share the transcript the commit check already read.
+    parity_word = None
+    visual_files = []
+    transcript_path = _field(_TRANSCRIPT_RE, payload)
+    if transcript_path and (_parity_enabled() or _visual_check_enabled()):
+        turn_records, _detail = _records_since_last_user_message(transcript_path)
+        if turn_records is not None:
+            written_now = []
+            for block in _turn_tool_uses(turn_records):
+                if block.get("name") in _AUDIT_WRITE_TOOLS:
+                    inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+                    fp = inp.get("file_path") or inp.get("notebook_path")
+                    if fp and fp not in written_now:
+                        written_now.append(fp)
+            if written_now and _parity_enabled():
+                pm = _PARITY_RE.search(_last_user_text(transcript_path))
+                reply_for_parity = reply_text if vm is not None else ""
+                if pm and not _PARITY_ACCOUNTED_RE.search(reply_for_parity):
+                    parity_word = pm.group(1)
+            if written_now and _visual_check_enabled():
+                visual = [os.path.basename(p) for p in written_now if _VISUAL_EXT_RE.search(p)]
+                if visual and not _looked_at_result(list(_turn_tool_uses(turn_records))):
+                    visual_files = visual
+
     trace_lines = []
     if could_not_tell:
         # Fail open, loud: a claim was made and this could not confirm or deny it, so it says
@@ -3709,7 +3851,8 @@ def event_handover():
             "(%s)." % commit_could_not_tell
         )
 
-    if not needs_card and not needs_evidence and not not_checked and not uncommitted:
+    if (not needs_card and not needs_evidence and not not_checked and not uncommitted
+            and not parity_word and not visual_files):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -3727,6 +3870,10 @@ def event_handover():
         parts.append(_evidence_note(evidence_words, impossible_words))
     if not_checked:
         parts.append(_not_checked_note(not_checked))
+    if parity_word:
+        parts.append(_parity_report_note(parity_word))
+    if visual_files:
+        parts.append(_visual_note(visual_files))
     if uncommitted:
         parts.append(_commit_note(uncommitted))
     out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}

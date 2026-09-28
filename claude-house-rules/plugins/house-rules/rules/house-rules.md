@@ -83,7 +83,9 @@ instruction they act on names the exact input — the literal prompt, file, valu
 ## A green test suite is not proof it works
 
 Green means the cases I thought of pass, not that it works. Run it: realistic scale, twice, as
-what ships, against the mechanism. A run beats a test; the gap becomes a new test. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/green-suite.md`.
+what ships, against the mechanism. A run beats a test; the gap becomes a new test. A visual
+change: screenshot the same flow before and after, and look. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/green-suite.md`,
+`${CLAUDE_PLUGIN_ROOT}/rules/detail/visual-check.md`.
 
 ## A shim that compiles is not proof the real code does
 
@@ -162,4 +164,7 @@ destroyed/unrecoverable, run `git status`, wait for them to agree. See `${CLAUDE
 <!-- subagent -->
 
 Changing only the lines that need to change is default. A wholesale rewrite needs approval by
-name: say what's discarded, why in-place won't do. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/edit-place.md`.
+name: say what's discarded, why in-place won't do. Port, rewrite, restructure, migrate: inventory
+the original from its code first — keep/change/drop, shown before building; verify against the
+original; name every drop, an issue per deferred re-add. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/edit-place.md`,
+`${CLAUDE_PLUGIN_ROOT}/rules/detail/parity-inventory.md`.
