@@ -3204,6 +3204,74 @@ def _claim_words(text):
     return found
 
 
+# #92: "it can't be done" is a claim of fact too, and the one most often made from memory. Only
+# phrasings that assert impossibility or absence - a bare "can't" is everywhere in ordinary prose.
+_IMPOSSIBLE_RE = re.compile(
+    r"\b(can(?:'|no)t be done|can not be done|(?:is|isn't|is not|not) (?:possible|supported)|"
+    r"impossible|no way to|does(?:n't| not) (?:support|exist)|"
+    r"there(?:'s| is) no (?:way|option|setting|flag|api|command))\b",
+    re.IGNORECASE,
+)
+# "is possible" / "is supported" are matched above only to be dropped here: the negative forms
+# are the claim this catches.
+_POSITIVE_FORM_RE = re.compile(r"^is (possible|supported)$", re.IGNORECASE)
+
+
+_QUOTE_CHARS = "\"'`\u201c\u2018"
+
+
+def _is_quoted(text, start):
+    """A phrase opening right after a quote mark is being talked about, not asserted."""
+    return start > 0 and text[start - 1] in _QUOTE_CHARS
+
+
+def _impossibility_claims(text):
+    found = []
+    for m in _IMPOSSIBLE_RE.finditer(text or ""):
+        if _is_quoted(text, m.start()):
+            continue
+        phrase = m.group(1).lower()
+        if _POSITIVE_FORM_RE.match(phrase):
+            continue
+        found.append(phrase)
+    return found
+
+
+# #89: a disclosure that something was not checked. The default is to check; a disclosure is
+# right only when the check cannot run here, and then the reply says why. Lowercase-only for
+# "untested"/"unverified" so a handover card's own "UNTESTED:" marker - which the card rule
+# already requires a reason beside - is never what trips it.
+_NOT_CHECKED_RE = re.compile(
+    r"\b((?:[Nn]ot|[Hh]aven't|[Hh]ave not|[Dd]idn't|[Dd]id not|[Ww]asn't|[Ww]as not|[Hh]asn't|"
+    r"[Hh]as not) (?:been )?(?:checked|verified|tested|run it|confirmed)|unverified|untested)\b"
+)
+# A reason in the same sentence makes the disclosure the rule-compliant kind.
+_REASON_RE = re.compile(
+    r"\b(because|since|as there|no access|not available|unavailable|not installed|"
+    r"not reachable|(?:can't|cannot) (?:reach|run|access)|requires|would need|needs a|"
+    r"no .{0,20} (?:here|on this machine)|on your machine|prohibitively|had no|has no|"
+    r"there (?:is|was) no|does(?:n't| not) have|did(?:n't| not) have)\b",
+    re.IGNORECASE,
+)
+_SENTENCE_END_RE = re.compile(r"[.!?\n]")
+
+
+def _unreasoned_not_checked(text):
+    """'Not checked' phrases whose own sentence gives no reason the check could not run."""
+    found = []
+    text = text or ""
+    for m in _NOT_CHECKED_RE.finditer(text):
+        if _is_quoted(text, m.start()):
+            continue
+        start = max((e.end() for e in _SENTENCE_END_RE.finditer(text, 0, m.start())), default=0)
+        end_m = _SENTENCE_END_RE.search(text, m.end())
+        sentence = text[start : end_m.start() if end_m else len(text)]
+        if _REASON_RE.search(sentence):
+            continue
+        found.append(m.group(1).lower())
+    return found
+
+
 def _is_genuine_user_message(record):
     """A real human turn - not a tool_result carrier, not Stop hook feedback, not a background
     task's <task-notification> hand-back, and (when the field is present) not attributed to a
@@ -3389,13 +3457,28 @@ def _commit_note(uncommitted):
     )
 
 
-def _evidence_note(claim_words):
-    words = ", ".join(sorted(set(claim_words)))
+def _evidence_note(claim_words, impossible_words=()):
+    kinds = []
+    if claim_words:
+        kinds.append("claims success (%s)" % ", ".join(sorted(set(claim_words))))
+    if impossible_words:
+        kinds.append("says something cannot be done or does not exist (%s)"
+                     % ", ".join(sorted(set(impossible_words))))
     return (
-        "House rules, evidence before claims: this reply claims success (%s), but no tool ran "
-        "since your last real message and the reply does not quote any command output. Before "
-        "this turn ends, either run the check and quote its real output, or restate the claim "
-        "as untested and say why." % words
+        "House rules, evidence before claims: this reply %s, but no tool ran since your last "
+        "real message and the reply does not quote any command output. Before this turn ends, "
+        "either run the check and quote its real output, or restate the claim as untested and "
+        "say why. Reasoning, docs and memory are not a check." % " and ".join(kinds)
+    )
+
+
+def _not_checked_note(phrases):
+    return (
+        "House rules, evidence before claims: this reply says something was not checked (%s) "
+        "without saying why it could not be. Checking is the default, not an offer. If the check "
+        "can run here and is not prohibitively expensive, run it now and report its real "
+        "result; leave it unchecked only when it cannot run, and say in the same sentence what "
+        "stops it." % ", ".join(sorted(set(phrases)))
     )
 
 
@@ -3437,6 +3520,8 @@ def event_handover():
     # with no fence in it at all.
     needs_evidence = False
     evidence_words = []
+    impossible_words = []
+    not_checked = []
     could_not_tell = None
     vm = _LAST_MESSAGE_VALUE_RE.search(payload)
     if vm is not None:
@@ -3445,7 +3530,9 @@ def event_handover():
         except ValueError:
             reply_text = vm.group(1)
         claims = _claim_words(reply_text)
-        if claims and not _EVIDENCE_QUOTE_RE.search(reply_text):
+        impossible = _impossibility_claims(reply_text)
+        not_checked = _unreasoned_not_checked(reply_text)
+        if (claims or impossible) and not _EVIDENCE_QUOTE_RE.search(reply_text):
             transcript_path = _field(_TRANSCRIPT_RE, payload)
             if not transcript_path:
                 could_not_tell = "the Stop payload carried no transcript_path"
@@ -3456,6 +3543,7 @@ def event_handover():
                 elif has_tool is False:
                     needs_evidence = True
                     evidence_words = claims
+                    impossible_words = impossible
 
     # The commit check, independent of both: a turn that wrote files and left them uncommitted
     # gets told at the end of that turn, whatever the reply says. Its "could not tell" is its
@@ -3491,7 +3579,7 @@ def event_handover():
             "(%s)." % commit_could_not_tell
         )
 
-    if not needs_card and not needs_evidence and not uncommitted:
+    if not needs_card and not needs_evidence and not not_checked and not uncommitted:
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -3506,7 +3594,9 @@ def event_handover():
     if needs_card:
         parts.append(HANDOVER_NOTE)
     if needs_evidence:
-        parts.append(_evidence_note(evidence_words))
+        parts.append(_evidence_note(evidence_words, impossible_words))
+    if not_checked:
+        parts.append(_not_checked_note(not_checked))
     if uncommitted:
         parts.append(_commit_note(uncommitted))
     out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}

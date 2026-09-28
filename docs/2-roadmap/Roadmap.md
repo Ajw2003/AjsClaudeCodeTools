@@ -90,11 +90,9 @@ The rules text covers these; what's missing is a hook that fires when the rule i
 - **#97 Commit rule has no hook for the obligation half.** Built in 2.39.0: a `Stop` commit
   check, the `branchnudge` handler, an `uncommitted:` line in `audit`, and a stale-memory
   preflight warning (`docs/6-decisions/Decisions.md`, 2026-09-28). Closes when its PR merges.
-- **#93, #91, #92, #89 Verification required, not suggested.** The rule was widened in 2.38.0
-  (#72, PR #84), and these issues report the model still breaks it. Do them as one change: a
-  `Stop`-side check that flags unsupported claims ("can't be done", "not checked") with no tool
-  output in the turn, plus #89's default of checking instead of disclosing "not checked" when
-  the check is cheap.
+- **#93, #91, #92, #89 Verification required, not suggested.** Built in 2.40.0: the `Stop`
+  evidence check now catches "can't be done"/"doesn't exist" claims and any "not checked" with
+  no reason beside it (`docs/6-decisions/Decisions.md`, 2026-09-28). Closes when its PR merges.
 - **#85 Verify a wait's target before leaving it.** A new rule next to "Nothing fails silently",
   plus a `guard` pattern for a wait loop piped through `tail`/`head`.
 - **#47 Vague instructions.** A rule: an instruction the user acts on names the exact input.

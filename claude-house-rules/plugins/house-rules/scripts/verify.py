@@ -2326,14 +2326,79 @@ hand_case(
         last_assistant_message="It works now.\n\nRESULT: PASS",
     ),
 )
+# #89 reversed this one: it used to expect silence, because "untested" is not a success word.
+# But a bare "untested" with no reason is exactly the disclosure-instead-of-checking #89 is about.
 hand_case(
-    "silent",
-    "an explicit UNTESTED claim never matches a success word to begin with",
+    "feedback",
+    "a bare 'untested' with no reason the check could not run gets told to run it (#89)",
     stop_payload(
         transcript_path=_HAND_NO_TOOL,
         last_assistant_message="This is untested; I have not run it.",
     ),
 )
+hand_case(
+    "silent",
+    "an 'untested' that says in the same sentence why the check cannot run stays quiet (#89)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="This is untested because the Unity editor is not installed here.",
+    ),
+)
+hand_case(
+    "feedback",
+    "a 'not checked' with no reason fires even when tools ran this turn (#89)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="I ran the tests. I haven't checked the CI logs.",
+    ),
+)
+hand_case(
+    "silent",
+    "a handover card's own UNTESTED: marker is not what the not-checked check trips on (#89)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="UNTESTED: this runs on your machine.\n\nNothing else to report.",
+    ),
+)
+hand_case(
+    "feedback",
+    "'that can't be done' with no tool run this turn gets the evidence reminder (#92)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="That can't be done in Claude Code; there is no setting for it.",
+    ),
+)
+hand_case(
+    "silent",
+    "'that can't be done' after a tool ran this turn stays quiet (#92)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="That can't be done in Claude Code; there is no setting for it.",
+    ),
+)
+hand_case(
+    "silent",
+    "'it is possible' is not an impossibility claim (#92)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="Yes, it is possible to configure that.",
+    ),
+)
+hand_case(
+    "silent",
+    "a phrase in quotation marks is being talked about, not asserted, so neither check fires",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message='Adding checks for "can\'t be done" claims and for a bare "untested".',
+    ),
+)
+_, _out92, _ = run_hook("handover", stop_payload(
+    transcript_path=_HAND_NO_TOOL,
+    last_assistant_message="That setting doesn't exist.",
+))
+report("PASS" if "cannot be done or does not exist" in _out92 and "doesn't exist" in _out92 else "FAIL",
+       "the #92 note names the impossibility phrase it caught")
+print(f"          {_out92[:160]!r}")
 hand_case(
     "silent",
     "a reply naming no claim word at all is untouched by the evidence check",

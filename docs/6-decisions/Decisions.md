@@ -7,6 +7,32 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-28 — The Stop evidence check catches "can't be done" and an unreasoned "not checked"
+
+**Context.** #91, #92, #93 and #89 all report the same gap after 2.38.0 widened the evidence
+rule: the rule text covered any claim of fact, but the `Stop` check only recognised success words.
+"That isn't supported" said from memory went through, and so did "I haven't checked X" when X was
+one command away.
+
+**Decision.** Two additions to `handover`'s evidence check, sharing its one emission:
+impossibility phrases ("can't be done", "isn't supported", "doesn't exist", "there is no
+setting/flag/api/…") count as claims, under the same no-tool-this-turn and no-quoted-output
+conditions as success words; and a "not checked" / "unverified" / lowercase "untested" phrase
+fires whether or not tools ran, unless its own sentence gives a reason the check could not run.
+A phrase opening right after a quote mark is exempt. The rules core now says "can't be done" is a
+claim and checking is the default, not an offer.
+
+**Why.** Rejected: a bare "can't" — it is everywhere in ordinary prose. Rejected: firing on the
+card's `UNTESTED:` marker — the card rule already requires a reason beside it. The one existing
+test that expected a bare "This is untested; I have not run it." to stay silent was flipped on
+purpose: that sentence is exactly the disclosure-instead-of-checking #89 asks to stop. Measured on
+this session's 49 real replies before shipping: 2 false positives, both quoted meta-talk, fixed
+by the quote exemption; 0 after.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-28 — The commit rule's obligation half gets hooks: Stop, first change, audit, memory
 
 **Context.** Issue #97: a multi-day task finished with nothing committed, on the user's `main`,

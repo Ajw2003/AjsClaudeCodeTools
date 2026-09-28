@@ -55,7 +55,8 @@ pass` is never the answer; a non-blocking check still announces it ran. See `${C
 
 Any claim that something is true or correct — a success claim included — needs an applied test
 behind it: run it, or read the thing itself. Chat, docs, comments, memory, reasoning are not
-tests; tested nothing → say unverified, why. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/evidence-before-claims.md`.
+tests; tested nothing → say unverified, why. "Can't be done" is a claim too. Checking is the
+default, not an offer: "not checked" needs the reason it can't run. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/evidence-before-claims.md`.
 
 ## The user's hands are for decisions, not labour
 
