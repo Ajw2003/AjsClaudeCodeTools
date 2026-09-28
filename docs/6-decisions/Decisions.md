@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-28 — An instruction names its exact input (#47)
+
+**Context.** Queued in `docs/rules-backlog.md` since 2026-09-07: verification steps whose whole
+input was "ask for a multi-step handover", so no two runs could disagree.
+
+**Decision.** A rule under "Deliver a whole workflow", core line plus a section in
+`rules/detail/deliver-workflow.md`: an instruction the user acts on names the literal input, and
+records the expected result when runs are to be compared. The backlog's two open questions: it
+does not join the six handover items, which are about shell commands and would be diluted by a
+broader rule; and it ships as rule text with no `verify.py` check, since whether an instruction is
+specific enough is not a string match.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-28 — Verify a wait's target and working state before leaving it (#85)
 
 **Context.** A test-runner wait reported "running" for its full 10-minute timeout on a run that

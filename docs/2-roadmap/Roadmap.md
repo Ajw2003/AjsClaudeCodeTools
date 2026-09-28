@@ -95,8 +95,8 @@ The rules text covers these; what's missing is a hook that fires when the rule i
   no reason beside it (`docs/6-decisions/Decisions.md`, 2026-09-28). Closes when its PR merges.
 - **#85 Verify a wait's target before leaving it.** Built in 2.41.0: the rule under "Nothing
   fails silently" and a `guard` pattern for a wait piped through `tail`/`head`.
-- **#47 Vague instructions.** A rule: an instruction the user acts on names the exact input.
-  Written up in `docs/rules-backlog.md`.
+- **#47 Vague instructions.** Built in 2.42.0: "An instruction names its exact input", under
+  "Deliver a whole workflow".
 
 ### B. Guard against silently dropped features
 

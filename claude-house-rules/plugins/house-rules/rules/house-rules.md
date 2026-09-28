@@ -77,7 +77,8 @@ conflict. On by default; `HOUSE_RULES_VOICE=off` turns it off. See `${CLAUDE_PLU
 
 ## Deliver a whole workflow, not a starting point
 
-Runs end to end, zero manual editing: exact commands, what they'll see, what it means. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/deliver-workflow.md`.
+Runs end to end, zero manual editing: exact commands, what they'll see, what it means. An
+instruction they act on names the exact input — the literal prompt, file, value — never a category. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/deliver-workflow.md`.
 
 ## A green test suite is not proof it works
 
