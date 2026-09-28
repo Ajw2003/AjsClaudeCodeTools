@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-28 — A reply reporting finished work opens with a plain summary (#98)
+
+**Context.** #98 asked for a human-facing document first, in plain terms, readable on mobile or
+desktop. The user had just asked for a technical report to be re-explained in layman terms. Asked
+which form "document" meant, the user chose a plain summary at the top of the chat reply — not a
+file, and not a page, which would have reversed "never publish a page unasked".
+
+**Decision.** A rule under "Plain language": a reply reporting finished work opens with what's
+done, what it changes for the user and what waits on them, readable on a phone, before technical
+detail. A `handover` (Stop) check for turns that wrote files or committed: a reply of 600+ chars
+whose opening paragraph is a code block, a table or more than three code names, or which has a
+table wider than three columns, is sent back once. `HOUSE_RULES_PLAIN_SUMMARY=off`.
+
+**Why.** "Plain" cannot be judged from text, but its opposites can: an opening that is code, a
+table, or a list of identifiers is not a summary for a person. Measured on this session before
+shipping: the 4 real end-of-work replies all passed — which shows no false alarms, not that it
+catches bad ones; the tests supply those. The core line brings inject to 8,919 of 9,000 chars.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-28 — Re-creating behaviour starts from an inventory; a visual change gets looked at
 
 **Context.** #90 (with #86 and #87): a port to GitHub Pages silently dropped 10 features because
