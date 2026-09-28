@@ -147,6 +147,69 @@ def _detect_environment():
     return "\n".join(lines) + "\n"
 
 
+# A saved memory restating the commit rule this plugin replaced ("never commit without asking")
+# silently won over the current rule in a real session (#97). These catch the old rule's
+# wording, not every mention of git.
+_STALE_COMMIT_MEMORY_RE = re.compile(
+    r"never (?:run|do|use|perform) (?:any )?git|no git (?:commands|actions|operations)|"
+    r"never commit|do(?:n'?t| not) commit|commit only (?:when|if) asked|"
+    r"never (?:commit|push) without (?:asking|permission)|ask before (?:committing|any commit)",
+    re.IGNORECASE,
+)
+MEMORY_SCAN_MAX_FILES = 50
+
+
+def _project_memory_dir():
+    """Where Claude Code keeps this project's auto-memory: <config>/projects/<project dir with
+    every non-alphanumeric character turned into '-'>/memory. HOUSE_RULES_MEMORY_DIR overrides
+    it, which is how verify.py points it at a fixture."""
+    override = os.environ.get("HOUSE_RULES_MEMORY_DIR")
+    if override:
+        return override
+    config = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    project = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    return os.path.join(config, "projects", re.sub(r"[^A-Za-z0-9]", "-", project), "memory")
+
+
+def _stale_memory_warnings():
+    """One preflight line per memory file that restates the old commit rule. An unreadable
+    memory folder says so; a missing one is the normal case and adds nothing."""
+    mem_dir = _project_memory_dir()
+    if not os.path.isdir(mem_dir):
+        return []
+    try:
+        names = sorted(n for n in os.listdir(mem_dir) if n.lower().endswith(".md"))[:MEMORY_SCAN_MAX_FILES]
+    except OSError as exc:
+        return ["- could not read the memory folder %s (%s), so memories were not checked "
+                "against the commit rule." % (mem_dir, type(exc).__name__)]
+    found = []
+    unread = []
+    for name in names:
+        try:
+            text = _read_text(os.path.join(mem_dir, name))
+        except (OSError, UnicodeDecodeError) as exc:
+            unread.append("%s (%s)" % (name, type(exc).__name__))
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            if _STALE_COMMIT_MEMORY_RE.search(line):
+                found.append("%s:%d \"%s\"" % (name, lineno, line.strip()[:120]))
+                break
+    out = []
+    if found:
+        out.append(
+            "- a saved memory restates the old commit rule, which the current one replaced: "
+            + "; ".join(found)
+            + " (in %s). A memory that contradicts a house rule is stale: follow the rule, tell "
+            "the user about the conflict, and offer to delete or correct the memory." % mem_dir
+        )
+    if unread:
+        out.append(
+            "- could not read memory file(s) %s, so they were not checked against the commit "
+            "rule." % ", ".join(unread)
+        )
+    return out
+
+
 def _preflight_warnings():
     """Gaps that should be visible in-session, not just discoverable via /house-rules:doctor.
 
@@ -169,6 +232,7 @@ def _preflight_warnings():
             "- no sh.exe found (Git for Windows not installed or not on PATH). run.sh, and "
             "therefore every hook, cannot execute at all on this machine."
         )
+    warnings.extend(_stale_memory_warnings())
     if not warnings:
         return ""
     return (
@@ -1243,13 +1307,15 @@ SCOPE_REMINDER = (
     "something similar is not running it.\n"
     "- Update the docs tier that changed before this turn ends - state usually - or say why "
     "none did.\n"
-    "- No success claim without a run you can quote: evidence before claims, every time."
+    "- No success claim without a run you can quote: evidence before claims, every time.\n"
+    "- Commit finished work on your own branch, scoped to the paths you changed; on the "
+    "user's branch, branch off first."
 )
 
 SCOPE_REMINDER_SHORT = (
     "House rules reminder: update the docs tier that changed; no success claim without a run "
-    "you can quote. Never hand over a command you have not run. Build only what was asked - "
-    "where it is ambiguous, ask instead of assuming."
+    "you can quote; commit finished work on your own branch. Never hand over a command you "
+    "have not run. Build only what was asked - where it is ambiguous, ask instead of assuming."
 )
 
 # The delegation clause. delegate only fires on ExitPlanMode, so an auto or accept-edits
@@ -1343,6 +1409,12 @@ GUARD_R1 = [
         "detaches the process from your terminal",
     ),
     (r'[^&]&\s*\\?"', "backgrounds the command with a trailing ampersand"),
+    # #85: a wait piped through tail/head shows nothing until it exits - a stuck wait and a
+    # working one look identical for its whole timeout.
+    (
+        r"(^|[^0-9A-Za-z_-])(while|until|sleep|timeout|watch)\s.*\|\s*(tail|head)([^0-9A-Za-z_-]|$)",
+        "pipes a wait or loop through tail/head, which hides its output until it exits",
+    ),
 ]
 
 # `git` plus any run of global options before the subcommand.
@@ -1991,6 +2063,85 @@ def event_artifact():
     return 0
 
 
+# ---------------------------------------------------------------------------------------
+# branchnudge - PostToolUse on Write|Edit. The commit rule's "branch off first", at the moment
+# it applies: the first uncommitted change on a branch that is not claude/. Never obstructs.
+# ---------------------------------------------------------------------------------------
+
+BRANCH_NUDGE_NOTE = (
+    "House rules, commit on your own branch: that write is the only uncommitted change on "
+    "`{branch}`, which is not a claude/ branch. If that branch was opened for this session's "
+    "work, carry on and commit there. If it is the user's, branch off now, before editing "
+    "further (`git switch -c claude/<topic>` carries this change with it), and commit on that "
+    "branch, scoped to the paths you changed."
+)
+
+
+def event_branchnudge():
+    # PostToolUse, not PreToolUse: a PreToolUse hook can only put context in front of the model
+    # alongside a permission decision, and "allow" would skip the user's own write prompt.
+    # Stateless: "the only dirty path is the one just written" is what makes it the first
+    # change. If the user already had uncommitted edits, this stays quiet and the Stop commit
+    # check still catches the turn's files.
+    try:
+        if not _commit_check_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the branch nudge got an empty "
+                    "payload and did not run for this call."
+                }
+            )
+            return 0
+        file_path = _extract_file_path(payload)
+        if not file_path:
+            return 0
+        is_mine, branch, note = branch_ownership()
+        if is_mine:
+            trace("branchnudge: on own branch %s - nothing to nudge." % branch)
+            return 0
+        if not branch:
+            trace("branchnudge: no branch to judge (%s) - not checked." % note)
+            return 0
+        root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        try:
+            status = _dirty_paths(root)
+            dirty = status[1]
+            written = _uncommitted_among([file_path], root, status)
+        except Exception as exc:
+            emit(
+                {
+                    "systemMessage": "house-rules: branch nudge could not tell whether that "
+                    "was the first change on %s (%s: %s)." % (branch, type(exc).__name__, exc)
+                }
+            )
+            return 0
+        if written and len(dirty) == 1:
+            emit(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PostToolUse",
+                        "additionalContext": BRANCH_NUDGE_NOTE.format(branch=branch),
+                    }
+                }
+            )
+            return 0
+        trace(
+            "branchnudge: %d uncommitted path(s) on %s - not the first change, no nudge."
+            % (len(dirty), branch)
+        )
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the branch nudge hit an error (%s: %s) "
+                "and is offline for this call." % (type(exc).__name__, exc)
+            }
+        )
+    return 0
+
+
 RUNNABLE_NOTE = (
     "House rules, whole workflows: you just created a runnable file. A runnable file you "
     "have not run is a starting point, not a whole workflow. Before you finish this task, "
@@ -2603,6 +2754,19 @@ def _audit_report(found):
         lines.append(
             "  tool uses: %s" % ", ".join("%s x%d" % (n, c) for n, c in sorted(tool_counts.items()))
         )
+    if wrote and _commit_check_enabled():
+        paths = [w.split(" ", 1)[1] for w in wrote if " " in w]
+        try:
+            left = _uncommitted_among(paths, os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        except Exception as exc:
+            lines.append("  uncommitted: could not tell (%s: %s)" % (type(exc).__name__, exc))
+        else:
+            if left:
+                lines.append(
+                    "  uncommitted: %s - the subagent wrote these and they are not committed. "
+                    "The commit is yours now, whoever wrote them: commit on your own branch, "
+                    "scoped to those paths." % ", ".join(_capped_lines(left, 8, AUDIT_COMMAND_CHARS))
+                )
     lines.append(
         "Reconcile the subagent's report against this record; flag every claim the record "
         "does not support before relaying."
@@ -2786,6 +2950,130 @@ def event_verdict():
             {
                 "systemMessage": "house-rules plugin: the subagent-stop model check hit an "
                 "error (%s) and is offline for this call." % type(exc).__name__
+            }
+        )
+    return 0
+
+
+# subagentcommit — SubagentStop, its own hooks.json entry so verdict's report never depends on
+# it. The one handler that returns decision "block" on purpose: probed on CLI 2.1.284, a block
+# sends the subagent back to work with the reason as its instruction, and the retry's payload
+# carries stop_hook_active: true, which is what stops it looping.
+
+SUBAGENT_COMMIT_REASON = (
+    "House rules, commit on your own branch: before you finish, commit the files you wrote "
+    "that git still shows uncommitted - {files}. {advice} If whoever delegated this told you "
+    "not to run git, do not; say in your final report exactly which files are uncommitted "
+    "instead. Then finish."
+)
+
+
+def _repo_top(path, cache):
+    """The git top level holding `path`, or None when it is not in a repo. Walks up to the
+    nearest directory that exists, since a written file may since have been moved."""
+    import subprocess
+
+    d = os.path.dirname(os.path.abspath(path))
+    while d and not os.path.isdir(d):
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+    if d in cache:
+        return cache[d]
+    proc = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], cwd=d, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, timeout=COMMIT_CHECK_TIMEOUT,
+    )
+    top = proc.stdout.decode("utf-8", "replace").strip() if proc.returncode == 0 else None
+    cache[d] = top
+    return top
+
+
+def _repo_branch(top):
+    import subprocess
+
+    proc = subprocess.run(
+        ["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=top, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, timeout=COMMIT_CHECK_TIMEOUT,
+    )
+    return proc.stdout.decode("utf-8", "replace").strip() if proc.returncode == 0 else None
+
+
+def _uncommitted_by_repo(paths):
+    """[(repo top, branch or None, [uncommitted repo-relative paths])], one entry per repo that
+    has any. Each file is judged in its OWN repo, so a subagent working in an isolated worktree
+    is checked against that worktree, not the session's project directory."""
+    cache = {}
+    by_top = {}
+    for p in paths:
+        top = _repo_top(p, cache)
+        if top:
+            by_top.setdefault(top, []).append(p)
+    out = []
+    for top, ps in sorted(by_top.items()):
+        left = _uncommitted_among(ps, top)
+        if left:
+            out.append((top, _repo_branch(top), left))
+    return out
+
+
+def event_subagentcommit():
+    try:
+        if not _commit_check_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: the subagent commit check got an "
+                    "empty SubagentStop payload and did not run for this call."
+                }
+            )
+            return 0
+        agent_type = _field(_AGENT_TYPE_RE, payload) or "a subagent"
+        found = next((c for c in _transcript_candidates(payload) if os.path.isfile(c)), "")
+        if not found:
+            emit(
+                {
+                    "systemMessage": "house-rules: commit check could not tell whether %s "
+                    "left files uncommitted - no readable transcript." % agent_type
+                }
+            )
+            return 0
+        _commands, wrote, _counts = _audit_summary(found)
+        paths = [w.split(" ", 1)[1] for w in wrote if " " in w]
+        if not paths:
+            return 0
+        left = _uncommitted_by_repo(paths)
+        if not left:
+            trace("subagentcommit: %s committed everything it wrote." % agent_type)
+            return 0
+        shown = "; ".join(
+            "%s in %s" % (", ".join(files[:8]) + (" and %d more" % (len(files) - 8) if len(files) > 8 else ""), top)
+            for top, _branch, files in left
+        )
+        if re.search(r'"stop_hook_active"\s*:\s*true', payload):
+            # The retry. Blocking again could loop; the parent's audit line names the files.
+            emit(
+                {
+                    "systemMessage": "house-rules: %s finished with files still uncommitted "
+                    "after being asked once: %s." % (agent_type, shown)
+                }
+            )
+            return 0
+        advice = " ".join(
+            _branch_advice(bool(branch and branch.startswith(OWNED_BRANCH_PREFIX)), branch,
+                           "HEAD is detached in %s" % top)
+            for top, branch, _files in left
+        )
+        emit({"decision": "block", "reason": SUBAGENT_COMMIT_REASON.format(files=shown, advice=advice)})
+    except Exception as exc:
+        # Fails open: a crash here must never hold a subagent back.
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the subagent commit check hit an error "
+                "(%s: %s) and did not run for this call." % (type(exc).__name__, exc)
             }
         )
     return 0
@@ -3046,6 +3334,74 @@ def _claim_words(text):
     return found
 
 
+# #92: "it can't be done" is a claim of fact too, and the one most often made from memory. Only
+# phrasings that assert impossibility or absence - a bare "can't" is everywhere in ordinary prose.
+_IMPOSSIBLE_RE = re.compile(
+    r"\b(can(?:'|no)t be done|can not be done|(?:is|isn't|is not|not) (?:possible|supported)|"
+    r"impossible|no way to|does(?:n't| not) (?:support|exist)|"
+    r"there(?:'s| is) no (?:way|option|setting|flag|api|command))\b",
+    re.IGNORECASE,
+)
+# "is possible" / "is supported" are matched above only to be dropped here: the negative forms
+# are the claim this catches.
+_POSITIVE_FORM_RE = re.compile(r"^is (possible|supported)$", re.IGNORECASE)
+
+
+_QUOTE_CHARS = "\"'`\u201c\u2018"
+
+
+def _is_quoted(text, start):
+    """A phrase opening right after a quote mark is being talked about, not asserted."""
+    return start > 0 and text[start - 1] in _QUOTE_CHARS
+
+
+def _impossibility_claims(text):
+    found = []
+    for m in _IMPOSSIBLE_RE.finditer(text or ""):
+        if _is_quoted(text, m.start()):
+            continue
+        phrase = m.group(1).lower()
+        if _POSITIVE_FORM_RE.match(phrase):
+            continue
+        found.append(phrase)
+    return found
+
+
+# #89: a disclosure that something was not checked. The default is to check; a disclosure is
+# right only when the check cannot run here, and then the reply says why. Lowercase-only for
+# "untested"/"unverified" so a handover card's own "UNTESTED:" marker - which the card rule
+# already requires a reason beside - is never what trips it.
+_NOT_CHECKED_RE = re.compile(
+    r"\b((?:[Nn]ot|[Hh]aven't|[Hh]ave not|[Dd]idn't|[Dd]id not|[Ww]asn't|[Ww]as not|[Hh]asn't|"
+    r"[Hh]as not) (?:been )?(?:checked|verified|tested|run it|confirmed)|unverified|untested)\b"
+)
+# A reason in the same sentence makes the disclosure the rule-compliant kind.
+_REASON_RE = re.compile(
+    r"\b(because|since|as there|no access|not available|unavailable|not installed|"
+    r"not reachable|(?:can't|cannot) (?:reach|run|access)|requires|would need|needs a|"
+    r"no .{0,20} (?:here|on this machine)|on your machine|prohibitively|had no|has no|"
+    r"there (?:is|was) no|does(?:n't| not) have|did(?:n't| not) have)\b",
+    re.IGNORECASE,
+)
+_SENTENCE_END_RE = re.compile(r"[.!?\n]")
+
+
+def _unreasoned_not_checked(text):
+    """'Not checked' phrases whose own sentence gives no reason the check could not run."""
+    found = []
+    text = text or ""
+    for m in _NOT_CHECKED_RE.finditer(text):
+        if _is_quoted(text, m.start()):
+            continue
+        start = max((e.end() for e in _SENTENCE_END_RE.finditer(text, 0, m.start())), default=0)
+        end_m = _SENTENCE_END_RE.search(text, m.end())
+        sentence = text[start : end_m.start() if end_m else len(text)]
+        if _REASON_RE.search(sentence):
+            continue
+        found.append(m.group(1).lower())
+    return found
+
+
 def _is_genuine_user_message(record):
     """A real human turn - not a tool_result carrier, not Stop hook feedback, not a background
     task's <task-notification> hand-back, and (when the field is present) not attributed to a
@@ -3077,9 +3433,9 @@ def _is_genuine_user_message(record):
     return True
 
 
-def _tool_use_since_last_user_message(transcript_path):
-    """(True/False/None, detail). None means could not tell - an unreadable transcript, or no
-    genuine user message found in it at all."""
+def _records_since_last_user_message(transcript_path):
+    """(records after the last genuine user message, None) or (None, detail) when that cannot
+    be told - an unreadable transcript, or no genuine user message in it at all."""
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             raw_lines = f.readlines()
@@ -3103,25 +3459,156 @@ def _tool_use_since_last_user_message(transcript_path):
             last_user_idx = i
     if last_user_idx is None:
         return None, "no genuine user message found in the transcript"
+    return records[last_user_idx + 1 :], None
 
-    for rec in records[last_user_idx + 1 :]:
+
+def _turn_tool_uses(records):
+    """Every tool_use block the assistant made in `records`, in order."""
+    for rec in records:
         if not isinstance(rec, dict) or rec.get("type") != "assistant":
             continue
         content = (rec.get("message") or {}).get("content")
         if isinstance(content, list):
             for block in content:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
-                    return True, None
+                    yield block
+
+
+def _tool_use_since_last_user_message(transcript_path):
+    """(True/False/None, detail). None means could not tell - an unreadable transcript, or no
+    genuine user message found in it at all."""
+    records, detail = _records_since_last_user_message(transcript_path)
+    if records is None:
+        return None, detail
+    for _block in _turn_tool_uses(records):
+        return True, None
     return False, None
 
 
-def _evidence_note(claim_words):
-    words = ", ".join(sorted(set(claim_words)))
+def _written_since_last_user_message(transcript_path):
+    """(file paths Write/Edit/NotebookEdit touched this turn, None) or (None, detail)."""
+    records, detail = _records_since_last_user_message(transcript_path)
+    if records is None:
+        return None, detail
+    paths = []
+    for block in _turn_tool_uses(records):
+        if block.get("name") not in _AUDIT_WRITE_TOOLS:
+            continue
+        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+        fp = inp.get("file_path") or inp.get("notebook_path")
+        if fp and fp not in paths:
+            paths.append(fp)
+    return paths, None
+
+
+# ---------------------------------------------------------------------------------------
+# The commit rule's obligation half. guard only judges git commands that are run, so a session
+# that never runs one produced no signal at all (#97). These helpers answer the one question
+# the Stop, branchnudge and audit checks share: which of these files are still uncommitted?
+# ---------------------------------------------------------------------------------------
+
+COMMIT_CHECK_TIMEOUT = 2.0
+
+
+def _commit_check_enabled():
+    return os.environ.get("HOUSE_RULES_COMMIT_CHECK", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _dirty_paths(root):
+    """(repo top level, [repo-relative dirty paths]) for the repo containing `root`.
+
+    Raises on no git, not a repo, or the time budget running out - every caller turns that
+    into a "could not tell" line, never a guess.
+    """
+    import subprocess
+    import time as _t
+
+    deadline = _t.time() + COMMIT_CHECK_TIMEOUT
+
+    def run_git(args):
+        remaining = deadline - _t.time()
+        if remaining <= 0:
+            raise RuntimeError("the commit check's time budget ran out")
+        proc = subprocess.run(
+            ["git"] + args, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=remaining
+        )
+        if proc.returncode != 0:
+            raise RuntimeError("git %s exited %d" % (" ".join(args), proc.returncode))
+        return [p for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
+
+    top = run_git(["rev-parse", "--show-toplevel"])[0].strip()
+    return top, [p for p, _tracked in _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))]
+
+
+def _uncommitted_among(paths, root, status=None):
+    """The subset of `paths` (absolute, or relative to `root`) that git reports as changed or
+    untracked. A path outside the repo is never in the subset: it is not this repo's to commit.
+    `status` is a (top, dirty) pair from _dirty_paths, when the caller already has one."""
+    top, dirty = status if status is not None else _dirty_paths(root)
+    dirty_set = set(os.path.normcase(os.path.normpath(p)) for p in dirty)
+    found = []
+    for p in paths:
+        absolute = p if os.path.isabs(p) else os.path.join(root, p)
+        rel = os.path.relpath(os.path.realpath(absolute), os.path.realpath(top))
+        if rel.startswith(".."):
+            continue
+        if os.path.normcase(os.path.normpath(rel)) in dirty_set:
+            found.append(rel.replace(os.sep, "/"))
+    return found
+
+
+def _branch_advice(is_mine, branch, note):
+    """What to do about uncommitted work, given whose branch the checkout is on."""
+    if is_mine:
+        return (
+            "You are on your own branch `%s`: commit them now, scoped to those paths "
+            "(`git commit -- <paths>`), and say what you committed and where." % branch
+        )
+    if branch:
+        return (
+            "The checkout is on `%s`, which is not a claude/ branch. If that branch was opened "
+            "for this session's work, commit there, scoped to those paths. If it is the user's, "
+            "branch off first (`git switch -c claude/<topic>` carries the changes with it), "
+            "then commit, scoped to those paths. Either way, say what you committed and where."
+            % branch
+        )
     return (
-        "House rules, evidence before claims: this reply claims success (%s), but no tool ran "
-        "since your last real message and the reply does not quote any command output. Before "
-        "this turn ends, either run the check and quote its real output, or restate the claim "
-        "as untested and say why." % words
+        "No branch could be read (%s), so branch off first (`git switch -c claude/<topic>`), "
+        "then commit, scoped to those paths, and say what you committed and where." % note
+    )
+
+
+def _commit_note(uncommitted):
+    is_mine, branch, note = branch_ownership()
+    shown = ", ".join(uncommitted[:8]) + (" and %d more" % (len(uncommitted) - 8) if len(uncommitted) > 8 else "")
+    return (
+        "House rules, commit on your own branch: this turn changed %s, and git still shows "
+        "them uncommitted. %s Work left uncommitted is not a checkpoint." % (shown, _branch_advice(is_mine, branch, note))
+    )
+
+
+def _evidence_note(claim_words, impossible_words=()):
+    kinds = []
+    if claim_words:
+        kinds.append("claims success (%s)" % ", ".join(sorted(set(claim_words))))
+    if impossible_words:
+        kinds.append("says something cannot be done or does not exist (%s)"
+                     % ", ".join(sorted(set(impossible_words))))
+    return (
+        "House rules, evidence before claims: this reply %s, but no tool ran since your last "
+        "real message and the reply does not quote any command output. Before this turn ends, "
+        "either run the check and quote its real output, or restate the claim as untested and "
+        "say why. Reasoning, docs and memory are not a check." % " and ".join(kinds)
+    )
+
+
+def _not_checked_note(phrases):
+    return (
+        "House rules, evidence before claims: this reply says something was not checked (%s) "
+        "without saying why it could not be. Checking is the default, not an offer. If the check "
+        "can run here and is not prohibitively expensive, run it now and report its real "
+        "result; leave it unchecked only when it cannot run, and say in the same sentence what "
+        "stops it." % ", ".join(sorted(set(phrases)))
     )
 
 
@@ -3163,6 +3650,8 @@ def event_handover():
     # with no fence in it at all.
     needs_evidence = False
     evidence_words = []
+    impossible_words = []
+    not_checked = []
     could_not_tell = None
     vm = _LAST_MESSAGE_VALUE_RE.search(payload)
     if vm is not None:
@@ -3171,7 +3660,9 @@ def event_handover():
         except ValueError:
             reply_text = vm.group(1)
         claims = _claim_words(reply_text)
-        if claims and not _EVIDENCE_QUOTE_RE.search(reply_text):
+        impossible = _impossibility_claims(reply_text)
+        not_checked = _unreasoned_not_checked(reply_text)
+        if (claims or impossible) and not _EVIDENCE_QUOTE_RE.search(reply_text):
             transcript_path = _field(_TRANSCRIPT_RE, payload)
             if not transcript_path:
                 could_not_tell = "the Stop payload carried no transcript_path"
@@ -3182,37 +3673,65 @@ def event_handover():
                 elif has_tool is False:
                     needs_evidence = True
                     evidence_words = claims
+                    impossible_words = impossible
 
-    if not needs_card and not needs_evidence:
-        if could_not_tell:
-            # Fail open, loud: a claim was made and this could not confirm or deny it, so it
-            # says so rather than silently assuming either answer - but it never blocks, and
-            # it never asserts the claim is wrong.
-            emit(
-                {
-                    "systemMessage": "house-rules: evidence check could not tell whether a "
-                    "tool ran for this reply's claim (%s)." % could_not_tell
-                }
-            )
-        # The one handler that must NOT trace when neither check fires - direct rule conflict,
+    # The commit check, independent of both: a turn that wrote files and left them uncommitted
+    # gets told at the end of that turn, whatever the reply says. Its "could not tell" is its
+    # own line - it must never be mistaken for the evidence check's.
+    uncommitted = []
+    commit_could_not_tell = None
+    if _commit_check_enabled():
+        transcript_path = _field(_TRANSCRIPT_RE, payload)
+        if transcript_path:
+            written, detail = _written_since_last_user_message(transcript_path)
+            if written:
+                try:
+                    uncommitted = _uncommitted_among(
+                        written, os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+                    )
+                except Exception as exc:
+                    commit_could_not_tell = "%s: %s" % (type(exc).__name__, exc)
+            elif written is None:
+                commit_could_not_tell = detail
+
+    trace_lines = []
+    if could_not_tell:
+        # Fail open, loud: a claim was made and this could not confirm or deny it, so it says
+        # so rather than silently assuming either answer - but it never blocks, and it never
+        # asserts the claim is wrong.
+        trace_lines.append(
+            "house-rules: evidence check could not tell whether a tool ran for this reply's "
+            "claim (%s)." % could_not_tell
+        )
+    if commit_could_not_tell:
+        trace_lines.append(
+            "house-rules: commit check could not tell whether this turn's files are committed "
+            "(%s)." % commit_could_not_tell
+        )
+
+    if not needs_card and not needs_evidence and not not_checked and not uncommitted:
+        if trace_lines:
+            emit({"systemMessage": " ".join(trace_lines)})
+        # The one handler that must NOT trace when no check fires - direct rule conflict,
         # not a cost argument. docs/architecture.md, "handover is the one deliberate exception".
         return 0
 
     # additionalContext, not decision: "block". Both continue the turn under the same loop
     # protections, but this one is labelled Stop hook feedback rather than raising a hook
-    # error - and this hook is guidance working as designed, not a failure. Both checks share
-    # ONE emission when both fire - two emit() calls would be two concatenated JSON objects.
+    # error - and this hook is guidance working as designed, not a failure. All checks share
+    # ONE emission when several fire - two emit() calls would be two concatenated JSON objects.
     parts = []
     if needs_card:
         parts.append(HANDOVER_NOTE)
     if needs_evidence:
-        parts.append(_evidence_note(evidence_words))
+        parts.append(_evidence_note(evidence_words, impossible_words))
+    if not_checked:
+        parts.append(_not_checked_note(not_checked))
+    if uncommitted:
+        parts.append(_commit_note(uncommitted))
     out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}
-    if could_not_tell:
-        out["systemMessage"] = (
-            "house-rules: evidence check could not tell whether a tool ran for this reply's "
-            "claim (%s)." % could_not_tell
-        )
+    if trace_lines:
+        out["systemMessage"] = " ".join(trace_lines)
     emit(out)
     return 0
 
@@ -3643,11 +4162,13 @@ EVENTS = {
     "guard": event_guard,
     "guardwrite": event_guardwrite,
     "artifact": event_artifact,
+    "branchnudge": event_branchnudge,
     "runnable": event_runnable,
     "delegate": event_delegate,
     "announce": event_announce,
     "subagentrules": event_subagentrules,
     "verdict": event_verdict,
+    "subagentcommit": event_subagentcommit,
     "audit": event_audit,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,

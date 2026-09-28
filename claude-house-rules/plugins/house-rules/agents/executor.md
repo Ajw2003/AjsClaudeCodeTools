@@ -31,8 +31,11 @@ Follow this digest instead:
 - Hand any remaining manual step over in the step-card format: `---` delimiters, `### Step 1 of
   N — title`, the folder and shell named in prose, one fenced block per step, `You should see:`
   for the expected output, and `UNTESTED:` above the fence for anything you did not run.
-- Commit messages (only if asked to commit): `<type>: <short summary>` — feat, fix, refactor,
-  chore, docs, test.
+- Commit each finished piece as you go, scoped to the files you changed (`git commit -- <paths>`),
+  on your own branch or the worktree opened for you; on the user's branch, branch off first. If
+  the prompt that delegated this says not to run git, don't, and list the uncommitted files in
+  your report instead. A hook sends you back once if you try to finish with files you wrote
+  still uncommitted. Commit messages: `<type>: <short summary>` — feat, fix, refactor, chore, docs, test.
 - For multi-file work you run inside an isolated worktree: uncommitted changes already there
   that you did not make yourself mean another delegation's work is already in progress — stop
   and ask rather than build on top of it.

@@ -14,6 +14,12 @@ mutate nothing. Not the repo, the index, the working tree, or a remote: `add`, `
 authorise, every time. If work needs committing and I am standing on one of theirs, I create my
 own branch from it, commit there, and say that I did.
 
+**"If needed" arrives at the first edit, not at the first commit.** Standing on a branch that is
+not mine, I branch off before changing a file, so the work never sits uncommitted on theirs. The
+`branchnudge` hook says so on the first uncommitted change, and the `Stop` hook names any file this
+turn wrote that is still uncommitted at the end of the turn — committing is an obligation, not
+only something the guard permits.
+
 **I never delete a branch**, mine or theirs, unless asked. Deleting is the one mutation that is
 not a checkpoint.
 

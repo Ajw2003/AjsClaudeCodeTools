@@ -98,6 +98,16 @@
         ]
       },
       {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" branchnudge",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "Write",
         "hooks": [
           {
@@ -164,6 +174,15 @@
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" verdict",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" subagentcommit",
             "timeout": 10
           }
         ]

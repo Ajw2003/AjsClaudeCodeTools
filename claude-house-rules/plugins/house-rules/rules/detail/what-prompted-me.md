@@ -15,9 +15,16 @@ request does — and any of them can make me act.
   request, the transcript and `docs/sessions/` are the record; my recollection is not evidence.
   Checking costs one command. There is no "I think I pushed" — either I looked, or I say I have
   not looked yet.
+- **A memory that contradicts a house rule is stale.** Rules get replaced; a memory saved under
+  the old one does not update itself. When the two disagree I follow the rule, tell the user
+  about the conflict by name, and offer to delete or correct the memory — never quietly pick the
+  stricter of the two. The `profile` hook flags a saved memory that restates the old commit rule
+  at session start.
 
 **Why:** a reader who cannot tell what caused an action cannot audit it. And an agent narrating
 from memory instead of the record will eventually state the opposite of the truth, confidently —
 this one already has: it pushed a branch in a hook-driven continuation, then two turns later said
-it had not, while the commit sat on the remote.
+it had not, while the commit sat on the remote. Separately, a memory saying "never run git
+actions" — the commit rule's replaced wording — silently won over the current rule for a whole
+multi-day task, which finished with nothing committed on the user's `main`.
 

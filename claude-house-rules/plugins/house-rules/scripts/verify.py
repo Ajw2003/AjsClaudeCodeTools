@@ -424,6 +424,16 @@ GUARD_CASES = [
         "npm run dev > dev.log 2>&1 &",
     ),
     ("ask", "Never hide work in a background window or a silent process", "nohup ./long-task.sh"),
+    # #85: a wait piped through tail/head shows nothing until it exits.
+    (
+        "ask",
+        "Never hide work in a background window or a silent process",
+        "until grep -q done status.txt; do sleep 5; done | tail -5",
+    ),
+    ("ask", "Never hide work in a background window or a silent process", "timeout 600 ./run_tests.sh | head -40"),
+    ("pass", None, "git log | head -5"),
+    ("pass", None, "cat build.log | tail -50"),
+    ("pass", None, "python sleepy.py | tail"),
     (
         "ask",
         "Never hide work in a background window or a silent process",
@@ -2326,14 +2336,79 @@ hand_case(
         last_assistant_message="It works now.\n\nRESULT: PASS",
     ),
 )
+# #89 reversed this one: it used to expect silence, because "untested" is not a success word.
+# But a bare "untested" with no reason is exactly the disclosure-instead-of-checking #89 is about.
 hand_case(
-    "silent",
-    "an explicit UNTESTED claim never matches a success word to begin with",
+    "feedback",
+    "a bare 'untested' with no reason the check could not run gets told to run it (#89)",
     stop_payload(
         transcript_path=_HAND_NO_TOOL,
         last_assistant_message="This is untested; I have not run it.",
     ),
 )
+hand_case(
+    "silent",
+    "an 'untested' that says in the same sentence why the check cannot run stays quiet (#89)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="This is untested because the Unity editor is not installed here.",
+    ),
+)
+hand_case(
+    "feedback",
+    "a 'not checked' with no reason fires even when tools ran this turn (#89)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="I ran the tests. I haven't checked the CI logs.",
+    ),
+)
+hand_case(
+    "silent",
+    "a handover card's own UNTESTED: marker is not what the not-checked check trips on (#89)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="UNTESTED: this runs on your machine.\n\nNothing else to report.",
+    ),
+)
+hand_case(
+    "feedback",
+    "'that can't be done' with no tool run this turn gets the evidence reminder (#92)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="That can't be done in Claude Code; there is no setting for it.",
+    ),
+)
+hand_case(
+    "silent",
+    "'that can't be done' after a tool ran this turn stays quiet (#92)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="That can't be done in Claude Code; there is no setting for it.",
+    ),
+)
+hand_case(
+    "silent",
+    "'it is possible' is not an impossibility claim (#92)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="Yes, it is possible to configure that.",
+    ),
+)
+hand_case(
+    "silent",
+    "a phrase in quotation marks is being talked about, not asserted, so neither check fires",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message='Adding checks for "can\'t be done" claims and for a bare "untested".',
+    ),
+)
+_, _out92, _ = run_hook("handover", stop_payload(
+    transcript_path=_HAND_NO_TOOL,
+    last_assistant_message="That setting doesn't exist.",
+))
+report("PASS" if "cannot be done or does not exist" in _out92 and "doesn't exist" in _out92 else "FAIL",
+       "the #92 note names the impossibility phrase it caught")
+print(f"          {_out92[:160]!r}")
 hand_case(
     "silent",
     "a reply naming no claim word at all is untouched by the evidence check",
@@ -2367,6 +2442,279 @@ else:
     report("FAIL", "a reply with both a shell fence and a claim still emits exactly one valid JSON object")
     print(f"          out {out[:200]!r}")
 
+# --- the commit rule's obligation half (#97): Stop, branchnudge, audit, stale memories -------
+# Each case gets its own throwaway repo, so the branch and the dirty set are exactly what the
+# case says they are. The hook is pointed at it through CLAUDE_PROJECT_DIR, the same variable
+# Claude Code sets.
+def _commit_repo(branch, committed=(), dirty=()):
+    d = tempfile.mkdtemp(prefix="house-rules-commit-", dir=_FIXTURE_ROOT)
+    git = ["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", d]
+    subprocess.run(git + ["init", "-q", "-b", branch], check=True)
+    for rel in committed:
+        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+            f.write("original\n")
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    for rel in dirty:
+        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+            f.write("changed\n")
+    return d
+
+
+def _wrote_transcript(name, paths):
+    lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "change it"}})]
+    for i, p in enumerate(paths):
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "w%d" % i, "name": "Edit", "input": {"file_path": p}}]}}))
+    return _hand_transcript(name, lines)
+
+
+def _project_env(root, **extra):
+    e = dict(os.environ)
+    e["CLAUDE_PROJECT_DIR"] = root
+    e.pop("HOUSE_RULES_COMMIT_CHECK", None)
+    e.update(extra)
+    return e
+
+
+def _stop_context(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def commit_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print(f"          {detail}")
+
+
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-own", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_r),
+)
+_ctx = _stop_context(out)
+commit_case(
+    "Stop: a file this turn wrote, still uncommitted on a claude/ branch, gets 'commit it now, scoped'",
+    "commit on your own branch" in _ctx and "a.py" in _ctx and "`claude/topic`" in _ctx and "git commit -- <paths>" in _ctx,
+    "context: %r" % _ctx[:160],
+)
+
+_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-main", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_r),
+)
+_ctx = _stop_context(out)
+commit_case(
+    "Stop: the same on the user's main says to branch off to claude/<topic> first",
+    "not a claude/ branch" in _ctx and "branch off first" in _ctx and "git switch -c claude/<topic>" in _ctx,
+    "context: %r" % _ctx[:160],
+)
+
+_r = _commit_repo("main", committed=["a.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-committed", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed and committed a.py."),
+    env=_project_env(_r),
+)
+commit_case(
+    "Stop: a file this turn wrote that is already committed stays silent",
+    out.strip() == "",
+    "stdout: %r" % out[:120],
+)
+
+_r = _commit_repo("main", committed=["a.py", "theirs.py"], dirty=["theirs.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-not-theirs", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_r),
+)
+commit_case(
+    "Stop: the user's own uncommitted edit, which this turn never wrote, never trips the check",
+    out.strip() == "",
+    "stdout: %r" % out[:120],
+)
+
+_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-toggle", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_r, HOUSE_RULES_COMMIT_CHECK="off"),
+)
+commit_case(
+    "Stop: HOUSE_RULES_COMMIT_CHECK=off switches the commit check off",
+    out.strip() == "",
+    "stdout: %r" % out[:120],
+)
+
+_nogit = tempfile.mkdtemp(prefix="house-rules-nogit-", dir=_FIXTURE_ROOT)
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-nogit", [os.path.join(_nogit, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_nogit),
+)
+commit_case(
+    "Stop: outside a git repo the commit check says it could not tell, and never blocks",
+    "commit check could not tell" in out and '"decision"' not in out and '"additionalContext"' not in out,
+    "stdout: %r" % out[:160],
+)
+
+
+def _nudge(root, rel, **extra):
+    payload = json.dumps({"tool_name": "Edit", "tool_input": {"file_path": os.path.join(root, rel)}})
+    return run_hook("branchnudge", payload, env=_project_env(root, **extra))[1]
+
+
+_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+out = _nudge(_r, "a.py")
+commit_case(
+    "branchnudge: the first uncommitted change on a non-claude/ branch says to branch off now",
+    "branch off now" in out and "`main`" in out and '"PostToolUse"' in out and '"permissionDecision"' not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("main", committed=["a.py", "b.py"], dirty=["a.py", "b.py"])
+out = _nudge(_r, "b.py")
+commit_case(
+    "branchnudge: a second uncommitted change is not the first, so it stays quiet",
+    "branch off now" not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+out = _nudge(_r, "a.py")
+commit_case(
+    "branchnudge: on a claude/ branch there is nothing to nudge",
+    "branch off now" not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+out = _nudge(_r, "a.py", HOUSE_RULES_COMMIT_CHECK="off")
+commit_case(
+    "branchnudge: HOUSE_RULES_COMMIT_CHECK=off switches it off",
+    out.strip() == "",
+    "stdout: %r" % out[:160],
+)
+commit_case(
+    "branchnudge is wired to PostToolUse Write|Edit in hooks.json",
+    bool(re.search(r'"matcher": "Write\|Edit",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" branchnudge"', hooks_json_text)),
+    "hooks.json PostToolUse entry",
+)
+
+# audit: a subagent's uncommitted files are named, because the parent owns that commit.
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_sub = _hand_transcript("subagent-wrote", [
+    json.dumps({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "id": "w1", "name": "Write", "input": {"file_path": os.path.join(_r, "a.py")}}]}}),
+])
+_audit_snippet = "import sys, hook\nprint(hook._audit_report(sys.argv[1]))\n"
+_p = subprocess.run([sys.executable, "-c", _audit_snippet, _sub], cwd=HERE, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, env=_project_env(_r))
+_aout = _p.stdout.decode("utf-8", "replace")
+commit_case(
+    "audit: a file the subagent wrote that is still uncommitted is named, and the commit is the parent's",
+    "uncommitted: a.py" in _aout and "The commit is yours now" in _aout,
+    "audit: %r" % _aout[-200:],
+)
+
+# subagentcommit: a subagent cannot finish with files it wrote still uncommitted - it is sent
+# back once (decision "block", probed on CLI 2.1.284), and the retry is let through.
+def _subagent_stop(paths, active=False, **env_extra):
+    tr = _hand_transcript("subcommit-%d" % len(os.listdir(_HAND_ROOT)), [
+        json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "s%d" % i, "name": "Write", "input": {"file_path": p}}]}})
+        for i, p in enumerate(paths)
+    ])
+    payload = json.dumps({"hook_event_name": "SubagentStop", "agent_type": "house-rules:executor",
+                          "agent_transcript_path": tr, "stop_hook_active": active})
+    return run_hook("subagentcommit", payload, env=_project_env(_FIXTURE_ROOT, **env_extra))[1]
+
+
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")])
+commit_case(
+    "subagentcommit: a subagent finishing with a file it wrote still uncommitted is sent back to commit it",
+    '"decision": "block"' in out.replace('":"', '": "') and "a.py" in out and "commit on your own branch" in out,
+    "stdout: %r" % out[:160],
+)
+commit_case(
+    "subagentcommit: its instruction respects a 'do not run git' delegation",
+    "told you not to run git" in out,
+    "stdout: %r" % out[:160],
+)
+out = _subagent_stop([os.path.join(_r, "a.py")], active=True)
+commit_case(
+    "subagentcommit: the retry (stop_hook_active) is never blocked again - it only reports",
+    '"decision"' not in out and "still uncommitted after being asked once" in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("claude/topic", committed=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")])
+commit_case(
+    "subagentcommit: a subagent that committed what it wrote finishes without being held",
+    '"decision"' not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")], HOUSE_RULES_COMMIT_CHECK="off")
+commit_case(
+    "subagentcommit: HOUSE_RULES_COMMIT_CHECK=off switches it off",
+    out.strip() == "",
+    "stdout: %r" % out[:160],
+)
+# The project dir is _FIXTURE_ROOT (not a repo); the file lives in its own repo, like a worktree.
+_wt = _commit_repo("worktree-agent-1", committed=["w.py"], dirty=["w.py"])
+out = _subagent_stop([os.path.join(_wt, "w.py")])
+commit_case(
+    "subagentcommit: a file in a separate worktree is judged in that worktree's repo, not the project dir",
+    '"decision"' in out and "w.py" in out and "worktree-agent-1" in out,
+    "stdout: %r" % out[:200],
+)
+commit_case(
+    "subagentcommit is wired to SubagentStop in hooks.json",
+    'run.sh\\" subagentcommit' in hooks_json_text,
+    "hooks.json SubagentStop entry",
+)
+commit_case(
+    "the executor and archivist commit as they go, not only if asked",
+    all(
+        "Commit each finished piece as you go" in read(os.path.join(HERE, "..", "agents", n))
+        and "only if asked to commit" not in read(os.path.join(HERE, "..", "agents", n))
+        for n in ("executor.md", "archivist.md")
+    ),
+    "agents/executor.md, agents/archivist.md",
+)
+
+# profile: a saved memory restating the replaced commit rule is flagged at session start.
+_mem = tempfile.mkdtemp(prefix="house-rules-memory-", dir=_FIXTURE_ROOT)
+with open(os.path.join(_mem, "MEMORY.md"), "w", encoding="utf-8") as f:
+    f.write("# Memory\n\n- Never run git actions; commit before destructive changes\n")
+with open(os.path.join(_mem, "other.md"), "w", encoding="utf-8") as f:
+    f.write("- prefers tabs over spaces\n")
+_, out, _ = run_hook("profile", "", env=_project_env(_FIXTURE_ROOT, HOUSE_RULES_MEMORY_DIR=_mem))
+commit_case(
+    "profile: a memory restating the old commit rule is flagged by file and line at session start",
+    "restates the old commit rule" in out and "MEMORY.md:3" in out and "other.md" not in out,
+    "found: %s" % ("yes" if "restates the old commit rule" in out else "no"),
+)
+_clean_mem = tempfile.mkdtemp(prefix="house-rules-memory-clean-", dir=_FIXTURE_ROOT)
+with open(os.path.join(_clean_mem, "MEMORY.md"), "w", encoding="utf-8") as f:
+    f.write("- Commit freely on claude/ branches\n")
+_, out, _ = run_hook("profile", "", env=_project_env(_FIXTURE_ROOT, HOUSE_RULES_MEMORY_DIR=_clean_mem))
+commit_case(
+    "profile: a memory that agrees with the commit rule adds nothing",
+    "restates the old commit rule" not in out,
+    "flagged: %s" % ("yes" if "restates the old commit rule" in out else "no"),
+)
+
 # --- the check gives guidance, not a hook error ----------------------------------------------
 code, out, err = run_hook(
     "handover", stop_payload(last_assistant_message="```powershell\nGet-ChildItem\n```")
@@ -2393,9 +2741,29 @@ RESTATEMENTS = [
         [
             "response depth", "only what was asked", "ask instead of assuming",
             "project directory", "hand over a command", "tier that changed",
-            "success claim", "whole workflow", "have not run",
+            "success claim", "whole workflow", "have not run", "own branch", "branch off first",
         ],
         False,
+    ),
+    Restatement(
+        "the Stop commit note (#97), on the user's branch",
+        lambda: (lambda r: run_hook(
+            "handover",
+            stop_payload(transcript_path=_wrote_transcript("restate-commit", [os.path.join(r, "a.py")]),
+                         last_assistant_message="Changed a.py."),
+            env=_project_env(r),
+        )[1])(_commit_repo("main", committed=["a.py"], dirty=["a.py"])),
+        ["own branch", "branch off first", "scoped to"],
+        False,
+        ("commit on your own branch", "scoped to those paths", "say what you committed and where",
+         "not a checkpoint", "claude/<topic>"),
+    ),
+    Restatement(
+        "the branch nudge (#97)",
+        lambda: (lambda r: _nudge(r, "a.py"))(_commit_repo("main", committed=["a.py"], dirty=["a.py"])),
+        ["own branch", "branch off", "scoped to"],
+        False,
+        ("commit on your own branch", "scoped to the paths you changed", "only uncommitted change"),
     ),
     Restatement(
         "the compile-verification note (runnable handler, .cs files)",

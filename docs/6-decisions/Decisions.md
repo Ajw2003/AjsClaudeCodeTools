@@ -7,6 +7,130 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-28 — Subagents commit as they go, and cannot finish with unsaved work
+
+**Context.** The user reported subagents committing less often than the main session. The cause
+was in the agents' own instructions: `executor.md` and `archivist.md` both said "Commit messages
+(only if asked to commit)", so a subagent never told to commit never did. 2.39.0's `audit` line
+only named the leftovers to the parent afterwards. The user suggested either the same save logic
+for subagents or a 1-minute autosave timer run by the main session.
+
+**Decision.** The same save logic, at the subagent's own finish line. Both agents now commit each
+finished piece as they go, scoped, unless the delegation said not to run git. A new
+`subagentcommit` handler on `SubagentStop` returns `decision: "block"` when files the subagent
+wrote are still uncommitted, judging each file in its own repo so worktrees are covered, and only
+reports on the retry. Its own hook entry, so `verdict`'s report never depends on it.
+
+**Why.** Probed live on CLI 2.1.284 before building: a `SubagentStop` block sent the subagent back
+with the reason as its instruction, and the retry's payload carried `stop_hook_active: true`.
+End to end in a throwaway repo, a subagent asked only to write a file committed it with the hook
+(`Add hello.py`, clean tree) and left `?? hello.py` without it — one run each. Rejected: a
+1-minute timer — it commits whatever state the files are in mid-edit, cannot tell the subagent's
+edits from the user's, and would be exactly the unwatched background process "never hide work"
+forbids. A hook at the point a piece of work finishes is the save point a timer approximates.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — An instruction names its exact input (#47)
+
+**Context.** Queued in `docs/rules-backlog.md` since 2026-09-07: verification steps whose whole
+input was "ask for a multi-step handover", so no two runs could disagree.
+
+**Decision.** A rule under "Deliver a whole workflow", core line plus a section in
+`rules/detail/deliver-workflow.md`: an instruction the user acts on names the literal input, and
+records the expected result when runs are to be compared. The backlog's two open questions: it
+does not join the six handover items, which are about shell commands and would be diluted by a
+broader rule; and it ships as rule text with no `verify.py` check, since whether an instruction is
+specific enough is not a string match.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — Verify a wait's target and working state before leaving it (#85)
+
+**Context.** A test-runner wait reported "running" for its full 10-minute timeout on a run that
+finished in 62 seconds: it was called with a bare class name while its verdict script matched by
+full-name prefix, and it was piped through `tail`, so nothing showed until it ended.
+
+**Decision.** A rule under "Nothing fails silently" (core line plus
+`rules/detail/fails-silently.md`): before leaving a wait or background task, check its target
+name against the source and run one status check. `guard` gains a `GUARD_R1` pattern that prompts
+on a `while`/`until`/`sleep`/`timeout`/`watch` wait piped through `tail`/`head`.
+
+**Why.** The pipe is the one part of the failure with a shell signature, so it is the part a hook
+can catch. Rejected for now: matching test-wrapper names against test classes and Monitor
+conditions against source — both need per-project knowledge the guard does not have; the rule
+carries them. A plain `cmd | head` with no wait keyword stays silent.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — The Stop evidence check catches "can't be done" and an unreasoned "not checked"
+
+**Context.** #91, #92, #93 and #89 all report the same gap after 2.38.0 widened the evidence
+rule: the rule text covered any claim of fact, but the `Stop` check only recognised success words.
+"That isn't supported" said from memory went through, and so did "I haven't checked X" when X was
+one command away.
+
+**Decision.** Two additions to `handover`'s evidence check, sharing its one emission:
+impossibility phrases ("can't be done", "isn't supported", "doesn't exist", "there is no
+setting/flag/api/…") count as claims, under the same no-tool-this-turn and no-quoted-output
+conditions as success words; and a "not checked" / "unverified" / lowercase "untested" phrase
+fires whether or not tools ran, unless its own sentence gives a reason the check could not run.
+A phrase opening right after a quote mark is exempt. The rules core now says "can't be done" is a
+claim and checking is the default, not an offer.
+
+**Why.** Rejected: a bare "can't" — it is everywhere in ordinary prose. Rejected: firing on the
+card's `UNTESTED:` marker — the card rule already requires a reason beside it. The one existing
+test that expected a bare "This is untested; I have not run it." to stay silent was flipped on
+purpose: that sentence is exactly the disclosure-instead-of-checking #89 asks to stop. Measured on
+this session's 49 real replies before shipping: 2 false positives, both quoted meta-talk, fixed
+by the quote exemption; 0 after.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — The commit rule's obligation half gets hooks: Stop, first change, audit, memory
+
+**Context.** Issue #97: a multi-day task finished with nothing committed, on the user's `main`,
+and no hook fired, because the plugin only enforced the *prohibition* half of the commit rule
+(`guard` judges git commands that are run; a session that runs none gets no signal). A saved
+memory restating the replaced "never commit without asking" rule had quietly won over the current
+rule, and three executor runs told "no git" left the commit to a parent that never made it.
+
+**Decision.** Four signals, all stateless and all behind `HOUSE_RULES_COMMIT_CHECK=off`:
+- `handover` (Stop) gains a commit check: the `Write`/`Edit`/`NotebookEdit` paths since the last
+  genuine user message, intersected with `git status --porcelain -uall`. Any left → a note naming
+  them, with branch-aware advice. Only files this turn wrote count, so the user's own edits never
+  trip it.
+- A new `branchnudge` handler (`PostToolUse` `Write|Edit`) fires when the path just written is the
+  **only** dirty path on a non-`claude/` branch — that is what makes it the first change, with no
+  state kept.
+- `audit`'s summary names files a subagent wrote that are still uncommitted: the parent owns them.
+- `profile`'s preflight warnings flag an auto-memory file whose wording restates the old commit
+  rule, and the rules core says a memory contradicting a rule is stale.
+Both `scope` forms gain a commit line (long 911 chars, short 263, inside the +10% budgets).
+
+**Why.** The failure was an omission, and only a check that looks for the omission can see it.
+Rejected: a `PreToolUse` first-write nudge — its context reaches the model only alongside a
+permission decision, and `allow` would skip the user's own write prompt. Rejected: a per-session
+marker for "first write" — a second exception to the no-state rule, when "the only dirty path is
+this one" answers the same question. Accepted limitation: `branchnudge` stays quiet when the user
+already has uncommitted edits (the Stop check still covers the turn), and neither hook can tell a
+harness-assigned session branch from the user's, so both say "if this branch was opened for this
+session's work, commit there". The memory folder path (`<config>/projects/<project, non-alphanumerics
+as ->/memory`) matched this machine's project folder naming; the `memory/` subfolder itself was not
+present here to confirm.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-26 — versioncheck installs the update itself, and reads the install on disk
 
 **Context.** A cloud session opened with the out-of-date banner: running 2.29.0, marketplace
