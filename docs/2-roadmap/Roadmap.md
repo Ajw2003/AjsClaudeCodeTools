@@ -100,11 +100,12 @@ The rules text covers these; what's missing is a hook that fires when the rule i
 
 ### B. Guard against silently dropped features
 
-- **#90 (lead), #87 Parity inventory before a rewrite, port, restructure or migration.**
+- **#90 (lead), #87 Parity inventory before a rewrite, port, restructure or migration.** Built in
+  2.44.0 (rule plus `scope`/`delegate`/Stop checks); the feature-surface diff tripwire was not.
   #90 is the full write-up (#86 was closed as its duplicate), and #87 adds opening issues for
   features to be re-added. One change: widen `rules/detail/edit-place.md`, add the parity-inventory rule, then
   the hook ideas in #90.
-- **#88, #96 Screenshots for visual changes.** Capture old and new flows and compare them. This
+- **#88, #96 Screenshots for visual changes.** Built in 2.44.0: the rule and a Stop check. Capture old and new flows and compare them. This
   fits under #90's "compare against the original, not itself", so do it after #90.
 
 ### C. The hook engine's own structure (from `docs/architecture-backlog.md`)

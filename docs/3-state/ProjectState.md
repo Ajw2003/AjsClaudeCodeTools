@@ -40,7 +40,8 @@ claims and unreasoned "not checked" disclosures; 0 of this session's 49 real rep
 and its `guard` pattern. 2.42.0 (#47) adds "an instruction names its exact input"; group A of
 the roadmap is complete. 2.43.0 makes subagents commit as they go, with a `subagentcommit`
 hook that sends one back once if it finishes with unsaved work (verified end to end with a
-control run).
+control run). 2.44.0 (group B: #90, #87, #88, #96) adds the parity-inventory and visual-check rules
+with `scope`, `delegate` and Stop checks.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

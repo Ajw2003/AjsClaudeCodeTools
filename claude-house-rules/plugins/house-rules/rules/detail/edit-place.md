@@ -23,3 +23,7 @@ not make the loss safe, because nobody is checking the diff line by line before 
 one thing that needed to change, and the regression it introduced sat unnoticed until someone
 found it later. Git holding the old version did not prevent the regression — it only proved,
 after the fact, that the loss had been avoidable.
+
+A new file taking over an old one's job is the same loss in a different shape: git shows a delete
+and an add, not an edit, and nothing here engages. That case — port, rebuild, restructure,
+migration — is covered by `parity-inventory.md`.

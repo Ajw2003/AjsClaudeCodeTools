@@ -7,6 +7,35 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-28 — Re-creating behaviour starts from an inventory; a visual change gets looked at
+
+**Context.** #90 (with #86 and #87): a port to GitHub Pages silently dropped 10 features because
+its spec was written from memory, only forced losses were disclosed, and every check compared the
+new page with itself. #88 and #96: visual changes were judged by reading code, never by looking.
+
+**Decision.** Rules: a port, rewrite, restructure or migration inventories the original from its
+code first (keep/change/drop, shown before building), verifies against the original, names every
+drop, and files an issue per deferred re-add (`rules/detail/parity-inventory.md`, pointed to from
+the "Edit in place" core section, which already reaches subagents); a visual change is
+screenshotted before and after (`rules/detail/visual-check.md`, one sentence under "A green test
+suite"). Hooks: `scope` adds an inventory clause to a prompt that reads like re-creation;
+`delegate` adds one to such a plan with no inventory; `handover` (Stop) reminds a re-creation
+turn that wrote files but names nothing kept or dropped, and a turn that wrote a visual file
+without capturing or reading an image.
+
+**Why.** The failure happens at three points — the ask, the plan handed to a subagent, and the
+report — so each gets a check. Rejected for the pattern: "replace" and "move to", which are
+everyday edit words; a false positive at Stop costs a whole continuation. Measured: none of the
+12 genuine prompts in this machine's transcripts matched; none was a port, so this shows no false
+positives rather than proving true ones. Not built from #90's list: the feature-surface diff
+tripwire (element IDs, workflow triggers, migration columns), which needs per-project knowledge
+of what "the surface" is; the rule carries it instead. Both core additions fit the inject budget
+(8,748 of 9,000 chars).
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-28 — Subagents commit as they go, and cannot finish with unsaved work
 
 **Context.** The user reported subagents committing less often than the main session. The cause

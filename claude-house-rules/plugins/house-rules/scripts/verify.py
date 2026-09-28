@@ -2442,6 +2442,73 @@ else:
     report("FAIL", "a reply with both a shell fence and a claim still emits exactly one valid JSON object")
     print(f"          out {out[:200]!r}")
 
+# --- parity (#90/#87) and visual (#88/#96) checks ------------------------------------------
+def _turn_transcript(name, prompt, uses):
+    lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": prompt}})]
+    for i, (tool, arg) in enumerate(uses):
+        inp = {"command": arg} if tool == "Bash" else {"file_path": arg}
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "p%d" % i, "name": tool, "input": inp}]}}))
+    return _hand_transcript(name, lines)
+
+
+def _stop_notes(transcript, reply, **env_extra):
+    env = dict(os.environ)
+    env["HOUSE_RULES_COMMIT_CHECK"] = "off"
+    env.update(env_extra)
+    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=reply), env=env)
+    try:
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        ctx = ""
+    return ("re-creating existing behaviour" in ctx, "checked by looking at it" in ctx, ctx)
+
+
+def pv_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print(f"          {detail}")
+
+
+_pv_port = _turn_transcript("pv-port", "port the stock page to GitHub Pages", [("Write", "/proj/site/index.html")])
+_par, _vis, _ = _stop_notes(_pv_port, "Done, the page is ported.")
+pv_case("Stop: a port that wrote files but names nothing kept or dropped gets the parity report note (#90)",
+        _par, "parity=%s" % _par)
+pv_case("Stop: the same turn changed an .html file and looked at nothing, so it gets the visual note (#88)",
+        _vis, "visual=%s" % _vis)
+_par, _, _ = _stop_notes(_pv_port, "Kept search and sorting; dropped the server sync, which needs a server.")
+pv_case("Stop: a port whose reply names what was kept and dropped gets no parity note", not _par, "parity=%s" % _par)
+_par, _, _ = _stop_notes(_pv_port, "Done.", HOUSE_RULES_PARITY="off")
+pv_case("Stop: HOUSE_RULES_PARITY=off switches the parity check off", not _par, "parity=%s" % _par)
+_pv_edit = _turn_transcript("pv-edit", "replace the colour in the header", [("Edit", "/proj/src/app.py")])
+_par, _vis, _ = _stop_notes(_pv_edit, "Changed the colour.")
+pv_case("Stop: an everyday 'replace' edit to a non-visual file trips neither check", not _par and not _vis,
+        "parity=%s visual=%s" % (_par, _vis))
+_pv_shot = _turn_transcript("pv-shot", "make the header blue",
+                            [("Edit", "/proj/site.css"), ("Bash", "npx playwright screenshot http://localhost:3000 after.png")])
+_, _vis, _ = _stop_notes(_pv_shot, "The header is blue.")
+pv_case("Stop: a visual edit with a Playwright screenshot in the turn gets no visual note", not _vis, "visual=%s" % _vis)
+_pv_read = _turn_transcript("pv-read", "make the header blue", [("Edit", "/proj/site.css"), ("Read", "/proj/after.png")])
+_, _vis, _ = _stop_notes(_pv_read, "The header is blue.")
+pv_case("Stop: a visual edit whose turn read a captured image gets no visual note", not _vis, "visual=%s" % _vis)
+_, _vis, _ = _stop_notes(_turn_transcript("pv-off", "make the header blue", [("Edit", "/proj/site.css")]),
+                         "Done.", HOUSE_RULES_VISUAL_CHECK="off")
+pv_case("Stop: HOUSE_RULES_VISUAL_CHECK=off switches the visual check off", not _vis, "visual=%s" % _vis)
+
+_, out, _ = run_hook("scope", json.dumps({"prompt": "rewrite the scraper workflow from scratch"}))
+pv_case("scope: a prompt that reads like a rewrite gets the inventory-first clause", "re-creating existing behaviour" in out,
+        "clause=%s" % ("re-creating existing behaviour" in out))
+_, out, _ = run_hook("scope", json.dumps({"prompt": "replace the colour in header.css"}))
+pv_case("scope: an everyday 'replace' prompt does not", "re-creating existing behaviour" not in out,
+        "clause=%s" % ("re-creating existing behaviour" in out))
+_, out, _ = run_hook("delegate", json.dumps({"tool_name": "ExitPlanMode", "tool_input": {
+    "plan": "Port the stock page to GitHub Pages as a static site."}}))
+pv_case("delegate: an approved port plan with no keep/change/drop inventory gets the parity note",
+        "carries no keep/change/drop" in out, "note=%s" % ("carries no keep/change/drop" in out))
+_, out, _ = run_hook("delegate", json.dumps({"tool_name": "ExitPlanMode", "tool_input": {
+    "plan": "Port the page. Parity: keep search, drop server sync."}}))
+pv_case("delegate: a port plan that carries its inventory does not", "carries no keep/change/drop" not in out,
+        "note=%s" % ("carries no keep/change/drop" in out))
+
 # --- the commit rule's obligation half (#97): Stop, branchnudge, audit, stale memories -------
 # Each case gets its own throwaway repo, so the branch and the dirty set are exactly what the
 # case says they are. The hook is pointed at it through CLAUDE_PROJECT_DIR, the same variable
