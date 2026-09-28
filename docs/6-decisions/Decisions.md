@@ -7,6 +7,26 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-28 — Verify a wait's target and working state before leaving it (#85)
+
+**Context.** A test-runner wait reported "running" for its full 10-minute timeout on a run that
+finished in 62 seconds: it was called with a bare class name while its verdict script matched by
+full-name prefix, and it was piped through `tail`, so nothing showed until it ended.
+
+**Decision.** A rule under "Nothing fails silently" (core line plus
+`rules/detail/fails-silently.md`): before leaving a wait or background task, check its target
+name against the source and run one status check. `guard` gains a `GUARD_R1` pattern that prompts
+on a `while`/`until`/`sleep`/`timeout`/`watch` wait piped through `tail`/`head`.
+
+**Why.** The pipe is the one part of the failure with a shell signature, so it is the part a hook
+can catch. Rejected for now: matching test-wrapper names against test classes and Monitor
+conditions against source — both need per-project knowledge the guard does not have; the rule
+carries them. A plain `cmd | head` with no wait keyword stays silent.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-28 — The Stop evidence check catches "can't be done" and an unreasoned "not checked"
 
 **Context.** #91, #92, #93 and #89 all report the same gap after 2.38.0 widened the evidence

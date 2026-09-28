@@ -36,7 +36,8 @@ warning in `profile`. Each has `verify.py` cases driving real throwaway git repo
 verified live: a real memory file in Claude Code's auto-memory folder, since this machine had none.
 
 2.40.0 (2026-09-28, #89/#91/#92/#93) widens `handover`'s evidence check to impossibility
-claims and unreasoned "not checked" disclosures; 0 of this session's 49 real replies trip it.
+claims and unreasoned "not checked" disclosures; 0 of this session's 49 real replies trip it. 2.41.0 (#85) adds the verify-a-wait rule
+and its `guard` pattern.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

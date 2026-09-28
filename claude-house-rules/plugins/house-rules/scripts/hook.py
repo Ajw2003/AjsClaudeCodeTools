@@ -1409,6 +1409,12 @@ GUARD_R1 = [
         "detaches the process from your terminal",
     ),
     (r'[^&]&\s*\\?"', "backgrounds the command with a trailing ampersand"),
+    # #85: a wait piped through tail/head shows nothing until it exits - a stuck wait and a
+    # working one look identical for its whole timeout.
+    (
+        r"(^|[^0-9A-Za-z_-])(while|until|sleep|timeout|watch)\s.*\|\s*(tail|head)([^0-9A-Za-z_-]|$)",
+        "pipes a wait or loop through tail/head, which hides its output until it exits",
+    ),
 ]
 
 # `git` plus any run of global options before the subcommand.

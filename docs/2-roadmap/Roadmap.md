@@ -93,8 +93,8 @@ The rules text covers these; what's missing is a hook that fires when the rule i
 - **#93, #91, #92, #89 Verification required, not suggested.** Built in 2.40.0: the `Stop`
   evidence check now catches "can't be done"/"doesn't exist" claims and any "not checked" with
   no reason beside it (`docs/6-decisions/Decisions.md`, 2026-09-28). Closes when its PR merges.
-- **#85 Verify a wait's target before leaving it.** A new rule next to "Nothing fails silently",
-  plus a `guard` pattern for a wait loop piped through `tail`/`head`.
+- **#85 Verify a wait's target before leaving it.** Built in 2.41.0: the rule under "Nothing
+  fails silently" and a `guard` pattern for a wait piped through `tail`/`head`.
 - **#47 Vague instructions.** A rule: an instruction the user acts on names the exact input.
   Written up in `docs/rules-backlog.md`.
 

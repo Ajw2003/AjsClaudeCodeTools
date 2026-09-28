@@ -424,6 +424,16 @@ GUARD_CASES = [
         "npm run dev > dev.log 2>&1 &",
     ),
     ("ask", "Never hide work in a background window or a silent process", "nohup ./long-task.sh"),
+    # #85: a wait piped through tail/head shows nothing until it exits.
+    (
+        "ask",
+        "Never hide work in a background window or a silent process",
+        "until grep -q done status.txt; do sleep 5; done | tail -5",
+    ),
+    ("ask", "Never hide work in a background window or a silent process", "timeout 600 ./run_tests.sh | head -40"),
+    ("pass", None, "git log | head -5"),
+    ("pass", None, "cat build.log | tail -50"),
+    ("pass", None, "python sleepy.py | tail"),
     (
         "ask",
         "Never hide work in a background window or a silent process",
