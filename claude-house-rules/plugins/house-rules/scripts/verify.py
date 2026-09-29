@@ -3855,7 +3855,7 @@ if not os.path.isfile(_free_detail):
     _free_problems.append("rules/detail/free-first.md does not exist")
 else:
     _fd = read(_free_detail)
-    _core_rungs = ["Local OSS", "cloud OSS", "local free closed", "cloud free closed", "paid"]
+    _core_rungs = ["Local OSS", "cloud OSS", "local free closed", "cloud free closed", "→ paid"]
     _detail_rungs = ["Local open source", "Cloud open source", "Local free closed source",
                      "Cloud free closed source", "Any paid option"]
     _core_rule = _core[_core.find("## Open source first"):].split("\n## ")[0]
