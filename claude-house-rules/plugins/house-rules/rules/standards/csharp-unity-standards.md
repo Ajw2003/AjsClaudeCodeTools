@@ -21,7 +21,7 @@
 ## Read the detail file before Unity C#
 
 Before writing or verifying Unity C# code, read
-`${CLAUDE_PLUGIN_ROOT}/rules/detail/csharp-unity-detail.md` first. It holds: Project &
+`${CLAUDE_PLUGIN_ROOT}/rules/standards/csharp-unity-detail.md` first. It holds: Project &
 folder structure, Unity-specific patterns, Performance, Testing, Verifying compilation,
 Tooling (Rider).
 

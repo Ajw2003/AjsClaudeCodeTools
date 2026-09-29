@@ -13,7 +13,7 @@ overrun that `verify.py` had never measured. See the dated entry in
   `rules/detail/environment.md` says what "doesn't fit" means.
 - **Unity rule moved out of the core (Option B).** It now lives in
   `rules/standards/csharp-unity-standards.md`, so only Unity projects load it. That document is
-  split: a small always-injected core plus `rules/detail/csharp-unity-detail.md` (six sections
+  split: a small always-injected core plus `rules/standards/csharp-unity-detail.md` (six sections
   moved unchanged, checked with a diff). `inject` is 8,943 of 9,000.
 - **Unity standards overrun fixed.** `standards` emitted 9,832 chars for a Unity-only project and
   13,376 for Unity + Node; now 5,782 and 9,326 (budget 9,500). `verify.py` measures both, which it

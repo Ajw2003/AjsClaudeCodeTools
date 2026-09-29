@@ -25,7 +25,7 @@ it (hard limit 10,000).
 2. "Unity work starts with the Unity plugin and the Unity CLI" moves from `house-rules.md` to
    `rules/standards/csharp-unity-standards.md`, so only Unity projects load it. That document
    splits into an always-injected core (C# style, a pointer, the Unity rule) and
-   `rules/detail/csharp-unity-detail.md`, holding six sections moved unchanged: Project & folder
+   `rules/standards/csharp-unity-detail.md`, holding six sections moved unchanged: Project & folder
    structure, Unity-specific patterns, Performance, Testing, Verifying compilation, Tooling
    (Rider). `standards` now emits 5,782 chars for Unity only and 9,326 for Unity + Node.
 3. The `profile` fallback detects CPU, RAM, GPU/VRAM, free disk and the Claude plan at runtime
@@ -47,10 +47,16 @@ that output has no plan field, so the profile says "not detected" and Claude ask
 session for people who never open Unity. No `guard` pattern: recommending a product is prose,
 not a shell command.
 
-**Consequence.** `tools/sync_standards.py` overwrites the vendored Unity document from
+**Consequence (superseded by the path move below).** `tools/sync_standards.py` overwrites the vendored Unity document from
 `Ajw2003/Coding-Standards`, which reverts the split. The new size check would fail after such a
 sync; the fix is to make the same change upstream. Not verified: the macOS and Windows probe
 branches, and whether a local claude.ai login reports a plan in `claude auth status`.
+
+**Follow-up, same day: the detail file moved to `rules/standards/`.** The Unity detail file now
+lives at `rules/standards/csharp-unity-detail.md`, not `rules/detail/`, so the plugin layout
+mirrors upstream (`Ajw2003/coding-standards` carries both Unity files) and `sync_standards.py`
+can no longer revert the split. `event_standards` loads only exact stems, so the extra file is
+never injected.
 
 **Status.** Standing.
 

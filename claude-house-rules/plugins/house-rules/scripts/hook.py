@@ -839,7 +839,7 @@ def event_standards():
         if bodies:
             sections = [f"### {stem}.md\n\n{text}" for stem, _, text in bodies]
             content = " ".join(preamble_parts) + "\n\n---\n\n" + "\n\n---\n\n".join(sections)
-            # The Unity core points at rules/detail/csharp-unity-detail.md by the same
+            # The Unity core points at rules/standards/csharp-unity-detail.md by the same
             # ${CLAUDE_PLUGIN_ROOT} spelling house-rules.md uses; nothing expands it inside
             # additionalContext, so resolve it here (a no-op when no document uses it).
             content = _expand_detail_paths(content)

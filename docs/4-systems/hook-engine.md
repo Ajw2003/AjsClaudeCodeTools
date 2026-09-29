@@ -112,7 +112,7 @@ on purpose — `verify.py` fails if it reappears.
   document is split the way the rules are: `rules/standards/csharp-unity-standards.md` is the
   always-injected core (C# style, a "read the detail file first" pointer, and the "Unity work
   starts with the Unity plugin and the Unity CLI" rule), and the rest moved verbatim to
-  `rules/detail/csharp-unity-detail.md`. `event_standards` expands `${CLAUDE_PLUGIN_ROOT}` in
+  `rules/standards/csharp-unity-detail.md`. `event_standards` expands `${CLAUDE_PLUGIN_ROOT}` in
   what it emits, as `inject` does. Until 2026-09-29 nothing measured `standards` in a Unity
   project, so it emitted 9,832 chars (Unity only) and 13,376 (Unity + Node) against a 10,000 hard
   limit unnoticed. `verify.py` now measures both fixtures. `tools/sync_standards.py` overwrites

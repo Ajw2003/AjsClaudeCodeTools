@@ -100,6 +100,7 @@ def read(path):
 
 
 DETAIL_DIR = os.path.join(HERE, "..", "rules", "detail")
+STANDARDS_DIR = os.path.join(HERE, "..", "rules", "standards")
 
 
 def rules_corpus():
@@ -3716,7 +3717,7 @@ std_case(
     lambda out: (
         _UNITY_RULE_HEADING in out
         and "rules/detail/unity-tools-first.md" in out
-        and "rules/detail/csharp-unity-detail.md" in out
+        and "rules/standards/csharp-unity-detail.md" in out
         and "${CLAUDE_PLUGIN_ROOT}" not in out,
         f"got: {_standards_len(out)} chars; heading={_UNITY_RULE_HEADING in out}",
     ),
@@ -3738,15 +3739,15 @@ if (
 else:
     report("FAIL", "the Unity tools-first rule is not in the always-injected core")
     print("          the Unity rule is still in house-rules.md or the inject output")
-_unity_detail = os.path.join(DETAIL_DIR, "csharp-unity-detail.md")
+_unity_detail = os.path.join(STANDARDS_DIR, "csharp-unity-detail.md")
 if os.path.isfile(_unity_detail) and all(
     h in read(_unity_detail)
     for h in ("## Unity-specific patterns", "## Performance", "## Testing", "## Verifying compilation", "## Tooling (Rider)")
 ):
-    report("PASS", "rules/detail/csharp-unity-detail.md holds the Unity sections moved out of the core")
+    report("PASS", "rules/standards/csharp-unity-detail.md holds the Unity sections moved out of the core")
     print("          all five named sections are present")
 else:
-    report("FAIL", "rules/detail/csharp-unity-detail.md holds the Unity sections moved out of the core")
+    report("FAIL", "rules/standards/csharp-unity-detail.md holds the Unity sections moved out of the core")
     print(f"          {_unity_detail} is missing or lacks a moved section")
 
 # --- the profile reports hardware and the Claude plan, and says so when it cannot -----------

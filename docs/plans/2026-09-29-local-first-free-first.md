@@ -2,7 +2,7 @@
 
 **Status: built in 2.46.0 (2026-09-29), with Option B for the trim.** aj chose Option B (move the
 Unity rule out of the core) and asked for the Unity standards overrun to be fixed in the same
-change: `csharp-unity-standards.md` is now a core plus `rules/detail/csharp-unity-detail.md`. See
+change: `csharp-unity-standards.md` is now a core plus `rules/standards/csharp-unity-detail.md`. See
 the dated entry in `docs/6-decisions/Decisions.md`. The text below is the scoping record and is
 left as it was written.
 
