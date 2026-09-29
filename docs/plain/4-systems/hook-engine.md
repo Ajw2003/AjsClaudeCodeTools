@@ -1,4 +1,4 @@
-<!-- plain copy of: docs/4-systems/hook-engine.md @ a4e4e388f19c51989b9c23d6e46dd3f01cad28c4 -->
+<!-- plain copy of: docs/4-systems/hook-engine.md @ 62a3b479fdab8e461f50e6b59c632b90f9d76afd -->
 
 # The hook engine, in plain English
 
