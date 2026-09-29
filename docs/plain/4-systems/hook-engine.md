@@ -39,6 +39,11 @@ unchallenged and reminders never reach Claude.
 - **A file replaced by mistake.** Any full overwrite of an existing file asks first, however small.
 - **Big files timing out.** The long-comment check is fast enough to finish on large files.
 - **Unity game projects missed.** One opened at its Assets folder is still recognised.
+- **Unity guidance crowding out the rest.** The Unity coding advice is split, so only its short
+  part loads at the start and the rest is read when needed. The tests measure the size.
+- **Guessing at the machine.** Where the machine's details aren't written down, its memory,
+  graphics card, free disk space and Claude plan are looked up at the start, each with a time
+  limit. Anything that can't be found says so.
 - **Extra installs breaking it.** Only Python's built-in parts are used.
 
 **Related.**

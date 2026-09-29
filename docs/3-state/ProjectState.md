@@ -44,6 +44,13 @@ control run). 2.44.0 (group B: #90, #87, #88, #96) adds the parity-inventory and
 with `scope`, `delegate` and Stop checks. 2.45.0 (#98) adds "plain summary first" for work reports,
 checked at Stop.
 
+2.46.0 (2026-09-29) adds the "Open source first; paid is the last resort" rule and its detail
+file, hardware and Claude-plan detection in `profile`, and moves the Unity tools-first rule into
+the Unity-only standards (split into a core plus `rules/detail/csharp-unity-detail.md`). That
+also fixed `standards` overrunning its budget in Unity projects, which nothing had measured.
+Not verified: the macOS and Windows hardware probes, and whether a local claude.ai login reports
+a plan in `claude auth status`. `tools/sync_standards.py` would revert the Unity split.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

@@ -125,6 +125,215 @@ def _read_text(path):
         return f.read()
 
 
+# Hardware and plan probes for the machine profile: doc-ref ad50 docs/4-systems/hook-engine.md
+PROBE_TIMEOUT_SECONDS = 3.0
+PROBE_TOTAL_SECONDS = 6.0
+_GIB = 1024 ** 3
+_PLAN_KEYS = {"subscriptiontype", "subscription_type", "subscription", "plan", "plantype", "plan_type"}
+
+
+class _ProbeClock:
+    def __init__(self):
+        self.deadline = _time.monotonic() + PROBE_TOTAL_SECONDS
+
+    def remaining(self):
+        return self.deadline - _time.monotonic()
+
+
+def _probe(argv, clock):
+    """Run argv with a short timeout. Returns (stdout, None) or (None, reason)."""
+    import subprocess
+
+    room = min(PROBE_TIMEOUT_SECONDS, clock.remaining())
+    if room <= 0:
+        return None, "probe time budget of %g s already used up" % PROBE_TOTAL_SECONDS
+    try:
+        proc = subprocess.run(
+            argv, stdin=subprocess.DEVNULL, capture_output=True, timeout=room,
+            text=True, encoding="utf-8", errors="replace",
+        )
+    except subprocess.TimeoutExpired:
+        return None, "%s timed out after %g s" % (os.path.basename(argv[0]), room)
+    except OSError as exc:
+        return None, "%s could not run: %s" % (os.path.basename(argv[0]), exc)
+    if proc.returncode != 0:
+        first = (proc.stderr or proc.stdout or "").strip().splitlines()
+        why = first[0][:120] if first else "no output"
+        return None, "%s exited %d: %s" % (os.path.basename(argv[0]), proc.returncode, why)
+    return proc.stdout, None
+
+
+def _fmt_gib(nbytes):
+    return "%.1f GB" % (nbytes / _GIB)
+
+
+def _probe_cpu(clock):
+    cores = os.cpu_count()
+    cores_txt = "%d logical cores" % cores if cores else "core count not detected (os.cpu_count() returned None)"
+    model, why = None, None
+    system = platform.system()
+    if system == "Linux":
+        try:
+            for line in _read_text("/proc/cpuinfo").splitlines():
+                if line.lower().startswith("model name"):
+                    model = line.split(":", 1)[1].strip()
+                    break
+            if model is None:
+                why = "/proc/cpuinfo has no 'model name' line"
+        except OSError as exc:
+            why = "cannot read /proc/cpuinfo: %s" % exc
+    elif system == "Darwin":
+        sysctl = shutil.which("sysctl")
+        if not sysctl:
+            why = "sysctl not on PATH"
+        else:
+            out, why = _probe([sysctl, "-n", "machdep.cpu.brand_string"], clock)
+            model = out.strip() if out and out.strip() else None
+    else:
+        model = platform.processor() or None
+        if model is None:
+            why = "platform.processor() is empty"
+    if model:
+        return "CPU: %s, %s" % (model, cores_txt)
+    return "CPU: model not detected (%s), %s" % (why or "unknown", cores_txt)
+
+
+def _probe_ram(clock):
+    system = platform.system()
+    try:
+        if system == "Linux":
+            for line in _read_text("/proc/meminfo").splitlines():
+                if line.startswith("MemTotal:"):
+                    return "RAM: %s total" % _fmt_gib(int(line.split()[1]) * 1024)
+            return "RAM: not detected (/proc/meminfo has no MemTotal line)"
+        if system == "Darwin":
+            sysctl = shutil.which("sysctl")
+            if not sysctl:
+                return "RAM: not detected (sysctl not on PATH)"
+            out, why = _probe([sysctl, "-n", "hw.memsize"], clock)
+            if out is None:
+                return "RAM: not detected (%s)" % why
+            return "RAM: %s total" % _fmt_gib(int(out.strip()))
+        if system == "Windows":
+            import ctypes
+
+            class _MemStatus(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            status = _MemStatus()
+            status.dwLength = ctypes.sizeof(_MemStatus)
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                return "RAM: not detected (GlobalMemoryStatusEx returned failure)"
+            return "RAM: %s total" % _fmt_gib(status.ullTotalPhys)
+        return "RAM: not detected (no RAM probe for %s)" % system
+    except (OSError, ValueError, AttributeError) as exc:
+        return "RAM: not detected (%s: %s)" % (type(exc).__name__, exc)
+
+
+def _probe_gpu(clock):
+    system = platform.system()
+    smi = shutil.which("nvidia-smi")
+    if smi:
+        out, why = _probe([smi, "--query-gpu=name,memory.total", "--format=csv,noheader"], clock)
+        if out is None:
+            return "GPU: not detected (%s)" % why
+        rows = [r.strip() for r in out.splitlines() if r.strip()]
+        if not rows:
+            return "GPU: not detected (nvidia-smi listed no GPU)"
+        return "GPU: " + "; ".join(r.replace(", ", " with ", 1) + " VRAM" for r in rows)
+    if system == "Darwin":
+        profiler = shutil.which("system_profiler")
+        if not profiler:
+            return "GPU: not detected (nvidia-smi and system_profiler not on PATH)"
+        out, why = _probe([profiler, "SPDisplaysDataType"], clock)
+        if out is None:
+            return "GPU: not detected (%s)" % why
+        chips = [l.split(":", 1)[1].strip() for l in out.splitlines() if "Chipset Model:" in l]
+        vram = [l.split(":", 1)[1].strip() for l in out.splitlines() if "VRAM" in l and ":" in l]
+        if not chips:
+            return "GPU: not detected (system_profiler listed no 'Chipset Model')"
+        tail = ", VRAM %s" % vram[0] if vram else ", VRAM not reported (likely unified memory shared with RAM)"
+        return "GPU: %s%s" % ("; ".join(chips), tail)
+    if system == "Windows":
+        ps = shutil.which("powershell") or shutil.which("pwsh")
+        if not ps:
+            return "GPU: not detected (nvidia-smi, powershell and pwsh not on PATH)"
+        script = ("Get-CimInstance Win32_VideoController | ForEach-Object "
+                  "{ $_.Name + '|' + $_.AdapterRAM }")
+        out, why = _probe([ps, "-NoProfile", "-NonInteractive", "-Command", script], clock)
+        if out is None:
+            return "GPU: not detected (%s)" % why
+        found = []
+        for row in [r.strip() for r in out.splitlines() if r.strip()]:
+            name, _, ram = row.rpartition("|")
+            try:
+                nbytes = int(ram)
+            except ValueError:
+                found.append("%s, VRAM not reported" % (name or row))
+                continue
+            note = ""
+            # AdapterRAM is a 32-bit field: a card with more than 4 GB reads as ~4 GB.
+            if nbytes >= 4 * _GIB - 1024 * 1024:
+                note = " (may be higher - Windows reports at most 4 GB here)"
+            found.append("%s with %s VRAM%s" % (name, _fmt_gib(nbytes), note))
+        if not found:
+            return "GPU: not detected (Win32_VideoController listed no adapter)"
+        return "GPU: " + "; ".join(found)
+    return "GPU: not detected (nvidia-smi not on PATH; no other GPU probe for %s)" % system
+
+
+def _probe_disk():
+    where = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    try:
+        usage = shutil.disk_usage(where)
+    except OSError as exc:
+        return "Free disk: not detected (shutil.disk_usage(%r) failed: %s)" % (where, exc)
+    return "Free disk: %s free of %s on the drive holding %s" % (
+        _fmt_gib(usage.free), _fmt_gib(usage.total), where)
+
+
+def _probe_claude_plan(clock):
+    claude = shutil.which("claude")
+    if not claude:
+        return "Claude plan: not detected (claude not on PATH)"
+    out, why = _probe([claude, "auth", "status", "--json"], clock)
+    if out is None:
+        return "Claude plan: not detected (%s)" % why
+    try:
+        data = json.loads(out)
+    except ValueError as exc:
+        return "Claude plan: not detected (claude auth status --json was not JSON: %s)" % exc
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key.lower() in _PLAN_KEYS and isinstance(value, str) and value.strip():
+                return "Claude plan: %s (from claude auth status: %s)" % (value.strip(), key)
+    return "Claude plan: not detected (claude auth status reports no plan field)"
+
+
+def _detect_hardware():
+    clock = _ProbeClock()
+    remote = bool(os.environ.get("CLAUDE_CODE_REMOTE"))
+    if remote:
+        head = ("## Hardware of this sandbox (for my own checks only - NOT the user's local "
+                "build budget)")
+    else:
+        head = "## Hardware (the local build budget)"
+    lines = [head, _probe_cpu(clock), _probe_ram(clock), _probe_gpu(clock), _probe_disk(),
+             _probe_claude_plan(clock)]
+    if remote:
+        lines.append(
+            "The local build budget is the user's own machine, from rules/handover-target.md, "
+            "not the figures above."
+        )
+    return lines
+
+
 def _detect_environment():
     """Runtime detection used when rules/environment.md is missing or empty.
 
@@ -138,11 +347,16 @@ def _detect_environment():
         found = shutil.which(tool)
         lines.append(f"{tool}: {found if found else 'NOT on PATH'}")
     lines.append("")
+    lines.extend(_detect_hardware())
+    lines.append("")
     lines.append(
-        "This section was generated by hook.py's inject handler, not hand-verified. Before "
-        "relying on a fact not listed here - RAM, GPU, line-ending config, anything else - "
-        "discover it and write it into rules/environment.md (gitignored, machine-local) so it "
-        "is recorded rather than re-detected every session."
+        "This section was generated by hook.py's profile handler, not hand-verified. Hardware "
+        "and Claude plan above were probed at session start; a field marked 'not detected' "
+        "is unknown, not zero. Before relying on any other fact - line-ending config, "
+        "anything else - discover it and write it into rules/environment.md (gitignored, "
+        "machine-local) so it is recorded rather than re-detected every session. Claude plan "
+        "not detected: ask the user once, the first time a paid option comes up, and record "
+        "the answer there."
     )
     return "\n".join(lines) + "\n"
 
@@ -393,7 +607,8 @@ def event_profile():
         if handover_body.strip():
             handover_block = (
                 "\n\n---\n\nThe human's own machine (for anything I hand over to them), as "
-                "recorded. Recorded? Build for exactly that:\n\n" + handover_body
+                "recorded. Recorded? Build for exactly that; its hardware, not the sandbox's, is "
+                "the local build budget:\n\n" + handover_body
             )
         else:
             handover_block = (
@@ -402,7 +617,9 @@ def event_profile():
                 "command I hand over, find out theirs - check docs/example-environment.md if "
                 "present (say it's inferred, and from when, not confirmed), or ask - then "
                 "record the confirmed answer into rules/handover-target.md so a later session "
-                "does not have to ask again.\n"
+                "does not have to ask again. Ask for their hardware too (CPU, RAM, GPU and "
+                "VRAM, free disk) and their Claude plan: that hardware, not the sandbox's, is "
+                "the local build budget.\n"
             )
 
     # Truncate only the environment body if it runs the whole thing over budget - preflight

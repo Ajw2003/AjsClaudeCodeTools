@@ -3685,6 +3685,201 @@ try:
 finally:
     shutil.rmtree(assets_fixture, ignore_errors=True)
 
+# --- standards stays under budget in Unity projects, where the Unity rule now lives ----------
+# The standards budget was only ever measured in this repo, which has no Unity markers, so a
+# Unity project sailed past the 10,000-char hard limit unseen (docs/6-decisions/Decisions.md,
+# 2026-09-29). These two fixtures are the check that was missing.
+STANDARDS_BUDGET = 9_500
+
+
+def _standards_len(out):
+    try:
+        return len(json.loads(out)["hookSpecificOutput"]["additionalContext"])
+    except Exception as exc:
+        return f"unparseable ({exc}): {out[:120]!r}"
+
+
+for _title, _files in [
+    ("a Unity-only project", {"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"}),
+    ("a Unity + Node project", {"Assets/Scripts/a.cs": "", "package.json": "{}"}),
+]:
+    def _within_budget(out):
+        n = _standards_len(out)
+        return isinstance(n, int) and n <= STANDARDS_BUDGET, f"{n} chars (budget {STANDARDS_BUDGET}, hard limit 10,000)"
+
+    std_case(f"standards stays under its {STANDARDS_BUDGET:,}-char budget in {_title}", _files, _within_budget)
+
+_UNITY_RULE_HEADING = "## Unity work starts with the Unity plugin and the Unity CLI"
+std_case(
+    "the Unity tools-first rule reaches a Unity project through standards, with both pointers",
+    {"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"},
+    lambda out: (
+        _UNITY_RULE_HEADING in out
+        and "rules/detail/unity-tools-first.md" in out
+        and "rules/detail/csharp-unity-detail.md" in out
+        and "${CLAUDE_PLUGIN_ROOT}" not in out,
+        f"got: {_standards_len(out)} chars; heading={_UNITY_RULE_HEADING in out}",
+    ),
+)
+std_case(
+    "the Unity tools-first rule does not reach a project with no Unity markers",
+    {},
+    lambda out: (_UNITY_RULE_HEADING not in out, "a bare directory got the Unity rule" if _UNITY_RULE_HEADING in out else "absent, as intended"),
+)
+_, _inject_out, _ = run_hook("inject", "", env=env_in(ROOT))
+_core_text = read(RULES_FILE)
+if (
+    "Unity work starts" not in _inject_out
+    and "unity-tools-first" not in _inject_out
+    and "Unity work starts" not in _core_text
+):
+    report("PASS", "the Unity tools-first rule is not in the always-injected core")
+    print("          neither house-rules.md nor the inject output carries it")
+else:
+    report("FAIL", "the Unity tools-first rule is not in the always-injected core")
+    print("          the Unity rule is still in house-rules.md or the inject output")
+_unity_detail = os.path.join(DETAIL_DIR, "csharp-unity-detail.md")
+if os.path.isfile(_unity_detail) and all(
+    h in read(_unity_detail)
+    for h in ("## Unity-specific patterns", "## Performance", "## Testing", "## Verifying compilation", "## Tooling (Rider)")
+):
+    report("PASS", "rules/detail/csharp-unity-detail.md holds the Unity sections moved out of the core")
+    print("          all five named sections are present")
+else:
+    report("FAIL", "rules/detail/csharp-unity-detail.md holds the Unity sections moved out of the core")
+    print(f"          {_unity_detail} is missing or lacks a moved section")
+
+# --- the profile reports hardware and the Claude plan, and says so when it cannot -----------
+# PATH is replaced by a directory holding only the fakes each case wants, so the result does not
+# depend on whether this machine has nvidia-smi or a logged-in claude. POSIX shell fakes.
+def _fake_bin(**scripts):
+    d = tempfile.mkdtemp(prefix="house-rules-fakebin-")
+    for name, body in scripts.items():
+        path = os.path.join(d, name.replace("_", "-"))
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write("#!/bin/sh\n" + body + "\n")
+        os.chmod(path, 0o755)
+    return d
+
+
+def _profile_out(path_dir, remote=False, **extra):
+    env = dict(os.environ)
+    env.pop("CLAUDE_CODE_REMOTE", None)
+    env["PATH"] = path_dir
+    env["HOUSE_RULES_ENV_FILE"] = "/nonexistent-on-purpose-env"
+    env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = "/nonexistent-on-purpose-handover"
+    if remote:
+        env["CLAUDE_CODE_REMOTE"] = "1"
+    env.update(extra)
+    _, out, _ = run_hook("profile", "", env=env)
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return out
+
+
+if os.name == "nt":
+    for _t in ("the profile names CPU, RAM, GPU, free disk and Claude plan",
+               "a missing nvidia-smi is reported as 'GPU: not detected (...)'",
+               "a claude that reports no plan field is 'Claude plan: not detected (...)'",
+               "a claude that reports a plan field has it shown",
+               "nvidia-smi output is reported as GPU name and VRAM"):
+        report("SKIP", _t + " (the fakes are POSIX shell scripts)")
+else:
+    _no_plan = _fake_bin(claude='echo \'{"loggedIn":true,"authMethod":"oauth_token","apiProvider":"firstParty"}\'')
+    _with_plan = _fake_bin(claude='echo \'{"loggedIn":true,"subscriptionType":"max"}\'',
+                           nvidia_smi='echo "NVIDIA Test GPU, 8192 MiB"')
+    _empty = tempfile.mkdtemp(prefix="house-rules-emptybin-")
+    try:
+        _p = _profile_out(_no_plan)
+        _missing = [f for f in ("CPU:", "RAM:", "GPU:", "Free disk:", "Claude plan:") if f not in _p]
+        report("PASS" if not _missing else "FAIL", "the profile names CPU, RAM, GPU, free disk and Claude plan")
+        print(f"          missing fields: {_missing}" if _missing else "          all five field names present")
+
+        _gpu_line = next((l for l in _p.splitlines() if l.startswith("GPU:")), "")
+        report("PASS" if _gpu_line.startswith("GPU: not detected (") and "nvidia-smi" in _gpu_line else "FAIL",
+               "a missing nvidia-smi is reported as 'GPU: not detected (...)'")
+        print(f"          {_gpu_line!r}")
+
+        _plan_line = next((l for l in _p.splitlines() if l.startswith("Claude plan:")), "")
+        report("PASS" if _plan_line.startswith("Claude plan: not detected (") and "no plan field" in _plan_line else "FAIL",
+               "a claude that reports no plan field is 'Claude plan: not detected (...)'")
+        print(f"          {_plan_line!r}")
+
+        _p2 = _profile_out(_with_plan)
+        _plan2 = next((l for l in _p2.splitlines() if l.startswith("Claude plan:")), "")
+        report("PASS" if _plan2.startswith("Claude plan: max") else "FAIL",
+               "a claude that reports a plan field has it shown")
+        print(f"          {_plan2!r}")
+
+        _gpu2 = next((l for l in _p2.splitlines() if l.startswith("GPU:")), "")
+        report("PASS" if "NVIDIA Test GPU" in _gpu2 and "8192 MiB" in _gpu2 else "FAIL",
+               "nvidia-smi output is reported as GPU name and VRAM")
+        print(f"          {_gpu2!r}")
+
+        _p3 = _profile_out(_empty)
+        _plan3 = next((l for l in _p3.splitlines() if l.startswith("Claude plan:")), "")
+        report("PASS" if _plan3.startswith("Claude plan: not detected (claude not on PATH)") else "FAIL",
+               "no claude on PATH is 'Claude plan: not detected (claude not on PATH)'")
+        print(f"          {_plan3!r}")
+    finally:
+        for _d in (_no_plan, _with_plan, _empty):
+            shutil.rmtree(_d, ignore_errors=True)
+
+# --- a remote profile never presents the sandbox's hardware as the local build budget --------
+_remote_empty = tempfile.mkdtemp(prefix="house-rules-emptybin-")
+try:
+    _r = _profile_out(_remote_empty, remote=True)
+    _r_ok = (
+        "NOT the user's local build budget" in _r
+        and "rules/handover-target.md" in _r
+        and "## Hardware (the local build budget)" not in _r
+        and "Ask for their hardware" in _r
+    )
+    report("PASS" if _r_ok else "FAIL",
+           "a remote profile labels detected hardware as the sandbox's and asks for the user's")
+    print("          sandbox label, handover-target pointer and hardware question present" if _r_ok
+          else f"          got: {_r[-900:]!r}")
+    _l = _profile_out(_remote_empty, remote=False)
+    report("PASS" if "## Hardware (the local build budget)" in _l and "NOT the user's" not in _l else "FAIL",
+           "a local profile calls the detected hardware the local build budget")
+    print("          local label present, no sandbox caveat")
+finally:
+    shutil.rmtree(_remote_empty, ignore_errors=True)
+
+# --- the open-source-first rule and its detail file agree ------------------------------------
+_free_detail = os.path.join(DETAIL_DIR, "free-first.md")
+_core = read(RULES_FILE)
+_free_problems = []
+if not os.path.isfile(_free_detail):
+    _free_problems.append("rules/detail/free-first.md does not exist")
+else:
+    _fd = read(_free_detail)
+    _core_rungs = ["Local OSS", "cloud OSS", "local free closed", "cloud free closed", "paid"]
+    _detail_rungs = ["Local open source", "Cloud open source", "Local free closed source",
+                     "Cloud free closed source", "Any paid option"]
+    _core_rule = _core[_core.find("## Open source first"):].split("\n## ")[0]
+    for label, text, rungs in (("house-rules.md", _core_rule, _core_rungs), ("free-first.md", _fd, _detail_rungs)):
+        pos = [text.find(r) for r in rungs]
+        if min(pos) < 0:
+            _free_problems.append(f"{label} lacks ladder rung(s): {[r for r, p in zip(rungs, pos) if p < 0]}")
+        elif pos != sorted(pos):
+            _free_problems.append(f"{label} names the ladder rungs out of order")
+    for phrase in ("OSI-approved", "Pro or Max", "Break-even", "guess"):
+        if phrase not in _fd:
+            _free_problems.append(f"free-first.md lacks {phrase!r}")
+if "## Open source first; paid is the last resort" not in _core:
+    _free_problems.append("house-rules.md lacks the rule heading")
+if "${CLAUDE_PLUGIN_ROOT}/rules/detail/free-first.md" not in _core:
+    _free_problems.append("house-rules.md does not point at rules/detail/free-first.md")
+if "## Open source first; paid is the last resort" in _core and "## Match response depth" in _core and \
+        _core.index("## Open source first") > _core.index("## Match response depth"):
+    _free_problems.append("the rule is not placed before 'Match response depth'")
+if "free-first.md" not in read(os.path.join(DETAIL_DIR, "environment.md")):
+    _free_problems.append("environment.md does not link free-first.md")
+report("FAIL" if _free_problems else "PASS", "the open-source-first rule and rules/detail/free-first.md exist and agree")
+print(f"          {'; '.join(_free_problems)}" if _free_problems else "          heading, pointer, ladder order in both files, estimate table terms all present")
+
 # run.sh standards with no working interpreter still prints a visible warning and exits 0
 env_nopath = dict(os.environ)
 env_nopath.pop("HOUSE_RULES_PYTHON", None)

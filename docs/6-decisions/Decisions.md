@@ -7,6 +7,55 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-29 — Open source first; the Unity rule leaves the core; the profile records hardware
+
+**Context.** aj asked for two things: build locally for the hardware we have, and prefer free
+open-source solutions with paid as the last resort (on Pro or Max, first scope building our own).
+The plan is `docs/plans/2026-09-29-local-first-free-first.md`. The core `inject` text had 81
+characters of room, so the new rule needed space. Two ways of making it were measured; aj chose
+Option B, moving the Unity rule out of the core. Measuring Option B showed that `standards` in a
+Unity project already emitted 9,832 chars (budget 9,500) and 13,376 with a Node service beside
+it (hard limit 10,000).
+
+**Decision.**
+1. A core rule "Open source first; paid is the last resort" with a five-rung ladder, and
+   `rules/detail/free-first.md` (the ladder, the build-your-own estimate table, an example). The
+   "Find out what machine you are on" rule gains "Detected hardware is the local budget", and
+   `rules/detail/environment.md` says what "doesn't fit" means.
+2. "Unity work starts with the Unity plugin and the Unity CLI" moves from `house-rules.md` to
+   `rules/standards/csharp-unity-standards.md`, so only Unity projects load it. That document
+   splits into an always-injected core (C# style, a pointer, the Unity rule) and
+   `rules/detail/csharp-unity-detail.md`, holding six sections moved unchanged: Project & folder
+   structure, Unity-specific patterns, Performance, Testing, Verifying compilation, Tooling
+   (Rider). `standards` now emits 5,782 chars for Unity only and 9,326 for Unity + Node.
+3. The `profile` fallback detects CPU, RAM, GPU/VRAM, free disk and the Claude plan at runtime
+   (nothing hardcoded), with per-probe timeouts and a `not detected (<reason>)` line on failure.
+   On a remote session the numbers are labelled as the sandbox's; the local budget is the
+   user's machine, from `rules/handover-target.md`.
+4. `verify.py` gains the check that was missing: `standards` measured in a Unity-only and a
+   Unity + Node project, plus cases for the Unity rule's placement, the hardware and plan
+   fields, and the rule/detail agreement.
+
+**Why.** Option B suits a plugin others install: people who do not use Unity stop paying for a
+Unity rule. It only worked once the Unity standards were split, since adding the rule to the
+existing document would have put a Unity + Node project past the hard limit. The overrun went
+unseen because `verify.py` measured `standards` only in this repo, which has no Unity markers.
+The plan tier is read from `claude auth status --json` and never assumed; in a cloud session
+that output has no plan field, so the profile says "not detected" and Claude asks once.
+
+**Rejected.** Option A (tightening three other rules' wording) kept the Unity rule in every
+session for people who never open Unity. No `guard` pattern: recommending a product is prose,
+not a shell command.
+
+**Consequence.** `tools/sync_standards.py` overwrites the vendored Unity document from
+`Ajw2003/Coding-Standards`, which reverts the split. The new size check would fail after such a
+sync; the fix is to make the same change upstream. Not verified: the macOS and Windows probe
+branches, and whether a local claude.ai login reports a plan in `claude auth status`.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-28 — A reply reporting finished work opens with a plain summary (#98)
 
 **Context.** #98 asked for a human-facing document first, in plain terms, readable on mobile or
