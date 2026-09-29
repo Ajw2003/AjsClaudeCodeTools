@@ -4,7 +4,17 @@ Status: research only. Nothing here was run in Unity. The sandbox has no `unity`
 `unity:*` skills, and `docs.unity3d.com` is blocked by the egress proxy, so Unity's own Terrain
 Tools page was **not** read; its feature list below comes from search snippets plus general
 knowledge and is marked as such. Repo facts come from the GitHub READMEs fetched on 2026-09-29.
-Maintenance state and Unity-6/URP compatibility of every community repo are **unchecked**.
+Follow-up checks, same day, via public GitHub pages (the GitHub API returned 403 to this
+sandbox, so licence and star counts were not readable):
+
+- Terrain Tools: the `needle-mirror/com.unity.terrain-tools` `package.json` says version 5.3.3,
+  minimum Unity 6000.0. So the current package is the 5.x line for Unity 6, not 4.x as first cited.
+- MoonbowPony/FoliageTool: last commit 2024-12-12 (v1.0.6), including a Unity 6 API fix. Most
+  recently maintained of the foliage repos.
+- Path Paint Tool: last commit 2020-05-20. Likely stale for Unity 6; untested.
+- santorr/UnityFoliageTool: the commits page showed no history, so its activity is **unknown**.
+- Not checked for any repo: URP/HDRP behaviour. That needs the tool opened in a Unity project,
+  which this sandbox cannot do (no Unity editor).
 
 ## What Unreal gives you (the target)
 
@@ -46,7 +56,7 @@ because the ask is free.
 
 **No single free tool matches the Unreal pipeline.** Nearest free stack today:
 
-1. Unity Terrain + Terrain Tools 4 for sculpt, heightmaps, erosion, stamps, texture layers.
+1. Unity Terrain + Terrain Tools (5.x on Unity 6) for sculpt, heightmaps, erosion, stamps, texture layers.
 2. Terrain layers with a height-blend shader for materials.
 3. A foliage painter: fork or wrap MoonbowPony/FoliageTool (MIT) for rules, or use
    santorr/UnityFoliageTool as a reference only (no licence).
