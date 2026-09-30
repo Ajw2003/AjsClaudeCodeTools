@@ -3415,6 +3415,15 @@ def _autosave_target(payload):
         return None
     if not os.path.isabs(path) and data.get("cwd"):
         path = os.path.join(data["cwd"], path)
+    # Fast path: .git/HEAD is a file read, so a branch that is not a subagent worktree branch
+    # is ruled out with zero git subprocesses. An unreadable HEAD raises (loud, as before).
+    start = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+    git_dir = _git_dir(start)
+    if not git_dir:
+        return None
+    head = _read_text(os.path.join(git_dir, "HEAD")).strip()
+    if not head.startswith("ref: refs/heads/" + AUTOSAVE_BRANCH_PREFIX):
+        return None
     top = _repo_top(os.path.join(path, "x") if os.path.isdir(path) else path, {})
     if not top:
         return None

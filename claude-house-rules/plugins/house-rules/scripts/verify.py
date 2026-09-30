@@ -188,6 +188,14 @@ REPO_NONE = os.path.join(_FIXTURE_ROOT, "not-a-repo")
 os.makedirs(REPO_NONE)
 
 
+def verbose_env(base=None):
+    """The no-op traces ("looked, nothing to do") print only under HOUSE_RULES_TRACE=verbose.
+    Cases that assert the decision text run under this env; the default-silent cases do not."""
+    e = dict(os.environ if base is None else base)
+    e["HOUSE_RULES_TRACE"] = "verbose"
+    return e
+
+
 def env_in(project_dir, **extra):
     e = dict(os.environ)
     e["CLAUDE_PROJECT_DIR"] = project_dir
@@ -840,7 +848,7 @@ desc_payload = json.dumps(
         },
     }
 )
-code, out, err = run_hook("guard", desc_payload)
+code, out, err = run_hook("guard", desc_payload, env=verbose_env())
 if '"permissionDecision"' not in out and "`npm test`" in out:
     report("PASS", "a harmless command with a git-mentioning description does not prompt")
     print("          no prompt, and the trace names `npm test` - the command, not the description")
@@ -1140,7 +1148,7 @@ def art_case(expect, title, file_path, extra="", contains=None, excludes=None):
         obj = json.loads(payload)
         obj["tool_input"].update(extra)
         payload = json.dumps(obj)
-    code, out, err = run_hook("artifact", payload)
+    code, out, err = run_hook("artifact", payload, env=verbose_env())
     if "artifact custody" in out:
         got = "remind"
     elif '"systemMessage"' in out:
@@ -1402,7 +1410,7 @@ def run_case(expect, title, file_path, extra=""):
     obj = {"tool_name": "Write", "tool_input": {"file_path": file_path}}
     if extra:
         obj["tool_input"].update(extra)
-    code, out, err = run_hook("runnable", json.dumps(obj))
+    code, out, err = run_hook("runnable", json.dumps(obj), env=verbose_env())
     if "whole workflows" in out:
         got = "remind"
     elif '"systemMessage"' in out:
@@ -1441,7 +1449,7 @@ run_case(
 # --- the compile-verification reminder for compiled-language (.cs) files ---------------------
 def compile_case(expect, title, file_path):
     obj = {"tool_name": "Write", "tool_input": {"file_path": file_path}}
-    code, out, err = run_hook("runnable", json.dumps(obj))
+    code, out, err = run_hook("runnable", json.dumps(obj), env=verbose_env())
     if "should compile" in out.lower():
         got = "remind"
     elif '"systemMessage"' in out:
@@ -1688,6 +1696,7 @@ def harv_case(expect, title, file_path, content, tool="Write", env=None, expect_
     e.pop("HOUSE_RULES_HARVEST", None)
     e.pop("HOUSE_RULES_HARVEST_MIN_CHARS", None)
     e.pop("HOUSE_RULES_DEBUG", None)
+    e["HOUSE_RULES_TRACE"] = "verbose"  # the no-blocks trace is verbose-only; env= may override
     if env:
         e.update(env)
     code, out, err = run_hook("harvest", payload, env=e)
@@ -1942,13 +1951,69 @@ trace_cases = [
      "not a runnable file", "a file that cannot be run"),
 ]
 for event, payload, needle, why in trace_cases:
-    code, out, err = run_hook(event, payload)
+    code, out, err = run_hook(event, payload, env=verbose_env())
     if code == 0 and '"systemMessage"' in out and needle in out:
         report("PASS", f"{event} traces its decision on {why}")
         print(f"          says what it looked at and what it concluded; names {needle!r}")
     else:
         report("FAIL", f"{event} traces its decision on {why}")
         print(f"          exit {code}, got: {out[:160]!r}")
+
+# --- the default is silent on "looked, nothing to do"; verbose restores it; "could not tell" stays loud
+_dflt = dict(os.environ)
+_dflt.pop("HOUSE_RULES_TRACE", None)
+for event, payload, needle, why in trace_cases:
+    code, out, err = run_hook(event, payload, env=_dflt)
+    if code == 0 and not out.strip():
+        report("PASS", f"{event} is silent by default on {why}")
+        print("          no-op decision, nothing emitted (HOUSE_RULES_TRACE unset)")
+    else:
+        report("FAIL", f"{event} is silent by default on {why}")
+        print(f"          exit {code}, got: {out[:160]!r}")
+    code, out, err = run_hook(event, payload, env=verbose_env())
+    if code == 0 and needle in out and '"systemMessage"' in out:
+        report("PASS", f"HOUSE_RULES_TRACE=verbose restores the {event} trace on {why}")
+    else:
+        report("FAIL", f"HOUSE_RULES_TRACE=verbose restores the {event} trace on {why}")
+        print(f"          exit {code}, got: {out[:160]!r}")
+for event, payload, needle in (
+    ("guard", "", "guard: empty payload"),
+    ("guardwrite", "", "guardwrite: empty payload"),
+    ("guardwrite", json.dumps({"tool_input": {}}), "no file_path field"),
+):
+    code, out, err = run_hook(event, payload, env=_dflt)
+    if code == 0 and needle in out and '"systemMessage"' in out:
+        report("PASS", f"{event} still prints its 'could not tell' trace by default ({needle})")
+    else:
+        report("FAIL", f"{event} still prints its 'could not tell' trace by default ({needle})")
+        print(f"          exit {code}, got: {out[:160]!r}")
+_hd = dict(_dflt)
+_hd["HOUSE_RULES_HARVEST_MIN_CHARS"] = "banana"
+_short_payload = json.dumps(
+    {"tool_name": "Write", "tool_input": {"file_path": "/p/a.cs", "content": SHORT_CS}}
+)
+code, out, err = run_hook("harvest", _short_payload, env=_dflt)
+if code == 0 and not out.strip():
+    report("PASS", "harvest is silent by default when no comment block qualifies")
+else:
+    report("FAIL", "harvest is silent by default when no comment block qualifies")
+    print(f"          exit {code}, got: {out[:160]!r}")
+code, out, err = run_hook("harvest", _short_payload, env=_hd)
+if code == 0 and "banana" in out and "systemMessage" in out:
+    report("PASS", "harvest still speaks by default when an override is bad")
+else:
+    report("FAIL", "harvest still speaks by default when an override is bad")
+    print(f"          exit {code}, got: {out[:160]!r}")
+code, out, err = run_hook(
+    "harvest",
+    json.dumps({"tool_name": "Write", "tool_input": {"file_path": "/p/a.cs", "content": ESSAY_CS}}),
+    env=_dflt,
+)
+if code == 0 and "additionalContext" in out and "systemMessage" in out:
+    report("PASS", "harvest still speaks by default when blocks are found")
+else:
+    report("FAIL", "harvest still speaks by default when blocks are found")
+    print(f"          exit {code}, got: {out[:160]!r}")
 
 # --- one lever turns every trace off, and no reminder goes with it -----------------------------
 off = env_in(REPO_THEIRS)
@@ -2056,6 +2121,97 @@ if code == 0 and "systemMessage" in out and "did not run" in out:
 else:
     report("FAIL", "harvest with no working Python says so rather than falling through silently")
     print(f"          exit {code}, got: {out[:200]!r}")
+
+# --- run.sh's interpreter cache (2.48.0) -------------------------------------------------------
+# A copy of run.sh sits next to a stub hook.py that just prints "ran", so the cache file lands in
+# a throwaway directory and never in the real plugin.
+def _cache_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print(f"          {detail}")
+
+
+def _cache_dir():
+    d = tempfile.mkdtemp(prefix="house-rules-cache-", dir=_FIXTURE_ROOT)
+    shutil.copy(RUN, os.path.join(d, "run.sh"))
+    with open(os.path.join(d, "hook.py"), "w", encoding="utf-8") as f:
+        f.write("print('ran')\n")
+    return d
+
+
+def _cache_run(d, **env_extra):
+    e = dict(os.environ)
+    e.pop("HOUSE_RULES_PYTHON", None)
+    e["HOUSE_RULES_DEBUG"] = "1"
+    e.update(env_extra)
+    # forward slashes: run.sh derives HERE from $0 and splits only on "/"
+    return run_shell([os.path.join(d, "run.sh").replace("\\", "/"), "anyevent"], env=e)
+
+
+def _cache_text(d):
+    try:
+        with open(os.path.join(d, ".python-cache"), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+_cd = _cache_dir()
+_c1, _o1, _e1 = _cache_run(_cd)
+_first = _cache_text(_cd)
+_cache_case(
+    "run.sh: the first run probes and writes the cache",
+    _c1 == 0 and "ran" in _o1 and "cache=yes" not in _e1 and bool(_first),
+    "exit %d, out %r, cache %r" % (_c1, _o1.strip(), _first),
+)
+_c2, _o2, _e2 = _cache_run(_cd)
+_cache_case(
+    "run.sh: the second run uses the cache and skips probing",
+    _c2 == 0 and "ran" in _o2 and "cache=yes" in _e2 and _cache_text(_cd) == _first,
+    "exit %d, out %r, stderr %r" % (_c2, _o2.strip(), _e2.strip()[:100]),
+)
+with open(os.path.join(_cd, ".python-cache"), "w", encoding="utf-8") as f:
+    f.write("no-such-interpreter-xyz\n")
+_c3, _o3, _e3 = _cache_run(_cd)
+_cache_case(
+    "run.sh: a stale cache (missing binary) is dropped, the probe order runs, and the cache is rewritten",
+    _c3 == 0 and "ran" in _o3 and "cache=yes" not in _e3 and _cache_text(_cd) == _first,
+    "exit %d, out %r, cache now %r" % (_c3, _o3.strip(), _cache_text(_cd)),
+)
+_cd = _cache_dir()
+_stubdir = tempfile.mkdtemp(prefix="house-rules-stub-", dir=_FIXTURE_ROOT)
+with open(os.path.join(_stubdir, "python3"), "w", encoding="utf-8", newline="\n") as f:
+    f.write('#!/bin/sh\necho "Python was not found; run without arguments to install from the Microsoft Store."\nexit 0\n')
+_c4, _o4, _e4 = _cache_run(_cd, PATH=_stubdir + os.pathsep + os.environ.get("PATH", ""))
+_cached4 = _cache_text(_cd)
+_cache_case(
+    "run.sh: an interpreter stub that prints a nag instead of running code is never cached",
+    _c4 == 0 and "ran" in _o4 and _cached4 is not None and _cached4.split()[0] != "python3",
+    "exit %d, out %r, cache %r" % (_c4, _o4.strip(), _cached4),
+)
+_cd = _cache_dir()
+os.mkdir(os.path.join(_cd, ".python-cache"))  # a directory where the file should go: not writable as a file
+_c5, _o5, _e5 = _cache_run(_cd)
+_cache_case(
+    "run.sh: a cache that cannot be written is skipped, never a failure",
+    _c5 == 0 and "ran" in _o5,
+    "exit %d, out %r" % (_c5, _o5.strip()),
+)
+_cd = _cache_dir()
+with open(os.path.join(_cd, ".python-cache"), "w", encoding="utf-8") as f:
+    f.write("no-such-interpreter-xyz\n")
+_c6, _o6, _e6 = _cache_run(_cd, HOUSE_RULES_PYTHON=sys.executable)
+_cache_case(
+    "run.sh: HOUSE_RULES_PYTHON still wins over the cache and is still probed",
+    _c6 == 0 and "ran" in _o6 and "cache=override" in _e6 and _cache_text(_cd) == "no-such-interpreter-xyz",
+    "exit %d, out %r, stderr %r" % (_c6, _o6.strip(), _e6.strip()[:100]),
+)
+_cd = _cache_dir()
+_c7, _o7, _e7 = _cache_run(_cd, HOUSE_RULES_PYTHON="no-such-interpreter-xyz")
+_cache_case(
+    "run.sh: a bad HOUSE_RULES_PYTHON is still rejected by the probe and falls through to the normal order",
+    _c7 == 0 and "ran" in _o7,
+    "exit %d, out %r" % (_c7, _o7.strip()),
+)
 
 # The harvest reminder's drift check is a row in the RESTATEMENTS table below.
 
@@ -2883,6 +3039,76 @@ if _as_ref(_dq, "worktree-agent-off") or oq.strip():
 commit_case(
     "autosave: does nothing on main, on a claude/ branch, or with HOUSE_RULES_AUTOSAVE=off",
     not _quiet, "; ".join(_quiet) or "no ref and no output in all three",
+)
+# .git/HEAD fast path (2.48.0): a branch that is not worktree-agent-* is ruled out by reading
+# .git/HEAD, so no git subprocess is spawned. The probe counts subprocess.Popen constructions
+# (subprocess.run goes through Popen) while running hook.py unmodified.
+_SPAWN_PROBE = (
+    "import sys, subprocess, runpy\n"
+    "n = [0]\n"
+    "orig = subprocess.Popen.__init__\n"
+    "def counting(self, *a, **k):\n"
+    "    n[0] += 1\n"
+    "    orig(self, *a, **k)\n"
+    "subprocess.Popen.__init__ = counting\n"
+    "hook, event = sys.argv[1], sys.argv[2]\n"
+    "sys.argv = [hook, event]\n"
+    "try:\n"
+    "    runpy.run_path(hook, run_name='__main__')\n"
+    "finally:\n"
+    "    sys.stderr.write('SPAWNS=%d' % n[0])\n"
+)
+
+
+def _as_spawns(event, payload, env):
+    proc = subprocess.run([sys.executable, "-c", _SPAWN_PROBE, HOOK, event], input=payload.encode("utf-8"),
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    m = re.search(r"SPAWNS=(\d+)", proc.stderr.decode("utf-8", "replace"))
+    return (int(m.group(1)) if m else -1), proc.stdout.decode("utf-8", "replace")
+
+
+_fast = []
+for _ev in ("autosave", "commitgate"):
+    _dq, _ = _as_repo("main")
+    _pq = _as_write(_dq, "new.py")
+    _n, _o = _as_spawns(_ev, _as_payload("PostToolUse" if _ev == "autosave" else "PreToolUse", "Write", _pq, _dq), _as_env())
+    if _n != 0 or _o.strip():
+        _fast.append("%s on main: %d spawns, out %r" % (_ev, _n, _o[:60]))
+commit_case(
+    "autosave/commitgate: a non-subagent branch is ruled out from .git/HEAD with zero git subprocesses",
+    not _fast, "; ".join(_fast) or "0 spawns and no output on main for both handlers",
+)
+_dq, _ = _as_repo("worktree-agent-fast")
+_pq = _as_write(_dq, "new.py")
+_n, _o = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), _as_env())
+commit_case(
+    "autosave: a worktree-agent- branch still takes the full path after the fast check (unchanged behaviour)",
+    _n > 0 and bool(_as_ref(_dq, "worktree-agent-fast")),
+    "%d spawns, autosave ref %r" % (_n, _as_ref(_dq, "worktree-agent-fast")[:9]),
+)
+_dq, _ = _as_repo("worktree-agent-det")
+_as_git(_dq, "checkout", "-q", "--detach")
+_pq = _as_write(_dq, "new.py")
+_n, _o = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), _as_env())
+commit_case(
+    "autosave: a detached HEAD spawns no git subprocess and saves nothing",
+    _n == 0 and not _o.strip() and not _as_ref(_dq, "worktree-agent-det"),
+    "%d spawns, out %r" % (_n, _o[:60]),
+)
+_dq, _ = _as_repo("main")
+_wt = os.path.join(_FIXTURE_ROOT, "wt-agent-%d" % int(time.time() * 1000))
+_as_git(_dq, "worktree", "add", "-q", "-b", "worktree-agent-wt", _wt)
+_wf_is_file = os.path.isfile(os.path.join(_wt, ".git"))
+_pq = _as_write(_wt, "new.py")
+_n, _o = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq, _wt), _as_env())
+_wt2 = os.path.join(_FIXTURE_ROOT, "wt-plain-%d" % int(time.time() * 1000))
+_as_git(_dq, "worktree", "add", "-q", "-b", "feature-plain", _wt2)
+_pq2 = _as_write(_wt2, "new.py")
+_n2, _o2 = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq2, _wt2), _as_env())
+commit_case(
+    "autosave: a linked worktree (.git is a file) is resolved for both branch kinds",
+    _wf_is_file and _n > 0 and bool(_as_ref(_wt, "worktree-agent-wt")) and _n2 == 0 and not _o2.strip(),
+    ".git file %s; agent branch: %d spawns, ref %r; plain branch: %d spawns" % (_wf_is_file, _n, _as_ref(_wt, "worktree-agent-wt")[:9], _n2),
 )
 _dq, _ = _as_repo("worktree-agent-noreach")
 _as_git(_dq, "remote", "set-url", "origin", os.path.join(_FIXTURE_ROOT, "no-such-origin.git"))
