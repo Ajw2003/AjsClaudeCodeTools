@@ -7,6 +7,34 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-30 - Hooks force the issue workflow; Claude still performs it (2.49.0)
+
+**Context.** Issues #108-#110, parent #107. Plans, pull requests and closures were not tied to
+issues, and a merged PR could close an issue before the user had tested. Focus Deck, the user's
+board, only shows issues labelled `Claude created this`.
+
+**Decision.** (1) The hooks force; they never act. No hook runs `gh issue create` or `gh issue close`:
+a plan over three steps makes `commitgate` deny Write/Edit/NotebookEdit on source files until a
+parent and a child issue, both labelled `Claude created this`, are recorded. `docs/`, `.claude/`,
+any `.md`, files outside the project and the state file stay editable, so the plan and the issues'
+text can still be written. The kill switch is `HOUSE_RULES_ISSUES=off`. (2) Pull request bodies say
+`Refs #N`, `Part of #N` or `No-issue: <reason>`; a closing word followed by an issue reference is
+denied, because GitHub closes the issue at merge. (3) `gh issue close` always asks; the prompt is the
+user's go-ahead after testing, and on approval Claude adds `Claude completed this`, removes `in
+progress`, and comments the merged PR link. (4) On 2026-09-30 the user permitted Claude to apply an
+`in progress` label to an issue when work on it starts.
+
+**Alternatives rejected.** A hook that creates the issues itself (hooks must not write to GitHub on a
+tool call and cannot write plain-language titles). A warning instead of a block (the efficiency review
+and past lapses show reminders get ignored). A new hook process per gate (about 114 ms each).
+
+**Status.** Decided. Supersedes nothing.
+
+**Consequence.** `inject` grew by about 115 tokens and its `verify.py` margin moved from 9,000 to
+9,700 characters. The open-issue list is its own SessionStart entry because of that margin. `gh
+issue create` through the `PowerShell` tool is not recorded. A subagent worktree has its own git
+directory, so a plan approved in the main session does not gate it.
+
 ## 2026-09-30 — Subagents do receive CLAUDE.md; the "never sees it" claim is withdrawn
 
 **Context.** While measuring what a subagent spawn costs, the transcripts of one

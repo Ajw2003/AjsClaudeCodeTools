@@ -157,6 +157,15 @@ Refactors with no change in behaviour, needed before group A adds more handlers.
   issue-forge duplicate PostToolUse entries, `worktreesweep` per-prompt walk and WIP-commit squash,
   `docs/architecture.md` overlap and unarchived plans.
 
+### D3. Issue workflow follow-ups (from `docs/plans/issue-workflow-build-plan.md`; #108-#110 shipped in 2.49.0)
+
+- **#111, #112.** The tiered helpers and their limits, out of scope for 2.49.0.
+- **Commits without an issue number.** The end-of-turn check the plan left out.
+- **`gh issue create` through `PowerShell`.** Not recorded by the gate today; needs either a wider
+  `autosave` matcher (one more process per PowerShell call) or a move of the recording into `guard`.
+- **Inject size margin.** `verify.py`'s inject margin went 9,000 to 9,700 for the new rules section;
+  finding 5 of the efficiency review is the place to win that back.
+
 ### E. Research, with nothing to build yet
 
 - **#69** How the superpowers subagent-driven-development workflow could be ported. #63 (auto
