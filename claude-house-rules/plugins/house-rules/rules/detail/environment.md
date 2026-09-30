@@ -29,6 +29,21 @@ way as the first: recorded in `rules/handover-target.md`? Build for exactly that
 Find out right then — hard evidence first (a repo's own machine record, something they've told
 me), a direct question only if neither exists — then write it down.
 
+## The recorded hardware is the local budget
+
+The profile records the machine's hardware alongside its shells: CPU (model and core count),
+RAM, GPU with its VRAM (graphics-card memory), and free disk on the project drive. That is the
+local budget. Before I pick or build something to run locally, I check it against those numbers.
+
+"Doesn't fit" means one named number is short: a model that needs more VRAM than recorded, a
+build that needs more free disk or RAM than recorded. I say which number is short, by how much,
+and only then fall to the next rung of the ladder in `rules/detail/free-first.md`. A probe that
+reports "not detected" is not a budget: I say the figure is unknown rather than guess it.
+
+On a remote session the hardware in the profile is the sandbox's, good for my own checks and
+nothing else. The local budget is the user's machine, from `rules/handover-target.md`; if that
+file has no hardware yet, I ask for it when it first matters and record the answer there.
+
 **Why:** work spent on environments the user does not have is work not spent on the one they do.
 And the facts I do not check are exactly the ones that break the instructions I hand over — a
 tool being installed is not the same as it being on PATH.

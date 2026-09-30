@@ -7,6 +7,102 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-30 — Subagent work is saved while it runs, not only when it finishes
+
+**Context.** On 2026-09-29 a safety-classifier outage stopped an executor mid-run. `SubagentStop`
+never fired, so `subagentcommit` (the only commit enforcement for subagents) never ran, and
+`hook.py`, `verify.py` and six docs sat uncommitted in its worktree until the parent noticed and
+committed them by hand. aj asked for the executor to be held to committing constantly, with
+progress saved against outages, and then asked for the parent's own 10-minute check (which the
+parent had been doing by hand) to become a plugin behaviour too.
+
+**Decision.** Three hooks, all limited to `worktree-agent-` branches (the ones Claude Code creates
+for `isolation: "worktree"`), all off with `HOUSE_RULES_AUTOSAVE=off`:
+- `autosave` (PostToolUse): snapshots the worktree to `refs/house-rules/autosave/<branch>` through
+  a temporary index, pushes it once a minute, and commits for the subagent after 10 minutes
+  without a commit.
+- `commitgate` (PreToolUse): blocks edits at 3+ uncommitted files. aj chose "tell the executor"
+  over auto-committing every edit. aj then added that if the executor ignores it, the hook
+  commits itself; `subagentcommit`'s retry path does the same.
+- `worktreesweep` (UserPromptSubmit): on every parent wake, commits any subagent worktree left
+  untouched 10+ minutes. That is the one case no subagent-side hook can cover, a dead subagent.
+  `audit` asks for a 10-minute check-in when a subagent launches in the background, so the
+  parent wakes.
+
+aj chose to push the autosave ref, so the save outlives the container.
+
+**Rejected.** Auto-committing every edit (the branch fills with wip commits). An instruction-only
+rule, which is what failed on 2026-09-29.
+
+**Consequence.** `autosave` and `commitgate` are the first handlers to keep state between calls:
+three small files per branch inside that worktree's git dir, deleted on a clean finish.
+`docs/4-systems/hook-engine.md`'s stateless invariant now names them as the exception. In a
+Claude Code cloud session the push is refused (HTTP 403 from the session's git proxy, which only
+accepts the session's own branch), measured 2026-09-30. There the save stays local and each
+failed push says so. Whether GitHub accepts `refs/house-rules/*` from a user's own machine is
+untested. Building it was itself blocked twice by the auto-mode classifier as
+`[Self-Modification]` when the executor tried it. aj then had the main session build it directly.
+
+**Related.** Issue #105 (replace the single executor with dynamic dispatch) is the longer-term
+direction. This protection is needed whatever replaces the executor.
+
+---
+
+## 2026-09-29 — Open source first; the Unity rule leaves the core; the profile records hardware
+
+**Context.** aj asked for two things: build locally for the hardware we have, and prefer free
+open-source solutions with paid as the last resort (on Pro or Max, first scope building our own).
+The plan is `docs/plans/2026-09-29-local-first-free-first.md`. The core `inject` text had 81
+characters of room, so the new rule needed space. Two ways of making it were measured; aj chose
+Option B, moving the Unity rule out of the core. Measuring Option B showed that `standards` in a
+Unity project already emitted 9,832 chars (budget 9,500) and 13,376 with a Node service beside
+it (hard limit 10,000).
+
+**Decision.**
+1. A core rule "Open source first; paid is the last resort" with a five-rung ladder, and
+   `rules/detail/free-first.md` (the ladder, the build-your-own estimate table, an example). The
+   "Find out what machine you are on" rule gains "Detected hardware is the local budget", and
+   `rules/detail/environment.md` says what "doesn't fit" means.
+2. "Unity work starts with the Unity plugin and the Unity CLI" moves from `house-rules.md` to
+   `rules/standards/csharp-unity-standards.md`, so only Unity projects load it. That document
+   splits into an always-injected core (C# style, a pointer, the Unity rule) and
+   `rules/standards/csharp-unity-detail.md`, holding six sections moved unchanged: Project & folder
+   structure, Unity-specific patterns, Performance, Testing, Verifying compilation, Tooling
+   (Rider). `standards` now emits 5,782 chars for Unity only and 9,326 for Unity + Node.
+3. The `profile` fallback detects CPU, RAM, GPU/VRAM, free disk and the Claude plan at runtime
+   (nothing hardcoded), with per-probe timeouts and a `not detected (<reason>)` line on failure.
+   On a remote session the numbers are labelled as the sandbox's; the local budget is the
+   user's machine, from `rules/handover-target.md`.
+4. `verify.py` gains the check that was missing: `standards` measured in a Unity-only and a
+   Unity + Node project, plus cases for the Unity rule's placement, the hardware and plan
+   fields, and the rule/detail agreement.
+
+**Why.** Option B suits a plugin others install: people who do not use Unity stop paying for a
+Unity rule. It only worked once the Unity standards were split, since adding the rule to the
+existing document would have put a Unity + Node project past the hard limit. The overrun went
+unseen because `verify.py` measured `standards` only in this repo, which has no Unity markers.
+The plan tier is read from `claude auth status --json` and never assumed; in a cloud session
+that output has no plan field, so the profile says "not detected" and Claude asks once.
+
+**Rejected.** Option A (tightening three other rules' wording) kept the Unity rule in every
+session for people who never open Unity. No `guard` pattern: recommending a product is prose,
+not a shell command.
+
+**Consequence (superseded by the path move below).** `tools/sync_standards.py` overwrites the vendored Unity document from
+`Ajw2003/Coding-Standards`, which reverts the split. The new size check would fail after such a
+sync; the fix is to make the same change upstream. Not verified: the macOS and Windows probe
+branches, and whether a local claude.ai login reports a plan in `claude auth status`.
+
+**Follow-up, same day: the detail file moved to `rules/standards/`.** The Unity detail file now
+lives at `rules/standards/csharp-unity-detail.md`, not `rules/detail/`, so the plugin layout
+mirrors upstream (`Ajw2003/coding-standards` carries both Unity files) and `sync_standards.py`
+can no longer revert the split. `event_standards` loads only exact stems, so the extra file is
+never injected.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-28 — A reply reporting finished work opens with a plain summary (#98)
 
 **Context.** #98 asked for a human-facing document first, in plain terms, readable on mobile or

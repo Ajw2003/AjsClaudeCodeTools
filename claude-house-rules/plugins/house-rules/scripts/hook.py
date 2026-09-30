@@ -125,6 +125,215 @@ def _read_text(path):
         return f.read()
 
 
+# Hardware and plan probes for the machine profile: doc-ref ad50 docs/4-systems/hook-engine.md
+PROBE_TIMEOUT_SECONDS = 3.0
+PROBE_TOTAL_SECONDS = 6.0
+_GIB = 1024 ** 3
+_PLAN_KEYS = {"subscriptiontype", "subscription_type", "subscription", "plan", "plantype", "plan_type"}
+
+
+class _ProbeClock:
+    def __init__(self):
+        self.deadline = _time.monotonic() + PROBE_TOTAL_SECONDS
+
+    def remaining(self):
+        return self.deadline - _time.monotonic()
+
+
+def _probe(argv, clock):
+    """Run argv with a short timeout. Returns (stdout, None) or (None, reason)."""
+    import subprocess
+
+    room = min(PROBE_TIMEOUT_SECONDS, clock.remaining())
+    if room <= 0:
+        return None, "probe time budget of %g s already used up" % PROBE_TOTAL_SECONDS
+    try:
+        proc = subprocess.run(
+            argv, stdin=subprocess.DEVNULL, capture_output=True, timeout=room,
+            text=True, encoding="utf-8", errors="replace",
+        )
+    except subprocess.TimeoutExpired:
+        return None, "%s timed out after %g s" % (os.path.basename(argv[0]), room)
+    except OSError as exc:
+        return None, "%s could not run: %s" % (os.path.basename(argv[0]), exc)
+    if proc.returncode != 0:
+        first = (proc.stderr or proc.stdout or "").strip().splitlines()
+        why = first[0][:120] if first else "no output"
+        return None, "%s exited %d: %s" % (os.path.basename(argv[0]), proc.returncode, why)
+    return proc.stdout, None
+
+
+def _fmt_gib(nbytes):
+    return "%.1f GB" % (nbytes / _GIB)
+
+
+def _probe_cpu(clock):
+    cores = os.cpu_count()
+    cores_txt = "%d logical cores" % cores if cores else "core count not detected (os.cpu_count() returned None)"
+    model, why = None, None
+    system = platform.system()
+    if system == "Linux":
+        try:
+            for line in _read_text("/proc/cpuinfo").splitlines():
+                if line.lower().startswith("model name"):
+                    model = line.split(":", 1)[1].strip()
+                    break
+            if model is None:
+                why = "/proc/cpuinfo has no 'model name' line"
+        except OSError as exc:
+            why = "cannot read /proc/cpuinfo: %s" % exc
+    elif system == "Darwin":
+        sysctl = shutil.which("sysctl")
+        if not sysctl:
+            why = "sysctl not on PATH"
+        else:
+            out, why = _probe([sysctl, "-n", "machdep.cpu.brand_string"], clock)
+            model = out.strip() if out and out.strip() else None
+    else:
+        model = platform.processor() or None
+        if model is None:
+            why = "platform.processor() is empty"
+    if model:
+        return "CPU: %s, %s" % (model, cores_txt)
+    return "CPU: model not detected (%s), %s" % (why or "unknown", cores_txt)
+
+
+def _probe_ram(clock):
+    system = platform.system()
+    try:
+        if system == "Linux":
+            for line in _read_text("/proc/meminfo").splitlines():
+                if line.startswith("MemTotal:"):
+                    return "RAM: %s total" % _fmt_gib(int(line.split()[1]) * 1024)
+            return "RAM: not detected (/proc/meminfo has no MemTotal line)"
+        if system == "Darwin":
+            sysctl = shutil.which("sysctl")
+            if not sysctl:
+                return "RAM: not detected (sysctl not on PATH)"
+            out, why = _probe([sysctl, "-n", "hw.memsize"], clock)
+            if out is None:
+                return "RAM: not detected (%s)" % why
+            return "RAM: %s total" % _fmt_gib(int(out.strip()))
+        if system == "Windows":
+            import ctypes
+
+            class _MemStatus(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            status = _MemStatus()
+            status.dwLength = ctypes.sizeof(_MemStatus)
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                return "RAM: not detected (GlobalMemoryStatusEx returned failure)"
+            return "RAM: %s total" % _fmt_gib(status.ullTotalPhys)
+        return "RAM: not detected (no RAM probe for %s)" % system
+    except (OSError, ValueError, AttributeError) as exc:
+        return "RAM: not detected (%s: %s)" % (type(exc).__name__, exc)
+
+
+def _probe_gpu(clock):
+    system = platform.system()
+    smi = shutil.which("nvidia-smi")
+    if smi:
+        out, why = _probe([smi, "--query-gpu=name,memory.total", "--format=csv,noheader"], clock)
+        if out is None:
+            return "GPU: not detected (%s)" % why
+        rows = [r.strip() for r in out.splitlines() if r.strip()]
+        if not rows:
+            return "GPU: not detected (nvidia-smi listed no GPU)"
+        return "GPU: " + "; ".join(r.replace(", ", " with ", 1) + " VRAM" for r in rows)
+    if system == "Darwin":
+        profiler = shutil.which("system_profiler")
+        if not profiler:
+            return "GPU: not detected (nvidia-smi and system_profiler not on PATH)"
+        out, why = _probe([profiler, "SPDisplaysDataType"], clock)
+        if out is None:
+            return "GPU: not detected (%s)" % why
+        chips = [l.split(":", 1)[1].strip() for l in out.splitlines() if "Chipset Model:" in l]
+        vram = [l.split(":", 1)[1].strip() for l in out.splitlines() if "VRAM" in l and ":" in l]
+        if not chips:
+            return "GPU: not detected (system_profiler listed no 'Chipset Model')"
+        tail = ", VRAM %s" % vram[0] if vram else ", VRAM not reported (likely unified memory shared with RAM)"
+        return "GPU: %s%s" % ("; ".join(chips), tail)
+    if system == "Windows":
+        ps = shutil.which("powershell") or shutil.which("pwsh")
+        if not ps:
+            return "GPU: not detected (nvidia-smi, powershell and pwsh not on PATH)"
+        script = ("Get-CimInstance Win32_VideoController | ForEach-Object "
+                  "{ $_.Name + '|' + $_.AdapterRAM }")
+        out, why = _probe([ps, "-NoProfile", "-NonInteractive", "-Command", script], clock)
+        if out is None:
+            return "GPU: not detected (%s)" % why
+        found = []
+        for row in [r.strip() for r in out.splitlines() if r.strip()]:
+            name, _, ram = row.rpartition("|")
+            try:
+                nbytes = int(ram)
+            except ValueError:
+                found.append("%s, VRAM not reported" % (name or row))
+                continue
+            note = ""
+            # AdapterRAM is a 32-bit field: a card with more than 4 GB reads as ~4 GB.
+            if nbytes >= 4 * _GIB - 1024 * 1024:
+                note = " (may be higher - Windows reports at most 4 GB here)"
+            found.append("%s with %s VRAM%s" % (name, _fmt_gib(nbytes), note))
+        if not found:
+            return "GPU: not detected (Win32_VideoController listed no adapter)"
+        return "GPU: " + "; ".join(found)
+    return "GPU: not detected (nvidia-smi not on PATH; no other GPU probe for %s)" % system
+
+
+def _probe_disk():
+    where = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    try:
+        usage = shutil.disk_usage(where)
+    except OSError as exc:
+        return "Free disk: not detected (shutil.disk_usage(%r) failed: %s)" % (where, exc)
+    return "Free disk: %s free of %s on the drive holding %s" % (
+        _fmt_gib(usage.free), _fmt_gib(usage.total), where)
+
+
+def _probe_claude_plan(clock):
+    claude = shutil.which("claude")
+    if not claude:
+        return "Claude plan: not detected (claude not on PATH)"
+    out, why = _probe([claude, "auth", "status", "--json"], clock)
+    if out is None:
+        return "Claude plan: not detected (%s)" % why
+    try:
+        data = json.loads(out)
+    except ValueError as exc:
+        return "Claude plan: not detected (claude auth status --json was not JSON: %s)" % exc
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key.lower() in _PLAN_KEYS and isinstance(value, str) and value.strip():
+                return "Claude plan: %s (from claude auth status: %s)" % (value.strip(), key)
+    return "Claude plan: not detected (claude auth status reports no plan field)"
+
+
+def _detect_hardware():
+    clock = _ProbeClock()
+    remote = bool(os.environ.get("CLAUDE_CODE_REMOTE"))
+    if remote:
+        head = ("## Hardware of this sandbox (for my own checks only - NOT the user's local "
+                "build budget)")
+    else:
+        head = "## Hardware (the local build budget)"
+    lines = [head, _probe_cpu(clock), _probe_ram(clock), _probe_gpu(clock), _probe_disk(),
+             _probe_claude_plan(clock)]
+    if remote:
+        lines.append(
+            "The local build budget is the user's own machine, from rules/handover-target.md, "
+            "not the figures above."
+        )
+    return lines
+
+
 def _detect_environment():
     """Runtime detection used when rules/environment.md is missing or empty.
 
@@ -138,11 +347,16 @@ def _detect_environment():
         found = shutil.which(tool)
         lines.append(f"{tool}: {found if found else 'NOT on PATH'}")
     lines.append("")
+    lines.extend(_detect_hardware())
+    lines.append("")
     lines.append(
-        "This section was generated by hook.py's inject handler, not hand-verified. Before "
-        "relying on a fact not listed here - RAM, GPU, line-ending config, anything else - "
-        "discover it and write it into rules/environment.md (gitignored, machine-local) so it "
-        "is recorded rather than re-detected every session."
+        "This section was generated by hook.py's profile handler, not hand-verified. Hardware "
+        "and Claude plan above were probed at session start; a field marked 'not detected' "
+        "is unknown, not zero. Before relying on any other fact - line-ending config, "
+        "anything else - discover it and write it into rules/environment.md (gitignored, "
+        "machine-local) so it is recorded rather than re-detected every session. Claude plan "
+        "not detected: ask the user once, the first time a paid option comes up, and record "
+        "the answer there."
     )
     return "\n".join(lines) + "\n"
 
@@ -393,7 +607,8 @@ def event_profile():
         if handover_body.strip():
             handover_block = (
                 "\n\n---\n\nThe human's own machine (for anything I hand over to them), as "
-                "recorded. Recorded? Build for exactly that:\n\n" + handover_body
+                "recorded. Recorded? Build for exactly that; its hardware, not the sandbox's, is "
+                "the local build budget:\n\n" + handover_body
             )
         else:
             handover_block = (
@@ -402,7 +617,9 @@ def event_profile():
                 "command I hand over, find out theirs - check docs/example-environment.md if "
                 "present (say it's inferred, and from when, not confirmed), or ask - then "
                 "record the confirmed answer into rules/handover-target.md so a later session "
-                "does not have to ask again.\n"
+                "does not have to ask again. Ask for their hardware too (CPU, RAM, GPU and "
+                "VRAM, free disk) and their Claude plan: that hardware, not the sandbox's, is "
+                "the local build budget.\n"
             )
 
     # Truncate only the environment body if it runs the whole thing over budget - preflight
@@ -622,6 +839,10 @@ def event_standards():
         if bodies:
             sections = [f"### {stem}.md\n\n{text}" for stem, _, text in bodies]
             content = " ".join(preamble_parts) + "\n\n---\n\n" + "\n\n---\n\n".join(sections)
+            # The Unity core points at rules/standards/csharp-unity-detail.md by the same
+            # ${CLAUDE_PLUGIN_ROOT} spelling house-rules.md uses; nothing expands it inside
+            # additionalContext, so resolve it here (a no-op when no document uses it).
+            content = _expand_detail_paths(content)
             result["hookSpecificOutput"] = {
                 "hookEventName": "SessionStart",
                 "additionalContext": content,
@@ -3063,18 +3284,37 @@ def event_subagentcommit():
             return 0
         left = _uncommitted_by_repo(paths)
         if not left:
-            trace("subagentcommit: %s committed everything it wrote." % agent_type)
+            cache, notes = {}, []
+            for top in sorted(set(filter(None, (_repo_top(p, cache) for p in paths)))):
+                note = _autosave_cleanup(top)
+                if note:
+                    notes.append(note)
+            if notes:
+                emit({"systemMessage": " | ".join(notes)})
+            else:
+                trace("subagentcommit: %s committed everything it wrote." % agent_type)
             return 0
         shown = "; ".join(
             "%s in %s" % (", ".join(files[:8]) + (" and %d more" % (len(files) - 8) if len(files) > 8 else ""), top)
             for top, _branch, files in left
         )
         if re.search(r'"stop_hook_active"\s*:\s*true', payload):
-            # The retry. Blocking again could loop; the parent's audit line names the files.
+            # The retry. Blocking again could loop. On the subagent's own worktree branch the hook
+            # commits the leftovers itself; anywhere else it only names them.
+            sid = _field(re.compile(r'"session_id"\s*:\s*"([^"]*)"'), payload) or ""
+            parts = []
+            for top, branch, files in left:
+                if _autosave_enabled() and branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX):
+                    sha, done = _wip_commit(top, WIP_NOT_COMMITTED, sid)
+                    note = _autosave_snapshot(top, branch, force_push=True)
+                    parts.append("committed %d file(s) in %s as %s%s"
+                                 % (len(done), top, sha, " | " + note if note else ""))
+                else:
+                    parts.append("%s in %s left uncommitted" % (", ".join(files[:8]), top))
             emit(
                 {
                     "systemMessage": "house-rules: %s finished with files still uncommitted "
-                    "after being asked once: %s." % (agent_type, shown)
+                    "after being asked once: %s. %s." % (agent_type, shown, "; ".join(parts))
                 }
             )
             return 0
@@ -3092,6 +3332,376 @@ def event_subagentcommit():
                 "(%s: %s) and did not run for this call." % (type(exc).__name__, exc)
             }
         )
+    return 0
+
+
+# autosave (PostToolUse), commitgate (PreToolUse), worktreesweep (UserPromptSubmit) - subagent
+# worktree branches only. subagentcommit above runs only at SubagentStop, which never fires for a
+# subagent killed mid-run (the 2026-09-29 safety-classifier outage). See docs/6-decisions/
+# Decisions.md, 2026-09-30. Related future direction: issue #105 (dynamic dispatch).
+
+AUTOSAVE_BRANCH_PREFIX = "worktree-agent-"
+AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
+COMMITGATE_THRESHOLD = 3
+COMMITGATE_LIST_MAX = 8
+CHECKPOINT_MINUTES = 10
+AUTOSAVE_PUSH_INTERVAL = 60
+AUTOSAVE_PUSH_TIMEOUT = 6.0
+AUTOSAVE_GIT_TIMEOUT = 4.0
+SWEEP_MAX_WORKTREES = 10
+WIP_NOT_COMMITTED = "wip: autosave - subagent did not commit when asked"
+WIP_CHECKPOINT = "wip: checkpoint - %d min without a commit" % CHECKPOINT_MINUTES
+WIP_PARENT = "wip: parent checkpoint of subagent work"
+_AUTOSAVE_TOOLS = {"Write", "Edit", "NotebookEdit", "Bash"}
+_GATED_TOOLS = {"Write", "Edit", "NotebookEdit"}
+
+
+def _autosave_enabled():
+    return os.environ.get("HOUSE_RULES_AUTOSAVE", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True):
+    """Run git in `top`; (returncode, stdout, stderr). Raises RuntimeError on failure when
+    `check`, and on a timeout always - every caller turns that into a systemMessage."""
+    import subprocess
+
+    e = dict(os.environ)
+    e["GIT_TERMINAL_PROMPT"] = "0"
+    if env:
+        e.update(env)
+    try:
+        proc = subprocess.run(
+            ["git"] + args, cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=timeout, env=e,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("git %s timed out after %ss" % (args[0], timeout))
+    out = proc.stdout.decode("utf-8", "replace")
+    err = proc.stderr.decode("utf-8", "replace").strip()
+    if check and proc.returncode != 0:
+        raise RuntimeError("git %s failed: %s" % (" ".join(args[:2]), err or "exit %d" % proc.returncode))
+    return proc.returncode, out, err
+
+
+def _autosave_target(payload):
+    """(repo top, branch, tool_name, session_id) when the edited file (or, for Bash, the payload
+    cwd) is in a repo on a worktree-agent- branch; None otherwise - not a subagent worktree."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = None
+    if not isinstance(data, dict):
+        raise RuntimeError("the payload was not a JSON object")
+    tool = data.get("tool_name") or ""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    path = ti.get("file_path") or ti.get("notebook_path") or data.get("cwd")
+    if not path:
+        return None
+    if not os.path.isabs(path) and data.get("cwd"):
+        path = os.path.join(data["cwd"], path)
+    top = _repo_top(os.path.join(path, "x") if os.path.isdir(path) else path, {})
+    if not top:
+        return None
+    branch = _repo_branch(top)
+    if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX):
+        return None
+    return top, branch, tool, data.get("session_id") or ""
+
+
+def _autosave_state_path(top, branch, kind):
+    gitdir = _ag(top, ["rev-parse", "--absolute-git-dir"])[1].strip()
+    return os.path.join(gitdir, "house-rules-autosave-%s.%s" % (branch.replace("/", "_"), kind))
+
+
+def _autosave_read(path):
+    """A state file's contents, or "" when it does not exist yet (its normal first state)."""
+    if not os.path.isfile(path):
+        return ""
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def _autosave_write(path, text):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def _dirty_files(top):
+    return [p for p, _t in _parse_status_porcelain(_ag(top, ["status", "--porcelain", "-uall"])[1].splitlines())]
+
+
+def _shown(files):
+    text = ", ".join(files[:COMMITGATE_LIST_MAX])
+    if len(files) > COMMITGATE_LIST_MAX:
+        text += " and %d more" % (len(files) - COMMITGATE_LIST_MAX)
+    return text
+
+
+def _autosave_push(top, branch, sha, now, force=False):
+    """Push the autosave ref to origin, at most once per AUTOSAVE_PUSH_INTERVAL unless `force`.
+    Returns a systemMessage string, or None."""
+    ref = AUTOSAVE_REF_PREFIX + branch
+    stamp = _autosave_state_path(top, branch, "pushed")
+    prev = _autosave_read(stamp).split()
+    if len(prev) == 2 and prev[1] == sha:
+        return None  # this exact snapshot is already on origin
+    if not force and len(prev) == 2 and now - float(prev[0]) < AUTOSAVE_PUSH_INTERVAL:
+        return None  # saved locally; the next edit after the window pushes the latest
+    if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
+        marker = _autosave_state_path(top, branch, "noorigin")
+        if _autosave_read(marker):
+            return None
+        _autosave_write(marker, "1")
+        return ("house-rules autosave: this repo has no `origin` remote, so %s is local-only and "
+                "would be lost with the container. (Said once.)" % ref)
+    # Stamped before the attempt, so an unreachable origin costs one timeout a minute, not one
+    # per edit.
+    _autosave_write(stamp, "%s %s" % (now, prev[1] if len(prev) == 2 else "-"))
+    try:
+        _ag(top, ["push", "--force", "--quiet", "origin", "%s:%s" % (ref, ref)], timeout=AUTOSAVE_PUSH_TIMEOUT)
+    except RuntimeError as exc:
+        return "house-rules autosave: could not push %s to origin (%s). It is saved locally only." % (ref, exc)
+    _autosave_write(stamp, "%s %s" % (now, sha))
+    return None
+
+
+def _autosave_snapshot(top, branch, force_push=False):
+    """Snapshot the worktree, untracked files included, to the autosave ref without touching
+    the real index, branch or working tree, then push it. Returns a systemMessage or None."""
+    import time as _t
+
+    ref = AUTOSAVE_REF_PREFIX + branch
+    now = _t.time()
+    idx = _autosave_state_path(top, branch, "index")
+    env = {"GIT_INDEX_FILE": idx}
+    try:
+        if os.path.exists(idx):
+            os.remove(idx)
+        _ag(top, ["read-tree", "HEAD"], env=env)
+        _ag(top, ["add", "-A"], env=env)
+        tree = _ag(top, ["write-tree"], env=env)[1].strip()
+    finally:
+        if os.path.exists(idx):
+            os.remove(idx)
+    rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", ref], check=False)
+    cur = cur.strip() if rc == 0 else ""
+    head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+    cur_parent = _ag(top, ["rev-parse", "%s^" % cur], check=False)[1].strip() if cur else ""
+    cur_tree = _ag(top, ["rev-parse", "%s^{tree}" % cur])[1].strip() if cur else ""
+    if cur and tree == cur_tree and cur_parent == head:
+        sha = cur
+    else:
+        stamp = _t.strftime("%Y-%m-%d %H:%M:%SZ", _t.gmtime(now))
+        sha = _ag(top, ["-c", "user.name=house-rules", "-c", "user.email=house-rules@localhost",
+                        "commit-tree", tree, "-p", "HEAD", "-m",
+                        "house-rules autosave: %s %s" % (branch, stamp)])[1].strip()
+        _ag(top, ["update-ref", ref, sha])
+    return _autosave_push(top, branch, sha, now, force=force_push)
+
+
+def _wip_message(subject, session_id=""):
+    msg = subject + "\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+    if re.match(r"^session_[A-Za-z0-9]+$", session_id or ""):
+        msg += "\nClaude-Session: https://claude.ai/code/%s" % session_id
+    return msg
+
+
+def _wip_commit(top, subject, session_id=""):
+    """Commit everything in the worktree on the subagent's behalf. (short sha, files), or
+    (None, []) when there was nothing to commit. --no-verify: a repo's pre-commit hook must not
+    be able to block the one commit that protects the work."""
+    files = _dirty_files(top)
+    if not files:
+        return None, []
+    _ag(top, ["add", "-A"])
+    ident = []
+    if _ag(top, ["config", "user.name"], check=False)[0] != 0:
+        ident += ["-c", "user.name=house-rules"]
+    if _ag(top, ["config", "user.email"], check=False)[0] != 0:
+        ident += ["-c", "user.email=house-rules@localhost"]
+    _ag(top, ident + ["commit", "--no-verify", "-q", "-m", _wip_message(subject, session_id)])
+    return _ag(top, ["rev-parse", "--short", "HEAD"])[1].strip(), files
+
+
+def _head_age_seconds(top):
+    import time as _t
+
+    return _t.time() - int(_ag(top, ["log", "-1", "--format=%ct"])[1].strip() or "0")
+
+
+def event_autosave():
+    """PostToolUse (Write|Edit|NotebookEdit|Bash) on a worktree-agent- branch: after a
+    CHECKPOINT_MINUTES stretch with no commit, commit for the subagent; then snapshot the
+    worktree to the autosave ref and push it."""
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit({"systemMessage": "house-rules plugin: autosave got an empty payload and did not run for this call."})
+            return 0
+        target = _autosave_target(payload)
+        if target is None:
+            return 0
+        top, branch, tool, sid = target
+        if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
+            return 0
+        notes = []
+        if _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
+            sha, done = _wip_commit(top, WIP_CHECKPOINT, sid)
+            if sha:
+                notes.append("house-rules autosave: %d min passed without a commit on %s, so the "
+                             "hook committed %d file(s) as %s: %s."
+                             % (CHECKPOINT_MINUTES, branch, len(done), sha, _shown(done)))
+        msg = _autosave_snapshot(top, branch, force_push=bool(notes))
+        if msg:
+            notes.append(msg)
+        # One JSON object per hook call: Claude Code parses stdout as a single object, so the
+        # trace is the fallback line, never an extra one.
+        if notes:
+            emit({"systemMessage": " | ".join(notes)})
+        else:
+            trace("autosave: %s%s saved." % (AUTOSAVE_REF_PREFIX, branch))
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: autosave hit an error (%s: %s) and did not run for this call."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
+def event_commitgate():
+    """PreToolUse (Write|Edit|NotebookEdit) on a worktree-agent- branch: once COMMITGATE_THRESHOLD
+    files are uncommitted, deny the edit and say commit first. Asked once and ignored (HEAD has not
+    moved), commit for the subagent instead and let the edit through."""
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit({"systemMessage": "house-rules plugin: commitgate got an empty payload and did not run for this call."})
+            return 0
+        target = _autosave_target(payload)
+        if target is None:
+            return 0
+        top, branch, tool, sid = target
+        if tool not in _GATED_TOOLS:
+            return 0  # Bash is never gated: it is how the subagent commits
+        files = _dirty_files(top)
+        counter = _autosave_state_path(top, branch, "denied")
+        if len(files) < COMMITGATE_THRESHOLD:
+            if os.path.exists(counter):
+                os.remove(counter)
+            return 0
+        head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+        if _autosave_read(counter) == head:
+            sha, done = _wip_commit(top, WIP_NOT_COMMITTED, sid)
+            os.remove(counter)
+            note = _autosave_snapshot(top, branch, force_push=True)
+            text = ("house-rules commitgate: the subagent did not commit when asked, so the hook "
+                    "committed %d file(s) on %s as %s: %s." % (len(done), branch, sha, _shown(done)))
+            emit({"systemMessage": text + (" | " + note if note else "")})
+            return 0
+        _autosave_write(counter, head)
+        reason = (
+            "House rules, commit as you go: %d files are uncommitted on %s (%s), so this edit is "
+            "blocked until you commit what you have. Run `git add <paths> && git commit -m "
+            "\"<type>: <summary>\"` now, then repeat the edit. If you repeat it without committing, "
+            "the hook commits everything for you." % (len(files), branch, _shown(files))
+        )
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": reason}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: commitgate hit an error (%s: %s) and did not run for this call."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
+def _autosave_cleanup(top):
+    """On a subagent's clean finish, drop its autosave ref locally and on origin. A failure
+    message, or None (also None when there is nothing to do)."""
+    if not _autosave_enabled():
+        return None
+    branch = _repo_branch(top)
+    if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX) or _dirty_files(top):
+        return None
+    ref = AUTOSAVE_REF_PREFIX + branch
+    had_ref = _ag(top, ["rev-parse", "--verify", "-q", ref], check=False)[0] == 0
+    _ag(top, ["update-ref", "-d", ref], check=False)
+    pushed = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
+    for kind in ("pushed", "noorigin", "denied"):
+        p = _autosave_state_path(top, branch, kind)
+        if os.path.exists(p):
+            os.remove(p)
+    if not had_ref or len(pushed) != 2 or pushed[1] == "-":
+        return None  # never reached origin, so there is nothing there to delete
+    if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
+        return None
+    try:
+        _ag(top, ["push", "--quiet", "origin", ":" + ref], timeout=AUTOSAVE_PUSH_TIMEOUT)
+    except RuntimeError as exc:
+        return "house-rules autosave: could not delete %s on origin (%s); delete it by hand." % (ref, exc)
+    return None
+
+
+def _newest_mtime(top, files):
+    newest = 0.0
+    for f in files:
+        try:
+            newest = max(newest, os.path.getmtime(os.path.join(top, f)))
+        except OSError:
+            continue  # a deleted file has no mtime; the others decide
+    return newest
+
+
+def event_worktreesweep():
+    """UserPromptSubmit on the parent (prompts, task notifications, scheduled check-ins): commit
+    any subagent worktree left with uncommitted work untouched for CHECKPOINT_MINUTES - the case a
+    killed subagent leaves behind, where none of its own hooks will ever run again."""
+    import time as _t
+
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        try:
+            data = json.loads(payload) if payload else {}
+        except ValueError:
+            data = {}
+        root = os.environ.get("CLAUDE_PROJECT_DIR") or (data.get("cwd") if isinstance(data, dict) else "") or os.getcwd()
+        rc, out, _e = _ag(root, ["worktree", "list", "--porcelain"], check=False)
+        if rc != 0:
+            return 0  # not a git repo: no subagent worktrees to sweep
+        worktrees, path = [], None
+        for line in out.splitlines():
+            if line.startswith("worktree "):
+                path = line[len("worktree "):]
+            elif line.startswith("branch refs/heads/" + AUTOSAVE_BRANCH_PREFIX) and path:
+                worktrees.append((path, line[len("branch refs/heads/"):]))
+        sid = data.get("session_id", "") if isinstance(data, dict) else ""
+        swept, problems = [], []
+        now = _t.time()
+        for top, branch in worktrees[:SWEEP_MAX_WORKTREES]:
+            try:
+                files = _dirty_files(top)
+                if not files or now - _newest_mtime(top, files) < CHECKPOINT_MINUTES * 60:
+                    continue  # clean, or a live subagent is still editing it
+                sha, done = _wip_commit(top, WIP_PARENT, sid)
+                note = _autosave_snapshot(top, branch, force_push=True)
+                swept.append("%s (%s): committed %d file(s) as %s - %s%s"
+                             % (top, branch, len(done), sha, _shown(done), " | " + note if note else ""))
+            except Exception as exc:
+                problems.append("%s (%s): %s" % (top, branch, exc))
+        if not swept and not problems:
+            return 0
+        lines = []
+        if swept:
+            lines.append("house-rules worktreesweep: subagent work sat uncommitted for %d+ min, so the "
+                         "hook committed it: %s." % (CHECKPOINT_MINUTES, "; ".join(swept)))
+        if problems:
+            lines.append("house-rules worktreesweep: could not check or commit %s." % "; ".join(problems))
+        emit({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": " ".join(lines)}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: worktreesweep hit an error (%s: %s) and did not run for this call."
+                               % (type(exc).__name__, exc)})
     return 0
 
 
@@ -3115,10 +3725,20 @@ def event_audit():
             return 0
 
         status = _field(_RESPONSE_STATUS_RE, payload)
+        if status == "async_launched" and _autosave_enabled():
+            # Nothing to audit yet. A killed background subagent runs no hooks of its own, so
+            # the parent's worktreesweep is what commits its work - and that only runs when the
+            # parent wakes. Ask for a check-in so it does.
+            emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": (
+                "house-rules: a subagent is running in the background. Until it finishes, schedule "
+                "a check-in every %d min (send_later, ScheduleWakeup or CronCreate, whichever this "
+                "session has) so worktreesweep can commit its work if it stalls; cancel it when the "
+                "subagent finishes." % CHECKPOINT_MINUTES)}})
+            return 0
         if status != "completed":
-            # "async_launched" (a backgrounded call, still running) or an unrecognised shape:
-            # genuinely nothing to audit yet, not a failure to report - userpromptaudit picks
-            # up a backgrounded call's eventual hand-back.
+            # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing
+            # to audit yet, not a failure to report - userpromptaudit picks up a backgrounded
+            # call's eventual hand-back.
             return 0
 
         problems = []
@@ -4375,6 +4995,9 @@ EVENTS = {
     "subagentrules": event_subagentrules,
     "verdict": event_verdict,
     "subagentcommit": event_subagentcommit,
+    "autosave": event_autosave,
+    "commitgate": event_commitgate,
+    "worktreesweep": event_worktreesweep,
     "audit": event_audit,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,

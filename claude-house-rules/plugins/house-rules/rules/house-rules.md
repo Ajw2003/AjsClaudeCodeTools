@@ -5,7 +5,13 @@ Each section names `${CLAUDE_PLUGIN_ROOT}/rules/detail/<file>.md` for rationale 
 ## Find out what machine you are on, then build for that
 
 `rules/environment.md` records the real environment. Recorded → build for that; not recorded →
-discover it, write it down. Remote handover target: `rules/handover-target.md`. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/environment.md`.
+discover it, write it down. Detected hardware is the local budget. Remote handover target:
+`rules/handover-target.md`. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/environment.md`.
+
+## Open source first; paid is the last resort
+
+Local OSS → cloud OSS → local free closed → cloud free closed → paid; each step down reasoned.
+Paid on Pro/Max: estimate building our own. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/free-first.md`.
 
 ## Match response depth to the task
 
@@ -93,12 +99,6 @@ change: screenshot the same flow before and after, and look. See `${CLAUDE_PLUGI
 I don't say compiled code compiles until the real compiler has run and I've read its output. A
 hand-rolled API stand-in is not a compiler check. Can't reach the toolchain → say so, `UNTESTED:`.
 See `${CLAUDE_PLUGIN_ROOT}/rules/detail/shim-compiles.md`.
-
-## Unity work starts with the Unity plugin and the Unity CLI
-
-Before any Unity task, check for the `unity:*` skills and the `unity` CLI, then use them
-unprompted — never wait to be told. Missing or unreachable → say so, then fall back. See
-`${CLAUDE_PLUGIN_ROOT}/rules/detail/unity-tools-first.md`.
 
 ## A reported update is not a completed one
 

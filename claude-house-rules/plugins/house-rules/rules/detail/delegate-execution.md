@@ -61,6 +61,18 @@ first place.
 the worktree opened for it — the same rule as mine. The `subagentcommit` hook sends it back once
 if it tries to finish with files it wrote still uncommitted.
 
+**A subagent's work is saved while it runs, not only when it finishes.** On its own
+`worktree-agent-` branch, every edit is snapshotted to `refs/house-rules/autosave/<branch>` and
+pushed to `origin` once a minute. Edits are blocked once 3 files are uncommitted; if it ignores
+that once, or goes 10 minutes without a commit, the hook commits for it. When I launch one in the
+background I schedule a check-in every 10 minutes, and on every wake `worktreesweep` commits any
+subagent worktree left untouched that long. To recover a killed subagent's work from its save
+point: `git fetch origin 'refs/house-rules/autosave/*:refs/house-rules/autosave/*'` (skip it if
+the save is only local), then `git worktree add -b recovered <path> refs/house-rules/autosave/<branch>`.
+
+**Why:** on 2026-09-29 a safety-classifier outage killed an executor mid-run. `SubagentStop`
+never fired, so nothing checked its work, and it sat uncommitted until the parent noticed.
+
 **When I tell a subagent not to run git, the commit is mine after it hands back.** Its files are
 my uncommitted work from that moment, under the same commit rule as anything I wrote myself. The
 `audit` summary names any file the subagent wrote that is still uncommitted.

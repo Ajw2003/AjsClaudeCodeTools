@@ -9,3 +9,6 @@ claude-house-rules/plugins/house-rules/rules/handover-target.md
 
 # Subagent-driven-development workspace: machine-local scratch, briefs full of example pointers.
 .superpowers/
+
+# Isolated working copies the executor subagent works in; merged into the branch, then removed.
+.claude/worktrees/

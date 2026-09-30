@@ -1,4 +1,4 @@
-<!-- plain copy of: docs/4-systems/hook-engine.md @ a4e4e388f19c51989b9c23d6e46dd3f01cad28c4 -->
+<!-- plain copy of: docs/4-systems/hook-engine.md @ a9bd74791a59a83927a1215cde83b71eaf703fdc -->
 
 # The hook engine, in plain English
 
@@ -30,7 +30,10 @@ unchallenged and reminders never reach Claude.
   say what went wrong.
 - **Errors nobody hears about.** The tests fail if any error is quietly swallowed, and a last
   safety net catches the rest.
-- **Leftover files between sessions.** No check stores anything, and the tests enforce it.
+- **Leftover files between sessions.** Checks store nothing, except three tiny notes kept for a
+  helper (a second copy of Claude doing part of the job), deleted when it finishes.
+- **A helper stopped mid-job losing its work.** It is saved after each step, and committed
+  if left 10 minutes.
 - **The terminal freezing.** The current branch (git's name for a line of work) is read from one
   file instead of running git, which can hang.
 - **Guessing whose branch it is.** Any doubt counts as "not Claude's", so you get asked.
@@ -39,6 +42,9 @@ unchallenged and reminders never reach Claude.
 - **A file replaced by mistake.** Any full overwrite of an existing file asks first, however small.
 - **Big files timing out.** The long-comment check is fast enough to finish on large files.
 - **Unity game projects missed.** One opened at its Assets folder is still recognised.
+- **Unity advice crowding out the rest.** Only its short part loads at the start.
+- **Guessing at the machine.** Unrecorded memory, graphics card, disk space and Claude plan are
+  looked up, and anything not found says so.
 - **Extra installs breaking it.** Only Python's built-in parts are used.
 
 **Related.**

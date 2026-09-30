@@ -49,6 +49,15 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" worktreesweep",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -71,6 +80,16 @@
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" guardwrite",
             "timeout": 10,
             "statusMessage": "Checking file-deletion safeguards..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" commitgate",
+            "timeout": 10
           }
         ]
       }
@@ -143,6 +162,16 @@
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" audit",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" autosave",
             "timeout": 10
           }
         ]

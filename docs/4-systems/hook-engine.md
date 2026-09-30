@@ -47,6 +47,9 @@ name as `argv[1]`; the payload always arrives on stdin
 | `PostToolUse` (`ExitPlanMode`) | `event_delegate` | a plan was just approved |
 | `SubagentStart` | `event_announce` | any subagent spawns |
 | `SubagentStop` | `event_verdict` | any subagent finishes |
+| `PreToolUse` (`Write`/`Edit`/`NotebookEdit`) | `event_commitgate` | 3+ uncommitted files on a subagent's `worktree-agent-` branch |
+| `PostToolUse` (`Write`/`Edit`/`NotebookEdit`/`Bash`) | `event_autosave` | any step on a subagent's `worktree-agent-` branch |
+| `UserPromptSubmit` | `event_worktreesweep` | every parent wake - commits subagent worktrees left untouched 10+ min |
 | `Stop` | `event_handover` | a turn ends handing over an untested-looking command |
 
 Full per-handler behavior, including *why* each one is shaped the way it is, is the subject of
@@ -54,8 +57,12 @@ Full per-handler behavior, including *why* each one is shaped the way it is, is 
 that one carries the reasoning and post-mortems, per the [[sixth-documentation-tier]] boundary
 between tier 4 and `docs/6-decisions/Decisions.md`.
 
-Every handler is **stateless**: nothing is written to disk between invocations, nothing carries
-over between turns. An earlier version enforced the deliver-a-whole-workflow rule with a `Stop`
+Every handler is **stateless** except two: nothing is written to disk between invocations,
+nothing carries over between turns. The exceptions are `autosave` and `commitgate` (2.47.0),
+which keep three small files per branch inside that worktree's own git dir, never the temp
+directory: the last push time, whether the subagent has already been asked to commit, and a
+said-once "no origin" marker. `subagentcommit` deletes them, with the autosave ref, when the
+subagent finishes clean. An earlier version enforced the deliver-a-whole-workflow rule with a `Stop`
 hook that kept session state in the temp directory; it leaked a file for every session that
 ended unexpectedly, and any unrelated shell command silently defeated it. That machinery is gone
 on purpose — `verify.py` fails if it reappears.
@@ -107,6 +114,32 @@ on purpose — `verify.py` fails if it reappears.
   false-positive. When it matches, detection re-scans from that real project root instead of
   `Assets/`, so a sibling Node service next to `Assets/` is still found too.
   <!-- ref:0d4d -->
+- **`standards` output stays under its 9,500-char budget in a Unity-only project and in a
+  Unity + Node one, and the Unity tools-first rule lives there, not in the core.** The Unity
+  document is split the way the rules are: `rules/standards/csharp-unity-standards.md` is the
+  always-injected core (C# style, a "read the detail file first" pointer, and the "Unity work
+  starts with the Unity plugin and the Unity CLI" rule), and the rest moved verbatim to
+  `rules/standards/csharp-unity-detail.md`. `event_standards` expands `${CLAUDE_PLUGIN_ROOT}` in
+  what it emits, as `inject` does. Until 2026-09-29 nothing measured `standards` in a Unity
+  project, so it emitted 9,832 chars (Unity only) and 13,376 (Unity + Node) against a 10,000 hard
+  limit unnoticed. `verify.py` now measures both fixtures. `tools/sync_standards.py` overwrites
+  the vendored file from `Ajw2003/Coding-Standards`; a sync reverts the split, and that
+  size check is what would say so.
+  <!-- ref:23c3 -->
+- **`profile`'s runtime-detected fallback records hardware and the Claude plan, with a time
+  budget, and never leaves a field blank.** `_detect_hardware` in `hook.py` probes CPU (model and
+  logical cores), RAM (`/proc/meminfo`, `sysctl hw.memsize`, or `GlobalMemoryStatusEx`), GPU
+  (`nvidia-smi`, else `system_profiler` on macOS or a CIM query on Windows, where an exact 4 GB
+  reading is marked "may be higher"), free disk on the project drive, and the plan from
+  `claude auth status --json`. Each subprocess gets 3 s and all of them share 6 s, under the
+  profile hook's 10 s timeout in `hooks/hooks.json`. A failed probe prints `not detected
+  (<reason>)`. Where `claude auth status` has no plan field (as in a cloud session) it says so
+  rather than guessing. On a remote session the block is headed as the sandbox's, for Claude's
+  own checks, and points at `rules/handover-target.md` for the local build budget. Only the
+  fallback probes: a hand-recorded `rules/environment.md` replaces it, so hardware missing from
+  that file is not re-detected. The macOS and Windows branches were written to the documented
+  command shapes and not run on those systems.
+  <!-- ref:ad50 -->
 - **`guardwrite` treats any `Write` to a file that already exists as a full-file replacement,
   full stop — there is no size threshold or content diff that lets a "small" rewrite through.**
   `Write` always replaces a file's entire contents; there is no partial form. A full rewrite is a
