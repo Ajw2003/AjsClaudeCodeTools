@@ -3620,9 +3620,19 @@ _dnr = _iss_repo(remote="git@example.com:o/r.git")
 _, _ol4, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dnr}, _dnr)
 _dnr2 = _iss_repo()
 _, _ol5, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dnr2}, _dnr2)
-_nogh_env = _iss_env()
-_nogh_env["PATH"] = os.path.dirname(SH)  # git and sh, no gh
-_, _ol6, _ = run_hook("issuelist", json.dumps({"hook_event_name": "SessionStart", "cwd": _dl}), env=_nogh_env)
+# No gh on PATH is tested in-process, with shutil.which patched and then restored. A PATH built
+# from dirname(SH) does not work: on a Linux runner gh lives in /usr/bin beside sh and git.
+import importlib.util as _ig_util
+_ig_spec = _ig_util.spec_from_file_location("hook_nogh", HOOK)
+_ig_mod = _ig_util.module_from_spec(_ig_spec)
+_ig_spec.loader.exec_module(_ig_mod)
+_ig_which = shutil.which
+shutil.which = lambda *_a, **_k: None
+try:
+    _ig_res = _ig_mod._open_issues_text(_dl)
+finally:
+    shutil.which = _ig_which
+_ol6 = "" if _ig_res == ("", None) else "unexpected result %r" % (_ig_res,)
 commit_case(
     "issuelist: no GitHub remote, no remote at all, or no gh on PATH is silent (nothing to list)",
     _ol4.strip() == "" and _ol5.strip() == "" and _ol6.strip() == "", "out %r %r %r" % (_ol4[:40], _ol5[:40], _ol6[:40]),
