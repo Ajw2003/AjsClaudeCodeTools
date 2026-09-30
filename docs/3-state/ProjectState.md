@@ -58,6 +58,14 @@ commits if ignored, and `worktreesweep` commits a dead subagent's leftovers when
 Verified in `verify.py` (454/454) and by a real run. Not verified: a push to GitHub from outside a
 cloud session, where the session's git proxy refused it with a 403.
 
+2.48.0 (2026-09-30) cuts hook overhead, findings 1-3 of
+[`docs/plans/hooks-efficiency-review.md`](../plans/hooks-efficiency-review.md): no-op traces are
+silent unless `HOUSE_RULES_TRACE=verbose`, `run.sh` caches the probed interpreter, and
+`_autosave_target` reads `.git/HEAD` before any git subprocess. Verified by `verify.py` (478
+checks incl. new default-silent, verbose, cache and no-spawn cases) and `verify_tools.py`. Not
+verified: the transcript noise being gone in a fresh session, which needs the user to look.
+Findings 4-8 of that plan are follow-ups in the Roadmap.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

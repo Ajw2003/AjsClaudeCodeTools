@@ -15,7 +15,8 @@
 # wins. `py -3` is two words, so candidates are tried via `set --` / "$@", never a single
 # variable that would get word-split by exec.
 #
-# Resolution order: $HOUSE_RULES_PYTHON (if set, probed too — not trusted blindly), python3,
+# Resolution order: $HOUSE_RULES_PYTHON (if set, probed too — not trusted blindly), else the
+# cached interpreter in $HERE/.python-cache (see INTERPRETER CACHE below), else python3,
 # python, py -3.
 #
 # DEPENDENCIES: /bin/sh only. This file must never itself need the thing it is looking for.
@@ -50,12 +51,33 @@ probe() {
   [ "$("$@" -c 'print(9)' 2>/dev/null)" = 9 ]
 }
 
+# INTERPRETER CACHE. Probing python3 (the Windows Store stub) costs ~65 ms on every hook call,
+# so the command that last passed `probe` is remembered in $HERE/.python-cache. Only a probed-
+# good command is ever written, so the stub can never be cached. A cached command is trusted
+# only while its first word still resolves (`command -v`); otherwise the file is deleted and
+# the normal probe order runs again. The plugin directory is replaced on update, which resets
+# the cache. A read-only plugin directory just means no cache - never a failure.
+CACHE="$HERE/.python-cache"
+FROM_CACHE=''
+
 PY=''
 if [ -n "${HOUSE_RULES_PYTHON:-}" ]; then
   # shellcheck disable=SC2086
   set -- $HOUSE_RULES_PYTHON
   if probe "$@"; then
     PY=set
+    FROM_CACHE=override
+  fi
+elif [ -f "$CACHE" ]; then
+  CACHED=''
+  { IFS= read -r CACHED; } < "$CACHE" 2>/dev/null || :
+  # shellcheck disable=SC2086
+  set -- $CACHED
+  if [ $# -gt 0 ] && command -v "$1" >/dev/null 2>&1; then
+    PY=set
+    FROM_CACHE=yes
+  else
+    rm -f "$CACHE" 2>/dev/null || :
   fi
 fi
 
@@ -73,6 +95,11 @@ if [ -z "$PY" ]; then
         PY=set
       fi
     fi
+  fi
+  if [ -n "$PY" ]; then
+    # The braces matter: a failed `> file` prints its error before a trailing 2>/dev/null applies.
+    { printf '%s
+' "$*" > "$CACHE"; } 2>/dev/null || :
   fi
 fi
 
@@ -125,7 +152,7 @@ if [ -z "$PY" ]; then
 fi
 
 if [ "${HOUSE_RULES_DEBUG:-}" = 1 ]; then
-  echo "house-rules run.sh: HERE=$HERE interpreter=$* event=$EVENT" >&2
+  echo "house-rules run.sh: HERE=$HERE interpreter=$* event=$EVENT cache=${FROM_CACHE:-no}" >&2
 fi
 
 exec "$@" "$HERE/hook.py" "$EVENT"

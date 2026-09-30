@@ -20,6 +20,14 @@ model context in the same turn — only the interactive UI shows a `SubagentStop
 which is why `verdict`'s audit summary rides that one proven channel rather than a second one that
 was assumed to work and does not.
 
+**Subagents do receive CLAUDE.md.** Correction, 2026-09-30 (Decisions.md, same date). The
+SessionStart finding above is about `additionalContext` only. A `general-purpose` or
+`claude-code-guide` subagent's transcript carries an `instructions` attachment holding the user
+and project `CLAUDE.md` files plus `MEMORY.md` (3.4 KB for this repo's own `CLAUDE.md`); an
+`Explore` subagent's transcript has none. So a rule placed in `CLAUDE.md` does reach most
+subagents, and its size is paid on every such spawn. Measurement:
+`docs/plans/issue-workflow-and-tiered-subagents-proposal.md`.
+
 ## The plugin is one POSIX shim plus one Python file, dispatched by event
 
 Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](../claude-house-rules/plugins/house-rules/hooks/hooks.json),
@@ -472,6 +480,15 @@ silence and the rule that requires it, so this cannot be quietly "fixed" later.
 `HOUSE_RULES_TRACE=off` is the single lever and silences no reminder — `guard` still prompts,
 `harvest` still reminds. `HOUSE_RULES_HARVEST=quiet` drops just harvest's trace;
 `HOUSE_RULES_DEBUG=1` adds harvest's per-run rejection reasons.
+
+**Two tiers, since 2.48.0.** The default (`on`) prints only traces that record something: a
+"could not tell" (`trace()`), or an action taken (`subagentcommit`, `autosave ... saved`; harvest
+when it found blocks or ignored a bad override). The "looked, nothing to do" traces — guard's
+allow, `guardwrite` on a new file, `artifact`, `runnable`, `branchnudge` staying quiet, harvest
+finding nothing — go through `trace_noop()` and print only under `HOUSE_RULES_TRACE=verbose`, which
+restores the full pre-2.48.0 output for debugging. The house rules define silence as "looked,
+nothing to do", and five to seven of these lines per Write/Edit were transcript noise. Values:
+`on` (default), `verbose`, `off`.
 
 ## The machine profile is data, not code, and is not committed
 

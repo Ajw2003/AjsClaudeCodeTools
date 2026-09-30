@@ -1,5 +1,11 @@
 # Today — 2026-09-30
 
+Hook overhead cut, plugin 2.48.0: the "looked, nothing to do" trace lines no longer print unless
+`HOUSE_RULES_TRACE=verbose`, `run.sh` caches the interpreter, and `autosave`/`commitgate` skip git
+on non-subagent branches. Plan: [`hooks-efficiency-review.md`](../plans/hooks-efficiency-review.md).
+Next: confirm in a fresh session that the transcript notices are gone; findings 4-8 are in the
+Roadmap.
+
 Subagent work is now saved while it runs: `autosave`, `commitgate` and `worktreesweep`, plugin
 2.47.0. See the dated entry in [`Decisions.md`](../6-decisions/Decisions.md).
 
