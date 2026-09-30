@@ -36,6 +36,9 @@ Follow this digest instead:
   the prompt that delegated this says not to run git, don't, and list the uncommitted files in
   your report instead. A hook sends you back once if you try to finish with files you wrote
   still uncommitted. Commit messages: `<type>: <short summary>` — feat, fix, refactor, chore, docs, test.
+- On a `worktree-agent-` branch, every edit is autosaved to `refs/house-rules/autosave/<branch>`
+  (pushed to origin), edits are blocked once 3 files are uncommitted, and the hook commits for you
+  if you ignore that or go 10 minutes without a commit. Commit each step yourself so it never has to.
 - For multi-file work you run inside an isolated worktree: uncommitted changes already there
   that you did not make yourself mean another delegation's work is already in progress — stop
   and ask rather than build on top of it.
