@@ -3316,6 +3316,376 @@ def event_subagentcommit():
     return 0
 
 
+# autosave (PostToolUse), commitgate (PreToolUse), worktreesweep (UserPromptSubmit) - subagent
+# worktree branches only. subagentcommit above runs only at SubagentStop, which never fires for a
+# subagent killed mid-run (the 2026-09-29 safety-classifier outage). See docs/6-decisions/
+# Decisions.md, 2026-09-30. Related future direction: issue #105 (dynamic dispatch).
+
+AUTOSAVE_BRANCH_PREFIX = "worktree-agent-"
+AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
+COMMITGATE_THRESHOLD = 3
+COMMITGATE_LIST_MAX = 8
+CHECKPOINT_MINUTES = 10
+AUTOSAVE_PUSH_INTERVAL = 60
+AUTOSAVE_PUSH_TIMEOUT = 6.0
+AUTOSAVE_GIT_TIMEOUT = 4.0
+SWEEP_MAX_WORKTREES = 10
+WIP_NOT_COMMITTED = "wip: autosave - subagent did not commit when asked"
+WIP_CHECKPOINT = "wip: checkpoint - %d min without a commit" % CHECKPOINT_MINUTES
+WIP_PARENT = "wip: parent checkpoint of subagent work"
+_AUTOSAVE_TOOLS = {"Write", "Edit", "NotebookEdit", "Bash"}
+_GATED_TOOLS = {"Write", "Edit", "NotebookEdit"}
+
+
+def _autosave_enabled():
+    return os.environ.get("HOUSE_RULES_AUTOSAVE", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True):
+    """Run git in `top`; (returncode, stdout, stderr). Raises RuntimeError on failure when
+    `check`, and on a timeout always - every caller turns that into a systemMessage."""
+    import subprocess
+
+    e = dict(os.environ)
+    e["GIT_TERMINAL_PROMPT"] = "0"
+    if env:
+        e.update(env)
+    try:
+        proc = subprocess.run(
+            ["git"] + args, cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=timeout, env=e,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("git %s timed out after %ss" % (args[0], timeout))
+    out = proc.stdout.decode("utf-8", "replace")
+    err = proc.stderr.decode("utf-8", "replace").strip()
+    if check and proc.returncode != 0:
+        raise RuntimeError("git %s failed: %s" % (" ".join(args[:2]), err or "exit %d" % proc.returncode))
+    return proc.returncode, out, err
+
+
+def _autosave_target(payload):
+    """(repo top, branch, tool_name, session_id) when the edited file (or, for Bash, the payload
+    cwd) is in a repo on a worktree-agent- branch; None otherwise - not a subagent worktree."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = None
+    if not isinstance(data, dict):
+        raise RuntimeError("the payload was not a JSON object")
+    tool = data.get("tool_name") or ""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    path = ti.get("file_path") or ti.get("notebook_path") or data.get("cwd")
+    if not path:
+        return None
+    if not os.path.isabs(path) and data.get("cwd"):
+        path = os.path.join(data["cwd"], path)
+    top = _repo_top(os.path.join(path, "x") if os.path.isdir(path) else path, {})
+    if not top:
+        return None
+    branch = _repo_branch(top)
+    if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX):
+        return None
+    return top, branch, tool, data.get("session_id") or ""
+
+
+def _autosave_state_path(top, branch, kind):
+    gitdir = _ag(top, ["rev-parse", "--absolute-git-dir"])[1].strip()
+    return os.path.join(gitdir, "house-rules-autosave-%s.%s" % (branch.replace("/", "_"), kind))
+
+
+def _autosave_read(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ""
+
+
+def _autosave_write(path, text):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def _dirty_files(top):
+    return [p for p, _t in _parse_status_porcelain(_ag(top, ["status", "--porcelain", "-uall"])[1].splitlines())]
+
+
+def _shown(files):
+    text = ", ".join(files[:COMMITGATE_LIST_MAX])
+    if len(files) > COMMITGATE_LIST_MAX:
+        text += " and %d more" % (len(files) - COMMITGATE_LIST_MAX)
+    return text
+
+
+def _autosave_push(top, branch, sha, now, force=False):
+    """Push the autosave ref to origin, at most once per AUTOSAVE_PUSH_INTERVAL unless `force`.
+    Returns a systemMessage string, or None."""
+    ref = AUTOSAVE_REF_PREFIX + branch
+    stamp = _autosave_state_path(top, branch, "pushed")
+    prev = _autosave_read(stamp).split()
+    if len(prev) == 2 and prev[1] == sha:
+        return None  # this exact snapshot is already on origin
+    if not force and len(prev) == 2 and now - float(prev[0]) < AUTOSAVE_PUSH_INTERVAL:
+        trace("autosave: %s updated locally; push skipped (once per %ds)." % (ref, AUTOSAVE_PUSH_INTERVAL))
+        return None
+    if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
+        marker = _autosave_state_path(top, branch, "noorigin")
+        if _autosave_read(marker):
+            return None
+        _autosave_write(marker, "1")
+        return ("house-rules autosave: this repo has no `origin` remote, so %s is local-only and "
+                "would be lost with the container. (Said once.)" % ref)
+    # Stamped before the attempt, so an unreachable origin costs one timeout a minute, not one
+    # per edit.
+    _autosave_write(stamp, "%s %s" % (now, prev[1] if len(prev) == 2 else "-"))
+    try:
+        _ag(top, ["push", "--force", "--quiet", "origin", "%s:%s" % (ref, ref)], timeout=AUTOSAVE_PUSH_TIMEOUT)
+    except RuntimeError as exc:
+        return "house-rules autosave: could not push %s to origin (%s). It is saved locally only." % (ref, exc)
+    _autosave_write(stamp, "%s %s" % (now, sha))
+    return None
+
+
+def _autosave_snapshot(top, branch, force_push=False):
+    """Snapshot the worktree, untracked files included, to the autosave ref without touching
+    the real index, branch or working tree, then push it. Returns a systemMessage or None."""
+    import time as _t
+
+    ref = AUTOSAVE_REF_PREFIX + branch
+    now = _t.time()
+    idx = _autosave_state_path(top, branch, "index")
+    env = {"GIT_INDEX_FILE": idx}
+    try:
+        if os.path.exists(idx):
+            os.remove(idx)
+        _ag(top, ["read-tree", "HEAD"], env=env)
+        _ag(top, ["add", "-A"], env=env)
+        tree = _ag(top, ["write-tree"], env=env)[1].strip()
+    finally:
+        if os.path.exists(idx):
+            os.remove(idx)
+    rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", ref], check=False)
+    cur = cur.strip() if rc == 0 else ""
+    head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+    cur_parent = _ag(top, ["rev-parse", "%s^" % cur], check=False)[1].strip() if cur else ""
+    cur_tree = _ag(top, ["rev-parse", "%s^{tree}" % cur])[1].strip() if cur else ""
+    if cur and tree == cur_tree and cur_parent == head:
+        sha = cur
+    else:
+        stamp = _t.strftime("%Y-%m-%d %H:%M:%SZ", _t.gmtime(now))
+        sha = _ag(top, ["-c", "user.name=house-rules", "-c", "user.email=house-rules@localhost",
+                        "commit-tree", tree, "-p", "HEAD", "-m",
+                        "house-rules autosave: %s %s" % (branch, stamp)])[1].strip()
+        _ag(top, ["update-ref", ref, sha])
+    msg = _autosave_push(top, branch, sha, now, force=force_push)
+    if not msg:
+        trace("autosave: %s is at %s." % (ref, sha[:9]))
+    return msg
+
+
+def _wip_message(subject, session_id=""):
+    msg = subject + "\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+    if re.match(r"^session_[A-Za-z0-9]+$", session_id or ""):
+        msg += "\nClaude-Session: https://claude.ai/code/%s" % session_id
+    return msg
+
+
+def _wip_commit(top, subject, session_id=""):
+    """Commit everything in the worktree on the subagent's behalf. (short sha, files), or
+    (None, []) when there was nothing to commit. --no-verify: a repo's pre-commit hook must not
+    be able to block the one commit that protects the work."""
+    files = _dirty_files(top)
+    if not files:
+        return None, []
+    _ag(top, ["add", "-A"])
+    ident = []
+    if _ag(top, ["config", "user.name"], check=False)[0] != 0:
+        ident += ["-c", "user.name=house-rules"]
+    if _ag(top, ["config", "user.email"], check=False)[0] != 0:
+        ident += ["-c", "user.email=house-rules@localhost"]
+    _ag(top, ident + ["commit", "--no-verify", "-q", "-m", _wip_message(subject, session_id)])
+    return _ag(top, ["rev-parse", "--short", "HEAD"])[1].strip(), files
+
+
+def _head_age_seconds(top):
+    import time as _t
+
+    return _t.time() - int(_ag(top, ["log", "-1", "--format=%ct"])[1].strip() or "0")
+
+
+def event_autosave():
+    """PostToolUse (Write|Edit|NotebookEdit|Bash) on a worktree-agent- branch: after a
+    CHECKPOINT_MINUTES stretch with no commit, commit for the subagent; then snapshot the
+    worktree to the autosave ref and push it."""
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit({"systemMessage": "house-rules plugin: autosave got an empty payload and did not run for this call."})
+            return 0
+        target = _autosave_target(payload)
+        if target is None:
+            return 0
+        top, branch, tool, sid = target
+        if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
+            return 0
+        notes = []
+        if _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
+            sha, done = _wip_commit(top, WIP_CHECKPOINT, sid)
+            if sha:
+                notes.append("house-rules autosave: %d min passed without a commit on %s, so the "
+                             "hook committed %d file(s) as %s: %s."
+                             % (CHECKPOINT_MINUTES, branch, len(done), sha, _shown(done)))
+        msg = _autosave_snapshot(top, branch, force_push=bool(notes))
+        if msg:
+            notes.append(msg)
+        if notes:
+            emit({"systemMessage": " | ".join(notes)})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: autosave hit an error (%s: %s) and did not run for this call."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
+def event_commitgate():
+    """PreToolUse (Write|Edit|NotebookEdit) on a worktree-agent- branch: once COMMITGATE_THRESHOLD
+    files are uncommitted, deny the edit and say commit first. Asked once and ignored (HEAD has not
+    moved), commit for the subagent instead and let the edit through."""
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit({"systemMessage": "house-rules plugin: commitgate got an empty payload and did not run for this call."})
+            return 0
+        target = _autosave_target(payload)
+        if target is None:
+            return 0
+        top, branch, tool, sid = target
+        if tool not in _GATED_TOOLS:
+            return 0  # Bash is never gated: it is how the subagent commits
+        files = _dirty_files(top)
+        counter = _autosave_state_path(top, branch, "denied")
+        if len(files) < COMMITGATE_THRESHOLD:
+            if os.path.exists(counter):
+                os.remove(counter)
+            return 0
+        head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+        if _autosave_read(counter) == head:
+            sha, done = _wip_commit(top, WIP_NOT_COMMITTED, sid)
+            os.remove(counter)
+            note = _autosave_snapshot(top, branch, force_push=True)
+            text = ("house-rules commitgate: the subagent did not commit when asked, so the hook "
+                    "committed %d file(s) on %s as %s: %s." % (len(done), branch, sha, _shown(done)))
+            emit({"systemMessage": text + (" | " + note if note else "")})
+            return 0
+        _autosave_write(counter, head)
+        reason = (
+            "House rules, commit as you go: %d files are uncommitted on %s (%s), so this edit is "
+            "blocked until you commit what you have. Run `git add <paths> && git commit -m "
+            "\"<type>: <summary>\"` now, then repeat the edit. If you repeat it without committing, "
+            "the hook commits everything for you." % (len(files), branch, _shown(files))
+        )
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": reason}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: commitgate hit an error (%s: %s) and did not run for this call."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
+def _autosave_cleanup(top):
+    """On a subagent's clean finish, drop its autosave ref locally and on origin. A failure
+    message, or None (also None when there is nothing to do)."""
+    if not _autosave_enabled():
+        return None
+    branch = _repo_branch(top)
+    if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX) or _dirty_files(top):
+        return None
+    ref = AUTOSAVE_REF_PREFIX + branch
+    had_ref = _ag(top, ["rev-parse", "--verify", "-q", ref], check=False)[0] == 0
+    _ag(top, ["update-ref", "-d", ref], check=False)
+    pushed = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
+    for kind in ("pushed", "noorigin", "denied"):
+        p = _autosave_state_path(top, branch, kind)
+        if os.path.exists(p):
+            os.remove(p)
+    if not had_ref or len(pushed) != 2 or pushed[1] == "-":
+        return None  # never reached origin, so there is nothing there to delete
+    if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
+        return None
+    try:
+        _ag(top, ["push", "--quiet", "origin", ":" + ref], timeout=AUTOSAVE_PUSH_TIMEOUT)
+    except RuntimeError as exc:
+        return "house-rules autosave: could not delete %s on origin (%s); delete it by hand." % (ref, exc)
+    return None
+
+
+def _newest_mtime(top, files):
+    newest = 0.0
+    for f in files:
+        try:
+            newest = max(newest, os.path.getmtime(os.path.join(top, f)))
+        except OSError:
+            continue  # a deleted file has no mtime; the others decide
+    return newest
+
+
+def event_worktreesweep():
+    """UserPromptSubmit on the parent (prompts, task notifications, scheduled check-ins): commit
+    any subagent worktree left with uncommitted work untouched for CHECKPOINT_MINUTES - the case a
+    killed subagent leaves behind, where none of its own hooks will ever run again."""
+    import time as _t
+
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        try:
+            data = json.loads(payload) if payload else {}
+        except ValueError:
+            data = {}
+        root = os.environ.get("CLAUDE_PROJECT_DIR") or (data.get("cwd") if isinstance(data, dict) else "") or os.getcwd()
+        rc, out, _e = _ag(root, ["worktree", "list", "--porcelain"], check=False)
+        if rc != 0:
+            return 0  # not a git repo: no subagent worktrees to sweep
+        worktrees, path = [], None
+        for line in out.splitlines():
+            if line.startswith("worktree "):
+                path = line[len("worktree "):]
+            elif line.startswith("branch refs/heads/" + AUTOSAVE_BRANCH_PREFIX) and path:
+                worktrees.append((path, line[len("branch refs/heads/"):]))
+        sid = data.get("session_id", "") if isinstance(data, dict) else ""
+        swept, problems = [], []
+        now = _t.time()
+        for top, branch in worktrees[:SWEEP_MAX_WORKTREES]:
+            try:
+                files = _dirty_files(top)
+                if not files or now - _newest_mtime(top, files) < CHECKPOINT_MINUTES * 60:
+                    continue  # clean, or a live subagent is still editing it
+                sha, done = _wip_commit(top, WIP_PARENT, sid)
+                note = _autosave_snapshot(top, branch, force_push=True)
+                swept.append("%s (%s): committed %d file(s) as %s - %s%s"
+                             % (top, branch, len(done), sha, _shown(done), " | " + note if note else ""))
+            except Exception as exc:
+                problems.append("%s (%s): %s" % (top, branch, exc))
+        if not swept and not problems:
+            return 0
+        lines = []
+        if swept:
+            lines.append("house-rules worktreesweep: subagent work sat uncommitted for %d+ min, so the "
+                         "hook committed it: %s." % (CHECKPOINT_MINUTES, "; ".join(swept)))
+        if problems:
+            lines.append("house-rules worktreesweep: could not check or commit %s." % "; ".join(problems))
+        emit({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": " ".join(lines)}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: worktreesweep hit an error (%s: %s) and did not run for this call."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
 # audit — PostToolUse on Agent|Task, its own hooks.json entry. doc-ref 8313 docs/6-decisions/Decisions.md.
 
 
@@ -4596,6 +4966,9 @@ EVENTS = {
     "subagentrules": event_subagentrules,
     "verdict": event_verdict,
     "subagentcommit": event_subagentcommit,
+    "autosave": event_autosave,
+    "commitgate": event_commitgate,
+    "worktreesweep": event_worktreesweep,
     "audit": event_audit,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,
