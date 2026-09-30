@@ -3725,10 +3725,20 @@ def event_audit():
             return 0
 
         status = _field(_RESPONSE_STATUS_RE, payload)
+        if status == "async_launched" and _autosave_enabled():
+            # Nothing to audit yet. A killed background subagent runs no hooks of its own, so
+            # the parent's worktreesweep is what commits its work - and that only runs when the
+            # parent wakes. Ask for a check-in so it does.
+            emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": (
+                "house-rules: a subagent is running in the background. Until it finishes, schedule "
+                "a check-in every %d min (send_later, ScheduleWakeup or CronCreate, whichever this "
+                "session has) so worktreesweep can commit its work if it stalls; cancel it when the "
+                "subagent finishes." % CHECKPOINT_MINUTES)}})
+            return 0
         if status != "completed":
-            # "async_launched" (a backgrounded call, still running) or an unrecognised shape:
-            # genuinely nothing to audit yet, not a failure to report - userpromptaudit picks
-            # up a backgrounded call's eventual hand-back.
+            # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing
+            # to audit yet, not a failure to report - userpromptaudit picks up a backgrounded
+            # call's eventual hand-back.
             return 0
 
         problems = []
