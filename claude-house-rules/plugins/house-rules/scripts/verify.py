@@ -283,7 +283,7 @@ def _additional_context(event, payload="", env=None):
 
 
 _size_cases = [
-    ("inject", 9_000, env_in(ROOT)),
+    ("inject", 9_700, env_in(ROOT)),
     ("standards", 9_500, env_in(ROOT)),
     ("profile", 9_500, env_in(ROOT, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV)),
     ("docstiers", 9_500, env_in(DOCSTIERS_NOT_OWNED)),
@@ -3251,6 +3251,426 @@ commit_case(
     "autosave, commitgate and worktreesweep are wired in hooks.json",
     all('run.sh\\" %s' % e in hooks_json_text for e in ("autosave", "commitgate", "worktreesweep")),
     "hooks.json PostToolUse / PreToolUse / UserPromptSubmit entries",
+)
+
+# --- issue workflow (2.49.0): #108 PR Refs rule, #109 issue close asks, #110 plan -> issues gate ---
+# Every case runs against a throwaway repo in _FIXTURE_ROOT. A stub `gh` on PATH writes a marker
+# file when it is run, so "the hooks never run gh on a tool call" is asserted, not assumed.
+# Plan: docs/plans/issue-workflow-build-plan.md.
+_ISS_PLAN5 = "# Plan\n\n1. one\n2. two\n3. three\n4. four\n5. five\n"
+_ISS_PLAN3 = "# Plan\n\n1. one\n2. two\n3. three\n"
+_ISS_MARK = os.path.join(_FIXTURE_ROOT, "gh-was-run.marker")
+_ISS_STUBDIR = tempfile.mkdtemp(prefix="house-rules-ghstub-", dir=_FIXTURE_ROOT)
+
+
+def _iss_stub(body_ok=True):
+    """Write a stub gh into _ISS_STUBDIR. It records that it ran, then prints two issues (or fails)."""
+    if os.name == "nt":
+        path = os.path.join(_ISS_STUBDIR, "gh.cmd")
+        lines = ["@echo off", "echo ran> \"%s\"" % _ISS_MARK]
+        if body_ok:
+            lines.append("echo [{\"number\":7,\"title\":\"Fix the login screen\"},{\"number\":3,\"title\":\"Add sound\"}]")
+        else:
+            lines += ["echo HTTP 401: bad credentials 1>&2", "exit /b 1"]
+        open(path, "w", encoding="utf-8", newline="\r\n").write("\r\n".join(lines) + "\r\n")
+    else:
+        path = os.path.join(_ISS_STUBDIR, "gh")
+        lines = ["#!/bin/sh", "echo ran > '%s'" % _ISS_MARK]
+        if body_ok:
+            lines.append("echo '[{\"number\":7,\"title\":\"Fix the login screen\"},{\"number\":3,\"title\":\"Add sound\"}]'")
+        else:
+            lines += ["echo 'HTTP 401: bad credentials' >&2", "exit 1"]
+        open(path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+        os.chmod(path, 0o755)
+
+
+def _iss_env(**extra):
+    e = _project_env(_FIXTURE_ROOT)
+    e.pop("HOUSE_RULES_ISSUES", None)
+    e["PATH"] = _ISS_STUBDIR + os.pathsep + e.get("PATH", "")
+    e.update(extra)
+    return e
+
+
+def _iss_repo(remote=None):
+    d = tempfile.mkdtemp(prefix="house-rules-issues-", dir=_FIXTURE_ROOT)
+    _as_git(d, "init", "-q", "-b", "main")
+    _as_write(d, "base.py", "base\n")
+    _as_git(d, "add", "-A")
+    _as_git(d, "commit", "-q", "-m", "base")
+    if remote:
+        _as_git(d, "remote", "add", "origin", remote)
+    return d
+
+
+def _iss_state_path(d):
+    return os.path.join(_as_git(d, "rev-parse", "--absolute-git-dir"), "house-rules-issues.json")
+
+
+def _iss_state(d):
+    try:
+        return json.load(open(_iss_state_path(d), encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _iss_payload(event, tool, d, **ti):
+    p = {"hook_event_name": event, "tool_name": tool, "session_id": "iss", "cwd": d, "tool_input": ti}
+    return p
+
+
+def _iss_call(event, payload, d, **envx):
+    return run_hook(event, json.dumps(payload), env=_iss_env(**envx))
+
+
+def _iss_decision(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"].get("permissionDecision")
+    except Exception:
+        return None
+
+
+def _iss_reason(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"].get("permissionDecisionReason", "")
+    except Exception:
+        return ""
+
+
+_iss_stub(True)
+_issues_outputs = []
+
+# -- #110: delegate counts steps and writes the state -----------------------------------------
+_d = _iss_repo()
+_, _o, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _d, plan=_ISS_PLAN5), _d)
+_issues_outputs.append(("delegate 5 steps", _o))
+_st = _iss_state(_d)
+_ctx = _stop_context(_o)
+commit_case(
+    "issues: a 5-step plan writes the gate state and the delegate note says to create the issues",
+    bool(_st) and _st.get("needs_issues") is True and _st.get("plan_steps") == 5 and "5 steps" in _ctx
+    and "parent issue" in _ctx and "Claude created this" in _ctx and "in progress" in _ctx
+    and "Claude completed this" not in _ctx,
+    "state %r" % _st,
+)
+_d3 = _iss_repo()
+_, _o3, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _d3, plan=_ISS_PLAN3), _d3)
+_issues_outputs.append(("delegate 3 steps", _o3))
+commit_case(
+    "issues: a 3-step plan writes nothing and the note names the count",
+    _iss_state(_d3) is None and "counts 3 step(s)" in _stop_context(_o3),
+    "state %r" % _iss_state(_d3),
+)
+_dh = _iss_repo()
+_, _oh, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dh,
+                      plan="## Steps\n\n### Step 1 - a\n### Step 2 - b\n### Change 3 - c\n- [ ] d\n"), _dh)
+commit_case(
+    "issues: '### Step', '### Change' headings and '- [ ]' items count as steps",
+    (_iss_state(_dh) or {}).get("plan_steps") == 4, "state %r" % _iss_state(_dh),
+)
+
+# -- #110: the gate in commitgate --------------------------------------------------------------
+_fp = lambda rel: os.path.join(_d, rel)
+_, _og, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp("Assets/Foo.cs"), content="x"), _d)
+_issues_outputs.append(("gate deny", _og))
+commit_case(
+    "issues: with the gate closed, a Write to a source file is denied naming both missing pieces",
+    _iss_decision(_og) == "deny" and "parent issue" in _iss_reason(_og) and "child issue" in _iss_reason(_og),
+    "out %r" % _og[:160],
+)
+_, _oe, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Edit", _d, file_path=_fp("src/a.py")), _d)
+_, _on, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "NotebookEdit", _d, notebook_path=_fp("n.ipynb")), _d)
+commit_case(
+    "issues: Edit and NotebookEdit on source files are denied too",
+    _iss_decision(_oe) == "deny" and _iss_decision(_on) == "deny", "edit %r notebook %r" % (_oe[:60], _on[:60]),
+)
+_allowed = []
+for _rel in ("docs/x.md", "docs/sub/y.json", "README.md", "src/notes.md", ".claude/settings.json"):
+    _, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp(_rel)), _d)
+    if _oa.strip():
+        _allowed.append((_rel, _oa[:60]))
+_, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=os.path.join(_FIXTURE_ROOT, "elsewhere.cs")), _d)
+if _oa.strip():
+    _allowed.append(("outside project", _oa[:60]))
+_, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_iss_state_path(_d)), _d)
+if _oa.strip():
+    _allowed.append(("state file", _oa[:60]))
+commit_case(
+    "issues: docs/, .md files, .claude/, files outside the project and the state file stay editable",
+    not _allowed, "denied: %r" % _allowed,
+)
+_, _ob, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Bash", _d, command="true"), _d)
+commit_case("issues: Bash is never gated", _ob.strip() == "", "out %r" % _ob[:80])
+
+# -- #110: recording creations clears the gate --------------------------------------------------
+_label_cmd = 'gh issue create --title "t" --body "b" --label "Claude created this" --label bug'
+_bare_cmd = 'gh issue create --title "t" --body "b" --label bug'
+
+
+def _iss_created(d, cmd, n):
+    return _iss_call("autosave", dict(_iss_payload("PostToolUse", "Bash", d, command=cmd),
+                                      tool_response={"stdout": "https://github.com/o/r/issues/%d\n" % n}), d)
+
+
+_, _ou, _ = _iss_created(_d, _bare_cmd, 50)
+_issues_outputs.append(("unlabelled create", _ou))
+_st = _iss_state(_d)
+commit_case(
+    "issues: an unlabelled `gh issue create` gets a correction note and does not count",
+    "without the `Claude created this` label" in _ou and _st["needs_issues"] is True
+    and _st["created"] and _st["created"][0]["labelled"] is False,
+    "state %r out %r" % (_st, _ou[:100]),
+)
+_, _o1, _ = _iss_created(_d, _label_cmd, 51)
+_st1 = _iss_state(_d)
+_, _o2, _ = _iss_created(_d, _label_cmd, 52)
+_issues_outputs.append(("labelled create 2", _o2))
+_st2 = _iss_state(_d)
+commit_case(
+    "issues: the gate clears after two labelled issues (parent plus one child), not after one",
+    _st1["needs_issues"] is True and _st2["needs_issues"] is False and "unblocked" in _o2
+    and _st2["created"][-1] == {"repo": "o/r", "number": 52, "labelled": True},
+    "after one %r, after two %r" % (_st1["needs_issues"], _st2["needs_issues"]),
+)
+_, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp("Assets/Foo.cs")), _d)
+commit_case("issues: once cleared the same source Write is allowed", _oa.strip() == "", "out %r" % _oa[:80])
+_dn = _iss_repo()
+_, _onone, _ = _iss_created(_dn, _label_cmd, 60)
+commit_case(
+    "issues: a `gh issue create` with no plan state is not recorded and says nothing",
+    _onone.strip() == "" and _iss_state(_dn) is None, "out %r" % _onone[:80],
+)
+_dm = _iss_repo()
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dm, plan=_ISS_PLAN5), _dm)
+_, _omiss, _ = _iss_call("autosave", dict(_iss_payload("PostToolUse", "Bash", _dm, command=_label_cmd),
+                                          tool_response={"stdout": "error: network down"}), _dm)
+commit_case(
+    "issues: a `gh issue create` whose output has no issue URL is said out loud and not counted",
+    "no issue URL" in _omiss and _iss_state(_dm)["created"] == [], "out %r" % _omiss[:120],
+)
+
+# -- #110: stop line, corrupt state, kill switch, subagent worktree -----------------------------
+_ds = _iss_repo()
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _ds, plan=_ISS_PLAN5), _ds)
+_, _ostop, _ = run_hook("handover", stop_payload(last_assistant_message="Done.", cwd=_ds), env=_iss_env())
+_issues_outputs.append(("stop", _ostop))
+commit_case(
+    "issues: Stop adds one line while the gate is still closed and does not block",
+    "plans become issues" in _stop_context(_ostop) and '"decision"' not in _ostop,
+    "out %r" % _ostop[:160],
+)
+_, _ostop2, _ = run_hook("handover", stop_payload(last_assistant_message="Done.", cwd=_d), env=_iss_env())
+commit_case("issues: Stop stays silent once the gate is cleared", "plans become issues" not in _ostop2, "out %r" % _ostop2[:100])
+
+_dc = _iss_repo()
+open(_iss_state_path(_dc), "w", encoding="utf-8").write("{not json")
+_, _oc, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dc, file_path=os.path.join(_dc, "a.cs")), _dc)
+_issues_outputs.append(("corrupt state", _oc))
+commit_case(
+    "issues: a corrupt state file is reported in one line and treated as no gate",
+    "could not read house-rules-issues.json" in _oc and _iss_decision(_oc) is None,
+    "out %r" % _oc[:160],
+)
+
+_dk = _iss_repo()
+_, _ok, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk, plan=_ISS_PLAN5), _dk,
+                      HOUSE_RULES_ISSUES="off")
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk, plan=_ISS_PLAN5), _dk)  # state now exists
+_, _ogk, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dk, file_path=os.path.join(_dk, "a.cs")), _dk,
+                       HOUSE_RULES_ISSUES="off")
+_, _opk, _ = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _dk, command='gh pr create --title T --body "Closes #5"'), _dk,
+                       HOUSE_RULES_ISSUES="off")
+_, _ock, _ = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _dk, command="gh issue close 5"), _dk,
+                       HOUSE_RULES_ISSUES="off")
+_dk2 = _iss_repo()
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk2, plan=_ISS_PLAN5), _dk2, HOUSE_RULES_ISSUES="off")
+commit_case(
+    "issues: HOUSE_RULES_ISSUES=off writes no state and disables the gate, the PR rule and the close prompt",
+    _iss_state(_dk2) is None and _ogk.strip() == "" and _opk.strip() == "" and _ock.strip() == "",
+    "gate %r pr %r close %r" % (_ogk[:40], _opk[:40], _ock[:40]),
+)
+
+_dw = _iss_repo()
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dw, plan=_ISS_PLAN5), _dw)
+_wt = os.path.join(_FIXTURE_ROOT, "iss-subagent-wt")
+_as_git(_dw, "worktree", "add", "-q", "-b", "worktree-agent-iss", _wt)
+_, _osub, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _wt, file_path=os.path.join(_wt, "a.cs")), _wt)
+_, _omain, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dw, file_path=os.path.join(_dw, "a.cs")), _dw)
+commit_case(
+    "issues: the main session's gate does not apply inside a subagent worktree (its own git directory)",
+    _iss_decision(_omain) == "deny" and _osub.strip() == "", "main %r subagent %r" % (_iss_decision(_omain), _osub[:60]),
+)
+
+# -- #108: gh pr create ------------------------------------------------------------------------
+_dp = _iss_repo()
+
+
+def _iss_guard(cmd, d=None, **envx):
+    d = d or _dp
+    return _iss_call("guard", _iss_payload("PreToolUse", "Bash", d, command=cmd), d, **envx)[1]
+
+
+_pr = lambda body: 'gh pr create --title "T" --body "%s"' % body
+_ocl = _iss_guard(_pr("Closes #5"))
+_issues_outputs.append(("pr closes", _ocl))
+commit_case(
+    "pr: a body with 'Closes #5' is denied and the reason explains the merge-time close",
+    _iss_decision(_ocl) == "deny" and "before the user has tested" in _iss_reason(_ocl), "out %r" % _ocl[:140],
+)
+_bad = []
+for _b in ("Fixes #5", "resolved #5", "FIXED owner/repo#7", "Close: #9", "closes https://github.com/o/r/issues/4"):
+    if _iss_decision(_iss_guard(_pr(_b))) != "deny":
+        _bad.append(_b)
+commit_case("pr: every closing word in any tense, any case, with #N, owner/repo#N or a URL is denied", not _bad, "not denied: %r" % _bad)
+_onr = _iss_guard(_pr("Just a change"))
+commit_case(
+    "pr: a body with no Refs / Part of / No-issue is denied",
+    _iss_decision(_onr) == "deny" and "Refs #N" in _iss_reason(_onr), "out %r" % _onr[:140],
+)
+_bad = []
+for _b in ("Refs #5", "Refs owner/repo#5", "Part of #12", "Summary\\n\\nNo-issue: typo fix"):
+    if _iss_guard(_pr(_b)).strip():
+        _bad.append(_b)
+commit_case("pr: Refs #N, Refs owner/repo#N, Part of #N and a No-issue line are allowed", not _bad, "not allowed: %r" % _bad)
+_heredoc = "gh pr create --title T --body \"$(cat <<'EOF'\n## Summary\nthings\n\nRefs #108, #109\nEOF\n)\""
+commit_case("pr: a heredoc body carrying Refs is allowed", _iss_guard(_heredoc).strip() == "", "out %r" % _iss_guard(_heredoc)[:100])
+_bf = os.path.join(_dp, "body.md")
+open(_bf, "w", encoding="utf-8").write("Summary\n\nRefs #5\n")
+_bfc = os.path.join(_dp, "bodyc.md")
+open(_bfc, "w", encoding="utf-8").write("Summary\n\nFixes #5\n")
+_bfn = os.path.join(_dp, "bodyn.md")
+open(_bfn, "w", encoding="utf-8").write("Summary only\n")
+commit_case(
+    "pr: --body-file / -F is read: Refs allowed, closing word denied, no link denied",
+    _iss_guard("gh pr create --title T --body-file body.md").strip() == ""
+    and _iss_decision(_iss_guard("gh pr create -t T -F bodyc.md")) == "deny"
+    and _iss_decision(_iss_guard("gh pr create --title T --body-file bodyn.md")) == "deny",
+    "three file cases",
+)
+_ou = _iss_guard("gh pr create --title T --body-file missing.md")
+_ow = _iss_guard("gh pr create --web")
+_os = _iss_guard("gh pr create --title T --body-file -")
+commit_case(
+    "pr: an unreadable body file, stdin, and --web / no body all ask instead of allowing",
+    _iss_decision(_ou) == "ask" and "could not read" in _iss_reason(_ou)
+    and _iss_decision(_ow) == "ask" and _iss_decision(_os) == "ask",
+    "missing %r web %r stdin %r" % (_iss_decision(_ou), _iss_decision(_ow), _iss_decision(_os)),
+)
+commit_case(
+    "pr: commands that only mention gh pr create (a commit message, an echo) are not checked",
+    all(_iss_guard(c).strip() == "" for c in ('echo "gh pr create is checked"', 'grep -r "gh pr create" docs')),
+    "two commands that only mention it",
+)
+
+# -- #109: gh issue close ---------------------------------------------------------------------------
+_occ = _iss_guard("gh issue close 5")
+_issues_outputs.append(("issue close", _occ))
+commit_case(
+    "close: `gh issue close` asks, says the user must have tested, and tells Claude the label follow-up",
+    _iss_decision(_occ) == "ask" and "tested" in _iss_reason(_occ) and "Claude completed this" in _iss_reason(_occ)
+    and "Claude completed this" in json.loads(_occ)["hookSpecificOutput"].get("additionalContext", ""),
+    "out %r" % _occ[:160],
+)
+_bad = []
+for _c in ("gh issue close 5 --comment done", "gh issue edit 5 --state closed", "cd x && gh issue close 5",
+           "gh api -X PATCH repos/o/r/issues/5 -f state=closed", "gh api repos/o/r/issues/5 --method PATCH -f state=closed"):
+    if _iss_decision(_iss_guard(_c)) != "ask":
+        _bad.append(_c)
+commit_case("close: edit --state closed, a chained close and gh api PATCH to closed also ask", not _bad, "not asked: %r" % _bad)
+_bad = []
+for _c in ("gh issue comment 5 --body hi", 'gh issue create --title t --body b', "gh issue edit 5 --add-label bug",
+           "gh api repos/o/r/issues/5", 'git commit -m "gh issue close 5 is gated"'):
+    if _iss_decision(_iss_guard(_c)) == "ask" and "closing an issue" in _iss_reason(_iss_guard(_c)):
+        _bad.append(_c)
+commit_case("close: comment, create, label edits, reads and a commit message mentioning it are not affected", not _bad, "affected: %r" % _bad)
+_ocm = _iss_guard("git add -A && git commit -m x && gh issue close 5")
+commit_case(
+    "close: a chained command asks once with both reasons in the prompt",
+    _iss_decision(_ocm) == "ask" and "closing an issue" in _iss_reason(_ocm) and "writes history" in _iss_reason(_ocm),
+    "out %r" % _ocm[:120],
+)
+
+# -- SessionStart open-issue list (issuelist) ---------------------------------------------------------
+_dl = _iss_repo(remote="https://github.com/o/r.git")
+if os.path.exists(_ISS_MARK):
+    os.remove(_ISS_MARK)
+_, _ol, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+_issues_outputs.append(("issuelist", _ol))
+_lctx = _stop_context(_ol)
+commit_case(
+    "issuelist: a GitHub repo gets the open issue titles as SessionStart context",
+    "#7 Fix the login screen" in _lctx and "#3 Add sound" in _lctx and "SessionStart" in _ol and len(_lctx) < 1200,
+    "out %r" % _ol[:160],
+)
+_cachef = os.path.join(_as_git(_dl, "rev-parse", "--absolute-git-dir"), "house-rules-issues-cache.json")
+_iss_stub(False)
+_, _ol2, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+commit_case(
+    "issuelist: a second start within 60 s uses the cache and does not call gh again",
+    os.path.isfile(_cachef) and "#7 Fix the login screen" in _stop_context(_ol2), "out %r" % _ol2[:100],
+)
+os.remove(_cachef)
+_, _ol3, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+commit_case(
+    "issuelist: a gh failure prints `could not list open issues (<reason>)` and no context",
+    "could not list open issues (HTTP 401: bad credentials" in _ol3 and _stop_context(_ol3) == "", "out %r" % _ol3[:160],
+)
+_iss_stub(True)
+_dnr = _iss_repo(remote="git@example.com:o/r.git")
+_, _ol4, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dnr}, _dnr)
+_dnr2 = _iss_repo()
+_, _ol5, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dnr2}, _dnr2)
+_nogh_env = _iss_env()
+_nogh_env["PATH"] = os.path.dirname(SH)  # git and sh, no gh
+_, _ol6, _ = run_hook("issuelist", json.dumps({"hook_event_name": "SessionStart", "cwd": _dl}), env=_nogh_env)
+commit_case(
+    "issuelist: no GitHub remote, no remote at all, or no gh on PATH is silent (nothing to list)",
+    _ol4.strip() == "" and _ol5.strip() == "" and _ol6.strip() == "", "out %r %r %r" % (_ol4[:40], _ol5[:40], _ol6[:40]),
+)
+_, _ol7, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl, HOUSE_RULES_ISSUES="off")
+commit_case("issuelist: HOUSE_RULES_ISSUES=off prints nothing", _ol7.strip() == "", "out %r" % _ol7[:60])
+
+# -- constraints the plan sets --------------------------------------------------------------------------
+if os.path.exists(_ISS_MARK):
+    os.remove(_ISS_MARK)
+_iss_stub(True)
+_dq = _iss_repo(remote="https://github.com/o/r.git")
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dq, plan=_ISS_PLAN5), _dq)
+_iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dq, file_path=os.path.join(_dq, "a.cs")), _dq)
+_iss_created(_dq, _label_cmd, 1)
+_iss_guard("gh issue close 5", _dq)
+_iss_guard('gh pr create --title T --body "Refs #1"', _dq)
+run_hook("handover", stop_payload(last_assistant_message="Done.", cwd=_dq), env=_iss_env())
+commit_case(
+    "issues: delegate, commitgate, the Bash PostToolUse entry, guard and handover never run gh (no network on a tool call)",
+    not os.path.exists(_ISS_MARK), "gh stub marker present: %s" % os.path.exists(_ISS_MARK),
+)
+_multi = []
+for _name, _o in _issues_outputs:
+    if not _o.strip():
+        continue
+    try:
+        json.loads(_o)
+    except ValueError:
+        _multi.append("%s: %r" % (_name, _o[:80]))
+commit_case("issues: every new output parses as exactly one JSON object", not _multi, "; ".join(_multi) or "%d outputs checked" % len(_issues_outputs))
+
+_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
+_tool_cmds = [h["command"] for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) for h in g["hooks"]]
+_count_entries = sum(len(g["hooks"]) for g in _hj["PreToolUse"] + _hj["PostToolUse"])
+commit_case(
+    "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 10 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
+)
+_rules_text = read(RULES_FILE)
+_detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
+commit_case(
+    "issues: the rules section and its detail file exist, and the plugin is 2.49.0",
+    "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
+    and "HOUSE_RULES_ISSUES=off" in read(_detail)
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.49.0",
+    "rules section + detail file + version",
 )
 
 commit_case(

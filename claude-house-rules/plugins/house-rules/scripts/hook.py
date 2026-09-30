@@ -3698,7 +3698,7 @@ def _issues_gate(payload):
     try:
         data = json.loads(payload)
     except ValueError:
-        return None, None
+        return None, "house-rules: the issue gate could not parse the hook payload, so it is off for this call."
     if not isinstance(data, dict) or data.get("tool_name") not in _GATED_TOOLS:
         return None, None
     ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
@@ -3719,7 +3719,7 @@ def _issues_gate(payload):
     try:
         rel = os.path.relpath(os.path.normcase(os.path.abspath(fp)), os.path.normcase(top))
     except ValueError:
-        return None, None  # another drive: outside the project
+        rel = ".."  # another drive: outside the project
     parts = rel.replace("\\", "/").split("/")
     if (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
             or os.path.basename(rel) == ISSUES_FILE):
@@ -3817,7 +3817,8 @@ def _issues_stop_line(payload):
 _PR_BODY_FILE_RE = re.compile(r"(?:--body-file|(?<![\w-])-F)(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
 _PR_BODY_FLAG_RE = re.compile(r"(?:--body|(?<![\w-])-b)(?:=|\s+|(?=[\"']))")
 _PR_LINK_RE = re.compile(r"\b(?:Refs|Part of)\s+(?:[\w.-]+/[\w.-]+)?#\d+", re.IGNORECASE)
-_PR_NO_ISSUE_RE = re.compile(r"^\s*No-issue:\s*\S", re.MULTILINE | re.IGNORECASE)
+_PR_NO_ISSUE_RE = re.compile(r"(?:^|
+|[\"']|\n)\s*No-issue:\s*\S", re.IGNORECASE)
 _PR_CLOSING_RE = re.compile(
     r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b:?\s+"
     r"(?:(?:[\w.-]+/[\w.-]+)?#\d+|https?://github\.com/[\w.-]+/[\w.-]+/issues/\d+)",
@@ -3841,10 +3842,12 @@ def _decoded_command(subject):
     m = _COMMAND_VALUE_RE.search(subject)
     if not m:
         return subject
+    text = m.group(1)
     try:
-        return json.loads('"%s"' % m.group(1))
+        text = json.loads('"%s"' % text)
     except ValueError:
-        return m.group(1)
+        text = m.group(1)  # undecodable escapes: match against the raw slice
+    return text
 
 
 def _issues_guard(subject, payload):
@@ -3894,7 +3897,8 @@ def _open_issues_text(cwd):
     when there is nothing to list against: no gh, or no GitHub remote."""
     import subprocess
     import time
-    if not shutil.which("gh"):
+    gh = shutil.which("gh")
+    if not gh:
         return "", None
     top, git_dir = _issues_locate(cwd)
     if not top or not git_dir:
@@ -3916,13 +3920,13 @@ def _open_issues_text(cwd):
     except (OSError, ValueError, KeyError, TypeError):
         pass  # no usable cache: fetch fresh below
     try:
-        proc = subprocess.run(["gh", "issue", "list", "--state", "open", "--limit", "10", "--json",
+        proc = subprocess.run([gh, "issue", "list", "--state", "open", "--limit", "10", "--json",
                                "number,title"], cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               timeout=5)
     except subprocess.TimeoutExpired:
         return "", "timed out after 5 s"
     except OSError as exc:
-        return "", str(exc)
+        return "", "could not run gh: %s" % exc
     if proc.returncode != 0:
         first = (proc.stderr.decode("utf-8", "replace").strip().splitlines() or ["exit %d" % proc.returncode])[0]
         return "", first[:120]
