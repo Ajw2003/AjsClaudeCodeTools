@@ -49,7 +49,14 @@ file, hardware and Claude-plan detection in `profile`, and moves the Unity tools
 the Unity-only standards (split into a core plus `rules/standards/csharp-unity-detail.md`). That
 also fixed `standards` overrunning its budget in Unity projects, which nothing had measured.
 Not verified: the macOS and Windows hardware probes, and whether a local claude.ai login reports
-a plan in `claude auth status`. `tools/sync_standards.py` would revert the Unity split.
+a plan in `claude auth status`. 2.46.1 moved the Unity detail file into `rules/standards/` and
+Ajw2003/Coding-Standards#2 brought upstream in line, so `tools/sync_standards.py` is a no-op.
+
+2.47.0 (2026-09-30) saves subagent work while it runs: `autosave` snapshots and pushes a
+`worktree-agent-` branch after each step, `commitgate` blocks edits at 3+ uncommitted files and
+commits if ignored, and `worktreesweep` commits a dead subagent's leftovers when the parent wakes.
+Verified in `verify.py` (454/454) and by a real run. Not verified: a push to GitHub from outside a
+cloud session, where the session's git proxy refused it with a 403.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

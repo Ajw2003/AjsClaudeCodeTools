@@ -1,4 +1,4 @@
-<!-- plain copy of: docs/4-systems/hook-engine.md @ 62a3b479fdab8e461f50e6b59c632b90f9d76afd -->
+<!-- plain copy of: docs/4-systems/hook-engine.md @ a9bd74791a59a83927a1215cde83b71eaf703fdc -->
 
 # The hook engine, in plain English
 
@@ -30,7 +30,10 @@ unchallenged and reminders never reach Claude.
   say what went wrong.
 - **Errors nobody hears about.** The tests fail if any error is quietly swallowed, and a last
   safety net catches the rest.
-- **Leftover files between sessions.** No check stores anything, and the tests enforce it.
+- **Leftover files between sessions.** Checks store nothing, except three tiny notes kept for a
+  helper (a second copy of Claude doing part of the job), deleted when it finishes.
+- **A helper stopped mid-job losing its work.** It is saved after each step, and committed
+  if left 10 minutes.
 - **The terminal freezing.** The current branch (git's name for a line of work) is read from one
   file instead of running git, which can hang.
 - **Guessing whose branch it is.** Any doubt counts as "not Claude's", so you get asked.

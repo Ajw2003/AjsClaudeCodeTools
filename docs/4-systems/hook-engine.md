@@ -47,6 +47,9 @@ name as `argv[1]`; the payload always arrives on stdin
 | `PostToolUse` (`ExitPlanMode`) | `event_delegate` | a plan was just approved |
 | `SubagentStart` | `event_announce` | any subagent spawns |
 | `SubagentStop` | `event_verdict` | any subagent finishes |
+| `PreToolUse` (`Write`/`Edit`/`NotebookEdit`) | `event_commitgate` | 3+ uncommitted files on a subagent's `worktree-agent-` branch |
+| `PostToolUse` (`Write`/`Edit`/`NotebookEdit`/`Bash`) | `event_autosave` | any step on a subagent's `worktree-agent-` branch |
+| `UserPromptSubmit` | `event_worktreesweep` | every parent wake - commits subagent worktrees left untouched 10+ min |
 | `Stop` | `event_handover` | a turn ends handing over an untested-looking command |
 
 Full per-handler behavior, including *why* each one is shaped the way it is, is the subject of
@@ -54,8 +57,12 @@ Full per-handler behavior, including *why* each one is shaped the way it is, is 
 that one carries the reasoning and post-mortems, per the [[sixth-documentation-tier]] boundary
 between tier 4 and `docs/6-decisions/Decisions.md`.
 
-Every handler is **stateless**: nothing is written to disk between invocations, nothing carries
-over between turns. An earlier version enforced the deliver-a-whole-workflow rule with a `Stop`
+Every handler is **stateless** except two: nothing is written to disk between invocations,
+nothing carries over between turns. The exceptions are `autosave` and `commitgate` (2.47.0),
+which keep three small files per branch inside that worktree's own git dir, never the temp
+directory: the last push time, whether the subagent has already been asked to commit, and a
+said-once "no origin" marker. `subagentcommit` deletes them, with the autosave ref, when the
+subagent finishes clean. An earlier version enforced the deliver-a-whole-workflow rule with a `Stop`
 hook that kept session state in the temp directory; it leaked a file for every session that
 ended unexpectedly, and any unrelated shell command silently defeated it. That machinery is gone
 on purpose — `verify.py` fails if it reappears.

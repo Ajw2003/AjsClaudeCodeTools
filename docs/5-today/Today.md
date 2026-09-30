@@ -1,4 +1,31 @@
-# Today — 2026-09-29
+# Today — 2026-09-30
+
+Subagent work is now saved while it runs: `autosave`, `commitgate` and `worktreesweep`, plugin
+2.47.0. See the dated entry in [`Decisions.md`](../6-decisions/Decisions.md).
+
+## What was done (2026-09-30)
+
+- **Three new hooks**, on `worktree-agent-` branches only. They snapshot and push after each step,
+  block edits at 3+ uncommitted files, and commit for the subagent if it ignores that or goes
+  10 minutes without a commit. The parent-side sweep commits a dead subagent's leftovers.
+  `subagentcommit` also cleans up the save point on a clean finish, and commits leftovers on
+  its retry.
+- **Tests.** 17 new `verify.py` cases; 454 of 454 pass. 12 of them fail against the pre-change
+  code. The other five check that nothing happens (on `main`, with the toggle off, with nothing
+  to commit), which was already true before.
+- **Real run.** A real worktree edit made the hook save the work and try GitHub. The push was
+  refused (HTTP 403 from this cloud session's git proxy), the hook said so, and restoring from the
+  local save worked.
+- **Issue #105** records the idea of replacing the one executor with dynamic subagent dispatch.
+
+## What to do next
+
+- Merge PR #104 once reviewed.
+- On a local machine, check that GitHub accepts a push to `refs/house-rules/autosave/*`.
+
+---
+
+# Earlier — 2026-09-29
 
 Built "open source first" and the hardware-aware machine profile, and fixed the Unity standards
 overrun that `verify.py` had never measured. See the dated entry in

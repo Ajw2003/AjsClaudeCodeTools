@@ -7,6 +7,47 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-30 — Subagent work is saved while it runs, not only when it finishes
+
+**Context.** On 2026-09-29 a safety-classifier outage stopped an executor mid-run. `SubagentStop`
+never fired, so `subagentcommit` (the only commit enforcement for subagents) never ran, and
+`hook.py`, `verify.py` and six docs sat uncommitted in its worktree until the parent noticed and
+committed them by hand. aj asked for the executor to be held to committing constantly, with
+progress saved against outages, and then asked for the parent's own 10-minute check (which the
+parent had been doing by hand) to become a plugin behaviour too.
+
+**Decision.** Three hooks, all limited to `worktree-agent-` branches (the ones Claude Code creates
+for `isolation: "worktree"`), all off with `HOUSE_RULES_AUTOSAVE=off`:
+- `autosave` (PostToolUse): snapshots the worktree to `refs/house-rules/autosave/<branch>` through
+  a temporary index, pushes it once a minute, and commits for the subagent after 10 minutes
+  without a commit.
+- `commitgate` (PreToolUse): blocks edits at 3+ uncommitted files. aj chose "tell the executor"
+  over auto-committing every edit. aj then added that if the executor ignores it, the hook
+  commits itself; `subagentcommit`'s retry path does the same.
+- `worktreesweep` (UserPromptSubmit): on every parent wake, commits any subagent worktree left
+  untouched 10+ minutes. That is the one case no subagent-side hook can cover, a dead subagent.
+  `audit` asks for a 10-minute check-in when a subagent launches in the background, so the
+  parent wakes.
+
+aj chose to push the autosave ref, so the save outlives the container.
+
+**Rejected.** Auto-committing every edit (the branch fills with wip commits). An instruction-only
+rule, which is what failed on 2026-09-29.
+
+**Consequence.** `autosave` and `commitgate` are the first handlers to keep state between calls:
+three small files per branch inside that worktree's git dir, deleted on a clean finish.
+`docs/4-systems/hook-engine.md`'s stateless invariant now names them as the exception. In a
+Claude Code cloud session the push is refused (HTTP 403 from the session's git proxy, which only
+accepts the session's own branch), measured 2026-09-30. There the save stays local and each
+failed push says so. Whether GitHub accepts `refs/house-rules/*` from a user's own machine is
+untested. Building it was itself blocked twice by the auto-mode classifier as
+`[Self-Modification]` when the executor tried it. aj then had the main session build it directly.
+
+**Related.** Issue #105 (replace the single executor with dynamic dispatch) is the longer-term
+direction. This protection is needed whatever replaces the executor.
+
+---
+
 ## 2026-09-29 — Open source first; the Unity rule leaves the core; the profile records hardware
 
 **Context.** aj asked for two things: build locally for the hardware we have, and prefer free
