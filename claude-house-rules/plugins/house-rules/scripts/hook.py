@@ -3886,8 +3886,7 @@ def _issues_guard(subject, payload):
                     "Add it and run the command again.", None)
         return None
     if any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
-        return ("ask", "House rules, closing an issue always asks the user: has the user tested the work? "
-                "Approve only if they have. " + CLOSE_ASK_NOTE, CLOSE_ASK_NOTE)
+        return ("ask", CLOSE_ASK_NOTE, CLOSE_ASK_NOTE)
     return None
 
 
