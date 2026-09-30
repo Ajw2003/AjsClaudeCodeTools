@@ -3414,11 +3414,11 @@ def _autosave_state_path(top, branch, kind):
 
 
 def _autosave_read(path):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except FileNotFoundError:
+    """A state file's contents, or "" when it does not exist yet (its normal first state)."""
+    if not os.path.isfile(path):
         return ""
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().strip()
 
 
 def _autosave_write(path, text):

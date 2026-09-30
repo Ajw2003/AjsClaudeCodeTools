@@ -4503,16 +4503,20 @@ else:
         print(f"          {a}")
 
 # A backgrounded call's PostToolUse fires immediately with status "async_launched" - nothing
-# has happened yet, so audit must say nothing at all, not report an empty/wrong audit.
-code, out, err = run_hook("audit", post_agent_payload(
+# has happened yet, so audit reports no audit. Since 2.47.0 it asks the parent for a check-in
+# instead (so worktreesweep runs while the subagent works); with autosave off it says nothing.
+_async_payload = post_agent_payload(
     tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}
-))
-if code == 0 and not out.strip():
-    report("PASS", "audit stays silent for a backgrounded call's async_launched PostToolUse")
-    print("          nothing to audit yet - userpromptaudit covers its later hand-back")
+)
+code, out, err = run_hook("audit", _async_payload)
+code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
+if (code == 0 and "schedule a check-in every 10 min" in out and "finished" not in out
+        and code_off == 0 and not out_off.strip()):
+    report("PASS", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
+    print("          nothing to audit yet; the check-in nudge appears, and not with HOUSE_RULES_AUTOSAVE=off")
 else:
-    report("FAIL", "audit stays silent for a backgrounded call's async_launched PostToolUse")
-    print(f"          exit {code}, out {out[:150]!r}")
+    report("FAIL", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
+    print(f"          exit {code}, out {out[:150]!r}; autosave off: exit {code_off}, out {out_off[:80]!r}")
 
 audq = []
 code, out, err = run_hook("audit", "")
