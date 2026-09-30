@@ -3446,8 +3446,7 @@ def _autosave_push(top, branch, sha, now, force=False):
     if len(prev) == 2 and prev[1] == sha:
         return None  # this exact snapshot is already on origin
     if not force and len(prev) == 2 and now - float(prev[0]) < AUTOSAVE_PUSH_INTERVAL:
-        trace("autosave: %s updated locally; push skipped (once per %ds)." % (ref, AUTOSAVE_PUSH_INTERVAL))
-        return None
+        return None  # saved locally; the next edit after the window pushes the latest
     if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
         marker = _autosave_state_path(top, branch, "noorigin")
         if _autosave_read(marker):
@@ -3497,10 +3496,7 @@ def _autosave_snapshot(top, branch, force_push=False):
                         "commit-tree", tree, "-p", "HEAD", "-m",
                         "house-rules autosave: %s %s" % (branch, stamp)])[1].strip()
         _ag(top, ["update-ref", ref, sha])
-    msg = _autosave_push(top, branch, sha, now, force=force_push)
-    if not msg:
-        trace("autosave: %s is at %s." % (ref, sha[:9]))
-    return msg
+    return _autosave_push(top, branch, sha, now, force=force_push)
 
 
 def _wip_message(subject, session_id=""):
@@ -3560,8 +3556,12 @@ def event_autosave():
         msg = _autosave_snapshot(top, branch, force_push=bool(notes))
         if msg:
             notes.append(msg)
+        # One JSON object per hook call: Claude Code parses stdout as a single object, so the
+        # trace is the fallback line, never an extra one.
         if notes:
             emit({"systemMessage": " | ".join(notes)})
+        else:
+            trace("autosave: %s%s saved." % (AUTOSAVE_REF_PREFIX, branch))
     except Exception as exc:
         emit({"systemMessage": "house-rules plugin: autosave hit an error (%s: %s) and did not run for this call."
                                % (type(exc).__name__, exc)})

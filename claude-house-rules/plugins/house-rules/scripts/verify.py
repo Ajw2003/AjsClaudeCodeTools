@@ -2779,6 +2779,253 @@ commit_case(
     'run.sh\\" subagentcommit' in hooks_json_text,
     "hooks.json SubagentStop entry",
 )
+# autosave / commitgate / worktreesweep (2.47.0): a subagent killed mid-run never reaches
+# SubagentStop, so its work is protected while it runs. Each fixture repo has a local bare repo
+# as `origin`, standing in for GitHub.
+def _as_git(d, *args, env=None):
+    return subprocess.run(["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid",
+                           "-C", d] + list(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          env=env, check=False).stdout.decode("utf-8", "replace").strip()
+
+
+def _as_repo(branch, backdate_minutes=0):
+    bare = tempfile.mkdtemp(prefix="house-rules-origin-", dir=_FIXTURE_ROOT)
+    subprocess.run(["git", "init", "-q", "--bare", bare], check=True)
+    d = tempfile.mkdtemp(prefix="house-rules-autosave-", dir=_FIXTURE_ROOT)
+    _as_git(d, "init", "-q", "-b", branch)
+    with open(os.path.join(d, "base.py"), "w", encoding="utf-8") as f:
+        f.write("base\n")
+    _as_git(d, "add", "-A")
+    env = dict(os.environ)
+    if backdate_minutes:
+        when = "@%d +0000" % int(time.time() - backdate_minutes * 60)
+        env.update(GIT_COMMITTER_DATE=when, GIT_AUTHOR_DATE=when)
+    _as_git(d, "commit", "-q", "-m", "base", env=env)
+    _as_git(d, "remote", "add", "origin", bare)
+    return d, bare
+
+
+def _as_write(d, rel, text="x\n"):
+    p = os.path.join(d, rel)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(text)
+    return p
+
+
+def _as_payload(event, tool, path, cwd):
+    return json.dumps({"hook_event_name": event, "tool_name": tool, "session_id": "s1", "cwd": cwd,
+                       "tool_input": {"file_path": path} if tool != "Bash" else {"command": "true"}})
+
+
+def _as_env(**extra):
+    e = _project_env(_FIXTURE_ROOT, **extra)
+    e.pop("HOUSE_RULES_AUTOSAVE", None)
+    e.update(extra)
+    return e
+
+
+def _as_ref(d, branch):
+    return _as_git(d, "rev-parse", "--verify", "-q", "refs/house-rules/autosave/" + branch)
+
+
+def _as_remote_ref(bare, branch):
+    return _as_git(bare, "rev-parse", "--verify", "-q", "refs/house-rules/autosave/" + branch)
+
+
+_d, _bare = _as_repo("worktree-agent-x")
+_head0 = _as_git(_d, "rev-parse", "HEAD")
+_p = _as_write(_d, "new.py")
+_t0 = time.time()
+_, out, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _p, _d), env=_as_env())
+out_first_autosave = out
+_elapsed = time.time() - _t0
+_local = _as_ref(_d, "worktree-agent-x")
+commit_case(
+    "autosave: an edit on a worktree-agent- branch saves an untracked file to the autosave ref and pushes it",
+    bool(_local) and "new.py" in _as_git(_d, "ls-tree", "--name-only", _local)
+    and _as_remote_ref(_bare, "worktree-agent-x") == _local,
+    "local %s, origin %s, out %r" % (_local[:9], _as_remote_ref(_bare, "worktree-agent-x")[:9], out[:120]),
+)
+commit_case(
+    "autosave: the branch, the real index and the working tree are left exactly as they were",
+    _as_git(_d, "rev-parse", "HEAD") == _head0 and _as_git(_d, "diff", "--cached", "--name-only") == ""
+    and _as_git(_d, "status", "--porcelain") == "?? new.py",
+    "status %r" % _as_git(_d, "status", "--porcelain"),
+)
+commit_case("autosave: one edit stays well inside the 10 s hook budget", _elapsed < 5, "took %.2fs" % _elapsed)
+_p = _as_write(_d, "new.py", "y\n")
+run_hook("autosave", _as_payload("PostToolUse", "Edit", _p, _d), env=_as_env())
+_local2 = _as_ref(_d, "worktree-agent-x")
+_rate_ok = _local2 != _local and _as_remote_ref(_bare, "worktree-agent-x") == _local
+_stamp = os.path.join(_as_git(_d, "rev-parse", "--absolute-git-dir"), "house-rules-autosave-worktree-agent-x.pushed")
+with open(_stamp, "w", encoding="utf-8") as f:
+    f.write("%s %s" % (time.time() - 120, _local))
+_p = _as_write(_d, "new.py", "z\n")
+run_hook("autosave", _as_payload("PostToolUse", "Edit", _p, _d), env=_as_env())
+commit_case(
+    "autosave: pushes at most once a minute; the local ref still moves, and the next push after the window catches up",
+    _rate_ok and _as_remote_ref(_bare, "worktree-agent-x") == _as_ref(_d, "worktree-agent-x"),
+    "second edit local-only: %s; after the window origin matches: %s"
+    % (_rate_ok, _as_remote_ref(_bare, "worktree-agent-x") == _as_ref(_d, "worktree-agent-x")),
+)
+_quiet = []
+for _br in ("main", "claude/x"):
+    _dq, _ = _as_repo(_br)
+    _pq = _as_write(_dq, "new.py")
+    _, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env())
+    if _as_ref(_dq, _br) or oq.strip():
+        _quiet.append("%s: ref %r, out %r" % (_br, _as_ref(_dq, _br), oq[:80]))
+_dq, _ = _as_repo("worktree-agent-off")
+_pq = _as_write(_dq, "new.py")
+_, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env(HOUSE_RULES_AUTOSAVE="off"))
+if _as_ref(_dq, "worktree-agent-off") or oq.strip():
+    _quiet.append("HOUSE_RULES_AUTOSAVE=off still acted: out %r" % oq[:80])
+commit_case(
+    "autosave: does nothing on main, on a claude/ branch, or with HOUSE_RULES_AUTOSAVE=off",
+    not _quiet, "; ".join(_quiet) or "no ref and no output in all three",
+)
+_dq, _ = _as_repo("worktree-agent-noreach")
+_as_git(_dq, "remote", "set-url", "origin", os.path.join(_FIXTURE_ROOT, "no-such-origin.git"))
+_pq = _as_write(_dq, "new.py")
+_, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env())
+oq_unreach = oq
+commit_case(
+    "autosave: an unreachable origin is said out loud, and the save is still kept locally",
+    "could not push refs/house-rules/autosave/worktree-agent-noreach" in oq and bool(_as_ref(_dq, "worktree-agent-noreach")),
+    "out %r" % oq[:160],
+)
+_dq, _ = _as_repo("worktree-agent-old", backdate_minutes=20)
+_pq = _as_write(_dq, "new.py")
+_, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env())
+oq_checkpoint = oq
+_dfresh, _ = _as_repo("worktree-agent-fresh")
+_pf = _as_write(_dfresh, "new.py")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _pf, _dfresh), env=_as_env())
+commit_case(
+    "autosave: 10 minutes without a commit makes the hook commit for the subagent; a fresh commit does not",
+    _as_git(_dq, "log", "-1", "--format=%s") == "wip: checkpoint - 10 min without a commit"
+    and _as_git(_dq, "status", "--porcelain") == "" and "committed 1 file(s)" in oq
+    and _as_git(_dfresh, "log", "-1", "--format=%s") == "base",
+    "old: %r, status %r; fresh: %r" % (_as_git(_dq, "log", "-1", "--format=%s"),
+                                       _as_git(_dq, "status", "--porcelain"), _as_git(_dfresh, "log", "-1", "--format=%s")),
+)
+
+_dg, _ = _as_repo("worktree-agent-gate")
+_as_write(_dg, "a.py")
+_pg = _as_write(_dg, "b.py")
+_, o2, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
+_as_write(_dg, "c.py")
+_, o3, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
+commit_case(
+    "commitgate: 2 uncommitted files pass; 3 block the edit, naming the files, with nothing committed",
+    o2.strip() == "" and '"permissionDecision":"deny"' in o3 and "a.py" in o3 and "c.py" in o3
+    and _as_git(_dg, "log", "-1", "--format=%s") == "base",
+    "2 files: %r; 3 files: %r" % (o2[:60], o3[:140]),
+)
+_, o4, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
+commit_case(
+    "commitgate: asked once and ignored, the hook commits everything itself and lets the edit through",
+    _as_git(_dg, "log", "-1", "--format=%s") == "wip: autosave - subagent did not commit when asked"
+    and _as_git(_dg, "status", "--porcelain") == "" and "deny" not in o4 and "committed 3 file(s)" in o4,
+    "last commit %r, out %r" % (_as_git(_dg, "log", "-1", "--format=%s"), o4[:140]),
+)
+_gq = []
+_dm, _ = _as_repo("main")
+for _n in ("a.py", "b.py", "c.py", "d.py"):
+    _pm = _as_write(_dm, _n)
+_, om, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pm, _dm), env=_as_env())
+if om.strip():
+    _gq.append("main: %r" % om[:80])
+_db, _ = _as_repo("worktree-agent-bash")
+for _n in ("a.py", "b.py", "c.py"):
+    _as_write(_db, _n)
+_, ob, _ = run_hook("commitgate", _as_payload("PreToolUse", "Bash", _db, _db), env=_as_env())
+if ob.strip():
+    _gq.append("Bash: %r" % ob[:80])
+commit_case(
+    "commitgate: never gates main, and never gates Bash (the subagent needs it to commit)",
+    not _gq, "; ".join(_gq) or "both passed with no output",
+)
+
+_ds, _bs = _as_repo("worktree-agent-done")
+_ps = _as_write(_ds, "s.py")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _ps, _ds), env=_as_env())
+_had = bool(_as_remote_ref(_bs, "worktree-agent-done"))
+_as_git(_ds, "add", "-A")
+_as_git(_ds, "commit", "-q", "-m", "feat: s")
+out = run_hook("subagentcommit", json.dumps({
+    "hook_event_name": "SubagentStop", "agent_type": "house-rules:executor", "stop_hook_active": False,
+    "agent_transcript_path": _hand_transcript("autosave-done", [json.dumps({"type": "assistant", "message": {
+        "content": [{"type": "tool_use", "id": "d1", "name": "Write", "input": {"file_path": _ps}}]}})])}),
+    env=_project_env(_FIXTURE_ROOT))[1]
+commit_case(
+    "subagentcommit: a clean finish deletes the autosave ref locally and on origin",
+    _had and not _as_ref(_ds, "worktree-agent-done") and not _as_remote_ref(_bs, "worktree-agent-done"),
+    "on origin before: %s; after: local %r origin %r; out %r"
+    % (_had, _as_ref(_ds, "worktree-agent-done"), _as_remote_ref(_bs, "worktree-agent-done"), out[:80]),
+)
+_dr, _ = _as_repo("worktree-agent-retry")
+_pr = _as_write(_dr, "r.py")
+out = _subagent_stop([_pr], active=True)
+_dc, _ = _as_repo("claude/retry")
+_pc = _as_write(_dc, "r.py")
+out_c = _subagent_stop([_pc], active=True)
+commit_case(
+    "subagentcommit: a retry still uncommitted is committed by the hook on a worktree-agent- branch, never on claude/",
+    _as_git(_dr, "log", "-1", "--format=%s") == "wip: autosave - subagent did not commit when asked"
+    and _as_git(_dr, "status", "--porcelain") == "" and "committed 1 file(s)" in out
+    and _as_git(_dc, "log", "-1", "--format=%s") == "base" and _as_git(_dc, "status", "--porcelain") == "?? r.py",
+    "worktree-agent: %r; claude/: %r" % (_as_git(_dr, "log", "-1", "--format=%s"), _as_git(_dc, "log", "-1", "--format=%s")),
+)
+
+_dmain, _ = _as_repo("main")
+_sweep_old = os.path.join(_FIXTURE_ROOT, "wt-sweep-old")
+_sweep_new = os.path.join(_FIXTURE_ROOT, "wt-sweep-new")
+_sweep_mine = os.path.join(_FIXTURE_ROOT, "wt-sweep-claude")
+_as_git(_dmain, "worktree", "add", "-q", "-b", "worktree-agent-old", _sweep_old)
+_as_git(_dmain, "worktree", "add", "-q", "-b", "worktree-agent-new", _sweep_new)
+_as_git(_dmain, "worktree", "add", "-q", "-b", "claude/sweep", _sweep_mine)
+_long_ago = time.time() - 20 * 60
+for _wt in (_sweep_old, _sweep_mine):
+    os.utime(_as_write(_wt, "left.py"), (_long_ago, _long_ago))
+_as_write(_sweep_new, "live.py")
+_, osw, _ = run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "hi",
+                                                  "cwd": _dmain, "session_id": "s1"}),
+                     env=_project_env(_dmain))
+commit_case(
+    "worktreesweep: the parent commits a subagent worktree left untouched 10+ min, and leaves a live one and claude/ alone",
+    _as_git(_sweep_old, "log", "-1", "--format=%s") == "wip: parent checkpoint of subagent work"
+    and _as_git(_sweep_old, "status", "--porcelain") == "" and "worktree-agent-old" in osw
+    and _as_git(_sweep_new, "status", "--porcelain") == "?? live.py"
+    and _as_git(_sweep_mine, "status", "--porcelain") == "?? left.py",
+    "old: %r; live: %r; claude/: %r; out %r" % (_as_git(_sweep_old, "log", "-1", "--format=%s"),
+                                                _as_git(_sweep_new, "status", "--porcelain"),
+                                                _as_git(_sweep_mine, "status", "--porcelain"), osw[:100]),
+)
+_, osw2, _ = run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "hi",
+                                                   "cwd": _dmain}), env=_project_env(_dmain))
+commit_case(
+    "worktreesweep: says nothing when there is nothing to commit",
+    osw2.strip() == "", "out %r" % osw2[:100],
+)
+_multi = []
+for _name, _o in (("autosave", out_first_autosave), ("autosave unreachable origin", oq_unreach),
+                  ("autosave checkpoint", oq_checkpoint), ("commitgate deny", o3),
+                  ("commitgate fallback", o4), ("worktreesweep", osw)):
+    try:
+        json.loads(_o)
+    except ValueError:
+        _multi.append("%s: %r" % (_name, _o[:100]))
+commit_case(
+    "autosave, commitgate and worktreesweep each print exactly one JSON object per call",
+    not _multi, "; ".join(_multi) or "all six outputs parse as one object",
+)
+commit_case(
+    "autosave, commitgate and worktreesweep are wired in hooks.json",
+    all('run.sh\\" %s' % e in hooks_json_text for e in ("autosave", "commitgate", "worktreesweep")),
+    "hooks.json PostToolUse / PreToolUse / UserPromptSubmit entries",
+)
+
 commit_case(
     "the executor and archivist commit as they go, not only if asked",
     all(
