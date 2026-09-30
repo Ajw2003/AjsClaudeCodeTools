@@ -93,7 +93,8 @@ def trace_enabled():
     is not a diagnostic - see "nothing fails silently" in rules/house-rules.md. stderr is not
     an option here: a hook that exits 0 has its stderr sent to the debug log only, never the
     transcript, so a trace written there would be off by default in everything but name.
-    HOUSE_RULES_TRACE=off is the one lever, and it covers every handler.
+    HOUSE_RULES_TRACE=off is the one lever, and it covers every handler. HOUSE_RULES_TRACE=
+    verbose additionally restores the "looked, nothing to do" traces (see trace_noop).
     """
     return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() not in _TRACE_OFF
 
@@ -107,6 +108,21 @@ def trace(message):
     the most expensive possible frequency (scope runs on every prompt).
     """
     if trace_enabled():
+        emit({"systemMessage": message})
+
+
+def trace_verbose():
+    return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() == "verbose"
+
+
+def trace_noop(message):
+    """The "looked, nothing to do" trace: a handler that decided nothing and acted on nothing.
+
+    Silence is the correct output there - rules/house-rules.md defines silence as "looked,
+    nothing to do". Emits only under HOUSE_RULES_TRACE=verbose. "Could not tell" and "acted"
+    traces stay on trace(), which still prints by default.
+    """
+    if trace_verbose():
         emit({"systemMessage": message})
 
 
@@ -2011,14 +2027,14 @@ def event_guard():
                     "additionalContext": DOCS_COMMIT_REMINDER,
                 }
             }
-            if trace_enabled():
+            if trace_verbose():
                 out["systemMessage"] = allow_trace
             emit(out)
             return 0
         if docs_status == "unknown":
             trace("%s - docs check could not tell: %s." % (allow_trace, docs_detail))
         else:
-            trace(allow_trace)
+            trace_noop(allow_trace)
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
@@ -2143,7 +2159,7 @@ def event_guardwrite():
         return 2
 
     if not exists:
-        trace("guardwrite: %s does not exist yet - a new file, not an overwrite." % file_path)
+        trace_noop("guardwrite: %s does not exist yet - a new file, not an overwrite." % file_path)
         return 0
 
     old_lines = None
@@ -2259,10 +2275,10 @@ def event_artifact():
             return 0
         base = re.split(r"[\\/]", file_path)[-1]
         if not _ARTIFACT_EXT_RE.search(base):
-            trace("artifact: %s is not a document extension - not checked." % base)
+            trace_noop("artifact: %s is not a document extension - not checked." % base)
             return 0
         if not _is_outside_project(file_path):
-            trace("artifact: %s is inside the project - nothing to copy." % base)
+            trace_noop("artifact: %s is inside the project - nothing to copy." % base)
             return 0
         if _GENERATED_EXT_RE.search(base):
             where = "docs/generated/ for generated or visual artifacts"
@@ -2323,7 +2339,7 @@ def event_branchnudge():
             return 0
         is_mine, branch, note = branch_ownership()
         if is_mine:
-            trace("branchnudge: on own branch %s - nothing to nudge." % branch)
+            trace_noop("branchnudge: on own branch %s - nothing to nudge." % branch)
             return 0
         if not branch:
             trace("branchnudge: no branch to judge (%s) - not checked." % note)
@@ -2351,7 +2367,7 @@ def event_branchnudge():
                 }
             )
             return 0
-        trace(
+        trace_noop(
             "branchnudge: %d uncommitted path(s) on %s - not the first change, no nudge."
             % (len(dirty), branch)
         )
@@ -2422,7 +2438,7 @@ def event_runnable():
         base = re.split(r"[\\/]", file_path)[-1]
         if _COMPILED_EXT_RE.search(base):
             if _is_outside_project(file_path):
-                trace("runnable: %s is outside the project - scratch work, not compiled." % base)
+                trace_noop("runnable: %s is outside the project - scratch work, not compiled." % base)
                 return 0
             emit(
                 {
@@ -2434,10 +2450,10 @@ def event_runnable():
             )
             return 0
         if not (_RUNNABLE_EXT_RE.search(base) or _RUNNABLE_BARE_RE.match(base)):
-            trace("runnable: %s is not a runnable file - nothing to run." % base)
+            trace_noop("runnable: %s is not a runnable file - nothing to run." % base)
             return 0
         if _is_outside_project(file_path):
-            trace("runnable: %s is outside the project - scratch work, not run." % base)
+            trace_noop("runnable: %s is outside the project - scratch work, not run." % base)
             return 0
         emit(
             {
@@ -4953,7 +4969,9 @@ def event_harvest():
                 ),
             }
 
-        if not quiet:
+        # Default: speak only when something was found or an override was bad. The
+        # "no comment runs found / none met the threshold" line is a no-op trace, verbose only.
+        if not quiet and (blocks or problems or trace_verbose()):
             trace = _harvest_trace(base, blocks, misses, min_chars, ranged, verbose)
             if problems:
                 trace += " | ignoring bad override(s): %s - using the defaults" % "; ".join(
