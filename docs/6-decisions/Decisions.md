@@ -7,6 +7,24 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-09-30 — Subagents do receive CLAUDE.md; the "never sees it" claim is withdrawn
+
+**Context.** While measuring what a subagent spawn costs, the transcripts of one
+`general-purpose` and one `claude-code-guide` subagent each held an `instructions` attachment
+listing the user `CLAUDE.md`, the project `CLAUDE.md` files and `MEMORY.md`. The `Explore` subagent
+held none. `CLAUDE.md` said a spawned subagent never sees it, resting on the 2026-09-22 entry
+below, which tested `SessionStart`'s `additionalContext` only.
+
+**Decision.** `CLAUDE.md` and `docs/architecture.md` now say most subagent types receive it. The
+2026-09-22 finding stands for `SessionStart` `additionalContext`, and is not rewritten.
+
+**Status.** Decided. Replaces the `CLAUDE.md` sentence only; supersedes nothing else.
+
+**Consequence.** Anything added to `CLAUDE.md` is paid again on every general-purpose spawn, which
+weighs against adding to it. Not yet measured: whether Explore omits it on purpose or by accident.
+
+---
+
 ## 2026-09-30 — Subagent work is saved while it runs, not only when it finishes
 
 **Context.** On 2026-09-29 a safety-classifier outage stopped an executor mid-run. `SubagentStop`

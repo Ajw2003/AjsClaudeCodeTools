@@ -26,8 +26,9 @@ change has a shell signature add a `guard` pattern and a `verify.py` case in the
 For the hook-by-hook table, the design constraints `hook.py`/`run.sh` are built on, and which
 surfaces the step-card handover format actually reaches, see
 [docs/architecture.md](docs/architecture.md). This file stays small on purpose — it is
-auto-loaded every session, though (docs/architecture.md, "SessionStart is not re-paid on
-subagent spawn") a spawned subagent never sees it.
+auto-loaded every session, and most subagent types (general-purpose and claude-code-guide, not
+Explore) are handed it too (docs/architecture.md, "Subagents do receive CLAUDE.md"), so it is
+paid again on every such spawn.
 
 ## Commands
 

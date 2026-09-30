@@ -20,6 +20,14 @@ model context in the same turn — only the interactive UI shows a `SubagentStop
 which is why `verdict`'s audit summary rides that one proven channel rather than a second one that
 was assumed to work and does not.
 
+**Subagents do receive CLAUDE.md.** Correction, 2026-09-30 (Decisions.md, same date). The
+SessionStart finding above is about `additionalContext` only. A `general-purpose` or
+`claude-code-guide` subagent's transcript carries an `instructions` attachment holding the user
+and project `CLAUDE.md` files plus `MEMORY.md` (3.4 KB for this repo's own `CLAUDE.md`); an
+`Explore` subagent's transcript has none. So a rule placed in `CLAUDE.md` does reach most
+subagents, and its size is paid on every such spawn. Measurement:
+`docs/plans/issue-workflow-and-tiered-subagents-proposal.md`.
+
 ## The plugin is one POSIX shim plus one Python file, dispatched by event
 
 Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](../claude-house-rules/plugins/house-rules/hooks/hooks.json),
