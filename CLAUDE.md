@@ -10,12 +10,16 @@ project via hooks instead of a file that has to be copied around. The plugin is 
 GitHub marketplace (`.claude-plugin/marketplace.json` at the repo root) and installed with
 `claude plugin install`.
 
-The repo also carries two younger offshoots of that same plugin formula — `prompt-workshop`
-(`claude-prompt-workshop/`) and `agent-router` (`claude-agent-router/`) — each its own sibling
-directory with the same one-shim-plus-one-Python-file shape and its own `verify.py`.
-`agent-router` classifies a prompt's complexity and nudges delegation to a model-pinned subagent
-(haiku/sonnet/opus); it cannot switch the live session's own model — no hook can. Both offshoots
-are shells, not yet as load-bearing as `house-rules`; see
+The repo also carries three younger offshoots of that same plugin formula — `prompt-workshop`
+(`claude-prompt-workshop/`), `agent-router` (`claude-agent-router/`), and `issue-forge`
+(`claude-issue-forge/`) — each its own sibling directory with the same
+one-shim-plus-one-Python-file shape and its own `verify.py`. `agent-router` classifies a
+prompt's complexity and nudges delegation to a model-pinned subagent (haiku/sonnet/opus); it
+cannot switch the live session's own model — no hook can. `issue-forge` scans this repo's
+backlog docs and session ledgers for issue-worthy items and drafts scoped GitHub issues from
+them; it only ever suggests running the scan, and never creates an issue without explicit chat
+confirmation — creating one is "publish/post public content" under the standing safety rules.
+All three offshoots are shells, not yet as load-bearing as `house-rules`; see
 [docs/offshoots-plan.md](docs/offshoots-plan.md) for what they're for and what's still open. The
 rest of this file, and the commands below, describe `house-rules` specifically unless stated
 otherwise.

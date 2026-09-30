@@ -20,6 +20,11 @@
       "name": "agent-router",
       "source": "./claude-agent-router/plugins/agent-router",
       "description": "STATUS: shell/v0.1. Classifies each prompt's complexity and nudges Claude to delegate to a model-pinned subagent - haiku for simple doc/comms work, sonnet for recon and code implementation, opus for planning, architecture, and management. Cannot switch the live session's own model."
+    },
+    {
+      "name": "issue-forge",
+      "source": "./claude-issue-forge/plugins/issue-forge",
+      "description": "STATUS: shell/v0.1. Scans this repo's backlog docs and session ledgers for issue-worthy items, drafts scoped GitHub issues, and creates them only after explicit confirmation in chat."
     }
   ]
 }

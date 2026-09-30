@@ -1,6 +1,6 @@
 # Offshoots plan
 
-Two new sibling plugins were scaffolded alongside `house-rules`, following the same formula
+Three new sibling plugins were scaffolded alongside `house-rules`, following the same formula
 (one POSIX shim, one stdlib-only Python file dispatched by event, a `verify.py` that proves the
 hook payloads produce the claimed decisions). This doc is the plan they were built against —
 what each is for, the decisions already made and why, and what's still open.
@@ -118,6 +118,86 @@ form), three agent files with real `model:` pins, `commands/route.md`, a 32-case
 that `route`'s suggestions read that declaration live rather than restating it), and a README
 that opens with the same correction made above. Real, runnable v0.1 — not stub code — but see
 "Open questions" for what a suggestion-only mechanism still can't guarantee.
+
+## Offshoot 3: `issue-forge`
+
+**The problem.** This repo's own documentation already reads like a backlog —
+`docs/architecture-backlog.md` (7 open entries) and `docs/rules-backlog.md` (1 open entry) are
+hand-maintained decision logs, one entry per candidate/decided change, and `docs/sessions/*.md`
+session ledgers (from `tools/session_ledger.py`) flag actions a `Stop` hook continuation took
+that the user never saw in the visible reply. Nothing in the repo turns any of that into a
+GitHub issue a separate external tool of the user's could then read and auto-populate as tasks.
+`session_ledger.py` already classifies GitHub issue-*write* MCP calls for audit purposes, but
+nothing actually creates one.
+
+**The load-bearing correction, made before anything else here matters.** This is the one offshoot
+structurally different from its two siblings: `prompt-workshop` and `agent-router` only ever nudge
+Claude via `additionalContext` — they never take an action with external, visible consequences.
+Creating a GitHub issue is "publish/post public content" under the standing safety rules, which
+needs explicit user permission in chat every time, not a general one-time approval. So the design
+keeps the hook to *noticing and suggesting only*, and puts actual issue creation behind a
+separate, always-confirmed step that no hook can reach — see `rules/issue-forge.md`'s hard rule.
+
+**Decisions made, and why:**
+
+- **Two sources, not one.** Per the user's own scoping answers: both the hand-maintained backlog
+  logs *and* the session ledgers feed the scan, since both already read as a backlog of
+  issue-worthy items, just in different shapes.
+- **A `PostToolUse` hook on two matchers (`Edit|Write` and `Bash`), not `UserPromptSubmit`.** The
+  trigger is "a relevant doc changed," which is a tool-use fact, not a prompt-shape fact — the
+  same reason `house-rules`' `artifact`/`runnable`/`harvest` sit on `PostToolUse` rather than
+  `UserPromptSubmit`. The `Bash` matcher exists only because ledgers are written by a plain Python
+  script via `open()`, not through the `Write` tool, so file-path matching alone would miss a new
+  ledger landing — `suggest` reads `command` and looks for `session_ledger.py` on that path.
+- **The engine (`forge.py`) is a strict two-phase split, not a single command with a `--yes`
+  flag.** Phase A (`--dry-run`) is read-only against GitHub (a `gh issue list --search` for
+  dedup) and needs no confirmation; Phase B (`--create <slugs>`) is the only thing that posts,
+  and is never invoked by the hook and never invoked by Claude without first showing the user the
+  drafted list and getting an explicit, slug-named go-ahead in chat. The split is the mechanism
+  that makes the confirmation rule true in code, not just a habit stated in prose.
+- **Dedup via a marker embedded in the issue body (`<!-- issue-forge:source=<slug> -->`), not a
+  local state file.** Consistent with this repo's existing bias against hidden state (`hook.py`
+  keeps none, `versioncheck`'s marker is the one narrow exception) — there is nothing that can go
+  stale independently of what GitHub actually has.
+- **Backlog parsing matches the real file structure, not an invented one:** split each file on
+  `\n## `, keep only sections containing a `**Status:** open` line — this is why a non-item
+  section (`architecture-backlog.md`'s "Baseline" preamble) is skipped by construction rather
+  than by a special case. Ledger parsing is one candidate *per ledger*, not per flagged row —
+  the row-level detail belongs in the issue body, not in the candidate count.
+- **Issue body is a generic structured template**, since the downstream tool's schema isn't known
+  yet — Context / Why it matters / Proposed change / Source, plus the dedup marker as an HTML
+  comment. Labels are always `source:<origin>`, and architecture-backlog items additionally carry
+  whatever strength (`strong`/`worth-exploring`/`speculative`) is already authored into the doc —
+  real signal already in the source, not invented.
+- **General installable offshoot, not a repo-specific script.** The six-tier docs convention it
+  reads (`house-rules:project-docs`) is itself a general convention, not unique to this repo, so
+  `ISSUE_FORGE_BACKLOG_FILES` and `--sessions-dir` exist to point the engine at a different
+  project's own backlog/ledger files.
+
+**What shipped in this pass:** `plugin.json`, `hooks.json` (`SessionStart` → `inject`,
+`PostToolUse` on `Edit|Write` and `Bash` → `suggest`), `hook.py` with both handlers,
+`rules/issue-forge.md` (the methodology plus the hard confirmation rule), `commands/forge.md`,
+`scripts/forge.py` (the scan/draft/create engine, stdlib-only), a 48-case `verify.py` covering
+both hook contracts, backlog/ledger parsing against fixtures shaped like the real docs, and the
+dedup/create logic against a stubbed `gh` (never the real CLI), and a README. Real, runnable
+v0.1 — not stub code — confirmed against this repo's actual docs: a `--dry-run` run finds 9
+candidates (7 architecture-backlog + 1 rules-backlog + 1 session-ledger, the one ledger that
+exists today having 2 flagged rows), matching the counts read directly out of the tree while
+planning this.
+
+**Open questions.**
+
+- The Context/Why-it-matters/Proposed-change extraction from each backlog entry is a simple
+  labeled-paragraph heuristic (`**The friction.**`, `**Evidence.**`, `**What would change.**`, …)
+  — it will produce an awkward draft on an entry whose prose doesn't use those exact labels. The
+  Phase A review step is the intended backstop for this, not a claim that extraction is perfect.
+- Nothing verifies a created issue's content stays in sync if the source backlog entry is edited
+  or deleted afterward — the marker prevents a *duplicate*, not staleness.
+- No coverage yet, by design, for anything that actually calls the real `gh` CLI end-to-end
+  (issue creation against a live repo) — `verify.py` stops at the stubbed-runner boundary, the
+  same documented limitation `tools/verify_tools.py` carries for real-CLI-shelling-out code; a
+  real `--create` run against a throwaway test repo is a manual verification step, not part of
+  the automated suite.
 
 ## Open questions (not resolved by this shell)
 
