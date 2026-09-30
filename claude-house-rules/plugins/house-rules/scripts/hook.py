@@ -3284,18 +3284,37 @@ def event_subagentcommit():
             return 0
         left = _uncommitted_by_repo(paths)
         if not left:
-            trace("subagentcommit: %s committed everything it wrote." % agent_type)
+            cache, notes = {}, []
+            for top in sorted(set(filter(None, (_repo_top(p, cache) for p in paths)))):
+                note = _autosave_cleanup(top)
+                if note:
+                    notes.append(note)
+            if notes:
+                emit({"systemMessage": " | ".join(notes)})
+            else:
+                trace("subagentcommit: %s committed everything it wrote." % agent_type)
             return 0
         shown = "; ".join(
             "%s in %s" % (", ".join(files[:8]) + (" and %d more" % (len(files) - 8) if len(files) > 8 else ""), top)
             for top, _branch, files in left
         )
         if re.search(r'"stop_hook_active"\s*:\s*true', payload):
-            # The retry. Blocking again could loop; the parent's audit line names the files.
+            # The retry. Blocking again could loop. On the subagent's own worktree branch the hook
+            # commits the leftovers itself; anywhere else it only names them.
+            sid = _field(re.compile(r'"session_id"\s*:\s*"([^"]*)"'), payload) or ""
+            parts = []
+            for top, branch, files in left:
+                if _autosave_enabled() and branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX):
+                    sha, done = _wip_commit(top, WIP_NOT_COMMITTED, sid)
+                    note = _autosave_snapshot(top, branch, force_push=True)
+                    parts.append("committed %d file(s) in %s as %s%s"
+                                 % (len(done), top, sha, " | " + note if note else ""))
+                else:
+                    parts.append("%s in %s left uncommitted" % (", ".join(files[:8]), top))
             emit(
                 {
                     "systemMessage": "house-rules: %s finished with files still uncommitted "
-                    "after being asked once: %s." % (agent_type, shown)
+                    "after being asked once: %s. %s." % (agent_type, shown, "; ".join(parts))
                 }
             )
             return 0
