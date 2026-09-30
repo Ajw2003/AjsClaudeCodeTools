@@ -97,8 +97,9 @@ if [ -z "$PY" ]; then
     fi
   fi
   if [ -n "$PY" ]; then
-    printf '%s
-' "$*" > "$CACHE" 2>/dev/null || :
+    # The braces matter: a failed `> file` prints its error before a trailing 2>/dev/null applies.
+    { printf '%s
+' "$*" > "$CACHE"; } 2>/dev/null || :
   fi
 fi
 

@@ -2193,8 +2193,8 @@ os.mkdir(os.path.join(_cd, ".python-cache"))  # a directory where the file shoul
 _c5, _o5, _e5 = _cache_run(_cd)
 _cache_case(
     "run.sh: a cache that cannot be written is skipped, never a failure",
-    _c5 == 0 and "ran" in _o5,
-    "exit %d, out %r" % (_c5, _o5.strip()),
+    _c5 == 0 and "ran" in _o5 and "Permission denied" not in _e5 and "Is a directory" not in _e5,
+    "exit %d, out %r, stderr %r" % (_c5, _o5.strip(), _e5.strip()[:100]),
 )
 _cd = _cache_dir()
 with open(os.path.join(_cd, ".python-cache"), "w", encoding="utf-8") as f:
