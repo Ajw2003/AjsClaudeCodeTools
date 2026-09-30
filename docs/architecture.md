@@ -473,6 +473,15 @@ silence and the rule that requires it, so this cannot be quietly "fixed" later.
 `harvest` still reminds. `HOUSE_RULES_HARVEST=quiet` drops just harvest's trace;
 `HOUSE_RULES_DEBUG=1` adds harvest's per-run rejection reasons.
 
+**Two tiers, since 2.48.0.** The default (`on`) prints only traces that record something: a
+"could not tell" (`trace()`), or an action taken (`subagentcommit`, `autosave ... saved`; harvest
+when it found blocks or ignored a bad override). The "looked, nothing to do" traces — guard's
+allow, `guardwrite` on a new file, `artifact`, `runnable`, `branchnudge` staying quiet, harvest
+finding nothing — go through `trace_noop()` and print only under `HOUSE_RULES_TRACE=verbose`, which
+restores the full pre-2.48.0 output for debugging. The house rules define silence as "looked,
+nothing to do", and five to seven of these lines per Write/Edit were transcript noise. Values:
+`on` (default), `verbose`, `off`.
+
 ## The machine profile is data, not code, and is not committed
 
 `claude-house-rules/plugins/house-rules/rules/environment.md` is machine-local and **gitignored**

@@ -67,6 +67,15 @@ hook that kept session state in the temp directory; it leaked a file for every s
 ended unexpectedly, and any unrelated shell command silently defeated it. That machinery is gone
 on purpose — `verify.py` fails if it reappears.
 
+**Trace tiers (2.48.0).** `trace()` prints under `HOUSE_RULES_TRACE=on` (the default) and is for
+"could not tell" and "acted" messages. `trace_noop()` is for "looked, nothing to do" and prints only
+under `HOUSE_RULES_TRACE=verbose`; `off` silences both. `harvest` speaks by default only when it
+found blocks or ignored a bad override. `run.sh` remembers the interpreter that last passed its
+probe in `scripts/.python-cache` (gitignored, reset when the plugin directory is replaced on
+update, deleted and re-probed if the cached command stops resolving; a probe-failing stub is never
+written). `_autosave_target` reads `.git/HEAD` through `_git_dir()` first, so `autosave` and
+`commitgate` spawn no git process unless the branch is `worktree-agent-*`.
+
 ## Invariants
 
 - **`hook.py` is stdlib-only Python** (`hook.py:8-10`) — no third-party imports, nothing beyond

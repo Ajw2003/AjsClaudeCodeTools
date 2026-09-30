@@ -138,6 +138,25 @@ Refactors with no change in behaviour, needed before group A adds more handlers.
 - **#95 Cost of delegating to the executor versus doing the work on the main thread, with a
   chart.** Builds on `tools/measure_footprint.py`, which prices every hook since #74.
 
+### D2. Hooks efficiency follow-ups (from `docs/plans/hooks-efficiency-review.md`; findings 1-3 shipped in 2.48.0)
+
+- **Finding 2b/2c.** Merge same-event handlers into one dispatcher per event/matcher; later split
+  `hook.py` into per-event modules.
+- **Finding 4.** Duplicated logic inside `hook.py` (path extraction, base-name splitting, empty
+  payload handling, four repo/branch resolvers); a merged dispatcher removes most of it.
+- **Finding 5.** Rule-base weight and repetition (handover field list, evidence text, the "See
+  `<plugin>/rules/detail/x.md`" suffix on 26 sections, the delegation exception in four places);
+  stale token figure at `docs/architecture.md:460`.
+- **Finding 6.** Rules that conflict or over-fire (commit-constantly vs the guard, autosave's
+  `git add -A`, `SUBAGENT_MANDATE` for read-only agents, loose delegation trigger, handover check
+  on illustrative fences).
+- **Finding 7.** Docs tiers stay mandatory; only make the nag cheaper to resolve, fix the wording
+  conflict with "build only what was asked", dedupe the repeated rule text.
+- **Finding 8.** Repo maintenance: `verify.py` speed (test `hook.py` directly), one shared shim
+  instead of three `run.sh` copies, offshoot overlap and `route`'s `except Exception: pass`,
+  issue-forge duplicate PostToolUse entries, `worktreesweep` per-prompt walk and WIP-commit squash,
+  `docs/architecture.md` overlap and unarchived plans.
+
 ### E. Research, with nothing to build yet
 
 - **#69** How the superpowers subagent-driven-development workflow could be ported. #63 (auto
