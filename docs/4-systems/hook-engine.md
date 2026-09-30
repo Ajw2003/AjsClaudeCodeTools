@@ -76,6 +76,25 @@ update, deleted and re-probed if the cached command stops resolving; a probe-fai
 written). `_autosave_target` reads `.git/HEAD` through `_git_dir()` first, so `autosave` and
 `commitgate` spawn no git process unless the branch is `worktree-agent-*`.
 
+**Issue workflow (2.49.0, issues #108-#110).** Plans over three steps become issues before code, pull
+requests link with `Refs` and never close, and closing an issue always asks. The hooks force Claude to
+do these; none runs `gh issue create` or `gh issue close`. No new hook process on Write, Edit or Bash:
+`delegate` counts the plan's steps (numbered lines, `- [ ]`, `### Step`/`### Change`) and, over 3,
+writes `house-rules-issues.json` into the git directory (`_git_dir()`, so a linked worktree or a
+subagent's worktree has its own and is not gated by the main session's plan); `commitgate` reads it
+before its subagent logic and denies Write/Edit/NotebookEdit on source files while `needs_issues` is
+true (`docs/`, `.claude/`, any `.md`, files outside the project and the state file stay open); the
+existing Bash PostToolUse entry that runs `autosave` parses `gh issue create` output for the issue URL and
+the `Claude created this` label and clears the gate at two labelled issues; `handover` adds one Stop
+line while the gate is shut; `guard` denies a `gh pr create` whose body lacks `Refs #N` / `Part of #N` /
+`No-issue:` or pairs a closing word with an issue reference, and asks on `gh issue close`, `gh issue edit
+--state closed` and a `gh api` PATCH to closed. `issuelist` is a sixth SessionStart entry (its own, because
+`inject` sits near its size margin) that lists up to 10 open issues with a 5 s timeout and a 60 s cache;
+it is the only network call and never runs on a tool call. A corrupt state file is reported in one line
+and treated as no gate. `HOUSE_RULES_ISSUES=off` disables all of it. Known limit: `gh issue create` run
+through the `PowerShell` tool is not recorded (the `autosave` entry matches `Bash`, not `PowerShell`, and
+widening it would add a process per PowerShell call). Plan: `docs/plans/issue-workflow-build-plan.md`.
+
 ## Invariants
 
 - **`hook.py` is stdlib-only Python** (`hook.py:8-10`) — no third-party imports, nothing beyond

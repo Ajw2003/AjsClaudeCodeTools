@@ -1,5 +1,12 @@
 # Today — 2026-09-30
 
+Issue workflow, plugin 2.49.0 (issues #108-#110): approving a plan of more than three steps now
+makes the hooks demand a parent issue and child issues before any source edit; pull requests must say
+`Refs #N` and never a closing word; closing an issue always asks you. Plan:
+[`issue-workflow-build-plan.md`](../plans/issue-workflow-build-plan.md). Next: restart Claude Code after
+the update, open PlunderSpell, approve a four-step plan, and confirm the edit is refused until the issues
+exist (a real session there could not be run from the build session).
+
 Hook overhead cut, plugin 2.48.0: the "looked, nothing to do" trace lines no longer print unless
 `HOUSE_RULES_TRACE=verbose`, `run.sh` caches the interpreter, and `autosave`/`commitgate` skip git
 on non-subagent branches. Plan: [`hooks-efficiency-review.md`](../plans/hooks-efficiency-review.md).

@@ -66,6 +66,15 @@ checks incl. new default-silent, verbose, cache and no-spawn cases) and `verify_
 verified: the transcript noise being gone in a fresh session, which needs the user to look.
 Findings 4-8 of that plan are follow-ups in the Roadmap.
 
+2.49.0 (2026-09-30, #108-#110) adds the issue workflow: `delegate` counts a plan's steps and over
+three sets an issue gate, `commitgate` refuses source edits until a parent and a child issue labelled
+`Claude created this` are recorded, `guard` denies a `gh pr create` without `Refs #N` or with a
+closing word and always asks on `gh issue close`, and a new `issuelist` SessionStart entry lists open
+issues. Verified by `verify.py` (new cases driving real throwaway repos with a stub `gh`) and by the
+same call sequence replayed through `run.sh` in a scratch clone of PlunderSpell and in this repo. Not
+verified: a real Claude Code session in another repo, and a `gh issue create` made through the
+`PowerShell` tool, which is not recorded.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
