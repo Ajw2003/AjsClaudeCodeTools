@@ -1981,6 +1981,14 @@ def event_guard():
     subject = _guard_subject(payload)
     outdated = _read_and_clear_outdated_marker(_vc_session_id(payload))
 
+    # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
+    # an ask is folded into the prompt built below so a compound command is asked about once.
+    issue_hit = _issues_guard(subject, payload)
+    if issue_hit and issue_hit[0] == "deny":
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": issue_hit[1]}})
+        return 0
+
     is_mine, branch, ownership_note = branch_ownership()
     # A command carrying -C / --git-dir / --work-tree acts on a repo other than the one we
     # just read the branch from, so the exemption cannot be justified and is withheld.
@@ -2002,7 +2010,7 @@ def event_guard():
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _staged_docs_status(subject, elsewhere) if is_commit else (None, None)
 
-    if not any(hits.values()) and not outdated:
+    if not any(hits.values()) and not outdated and not issue_hit:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
         # not to fire" from "never ran" - and it is the security-shaped backstop, so that is
         # the worst place to leave the ambiguity. Exactly one emit() call either way - two
@@ -2069,6 +2077,11 @@ def event_guard():
             lines.append("")
             lines.append(why_not_exempt)
 
+    if issue_hit:
+        lines.append("")
+        lines.append("  Rule: Issue workflow (PRs link with Refs, the user closes issues)")
+        lines.append("    - %s" % issue_hit[1])
+
     if docs_status == "needs-docs":
         lines.append("")
         lines.append("  Rule: Documentation goes in tiers, and I update the tier that changed")
@@ -2094,6 +2107,7 @@ def event_guard():
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "ask",
                 "permissionDecisionReason": reason_text,
+                **({"additionalContext": issue_hit[2]} if issue_hit and issue_hit[2] else {}),
             }
         }
     )
@@ -2514,10 +2528,12 @@ _PLAN_VALUE_RE = re.compile(r'"plan"\s*:\s*"((?:[^"\\]|\\.)*)"')
 def event_delegate():
     try:
         note = DELEGATE_NOTE
+        payload = read_payload() or ""
         if _parity_enabled():
-            plan = _field(_PLAN_VALUE_RE, read_payload() or "") or ""
+            plan = _field(_PLAN_VALUE_RE, payload) or ""
             if _PARITY_RE.search(plan) and not _PARITY_ACCOUNTED_RE.search(plan):
                 note = note + DELEGATE_PARITY_NOTE
+        note = note + _issues_plan_note(payload)
         emit(
             {
                 "hookSpecificOutput": {
@@ -3554,24 +3570,425 @@ def _head_age_seconds(top):
     return _t.time() - int(_ag(top, ["log", "-1", "--format=%ct"])[1].strip() or "0")
 
 
+# ---------------------------------------------------------------------------------------
+# Issue workflow (2.49.0): plans over three steps become issues, source edits wait for them,
+# PRs link with Refs and never close, and closing an issue always asks. The hooks FORCE Claude
+# to do these things; none of them runs `gh issue create` or `gh issue close` itself. No new
+# hook process on Write/Edit/Bash: delegate writes the state, the Bash PostToolUse entry that
+# autosave uses records creations, commitgate gates, handover nags, guard checks the gh commands.
+# Plan: docs/plans/issue-workflow-build-plan.md. HOUSE_RULES_ISSUES=off disables all of it.
+# ---------------------------------------------------------------------------------------
+
+ISSUES_FILE = "house-rules-issues.json"
+ISSUES_LABEL = "Claude created this"
+ISSUES_STEP_THRESHOLD = 3
+ISSUES_NEEDED = 2  # one parent plus at least one child
+
+ISSUE_NOTE = (
+    " Issue workflow: this plan has {n} steps, which is more than three, so before any code is "
+    "written create one parent issue for the plan and one child issue per step with `gh issue "
+    "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
+    "non-programmer can follow. Every issue carries at least one category label and the label "
+    "`Claude created this`; if the repo lacks that label, create it first with `gh label "
+    "create`. Show the user the issue numbers. Mark a step `in progress` (`gh issue edit N "
+    "--add-label \"in progress\"`) when work on it starts and remove it when the issue closes. "
+    "Until a parent and at least one child exist, a hook blocks edits to source files "
+    "(docs/, .md files and .claude/ stay open). Do not close any issue yourself: closing always "
+    "asks the user."
+)
+
+
+def _issues_enabled():
+    return os.environ.get("HOUSE_RULES_ISSUES", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _payload_cwd(payload):
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = None
+    cwd = data.get("cwd") if isinstance(data, dict) else None
+    return cwd or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+
+
+def _issues_locate(start):
+    """(checkout top, resolved git directory) for `start`, or (None, None) outside a repo."""
+    d = os.path.abspath(start)
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d, _git_dir(d)
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None, None
+        d = parent
+
+
+def _issues_read(git_dir):
+    """(state dict or None, problem or None). A missing file is the normal no-gate state; an
+    unreadable or corrupt one is reported and treated as no gate (fail open, loud)."""
+    path = os.path.join(git_dir, ISSUES_FILE)
+    if not os.path.isfile(path):
+        return None, None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("not a JSON object")
+    except (OSError, ValueError) as exc:
+        return None, ("house-rules: could not read %s (%s), so the issue gate is off for this call."
+                      % (ISSUES_FILE, exc))
+    return data, None
+
+
+def _issues_write(git_dir, state):
+    with open(os.path.join(git_dir, ISSUES_FILE), "w", encoding="utf-8") as f:
+        json.dump(state, f)
+
+
+def _labelled_count(state):
+    return sum(1 for c in state.get("created", []) if isinstance(c, dict) and c.get("labelled"))
+
+
+_STEP_LINE_RES = (
+    re.compile(r"^\s*\d+[.)]\s", re.MULTILINE),
+    re.compile(r"^\s*[-*]\s+\[ \]", re.MULTILINE),
+    re.compile(r"^#{3,}\s+(?:Step|Change)", re.MULTILINE | re.IGNORECASE),
+)
+
+
+def _plan_step_count(plan):
+    return sum(len(r.findall(plan)) for r in _STEP_LINE_RES)
+
+
+def _issues_plan_note(payload):
+    """Delegate's issue half: count the plan's steps, write the gate state when it is over the
+    threshold, and return the text to append to the delegate note (always at least one sentence)."""
+    if not _issues_enabled():
+        return ""
+    raw = _field(_PLAN_VALUE_RE, payload or "")
+    if raw is None:
+        return " Issue workflow: could not read the plan text from the payload, so the issue gate is off for this plan."
+    try:
+        plan = json.loads('"%s"' % raw)
+    except ValueError:
+        plan = raw
+    n = _plan_step_count(plan)
+    if n <= ISSUES_STEP_THRESHOLD:
+        return " Issue workflow: this plan counts %d step(s), 3 or fewer, so no issues are required." % n
+    top, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return (" Issue workflow: this plan counts %d steps but the directory is not in a git repo, "
+                "so no gate was set." % n)
+    import datetime
+    state = {"plan_steps": n, "approved_at": datetime.datetime.now().isoformat(timespec="seconds"),
+             "needs_issues": True, "created": []}
+    try:
+        _issues_write(git_dir, state)
+    except OSError as exc:
+        return (" Issue workflow: this plan counts %d steps but the gate state could not be written "
+                "(%s), so edits are not blocked. Create the issues anyway." % (n, exc)) + ISSUE_NOTE.format(n=n)
+    return ISSUE_NOTE.format(n=n)
+
+
+_ISSUE_EDIT_ALLOWED_TOPS = ("docs", ".claude")
+
+
+def _issues_gate(payload):
+    """(deny reason or None, problem or None) for a Write/Edit/NotebookEdit payload."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        return None, None
+    if not isinstance(data, dict) or data.get("tool_name") not in _GATED_TOOLS:
+        return None, None
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    fp = ti.get("file_path") or ti.get("notebook_path")
+    if not fp:
+        return None, None
+    cwd = data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    top, git_dir = _issues_locate(cwd)
+    if not git_dir:
+        return None, None
+    state, problem = _issues_read(git_dir)
+    if problem:
+        return None, problem
+    if not state or not state.get("needs_issues"):
+        return None, None
+    if not os.path.isabs(fp):
+        fp = os.path.join(cwd, fp)
+    try:
+        rel = os.path.relpath(os.path.normcase(os.path.abspath(fp)), os.path.normcase(top))
+    except ValueError:
+        return None, None  # another drive: outside the project
+    parts = rel.replace("\\", "/").split("/")
+    if (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
+            or os.path.basename(rel) == ISSUES_FILE):
+        return None, None
+    have = _labelled_count(state)
+    return (
+        "House rules, plans become issues: the approved plan has %s steps, so source edits are "
+        "blocked until its issues exist. Two pieces are missing: (1) a parent issue for the plan, "
+        "(2) at least one child issue per step saying `Part of #<parent>`, each carrying the label "
+        "`%s` (%d of %d recorded). Create them with `gh issue create --label \"%s\"`, show the user "
+        "the numbers, then repeat this edit. docs/, .md files and .claude/ are editable meanwhile. "
+        "To switch this off: HOUSE_RULES_ISSUES=off." % (state.get("plan_steps", "more than 3"),
+                                                          ISSUES_LABEL, have, ISSUES_NEEDED, ISSUES_LABEL),
+        None,
+    )
+
+
+_GH_PREFIX = r"(?:^|[;&|(\n`]|\$\()\s*gh\s+"
+_GH_ISSUE_CREATE_RE = re.compile(_GH_PREFIX + r"issue\s+create\b")
+_GH_PR_CREATE_RE = re.compile(_GH_PREFIX + r"pr\s+create\b")
+_GH_ISSUE_CLOSE_RES = (
+    re.compile(_GH_PREFIX + r"issue\s+close\b"),
+    re.compile(_GH_PREFIX + r"issue\s+edit\b[^\n;&|]*--state[=\s]+[\"']?closed", re.IGNORECASE),
+    re.compile(_GH_PREFIX + r"api\b(?=[^\n]*(?:-X|--method)[=\s]+[\"']?PATCH)(?=[^\n]*issues/\d+)"
+               r"(?=[^\n]*state\W{0,4}closed)", re.IGNORECASE),
+)
+_ISSUE_URL_RE = re.compile(r"github\.com/([\w.-]+/[\w.-]+)/issues/(\d+)")
+
+
+def _issues_record(payload):
+    """PostToolUse Bash: record a `gh issue create` in the gate state. Returns a list of note
+    strings (empty when nothing applies). Never raises."""
+    try:
+        data = json.loads(payload)
+        if not isinstance(data, dict) or data.get("tool_name") != "Bash":
+            return []
+        ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+        cmd = ti.get("command") or ""
+        if not _GH_ISSUE_CREATE_RE.search(cmd):
+            return []
+        top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if not git_dir:
+            return []
+        state, problem = _issues_read(git_dir)
+        if problem:
+            return [problem]
+        if not state or not state.get("needs_issues"):
+            return []
+        resp = data.get("tool_response")
+        text = resp if isinstance(resp, str) else json.dumps(resp)
+        found = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
+        if not found:
+            return ["house-rules: a `gh issue create` ran but no issue URL was in its output, so it "
+                    "was not counted toward the issue gate."]
+        labelled = ISSUES_LABEL.lower() in cmd.lower()
+        created = state.setdefault("created", [])
+        for repo, number in found:
+            created.append({"repo": repo, "number": int(number), "labelled": labelled})
+        notes = []
+        if not labelled:
+            notes.append("house-rules: issue #%s was created without the `%s` label, so it does not "
+                         "count toward the issue gate and Focus Deck will ignore it. Add it with `gh "
+                         "issue edit %s --add-label \"%s\"` and create the next issues with it."
+                         % (found[0][1], ISSUES_LABEL, found[0][1], ISSUES_LABEL))
+        have = _labelled_count(state)
+        if have >= ISSUES_NEEDED:
+            state["needs_issues"] = False
+            notes.append("house-rules: %d labelled issues recorded, so source edits are unblocked." % have)
+        _issues_write(git_dir, state)
+        return notes
+    except Exception as exc:
+        return ["house-rules: could not record the `gh issue create` in the issue gate (%s: %s)."
+                % (type(exc).__name__, exc)]
+
+
+def _issues_stop_line(payload):
+    """Handover: (line or None, problem or None) - the gate is still closed at Stop."""
+    if not _issues_enabled():
+        return None, None
+    top, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return None, None
+    state, problem = _issues_read(git_dir)
+    if problem:
+        return None, problem
+    if state and state.get("needs_issues"):
+        return ("House rules, plans become issues: the approved %s-step plan still has no parent and "
+                "child issues recorded (%d of %d), so source edits stay blocked. Create them with `gh "
+                "issue create` and the `%s` label, or tell the user why not."
+                % (state.get("plan_steps", "multi"), _labelled_count(state), ISSUES_NEEDED, ISSUES_LABEL)), None
+    return None, None
+
+
+# gh pr create / gh issue close, checked in guard. Both work from the decoded command text.
+_PR_BODY_FILE_RE = re.compile(r"(?:--body-file|(?<![\w-])-F)(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
+_PR_BODY_FLAG_RE = re.compile(r"(?:--body|(?<![\w-])-b)(?:=|\s+|(?=[\"']))")
+_PR_LINK_RE = re.compile(r"\b(?:Refs|Part of)\s+(?:[\w.-]+/[\w.-]+)?#\d+", re.IGNORECASE)
+_PR_NO_ISSUE_RE = re.compile(r"^\s*No-issue:\s*\S", re.MULTILINE | re.IGNORECASE)
+_PR_CLOSING_RE = re.compile(
+    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b:?\s+"
+    r"(?:(?:[\w.-]+/[\w.-]+)?#\d+|https?://github\.com/[\w.-]+/[\w.-]+/issues/\d+)",
+    re.IGNORECASE,
+)
+
+PR_ASK_NOTE = (
+    "House rules, pull requests link issues without closing them: say `Refs #N` (or `Part of #N`, "
+    "or a line `No-issue: <reason>`) in the body, and never a closing word, because GitHub would "
+    "close the issue at merge, before the user has tested."
+)
+CLOSE_ASK_NOTE = (
+    "House rules, closing an issue always asks the user: the user must have tested the work first, "
+    "and this approval prompt is their go-ahead. On approval, also run `gh issue edit N "
+    "--add-label \"Claude completed this\" --remove-label \"in progress\"` and comment on the "
+    "issue with the merged PR link."
+)
+
+
+def _decoded_command(subject):
+    m = _COMMAND_VALUE_RE.search(subject)
+    if not m:
+        return subject
+    try:
+        return json.loads('"%s"' % m.group(1))
+    except ValueError:
+        return m.group(1)
+
+
+def _issues_guard(subject, payload):
+    """None when the issue rules have nothing to say about this command, else
+    (kind, reason, context) with kind "deny" or "ask"."""
+    if not _issues_enabled():
+        return None
+    cmd = _decoded_command(subject)
+    if _GH_PR_CREATE_RE.search(cmd):
+        body = cmd
+        fm = _PR_BODY_FILE_RE.search(cmd)
+        if fm:
+            name = fm.group(1).strip("\"'")
+            if name == "-":
+                return ("ask", "House rules: `gh pr create --body-file -` reads the body from stdin, so I "
+                        "could not check it for `Refs #N` and closing words. " + PR_ASK_NOTE, PR_ASK_NOTE)
+            path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    body = f.read()
+            except OSError as exc:
+                return ("ask", "House rules: could not read the PR body file %s (%s), so I could not check "
+                        "it for `Refs #N` and closing words. %s" % (name, exc, PR_ASK_NOTE), PR_ASK_NOTE)
+        elif not _PR_BODY_FLAG_RE.search(cmd):
+            return ("ask", "House rules: this `gh pr create` has no --body or --body-file (--web, --fill "
+                    "or interactive), so I cannot check it for `Refs #N` and closing words. " + PR_ASK_NOTE,
+                    PR_ASK_NOTE)
+        closing = _PR_CLOSING_RE.search(body)
+        if closing:
+            return ("deny", "House rules, pull requests link issues without closing them: the body says "
+                    "`%s`, and GitHub would close that issue when the PR merges, before the user has "
+                    "tested. Reword it as `Refs #N` (the user closes the issue after testing)."
+                    % closing.group(0), None)
+        if not (_PR_LINK_RE.search(body) or _PR_NO_ISSUE_RE.search(body)):
+            return ("deny", "House rules, pull requests link issues without closing them: the body needs "
+                    "`Refs #N`, `Refs owner/repo#N` or `Part of #N`, or a line `No-issue: <reason>`. "
+                    "Add it and run the command again.", None)
+        return None
+    if any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
+        return ("ask", "House rules, closing an issue always asks the user: has the user tested the work? "
+                "Approve only if they have. " + CLOSE_ASK_NOTE, CLOSE_ASK_NOTE)
+    return None
+
+
+def _open_issues_text(cwd):
+    """(text or "", problem or None) for the SessionStart open-issue list. Silent ("", None)
+    when there is nothing to list against: no gh, or no GitHub remote."""
+    import subprocess
+    import time
+    if not shutil.which("gh"):
+        return "", None
+    top, git_dir = _issues_locate(cwd)
+    if not top or not git_dir:
+        return "", None
+    try:
+        remote = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=top,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                timeout=3).stdout.decode("utf-8", "replace")
+    except (OSError, subprocess.SubprocessError) as exc:
+        return "", "git remote lookup failed: %s" % exc
+    if "github.com" not in remote:
+        return "", None
+    cache = os.path.join(git_dir, "house-rules-issues-cache.json")
+    try:
+        with open(cache, "r", encoding="utf-8") as f:
+            c = json.load(f)
+        if time.time() - float(c["ts"]) < 60:
+            return c["text"], None
+    except (OSError, ValueError, KeyError, TypeError):
+        pass  # no usable cache: fetch fresh below
+    try:
+        proc = subprocess.run(["gh", "issue", "list", "--state", "open", "--limit", "10", "--json",
+                               "number,title"], cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=5)
+    except subprocess.TimeoutExpired:
+        return "", "timed out after 5 s"
+    except OSError as exc:
+        return "", str(exc)
+    if proc.returncode != 0:
+        first = (proc.stderr.decode("utf-8", "replace").strip().splitlines() or ["exit %d" % proc.returncode])[0]
+        return "", first[:120]
+    try:
+        items = json.loads(proc.stdout.decode("utf-8", "replace"))
+    except ValueError as exc:
+        return "", "unreadable gh output: %s" % exc
+    if not items:
+        text = "Open issues: none."
+    else:
+        text = "Open issues (newest first):\n" + "\n".join(
+            "- #%s %s" % (i.get("number"), str(i.get("title", ""))[:80]) for i in items[:10])
+    try:
+        with open(cache, "w", encoding="utf-8") as f:
+            json.dump({"ts": time.time(), "text": text}, f)
+    except OSError as exc:
+        return text, "cache not written (%s)" % exc
+    return text, None
+
+
+def event_issuelist():
+    """SessionStart: the open issues, so the session starts knowing what work is tracked. Its own
+    entry (like profile) because inject is already near the 10,000-char per-hook limit."""
+    try:
+        if not _issues_enabled():
+            return 0
+        payload = read_payload()
+        text, problem = _open_issues_text(_payload_cwd(payload or ""))
+        out = {}
+        if text:
+            out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": text}
+        if problem and not text:
+            out["systemMessage"] = "house-rules: could not list open issues (%s)" % problem
+        elif problem:
+            out["systemMessage"] = "house-rules: open issue list: %s" % problem
+        if out:
+            emit(out)
+    except Exception as exc:
+        emit({"systemMessage": "house-rules: could not list open issues (%s: %s)" % (type(exc).__name__, exc)})
+    return 0
+
+
 def event_autosave():
     """PostToolUse (Write|Edit|NotebookEdit|Bash) on a worktree-agent- branch: after a
     CHECKPOINT_MINUTES stretch with no commit, commit for the subagent; then snapshot the
-    worktree to the autosave ref and push it."""
+    worktree to the autosave ref and push it. The same entry records `gh issue create` calls for
+    the issue gate (_issues_record), which is why it runs on any branch."""
     try:
-        if not _autosave_enabled():
+        if not _autosave_enabled() and not _issues_enabled():
             return 0
         payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: autosave got an empty payload and did not run for this call."})
             return 0
-        target = _autosave_target(payload)
+        issue_notes = _issues_record(payload) if _issues_enabled() else []
+        target = _autosave_target(payload) if _autosave_enabled() else None
         if target is None:
+            if issue_notes:
+                emit({"systemMessage": " | ".join(issue_notes)})
             return 0
         top, branch, tool, sid = target
         if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
+            if issue_notes:
+                emit({"systemMessage": " | ".join(issue_notes)})
             return 0
-        notes = []
+        notes = list(issue_notes)
         if _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
             sha, done = _wip_commit(top, WIP_CHECKPOINT, sid)
             if sha:
@@ -3596,13 +4013,25 @@ def event_autosave():
 def event_commitgate():
     """PreToolUse (Write|Edit|NotebookEdit) on a worktree-agent- branch: once COMMITGATE_THRESHOLD
     files are uncommitted, deny the edit and say commit first. Asked once and ignored (HEAD has not
-    moved), commit for the subagent instead and let the edit through."""
+    moved), commit for the subagent instead and let the edit through. It also carries the issue
+    gate (_issues_gate), which applies on any branch of the main session."""
     try:
-        if not _autosave_enabled():
+        if not _autosave_enabled() and not _issues_enabled():
             return 0
         payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: commitgate got an empty payload and did not run for this call."})
+            return 0
+        if _issues_enabled():
+            deny, problem = _issues_gate(payload)
+            if deny:
+                emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                             "permissionDecisionReason": deny}})
+                return 0
+            if problem:
+                emit({"systemMessage": problem})
+                return 0
+        if not _autosave_enabled():
             return 0
         target = _autosave_target(payload)
         if target is None:
@@ -4538,7 +4967,11 @@ def event_handover():
                 if visual and not _looked_at_result(list(_turn_tool_uses(turn_records))):
                     visual_files = visual
 
+    issue_line, issue_problem = _issues_stop_line(payload)
+
     trace_lines = []
+    if issue_problem:
+        trace_lines.append(issue_problem)
     if could_not_tell:
         # Fail open, loud: a claim was made and this could not confirm or deny it, so it says
         # so rather than silently assuming either answer - but it never blocks, and it never
@@ -4554,7 +4987,7 @@ def event_handover():
         )
 
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
-            and not parity_word and not visual_files and not plain_problems):
+            and not parity_word and not visual_files and not plain_problems and not issue_line):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -4580,6 +5013,8 @@ def event_handover():
         parts.append(_visual_note(visual_files))
     if uncommitted:
         parts.append(_commit_note(uncommitted))
+    if issue_line:
+        parts.append(issue_line)
     out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}
     if trace_lines:
         out["systemMessage"] = " ".join(trace_lines)
@@ -5007,6 +5442,7 @@ def event_harvest():
 
 EVENTS = {
     "inject": event_inject,
+    "issuelist": event_issuelist,
     "profile": event_profile,
     "standards": event_standards,
     "docstiers": event_docstiers,

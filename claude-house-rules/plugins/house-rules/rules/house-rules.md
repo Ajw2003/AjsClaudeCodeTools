@@ -148,6 +148,13 @@ runs foreground, printing live. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidde
 Issue/PR text never carries a local path — repo-relative paths, other repos as `owner/repo`
 (their own-terminal commands still carry absolute paths, different text). See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-local-paths.md`.
 
+## A plan over three steps becomes issues; a pull request links, never closes
+
+Before code: one parent issue, one child per step (`Part of #N`), plain titles, each labelled
+`Claude created this` plus a category; a hook blocks source edits until they exist. PR bodies say
+`Refs #N`, never Closes/Fixes/Resolves. Closing an issue always asks the user, who has tested first.
+`HOUSE_RULES_ISSUES=off` disables it. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/issue-workflow.md`.
+
 ## Commit constantly on my own branches, never on theirs
 <!-- subagent -->
 
