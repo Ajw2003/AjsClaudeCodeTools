@@ -2181,6 +2181,7 @@ _cd = _cache_dir()
 _stubdir = tempfile.mkdtemp(prefix="house-rules-stub-", dir=_FIXTURE_ROOT)
 with open(os.path.join(_stubdir, "python3"), "w", encoding="utf-8", newline="\n") as f:
     f.write('#!/bin/sh\necho "Python was not found; run without arguments to install from the Microsoft Store."\nexit 0\n')
+os.chmod(os.path.join(_stubdir, "python3"), 0o755)  # POSIX skips a non-executable file on PATH
 _c4, _o4, _e4 = _cache_run(_cd, PATH=_stubdir + os.pathsep + os.environ.get("PATH", ""))
 _cached4 = _cache_text(_cd)
 _cache_case(
