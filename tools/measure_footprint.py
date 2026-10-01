@@ -94,6 +94,9 @@ def reminder_text(stdout):
 def run_hook(hook_py, event, payload, env=None):
     """Invoke a hook handler the way the harness does and return (exit code, stdout)."""
     child_env = dict(os.environ)
+    # announce/verdict keep a running-subagent list; point it at a scratch file so measuring
+    # never leaves records that would make the real agentcap deny a spawn.
+    child_env["HOUSE_RULES_AGENTS_STATE"] = os.path.join(tempfile.gettempdir(), "hr-measure-agents.json")
     child_env.update(env or {})
     proc = subprocess.run(
         [sys.executable, hook_py, event],
@@ -350,14 +353,14 @@ def main():
                      "tool_input": {"file_path": "/proj/a.cs", "content": essay}}), "one block"),
         ("delegate", "each approved plan", "{}", "always fires"),
         ("announce", "each subagent spawn",
-         json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
+         json.dumps({"agent_type": "house-rules:builder", "agent_id": "m1",
                      "effort": "low"}), "always fires"),
         ("subagentrules", "each subagent spawn",
-         json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
+         json.dumps({"agent_type": "house-rules:builder", "agent_id": "m1",
                      "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
          "the ONLY additionalContext a subagent ever sees - inject/profile/standards above never reach it"),
         ("verdict", "each subagent finish",
-         json.dumps({"agent_type": "house-rules:executor", "agent_id": "m1",
+         json.dumps({"agent_type": "house-rules:builder", "agent_id": "m1",
                      "session_id": "s", "transcript_path": "/nope/s.jsonl"}),
          "transcript not found"),
         ("audit", "each FOREGROUND subagent return",

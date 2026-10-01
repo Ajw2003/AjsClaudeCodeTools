@@ -40,7 +40,9 @@ RUN = os.path.join(HERE, "run.sh")
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
-AGENT = os.path.join(HERE, "..", "agents", "executor.md")
+AGENTS_DIR = os.path.join(HERE, "..", "agents")
+# The three tier agents and the model each must declare (and, at SubagentStop, actually run on).
+TIERS = {"scout": "haiku", "builder": "sonnet", "reviewer": "opus"}
 ARCHIVIST = os.path.join(HERE, "..", "agents", "archivist.md")
 STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
 TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
@@ -170,6 +172,8 @@ RULE_DESTRUCTIVE = "Never take a destructive action without checking first"
 # --- branch fixtures -------------------------------------------------------------------------
 # Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
 _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
+# Simulated spawns in this file must never leave records in the real repository's agent list.
+os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
 
 
@@ -424,28 +428,28 @@ GUARD_CASES = [
     ("ask", "Commit constantly on my own branches, never on theirs", "git reset --hard origin/main"),
     (
         "ask",
-        "Never hide work in a background window or a silent process",
+        "Never hide work: it stays visible, reachable and readable",
         'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"',
     ),
     (
         "ask",
-        "Never hide work in a background window or a silent process",
+        "Never hide work: it stays visible, reachable and readable",
         "npm run dev > dev.log 2>&1 &",
     ),
-    ("ask", "Never hide work in a background window or a silent process", "nohup ./long-task.sh"),
+    ("ask", "Never hide work: it stays visible, reachable and readable", "nohup ./long-task.sh"),
     # #85: a wait piped through tail/head shows nothing until it exits.
     (
         "ask",
-        "Never hide work in a background window or a silent process",
+        "Never hide work: it stays visible, reachable and readable",
         "until grep -q done status.txt; do sleep 5; done | tail -5",
     ),
-    ("ask", "Never hide work in a background window or a silent process", "timeout 600 ./run_tests.sh | head -40"),
+    ("ask", "Never hide work: it stays visible, reachable and readable", "timeout 600 ./run_tests.sh | head -40"),
     ("pass", None, "git log | head -5"),
     ("pass", None, "cat build.log | tail -50"),
     ("pass", None, "python sleepy.py | tail"),
     (
         "ask",
-        "Never hide work in a background window or a silent process",
+        "Never hide work: it stays visible, reachable and readable",
         "Start-Job -ScriptBlock { ./build.ps1 }",
     ),
     ("ask", "Never take a destructive action without checking first", "rm -rf node_modules"),
@@ -965,7 +969,7 @@ for h in [
     "Deliver a whole workflow, not a starting point",
     "Never hand over a command I have not run",
     "Every artifact lives in the project directory",
-    "Never hide work in a background window or a silent process",
+    "Never hide work: it stays visible, reachable and readable",
     "Commit constantly on my own branches, never on theirs",
     "Never take a destructive action without checking first",
     "Edit in place; a full rewrite is a delete, not an edit",
@@ -1517,11 +1521,11 @@ else:
 
 # --- the delegate reminder fires after ExitPlanMode -------------------------------------------
 code, out, err = run_hook("delegate", "")
-if '"hookEventName":"PostToolUse"' in out and "@house-rules:executor" in out:
-    report("PASS", "delegate reminds Claude to hand the plan to the executor subagent")
-    print("          names @house-rules:executor and carries the right hookEventName")
+if '"hookEventName":"PostToolUse"' in out and "@house-rules:builder" in out:
+    report("PASS", "delegate reminds Claude to hand the plan to the builder subagent")
+    print("          names @house-rules:builder and carries the right hookEventName")
 else:
-    report("FAIL", "delegate reminds Claude to hand the plan to the executor subagent")
+    report("FAIL", "delegate reminds Claude to hand the plan to the builder subagent")
     print(f"          got: {out}")
 
 # --- delegate is wired to ExitPlanMode, not just present in hook.py ---------------------------
@@ -2886,7 +2890,7 @@ def _subagent_stop(paths, active=False, **env_extra):
             {"type": "tool_use", "id": "s%d" % i, "name": "Write", "input": {"file_path": p}}]}})
         for i, p in enumerate(paths)
     ])
-    payload = json.dumps({"hook_event_name": "SubagentStop", "agent_type": "house-rules:executor",
+    payload = json.dumps({"hook_event_name": "SubagentStop", "agent_type": "house-rules:builder",
                           "agent_transcript_path": tr, "stop_hook_active": active})
     return run_hook("subagentcommit", payload, env=_project_env(_FIXTURE_ROOT, **env_extra))[1]
 
@@ -3181,7 +3185,7 @@ _had = bool(_as_remote_ref(_bs, "worktree-agent-done"))
 _as_git(_ds, "add", "-A")
 _as_git(_ds, "commit", "-q", "-m", "feat: s")
 out = run_hook("subagentcommit", json.dumps({
-    "hook_event_name": "SubagentStop", "agent_type": "house-rules:executor", "stop_hook_active": False,
+    "hook_event_name": "SubagentStop", "agent_type": "house-rules:builder", "stop_hook_active": False,
     "agent_transcript_path": _hand_transcript("autosave-done", [json.dumps({"type": "assistant", "message": {
         "content": [{"type": "tool_use", "id": "d1", "name": "Write", "input": {"file_path": _ps}}]}})])}),
     env=_project_env(_FIXTURE_ROOT))[1]
@@ -3268,7 +3272,9 @@ def _iss_stub(body_ok=True):
     if os.name == "nt":
         path = os.path.join(_ISS_STUBDIR, "gh.cmd")
         lines = ["@echo off", "echo ran> \"%s\"" % _ISS_MARK]
-        if body_ok:
+        if body_ok == "empty":
+            lines.append("echo []")
+        elif body_ok:
             lines.append("echo [{\"number\":7,\"title\":\"Fix the login screen\"},{\"number\":3,\"title\":\"Add sound\"}]")
         else:
             lines += ["echo HTTP 401: bad credentials 1>&2", "exit /b 1"]
@@ -3276,7 +3282,9 @@ def _iss_stub(body_ok=True):
     else:
         path = os.path.join(_ISS_STUBDIR, "gh")
         lines = ["#!/bin/sh", "echo ran > '%s'" % _ISS_MARK]
-        if body_ok:
+        if body_ok == "empty":
+            lines.append("echo '[]'")
+        elif body_ok:
             lines.append("echo '[{\"number\":7,\"title\":\"Fix the login screen\"},{\"number\":3,\"title\":\"Add sound\"}]'")
         else:
             lines += ["echo 'HTTP 401: bad credentials' >&2", "exit 1"]
@@ -3603,6 +3611,15 @@ commit_case(
     "out %r" % _ol[:160],
 )
 _cachef = os.path.join(_as_git(_dl, "rev-parse", "--absolute-git-dir"), "house-rules-issues-cache.json")
+try:
+    _lmsg = json.loads(_ol).get("systemMessage", "")
+except ValueError:
+    _lmsg = "unparseable"
+commit_case(
+    "issuelist: the user sees `house-rules: 2 open issues loaded` in the same single JSON object as the context",
+    _lmsg == "house-rules: 2 open issues loaded" and _lctx != "" and _ol.strip().count("\n") == 0,
+    "systemMessage %r" % _lmsg,
+)
 _iss_stub(False)
 _, _ol2, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
 commit_case(
@@ -3615,6 +3632,22 @@ commit_case(
     "issuelist: a gh failure prints `could not list open issues (<reason>)` and no context",
     "could not list open issues (HTTP 401: bad credentials" in _ol3 and _stop_context(_ol3) == "", "out %r" % _ol3[:160],
 )
+commit_case(
+    "issuelist: a gh failure shows no 'loaded' note, only the could-not-list message",
+    "loaded" not in _ol3 and "open issues" in _ol3, "out %r" % _ol3[:100],
+)
+os.remove(_cachef) if os.path.exists(_cachef) else None
+_iss_stub("empty")
+_, _ol3b, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+try:
+    _emsg = json.loads(_ol3b).get("systemMessage", "")
+except ValueError:
+    _emsg = "unparseable"
+commit_case(
+    "issuelist: an empty list shows `house-rules: no open issues`",
+    _emsg == "house-rules: no open issues", "systemMessage %r" % _emsg,
+)
+os.remove(_cachef) if os.path.exists(_cachef) else None
 _iss_stub(True)
 _dnr = _iss_repo(remote="git@example.com:o/r.git")
 _, _ol4, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dnr}, _dnr)
@@ -3666,8 +3699,10 @@ for _name, _o in _issues_outputs:
 commit_case("issues: every new output parses as exactly one JSON object", not _multi, "; ".join(_multi) or "%d outputs checked" % len(_issues_outputs))
 
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
-_tool_cmds = [h["command"] for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) for h in g["hooks"]]
-_count_entries = sum(len(g["hooks"]) for g in _hj["PreToolUse"] + _hj["PostToolUse"])
+# The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count.
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] for h in g["hooks"])]
+_tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
+_count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
     not any("issue" in c for c in _tool_cmds) and _count_entries == 10 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
@@ -3676,21 +3711,21 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.49.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.50.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.49.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.50.0",
     "rules section + detail file + version",
 )
 
 commit_case(
-    "the executor and archivist commit as they go, not only if asked",
+    "the builder and archivist commit as they go, not only if asked",
     all(
-        "Commit each finished piece as you go" in read(os.path.join(HERE, "..", "agents", n))
+        phrase in read(os.path.join(HERE, "..", "agents", n))
         and "only if asked to commit" not in read(os.path.join(HERE, "..", "agents", n))
-        for n in ("executor.md", "archivist.md")
+        for n, phrase in (("builder.md", "Commit as you go"), ("archivist.md", "Commit each finished piece as you go"))
     ),
-    "agents/executor.md, agents/archivist.md",
+    "agents/builder.md, agents/archivist.md",
 )
 
 # profile: a saved memory restating the replaced commit rule is flagged at session start.
@@ -3787,7 +3822,7 @@ RESTATEMENTS = [
         "the delegate reminder (ExitPlanMode, including the worktree-isolation mandate)",
         lambda: run_hook("delegate", "")[1],
         [
-            "@house-rules:executor", "plan is settled", "proactiv", "one file",
+            "@house-rules:builder", "plan is settled", "proactiv", "one file",
             "three steps or fewer", "one delegation per group", "isolation", "worktree",
         ],
         False,
@@ -3885,8 +3920,8 @@ def check_delegate(title, empty_path):
     bad = []
     if '"hookEventName":"PostToolUse"' not in out:
         bad.append("wrong or missing hookEventName")
-    if "@house-rules:executor" not in out:
-        bad.append("it does not name the executor subagent")
+    if "@house-rules:builder" not in out:
+        bad.append("it does not name the builder subagent")
     if "one file" not in out or "three steps or fewer" not in out:
         bad.append("the skip-it exception is not stated as a count (one file, three steps)")
     if "proactiv" not in out:
@@ -3906,7 +3941,7 @@ check_delegate("the delegation nudge still works with PATH empty (it depends on 
 deldrift = []
 if '"matcher": "ExitPlanMode"' not in hooks_json_text:
     deldrift.append("hooks.json has no ExitPlanMode matcher")
-if "@house-rules:executor" not in rules_text:
+if "@house-rules:builder" not in rules_text:
     deldrift.append("house-rules.md no longer states the delegation rule")
 if not deldrift:
     report("PASS", "delegate runs on ExitPlanMode and matches the rules document")
@@ -3941,37 +3976,78 @@ else:
     print(f"          {'; '.join(carddrift)}")
 
 
-# --- the executor subagent is pinned to Sonnet ---------------------------------------------
+# --- the tier agents exist, each pinned to its model, with the tool allowlist the plan set -------
+TIER_TOOLS = {
+    "scout": ["Read", "Grep", "Glob"],
+    "builder": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+    "reviewer": ["Read", "Grep", "Glob", "Bash"],
+}
 agentdrift = []
-if not os.path.isfile(AGENT):
-    agentdrift.append("agents/executor.md is missing")
-else:
-    agent_text = read(AGENT)
-    if not re.search(r"^model: sonnet$", agent_text, re.MULTILINE):
-        agentdrift.append("executor.md does not pin model: sonnet")
-    if not re.search(r"^name: executor$", agent_text, re.MULTILINE):
-        agentdrift.append("executor.md has no name: executor")
+for _name, _model in TIERS.items():
+    _f = os.path.join(AGENTS_DIR, _name + ".md")
+    if not os.path.isfile(_f):
+        agentdrift.append(f"agents/{_name}.md is missing")
+        continue
+    _t = read(_f)
+    if not re.search(rf"^model: {_model}$", _t, re.MULTILINE):
+        agentdrift.append(f"{_name}.md does not pin model: {_model}")
+    if not re.search(rf"^name: {_name}$", _t, re.MULTILINE):
+        agentdrift.append(f"{_name}.md has no name: {_name}")
+    _tm = re.search(r"^tools:\s*(.+)$", _t, re.MULTILINE)
+    _got = [x.strip() for x in _tm.group(1).split(",")] if _tm else []
+    if _got != TIER_TOOLS[_name]:
+        agentdrift.append(f"{_name}.md tools are {_got}, expected {TIER_TOOLS[_name]}")
+    if "Agent" in _got:
+        agentdrift.append(f"{_name}.md allows the Agent tool, so it could start subagents")
+    _body = _t.split("---", 2)[-1].strip().splitlines()
+    if len(_body) > 15:
+        agentdrift.append(f"{_name}.md body is {len(_body)} lines, the limit is 15")
     for dead in ["hooks", "mcpServers", "permissionMode"]:
-        if re.search(rf"^{dead}:", agent_text, re.MULTILINE):
-            agentdrift.append(f"executor.md sets {dead}, which plugin subagents ignore")
+        if re.search(rf"^{dead}:", _t, re.MULTILINE):
+            agentdrift.append(f"{_name}.md sets {dead}, which plugin subagents ignore")
+if os.path.isfile(os.path.join(AGENTS_DIR, "executor.md")):
+    agentdrift.append("agents/executor.md still exists, it was retired")
 if not agentdrift:
-    report("PASS", "the executor subagent exists and is pinned to Sonnet")
-    print("          execution delegated to @house-rules:executor runs on sonnet, not opus")
+    report("PASS", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
+    print("          short tool allowlists, no Agent tool, bodies of 15 lines or fewer, executor.md gone")
 else:
-    report("FAIL", "the executor subagent exists and is pinned to Sonnet")
+    report("FAIL", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
     print(f"          {'; '.join(agentdrift)}")
 
-# --- executor.md does not claim the rules are already in its context, and carries a digest ----
-# A clean @house-rules:executor spawn was asked directly and answered no: SessionStart
-# additionalContext does not reach subagents. executor.md used to assert the opposite ("The
-# house rules are already in this session's context"), which is the bug this check catches.
-digestdrift = []
-if not os.path.isfile(AGENT):
-    digestdrift.append("agents/executor.md is missing")
+# --- no live file still names the retired executor agent ----------------------------------------
+_stale = []
+_skip_dirs = {".git", "node_modules", "__pycache__", "sessions", "archive", "plans", "generated"}
+for _dp, _dns, _fns in os.walk(ROOT):
+    _dns[:] = [d for d in _dns if d not in _skip_dirs and d != "6-decisions"]
+    for _fn in _fns:
+        if not _fn.endswith((".md", ".py", ".json", ".sh", ".bat", ".ps1", ".yml", ".html")):
+            continue
+        _fp = os.path.join(_dp, _fn)
+        if os.path.abspath(_fp) == os.path.abspath(__file__):
+            continue
+        try:
+            if "house-rules:executor" in read(_fp):
+                _stale.append(os.path.relpath(_fp, ROOT))
+        except OSError:
+            pass
+if not _stale:
+    report("PASS", "no live file still names house-rules:executor")
+    print("          docs/sessions, docs/archive, docs/plans and past Decisions entries are history and not scanned")
 else:
-    agent_text = read(AGENT)
+    report("FAIL", "no live file still names house-rules:executor")
+    print(f"          still named in: {', '.join(_stale)}")
+
+# --- archivist.md does not claim the rules are already in its context, and carries a digest ----
+# A clean spawn was asked directly and answered no: SessionStart additionalContext does not
+# reach subagents. The tier files carry no digest (the subagentrules hook injects the core);
+# archivist.md keeps its own, so only it is checked here.
+digestdrift = []
+if not os.path.isfile(ARCHIVIST):
+    digestdrift.append("agents/archivist.md is missing")
+else:
+    agent_text = read(ARCHIVIST)
     if "already in this session" in agent_text.lower():
-        digestdrift.append("executor.md still claims the rules are already in its context")
+        digestdrift.append("archivist.md still claims the rules are already in its context")
     for phrase in [
         "not injected",
         "hand over a command you have not run",
@@ -3979,12 +4055,12 @@ else:
         "commit messages",
     ]:
         if phrase.lower() not in agent_text.lower():
-            digestdrift.append(f"executor.md digest is missing: {phrase!r}")
+            digestdrift.append(f"archivist.md digest is missing: {phrase!r}")
 if not digestdrift:
-    report("PASS", "executor.md carries its own rules digest instead of assuming inherited context")
+    report("PASS", "archivist.md carries its own rules digest instead of assuming inherited context")
     print("          no 'already in this session' claim; the digest covers the load-bearing rules")
 else:
-    report("FAIL", "executor.md carries its own rules digest instead of assuming inherited context")
+    report("FAIL", "archivist.md carries its own rules digest instead of assuming inherited context")
     print(f"          {'; '.join(digestdrift)}")
 
 # --- the output style exists and IS forced ---------------------------------------------------
@@ -4225,13 +4301,15 @@ else:
     report("FAIL", "the claude.ai chat block exists and matches the rules document")
     print(f"          {'; '.join(chatdrift)}")
 
-# --- the executor description authorizes proactive use ----------------------------------------
-if os.path.isfile(AGENT) and "proactiv" in read(AGENT).lower():
-    report("PASS", "the executor description authorizes proactive use")
+# --- the scout and builder descriptions authorize proactive use ----------------------------------------
+_proactive = [n for n in ("scout", "builder")
+              if "proactiv" not in read(os.path.join(AGENTS_DIR, n + ".md")).lower()]
+if not _proactive:
+    report("PASS", "the scout and builder descriptions authorize proactive use")
     print('          description contains "proactively", satisfying the Agent tool\'s own gate')
 else:
-    report("FAIL", "the executor description authorizes proactive use")
-    print('          agents/executor.md description has no "proactively" (or similar) wording')
+    report("FAIL", "the scout and builder descriptions authorize proactive use")
+    print(f'          {", ".join(_proactive)}: description has no "proactively" (or similar) wording')
 
 # --- install.py still writes the model setting the README claims ------------------------------
 install_path = os.path.join(ROOT, "tools", "install.py")
@@ -4261,7 +4339,7 @@ if _absent:
     pass  # already reported as skipped above
 elif not moddrift:
     report("PASS", "install.py sets model = opusplan and the docs scope it correctly")
-    print("          opusplan on the CLI and IDE; every other surface via @house-rules:executor")
+    print("          opusplan on the CLI and IDE; every other surface via @house-rules:builder")
 else:
     report("FAIL", "install.py sets model = opusplan and the docs scope it correctly")
     print(f"          {'; '.join(moddrift)}")
@@ -4883,12 +4961,12 @@ for prompt in ("go ahead", "implement it in two groups", "do it", "proceed", "sh
     code, text = scope_text(prompt)
     if code != 0:
         goahead.append(f"{prompt!r} exited {code} - scope must never exit non-zero")
-    if "@house-rules:executor" not in text:
+    if "@house-rules:builder" not in text:
         goahead.append(f"{prompt!r} is a go-ahead but got no delegation clause")
 for prompt in ("what does this function do?", "explain the guard handler",
                "why did the suite fail?"):
     code, text = scope_text(prompt)
-    if "@house-rules:executor" in text:
+    if "@house-rules:builder" in text:
         goahead.append(f"{prompt!r} is a question, not a go-ahead, but got the clause")
 if not goahead:
     report("PASS", "scope adds the delegation clause on a go-ahead and not on a question")
@@ -4902,7 +4980,7 @@ else:
 # reminder - and it must never be able to take the prompt down with it.
 clause_drift = []
 _, goahead_text = scope_text("go ahead and implement it")
-for phrase in ("@house-rules:executor", "proactiv", "one file", "three steps or fewer"):
+for phrase in ("@house-rules:builder", "proactiv", "one file", "three steps or fewer"):
     if phrase.lower() not in goahead_text.lower():
         clause_drift.append(f"{phrase!r} missing from the emitted go-ahead clause")
     if phrase.lower() not in rules_text.lower():
@@ -5007,12 +5085,12 @@ def sub_payload(**kw):
 
 # announce names the agent, what it DECLARES, the plugin version and the digest fingerprint.
 code, out, err = run_hook("announce", sub_payload(
-    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1", effort="low"
+    hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="x1", effort="low"
 ))
 ann = []
 if code != 0:
     ann.append(f"exit {code}, must never be non-zero")
-for needle in ("house-rules:executor", "declared model sonnet", "digest ", "house-rules 2."):
+for needle in ("house-rules:builder", "declared model sonnet", "digest ", "house-rules 2."):
     if needle not in out:
         ann.append(f"announce output does not mention {needle!r}")
 if not ann:
@@ -5055,7 +5133,7 @@ else:
 # A set model-override env var is the documented way "model: sonnet" is not what runs.
 _ovr = dict(os.environ)
 _ovr["CLAUDE_CODE_SUBAGENT_MODEL_FORCE"] = "opus"
-code, out, err = run_hook("announce", sub_payload(agent_type="house-rules:executor"), env=_ovr)
+code, out, err = run_hook("announce", sub_payload(agent_type="house-rules:builder"), env=_ovr)
 if "CLAUDE_CODE_SUBAGENT_MODEL_FORCE" in out and "may not be what runs" in out:
     report("PASS", "announce warns when a model-override env var is set")
     print("          names the variable that can silently override the declared model")
@@ -5065,7 +5143,7 @@ else:
 
 # verdict turns the declaration into evidence: the model that actually served the subagent.
 code, out, err = run_hook("verdict", sub_payload(
-    hook_event_name="SubagentStop", agent_type="house-rules:executor", agent_id="sonnet"
+    hook_event_name="SubagentStop", agent_type="house-rules:builder", agent_id="sonnet"
 ))
 if code == 0 and "claude-sonnet-4-5-20250929" in out and "MATCH" in out and "2 assistant turns" in out:
     report("PASS", "verdict reports the model that actually served the subagent")
@@ -5075,7 +5153,7 @@ else:
     print(f"          exit {code}, out {out[:200]!r}")
 
 # The case the whole feature exists for: declared Sonnet, actually ran on something else.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="opus"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="opus"))
 if code == 0 and "MISMATCH" in out and "claude-opus-5" in out:
     report("PASS", "verdict reports MISMATCH when the observed model is not the declared one")
     print("          a delegation that did not run on what it declares is now visible")
@@ -5085,7 +5163,7 @@ else:
 
 # The completion-sanity check: zero tool calls across the whole transcript is exactly the
 # hollow "stop" that let a duplicate delegation get dispatched.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"))
 if code == 0 and "SUSPICIOUS COMPLETION" in out and "0 tool calls" in out:
     report("PASS", "verdict flags a completion with zero tool calls")
     print("          a status-update-only finish is now visible, not read as done work")
@@ -5095,7 +5173,7 @@ else:
 
 # One tool call present (so the zero-tool-calls path does not fire), but the last message
 # still reads like a deferral - the other half of the same signal.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="deferral"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="deferral"))
 if code == 0 and "SUSPICIOUS COMPLETION" in out and "i'll report back" in out.lower():
     report("PASS", "verdict flags a last message that matches a deferral phrase")
     print("          names the phrase, does not fire the zero-tool-calls branch instead")
@@ -5105,7 +5183,7 @@ else:
 
 # An ordinary finish - tool calls present, last message an ordinary summary - must not
 # false-positive as a suspicious completion.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="normal"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="normal"))
 if code == 0 and "SUSPICIOUS COMPLETION" not in out:
     report("PASS", "verdict does not flag an ordinary did-the-work-then-reported-back finish")
     print("          no false positive on a normal completion")
@@ -5115,13 +5193,13 @@ else:
 
 # Nothing fails silently: every "I could not tell" path says so, and says what it tried.
 quiet = []
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="ghost"))
 if code != 0 or "unverified" not in out or "tried:" not in out:
     quiet.append(f"missing transcript: exit {code}, out {out[:120]!r}")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="nomodel"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="nomodel"))
 if code != 0 or "unverified" not in out:
     quiet.append(f"transcript with no model field: exit {code}, out {out[:120]!r}")
-code, out, err = run_hook("verdict", '{"agent_type":"house-rules:executor"}')
+code, out, err = run_hook("verdict", '{"agent_type":"house-rules:builder"}')
 if code != 0 or "unverified" not in out:
     quiet.append(f"not enough fields to locate one: exit {code}, out {out[:120]!r}")
 for ev in ("announce", "verdict"):
@@ -5143,20 +5221,20 @@ else:
 _off = dict(os.environ)
 _off["HOUSE_RULES_DELEGATION"] = "off"
 deloff = []
-for ev, pl in (("announce", sub_payload(agent_type="house-rules:executor")),
-               ("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"))):
+for ev, pl in (("announce", sub_payload(agent_type="house-rules:builder")),
+               ("verdict", sub_payload(agent_type="house-rules:builder", agent_id="sonnet"))):
     code, out, err = run_hook(ev, pl, env=_off)
     if out.strip():
         deloff.append(f"{ev} still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
 _tron = dict(os.environ)
 _tron["HOUSE_RULES_TRACE"] = "off"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"), env=_tron)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="sonnet"), env=_tron)
 if "claude-sonnet" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the verdict, which is not a trace")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"), env=_off)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"), env=_off)
 if out.strip():
     deloff.append(f"suspicious-completion report still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"), env=_tron)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"), env=_tron)
 if "SUSPICIOUS COMPLETION" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the suspicious-completion report, which is not a trace")
 if not deloff:
@@ -5207,7 +5285,7 @@ else:
 # Judged against the real rules file, since a hand-copied fixture core would only prove the
 # handler can read a fixture, not that it stays in sync with the rules a human session sees.
 code, out, err = run_hook("subagentrules", sub_payload(
-    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1"
+    hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="x1"
 ))
 sar = []
 if code != 0:
@@ -5300,40 +5378,130 @@ if ("    subagentrules)" in read(RUN)):
 else:
     report("FAIL", "run.sh names subagentrules in its no-interpreter fallback")
 
+# --- agentcap (2.50.0, #112): at most two running subagents, none started by a subagent -------
+_cap_state = os.path.join(_FIXTURE_ROOT, "cap-agents.json")
+
+
+def _cap_env(**extra):
+    e = dict(os.environ)
+    e["HOUSE_RULES_AGENTS_STATE"] = _cap_state
+    e.pop("HOUSE_RULES_AGENTS", None)
+    e.update(extra)
+    return e
+
+
+def _cap_spawn(agent_id="", **extra):
+    pl = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {"prompt": "x"}}
+    if agent_id:
+        pl["agent_id"] = agent_id
+    return run_hook("agentcap", json.dumps(pl), env=_cap_env(**extra))
+
+
+def _cap_denied(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    except Exception:
+        return False
+
+
+def _cap_start(aid, atype="house-rules:builder"):
+    return run_hook("announce", sub_payload(hook_event_name="SubagentStart", agent_type=atype, agent_id=aid), env=_cap_env())
+
+
+def _cap_stop(aid, atype="house-rules:builder"):
+    return run_hook("verdict", sub_payload(hook_event_name="SubagentStop", agent_type=atype, agent_id=aid), env=_cap_env())
+
+
+if os.path.exists(_cap_state):
+    os.remove(_cap_state)
+_c0 = _cap_spawn()
+_cap_start("capA")
+_c1 = _cap_spawn()
+_cap_start("capB")
+_c2 = _cap_spawn()
+commit_case(
+    "agentcap: the first and second spawn are allowed, the third is denied naming both running agents",
+    not _cap_denied(_c0[1]) and not _cap_denied(_c1[1]) and _cap_denied(_c2[1])
+    and "capA" in _c2[1] and "capB" in _c2[1] and "Wait for one to finish" in _c2[1],
+    "out %r" % _c2[1][:200],
+)
+_cap_stop("capA")
+_c3 = _cap_spawn()
+commit_case(
+    "agentcap: a record is cleared by SubagentStop, so a spawn is allowed again",
+    not _cap_denied(_c3[1]) and "capA" not in open(_cap_state, encoding="utf-8").read(),
+    "after stop: %r" % open(_cap_state, encoding="utf-8").read()[:120],
+)
+_stale = time.time() - 46 * 60
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    json.dump({"agents": [{"id": "old1", "type": "x", "start": _stale}, {"id": "old2", "type": "x", "start": _stale}]}, _f)
+_c4 = _cap_spawn()
+commit_case(
+    "agentcap: records older than 45 minutes are ignored",
+    not _cap_denied(_c4[1]), "out %r" % _c4[1][:120],
+)
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    json.dump({"agents": [{"id": "k1", "type": "x", "start": time.time()}, {"id": "k2", "type": "x", "start": time.time()}]}, _f)
+_c5 = _cap_spawn(HOUSE_RULES_AGENTS="off")
+_c5b = _cap_spawn()
+commit_case(
+    "agentcap: HOUSE_RULES_AGENTS=off disables the cap (and the same state denies without it)",
+    _c5[1].strip() == "" and _cap_denied(_c5b[1]), "off: %r; on: %r" % (_c5[1][:60], _c5b[1][:60]),
+)
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    _f.write("{not json")
+_c6 = _cap_spawn()
+try:
+    _c6msg = json.loads(_c6[1]).get("systemMessage", "")
+except ValueError:
+    _c6msg = "unparseable"
+commit_case(
+    "agentcap: a corrupt state file fails open and says so in one line",
+    _c6[0] == 0 and not _cap_denied(_c6[1]) and "could not read" in _c6msg and "allowed" in _c6msg,
+    "systemMessage %r" % _c6msg[:160],
+)
+os.remove(_cap_state)
+_c7 = _cap_spawn(agent_id="sub9")
+commit_case(
+    "agentcap: a spawn made by a subagent (payload carries agent_id) is denied",
+    _cap_denied(_c7[1]) and "sub9" in _c7[1], "out %r" % _c7[1][:160],
+)
+
 # --- verdict's audit summary: built from the transcript, not the subagent's own report --------
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"))
 audit = []
 if code != 0:
     audit.append(f"exit {code}, must never be non-zero")
 for needle in (
-    "transcript found at", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "transcript found at", "tool uses:", "FAILED commands", "cmd: Bash [ERROR]: false",
+    "wrote: Write /proj/a.py", "other commands: 1 ok (not listed)",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in out:
         audit.append(f"audit summary is missing {needle!r}")
 if not audit:
     report("PASS", "verdict's audit summary reports commands with exit status and files written")
-    print("          built from the transcript itself: one ok, one ERROR, one write")
+    print("          built from the transcript itself: counts, the failed command in full, the written file, the ok count")
 else:
     report("FAIL", "verdict's audit summary reports commands with exit status and files written")
     for a in audit:
         print(f"          {a}")
 
 # The cap: 45 commands in the fixture, at most 40 shown plus an explicit "N more".
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="auditbig"))
-if code == 0 and out.count("cmd: Bash [ok]: echo") <= 40 and "5 more" in out:
-    report("PASS", "verdict's audit summary caps the command list and says how many more")
-    print(f"          {out.count('cmd: Bash [ok]: echo')} commands shown, '5 more' present")
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="auditbig"))
+if code == 0 and "cmd: Bash [ok]" not in out and "other commands: 45 ok (not listed)" in out and "Bash x45" in out and len(out) < 1500:
+    report("PASS", "verdict's audit summary counts ok commands instead of listing them, and stays small")
+    print(f"          45 ok commands -> one count line, {len(out)} chars (< 1500)")
 else:
-    report("FAIL", "verdict's audit summary caps the command list and says how many more")
-    print(f"          exit {code}, shown={out.count('cmd: Bash [ok]: echo')}, out[-200:]={out[-200:]!r}")
+    report("FAIL", "verdict's audit summary counts ok commands instead of listing them, and stays small")
+    print(f"          exit {code}, len={len(out)}, out[-200:]={out[-200:]!r}")
 
 # --- HOUSE_RULES_SUBAGENT_LEDGER: off by default, renders docs/sessions/<...> when on ---------
 _ledger_root = tempfile.mkdtemp(prefix="house-rules-ledger-")
 atexit.register(shutil.rmtree, _ledger_root, True)
 _ledger_off = dict(os.environ)
 _ledger_off["CLAUDE_PROJECT_DIR"] = _ledger_root
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_off)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"), env=_ledger_off)
 _ledger_dir = os.path.join(_ledger_root, "docs", "sessions")
 if "LEDGER" not in out and not os.path.isdir(_ledger_dir):
     report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER is off by default - no docs/sessions/ write")
@@ -5344,7 +5512,7 @@ else:
 
 _ledger_on = dict(_ledger_off)
 _ledger_on["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_on)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"), env=_ledger_on)
 _written = [f for f in os.listdir(_ledger_dir)] if os.path.isdir(_ledger_dir) else []
 if code == 0 and "LEDGER: rendered" in out and any(f.endswith(".md") for f in _written):
     report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
@@ -5359,7 +5527,7 @@ atexit.register(shutil.rmtree, _ledger_bad_root, True)
 _ledger_bad = dict(os.environ)
 _ledger_bad["CLAUDE_PROJECT_DIR"] = _ledger_bad_root
 _ledger_bad["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"), env=_ledger_bad)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="ghost"), env=_ledger_bad)
 # "ghost" has no transcript file at all, so verdict returns before ever reaching the ledger
 # step - this proves that early return, not the ledger call, never crashes.
 if code == 0 and "unverified" in out:
@@ -5393,7 +5561,7 @@ except Exception as exc:
     aud.append(f"could not parse audit output: {exc}")
     core_ctx = ""
 for needle in (
-    "finished (foreground)", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "finished (foreground)", "FAILED commands", "cmd: Bash [ERROR]: false", "wrote: Write /proj/a.py",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in core_ctx:
@@ -5414,13 +5582,58 @@ _async_payload = post_agent_payload(
 )
 code, out, err = run_hook("audit", _async_payload)
 code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
-if (code == 0 and "schedule a check-in every 10 min" in out and "finished" not in out
+if (code == 0 and "checked for stalls every 5 minutes" in out and "stallcheck.py" in out and "AUDIT" not in out
         and code_off == 0 and not out_off.strip()):
     report("PASS", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
     print("          nothing to audit yet; the check-in nudge appears, and not with HOUSE_RULES_AUTOSAVE=off")
 else:
     report("FAIL", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
     print(f"          exit {code}, out {out[:150]!r}; autosave off: exit {code_off}, out {out_off[:80]!r}")
+
+
+# --- stallcheck.py (issue 120). The agentcap cases live with the spawn-cap tests above.
+import tempfile as _cap_tf
+def _cap_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print("          " + detail)
+
+_sc = os.path.join(HERE, "stallcheck.py")
+_home = _cap_tf.mkdtemp(prefix="house-rules-home-", dir=_FIXTURE_ROOT)
+_sd = os.path.join(_home, ".claude", "projects", "p", "s", "subagents")
+os.makedirs(_sd)
+_henv = dict(os.environ, HOME=_home, USERPROFILE=_home)
+
+
+def _sc_file(name, text, age_s):
+    path = os.path.join(_sd, "agent-%s.jsonl" % name)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.utime(path, (time.time() - age_s, time.time() - age_s))
+
+
+def _sc_run(*extra):
+    pr = subprocess.run([sys.executable, _sc] + list(extra), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_henv)
+    return pr.returncode, pr.stdout.decode("utf-8", "replace")
+
+
+_sc_file("fresh", '{"type":"assistant"}\n', 20)
+_c, _o = _sc_run()
+_cap_case("stallcheck: a transcript written 20 s ago is ok, exit 0", _c == 0 and "ok" in _o and "fresh" in _o, "exit %d out %r" % (_c, _o[:100]))
+_sc_file("quiet", '{"type":"assistant"}\n', 600)
+_c, _o = _sc_run()
+_cap_case("stallcheck: a transcript silent for 10 minutes is STALLED, exit 1",
+          _c == 1 and "STALLED" in _o and "quiet" in _o, "exit %d out %r" % (_c, _o[:160]))
+_sc_file("done", '{"type":"attachment","attachment":{"hookEvent":"SubagentStop"}}\n', 3000)
+_c, _o = _sc_run("--threshold", "9999")
+_cap_case("stallcheck: a transcript holding SubagentStop is finished, never STALLED",
+          "finished  subagent done" in _o, "out %r" % _o[:200])
+_c, _o = _sc_run("--file", os.path.join(_home, "no-such.out"))
+_cap_case("stallcheck: a watched file that does not exist is STALLED, not skipped", _c == 1 and "no-such.out" in _o, "exit %d out %r" % (_c, _o[:160]))
+for _n in os.listdir(_sd):
+    os.remove(os.path.join(_sd, _n))
+_c, _o = _sc_run()
+_cap_case("stallcheck: with nothing to check it says so and exits 2, never silent",
+          _c == 2 and "nothing was checked" in _o, "exit %d out %r" % (_c, _o[:160]))
 
 audq = []
 code, out, err = run_hook("audit", "")
@@ -5483,7 +5696,7 @@ except Exception as exc:
     upa.append(f"could not parse userpromptaudit output: {exc}")
     up_ctx = ""
 for needle in (
-    "finished (background)", "Bash [ok]: pytest -q", "Bash [ERROR]: false",
+    "finished (background)", "FAILED commands", "cmd: Bash [ERROR]: false",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in up_ctx:

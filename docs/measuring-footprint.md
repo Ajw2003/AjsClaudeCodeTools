@@ -26,7 +26,7 @@ Three facts about how the plugin reaches a session make its cost non-obvious:
   `general-purpose` subagent could not see a word planted by a SessionStart hook in the parent
   session. This corrects an earlier, wrong version of this doc that claimed the opposite. A
   subagent's context is its own agent file plus whatever the delegation prompt passes it, full
-  stop — see docs/architecture.md for the consequence (`@house-rules:executor` and
+  stop — see docs/architecture.md for the consequence (`@house-rules:builder` and
   `@house-rules:archivist` carry their own rules digest for exactly this reason). Whether
   `UserPromptSubmit`'s output (the bullet above) reaches a subagent has not been tested the same
   way and is not claimed here either way.

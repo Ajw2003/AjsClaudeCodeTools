@@ -12,7 +12,7 @@ without a per-repo file to copy around.
 [`hooks.json`](../../claude-house-rules/plugins/house-rules/hooks/hooks.json) through
 [`hook.py`](../../claude-house-rules/plugins/house-rules/scripts/hook.py)'s `EVENTS` table —
 `inject`, `standards`, `scope`, `guard`, `artifact`, `runnable`, `delegate`, `announce`,
-`verdict`, `handover`, `harvest`. The `@house-rules:executor` subagent that the model-split rule
+`verdict`, `handover`, `harvest`. The `@house-rules:builder` subagent that the model-split rule
 actually runs on. Full detail in [`docs/4-systems/hook-engine.md`](../4-systems/hook-engine.md).
 
 **Acceptance.** `python claude-house-rules/plugins/house-rules/scripts/verify.py` exits 0.
@@ -159,7 +159,8 @@ Refactors with no change in behaviour, needed before group A adds more handlers.
 
 ### D3. Issue workflow follow-ups (from `docs/plans/issue-workflow-build-plan.md`; #108-#110 shipped in 2.49.0)
 
-- **#111, #112.** The tiered helpers and their limits, out of scope for 2.49.0.
+- **#111, #112.** Shipped in 2.50.0: the `scout`/`builder`/`reviewer` tiers and the `agentcap` spawn cap.
+  Still open: measuring a real spawn of each tier after an update and restart.
 - **Commits without an issue number.** The end-of-turn check the plan left out.
 - **`gh issue create` through `PowerShell`.** Not recorded by the gate today; needs either a wider
   `autosave` matcher (one more process per PowerShell call) or a move of the recording into `guard`.

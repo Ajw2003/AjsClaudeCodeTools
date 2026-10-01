@@ -35,7 +35,7 @@ things a bare imperative sentence usually skips.
   and tell Claude to run it," and the actual back-and-forth (via `AskUserQuestion`) happens in
   the turn that follows, driven by the injected instructions plus
   `rules/prompt-workshop.md`. This is the same shape `house-rules`' `delegate` hook uses to
-  route an approved plan to `@house-rules:executor` — a hook steering Claude's next action,
+  route an approved plan to `@house-rules:builder` — a hook steering Claude's next action,
   not performing the action itself.
 - **A `/prompt-workshop:workshop` command exists too**, for the case the heuristic misses or
   the user wants the flow explicitly on a prompt that didn't trigger it. Automatic-by-default,
@@ -76,7 +76,7 @@ under its old name — its own README had already said to do exactly that once a
 model the live session runs on mid-turn. **No hook can do that.** `UserPromptSubmit` hooks emit
 `additionalContext` or block the prompt; there is no hook output that changes a running
 session's model. What genuinely is enforced, the same way `house-rules` already uses it for
-`@house-rules:executor`, is a subagent's `model:` frontmatter — so "routing" here means: a hook
+`@house-rules:builder`, is a subagent's `model:` frontmatter — so "routing" here means: a hook
 classifies the prompt and *suggests* Claude delegate to a subagent pinned to the right tier.
 Claude decides whether to actually delegate. This is a real mechanism, not a workaround — it's
 the same shape `house-rules`' `delegate` hook already uses (nudge toward a pinned subagent
@@ -87,7 +87,7 @@ that gap needed to be named rather than built over silently.
 
 - **Three subagents, one per tier, each with only a `model:` pin as their real teeth** —
   `@agent-router:scribe` (haiku), `@agent-router:operative` (sonnet),
-  `@agent-router:architect` (opus). `house-rules`' own `opusplan` + `@house-rules:executor` split
+  `@agent-router:architect` (opus). `house-rules`' own `opusplan` + `@house-rules:builder` split
   is the two-tier version of this; `agent-router` generalizes it to three explicit tiers and
   makes the routing decision per-prompt instead of per-session.
 - **`route` reads each agent's declared model live, off disk, every time it fires** — never a

@@ -11,7 +11,7 @@ whole of what is possible.
 
 Paste the block below into that field. It is deliberately short: the field is length-bounded, and
 everything Claude-Code-specific has been stripped out because none of it applies in chat — no
-hooks, no `verify.py`, no `@house-rules:executor`, no coding standards, no artifact publishing.
+hooks, no `verify.py`, no `@house-rules:builder`, no coding standards, no artifact publishing.
 
 This file is committed so it can be diffed against
 [`rules/house-rules.md`](../claude-house-rules/plugins/house-rules/rules/house-rules.md) when the

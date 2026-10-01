@@ -1,5 +1,11 @@
 # Today — 2026-09-30
 
+Helper tiers, plugin 2.50.0 (issues #110-#112): the executor is gone; delegate to `@house-rules:scout`
+(lookups), `@house-rules:builder` (one issue's work) or `@house-rules:reviewer` (second opinion). A new
+hook refuses a third running subagent, subagent reports in the parent are far shorter, and the open-issue
+list now says it loaded. Plan: [`subagent-tiers-build-plan.md`](../plans/subagent-tiers-build-plan.md). Next:
+update the plugin, restart Claude Code, spawn each tier once and confirm the model and tool list.
+
 Issue workflow, plugin 2.49.0 (issues #108-#110): approving a plan of more than three steps now
 makes the hooks demand a parent issue and child issues before any source edit; pull requests must say
 `Refs #N` and never a closing word; closing an issue always asks you. Plan:

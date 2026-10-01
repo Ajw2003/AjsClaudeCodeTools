@@ -33,7 +33,7 @@ tier of work it is — so the *right* amount of model gets spent, not the same a
    delegate to what, prioritizing across competing asks — not literally managing people.
 
 These map to the same split `house-rules` already uses for its own model routing (its
-`opusplan` setting plus `@house-rules:executor` pinned to Sonnet) — this plugin generalizes that
+`opusplan` setting plus `@house-rules:builder` pinned to Sonnet) — this plugin generalizes that
 split into three explicit tiers instead of two, and makes the routing decision per-prompt
 instead of per-session.
 
@@ -43,7 +43,7 @@ A `UserPromptSubmit` hook cannot switch the model the current session is running
 no hook output for "run the rest of this turn on a different model." What it *can* do is inject
 `additionalContext` that Claude reads before acting, and Claude can act on that by delegating the
 prompt to a subagent — and a subagent's `model:` frontmatter **is** a real, enforced pin (the
-same mechanism `house-rules`' `@house-rules:executor` uses). So "routing" here concretely means:
+same mechanism `house-rules`' `@house-rules:builder` uses). So "routing" here concretely means:
 
 1. The `route` hook classifies the prompt and names which of the three subagents below fits.
 2. It reads that subagent's own `agents/*.md` frontmatter at the moment it fires — never a
@@ -68,7 +68,7 @@ delegating to a same-tier subagent would add overhead for no benefit.
 - `@agent-router:architect` — `model: opus`. Planning, architecture, and management-shaped work.
 
 None of these have this plugin's `SessionStart` context — subagent contexts don't inherit the
-parent session's injected `additionalContext` (the same fact `house-rules`' `executor.md`
+parent session's injected `additionalContext` (the same fact `house-rules`' `builder.md`
 documents about itself). Each agent file below carries its own short, self-contained digest of
 what it needs to know instead of assuming this document reached it.
 

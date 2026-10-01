@@ -129,19 +129,21 @@ Standards injected at session start bind; existing file style wins. See `${CLAUD
 
 ## Once the approach is decided, delegate the execution
 
-A settled plan goes to `@house-rules:executor`, no re-planning inside. Skip only for one file AND
-≤3 steps, named in one line. Multi-file/behavior work: `isolation: "worktree"`. A status-only
-`SubagentStop` isn't finished — check `ListAgents` first. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/delegate-execution.md`.
+A settled plan goes to subagents, one per issue, never per step: lookups to `@house-rules:scout`,
+building to `@house-rules:builder`, a second opinion to `@house-rules:reviewer`. One at a time, never
+more than two; subagents start none. Skip only for one file AND ≤3 steps, named in one line.
+Multi-file/behavior work: `isolation: "worktree"`. A status-only `SubagentStop` isn't finished. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/delegate-execution.md`.
 
 ## Every artifact lives in the project directory
 <!-- subagent -->
 
 Plans, reports, scripts, findings: real files under `docs/`, never chat-only or scratchpad. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/artifact-location.md`.
 
-## Never hide work in a background window or a silent process
+## Never hide work: it stays visible, reachable and readable
 
-Nothing runs where the user can't see it: no hidden windows, detached jobs, `nohup`; long work
-runs foreground, printing live. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
+The user can always see, reach and audit what runs, on mobile too: no hidden windows, `nohup`, or
+work only I can read. Background jobs use a followable tool and get a `stallcheck.py` every 5
+minutes. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
 
 ## Never name a local path in an issue or a pull request
 

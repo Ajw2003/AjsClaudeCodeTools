@@ -48,7 +48,7 @@ what pulled the review toward entries 1, 2 and 5 rather than anywhere else in th
 
 **The friction.** `rules/house-rules.md` is canonical, and nine places restate part of it:
 `SCOPE_REMINDER`, `SCOPE_REMINDER_SHORT`, `RUNNABLE_NOTE`, `DELEGATE_NOTE` and `HANDOVER_NOTE` in
-`hook.py`, plus `output-styles/handover-cards.md`, `agents/executor.md`,
+`hook.py`, plus `output-styles/handover-cards.md`, `agents/builder.md`,
 `templates/step-card.html` and `docs/claude-ai-instructions.md`. That relationship is real and
 load-bearing — `CLAUDE.md` states it as an editing rule — but no module holds it. Each restatement
 is policed by a hand-copied `drift = []` / loop / PASS-FAIL block: nine of them, at `verify.py`
@@ -61,7 +61,7 @@ named for:
 
 - `verify.py:545` (`runnable`) matches `"whole workflow"`, `"starting point"` and
   `"hand over a command"` against `rules_text` only.
-- `verify.py:575` (`delegate`) matches `"@house-rules:executor"` and `"plan is settled"` the same way.
+- `verify.py:575` (`delegate`) matches `"@house-rules:builder"` and `"plan is settled"` the same way.
 - `verify.py:689` (`handover`) matches fourteen phrases the same way — the longest checklist in the
   plugin.
 
@@ -90,7 +90,7 @@ has to assert.
 - Do all nine restatements bind the same way? `templates/step-card.html` is checked for JS field
   names (`title:`, `location:`, …), not prose phrases — it may be a second kind of row rather than
   the same kind.
-- `executor.md`'s digest is checked for phrases that must be *absent* too (`"already in this
+- `builder.md`'s digest is checked for phrases that must be *absent* too (`"already in this
   session"`, `verify.py:832`). A row may need both a requires and a forbids list.
 
 ---
