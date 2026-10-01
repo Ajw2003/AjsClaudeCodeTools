@@ -38,11 +38,13 @@ def _age(path, now):
 
 
 def _finished(path):
-    """True when the transcript's tail holds a SubagentStop record."""
+    """True when SubagentStop is the last record in the transcript's tail. A resumed agent writes
+    records after its old SubagentStop; that is running again, not finished."""
     with open(path, "rb") as f:
         f.seek(0, os.SEEK_END)
         f.seek(max(0, f.tell() - TAIL_BYTES))
-        return b"SubagentStop" in f.read()
+        lines = [ln for ln in f.read().splitlines() if ln.strip()]
+    return bool(lines) and b"SubagentStop" in lines[-1]
 
 
 def _subagent_files(now, sessions=(), agents=()):
