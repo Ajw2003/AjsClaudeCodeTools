@@ -103,6 +103,7 @@ def main():
     parser.add_argument("--threshold", type=int, default=DEFAULT_THRESHOLD)
     parser.add_argument("--file", action="append", default=[])
     parser.add_argument("--watch", action="store_true")
+    parser.add_argument("--poll", type=float, default=POLL_SECONDS, help=argparse.SUPPRESS)  # tests only
     parser.add_argument("--session", action="append", default=[])
     parser.add_argument("--agent", action="append", default=[])
     args = parser.parse_args()
@@ -128,19 +129,24 @@ def main():
 
     print(header, flush=True)
     seen = {}
+    last_alert = {}  # label -> time of the last STALLED print; a stall is re-announced every threshold
     while True:
         rows = check(_subagent_files(time.time(), args.session, args.agent), args.file, args.threshold)
         if not rows:
             print("stallcheck: nothing to watch" + (" for " + scope if scope else "") + ".")
             return 2
         for row in rows:
-            if seen.get(row[0]) != row[1] and row[1] != "ok":
+            now = time.time()
+            changed = seen.get(row[0]) != row[1]
+            repeat = row[1] == "STALLED" and now - last_alert.get(row[0], now) >= args.threshold
+            if (changed and row[1] != "ok") or repeat:
                 print(_fmt(row), flush=True)
+                last_alert[row[0]] = now
             seen[row[0]] = row[1]
         if all(r[1] == "finished" for r in rows):
             print("stallcheck: everything watched has finished.", flush=True)
             return 0
-        time.sleep(POLL_SECONDS)
+        time.sleep(args.poll)
 
 
 if __name__ == "__main__":

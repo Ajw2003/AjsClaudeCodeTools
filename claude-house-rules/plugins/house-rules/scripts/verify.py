@@ -5617,6 +5617,17 @@ def _sc_run(*extra):
     return pr.returncode, pr.stdout.decode("utf-8", "replace")
 
 
+# #122: a row that stays STALLED is printed again every threshold period, not once.
+_sc_file("stuck122", '{"type":"assistant"}\n', 600)
+try:
+    _pr = subprocess.run([sys.executable, _sc, "--watch", "--threshold", "1", "--poll", "0.2", "--agent", "stuck122"],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_henv, timeout=4)
+    _o = _pr.stdout.decode("utf-8", "replace")
+except subprocess.TimeoutExpired as _e:
+    _o = (_e.stdout or b"").decode("utf-8", "replace")  # expected: the watch never ends; the limit stops it
+_cap_case("stallcheck: --watch re-prints a row that stays STALLED every threshold period (#122)",
+          _o.count("STALLED") >= 2, "STALLED lines in 4 s: %d, out %r" % (_o.count("STALLED"), _o[:200]))
+os.remove(os.path.join(_sd, "agent-stuck122.jsonl"))
 _sc_file("fresh", '{"type":"assistant"}\n', 20)
 _c, _o = _sc_run()
 _cap_case("stallcheck: a transcript written 20 s ago is ok, exit 0", _c == 0 and "ok" in _o and "fresh" in _o, "exit %d out %r" % (_c, _o[:100]))
