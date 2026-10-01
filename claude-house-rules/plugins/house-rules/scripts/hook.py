@@ -4377,8 +4377,11 @@ def event_audit():
                 "Monitor with the command `%s` (it prints only on a "
                 "STALLED or finished line), or run that command without --watch each time you wake. %s"
                 "A parent that wakes also lets worktreesweep commit a stalled subagent's work (every "
-                "%d min). Report a STALLED line to the user with what you looked at; do not assume the "
-                "subagent died." % (watch_cmd, scope_note, CHECKPOINT_MINUTES))}})
+                "%d min). On a STALLED line: find the agent's last tool call or blocking child process "
+                "(newest transcript record, process list), tell the user how long it has been stuck and what it is "
+                "blocked on, and ask before stopping a command that cannot finish. Do not assume it died or is "
+                "fine; no later STALLED line is not progress; SendMessage cannot reach an agent blocked inside a "
+                "tool call." % (watch_cmd, scope_note, CHECKPOINT_MINUTES))}})
             return 0
         if status != "completed":
             # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing
