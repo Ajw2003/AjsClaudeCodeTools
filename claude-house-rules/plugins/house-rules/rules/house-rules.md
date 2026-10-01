@@ -139,7 +139,7 @@ Multi-file/behavior work: `isolation: "worktree"`. A status-only `SubagentStop` 
 
 Plans, reports, scripts, findings: real files under `docs/`, never chat-only or scratchpad. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/artifact-location.md`.
 
-## Never hide work in a background window or a silent process
+## Never hide work: it stays visible, reachable and readable
 
 Nothing runs where the user can't see it: no hidden windows, detached jobs, `nohup`; long work
 runs foreground, printing live. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.

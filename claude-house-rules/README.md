@@ -124,7 +124,7 @@ Every one of these properties is tested by the suite below.
 
 | Rule | Patterns |
 |---|---|
-| Never hide work in a background window or a silent process | `-WindowStyle Hidden`, `Start-Process`, `Start-Job`, `-AsJob`, `nohup`, `setsid`, `disown`, a trailing `&`, a wait or loop (`while`, `until`, `sleep`, `timeout`, `watch`) piped through `tail`/`head`, which hides its output until it exits |
+| Never hide work: it stays visible, reachable and readable | `-WindowStyle Hidden`, `Start-Process`, `Start-Job`, `-AsJob`, `nohup`, `setsid`, `disown`, a trailing `&`, a wait or loop (`while`, `until`, `sleep`, `timeout`, `watch`) piped through `tail`/`head`, which hides its output until it exits |
 | Commit constantly on my own branches, never on theirs | `git push` and `git commit` (force push always prompts; a plain push or commit stands down on a `claude/` branch); `reset`, `revert`, `clean`, `rebase`, `merge`, `filter-branch`, `cherry-pick`, `am`, `apply` (these seven prompt on every branch, mine included — they discard work or finish something the user started) |
 | Never take a destructive action without checking first | `rm` (any form, not just `-r`/`-f` — a plain `rm file` deletes just as permanently), `Remove-Item`, `del /f`, `rmdir /s`, `Stop-Process`, `taskkill`, `pkill`, `kill -9`, `Clear-Content`, `truncate -s`, `git checkout --`/`git restore` (discards uncommitted edits), `git stash drop`/`clear` (deletes stashed work permanently) |
 

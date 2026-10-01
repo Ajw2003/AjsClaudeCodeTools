@@ -1723,7 +1723,7 @@ GUARD_R4 = [
 ]
 
 GUARD_BUCKETS = [
-    ("Never hide work in a background window or a silent process", GUARD_R1),
+    ("Never hide work: it stays visible, reachable and readable", GUARD_R1),
     ("Commit constantly on my own branches, never on theirs", GUARD_R3),
     ("Never take a destructive action without checking first", GUARD_R4),
 ]
