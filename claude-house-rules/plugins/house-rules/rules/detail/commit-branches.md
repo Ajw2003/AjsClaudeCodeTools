@@ -44,3 +44,17 @@ it exists to prevent, and a rule that produces its own failure case is mis-drawn
 The line it actually needs to draw is ownership, not permission. Frequent commits on a branch that
 is mine risk nothing; that history is disposable. The user's is not.
 
+## Credit "aj's agent", never Claude
+
+Commits end with `Committed by AJ's agent`; pull requests end with `Opened by AJ's agent`. The
+user wants the distinction that an agent did the work, but not the Claude branding, and no email
+shown, so there is no `Co-Authored-By:` trailer (a trailer needs an email) and no
+`Generated with [Claude Code]` line, `Claude-Session` trailer or `claude.ai/code/` link.
+
+Two mechanisms, because a plugin cannot carry the Claude Code `attribution` setting (a plugin's
+`settings.json` may only hold `agent` and `subagentStatusLine`): `tools/install.py` writes
+`attribution` (`commit`, `pr`, `sessionUrl: false`) into `~/.claude/settings.json` on each machine,
+and the `guard` hook refuses a `git commit`, `gh pr create/edit` or `gh issue create/comment` whose
+text carries the old forms, naming the replacement wording. The guard is the backstop for sessions
+that never read the settings file (cloud sessions). `HOUSE_RULES_ATTRIBUTION=off` disables it.
+

@@ -162,7 +162,7 @@ Before code: one parent issue, one child per step (`Part of #N`), plain titles, 
 
 Read-only inspection is always fine. **My own branch**: commit freely. **Theirs**: every git
 write is theirs; branch off first if needed, never delete one unasked. Commit scoped to changed
-paths, never finish what they started, say what/where. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
+paths, never finish what they started, say what/where. Credit "aj's agent", never Claude. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
 
 ## Never take a destructive action without checking first
 <!-- subagent -->
