@@ -3354,8 +3354,10 @@ def event_agentcap():
         try:
             data = json.loads(payload) if payload else {}
             caller = (data.get("agent_id") or "") if isinstance(data, dict) else ""
-        except ValueError:
-            pass
+        except ValueError as exc:
+            emit({"systemMessage": "house-rules: agent cap could not parse the call payload (%s); "
+                  "the spawn is allowed, the cap is not enforced this time." % type(exc).__name__})
+            return 0
         if caller:
             reason = (
                 "house-rules: a subagent may not start another subagent (agent %s tried). "
