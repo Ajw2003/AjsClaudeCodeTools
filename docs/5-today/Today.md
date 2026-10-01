@@ -1,4 +1,10 @@
-# Today — 2026-09-30
+# Today — 2026-10-01
+
+Credit "aj's agent", never Claude, plugin 2.51.0 (issue #133): the installer now writes Claude Code's
+`attribution` setting (commit `Committed by AJ's agent`, pull request `Opened by AJ's agent`, no session link, no
+email), and `guard` refuses a commit, pull request or issue text that credits Claude, as the backstop for cloud
+sessions that never read the settings file. Plan: [`attribution-build-plan.md`](../plans/attribution-build-plan.md).
+Next: update the plugin on other machines (`toolsootstrap.ps1`) so the setting lands there too.
 
 Helper tiers, plugin 2.50.0 (issues #110-#112): the executor is gone; delegate to `@house-rules:scout`
 (lookups), `@house-rules:builder` (one issue's work) or `@house-rules:reviewer` (second opinion). A new
