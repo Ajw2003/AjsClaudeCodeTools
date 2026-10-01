@@ -3270,7 +3270,9 @@ def _iss_stub(body_ok=True):
     if os.name == "nt":
         path = os.path.join(_ISS_STUBDIR, "gh.cmd")
         lines = ["@echo off", "echo ran> \"%s\"" % _ISS_MARK]
-        if body_ok:
+        if body_ok == "empty":
+            lines.append("echo []")
+        elif body_ok:
             lines.append("echo [{\"number\":7,\"title\":\"Fix the login screen\"},{\"number\":3,\"title\":\"Add sound\"}]")
         else:
             lines += ["echo HTTP 401: bad credentials 1>&2", "exit /b 1"]
@@ -3278,7 +3280,9 @@ def _iss_stub(body_ok=True):
     else:
         path = os.path.join(_ISS_STUBDIR, "gh")
         lines = ["#!/bin/sh", "echo ran > '%s'" % _ISS_MARK]
-        if body_ok:
+        if body_ok == "empty":
+            lines.append("echo '[]'")
+        elif body_ok:
             lines.append("echo '[{\"number\":7,\"title\":\"Fix the login screen\"},{\"number\":3,\"title\":\"Add sound\"}]'")
         else:
             lines += ["echo 'HTTP 401: bad credentials' >&2", "exit 1"]
@@ -3605,6 +3609,15 @@ commit_case(
     "out %r" % _ol[:160],
 )
 _cachef = os.path.join(_as_git(_dl, "rev-parse", "--absolute-git-dir"), "house-rules-issues-cache.json")
+try:
+    _lmsg = json.loads(_ol).get("systemMessage", "")
+except ValueError:
+    _lmsg = "unparseable"
+commit_case(
+    "issuelist: the user sees `house-rules: 2 open issues loaded` in the same single JSON object as the context",
+    _lmsg == "house-rules: 2 open issues loaded" and _lctx != "" and _ol.strip().count("\n") == 0,
+    "systemMessage %r" % _lmsg,
+)
 _iss_stub(False)
 _, _ol2, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
 commit_case(
@@ -3617,6 +3630,22 @@ commit_case(
     "issuelist: a gh failure prints `could not list open issues (<reason>)` and no context",
     "could not list open issues (HTTP 401: bad credentials" in _ol3 and _stop_context(_ol3) == "", "out %r" % _ol3[:160],
 )
+commit_case(
+    "issuelist: a gh failure shows no 'loaded' note, only the could-not-list message",
+    "loaded" not in _ol3 and "open issues" in _ol3, "out %r" % _ol3[:100],
+)
+os.remove(_cachef) if os.path.exists(_cachef) else None
+_iss_stub("empty")
+_, _ol3b, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+try:
+    _emsg = json.loads(_ol3b).get("systemMessage", "")
+except ValueError:
+    _emsg = "unparseable"
+commit_case(
+    "issuelist: an empty list shows `house-rules: no open issues`",
+    _emsg == "house-rules: no open issues", "systemMessage %r" % _emsg,
+)
+os.remove(_cachef) if os.path.exists(_cachef) else None
 _iss_stub(True)
 _dnr = _iss_repo(remote="git@example.com:o/r.git")
 _, _ol4, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dnr}, _dnr)
