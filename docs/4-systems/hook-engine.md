@@ -95,6 +95,20 @@ and treated as no gate. `HOUSE_RULES_ISSUES=off` disables all of it. Known limit
 through the `PowerShell` tool is not recorded (the `autosave` entry matches `Bash`, not `PowerShell`, and
 widening it would add a process per PowerShell call). Plan: `docs/plans/issue-workflow-build-plan.md`.
 
+**Helper tiers and the spawn cap (2.50.0, issues #110-#112).** `agents/executor.md` is retired; `scout`
+(haiku; Read, Grep, Glob), `builder` (sonnet; Read, Edit, Write, Bash, Grep, Glob) and `reviewer` (opus;
+Read, Grep, Glob, Bash) replace it, each a short role with a tool allowlist, and none can start a
+subagent. `agentcap` is a PreToolUse entry matched to `Agent`/`Task` (it runs only when a spawn is
+attempted, never on Write, Edit or Bash). It reads a JSON list in the common repository directory
+(`git rev-parse --git-common-dir`, found through the `commondir` file `_git_dir()`'s directory holds, so
+every worktree shares it), kept by `announce` (adds) and `verdict` (removes). Two running subagents deny a
+third; a record older than 45 minutes is ignored; a spawn whose payload carries `agent_id` is denied;
+`HOUSE_RULES_AGENTS=off` disables it; a corrupt or unreadable file is one `systemMessage` and the spawn is
+allowed. `audit`/`verdict`/`userpromptaudit` now print counts per tool, every failed command in full,
+every file written and a count of the other commands. `issuelist` adds a visible
+`house-rules: N open issues loaded` (or `no open issues`) in the same JSON object as its context.
+Plan: `docs/plans/subagent-tiers-build-plan.md`.
+
 ## Invariants
 
 - **`hook.py` is stdlib-only Python** (`hook.py:8-10`) — no third-party imports, nothing beyond

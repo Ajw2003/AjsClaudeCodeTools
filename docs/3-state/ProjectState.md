@@ -75,6 +75,14 @@ same call sequence replayed through `run.sh` in a scratch clone of PlunderSpell 
 verified: a real Claude Code session in another repo, and a `gh issue create` made through the
 `PowerShell` tool, which is not recorded.
 
+2.50.0 (2026-10-01, #110-#112) retires the executor for three tiers (`scout`, `builder`, `reviewer`),
+adds the `agentcap` spawn cap (two running, 45-minute expiry, no spawns from subagents), quiets the
+subagent audit, and shows a visible note when the open-issue list loads. Verified by `verify.py` (cases
+for each cap behaviour, the audit size bound and the issue-list note) and by parsing the tier files. Not
+verified: a real spawn of each tier, which needs the plugin updated and Claude Code restarted; and that a
+real PreToolUse `Agent` payload carries `agent_id` for a call made from inside a subagent (the cap relies
+on the tier files omitting the `Agent` tool if it does not).
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

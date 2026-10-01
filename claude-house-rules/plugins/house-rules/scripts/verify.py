@@ -172,6 +172,8 @@ RULE_DESTRUCTIVE = "Never take a destructive action without checking first"
 # --- branch fixtures -------------------------------------------------------------------------
 # Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
 _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
+# Simulated spawns in this file must never leave records in the real repository's agent list.
+os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
 
 
@@ -5375,6 +5377,95 @@ if ("    subagentrules)" in read(RUN)):
     print("          no working Python still reports the subagent got no rules")
 else:
     report("FAIL", "run.sh names subagentrules in its no-interpreter fallback")
+
+# --- agentcap (2.50.0, #112): at most two running subagents, none started by a subagent -------
+_cap_state = os.path.join(_FIXTURE_ROOT, "cap-agents.json")
+
+
+def _cap_env(**extra):
+    e = dict(os.environ)
+    e["HOUSE_RULES_AGENTS_STATE"] = _cap_state
+    e.pop("HOUSE_RULES_AGENTS", None)
+    e.update(extra)
+    return e
+
+
+def _cap_spawn(agent_id="", **extra):
+    pl = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {"prompt": "x"}}
+    if agent_id:
+        pl["agent_id"] = agent_id
+    return run_hook("agentcap", json.dumps(pl), env=_cap_env(**extra))
+
+
+def _cap_denied(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    except Exception:
+        return False
+
+
+def _cap_start(aid, atype="house-rules:builder"):
+    return run_hook("announce", sub_payload(hook_event_name="SubagentStart", agent_type=atype, agent_id=aid), env=_cap_env())
+
+
+def _cap_stop(aid, atype="house-rules:builder"):
+    return run_hook("verdict", sub_payload(hook_event_name="SubagentStop", agent_type=atype, agent_id=aid), env=_cap_env())
+
+
+if os.path.exists(_cap_state):
+    os.remove(_cap_state)
+_c0 = _cap_spawn()
+_cap_start("capA")
+_c1 = _cap_spawn()
+_cap_start("capB")
+_c2 = _cap_spawn()
+commit_case(
+    "agentcap: the first and second spawn are allowed, the third is denied naming both running agents",
+    not _cap_denied(_c0[1]) and not _cap_denied(_c1[1]) and _cap_denied(_c2[1])
+    and "capA" in _c2[1] and "capB" in _c2[1] and "Wait for one to finish" in _c2[1],
+    "out %r" % _c2[1][:200],
+)
+_cap_stop("capA")
+_c3 = _cap_spawn()
+commit_case(
+    "agentcap: a record is cleared by SubagentStop, so a spawn is allowed again",
+    not _cap_denied(_c3[1]) and "capA" not in open(_cap_state, encoding="utf-8").read(),
+    "after stop: %r" % open(_cap_state, encoding="utf-8").read()[:120],
+)
+_stale = time.time() - 46 * 60
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    json.dump({"agents": [{"id": "old1", "type": "x", "start": _stale}, {"id": "old2", "type": "x", "start": _stale}]}, _f)
+_c4 = _cap_spawn()
+commit_case(
+    "agentcap: records older than 45 minutes are ignored",
+    not _cap_denied(_c4[1]), "out %r" % _c4[1][:120],
+)
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    json.dump({"agents": [{"id": "k1", "type": "x", "start": time.time()}, {"id": "k2", "type": "x", "start": time.time()}]}, _f)
+_c5 = _cap_spawn(HOUSE_RULES_AGENTS="off")
+_c5b = _cap_spawn()
+commit_case(
+    "agentcap: HOUSE_RULES_AGENTS=off disables the cap (and the same state denies without it)",
+    _c5[1].strip() == "" and _cap_denied(_c5b[1]), "off: %r; on: %r" % (_c5[1][:60], _c5b[1][:60]),
+)
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    _f.write("{not json")
+_c6 = _cap_spawn()
+try:
+    _c6msg = json.loads(_c6[1]).get("systemMessage", "")
+except ValueError:
+    _c6msg = "unparseable"
+commit_case(
+    "agentcap: a corrupt state file fails open and says so in one line",
+    _c6[0] == 0 and not _cap_denied(_c6[1]) and "could not read" in _c6msg and "allowed" in _c6msg,
+    "systemMessage %r" % _c6msg[:160],
+)
+os.remove(_cap_state)
+_c7 = _cap_spawn(agent_id="sub9")
+commit_case(
+    "agentcap: a spawn made by a subagent (payload carries agent_id) is denied",
+    _cap_denied(_c7[1]) and "sub9" in _c7[1], "out %r" % _c7[1][:160],
+)
 
 # --- verdict's audit summary: built from the transcript, not the subagent's own report --------
 code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"))

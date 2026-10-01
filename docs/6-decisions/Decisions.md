@@ -7,6 +7,30 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-01 - Three helper tiers replace the executor; spawns are capped (2.50.0)
+
+**Context.** Issues #110-#112. aj found the executor too slow (a build ran 32 minutes), too costly
+(about 54k tokens just to start) and too chatty. Measured spawn cost is dominated by tool definitions,
+so a short tool allowlist is the main lever.
+
+**Decision.** `agents/executor.md` is deleted. `scout` (haiku; Read, Grep, Glob), `builder` (sonnet; Read,
+Edit, Write, Bash, Grep, Glob) and `reviewer` (opus; Read, Grep, Glob, Bash) replace it; none has the
+`Agent` tool, so nesting is impossible by construction. Tier files carry only model, tools and role; the
+rules core reaches them through `subagentrules`. A PreToolUse `agentcap` entry (matched to Agent only)
+denies a third running subagent, using a list in the common repository directory; a record older than 45
+minutes is ignored because SubagentStop did not fire during the 2026-09-29 outage; it fails open and loud,
+and `HOUSE_RULES_AGENTS=off` disables it. The subagent audit now prints tool counts, failed commands in
+full, files written and a count of other commands. `issuelist` shows a visible loaded note.
+
+**Alternatives rejected.** Keeping the executor with a trimmed prompt (the tool definitions were the cost);
+blocking nesting only by a hook (the tool list does it with no process).
+
+**Left alone on purpose.** The archivist, `commitgate`, `autosave`, `worktreesweep`, `subagentcommit`.
+
+**Supersedes.** The executor-based delegation in the 2026-09 entries; those entries stay as history.
+
+---
+
 ## 2026-09-30 - Hooks force the issue workflow; Claude still performs it (2.49.0)
 
 **Context.** Issues #108-#110, parent #107. Plans, pull requests and closures were not tied to
