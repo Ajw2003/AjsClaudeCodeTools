@@ -1517,9 +1517,9 @@ else:
 
 # --- the delegate reminder fires after ExitPlanMode -------------------------------------------
 code, out, err = run_hook("delegate", "")
-if '"hookEventName":"PostToolUse"' in out and "@house-rules:executor" in out:
+if '"hookEventName":"PostToolUse"' in out and "@house-rules:builder" in out:
     report("PASS", "delegate reminds Claude to hand the plan to the executor subagent")
-    print("          names @house-rules:executor and carries the right hookEventName")
+    print("          names @house-rules:builder and carries the right hookEventName")
 else:
     report("FAIL", "delegate reminds Claude to hand the plan to the executor subagent")
     print(f"          got: {out}")
@@ -2886,7 +2886,7 @@ def _subagent_stop(paths, active=False, **env_extra):
             {"type": "tool_use", "id": "s%d" % i, "name": "Write", "input": {"file_path": p}}]}})
         for i, p in enumerate(paths)
     ])
-    payload = json.dumps({"hook_event_name": "SubagentStop", "agent_type": "house-rules:executor",
+    payload = json.dumps({"hook_event_name": "SubagentStop", "agent_type": "house-rules:builder",
                           "agent_transcript_path": tr, "stop_hook_active": active})
     return run_hook("subagentcommit", payload, env=_project_env(_FIXTURE_ROOT, **env_extra))[1]
 
@@ -3181,7 +3181,7 @@ _had = bool(_as_remote_ref(_bs, "worktree-agent-done"))
 _as_git(_ds, "add", "-A")
 _as_git(_ds, "commit", "-q", "-m", "feat: s")
 out = run_hook("subagentcommit", json.dumps({
-    "hook_event_name": "SubagentStop", "agent_type": "house-rules:executor", "stop_hook_active": False,
+    "hook_event_name": "SubagentStop", "agent_type": "house-rules:builder", "stop_hook_active": False,
     "agent_transcript_path": _hand_transcript("autosave-done", [json.dumps({"type": "assistant", "message": {
         "content": [{"type": "tool_use", "id": "d1", "name": "Write", "input": {"file_path": _ps}}]}})])}),
     env=_project_env(_FIXTURE_ROOT))[1]
@@ -3787,7 +3787,7 @@ RESTATEMENTS = [
         "the delegate reminder (ExitPlanMode, including the worktree-isolation mandate)",
         lambda: run_hook("delegate", "")[1],
         [
-            "@house-rules:executor", "plan is settled", "proactiv", "one file",
+            "@house-rules:builder", "plan is settled", "proactiv", "one file",
             "three steps or fewer", "one delegation per group", "isolation", "worktree",
         ],
         False,
@@ -3885,7 +3885,7 @@ def check_delegate(title, empty_path):
     bad = []
     if '"hookEventName":"PostToolUse"' not in out:
         bad.append("wrong or missing hookEventName")
-    if "@house-rules:executor" not in out:
+    if "@house-rules:builder" not in out:
         bad.append("it does not name the executor subagent")
     if "one file" not in out or "three steps or fewer" not in out:
         bad.append("the skip-it exception is not stated as a count (one file, three steps)")
@@ -3906,7 +3906,7 @@ check_delegate("the delegation nudge still works with PATH empty (it depends on 
 deldrift = []
 if '"matcher": "ExitPlanMode"' not in hooks_json_text:
     deldrift.append("hooks.json has no ExitPlanMode matcher")
-if "@house-rules:executor" not in rules_text:
+if "@house-rules:builder" not in rules_text:
     deldrift.append("house-rules.md no longer states the delegation rule")
 if not deldrift:
     report("PASS", "delegate runs on ExitPlanMode and matches the rules document")
@@ -3956,13 +3956,13 @@ else:
             agentdrift.append(f"executor.md sets {dead}, which plugin subagents ignore")
 if not agentdrift:
     report("PASS", "the executor subagent exists and is pinned to Sonnet")
-    print("          execution delegated to @house-rules:executor runs on sonnet, not opus")
+    print("          execution delegated to @house-rules:builder runs on sonnet, not opus")
 else:
     report("FAIL", "the executor subagent exists and is pinned to Sonnet")
     print(f"          {'; '.join(agentdrift)}")
 
 # --- executor.md does not claim the rules are already in its context, and carries a digest ----
-# A clean @house-rules:executor spawn was asked directly and answered no: SessionStart
+# A clean @house-rules:builder spawn was asked directly and answered no: SessionStart
 # additionalContext does not reach subagents. executor.md used to assert the opposite ("The
 # house rules are already in this session's context"), which is the bug this check catches.
 digestdrift = []
@@ -4261,7 +4261,7 @@ if _absent:
     pass  # already reported as skipped above
 elif not moddrift:
     report("PASS", "install.py sets model = opusplan and the docs scope it correctly")
-    print("          opusplan on the CLI and IDE; every other surface via @house-rules:executor")
+    print("          opusplan on the CLI and IDE; every other surface via @house-rules:builder")
 else:
     report("FAIL", "install.py sets model = opusplan and the docs scope it correctly")
     print(f"          {'; '.join(moddrift)}")
@@ -4883,12 +4883,12 @@ for prompt in ("go ahead", "implement it in two groups", "do it", "proceed", "sh
     code, text = scope_text(prompt)
     if code != 0:
         goahead.append(f"{prompt!r} exited {code} - scope must never exit non-zero")
-    if "@house-rules:executor" not in text:
+    if "@house-rules:builder" not in text:
         goahead.append(f"{prompt!r} is a go-ahead but got no delegation clause")
 for prompt in ("what does this function do?", "explain the guard handler",
                "why did the suite fail?"):
     code, text = scope_text(prompt)
-    if "@house-rules:executor" in text:
+    if "@house-rules:builder" in text:
         goahead.append(f"{prompt!r} is a question, not a go-ahead, but got the clause")
 if not goahead:
     report("PASS", "scope adds the delegation clause on a go-ahead and not on a question")
@@ -4902,7 +4902,7 @@ else:
 # reminder - and it must never be able to take the prompt down with it.
 clause_drift = []
 _, goahead_text = scope_text("go ahead and implement it")
-for phrase in ("@house-rules:executor", "proactiv", "one file", "three steps or fewer"):
+for phrase in ("@house-rules:builder", "proactiv", "one file", "three steps or fewer"):
     if phrase.lower() not in goahead_text.lower():
         clause_drift.append(f"{phrase!r} missing from the emitted go-ahead clause")
     if phrase.lower() not in rules_text.lower():
@@ -5007,12 +5007,12 @@ def sub_payload(**kw):
 
 # announce names the agent, what it DECLARES, the plugin version and the digest fingerprint.
 code, out, err = run_hook("announce", sub_payload(
-    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1", effort="low"
+    hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="x1", effort="low"
 ))
 ann = []
 if code != 0:
     ann.append(f"exit {code}, must never be non-zero")
-for needle in ("house-rules:executor", "declared model sonnet", "digest ", "house-rules 2."):
+for needle in ("house-rules:builder", "declared model sonnet", "digest ", "house-rules 2."):
     if needle not in out:
         ann.append(f"announce output does not mention {needle!r}")
 if not ann:
@@ -5055,7 +5055,7 @@ else:
 # A set model-override env var is the documented way "model: sonnet" is not what runs.
 _ovr = dict(os.environ)
 _ovr["CLAUDE_CODE_SUBAGENT_MODEL_FORCE"] = "opus"
-code, out, err = run_hook("announce", sub_payload(agent_type="house-rules:executor"), env=_ovr)
+code, out, err = run_hook("announce", sub_payload(agent_type="house-rules:builder"), env=_ovr)
 if "CLAUDE_CODE_SUBAGENT_MODEL_FORCE" in out and "may not be what runs" in out:
     report("PASS", "announce warns when a model-override env var is set")
     print("          names the variable that can silently override the declared model")
@@ -5065,7 +5065,7 @@ else:
 
 # verdict turns the declaration into evidence: the model that actually served the subagent.
 code, out, err = run_hook("verdict", sub_payload(
-    hook_event_name="SubagentStop", agent_type="house-rules:executor", agent_id="sonnet"
+    hook_event_name="SubagentStop", agent_type="house-rules:builder", agent_id="sonnet"
 ))
 if code == 0 and "claude-sonnet-4-5-20250929" in out and "MATCH" in out and "2 assistant turns" in out:
     report("PASS", "verdict reports the model that actually served the subagent")
@@ -5075,7 +5075,7 @@ else:
     print(f"          exit {code}, out {out[:200]!r}")
 
 # The case the whole feature exists for: declared Sonnet, actually ran on something else.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="opus"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="opus"))
 if code == 0 and "MISMATCH" in out and "claude-opus-5" in out:
     report("PASS", "verdict reports MISMATCH when the observed model is not the declared one")
     print("          a delegation that did not run on what it declares is now visible")
@@ -5085,7 +5085,7 @@ else:
 
 # The completion-sanity check: zero tool calls across the whole transcript is exactly the
 # hollow "stop" that let a duplicate delegation get dispatched.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"))
 if code == 0 and "SUSPICIOUS COMPLETION" in out and "0 tool calls" in out:
     report("PASS", "verdict flags a completion with zero tool calls")
     print("          a status-update-only finish is now visible, not read as done work")
@@ -5095,7 +5095,7 @@ else:
 
 # One tool call present (so the zero-tool-calls path does not fire), but the last message
 # still reads like a deferral - the other half of the same signal.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="deferral"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="deferral"))
 if code == 0 and "SUSPICIOUS COMPLETION" in out and "i'll report back" in out.lower():
     report("PASS", "verdict flags a last message that matches a deferral phrase")
     print("          names the phrase, does not fire the zero-tool-calls branch instead")
@@ -5105,7 +5105,7 @@ else:
 
 # An ordinary finish - tool calls present, last message an ordinary summary - must not
 # false-positive as a suspicious completion.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="normal"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="normal"))
 if code == 0 and "SUSPICIOUS COMPLETION" not in out:
     report("PASS", "verdict does not flag an ordinary did-the-work-then-reported-back finish")
     print("          no false positive on a normal completion")
@@ -5115,13 +5115,13 @@ else:
 
 # Nothing fails silently: every "I could not tell" path says so, and says what it tried.
 quiet = []
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="ghost"))
 if code != 0 or "unverified" not in out or "tried:" not in out:
     quiet.append(f"missing transcript: exit {code}, out {out[:120]!r}")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="nomodel"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="nomodel"))
 if code != 0 or "unverified" not in out:
     quiet.append(f"transcript with no model field: exit {code}, out {out[:120]!r}")
-code, out, err = run_hook("verdict", '{"agent_type":"house-rules:executor"}')
+code, out, err = run_hook("verdict", '{"agent_type":"house-rules:builder"}')
 if code != 0 or "unverified" not in out:
     quiet.append(f"not enough fields to locate one: exit {code}, out {out[:120]!r}")
 for ev in ("announce", "verdict"):
@@ -5143,20 +5143,20 @@ else:
 _off = dict(os.environ)
 _off["HOUSE_RULES_DELEGATION"] = "off"
 deloff = []
-for ev, pl in (("announce", sub_payload(agent_type="house-rules:executor")),
-               ("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"))):
+for ev, pl in (("announce", sub_payload(agent_type="house-rules:builder")),
+               ("verdict", sub_payload(agent_type="house-rules:builder", agent_id="sonnet"))):
     code, out, err = run_hook(ev, pl, env=_off)
     if out.strip():
         deloff.append(f"{ev} still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
 _tron = dict(os.environ)
 _tron["HOUSE_RULES_TRACE"] = "off"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"), env=_tron)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="sonnet"), env=_tron)
 if "claude-sonnet" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the verdict, which is not a trace")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"), env=_off)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"), env=_off)
 if out.strip():
     deloff.append(f"suspicious-completion report still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"), env=_tron)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"), env=_tron)
 if "SUSPICIOUS COMPLETION" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the suspicious-completion report, which is not a trace")
 if not deloff:
@@ -5207,7 +5207,7 @@ else:
 # Judged against the real rules file, since a hand-copied fixture core would only prove the
 # handler can read a fixture, not that it stays in sync with the rules a human session sees.
 code, out, err = run_hook("subagentrules", sub_payload(
-    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1"
+    hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="x1"
 ))
 sar = []
 if code != 0:
@@ -5301,7 +5301,7 @@ else:
     report("FAIL", "run.sh names subagentrules in its no-interpreter fallback")
 
 # --- verdict's audit summary: built from the transcript, not the subagent's own report --------
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"))
 audit = []
 if code != 0:
     audit.append(f"exit {code}, must never be non-zero")
@@ -5320,7 +5320,7 @@ else:
         print(f"          {a}")
 
 # The cap: 45 commands in the fixture, at most 40 shown plus an explicit "N more".
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="auditbig"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="auditbig"))
 if code == 0 and out.count("cmd: Bash [ok]: echo") <= 40 and "5 more" in out:
     report("PASS", "verdict's audit summary caps the command list and says how many more")
     print(f"          {out.count('cmd: Bash [ok]: echo')} commands shown, '5 more' present")
@@ -5333,7 +5333,7 @@ _ledger_root = tempfile.mkdtemp(prefix="house-rules-ledger-")
 atexit.register(shutil.rmtree, _ledger_root, True)
 _ledger_off = dict(os.environ)
 _ledger_off["CLAUDE_PROJECT_DIR"] = _ledger_root
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_off)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"), env=_ledger_off)
 _ledger_dir = os.path.join(_ledger_root, "docs", "sessions")
 if "LEDGER" not in out and not os.path.isdir(_ledger_dir):
     report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER is off by default - no docs/sessions/ write")
@@ -5344,7 +5344,7 @@ else:
 
 _ledger_on = dict(_ledger_off)
 _ledger_on["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_on)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"), env=_ledger_on)
 _written = [f for f in os.listdir(_ledger_dir)] if os.path.isdir(_ledger_dir) else []
 if code == 0 and "LEDGER: rendered" in out and any(f.endswith(".md") for f in _written):
     report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
@@ -5359,7 +5359,7 @@ atexit.register(shutil.rmtree, _ledger_bad_root, True)
 _ledger_bad = dict(os.environ)
 _ledger_bad["CLAUDE_PROJECT_DIR"] = _ledger_bad_root
 _ledger_bad["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"), env=_ledger_bad)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="ghost"), env=_ledger_bad)
 # "ghost" has no transcript file at all, so verdict returns before ever reaching the ledger
 # step - this proves that early return, not the ledger call, never crashes.
 if code == 0 and "unverified" in out:

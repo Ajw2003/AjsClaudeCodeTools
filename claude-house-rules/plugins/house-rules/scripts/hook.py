@@ -46,6 +46,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 
 
 def read_payload():
@@ -1561,7 +1562,8 @@ SCOPE_REMINDER_SHORT = (
 # is the only stateless place to close it: the go-ahead is in the prompt text.
 SCOPE_DELEGATE_CLAUSE = (
     "\n- This reads like a go-ahead on settled work. Hand the implementation to the "
-    "@house-rules:executor subagent rather than running it on the planning model; its "
+    "@house-rules:builder subagent (one per issue, never per step; at most two running) rather "
+    "than running it on the planning model; its "
     "description is marked for proactive use, so that is authorized without a fresh ask. "
     "Skip it only when the work touches one file AND is three steps or fewer, and say so in "
     "one line naming the count."
@@ -2493,9 +2495,10 @@ def event_runnable():
 
 DELEGATE_NOTE = (
     "House rules, execution model: the plan is settled, so the implementation is delegated "
-    "work now. Hand it to the @house-rules:executor subagent (Task tool, subagent_type "
-    "house-rules:executor). The plan is already committed to the repo as a real file (per the "
-    "artifact rule); pass that file's path in the delegation prompt so the executor reads the "
+    "work now. Hand it to the @house-rules:builder subagent (Task tool, subagent_type "
+    "house-rules:builder), one per issue and never per step; use @house-rules:scout for "
+    "read-only lookups, and never more than two subagents at once. The plan is already committed to the repo as a real file (per the "
+    "artifact rule); pass that file's path in the delegation prompt so the builder reads the "
     "decided plan instead of re-deriving it from this conversation - the ExitPlanMode payload "
     "itself carries the plan as inline text, not a path, so naming the file is on you, not "
     "something to read off the tool call. That agent is pinned to Sonnet at low effort, which "
@@ -2605,7 +2608,16 @@ SUBAGENT_MANDATE = (
 )
 
 
-def _subagent_core(rules_path=None):
+# The tier agents (agents/scout.md, builder.md, reviewer.md) carry their own short report formats,
+# so they are not also told to list every command verbatim. Every other agent type still is.
+TIER_AGENTS = ("scout", "builder", "reviewer")
+
+
+def _is_tier_agent(agent_type):
+    return (agent_type or "").split(":")[-1].strip() in TIER_AGENTS
+
+
+def _subagent_core(rules_path=None, agent_type=""):
     """The marked sections of house-rules.md, in file order, plus SUBAGENT_MANDATE.
 
     Returns (text, problems). A section is a "## " heading through the next "## " heading (or
@@ -2659,7 +2671,7 @@ def event_subagentrules():
         if not _delegation_enabled():
             return 0
         payload = read_payload()
-        core, problems = _subagent_core()
+        core, problems = _subagent_core(agent_type=_field(_AGENT_TYPE_RE, payload))
         bits = []
         if not payload:
             problems.append("the SubagentStart payload was empty")
@@ -2724,7 +2736,7 @@ def _field(pattern, payload, problems=None):
 def _agent_file(agent_type):
     """The shipped definition for this agent, or "" if the plugin does not ship it.
 
-    agent_type arrives plugin-scoped ("house-rules:executor"), so the scope prefix is
+    agent_type arrives plugin-scoped ("house-rules:builder"), so the scope prefix is
     stripped before looking for agents/<name>.md. An agent the plugin does not ship is not
     an error - it is the common case (Explore, Plan, general-purpose) and is reported as
     "no declaration", which is still the useful half of the answer.
@@ -2811,6 +2823,10 @@ def event_announce():
         effort = _field(_EFFORT_RE, payload, problems)
         version = _plugin_version(problems)
         model, decl_effort, digest = _declared(agent_type, problems)
+        if agent_id:
+            cap_note = _agentcap_update(add=(agent_id, agent_type))
+            if cap_note:
+                problems.append(cap_note)
 
         bits = ["house-rules: subagent starting - %s" % (agent_type or "agent type not in payload")]
         if agent_id:
@@ -2934,6 +2950,9 @@ def _observed_models(path):
 # a systemMessage so large it becomes unreadable (or gets truncated) itself.
 AUDIT_MAX_COMMANDS = 40
 AUDIT_COMMAND_CHARS = 160
+AUDIT_MAX_FAILED = 8
+AUDIT_FAILED_CHARS = 500
+AUDIT_MAX_FILES = 15
 _AUDIT_COMMAND_TOOLS = ("Bash", "PowerShell")
 _AUDIT_WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
 
@@ -3017,12 +3036,21 @@ def _audit_report(found):
         return "AUDIT COULD NOT TELL: transcript at %s could not be re-read for the audit " \
             "summary (%s)" % (found, type(exc).__name__)
     lines = ["AUDIT (from the transcript, not the subagent's own report):"]
-    lines.extend("  cmd: %s" % l for l in _capped_lines(commands, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
-    lines.extend("  wrote: %s" % l for l in _capped_lines(wrote, AUDIT_MAX_COMMANDS, AUDIT_COMMAND_CHARS))
     if tool_counts:
         lines.append(
             "  tool uses: %s" % ", ".join("%s x%d" % (n, c) for n, c in sorted(tool_counts.items()))
         )
+    failed = [c for c in commands if not c.split(": ", 1)[0].endswith("[ok]")]
+    if failed:
+        lines.append(
+            "  FAILED commands (%d) - a report that claims success without accounting for these "
+            "is unsupported:" % len(failed)
+        )
+        lines.extend("    cmd: %s" % l for l in _capped_lines(failed, AUDIT_MAX_FAILED, AUDIT_FAILED_CHARS))
+    files = list(dict.fromkeys(wrote))
+    lines.extend("  wrote: %s" % l for l in _capped_lines(files, AUDIT_MAX_FILES, AUDIT_COMMAND_CHARS))
+    if len(commands) > len(failed):
+        lines.append("  other commands: %d ok (not listed)" % (len(commands) - len(failed)))
     if wrote and _commit_check_enabled():
         paths = [w.split(" ", 1)[1] for w in wrote if " " in w]
         try:
@@ -3109,6 +3137,11 @@ def event_verdict():
         raw_type = _field(_AGENT_TYPE_RE, payload, problems)
         agent_type = raw_type or "agent type not in payload"
         declared, _decl_effort, _digest = _declared(raw_type, problems)
+        stop_id = _field(_AGENT_ID_RE, payload)
+        if stop_id:
+            cap_note = _agentcap_update(remove=stop_id)
+            if cap_note:
+                problems.append(cap_note)
 
         candidates = _transcript_candidates(payload)
         if not candidates:
@@ -3221,6 +3254,136 @@ def event_verdict():
                 "error (%s) and is offline for this call." % type(exc).__name__
             }
         )
+    return 0
+
+
+# agentcap — PreToolUse on Agent|Task. Counts running subagents so the spawn count stays under
+# control (issue #112). The list is kept by announce (SubagentStart adds) and verdict
+# (SubagentStop removes); this handler only reads it. The state file lives in the COMMON repo
+# directory because subagents run in their own worktrees, whose per-worktree directory is not
+# shared. A record older than AGENT_STALE_SECONDS is ignored: a stopped session or an outage
+# means SubagentStop never fires (2026-09-29). Fails open, loud.
+AGENT_CAP = 2
+AGENT_STALE_SECONDS = 45 * 60
+AGENT_STATE_FILE = "house-rules-agents.json"
+
+
+def _agentcap_enabled():
+    return os.environ.get("HOUSE_RULES_AGENTS", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _common_git_dir(start):
+    gd = _git_dir(start)
+    if not gd:
+        return None
+    cd = os.path.join(gd, "commondir")
+    if os.path.isfile(cd):
+        rel = _read_text(cd).strip()
+        if rel:
+            return os.path.abspath(rel if os.path.isabs(rel) else os.path.join(gd, rel))
+    return gd
+
+
+def _agentcap_path():
+    # HOUSE_RULES_AGENTS_STATE points the state file elsewhere: verify.py and measure_footprint.py
+    # use it so their simulated spawns never leave records in the real repository.
+    override = os.environ.get("HOUSE_RULES_AGENTS_STATE", "").strip()
+    if override:
+        return override
+    cd = _common_git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    return os.path.join(cd, AGENT_STATE_FILE) if cd else None
+
+
+def _agentcap_load(path):
+    """The records, or ValueError when the file exists but is not the expected shape."""
+    if not os.path.isfile(path):
+        return []
+    data = json.loads(_read_text(path))
+    recs = data.get("agents") if isinstance(data, dict) else None
+    if not isinstance(recs, list) or not all(
+        isinstance(r, dict) and isinstance(r.get("start"), (int, float)) for r in recs
+    ):
+        raise ValueError("unexpected shape")
+    return recs
+
+
+def _agentcap_live(recs, now=None):
+    now = time.time() if now is None else now
+    return [r for r in recs if now - r["start"] <= AGENT_STALE_SECONDS]
+
+
+def _agentcap_save(path, recs):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({"agents": recs}, f)
+    os.replace(tmp, path)
+
+
+def _agentcap_update(add=None, remove=None):
+    """Add or remove one record. Returns "" or a one-line problem (never raises)."""
+    if not _agentcap_enabled():
+        return ""
+    note = ""
+    try:
+        path = _agentcap_path()
+        if not path:
+            return "agent cap: not inside a repository, so running subagents are not tracked"
+        try:
+            recs = _agentcap_load(path)
+        except (ValueError, OSError) as exc:
+            recs = []
+            note = "agent cap: state file %s was unreadable (%s) and was reset" % (path, type(exc).__name__)
+        recs = _agentcap_live(recs)
+        if remove:
+            recs = [r for r in recs if r.get("id") != remove]
+        if add:
+            recs = [r for r in recs if r.get("id") != add[0]]
+            recs.append({"id": add[0], "type": add[1], "start": time.time()})
+        _agentcap_save(path, recs)
+    except Exception as exc:
+        return "agent cap: could not update the running-subagent list (%s: %s)" % (type(exc).__name__, exc)
+    return note
+
+
+def event_agentcap():
+    try:
+        if not _agentcap_enabled():
+            return 0
+        payload = read_payload()
+        caller = ""
+        try:
+            data = json.loads(payload) if payload else {}
+            caller = (data.get("agent_id") or "") if isinstance(data, dict) else ""
+        except ValueError:
+            pass
+        if caller:
+            reason = (
+                "house-rules: a subagent may not start another subagent (agent %s tried). "
+                "Report back to the parent and let it decide. HOUSE_RULES_AGENTS=off disables "
+                "this check." % caller
+            )
+        else:
+            path = _agentcap_path()
+            try:
+                recs = _agentcap_live(_agentcap_load(path)) if path else []
+            except (ValueError, OSError) as exc:
+                emit({"systemMessage": "house-rules: agent cap could not read %s (%s); the spawn is "
+                      "allowed, the cap is not enforced this time." % (path, type(exc).__name__)})
+                return 0
+            if len(recs) < AGENT_CAP:
+                return 0
+            names = ", ".join("%s %s" % (r.get("type") or "agent", r.get("id") or "?") for r in recs)
+            reason = (
+                "house-rules: %d subagents are already running (%s). Wait for one to finish "
+                "before spawning another; the cap is %d. A record older than %d minutes is "
+                "ignored. HOUSE_RULES_AGENTS=off disables this check."
+                % (len(recs), names, AGENT_CAP, AGENT_STALE_SECONDS // 60)
+            )
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": reason}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: the agent cap hit an error (%s: %s) and did not "
+              "run for this call; the spawn is allowed." % (type(exc).__name__, exc)})
     return 0
 
 
@@ -3958,8 +4121,11 @@ def event_issuelist():
             out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": text}
         if problem and not text:
             out["systemMessage"] = "house-rules: could not list open issues (%s)" % problem
-        elif problem:
-            out["systemMessage"] = "house-rules: open issue list: %s" % problem
+        elif text:
+            n = sum(1 for l in text.splitlines() if l.startswith("- #"))
+            note = ("house-rules: %d open issue%s loaded" % (n, "" if n == 1 else "s")
+                    if n else "house-rules: no open issues")
+            out["systemMessage"] = note + (" | house-rules: open issue list: %s" % problem if problem else "")
         if out:
             emit(out)
     except Exception as exc:
@@ -5463,6 +5629,7 @@ EVENTS = {
     "autosave": event_autosave,
     "commitgate": event_commitgate,
     "worktreesweep": event_worktreesweep,
+    "agentcap": event_agentcap,
     "audit": event_audit,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,

@@ -22,7 +22,7 @@ forcing displaces is a settings-file value, not a live choice.
 stop the decision being reversed by accident in whichever direction it currently points.
 
 Note that output styles apply to the main conversation only — a subagent runs its own system
-prompt. Work delegated to `@house-rules:executor` is governed by the injected rules, not by this
+prompt. Work delegated to `@house-rules:scout`, `builder` and `reviewer` is governed by the injected rules, not by this
 file. Styles are also read once at session start, so a change needs `/clear` or a new session.
 
 ## The six things every handed-over command carries

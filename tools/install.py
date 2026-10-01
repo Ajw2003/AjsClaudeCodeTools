@@ -15,7 +15,7 @@ hooks, rules and agents — it cannot set anything the Claude Code harness reads
            outranks the model field in any settings file, and 'opusplan' is an alias rather
            than a model so it is not in that picker at all. Cloud sessions run on managed VMs
            that never see a settings file written to this device. On all of those, the
-           Opus/Sonnet split comes from the @house-rules:executor subagent the plugin ships,
+           Opus/Sonnet split comes from the @house-rules tier subagents (scout, builder, reviewer) the plugin ships,
            not from this key.
 
 This script does both halves, so a new device is configured in one command instead of two
@@ -338,7 +338,7 @@ def main():
         print("Note: model = opusplan applies to the CLI and the IDE extensions. The desktop Code")
         print("tab takes its model from the picker beside the send button, and cloud sessions never")
         print("read this file at all. There, the Opus/Sonnet split comes from the plugin delegating")
-        print("execution to @house-rules:executor, which is pinned to Sonnet.")
+        print("execution to @house-rules:builder, which is pinned to Sonnet.")
         print()
 
     sys.exit(1 if failures else 0)
