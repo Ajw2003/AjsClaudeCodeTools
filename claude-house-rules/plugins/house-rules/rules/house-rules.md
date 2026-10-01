@@ -141,10 +141,9 @@ Plans, reports, scripts, findings: real files under `docs/`, never chat-only or 
 
 ## Never hide work: it stays visible, reachable and readable
 
-The user can always see what is being done, check in on it and audit it, on mobile too. No hidden
-windows, `nohup`, or work only I can read. Background work uses a tool they can follow (a
-subagent, Monitor, `run_in_background`), checked for stalls every 5 minutes with `stallcheck.py`.
-If they can't see, reach or read it, the rule is broken. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
+The user can always see, reach and audit what runs, on mobile too: no hidden windows, `nohup`, or
+work only I can read. Background jobs use a followable tool and get a `stallcheck.py` every 5
+minutes. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
 
 ## Never name a local path in an issue or a pull request
 

@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-01 - "Never hide work in the background" becomes "work stays visible, reachable and readable"; every background job gets a 5-minute stall check (#120)
+
+**Context.** The rule said nothing runs in the background. That stopped being true or useful: subagents, Monitor and `run_in_background` are tools the user can follow, and aj works from a phone. aj amended it: "work should never be hidden, unreachable and unreadable. If I cannot see what is being done or reliably check in on or audit long running tasks on mobile then the rule is being broken." Earlier the same day a subagent sat silent for 26 minutes and nothing said so.
+
+**Decision.** The rule is renamed (*Never hide work: it stays visible, reachable and readable*) and rewritten around that test. Hidden windows, `nohup`, detached jobs and logs only Claude reads stay banned (the `guard` patterns are unchanged). Followable background work is allowed. Every background job is checked every 5 minutes with `scripts/stallcheck.py`: the age of the newest write to its transcript or output file against 300 seconds, no model call. Run under Monitor with `--watch` it costs nothing until something stalls. The reminder hooks that said "check in every 10 minutes" now name that command. `worktreesweep`'s 10-minute commit rule is a separate mechanism and is unchanged.
+
+**Status.** Decided. Supersedes the old rule text and heading; the heading string changed in `guard`'s bucket title and the tests.
+
+**Consequence.** A long model call or a usage-limit wait writes nothing, so it reads as STALLED. That is the definition; the answer is to look and tell aj, not to assume the job died. The check is enforced for subagents by the reminder hook text, not by a hook that blocks; for other background commands it relies on Claude following the rule.
+
+---
+
 ## 2026-10-01 - Three helper tiers replace the executor; spawns are capped (2.50.0)
 
 **Context.** Issues #110-#112. aj found the executor too slow (a build ran 32 minutes), too costly
