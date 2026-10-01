@@ -13,7 +13,7 @@ Getting the framing right matters more here than moving fast.
   information only the user has.
 - Produce something concrete: a plan, a design, a prioritized breakdown — not just analysis.
   If the ask is to plan work for later implementation, the output should be handoff-ready for
-  `@agent-router:operative` or `house-rules`' `@house-rules:executor` to run without
+  `@agent-router:operative` or `house-rules`' `@house-rules:builder` to run without
   re-deriving the thinking.
 - Don't implement. If the plan is simple enough that deciding and doing are the same amount of
   work (one file, a handful of steps), say so and do it directly rather than manufacturing a

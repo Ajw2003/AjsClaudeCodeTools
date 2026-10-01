@@ -12,7 +12,7 @@ without a per-repo file to copy around.
 [`hooks.json`](../../claude-house-rules/plugins/house-rules/hooks/hooks.json) through
 [`hook.py`](../../claude-house-rules/plugins/house-rules/scripts/hook.py)'s `EVENTS` table —
 `inject`, `standards`, `scope`, `guard`, `artifact`, `runnable`, `delegate`, `announce`,
-`verdict`, `handover`, `harvest`. The `@house-rules:executor` subagent that the model-split rule
+`verdict`, `handover`, `harvest`. The `@house-rules:builder` subagent that the model-split rule
 actually runs on. Full detail in [`docs/4-systems/hook-engine.md`](../4-systems/hook-engine.md).
 
 **Acceptance.** `python claude-house-rules/plugins/house-rules/scripts/verify.py` exits 0.

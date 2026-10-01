@@ -3668,8 +3668,10 @@ for _name, _o in _issues_outputs:
 commit_case("issues: every new output parses as exactly one JSON object", not _multi, "; ".join(_multi) or "%d outputs checked" % len(_issues_outputs))
 
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
-_tool_cmds = [h["command"] for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) for h in g["hooks"]]
-_count_entries = sum(len(g["hooks"]) for g in _hj["PreToolUse"] + _hj["PostToolUse"])
+# The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count.
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] for h in g["hooks"])]
+_tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
+_count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
     not any("issue" in c for c in _tool_cmds) and _count_entries == 10 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
@@ -5351,14 +5353,15 @@ audit = []
 if code != 0:
     audit.append(f"exit {code}, must never be non-zero")
 for needle in (
-    "transcript found at", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "transcript found at", "tool uses:", "FAILED commands", "cmd: Bash [ERROR]: false",
+    "wrote: Write /proj/a.py", "other commands: 1 ok (not listed)",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in out:
         audit.append(f"audit summary is missing {needle!r}")
 if not audit:
     report("PASS", "verdict's audit summary reports commands with exit status and files written")
-    print("          built from the transcript itself: one ok, one ERROR, one write")
+    print("          built from the transcript itself: counts, the failed command in full, the written file, the ok count")
 else:
     report("FAIL", "verdict's audit summary reports commands with exit status and files written")
     for a in audit:
@@ -5366,12 +5369,12 @@ else:
 
 # The cap: 45 commands in the fixture, at most 40 shown plus an explicit "N more".
 code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="auditbig"))
-if code == 0 and out.count("cmd: Bash [ok]: echo") <= 40 and "5 more" in out:
-    report("PASS", "verdict's audit summary caps the command list and says how many more")
-    print(f"          {out.count('cmd: Bash [ok]: echo')} commands shown, '5 more' present")
+if code == 0 and "cmd: Bash [ok]" not in out and "other commands: 45 ok (not listed)" in out and "Bash x45" in out and len(out) < 1500:
+    report("PASS", "verdict's audit summary counts ok commands instead of listing them, and stays small")
+    print(f"          45 ok commands -> one count line, {len(out)} chars (< 1500)")
 else:
-    report("FAIL", "verdict's audit summary caps the command list and says how many more")
-    print(f"          exit {code}, shown={out.count('cmd: Bash [ok]: echo')}, out[-200:]={out[-200:]!r}")
+    report("FAIL", "verdict's audit summary counts ok commands instead of listing them, and stays small")
+    print(f"          exit {code}, len={len(out)}, out[-200:]={out[-200:]!r}")
 
 # --- HOUSE_RULES_SUBAGENT_LEDGER: off by default, renders docs/sessions/<...> when on ---------
 _ledger_root = tempfile.mkdtemp(prefix="house-rules-ledger-")
@@ -5438,7 +5441,7 @@ except Exception as exc:
     aud.append(f"could not parse audit output: {exc}")
     core_ctx = ""
 for needle in (
-    "finished (foreground)", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "finished (foreground)", "FAILED commands", "cmd: Bash [ERROR]: false", "wrote: Write /proj/a.py",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in core_ctx:
@@ -5528,7 +5531,7 @@ except Exception as exc:
     upa.append(f"could not parse userpromptaudit output: {exc}")
     up_ctx = ""
 for needle in (
-    "finished (background)", "Bash [ok]: pytest -q", "Bash [ERROR]: false",
+    "finished (background)", "FAILED commands", "cmd: Bash [ERROR]: false",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in up_ctx:
