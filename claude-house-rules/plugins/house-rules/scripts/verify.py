@@ -3711,10 +3711,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.50.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.50.1",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.50.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.50.1",
     "rules section + detail file + version",
 )
 
@@ -5583,7 +5583,8 @@ _async_payload = post_agent_payload(
 code, out, err = run_hook("audit", _async_payload)
 code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
 if (code == 0 and "checked for stalls every 5 minutes" in out and "stallcheck.py" in out and "AUDIT" not in out
-        and code_off == 0 and not out_off.strip()):
+        and code_off == 0 and not out_off.strip()
+        and "--session sess1 --agent audit1" in out):
     report("PASS", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
     print("          nothing to audit yet; the check-in nudge appears, and not with HOUSE_RULES_AUTOSAVE=off")
 else:
@@ -5634,6 +5635,34 @@ for _n in os.listdir(_sd):
 _c, _o = _sc_run()
 _cap_case("stallcheck: with nothing to check it says so and exits 2, never silent",
           _c == 2 and "nothing was checked" in _o, "exit %d out %r" % (_c, _o[:160]))
+
+# Scope (issue 123): a watch covers only the calling session's / named agent's transcripts.
+_sdA = os.path.join(_home, ".claude", "projects", "p", "sessA", "subagents")
+_sdB = os.path.join(_home, ".claude", "projects", "p", "sessB", "subagents")
+os.makedirs(_sdA)
+os.makedirs(_sdB)
+for _d, _n in ((_sdA, "aaa"), (_sdA, "xxx"), (_sdB, "bbb")):
+    with open(os.path.join(_d, "agent-%s.jsonl" % _n), "w", encoding="utf-8") as _f:
+        _f.write('{"type":"assistant"}' + chr(10))
+_c, _o = _sc_run("--session", "sessA")
+_cap_case("stallcheck: --session sessA reports only sessA's agents, never sessB's",
+          _c == 0 and "aaa" in _o and "xxx" in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--agent", "xxx")
+_cap_case("stallcheck: --agent xxx reports only that agent",
+          _c == 0 and "xxx" in _o and "aaa" not in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--session", "sessA", "--agent", "bbb")
+_cap_case("stallcheck: --session sessA with another session's agent matches nothing, exit 2, says so",
+          _c == 2 and "sessA" in _o and "bbb" in _o and "nothing was checked" in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--session", "nosuch")
+_cap_case("stallcheck: a --session matching nothing exits 2 and names the session",
+          _c == 2 and "nosuch" in _o and "nothing was checked" in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run()
+_cap_case("stallcheck: no-flag mode says it is watching all sessions",
+          "watching ALL sessions" in _o and "aaa" in _o and "bbb" in _o, "exit %d out %r" % (_c, _o[:200]))
+_ctx_bad = run_hook("audit", post_agent_payload(
+    session_id="bad;id", tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}))[1]
+_cap_case("audit: an unsafe session_id is omitted from the suggested command and the watch is called unscoped",
+          "--threshold 300 --agent audit1`" in _ctx_bad and "bad;id" not in _ctx_bad and "unscoped" in _ctx_bad, "out %r" % _ctx_bad[:300])
 
 audq = []
 code, out, err = run_hook("audit", "")

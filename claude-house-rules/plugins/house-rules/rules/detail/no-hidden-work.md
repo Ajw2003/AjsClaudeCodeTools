@@ -16,7 +16,10 @@ each with a short description saying what it is. Short work runs foreground, pri
 **Every background job is checked for stalls every 5 minutes** with `scripts/stallcheck.py`: it compares
 the age of the newest write to the job's transcript or output file against 300 seconds and prints
 `ok`, `STALLED` or `finished`. Run it under Monitor with `--watch` so it costs nothing until something
-stalls. A `STALLED` line is reported to the user with what was looked at and why; it is not assumed to
+stalls. Scope it to the job: `python scripts/stallcheck.py --watch --threshold 300 --session <session_id>
+--agent <agentId>` (the PostToolUse hook prints this command filled in). Without `--session` it watches
+every session's subagents on the machine and says so in a header line; that is noise, not a check of
+your own work. A `STALLED` line is reported to the user with what was looked at and why; it is not assumed to
 mean the job died (a long model call or a usage-limit wait also writes nothing).
 
 **Why:** a test the user cannot observe is not a test - it is me asserting a result, which is exactly the
