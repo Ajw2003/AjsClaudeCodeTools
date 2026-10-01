@@ -40,7 +40,9 @@ RUN = os.path.join(HERE, "run.sh")
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
-AGENT = os.path.join(HERE, "..", "agents", "executor.md")
+AGENTS_DIR = os.path.join(HERE, "..", "agents")
+# The three tier agents and the model each must declare (and, at SubagentStop, actually run on).
+TIERS = {"scout": "haiku", "builder": "sonnet", "reviewer": "opus"}
 ARCHIVIST = os.path.join(HERE, "..", "agents", "archivist.md")
 STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
 TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
@@ -1518,10 +1520,10 @@ else:
 # --- the delegate reminder fires after ExitPlanMode -------------------------------------------
 code, out, err = run_hook("delegate", "")
 if '"hookEventName":"PostToolUse"' in out and "@house-rules:builder" in out:
-    report("PASS", "delegate reminds Claude to hand the plan to the executor subagent")
+    report("PASS", "delegate reminds Claude to hand the plan to the builder subagent")
     print("          names @house-rules:builder and carries the right hookEventName")
 else:
-    report("FAIL", "delegate reminds Claude to hand the plan to the executor subagent")
+    report("FAIL", "delegate reminds Claude to hand the plan to the builder subagent")
     print(f"          got: {out}")
 
 # --- delegate is wired to ExitPlanMode, not just present in hook.py ---------------------------
@@ -3676,21 +3678,21 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.49.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.50.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.49.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.50.0",
     "rules section + detail file + version",
 )
 
 commit_case(
-    "the executor and archivist commit as they go, not only if asked",
+    "the builder and archivist commit as they go, not only if asked",
     all(
-        "Commit each finished piece as you go" in read(os.path.join(HERE, "..", "agents", n))
+        phrase in read(os.path.join(HERE, "..", "agents", n))
         and "only if asked to commit" not in read(os.path.join(HERE, "..", "agents", n))
-        for n in ("executor.md", "archivist.md")
+        for n, phrase in (("builder.md", "Commit as you go"), ("archivist.md", "Commit each finished piece as you go"))
     ),
-    "agents/executor.md, agents/archivist.md",
+    "agents/builder.md, agents/archivist.md",
 )
 
 # profile: a saved memory restating the replaced commit rule is flagged at session start.
@@ -3886,7 +3888,7 @@ def check_delegate(title, empty_path):
     if '"hookEventName":"PostToolUse"' not in out:
         bad.append("wrong or missing hookEventName")
     if "@house-rules:builder" not in out:
-        bad.append("it does not name the executor subagent")
+        bad.append("it does not name the builder subagent")
     if "one file" not in out or "three steps or fewer" not in out:
         bad.append("the skip-it exception is not stated as a count (one file, three steps)")
     if "proactiv" not in out:
@@ -3941,37 +3943,78 @@ else:
     print(f"          {'; '.join(carddrift)}")
 
 
-# --- the executor subagent is pinned to Sonnet ---------------------------------------------
+# --- the tier agents exist, each pinned to its model, with the tool allowlist the plan set -------
+TIER_TOOLS = {
+    "scout": ["Read", "Grep", "Glob"],
+    "builder": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+    "reviewer": ["Read", "Grep", "Glob", "Bash"],
+}
 agentdrift = []
-if not os.path.isfile(AGENT):
-    agentdrift.append("agents/executor.md is missing")
-else:
-    agent_text = read(AGENT)
-    if not re.search(r"^model: sonnet$", agent_text, re.MULTILINE):
-        agentdrift.append("executor.md does not pin model: sonnet")
-    if not re.search(r"^name: executor$", agent_text, re.MULTILINE):
-        agentdrift.append("executor.md has no name: executor")
+for _name, _model in TIERS.items():
+    _f = os.path.join(AGENTS_DIR, _name + ".md")
+    if not os.path.isfile(_f):
+        agentdrift.append(f"agents/{_name}.md is missing")
+        continue
+    _t = read(_f)
+    if not re.search(rf"^model: {_model}$", _t, re.MULTILINE):
+        agentdrift.append(f"{_name}.md does not pin model: {_model}")
+    if not re.search(rf"^name: {_name}$", _t, re.MULTILINE):
+        agentdrift.append(f"{_name}.md has no name: {_name}")
+    _tm = re.search(r"^tools:\s*(.+)$", _t, re.MULTILINE)
+    _got = [x.strip() for x in _tm.group(1).split(",")] if _tm else []
+    if _got != TIER_TOOLS[_name]:
+        agentdrift.append(f"{_name}.md tools are {_got}, expected {TIER_TOOLS[_name]}")
+    if "Agent" in _got:
+        agentdrift.append(f"{_name}.md allows the Agent tool, so it could start subagents")
+    _body = _t.split("---", 2)[-1].strip().splitlines()
+    if len(_body) > 15:
+        agentdrift.append(f"{_name}.md body is {len(_body)} lines, the limit is 15")
     for dead in ["hooks", "mcpServers", "permissionMode"]:
-        if re.search(rf"^{dead}:", agent_text, re.MULTILINE):
-            agentdrift.append(f"executor.md sets {dead}, which plugin subagents ignore")
+        if re.search(rf"^{dead}:", _t, re.MULTILINE):
+            agentdrift.append(f"{_name}.md sets {dead}, which plugin subagents ignore")
+if os.path.isfile(os.path.join(AGENTS_DIR, "executor.md")):
+    agentdrift.append("agents/executor.md still exists, it was retired")
 if not agentdrift:
-    report("PASS", "the executor subagent exists and is pinned to Sonnet")
-    print("          execution delegated to @house-rules:builder runs on sonnet, not opus")
+    report("PASS", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
+    print("          short tool allowlists, no Agent tool, bodies of 15 lines or fewer, executor.md gone")
 else:
-    report("FAIL", "the executor subagent exists and is pinned to Sonnet")
+    report("FAIL", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
     print(f"          {'; '.join(agentdrift)}")
 
-# --- executor.md does not claim the rules are already in its context, and carries a digest ----
-# A clean @house-rules:builder spawn was asked directly and answered no: SessionStart
-# additionalContext does not reach subagents. executor.md used to assert the opposite ("The
-# house rules are already in this session's context"), which is the bug this check catches.
-digestdrift = []
-if not os.path.isfile(AGENT):
-    digestdrift.append("agents/executor.md is missing")
+# --- no live file still names the retired executor agent ----------------------------------------
+_stale = []
+_skip_dirs = {".git", "node_modules", "__pycache__", "sessions", "archive", "plans", "generated"}
+for _dp, _dns, _fns in os.walk(ROOT):
+    _dns[:] = [d for d in _dns if d not in _skip_dirs and d != "6-decisions"]
+    for _fn in _fns:
+        if not _fn.endswith((".md", ".py", ".json", ".sh", ".bat", ".ps1", ".yml", ".html")):
+            continue
+        _fp = os.path.join(_dp, _fn)
+        if os.path.abspath(_fp) == os.path.abspath(__file__):
+            continue
+        try:
+            if "house-rules:executor" in read(_fp):
+                _stale.append(os.path.relpath(_fp, ROOT))
+        except OSError:
+            pass
+if not _stale:
+    report("PASS", "no live file still names house-rules:executor")
+    print("          docs/sessions, docs/archive, docs/plans and past Decisions entries are history and not scanned")
 else:
-    agent_text = read(AGENT)
+    report("FAIL", "no live file still names house-rules:executor")
+    print(f"          still named in: {', '.join(_stale)}")
+
+# --- archivist.md does not claim the rules are already in its context, and carries a digest ----
+# A clean spawn was asked directly and answered no: SessionStart additionalContext does not
+# reach subagents. The tier files carry no digest (the subagentrules hook injects the core);
+# archivist.md keeps its own, so only it is checked here.
+digestdrift = []
+if not os.path.isfile(ARCHIVIST):
+    digestdrift.append("agents/archivist.md is missing")
+else:
+    agent_text = read(ARCHIVIST)
     if "already in this session" in agent_text.lower():
-        digestdrift.append("executor.md still claims the rules are already in its context")
+        digestdrift.append("archivist.md still claims the rules are already in its context")
     for phrase in [
         "not injected",
         "hand over a command you have not run",
@@ -3979,12 +4022,12 @@ else:
         "commit messages",
     ]:
         if phrase.lower() not in agent_text.lower():
-            digestdrift.append(f"executor.md digest is missing: {phrase!r}")
+            digestdrift.append(f"archivist.md digest is missing: {phrase!r}")
 if not digestdrift:
-    report("PASS", "executor.md carries its own rules digest instead of assuming inherited context")
+    report("PASS", "archivist.md carries its own rules digest instead of assuming inherited context")
     print("          no 'already in this session' claim; the digest covers the load-bearing rules")
 else:
-    report("FAIL", "executor.md carries its own rules digest instead of assuming inherited context")
+    report("FAIL", "archivist.md carries its own rules digest instead of assuming inherited context")
     print(f"          {'; '.join(digestdrift)}")
 
 # --- the output style exists and IS forced ---------------------------------------------------
@@ -4225,13 +4268,15 @@ else:
     report("FAIL", "the claude.ai chat block exists and matches the rules document")
     print(f"          {'; '.join(chatdrift)}")
 
-# --- the executor description authorizes proactive use ----------------------------------------
-if os.path.isfile(AGENT) and "proactiv" in read(AGENT).lower():
-    report("PASS", "the executor description authorizes proactive use")
+# --- the scout and builder descriptions authorize proactive use ----------------------------------------
+_proactive = [n for n in ("scout", "builder")
+              if "proactiv" not in read(os.path.join(AGENTS_DIR, n + ".md")).lower()]
+if not _proactive:
+    report("PASS", "the scout and builder descriptions authorize proactive use")
     print('          description contains "proactively", satisfying the Agent tool\'s own gate')
 else:
-    report("FAIL", "the executor description authorizes proactive use")
-    print('          agents/executor.md description has no "proactively" (or similar) wording')
+    report("FAIL", "the scout and builder descriptions authorize proactive use")
+    print(f'          {", ".join(_proactive)}: description has no "proactively" (or similar) wording')
 
 # --- install.py still writes the model setting the README claims ------------------------------
 install_path = os.path.join(ROOT, "tools", "install.py")
