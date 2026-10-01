@@ -3542,6 +3542,7 @@ AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
 COMMITGATE_THRESHOLD = 3
 COMMITGATE_LIST_MAX = 8
 CHECKPOINT_MINUTES = 10
+STALLCHECK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stallcheck.py")
 AUTOSAVE_PUSH_INTERVAL = 60
 AUTOSAVE_PUSH_TIMEOUT = 6.0
 AUTOSAVE_GIT_TIMEOUT = 4.0
@@ -4354,10 +4355,13 @@ def event_audit():
             # the parent's worktreesweep is what commits its work - and that only runs when the
             # parent wakes. Ask for a check-in so it does.
             emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": (
-                "house-rules: a subagent is running in the background. Until it finishes, schedule "
-                "a check-in every %d min (send_later, ScheduleWakeup or CronCreate, whichever this "
-                "session has) so worktreesweep can commit its work if it stalls; cancel it when the "
-                "subagent finishes." % CHECKPOINT_MINUTES)}})
+                "house-rules: a subagent is running in the background, so it must be checked for stalls "
+                "every 5 minutes. Cheapest reliable way, no model call until something stalls: start "
+                "Monitor with the command `python \"%s\" --watch --threshold 300` (it prints only on a "
+                "STALLED or finished line), or run that command without --watch each time you wake. "
+                "A parent that wakes also lets worktreesweep commit a stalled subagent's work (every "
+                "%d min). Report a STALLED line to the user with what you looked at; do not assume the "
+                "subagent died." % (STALLCHECK_PATH, CHECKPOINT_MINUTES))}})
             return 0
         if status != "completed":
             # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing

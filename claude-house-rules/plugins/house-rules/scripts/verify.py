@@ -5491,13 +5491,103 @@ _async_payload = post_agent_payload(
 )
 code, out, err = run_hook("audit", _async_payload)
 code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
-if (code == 0 and "schedule a check-in every 10 min" in out and "finished" not in out
+if (code == 0 and "checked for stalls every 5 minutes" in out and "stallcheck.py" in out and "finished" not in out
         and code_off == 0 and not out_off.strip()):
     report("PASS", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
     print("          nothing to audit yet; the check-in nudge appears, and not with HOUSE_RULES_AUTOSAVE=off")
 else:
     report("FAIL", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
     print(f"          exit {code}, out {out[:150]!r}; autosave off: exit {code_off}, out {out_off[:80]!r}")
+
+
+# --- agentcap: the PreToolUse spawn cap (issue 112) and stallcheck.py (issue 120) --------------
+import tempfile as _cap_tf
+_cap_dir = _cap_tf.mkdtemp(prefix="house-rules-cap-", dir=_FIXTURE_ROOT)
+_cap_state = os.path.join(_cap_dir, "agents.json")
+_cap_env = dict(os.environ, HOUSE_RULES_AGENTS_STATE=_cap_state)
+_cap_env.pop("HOUSE_RULES_AGENTS", None)
+_spawn = json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {"prompt": "x"}})
+
+
+def _cap_write(ages_min):
+    with open(_cap_state, "w", encoding="utf-8") as f:
+        json.dump({"agents": [{"id": "r%d" % i, "type": "house-rules:builder", "start": time.time() - m * 60}
+                              for i, m in enumerate(ages_min)]}, f)
+
+
+def _cap_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print("          " + detail)
+
+
+_cap_write([1])
+_, _o, _ = run_hook("agentcap", _spawn, env=_cap_env)
+_cap_case("agentcap: a second concurrent subagent is allowed", _o.strip() == "", "out %r" % _o[:100])
+_cap_write([1, 2])
+_, _o, _ = run_hook("agentcap", _spawn, env=_cap_env)
+_cap_case("agentcap: a third concurrent subagent is denied, naming the two running",
+          '"permissionDecision": "deny"' in _o and "2 subagents are already running" in _o and "r0" in _o, "out %r" % _o[:160])
+_cap_write([50, 60])
+_, _o, _ = run_hook("agentcap", _spawn, env=_cap_env)
+_cap_case("agentcap: records older than 45 minutes are ignored", _o.strip() == "", "out %r" % _o[:100])
+_cap_write([1, 2])
+_, _o, _ = run_hook("agentcap", _spawn, env=dict(_cap_env, HOUSE_RULES_AGENTS="off"))
+_cap_case("agentcap: HOUSE_RULES_AGENTS=off disables the cap", _o.strip() == "", "out %r" % _o[:100])
+with open(_cap_state, "w", encoding="utf-8") as f:
+    f.write("not json at all")
+_, _o, _ = run_hook("agentcap", _spawn, env=_cap_env)
+_cap_case("agentcap: a corrupt state file allows the spawn and says so",
+          "deny" not in _o and "could not read" in _o, "out %r" % _o[:160])
+_, _o, _ = run_hook("agentcap", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Agent",
+                                             "agent_id": "kid1", "tool_input": {}}), env=_cap_env)
+_cap_case("agentcap: a spawn made from inside a subagent is denied",
+          '"permissionDecision": "deny"' in _o and "may not start another subagent" in _o, "out %r" % _o[:160])
+if os.path.exists(_cap_state):
+    os.remove(_cap_state)
+run_hook("announce", sub_payload(hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="capx"), env=_cap_env)
+_added = os.path.exists(_cap_state) and "capx" in open(_cap_state, encoding="utf-8").read()
+run_hook("verdict", sub_payload(hook_event_name="SubagentStop", agent_type="house-rules:builder", agent_id="capx"), env=_cap_env)
+_removed = os.path.exists(_cap_state) and "capx" not in open(_cap_state, encoding="utf-8").read()
+_cap_case("agentcap: SubagentStart records the subagent and SubagentStop clears it", _added and _removed,
+          "added %s, removed %s" % (_added, _removed))
+
+_sc = os.path.join(HERE, "stallcheck.py")
+_home = _cap_tf.mkdtemp(prefix="house-rules-home-", dir=_FIXTURE_ROOT)
+_sd = os.path.join(_home, ".claude", "projects", "p", "s", "subagents")
+os.makedirs(_sd)
+_henv = dict(os.environ, HOME=_home, USERPROFILE=_home)
+
+
+def _sc_file(name, text, age_s):
+    path = os.path.join(_sd, "agent-%s.jsonl" % name)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.utime(path, (time.time() - age_s, time.time() - age_s))
+
+
+def _sc_run(*extra):
+    pr = subprocess.run([sys.executable, _sc] + list(extra), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_henv)
+    return pr.returncode, pr.stdout.decode("utf-8", "replace")
+
+
+_sc_file("fresh", '{"type":"assistant"}\n', 20)
+_c, _o = _sc_run()
+_cap_case("stallcheck: a transcript written 20 s ago is ok, exit 0", _c == 0 and "ok" in _o and "fresh" in _o, "exit %d out %r" % (_c, _o[:100]))
+_sc_file("quiet", '{"type":"assistant"}\n', 600)
+_c, _o = _sc_run()
+_cap_case("stallcheck: a transcript silent for 10 minutes is STALLED, exit 1",
+          _c == 1 and "STALLED" in _o and "quiet" in _o, "exit %d out %r" % (_c, _o[:160]))
+_sc_file("done", '{"type":"attachment","attachment":{"hookEvent":"SubagentStop"}}\n', 3000)
+_c, _o = _sc_run("--threshold", "9999")
+_cap_case("stallcheck: a transcript holding SubagentStop is finished, never STALLED",
+          "finished  subagent done" in _o, "out %r" % _o[:200])
+_c, _o = _sc_run("--file", os.path.join(_home, "no-such.out"))
+_cap_case("stallcheck: a watched file that does not exist is STALLED, not skipped", _c == 1 and "no-such.out" in _o, "exit %d out %r" % (_c, _o[:160]))
+for _n in os.listdir(_sd):
+    os.remove(os.path.join(_sd, _n))
+_c, _o = _sc_run()
+_cap_case("stallcheck: with nothing to check it says so and exits 2, never silent",
+          _c == 2 and "nothing was checked" in _o, "exit %d out %r" % (_c, _o[:160]))
 
 audq = []
 code, out, err = run_hook("audit", "")
