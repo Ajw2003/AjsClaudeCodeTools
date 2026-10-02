@@ -3677,6 +3677,45 @@ commit_case("issuelist: HOUSE_RULES_ISSUES=off prints nothing", _ol7.strip() == 
 if os.path.exists(_ISS_MARK):
     os.remove(_ISS_MARK)
 _iss_stub(True)
+# -- #133: attribution - credit aj's agent, never Claude ----------------------------------------
+_da = _iss_repo()
+_att_cases = {
+    "commit Co-Authored-By Claude": 'git commit -m "feat: x\n\nCo-Authored-By: Claude <noreply@anthropic.com>"',
+    "commit Co-Authored-By anthropic address": 'git commit -m "x" -m "Co-Authored-By: Bot <bot@anthropic.com>"',
+    "commit Generated with": 'git commit -m "x\n\nGenerated with [Claude Code](https://claude.com/claude-code)"',
+    "pr claude.com link": 'gh pr create --title T --body "Refs #1 see claude.com/claude-code"',
+    "pr Claude-Session": 'gh pr edit 3 --body "Refs #1\nClaude-Session: abc"',
+    "issue session link": 'gh issue comment 3 --body "https://claude.ai/code/session_1"',
+    "issue create Generated": 'gh issue create --title T --body "Generated with [Claude Code]"',
+    "commit heredoc": "git commit -m \"$(cat <<'EOF'\nfeat: x\n\nCo-Authored-By: Claude Opus <noreply@anthropic.com>\nEOF\n)\"",
+}
+_bad = []
+for _n, _c in _att_cases.items():
+    _o = _iss_guard(_c, _da)
+    if _iss_decision(_o) != "deny" or "Committed by AJ's agent" not in _iss_reason(_o):
+        _bad.append(_n)
+commit_case("attribution: every Claude credit form is denied and the reason names the replacement wording",
+            not _bad, "not denied: %r" % _bad)
+_bad = []
+for _c in ('git commit -m "feat: x\n\nCommitted by AJ\'s agent"',
+           'gh pr create --title T --body "Refs #1\n\nOpened by AJ\'s agent"',
+           'git commit -m "docs: rename the Claude setting"'):
+    if _iss_decision(_iss_guard(_c, _da)) == "deny":
+        _bad.append(_c)
+commit_case("attribution: aj's agent with no email, and a subject that merely says Claude, are allowed",
+            not _bad, "denied: %r" % _bad)
+_ko = _iss_guard(_att_cases["commit Co-Authored-By Claude"], _da, HOUSE_RULES_ATTRIBUTION="off")
+commit_case("attribution: HOUSE_RULES_ATTRIBUTION=off lets the old forms through",
+            _iss_decision(_ko) != "deny", "out %r" % _ko[:120])
+_abf = os.path.join(_da, "attrbody.md")
+open(_abf, "w", encoding="utf-8").write("Refs #5\n\nGenerated with [Claude Code]\n")
+_o = _iss_guard("gh pr create --title T --body-file attrbody.md", _da)
+commit_case("attribution: a --body-file carrying the old form is read and denied",
+            _iss_decision(_o) == "deny" and "aj's agent" in _iss_reason(_o), "out %r" % _o[:120])
+_po = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _da, command=_att_cases["commit Co-Authored-By Claude"]), _da)[1]
+commit_case("attribution: the PowerShell tool is checked too",
+            _iss_decision(_po) == "deny", "out %r" % _po[:120])
+
 _dq = _iss_repo(remote="https://github.com/o/r.git")
 _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dq, plan=_ISS_PLAN5), _dq)
 _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dq, file_path=os.path.join(_dq, "a.cs")), _dq)

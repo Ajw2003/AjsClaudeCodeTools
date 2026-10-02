@@ -1985,6 +1985,11 @@ def event_guard():
 
     # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
     # an ask is folded into the prompt built below so a compound command is asked about once.
+    attr_deny = _attribution_guard(subject, payload)
+    if attr_deny:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": attr_deny}})
+        return 0
     issue_hit = _issues_guard(subject, payload)
     if issue_hit and issue_hit[0] == "deny":
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
@@ -4053,6 +4058,48 @@ def _issues_guard(subject, payload):
         return None
     if any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
         return ("ask", CLOSE_ASK_NOTE, CLOSE_ASK_NOTE)
+    return None
+
+
+# Attribution (#133): commits and PRs credit "aj's agent", never Claude, no email. Checked in guard.
+_ATTR_CMD_RES = (
+    _GIT_COMMIT_RE,
+    re.compile(_GH_PREFIX + r"pr\s+(?:create|edit)\b"),
+    re.compile(_GH_PREFIX + r"issue\s+(?:create|comment)\b"),
+)
+_ATTR_FORMS = (
+    (re.compile(r"Co-Authored-By:[^\n]*(?:claude|anthropic\.com)", re.IGNORECASE), "a Co-Authored-By trailer naming Claude or an anthropic.com address"),
+    (re.compile(r"Generated with \[Claude Code\]|claude\.com/claude-code", re.IGNORECASE), "a `Generated with [Claude Code]` line"),
+    (re.compile(r"Claude-Session|claude\.ai/code/", re.IGNORECASE), "a Claude-Session trailer or claude.ai/code/ session link"),
+)
+ATTR_REPLACEMENT = (
+    "House rules, credit aj's agent and never Claude: end a commit message with the line "
+    "`Committed by AJ's agent` and a pull request or issue body with `Opened by AJ's agent`, with "
+    "no email, no Co-Authored-By trailer and no session link. HOUSE_RULES_ATTRIBUTION=off disables this check."
+)
+
+
+def _attribution_guard(subject, payload):
+    """None when fine, else a deny reason. Reads a --body-file the way the PR Refs check does."""
+    if os.environ.get("HOUSE_RULES_ATTRIBUTION", "on").strip().lower() in _TOGGLE_OFF:
+        return None
+    cmd = _decoded_command(subject)
+    if not any(r.search(cmd) for r in _ATTR_CMD_RES):
+        return None
+    text = cmd
+    fm = _PR_BODY_FILE_RE.search(cmd)
+    if fm and fm.group(1).strip("\"'") != "-":
+        name = fm.group(1).strip("\"'")
+        path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                text += "\n" + f.read()
+        except OSError:
+            pass  # the PR Refs check already asks about an unreadable body file
+    for rx, what in _ATTR_FORMS:
+        m = rx.search(text)
+        if m:
+            return "%s The text carries %s (`%s`)." % (ATTR_REPLACEMENT, what, m.group(0)[:60])
     return None
 
 
