@@ -1985,7 +1985,7 @@ def event_guard():
 
     # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
     # an ask is folded into the prompt built below so a compound command is asked about once.
-    issue_hit = _issues_guard(subject, payload)
+    issue_hit = _attribution_guard(subject, payload) or _issues_guard(subject, payload)
     if issue_hit and issue_hit[0] == "deny":
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": issue_hit[1]}})
@@ -4013,6 +4013,57 @@ def _decoded_command(subject):
     except ValueError:
         text = m.group(1)  # undecodable escapes: match against the raw slice
     return text
+
+
+def _attribution_enabled():
+    return os.environ.get("HOUSE_RULES_ATTRIBUTION", "on").strip().lower() not in _TOGGLE_OFF
+
+
+# Credit goes to "aj's agent", with no email and no Claude branding (issue #133). The Claude Code
+# `attribution` setting is the primary mechanism and is written by tools/install.py; this check is
+# the backstop for sessions that never read the settings file (cloud sessions).
+_ATTRIBUTION_TEXT_RES = [
+    re.compile(r"co-authored-by:[^\n]*(?:claude|anthropic)", re.IGNORECASE),
+    re.compile(r"noreply@anthropic\.com", re.IGNORECASE),
+    re.compile(r"generated with \[?claude", re.IGNORECASE),
+    re.compile(r"claude\.com/claude-code", re.IGNORECASE),
+    re.compile(r"claude-session\s*:", re.IGNORECASE),
+    re.compile(r"claude\.ai/code/", re.IGNORECASE),
+]
+_ATTRIBUTION_CMD_RE = re.compile(
+    r"(?:" + _GIT + r"commit([^0-9A-Za-z-]|$))|(?:" + _GH_PREFIX + r"(?:pr|issue)\s+(?:create|edit|comment)\b)",
+    re.IGNORECASE,
+)
+ATTRIBUTION_DENY = (
+    "House rules, credit aj's agent: this %s credits Claude (`%s`). Credit \"aj's agent\" instead, "
+    "with no email and no Claude branding: commits end with `Committed by AJ's agent`, pull requests "
+    "with `Opened by AJ's agent`. HOUSE_RULES_ATTRIBUTION=off disables this check."
+)
+
+
+def _attribution_guard(subject, payload):
+    """None when the command's text does not credit Claude, else ("deny", reason, None)."""
+    if not _attribution_enabled():
+        return None
+    cmd = _decoded_command(subject)
+    if not _ATTRIBUTION_CMD_RE.search(cmd):
+        return None
+    text = cmd
+    fm = _PR_BODY_FILE_RE.search(cmd)
+    if fm and fm.group(1).strip("\"'") != "-":
+        name = fm.group(1).strip("\"'")
+        path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                text = text + "\n" + f.read()
+        except OSError:
+            pass  # the PR-body check already asks about an unreadable file; nothing more to say here
+    for rx in _ATTRIBUTION_TEXT_RES:
+        m = rx.search(text)
+        if m:
+            kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
+            return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)
+    return None
 
 
 def _issues_guard(subject, payload):

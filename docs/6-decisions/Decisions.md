@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-01 - Commits and pull requests credit "aj's agent", never Claude (#133, 2.51.0)
+
+**Context.** Claude Code adds a `Co-Authored-By: Claude` trailer to commits and a "Generated with Claude Code" line to pull requests. aj wants the distinction that an agent did the work but not the Claude branding, and no email shown.
+
+**Decision.** Credit "aj's agent": commit text `Committed by AJ's agent`, pull request text `Opened by AJ's agent`, no `Co-Authored-By` trailer (it needs an email), `sessionUrl` false. Two mechanisms. (1) Claude Code's `attribution` setting, written by `tools/install.py` into the user's settings file; it exists in the program (found in 2.1.286) though not in the public docs, and the app applied it to a running session at once. A plugin cannot ship it: Claude Code reads only `agent` and `subagentStatusLine` from a plugin's settings.json. (2) A `guard` check that refuses text crediting Claude, for sessions that never read the settings file (cloud sessions). `HOUSE_RULES_ATTRIBUTION=off` disables the check.
+
+**Status.** Decided. Old commits and pull requests are not rewritten.
+
+**Consequence.** A new machine gets the setting only when the installer runs there. The guard cannot add the right wording, only refuse the wrong one.
+
+---
+
 ## 2026-10-01 - "Never hide work in the background" becomes "work stays visible, reachable and readable"; every background job gets a 5-minute stall check (#120)
 
 **Context.** The rule said nothing runs in the background. That stopped being true or useful: subagents, Monitor and `run_in_background` are tools the user can follow, and aj works from a phone. aj amended it: "work should never be hidden, unreachable and unreadable. If I cannot see what is being done or reliably check in on or audit long running tasks on mobile then the rule is being broken." Earlier the same day a subagent sat silent for 26 minutes and nothing said so.
