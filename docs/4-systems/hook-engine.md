@@ -95,6 +95,13 @@ and treated as no gate. `HOUSE_RULES_ISSUES=off` disables all of it. Known limit
 through the `PowerShell` tool is not recorded (the `autosave` entry matches `Bash`, not `PowerShell`, and
 widening it would add a process per PowerShell call). Plan: `docs/plans/issue-workflow-build-plan.md`.
 
+**Attribution (2.51.0, issue #133).** `guard` also refuses a `git commit`, `gh pr create|edit` or `gh issue create|comment`
+whose text credits Claude (a `Co-Authored-By` line naming Claude or anthropic.com, `Generated with [Claude Code]`, a
+`Claude-Session` trailer or a claude.ai/code link). The wording to use is `Committed by AJ's agent` and
+`Opened by AJ's agent`, with no email. This is the backstop: the primary mechanism is the Claude Code `attribution`
+setting, which `tools/install.py` writes into the user's settings file. Kill switch `HOUSE_RULES_ATTRIBUTION=off`.
+A `--body-file` is read; a commit `-F file` is not.
+
 **Helper tiers and the spawn cap (2.50.0, issues #110-#112).** `agents/executor.md` is retired; `scout`
 (haiku; Read, Grep, Glob), `builder` (sonnet; Read, Edit, Write, Bash, Grep, Glob) and `reviewer` (opus;
 Read, Grep, Glob, Bash) replace it, each a short role with a tool allowlist, and none can start a

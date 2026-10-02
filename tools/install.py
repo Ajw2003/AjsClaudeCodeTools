@@ -4,7 +4,7 @@ expects.
 
 The two `claude plugin` commands in the README install the plugin, but a plugin can only ship
 hooks, rules and agents — it cannot set anything the Claude Code harness reads from
-~/.claude/settings.json. Two of those matter here:
+~/.claude/settings.json. Three of those matter here:
 
   verbose  the verbose transcript view, rendered by the harness, so no rule text can turn it on.
   model    'opusplan' - Opus while planning, automatically switching to Sonnet to execute.
@@ -18,6 +18,11 @@ hooks, rules and agents — it cannot set anything the Claude Code harness reads
            Opus/Sonnet split comes from the @house-rules tier subagents (scout, builder, reviewer) the plugin ships,
            not from this key.
 
+  attribution  {"commit": "Committed by AJ's agent", "pr": "Opened by AJ's agent", "sessionUrl": false}
+           so commits and PRs credit aj's agent, with no Claude branding and no email. A plugin
+           cannot carry this key (only `agent` and `subagentStatusLine` are read from a plugin's
+           settings.json), so it is written here, and the guard hook backs it up in cloud sessions.
+
 This script does both halves, so a new device is configured in one command instead of two
 commands plus a hand edit.
 
@@ -26,7 +31,7 @@ Idempotent. Re-running it on a machine that already has the plugin re-adds the m
 holds the wanted value. Every other key in settings.json is preserved.
 
 Usage:
-    python tools/install.py [--no-verbose] [--no-model]
+    python tools/install.py [--no-verbose] [--no-model] [--no-attribution]
 """
 
 import argparse
@@ -180,10 +185,90 @@ def install_steps():
     ]
 
 
+ATTRIBUTION = {"commit": "Committed by AJ's agent", "pr": "Opened by AJ's agent", "sessionUrl": False}
+
+
+def wanted_settings():
+    return [
+        {
+            "name": "verbose",
+            "value": True,
+            "skip_note": "--no-verbose given, leaving the transcript view setting alone",
+            "why": "default to the verbose transcript view",
+        },
+        {
+            "name": "model",
+            "value": "opusplan",
+            "skip_note": "--no-model given, leaving the model setting alone",
+            "why": "Opus while planning, Sonnet to execute",
+        },
+        {
+            # An object value, set exactly: the house rule wins over a different existing one.
+            "name": "attribution",
+            "value": ATTRIBUTION,
+            "skip_note": "--no-attribution given, leaving the attribution setting alone",
+            "why": "credit aj's agent on commits and PRs, not Claude",
+        },
+    ]
+
+
+def apply_settings(claude_dir, skip, ok, bad, info):
+    """Write the wanted settings into <claude_dir>/settings.json, keeping every other key.
+    `skip` is a set of setting names to leave alone. A file that does not parse is reported
+    and never overwritten."""
+    wanted = [dict(w, skip=w["name"] in skip) for w in wanted_settings()]
+    to_apply = [w for w in wanted if not w["skip"]]
+    for w in wanted:
+        if w["skip"]:
+            info(w["skip_note"])
+    if not to_apply:
+        return
+
+    settings_path = os.path.join(claude_dir, "settings.json")
+    if os.path.isfile(settings_path):
+        try:
+            with open(settings_path, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+        except (OSError, ValueError) as exc:
+            bad(f"{settings_path} could not be read as JSON ({exc}) - left untouched, no settings applied")
+            return
+        if not isinstance(settings, dict):
+            bad(f"{settings_path} is not a JSON object - left untouched, no settings applied")
+            return
+    else:
+        os.makedirs(claude_dir, exist_ok=True)
+        settings = {}
+
+    changed = False
+    for w in to_apply:
+        if settings.get(w["name"]) == w["value"]:
+            ok(f"{w['name']} is already {w['value']} - nothing to change")
+            continue
+        settings[w["name"]] = w["value"]
+        changed = True
+        ok(f"set {w['name']} = {w['value']} ({w['why']})")
+
+    if changed:
+        kept = [k for k in settings if k not in [w["name"] for w in to_apply]]
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=2)
+        if kept:
+            info(f"kept: {', '.join(kept)}")
+
+    with open(settings_path, "r", encoding="utf-8") as f:
+        check = json.load(f)
+    for w in to_apply:
+        if check.get(w["name"]) == w["value"]:
+            ok(f"settings.json still parses and reads back {w['name']} = {w['value']}")
+        else:
+            bad(f"settings.json does not read back {w['name']} = {w['value']}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-verbose", action="store_true")
     parser.add_argument("--no-model", action="store_true")
+    parser.add_argument("--no-attribution", action="store_true")
     args = parser.parse_args()
 
     failures = 0
@@ -269,60 +354,9 @@ def main():
     print()
     print("4. Settings the plugin cannot set itself")
 
-    wanted = [
-        {
-            "name": "verbose",
-            "value": True,
-            "skip": args.no_verbose,
-            "skip_note": "--no-verbose given, leaving the transcript view setting alone",
-            "why": "default to the verbose transcript view",
-        },
-        {
-            "name": "model",
-            "value": "opusplan",
-            "skip": args.no_model,
-            "skip_note": "--no-model given, leaving the model setting alone",
-            "why": "Opus while planning, Sonnet to execute",
-        },
-    ]
-
-    to_apply = [w for w in wanted if not w["skip"]]
-    for w in wanted:
-        if w["skip"]:
-            info(w["skip_note"])
-
-    if to_apply:
-        settings_path = os.path.join(claude_dir, "settings.json")
-        if os.path.isfile(settings_path):
-            with open(settings_path, "r", encoding="utf-8") as f:
-                settings = json.load(f)
-        else:
-            os.makedirs(claude_dir, exist_ok=True)
-            settings = {}
-
-        changed = False
-        for w in to_apply:
-            if settings.get(w["name"]) == w["value"]:
-                ok(f"{w['name']} is already {w['value']} - nothing to change")
-                continue
-            settings[w["name"]] = w["value"]
-            changed = True
-            ok(f"set {w['name']} = {w['value']} ({w['why']})")
-
-        if changed:
-            kept = [k for k in settings if k not in [w["name"] for w in to_apply]]
-            with open(settings_path, "w", encoding="utf-8") as f:
-                json.dump(settings, f, indent=2)
-            if kept:
-                info(f"kept: {', '.join(kept)}")
-
-        with open(settings_path, "r", encoding="utf-8") as f:
-            check = json.load(f)
-        for w in to_apply:
-            if check.get(w["name"]) == w["value"]:
-                ok(f"settings.json still parses and reads back {w['name']} = {w['value']}")
-            else:
-                bad(f"settings.json does not read back {w['name']} = {w['value']}")
+    skip = {n for n, flag in (("verbose", args.no_verbose), ("model", args.no_model),
+                              ("attribution", args.no_attribution)) if flag}
+    apply_settings(claude_dir, skip, ok, bad, info)
 
     print()
     print("---------------------")

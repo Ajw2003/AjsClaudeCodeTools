@@ -3570,6 +3570,47 @@ commit_case(
     "two commands that only mention it",
 )
 
+# -- #133: credit aj's agent, never Claude -------------------------------------------------------------
+_att_trailer = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\nEOF\n)\""
+_att_gen = "git commit -m \"feat: x\n\nGenerated with [Claude Code](https://claude.com/claude-code)\""
+_att_ok = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCommitted by AJ's agent\nEOF\n)\""
+_att_word = "git commit -m \"docs: rename the Claude setting\""
+_oa1, _oa2, _oa3, _oa4 = _iss_guard(_att_trailer), _iss_guard(_att_gen), _iss_guard(_att_ok), _iss_guard(_att_word)
+commit_case(
+    "attribution: a commit crediting Claude (co-author trailer or Generated-with line) is refused, naming the replacement",
+    _iss_decision(_oa1) == "deny" and _iss_decision(_oa2) == "deny"
+    and "Committed by AJ's agent" in _iss_reason(_oa1) and "no email" in _iss_reason(_oa1),
+    "out %r | %r" % (_oa1[:140], _oa2[:100]),
+)
+_ota3 = _iss_decision(_oa3) != "deny" or "credit aj's agent" not in _iss_reason(_oa3)
+commit_case(
+    "attribution: crediting aj's agent with no email passes, and a subject that merely mentions Claude passes",
+    "credit aj's agent" not in _oa3 and "credit aj's agent" not in _oa4,
+    "out %r | %r" % (_oa3[:100], _oa4[:100]),
+)
+_opr1 = _iss_guard('gh pr create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"')
+_opr2 = _iss_guard('gh pr create --title T --body "Refs #5\n\nOpened by AJ\'s agent"')
+_opr3 = _iss_guard('gh pr create --title T --body "Refs #5\n\nhttps://claude.ai/code/session_abc"')
+commit_case(
+    "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting aj's agent passes",
+    _iss_decision(_opr1) == "deny" and "credit aj's agent" in _iss_reason(_opr1)
+    and _iss_decision(_opr3) == "deny" and "credit aj's agent" not in _opr2 and _opr2.strip() == "",
+    "out %r | %r | %r" % (_opr1[:90], _opr2[:60], _opr3[:90]),
+)
+_oc1 = _iss_guard('gh issue comment 5 --body "Co-Authored-By: Claude <x>"')
+_off = _iss_guard(_att_trailer, HOUSE_RULES_ATTRIBUTION="off")
+commit_case(
+    "attribution: an issue comment crediting Claude is refused, and HOUSE_RULES_ATTRIBUTION=off disables the check",
+    _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
+    "out %r | off %r" % (_oc1[:90], _off[:80]),
+)
+_opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
+commit_case(
+    "attribution: the same refusal applies through the PowerShell tool",
+    _iss_decision(_opw) == "deny" and "credit aj's agent" in _iss_reason(_opw),
+    "out %r" % _opw[:140],
+)
+
 # -- #109: gh issue close ---------------------------------------------------------------------------
 _occ = _iss_guard("gh issue close 5")
 _issues_outputs.append(("issue close", _occ))
@@ -3711,10 +3752,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.50.2",
+    "issues: the rules section and its detail file exist, and the plugin is 2.51.1",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.50.2",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.51.1",
     "rules section + detail file + version",
 )
 
