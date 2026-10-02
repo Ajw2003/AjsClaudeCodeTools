@@ -6,7 +6,10 @@ appending to against a threshold (default 300 s). A subagent appends a record to
 for every message and tool call, so a transcript that has not changed for 5 minutes means no
 progress. A background command appends to its output file the same way.
 
-  python stallcheck.py                      every subagent transcript touched in the last 3 hours
+  python stallcheck.py --session ID --agent ID   only that session's / that agent's transcript
+                                            (what the hook suggests; --session and --agent repeat)
+  python stallcheck.py                      every subagent transcript of EVERY session touched in the
+                                            last 3 hours (says so in a header line; noisy)
   python stallcheck.py --file OUT [--file ...]   also watch a background command's output file
   python stallcheck.py --watch              loop every 30 s; print only when something stalls or
                                             finishes; exit when nothing is left running
@@ -35,17 +38,34 @@ def _age(path, now):
 
 
 def _finished(path):
-    """True when the transcript's tail holds a SubagentStop record."""
+    """True when SubagentStop is the last record in the transcript's tail. A resumed agent writes
+    records after its old SubagentStop; that is running again, not finished."""
     with open(path, "rb") as f:
         f.seek(0, os.SEEK_END)
         f.seek(max(0, f.tell() - TAIL_BYTES))
-        return b"SubagentStop" in f.read()
+        lines = [ln for ln in f.read().splitlines() if ln.strip()]
+    return bool(lines) and b"SubagentStop" in lines[-1]
 
 
-def _subagent_files(now):
-    pattern = os.path.join(os.path.expanduser("~"), ".claude", "projects", "*", "*", "subagents",
-                           "agent-*.jsonl")
-    return [p for p in glob.glob(pattern) if _age(p, now) < LOOKBACK_SECONDS]
+def _subagent_files(now, sessions=(), agents=()):
+    base = os.path.join(os.path.expanduser("~"), ".claude", "projects", "*")
+    files = []
+    for session in (sessions or ["*"]):
+        pattern = os.path.join(base, session, "subagents", "agent-*.jsonl")
+        files.extend(glob.glob(pattern))
+    if agents:
+        wanted = set("agent-%s.jsonl" % a for a in agents)
+        files = [p for p in files if os.path.basename(p) in wanted]
+    return [p for p in sorted(set(files)) if _age(p, now) < LOOKBACK_SECONDS]
+
+
+def _scope_words(sessions, agents):
+    parts = []
+    if sessions:
+        parts.append("session " + ", ".join(sessions))
+    if agents:
+        parts.append("agent " + ", ".join(agents))
+    return " and ".join(parts)
 
 
 def _label(path):
@@ -85,32 +105,50 @@ def main():
     parser.add_argument("--threshold", type=int, default=DEFAULT_THRESHOLD)
     parser.add_argument("--file", action="append", default=[])
     parser.add_argument("--watch", action="store_true")
+    parser.add_argument("--poll", type=float, default=POLL_SECONDS, help=argparse.SUPPRESS)  # tests only
+    parser.add_argument("--session", action="append", default=[])
+    parser.add_argument("--agent", action="append", default=[])
     args = parser.parse_args()
+    scope = _scope_words(args.session, args.agent)
+    header = ("stallcheck: watching " + scope + " only." if scope else
+              "stallcheck: no --session or --agent given, so this is watching ALL sessions' "
+              "subagents from the last 3 hours.")
 
     if not args.watch:
-        rows = check(_subagent_files(time.time()), args.file, args.threshold)
+        print(header)
+        rows = check(_subagent_files(time.time(), args.session, args.agent), args.file, args.threshold)
         if not rows:
-            print("stallcheck: found no subagent transcripts from the last 3 hours and no --file "
-                  "to check, so nothing was checked.")
+            if scope:
+                print("stallcheck: found no subagent transcript from the last 3 hours for %s and "
+                      "no --file to check, so nothing was checked." % scope)
+            else:
+                print("stallcheck: found no subagent transcripts from the last 3 hours and no --file "
+                      "to check, so nothing was checked.")
             return 2
         for row in rows:
             print(_fmt(row))
         return 1 if any(r[1] == "STALLED" for r in rows) else 0
 
+    print(header, flush=True)
     seen = {}
+    last_alert = {}  # label -> time of the last STALLED print; a stall is re-announced every threshold
     while True:
-        rows = check(_subagent_files(time.time()), args.file, args.threshold)
+        rows = check(_subagent_files(time.time(), args.session, args.agent), args.file, args.threshold)
         if not rows:
-            print("stallcheck: nothing to watch.")
+            print("stallcheck: nothing to watch" + (" for " + scope if scope else "") + ".")
             return 2
         for row in rows:
-            if seen.get(row[0]) != row[1] and row[1] != "ok":
+            now = time.time()
+            changed = seen.get(row[0]) != row[1]
+            repeat = row[1] == "STALLED" and now - last_alert.get(row[0], now) >= args.threshold
+            if (changed and row[1] != "ok") or repeat:
                 print(_fmt(row), flush=True)
+                last_alert[row[0]] = now
             seen[row[0]] = row[1]
         if all(r[1] == "finished" for r in rows):
             print("stallcheck: everything watched has finished.", flush=True)
             return 0
-        time.sleep(POLL_SECONDS)
+        time.sleep(args.poll)
 
 
 if __name__ == "__main__":

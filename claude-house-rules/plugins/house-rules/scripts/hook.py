@@ -4402,17 +4402,37 @@ def event_audit():
 
         status = _field(_RESPONSE_STATUS_RE, payload)
         if status == "async_launched" and _autosave_enabled():
+            watch_cmd = "python \"%s\" --watch --threshold 300" % STALLCHECK_PATH
+            scope_notes = []
+            for flag, label, value in (
+                ("--session", "session_id", _field(_SESSION_ID_RE, payload)),
+                ("--agent", "agentId", _field(_RESPONSE_AGENT_ID_RE, payload)),
+            ):
+                if re.fullmatch(r"[A-Za-z0-9_-]+", value or ""):
+                    watch_cmd += " %s %s" % (flag, value)
+                elif value:
+                    scope_notes.append("the %s in the payload is not shell-safe, so %s is omitted" % (label, flag))
+                else:
+                    scope_notes.append("the payload has no %s, so %s is omitted" % (label, flag))
+            scope_note = ""
+            if scope_notes:
+                scope_note = ("Note: " + "; ".join(scope_notes) + (
+                    "; with no --session the watch is unscoped and reports every session's subagents. "
+                    if "--session" not in watch_cmd else ". "))
             # Nothing to audit yet. A killed background subagent runs no hooks of its own, so
             # the parent's worktreesweep is what commits its work - and that only runs when the
             # parent wakes. Ask for a check-in so it does.
             emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": (
                 "house-rules: a subagent is running in the background, so it must be checked for stalls "
                 "every 5 minutes. Cheapest reliable way, no model call until something stalls: start "
-                "Monitor with the command `python \"%s\" --watch --threshold 300` (it prints only on a "
-                "STALLED or finished line), or run that command without --watch each time you wake. "
+                "Monitor with the command `%s` (it prints only on a "
+                "STALLED or finished line), or run that command without --watch each time you wake. %s"
                 "A parent that wakes also lets worktreesweep commit a stalled subagent's work (every "
-                "%d min). Report a STALLED line to the user with what you looked at; do not assume the "
-                "subagent died." % (STALLCHECK_PATH, CHECKPOINT_MINUTES))}})
+                "%d min). On a STALLED line: find the agent's last tool call or blocking child process "
+                "(newest transcript record, process list), tell the user how long it has been stuck and what it is "
+                "blocked on, and ask before stopping a command that cannot finish. Do not assume it died or is "
+                "fine; no later STALLED line is not progress; SendMessage cannot reach an agent blocked inside a "
+                "tool call." % (watch_cmd, scope_note, CHECKPOINT_MINUTES))}})
             return 0
         if status != "completed":
             # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing
