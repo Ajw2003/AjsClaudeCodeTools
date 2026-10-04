@@ -41,6 +41,7 @@ not it fires. That is on by default on purpose: a diagnostic that ships switched
 enabled until someone is already lost.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -3389,6 +3390,213 @@ def event_agentcap():
     return 0
 
 
+# prompttimer - PermissionRequest (issue #144, plan docs/plans/2026-10-04-permission-prompt-timeout.md).
+# Runs beside the permission dialog. If nobody answers within HOUSE_RULES_PROMPT_TIMEOUT seconds
+# (default 300) it refuses, so one unanswered prompt cannot hold a whole session overnight. It only
+# ever refuses: an unanswered prompt is a no, and the only other outcome is saying nothing, which
+# leaves the dialog in charge. The refusal goes into the waiting-on-you list, which issue #145 shows.
+PROMPT_TIMEOUT_DEFAULT = 300.0
+WAITING_FILE = "waiting-on-you.json"
+
+
+class _PromptAnswered(Exception):
+    """The hook was told to stop (SIGTERM/SIGINT): aj answered the dialog first."""
+
+
+def _prompt_timeout_seconds():
+    """(seconds or None when off, problem text or "")."""
+    raw = os.environ.get("HOUSE_RULES_PROMPT_TIMEOUT")
+    if raw is None or not raw.strip():
+        return PROMPT_TIMEOUT_DEFAULT, ""
+    val = raw.strip().lower()
+    if val in ("off", "0"):
+        return None, ""
+    try:
+        secs = float(val)
+    except ValueError:
+        secs = 0.0
+    if 0 < secs < float("inf"):
+        return secs, ""
+    return PROMPT_TIMEOUT_DEFAULT, (
+        "HOUSE_RULES_PROMPT_TIMEOUT=%r is not 'off', '0' or a positive number; using %d seconds"
+        % (raw, PROMPT_TIMEOUT_DEFAULT)
+    )
+
+
+def _waiting_path(session_id=""):
+    """The waiting-on-you list: in the common git directory, so worktrees share it. Outside a
+    repository it is a session-keyed file in the temp directory, like versioncheck's marker.
+    Returns (path, in_repo)."""
+    cd = _common_git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    if cd:
+        return os.path.join(cd, "house-rules", WAITING_FILE), True
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-waiting-%s.json" % safe), False
+
+
+def _waiting_load(path):
+    """The entries; ValueError/OSError when the file exists but cannot be read as a list."""
+    if not os.path.isfile(path):
+        return []
+    data = json.loads(_read_text(path))
+    if not isinstance(data, list) or not all(isinstance(e, dict) for e in data):
+        raise ValueError("unexpected shape, wanted a JSON list of objects")
+    return data
+
+
+def _waiting_save(path, entries):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(entries, f, indent=1)
+    os.replace(tmp, path)
+
+
+def _waiting_clear_session(entries, session_id, status=None):
+    """The entries without this session's (optionally only those with this status)."""
+    return [e for e in entries
+            if not (e.get("session_id") == session_id and (status is None or e.get("status") == status))]
+
+
+def _waiting_key(tool_name, tool_input):
+    blob = tool_name + json.dumps(tool_input, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+
+def _waiting_summary(tool_name, tool_input):
+    ti = tool_input if isinstance(tool_input, dict) else {}
+    if tool_name in ("Bash", "PowerShell"):
+        text = ti.get("command")
+    else:
+        text = ti.get("file_path") or ti.get("notebook_path")
+    text = " ".join(str(text).split()) if text else tool_name
+    return text if len(text) <= 100 else text[:97] + "..."
+
+
+def _prompt_refusal(minutes, path, summary):
+    return (
+        "Nobody answered this permission prompt for %s, so it was refused - not approved - and "
+        "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this same action "
+        "this session; it would only wait again. Look for a route that needs no permission AND does "
+        "not have the same effect (for example: commit to a claude/ branch instead of aj's branch; "
+        "make the change with Edit instead of a full-file Write). Never get the same destructive "
+        "result another way - deleting, force-pushing or killing a process has no substitute: leave "
+        "it. Carry on with every part of the task that does not depend on this. Before you stop, "
+        "list each refused action under 'Waiting on you' in your reply." % (minutes, path, summary)
+    )
+
+
+def _prompt_deny(text):
+    emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest",
+                                 "decision": {"behavior": "deny", "message": text, "reason": text}}})
+
+
+def _prompt_minutes(secs):
+    if secs < 60:
+        return "%g seconds" % secs
+    n = round(secs / 60.0)
+    return "%d minute%s" % (n, "" if n == 1 else "s")
+
+
+def event_prompttimer():
+    secs, problem = _prompt_timeout_seconds()
+    if problem:
+        sys.stderr.write("house-rules prompttimer: %s.\n" % problem)
+    if secs is None:
+        sys.stderr.write("house-rules prompttimer: off (HOUSE_RULES_PROMPT_TIMEOUT), no timer for this prompt.\n")
+        return 0
+    try:
+        payload = read_payload()
+    except Exception as exc:
+        sys.stderr.write("house-rules prompttimer: could not read the permission-request payload (%s: %s); "
+                         "no timer, the dialog decides.\n" % (type(exc).__name__, exc))
+        return 0
+    try:
+        data = json.loads(payload)
+        if not isinstance(data, dict) or not isinstance(data.get("tool_name"), str) or not data["tool_name"]:
+            raise ValueError("not an object with a tool_name")
+        tool_name = data["tool_name"]
+        session_id = str(data.get("session_id") or "")
+        tool_input = data.get("tool_input")
+    except ValueError as exc:
+        sys.stderr.write(
+            "house-rules prompttimer: could not read the permission-request payload (%s: %s); "
+            "no timer, the dialog decides.\n" % (type(exc).__name__, exc)
+        )
+        return 0
+    key = _waiting_key(tool_name, tool_input)
+    summary = _waiting_summary(tool_name, tool_input)
+    path, in_repo = _waiting_path(session_id)
+    if not in_repo:
+        sys.stderr.write("house-rules prompttimer: not inside a git repository; the waiting-on-you "
+                         "list is the session file %s.\n" % path)
+
+    def mine(e):
+        return e.get("session_id") == session_id and e.get("key") == key
+
+    def update(fn):
+        """Load, change, save. A state problem is loud and never stops the timer."""
+        try:
+            try:
+                entries = _waiting_load(path)
+            except (ValueError, OSError) as exc:
+                sys.stderr.write("house-rules prompttimer: could not read %s (%s: %s); starting that "
+                                 "list again.\n" % (path, type(exc).__name__, exc))
+                entries = []
+            _waiting_save(path, fn(entries))
+        except Exception as exc:
+            sys.stderr.write("house-rules prompttimer: could not write %s (%s: %s); the timer still "
+                             "applies.\n" % (path, type(exc).__name__, exc))
+
+    try:
+        existing = _waiting_load(path)
+    except (ValueError, OSError) as exc:
+        sys.stderr.write("house-rules prompttimer: could not read %s (%s: %s); treating the list as "
+                         "empty.\n" % (path, type(exc).__name__, exc))
+        existing = []
+    if any(mine(e) and e.get("status") == "timed-out" for e in existing):
+        _prompt_deny(
+            "This exact action already timed out this session and is still waiting on aj, so it was "
+            "refused again without waiting. " + _prompt_refusal(_prompt_minutes(secs), path, summary))
+        return 0
+
+    started = time.time()
+    entry = {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,
+             "started": started, "status": "waiting"}
+    update(lambda es: [e for e in es if not mine(e)] + [entry])
+
+    def stop(signum, frame):
+        raise _PromptAnswered()
+
+    try:
+        import signal
+        for name in ("SIGTERM", "SIGINT"):
+            if hasattr(signal, name):
+                signal.signal(getattr(signal, name), stop)
+    except (ImportError, ValueError, OSError) as exc:
+        sys.stderr.write("house-rules prompttimer: could not watch for a stop signal (%s); an answered "
+                         "prompt may leave a stale 'waiting' entry in %s.\n" % (exc, path))
+    try:
+        while True:
+            left = started + secs - time.time()
+            if left <= 0:
+                break
+            time.sleep(min(1.0, left))
+    except (_PromptAnswered, KeyboardInterrupt):
+        sys.stderr.write("house-rules prompttimer: stopped while waiting (the prompt was answered); "
+                         "removed its waiting entry, no decision.\n")
+        update(lambda es: [e for e in es if not (mine(e) and e.get("status") == "waiting")])
+        return 0
+
+    def mark(es):
+        es = [e for e in es if not mine(e)]
+        es.append(dict(entry, status="timed-out", timed_out_at=time.time()))
+        return es
+    update(mark)
+    _prompt_deny(_prompt_refusal(_prompt_minutes(secs), path, summary))
+    return 0
+
+
 # subagentcommit — SubagentStop, its own hooks.json entry so verdict's report never depends on
 # it. The one handler that returns decision "block" on purpose: probed on CLI 2.1.284, a block
 # sends the subagent back to work with the reason as its instruction, and the retry's payload
@@ -5687,6 +5895,7 @@ EVENTS = {
     "commitgate": event_commitgate,
     "worktreesweep": event_worktreesweep,
     "agentcap": event_agentcap,
+    "prompttimer": event_prompttimer,
     "audit": event_audit,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,

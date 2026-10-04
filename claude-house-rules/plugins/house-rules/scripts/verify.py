@@ -4496,7 +4496,7 @@ for doc in ([] if _absent else [ARCHDOC, readme_path]):
     table_lines = "\n".join(
         line
         for line in doc_text.splitlines()
-        if re.match(r"^\| `(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop|SubagentStart|SubagentStop)`", line)
+        if re.match(r"^\| `(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|PermissionRequest|Stop|SubagentStart|SubagentStop)`", line)
     )
     for event in registered_events:
         if event not in table_lines:
@@ -5506,6 +5506,104 @@ _c7 = _cap_spawn(agent_id="sub9")
 commit_case(
     "agentcap: a spawn made by a subagent (payload carries agent_id) is denied",
     _cap_denied(_c7[1]) and "sub9" in _c7[1], "out %r" % _c7[1][:160],
+)
+
+# --- prompttimer (#144): an unanswered permission prompt is refused after a timeout, never approved
+_pt_repo = os.path.join(_FIXTURE_ROOT, "pt-repo")
+os.makedirs(_pt_repo, exist_ok=True)
+subprocess.run(["git", "init", "-q"], cwd=_pt_repo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+_pt_state = os.path.join(_pt_repo, ".git", "house-rules", "waiting-on-you.json")
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+
+
+def _pt_env(**extra):
+    e = dict(os.environ)
+    e["CLAUDE_PROJECT_DIR"] = _pt_repo
+    e["HOUSE_RULES_PROMPT_TIMEOUT"] = "1"
+    e.update(extra)
+    return e
+
+
+_pt_payload = json.dumps({"hook_event_name": "PermissionRequest", "session_id": "pt-sess", "tool_name": "Bash",
+                          "tool_input": {"command": "rm -rf /tmp/pt-victim"}})
+
+
+def _pt_run(payload=_pt_payload, **extra):
+    t0 = time.time()
+    code, out, err = run_hook("prompttimer", payload, env=_pt_env(**extra))
+    return code, out, err, time.time() - t0
+
+
+def _pt_decision(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["decision"]
+    except Exception:
+        return {}
+
+
+_p1 = _pt_run()
+_d1 = _pt_decision(_p1[1])
+try:
+    _pt_entries = json.load(open(_pt_state, encoding="utf-8"))
+except Exception:
+    _pt_entries = []
+commit_case(
+    "prompttimer: an unanswered prompt is denied after the timeout, message == reason, state holds one timed-out entry",
+    _p1[0] == 0 and _d1.get("behavior") == "deny" and _d1.get("message") == _d1.get("reason")
+    and "refused" in _d1.get("message", "") and "rm -rf /tmp/pt-victim" in _d1.get("message", "")
+    and len(_pt_entries) == 1 and _pt_entries[0]["status"] == "timed-out"
+    and _pt_entries[0]["session_id"] == "pt-sess" and len(_pt_entries[0]["key"]) == 16
+    and _pt_entries[0]["summary"] == "rm -rf /tmp/pt-victim",
+    "out %r entries %r" % (_p1[1][:120], _pt_entries),
+)
+commit_case(
+    "prompttimer: the 1-second timeout waits about 1 second (not 0, not 10)",
+    0.9 <= _p1[3] <= 5, "elapsed %.2fs" % _p1[3],
+)
+_p2 = _pt_run()
+commit_case(
+    "prompttimer: the same action again in the same session is denied at once",
+    _p2[3] < 0.5 and _pt_decision(_p2[1]).get("behavior") == "deny" and "already timed out" in _pt_decision(_p2[1]).get("message", ""),
+    "elapsed %.2fs out %r" % (_p2[3], _p2[1][:100]),
+)
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_p3 = _pt_run(HOUSE_RULES_PROMPT_TIMEOUT="OFF")
+commit_case(
+    "prompttimer: HOUSE_RULES_PROMPT_TIMEOUT=off makes no decision and writes no state",
+    _p3[0] == 0 and _p3[1] == "" and not os.path.exists(_pt_state) and _p3[3] < 0.9,
+    "out %r state exists %s" % (_p3[1], os.path.exists(_pt_state)),
+)
+os.makedirs(os.path.dirname(_pt_state), exist_ok=True)
+with open(_pt_state, "w", encoding="utf-8") as _f:
+    _f.write("{not json")
+_p4 = _pt_run()
+commit_case(
+    "prompttimer: a corrupt state file is reported loudly and the prompt is still denied after the timeout",
+    _p4[0] == 0 and _pt_decision(_p4[1]).get("behavior") == "deny" and _p4[3] >= 0.9
+    and "could not read" in _p4[2] and _pt_state in _p4[2] and "Traceback" not in _p4[2],
+    "elapsed %.2fs stderr %r" % (_p4[3], _p4[2][:200]),
+)
+_p5 = _pt_run("{not json")
+_p5b = _pt_run(json.dumps({"session_id": "x"}))
+commit_case(
+    "prompttimer: a malformed payload makes no decision, says so on stderr and exits 0",
+    _p5[0] == 0 and _p5[1] == "" and "could not read" in _p5[2] and _p5[3] < 0.9
+    and _p5b[0] == 0 and _p5b[1] == "" and "could not read" in _p5b[2],
+    "stderr %r / %r" % (_p5[2][:100], _p5b[2][:100]),
+)
+_pt_src = read(HOOK)
+_pt_block = _pt_src[_pt_src.index("# prompttimer - PermissionRequest"):_pt_src.index("# subagentcommit")]
+commit_case(
+    "prompttimer: the handler source has no route to an allow decision",
+    "allow" not in _pt_block.lower() and 'behavior": "deny"' in _pt_block,
+    "%d characters of handler source scanned" % len(_pt_block),
+)
+_pt_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"].get("PermissionRequest", [])
+commit_case(
+    "prompttimer: hooks.json wires PermissionRequest to prompttimer with a 330 second timeout",
+    len(_pt_hj) == 1 and "matcher" not in _pt_hj[0] and len(_pt_hj[0]["hooks"]) == 1
+    and _pt_hj[0]["hooks"][0]["command"].endswith('run.sh" prompttimer') and _pt_hj[0]["hooks"][0]["timeout"] == 330,
+    "entry %r" % (_pt_hj,),
 )
 
 # --- verdict's audit summary: built from the transcript, not the subagent's own report --------
