@@ -1,7 +1,9 @@
 # Plan: a permission prompt nobody answers for 5 minutes stops blocking the session
 
-STATUS: proposed 2026-10-04, not approved, nothing built. Building it takes more than three steps,
-so the issue workflow applies: one parent issue and one child per step before any source edit.
+STATUS: approved by aj 2026-10-04. Parent issue #142; steps are #143-#147 in the build order
+below. Build order changed with approval: steps 2-4 are built before step 1's desktop test,
+because the timer is proven useful for the prompts Claude Code shows on its own (probe C/D);
+step 1 decides only whether it also covers the house-rules prompts.
 
 ## The problem, in aj's words
 
