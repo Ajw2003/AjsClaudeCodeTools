@@ -5606,6 +5606,153 @@ commit_case(
     "entry %r" % (_pt_hj,),
 )
 
+# --- #145: the waiting-on-you list is locked, shown by scope and issuelist, and named in the guard prompts
+import threading
+
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_pt_pl = lambda cmd, sid="pt-sess": json.dumps({"hook_event_name": "PermissionRequest", "session_id": sid,
+                                                "tool_name": "Bash", "tool_input": {"command": cmd}})
+_pt_res = {}
+
+
+def _pt_thread(name, cmd):
+    _pt_res[name] = _pt_run(_pt_pl(cmd))
+
+
+_ths = [threading.Thread(target=_pt_thread, args=("a", "echo concurrent-a")),
+        threading.Thread(target=_pt_thread, args=("b", "echo concurrent-b"))]
+for _t in _ths:
+    _t.start()
+for _t in _ths:
+    _t.join()
+try:
+    _pt_c = json.load(open(_pt_state, encoding="utf-8"))
+except Exception:
+    _pt_c = []
+commit_case(
+    "prompttimer: two concurrent runs on different actions leave 2 entries (the lock keeps both)",
+    len(_pt_c) == 2 and {e["summary"] for e in _pt_c} == {"echo concurrent-a", "echo concurrent-b"}
+    and not os.path.exists(_pt_state + ".lock"),
+    "entries %r" % (_pt_c,),
+)
+
+# a stale lock is removed and reported
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+os.makedirs(os.path.dirname(_pt_state), exist_ok=True)
+with open(_pt_state + ".lock", "w") as _f:
+    _f.write("")
+os.utime(_pt_state + ".lock", (time.time() - 60, time.time() - 60))
+_s1 = _pt_run(_pt_pl("echo stale-lock"))
+commit_case(
+    "prompttimer: a lock older than 15 s is removed, reported on stderr, and the entry is still written",
+    "stale lock" in _s1[2] and not os.path.exists(_pt_state + ".lock")
+    and _pt_decision(_s1[1]).get("behavior") == "deny"
+    and any(e["summary"] == "echo stale-lock" for e in json.load(open(_pt_state, encoding="utf-8"))),
+    "stderr %r" % (_s1[2][:200],),
+)
+
+# scope: a real prompt lists the entry, marks it reported; a retry then waits
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_pt_run()  # times out: one timed-out entry for rm -rf /tmp/pt-victim in pt-sess
+_pt_scope_env = _pt_env()
+
+
+def _pt_scope(prompt, sid="pt-sess"):
+    return run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": sid,
+                                         "prompt": prompt}), env=_pt_scope_env)
+
+
+_n1 = _pt_scope("<task-notification><task-id>abc</task-id><status>completed</status></task-notification>")
+_state_n1 = json.load(open(_pt_state, encoding="utf-8"))
+commit_case(
+    "scope: a background task-notification prompt changes nothing and lists nothing",
+    _n1[0] == 0 and "waiting on you" not in _n1[1] and _state_n1[0]["status"] == "timed-out",
+    "out %r state %r" % (_n1[1][:150], _state_n1),
+)
+_r1 = _pt_scope("hello, back now")
+_state_r1 = json.load(open(_pt_state, encoding="utf-8"))
+try:
+    _r1ctx = json.loads(_r1[1])["hookSpecificOutput"]["additionalContext"]
+except Exception:
+    _r1ctx = ""
+commit_case(
+    "scope: a real prompt lists the session's timed-out action, marks it reported, one JSON object on stdout",
+    _r1[0] == 0 and "1 action waiting on you since" in _r1ctx and "(local time)" in _r1ctx
+    and "- Bash: rm -rf /tmp/pt-victim" in _r1ctx and "aj is here now" in _r1ctx
+    and len(_state_r1) == 1 and _state_r1[0]["status"] == "reported",
+    "out %r state %r" % (_r1[1][:200], _state_r1),
+)
+_r2 = _pt_run()
+commit_case(
+    "prompttimer: after scope reported it, the same action waits instead of being re-denied at once",
+    _r2[3] >= 0.9 and "already timed out" not in _pt_decision(_r2[1]).get("message", ""),
+    "elapsed %.2fs out %r" % (_r2[3], _r2[1][:100]),
+)
+_r3 = _pt_scope("again", sid="quiet-sess")
+commit_case(
+    "scope: a session with nothing waiting gets nothing extra",
+    "action waiting on you" not in _r3[1] and "actions waiting on you" not in _r3[1],
+    "out %r" % (_r3[1][:150],),
+)
+
+# issuelist: other sessions' entries are shown and dropped; >7-day entries pruned; empty says nothing
+_now = time.time()
+with open(_pt_state, "w", encoding="utf-8") as _f:
+    json.dump([
+        {"session_id": "old-sess", "key": "k1", "tool": "Bash", "summary": "git push origin main",
+         "started": _now - 3600, "status": "timed-out"},
+        {"session_id": "old-sess2", "key": "k2", "tool": "Write", "summary": "ancient.txt",
+         "started": _now - 8 * 86400, "status": "timed-out"},
+        {"session_id": "new-sess", "key": "k3", "tool": "Bash", "summary": "mine stays",
+         "started": _now - 5, "status": "waiting"},
+    ] + [{"session_id": "filler%d" % _k, "key": "f%d" % _k, "tool": "Bash", "summary": "filler %d" % _k,
+          "started": _now - 100 - _k, "status": "timed-out"} for _k in range(9)], _f)
+_il_env = _pt_env(HOUSE_RULES_ISSUES="off")
+_i1 = run_hook("issuelist", json.dumps({"hook_event_name": "SessionStart", "session_id": "new-sess",
+                                        "cwd": _pt_repo}), env=_il_env)
+try:
+    _io = json.loads(_i1[1])
+except Exception:
+    _io = {}
+_left = json.load(open(_pt_state, encoding="utf-8"))
+commit_case(
+    "issuelist: another session's entry is shown to Claude and aj in one JSON object, then dropped; >7-day entries pruned",
+    _i1[0] == 0 and "Left waiting on you by an earlier session" in _io.get("hookSpecificOutput", {}).get("additionalContext", "")
+    and "git push origin main" in _io["hookSpecificOutput"]["additionalContext"]
+    and "ancient.txt" not in _io["hookSpecificOutput"]["additionalContext"]
+    and _io["hookSpecificOutput"]["additionalContext"].count("\n- ") == 10
+    and "git push origin main" in _io.get("systemMessage", "")
+    and [e["summary"] for e in _left] == ["mine stays"],
+    "out %r left %r" % (_i1[1][:200], _left),
+)
+_i2 = run_hook("issuelist", json.dumps({"hook_event_name": "SessionStart", "session_id": "new-sess",
+                                        "cwd": _pt_repo}), env=_il_env)
+commit_case(
+    "issuelist: with nothing left by other sessions it says nothing",
+    _i2[0] == 0 and _i2[1] == "", "out %r" % (_i2[1][:100],),
+)
+
+# guard: the timeout line, omitted when off
+_g_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Bash",
+                         "tool_input": {"command": "rm -rf /tmp/pt-victim"}, "cwd": _pt_repo})
+_gw_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Write",
+                          "tool_input": {"file_path": os.path.join(_pt_repo, "existing.txt"), "content": "x\n"},
+                          "cwd": _pt_repo})
+with open(os.path.join(_pt_repo, "existing.txt"), "w") as _f:
+    _f.write("a\nb\n")
+_gline = "refused (never approved) and added to the waiting-on-you list."
+_ge = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="300")
+_geoff = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="off")
+_g1, _g2 = run_hook("guard", _g_payload, env=_ge), run_hook("guardwrite", _gw_payload, env=_ge)
+_g3, _g4 = run_hook("guard", _g_payload, env=_geoff), run_hook("guardwrite", _gw_payload, env=_geoff)
+commit_case(
+    "guard and guardwrite: the prompt says 'If nobody answers within 5 minutes...' before the Approve line; off omits it",
+    all("If nobody answers within 5 minutes, this is " + _gline in x[1] for x in (_g1, _g2))
+    and all(x[1].index("If nobody answers") < x[1].index("Approve to let it run") for x in (_g1, _g2))
+    and all(_gline not in x[1] and "Approve to let it run" in x[1] for x in (_g3, _g4)),
+    "guard %r | guardwrite %r | off %r" % (_g1[1][-250:], _g2[1][-250:], _g3[1][-150:]),
+)
+
 # --- verdict's audit summary: built from the transcript, not the subagent's own report --------
 code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"))
 audit = []
