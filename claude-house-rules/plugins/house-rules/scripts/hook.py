@@ -1599,8 +1599,10 @@ def event_scope():
     # unreadable payload, missing "prompt" key, any exception at all - must fall through to
     # emitting the safe short reminder and exiting 0. Never raise, never exit non-zero.
     reminder = SCOPE_REMINDER_SHORT
+    waiting = ""
     try:
         payload = read_payload()
+        waiting = _waiting_scope_note(payload)
         m = _PROMPT_FIELD_RE.search(payload)
         if m:
             field = m.group(0)
@@ -1620,7 +1622,7 @@ def event_scope():
             {
                 "hookSpecificOutput": {
                     "hookEventName": "UserPromptSubmit",
-                    "additionalContext": reminder,
+                    "additionalContext": reminder + ("\n\n" + waiting if waiting else ""),
                 }
             }
         )
@@ -2099,6 +2101,9 @@ def event_guard():
         )
 
     lines.append("")
+    _tl = _prompt_timeout_line()
+    if _tl:
+        lines.append(_tl)
     lines.append(
         "Approve to let it run, or reject and Claude will explain what it was about to do."
     )
@@ -2212,6 +2217,9 @@ def event_guardwrite():
         "content this discards and why an in-place edit will not do."
     )
     lines.append("")
+    _tl = _prompt_timeout_line()
+    if _tl:
+        lines.append(_tl)
     lines.append(
         "Approve to let it run, or reject and Claude will explain what it was about to do."
     )
@@ -3452,6 +3460,162 @@ def _waiting_save(path, entries):
     os.replace(tmp, path)
 
 
+WAITING_LOCK_WAIT = 3.0
+WAITING_LOCK_STALE = 15.0
+
+
+def _waiting_update(path, fn, who="prompttimer"):
+    """Load, apply fn, save - under a lock file (path + '.lock', O_CREAT|O_EXCL) so two hooks
+    cannot overwrite each other's entry. fn returns the new list, or None to leave the file as
+    it is. Waits up to 3 s for the lock; a lock older than 15 s is stale and is removed (said on
+    stderr). If the lock cannot be taken it says so and updates unlocked: never hangs, never
+    crashes on the lock. A corrupt list is reported and started again; save errors raise."""
+    lock = path + ".lock"
+    held = False
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        deadline = time.time() + WAITING_LOCK_WAIT
+        while True:
+            try:
+                os.close(os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+                held = True
+                break
+            except FileExistsError:
+                try:
+                    age = time.time() - os.path.getmtime(lock)
+                except OSError:
+                    continue  # it vanished between the two calls: take it
+                if age > WAITING_LOCK_STALE:
+                    try:
+                        os.remove(lock)
+                        sys.stderr.write("house-rules %s: removed a stale lock %s (%d s old).\n"
+                                         % (who, lock, age))
+                    except OSError as exc:
+                        sys.stderr.write("house-rules %s: could not remove the stale lock %s (%s).\n"
+                                         % (who, lock, exc))
+                        time.sleep(0.05)
+                    if time.time() >= deadline:
+                        break
+                    continue
+                if time.time() >= deadline:
+                    break
+                time.sleep(0.05)
+        if not held:
+            sys.stderr.write("house-rules %s: could not take the lock %s within %g s; updating %s "
+                             "without it, so a simultaneous update may be lost.\n"
+                             % (who, lock, WAITING_LOCK_WAIT, path))
+    except Exception as exc:
+        sys.stderr.write("house-rules %s: could not take the lock %s (%s: %s); updating %s without it.\n"
+                         % (who, lock, type(exc).__name__, exc, path))
+    try:
+        try:
+            entries = _waiting_load(path)
+        except (ValueError, OSError) as exc:
+            sys.stderr.write("house-rules %s: could not read %s (%s: %s); starting that list again.\n"
+                             % (who, path, type(exc).__name__, exc))
+            entries = []
+        new = fn(entries)
+        if new is not None:
+            _waiting_save(path, new)
+    finally:
+        if held:
+            try:
+                os.remove(lock)
+            except OSError as exc:
+                sys.stderr.write("house-rules %s: could not remove the lock %s (%s).\n" % (who, lock, exc))
+
+
+def _waiting_clock(ts):
+    try:
+        return time.strftime("%H:%M", time.localtime(float(ts)))
+    except (TypeError, ValueError, OverflowError, OSError):
+        return "an unknown time"
+
+
+def _waiting_lines(entries):
+    return "\n".join("- %s: %s" % (e.get("tool", "?"), e.get("summary", "?")) for e in entries)
+
+
+def _waiting_scope_note(payload):
+    """UserPromptSubmit: if this prompt is a real message from aj (a background task-notification
+    is not aj being back), report this session's timed-out entries, mark them reported and drop
+    its waiting entries. Returns the text for Claude, or "". Never raises."""
+    try:
+        m = _PROMPT_VALUE_RE.search(payload or "")
+        if not m or _TASK_NOTIFICATION_RE.search(m.group(1)):
+            return ""
+        data = json.loads(payload)
+        session_id = str(data.get("session_id") or "") if isinstance(data, dict) else ""
+        path, _ = _waiting_path(session_id)
+        if not os.path.isfile(path):
+            return ""
+        shown = []
+
+        def fn(entries):
+            mine = [e for e in entries if e.get("session_id") == session_id]
+            timed = [e for e in mine if e.get("status") == "timed-out"]
+            if not mine:
+                return None
+            shown.extend(dict(e) for e in timed)
+            out = []
+            for e in entries:
+                if e.get("session_id") == session_id:
+                    if e.get("status") == "waiting":
+                        continue
+                    if e.get("status") == "timed-out":
+                        e = dict(e, status="reported")
+                out.append(e)
+            return out
+        _waiting_update(path, fn, "scope")
+        if not shown:
+            return ""
+        since = _waiting_clock(min(e.get("started", 0) for e in shown))
+        return (
+            "house-rules: %d action%s waiting on you since %s (local time):\n%s\n"
+            "aj is here now, so retrying one shows a normal permission prompt."
+            % (len(shown), "" if len(shown) == 1 else "s", since, _waiting_lines(shown))
+        )
+    except Exception as exc:
+        sys.stderr.write("house-rules scope: could not report the waiting-on-you list (%s: %s).\n"
+                         % (type(exc).__name__, exc))
+        return ""
+
+
+def _waiting_session_note(payload):
+    """SessionStart: entries left by OTHER sessions, newest first, max 10; shown ones and any
+    older than 7 days are dropped. Returns the text, or "". Never raises."""
+    try:
+        try:
+            data = json.loads(payload) if payload else {}
+        except ValueError:
+            data = {}
+        session_id = str(data.get("session_id") or "") if isinstance(data, dict) else ""
+        path, _ = _waiting_path(session_id)
+        if not os.path.isfile(path):
+            return ""
+        shown = []
+
+        def fn(entries):
+            others = [e for e in entries if e.get("session_id") != session_id]
+            others.sort(key=lambda e: e.get("started") or 0, reverse=True)
+            shown.extend(others[:10])
+            gone = set(id(e) for e in shown)
+            cutoff = time.time() - 7 * 86400
+            keep = [e for e in entries if id(e) not in gone and (e.get("started") or 0) >= cutoff]
+            return keep if len(keep) != len(entries) else None
+        _waiting_update(path, fn, "issuelist")
+        if not shown:
+            return ""
+        return "Left waiting on you by an earlier session:\n" + "\n".join(
+            "- %s %s: %s (%s)" % (time.strftime("%Y-%m-%d %H:%M", time.localtime(e.get("started") or 0)),
+                                  e.get("tool", "?"), e.get("summary", "?"), e.get("status", "?"))
+            for e in shown)
+    except Exception as exc:
+        sys.stderr.write("house-rules issuelist: could not read the waiting-on-you list (%s: %s).\n"
+                         % (type(exc).__name__, exc))
+        return ""
+
+
 def _waiting_clear_session(entries, session_id, status=None):
     """The entries without this session's (optionally only those with this status)."""
     return [e for e in entries
@@ -3489,6 +3653,15 @@ def _prompt_refusal(minutes, path, summary):
 def _prompt_deny(text):
     emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest",
                                  "decision": {"behavior": "deny", "message": text, "reason": text}}})
+
+
+def _prompt_timeout_line():
+    """The guard prompts' one line about the timer; "" when the timer is off."""
+    secs, _ = _prompt_timeout_seconds()
+    if secs is None:
+        return ""
+    return ("If nobody answers within %s, this is refused (never approved) and added to the "
+            "waiting-on-you list." % _prompt_minutes(secs))
 
 
 def _prompt_minutes(secs):
@@ -3535,15 +3708,9 @@ def event_prompttimer():
         return e.get("session_id") == session_id and e.get("key") == key
 
     def update(fn):
-        """Load, change, save. A state problem is loud and never stops the timer."""
+        """Load, change, save under the lock. A state problem is loud and never stops the timer."""
         try:
-            try:
-                entries = _waiting_load(path)
-            except (ValueError, OSError) as exc:
-                sys.stderr.write("house-rules prompttimer: could not read %s (%s: %s); starting that "
-                                 "list again.\n" % (path, type(exc).__name__, exc))
-                entries = []
-            _waiting_save(path, fn(entries))
+            _waiting_update(path, fn, "prompttimer")
         except Exception as exc:
             sys.stderr.write("house-rules prompttimer: could not write %s (%s: %s); the timer still "
                              "applies.\n" % (path, type(exc).__name__, exc))
@@ -4374,20 +4541,30 @@ def event_issuelist():
     """SessionStart: the open issues, so the session starts knowing what work is tracked. Its own
     entry (like profile) because inject is already near the 10,000-char per-hook limit."""
     try:
-        if not _issues_enabled():
-            return 0
         payload = read_payload()
-        text, problem = _open_issues_text(_payload_cwd(payload or ""))
+        waiting = _waiting_session_note(payload)
+        text, problem = "", ""
+        if _issues_enabled():
+            text, problem = _open_issues_text(_payload_cwd(payload or ""))
         out = {}
-        if text:
-            out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": text}
-        if problem and not text:
-            out["systemMessage"] = "house-rules: could not list open issues (%s)" % problem
-        elif text:
-            n = sum(1 for l in text.splitlines() if l.startswith("- #"))
-            note = ("house-rules: %d open issue%s loaded" % (n, "" if n == 1 else "s")
-                    if n else "house-rules: no open issues")
-            out["systemMessage"] = note + (" | house-rules: open issue list: %s" % problem if problem else "")
+        context = [t for t in (text, waiting) if t]
+        if context:
+            out["hookSpecificOutput"] = {"hookEventName": "SessionStart",
+                                         "additionalContext": "\n\n".join(context)}
+        notes = []
+        if _issues_enabled():
+            if problem and not text:
+                notes.append("house-rules: could not list open issues (%s)" % problem)
+            elif text:
+                n = sum(1 for l in text.splitlines() if l.startswith("- #"))
+                notes.append("house-rules: %d open issue%s loaded" % (n, "" if n == 1 else "s")
+                             if n else "house-rules: no open issues")
+                if problem:
+                    notes.append("house-rules: open issue list: %s" % problem)
+        if waiting:
+            notes.append("house-rules: " + waiting)
+        if notes:
+            out["systemMessage"] = " | ".join(notes)
         if out:
             emit(out)
     except Exception as exc:
