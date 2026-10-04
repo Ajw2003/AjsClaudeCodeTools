@@ -3752,10 +3752,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.51.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.52.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.51.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.52.0",
     "rules section + detail file + version",
 )
 
@@ -4057,7 +4057,7 @@ else:
 
 # --- no live file still names the retired executor agent ----------------------------------------
 _stale = []
-_skip_dirs = {".git", "node_modules", "__pycache__", "sessions", "archive", "plans", "generated"}
+_skip_dirs = {".git", "node_modules", "__pycache__", "sessions", "archive", "plans", "generated", "worktrees"}
 for _dp, _dns, _fns in os.walk(ROOT):
     _dns[:] = [d for d in _dns if d not in _skip_dirs and d != "6-decisions"]
     for _fn in _fns:

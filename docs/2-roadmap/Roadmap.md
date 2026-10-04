@@ -159,6 +159,8 @@ Refactors with no change in behaviour, needed before group A adds more handlers.
 
 ### D3. Issue workflow follow-ups (from `docs/plans/issue-workflow-build-plan.md`; #108-#110 shipped in 2.49.0)
 
+- **#142.** Shipped in 2.52.0: the prompt timer and the waiting-on-you list (#144-#146). Open: #143 (do
+  `guard` prompts reach the timer in the desktop app?) and #147 (overnight-style check), both on aj's machine.
 - **#133.** Shipped in 2.51.0: the installer sets the `attribution` setting and `guard` refuses text crediting Claude.
   Open: other machines get the setting only when `bootstrap` or `update` runs there.
 - **#111, #112.** Shipped in 2.50.0: the `scout`/`builder`/`reviewer` tiers and the `agentcap` spawn cap.

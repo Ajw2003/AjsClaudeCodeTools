@@ -95,6 +95,20 @@ and treated as no gate. `HOUSE_RULES_ISSUES=off` disables all of it. Known limit
 through the `PowerShell` tool is not recorded (the `autosave` entry matches `Bash`, not `PowerShell`, and
 widening it would add a process per PowerShell call). Plan: `docs/plans/issue-workflow-build-plan.md`.
 
+**Prompt timer (2.52.0, issues #142-#146).** `prompttimer` is the plugin's one `PermissionRequest` entry (no
+matcher, timeout 330). That event runs at the same time as the permission dialog, and whichever finishes first
+decides. The handler waits `HOUSE_RULES_PROMPT_TIMEOUT` seconds (default 300; `off` or `0` disables), then
+refuses with the same text in `decision.message` and `decision.reason`. Probed on 2.1.289: only `message` reached
+the model. It never emits an allow. The refused action goes into `<git common dir>/house-rules/waiting-on-you.json`
+(outside a repository: a session-keyed temp file), changed only through `_waiting_update`, which holds a
+`.lock` file (O_EXCL, 3 s wait, stale after 15 s, loud and unlocked if the lock can't be taken). The same
+action again in the same session is refused at once until aj's next real message. On that message `scope`
+lists the session's timed-out entries and marks them `reported`; a background task notice does not count.
+`issuelist` shows entries other sessions left (newest 10) at session start and drops them, plus anything older
+than 7 days. `guard` and `guardwrite` prompts carry one line naming the timeout. Untested: whether a `guard`
+`ask` reaches `PermissionRequest` in the desktop app (#143); headless it does not. Plan:
+`docs/plans/2026-10-04-permission-prompt-timeout.md`.
+
 **Attribution (2.51.0, issue #133).** `guard` also refuses a `git commit`, `gh pr create|edit` or `gh issue create|comment`
 whose text credits Claude (a `Co-Authored-By` line naming Claude or anthropic.com, `Generated with [Claude Code]`, a
 `Claude-Session` trailer or a claude.ai/code link). The wording to use is `Committed by AJ's agent` and
