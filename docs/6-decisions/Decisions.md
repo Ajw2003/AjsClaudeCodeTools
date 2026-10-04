@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-04 - A permission prompt nobody answers for 5 minutes is refused, never approved (#142, 2.52.0)
+
+**Context.** Overnight, one unanswered permission prompt held up a whole session. Issue #136 is the same failure in background builders. aj: "Permission as a blocker should be isolated, not affect the rest of the project."
+
+**Decision.** A `prompttimer` handler on `PermissionRequest`, the one hook event that runs at the same time as the dialog ("whichever finishes first determines the outcome", hooks reference). It waits `HOUSE_RULES_PROMPT_TIMEOUT` seconds (default 300, `off` disables) and then refuses. It never approves, because an unanswered prompt is a no. The refusal tells Claude not to retry, to route around without the same effect, and to carry on with the rest. The action goes on a waiting-on-you list in `<git common dir>/house-rules/waiting-on-you.json`. That list is shown on aj's next real message and at the next session start. It is the second deliberate exception to "no hook keeps state", after `versioncheck`'s marker, and is kept for the same reason: each entry is keyed by session.
+
+The refusal text goes in both `decision.message` and `decision.reason`. Probed on Claude Code 2.1.289: only `message` reached the model, although `reason` is the documented name.
+
+**Rejected.** Approving after the timeout: that would turn silence into consent for exactly the destructive actions the prompts exist for. A timer inside `PreToolUse`: that hook finishes before the dialog opens, so it cannot time one.
+
+**Status.** Decided and built. Not yet settled (#143): headless, a `guard` `ask` never reached `PermissionRequest`. Whether it does in the desktop app is untested, so whether the house-rules prompts themselves are timed is unknown until #143 runs. If they are not, the fallback in the plan (an absence check) goes to aj first.
+
+**Consequence.** A refused action can sit on the list unseen until aj next writes or a new session starts. That is the point: it waits, and the rest of the session carries on.
+
+---
+
 ## 2026-10-01 - Commits and pull requests credit "aj's agent", never Claude (#133, 2.51.0)
 
 **Context.** Claude Code adds a `Co-Authored-By: Claude` trailer to commits and a "Generated with Claude Code" line to pull requests. aj wants the distinction that an agent did the work but not the Claude branding, and no email shown.
