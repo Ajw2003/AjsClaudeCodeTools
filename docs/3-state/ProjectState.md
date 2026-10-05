@@ -75,6 +75,15 @@ same call sequence replayed through `run.sh` in a scratch clone of PlunderSpell 
 verified: a real Claude Code session in another repo, and a `gh issue create` made through the
 `PowerShell` tool, which is not recorded.
 
+2.52.0 (2026-10-04, #142-#146) adds `prompttimer`: a permission prompt nobody answers for 5 minutes is
+refused (never approved) and goes on a waiting-on-you list, shown on aj's next message and at the next session
+start. Verified by `verify.py` (554 checks, 18 of them for the timer, the lock and the list) and by a real
+headless Claude Code 2.1.289 run against the built hook: refused after the timeout, the file was never created,
+Claude replied with a "Waiting on you" line. Stopping the hook mid-wait with SIGTERM through `run.sh`
+removed its "waiting" entry and made no decision (checked by hand, Linux). Not verified: whether Claude Code
+actually stops the hook when aj answers first, Windows locking and signals, the desktop app, including whether `guard`'s own
+prompts reach the timer (#143), and the overnight-style run (#147).
+
 2.51.0 (2026-10-01, #133) credits "aj's agent" instead of Claude: `tools/install.py` writes the `attribution` setting
 (a plugin cannot carry it: Claude Code accepts only `agent` and `subagentStatusLine` from a plugin's settings.json), and
 `guard` refuses text crediting Claude (kill switch `HOUSE_RULES_ATTRIBUTION=off`).

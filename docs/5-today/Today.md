@@ -1,4 +1,12 @@
-# Today — 2026-10-01
+# Today — 2026-10-04
+
+Prompt timer, plugin 2.52.0 (issue #142): a permission prompt nobody answers for 5 minutes is now refused,
+never approved, and Claude carries on with the rest of the work. The refused action goes on a waiting-on-you
+list, which shows on your next message and at the next session start. Plan:
+[`2026-10-04-permission-prompt-timeout.md`](../plans/2026-10-04-permission-prompt-timeout.md). Next: on the
+desktop app, check whether the house-rules prompts (`guard`) are timed too (#143), then the overnight-style
+run (#147).
+
 
 Credit "aj's agent", never Claude, plugin 2.51.0 (issue #133): the installer now writes Claude Code's
 `attribution` setting (commit `Committed by AJ's agent`, pull request `Opened by AJ's agent`, no session link, no

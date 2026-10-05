@@ -168,7 +168,8 @@ paths, never finish what they started, say what/where. Credit "aj's agent", neve
 <!-- subagent -->
 
 Before deleting, overwriting, moving, killing, discarding, force-pushing: say what's
-destroyed/unrecoverable, run `git status`, wait for them to agree. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
+destroyed/unrecoverable, run `git status`, wait for agreement. Unanswered 5 min = no: route
+around it, never to the same effect. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
 
 ## Edit in place; a full rewrite is a delete, not an edit
 <!-- subagent -->
