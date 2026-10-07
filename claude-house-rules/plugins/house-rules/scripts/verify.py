@@ -566,6 +566,79 @@ else:
     for p in prompt_problems:
         print(f"          {p}")
 
+# --- #153: destructive git steps run unasked only on my branch with the work saved elsewhere ---
+_sv_root = os.path.join(_FIXTURE_ROOT, "saved")
+_sv_remote, _sv_repo = os.path.join(_sv_root, "remote.git"), os.path.join(_sv_root, "work")
+os.makedirs(_sv_repo, exist_ok=True)
+
+
+def _sv_git(*args, cwd=_sv_repo):
+    return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=cwd,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
+
+_sv_git("init", "-q", "--bare", _sv_remote, cwd=_sv_root)
+_sv_git("init", "-q")
+_sv_git("switch", "-q", "-c", "claude/saved-topic")
+with open(os.path.join(_sv_repo, "f.txt"), "w") as _f:
+    _f.write("one\n")
+_sv_git("add", "f.txt")
+_sv_git("commit", "-q", "-m", "one")
+_sv_git("remote", "add", "origin", _sv_remote)
+_sv_git("push", "-q", "-u", "origin", "claude/saved-topic")
+
+
+def _sv_guard(cmd):
+    code, out, err = run_hook("guard", payload_for(cmd), env=verbose_env(env_in(_sv_repo)))
+    return ("ask" if '"permissionDecision":"ask"' in out else "pass"), out
+
+
+def _sv_case(title, ok, detail):  # commit_case is defined further down this file
+    report("PASS" if ok else "FAIL", title)
+    print(f"          {detail}")
+
+
+_sv_fail = []
+for _cmd in ("git reset --hard HEAD", "git rebase -i HEAD", "git revert --no-edit HEAD", "git restore f.txt",
+             "git checkout -- f.txt"):
+    _got, _out = _sv_guard(_cmd)
+    if _got != "pass" or "every commit on a remote" not in _out:
+        _sv_fail.append("%s: %s %r" % (_cmd, _got, _out[:120]))
+_sv_case(
+    "guard: on a claude/ branch with a clean tree and every commit pushed, reset/rebase/revert/restore run unasked",
+    not _sv_fail, "; ".join(_sv_fail) or "5 commands passed, each trace names the saved-elsewhere check",
+)
+_sv_fail = []
+for _cmd in ("git push --force-with-lease", "git clean -fdx", "git stash drop", "git merge main", "rm f.txt"):
+    if _sv_guard(_cmd)[0] != "ask":
+        _sv_fail.append(_cmd)
+_sv_case(
+    "guard: even with the work saved, force-push, clean, stash drop, merge and rm still ask",
+    not _sv_fail, "did not ask: %s" % ", ".join(_sv_fail) if _sv_fail else "all 5 asked",
+)
+with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
+    _f.write("uncommitted\n")
+_sv_dirty = _sv_guard("git reset --hard HEAD")
+_sv_git("checkout", "--", "f.txt")
+with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
+    _f.write("two\n")
+_sv_git("commit", "-q", "-am", "two")
+_sv_unpushed = _sv_guard("git reset --hard HEAD~1")
+_sv_case(
+    "guard: an uncommitted change or an unpushed commit makes reset ask, and the prompt says which",
+    _sv_dirty[0] == "ask" and "1 uncommitted or untracked file would be lost" in _sv_dirty[1]
+    and _sv_unpushed[0] == "ask" and "1 commit on this branch is not on any remote" in _sv_unpushed[1],
+    "dirty %r | unpushed %r" % (_sv_dirty[1][-160:], _sv_unpushed[1][-160:]),
+)
+_sv_git("push", "-q")
+_sv_git("switch", "-q", "-c", "main")
+_sv_git("push", "-q", "-u", "origin", "main")
+_sv_theirs = _sv_guard("git reset --hard HEAD")
+_sv_case(
+    "guard: on aj's branch, reset asks even with a clean tree and everything pushed",
+    _sv_theirs[0] == "ask" and "not a `claude/` branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
+)
+
 # The exemption is a silent success path, and guard's silent paths trace by contract.
 code, out, err = run_hook("guard", payload_for("git commit -m x"), env=env_in(REPO_MINE))
 if '"systemMessage"' in out and "claude/some-topic" in out and "mine to commit on" in out:

@@ -163,6 +163,8 @@ Refactors with no change in behaviour, needed before group A adds more handlers.
   exempt (#151), refuse at once once aj is away (#152), an action that ran is never recorded as timed out
   (#149). Open: #143 (do `guard` prompts reach the timer in the desktop app?), #147 (overnight-style
   check) and #149's stale dialog, all on aj's machine.
+- **#153.** Built for 2.53.0: destructive git steps unasked only on a `claude/` branch with the work
+  pushed. Open: a real session confirming the prompt disappears in that case and stays everywhere else.
 - **#133.** Shipped in 2.51.0: the installer sets the `attribution` setting and `guard` refuses text crediting Claude.
   Open: other machines get the setting only when `bootstrap` or `update` runs there.
 - **#111, #112.** Shipped in 2.50.0: the `scout`/`builder`/`reviewer` tiers and the `agentcap` spawn cap.

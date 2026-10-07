@@ -363,14 +363,21 @@ a lesson about greping prose for the absence of an idea.
 
 ### What the exemption does and does not cover
 
-Only a plain `commit` and a plain `push`, and only on a branch named `claude/…`. Everything else
-in the bucket prompts on every branch:
+A plain `commit` and a plain `push` on a branch named `claude/…`; and, only when the work is
+already saved elsewhere, the history-rewriting steps below (#153). Everything else prompts on
+every branch:
 
 - **Force-push** rewrites history that was already safely on the remote. A checkpoint adds; this
   replaces. It is the one push that can destroy something already backed up.
-- **`reset`, `revert`, `clean`** discard work that is not yet a checkpoint — including the user's
-  uncommitted edits sitting in the same tree, which do not become mine because the branch is.
-- **`rebase`, `merge`, `cherry-pick`, `am`, `apply`** are how a hook would end up finishing an
+- **`reset`, `revert`, `rebase`** (and, in the destructive bucket, `checkout --` / `restore`) discard
+  work that is not yet a checkpoint — including the user's uncommitted edits sitting in the same
+  tree. Since #153 they run unasked on a `claude/` branch **only** when `work_saved_elsewhere()`
+  finds nothing to lose: `git status --porcelain -uall` empty and `git rev-list HEAD --not
+  --remotes` empty. That is the second deliberate subprocess in `guard` (2 s budget, after the docs
+  check), run only when one of these matched on my branch; anything it cannot tell is a no, and the
+  prompt names the reason (uncommitted files, unpushed commits, or the check failing).
+- **`clean`** can remove ignored files that exist nowhere else; prompts on every branch.
+- **`merge`, `cherry-pick`, `am`, `apply`** are how a hook would end up finishing an
   operation the user started, which the rule forbids *even on a branch named after me*.
 - **Any command carrying `-C`, `--git-dir` or `--work-tree`** acts on a repo other than the one the
   branch was read from, so the exemption cannot be justified and is withheld.

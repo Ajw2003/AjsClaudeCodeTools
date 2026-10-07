@@ -79,7 +79,9 @@ verified: a real Claude Code session in another repo, and a `gh issue create` ma
 timed; after one timeout, later prompts in that session are refused at once until aj writes; and a new
 `promptran` hook stops the timer when the action actually ran, and reports one recorded as timed out that ran
 anyway. Verified by `verify.py` (562 checks; 7 new). Not verified: the desktop app's stale dialog (#149) and a
-real session (#147).
+real session (#147). The same release (#153) lets `reset`/`revert`/`rebase`/`checkout --`/`restore` run unasked
+on a `claude/` branch only when the tree is clean and every commit is on a remote; everything else still asks.
+Verified by `verify.py` against a real repo with a local remote.
 
 2.52.0 (2026-10-04, #142-#146) adds `prompttimer`: a permission prompt nobody answers for 5 minutes is
 refused (never approved) and goes on a waiting-on-you list, shown on aj's next message and at the next session

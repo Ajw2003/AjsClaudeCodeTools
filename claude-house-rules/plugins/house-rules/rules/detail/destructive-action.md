@@ -15,6 +15,30 @@ it is their work, and removing it is their call.
 
 **Why:** uncommitted work has no undo. Clearing it with the user first costs one message.
 
+## The one case that needs no asking
+
+A destructive step may run without asking only when **both** hold:
+
+1. **The branch is mine:** a `claude/` branch I created for this work. Never one aj authored.
+2. **The work is already saved where the step cannot reach it:** `git status` shows nothing
+   uncommitted or untracked, and every commit on the branch is already on a remote.
+
+Then `git reset`, `git revert`, `git rebase`, `git checkout --` and `git restore` lose nothing that
+isn't on the remote, so the `guard` hook lets them through (issue #153). Everything else still asks:
+
+- **force-push:** it overwrites the remote, which is the "saved elsewhere" copy;
+- **`git clean`:** can remove ignored files that exist nowhere else;
+- **`git stash drop` / `clear`:** stashes are never pushed;
+- **`rm` and other file deletion:** guard can't tell where the target is saved;
+- **merge, cherry-pick, am, apply, filter-branch:** finishing what aj started is theirs to do,
+  whatever the branch.
+
+If either condition fails, the guard prompt says which one.
+
+**Why:** aj asked for exactly this line: destructive actions are permitted only on a branch I
+created, and only if the work is already saved somewhere the action wouldn't affect. Asking costs a
+round trip; when nothing can be lost, that round trip protects nothing.
+
 ## When nobody answers the prompt
 
 The `prompttimer` hook refuses a permission prompt nobody has answered for 5 minutes

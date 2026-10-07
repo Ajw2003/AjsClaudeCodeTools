@@ -123,6 +123,14 @@ answer on a stale dialog would show up. `scope` and `issuelist` drop `ran` entri
 output closes the app's dialog once the timer has refused (#149); the refusal reaches the model, the dialog
 can stay on screen.
 
+**Saved-work exemption (2.53.0, issue #153).** Patterns marked `SAVED` (`reset`, `revert`, `rebase`,
+`checkout --`, `restore`) stand down only when the checkout is on a `claude/` branch, the command names no
+other repo, and `work_saved_elsewhere()` reports a clean tree (`git status --porcelain -uall` empty) and no
+commit missing from every remote (`git rev-list --count HEAD --not --remotes` is 0). It runs at most once
+per command, only when such a pattern matched on my branch, with a 2-second budget; any failure is a no. A
+prompt that this could have silenced adds one line saying why it did not. Force-push, `clean`,
+`stash drop/clear`, `rm`, and merge-like verbs never use it.
+
 **Attribution (2.51.0, issue #133).** `guard` also refuses a `git commit`, `gh pr create|edit` or `gh issue create|comment`
 whose text credits Claude (a `Co-Authored-By` line naming Claude or anthropic.com, `Generated with [Claude Code]`, a
 `Claude-Session` trailer or a claude.ai/code link). The wording to use is `Committed by AJ's agent` and

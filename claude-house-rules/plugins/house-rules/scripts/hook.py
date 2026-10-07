@@ -1672,6 +1672,9 @@ _GIT = (
 # Everything without it prompts on every branch, mine included. See the ownership helpers below
 # and "Commit constantly on my own branches, never on theirs" in rules/house-rules.md.
 OWNED = "owned-branch-exempt"
+# Marks a destructive pattern that runs unasked only on my branch AND when everything it could
+# lose is already saved elsewhere: a clean tree and every commit on a remote (#153).
+SAVED = "saved-work-exempt"
 
 GUARD_R3 = [
     # Force-pushing is not a checkpoint — it rewrites history that was already backed up — so
@@ -1691,11 +1694,17 @@ GUARD_R3 = [
         "writes history (commit)",
         OWNED,
     ),
-    # Not exemptible on any branch. reset/clean/revert destroy work that is not yet a
-    # checkpoint, and rebase/merge/cherry-pick/am/apply are how a hook would end up finishing
-    # something the user started — which the rule bans even on a branch named after me.
+    # reset/revert/rebase only lose work that is not saved elsewhere, so on my branch with a
+    # clean tree and every commit pushed they run unasked (SAVED, #153). clean can remove
+    # ignored files that exist nowhere else, and merge/cherry-pick/am/apply/filter-branch are
+    # how a hook would end up finishing something the user started - not exemptible anywhere.
     (
-        _GIT + r"(reset|revert|clean|rebase|merge|filter-branch|cherry-pick|am|apply)([^0-9A-Za-z-]|$)",
+        _GIT + r"(reset|revert|rebase)([^0-9A-Za-z-]|$)",
+        "discards work or rewrites history (reset / revert / rebase)",
+        SAVED,
+    ),
+    (
+        _GIT + r"(clean|merge|filter-branch|cherry-pick|am|apply)([^0-9A-Za-z-]|$)",
         "discards work or finishes an operation you started",
     ),
 ]
@@ -1718,6 +1727,7 @@ GUARD_R4 = [
     (
         _GIT + r"(checkout\s+(--|\.(\s|$))|restore([^0-9A-Za-z-]|$))",
         "throws away uncommitted edits to a file (git checkout -- / git restore)",
+        SAVED,
     ),
     (
         _GIT + r"stash\s+(drop|clear)([^0-9A-Za-z-]|$)",
@@ -1935,6 +1945,44 @@ def branch_ownership():
     return branch.startswith(OWNED_BRANCH_PREFIX), branch, None
 
 
+SAVED_CHECK_TIMEOUT = 2.0
+
+
+def work_saved_elsewhere():
+    """(saved, note): is everything a reset/rebase/restore could lose already somewhere it
+    cannot reach? Yes only when the working tree is clean (nothing uncommitted or untracked)
+    and no commit reachable from HEAD is missing from every remote-tracking ref (#153).
+    The second deliberate subprocess in guard, after the docs check; it runs only when a SAVED
+    pattern matched on my branch. Anything it cannot tell is a no, with the reason."""
+    import subprocess
+
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    deadline = time.time() + SAVED_CHECK_TIMEOUT
+
+    def git(args):
+        left = deadline - time.time()
+        if left <= 0:
+            raise RuntimeError("the check ran out of time")
+        proc = subprocess.run(["git"] + args, cwd=root, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, timeout=left)
+        if proc.returncode != 0:
+            raise RuntimeError("git %s exited %d" % (" ".join(args), proc.returncode))
+        return proc.stdout.decode("utf-8", "replace").strip()
+
+    try:
+        dirty = git(["status", "--porcelain", "-uall"])
+        if dirty:
+            n = len(dirty.splitlines())
+            return False, "%d uncommitted or untracked file%s would be lost" % (n, "" if n == 1 else "s")
+        unpushed = int(git(["rev-list", "--count", "HEAD", "--not", "--remotes"]) or "0")
+        if unpushed:
+            return False, "%d commit%s on this branch %s not on any remote" % (
+                unpushed, "" if unpushed == 1 else "s", "is" if unpushed == 1 else "are")
+        return True, None
+    except Exception as exc:
+        return False, "could not check that the work is saved elsewhere (%s)" % exc
+
+
 # tier 3: pull out just "command":"..." — the first one. Allows backslash-escaped quotes.
 _COMMAND_FIELD_RE = re.compile(r'"command"\s*:\s*"(?:[^"\\]|\\.)*"')
 
@@ -2002,15 +2050,25 @@ def event_guard():
 
     hits = {title: [] for title, _ in GUARD_BUCKETS}
     exempted = []
+    saved_state = None  # (saved, note), computed at most once and only when a SAVED pattern matched
+    saved_blocked = None
     for title, patterns in GUARD_BUCKETS:
         for entry in patterns:
             pattern, reason = entry[0], entry[1]
             if not re.search(pattern, subject, re.IGNORECASE):
                 continue
-            if exempting and len(entry) > 2 and entry[2] == OWNED:
+            marker = entry[2] if len(entry) > 2 else None
+            if exempting and marker == OWNED:
                 exempted.append(reason)
-            else:
-                hits[title].append(reason)
+                continue
+            if exempting and marker == SAVED:
+                if saved_state is None:
+                    saved_state = work_saved_elsewhere()
+                if saved_state[0]:
+                    exempted.append(reason)
+                    continue
+                saved_blocked = saved_state[1]
+            hits[title].append(reason)
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _staged_docs_status(subject, elsewhere) if is_commit else (None, None)
@@ -2022,8 +2080,10 @@ def event_guard():
         # would be two concatenated JSON objects on stdout, which is not valid hook output.
         if exempted:
             allow_trace = (
-                "guard: checked %s - %s on `%s`, which is mine to commit on."
-                % (_trace_subject(subject), " and ".join(exempted), branch)
+                "guard: checked %s - %s on `%s`, which is mine to commit on%s."
+                % (_trace_subject(subject), " and ".join(exempted), branch,
+                   ", with nothing uncommitted and every commit on a remote"
+                   if saved_state and saved_state[0] else "")
             )
         else:
             allow_trace = "guard: checked %s - no house rule matched." % _trace_subject(subject)
@@ -2081,6 +2141,13 @@ def event_guard():
         if why_not_exempt:
             lines.append("")
             lines.append(why_not_exempt)
+
+    if saved_blocked:
+        lines.append("")
+        lines.append(
+            "  On `%s`, but this runs unasked only when the work is saved elsewhere: %s."
+            % (branch, saved_blocked)
+        )
 
     if issue_hit:
         lines.append("")

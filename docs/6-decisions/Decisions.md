@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-07 - Destructive git steps run unasked only on my branch, and only when the work is saved elsewhere (#153, 2.53.0)
+
+**Context.** aj: "destructive actions are permitted only on a Claude created branch and only if the work already is saved somewhere else the destructive action would not affect." Asked whether "otherwise" meant ask or never, aj chose ask as today; asked whether `guard` should enforce it, aj chose rule text plus `guard`.
+
+**Decision.** The two rules now draw the line: on a `claude/` branch with a clean tree and every commit on a remote, a destructive step needs no asking; anywhere else it asks exactly as before. `guard` enforces the safe case for `reset`, `revert`, `rebase`, `checkout --` and `restore` through `work_saved_elsewhere()`.
+
+**Rejected.** Exempting force-push: it overwrites the remote, which is the copy that makes the work "saved elsewhere". Exempting `clean`, `stash drop` and `rm`: what they remove (ignored files, stashes, arbitrary paths) is never on the remote, or guard can't tell. Exempting merge-like verbs: a separate rule (don't finish what aj started) covers them.
+
+**Status.** Built; `verify.py` drives a real repo with a local bare remote (safe case passes; dirty tree, unpushed commit and aj's branch ask; force-push, clean, stash drop, merge and rm ask). To fit the 9,700-character inject margin, three phrasings elsewhere in `house-rules.md` were shortened without changing what they say (docs tiers, local paths, the step card).
+
+**Consequence.** `guard` now runs up to two `git` subprocesses on a matching command on my branch. On aj's branch nothing changes.
+
+---
+
 ## 2026-10-07 - The prompt timer skips questions, refuses at once once aj is away, and learns when an action ran (#149, #151, #152, 2.53.0)
 
 **Context.** #149: on 2026-10-06 a subagent's `git push` dialog stayed on screen overnight after the timer refused it, a second push prompt waited another full 5 minutes, and a third push that actually ran was recorded as timed out. aj asked that the timer actually move the agent on to a route that is not blocked rather than leave it waiting long after aj had the chance to answer, and that questions and multiple-choice prompts be left out of it.
