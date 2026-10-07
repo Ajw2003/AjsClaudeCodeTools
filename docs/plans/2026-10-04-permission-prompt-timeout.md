@@ -157,3 +157,6 @@ normally. If R1 fails, aj decides whether the fallback is worth it before anythi
 Other dialogs that can also stall a session overnight: `AskUserQuestion`, plan approval, and the
 desktop app's "trust this folder" prompt. They are not permission prompts, and none of the above
 touches them.
+
+Update 2026-10-07 (#151): `prompttimer` had no matcher, so it may have fired for `AskUserQuestion` and plan
+approval too. aj asked for those to be left out explicitly, and 2.53.0 skips them in the handler.

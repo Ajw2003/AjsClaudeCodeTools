@@ -1672,6 +1672,9 @@ _GIT = (
 # Everything without it prompts on every branch, mine included. See the ownership helpers below
 # and "Commit constantly on my own branches, never on theirs" in rules/house-rules.md.
 OWNED = "owned-branch-exempt"
+# Marks a destructive pattern that runs unasked only on my branch AND when everything it could
+# lose is already saved elsewhere: a clean tree and every commit on a remote (#153).
+SAVED = "saved-work-exempt"
 
 GUARD_R3 = [
     # Force-pushing is not a checkpoint — it rewrites history that was already backed up — so
@@ -1691,11 +1694,17 @@ GUARD_R3 = [
         "writes history (commit)",
         OWNED,
     ),
-    # Not exemptible on any branch. reset/clean/revert destroy work that is not yet a
-    # checkpoint, and rebase/merge/cherry-pick/am/apply are how a hook would end up finishing
-    # something the user started — which the rule bans even on a branch named after me.
+    # reset/revert/rebase only lose work that is not saved elsewhere, so on my branch with a
+    # clean tree and every commit pushed they run unasked (SAVED, #153). clean can remove
+    # ignored files that exist nowhere else, and merge/cherry-pick/am/apply/filter-branch are
+    # how a hook would end up finishing something the user started - not exemptible anywhere.
     (
-        _GIT + r"(reset|revert|clean|rebase|merge|filter-branch|cherry-pick|am|apply)([^0-9A-Za-z-]|$)",
+        _GIT + r"(reset|revert|rebase)([^0-9A-Za-z-]|$)",
+        "discards work or rewrites history (reset / revert / rebase)",
+        SAVED,
+    ),
+    (
+        _GIT + r"(clean|merge|filter-branch|cherry-pick|am|apply)([^0-9A-Za-z-]|$)",
         "discards work or finishes an operation you started",
     ),
 ]
@@ -1718,6 +1727,7 @@ GUARD_R4 = [
     (
         _GIT + r"(checkout\s+(--|\.(\s|$))|restore([^0-9A-Za-z-]|$))",
         "throws away uncommitted edits to a file (git checkout -- / git restore)",
+        SAVED,
     ),
     (
         _GIT + r"stash\s+(drop|clear)([^0-9A-Za-z-]|$)",
@@ -1935,6 +1945,44 @@ def branch_ownership():
     return branch.startswith(OWNED_BRANCH_PREFIX), branch, None
 
 
+SAVED_CHECK_TIMEOUT = 2.0
+
+
+def work_saved_elsewhere():
+    """(saved, note): is everything a reset/rebase/restore could lose already somewhere it
+    cannot reach? Yes only when the working tree is clean (nothing uncommitted or untracked)
+    and no commit reachable from HEAD is missing from every remote-tracking ref (#153).
+    The second deliberate subprocess in guard, after the docs check; it runs only when a SAVED
+    pattern matched on my branch. Anything it cannot tell is a no, with the reason."""
+    import subprocess
+
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    deadline = time.time() + SAVED_CHECK_TIMEOUT
+
+    def git(args):
+        left = deadline - time.time()
+        if left <= 0:
+            raise RuntimeError("the check ran out of time")
+        proc = subprocess.run(["git"] + args, cwd=root, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, timeout=left)
+        if proc.returncode != 0:
+            raise RuntimeError("git %s exited %d" % (" ".join(args), proc.returncode))
+        return proc.stdout.decode("utf-8", "replace").strip()
+
+    try:
+        dirty = git(["status", "--porcelain", "-uall"])
+        if dirty:
+            n = len(dirty.splitlines())
+            return False, "%d uncommitted or untracked file%s would be lost" % (n, "" if n == 1 else "s")
+        unpushed = int(git(["rev-list", "--count", "HEAD", "--not", "--remotes"]) or "0")
+        if unpushed:
+            return False, "%d commit%s on this branch %s not on any remote" % (
+                unpushed, "" if unpushed == 1 else "s", "is" if unpushed == 1 else "are")
+        return True, None
+    except Exception as exc:
+        return False, "could not check that the work is saved elsewhere (%s)" % exc
+
+
 # tier 3: pull out just "command":"..." — the first one. Allows backslash-escaped quotes.
 _COMMAND_FIELD_RE = re.compile(r'"command"\s*:\s*"(?:[^"\\]|\\.)*"')
 
@@ -2002,15 +2050,25 @@ def event_guard():
 
     hits = {title: [] for title, _ in GUARD_BUCKETS}
     exempted = []
+    saved_state = None  # (saved, note), computed at most once and only when a SAVED pattern matched
+    saved_blocked = None
     for title, patterns in GUARD_BUCKETS:
         for entry in patterns:
             pattern, reason = entry[0], entry[1]
             if not re.search(pattern, subject, re.IGNORECASE):
                 continue
-            if exempting and len(entry) > 2 and entry[2] == OWNED:
+            marker = entry[2] if len(entry) > 2 else None
+            if exempting and marker == OWNED:
                 exempted.append(reason)
-            else:
-                hits[title].append(reason)
+                continue
+            if exempting and marker == SAVED:
+                if saved_state is None:
+                    saved_state = work_saved_elsewhere()
+                if saved_state[0]:
+                    exempted.append(reason)
+                    continue
+                saved_blocked = saved_state[1]
+            hits[title].append(reason)
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _staged_docs_status(subject, elsewhere) if is_commit else (None, None)
@@ -2022,8 +2080,10 @@ def event_guard():
         # would be two concatenated JSON objects on stdout, which is not valid hook output.
         if exempted:
             allow_trace = (
-                "guard: checked %s - %s on `%s`, which is mine to commit on."
-                % (_trace_subject(subject), " and ".join(exempted), branch)
+                "guard: checked %s - %s on `%s`, which is mine to commit on%s."
+                % (_trace_subject(subject), " and ".join(exempted), branch,
+                   ", with nothing uncommitted and every commit on a remote"
+                   if saved_state and saved_state[0] else "")
             )
         else:
             allow_trace = "guard: checked %s - no house rule matched." % _trace_subject(subject)
@@ -2081,6 +2141,13 @@ def event_guard():
         if why_not_exempt:
             lines.append("")
             lines.append(why_not_exempt)
+
+    if saved_blocked:
+        lines.append("")
+        lines.append(
+            "  On `%s`, but this runs unasked only when the work is saved elsewhere: %s."
+            % (branch, saved_blocked)
+        )
 
     if issue_hit:
         lines.append("")
@@ -3405,6 +3472,9 @@ def event_agentcap():
 # leaves the dialog in charge. The refusal goes into the waiting-on-you list, which issue #145 shows.
 PROMPT_TIMEOUT_DEFAULT = 300.0
 WAITING_FILE = "waiting-on-you.json"
+# Questions and choices put to aj, not permission to act: refusing one would throw the question
+# away, not route around a blocked action, so they wait for aj however long that takes (#151).
+PROMPT_TIMER_EXEMPT_TOOLS = ("AskUserQuestion", "ExitPlanMode")
 
 
 class _PromptAnswered(Exception):
@@ -3560,7 +3630,7 @@ def _waiting_scope_note(payload):
             out = []
             for e in entries:
                 if e.get("session_id") == session_id:
-                    if e.get("status") == "waiting":
+                    if e.get("status") in ("waiting", "ran"):
                         continue
                     if e.get("status") == "timed-out":
                         e = dict(e, status="reported")
@@ -3596,12 +3666,13 @@ def _waiting_session_note(payload):
         shown = []
 
         def fn(entries):
-            others = [e for e in entries if e.get("session_id") != session_id]
+            others = [e for e in entries if e.get("session_id") != session_id and e.get("status") != "ran"]
             others.sort(key=lambda e: e.get("started") or 0, reverse=True)
             shown.extend(others[:10])
             gone = set(id(e) for e in shown)
             cutoff = time.time() - 7 * 86400
-            keep = [e for e in entries if id(e) not in gone and (e.get("started") or 0) >= cutoff]
+            keep = [e for e in entries if id(e) not in gone and e.get("status") != "ran"
+                    and (e.get("started") or 0) >= cutoff]
             return keep if len(keep) != len(entries) else None
         _waiting_update(path, fn, "issuelist")
         if not shown:
@@ -3640,8 +3711,8 @@ def _waiting_summary(tool_name, tool_input):
 def _prompt_refusal(minutes, path, summary):
     return (
         "Nobody answered this permission prompt for %s, so it was refused - not approved - and "
-        "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this same action "
-        "this session; it would only wait again. Look for a route that needs no permission AND does "
+        "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this action, or a "
+        "variation of it, this session; it would only be refused again. Look for a route that needs no permission AND does "
         "not have the same effect (for example: commit to a claude/ branch instead of aj's branch; "
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
@@ -3697,6 +3768,10 @@ def event_prompttimer():
             "no timer, the dialog decides.\n" % (type(exc).__name__, exc)
         )
         return 0
+    if tool_name in PROMPT_TIMER_EXEMPT_TOOLS:
+        sys.stderr.write("house-rules prompttimer: %s is a question for aj, not a permission prompt; "
+                         "no timer, it waits for the answer.\n" % tool_name)
+        return 0
     key = _waiting_key(tool_name, tool_input)
     summary = _waiting_summary(tool_name, tool_input)
     path, in_repo = _waiting_path(session_id)
@@ -3726,6 +3801,20 @@ def event_prompttimer():
             "This exact action already timed out this session and is still waiting on aj, so it was "
             "refused again without waiting. " + _prompt_refusal(_prompt_minutes(secs), path, summary))
         return 0
+    away = [e for e in existing if e.get("session_id") == session_id and e.get("status") == "timed-out"]
+    if away:
+        # aj had the full wait on an earlier prompt and has not written since: they are away, and a
+        # new prompt would only cost another full wait before the same refusal (#152).
+        now = time.time()
+        update(lambda es: [e for e in es if not mine(e)] + [
+            {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,
+             "started": now, "status": "timed-out", "timed_out_at": now}])
+        _prompt_deny(
+            "Another permission prompt this session already went unanswered (%s, since %s) and aj has "
+            "not written since, so this one was refused at once instead of waiting again. "
+            % (away[0].get("summary", "?"), _waiting_clock(away[0].get("started")))
+            + _prompt_refusal(_prompt_minutes(secs), path, summary))
+        return 0
 
     started = time.time()
     entry = {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,
@@ -3743,12 +3832,32 @@ def event_prompttimer():
     except (ImportError, ValueError, OSError) as exc:
         sys.stderr.write("house-rules prompttimer: could not watch for a stop signal (%s); an answered "
                          "prompt may leave a stale 'waiting' entry in %s.\n" % (exc, path))
+    unreadable = []
+
+    def ran():
+        """promptran marked this action as run: it was approved some way that never stopped this
+        hook (#149), so there is nothing left to time out."""
+        try:
+            return any(mine(e) and e.get("status") == "ran" for e in _waiting_load(path))
+        except (ValueError, OSError) as exc:
+            if not unreadable:  # once, not every second of the wait
+                unreadable.append(exc)
+                sys.stderr.write("house-rules prompttimer: could not read %s while waiting (%s: %s); "
+                                 "cannot tell if the action ran, so the timer carries on.\n"
+                                 % (path, type(exc).__name__, exc))
+            return False
+
     try:
         while True:
             left = started + secs - time.time()
             if left <= 0:
                 break
             time.sleep(min(1.0, left))
+            if ran():
+                sys.stderr.write("house-rules prompttimer: the action ran (approved without stopping "
+                                 "this hook); removed its entry, no decision.\n")
+                update(lambda es: [e for e in es if not (mine(e) and e.get("status") == "ran")])
+                return 0
     except (_PromptAnswered, KeyboardInterrupt):
         sys.stderr.write("house-rules prompttimer: stopped while waiting (the prompt was answered); "
                          "removed its waiting entry, no decision.\n")
@@ -3761,6 +3870,51 @@ def event_prompttimer():
         return es
     update(mark)
     _prompt_deny(_prompt_refusal(_prompt_minutes(secs), path, summary))
+    return 0
+
+
+def event_promptran():
+    """PostToolUse / PostToolUseFailure: a tool call ran, so it was not refused (#149). A
+    'waiting' entry for it becomes 'ran', which tells its prompttimer to stop without a decision.
+    A 'timed-out' one is removed and reported, because it means an action recorded as refused
+    ran anyway - for example through the old dialog, answered after the timer's refusal."""
+    try:
+        payload = read_payload()
+        data = json.loads(payload) if payload else None
+        if not isinstance(data, dict) or not isinstance(data.get("tool_name"), str):
+            return 0
+        session_id = str(data.get("session_id") or "")
+        path, _ = _waiting_path(session_id)
+        if not os.path.isfile(path):
+            return 0
+        key = _waiting_key(data["tool_name"], data.get("tool_input"))
+        late = []
+
+        def fn(entries):
+            out, changed = [], False
+            for e in entries:
+                if e.get("session_id") == session_id and e.get("key") == key:
+                    status = e.get("status")
+                    if status == "waiting":
+                        e, changed = dict(e, status="ran"), True
+                    elif status in ("timed-out", "reported"):
+                        if status == "timed-out":
+                            late.append(e)
+                        changed = True
+                        continue
+                out.append(e)
+            return out if changed else None
+        _waiting_update(path, fn, "promptran")
+        if late:
+            text = ("house-rules: '%s' ran although its permission prompt was refused as unanswered "
+                    "at %s; something approved it afterwards (possibly a late answer on the old dialog). "
+                    "Removed it from the waiting-on-you list."
+                    % (late[0].get("summary", "?"), _waiting_clock(late[0].get("timed_out_at"))))
+            emit({"systemMessage": text, "hookSpecificOutput": {
+                "hookEventName": data.get("hook_event_name") or "PostToolUse", "additionalContext": text}})
+    except Exception as exc:
+        sys.stderr.write("house-rules promptran: could not update the waiting-on-you list (%s: %s).\n"
+                         % (type(exc).__name__, exc))
     return 0
 
 
@@ -6073,6 +6227,7 @@ EVENTS = {
     "worktreesweep": event_worktreesweep,
     "agentcap": event_agentcap,
     "prompttimer": event_prompttimer,
+    "promptran": event_promptran,
     "audit": event_audit,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,

@@ -20,6 +20,10 @@ not mine, I branch off before changing a file, so the work never sits uncommitte
 turn wrote that is still uncommitted at the end of the turn — committing is an obligation, not
 only something the guard permits.
 
+**Destructive steps on my own branch** (reset, rebase, restore and the like) run unasked only when
+the work is already saved where they can't reach it: a clean tree and every commit pushed. The
+full line, and what still asks, is in `destructive-action.md`, "The one case that needs no asking".
+
 **I never delete a branch**, mine or theirs, unless asked. Deleting is the one mutation that is
 not a checkpoint.
 

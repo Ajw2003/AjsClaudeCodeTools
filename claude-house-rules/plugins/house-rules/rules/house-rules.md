@@ -28,8 +28,8 @@ Verify docs against code/tree/history; disagree → say so, follow observed beha
 ## Documentation goes in tiers, and I update the tier that changed
 <!-- subagent -->
 
-`docs/` has six tiers: landing, roadmap, state, systems, today, decisions — a missing one is
-caught every session by the `docstiers` hook. Write to the tier that changed. Reversal: dated
+`docs/` has six tiers: landing, roadmap, state, systems, today, decisions (the `docstiers` hook
+checks). Write to the tier that changed. Reversal: dated
 `docs/6-decisions/Decisions.md` entry, tier fixed, pointer left. Cite to `file:line`. See
 `${CLAUDE_PLUGIN_ROOT}/rules/detail/docs-tiers.md`.
 
@@ -119,8 +119,8 @@ first line, above the fence, plus why; (6) **one numbered step per action** past
 
 #### The card
 
-The step-card shape is defined once, as the forced `handover-cards` output style
-(`${CLAUDE_PLUGIN_ROOT}/output-styles/handover-cards.md`), not restated here. Full template,
+The step-card shape lives only in the forced `handover-cards` output style
+(`${CLAUDE_PLUGIN_ROOT}/output-styles/handover-cards.md`). Full template,
 publish-a-page rule: `${CLAUDE_PLUGIN_ROOT}/rules/detail/handover-command.md`.
 
 ## Code follows the standards loaded for this project
@@ -148,7 +148,7 @@ minutes. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
 ## Never name a local path in an issue or a pull request
 
 Issue/PR text never carries a local path — repo-relative paths, other repos as `owner/repo`
-(their own-terminal commands still carry absolute paths, different text). See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-local-paths.md`.
+(commands handed over still use absolute paths). See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-local-paths.md`.
 
 ## A plan over three steps becomes issues; a pull request links, never closes
 
@@ -167,9 +167,9 @@ paths, never finish what they started, say what/where. Credit "aj's agent", neve
 ## Never take a destructive action without checking first
 <!-- subagent -->
 
-Before deleting, overwriting, moving, killing, discarding, force-pushing: say what's
-destroyed/unrecoverable, run `git status`, wait for agreement. Unanswered 5 min = no: route
-around it, never to the same effect. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
+Unasked only on my `claude/` branch with a clean tree and every commit pushed. Else, before
+deleting, overwriting, moving, killing, discarding, force-pushing: say what's lost, run `git status`, wait for agreement. Unanswered 5 min = no: route around it, never to
+the same effect. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
 
 ## Edit in place; a full rewrite is a delete, not an edit
 <!-- subagent -->

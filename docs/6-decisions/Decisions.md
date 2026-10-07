@@ -7,6 +7,34 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-07 - Destructive git steps run unasked only on my branch, and only when the work is saved elsewhere (#153, 2.53.0)
+
+**Context.** aj: "destructive actions are permitted only on a Claude created branch and only if the work already is saved somewhere else the destructive action would not affect." Asked whether "otherwise" meant ask or never, aj chose ask as today; asked whether `guard` should enforce it, aj chose rule text plus `guard`.
+
+**Decision.** The two rules now draw the line: on a `claude/` branch with a clean tree and every commit on a remote, a destructive step needs no asking; anywhere else it asks exactly as before. `guard` enforces the safe case for `reset`, `revert`, `rebase`, `checkout --` and `restore` through `work_saved_elsewhere()`.
+
+**Rejected.** Exempting force-push: it overwrites the remote, which is the copy that makes the work "saved elsewhere". Exempting `clean`, `stash drop` and `rm`: what they remove (ignored files, stashes, arbitrary paths) is never on the remote, or guard can't tell. Exempting merge-like verbs: a separate rule (don't finish what aj started) covers them.
+
+**Status.** Built; `verify.py` drives a real repo with a local bare remote (safe case passes; dirty tree, unpushed commit and aj's branch ask; force-push, clean, stash drop, merge and rm ask). To fit the 9,700-character inject margin, three phrasings elsewhere in `house-rules.md` were shortened without changing what they say (docs tiers, local paths, the step card), and the commit rule carries no pointer to the destructive one (its detail file does). The injected length includes the plugin's absolute path: 9,650 in this sandbox, about 26 more on the CI runner, where a first attempt at 9,687 failed at 9,713.
+
+**Consequence.** `guard` now runs up to two `git` subprocesses on a matching command on my branch. On aj's branch nothing changes.
+
+---
+
+## 2026-10-07 - The prompt timer skips questions, refuses at once once aj is away, and learns when an action ran (#149, #151, #152, 2.53.0)
+
+**Context.** #149: on 2026-10-06 a subagent's `git push` dialog stayed on screen overnight after the timer refused it, a second push prompt waited another full 5 minutes, and a third push that actually ran was recorded as timed out. aj asked that the timer actually move the agent on to a route that is not blocked rather than leave it waiting long after aj had the chance to answer, and that questions and multiple-choice prompts be left out of it.
+
+**Decision.** (1) `AskUserQuestion` and `ExitPlanMode` get no timer. (2) After one timeout in a session, later prompts in it are refused at once until aj's next message; the refusal names the earlier unanswered prompt. (3) A new `promptran` handler on `PostToolUse`/`PostToolUseFailure` marks an action that ran, so the waiting timer stops with no decision, and reports a timed-out action that ran anyway.
+
+**Rejected.** A `PostToolUse` entry with no matcher: about 130 ms per call on every Read and Grep, where nothing else runs; it is matched to the tools that raise prompts instead. Exempting by a `hooks.json` matcher: a negative match needs a lookahead regex whose support was not checked; the exemption in `hook.py` is explicit and tested. Closing the stale dialog: there is no hook output for it.
+
+**Status.** Built; `verify.py` covers each part. Seen live in the build session itself (cloud, auto mode, 2.52.0 installed): three Bash calls that ran were listed by `scope` as "waiting on you", because auto mode approved them without stopping the timer - the #149 symptom `promptran` removes. Not verified in a real session: whether the stale dialog's Allow can still run the command (if it does, `promptran` now reports it), and whether `PermissionRequest` ever fired for `AskUserQuestion` before this change.
+
+**Consequence.** An aj who is present but missed one prompt sees the next prompts refused until they write anything; writing restores normal prompts.
+
+---
+
 ## 2026-10-04 - A permission prompt nobody answers for 5 minutes is refused, never approved (#142, 2.52.0)
 
 **Context.** Overnight, one unanswered permission prompt held up a whole session. Issue #136 is the same failure in background builders. aj: "Permission as a blocker should be isolated, not affect the rest of the project."
