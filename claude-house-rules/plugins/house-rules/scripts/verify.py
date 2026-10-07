@@ -3741,21 +3741,23 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count.
+# 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
+# the same cost as artifact's, and the only way to tell the timer an action actually ran.
 _non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
-    not any("issue" in c for c in _tool_cmds) and _count_entries == 10 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 11 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
     "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
 )
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.52.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.53.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.52.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.53.0",
     "rules section + detail file + version",
 )
 
@@ -5751,6 +5753,107 @@ commit_case(
     and all(x[1].index("If nobody answers") < x[1].index("Approve to let it run") for x in (_g1, _g2))
     and all(_gline not in x[1] and "Approve to let it run" in x[1] for x in (_g3, _g4)),
     "guard %r | guardwrite %r | off %r" % (_g1[1][-250:], _g2[1][-250:], _g3[1][-150:]),
+)
+
+# --- #142 follow-ups: questions exempt, away fast-fail, an action that ran is never "timed out" (#149)
+def _pt_tool(tool, tool_input, sid="pt-sess", event="PermissionRequest"):
+    return json.dumps({"hook_event_name": event, "session_id": sid, "tool_name": tool, "tool_input": tool_input})
+
+
+def _pt_state_now():
+    try:
+        return json.load(open(_pt_state, encoding="utf-8"))
+    except Exception:
+        return []
+
+
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_q1 = _pt_run(_pt_tool("AskUserQuestion", {"questions": [{"question": "Which one?"}]}))
+_q2 = _pt_run(_pt_tool("ExitPlanMode", {"plan": "1. do it"}))
+commit_case(
+    "prompttimer: AskUserQuestion and ExitPlanMode get no timer - no decision, no state, said on stderr",
+    all(x[0] == 0 and x[1] == "" and x[3] < 0.9 and "question for aj" in x[2] for x in (_q1, _q2))
+    and not os.path.exists(_pt_state),
+    "q1 %r q2 %r state %s" % (_q1[2][:120], _q2[2][:120], os.path.exists(_pt_state)),
+)
+
+_a1 = _pt_run()  # rm -rf /tmp/pt-victim times out: aj is away
+_a2 = _pt_run(_pt_pl("git push -q origin claude/x"))
+_a2d = _pt_decision(_a2[1])
+_a2s = _pt_state_now()
+commit_case(
+    "prompttimer: after one timeout, a DIFFERENT action in the same session is refused at once and queued",
+    _a1[3] >= 0.9 and _a2[3] < 0.5 and _a2d.get("behavior") == "deny" and _a2d.get("message") == _a2d.get("reason")
+    and "already went unanswered" in _a2d.get("message", "") and "rm -rf /tmp/pt-victim" in _a2d.get("message", "")
+    and sorted(e["status"] for e in _a2s) == ["timed-out", "timed-out"],
+    "elapsed %.2fs out %r state %r" % (_a2[3], _a2[1][:120], _a2s),
+)
+_a3 = _pt_run(_pt_pl("git push -q origin claude/x", sid="other-sess"))
+commit_case(
+    "prompttimer: another session's timeout does not refuse this session's prompt at once",
+    _a3[3] >= 0.9 and "already went unanswered" not in _pt_decision(_a3[1]).get("message", ""),
+    "elapsed %.2fs" % _a3[3],
+)
+_pt_scope("I'm back")
+_a4 = _pt_run(_pt_pl("echo after-aj-wrote"))
+commit_case(
+    "prompttimer: once aj writes (scope), a new prompt waits normally again",
+    _a4[3] >= 0.9 and "already went unanswered" not in _pt_decision(_a4[1]).get("message", ""),
+    "elapsed %.2fs out %r" % (_a4[3], _a4[1][:100]),
+)
+
+# an action approved some other way runs: promptran marks it, the waiting timer stops without a decision
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_ran_input = {"command": "git push -q"}
+_ran_res = {}
+_ran_t = threading.Thread(target=lambda: _ran_res.update(
+    r=_pt_run(_pt_tool("Bash", _ran_input), HOUSE_RULES_PROMPT_TIMEOUT="4")))
+_ran_t.start()
+for _w in range(50):
+    if any(e.get("status") == "waiting" for e in _pt_state_now()):
+        break
+    time.sleep(0.1)
+_rr = run_hook("promptran", _pt_tool("Bash", _ran_input, event="PostToolUse"), env=_pt_env())
+_ran_t.join()
+_ran = _ran_res.get("r", (None, "?", "", 99))
+commit_case(
+    "promptran: an action that ran while its prompt was waiting stops the timer with no decision and no entry",
+    _rr[0] == 0 and _rr[1] == "" and _ran[0] == 0 and _ran[1] == "" and _ran[3] < 3.5
+    and "the action ran" in _ran[2] and _pt_state_now() == [],
+    "timer elapsed %.2fs out %r stderr %r state %r" % (_ran[3], _ran[1][:80], _ran[2][:150], _pt_state_now()),
+)
+
+# an action that ran AFTER being refused as timed out is removed and reported out loud
+_pt_run(_pt_tool("Bash", _ran_input))
+_late = run_hook("promptran", _pt_tool("Bash", _ran_input, event="PostToolUseFailure"), env=_pt_env())
+try:
+    _late_o = json.loads(_late[1])
+except Exception:
+    _late_o = {}
+commit_case(
+    "promptran: a timed-out action that ran anyway is removed from the list and reported to aj and Claude",
+    _late[0] == 0 and "ran although its permission prompt was refused" in _late_o.get("systemMessage", "")
+    and "git push -q" in _late_o.get("systemMessage", "")
+    and _late_o.get("hookSpecificOutput", {}).get("hookEventName") == "PostToolUseFailure"
+    and _pt_state_now() == [],
+    "out %r state %r" % (_late[1][:200], _pt_state_now()),
+)
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_quiet = run_hook("promptran", _pt_tool("Bash", _ran_input, event="PostToolUse"), env=_pt_env())
+_bad = run_hook("promptran", "{not json", env=_pt_env())
+commit_case(
+    "promptran: with no waiting-on-you list, or a bad payload, it says nothing and exits 0",
+    _quiet[0] == 0 and _quiet[1] == "" and _bad[0] == 0 and _bad[1] == "",
+    "quiet %r bad %r" % (_quiet[1][:80], _bad[1][:80]),
+)
+_pr_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
+_pr_entries = [g for ev in ("PostToolUse", "PostToolUseFailure") for g in _pr_hj.get(ev, [])
+               if any(h["command"].endswith('run.sh" promptran') for h in g["hooks"])]
+commit_case(
+    "promptran: wired on PostToolUse and PostToolUseFailure, matched to the tools that raise permission prompts",
+    len(_pr_entries) == 2 and all(len(g["hooks"]) == 1 and "Bash" in g.get("matcher", "")
+                                  and "Read" not in g.get("matcher", "") for g in _pr_entries),
+    "entries %r" % (_pr_entries,),
 )
 
 # --- verdict's audit summary: built from the transcript, not the subagent's own report --------

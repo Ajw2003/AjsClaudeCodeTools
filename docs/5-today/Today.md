@@ -1,4 +1,10 @@
-# Today — 2026-10-04
+# Today — 2026-10-07
+
+Prompt timer follow-ups, plugin 2.53.0 (issues #149, #151, #152): questions and plan approvals are never
+timed out. Once one permission prompt goes unanswered, the next ones in that session are refused straight
+away instead of each waiting another 5 minutes; your next message puts prompts back to normal. An action that
+actually ran is no longer recorded as timed out. Still open: the app may keep showing a dialog the timer
+already refused (#149), which needs checking on the desktop app.
 
 Prompt timer, plugin 2.52.0 (issue #142): a permission prompt nobody answers for 5 minutes is now refused,
 never approved, and Claude carries on with the rest of the work. The refused action goes on a waiting-on-you

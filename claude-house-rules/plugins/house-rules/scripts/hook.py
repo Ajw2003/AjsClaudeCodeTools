@@ -3405,6 +3405,9 @@ def event_agentcap():
 # leaves the dialog in charge. The refusal goes into the waiting-on-you list, which issue #145 shows.
 PROMPT_TIMEOUT_DEFAULT = 300.0
 WAITING_FILE = "waiting-on-you.json"
+# Questions and choices put to aj, not permission to act: refusing one would throw the question
+# away, not route around a blocked action, so they wait for aj however long that takes (#151).
+PROMPT_TIMER_EXEMPT_TOOLS = ("AskUserQuestion", "ExitPlanMode")
 
 
 class _PromptAnswered(Exception):
@@ -3560,7 +3563,7 @@ def _waiting_scope_note(payload):
             out = []
             for e in entries:
                 if e.get("session_id") == session_id:
-                    if e.get("status") == "waiting":
+                    if e.get("status") in ("waiting", "ran"):
                         continue
                     if e.get("status") == "timed-out":
                         e = dict(e, status="reported")
@@ -3596,12 +3599,13 @@ def _waiting_session_note(payload):
         shown = []
 
         def fn(entries):
-            others = [e for e in entries if e.get("session_id") != session_id]
+            others = [e for e in entries if e.get("session_id") != session_id and e.get("status") != "ran"]
             others.sort(key=lambda e: e.get("started") or 0, reverse=True)
             shown.extend(others[:10])
             gone = set(id(e) for e in shown)
             cutoff = time.time() - 7 * 86400
-            keep = [e for e in entries if id(e) not in gone and (e.get("started") or 0) >= cutoff]
+            keep = [e for e in entries if id(e) not in gone and e.get("status") != "ran"
+                    and (e.get("started") or 0) >= cutoff]
             return keep if len(keep) != len(entries) else None
         _waiting_update(path, fn, "issuelist")
         if not shown:
@@ -3640,8 +3644,8 @@ def _waiting_summary(tool_name, tool_input):
 def _prompt_refusal(minutes, path, summary):
     return (
         "Nobody answered this permission prompt for %s, so it was refused - not approved - and "
-        "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this same action "
-        "this session; it would only wait again. Look for a route that needs no permission AND does "
+        "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this action, or a "
+        "variation of it, this session; it would only be refused again. Look for a route that needs no permission AND does "
         "not have the same effect (for example: commit to a claude/ branch instead of aj's branch; "
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
@@ -3697,6 +3701,10 @@ def event_prompttimer():
             "no timer, the dialog decides.\n" % (type(exc).__name__, exc)
         )
         return 0
+    if tool_name in PROMPT_TIMER_EXEMPT_TOOLS:
+        sys.stderr.write("house-rules prompttimer: %s is a question for aj, not a permission prompt; "
+                         "no timer, it waits for the answer.\n" % tool_name)
+        return 0
     key = _waiting_key(tool_name, tool_input)
     summary = _waiting_summary(tool_name, tool_input)
     path, in_repo = _waiting_path(session_id)
@@ -3726,6 +3734,20 @@ def event_prompttimer():
             "This exact action already timed out this session and is still waiting on aj, so it was "
             "refused again without waiting. " + _prompt_refusal(_prompt_minutes(secs), path, summary))
         return 0
+    away = [e for e in existing if e.get("session_id") == session_id and e.get("status") == "timed-out"]
+    if away:
+        # aj had the full wait on an earlier prompt and has not written since: they are away, and a
+        # new prompt would only cost another full wait before the same refusal (#152).
+        now = time.time()
+        update(lambda es: [e for e in es if not mine(e)] + [
+            {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,
+             "started": now, "status": "timed-out", "timed_out_at": now}])
+        _prompt_deny(
+            "Another permission prompt this session already went unanswered (%s, since %s) and aj has "
+            "not written since, so this one was refused at once instead of waiting again. "
+            % (away[0].get("summary", "?"), _waiting_clock(away[0].get("started")))
+            + _prompt_refusal(_prompt_minutes(secs), path, summary))
+        return 0
 
     started = time.time()
     entry = {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,
@@ -3743,12 +3765,32 @@ def event_prompttimer():
     except (ImportError, ValueError, OSError) as exc:
         sys.stderr.write("house-rules prompttimer: could not watch for a stop signal (%s); an answered "
                          "prompt may leave a stale 'waiting' entry in %s.\n" % (exc, path))
+    unreadable = []
+
+    def ran():
+        """promptran marked this action as run: it was approved some way that never stopped this
+        hook (#149), so there is nothing left to time out."""
+        try:
+            return any(mine(e) and e.get("status") == "ran" for e in _waiting_load(path))
+        except (ValueError, OSError) as exc:
+            if not unreadable:  # once, not every second of the wait
+                unreadable.append(exc)
+                sys.stderr.write("house-rules prompttimer: could not read %s while waiting (%s: %s); "
+                                 "cannot tell if the action ran, so the timer carries on.\n"
+                                 % (path, type(exc).__name__, exc))
+            return False
+
     try:
         while True:
             left = started + secs - time.time()
             if left <= 0:
                 break
             time.sleep(min(1.0, left))
+            if ran():
+                sys.stderr.write("house-rules prompttimer: the action ran (approved without stopping "
+                                 "this hook); removed its entry, no decision.\n")
+                update(lambda es: [e for e in es if not (mine(e) and e.get("status") == "ran")])
+                return 0
     except (_PromptAnswered, KeyboardInterrupt):
         sys.stderr.write("house-rules prompttimer: stopped while waiting (the prompt was answered); "
                          "removed its waiting entry, no decision.\n")
@@ -3761,6 +3803,51 @@ def event_prompttimer():
         return es
     update(mark)
     _prompt_deny(_prompt_refusal(_prompt_minutes(secs), path, summary))
+    return 0
+
+
+def event_promptran():
+    """PostToolUse / PostToolUseFailure: a tool call ran, so it was not refused (#149). A
+    'waiting' entry for it becomes 'ran', which tells its prompttimer to stop without a decision.
+    A 'timed-out' one is removed and reported, because it means an action recorded as refused
+    ran anyway - for example through the old dialog, answered after the timer's refusal."""
+    try:
+        payload = read_payload()
+        data = json.loads(payload) if payload else None
+        if not isinstance(data, dict) or not isinstance(data.get("tool_name"), str):
+            return 0
+        session_id = str(data.get("session_id") or "")
+        path, _ = _waiting_path(session_id)
+        if not os.path.isfile(path):
+            return 0
+        key = _waiting_key(data["tool_name"], data.get("tool_input"))
+        late = []
+
+        def fn(entries):
+            out, changed = [], False
+            for e in entries:
+                if e.get("session_id") == session_id and e.get("key") == key:
+                    status = e.get("status")
+                    if status == "waiting":
+                        e, changed = dict(e, status="ran"), True
+                    elif status in ("timed-out", "reported"):
+                        if status == "timed-out":
+                            late.append(e)
+                        changed = True
+                        continue
+                out.append(e)
+            return out if changed else None
+        _waiting_update(path, fn, "promptran")
+        if late:
+            text = ("house-rules: '%s' ran although its permission prompt was refused as unanswered "
+                    "at %s; something approved it afterwards (possibly a late answer on the old dialog). "
+                    "Removed it from the waiting-on-you list."
+                    % (late[0].get("summary", "?"), _waiting_clock(late[0].get("timed_out_at"))))
+            emit({"systemMessage": text, "hookSpecificOutput": {
+                "hookEventName": data.get("hook_event_name") or "PostToolUse", "additionalContext": text}})
+    except Exception as exc:
+        sys.stderr.write("house-rules promptran: could not update the waiting-on-you list (%s: %s).\n"
+                         % (type(exc).__name__, exc))
     return 0
 
 
@@ -6073,6 +6160,7 @@ EVENTS = {
     "worktreesweep": event_worktreesweep,
     "agentcap": event_agentcap,
     "prompttimer": event_prompttimer,
+    "promptran": event_promptran,
     "audit": event_audit,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,

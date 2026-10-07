@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-07 - The prompt timer skips questions, refuses at once once aj is away, and learns when an action ran (#149, #151, #152, 2.53.0)
+
+**Context.** #149: on 2026-10-06 a subagent's `git push` dialog stayed on screen overnight after the timer refused it, a second push prompt waited another full 5 minutes, and a third push that actually ran was recorded as timed out. aj asked that the timer actually move the agent on to a route that is not blocked rather than leave it waiting long after aj had the chance to answer, and that questions and multiple-choice prompts be left out of it.
+
+**Decision.** (1) `AskUserQuestion` and `ExitPlanMode` get no timer. (2) After one timeout in a session, later prompts in it are refused at once until aj's next message; the refusal names the earlier unanswered prompt. (3) A new `promptran` handler on `PostToolUse`/`PostToolUseFailure` marks an action that ran, so the waiting timer stops with no decision, and reports a timed-out action that ran anyway.
+
+**Rejected.** A `PostToolUse` entry with no matcher: about 130 ms per call on every Read and Grep, where nothing else runs; it is matched to the tools that raise prompts instead. Exempting by a `hooks.json` matcher: a negative match needs a lookahead regex whose support was not checked; the exemption in `hook.py` is explicit and tested. Closing the stale dialog: there is no hook output for it.
+
+**Status.** Built; `verify.py` covers each part. Seen live in the build session itself (cloud, auto mode, 2.52.0 installed): three Bash calls that ran were listed by `scope` as "waiting on you", because auto mode approved them without stopping the timer - the #149 symptom `promptran` removes. Not verified in a real session: whether the stale dialog's Allow can still run the command (if it does, `promptran` now reports it), and whether `PermissionRequest` ever fired for `AskUserQuestion` before this change.
+
+**Consequence.** An aj who is present but missed one prompt sees the next prompts refused until they write anything; writing restores normal prompts.
+
+---
+
 ## 2026-10-04 - A permission prompt nobody answers for 5 minutes is refused, never approved (#142, 2.52.0)
 
 **Context.** Overnight, one unanswered permission prompt held up a whole session. Issue #136 is the same failure in background builders. aj: "Permission as a blocker should be isolated, not affect the rest of the project."

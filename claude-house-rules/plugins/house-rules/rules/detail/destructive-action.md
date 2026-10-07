@@ -20,9 +20,12 @@ it is their work, and removing it is their call.
 The `prompttimer` hook refuses a permission prompt nobody has answered for 5 minutes
 (`HOUSE_RULES_PROMPT_TIMEOUT`, in seconds; `off` disables it). It never approves one. An unanswered
 prompt is a no, not a yes. The refused action goes on a waiting-on-you list, and aj sees it on
-their next message and at the next session start. When that happens:
+their next message and at the next session start. Once one prompt has timed out, every later
+prompt in that session is refused at once until aj next writes: aj has already had the full wait.
+Questions and choices put to aj (`AskUserQuestion`, plan approval) never time out. When a refusal
+happens:
 
-1. Don't retry the same action this session. It would only wait again.
+1. Don't retry the same action, or a variation of it, this session. It would only be refused again.
 2. Look for a route that needs no permission **and does not have the same effect**:
    - committing or pushing on aj's branch → commit and push on a `claude/<topic>` branch and
      leave the merge to aj;

@@ -75,6 +75,12 @@ same call sequence replayed through `run.sh` in a scratch clone of PlunderSpell 
 verified: a real Claude Code session in another repo, and a `gh issue create` made through the
 `PowerShell` tool, which is not recorded.
 
+2.53.0 (2026-10-07, #149, #151, #152) follows the prompt timer up: questions and plan approval are never
+timed; after one timeout, later prompts in that session are refused at once until aj writes; and a new
+`promptran` hook stops the timer when the action actually ran, and reports one recorded as timed out that ran
+anyway. Verified by `verify.py` (562 checks; 7 new). Not verified: the desktop app's stale dialog (#149) and a
+real session (#147).
+
 2.52.0 (2026-10-04, #142-#146) adds `prompttimer`: a permission prompt nobody answers for 5 minutes is
 refused (never approved) and goes on a waiting-on-you list, shown on aj's next message and at the next session
 start. Verified by `verify.py` (554 checks, 18 of them for the timer, the lock and the list) and by a real
