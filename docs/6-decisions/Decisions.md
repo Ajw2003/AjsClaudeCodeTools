@@ -15,7 +15,7 @@ pointer, when a later entry replaces it.
 
 **Rejected.** Exempting force-push: it overwrites the remote, which is the copy that makes the work "saved elsewhere". Exempting `clean`, `stash drop` and `rm`: what they remove (ignored files, stashes, arbitrary paths) is never on the remote, or guard can't tell. Exempting merge-like verbs: a separate rule (don't finish what aj started) covers them.
 
-**Status.** Built; `verify.py` drives a real repo with a local bare remote (safe case passes; dirty tree, unpushed commit and aj's branch ask; force-push, clean, stash drop, merge and rm ask). To fit the 9,700-character inject margin, three phrasings elsewhere in `house-rules.md` were shortened without changing what they say (docs tiers, local paths, the step card).
+**Status.** Built; `verify.py` drives a real repo with a local bare remote (safe case passes; dirty tree, unpushed commit and aj's branch ask; force-push, clean, stash drop, merge and rm ask). To fit the 9,700-character inject margin, three phrasings elsewhere in `house-rules.md` were shortened without changing what they say (docs tiers, local paths, the step card), and the commit rule carries no pointer to the destructive one (its detail file does). The injected length includes the plugin's absolute path: 9,650 in this sandbox, about 26 more on the CI runner, where a first attempt at 9,687 failed at 9,713.
 
 **Consequence.** `guard` now runs up to two `git` subprocesses on a matching command on my branch. On aj's branch nothing changes.
 
