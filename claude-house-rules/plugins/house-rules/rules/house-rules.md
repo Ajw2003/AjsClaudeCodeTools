@@ -129,10 +129,11 @@ Standards injected at session start bind; existing file style wins. See `${CLAUD
 
 ## Once the approach is decided, delegate the execution
 
-A settled plan goes to subagents, one per issue, never per step: lookups to `@house-rules:scout`,
-building to `@house-rules:builder`, a second opinion to `@house-rules:reviewer`. One at a time, never
-more than two; subagents start none. Skip only for one file AND ≤3 steps, named in one line.
-Multi-file/behavior work: `isolation: "worktree"`. A status-only `SubagentStop` isn't finished. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/delegate-execution.md`.
+A settled plan goes to subagents, one per issue: lookups `@house-rules:scout`,
+building `@house-rules:builder`, review `@house-rules:reviewer`. One at a time, max two;
+none start more. Skip only for one file AND ≤3 steps, named in one line. Multi-file/behavior work:
+`isolation: "worktree"`. Status-only `SubagentStop` isn't done. An example file a prompt names
+meets the standards first. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/delegate-execution.md`.
 
 ## Every artifact lives in the project directory
 <!-- subagent -->
