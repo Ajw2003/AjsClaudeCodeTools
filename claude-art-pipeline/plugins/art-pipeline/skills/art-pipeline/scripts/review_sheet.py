@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Compose a review sheet: concept left, four renders 2x2 right, caption from stats.json.
+The fourth panel is wireframe.png (render_views.py) or walk.png (unity_capture.py), whichever exists.
 
   review_sheet.py --views DIR --out SHEET.png [--concept CONCEPT.png] [--title NAME] [--notes "text"]
 """
 import argparse, json, os, sys
 from PIL import Image, ImageDraw, ImageFont
 
-VIEWS = [("three_quarter", "THREE-QUARTER"), ("front", "FRONT"), ("side", "SIDE"), ("wireframe", "WIREFRAME")]
+VIEWS = [("three_quarter", "THREE-QUARTER"), ("front", "FRONT"), ("side", "SIDE")]
+FOURTH = [("wireframe", "WIREFRAME"), ("walk", "MID-WALK")]  # first that exists; else an empty panel
 BG, FG, DIM = "#14120E", "#DCD2BA", "#9A9078"
 FONTS = ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVuSans.ttf"]
 
@@ -33,8 +35,11 @@ def main():
     missing = [f"{n}.png" for n, _ in VIEWS if not os.path.isfile(os.path.join(a.views, n + ".png"))]
     if missing:
         sys.exit(f"review_sheet.py: missing views in {a.views}: {', '.join(missing)}")
+    views = VIEWS + [next((v for v in FOURTH if os.path.isfile(os.path.join(a.views, v[0] + ".png"))), ("", "NOT CAPTURED"))]
     tiles = [Image.open(os.path.join(a.views, n + ".png")).convert("RGB") for n, _ in VIEWS]
     tile = tiles[0].width
+    tiles.append(Image.open(os.path.join(a.views, views[3][0] + ".png")).convert("RGB") if views[3][0]
+                 else Image.new("RGB", (tile, tile), "#2A261F"))
     gap = max(6, tile // 80)
     grid = tile * 2 + gap
 
@@ -54,7 +59,7 @@ def main():
     sheet.paste(c, (gap, gap))
     d = ImageDraw.Draw(sheet)
     left = gap + c.width + gap
-    for i, ((_, label), t) in enumerate(zip(VIEWS, tiles)):
+    for i, ((_, label), t) in enumerate(zip(views, tiles)):
         r, col = divmod(i, 2)
         x, y = left + col * (tile + gap), gap + r * (tile + gap)
         sheet.paste(t, (x, y))
@@ -64,9 +69,15 @@ def main():
     sp = os.path.join(a.views, "stats.json")
     if os.path.isfile(sp):
         s = json.load(open(sp))
-        bx, by, bz = s["bbox_m"]
-        line2 = (f"{s['triangles']} tris  |  bbox {bx:.2f} x {by:.2f} x {bz:.2f} m  |  height {s['height_m']:.2f} m"
-                 f"  |  {s['bones']['count']} bones  |  {s['mesh_count']} mesh(es)")
+        if "bbox_m" in s:      # render_views.py (Blender, Z up)
+            bx, by, bz = s["bbox_m"]
+            line2 = (f"{s['triangles']} tris  |  bbox {bx:.2f} x {by:.2f} x {bz:.2f} m  |  height {s['height_m']:.2f} m"
+                     f"  |  {s['bones']['count']} bones  |  {s['mesh_count']} mesh(es)")
+        else:                  # unity_capture.py (Unity, Y up)
+            bx, bh, bd = s["boundsSize"]
+            mats = ", ".join(f"{m['name']} ({m['shader']})" for m in s.get("materials", []))
+            line2 = (f"{s['triangles']} tris  |  bounds {bx:.2f} x {bd:.2f} x {bh:.2f} m  |  height {bh:.2f} m"
+                     f"  |  {s['bones']} bones  |  rig {s['rig']}  |  {mats}")
     else:
         line2 = "NO stats.json in views dir"
     y0 = gap + grid + gap + 4
