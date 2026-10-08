@@ -20,6 +20,11 @@
       "name": "agent-router",
       "source": "./claude-agent-router/plugins/agent-router",
       "description": "STATUS: shell/v0.1. Classifies each prompt's complexity and nudges Claude to delegate to a model-pinned subagent - haiku for simple doc/comms work, sonnet for recon and code implementation, opus for planning, architecture, and management. Cannot switch the live session's own model."
+    },
+    {
+      "name": "art-pipeline",
+      "source": "./claude-art-pipeline/plugins/art-pipeline",
+      "description": "STATUS: v0.1. Make game art by code - concept, model, rig, animation - and never call a model done until someone has looked at it beside its concept. A Stop-hook gate enforces the look."
     }
   ]
 }
