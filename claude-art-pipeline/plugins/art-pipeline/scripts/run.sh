@@ -11,8 +11,10 @@
 
 set -u
 
-case "$0" in
-  */*) HERE=${0%/*} ;;
+# A Windows caller may pass a backslash path (C:\x\run.sh); sh would see no "/" and use cwd.
+SELF=$(printf '%s' "$0" | tr '\\' '/')
+case "$SELF" in
+  */*) HERE=${SELF%/*} ;;
   *)   HERE=. ;;
 esac
 EVENT="${1:-}"

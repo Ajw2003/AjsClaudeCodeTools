@@ -47,8 +47,8 @@ Full detail per stage, with commands: `references/stages.md`.
    anything that contradicts an approved plan (for example a death animation when the plan says the
    body vanishes). Defaults that are just craft, you choose and say so.
 3. **Set up Blender as a Python module**: `sh scripts/setup_bpy.sh` (from this skill's folder).
-   It finds a Python that matches a `bpy` wheel and installs it with Pillow. Cycles on CPU only:
-   EEVEE and Workbench abort without a GPU. `references/tooling-and-traps.md` has the rest.
+   It finds a Python that matches a `bpy` wheel and installs it with Pillow. Cycles uses the GPU when present, CPU in GPU-less containers:
+   EEVEE and Workbench still abort without a GPU. `references/tooling-and-traps.md` has the rest.
 4. **Build by blueprint, never by hand-edit.** Fix the generator, not its output, so a rebuild
    keeps the fix. Every output is regenerable from a committed script and spec.
 5. **Render and compose the review sheet** for every model you touch:

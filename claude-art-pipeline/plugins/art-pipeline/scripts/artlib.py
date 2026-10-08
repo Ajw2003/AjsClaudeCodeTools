@@ -5,6 +5,7 @@ import fnmatch
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 
@@ -97,6 +98,10 @@ def _path_match(rel, pat):
     return fnmatch.fnmatch(rel, pat) or (pat.startswith("**/") and fnmatch.fnmatch(rel, pat[3:]))
 
 
+# doc_check commands are POSIX sh; on Windows shell=True means cmd.exe, which runs `a; exit 3` as one echo and exits 0.
+_SH = ["sh", "-c"] if shutil.which("sh") else None
+
+
 def run_doc_check(root, cfg, names):
     """None when not configured / nothing relevant changed, else ('ok'|'fail'|'timeout', [detail])."""
     cmd = cfg.get("doc_check")
@@ -106,7 +111,7 @@ def run_doc_check(root, cfg, names):
     if not any(is_model(n, cfg) or any(_path_match(n, g) for g in pats) for n in names):
         return None
     try:
-        p = subprocess.run(cmd, shell=True, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=DOC_TIMEOUT)
+        p = subprocess.run(_SH + [cmd] if _SH else cmd, shell=not _SH, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=DOC_TIMEOUT)
     except subprocess.TimeoutExpired:
         return "timeout", ["doc_check `%s` timed out after %ds; not checked" % (cmd, DOC_TIMEOUT)]
     if p.returncode == 0:

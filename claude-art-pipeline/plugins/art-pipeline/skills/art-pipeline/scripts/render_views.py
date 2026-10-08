@@ -5,7 +5,7 @@
 
 MODEL: .fbx .glb .gltf .obj .blend. Writes DIR/{three_quarter,front,side,wireframe}.png and DIR/stats.json.
 --forward is the world axis the model FACES after import into Blender (default -Y, which is where
-glTF, and FBX exported from Blender for Unity, land). Cycles CPU only (EEVEE/Workbench need a GPU).
+glTF, and FBX exported from Blender for Unity, land). Cycles on GPU when present (--device auto|cpu|gpu), CPU in GPU-less containers (EEVEE/Workbench still abort without a GPU).
 """
 import argparse, json, math, os, sys
 
@@ -115,6 +115,31 @@ def look_at(obj, direction):
     obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
 
 
+def pick_device(sc, want):
+    """Set sc.cycles.device; return a description of what will render. GPU: OPTIX, CUDA, HIP, METAL in turn."""
+    sc.cycles.device = "CPU"
+    if want == "cpu":
+        return "CPU (--device cpu)"
+    prefs = bpy.context.preferences.addons["cycles"].preferences
+    for kind in ("OPTIX", "CUDA", "HIP", "METAL"):
+        try:
+            prefs.compute_device_type = kind
+            prefs.get_devices()
+        except Exception:
+            continue
+        gpus = [d for d in prefs.devices if d.type == kind]
+        if gpus:
+            for d in prefs.devices:
+                d.use = d.type == kind
+            sc.cycles.device = "GPU"
+            return f"GPU {kind} ({', '.join(d.name for d in gpus)})"
+    prefs.compute_device_type = "NONE"
+    msg = "CPU (no GPU found; falling back)"
+    if want == "gpu":
+        print("render_views: --device gpu requested but none usable", file=sys.stderr)
+    return msg
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("model"); ap.add_argument("--out", required=True)
@@ -122,7 +147,9 @@ def main():
     ap.add_argument("--forward", default="-Y", choices=sorted(AXES) + ["+Z", "-Z"])
     ap.add_argument("--reference-height", type=float, default=1.8)
     ap.add_argument("--no-reference", action="store_true")
+    ap.add_argument("--device", default="auto", choices=["auto", "cpu", "gpu"])
     a = ap.parse_args()
+    a.model, a.out = os.path.abspath(a.model), os.path.abspath(a.out)  # Blender resolves relative render paths against C:\ on Windows
     if not os.path.isfile(a.model):
         fail(f"model not found: {a.model}")
     if a.forward in ("+Z", "-Z"):
@@ -140,7 +167,8 @@ def main():
     yaw0 = math.atan2(fx, -fy)  # camera azimuth 0 sits on the side the model faces
 
     sc = bpy.context.scene
-    sc.render.engine = "CYCLES"; sc.cycles.device = "CPU"; sc.cycles.samples = a.samples
+    sc.render.engine = "CYCLES"; sc.cycles.samples = a.samples
+    print(f"render_views: device {pick_device(sc, a.device)}", file=sys.stderr)
     sc.cycles.use_denoising = True; sc.cycles.max_bounces = 3; sc.cycles.use_light_tree = False
     sc.render.resolution_x = sc.render.resolution_y = a.res
     sc.view_settings.view_transform = "AgX"
