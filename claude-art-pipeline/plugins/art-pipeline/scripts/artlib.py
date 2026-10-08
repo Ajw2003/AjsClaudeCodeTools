@@ -186,9 +186,12 @@ def load_records(root, cfg):
 
 def check_model(root, model, recs, seen_paths, cfg):
     """('ok'|'waived'|'fail', [problems]). Passes if any record for the model is satisfied."""
+    ast, apr = asset_review(root, model, seen_paths, cfg)
+    if ast == "ok":
+        return "ok", []
     mine = [r for r in recs if r.get("model") == model]
     if not mine:
-        return "fail", ["no review record in %s/ with \"model\": \"%s\"" % (cfg["review_dir"], model)]
+        return "fail", apr or ["no review record in %s/ with \"model\": \"%s\"" % (cfg["review_dir"], model)]
     last = None
     for r in mine:
         probs = []
@@ -212,7 +215,37 @@ def check_model(root, model, recs, seen_paths, cfg):
         if not probs:
             return ("waived" if verdict == "waived" else "ok"), []
         last = probs
-    return "fail", last
+    return "fail", (apr or []) + last
+
+
+def asset_review(root, model, seen_paths, cfg):
+    """('ok'|'fail'|'none', [problems]): an asset ledger whose slug or name matches the model's stem
+    (case-insensitive) counts as the review when its latest model-stage record is a fresh, seen pass."""
+    stem, out = os.path.splitext(os.path.basename(model))[0].lower(), ("none", [])
+    for slug in list_assets(root, cfg):
+        try:
+            a = load_asset(root, cfg, slug)
+        except Exception:
+            continue
+        if stem not in (slug.lower(), str(a.get("name", "")).lower()):
+            continue
+        h = [r for r in a["history"] if r.get("stage") == "model"]
+        who, probs = "asset ledger %s/%s.json" % (cfg["asset_dir"], slug), []
+        sh = h[-1].get("sheet") if h else ""
+        sa = os.path.join(root, sh) if sh else ""
+        if not h or h[-1].get("verdict") != "pass":
+            probs.append("%s: latest model-stage record is not a pass" % who)
+        elif not sh or not os.path.isfile(sa):
+            probs.append("%s: model sheet %r does not exist" % (who, sh))
+        else:
+            if os.path.getmtime(sa) < os.path.getmtime(os.path.join(root, model)):
+                probs.append("%s: model sheet %s is older than the model - re-render it" % (who, sh))
+            if norm(sa) not in seen_paths:
+                probs.append("%s: model sheet %s was not opened (Read) this session" % (who, sh))
+        if not probs:
+            return "ok", []
+        out = ("fail", probs)
+    return out
 
 
 def evaluate(root, gitdir, session_id):

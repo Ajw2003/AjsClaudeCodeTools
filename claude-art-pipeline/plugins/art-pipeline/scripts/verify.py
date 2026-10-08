@@ -369,6 +369,31 @@ try:
     report(ok_seen and blocked and ignored,
            "Stop gate blocks a pass record whose sheet was not opened this session (other sessions' records ignored)")
 
+    # --- asset ledger as the model review ---
+    def ledger_case(sheet_age, seen_it, later_fail=False):
+        d = mkrepo(); hook("start", d)
+        now = time.time()
+        write(d, "Assets/Generated/lantern/lantern.fbx", "m", mtime=now - 100)
+        sh = write(d, "docs/art/sheets/l.png", "png", mtime=now + sheet_age)
+        if seen_it:
+            see(d, sh)
+        h = [{"stage": "model", "verdict": "pass", "sheet": "docs/art/sheets/l.png", "seen": SEEN_TXT, "reason": "", "date": "x"}]
+        if later_fail:
+            h.append(dict(h[0], verdict="fail"))
+        write(d, "docs/art/assets/Lantern.json", json.dumps({"slug": "Lantern", "name": "Lantern", "kind": "prop", "stage": "done", "history": h}))
+        return d, gate(d)[1]
+
+    d, o = ledger_case(-50, True)
+    report(o.get("decision") != "block", "asset ledger: latest model pass with a fresh, seen sheet satisfies the gate (case-insensitive)")
+    d, o = ledger_case(-500, True)
+    report(o.get("decision") == "block" and "asset ledger" in o["reason"] and "older" in o["reason"], "asset ledger: stale sheet still blocks, naming the ledger")
+    d, o = ledger_case(-50, False)
+    report(o.get("decision") == "block" and "asset ledger" in o["reason"] and "not opened" in o["reason"], "asset ledger: unseen sheet blocks")
+    d, o = ledger_case(-50, True, later_fail=True)
+    report(o.get("decision") == "block" and "not a pass" in o["reason"], "asset ledger: a later model-stage fail blocks")
+    rc, out, _ = art(d, "status")
+    report("fail" in out.splitlines()[1] and " 2 " in out.splitlines()[1], "art.py status at done shows the last verdict and look count")
+
     # 18-20 run.sh
     env_np = {"PATH": "", "ART_PIPELINE_PYTHON": ""}
     for ev, want in (("start", "NOT armed"), ("gate", "did NOT run")):

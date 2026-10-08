@@ -68,9 +68,10 @@ def table(root, cfg):
         except Exception as exc:
             rows.append((s, "?", "UNREADABLE: %s" % exc, "", "", ""))
             continue
-        lr = last(a, a["stage"])
+        ls = a["history"][-1]["stage"] if a["history"] else a["stage"]
+        lr = last(a, ls)
         rows.append((s, a["kind"], a["stage"], lr["verdict"] if lr else "-",
-                     str(len(looks(a, a["stage"]))), str(len(L.reported(a)))))
+                     str(len(looks(a, ls))), str(len(L.reported(a)))))
     w = [max(len(r[i]) for r in rows) for i in range(6)]
     return "\n".join("  ".join(c.ljust(w[i]) for i, c in enumerate(r)).rstrip() for r in rows)
 
