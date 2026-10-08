@@ -51,3 +51,6 @@ jobs:
 
       - name: Run the agent-router test suite
         run: python claude-agent-router/plugins/agent-router/scripts/verify.py
+
+      - name: Run the art-pipeline test suite
+        run: python claude-art-pipeline/plugins/art-pipeline/scripts/verify.py

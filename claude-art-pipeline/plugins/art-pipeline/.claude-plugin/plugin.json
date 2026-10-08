@@ -1,0 +1,9 @@
+{
+  "name": "art-pipeline",
+  "description": "Make game art by code - concept, model, rig, animation - and never call a model done until someone has looked at it beside its concept. A Stop-hook gate enforces the look.",
+  "version": "0.1.0",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  }
+}
