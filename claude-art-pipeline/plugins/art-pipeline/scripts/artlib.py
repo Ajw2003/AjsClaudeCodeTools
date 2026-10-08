@@ -12,6 +12,12 @@ import time
 DEFAULT_GLOBS = ["*.fbx", "*.glb", "*.gltf", "*.blend", "*.obj"]
 DEFAULT_EXCLUDE = ["node_modules/", "Library/", "Temp/", ".git/"]
 DEFAULT_REVIEW_DIR = "docs/art/reviews"
+DEFAULT_ASSET_DIR = "docs/art/assets"
+STAGES = ["brief", "concept", "spec", "model", "rig", "clips", "engine", "done"]
+APPROVAL = ("brief", "concept")
+LOOK = ("spec", "model", "rig", "clips", "engine")
+KINDS = ("prop", "character", "creature", "set")
+NA_KINDS = ("prop", "set")  # rig and clips are n/a for these
 MIN_SEEN = 40
 IMG_EXT = (".png", ".jpg", ".jpeg", ".webp")
 MAX_BLOCKS = 3
@@ -47,7 +53,9 @@ def head_sha(root):
 
 def load_config(root):
     cfg = {"model_globs": DEFAULT_GLOBS, "exclude": DEFAULT_EXCLUDE, "review_dir": DEFAULT_REVIEW_DIR,
-           "doc_check": "", "doc_check_paths": DOC_PATHS}
+           "doc_check": "", "doc_check_paths": DOC_PATHS,
+           "asset_dir": DEFAULT_ASSET_DIR, "min_looks": 2, "engine": "unity", "engine_capture": "",
+           "stage_outputs": {}}
     path = os.path.join(root, ".art-pipeline.json")
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as fh:
@@ -122,8 +130,12 @@ def run_doc_check(root, cfg, names):
 
 # --- ledger -----------------------------------------------------------------------------
 
+def san(session_id):
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "") or "nosession"
+
+
 def ledger_path(gitdir, session_id):
-    sid = re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "") or "nosession"
+    sid = san(session_id)
     return os.path.join(gitdir, "art-pipeline", sid + ".json")
 
 
@@ -216,6 +228,7 @@ def evaluate(root, gitdir, session_id):
         if is_model(m, cfg) and os.path.isfile(os.path.join(root, m)):
             st, pr = check_model(root, m, recs, seen, cfg)
             res.append((m, st, pr))
+    res += check_assets(root, cfg, names, seen, san(session_id))
     dc = run_doc_check(root, cfg, names)
     if dc:
         res.append(("doc_check", dc[0], dc[1]))
@@ -230,3 +243,87 @@ def fix_hint(cfg):
     return ("make a review sheet PNG of the model beside its concept (art-pipeline skill), open it "
             "with Read, then: python \"%s\" record --model <model> --sheet <sheet.png> "
             "--verdict pass --seen \"<what you saw, >= %d chars>\"" % (os.path.join(HERE, "review.py"), MIN_SEEN))
+
+
+# --- asset ledgers (plan -> build -> verify -> iterate) ---------------------------------
+
+def asset_file(root, cfg, slug):
+    return os.path.join(root, cfg["asset_dir"], slug + ".json")
+
+
+def load_asset(root, cfg, slug):
+    p = asset_file(root, cfg, slug)
+    if not os.path.isfile(p):
+        raise ValueError("no asset %r (expected %s)" % (slug, p))
+    with open(p, "r", encoding="utf-8") as fh:
+        a = json.load(fh)
+    if not isinstance(a, dict) or a.get("stage") not in STAGES or not isinstance(a.get("history"), list):
+        raise ValueError("asset file %s has the wrong shape" % p)
+    return a
+
+
+def save_asset(root, cfg, a):
+    p = asset_file(root, cfg, a["slug"])
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump(a, fh, indent=2)
+        fh.write("\n")
+    return p
+
+
+def list_assets(root, cfg):
+    d = os.path.join(root, cfg["asset_dir"])
+    return sorted(f[:-5] for f in os.listdir(d) if f.endswith(".json")) if os.path.isdir(d) else []
+
+
+def is_look(rec):
+    return rec.get("verdict") in ("pass", "fail") and not rec.get("approval")
+
+
+def newest_session(gitdir):
+    """(session id, set of normalized seen paths) of the newest session ledger; stands in for 'this session'."""
+    d = os.path.join(gitdir, "art-pipeline")
+    leds = [os.path.join(d, f) for f in os.listdir(d) if f.endswith(".json")] if os.path.isdir(d) else []
+    if not leds:
+        return "", set()
+    p = max(leds, key=os.path.getmtime)
+    led = load_ledger(p)
+    return os.path.basename(p)[:-5], {norm(e["path"]) for e in led["seen"] if isinstance(e, dict) and "path" in e}
+
+
+def reported(a):
+    """Every skip and first-look-pass in the asset's history, as report lines."""
+    out = []
+    for r in a["history"]:
+        if r.get("verdict") == "skipped":
+            out.append("SKIPPED %s/%s: %s" % (a["slug"], r["stage"], r.get("reason", "")))
+        elif r.get("first_look_pass"):
+            out.append("FIRST-LOOK-PASS %s/%s: %s" % (a["slug"], r["stage"], r.get("reason", "")))
+    return out
+
+
+def check_assets(root, cfg, names, seen, sid):
+    """res entries for asset ledgers changed this session: ('asset:<slug>', 'fail', problems) when a
+    pass record of THIS session names a sheet not opened this session; ('asset:<slug>', 'report', lines)
+    for every skip / first-look-pass."""
+    res, pre = [], cfg["asset_dir"].rstrip("/") + "/"
+    for n in names:
+        if not (n.startswith(pre) and n.endswith(".json")) or not os.path.isfile(os.path.join(root, n)):
+            continue
+        slug = n[len(pre):-5]
+        try:
+            a = load_asset(root, cfg, slug)
+        except Exception as exc:
+            res.append(("asset:" + slug, "fail", ["unreadable asset ledger: %s" % exc]))
+            continue
+        probs = []
+        for r in a["history"]:
+            sh = r.get("sheet")
+            if r.get("verdict") == "pass" and sh and r.get("session") == sid and norm(os.path.join(root, sh)) not in seen:
+                probs.append("%s/%s: pass record names sheet %s, which was not opened (Read) this session" % (slug, r.get("stage"), sh))
+        if probs:
+            res.append(("asset:" + slug, "fail", probs))
+        rep = reported(a)
+        if rep:
+            res.append(("asset:" + slug, "report", rep))
+    return res

@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 HOOK = os.path.join(HERE, "hook.py")
 RUN = os.path.join(HERE, "run.sh")
 REVIEW = os.path.join(HERE, "review.py")
+ART = os.path.join(HERE, "art.py")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
 SH = shutil.which("sh") or "sh"
 STEP = FAILURES = 0
@@ -260,6 +261,113 @@ try:
     ok1 = gate(d)[1] == {}
     write(d, "data/x.csv", "x")
     report(ok1 and gate(d)[1].get("decision") == "block", "doc_check_paths overrides the default paths")
+
+    # --- asset ledger (art.py) ---
+    def art(d, *a):
+        return run([sys.executable, ART] + list(a), cwd=d)
+
+    def sheet_for(d, name, seen_it=True):
+        p = write(d, "docs/art/sheets/%s.png" % name, "png")
+        if seen_it:
+            see(d, p)
+        return "docs/art/sheets/%s.png" % name
+
+    def asset_json(d, slug):
+        return json.load(open(os.path.join(d, "docs/art/assets", slug + ".json")))
+
+    d = mkrepo(); hook("start", d)
+    rc, out, _ = art(d, "new", "crate", "--kind", "prop")
+    rc2, _, err2 = art(d, "new", "crate", "--kind", "prop")
+    rc3, nx, _ = art(d, "next", "crate")
+    rc4, st, _ = art(d, "status")
+    report(rc == 0 and os.path.isfile(os.path.join(d, "docs/art/assets/crate.json")) and rc2 == 1 and "already exists" in err2
+           and rc3 == 0 and "stage: brief" in nx and "--approved-by-user" in nx and "crate" in st and "brief" in st,
+           "art.py new/next/status: creates the ledger, refuses a duplicate, next names the gate, status lists it")
+
+    rc, _, err = art(d, "record", "crate", "--verdict", "pass")
+    rc2, _, err2 = art(d, "advance", "crate")
+    rc3, _, _ = art(d, "record", "crate", "--verdict", "pass", "--approved-by-user")
+    rc4, out4, _ = art(d, "advance", "crate")
+    report(rc == 1 and "user-approval gate" in err and len(err.strip().splitlines()) == 1 and rc2 == 1 and "no record" in err2
+           and rc3 == 0 and rc4 == 0 and "-> concept" in out4,
+           "approval gate: pass without --approved-by-user refused (one line), advance refused with no record, approved pass advances")
+
+    rc, _, err = art(d, "skip", "crate", "--reason", " ")
+    art(d, "skip", "crate", "--reason", "user said reuse the old spec")
+    rc2, out2, _ = art(d, "advance", "crate")
+    rc3, _, err3 = art(d, "advance", "crate")
+    report(rc == 1 and rc2 == 0 and "-> spec" in out2 and rc3 == 1 and "no record" in err3,
+           "skip with a reason advances; blank reason refused; advance refused on a stage with no record")
+
+    sh = sheet_for(d, "spec1", seen_it=False)
+    rc, _, err = art(d, "record", "crate", "--verdict", "fail", "--sheet", sh, "--seen", SEEN_TXT)
+    rc2, _, err2 = art(d, "record", "crate", "--verdict", "fail", "--sheet", sh, "--seen", "short")
+    rc3, _, err3 = art(d, "record", "crate", "--verdict", "fail", "--seen", SEEN_TXT)
+    see(d, os.path.join(d, sh))
+    ok_a = rc == 1 and "not opened" in err and rc2 == 1 and ">= 40" in err2 and rc3 == 1 and "--sheet" in err3
+    rc, _, err = art(d, "record", "crate", "--verdict", "pass", "--sheet", sh, "--seen", SEEN_TXT)
+    report(ok_a and rc == 1 and "needs 2 looks" in err,
+           "look gate: unopened sheet, short --seen, missing sheet refused; first-look pass refused (min_looks 2)")
+    rc, _, _ = art(d, "record", "crate", "--verdict", "fail", "--sheet", sh, "--seen", SEEN_TXT)
+    rc2, _, err2 = art(d, "advance", "crate")
+    rc3, _, _ = art(d, "record", "crate", "--verdict", "pass", "--sheet", sh, "--seen", SEEN_TXT)
+    rc4, out4, _ = art(d, "advance", "crate")
+    report(rc == 0 and rc2 == 1 and "last record is fail" in err2 and rc3 == 0 and rc4 == 0 and "-> model" in out4,
+           "min_looks: fail then pass advances; advance refused while the last record is fail")
+
+    art(d, "record", "crate", "--verdict", "fail", "--sheet", sh, "--seen", SEEN_TXT)
+    art(d, "record", "crate", "--verdict", "pass", "--sheet", sh, "--seen", SEEN_TXT)
+    rc, out, _ = art(d, "advance", "crate")
+    a = asset_json(d, "crate")
+    report(rc == 0 and "-> engine" in out and [r["verdict"] for r in a["history"] if r["stage"] in ("rig", "clips")] == ["n/a", "n/a"],
+           "prop: advance from model lands on engine, rig and clips recorded n/a")
+    rc, out, _ = art(d, "next", "crate")
+    write(d, ".art-pipeline.json", json.dumps({"engine_capture": "unity-capture --asset {slug}"}))
+    rc2, out2, _ = art(d, "next", "crate")
+    report("no engine adapter configured" in out and "unity-capture --asset crate" in out2,
+           "next at engine: no-adapter line without engine_capture, {slug} substituted with it")
+
+    d = mkrepo(); hook("start", d)
+    write(d, ".art-pipeline.json", json.dumps({"stage_outputs": {"spec": ["out/{slug}/*"]}}))
+    art(d, "new", "orc", "--kind", "character")
+    for _ in range(2):
+        art(d, "skip", "orc", "--reason", "pre-approved by aj"); art(d, "advance", "orc")
+    now = time.time()
+    write(d, "out/orc/spec.json", "s", mtime=now)
+    sh = write(d, "docs/art/sheets/o.png", "png", mtime=now - 200); see(d, sh)
+    rc, _, err = art(d, "record", "orc", "--verdict", "fail", "--sheet", "docs/art/sheets/o.png", "--seen", SEEN_TXT)
+    os.utime(sh, (now + 50, now + 50)); see(d, sh)
+    rc2, _, _ = art(d, "record", "orc", "--verdict", "pass", "--sheet", "docs/art/sheets/o.png", "--seen", SEEN_TXT,
+                    "--first-look-pass", "trivial single-number spec")
+    rc3, out3, _ = art(d, "advance", "orc")
+    for v in ("fail", "pass"):
+        art(d, "record", "orc", "--verdict", v, "--sheet", "docs/art/sheets/o.png", "--seen", SEEN_TXT)
+    rc4, out4, _ = art(d, "advance", "orc")
+    rc5, out5, _ = art(d, "advance", "orc")
+    report(rc == 1 and "older than" in err and rc2 == 0 and rc3 == 0 and "-> model" in out3 and rc4 == 0 and "-> rig" in out4 and rc5 == 1,
+           "stage_outputs freshness enforced; --first-look-pass accepted; character goes model -> rig (not n/a)")
+
+    rc, o = gate(d)
+    msg = o.get("systemMessage", "")
+    report("decision" not in o and "SKIPPED orc/brief: pre-approved by aj" in msg and "SKIPPED orc/concept" in msg
+           and "FIRST-LOOK-PASS orc/spec: trivial single-number spec" in msg,
+           "Stop gate: every skip and first-look-pass listed with its reason in a systemMessage")
+    rc, out, _ = run([sys.executable, REVIEW, "status"], cwd=d)
+    report("SKIPPED orc/brief" in out and "slug" in out and "orc" in out, "review.py status shows the asset notes and table")
+
+    d = mkrepo(); hook("start", d)
+    art(d, "new", "rock", "--kind", "set")
+    sh = sheet_for(d, "r", seen_it=True)
+    art(d, "record", "rock", "--verdict", "pass", "--approved-by-user", "--sheet", sh)
+    ok_seen = gate(d)[1] == {}
+    hook("start", d)  # same session id, seen-list reset: the sheet is no longer opened
+    rc, o = gate(d)
+    blocked = o.get("decision") == "block" and "rock/brief" in o["reason"] and "not opened" in o["reason"]
+    p = os.path.join(d, "docs/art/assets/rock.json")
+    a = json.load(open(p)); a["history"][0]["session"] = "other"; json.dump(a, open(p, "w"))
+    ignored = gate(d)[1] == {}
+    report(ok_seen and blocked and ignored,
+           "Stop gate blocks a pass record whose sheet was not opened this session (other sessions' records ignored)")
 
     # 18-20 run.sh
     env_np = {"PATH": "", "ART_PIPELINE_PYTHON": ""}

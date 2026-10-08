@@ -25,6 +25,15 @@ the sheet PNG exists, is at least as new as the model, and was opened this sessi
 `python scripts/review.py record --model M --sheet S.png --verdict pass --seen "..."`;
 `review.py status` shows what would pass.
 
+Asset ledger: `scripts/art.py` keeps `docs/art/assets/<slug>.json` per asset (stages brief, concept,
+spec, model, rig, clips, engine, done; rig/clips n/a for prop/set). Brief and concept need
+`--approved-by-user`; the others need a Read-opened `--sheet` and `--seen`, and a pass needs
+`min_looks` (default 2) records unless `--first-look-pass "<reason>"`. Skipping a gate needs
+`art.py skip --reason`. At Stop, every ledger changed this session is checked (a pass naming an
+unopened sheet blocks) and every skip and first-look-pass is listed with its reason. Extra config:
+`asset_dir`, `min_looks`, `engine` (default unity), `engine_capture` (command, `{slug}`),
+`stage_outputs` ({stage: [globs with {slug}]}). `review.py status` also prints the asset table.
+
 Override per project with `.art-pipeline.json` at the repo root:
 `{"model_globs": [...], "exclude": [...], "review_dir": "..."}`.
 

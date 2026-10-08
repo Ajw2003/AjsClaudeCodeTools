@@ -64,12 +64,19 @@ def main(argv):
     if not res:
         print("no changed models")
     for m, st, pr in res:
+        if st == "report":
+            print("NOTE  %s" % m)
+            for p in pr:
+                print("      - " + p)
+            continue
         print("%s  %s" % ("PASS" if st not in ("fail", "timeout") else ("BLOCK" if st == "fail" else "UNCHECKED"), m)
               + ("  [waived]" if st == "waived" else ""))
         for p in pr:
             print("      - " + p)
     for b in bad:
         print("unreadable record: " + b)
+    import art
+    print(art.table(root, cfg))
     return 0
 
 

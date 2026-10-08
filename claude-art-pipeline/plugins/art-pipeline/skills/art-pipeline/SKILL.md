@@ -41,6 +41,15 @@ Full detail per stage, with commands: `references/stages.md`.
 
 ## How to work through it
 
+0. **One ledger per asset, one loop.** `python "${CLAUDE_PLUGIN_ROOT}/scripts/art.py" new <slug>
+   --kind prop|character|creature|set`, then loop: `art.py next <slug>` (prints the stage, what it
+   produces, the gate and the exact commands) -> do the stage -> `art.py record` -> `art.py advance`.
+   Stages: brief, concept, spec, model, rig, clips, engine, done (rig/clips are n/a for prop/set).
+   brief and concept need `--approved-by-user`; the rest are look gates needing `--sheet` (opened with
+   Read this session, newer than the stage's outputs) and `--seen` (>= 40 chars), and a pass needs at
+   least `min_looks` (default 2) records, so one fail -> fix -> look cycle. The only ways round a
+   gate are `art.py skip <slug> --reason "..."` and `--first-look-pass "<reason>"`; both are listed
+   with their reason at every Stop. `art.py status` shows all assets.
 1. **Read the project first.** Find its art docs, scale doc and any existing forge before writing
    one. Extend what is there; the worked example shows the shape when nothing is.
 2. **Decisions that are the user's go to the user**, with a proposal page or a question: the look,

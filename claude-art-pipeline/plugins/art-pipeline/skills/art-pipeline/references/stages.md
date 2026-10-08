@@ -4,6 +4,18 @@ Paths below are the defaults; a project that already has its own layout keeps it
 its brief. Every stage's outputs are committed, sheets and renders included: they are the record of
 what was looked at.
 
+## The asset ledger
+
+`docs/art/assets/<slug>.json` (key `asset_dir`) holds slug, kind, stage and a history of
+`{stage, verdict pass|fail|skipped|n/a, sheet, seen, reason, date}`; driven by `scripts/art.py`
+(`new`, `status`, `next`, `record`, `skip`, `advance`). Stages 1-2 are user-approval gates (pass needs
+`--approved-by-user`); 3-7 are look gates (`--sheet` opened this session and newer than the stage's
+`stage_outputs`, `--seen` >= 40 chars, at least `min_looks` records before a pass, or
+`--first-look-pass "<reason>"`). Rig and clips are `n/a` for prop and set. A gate is skipped only
+with `art.py skip --reason`; the Stop hook lists every skip and first-look-pass with its reason, and
+blocks a pass whose sheet was not opened this session. The engine stage prints config key
+`engine_capture` (`{slug}` substituted) or says no adapter is configured.
+
 ## 0. Protect the work
 
 Long Blender runs and multi-worker batches get cut off (usage limits, a reclaimed container).
