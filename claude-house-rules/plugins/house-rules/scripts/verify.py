@@ -3827,10 +3827,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.54.1",
+    "issues: the rules section and its detail file exist, and the plugin is 2.55.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.54.1",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.55.0",
     "rules section + detail file + version",
 )
 
@@ -6045,7 +6045,8 @@ _async_payload = post_agent_payload(
 code, out, err = run_hook("audit", _async_payload)
 code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
 if (code == 0 and "checked for stalls every 5 minutes" in out and "stallcheck.py" in out and "AUDIT" not in out
-        and code_off == 0 and not out_off.strip()):
+        and code_off == 0 and not out_off.strip()
+        and "--session sess1 --agent audit1" in out):
     report("PASS", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
     print("          nothing to audit yet; the check-in nudge appears, and not with HOUSE_RULES_AUTOSAVE=off")
 else:
@@ -6078,6 +6079,17 @@ def _sc_run(*extra):
     return pr.returncode, pr.stdout.decode("utf-8", "replace")
 
 
+# #122: a row that stays STALLED is printed again every threshold period, not once.
+_sc_file("stuck122", '{"type":"assistant"}\n', 600)
+try:
+    _pr = subprocess.run([sys.executable, _sc, "--watch", "--threshold", "1", "--poll", "0.2", "--agent", "stuck122"],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_henv, timeout=4)
+    _o = _pr.stdout.decode("utf-8", "replace")
+except subprocess.TimeoutExpired as _e:
+    _o = (_e.stdout or b"").decode("utf-8", "replace")  # expected: the watch never ends; the limit stops it
+_cap_case("stallcheck: --watch re-prints a row that stays STALLED every threshold period (#122)",
+          _o.count("STALLED") >= 2, "STALLED lines in 4 s: %d, out %r" % (_o.count("STALLED"), _o[:200]))
+os.remove(os.path.join(_sd, "agent-stuck122.jsonl"))
 _sc_file("fresh", '{"type":"assistant"}\n', 20)
 _c, _o = _sc_run()
 _cap_case("stallcheck: a transcript written 20 s ago is ok, exit 0", _c == 0 and "ok" in _o and "fresh" in _o, "exit %d out %r" % (_c, _o[:100]))
@@ -6089,6 +6101,11 @@ _sc_file("done", '{"type":"attachment","attachment":{"hookEvent":"SubagentStop"}
 _c, _o = _sc_run("--threshold", "9999")
 _cap_case("stallcheck: a transcript holding SubagentStop is finished, never STALLED",
           "finished  subagent done" in _o, "out %r" % _o[:200])
+_sc_file("resumed", '{"type":"attachment","attachment":{"hookEvent":"SubagentStop"}}\n{"type":"assistant"}\n', 5)
+_c, _o = _sc_run("--agent", "resumed")
+_cap_case("stallcheck: a transcript with records after SubagentStop (resumed agent) is ok, not finished",
+          "ok" in _o and "finished" not in _o, "out %r" % _o[:200])
+os.remove(os.path.join(_sd, "agent-resumed.jsonl"))
 _c, _o = _sc_run("--file", os.path.join(_home, "no-such.out"))
 _cap_case("stallcheck: a watched file that does not exist is STALLED, not skipped", _c == 1 and "no-such.out" in _o, "exit %d out %r" % (_c, _o[:160]))
 for _n in os.listdir(_sd):
@@ -6096,6 +6113,34 @@ for _n in os.listdir(_sd):
 _c, _o = _sc_run()
 _cap_case("stallcheck: with nothing to check it says so and exits 2, never silent",
           _c == 2 and "nothing was checked" in _o, "exit %d out %r" % (_c, _o[:160]))
+
+# Scope (issue 123): a watch covers only the calling session's / named agent's transcripts.
+_sdA = os.path.join(_home, ".claude", "projects", "p", "sessA", "subagents")
+_sdB = os.path.join(_home, ".claude", "projects", "p", "sessB", "subagents")
+os.makedirs(_sdA)
+os.makedirs(_sdB)
+for _d, _n in ((_sdA, "aaa"), (_sdA, "xxx"), (_sdB, "bbb")):
+    with open(os.path.join(_d, "agent-%s.jsonl" % _n), "w", encoding="utf-8") as _f:
+        _f.write('{"type":"assistant"}' + chr(10))
+_c, _o = _sc_run("--session", "sessA")
+_cap_case("stallcheck: --session sessA reports only sessA's agents, never sessB's",
+          _c == 0 and "aaa" in _o and "xxx" in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--agent", "xxx")
+_cap_case("stallcheck: --agent xxx reports only that agent",
+          _c == 0 and "xxx" in _o and "aaa" not in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--session", "sessA", "--agent", "bbb")
+_cap_case("stallcheck: --session sessA with another session's agent matches nothing, exit 2, says so",
+          _c == 2 and "sessA" in _o and "bbb" in _o and "nothing was checked" in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--session", "nosuch")
+_cap_case("stallcheck: a --session matching nothing exits 2 and names the session",
+          _c == 2 and "nosuch" in _o and "nothing was checked" in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run()
+_cap_case("stallcheck: no-flag mode says it is watching all sessions",
+          "watching ALL sessions" in _o and "aaa" in _o and "bbb" in _o, "exit %d out %r" % (_c, _o[:200]))
+_ctx_bad = run_hook("audit", post_agent_payload(
+    session_id="bad;id", tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}))[1]
+_cap_case("audit: an unsafe session_id is omitted from the suggested command and the watch is called unscoped",
+          "--threshold 300 --agent audit1`" in _ctx_bad and "bad;id" not in _ctx_bad and "unscoped" in _ctx_bad, "out %r" % _ctx_bad[:300])
 
 audq = []
 code, out, err = run_hook("audit", "")
