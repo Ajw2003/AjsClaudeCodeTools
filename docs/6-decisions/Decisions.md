@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-08 - Agent branches are AjsAgent/ and the issue label is AjsAgent created this (#175, part of #174, 2.56.0)
+
+**Context.** The agent's work is credited to "aj's agent", not Claude; branch prefix and issue label still said `claude/` and `Claude created this`.
+
+**Decision.** New branches are `AjsAgent/<topic>` and new issues carry `AjsAgent created this`; every message and rules file names the new forms. `OWNED_BRANCH_PREFIXES` in `hook.py` is `("AjsAgent/", "claude/")` and the issue gate also accepts the old label (`ISSUES_LABEL_OLD`).
+
+**Rejected.** Dropping the old names: the cloud app still creates `claude/<name>` branches, 56 old ones exist, and a plan already in flight has old-labelled issues that must not be blocked.
+
+**Status.** Built; `verify.py` cases cover both prefixes, a non-owned branch, and both labels. Injected rules stay under the 9,700 margin.
+
+**Consequence.** Old names are accepted but no longer suggested. Guard attribution text, SessionStart branch switching, git author and MCP matchers are #176-#179.
+
+---
+
 ## 2026-10-07 - Destructive git steps run unasked only on my branch, and only when the work is saved elsewhere (#153, 2.53.0)
 
 **Context.** aj: "destructive actions are permitted only on a Claude created branch and only if the work already is saved somewhere else the destructive action would not affect." Asked whether "otherwise" meant ask or never, aj chose ask as today; asked whether `guard` should enforce it, aj chose rule text plus `guard`.

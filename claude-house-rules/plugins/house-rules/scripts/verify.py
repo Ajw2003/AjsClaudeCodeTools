@@ -636,7 +636,7 @@ _sv_git("push", "-q", "-u", "origin", "main")
 _sv_theirs = _sv_guard("git reset --hard HEAD")
 _sv_case(
     "guard: on aj's branch, reset asks even with a clean tree and everything pushed",
-    _sv_theirs[0] == "ask" and "not a `claude/` branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
+    _sv_theirs[0] == "ask" and "not an `AjsAgent/` (or `claude/`) branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
 )
 
 # The exemption is a silent success path, and guard's silent paths trace by contract.
@@ -2842,8 +2842,8 @@ _, out, _ = run_hook(
 )
 _ctx = _stop_context(out)
 commit_case(
-    "Stop: the same on the user's main says to branch off to claude/<topic> first",
-    "not a claude/ branch" in _ctx and "branch off first" in _ctx and "git switch -c claude/<topic>" in _ctx,
+    "Stop: the same on the user's main says to branch off to AjsAgent/<topic> first",
+    "not an AjsAgent/ (or claude/) branch" in _ctx and "branch off first" in _ctx and "git switch -c AjsAgent/<topic>" in _ctx,
     "context: %r" % _ctx[:160],
 )
 
@@ -2926,6 +2926,15 @@ commit_case(
     "branch off now" not in out,
     "stdout: %r" % out[:160],
 )
+for _br, _owned in (("AjsAgent/x", True), ("claude/x", True), ("main", False), ("feature/x", False)):
+    _r = _commit_repo(_br, committed=["a.py"], dirty=["a.py"])
+    out = _nudge(_r, "a.py")
+    commit_case(
+        "branchnudge: `%s` is %s" % (_br, "owned (AjsAgent/ and claude/ both count), no nudge" if _owned
+                                     else "not owned, so it nudges"),
+        ("branch off now" not in out) == _owned,
+        "stdout: %r" % out[:160],
+    )
 _r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
 out = _nudge(_r, "a.py", HOUSE_RULES_COMMIT_CHECK="off")
 commit_case(
@@ -3430,7 +3439,7 @@ _ctx = _stop_context(_o)
 commit_case(
     "issues: a 5-step plan writes the gate state and the delegate note says to create the issues",
     bool(_st) and _st.get("needs_issues") is True and _st.get("plan_steps") == 5 and "5 steps" in _ctx
-    and "parent issue" in _ctx and "Claude created this" in _ctx and "in progress" in _ctx
+    and "parent issue" in _ctx and "AjsAgent created this" in _ctx and "in progress" in _ctx
     and "Claude completed this" not in _ctx,
     "state %r" % _st,
 )
@@ -3484,7 +3493,7 @@ _, _ob, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Bash", _d, comma
 commit_case("issues: Bash is never gated", _ob.strip() == "", "out %r" % _ob[:80])
 
 # -- #110: recording creations clears the gate --------------------------------------------------
-_label_cmd = 'gh issue create --title "t" --body "b" --label "Claude created this" --label bug'
+_label_cmd = 'gh issue create --title "t" --body "b" --label "AjsAgent created this" --label bug'
 _bare_cmd = 'gh issue create --title "t" --body "b" --label bug'
 
 
@@ -3498,7 +3507,7 @@ _issues_outputs.append(("unlabelled create", _ou))
 _st = _iss_state(_d)
 commit_case(
     "issues: an unlabelled `gh issue create` gets a correction note and does not count",
-    "without the `Claude created this` label" in _ou and _st["needs_issues"] is True
+    "without the `AjsAgent created this` label" in _ou and _st["needs_issues"] is True
     and _st["created"] and _st["created"][0]["labelled"] is False,
     "state %r out %r" % (_st, _ou[:100]),
 )
@@ -3515,6 +3524,16 @@ commit_case(
 )
 _, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp("Assets/Foo.cs")), _d)
 commit_case("issues: once cleared the same source Write is allowed", _oa.strip() == "", "out %r" % _oa[:80])
+_old_label_cmd = 'gh issue create --title "t" --body "b" --label "Claude created this" --label bug'
+for _lc, _nm in ((_label_cmd, "AjsAgent created this"), (_old_label_cmd, "Claude created this (old)")):
+    _dl = _iss_repo()
+    _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dl, plan=_ISS_PLAN5), _dl)
+    _iss_created(_dl, _lc, 70)
+    _stl = _iss_state(_dl)
+    commit_case(
+        "issues: a `gh issue create` with the `%s` label counts as labelled" % _nm,
+        _stl["created"] and _stl["created"][0]["labelled"] is True, "state %r" % (_stl,),
+    )
 _dn = _iss_repo()
 _, _onone, _ = _iss_created(_dn, _label_cmd, 60)
 commit_case(
@@ -3827,10 +3846,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.55.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.56.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.55.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.56.0",
     "rules section + detail file + version",
 )
 
@@ -3907,7 +3926,7 @@ RESTATEMENTS = [
         ["own branch", "branch off first", "scoped to"],
         False,
         ("commit on your own branch", "scoped to those paths", "say what you committed and where",
-         "not a checkpoint", "claude/<topic>"),
+         "not a checkpoint", "AjsAgent/<topic>"),
     ),
     Restatement(
         "the branch nudge (#97)",

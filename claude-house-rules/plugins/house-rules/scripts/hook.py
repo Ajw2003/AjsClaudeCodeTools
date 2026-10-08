@@ -555,7 +555,7 @@ def event_inject():
         "The following are the user standing house rules. They apply to every project and "
         "override default behaviour. A PreToolUse hook also prompts for destructive "
         "commands, backgrounded/hidden processes, and mutating git commands - except a "
-        "plain commit or push on a `claude/` branch. That hook is a backstop, not "
+        "plain commit or push on an `AjsAgent/` branch. That hook is a backstop, not "
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
 
@@ -1891,7 +1891,7 @@ DOCS_COMMIT_REMINDER = (
     "message why none needed updating."
 )
 
-OWNED_BRANCH_PREFIX = "claude/"
+OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/")  # claude/ = cloud app branches, old branches
 
 # A command that names its own repo, git dir or work tree is not talking about the checkout
 # this hook can see, so the branch read below would be the wrong branch to judge it by. Broad
@@ -1942,7 +1942,7 @@ def branch_ownership():
         return False, None, "HEAD points at %s, which is not a branch" % ref
 
     branch = ref[len("refs/heads/") :]
-    return branch.startswith(OWNED_BRANCH_PREFIX), branch, None
+    return branch.startswith(OWNED_BRANCH_PREFIXES), branch, None
 
 
 SAVED_CHECK_TIMEOUT = 2.0
@@ -2136,7 +2136,7 @@ def event_guard():
             why_not_exempt = "  I could not establish branch ownership: %s." % ownership_note
         elif not is_mine:
             why_not_exempt = (
-                "  You are on `%s`, which is yours, not a `claude/` branch." % branch
+                "  You are on `%s`, which is yours, not an `AjsAgent/` (or `claude/`) branch." % branch
             )
         if why_not_exempt:
             lines.append("")
@@ -2396,14 +2396,14 @@ def event_artifact():
 
 # ---------------------------------------------------------------------------------------
 # branchnudge - PostToolUse on Write|Edit. The commit rule's "branch off first", at the moment
-# it applies: the first uncommitted change on a branch that is not claude/. Never obstructs.
+# it applies: the first uncommitted change on a branch that is not AjsAgent/ (or claude/). Never obstructs.
 # ---------------------------------------------------------------------------------------
 
 BRANCH_NUDGE_NOTE = (
     "House rules, commit on your own branch: that write is the only uncommitted change on "
-    "`{branch}`, which is not a claude/ branch. If that branch was opened for this session's "
+    "`{branch}`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened for this session's "
     "work, carry on and commit there. If it is the user's, branch off now, before editing "
-    "further (`git switch -c claude/<topic>` carries this change with it), and commit on that "
+    "further (`git switch -c AjsAgent/<topic>` carries this change with it), and commit on that "
     "branch, scoped to the paths you changed."
 )
 
@@ -3713,7 +3713,7 @@ def _prompt_refusal(minutes, path, summary):
         "Nobody answered this permission prompt for %s, so it was refused - not approved - and "
         "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this action, or a "
         "variation of it, this session; it would only be refused again. Look for a route that needs no permission AND does "
-        "not have the same effect (for example: commit to a claude/ branch instead of aj's branch; "
+        "not have the same effect (for example: commit to an AjsAgent/ branch instead of aj's branch; "
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
         "it. Carry on with every part of the task that does not depend on this. Before you stop, "
@@ -4045,7 +4045,7 @@ def event_subagentcommit():
             )
             return 0
         advice = " ".join(
-            _branch_advice(bool(branch and branch.startswith(OWNED_BRANCH_PREFIX)), branch,
+            _branch_advice(bool(branch and branch.startswith(OWNED_BRANCH_PREFIXES)), branch,
                            "HEAD is detached in %s" % top)
             for top, branch, _files in left
         )
@@ -4275,7 +4275,8 @@ def _head_age_seconds(top):
 # ---------------------------------------------------------------------------------------
 
 ISSUES_FILE = "house-rules-issues.json"
-ISSUES_LABEL = "Claude created this"
+ISSUES_LABEL = "AjsAgent created this"
+ISSUES_LABEL_OLD = "Claude created this"  # still counts: plans already in flight
 ISSUES_STEP_THRESHOLD = 3
 ISSUES_NEEDED = 2  # one parent plus at least one child
 
@@ -4284,7 +4285,7 @@ ISSUE_NOTE = (
     "written create one parent issue for the plan and one child issue per step with `gh issue "
     "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
     "non-programmer can follow. Every issue carries at least one category label and the label "
-    "`Claude created this`; if the repo lacks that label, create it first with `gh label "
+    "`AjsAgent created this`; if the repo lacks that label, create it first with `gh label "
     "create`. Show the user the issue numbers. Mark a step `in progress` (`gh issue edit N "
     "--add-label \"in progress\"`) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
@@ -4469,7 +4470,7 @@ def _issues_record(payload):
         if not found:
             return ["house-rules: a `gh issue create` ran but no issue URL was in its output, so it "
                     "was not counted toward the issue gate."]
-        labelled = ISSUES_LABEL.lower() in cmd.lower()
+        labelled = any(l.lower() in cmd.lower() for l in (ISSUES_LABEL, ISSUES_LABEL_OLD))
         created = state.setdefault("created", [])
         for repo, number in found:
             created.append({"repo": repo, "number": int(number), "labelled": labelled})
@@ -5470,14 +5471,14 @@ def _branch_advice(is_mine, branch, note):
         )
     if branch:
         return (
-            "The checkout is on `%s`, which is not a claude/ branch. If that branch was opened "
+            "The checkout is on `%s`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened "
             "for this session's work, commit there, scoped to those paths. If it is the user's, "
-            "branch off first (`git switch -c claude/<topic>` carries the changes with it), "
+            "branch off first (`git switch -c AjsAgent/<topic>` carries the changes with it), "
             "then commit, scoped to those paths. Either way, say what you committed and where."
             % branch
         )
     return (
-        "No branch could be read (%s), so branch off first (`git switch -c claude/<topic>`), "
+        "No branch could be read (%s), so branch off first (`git switch -c AjsAgent/<topic>`), "
         "then commit, scoped to those paths, and say what you committed and where." % note
     )
 
