@@ -19,7 +19,7 @@ it is their work, and removing it is their call.
 
 A destructive step may run without asking only when **both** hold:
 
-1. **The branch is mine:** a `claude/` branch I created for this work. Never one aj authored.
+1. **The branch is mine:** an `AjsAgent/` branch I created for this work. Never one aj authored.
 2. **The work is already saved where the step cannot reach it:** `git status` shows nothing
    uncommitted or untracked, and every commit on the branch is already on a remote.
 
@@ -51,7 +51,7 @@ happens:
 
 1. Don't retry the same action, or a variation of it, this session. It would only be refused again.
 2. Look for a route that needs no permission **and does not have the same effect**:
-   - committing or pushing on aj's branch → commit and push on a `claude/<topic>` branch and
+   - committing or pushing on aj's branch → commit and push on an `AjsAgent/<topic>` branch and
      leave the merge to aj;
    - a full-file `Write` over an existing file → the same change made with `Edit`.
 3. Never reach the same destructive result another way: another tool, command, encoding or

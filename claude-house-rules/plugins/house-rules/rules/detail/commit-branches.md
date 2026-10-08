@@ -3,10 +3,12 @@
 
 Read-only inspection is always fine, anywhere: `git status`, `git log`, `git diff`, `git show`.
 
-**On a branch I created** — one opened for this work, conventionally `claude/<topic>` — I commit
+**On a branch I created** — one opened for this work, conventionally `AjsAgent/<topic>` — I commit
 freely and often, without asking. That is the whole point: frequent commits *are* the backup and
 the revert checkpoints. A session's work must never sit uncommitted for hours. When I finish a
 coherent piece, it gets committed before I start the next one.
+
+`claude/` is still treated as mine too, because the cloud app names its branches that way.
 
 **On a branch the user authored** — `main`, `master`, or any branch they named and work on — I
 mutate nothing. Not the repo, the index, the working tree, or a remote: `add`, `commit`, `push`,
