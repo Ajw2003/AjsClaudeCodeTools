@@ -55,12 +55,25 @@ without a version bump), and the branch is 17 commits behind `origin/main`.
    `setup_bpy.sh` assumes POSIX names (works under Git Bash, untested in PowerShell).
 5. **Ship it.** Rebase on main, bump the version the check wants, get #166 green, install.
 
-## Open questions (yours to decide)
+## Decided (aj, 2026-10-07)
 
-- Unity-only, or keep the engine-agnostic shape with Unity as the first adapter?
-- Render pipeline to target by default (URP is what the importer prose assumes)?
-- Unity drop-in as copied `Editor/` scripts or a UPM git package?
-- Should a stage's "user approves" gate (brief, concept) be hard-blocking, or a recorded waiver?
+- **Engine-agnostic core, Unity first.** Ledger, forge, gate and review sheets know nothing about
+  an engine. Stage 7 calls an engine adapter named in `.art-pipeline.json`
+  (`"engine": "unity"`); Unity is the only adapter built now.
+- **URP first.** The Unity importer builds URP Lit materials and the capture scene uses URP;
+  Built-in/HDRP are not handled until asked for.
+- **Unity side installs from git** as a UPM package kept in this repo, added to a project's
+  `Packages/manifest.json` as
+  `"com.aj.art-pipeline": "https://github.com/Ajw2003/AjsClaudeCodeTools.git?path=/claude-art-pipeline/unity#<tag>"`.
+- **A user-approval gate can be skipped with a recorded reason.** `art.py advance <slug> --skip
+  "<reason>"` writes verdict `skipped` plus the reason into the ledger; it never passes silently -
+  `review.py status` and the Stop gate list every skip.
 
-Suggested order: 5 → 4 → 3 → 1 → 2 (ship what exists, make the loop rigid, then widen what the
-loop can build, then close it in-engine).
+## Order of work (one child issue of #161 each)
+
+1. (#167) Ship what exists: rebase `claude/art-pipeline` on main, the version bump CI wants, #166 green.
+2. (#168) Windows fixes: absolute `--out`, GPU Cycles when present.
+3. (#169) The per-asset ledger and `art.py next/advance`, gate reads it, skips recorded.
+4. (#170) The forge extracted from PlunderSpell into the skill's `scripts/`, engine-free.
+5. (#171) The Unity UPM package: URP importer, animator/prefab generator, batchmode capture feeding
+   the review sheet.
