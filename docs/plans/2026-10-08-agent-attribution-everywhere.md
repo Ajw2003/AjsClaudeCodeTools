@@ -1,6 +1,7 @@
 # Plan: "aj's agent" attribution and `AjsAgent/` branches, in every repo, going forward and backward
 
-STATUS: draft, waiting on aj's answers to the open decisions at the bottom. Nothing built yet.
+STATUS: decisions D1-D4 answered by aj 2026-10-08 (see bottom); D5 defaulted. Nothing built yet;
+next is the parent issue plus one child per step.
 Builds on [attribution-build-plan.md](attribution-build-plan.md) (issue #133, shipped in 2.51.0).
 
 ## What exists today, checked 2026-10-08 in a cloud session on this repo
@@ -93,7 +94,19 @@ link to an old commit. See D1. If done, per repo: mirror backup first (`git clon
 dated folder), `git filter-repo --mailmap --message-callback`, force-push with lease, one repo at
 a time with aj's yes for each.
 
-## Open decisions (aj's to make)
+## Decisions
+
+Answered by aj, 2026-10-08:
+
+- **D1: branches + PR/issue text only.** R4 (history rewrite) is dropped; no commit is rewritten.
+- **D2: `AJ's agent <79066376+Ajw2003@users.noreply.github.com>`.**
+- **D3: always switch** cloud sessions to `AjsAgent/<name>` at session start (Step 2 is in).
+  Whether the app's "Create PR" button follows the new branch gets tested in the first cloud run.
+- **D4: own non-fork `Ajw2003/*` repos only.**
+- **D5 (not asked, defaulted): rename merged `claude/` branches too**, since a rename is not a
+  delete and keeps the naming uniform. Say so if you'd rather leave merged ones alone.
+
+The questions as asked:
 
 - D1. History rewrite: none / unmerged branches only / everything including `main`.
 - D2. Commit identity: name `AJ's agent` with which email — your GitHub noreply
