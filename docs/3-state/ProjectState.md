@@ -126,6 +126,11 @@ mechanism is worth trusting": no tuning against real prompt traffic, no
 that spans two of `agent-router`'s tiers. These are stated as open by
 [`docs/offshoots-plan.md`](../offshoots-plan.md), not discovered here.
 
+`art-pipeline` (third offshoot) made its first asset in this repo on 2026-10-08: a reaper
+scythe from a reference image, in [`art/scythe/`](../../art/scythe/README.md) — spec, blueprint,
+GLB/FBX/.blend, review sheet at `docs/art/reviews/scythe-review.png`. The render and sheet scripts
+ran for real; the Stop-hook gate did not, because the plugin was not installed in that session.
+
 ## 4. Distribution & install tooling — built and verified
 
 `install_steps()`'s four-command order, `bootstrap.ps1`/`.sh`, `update.bat`, and both

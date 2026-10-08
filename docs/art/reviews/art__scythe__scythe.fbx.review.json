@@ -1,0 +1,7 @@
+{
+  "model": "art/scythe/scythe.fbx",
+  "sheet": "docs/art/reviews/scythe-review.png",
+  "verdict": "pass",
+  "seen": "Same build as scythe.glb from build_scythe.py; the review sheet was rendered from the glb export, pass 2 notes apply.",
+  "date": "2026-10-08T21:03:59+0000"
+}
