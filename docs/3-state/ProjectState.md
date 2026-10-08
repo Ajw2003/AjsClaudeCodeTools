@@ -136,6 +136,19 @@ mechanism is worth trusting": no tuning against real prompt traffic, no
 that spans two of `agent-router`'s tiers. These are stated as open by
 [`docs/offshoots-plan.md`](../offshoots-plan.md), not discovered here.
 
+**`art-pipeline` (v0.2.0, 2026-10-07): end to end on Unity, proven once.** Skill + Stop gate +
+per-asset stage ledger (`scripts/art.py`), an engine-free Blender forge
+(`skills/art-pipeline/scripts/forge/`), and a URP Unity package installed by git URL
+(`claude-art-pipeline/unity/`). Verified on this Windows machine: `verify.py` 45/45 twice; forge
+builds its two examples `2/2 passed`; one new asset (a brazier) walked brief → concept → spec →
+model → Unity capture → done in a sandbox Unity 6000.3.15f1 project, with the package resolved
+from GitHub (`"source": "git"`), each look stage failing once and passing after a fix, both
+user-approval stages skipped with reasons the Stop gate reported. Not yet proven: the hooks
+inside a live session with the plugin installed (the run fed the seen-hook its payload by hand),
+a rigged character through the ledger (the dummy was captured in Unity, not walked through
+`art.py`), emission (fire renders unlit), Linux/macOS. Plan:
+[`docs/plans/2026-10-07-art-pipeline-for-any-unity-project.md`](../plans/2026-10-07-art-pipeline-for-any-unity-project.md).
+
 ## 4. Distribution & install tooling — built and verified
 
 `install_steps()`'s four-command order, `bootstrap.ps1`/`.sh`, `update.bat`, and both

@@ -1,14 +1,34 @@
 # art-pipeline
 
-STATUS: v0.1. Offshoot of the `house-rules` plugin formula (one `run.sh` shim, one stdlib Python
+STATUS: v0.2. Offshoot of the `house-rules` plugin formula (one `run.sh` shim, one stdlib Python
 file). Makes game art by code - concept, model, rig, animation - and never calls a model done
 until someone has looked at it beside its concept. The skills (under
-`plugins/art-pipeline/skills/`) carry the method; the hooks here carry the gate.
+`plugins/art-pipeline/skills/`) carry the method; the hooks here carry the gate. Engine-agnostic
+core; Unity (URP) is the first engine adapter.
 
 ## Install
 
     claude plugin marketplace add Ajw2003/AjsClaudeCodeTools
     claude plugin install art-pipeline@aj-house-rules
+
+In a Unity project, add the package to `Packages/manifest.json` (the ref is `main` once merged; until
+then `claude/modest-hawking-d4w2bv`):
+
+    "com.aj.art-pipeline": "https://github.com/Ajw2003/AjsClaudeCodeTools.git?path=/claude-art-pipeline/unity#main"
+
+and point the engine stage at the capture script in `.art-pipeline.json` at the repo root:
+
+    {"engine": "unity",
+     "engine_capture": "python <plugin>/skills/art-pipeline/scripts/unity_capture.py --project <abs project> --model Assets/Art/Generated/{slug}/{slug}.fbx --out docs/art/engine/{slug}"}
+
+## The pieces
+
+| Piece | Where | What |
+|---|---|---|
+| Stage ledger | `plugins/art-pipeline/scripts/art.py` | `new`, `next`, `record`, `skip --reason`, `advance`, `status`: one asset at a time through brief, concept, spec, model, rig, clips, engine |
+| Forge | `plugins/art-pipeline/skills/art-pipeline/scripts/forge/` | spec JSON + blueprints -> validated FBX/GLB/.blend and the `.art.json` sidecar; humanoid rig, idle and walk ([forge/README.md](plugins/art-pipeline/skills/art-pipeline/scripts/forge/README.md)) |
+| Review renders | `.../scripts/render_views.py`, `review_sheet.py` | Blender views (GPU when present) and the concept-beside-renders sheet; the sheet also takes a Unity capture folder |
+| Unity adapter | `unity/` (UPM package) + `.../scripts/unity_capture.py` | URP importer from the sidecar, prefab/animator generator, batchmode capture beside a 1.80 m capsule ([unity/README.md](unity/README.md)) |
 
 ## The gate
 

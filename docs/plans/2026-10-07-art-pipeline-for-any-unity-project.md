@@ -1,6 +1,6 @@
 # art-pipeline → a skill for any Unity project: what it would take
 
-Date: 2026-10-07. Status: assessment, nothing built. Source: branch `claude/art-pipeline`
+Date: 2026-10-07. Status: built on branch claude/modest-hawking-d4w2bv (issues #167-#171); proven once end to end, see docs/3-state/ProjectState.md section 3. Source: branch `claude/art-pipeline`
 (PR Ajw2003/AjsClaudeCodeTools#166, issues #161–#164), read at `466c6cd`.
 
 ## Where it stands
