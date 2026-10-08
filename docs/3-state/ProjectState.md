@@ -172,9 +172,10 @@ invocation.
   branches in every own repo; old `claude/` branches renamed, no history rewrite. Plan:
   [`docs/plans/2026-10-08-agent-attribution-everywhere.md`](../plans/2026-10-08-agent-attribution-everywhere.md).
   #175 is built (2.56.0): owned branches are `AjsAgent/` (`claude/` still recognised) and the issue
-  label is `AjsAgent created this` (`Claude created this` still counts). Not built: #176 cloud
-  branch switch, #177 git author, #178 guard on GitHub tools, #179 cloud settings, #180 Focus Deck
-  label, #181-#182 retroactive report and renames.
+  label is `AjsAgent created this` (`Claude created this` still counts). #176 is built (2.57.0): a
+  cloud session on `claude/<name>` is told at start to move to `AjsAgent/<name>`; whether the app's
+  own PR button follows the new branch is still unchecked. Not built: #177 git author, #178 guard on
+  GitHub tools, #179 cloud settings, #180 Focus Deck label, #181-#182 retroactive report and renames.
 - **[`docs/architecture-backlog.md`](../architecture-backlog.md)** — seven open refactor candidates
   against `hook.py`/`verify.py` (deduplicating nine restatement checks, unifying the three
   places the failure-mode contract is stated, one open item about agent frontmatter fields

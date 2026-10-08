@@ -1,5 +1,10 @@
 # Today — 2026-10-08
 
+Cloud branches, plugin 2.57.0 (issue #176): a cloud session that the app starts on a `claude/<name>`
+branch is now told to move to `AjsAgent/<name>` before its first edit, and to push and open pull
+requests from there. Still to check in a real cloud session: whether the app's own "Create PR"
+button follows the new branch.
+
 Prompt timer, live test on the phone app: the timer refused an unanswered prompt after exactly 5 minutes and
 the refused action showed on your next message. The house-rules delete prompt reaches you as a real dialog.
 Found a gap: if the session's worker restarts while a prompt is open, the prompt sits on your screen with no

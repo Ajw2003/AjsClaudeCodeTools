@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-08 - Cloud sessions move off the app's claude/ branch onto AjsAgent/ (#176, part of #174, 2.57.0)
+
+**Context.** The cloud app assigns each session a `claude/<name>` branch and tells the agent to push only there. aj decided every agent branch should be `AjsAgent/`, cloud ones included.
+
+**Decision.** `profile` (SessionStart), on a remote session whose branch starts `claude/`, tells the agent to `git switch -c AjsAgent/<name>` before its first edit (or `git switch AjsAgent/<name>` when that branch already exists locally or on `origin`), push there, and open pull requests from there. The text names aj's standing permission as overriding the app's "push only to the designated branch" line. The hook only instructs; it never switches. `HOUSE_RULES_AGENT_BRANCH=off` disables it.
+
+**Rejected.** Having the hook run `git switch` itself: hooks force, they don't act. Switching only fresh branches: switching carries existing commits along, so there is nothing to protect.
+
+**Status.** Built; `verify.py` covers `claude/foo`, an existing `AjsAgent/foo`, `AjsAgent/foo`, `main`, a local session, the kill switch, and a non-git folder.
+
+**Open.** Not yet checked in a real cloud session: whether the app's "Create PR" button and branch display follow the new branch. If they don't, the PR is opened from `AjsAgent/<name>` with the GitHub tools instead.
+
+---
+
 ## 2026-10-08 - Agent branches are AjsAgent/ and the issue label is AjsAgent created this (#175, part of #174, 2.56.0)
 
 **Context.** The agent's work is credited to "aj's agent", not Claude; branch prefix and issue label still said `claude/` and `Claude created this`.

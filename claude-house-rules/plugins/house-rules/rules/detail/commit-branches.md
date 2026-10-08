@@ -8,7 +8,9 @@ freely and often, without asking. That is the whole point: frequent commits *are
 the revert checkpoints. A session's work must never sit uncommitted for hours. When I finish a
 coherent piece, it gets committed before I start the next one.
 
-`claude/` is still treated as mine too, because the cloud app names its branches that way.
+`claude/` is still treated as mine too, because the cloud app names its branches that way. A cloud
+session that starts on `claude/<name>` is told to move to `AjsAgent/<name>` before its first edit,
+and to push and open pull requests from there.
 
 **On a branch the user authored** — `main`, `master`, or any branch they named and work on — I
 mutate nothing. Not the repo, the index, the working tree, or a remote: `add`, `commit`, `push`,

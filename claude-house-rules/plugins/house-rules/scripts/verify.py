@@ -3662,6 +3662,54 @@ commit_case(
     "two commands that only mention it",
 )
 
+# -- #176: cloud sessions move off claude/<name> onto AjsAgent/<name> ---------------------------------
+def _ab_repo(branch, extra_branch=None):
+    d = tempfile.mkdtemp(prefix="hr-ab-", dir=_FIXTURE_ROOT)
+    g = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run(g + ["init", "-q", "-b", branch], cwd=d, check=True)
+    subprocess.run(g + ["commit", "-q", "--allow-empty", "-m", "x"], cwd=d, check=True)
+    if extra_branch:
+        subprocess.run(["git", "branch", extra_branch], cwd=d, check=True)
+    return d
+
+
+def _ab_out(d, remote=True, **extra):
+    e = env_in(d, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV, **extra)
+    e.pop("CLAUDE_CODE_REMOTE", None)
+    if remote:
+        e["CLAUDE_CODE_REMOTE"] = "true"
+    e.pop("HOUSE_RULES_AGENT_BRANCH", None)
+    e.update(extra)
+    return run_hook("profile", "", env=e)[1]
+
+
+_ab1 = _ab_out(_ab_repo("claude/foo"))
+_ab2 = _ab_out(_ab_repo("claude/foo", "AjsAgent/foo"))
+_ab3, _ab4 = _ab_out(_ab_repo("AjsAgent/foo")), _ab_out(_ab_repo("main"))
+_ab5 = _ab_out(_ab_repo("claude/foo"), remote=False)
+_ab6 = _ab_out(_ab_repo("claude/foo"), HOUSE_RULES_AGENT_BRANCH="off")
+_ab7 = _ab_out(tempfile.mkdtemp(prefix="hr-ab-nogit-", dir=_FIXTURE_ROOT))
+commit_case(
+    "agent-branch: claude/foo is told to git switch -c AjsAgent/foo, with aj's standing permission",
+    "git switch -c AjsAgent/foo" in _ab1 and "git push -u origin AjsAgent/foo" in _ab1 and "standing permission" in _ab1,
+    "out %r" % _ab1[-420:],
+)
+commit_case(
+    "agent-branch: an existing AjsAgent/foo gets git switch AjsAgent/foo, no -c",
+    "git switch AjsAgent/foo" in _ab2 and "switch -c" not in _ab2,
+    "out %r" % _ab2[-200:],
+)
+commit_case(
+    "agent-branch: AjsAgent/foo, main, a local session, and the kill switch add no switch text",
+    all("git switch" not in o for o in (_ab3, _ab4, _ab5, _ab6)),
+    "hit idx %s" % [i for i, o in enumerate((_ab3, _ab4, _ab5, _ab6)) if "git switch" in o],
+)
+commit_case(
+    "agent-branch: outside a git repo it does not crash and says the branch was not read",
+    "AjsAgent branch check: branch not read" in _ab7 and "git switch" not in _ab7,
+    "out %r" % _ab7[-200:],
+)
+
 # -- #133: credit aj's agent, never Claude -------------------------------------------------------------
 _att_trailer = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\nEOF\n)\""
 _att_gen = "git commit -m \"feat: x\n\nGenerated with [Claude Code](https://claude.com/claude-code)\""
@@ -3846,10 +3894,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.56.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.57.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.56.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.57.0",
     "rules section + detail file + version",
 )
 

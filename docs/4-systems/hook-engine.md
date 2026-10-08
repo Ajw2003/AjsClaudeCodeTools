@@ -220,7 +220,11 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   profile hook's 10 s timeout in `hooks/hooks.json`. A failed probe prints `not detected
   (<reason>)`. Where `claude auth status` has no plan field (as in a cloud session) it says so
   rather than guessing. On a remote session the block is headed as the sandbox's, for Claude's
-  own checks, and points at `rules/handover-target.md` for the local build budget. Only the
+  own checks, and points at `rules/handover-target.md` for the local build budget. A remote
+  session on a `claude/<name>` branch also gets `_agent_branch_block`: an instruction to
+  `git switch -c AjsAgent/<name>` (or `git switch` to it when it already exists locally or on
+  `origin`) and to push and open PRs from there. Text only, the hook never switches;
+  `HOUSE_RULES_AGENT_BRANCH=off` disables it. Only the
   fallback probes: a hand-recorded `rules/environment.md` replaces it, so hardware missing from
   that file is not re-detected. The macOS and Windows branches were written to the documented
   command shapes and not run on those systems.
