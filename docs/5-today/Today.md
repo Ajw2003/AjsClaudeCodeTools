@@ -14,7 +14,7 @@ actually ran is no longer recorded as timed out. Still open: the app may keep sh
 already refused (#149), which needs checking on the desktop app.
 
 Destructive steps (issue #153, same release): Claude may now reset, rebase, revert or restore without asking
-only on its own `claude/` branch, and only when nothing is uncommitted and every commit is already pushed, so
+only on its own `AjsAgent/` (or `claude/`) branch, and only when nothing is uncommitted and every commit is already pushed, so
 nothing can be lost. Anywhere else it asks you, as before. Force-push, `git clean`, dropping a stash and
 deleting files always ask.
 

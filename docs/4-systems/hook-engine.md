@@ -85,7 +85,7 @@ subagent's worktree has its own and is not gated by the main session's plan); `c
 before its subagent logic and denies Write/Edit/NotebookEdit on source files while `needs_issues` is
 true (`docs/`, `.claude/`, any `.md`, files outside the project and the state file stay open); the
 existing Bash PostToolUse entry that runs `autosave` parses `gh issue create` output for the issue URL and
-the `Claude created this` label and clears the gate at two labelled issues; `handover` adds one Stop
+the `AjsAgent created this` label (the old `Claude created this` still counts) and clears the gate at two labelled issues; `handover` adds one Stop
 line while the gate is shut; `guard` denies a `gh pr create` whose body lacks `Refs #N` / `Part of #N` /
 `No-issue:` or pairs a closing word with an issue reference, and asks on `gh issue close`, `gh issue edit
 --state closed` and a `gh api` PATCH to closed. `issuelist` is a sixth SessionStart entry (its own, because
@@ -124,7 +124,7 @@ output closes the app's dialog once the timer has refused (#149); the refusal re
 can stay on screen.
 
 **Saved-work exemption (2.53.0, issue #153).** Patterns marked `SAVED` (`reset`, `revert`, `rebase`,
-`checkout --`, `restore`) stand down only when the checkout is on a `claude/` branch, the command names no
+`checkout --`, `restore`) stand down only when the checkout is on an `AjsAgent/` (or `claude/`) branch, the command names no
 other repo, and `work_saved_elsewhere()` reports a clean tree (`git status --porcelain -uall` empty) and no
 commit missing from every remote (`git rev-list --count HEAD --not --remotes` is 0). It runs at most once
 per command, only when such a pattern matched on my branch, with a 2-second budget; any failure is a no. A
@@ -263,7 +263,7 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
 - **`verify.py`'s guard/branch cases must use hand-written fixture `.git/HEAD` files, not
   whichever branch the suite happens to be run from.** Once a decision depends on branch
   ownership, a suite that inherits the developer's real branch makes the result a property of
-  the checkout: it would pass on `main`, fail on a `claude/…` branch, and agree with neither —
+  the checkout: it would pass on `main`, fail on an `AjsAgent/…` branch, and agree with neither —
   CI checks out a detached `HEAD`.
 - **Every uncertainty in branch ownership resolves to "not mine," never to "assume it's fine."**
   The user's branch, a detached `HEAD`, a directory that isn't a repo, an unreadable `HEAD` all
