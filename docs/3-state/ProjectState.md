@@ -75,6 +75,14 @@ same call sequence replayed through `run.sh` in a scratch clone of PlunderSpell 
 verified: a real Claude Code session in another repo, and a `gh issue create` made through the
 `PowerShell` tool, which is not recorded.
 
+Live test of 2.53.0 in a cloud session on the mobile app (2026-10-07/08, transcript timestamps UTC):
+a prompt Claude Code raised itself was refused by `prompttimer` after 300.0 s unanswered and listed on aj's
+next message, as designed. `guard`'s own `ask` does reach aj as a real dialog (#143, first half). When aj
+answered first, the timer stopped with no leftover process or entry (R2). Not yet seen: a `guard` prompt left
+unanswered to the end, so whether the timer refuses those and whether the dialog then closes (#149) are still
+open. New gap: the worker restarted as a prompt opened; the dialog stayed on aj's screen for 12 minutes while no
+hook ran (`guard` ran only after aj pressed Deny), so the timer cannot cover a dialog that outlives its worker.
+
 2.53.0 (2026-10-07, #149, #151, #152) follows the prompt timer up: questions and plan approval are never
 timed; after one timeout, later prompts in that session are refused at once until aj writes; and a new
 `promptran` hook stops the timer when the action actually ran, and reports one recorded as timed out that ran
