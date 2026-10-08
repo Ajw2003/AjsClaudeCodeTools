@@ -1,4 +1,11 @@
-# Today — 2026-10-07
+# Today — 2026-10-08
+
+Prompt timer, live test on the phone app: the timer refused an unanswered prompt after exactly 5 minutes and
+the refused action showed on your next message. The house-rules delete prompt reaches you as a real dialog.
+Found a gap: if the session's worker restarts while a prompt is open, the prompt sits on your screen with no
+timer behind it (it waited 12 minutes until you denied it), issue #159. A house-rules delete prompt left alone
+was refused after exactly 5 minutes and nothing was deleted, so the timer covers those too. The refused
+dialog then closed by itself and showed as "Failed" (#149).
 
 Prompt timer follow-ups, plugin 2.53.0 (issues #149, #151, #152): questions and plan approvals are never
 timed out. Once one permission prompt goes unanswered, the next ones in that session are refused straight
