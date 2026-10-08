@@ -11,6 +11,7 @@ Output for an entry named Lantern, in <out>/Lantern/:
 
 from __future__ import annotations
 
+import json
 import os
 
 import bpy
@@ -89,7 +90,16 @@ def export(obj, rig, actions, bp: Blueprint, model_dir: str) -> dict:
     blend = os.path.join(model_dir, f"{name}.blend")
     bpy.context.preferences.filepaths.save_version = 0   # no .blend1 backups
     bpy.ops.wm.save_as_mainfile(filepath=blend, copy=True)
-    return {"fbx": fbx, "glb": glb, "blend": blend}
+    # Sidecar the Unity package's importer reads (claude-art-pipeline/unity/README.md).
+    sidecar = os.path.join(model_dir, f"{name}.art.json")
+    clips = []
+    for a in actions:
+        clip = a.name.split("|")[-1]
+        clips.append({"name": clip, "loop": bool(bp.entry.clips.get(clip, {}).get("loop", True))})
+    with open(sidecar, "w", encoding="utf-8") as fh:
+        json.dump({"kind": bp.entry.raw.get("kind") or ("character" if rig else "prop"),
+                   "rig": "humanoid" if rig else "none", "clips": clips}, fh)
+    return {"fbx": fbx, "glb": glb, "blend": blend, "sidecar": sidecar}
 
 
 def read_back_takes(fbx: str, expected: dict) -> list[str]:
