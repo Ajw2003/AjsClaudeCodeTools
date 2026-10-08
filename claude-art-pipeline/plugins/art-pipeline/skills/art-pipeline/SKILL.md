@@ -73,7 +73,18 @@ Full detail per stage, with commands: `references/stages.md`.
    `--verdict waived` (with the reason in `--seen`) is for a model that genuinely cannot be
    rendered here; it is reported, never silent. `python "${CLAUDE_PLUGIN_ROOT}/scripts/review.py"
    status` lists what the gate will say before you stop.
-8. **Engine work you cannot run here is UNTESTED**, said plainly, with the exact menu item or
+8. **Keep the docs in step with the art.** Docs that describe art (a scale doc's roster, a brief's
+   budgets, a tool's status line) drift the moment a roster changes. Give the project a drift check
+   (a script comparing docs with the data and code, see `references/stages.md`, stage 8) and name it
+   in `.art-pipeline.json` at the repo root, so the gate runs it before every stop that changed a
+   model or a doc:
+
+   ```json
+   {"doc_check": "python3 Tools/docs/check_art_docs.py", "doc_check_paths": ["docs/**", "**/*.json"]}
+   ```
+
+   The same file can set `model_globs`, `exclude` and `review_dir` (default `docs/art/reviews`).
+9. **Engine work you cannot run here is UNTESTED**, said plainly, with the exact menu item or
    command the user runs and what they should see.
 
 ## Delegating
