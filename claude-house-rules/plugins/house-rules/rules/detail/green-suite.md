@@ -26,6 +26,10 @@ meet:
 **When a run disagrees with a test, the run wins**, and the gap becomes a new test — the point is
 not to have run it once, it is that the suite now covers what running it found.
 
+**How much testing a change warrants.** A new test is for a bug fix (the regression test, written first) or for logic with a branch. Wiring, layout and visuals get none when a run or a screenshot already covers them; that is the visual-check rule's job, not a test's. A new test goes into the existing test class for that code before it gets a file of its own. While working I run the tests for what changed; the full suite runs once, before the batch merges, and a result that looks off is read, not re-run until it looks right. More tests is not more checking: the point of this file is that the failures sit outside the cases I imagined.
+
+**Why:** on 2026-10-07 in Ajw2003/PlunderSpell every change added a test file and re-ran several minutes of PlayMode, several times, for changes as small as a chalk slate on a counter. The repo reached 119 test files and about 735 cases (#160).
+
 **Why:** a suite reports on itself. It is evidence about the cases inside it and says nothing
 about the ones outside, which is exactly where the expensive failures sit — and reporting "all
 checks green" as though it meant "this works" is a claim the evidence does not support.

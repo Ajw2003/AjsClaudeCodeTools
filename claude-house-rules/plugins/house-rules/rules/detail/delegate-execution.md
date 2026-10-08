@@ -53,6 +53,10 @@ directory at the same time, neither passing `isolation: "worktree"`. Both edited
 concurrently and corrupted the checkout. Two isolated worktrees cannot clobber each other
 regardless of any later judgement error, so this is mechanical, not a judgement call.
 
+**A spawn prompt sizes the testing to the change.** A builder runs only its own new test and the test classes covering what it touched, and adds a test only where `green-suite.md` says one is warranted. The full suites run once per batch, by me, after the builders hand back and before merging: never per builder, and never written into every spawn prompt by habit. `agents/builder.md` carries the same limit, so a prompt asking for more has to say why.
+
+**Why:** on 2026-10-07 in Ajw2003/PlunderSpell the planning session's spawn prompts told every builder to "add one regression test" and "run the full EditMode and PlayMode suites; report totals", whatever the change's size. The builders did, re-ran suites when a run looked off, and the test count kept growing (#160).
+
 A subagent stopping is not the same as its task finishing, and a `SubagentStop` or background-task
 notification reporting only a status update ("I've launched...", "I'll report back...") is not a
 report of concrete deliverables. Before treating a delegation as done, or relaunching one, check

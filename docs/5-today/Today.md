@@ -1,4 +1,8 @@
-# Today — 2026-10-07
+# Today — 2026-10-08
+
+Builders now test only what they touched, plugin 2.54.0 (issue #160). A builder runs its own new test and the
+test classes covering its change, never the full suites, and adds a test only for a bug fix or logic with a
+branch. The full suites run once per batch, before merging. A spawn prompt asking for more has to say why.
 
 Prompt timer follow-ups, plugin 2.53.0 (issues #149, #151, #152): questions and plan approvals are never
 timed out. Once one permission prompt goes unanswered, the next ones in that session are refused straight

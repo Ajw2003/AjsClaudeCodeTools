@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-08 - Builders test what they touched; the full suites run once per batch (#160, 2.54.0)
+
+**Context.** On 2026-10-07 in Ajw2003/PlunderSpell every change added a test file and re-ran several minutes of PlayMode, several times; the repo reached 119 test files and about 735 cases. The planning session's spawn prompts told every builder to add a regression test and run the full suites.
+
+**Decision.** `agents/builder.md` limits a builder to its own new test and the classes covering what it touched, never the full suites, and a test only for a bug fix or branching logic. `green-suite.md` says how much testing a change warrants; `delegate-execution.md` says spawn prompts size testing to the change and the full suites run once per batch, by me, before merging.
+
+**Rejected.** A line in `house-rules.md`: no room under the 9,700-character inject margin, so the detail files and the agent carry it. A periodic test-prune tool: not built; the issue lists it as optional, add it if the count keeps growing. (The ponytail plugin's "Lazy code without its check is unfinished" line lives in a different plugin, not this repo.)
+
+**Status.** Built; one `verify.py` check confirms the phrases in all three files.
+
+**Consequence.** A builder that skips a test or run its spawn prompt asked for says so in its report; a prompt asking for more has to say why.
+
+---
+
 ## 2026-10-07 - Destructive git steps run unasked only on my branch, and only when the work is saved elsewhere (#153, 2.53.0)
 
 **Context.** aj: "destructive actions are permitted only on a Claude created branch and only if the work already is saved somewhere else the destructive action would not affect." Asked whether "otherwise" meant ask or never, aj chose ask as today; asked whether `guard` should enforce it, aj chose rule text plus `guard`.

@@ -3827,10 +3827,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.53.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.54.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.53.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.54.0",
     "rules section + detail file + version",
 )
 
@@ -3842,6 +3842,20 @@ commit_case(
         for n, phrase in (("builder.md", "Commit as you go"), ("archivist.md", "Commit each finished piece as you go"))
     ),
     "agents/builder.md, agents/archivist.md",
+)
+
+commit_case(
+    "testing is sized to the change: builder, green-suite and delegate-execution carry the limit",
+    all(
+        phrase in read(os.path.join(HERE, "..", *path))
+        for path, phrase in (
+            (("agents", "builder.md"), "Never run the full suites"),
+            (("agents", "builder.md"), "Add a test only for a bug fix"),
+            (("rules", "detail", "green-suite.md"), "How much testing a change warrants"),
+            (("rules", "detail", "delegate-execution.md"), "A spawn prompt sizes the testing to the change"),
+        )
+    ),
+    "agents/builder.md, rules/detail/green-suite.md, rules/detail/delegate-execution.md",
 )
 
 # profile: a saved memory restating the replaced commit rule is flagged at session start.

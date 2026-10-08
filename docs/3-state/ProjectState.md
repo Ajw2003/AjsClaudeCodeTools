@@ -75,6 +75,10 @@ same call sequence replayed through `run.sh` in a scratch clone of PlunderSpell 
 verified: a real Claude Code session in another repo, and a `gh issue create` made through the
 `PowerShell` tool, which is not recorded.
 
+2.54.0 (2026-10-08, #160) sizes builders' testing to the change: own new test plus covering classes, never the
+full suites (run once per batch by the parent), a new test only for a bug fix or branching logic. Verified by one
+`verify.py` phrase check; not verified: a real PlunderSpell batch.
+
 2.53.0 (2026-10-07, #149, #151, #152) follows the prompt timer up: questions and plan approval are never
 timed; after one timeout, later prompts in that session are refused at once until aj writes; and a new
 `promptran` hook stops the timer when the action actually ran, and reports one recorded as timed out that ran
