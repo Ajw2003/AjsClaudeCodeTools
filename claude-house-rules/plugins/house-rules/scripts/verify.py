@@ -23,8 +23,10 @@ computed at runtime, so it cannot drift out from under an added case.
 """
 
 import atexit
+from collections import namedtuple
 import json
 import os
+import pathlib
 import re
 import shutil
 import subprocess
@@ -38,7 +40,9 @@ RUN = os.path.join(HERE, "run.sh")
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
-AGENT = os.path.join(HERE, "..", "agents", "executor.md")
+AGENTS_DIR = os.path.join(HERE, "..", "agents")
+# The three tier agents and the model each must declare (and, at SubagentStop, actually run on).
+TIERS = {"scout": "haiku", "builder": "sonnet", "reviewer": "opus"}
 ARCHIVIST = os.path.join(HERE, "..", "agents", "archivist.md")
 STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
 TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
@@ -59,7 +63,7 @@ STEP = 0
 FAILURES = 0
 SKIPPED = []
 
-# Why SKIP exists and what it's gated on: docs/systems/verify-suites.md, "How it works"
+# Why SKIP exists and what it's gated on: docs/4-systems/verify-suites.md, "How it works"
 # (the IN_REPO paragraph) and Invariants ("A repo-only check SKIPs outside a checkout...").
 IN_REPO = os.path.isfile(os.path.join(ROOT, ".claude-plugin", "marketplace.json"))
 
@@ -98,11 +102,12 @@ def read(path):
 
 
 DETAIL_DIR = os.path.join(HERE, "..", "rules", "detail")
+STANDARDS_DIR = os.path.join(HERE, "..", "rules", "standards")
 
 
 def rules_corpus():
     """house-rules.md (the injected core) plus every rules/detail/*.md file it points to.
-    See docs/Decisions.md, 2026-09-22, for why drift checks read this instead of the core alone.
+    See docs/6-decisions/Decisions.md, 2026-09-22, for why drift checks read this instead of the core alone.
     """
     corpus = read(RULES_FILE)
     if os.path.isdir(DETAIL_DIR):
@@ -167,6 +172,8 @@ RULE_DESTRUCTIVE = "Never take a destructive action without checking first"
 # --- branch fixtures -------------------------------------------------------------------------
 # Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
 _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
+# Simulated spawns in this file must never leave records in the real repository's agent list.
+os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
 
 
@@ -185,6 +192,14 @@ REPO_NONE = os.path.join(_FIXTURE_ROOT, "not-a-repo")
 os.makedirs(REPO_NONE)
 
 
+def verbose_env(base=None):
+    """The no-op traces ("looked, nothing to do") print only under HOUSE_RULES_TRACE=verbose.
+    Cases that assert the decision text run under this env; the default-silent cases do not."""
+    e = dict(os.environ if base is None else base)
+    e["HOUSE_RULES_TRACE"] = "verbose"
+    return e
+
+
 def env_in(project_dir, **extra):
     e = dict(os.environ)
     e["CLAUDE_PROJECT_DIR"] = project_dir
@@ -193,19 +208,34 @@ def env_in(project_dir, **extra):
 
 
 # --- docstiers fixtures ------------------------------------------------------------------
-_DOCS_TIER_FILE_NAMES = ["README.md", "Roadmap.md", "ProjectState.md", "Today.md", "Decisions.md"]
+_DOCS_TIER_FOLDER_FILES = [
+    "1-landing/README.md", "2-roadmap/Roadmap.md", "3-state/ProjectState.md",
+    "5-today/Today.md", "6-decisions/Decisions.md",
+]
+_DOCS_OLD_TIER_FILE_NAMES = ["README.md", "Roadmap.md", "ProjectState.md", "Today.md", "Decisions.md"]
 
 
-def _docstiers_repo(name, all_tiers, git_config_text=None, config_is_dir=False, no_git=False):
+def _docstiers_repo(name, all_tiers, git_config_text=None, config_is_dir=False, no_git=False, old_layout=False):
     path = os.path.join(_FIXTURE_ROOT, name)
     docs = os.path.join(path, "docs")
-    os.makedirs(os.path.join(docs, "systems"), exist_ok=True)
-    if all_tiers:
-        for fname in _DOCS_TIER_FILE_NAMES:
-            with open(os.path.join(docs, fname), "w", encoding="utf-8") as f:
+    if old_layout:
+        os.makedirs(os.path.join(docs, "systems"), exist_ok=True)
+        if all_tiers:
+            for fname in _DOCS_OLD_TIER_FILE_NAMES:
+                with open(os.path.join(docs, fname), "w", encoding="utf-8") as f:
+                    f.write("x\n")
+            with open(os.path.join(docs, "systems", "core.md"), "w", encoding="utf-8") as f:
                 f.write("x\n")
-        with open(os.path.join(docs, "systems", "core.md"), "w", encoding="utf-8") as f:
-            f.write("x\n")
+    else:
+        os.makedirs(os.path.join(docs, "4-systems"), exist_ok=True)
+        if all_tiers:
+            for rel in _DOCS_TIER_FOLDER_FILES:
+                full = os.path.join(docs, *rel.split("/"))
+                os.makedirs(os.path.dirname(full), exist_ok=True)
+                with open(full, "w", encoding="utf-8") as f:
+                    f.write("x\n")
+            with open(os.path.join(docs, "4-systems", "core.md"), "w", encoding="utf-8") as f:
+                f.write("x\n")
     if not no_git:
         git_dir = os.path.join(path, ".git")
         os.makedirs(git_dir, exist_ok=True)
@@ -234,10 +264,14 @@ DOCSTIERS_GARBAGE_CONFIG = _docstiers_repo(
     "docstiers-garbage-config", False, "not an ini file\njust some random text\n"
 )
 DOCSTIERS_UNREADABLE_CONFIG = _docstiers_repo("docstiers-unreadable-config", False, config_is_dir=True)
+DOCSTIERS_OLD_LAYOUT = _docstiers_repo(
+    "docstiers-old-layout", True, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n',
+    old_layout=True,
+)
 
 
 # --- inject, profile and standards each stay under the per-hook additionalContext limit ------
-# Margins per docs/Decisions.md, 2026-09-22 (second entry): inject 9,000, profile/standards 9,500,
+# Margins per docs/6-decisions/Decisions.md, 2026-09-22 (second entry): inject 9,000, profile/standards 9,500,
 # each measured on the REAL emitted output, not source file size. profile is measured with
 # docs/example-environment.md standing in for a recorded profile.
 EXAMPLE_ENV = os.path.join(ROOT, "docs", "example-environment.md")
@@ -253,7 +287,7 @@ def _additional_context(event, payload="", env=None):
 
 
 _size_cases = [
-    ("inject", 9_000, env_in(ROOT)),
+    ("inject", 9_700, env_in(ROOT)),
     ("standards", 9_500, env_in(ROOT)),
     ("profile", 9_500, env_in(ROOT, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV)),
     ("docstiers", 9_500, env_in(DOCSTIERS_NOT_OWNED)),
@@ -307,6 +341,11 @@ _docstiers_cases = [
         DOCSTIERS_UNREADABLE_CONFIG,
         {"missing": True, "exclude": True, "owned": False},
     ),
+    (
+        "old flat layout, all tiers present under it - reported as moves, not missing",
+        DOCSTIERS_OLD_LAYOUT,
+        {"old_layout": True},
+    ),
 ]
 for _title, _path, _expect in _docstiers_cases:
     _code, _out, _err = run_hook("docstiers", "", env=env_in(_path))
@@ -316,6 +355,15 @@ for _title, _path, _expect in _docstiers_cases:
     if _expect.get("empty"):
         if _out.strip():
             _problems.append(f"expected a fully silent stdout, got: {_out[:200]!r}")
+    elif _expect.get("old_layout"):
+        if "old flat layout" not in _out:
+            _problems.append("expected the old-flat-layout move message, not present")
+        if "docs/Roadmap.md to docs/2-roadmap/Roadmap.md" not in _out:
+            _problems.append("expected a named move for docs/Roadmap.md")
+        if "docs/systems/*.md to docs/4-systems/*.md" not in _out:
+            _problems.append("expected a named move for docs/systems/*.md")
+        if "missing" in _out.lower() and "outright" in _out.lower():
+            _problems.append("an all-present old layout should not also claim tiers are missing")
     else:
         if "house-rules:project-docs" not in _out:
             _problems.append("missing the load-and-scaffold instruction")
@@ -344,8 +392,8 @@ if not os.path.isfile(DOCSKILL):
 else:
     _skill_text = read(DOCSKILL)
     for _tier_phrase in [
-        "docs/README.md", "docs/Roadmap.md", "docs/ProjectState.md",
-        "docs/systems/*.md", "docs/Today.md", "docs/Decisions.md",
+        "docs/1-landing/README.md", "docs/2-roadmap/Roadmap.md", "docs/3-state/ProjectState.md",
+        "docs/4-systems/*.md", "docs/5-today/Today.md", "docs/6-decisions/Decisions.md",
     ]:
         if _tier_phrase not in _skill_text:
             _skill_drift.append(f"{_tier_phrase!r} is not named in SKILL.md - docstiers may be inventing tier names")
@@ -380,18 +428,28 @@ GUARD_CASES = [
     ("ask", "Commit constantly on my own branches, never on theirs", "git reset --hard origin/main"),
     (
         "ask",
-        "Never hide work in a background window or a silent process",
+        "Never hide work: it stays visible, reachable and readable",
         'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"',
     ),
     (
         "ask",
-        "Never hide work in a background window or a silent process",
+        "Never hide work: it stays visible, reachable and readable",
         "npm run dev > dev.log 2>&1 &",
     ),
-    ("ask", "Never hide work in a background window or a silent process", "nohup ./long-task.sh"),
+    ("ask", "Never hide work: it stays visible, reachable and readable", "nohup ./long-task.sh"),
+    # #85: a wait piped through tail/head shows nothing until it exits.
     (
         "ask",
-        "Never hide work in a background window or a silent process",
+        "Never hide work: it stays visible, reachable and readable",
+        "until grep -q done status.txt; do sleep 5; done | tail -5",
+    ),
+    ("ask", "Never hide work: it stays visible, reachable and readable", "timeout 600 ./run_tests.sh | head -40"),
+    ("pass", None, "git log | head -5"),
+    ("pass", None, "cat build.log | tail -50"),
+    ("pass", None, "python sleepy.py | tail"),
+    (
+        "ask",
+        "Never hide work: it stays visible, reachable and readable",
         "Start-Job -ScriptBlock { ./build.ps1 }",
     ),
     ("ask", "Never take a destructive action without checking first", "rm -rf node_modules"),
@@ -507,6 +565,79 @@ else:
     report("FAIL", "a prompt the branch exemption could have silenced says why it did not")
     for p in prompt_problems:
         print(f"          {p}")
+
+# --- #153: destructive git steps run unasked only on my branch with the work saved elsewhere ---
+_sv_root = os.path.join(_FIXTURE_ROOT, "saved")
+_sv_remote, _sv_repo = os.path.join(_sv_root, "remote.git"), os.path.join(_sv_root, "work")
+os.makedirs(_sv_repo, exist_ok=True)
+
+
+def _sv_git(*args, cwd=_sv_repo):
+    return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=cwd,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
+
+_sv_git("init", "-q", "--bare", _sv_remote, cwd=_sv_root)
+_sv_git("init", "-q")
+_sv_git("switch", "-q", "-c", "claude/saved-topic")
+with open(os.path.join(_sv_repo, "f.txt"), "w") as _f:
+    _f.write("one\n")
+_sv_git("add", "f.txt")
+_sv_git("commit", "-q", "-m", "one")
+_sv_git("remote", "add", "origin", _sv_remote)
+_sv_git("push", "-q", "-u", "origin", "claude/saved-topic")
+
+
+def _sv_guard(cmd):
+    code, out, err = run_hook("guard", payload_for(cmd), env=verbose_env(env_in(_sv_repo)))
+    return ("ask" if '"permissionDecision":"ask"' in out else "pass"), out
+
+
+def _sv_case(title, ok, detail):  # commit_case is defined further down this file
+    report("PASS" if ok else "FAIL", title)
+    print(f"          {detail}")
+
+
+_sv_fail = []
+for _cmd in ("git reset --hard HEAD", "git rebase -i HEAD", "git revert --no-edit HEAD", "git restore f.txt",
+             "git checkout -- f.txt"):
+    _got, _out = _sv_guard(_cmd)
+    if _got != "pass" or "every commit on a remote" not in _out:
+        _sv_fail.append("%s: %s %r" % (_cmd, _got, _out[:120]))
+_sv_case(
+    "guard: on a claude/ branch with a clean tree and every commit pushed, reset/rebase/revert/restore run unasked",
+    not _sv_fail, "; ".join(_sv_fail) or "5 commands passed, each trace names the saved-elsewhere check",
+)
+_sv_fail = []
+for _cmd in ("git push --force-with-lease", "git clean -fdx", "git stash drop", "git merge main", "rm f.txt"):
+    if _sv_guard(_cmd)[0] != "ask":
+        _sv_fail.append(_cmd)
+_sv_case(
+    "guard: even with the work saved, force-push, clean, stash drop, merge and rm still ask",
+    not _sv_fail, "did not ask: %s" % ", ".join(_sv_fail) if _sv_fail else "all 5 asked",
+)
+with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
+    _f.write("uncommitted\n")
+_sv_dirty = _sv_guard("git reset --hard HEAD")
+_sv_git("checkout", "--", "f.txt")
+with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
+    _f.write("two\n")
+_sv_git("commit", "-q", "-am", "two")
+_sv_unpushed = _sv_guard("git reset --hard HEAD~1")
+_sv_case(
+    "guard: an uncommitted change or an unpushed commit makes reset ask, and the prompt says which",
+    _sv_dirty[0] == "ask" and "1 uncommitted or untracked file would be lost" in _sv_dirty[1]
+    and _sv_unpushed[0] == "ask" and "1 commit on this branch is not on any remote" in _sv_unpushed[1],
+    "dirty %r | unpushed %r" % (_sv_dirty[1][-160:], _sv_unpushed[1][-160:]),
+)
+_sv_git("push", "-q")
+_sv_git("switch", "-q", "-c", "main")
+_sv_git("push", "-q", "-u", "origin", "main")
+_sv_theirs = _sv_guard("git reset --hard HEAD")
+_sv_case(
+    "guard: on aj's branch, reset asks even with a clean tree and everything pushed",
+    _sv_theirs[0] == "ask" and "not a `claude/` branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
+)
 
 # The exemption is a silent success path, and guard's silent paths trace by contract.
 code, out, err = run_hook("guard", payload_for("git commit -m x"), env=env_in(REPO_MINE))
@@ -652,7 +783,7 @@ if shutil.which("git"):
         print(f"          out {out[:250]!r}")
 
     # --- what a commit will ACTUALLY include, not just what is already staged -----------------
-    # doc-ref c79f docs/Decisions.md: guard fires before the command it judges runs, so a
+    # doc-ref c79f docs/6-decisions/Decisions.md: guard fires before the command it judges runs, so a
     # docs-only-staged-right-now check misses an add-then-commit or an -a/-am commit entirely.
     DOCSGUARD_ADD_THEN_COMMIT_SOURCE = _docs_guard_repo(
         "docsguard-add-then-commit-source", "claude/topic", {"f.py": "print(1)\n"}, staged=[]
@@ -794,7 +925,7 @@ desc_payload = json.dumps(
         },
     }
 )
-code, out, err = run_hook("guard", desc_payload)
+code, out, err = run_hook("guard", desc_payload, env=verbose_env())
 if '"permissionDecision"' not in out and "`npm test`" in out:
     report("PASS", "a harmless command with a git-mentioning description does not prompt")
     print("          no prompt, and the trace names `npm test` - the command, not the description")
@@ -911,7 +1042,7 @@ for h in [
     "Deliver a whole workflow, not a starting point",
     "Never hand over a command I have not run",
     "Every artifact lives in the project directory",
-    "Never hide work in a background window or a silent process",
+    "Never hide work: it stays visible, reachable and readable",
     "Commit constantly on my own branches, never on theirs",
     "Never take a destructive action without checking first",
     "Edit in place; a full rewrite is a delete, not an edit",
@@ -1067,7 +1198,7 @@ check_scope(
 
 # --- both scope forms stay within +10% of their 2026-09-23 baseline size --------------------
 # Baselines recorded the day the step-card line was swapped for a docs-tier line and an
-# evidence line (docs/Decisions.md): long form was 909 chars, short form 260. +10% margin, not
+# evidence line (docs/6-decisions/Decisions.md): long form was 909 chars, short form 260. +10% margin, not
 # a floor - shrinking is fine, growing past it is the thing this catches.
 _SCOPE_SIZE_BASELINES = {"long": (909, 1.10), "short": (260, 1.10)}
 for form, payload_prompt in (("long", "run the build script"), ("short", "what does this function do?")):
@@ -1094,7 +1225,7 @@ def art_case(expect, title, file_path, extra="", contains=None, excludes=None):
         obj = json.loads(payload)
         obj["tool_input"].update(extra)
         payload = json.dumps(obj)
-    code, out, err = run_hook("artifact", payload)
+    code, out, err = run_hook("artifact", payload, env=verbose_env())
     if "artifact custody" in out:
         got = "remind"
     elif '"systemMessage"' in out:
@@ -1202,53 +1333,10 @@ else:
     report("FAIL", "docs/generated has not drifted across house-rules.md, SKILL.md, and the emitted ARTIFACT_NOTE")
     print(f"          {'; '.join(gendrift)}")
 
-# --- the reminder in hook.py's scope handler has not drifted from the rules document --------
-# Covers both forms - the short one is what fires on most prompts now, so its phrases need the
-# same drift protection the long form always had.
 rules_text = rules_corpus()
-drift = []
-for phrase in [
-    "response depth",
-    "portability work",
-    "only what was asked",
-    "ask instead of assuming",
-    "project directory",
-    "hand over a command",
-    "tier that changed",
-    "success claim",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-# The check above reads the rules document only, so it cannot notice a reminder that has been
-# trimmed until it no longer states a rule. The long form was cut from 1,435 to ~915 chars for
-# cost; these are the rules it must still carry after any further trim, since the long form is
-# the only place they are restated once the SessionStart copy has faded from attention.
-long_reminder = run_hook("scope", json.dumps({"prompt": "run the build script"}))[1]
-gutted = []
-for phrase in [
-    "only what was asked",
-    "ask instead of assuming",
-    "whole workflow",
-    "project directory",
-    "have not run",
-    "tier that changed",
-    "success claim",
-]:
-    if phrase.lower() not in long_reminder.lower():
-        gutted.append(phrase)
-if not gutted:
-    report("PASS", "the trimmed long-form reminder still carries every operative rule")
-    print(f"          {len(long_reminder)} chars, all 7 operative phrases present")
-else:
-    report("FAIL", "the trimmed long-form reminder still carries every operative rule")
-    print(f"          trimmed away: {'; '.join(gutted)}")
-
-if not drift:
-    report("PASS", "scope reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
-else:
-    report("FAIL", "scope reminder still matches the rules document")
-    print(f"          in scope reminder but missing from house-rules.md: {'; '.join(drift)}")
+# The scope reminder's own drift check now lives in the RESTATEMENTS table below (see
+# "the restatement table" further down this file), which checks it - and every other
+# restatement - both ways: rules corpus and emitted text, not the rules corpus alone.
 
 # --- a repo checkout and an installed copy can be told apart ---------------------------------
 # Everything below that skips instead of failing rests on IN_REPO. If that marker ever disagreed
@@ -1300,7 +1388,7 @@ else:
 
 # --- the recorded machine profile actually reaches the session -------------------------------
 # A real rules/environment.md fixture, not a coincidental phrase in the rules body - the rules
-# split (docs/Decisions.md, 2026-09-22) moved the PowerShell/Git-Bash path-notation example this
+# split (docs/6-decisions/Decisions.md, 2026-09-22) moved the PowerShell/Git-Bash path-notation example this
 # used to piggyback on out of the injected text on purpose, so this now supplies its own fixture.
 _envfixture = os.path.join(_FIXTURE_ROOT, "environment.md")
 with open(_envfixture, "w", encoding="utf-8") as _f:
@@ -1399,7 +1487,7 @@ def run_case(expect, title, file_path, extra=""):
     obj = {"tool_name": "Write", "tool_input": {"file_path": file_path}}
     if extra:
         obj["tool_input"].update(extra)
-    code, out, err = run_hook("runnable", json.dumps(obj))
+    code, out, err = run_hook("runnable", json.dumps(obj), env=verbose_env())
     if "whole workflows" in out:
         got = "remind"
     elif '"systemMessage"' in out:
@@ -1438,7 +1526,7 @@ run_case(
 # --- the compile-verification reminder for compiled-language (.cs) files ---------------------
 def compile_case(expect, title, file_path):
     obj = {"tool_name": "Write", "tool_input": {"file_path": file_path}}
-    code, out, err = run_hook("runnable", json.dumps(obj))
+    code, out, err = run_hook("runnable", json.dumps(obj), env=verbose_env())
     if "should compile" in out.lower():
         got = "remind"
     elif '"systemMessage"' in out:
@@ -1462,38 +1550,7 @@ compile_case(
     r"C:\Users\aj\AppData\Local\Temp\Player.cs",
 )
 
-# --- the reminder in hook.py's compile-verification note has not drifted from the rules doc ---
-drift = []
-for phrase in [
-    "should compile",
-    "stand-in",
-    "real compiler",
-    "batch mode",
-    "dotnet build",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-if not drift:
-    report("PASS", "compile-verification reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
-else:
-    report("FAIL", "compile-verification reminder still matches the rules document")
-    print(f"          in compile reminder but missing from house-rules.md: {'; '.join(drift)}")
-
-# --- and the reverse: the EMITTED compile note still states the rule -------------------------
-code, out, err = run_hook(
-    "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\Assets\Scripts\Enemy.cs"}})
-)
-drift = []
-for phrase in ["Should compile", "stand-in", "real compiler", "UNTESTED"]:
-    if phrase not in out:
-        drift.append(phrase)
-if not drift:
-    report("PASS", "the emitted compile note still says a stand-in is not a compiler")
-    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
-else:
-    report("FAIL", "the emitted compile note still says a stand-in is not a compiler")
-    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+# The compile-verification note's drift check is a row in the RESTATEMENTS table below.
 
 # --- the shim-is-not-a-compiler rule is stated in full, not just as scattered phrases ---------
 missing = [
@@ -1514,41 +1571,7 @@ else:
     report("FAIL", "the shim-is-not-a-compiler rule states the check, the fallback, and the honest-gap case")
     print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
-# --- the reminder in hook.py's runnable handler has not drifted from the rules document -----
-drift = []
-for phrase in [
-    "whole workflow",
-    "starting point",
-    "hand over a command",
-    "run it twice",
-    "realistic",
-    "not proof it works",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-if not drift:
-    report("PASS", "runnable reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
-else:
-    report("FAIL", "runnable reminder still matches the rules document")
-    print(f"          in runnable reminder but missing from house-rules.md: {'; '.join(drift)}")
-
-# --- and the reverse: the EMITTED runnable note still states the rule ---------------------------
-# The check above reads the rules document only, so on its own it cannot notice a reminder that
-# has been trimmed until it no longer states a rule. This reads what the hook actually emits.
-code, out, err = run_hook(
-    "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\deploy.sh"}})
-)
-drift = []
-for phrase in ["run it twice", "realistic input", "not a whole workflow", "someone thought to write"]:
-    if phrase not in out:
-        drift.append(phrase)
-if not drift:
-    report("PASS", "the emitted runnable note still says one clean run is not proof")
-    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
-else:
-    report("FAIL", "the emitted runnable note still says one clean run is not proof")
-    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+# The runnable note's drift check is a row in the RESTATEMENTS table below.
 
 # --- the green-suite rule is stated, and states the conditions that actually found the bugs ----
 missing = [
@@ -1571,11 +1594,11 @@ else:
 
 # --- the delegate reminder fires after ExitPlanMode -------------------------------------------
 code, out, err = run_hook("delegate", "")
-if '"hookEventName":"PostToolUse"' in out and "@house-rules:executor" in out:
-    report("PASS", "delegate reminds Claude to hand the plan to the executor subagent")
-    print("          names @house-rules:executor and carries the right hookEventName")
+if '"hookEventName":"PostToolUse"' in out and "@house-rules:builder" in out:
+    report("PASS", "delegate reminds Claude to hand the plan to the builder subagent")
+    print("          names @house-rules:builder and carries the right hookEventName")
 else:
-    report("FAIL", "delegate reminds Claude to hand the plan to the executor subagent")
+    report("FAIL", "delegate reminds Claude to hand the plan to the builder subagent")
     print(f"          got: {out}")
 
 # --- delegate is wired to ExitPlanMode, not just present in hook.py ---------------------------
@@ -1587,47 +1610,10 @@ else:
     report("FAIL", "delegate is registered on PostToolUse with matcher ExitPlanMode")
     print("          hooks.json does not wire ExitPlanMode to run.sh delegate")
 
-# --- the reminder in hook.py's delegate handler has not drifted from the rules document -----
-# Why this must be bidirectional: docs/systems/verify-suites.md, Traps ("Most drift checks
-# run in one direction only") and docs/architecture.md, "Why the delegation kept not happening".
-_, delegate_out, _ = run_hook("delegate", "")
-drift = []
-for phrase in [
-    "@house-rules:executor",
-    "plan is settled",
-    "proactiv",               # the authorization; its loss is the regression above
-    "one file",               # the skip-it exception is a count, not a judgement call
-    "three steps or fewer",
-    "one delegation per group",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(f"{phrase!r} missing from rules/house-rules.md")
-    if phrase.lower() not in delegate_out.lower():
-        drift.append(f"{phrase!r} missing from the emitted delegate reminder")
-if not drift:
-    report("PASS", "delegate reminder and the rules document state the same thing, both ways")
-    print("          every key phrase appears in house-rules.md AND in what delegate emits")
-else:
-    report("FAIL", "delegate reminder and the rules document state the same thing, both ways")
-    for d in drift:
-        print(f"          {d}")
-
-# --- the worktree-isolation mandate has not drifted between DELEGATE_NOTE and house-rules.md ---
-# Same bidirectional shape as the delegate drift check above: a concurrent-edit corruption
-# incident is what this rule exists to prevent, and it only prevents it if both copies say so.
-drift = []
-for phrase in ("isolation", "worktree"):
-    if phrase.lower() not in rules_text.lower():
-        drift.append(f"{phrase!r} missing from rules/house-rules.md")
-    if phrase.lower() not in delegate_out.lower():
-        drift.append(f"{phrase!r} missing from the emitted delegate reminder")
-if not drift:
-    report("PASS", "worktree-isolation mandate is stated the same way in both places")
-    print("          'isolation' and 'worktree' appear in house-rules.md AND in what delegate emits")
-else:
-    report("FAIL", "worktree-isolation mandate is stated the same way in both places")
-    for d in drift:
-        print(f"          {d}")
+# The delegate reminder's drift check (including the worktree-isolation mandate it carries) is
+# a row in the RESTATEMENTS table below. Why this must be bidirectional: docs/4-systems/
+# verify-suites.md, Traps ("Most drift checks run in one direction only") and
+# docs/architecture.md, "Why the delegation kept not happening".
 
 # --- the disclosure rule, and the voice toggle it sits next to ------------------------------
 missing = [
@@ -1787,6 +1773,7 @@ def harv_case(expect, title, file_path, content, tool="Write", env=None, expect_
     e.pop("HOUSE_RULES_HARVEST", None)
     e.pop("HOUSE_RULES_HARVEST_MIN_CHARS", None)
     e.pop("HOUSE_RULES_DEBUG", None)
+    e["HOUSE_RULES_TRACE"] = "verbose"  # the no-blocks trace is verbose-only; env= may override
     if env:
         e.update(env)
     code, out, err = run_hook("harvest", payload, env=e)
@@ -1813,7 +1800,7 @@ def harv_case(expect, title, file_path, content, tool="Write", env=None, expect_
 
 harv_case(
     "remind+trace",
-    "a design essay in a .cs file is flagged for porting into docs/systems/",
+    "a design essay in a .cs file is flagged for porting into docs/4-systems/",
     r"C:\proj\Assets\Orbit.cs",
     ESSAY_CS,
     expect_in=["@house-rules:archivist", "one-line pointer", "Orbit.cs:5-12"],
@@ -1949,7 +1936,7 @@ else:
     print(f"          got: {out[:300]}")
 
 # --- harvest: an Edit fragment's own line 1 is not the file's line 1 ---------------------------
-# Regression for docs/Decisions.md, "Fix the harvest handler treating an Edit fragment's line 1
+# Regression for docs/6-decisions/Decisions.md, "Fix the harvest handler treating an Edit fragment's line 1
 # as the file's header".
 EDIT_ESSAY_AT_FRAGMENT_START = (
     "// The orbit integrator uses Verlet rather than Euler. Euler was tried first and lost\n"
@@ -2041,13 +2028,69 @@ trace_cases = [
      "not a runnable file", "a file that cannot be run"),
 ]
 for event, payload, needle, why in trace_cases:
-    code, out, err = run_hook(event, payload)
+    code, out, err = run_hook(event, payload, env=verbose_env())
     if code == 0 and '"systemMessage"' in out and needle in out:
         report("PASS", f"{event} traces its decision on {why}")
         print(f"          says what it looked at and what it concluded; names {needle!r}")
     else:
         report("FAIL", f"{event} traces its decision on {why}")
         print(f"          exit {code}, got: {out[:160]!r}")
+
+# --- the default is silent on "looked, nothing to do"; verbose restores it; "could not tell" stays loud
+_dflt = dict(os.environ)
+_dflt.pop("HOUSE_RULES_TRACE", None)
+for event, payload, needle, why in trace_cases:
+    code, out, err = run_hook(event, payload, env=_dflt)
+    if code == 0 and not out.strip():
+        report("PASS", f"{event} is silent by default on {why}")
+        print("          no-op decision, nothing emitted (HOUSE_RULES_TRACE unset)")
+    else:
+        report("FAIL", f"{event} is silent by default on {why}")
+        print(f"          exit {code}, got: {out[:160]!r}")
+    code, out, err = run_hook(event, payload, env=verbose_env())
+    if code == 0 and needle in out and '"systemMessage"' in out:
+        report("PASS", f"HOUSE_RULES_TRACE=verbose restores the {event} trace on {why}")
+    else:
+        report("FAIL", f"HOUSE_RULES_TRACE=verbose restores the {event} trace on {why}")
+        print(f"          exit {code}, got: {out[:160]!r}")
+for event, payload, needle in (
+    ("guard", "", "guard: empty payload"),
+    ("guardwrite", "", "guardwrite: empty payload"),
+    ("guardwrite", json.dumps({"tool_input": {}}), "no file_path field"),
+):
+    code, out, err = run_hook(event, payload, env=_dflt)
+    if code == 0 and needle in out and '"systemMessage"' in out:
+        report("PASS", f"{event} still prints its 'could not tell' trace by default ({needle})")
+    else:
+        report("FAIL", f"{event} still prints its 'could not tell' trace by default ({needle})")
+        print(f"          exit {code}, got: {out[:160]!r}")
+_hd = dict(_dflt)
+_hd["HOUSE_RULES_HARVEST_MIN_CHARS"] = "banana"
+_short_payload = json.dumps(
+    {"tool_name": "Write", "tool_input": {"file_path": "/p/a.cs", "content": SHORT_CS}}
+)
+code, out, err = run_hook("harvest", _short_payload, env=_dflt)
+if code == 0 and not out.strip():
+    report("PASS", "harvest is silent by default when no comment block qualifies")
+else:
+    report("FAIL", "harvest is silent by default when no comment block qualifies")
+    print(f"          exit {code}, got: {out[:160]!r}")
+code, out, err = run_hook("harvest", _short_payload, env=_hd)
+if code == 0 and "banana" in out and "systemMessage" in out:
+    report("PASS", "harvest still speaks by default when an override is bad")
+else:
+    report("FAIL", "harvest still speaks by default when an override is bad")
+    print(f"          exit {code}, got: {out[:160]!r}")
+code, out, err = run_hook(
+    "harvest",
+    json.dumps({"tool_name": "Write", "tool_input": {"file_path": "/p/a.cs", "content": ESSAY_CS}}),
+    env=_dflt,
+)
+if code == 0 and "additionalContext" in out and "systemMessage" in out:
+    report("PASS", "harvest still speaks by default when blocks are found")
+else:
+    report("FAIL", "harvest still speaks by default when blocks are found")
+    print(f"          exit {code}, got: {out[:160]!r}")
 
 # --- one lever turns every trace off, and no reminder goes with it -----------------------------
 off = env_in(REPO_THEIRS)
@@ -2156,48 +2199,99 @@ else:
     report("FAIL", "harvest with no working Python says so rather than falling through silently")
     print(f"          exit {code}, got: {out[:200]!r}")
 
-# --- the harvest reminder has not drifted from the rules document ------------------------------
-drift = []
-for phrase in ["long-form", "one-line pointer", "@house-rules:archivist", "docs/systems", "docs/Decisions.md", "doc-ref", "docref.py", "<!-- ref:"]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-if not drift:
-    report("PASS", "harvest reminder still matches the rules document")
-    print("          every key phrase in the reminder appears in rules/house-rules.md")
-else:
-    report("FAIL", "harvest reminder still matches the rules document")
-    print(f"          in harvest reminder but missing from house-rules.md: {'; '.join(drift)}")
+# --- run.sh's interpreter cache (2.48.0) -------------------------------------------------------
+# A copy of run.sh sits next to a stub hook.py that just prints "ran", so the cache file lands in
+# a throwaway directory and never in the real plugin.
+def _cache_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print(f"          {detail}")
 
-# --- and the reverse: the EMITTED reminder still states the rule -------------------------------
-# The check above reads the rules document only, so on its own it cannot notice a reminder that
-# has been trimmed until it no longer states a rule. This reads what the hook actually emits.
-payload = json.dumps(
-    {"tool_name": "Write", "tool_input": {"file_path": "/proj/Orbit.cs", "content": ESSAY_CS}}
+
+def _cache_dir():
+    d = tempfile.mkdtemp(prefix="house-rules-cache-", dir=_FIXTURE_ROOT)
+    shutil.copy(RUN, os.path.join(d, "run.sh"))
+    with open(os.path.join(d, "hook.py"), "w", encoding="utf-8") as f:
+        f.write("print('ran')\n")
+    return d
+
+
+def _cache_run(d, **env_extra):
+    e = dict(os.environ)
+    e.pop("HOUSE_RULES_PYTHON", None)
+    e["HOUSE_RULES_DEBUG"] = "1"
+    e.update(env_extra)
+    # forward slashes: run.sh derives HERE from $0 and splits only on "/"
+    return run_shell([os.path.join(d, "run.sh").replace("\\", "/"), "anyevent"], env=e)
+
+
+def _cache_text(d):
+    try:
+        with open(os.path.join(d, ".python-cache"), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+_cd = _cache_dir()
+_c1, _o1, _e1 = _cache_run(_cd)
+_first = _cache_text(_cd)
+_cache_case(
+    "run.sh: the first run probes and writes the cache",
+    _c1 == 0 and "ran" in _o1 and "cache=yes" not in _e1 and bool(_first),
+    "exit %d, out %r, cache %r" % (_c1, _o1.strip(), _first),
 )
-code, out, err = run_hook("harvest", payload)
-drift = []
-for phrase in [
-    "doc-ref",
-    "docref.py",
-    "<!-- ref:",
-    "one-line pointer",
-    "@house-rules:archivist",
-    "docs/systems",
-    "docs/Decisions.md",
-    "How it works",
-    "Traps",
-    "Invariants",
-    "Do not change how you write",
-    "the user was not prompted",
-]:
-    if phrase not in out:
-        drift.append(phrase)
-if not drift:
-    report("PASS", "the emitted harvest reminder still carries every operative phrase")
-    print("          a trim that gutted the reminder would fail here, not just in the rules doc")
-else:
-    report("FAIL", "the emitted harvest reminder still carries every operative phrase")
-    print(f"          missing from the emitted reminder: {'; '.join(drift)}")
+_c2, _o2, _e2 = _cache_run(_cd)
+_cache_case(
+    "run.sh: the second run uses the cache and skips probing",
+    _c2 == 0 and "ran" in _o2 and "cache=yes" in _e2 and _cache_text(_cd) == _first,
+    "exit %d, out %r, stderr %r" % (_c2, _o2.strip(), _e2.strip()[:100]),
+)
+with open(os.path.join(_cd, ".python-cache"), "w", encoding="utf-8") as f:
+    f.write("no-such-interpreter-xyz\n")
+_c3, _o3, _e3 = _cache_run(_cd)
+_cache_case(
+    "run.sh: a stale cache (missing binary) is dropped, the probe order runs, and the cache is rewritten",
+    _c3 == 0 and "ran" in _o3 and "cache=yes" not in _e3 and _cache_text(_cd) == _first,
+    "exit %d, out %r, cache now %r" % (_c3, _o3.strip(), _cache_text(_cd)),
+)
+_cd = _cache_dir()
+_stubdir = tempfile.mkdtemp(prefix="house-rules-stub-", dir=_FIXTURE_ROOT)
+with open(os.path.join(_stubdir, "python3"), "w", encoding="utf-8", newline="\n") as f:
+    f.write('#!/bin/sh\necho "Python was not found; run without arguments to install from the Microsoft Store."\nexit 0\n')
+os.chmod(os.path.join(_stubdir, "python3"), 0o755)  # POSIX skips a non-executable file on PATH
+_c4, _o4, _e4 = _cache_run(_cd, PATH=_stubdir + os.pathsep + os.environ.get("PATH", ""))
+_cached4 = _cache_text(_cd)
+_cache_case(
+    "run.sh: an interpreter stub that prints a nag instead of running code is never cached",
+    _c4 == 0 and "ran" in _o4 and _cached4 is not None and _cached4.split()[0] != "python3",
+    "exit %d, out %r, cache %r" % (_c4, _o4.strip(), _cached4),
+)
+_cd = _cache_dir()
+os.mkdir(os.path.join(_cd, ".python-cache"))  # a directory where the file should go: not writable as a file
+_c5, _o5, _e5 = _cache_run(_cd)
+_cache_case(
+    "run.sh: a cache that cannot be written is skipped, never a failure",
+    _c5 == 0 and "ran" in _o5 and "Permission denied" not in _e5 and "Is a directory" not in _e5,
+    "exit %d, out %r, stderr %r" % (_c5, _o5.strip(), _e5.strip()[:100]),
+)
+_cd = _cache_dir()
+with open(os.path.join(_cd, ".python-cache"), "w", encoding="utf-8") as f:
+    f.write("no-such-interpreter-xyz\n")
+_c6, _o6, _e6 = _cache_run(_cd, HOUSE_RULES_PYTHON=sys.executable)
+_cache_case(
+    "run.sh: HOUSE_RULES_PYTHON still wins over the cache and is still probed",
+    _c6 == 0 and "ran" in _o6 and "cache=override" in _e6 and _cache_text(_cd) == "no-such-interpreter-xyz",
+    "exit %d, out %r, stderr %r" % (_c6, _o6.strip(), _e6.strip()[:100]),
+)
+_cd = _cache_dir()
+_c7, _o7, _e7 = _cache_run(_cd, HOUSE_RULES_PYTHON="no-such-interpreter-xyz")
+_cache_case(
+    "run.sh: a bad HOUSE_RULES_PYTHON is still rejected by the probe and falls through to the normal order",
+    _c7 == 0 and "ran" in _o7,
+    "exit %d, out %r" % (_c7, _o7.strip()),
+)
+
+# The harvest reminder's drift check is a row in the RESTATEMENTS table below.
 
 # --- the "nothing fails silently" rule, enforced structurally over hook.py source --------------
 # The rule is worthless if the plugin's own hooks break it, so this reads hook.py and fails any
@@ -2306,7 +2400,7 @@ for line in archivist.split("\n"):
         break
 if "proactiv" not in desc.lower():
     problems.append("the description does not say to use it proactively, so the Agent gate wins")
-for phrase in ("not injected", "one-line pointer", "Nothing fails silently", "docs/systems",
+for phrase in ("not injected", "one-line pointer", "Nothing fails silently", "docs/4-systems",
                "doc-ref", "<!-- ref:", "${CLAUDE_PLUGIN_ROOT}/scripts/docref.py", "fix --write"):
     if phrase.lower() not in archivist.lower():
         problems.append(f"the digest no longer states {phrase!r}")
@@ -2477,14 +2571,79 @@ hand_case(
         last_assistant_message="It works now.\n\nRESULT: PASS",
     ),
 )
+# #89 reversed this one: it used to expect silence, because "untested" is not a success word.
+# But a bare "untested" with no reason is exactly the disclosure-instead-of-checking #89 is about.
 hand_case(
-    "silent",
-    "an explicit UNTESTED claim never matches a success word to begin with",
+    "feedback",
+    "a bare 'untested' with no reason the check could not run gets told to run it (#89)",
     stop_payload(
         transcript_path=_HAND_NO_TOOL,
         last_assistant_message="This is untested; I have not run it.",
     ),
 )
+hand_case(
+    "silent",
+    "an 'untested' that says in the same sentence why the check cannot run stays quiet (#89)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="This is untested because the Unity editor is not installed here.",
+    ),
+)
+hand_case(
+    "feedback",
+    "a 'not checked' with no reason fires even when tools ran this turn (#89)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="I ran the tests. I haven't checked the CI logs.",
+    ),
+)
+hand_case(
+    "silent",
+    "a handover card's own UNTESTED: marker is not what the not-checked check trips on (#89)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="UNTESTED: this runs on your machine.\n\nNothing else to report.",
+    ),
+)
+hand_case(
+    "feedback",
+    "'that can't be done' with no tool run this turn gets the evidence reminder (#92)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="That can't be done in Claude Code; there is no setting for it.",
+    ),
+)
+hand_case(
+    "silent",
+    "'that can't be done' after a tool ran this turn stays quiet (#92)",
+    stop_payload(
+        transcript_path=_HAND_WITH_TOOL,
+        last_assistant_message="That can't be done in Claude Code; there is no setting for it.",
+    ),
+)
+hand_case(
+    "silent",
+    "'it is possible' is not an impossibility claim (#92)",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message="Yes, it is possible to configure that.",
+    ),
+)
+hand_case(
+    "silent",
+    "a phrase in quotation marks is being talked about, not asserted, so neither check fires",
+    stop_payload(
+        transcript_path=_HAND_NO_TOOL,
+        last_assistant_message='Adding checks for "can\'t be done" claims and for a bare "untested".',
+    ),
+)
+_, _out92, _ = run_hook("handover", stop_payload(
+    transcript_path=_HAND_NO_TOOL,
+    last_assistant_message="That setting doesn't exist.",
+))
+report("PASS" if "cannot be done or does not exist" in _out92 and "doesn't exist" in _out92 else "FAIL",
+       "the #92 note names the impossibility phrase it caught")
+print(f"          {_out92[:160]!r}")
 hand_case(
     "silent",
     "a reply naming no claim word at all is untouched by the evidence check",
@@ -2503,7 +2662,7 @@ hand_case(
 )
 
 # A shell fence always satisfies the evidence check's own "quotes evidence" exemption, so the
-# two checks can never both fire live on one reply - see doc-ref 6534 docs/Decisions.md.
+# two checks can never both fire live on one reply - see doc-ref 6534 docs/6-decisions/Decisions.md.
 code, out, err = run_hook(
     "handover",
     stop_payload(
@@ -2518,6 +2677,1195 @@ else:
     report("FAIL", "a reply with both a shell fence and a claim still emits exactly one valid JSON object")
     print(f"          out {out[:200]!r}")
 
+# --- parity (#90/#87) and visual (#88/#96) checks ------------------------------------------
+def _turn_transcript(name, prompt, uses):
+    lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": prompt}})]
+    for i, (tool, arg) in enumerate(uses):
+        inp = {"command": arg} if tool == "Bash" else {"file_path": arg}
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "p%d" % i, "name": tool, "input": inp}]}}))
+    return _hand_transcript(name, lines)
+
+
+def _stop_notes(transcript, reply, **env_extra):
+    env = dict(os.environ)
+    env["HOUSE_RULES_COMMIT_CHECK"] = "off"
+    env.update(env_extra)
+    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=reply), env=env)
+    try:
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        ctx = ""
+    return ("re-creating existing behaviour" in ctx, "checked by looking at it" in ctx, ctx)
+
+
+def pv_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print(f"          {detail}")
+
+
+_pv_port = _turn_transcript("pv-port", "port the stock page to GitHub Pages", [("Write", "/proj/site/index.html")])
+_par, _vis, _ = _stop_notes(_pv_port, "Done, the page is ported.")
+pv_case("Stop: a port that wrote files but names nothing kept or dropped gets the parity report note (#90)",
+        _par, "parity=%s" % _par)
+pv_case("Stop: the same turn changed an .html file and looked at nothing, so it gets the visual note (#88)",
+        _vis, "visual=%s" % _vis)
+_par, _, _ = _stop_notes(_pv_port, "Kept search and sorting; dropped the server sync, which needs a server.")
+pv_case("Stop: a port whose reply names what was kept and dropped gets no parity note", not _par, "parity=%s" % _par)
+_par, _, _ = _stop_notes(_pv_port, "Done.", HOUSE_RULES_PARITY="off")
+pv_case("Stop: HOUSE_RULES_PARITY=off switches the parity check off", not _par, "parity=%s" % _par)
+_pv_edit = _turn_transcript("pv-edit", "replace the colour in the header", [("Edit", "/proj/src/app.py")])
+_par, _vis, _ = _stop_notes(_pv_edit, "Changed the colour.")
+pv_case("Stop: an everyday 'replace' edit to a non-visual file trips neither check", not _par and not _vis,
+        "parity=%s visual=%s" % (_par, _vis))
+_pv_shot = _turn_transcript("pv-shot", "make the header blue",
+                            [("Edit", "/proj/site.css"), ("Bash", "npx playwright screenshot http://localhost:3000 after.png")])
+_, _vis, _ = _stop_notes(_pv_shot, "The header is blue.")
+pv_case("Stop: a visual edit with a Playwright screenshot in the turn gets no visual note", not _vis, "visual=%s" % _vis)
+_pv_read = _turn_transcript("pv-read", "make the header blue", [("Edit", "/proj/site.css"), ("Read", "/proj/after.png")])
+_, _vis, _ = _stop_notes(_pv_read, "The header is blue.")
+pv_case("Stop: a visual edit whose turn read a captured image gets no visual note", not _vis, "visual=%s" % _vis)
+_, _vis, _ = _stop_notes(_turn_transcript("pv-off", "make the header blue", [("Edit", "/proj/site.css")]),
+                         "Done.", HOUSE_RULES_VISUAL_CHECK="off")
+pv_case("Stop: HOUSE_RULES_VISUAL_CHECK=off switches the visual check off", not _vis, "visual=%s" % _vis)
+
+_, out, _ = run_hook("scope", json.dumps({"prompt": "rewrite the scraper workflow from scratch"}))
+pv_case("scope: a prompt that reads like a rewrite gets the inventory-first clause", "re-creating existing behaviour" in out,
+        "clause=%s" % ("re-creating existing behaviour" in out))
+_, out, _ = run_hook("scope", json.dumps({"prompt": "replace the colour in header.css"}))
+pv_case("scope: an everyday 'replace' prompt does not", "re-creating existing behaviour" not in out,
+        "clause=%s" % ("re-creating existing behaviour" in out))
+_, out, _ = run_hook("delegate", json.dumps({"tool_name": "ExitPlanMode", "tool_input": {
+    "plan": "Port the stock page to GitHub Pages as a static site."}}))
+pv_case("delegate: an approved port plan with no keep/change/drop inventory gets the parity note",
+        "carries no keep/change/drop" in out, "note=%s" % ("carries no keep/change/drop" in out))
+_, out, _ = run_hook("delegate", json.dumps({"tool_name": "ExitPlanMode", "tool_input": {
+    "plan": "Port the page. Parity: keep search, drop server sync."}}))
+pv_case("delegate: a port plan that carries its inventory does not", "carries no keep/change/drop" not in out,
+        "note=%s" % ("carries no keep/change/drop" in out))
+
+# --- plain summary first (#98) ------------------------------------------------------------
+_PS_PLAIN = ("The commit hooks are done and pushed. Claude now gets reminded to save its work, and "
+             "nothing is waiting on you.\n\n" + "More detail follows here. " * 40)
+_PS_TECH = ("`hook.py`: added `_dirty_paths`, `_uncommitted_among`, `branch_ownership` and "
+            "`event_branchnudge`.\n\n" + "More detail follows here. " * 40)
+_PS_WIDE = _PS_PLAIN + "\n\n| a | b | c | d |\n|---|---|---|---|\n| 1 | 2 | 3 | 4 |\n"
+_ps_wrote = _turn_transcript("ps-wrote", "add the commit hooks", [("Edit", "/proj/src/app.py")])
+_ps_read = _turn_transcript("ps-read", "what does this do?", [("Bash", "cat app.py")])
+_ps_commit = _turn_transcript("ps-commit", "commit it", [("Bash", "git commit -m x -- a.py && git push")])
+
+
+def _ps(transcript, reply, **env_extra):
+    return "plain summary first" in _stop_notes(transcript, reply, **env_extra)[2]
+
+
+pv_case("Stop: a work report opening with a pile of code names is sent back to lead with a plain summary (#98)",
+        _ps(_ps_wrote, _PS_TECH), "fired=%s" % _ps(_ps_wrote, _PS_TECH))
+pv_case("Stop: a work report that opens plainly is left alone", not _ps(_ps_wrote, _PS_PLAIN),
+        "fired=%s" % _ps(_ps_wrote, _PS_PLAIN))
+pv_case("Stop: a plain opening with a 4-column table still fires - too wide for a phone", _ps(_ps_wrote, _PS_WIDE),
+        "fired=%s" % _ps(_ps_wrote, _PS_WIDE))
+pv_case("Stop: a turn that only committed counts as reporting work", _ps(_ps_commit, _PS_TECH),
+        "fired=%s" % _ps(_ps_commit, _PS_TECH))
+pv_case("Stop: a turn that changed nothing is not a work report, so a technical answer is fine",
+        not _ps(_ps_read, _PS_TECH), "fired=%s" % _ps(_ps_read, _PS_TECH))
+pv_case("Stop: HOUSE_RULES_PLAIN_SUMMARY=off switches it off",
+        not _ps(_ps_wrote, _PS_TECH, HOUSE_RULES_PLAIN_SUMMARY="off"), "")
+
+# --- the commit rule's obligation half (#97): Stop, branchnudge, audit, stale memories -------
+# Each case gets its own throwaway repo, so the branch and the dirty set are exactly what the
+# case says they are. The hook is pointed at it through CLAUDE_PROJECT_DIR, the same variable
+# Claude Code sets.
+def _commit_repo(branch, committed=(), dirty=()):
+    d = tempfile.mkdtemp(prefix="house-rules-commit-", dir=_FIXTURE_ROOT)
+    git = ["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", d]
+    subprocess.run(git + ["init", "-q", "-b", branch], check=True)
+    for rel in committed:
+        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+            f.write("original\n")
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    for rel in dirty:
+        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+            f.write("changed\n")
+    return d
+
+
+def _wrote_transcript(name, paths):
+    lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "change it"}})]
+    for i, p in enumerate(paths):
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "w%d" % i, "name": "Edit", "input": {"file_path": p}}]}}))
+    return _hand_transcript(name, lines)
+
+
+def _project_env(root, **extra):
+    e = dict(os.environ)
+    e["CLAUDE_PROJECT_DIR"] = root
+    e.pop("HOUSE_RULES_COMMIT_CHECK", None)
+    e.update(extra)
+    return e
+
+
+def _stop_context(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def commit_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print(f"          {detail}")
+
+
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-own", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_r),
+)
+_ctx = _stop_context(out)
+commit_case(
+    "Stop: a file this turn wrote, still uncommitted on a claude/ branch, gets 'commit it now, scoped'",
+    "commit on your own branch" in _ctx and "a.py" in _ctx and "`claude/topic`" in _ctx and "git commit -- <paths>" in _ctx,
+    "context: %r" % _ctx[:160],
+)
+
+_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-main", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_r),
+)
+_ctx = _stop_context(out)
+commit_case(
+    "Stop: the same on the user's main says to branch off to claude/<topic> first",
+    "not a claude/ branch" in _ctx and "branch off first" in _ctx and "git switch -c claude/<topic>" in _ctx,
+    "context: %r" % _ctx[:160],
+)
+
+_r = _commit_repo("main", committed=["a.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-committed", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed and committed a.py."),
+    env=_project_env(_r),
+)
+commit_case(
+    "Stop: a file this turn wrote that is already committed stays silent",
+    out.strip() == "",
+    "stdout: %r" % out[:120],
+)
+
+_r = _commit_repo("main", committed=["a.py", "theirs.py"], dirty=["theirs.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-not-theirs", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_r),
+)
+commit_case(
+    "Stop: the user's own uncommitted edit, which this turn never wrote, never trips the check",
+    out.strip() == "",
+    "stdout: %r" % out[:120],
+)
+
+_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-toggle", [os.path.join(_r, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_r, HOUSE_RULES_COMMIT_CHECK="off"),
+)
+commit_case(
+    "Stop: HOUSE_RULES_COMMIT_CHECK=off switches the commit check off",
+    out.strip() == "",
+    "stdout: %r" % out[:120],
+)
+
+_nogit = tempfile.mkdtemp(prefix="house-rules-nogit-", dir=_FIXTURE_ROOT)
+_, out, _ = run_hook(
+    "handover",
+    stop_payload(transcript_path=_wrote_transcript("wrote-nogit", [os.path.join(_nogit, "a.py")]),
+                 last_assistant_message="Changed a.py."),
+    env=_project_env(_nogit),
+)
+commit_case(
+    "Stop: outside a git repo the commit check says it could not tell, and never blocks",
+    "commit check could not tell" in out and '"decision"' not in out and '"additionalContext"' not in out,
+    "stdout: %r" % out[:160],
+)
+
+
+def _nudge(root, rel, **extra):
+    payload = json.dumps({"tool_name": "Edit", "tool_input": {"file_path": os.path.join(root, rel)}})
+    return run_hook("branchnudge", payload, env=_project_env(root, **extra))[1]
+
+
+_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+out = _nudge(_r, "a.py")
+commit_case(
+    "branchnudge: the first uncommitted change on a non-claude/ branch says to branch off now",
+    "branch off now" in out and "`main`" in out and '"PostToolUse"' in out and '"permissionDecision"' not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("main", committed=["a.py", "b.py"], dirty=["a.py", "b.py"])
+out = _nudge(_r, "b.py")
+commit_case(
+    "branchnudge: a second uncommitted change is not the first, so it stays quiet",
+    "branch off now" not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+out = _nudge(_r, "a.py")
+commit_case(
+    "branchnudge: on a claude/ branch there is nothing to nudge",
+    "branch off now" not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+out = _nudge(_r, "a.py", HOUSE_RULES_COMMIT_CHECK="off")
+commit_case(
+    "branchnudge: HOUSE_RULES_COMMIT_CHECK=off switches it off",
+    out.strip() == "",
+    "stdout: %r" % out[:160],
+)
+commit_case(
+    "branchnudge is wired to PostToolUse Write|Edit in hooks.json",
+    bool(re.search(r'"matcher": "Write\|Edit",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" branchnudge"', hooks_json_text)),
+    "hooks.json PostToolUse entry",
+)
+
+# audit: a subagent's uncommitted files are named, because the parent owns that commit.
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_sub = _hand_transcript("subagent-wrote", [
+    json.dumps({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "id": "w1", "name": "Write", "input": {"file_path": os.path.join(_r, "a.py")}}]}}),
+])
+_audit_snippet = "import sys, hook\nprint(hook._audit_report(sys.argv[1]))\n"
+_p = subprocess.run([sys.executable, "-c", _audit_snippet, _sub], cwd=HERE, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, env=_project_env(_r))
+_aout = _p.stdout.decode("utf-8", "replace")
+commit_case(
+    "audit: a file the subagent wrote that is still uncommitted is named, and the commit is the parent's",
+    "uncommitted: a.py" in _aout and "The commit is yours now" in _aout,
+    "audit: %r" % _aout[-200:],
+)
+
+# subagentcommit: a subagent cannot finish with files it wrote still uncommitted - it is sent
+# back once (decision "block", probed on CLI 2.1.284), and the retry is let through.
+def _subagent_stop(paths, active=False, **env_extra):
+    tr = _hand_transcript("subcommit-%d" % len(os.listdir(_HAND_ROOT)), [
+        json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "s%d" % i, "name": "Write", "input": {"file_path": p}}]}})
+        for i, p in enumerate(paths)
+    ])
+    payload = json.dumps({"hook_event_name": "SubagentStop", "agent_type": "house-rules:builder",
+                          "agent_transcript_path": tr, "stop_hook_active": active})
+    return run_hook("subagentcommit", payload, env=_project_env(_FIXTURE_ROOT, **env_extra))[1]
+
+
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")])
+commit_case(
+    "subagentcommit: a subagent finishing with a file it wrote still uncommitted is sent back to commit it",
+    '"decision": "block"' in out.replace('":"', '": "') and "a.py" in out and "commit on your own branch" in out,
+    "stdout: %r" % out[:160],
+)
+commit_case(
+    "subagentcommit: its instruction respects a 'do not run git' delegation",
+    "told you not to run git" in out,
+    "stdout: %r" % out[:160],
+)
+out = _subagent_stop([os.path.join(_r, "a.py")], active=True)
+commit_case(
+    "subagentcommit: the retry (stop_hook_active) is never blocked again - it only reports",
+    '"decision"' not in out and "still uncommitted after being asked once" in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("claude/topic", committed=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")])
+commit_case(
+    "subagentcommit: a subagent that committed what it wrote finishes without being held",
+    '"decision"' not in out,
+    "stdout: %r" % out[:160],
+)
+_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+out = _subagent_stop([os.path.join(_r, "a.py")], HOUSE_RULES_COMMIT_CHECK="off")
+commit_case(
+    "subagentcommit: HOUSE_RULES_COMMIT_CHECK=off switches it off",
+    out.strip() == "",
+    "stdout: %r" % out[:160],
+)
+# The project dir is _FIXTURE_ROOT (not a repo); the file lives in its own repo, like a worktree.
+_wt = _commit_repo("worktree-agent-1", committed=["w.py"], dirty=["w.py"])
+out = _subagent_stop([os.path.join(_wt, "w.py")])
+commit_case(
+    "subagentcommit: a file in a separate worktree is judged in that worktree's repo, not the project dir",
+    '"decision"' in out and "w.py" in out and "worktree-agent-1" in out,
+    "stdout: %r" % out[:200],
+)
+commit_case(
+    "subagentcommit is wired to SubagentStop in hooks.json",
+    'run.sh\\" subagentcommit' in hooks_json_text,
+    "hooks.json SubagentStop entry",
+)
+# autosave / commitgate / worktreesweep (2.47.0): a subagent killed mid-run never reaches
+# SubagentStop, so its work is protected while it runs. Each fixture repo has a local bare repo
+# as `origin`, standing in for GitHub.
+def _as_git(d, *args, env=None):
+    return subprocess.run(["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid",
+                           "-C", d] + list(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          env=env, check=False).stdout.decode("utf-8", "replace").strip()
+
+
+def _as_repo(branch, backdate_minutes=0):
+    bare = tempfile.mkdtemp(prefix="house-rules-origin-", dir=_FIXTURE_ROOT)
+    subprocess.run(["git", "init", "-q", "--bare", bare], check=True)
+    d = tempfile.mkdtemp(prefix="house-rules-autosave-", dir=_FIXTURE_ROOT)
+    _as_git(d, "init", "-q", "-b", branch)
+    with open(os.path.join(d, "base.py"), "w", encoding="utf-8") as f:
+        f.write("base\n")
+    _as_git(d, "add", "-A")
+    env = dict(os.environ)
+    if backdate_minutes:
+        when = "@%d +0000" % int(time.time() - backdate_minutes * 60)
+        env.update(GIT_COMMITTER_DATE=when, GIT_AUTHOR_DATE=when)
+    _as_git(d, "commit", "-q", "-m", "base", env=env)
+    _as_git(d, "remote", "add", "origin", bare)
+    return d, bare
+
+
+def _as_write(d, rel, text="x\n"):
+    p = os.path.join(d, rel)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(text)
+    return p
+
+
+def _as_payload(event, tool, path, cwd):
+    return json.dumps({"hook_event_name": event, "tool_name": tool, "session_id": "s1", "cwd": cwd,
+                       "tool_input": {"file_path": path} if tool != "Bash" else {"command": "true"}})
+
+
+def _as_env(**extra):
+    e = _project_env(_FIXTURE_ROOT, **extra)
+    e.pop("HOUSE_RULES_AUTOSAVE", None)
+    e.update(extra)
+    return e
+
+
+def _as_ref(d, branch):
+    return _as_git(d, "rev-parse", "--verify", "-q", "refs/house-rules/autosave/" + branch)
+
+
+def _as_remote_ref(bare, branch):
+    return _as_git(bare, "rev-parse", "--verify", "-q", "refs/house-rules/autosave/" + branch)
+
+
+_d, _bare = _as_repo("worktree-agent-x")
+_head0 = _as_git(_d, "rev-parse", "HEAD")
+_p = _as_write(_d, "new.py")
+_t0 = time.time()
+_, out, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _p, _d), env=_as_env())
+out_first_autosave = out
+_elapsed = time.time() - _t0
+_local = _as_ref(_d, "worktree-agent-x")
+commit_case(
+    "autosave: an edit on a worktree-agent- branch saves an untracked file to the autosave ref and pushes it",
+    bool(_local) and "new.py" in _as_git(_d, "ls-tree", "--name-only", _local)
+    and _as_remote_ref(_bare, "worktree-agent-x") == _local,
+    "local %s, origin %s, out %r" % (_local[:9], _as_remote_ref(_bare, "worktree-agent-x")[:9], out[:120]),
+)
+commit_case(
+    "autosave: the branch, the real index and the working tree are left exactly as they were",
+    _as_git(_d, "rev-parse", "HEAD") == _head0 and _as_git(_d, "diff", "--cached", "--name-only") == ""
+    and _as_git(_d, "status", "--porcelain") == "?? new.py",
+    "status %r" % _as_git(_d, "status", "--porcelain"),
+)
+commit_case("autosave: one edit stays well inside the 10 s hook budget", _elapsed < 5, "took %.2fs" % _elapsed)
+_p = _as_write(_d, "new.py", "y\n")
+run_hook("autosave", _as_payload("PostToolUse", "Edit", _p, _d), env=_as_env())
+_local2 = _as_ref(_d, "worktree-agent-x")
+_rate_ok = _local2 != _local and _as_remote_ref(_bare, "worktree-agent-x") == _local
+_stamp = os.path.join(_as_git(_d, "rev-parse", "--absolute-git-dir"), "house-rules-autosave-worktree-agent-x.pushed")
+with open(_stamp, "w", encoding="utf-8") as f:
+    f.write("%s %s" % (time.time() - 120, _local))
+_p = _as_write(_d, "new.py", "z\n")
+run_hook("autosave", _as_payload("PostToolUse", "Edit", _p, _d), env=_as_env())
+commit_case(
+    "autosave: pushes at most once a minute; the local ref still moves, and the next push after the window catches up",
+    _rate_ok and _as_remote_ref(_bare, "worktree-agent-x") == _as_ref(_d, "worktree-agent-x"),
+    "second edit local-only: %s; after the window origin matches: %s"
+    % (_rate_ok, _as_remote_ref(_bare, "worktree-agent-x") == _as_ref(_d, "worktree-agent-x")),
+)
+_quiet = []
+for _br in ("main", "claude/x"):
+    _dq, _ = _as_repo(_br)
+    _pq = _as_write(_dq, "new.py")
+    _, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env())
+    if _as_ref(_dq, _br) or oq.strip():
+        _quiet.append("%s: ref %r, out %r" % (_br, _as_ref(_dq, _br), oq[:80]))
+_dq, _ = _as_repo("worktree-agent-off")
+_pq = _as_write(_dq, "new.py")
+_, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env(HOUSE_RULES_AUTOSAVE="off"))
+if _as_ref(_dq, "worktree-agent-off") or oq.strip():
+    _quiet.append("HOUSE_RULES_AUTOSAVE=off still acted: out %r" % oq[:80])
+commit_case(
+    "autosave: does nothing on main, on a claude/ branch, or with HOUSE_RULES_AUTOSAVE=off",
+    not _quiet, "; ".join(_quiet) or "no ref and no output in all three",
+)
+# .git/HEAD fast path (2.48.0): a branch that is not worktree-agent-* is ruled out by reading
+# .git/HEAD, so no git subprocess is spawned. The probe counts subprocess.Popen constructions
+# (subprocess.run goes through Popen) while running hook.py unmodified.
+_SPAWN_PROBE = (
+    "import sys, subprocess, runpy\n"
+    "n = [0]\n"
+    "orig = subprocess.Popen.__init__\n"
+    "def counting(self, *a, **k):\n"
+    "    n[0] += 1\n"
+    "    orig(self, *a, **k)\n"
+    "subprocess.Popen.__init__ = counting\n"
+    "hook, event = sys.argv[1], sys.argv[2]\n"
+    "sys.argv = [hook, event]\n"
+    "try:\n"
+    "    runpy.run_path(hook, run_name='__main__')\n"
+    "finally:\n"
+    "    sys.stderr.write('SPAWNS=%d' % n[0])\n"
+)
+
+
+def _as_spawns(event, payload, env):
+    proc = subprocess.run([sys.executable, "-c", _SPAWN_PROBE, HOOK, event], input=payload.encode("utf-8"),
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    m = re.search(r"SPAWNS=(\d+)", proc.stderr.decode("utf-8", "replace"))
+    return (int(m.group(1)) if m else -1), proc.stdout.decode("utf-8", "replace")
+
+
+_fast = []
+for _ev in ("autosave", "commitgate"):
+    _dq, _ = _as_repo("main")
+    _pq = _as_write(_dq, "new.py")
+    _n, _o = _as_spawns(_ev, _as_payload("PostToolUse" if _ev == "autosave" else "PreToolUse", "Write", _pq, _dq), _as_env())
+    if _n != 0 or _o.strip():
+        _fast.append("%s on main: %d spawns, out %r" % (_ev, _n, _o[:60]))
+commit_case(
+    "autosave/commitgate: a non-subagent branch is ruled out from .git/HEAD with zero git subprocesses",
+    not _fast, "; ".join(_fast) or "0 spawns and no output on main for both handlers",
+)
+_dq, _ = _as_repo("worktree-agent-fast")
+_pq = _as_write(_dq, "new.py")
+_n, _o = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), _as_env())
+commit_case(
+    "autosave: a worktree-agent- branch still takes the full path after the fast check (unchanged behaviour)",
+    _n > 0 and bool(_as_ref(_dq, "worktree-agent-fast")),
+    "%d spawns, autosave ref %r" % (_n, _as_ref(_dq, "worktree-agent-fast")[:9]),
+)
+_dq, _ = _as_repo("worktree-agent-det")
+_as_git(_dq, "checkout", "-q", "--detach")
+_pq = _as_write(_dq, "new.py")
+_n, _o = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), _as_env())
+commit_case(
+    "autosave: a detached HEAD spawns no git subprocess and saves nothing",
+    _n == 0 and not _o.strip() and not _as_ref(_dq, "worktree-agent-det"),
+    "%d spawns, out %r" % (_n, _o[:60]),
+)
+_dq, _ = _as_repo("main")
+_wt = os.path.join(_FIXTURE_ROOT, "wt-agent-%d" % int(time.time() * 1000))
+_as_git(_dq, "worktree", "add", "-q", "-b", "worktree-agent-wt", _wt)
+_wf_is_file = os.path.isfile(os.path.join(_wt, ".git"))
+_pq = _as_write(_wt, "new.py")
+_n, _o = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq, _wt), _as_env())
+_wt2 = os.path.join(_FIXTURE_ROOT, "wt-plain-%d" % int(time.time() * 1000))
+_as_git(_dq, "worktree", "add", "-q", "-b", "feature-plain", _wt2)
+_pq2 = _as_write(_wt2, "new.py")
+_n2, _o2 = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq2, _wt2), _as_env())
+commit_case(
+    "autosave: a linked worktree (.git is a file) is resolved for both branch kinds",
+    _wf_is_file and _n > 0 and bool(_as_ref(_wt, "worktree-agent-wt")) and _n2 == 0 and not _o2.strip(),
+    ".git file %s; agent branch: %d spawns, ref %r; plain branch: %d spawns" % (_wf_is_file, _n, _as_ref(_wt, "worktree-agent-wt")[:9], _n2),
+)
+_dq, _ = _as_repo("worktree-agent-noreach")
+_as_git(_dq, "remote", "set-url", "origin", os.path.join(_FIXTURE_ROOT, "no-such-origin.git"))
+_pq = _as_write(_dq, "new.py")
+_, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env())
+oq_unreach = oq
+commit_case(
+    "autosave: an unreachable origin is said out loud, and the save is still kept locally",
+    "could not push refs/house-rules/autosave/worktree-agent-noreach" in oq and bool(_as_ref(_dq, "worktree-agent-noreach")),
+    "out %r" % oq[:160],
+)
+_dq, _ = _as_repo("worktree-agent-old", backdate_minutes=20)
+_pq = _as_write(_dq, "new.py")
+_, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env())
+oq_checkpoint = oq
+_dfresh, _ = _as_repo("worktree-agent-fresh")
+_pf = _as_write(_dfresh, "new.py")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _pf, _dfresh), env=_as_env())
+commit_case(
+    "autosave: 10 minutes without a commit makes the hook commit for the subagent; a fresh commit does not",
+    _as_git(_dq, "log", "-1", "--format=%s") == "wip: checkpoint - 10 min without a commit"
+    and _as_git(_dq, "status", "--porcelain") == "" and "committed 1 file(s)" in oq
+    and _as_git(_dfresh, "log", "-1", "--format=%s") == "base",
+    "old: %r, status %r; fresh: %r" % (_as_git(_dq, "log", "-1", "--format=%s"),
+                                       _as_git(_dq, "status", "--porcelain"), _as_git(_dfresh, "log", "-1", "--format=%s")),
+)
+
+_dg, _ = _as_repo("worktree-agent-gate")
+_as_write(_dg, "a.py")
+_pg = _as_write(_dg, "b.py")
+_, o2, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
+_as_write(_dg, "c.py")
+_, o3, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
+commit_case(
+    "commitgate: 2 uncommitted files pass; 3 block the edit, naming the files, with nothing committed",
+    o2.strip() == "" and '"permissionDecision":"deny"' in o3 and "a.py" in o3 and "c.py" in o3
+    and _as_git(_dg, "log", "-1", "--format=%s") == "base",
+    "2 files: %r; 3 files: %r" % (o2[:60], o3[:140]),
+)
+_, o4, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
+commit_case(
+    "commitgate: asked once and ignored, the hook commits everything itself and lets the edit through",
+    _as_git(_dg, "log", "-1", "--format=%s") == "wip: autosave - subagent did not commit when asked"
+    and _as_git(_dg, "status", "--porcelain") == "" and "deny" not in o4 and "committed 3 file(s)" in o4,
+    "last commit %r, out %r" % (_as_git(_dg, "log", "-1", "--format=%s"), o4[:140]),
+)
+_gq = []
+_dm, _ = _as_repo("main")
+for _n in ("a.py", "b.py", "c.py", "d.py"):
+    _pm = _as_write(_dm, _n)
+_, om, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pm, _dm), env=_as_env())
+if om.strip():
+    _gq.append("main: %r" % om[:80])
+_db, _ = _as_repo("worktree-agent-bash")
+for _n in ("a.py", "b.py", "c.py"):
+    _as_write(_db, _n)
+_, ob, _ = run_hook("commitgate", _as_payload("PreToolUse", "Bash", _db, _db), env=_as_env())
+if ob.strip():
+    _gq.append("Bash: %r" % ob[:80])
+commit_case(
+    "commitgate: never gates main, and never gates Bash (the subagent needs it to commit)",
+    not _gq, "; ".join(_gq) or "both passed with no output",
+)
+
+_ds, _bs = _as_repo("worktree-agent-done")
+_ps = _as_write(_ds, "s.py")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _ps, _ds), env=_as_env())
+_had = bool(_as_remote_ref(_bs, "worktree-agent-done"))
+_as_git(_ds, "add", "-A")
+_as_git(_ds, "commit", "-q", "-m", "feat: s")
+out = run_hook("subagentcommit", json.dumps({
+    "hook_event_name": "SubagentStop", "agent_type": "house-rules:builder", "stop_hook_active": False,
+    "agent_transcript_path": _hand_transcript("autosave-done", [json.dumps({"type": "assistant", "message": {
+        "content": [{"type": "tool_use", "id": "d1", "name": "Write", "input": {"file_path": _ps}}]}})])}),
+    env=_project_env(_FIXTURE_ROOT))[1]
+commit_case(
+    "subagentcommit: a clean finish deletes the autosave ref locally and on origin",
+    _had and not _as_ref(_ds, "worktree-agent-done") and not _as_remote_ref(_bs, "worktree-agent-done"),
+    "on origin before: %s; after: local %r origin %r; out %r"
+    % (_had, _as_ref(_ds, "worktree-agent-done"), _as_remote_ref(_bs, "worktree-agent-done"), out[:80]),
+)
+_dr, _ = _as_repo("worktree-agent-retry")
+_pr = _as_write(_dr, "r.py")
+out = _subagent_stop([_pr], active=True)
+_dc, _ = _as_repo("claude/retry")
+_pc = _as_write(_dc, "r.py")
+out_c = _subagent_stop([_pc], active=True)
+commit_case(
+    "subagentcommit: a retry still uncommitted is committed by the hook on a worktree-agent- branch, never on claude/",
+    _as_git(_dr, "log", "-1", "--format=%s") == "wip: autosave - subagent did not commit when asked"
+    and _as_git(_dr, "status", "--porcelain") == "" and "committed 1 file(s)" in out
+    and _as_git(_dc, "log", "-1", "--format=%s") == "base" and _as_git(_dc, "status", "--porcelain") == "?? r.py",
+    "worktree-agent: %r; claude/: %r" % (_as_git(_dr, "log", "-1", "--format=%s"), _as_git(_dc, "log", "-1", "--format=%s")),
+)
+
+_dmain, _ = _as_repo("main")
+_sweep_old = os.path.join(_FIXTURE_ROOT, "wt-sweep-old")
+_sweep_new = os.path.join(_FIXTURE_ROOT, "wt-sweep-new")
+_sweep_mine = os.path.join(_FIXTURE_ROOT, "wt-sweep-claude")
+_as_git(_dmain, "worktree", "add", "-q", "-b", "worktree-agent-old", _sweep_old)
+_as_git(_dmain, "worktree", "add", "-q", "-b", "worktree-agent-new", _sweep_new)
+_as_git(_dmain, "worktree", "add", "-q", "-b", "claude/sweep", _sweep_mine)
+_long_ago = time.time() - 20 * 60
+for _wt in (_sweep_old, _sweep_mine):
+    os.utime(_as_write(_wt, "left.py"), (_long_ago, _long_ago))
+_as_write(_sweep_new, "live.py")
+_, osw, _ = run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "hi",
+                                                  "cwd": _dmain, "session_id": "s1"}),
+                     env=_project_env(_dmain))
+commit_case(
+    "worktreesweep: the parent commits a subagent worktree left untouched 10+ min, and leaves a live one and claude/ alone",
+    _as_git(_sweep_old, "log", "-1", "--format=%s") == "wip: parent checkpoint of subagent work"
+    and _as_git(_sweep_old, "status", "--porcelain") == "" and "worktree-agent-old" in osw
+    and _as_git(_sweep_new, "status", "--porcelain") == "?? live.py"
+    and _as_git(_sweep_mine, "status", "--porcelain") == "?? left.py",
+    "old: %r; live: %r; claude/: %r; out %r" % (_as_git(_sweep_old, "log", "-1", "--format=%s"),
+                                                _as_git(_sweep_new, "status", "--porcelain"),
+                                                _as_git(_sweep_mine, "status", "--porcelain"), osw[:100]),
+)
+_, osw2, _ = run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "hi",
+                                                   "cwd": _dmain}), env=_project_env(_dmain))
+commit_case(
+    "worktreesweep: says nothing when there is nothing to commit",
+    osw2.strip() == "", "out %r" % osw2[:100],
+)
+_multi = []
+for _name, _o in (("autosave", out_first_autosave), ("autosave unreachable origin", oq_unreach),
+                  ("autosave checkpoint", oq_checkpoint), ("commitgate deny", o3),
+                  ("commitgate fallback", o4), ("worktreesweep", osw)):
+    try:
+        json.loads(_o)
+    except ValueError:
+        _multi.append("%s: %r" % (_name, _o[:100]))
+commit_case(
+    "autosave, commitgate and worktreesweep each print exactly one JSON object per call",
+    not _multi, "; ".join(_multi) or "all six outputs parse as one object",
+)
+commit_case(
+    "autosave, commitgate and worktreesweep are wired in hooks.json",
+    all('run.sh\\" %s' % e in hooks_json_text for e in ("autosave", "commitgate", "worktreesweep")),
+    "hooks.json PostToolUse / PreToolUse / UserPromptSubmit entries",
+)
+
+# --- issue workflow (2.49.0): #108 PR Refs rule, #109 issue close asks, #110 plan -> issues gate ---
+# Every case runs against a throwaway repo in _FIXTURE_ROOT. A stub `gh` on PATH writes a marker
+# file when it is run, so "the hooks never run gh on a tool call" is asserted, not assumed.
+# Plan: docs/plans/issue-workflow-build-plan.md.
+_ISS_PLAN5 = "# Plan\n\n1. one\n2. two\n3. three\n4. four\n5. five\n"
+_ISS_PLAN3 = "# Plan\n\n1. one\n2. two\n3. three\n"
+_ISS_MARK = os.path.join(_FIXTURE_ROOT, "gh-was-run.marker")
+_ISS_STUBDIR = tempfile.mkdtemp(prefix="house-rules-ghstub-", dir=_FIXTURE_ROOT)
+
+
+def _iss_stub(body_ok=True):
+    """Write a stub gh into _ISS_STUBDIR. It records that it ran, then prints two issues (or fails)."""
+    if os.name == "nt":
+        path = os.path.join(_ISS_STUBDIR, "gh.cmd")
+        lines = ["@echo off", "echo ran> \"%s\"" % _ISS_MARK]
+        if body_ok == "empty":
+            lines.append("echo []")
+        elif body_ok:
+            lines.append("echo [{\"number\":7,\"title\":\"Fix the login screen\"},{\"number\":3,\"title\":\"Add sound\"}]")
+        else:
+            lines += ["echo HTTP 401: bad credentials 1>&2", "exit /b 1"]
+        open(path, "w", encoding="utf-8", newline="\r\n").write("\r\n".join(lines) + "\r\n")
+    else:
+        path = os.path.join(_ISS_STUBDIR, "gh")
+        lines = ["#!/bin/sh", "echo ran > '%s'" % _ISS_MARK]
+        if body_ok == "empty":
+            lines.append("echo '[]'")
+        elif body_ok:
+            lines.append("echo '[{\"number\":7,\"title\":\"Fix the login screen\"},{\"number\":3,\"title\":\"Add sound\"}]'")
+        else:
+            lines += ["echo 'HTTP 401: bad credentials' >&2", "exit 1"]
+        open(path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+        os.chmod(path, 0o755)
+
+
+def _iss_env(**extra):
+    e = _project_env(_FIXTURE_ROOT)
+    e.pop("HOUSE_RULES_ISSUES", None)
+    e["PATH"] = _ISS_STUBDIR + os.pathsep + e.get("PATH", "")
+    e.update(extra)
+    return e
+
+
+def _iss_repo(remote=None):
+    d = tempfile.mkdtemp(prefix="house-rules-issues-", dir=_FIXTURE_ROOT)
+    _as_git(d, "init", "-q", "-b", "main")
+    _as_write(d, "base.py", "base\n")
+    _as_git(d, "add", "-A")
+    _as_git(d, "commit", "-q", "-m", "base")
+    if remote:
+        _as_git(d, "remote", "add", "origin", remote)
+    return d
+
+
+def _iss_state_path(d):
+    return os.path.join(_as_git(d, "rev-parse", "--absolute-git-dir"), "house-rules-issues.json")
+
+
+def _iss_state(d):
+    try:
+        return json.load(open(_iss_state_path(d), encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _iss_payload(event, tool, d, **ti):
+    p = {"hook_event_name": event, "tool_name": tool, "session_id": "iss", "cwd": d, "tool_input": ti}
+    return p
+
+
+def _iss_call(event, payload, d, **envx):
+    return run_hook(event, json.dumps(payload), env=_iss_env(**envx))
+
+
+def _iss_decision(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"].get("permissionDecision")
+    except Exception:
+        return None
+
+
+def _iss_reason(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"].get("permissionDecisionReason", "")
+    except Exception:
+        return ""
+
+
+_iss_stub(True)
+_issues_outputs = []
+
+# -- #110: delegate counts steps and writes the state -----------------------------------------
+_d = _iss_repo()
+_, _o, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _d, plan=_ISS_PLAN5), _d)
+_issues_outputs.append(("delegate 5 steps", _o))
+_st = _iss_state(_d)
+_ctx = _stop_context(_o)
+commit_case(
+    "issues: a 5-step plan writes the gate state and the delegate note says to create the issues",
+    bool(_st) and _st.get("needs_issues") is True and _st.get("plan_steps") == 5 and "5 steps" in _ctx
+    and "parent issue" in _ctx and "Claude created this" in _ctx and "in progress" in _ctx
+    and "Claude completed this" not in _ctx,
+    "state %r" % _st,
+)
+_d3 = _iss_repo()
+_, _o3, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _d3, plan=_ISS_PLAN3), _d3)
+_issues_outputs.append(("delegate 3 steps", _o3))
+commit_case(
+    "issues: a 3-step plan writes nothing and the note names the count",
+    _iss_state(_d3) is None and "counts 3 step(s)" in _stop_context(_o3),
+    "state %r" % _iss_state(_d3),
+)
+_dh = _iss_repo()
+_, _oh, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dh,
+                      plan="## Steps\n\n### Step 1 - a\n### Step 2 - b\n### Change 3 - c\n- [ ] d\n"), _dh)
+commit_case(
+    "issues: '### Step', '### Change' headings and '- [ ]' items count as steps",
+    (_iss_state(_dh) or {}).get("plan_steps") == 4, "state %r" % _iss_state(_dh),
+)
+
+# -- #110: the gate in commitgate --------------------------------------------------------------
+_fp = lambda rel: os.path.join(_d, rel)
+_, _og, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp("Assets/Foo.cs"), content="x"), _d)
+_issues_outputs.append(("gate deny", _og))
+commit_case(
+    "issues: with the gate closed, a Write to a source file is denied naming both missing pieces",
+    _iss_decision(_og) == "deny" and "parent issue" in _iss_reason(_og) and "child issue" in _iss_reason(_og),
+    "out %r" % _og[:160],
+)
+_, _oe, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Edit", _d, file_path=_fp("src/a.py")), _d)
+_, _on, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "NotebookEdit", _d, notebook_path=_fp("n.ipynb")), _d)
+commit_case(
+    "issues: Edit and NotebookEdit on source files are denied too",
+    _iss_decision(_oe) == "deny" and _iss_decision(_on) == "deny", "edit %r notebook %r" % (_oe[:60], _on[:60]),
+)
+_allowed = []
+for _rel in ("docs/x.md", "docs/sub/y.json", "README.md", "src/notes.md", ".claude/settings.json"):
+    _, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp(_rel)), _d)
+    if _oa.strip():
+        _allowed.append((_rel, _oa[:60]))
+_, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=os.path.join(_FIXTURE_ROOT, "elsewhere.cs")), _d)
+if _oa.strip():
+    _allowed.append(("outside project", _oa[:60]))
+_, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_iss_state_path(_d)), _d)
+if _oa.strip():
+    _allowed.append(("state file", _oa[:60]))
+commit_case(
+    "issues: docs/, .md files, .claude/, files outside the project and the state file stay editable",
+    not _allowed, "denied: %r" % _allowed,
+)
+_, _ob, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Bash", _d, command="true"), _d)
+commit_case("issues: Bash is never gated", _ob.strip() == "", "out %r" % _ob[:80])
+
+# -- #110: recording creations clears the gate --------------------------------------------------
+_label_cmd = 'gh issue create --title "t" --body "b" --label "Claude created this" --label bug'
+_bare_cmd = 'gh issue create --title "t" --body "b" --label bug'
+
+
+def _iss_created(d, cmd, n):
+    return _iss_call("autosave", dict(_iss_payload("PostToolUse", "Bash", d, command=cmd),
+                                      tool_response={"stdout": "https://github.com/o/r/issues/%d\n" % n}), d)
+
+
+_, _ou, _ = _iss_created(_d, _bare_cmd, 50)
+_issues_outputs.append(("unlabelled create", _ou))
+_st = _iss_state(_d)
+commit_case(
+    "issues: an unlabelled `gh issue create` gets a correction note and does not count",
+    "without the `Claude created this` label" in _ou and _st["needs_issues"] is True
+    and _st["created"] and _st["created"][0]["labelled"] is False,
+    "state %r out %r" % (_st, _ou[:100]),
+)
+_, _o1, _ = _iss_created(_d, _label_cmd, 51)
+_st1 = _iss_state(_d)
+_, _o2, _ = _iss_created(_d, _label_cmd, 52)
+_issues_outputs.append(("labelled create 2", _o2))
+_st2 = _iss_state(_d)
+commit_case(
+    "issues: the gate clears after two labelled issues (parent plus one child), not after one",
+    _st1["needs_issues"] is True and _st2["needs_issues"] is False and "unblocked" in _o2
+    and _st2["created"][-1] == {"repo": "o/r", "number": 52, "labelled": True},
+    "after one %r, after two %r" % (_st1["needs_issues"], _st2["needs_issues"]),
+)
+_, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp("Assets/Foo.cs")), _d)
+commit_case("issues: once cleared the same source Write is allowed", _oa.strip() == "", "out %r" % _oa[:80])
+_dn = _iss_repo()
+_, _onone, _ = _iss_created(_dn, _label_cmd, 60)
+commit_case(
+    "issues: a `gh issue create` with no plan state is not recorded and says nothing",
+    _onone.strip() == "" and _iss_state(_dn) is None, "out %r" % _onone[:80],
+)
+_dm = _iss_repo()
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dm, plan=_ISS_PLAN5), _dm)
+_, _omiss, _ = _iss_call("autosave", dict(_iss_payload("PostToolUse", "Bash", _dm, command=_label_cmd),
+                                          tool_response={"stdout": "error: network down"}), _dm)
+commit_case(
+    "issues: a `gh issue create` whose output has no issue URL is said out loud and not counted",
+    "no issue URL" in _omiss and _iss_state(_dm)["created"] == [], "out %r" % _omiss[:120],
+)
+
+# -- #110: stop line, corrupt state, kill switch, subagent worktree -----------------------------
+_ds = _iss_repo()
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _ds, plan=_ISS_PLAN5), _ds)
+_, _ostop, _ = run_hook("handover", stop_payload(last_assistant_message="Done.", cwd=_ds), env=_iss_env())
+_issues_outputs.append(("stop", _ostop))
+commit_case(
+    "issues: Stop adds one line while the gate is still closed and does not block",
+    "plans become issues" in _stop_context(_ostop) and '"decision"' not in _ostop,
+    "out %r" % _ostop[:160],
+)
+_, _ostop2, _ = run_hook("handover", stop_payload(last_assistant_message="Done.", cwd=_d), env=_iss_env())
+commit_case("issues: Stop stays silent once the gate is cleared", "plans become issues" not in _ostop2, "out %r" % _ostop2[:100])
+
+_dc = _iss_repo()
+open(_iss_state_path(_dc), "w", encoding="utf-8").write("{not json")
+_, _oc, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dc, file_path=os.path.join(_dc, "a.cs")), _dc)
+_issues_outputs.append(("corrupt state", _oc))
+commit_case(
+    "issues: a corrupt state file is reported in one line and treated as no gate",
+    "could not read house-rules-issues.json" in _oc and _iss_decision(_oc) is None,
+    "out %r" % _oc[:160],
+)
+
+_dk = _iss_repo()
+_, _ok, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk, plan=_ISS_PLAN5), _dk,
+                      HOUSE_RULES_ISSUES="off")
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk, plan=_ISS_PLAN5), _dk)  # state now exists
+_, _ogk, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dk, file_path=os.path.join(_dk, "a.cs")), _dk,
+                       HOUSE_RULES_ISSUES="off")
+_, _opk, _ = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _dk, command='gh pr create --title T --body "Closes #5"'), _dk,
+                       HOUSE_RULES_ISSUES="off")
+_, _ock, _ = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _dk, command="gh issue close 5"), _dk,
+                       HOUSE_RULES_ISSUES="off")
+_dk2 = _iss_repo()
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk2, plan=_ISS_PLAN5), _dk2, HOUSE_RULES_ISSUES="off")
+commit_case(
+    "issues: HOUSE_RULES_ISSUES=off writes no state and disables the gate, the PR rule and the close prompt",
+    _iss_state(_dk2) is None and _ogk.strip() == "" and _opk.strip() == "" and _ock.strip() == "",
+    "gate %r pr %r close %r" % (_ogk[:40], _opk[:40], _ock[:40]),
+)
+
+_dw = _iss_repo()
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dw, plan=_ISS_PLAN5), _dw)
+_wt = os.path.join(_FIXTURE_ROOT, "iss-subagent-wt")
+_as_git(_dw, "worktree", "add", "-q", "-b", "worktree-agent-iss", _wt)
+_, _osub, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _wt, file_path=os.path.join(_wt, "a.cs")), _wt)
+_, _omain, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dw, file_path=os.path.join(_dw, "a.cs")), _dw)
+commit_case(
+    "issues: the main session's gate does not apply inside a subagent worktree (its own git directory)",
+    _iss_decision(_omain) == "deny" and _osub.strip() == "", "main %r subagent %r" % (_iss_decision(_omain), _osub[:60]),
+)
+
+# -- #108: gh pr create ------------------------------------------------------------------------
+_dp = _iss_repo()
+
+
+def _iss_guard(cmd, d=None, **envx):
+    d = d or _dp
+    return _iss_call("guard", _iss_payload("PreToolUse", "Bash", d, command=cmd), d, **envx)[1]
+
+
+_pr = lambda body: 'gh pr create --title "T" --body "%s"' % body
+_ocl = _iss_guard(_pr("Closes #5"))
+_issues_outputs.append(("pr closes", _ocl))
+commit_case(
+    "pr: a body with 'Closes #5' is denied and the reason explains the merge-time close",
+    _iss_decision(_ocl) == "deny" and "before the user has tested" in _iss_reason(_ocl), "out %r" % _ocl[:140],
+)
+_bad = []
+for _b in ("Fixes #5", "resolved #5", "FIXED owner/repo#7", "Close: #9", "closes https://github.com/o/r/issues/4"):
+    if _iss_decision(_iss_guard(_pr(_b))) != "deny":
+        _bad.append(_b)
+commit_case("pr: every closing word in any tense, any case, with #N, owner/repo#N or a URL is denied", not _bad, "not denied: %r" % _bad)
+_onr = _iss_guard(_pr("Just a change"))
+commit_case(
+    "pr: a body with no Refs / Part of / No-issue is denied",
+    _iss_decision(_onr) == "deny" and "Refs #N" in _iss_reason(_onr), "out %r" % _onr[:140],
+)
+_bad = []
+for _b in ("Refs #5", "Refs owner/repo#5", "Part of #12", "Summary\\n\\nNo-issue: typo fix"):
+    if _iss_guard(_pr(_b)).strip():
+        _bad.append(_b)
+commit_case("pr: Refs #N, Refs owner/repo#N, Part of #N and a No-issue line are allowed", not _bad, "not allowed: %r" % _bad)
+_heredoc = "gh pr create --title T --body \"$(cat <<'EOF'\n## Summary\nthings\n\nRefs #108, #109\nEOF\n)\""
+commit_case("pr: a heredoc body carrying Refs is allowed", _iss_guard(_heredoc).strip() == "", "out %r" % _iss_guard(_heredoc)[:100])
+_bf = os.path.join(_dp, "body.md")
+open(_bf, "w", encoding="utf-8").write("Summary\n\nRefs #5\n")
+_bfc = os.path.join(_dp, "bodyc.md")
+open(_bfc, "w", encoding="utf-8").write("Summary\n\nFixes #5\n")
+_bfn = os.path.join(_dp, "bodyn.md")
+open(_bfn, "w", encoding="utf-8").write("Summary only\n")
+commit_case(
+    "pr: --body-file / -F is read: Refs allowed, closing word denied, no link denied",
+    _iss_guard("gh pr create --title T --body-file body.md").strip() == ""
+    and _iss_decision(_iss_guard("gh pr create -t T -F bodyc.md")) == "deny"
+    and _iss_decision(_iss_guard("gh pr create --title T --body-file bodyn.md")) == "deny",
+    "three file cases",
+)
+_ou = _iss_guard("gh pr create --title T --body-file missing.md")
+_ow = _iss_guard("gh pr create --web")
+_os = _iss_guard("gh pr create --title T --body-file -")
+commit_case(
+    "pr: an unreadable body file, stdin, and --web / no body all ask instead of allowing",
+    _iss_decision(_ou) == "ask" and "could not read" in _iss_reason(_ou)
+    and _iss_decision(_ow) == "ask" and _iss_decision(_os) == "ask",
+    "missing %r web %r stdin %r" % (_iss_decision(_ou), _iss_decision(_ow), _iss_decision(_os)),
+)
+commit_case(
+    "pr: commands that only mention gh pr create (a commit message, an echo) are not checked",
+    all(_iss_guard(c).strip() == "" for c in ('echo "gh pr create is checked"', 'grep -r "gh pr create" docs')),
+    "two commands that only mention it",
+)
+
+# -- #133: credit aj's agent, never Claude -------------------------------------------------------------
+_att_trailer = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\nEOF\n)\""
+_att_gen = "git commit -m \"feat: x\n\nGenerated with [Claude Code](https://claude.com/claude-code)\""
+_att_ok = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCommitted by AJ's agent\nEOF\n)\""
+_att_word = "git commit -m \"docs: rename the Claude setting\""
+_oa1, _oa2, _oa3, _oa4 = _iss_guard(_att_trailer), _iss_guard(_att_gen), _iss_guard(_att_ok), _iss_guard(_att_word)
+commit_case(
+    "attribution: a commit crediting Claude (co-author trailer or Generated-with line) is refused, naming the replacement",
+    _iss_decision(_oa1) == "deny" and _iss_decision(_oa2) == "deny"
+    and "Committed by AJ's agent" in _iss_reason(_oa1) and "no email" in _iss_reason(_oa1),
+    "out %r | %r" % (_oa1[:140], _oa2[:100]),
+)
+_ota3 = _iss_decision(_oa3) != "deny" or "credit aj's agent" not in _iss_reason(_oa3)
+commit_case(
+    "attribution: crediting aj's agent with no email passes, and a subject that merely mentions Claude passes",
+    "credit aj's agent" not in _oa3 and "credit aj's agent" not in _oa4,
+    "out %r | %r" % (_oa3[:100], _oa4[:100]),
+)
+_opr1 = _iss_guard('gh pr create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"')
+_opr2 = _iss_guard('gh pr create --title T --body "Refs #5\n\nOpened by AJ\'s agent"')
+_opr3 = _iss_guard('gh pr create --title T --body "Refs #5\n\nhttps://claude.ai/code/session_abc"')
+commit_case(
+    "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting aj's agent passes",
+    _iss_decision(_opr1) == "deny" and "credit aj's agent" in _iss_reason(_opr1)
+    and _iss_decision(_opr3) == "deny" and "credit aj's agent" not in _opr2 and _opr2.strip() == "",
+    "out %r | %r | %r" % (_opr1[:90], _opr2[:60], _opr3[:90]),
+)
+_oc1 = _iss_guard('gh issue comment 5 --body "Co-Authored-By: Claude <x>"')
+_off = _iss_guard(_att_trailer, HOUSE_RULES_ATTRIBUTION="off")
+commit_case(
+    "attribution: an issue comment crediting Claude is refused, and HOUSE_RULES_ATTRIBUTION=off disables the check",
+    _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
+    "out %r | off %r" % (_oc1[:90], _off[:80]),
+)
+_opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
+commit_case(
+    "attribution: the same refusal applies through the PowerShell tool",
+    _iss_decision(_opw) == "deny" and "credit aj's agent" in _iss_reason(_opw),
+    "out %r" % _opw[:140],
+)
+
+# -- #109: gh issue close ---------------------------------------------------------------------------
+_occ = _iss_guard("gh issue close 5")
+_issues_outputs.append(("issue close", _occ))
+commit_case(
+    "close: `gh issue close` asks, says the user must have tested, and tells Claude the label follow-up",
+    _iss_decision(_occ) == "ask" and "tested" in _iss_reason(_occ) and "Claude completed this" in _iss_reason(_occ)
+    and "Claude completed this" in json.loads(_occ)["hookSpecificOutput"].get("additionalContext", ""),
+    "out %r" % _occ[:160],
+)
+_bad = []
+for _c in ("gh issue close 5 --comment done", "gh issue edit 5 --state closed", "cd x && gh issue close 5",
+           "gh api -X PATCH repos/o/r/issues/5 -f state=closed", "gh api repos/o/r/issues/5 --method PATCH -f state=closed"):
+    if _iss_decision(_iss_guard(_c)) != "ask":
+        _bad.append(_c)
+commit_case("close: edit --state closed, a chained close and gh api PATCH to closed also ask", not _bad, "not asked: %r" % _bad)
+_bad = []
+for _c in ("gh issue comment 5 --body hi", 'gh issue create --title t --body b', "gh issue edit 5 --add-label bug",
+           "gh api repos/o/r/issues/5", 'git commit -m "gh issue close 5 is gated"'):
+    if _iss_decision(_iss_guard(_c)) == "ask" and "closing an issue" in _iss_reason(_iss_guard(_c)):
+        _bad.append(_c)
+commit_case("close: comment, create, label edits, reads and a commit message mentioning it are not affected", not _bad, "affected: %r" % _bad)
+_ocm = _iss_guard("git add -A && git commit -m x && gh issue close 5")
+commit_case(
+    "close: a chained command asks once with both reasons in the prompt",
+    _iss_decision(_ocm) == "ask" and "closing an issue" in _iss_reason(_ocm) and "writes history" in _iss_reason(_ocm),
+    "out %r" % _ocm[:120],
+)
+
+# -- SessionStart open-issue list (issuelist) ---------------------------------------------------------
+_dl = _iss_repo(remote="https://github.com/o/r.git")
+if os.path.exists(_ISS_MARK):
+    os.remove(_ISS_MARK)
+_, _ol, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+_issues_outputs.append(("issuelist", _ol))
+_lctx = _stop_context(_ol)
+commit_case(
+    "issuelist: a GitHub repo gets the open issue titles as SessionStart context",
+    "#7 Fix the login screen" in _lctx and "#3 Add sound" in _lctx and "SessionStart" in _ol and len(_lctx) < 1200,
+    "out %r" % _ol[:160],
+)
+_cachef = os.path.join(_as_git(_dl, "rev-parse", "--absolute-git-dir"), "house-rules-issues-cache.json")
+try:
+    _lmsg = json.loads(_ol).get("systemMessage", "")
+except ValueError:
+    _lmsg = "unparseable"
+commit_case(
+    "issuelist: the user sees `house-rules: 2 open issues loaded` in the same single JSON object as the context",
+    _lmsg == "house-rules: 2 open issues loaded" and _lctx != "" and _ol.strip().count("\n") == 0,
+    "systemMessage %r" % _lmsg,
+)
+_iss_stub(False)
+_, _ol2, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+commit_case(
+    "issuelist: a second start within 60 s uses the cache and does not call gh again",
+    os.path.isfile(_cachef) and "#7 Fix the login screen" in _stop_context(_ol2), "out %r" % _ol2[:100],
+)
+os.remove(_cachef)
+_, _ol3, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+commit_case(
+    "issuelist: a gh failure prints `could not list open issues (<reason>)` and no context",
+    "could not list open issues (HTTP 401: bad credentials" in _ol3 and _stop_context(_ol3) == "", "out %r" % _ol3[:160],
+)
+commit_case(
+    "issuelist: a gh failure shows no 'loaded' note, only the could-not-list message",
+    "loaded" not in _ol3 and "open issues" in _ol3, "out %r" % _ol3[:100],
+)
+os.remove(_cachef) if os.path.exists(_cachef) else None
+_iss_stub("empty")
+_, _ol3b, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl)
+try:
+    _emsg = json.loads(_ol3b).get("systemMessage", "")
+except ValueError:
+    _emsg = "unparseable"
+commit_case(
+    "issuelist: an empty list shows `house-rules: no open issues`",
+    _emsg == "house-rules: no open issues", "systemMessage %r" % _emsg,
+)
+os.remove(_cachef) if os.path.exists(_cachef) else None
+_iss_stub(True)
+_dnr = _iss_repo(remote="git@example.com:o/r.git")
+_, _ol4, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dnr}, _dnr)
+_dnr2 = _iss_repo()
+_, _ol5, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dnr2}, _dnr2)
+# No gh on PATH is tested in-process, with shutil.which patched and then restored. A PATH built
+# from dirname(SH) does not work: on a Linux runner gh lives in /usr/bin beside sh and git.
+import importlib.util as _ig_util
+_ig_spec = _ig_util.spec_from_file_location("hook_nogh", HOOK)
+_ig_mod = _ig_util.module_from_spec(_ig_spec)
+_ig_spec.loader.exec_module(_ig_mod)
+_ig_which = shutil.which
+shutil.which = lambda *_a, **_k: None
+try:
+    _ig_res = _ig_mod._open_issues_text(_dl)
+finally:
+    shutil.which = _ig_which
+_ol6 = "" if _ig_res == ("", None) else "unexpected result %r" % (_ig_res,)
+commit_case(
+    "issuelist: no GitHub remote, no remote at all, or no gh on PATH is silent (nothing to list)",
+    _ol4.strip() == "" and _ol5.strip() == "" and _ol6.strip() == "", "out %r %r %r" % (_ol4[:40], _ol5[:40], _ol6[:40]),
+)
+_, _ol7, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl, HOUSE_RULES_ISSUES="off")
+commit_case("issuelist: HOUSE_RULES_ISSUES=off prints nothing", _ol7.strip() == "", "out %r" % _ol7[:60])
+
+# -- constraints the plan sets --------------------------------------------------------------------------
+if os.path.exists(_ISS_MARK):
+    os.remove(_ISS_MARK)
+_iss_stub(True)
+_dq = _iss_repo(remote="https://github.com/o/r.git")
+_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dq, plan=_ISS_PLAN5), _dq)
+_iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dq, file_path=os.path.join(_dq, "a.cs")), _dq)
+_iss_created(_dq, _label_cmd, 1)
+_iss_guard("gh issue close 5", _dq)
+_iss_guard('gh pr create --title T --body "Refs #1"', _dq)
+run_hook("handover", stop_payload(last_assistant_message="Done.", cwd=_dq), env=_iss_env())
+commit_case(
+    "issues: delegate, commitgate, the Bash PostToolUse entry, guard and handover never run gh (no network on a tool call)",
+    not os.path.exists(_ISS_MARK), "gh stub marker present: %s" % os.path.exists(_ISS_MARK),
+)
+_multi = []
+for _name, _o in _issues_outputs:
+    if not _o.strip():
+        continue
+    try:
+        json.loads(_o)
+    except ValueError:
+        _multi.append("%s: %r" % (_name, _o[:80]))
+commit_case("issues: every new output parses as exactly one JSON object", not _multi, "; ".join(_multi) or "%d outputs checked" % len(_issues_outputs))
+
+_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
+# The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count.
+# 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
+# the same cost as artifact's, and the only way to tell the timer an action actually ran.
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] for h in g["hooks"])]
+_tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
+_count_entries = sum(len(g["hooks"]) for g in _non_agent)
+commit_case(
+    "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 11 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
+)
+_rules_text = read(RULES_FILE)
+_detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
+commit_case(
+    "issues: the rules section and its detail file exist, and the plugin is 2.55.0",
+    "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
+    and "HOUSE_RULES_ISSUES=off" in read(_detail)
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.55.0",
+    "rules section + detail file + version",
+)
+
+commit_case(
+    "the builder and archivist commit as they go, not only if asked",
+    all(
+        phrase in read(os.path.join(HERE, "..", "agents", n))
+        and "only if asked to commit" not in read(os.path.join(HERE, "..", "agents", n))
+        for n, phrase in (("builder.md", "Commit as you go"), ("archivist.md", "Commit each finished piece as you go"))
+    ),
+    "agents/builder.md, agents/archivist.md",
+)
+
+# profile: a saved memory restating the replaced commit rule is flagged at session start.
+_mem = tempfile.mkdtemp(prefix="house-rules-memory-", dir=_FIXTURE_ROOT)
+with open(os.path.join(_mem, "MEMORY.md"), "w", encoding="utf-8") as f:
+    f.write("# Memory\n\n- Never run git actions; commit before destructive changes\n")
+with open(os.path.join(_mem, "other.md"), "w", encoding="utf-8") as f:
+    f.write("- prefers tabs over spaces\n")
+_, out, _ = run_hook("profile", "", env=_project_env(_FIXTURE_ROOT, HOUSE_RULES_MEMORY_DIR=_mem))
+commit_case(
+    "profile: a memory restating the old commit rule is flagged by file and line at session start",
+    "restates the old commit rule" in out and "MEMORY.md:3" in out and "other.md" not in out,
+    "found: %s" % ("yes" if "restates the old commit rule" in out else "no"),
+)
+_clean_mem = tempfile.mkdtemp(prefix="house-rules-memory-clean-", dir=_FIXTURE_ROOT)
+with open(os.path.join(_clean_mem, "MEMORY.md"), "w", encoding="utf-8") as f:
+    f.write("- Commit freely on claude/ branches\n")
+_, out, _ = run_hook("profile", "", env=_project_env(_FIXTURE_ROOT, HOUSE_RULES_MEMORY_DIR=_clean_mem))
+commit_case(
+    "profile: a memory that agrees with the commit rule adds nothing",
+    "restates the old commit rule" not in out,
+    "flagged: %s" % ("yes" if "restates the old commit rule" in out else "no"),
+)
+
 # --- the check gives guidance, not a hook error ----------------------------------------------
 code, out, err = run_hook(
     "handover", stop_payload(last_assistant_message="```powershell\nGet-ChildItem\n```")
@@ -2529,32 +3877,131 @@ else:
     report("FAIL", "the handover check emits Stop feedback, not a blocking hook error")
     print(f"          got: {out[:200]!r}")
 
-# --- the checklist in hook.py's handover handler has not drifted from the rules document ----
-drift = []
-for phrase in [
-    "fence label",
-    "working directory",
-    "UNTESTED",
-    "Run button",
-    "does not depend on where the prompt is",
-    "hand over a command",
-    "open a terminal or PowerShell there",
-    "One numbered step per action",
-    "step-card format",
-    "Step 1 of",
-    "You should see:",
-    "above the fence",
-    "Replacing step",
-    "never announces its own compliance",
-]:
-    if phrase.lower() not in rules_text.lower():
-        drift.append(phrase)
-if not drift:
-    report("PASS", "handover checklist still matches the rules document")
-    print("          every key phrase in the checklist appears in rules/house-rules.md")
-else:
-    report("FAIL", "handover checklist still matches the rules document")
-    print(f"          in handover checklist but missing from house-rules.md: {'; '.join(drift)}")
+# --- the restatement table --------------------------------------------------------------------
+# Each restatement of a house rule is one row, checked both directions at once (rules corpus and
+# its own emitted source) - adding a restatement to check is a row here, not a new drift block.
+# emitted_only holds phrases about the note's own behaviour that the rules never state, so they
+# can only be checked one way - but deleting one from the emitted note must still fail.
+Restatement = namedtuple("Restatement", "name source phrases case_sensitive emitted_only")
+Restatement.__new__.__defaults__ = ((),)
+
+RESTATEMENTS = [
+    Restatement(
+        "the scope reminder (long form)",
+        lambda: run_hook("scope", json.dumps({"prompt": "run the build script"}))[1],
+        [
+            "response depth", "only what was asked", "ask instead of assuming",
+            "project directory", "hand over a command", "tier that changed",
+            "success claim", "whole workflow", "have not run", "own branch", "branch off first",
+        ],
+        False,
+    ),
+    Restatement(
+        "the Stop commit note (#97), on the user's branch",
+        lambda: (lambda r: run_hook(
+            "handover",
+            stop_payload(transcript_path=_wrote_transcript("restate-commit", [os.path.join(r, "a.py")]),
+                         last_assistant_message="Changed a.py."),
+            env=_project_env(r),
+        )[1])(_commit_repo("main", committed=["a.py"], dirty=["a.py"])),
+        ["own branch", "branch off first", "scoped to"],
+        False,
+        ("commit on your own branch", "scoped to those paths", "say what you committed and where",
+         "not a checkpoint", "claude/<topic>"),
+    ),
+    Restatement(
+        "the branch nudge (#97)",
+        lambda: (lambda r: _nudge(r, "a.py"))(_commit_repo("main", committed=["a.py"], dirty=["a.py"])),
+        ["own branch", "branch off", "scoped to"],
+        False,
+        ("commit on your own branch", "scoped to the paths you changed", "only uncommitted change"),
+    ),
+    Restatement(
+        "the compile-verification note (runnable handler, .cs files)",
+        lambda: run_hook(
+            "runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\Assets\Scripts\Enemy.cs"}})
+        )[1],
+        ["should compile", "stand-in", "real compiler", "batch mode", "dotnet build"],
+        False,
+    ),
+    Restatement(
+        "the runnable note (runnable handler, scripts)",
+        lambda: run_hook("runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\deploy.sh"}}))[1],
+        [
+            "whole workflow", "starting point", "hand over a command", "run it twice",
+            "realistic", "not proof it works",
+        ],
+        False,
+        ("someone thought to write",),
+    ),
+    Restatement(
+        "the delegate reminder (ExitPlanMode, including the worktree-isolation mandate)",
+        lambda: run_hook("delegate", "")[1],
+        [
+            "@house-rules:builder", "plan is settled", "proactiv", "one file",
+            "three steps or fewer", "one delegation per group", "isolation", "worktree",
+        ],
+        False,
+    ),
+    Restatement(
+        "the harvest reminder (long-form comments)",
+        lambda: run_hook(
+            "harvest",
+            json.dumps({"tool_name": "Write", "tool_input": {"file_path": "/proj/Orbit.cs", "content": ESSAY_CS}}),
+        )[1],
+        [
+            "long-form", "one-line pointer", "@house-rules:archivist", "docs/4-systems",
+            "docs/6-decisions/Decisions.md", "doc-ref", "docref.py", "<!-- ref:",
+            "How it works", "Traps", "Invariants",
+        ],
+        False,
+        ("Do not change how you write", "the user was not prompted"),
+    ),
+    Restatement(
+        "the command-handover checklist (Stop hook)",
+        lambda: run_hook(
+            "handover",
+            json.dumps(
+                {
+                    "session_id": "verify",
+                    "hook_event_name": "Stop",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "```powershell\nGet-ChildItem\n```",
+                }
+            ),
+        )[1],
+        [
+            "fence label", "working directory", "UNTESTED", "Run button",
+            "not depend on where the prompt is", "open a terminal or PowerShell there",
+            "One numbered step per action", "step-card format", "Step 1 of",
+            "You should see:", "above the fence", "Replacing step",
+            "never announces its own compliance",
+        ],
+        False,
+    ),
+]
+
+for _restatement in RESTATEMENTS:
+    _source_text = _restatement.source()
+    if _restatement.case_sensitive:
+        _in_rules = lambda p: p in rules_text
+        _in_source = lambda p: p in _source_text
+    else:
+        _in_rules = lambda p: p.lower() in rules_text.lower()
+        _in_source = lambda p: p.lower() in _source_text.lower()
+    _missing_rules = [p for p in _restatement.phrases if not _in_rules(p)]
+    _missing_source = [
+        p for p in list(_restatement.phrases) + list(_restatement.emitted_only) if not _in_source(p)
+    ]
+    if not _missing_rules and not _missing_source:
+        report("PASS", f"{_restatement.name} matches the rules document, both ways")
+        print("          every phrase appears in house-rules.md AND in what it emits")
+    else:
+        report("FAIL", f"{_restatement.name} matches the rules document, both ways")
+        if _missing_rules:
+            print(f"          missing from house-rules.md: {'; '.join(_missing_rules)}")
+        if _missing_source:
+            print(f"          missing from the emitted restatement: {'; '.join(_missing_source)}")
 
 # --- the state machine this replaced is really gone, and no *.sh hook script survives --------
 gone = []
@@ -2589,8 +4036,8 @@ def check_delegate(title, empty_path):
     bad = []
     if '"hookEventName":"PostToolUse"' not in out:
         bad.append("wrong or missing hookEventName")
-    if "@house-rules:executor" not in out:
-        bad.append("it does not name the executor subagent")
+    if "@house-rules:builder" not in out:
+        bad.append("it does not name the builder subagent")
     if "one file" not in out or "three steps or fewer" not in out:
         bad.append("the skip-it exception is not stated as a count (one file, three steps)")
     if "proactiv" not in out:
@@ -2610,7 +4057,7 @@ check_delegate("the delegation nudge still works with PATH empty (it depends on 
 deldrift = []
 if '"matcher": "ExitPlanMode"' not in hooks_json_text:
     deldrift.append("hooks.json has no ExitPlanMode matcher")
-if "@house-rules:executor" not in rules_text:
+if "@house-rules:builder" not in rules_text:
     deldrift.append("house-rules.md no longer states the delegation rule")
 if not deldrift:
     report("PASS", "delegate runs on ExitPlanMode and matches the rules document")
@@ -2645,37 +4092,78 @@ else:
     print(f"          {'; '.join(carddrift)}")
 
 
-# --- the executor subagent is pinned to Sonnet ---------------------------------------------
+# --- the tier agents exist, each pinned to its model, with the tool allowlist the plan set -------
+TIER_TOOLS = {
+    "scout": ["Read", "Grep", "Glob"],
+    "builder": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+    "reviewer": ["Read", "Grep", "Glob", "Bash"],
+}
 agentdrift = []
-if not os.path.isfile(AGENT):
-    agentdrift.append("agents/executor.md is missing")
-else:
-    agent_text = read(AGENT)
-    if not re.search(r"^model: sonnet$", agent_text, re.MULTILINE):
-        agentdrift.append("executor.md does not pin model: sonnet")
-    if not re.search(r"^name: executor$", agent_text, re.MULTILINE):
-        agentdrift.append("executor.md has no name: executor")
+for _name, _model in TIERS.items():
+    _f = os.path.join(AGENTS_DIR, _name + ".md")
+    if not os.path.isfile(_f):
+        agentdrift.append(f"agents/{_name}.md is missing")
+        continue
+    _t = read(_f)
+    if not re.search(rf"^model: {_model}$", _t, re.MULTILINE):
+        agentdrift.append(f"{_name}.md does not pin model: {_model}")
+    if not re.search(rf"^name: {_name}$", _t, re.MULTILINE):
+        agentdrift.append(f"{_name}.md has no name: {_name}")
+    _tm = re.search(r"^tools:\s*(.+)$", _t, re.MULTILINE)
+    _got = [x.strip() for x in _tm.group(1).split(",")] if _tm else []
+    if _got != TIER_TOOLS[_name]:
+        agentdrift.append(f"{_name}.md tools are {_got}, expected {TIER_TOOLS[_name]}")
+    if "Agent" in _got:
+        agentdrift.append(f"{_name}.md allows the Agent tool, so it could start subagents")
+    _body = _t.split("---", 2)[-1].strip().splitlines()
+    if len(_body) > 15:
+        agentdrift.append(f"{_name}.md body is {len(_body)} lines, the limit is 15")
     for dead in ["hooks", "mcpServers", "permissionMode"]:
-        if re.search(rf"^{dead}:", agent_text, re.MULTILINE):
-            agentdrift.append(f"executor.md sets {dead}, which plugin subagents ignore")
+        if re.search(rf"^{dead}:", _t, re.MULTILINE):
+            agentdrift.append(f"{_name}.md sets {dead}, which plugin subagents ignore")
+if os.path.isfile(os.path.join(AGENTS_DIR, "executor.md")):
+    agentdrift.append("agents/executor.md still exists, it was retired")
 if not agentdrift:
-    report("PASS", "the executor subagent exists and is pinned to Sonnet")
-    print("          execution delegated to @house-rules:executor runs on sonnet, not opus")
+    report("PASS", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
+    print("          short tool allowlists, no Agent tool, bodies of 15 lines or fewer, executor.md gone")
 else:
-    report("FAIL", "the executor subagent exists and is pinned to Sonnet")
+    report("FAIL", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
     print(f"          {'; '.join(agentdrift)}")
 
-# --- executor.md does not claim the rules are already in its context, and carries a digest ----
-# A clean @house-rules:executor spawn was asked directly and answered no: SessionStart
-# additionalContext does not reach subagents. executor.md used to assert the opposite ("The
-# house rules are already in this session's context"), which is the bug this check catches.
-digestdrift = []
-if not os.path.isfile(AGENT):
-    digestdrift.append("agents/executor.md is missing")
+# --- no live file still names the retired executor agent ----------------------------------------
+_stale = []
+_skip_dirs = {".git", "node_modules", "__pycache__", "sessions", "archive", "plans", "generated", "worktrees"}
+for _dp, _dns, _fns in os.walk(ROOT):
+    _dns[:] = [d for d in _dns if d not in _skip_dirs and d != "6-decisions"]
+    for _fn in _fns:
+        if not _fn.endswith((".md", ".py", ".json", ".sh", ".bat", ".ps1", ".yml", ".html")):
+            continue
+        _fp = os.path.join(_dp, _fn)
+        if os.path.abspath(_fp) == os.path.abspath(__file__):
+            continue
+        try:
+            if "house-rules:executor" in read(_fp):
+                _stale.append(os.path.relpath(_fp, ROOT))
+        except OSError:
+            pass
+if not _stale:
+    report("PASS", "no live file still names house-rules:executor")
+    print("          docs/sessions, docs/archive, docs/plans and past Decisions entries are history and not scanned")
 else:
-    agent_text = read(AGENT)
+    report("FAIL", "no live file still names house-rules:executor")
+    print(f"          still named in: {', '.join(_stale)}")
+
+# --- archivist.md does not claim the rules are already in its context, and carries a digest ----
+# A clean spawn was asked directly and answered no: SessionStart additionalContext does not
+# reach subagents. The tier files carry no digest (the subagentrules hook injects the core);
+# archivist.md keeps its own, so only it is checked here.
+digestdrift = []
+if not os.path.isfile(ARCHIVIST):
+    digestdrift.append("agents/archivist.md is missing")
+else:
+    agent_text = read(ARCHIVIST)
     if "already in this session" in agent_text.lower():
-        digestdrift.append("executor.md still claims the rules are already in its context")
+        digestdrift.append("archivist.md still claims the rules are already in its context")
     for phrase in [
         "not injected",
         "hand over a command you have not run",
@@ -2683,12 +4171,12 @@ else:
         "commit messages",
     ]:
         if phrase.lower() not in agent_text.lower():
-            digestdrift.append(f"executor.md digest is missing: {phrase!r}")
+            digestdrift.append(f"archivist.md digest is missing: {phrase!r}")
 if not digestdrift:
-    report("PASS", "executor.md carries its own rules digest instead of assuming inherited context")
+    report("PASS", "archivist.md carries its own rules digest instead of assuming inherited context")
     print("          no 'already in this session' claim; the digest covers the load-bearing rules")
 else:
-    report("FAIL", "executor.md carries its own rules digest instead of assuming inherited context")
+    report("FAIL", "archivist.md carries its own rules digest instead of assuming inherited context")
     print(f"          {'; '.join(digestdrift)}")
 
 # --- the output style exists and IS forced ---------------------------------------------------
@@ -2704,7 +4192,7 @@ else:
         styledrift.append("the style has no description: field")
     if not re.search(r"^keep-coding-instructions: true$", style_text, re.MULTILINE):
         styledrift.append("the style does not keep-coding-instructions, so it would replace them")
-    # The style is now the single copy of the six-field checklist (docs/Decisions.md,
+    # The style is now the single copy of the six-field checklist (docs/6-decisions/Decisions.md,
     # 2026-09-22); the check below this one proves the core points here instead of restating it.
     for phrase in ["runs from anywhere", "One numbered step per action", "UNTESTED:"]:
         if phrase not in style_text:
@@ -2722,7 +4210,7 @@ else:
     print(f"          {'; '.join(styledrift)}")
 
 # --- the core's card section points at the output style instead of restating it --------------
-# Moved out of house-rules.md 2.17.0 to stay under the per-hook context limit (docs/Decisions.md,
+# Moved out of house-rules.md 2.17.0 to stay under the per-hook context limit (docs/6-decisions/Decisions.md,
 # 2026-09-22): the core keeps a one-line pointer, the output style keeps the actual checklist.
 cardptr = []
 _core_text = read(RULES_FILE)
@@ -2786,7 +4274,7 @@ else:
     print(f"          {'; '.join(teachdrift)}")
 
 # --- every surface the architecture.md table claims has a way to be checked ------------------
-# The table moved from CLAUDE.md to docs/architecture.md (docs/Decisions.md, 2026-09-22, step 2);
+# The table moved from CLAUDE.md to docs/architecture.md (docs/6-decisions/Decisions.md, 2026-09-22, step 2);
 # surface names are read out of the table itself rather than hardcoded here.
 surfdrift = []
 surfaces = []
@@ -2929,13 +4417,15 @@ else:
     report("FAIL", "the claude.ai chat block exists and matches the rules document")
     print(f"          {'; '.join(chatdrift)}")
 
-# --- the executor description authorizes proactive use ----------------------------------------
-if os.path.isfile(AGENT) and "proactiv" in read(AGENT).lower():
-    report("PASS", "the executor description authorizes proactive use")
+# --- the scout and builder descriptions authorize proactive use ----------------------------------------
+_proactive = [n for n in ("scout", "builder")
+              if "proactiv" not in read(os.path.join(AGENTS_DIR, n + ".md")).lower()]
+if not _proactive:
+    report("PASS", "the scout and builder descriptions authorize proactive use")
     print('          description contains "proactively", satisfying the Agent tool\'s own gate')
 else:
-    report("FAIL", "the executor description authorizes proactive use")
-    print('          agents/executor.md description has no "proactively" (or similar) wording')
+    report("FAIL", "the scout and builder descriptions authorize proactive use")
+    print(f'          {", ".join(_proactive)}: description has no "proactively" (or similar) wording')
 
 # --- install.py still writes the model setting the README claims ------------------------------
 install_path = os.path.join(ROOT, "tools", "install.py")
@@ -2965,7 +4455,7 @@ if _absent:
     pass  # already reported as skipped above
 elif not moddrift:
     report("PASS", "install.py sets model = opusplan and the docs scope it correctly")
-    print("          opusplan on the CLI and IDE; every other surface via @house-rules:executor")
+    print("          opusplan on the CLI and IDE; every other surface via @house-rules:builder")
 else:
     report("FAIL", "install.py sets model = opusplan and the docs scope it correctly")
     print(f"          {'; '.join(moddrift)}")
@@ -3068,7 +4558,7 @@ else:
 # --- the architecture tables in docs/architecture.md and the README match hooks.json ----------
 # Registered dispatch events, read from hooks.json's run.sh invocations rather than filenames -
 # there is only one script (run.sh) now, dispatched by event argument. The table moved from
-# CLAUDE.md to docs/architecture.md (docs/Decisions.md, 2026-09-22, step 2).
+# CLAUDE.md to docs/architecture.md (docs/6-decisions/Decisions.md, 2026-09-22, step 2).
 registered_events = sorted(set(re.findall(r'run\.sh\\" ([a-z]+)', hooks_json_text)))
 docdrift = []
 _absent = absent_repo_files("docs/architecture.md", readme_rel)
@@ -3081,7 +4571,7 @@ for doc in ([] if _absent else [ARCHDOC, readme_path]):
     table_lines = "\n".join(
         line
         for line in doc_text.splitlines()
-        if re.match(r"^\| `(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop|SubagentStart|SubagentStop)`", line)
+        if re.match(r"^\| `(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|PermissionRequest|Stop|SubagentStart|SubagentStop)`", line)
     )
     for event in registered_events:
         if event not in table_lines:
@@ -3115,7 +4605,7 @@ else:
 
 # --- the "What trips the guard" README table matches GUARD_R3/GUARD_R4's actual git verbs -----
 # Why this tokenizes the table instead of hand-copying the verb list, and the incident that
-# made it necessary: docs/systems/verify-suites.md, Invariants ("The guarded-verb list is
+# made it necessary: docs/4-systems/verify-suites.md, Invariants ("The guarded-verb list is
 # never hand-copied into a doc").
 GUARDED_GIT_VERBS = [
     "push", "commit", "reset", "revert", "clean", "rebase", "merge",
@@ -3294,6 +4784,201 @@ try:
 finally:
     shutil.rmtree(assets_fixture, ignore_errors=True)
 
+# --- standards stays under budget in Unity projects, where the Unity rule now lives ----------
+# The standards budget was only ever measured in this repo, which has no Unity markers, so a
+# Unity project sailed past the 10,000-char hard limit unseen (docs/6-decisions/Decisions.md,
+# 2026-09-29). These two fixtures are the check that was missing.
+STANDARDS_BUDGET = 9_500
+
+
+def _standards_len(out):
+    try:
+        return len(json.loads(out)["hookSpecificOutput"]["additionalContext"])
+    except Exception as exc:
+        return f"unparseable ({exc}): {out[:120]!r}"
+
+
+for _title, _files in [
+    ("a Unity-only project", {"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"}),
+    ("a Unity + Node project", {"Assets/Scripts/a.cs": "", "package.json": "{}"}),
+]:
+    def _within_budget(out):
+        n = _standards_len(out)
+        return isinstance(n, int) and n <= STANDARDS_BUDGET, f"{n} chars (budget {STANDARDS_BUDGET}, hard limit 10,000)"
+
+    std_case(f"standards stays under its {STANDARDS_BUDGET:,}-char budget in {_title}", _files, _within_budget)
+
+_UNITY_RULE_HEADING = "## Unity work starts with the Unity plugin and the Unity CLI"
+std_case(
+    "the Unity tools-first rule reaches a Unity project through standards, with both pointers",
+    {"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"},
+    lambda out: (
+        _UNITY_RULE_HEADING in out
+        and "rules/detail/unity-tools-first.md" in out
+        and "rules/standards/csharp-unity-detail.md" in out
+        and "${CLAUDE_PLUGIN_ROOT}" not in out,
+        f"got: {_standards_len(out)} chars; heading={_UNITY_RULE_HEADING in out}",
+    ),
+)
+std_case(
+    "the Unity tools-first rule does not reach a project with no Unity markers",
+    {},
+    lambda out: (_UNITY_RULE_HEADING not in out, "a bare directory got the Unity rule" if _UNITY_RULE_HEADING in out else "absent, as intended"),
+)
+_, _inject_out, _ = run_hook("inject", "", env=env_in(ROOT))
+_core_text = read(RULES_FILE)
+if (
+    "Unity work starts" not in _inject_out
+    and "unity-tools-first" not in _inject_out
+    and "Unity work starts" not in _core_text
+):
+    report("PASS", "the Unity tools-first rule is not in the always-injected core")
+    print("          neither house-rules.md nor the inject output carries it")
+else:
+    report("FAIL", "the Unity tools-first rule is not in the always-injected core")
+    print("          the Unity rule is still in house-rules.md or the inject output")
+_unity_detail = os.path.join(STANDARDS_DIR, "csharp-unity-detail.md")
+if os.path.isfile(_unity_detail) and all(
+    h in read(_unity_detail)
+    for h in ("## Unity-specific patterns", "## Performance", "## Testing", "## Verifying compilation", "## Tooling (Rider)")
+):
+    report("PASS", "rules/standards/csharp-unity-detail.md holds the Unity sections moved out of the core")
+    print("          all five named sections are present")
+else:
+    report("FAIL", "rules/standards/csharp-unity-detail.md holds the Unity sections moved out of the core")
+    print(f"          {_unity_detail} is missing or lacks a moved section")
+
+# --- the profile reports hardware and the Claude plan, and says so when it cannot -----------
+# PATH is replaced by a directory holding only the fakes each case wants, so the result does not
+# depend on whether this machine has nvidia-smi or a logged-in claude. POSIX shell fakes.
+def _fake_bin(**scripts):
+    d = tempfile.mkdtemp(prefix="house-rules-fakebin-")
+    for name, body in scripts.items():
+        path = os.path.join(d, name.replace("_", "-"))
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write("#!/bin/sh\n" + body + "\n")
+        os.chmod(path, 0o755)
+    return d
+
+
+def _profile_out(path_dir, remote=False, **extra):
+    env = dict(os.environ)
+    env.pop("CLAUDE_CODE_REMOTE", None)
+    env["PATH"] = path_dir
+    env["HOUSE_RULES_ENV_FILE"] = "/nonexistent-on-purpose-env"
+    env["HOUSE_RULES_HANDOVER_TARGET_FILE"] = "/nonexistent-on-purpose-handover"
+    if remote:
+        env["CLAUDE_CODE_REMOTE"] = "1"
+    env.update(extra)
+    _, out, _ = run_hook("profile", "", env=env)
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return out
+
+
+if os.name == "nt":
+    for _t in ("the profile names CPU, RAM, GPU, free disk and Claude plan",
+               "a missing nvidia-smi is reported as 'GPU: not detected (...)'",
+               "a claude that reports no plan field is 'Claude plan: not detected (...)'",
+               "a claude that reports a plan field has it shown",
+               "nvidia-smi output is reported as GPU name and VRAM"):
+        report("SKIP", _t + " (the fakes are POSIX shell scripts)")
+else:
+    _no_plan = _fake_bin(claude='echo \'{"loggedIn":true,"authMethod":"oauth_token","apiProvider":"firstParty"}\'')
+    _with_plan = _fake_bin(claude='echo \'{"loggedIn":true,"subscriptionType":"max"}\'',
+                           nvidia_smi='echo "NVIDIA Test GPU, 8192 MiB"')
+    _empty = tempfile.mkdtemp(prefix="house-rules-emptybin-")
+    try:
+        _p = _profile_out(_no_plan)
+        _missing = [f for f in ("CPU:", "RAM:", "GPU:", "Free disk:", "Claude plan:") if f not in _p]
+        report("PASS" if not _missing else "FAIL", "the profile names CPU, RAM, GPU, free disk and Claude plan")
+        print(f"          missing fields: {_missing}" if _missing else "          all five field names present")
+
+        _gpu_line = next((l for l in _p.splitlines() if l.startswith("GPU:")), "")
+        report("PASS" if _gpu_line.startswith("GPU: not detected (") and "nvidia-smi" in _gpu_line else "FAIL",
+               "a missing nvidia-smi is reported as 'GPU: not detected (...)'")
+        print(f"          {_gpu_line!r}")
+
+        _plan_line = next((l for l in _p.splitlines() if l.startswith("Claude plan:")), "")
+        report("PASS" if _plan_line.startswith("Claude plan: not detected (") and "no plan field" in _plan_line else "FAIL",
+               "a claude that reports no plan field is 'Claude plan: not detected (...)'")
+        print(f"          {_plan_line!r}")
+
+        _p2 = _profile_out(_with_plan)
+        _plan2 = next((l for l in _p2.splitlines() if l.startswith("Claude plan:")), "")
+        report("PASS" if _plan2.startswith("Claude plan: max") else "FAIL",
+               "a claude that reports a plan field has it shown")
+        print(f"          {_plan2!r}")
+
+        _gpu2 = next((l for l in _p2.splitlines() if l.startswith("GPU:")), "")
+        report("PASS" if "NVIDIA Test GPU" in _gpu2 and "8192 MiB" in _gpu2 else "FAIL",
+               "nvidia-smi output is reported as GPU name and VRAM")
+        print(f"          {_gpu2!r}")
+
+        _p3 = _profile_out(_empty)
+        _plan3 = next((l for l in _p3.splitlines() if l.startswith("Claude plan:")), "")
+        report("PASS" if _plan3.startswith("Claude plan: not detected (claude not on PATH)") else "FAIL",
+               "no claude on PATH is 'Claude plan: not detected (claude not on PATH)'")
+        print(f"          {_plan3!r}")
+    finally:
+        for _d in (_no_plan, _with_plan, _empty):
+            shutil.rmtree(_d, ignore_errors=True)
+
+# --- a remote profile never presents the sandbox's hardware as the local build budget --------
+_remote_empty = tempfile.mkdtemp(prefix="house-rules-emptybin-")
+try:
+    _r = _profile_out(_remote_empty, remote=True)
+    _r_ok = (
+        "NOT the user's local build budget" in _r
+        and "rules/handover-target.md" in _r
+        and "## Hardware (the local build budget)" not in _r
+        and "Ask for their hardware" in _r
+    )
+    report("PASS" if _r_ok else "FAIL",
+           "a remote profile labels detected hardware as the sandbox's and asks for the user's")
+    print("          sandbox label, handover-target pointer and hardware question present" if _r_ok
+          else f"          got: {_r[-900:]!r}")
+    _l = _profile_out(_remote_empty, remote=False)
+    report("PASS" if "## Hardware (the local build budget)" in _l and "NOT the user's" not in _l else "FAIL",
+           "a local profile calls the detected hardware the local build budget")
+    print("          local label present, no sandbox caveat")
+finally:
+    shutil.rmtree(_remote_empty, ignore_errors=True)
+
+# --- the open-source-first rule and its detail file agree ------------------------------------
+_free_detail = os.path.join(DETAIL_DIR, "free-first.md")
+_core = read(RULES_FILE)
+_free_problems = []
+if not os.path.isfile(_free_detail):
+    _free_problems.append("rules/detail/free-first.md does not exist")
+else:
+    _fd = read(_free_detail)
+    _core_rungs = ["Local OSS", "cloud OSS", "local free closed", "cloud free closed", "→ paid"]
+    _detail_rungs = ["Local open source", "Cloud open source", "Local free closed source",
+                     "Cloud free closed source", "Any paid option"]
+    _core_rule = _core[_core.find("## Open source first"):].split("\n## ")[0]
+    for label, text, rungs in (("house-rules.md", _core_rule, _core_rungs), ("free-first.md", _fd, _detail_rungs)):
+        pos = [text.find(r) for r in rungs]
+        if min(pos) < 0:
+            _free_problems.append(f"{label} lacks ladder rung(s): {[r for r, p in zip(rungs, pos) if p < 0]}")
+        elif pos != sorted(pos):
+            _free_problems.append(f"{label} names the ladder rungs out of order")
+    for phrase in ("OSI-approved", "Pro or Max", "Break-even", "guess"):
+        if phrase not in _fd:
+            _free_problems.append(f"free-first.md lacks {phrase!r}")
+if "## Open source first; paid is the last resort" not in _core:
+    _free_problems.append("house-rules.md lacks the rule heading")
+if "${CLAUDE_PLUGIN_ROOT}/rules/detail/free-first.md" not in _core:
+    _free_problems.append("house-rules.md does not point at rules/detail/free-first.md")
+if "## Open source first; paid is the last resort" in _core and "## Match response depth" in _core and \
+        _core.index("## Open source first") > _core.index("## Match response depth"):
+    _free_problems.append("the rule is not placed before 'Match response depth'")
+if "free-first.md" not in read(os.path.join(DETAIL_DIR, "environment.md")):
+    _free_problems.append("environment.md does not link free-first.md")
+report("FAIL" if _free_problems else "PASS", "the open-source-first rule and rules/detail/free-first.md exist and agree")
+print(f"          {'; '.join(_free_problems)}" if _free_problems else "          heading, pointer, ladder order in both files, estimate table terms all present")
+
 # run.sh standards with no working interpreter still prints a visible warning and exits 0
 env_nopath = dict(os.environ)
 env_nopath.pop("HOUSE_RULES_PYTHON", None)
@@ -3351,13 +5036,16 @@ if "## Documentation goes in tiers" not in rules_text:
     docs_drift.append("house-rules.md is missing the tiered-docs rule heading")
 if "house-rules:project-docs" not in rules_text:
     docs_drift.append("the tiered-docs rule no longer names the project-docs skill")
-if "docs/Decisions.md" not in rules_text:
-    docs_drift.append("house-rules.md no longer mentions docs/Decisions.md")
+if "docs/6-decisions/Decisions.md" not in rules_text:
+    docs_drift.append("house-rules.md no longer mentions docs/6-decisions/Decisions.md")
 if not os.path.isfile(DOCSKILL):
     docs_drift.append("skills/project-docs/SKILL.md does not exist")
 else:
     skill_text = read(DOCSKILL)
-    for phrase in ["docs/Roadmap.md", "docs/ProjectState.md", "docs/Today.md", "docs/systems", "docs/Decisions.md"]:
+    for phrase in [
+        "docs/2-roadmap/Roadmap.md", "docs/3-state/ProjectState.md", "docs/5-today/Today.md",
+        "docs/4-systems", "docs/6-decisions/Decisions.md",
+    ]:
         if phrase not in skill_text:
             docs_drift.append(f"the skill no longer specifies {phrase}")
 if not docs_drift:
@@ -3389,12 +5077,12 @@ for prompt in ("go ahead", "implement it in two groups", "do it", "proceed", "sh
     code, text = scope_text(prompt)
     if code != 0:
         goahead.append(f"{prompt!r} exited {code} - scope must never exit non-zero")
-    if "@house-rules:executor" not in text:
+    if "@house-rules:builder" not in text:
         goahead.append(f"{prompt!r} is a go-ahead but got no delegation clause")
 for prompt in ("what does this function do?", "explain the guard handler",
                "why did the suite fail?"):
     code, text = scope_text(prompt)
-    if "@house-rules:executor" in text:
+    if "@house-rules:builder" in text:
         goahead.append(f"{prompt!r} is a question, not a go-ahead, but got the clause")
 if not goahead:
     report("PASS", "scope adds the delegation clause on a go-ahead and not on a question")
@@ -3408,7 +5096,7 @@ else:
 # reminder - and it must never be able to take the prompt down with it.
 clause_drift = []
 _, goahead_text = scope_text("go ahead and implement it")
-for phrase in ("@house-rules:executor", "proactiv", "one file", "three steps or fewer"):
+for phrase in ("@house-rules:builder", "proactiv", "one file", "three steps or fewer"):
     if phrase.lower() not in goahead_text.lower():
         clause_drift.append(f"{phrase!r} missing from the emitted go-ahead clause")
     if phrase.lower() not in rules_text.lower():
@@ -3513,12 +5201,12 @@ def sub_payload(**kw):
 
 # announce names the agent, what it DECLARES, the plugin version and the digest fingerprint.
 code, out, err = run_hook("announce", sub_payload(
-    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1", effort="low"
+    hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="x1", effort="low"
 ))
 ann = []
 if code != 0:
     ann.append(f"exit {code}, must never be non-zero")
-for needle in ("house-rules:executor", "declared model sonnet", "digest ", "house-rules 2."):
+for needle in ("house-rules:builder", "declared model sonnet", "digest ", "house-rules 2."):
     if needle not in out:
         ann.append(f"announce output does not mention {needle!r}")
 if not ann:
@@ -3561,7 +5249,7 @@ else:
 # A set model-override env var is the documented way "model: sonnet" is not what runs.
 _ovr = dict(os.environ)
 _ovr["CLAUDE_CODE_SUBAGENT_MODEL_FORCE"] = "opus"
-code, out, err = run_hook("announce", sub_payload(agent_type="house-rules:executor"), env=_ovr)
+code, out, err = run_hook("announce", sub_payload(agent_type="house-rules:builder"), env=_ovr)
 if "CLAUDE_CODE_SUBAGENT_MODEL_FORCE" in out and "may not be what runs" in out:
     report("PASS", "announce warns when a model-override env var is set")
     print("          names the variable that can silently override the declared model")
@@ -3571,7 +5259,7 @@ else:
 
 # verdict turns the declaration into evidence: the model that actually served the subagent.
 code, out, err = run_hook("verdict", sub_payload(
-    hook_event_name="SubagentStop", agent_type="house-rules:executor", agent_id="sonnet"
+    hook_event_name="SubagentStop", agent_type="house-rules:builder", agent_id="sonnet"
 ))
 if code == 0 and "claude-sonnet-4-5-20250929" in out and "MATCH" in out and "2 assistant turns" in out:
     report("PASS", "verdict reports the model that actually served the subagent")
@@ -3581,7 +5269,7 @@ else:
     print(f"          exit {code}, out {out[:200]!r}")
 
 # The case the whole feature exists for: declared Sonnet, actually ran on something else.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="opus"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="opus"))
 if code == 0 and "MISMATCH" in out and "claude-opus-5" in out:
     report("PASS", "verdict reports MISMATCH when the observed model is not the declared one")
     print("          a delegation that did not run on what it declares is now visible")
@@ -3591,7 +5279,7 @@ else:
 
 # The completion-sanity check: zero tool calls across the whole transcript is exactly the
 # hollow "stop" that let a duplicate delegation get dispatched.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"))
 if code == 0 and "SUSPICIOUS COMPLETION" in out and "0 tool calls" in out:
     report("PASS", "verdict flags a completion with zero tool calls")
     print("          a status-update-only finish is now visible, not read as done work")
@@ -3601,7 +5289,7 @@ else:
 
 # One tool call present (so the zero-tool-calls path does not fire), but the last message
 # still reads like a deferral - the other half of the same signal.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="deferral"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="deferral"))
 if code == 0 and "SUSPICIOUS COMPLETION" in out and "i'll report back" in out.lower():
     report("PASS", "verdict flags a last message that matches a deferral phrase")
     print("          names the phrase, does not fire the zero-tool-calls branch instead")
@@ -3611,7 +5299,7 @@ else:
 
 # An ordinary finish - tool calls present, last message an ordinary summary - must not
 # false-positive as a suspicious completion.
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="normal"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="normal"))
 if code == 0 and "SUSPICIOUS COMPLETION" not in out:
     report("PASS", "verdict does not flag an ordinary did-the-work-then-reported-back finish")
     print("          no false positive on a normal completion")
@@ -3621,13 +5309,13 @@ else:
 
 # Nothing fails silently: every "I could not tell" path says so, and says what it tried.
 quiet = []
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="ghost"))
 if code != 0 or "unverified" not in out or "tried:" not in out:
     quiet.append(f"missing transcript: exit {code}, out {out[:120]!r}")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="nomodel"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="nomodel"))
 if code != 0 or "unverified" not in out:
     quiet.append(f"transcript with no model field: exit {code}, out {out[:120]!r}")
-code, out, err = run_hook("verdict", '{"agent_type":"house-rules:executor"}')
+code, out, err = run_hook("verdict", '{"agent_type":"house-rules:builder"}')
 if code != 0 or "unverified" not in out:
     quiet.append(f"not enough fields to locate one: exit {code}, out {out[:120]!r}")
 for ev in ("announce", "verdict"):
@@ -3649,20 +5337,20 @@ else:
 _off = dict(os.environ)
 _off["HOUSE_RULES_DELEGATION"] = "off"
 deloff = []
-for ev, pl in (("announce", sub_payload(agent_type="house-rules:executor")),
-               ("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"))):
+for ev, pl in (("announce", sub_payload(agent_type="house-rules:builder")),
+               ("verdict", sub_payload(agent_type="house-rules:builder", agent_id="sonnet"))):
     code, out, err = run_hook(ev, pl, env=_off)
     if out.strip():
         deloff.append(f"{ev} still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
 _tron = dict(os.environ)
 _tron["HOUSE_RULES_TRACE"] = "off"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="sonnet"), env=_tron)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="sonnet"), env=_tron)
 if "claude-sonnet" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the verdict, which is not a trace")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"), env=_off)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"), env=_off)
 if out.strip():
     deloff.append(f"suspicious-completion report still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="notools"), env=_tron)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"), env=_tron)
 if "SUSPICIOUS COMPLETION" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the suspicious-completion report, which is not a trace")
 if not deloff:
@@ -3713,7 +5401,7 @@ else:
 # Judged against the real rules file, since a hand-copied fixture core would only prove the
 # handler can read a fixture, not that it stays in sync with the rules a human session sees.
 code, out, err = run_hook("subagentrules", sub_payload(
-    hook_event_name="SubagentStart", agent_type="house-rules:executor", agent_id="x1"
+    hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="x1"
 ))
 sar = []
 if code != 0:
@@ -3806,40 +5494,476 @@ if ("    subagentrules)" in read(RUN)):
 else:
     report("FAIL", "run.sh names subagentrules in its no-interpreter fallback")
 
+# --- agentcap (2.50.0, #112): at most two running subagents, none started by a subagent -------
+_cap_state = os.path.join(_FIXTURE_ROOT, "cap-agents.json")
+
+
+def _cap_env(**extra):
+    e = dict(os.environ)
+    e["HOUSE_RULES_AGENTS_STATE"] = _cap_state
+    e.pop("HOUSE_RULES_AGENTS", None)
+    e.update(extra)
+    return e
+
+
+def _cap_spawn(agent_id="", **extra):
+    pl = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {"prompt": "x"}}
+    if agent_id:
+        pl["agent_id"] = agent_id
+    return run_hook("agentcap", json.dumps(pl), env=_cap_env(**extra))
+
+
+def _cap_denied(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    except Exception:
+        return False
+
+
+def _cap_start(aid, atype="house-rules:builder"):
+    return run_hook("announce", sub_payload(hook_event_name="SubagentStart", agent_type=atype, agent_id=aid), env=_cap_env())
+
+
+def _cap_stop(aid, atype="house-rules:builder"):
+    return run_hook("verdict", sub_payload(hook_event_name="SubagentStop", agent_type=atype, agent_id=aid), env=_cap_env())
+
+
+if os.path.exists(_cap_state):
+    os.remove(_cap_state)
+_c0 = _cap_spawn()
+_cap_start("capA")
+_c1 = _cap_spawn()
+_cap_start("capB")
+_c2 = _cap_spawn()
+commit_case(
+    "agentcap: the first and second spawn are allowed, the third is denied naming both running agents",
+    not _cap_denied(_c0[1]) and not _cap_denied(_c1[1]) and _cap_denied(_c2[1])
+    and "capA" in _c2[1] and "capB" in _c2[1] and "Wait for one to finish" in _c2[1],
+    "out %r" % _c2[1][:200],
+)
+_cap_stop("capA")
+_c3 = _cap_spawn()
+commit_case(
+    "agentcap: a record is cleared by SubagentStop, so a spawn is allowed again",
+    not _cap_denied(_c3[1]) and "capA" not in open(_cap_state, encoding="utf-8").read(),
+    "after stop: %r" % open(_cap_state, encoding="utf-8").read()[:120],
+)
+_stale = time.time() - 46 * 60
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    json.dump({"agents": [{"id": "old1", "type": "x", "start": _stale}, {"id": "old2", "type": "x", "start": _stale}]}, _f)
+_c4 = _cap_spawn()
+commit_case(
+    "agentcap: records older than 45 minutes are ignored",
+    not _cap_denied(_c4[1]), "out %r" % _c4[1][:120],
+)
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    json.dump({"agents": [{"id": "k1", "type": "x", "start": time.time()}, {"id": "k2", "type": "x", "start": time.time()}]}, _f)
+_c5 = _cap_spawn(HOUSE_RULES_AGENTS="off")
+_c5b = _cap_spawn()
+commit_case(
+    "agentcap: HOUSE_RULES_AGENTS=off disables the cap (and the same state denies without it)",
+    _c5[1].strip() == "" and _cap_denied(_c5b[1]), "off: %r; on: %r" % (_c5[1][:60], _c5b[1][:60]),
+)
+with open(_cap_state, "w", encoding="utf-8") as _f:
+    _f.write("{not json")
+_c6 = _cap_spawn()
+try:
+    _c6msg = json.loads(_c6[1]).get("systemMessage", "")
+except ValueError:
+    _c6msg = "unparseable"
+commit_case(
+    "agentcap: a corrupt state file fails open and says so in one line",
+    _c6[0] == 0 and not _cap_denied(_c6[1]) and "could not read" in _c6msg and "allowed" in _c6msg,
+    "systemMessage %r" % _c6msg[:160],
+)
+os.remove(_cap_state)
+_c7 = _cap_spawn(agent_id="sub9")
+commit_case(
+    "agentcap: a spawn made by a subagent (payload carries agent_id) is denied",
+    _cap_denied(_c7[1]) and "sub9" in _c7[1], "out %r" % _c7[1][:160],
+)
+
+# --- prompttimer (#144): an unanswered permission prompt is refused after a timeout, never approved
+_pt_repo = os.path.join(_FIXTURE_ROOT, "pt-repo")
+os.makedirs(_pt_repo, exist_ok=True)
+subprocess.run(["git", "init", "-q"], cwd=_pt_repo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+_pt_state = os.path.join(_pt_repo, ".git", "house-rules", "waiting-on-you.json")
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+
+
+def _pt_env(**extra):
+    e = dict(os.environ)
+    e["CLAUDE_PROJECT_DIR"] = _pt_repo
+    e["HOUSE_RULES_PROMPT_TIMEOUT"] = "1"
+    e.update(extra)
+    return e
+
+
+_pt_payload = json.dumps({"hook_event_name": "PermissionRequest", "session_id": "pt-sess", "tool_name": "Bash",
+                          "tool_input": {"command": "rm -rf /tmp/pt-victim"}})
+
+
+def _pt_run(payload=_pt_payload, **extra):
+    t0 = time.time()
+    code, out, err = run_hook("prompttimer", payload, env=_pt_env(**extra))
+    return code, out, err, time.time() - t0
+
+
+def _pt_decision(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["decision"]
+    except Exception:
+        return {}
+
+
+_p1 = _pt_run()
+_d1 = _pt_decision(_p1[1])
+try:
+    _pt_entries = json.load(open(_pt_state, encoding="utf-8"))
+except Exception:
+    _pt_entries = []
+commit_case(
+    "prompttimer: an unanswered prompt is denied after the timeout, message == reason, state holds one timed-out entry",
+    _p1[0] == 0 and _d1.get("behavior") == "deny" and _d1.get("message") == _d1.get("reason")
+    and "refused" in _d1.get("message", "") and "rm -rf /tmp/pt-victim" in _d1.get("message", "")
+    and len(_pt_entries) == 1 and _pt_entries[0]["status"] == "timed-out"
+    and _pt_entries[0]["session_id"] == "pt-sess" and len(_pt_entries[0]["key"]) == 16
+    and _pt_entries[0]["summary"] == "rm -rf /tmp/pt-victim",
+    "out %r entries %r" % (_p1[1][:120], _pt_entries),
+)
+commit_case(
+    "prompttimer: the 1-second timeout waits about 1 second (not 0, not 10)",
+    0.9 <= _p1[3] <= 5, "elapsed %.2fs" % _p1[3],
+)
+_p2 = _pt_run()
+commit_case(
+    "prompttimer: the same action again in the same session is denied at once",
+    _p2[3] < 0.5 and _pt_decision(_p2[1]).get("behavior") == "deny" and "already timed out" in _pt_decision(_p2[1]).get("message", ""),
+    "elapsed %.2fs out %r" % (_p2[3], _p2[1][:100]),
+)
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_p3 = _pt_run(HOUSE_RULES_PROMPT_TIMEOUT="OFF")
+commit_case(
+    "prompttimer: HOUSE_RULES_PROMPT_TIMEOUT=off makes no decision and writes no state",
+    _p3[0] == 0 and _p3[1] == "" and not os.path.exists(_pt_state) and _p3[3] < 0.9,
+    "out %r state exists %s" % (_p3[1], os.path.exists(_pt_state)),
+)
+os.makedirs(os.path.dirname(_pt_state), exist_ok=True)
+with open(_pt_state, "w", encoding="utf-8") as _f:
+    _f.write("{not json")
+_p4 = _pt_run()
+commit_case(
+    "prompttimer: a corrupt state file is reported loudly and the prompt is still denied after the timeout",
+    _p4[0] == 0 and _pt_decision(_p4[1]).get("behavior") == "deny" and _p4[3] >= 0.9
+    and "could not read" in _p4[2] and _pt_state in _p4[2] and "Traceback" not in _p4[2],
+    "elapsed %.2fs stderr %r" % (_p4[3], _p4[2][:200]),
+)
+_p5 = _pt_run("{not json")
+_p5b = _pt_run(json.dumps({"session_id": "x"}))
+commit_case(
+    "prompttimer: a malformed payload makes no decision, says so on stderr and exits 0",
+    _p5[0] == 0 and _p5[1] == "" and "could not read" in _p5[2] and _p5[3] < 0.9
+    and _p5b[0] == 0 and _p5b[1] == "" and "could not read" in _p5b[2],
+    "stderr %r / %r" % (_p5[2][:100], _p5b[2][:100]),
+)
+_pt_src = read(HOOK)
+_pt_block = _pt_src[_pt_src.index("# prompttimer - PermissionRequest"):_pt_src.index("# subagentcommit")]
+commit_case(
+    "prompttimer: the handler source has no route to an allow decision",
+    "allow" not in _pt_block.lower() and 'behavior": "deny"' in _pt_block,
+    "%d characters of handler source scanned" % len(_pt_block),
+)
+_pt_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"].get("PermissionRequest", [])
+commit_case(
+    "prompttimer: hooks.json wires PermissionRequest to prompttimer with a 330 second timeout",
+    len(_pt_hj) == 1 and "matcher" not in _pt_hj[0] and len(_pt_hj[0]["hooks"]) == 1
+    and _pt_hj[0]["hooks"][0]["command"].endswith('run.sh" prompttimer') and _pt_hj[0]["hooks"][0]["timeout"] == 330,
+    "entry %r" % (_pt_hj,),
+)
+
+# --- #145: the waiting-on-you list is locked, shown by scope and issuelist, and named in the guard prompts
+import threading
+
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_pt_pl = lambda cmd, sid="pt-sess": json.dumps({"hook_event_name": "PermissionRequest", "session_id": sid,
+                                                "tool_name": "Bash", "tool_input": {"command": cmd}})
+_pt_res = {}
+
+
+def _pt_thread(name, cmd):
+    _pt_res[name] = _pt_run(_pt_pl(cmd))
+
+
+_ths = [threading.Thread(target=_pt_thread, args=("a", "echo concurrent-a")),
+        threading.Thread(target=_pt_thread, args=("b", "echo concurrent-b"))]
+for _t in _ths:
+    _t.start()
+for _t in _ths:
+    _t.join()
+try:
+    _pt_c = json.load(open(_pt_state, encoding="utf-8"))
+except Exception:
+    _pt_c = []
+commit_case(
+    "prompttimer: two concurrent runs on different actions leave 2 entries (the lock keeps both)",
+    len(_pt_c) == 2 and {e["summary"] for e in _pt_c} == {"echo concurrent-a", "echo concurrent-b"}
+    and not os.path.exists(_pt_state + ".lock"),
+    "entries %r" % (_pt_c,),
+)
+
+# a stale lock is removed and reported
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+os.makedirs(os.path.dirname(_pt_state), exist_ok=True)
+with open(_pt_state + ".lock", "w") as _f:
+    _f.write("")
+os.utime(_pt_state + ".lock", (time.time() - 60, time.time() - 60))
+_s1 = _pt_run(_pt_pl("echo stale-lock"))
+commit_case(
+    "prompttimer: a lock older than 15 s is removed, reported on stderr, and the entry is still written",
+    "stale lock" in _s1[2] and not os.path.exists(_pt_state + ".lock")
+    and _pt_decision(_s1[1]).get("behavior") == "deny"
+    and any(e["summary"] == "echo stale-lock" for e in json.load(open(_pt_state, encoding="utf-8"))),
+    "stderr %r" % (_s1[2][:200],),
+)
+
+# scope: a real prompt lists the entry, marks it reported; a retry then waits
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_pt_run()  # times out: one timed-out entry for rm -rf /tmp/pt-victim in pt-sess
+_pt_scope_env = _pt_env()
+
+
+def _pt_scope(prompt, sid="pt-sess"):
+    return run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": sid,
+                                         "prompt": prompt}), env=_pt_scope_env)
+
+
+_n1 = _pt_scope("<task-notification><task-id>abc</task-id><status>completed</status></task-notification>")
+_state_n1 = json.load(open(_pt_state, encoding="utf-8"))
+commit_case(
+    "scope: a background task-notification prompt changes nothing and lists nothing",
+    _n1[0] == 0 and "waiting on you" not in _n1[1] and _state_n1[0]["status"] == "timed-out",
+    "out %r state %r" % (_n1[1][:150], _state_n1),
+)
+_r1 = _pt_scope("hello, back now")
+_state_r1 = json.load(open(_pt_state, encoding="utf-8"))
+try:
+    _r1ctx = json.loads(_r1[1])["hookSpecificOutput"]["additionalContext"]
+except Exception:
+    _r1ctx = ""
+commit_case(
+    "scope: a real prompt lists the session's timed-out action, marks it reported, one JSON object on stdout",
+    _r1[0] == 0 and "1 action waiting on you since" in _r1ctx and "(local time)" in _r1ctx
+    and "- Bash: rm -rf /tmp/pt-victim" in _r1ctx and "aj is here now" in _r1ctx
+    and len(_state_r1) == 1 and _state_r1[0]["status"] == "reported",
+    "out %r state %r" % (_r1[1][:200], _state_r1),
+)
+_r2 = _pt_run()
+commit_case(
+    "prompttimer: after scope reported it, the same action waits instead of being re-denied at once",
+    _r2[3] >= 0.9 and "already timed out" not in _pt_decision(_r2[1]).get("message", ""),
+    "elapsed %.2fs out %r" % (_r2[3], _r2[1][:100]),
+)
+_r3 = _pt_scope("again", sid="quiet-sess")
+commit_case(
+    "scope: a session with nothing waiting gets nothing extra",
+    "action waiting on you" not in _r3[1] and "actions waiting on you" not in _r3[1],
+    "out %r" % (_r3[1][:150],),
+)
+
+# issuelist: other sessions' entries are shown and dropped; >7-day entries pruned; empty says nothing
+_now = time.time()
+with open(_pt_state, "w", encoding="utf-8") as _f:
+    json.dump([
+        {"session_id": "old-sess", "key": "k1", "tool": "Bash", "summary": "git push origin main",
+         "started": _now - 3600, "status": "timed-out"},
+        {"session_id": "old-sess2", "key": "k2", "tool": "Write", "summary": "ancient.txt",
+         "started": _now - 8 * 86400, "status": "timed-out"},
+        {"session_id": "new-sess", "key": "k3", "tool": "Bash", "summary": "mine stays",
+         "started": _now - 5, "status": "waiting"},
+    ] + [{"session_id": "filler%d" % _k, "key": "f%d" % _k, "tool": "Bash", "summary": "filler %d" % _k,
+          "started": _now - 100 - _k, "status": "timed-out"} for _k in range(9)], _f)
+_il_env = _pt_env(HOUSE_RULES_ISSUES="off")
+_i1 = run_hook("issuelist", json.dumps({"hook_event_name": "SessionStart", "session_id": "new-sess",
+                                        "cwd": _pt_repo}), env=_il_env)
+try:
+    _io = json.loads(_i1[1])
+except Exception:
+    _io = {}
+_left = json.load(open(_pt_state, encoding="utf-8"))
+commit_case(
+    "issuelist: another session's entry is shown to Claude and aj in one JSON object, then dropped; >7-day entries pruned",
+    _i1[0] == 0 and "Left waiting on you by an earlier session" in _io.get("hookSpecificOutput", {}).get("additionalContext", "")
+    and "git push origin main" in _io["hookSpecificOutput"]["additionalContext"]
+    and "ancient.txt" not in _io["hookSpecificOutput"]["additionalContext"]
+    and _io["hookSpecificOutput"]["additionalContext"].count("\n- ") == 10
+    and "git push origin main" in _io.get("systemMessage", "")
+    and [e["summary"] for e in _left] == ["mine stays"],
+    "out %r left %r" % (_i1[1][:200], _left),
+)
+_i2 = run_hook("issuelist", json.dumps({"hook_event_name": "SessionStart", "session_id": "new-sess",
+                                        "cwd": _pt_repo}), env=_il_env)
+commit_case(
+    "issuelist: with nothing left by other sessions it says nothing",
+    _i2[0] == 0 and _i2[1] == "", "out %r" % (_i2[1][:100],),
+)
+
+# guard: the timeout line, omitted when off
+_g_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Bash",
+                         "tool_input": {"command": "rm -rf /tmp/pt-victim"}, "cwd": _pt_repo})
+_gw_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Write",
+                          "tool_input": {"file_path": os.path.join(_pt_repo, "existing.txt"), "content": "x\n"},
+                          "cwd": _pt_repo})
+with open(os.path.join(_pt_repo, "existing.txt"), "w") as _f:
+    _f.write("a\nb\n")
+_gline = "refused (never approved) and added to the waiting-on-you list."
+_ge = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="300")
+_geoff = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="off")
+_g1, _g2 = run_hook("guard", _g_payload, env=_ge), run_hook("guardwrite", _gw_payload, env=_ge)
+_g3, _g4 = run_hook("guard", _g_payload, env=_geoff), run_hook("guardwrite", _gw_payload, env=_geoff)
+commit_case(
+    "guard and guardwrite: the prompt says 'If nobody answers within 5 minutes...' before the Approve line; off omits it",
+    all("If nobody answers within 5 minutes, this is " + _gline in x[1] for x in (_g1, _g2))
+    and all(x[1].index("If nobody answers") < x[1].index("Approve to let it run") for x in (_g1, _g2))
+    and all(_gline not in x[1] and "Approve to let it run" in x[1] for x in (_g3, _g4)),
+    "guard %r | guardwrite %r | off %r" % (_g1[1][-250:], _g2[1][-250:], _g3[1][-150:]),
+)
+
+# --- #142 follow-ups: questions exempt, away fast-fail, an action that ran is never "timed out" (#149)
+def _pt_tool(tool, tool_input, sid="pt-sess", event="PermissionRequest"):
+    return json.dumps({"hook_event_name": event, "session_id": sid, "tool_name": tool, "tool_input": tool_input})
+
+
+def _pt_state_now():
+    try:
+        return json.load(open(_pt_state, encoding="utf-8"))
+    except Exception:
+        return []
+
+
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_q1 = _pt_run(_pt_tool("AskUserQuestion", {"questions": [{"question": "Which one?"}]}))
+_q2 = _pt_run(_pt_tool("ExitPlanMode", {"plan": "1. do it"}))
+commit_case(
+    "prompttimer: AskUserQuestion and ExitPlanMode get no timer - no decision, no state, said on stderr",
+    all(x[0] == 0 and x[1] == "" and x[3] < 0.9 and "question for aj" in x[2] for x in (_q1, _q2))
+    and not os.path.exists(_pt_state),
+    "q1 %r q2 %r state %s" % (_q1[2][:120], _q2[2][:120], os.path.exists(_pt_state)),
+)
+
+_a1 = _pt_run()  # rm -rf /tmp/pt-victim times out: aj is away
+_a2 = _pt_run(_pt_pl("git push -q origin claude/x"))
+_a2d = _pt_decision(_a2[1])
+_a2s = _pt_state_now()
+commit_case(
+    "prompttimer: after one timeout, a DIFFERENT action in the same session is refused at once and queued",
+    _a1[3] >= 0.9 and _a2[3] < 0.5 and _a2d.get("behavior") == "deny" and _a2d.get("message") == _a2d.get("reason")
+    and "already went unanswered" in _a2d.get("message", "") and "rm -rf /tmp/pt-victim" in _a2d.get("message", "")
+    and sorted(e["status"] for e in _a2s) == ["timed-out", "timed-out"],
+    "elapsed %.2fs out %r state %r" % (_a2[3], _a2[1][:120], _a2s),
+)
+_a3 = _pt_run(_pt_pl("git push -q origin claude/x", sid="other-sess"))
+commit_case(
+    "prompttimer: another session's timeout does not refuse this session's prompt at once",
+    _a3[3] >= 0.9 and "already went unanswered" not in _pt_decision(_a3[1]).get("message", ""),
+    "elapsed %.2fs" % _a3[3],
+)
+_pt_scope("I'm back")
+_a4 = _pt_run(_pt_pl("echo after-aj-wrote"))
+commit_case(
+    "prompttimer: once aj writes (scope), a new prompt waits normally again",
+    _a4[3] >= 0.9 and "already went unanswered" not in _pt_decision(_a4[1]).get("message", ""),
+    "elapsed %.2fs out %r" % (_a4[3], _a4[1][:100]),
+)
+
+# an action approved some other way runs: promptran marks it, the waiting timer stops without a decision
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_ran_input = {"command": "git push -q"}
+_ran_res = {}
+_ran_t = threading.Thread(target=lambda: _ran_res.update(
+    r=_pt_run(_pt_tool("Bash", _ran_input), HOUSE_RULES_PROMPT_TIMEOUT="4")))
+_ran_t.start()
+for _w in range(50):
+    if any(e.get("status") == "waiting" for e in _pt_state_now()):
+        break
+    time.sleep(0.1)
+_rr = run_hook("promptran", _pt_tool("Bash", _ran_input, event="PostToolUse"), env=_pt_env())
+_ran_t.join()
+_ran = _ran_res.get("r", (None, "?", "", 99))
+commit_case(
+    "promptran: an action that ran while its prompt was waiting stops the timer with no decision and no entry",
+    _rr[0] == 0 and _rr[1] == "" and _ran[0] == 0 and _ran[1] == "" and _ran[3] < 3.5
+    and "the action ran" in _ran[2] and _pt_state_now() == [],
+    "timer elapsed %.2fs out %r stderr %r state %r" % (_ran[3], _ran[1][:80], _ran[2][:150], _pt_state_now()),
+)
+
+# an action that ran AFTER being refused as timed out is removed and reported out loud
+_pt_run(_pt_tool("Bash", _ran_input))
+_late = run_hook("promptran", _pt_tool("Bash", _ran_input, event="PostToolUseFailure"), env=_pt_env())
+try:
+    _late_o = json.loads(_late[1])
+except Exception:
+    _late_o = {}
+commit_case(
+    "promptran: a timed-out action that ran anyway is removed from the list and reported to aj and Claude",
+    _late[0] == 0 and "ran although its permission prompt was refused" in _late_o.get("systemMessage", "")
+    and "git push -q" in _late_o.get("systemMessage", "")
+    and _late_o.get("hookSpecificOutput", {}).get("hookEventName") == "PostToolUseFailure"
+    and _pt_state_now() == [],
+    "out %r state %r" % (_late[1][:200], _pt_state_now()),
+)
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_quiet = run_hook("promptran", _pt_tool("Bash", _ran_input, event="PostToolUse"), env=_pt_env())
+_bad = run_hook("promptran", "{not json", env=_pt_env())
+commit_case(
+    "promptran: with no waiting-on-you list, or a bad payload, it says nothing and exits 0",
+    _quiet[0] == 0 and _quiet[1] == "" and _bad[0] == 0 and _bad[1] == "",
+    "quiet %r bad %r" % (_quiet[1][:80], _bad[1][:80]),
+)
+_pr_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
+_pr_entries = [g for ev in ("PostToolUse", "PostToolUseFailure") for g in _pr_hj.get(ev, [])
+               if any(h["command"].endswith('run.sh" promptran') for h in g["hooks"])]
+commit_case(
+    "promptran: wired on PostToolUse and PostToolUseFailure, matched to the tools that raise permission prompts",
+    len(_pr_entries) == 2 and all(len(g["hooks"]) == 1 and "Bash" in g.get("matcher", "")
+                                  and "Read" not in g.get("matcher", "") for g in _pr_entries),
+    "entries %r" % (_pr_entries,),
+)
+
 # --- verdict's audit summary: built from the transcript, not the subagent's own report --------
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"))
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"))
 audit = []
 if code != 0:
     audit.append(f"exit {code}, must never be non-zero")
 for needle in (
-    "transcript found at", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "transcript found at", "tool uses:", "FAILED commands", "cmd: Bash [ERROR]: false",
+    "wrote: Write /proj/a.py", "other commands: 1 ok (not listed)",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in out:
         audit.append(f"audit summary is missing {needle!r}")
 if not audit:
     report("PASS", "verdict's audit summary reports commands with exit status and files written")
-    print("          built from the transcript itself: one ok, one ERROR, one write")
+    print("          built from the transcript itself: counts, the failed command in full, the written file, the ok count")
 else:
     report("FAIL", "verdict's audit summary reports commands with exit status and files written")
     for a in audit:
         print(f"          {a}")
 
 # The cap: 45 commands in the fixture, at most 40 shown plus an explicit "N more".
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="auditbig"))
-if code == 0 and out.count("cmd: Bash [ok]: echo") <= 40 and "5 more" in out:
-    report("PASS", "verdict's audit summary caps the command list and says how many more")
-    print(f"          {out.count('cmd: Bash [ok]: echo')} commands shown, '5 more' present")
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="auditbig"))
+if code == 0 and "cmd: Bash [ok]" not in out and "other commands: 45 ok (not listed)" in out and "Bash x45" in out and len(out) < 1500:
+    report("PASS", "verdict's audit summary counts ok commands instead of listing them, and stays small")
+    print(f"          45 ok commands -> one count line, {len(out)} chars (< 1500)")
 else:
-    report("FAIL", "verdict's audit summary caps the command list and says how many more")
-    print(f"          exit {code}, shown={out.count('cmd: Bash [ok]: echo')}, out[-200:]={out[-200:]!r}")
+    report("FAIL", "verdict's audit summary counts ok commands instead of listing them, and stays small")
+    print(f"          exit {code}, len={len(out)}, out[-200:]={out[-200:]!r}")
 
 # --- HOUSE_RULES_SUBAGENT_LEDGER: off by default, renders docs/sessions/<...> when on ---------
 _ledger_root = tempfile.mkdtemp(prefix="house-rules-ledger-")
 atexit.register(shutil.rmtree, _ledger_root, True)
 _ledger_off = dict(os.environ)
 _ledger_off["CLAUDE_PROJECT_DIR"] = _ledger_root
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_off)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"), env=_ledger_off)
 _ledger_dir = os.path.join(_ledger_root, "docs", "sessions")
 if "LEDGER" not in out and not os.path.isdir(_ledger_dir):
     report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER is off by default - no docs/sessions/ write")
@@ -3850,7 +5974,7 @@ else:
 
 _ledger_on = dict(_ledger_off)
 _ledger_on["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="audit1"), env=_ledger_on)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"), env=_ledger_on)
 _written = [f for f in os.listdir(_ledger_dir)] if os.path.isdir(_ledger_dir) else []
 if code == 0 and "LEDGER: rendered" in out and any(f.endswith(".md") for f in _written):
     report("PASS", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
@@ -3865,7 +5989,7 @@ atexit.register(shutil.rmtree, _ledger_bad_root, True)
 _ledger_bad = dict(os.environ)
 _ledger_bad["CLAUDE_PROJECT_DIR"] = _ledger_bad_root
 _ledger_bad["HOUSE_RULES_SUBAGENT_LEDGER"] = "on"
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:executor", agent_id="ghost"), env=_ledger_bad)
+code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="ghost"), env=_ledger_bad)
 # "ghost" has no transcript file at all, so verdict returns before ever reaching the ledger
 # step - this proves that early return, not the ledger call, never crashes.
 if code == 0 and "unverified" in out:
@@ -3899,7 +6023,7 @@ except Exception as exc:
     aud.append(f"could not parse audit output: {exc}")
     core_ctx = ""
 for needle in (
-    "finished (foreground)", "Bash [ok]: pytest -q", "Bash [ERROR]: false", "Write /proj/a.py",
+    "finished (foreground)", "FAILED commands", "cmd: Bash [ERROR]: false", "wrote: Write /proj/a.py",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in core_ctx:
@@ -3913,16 +6037,110 @@ else:
         print(f"          {a}")
 
 # A backgrounded call's PostToolUse fires immediately with status "async_launched" - nothing
-# has happened yet, so audit must say nothing at all, not report an empty/wrong audit.
-code, out, err = run_hook("audit", post_agent_payload(
+# has happened yet, so audit reports no audit. Since 2.47.0 it asks the parent for a check-in
+# instead (so worktreesweep runs while the subagent works); with autosave off it says nothing.
+_async_payload = post_agent_payload(
     tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}
-))
-if code == 0 and not out.strip():
-    report("PASS", "audit stays silent for a backgrounded call's async_launched PostToolUse")
-    print("          nothing to audit yet - userpromptaudit covers its later hand-back")
+)
+code, out, err = run_hook("audit", _async_payload)
+code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
+if (code == 0 and "checked for stalls every 5 minutes" in out and "stallcheck.py" in out and "AUDIT" not in out
+        and code_off == 0 and not out_off.strip()
+        and "--session sess1 --agent audit1" in out):
+    report("PASS", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
+    print("          nothing to audit yet; the check-in nudge appears, and not with HOUSE_RULES_AUTOSAVE=off")
 else:
-    report("FAIL", "audit stays silent for a backgrounded call's async_launched PostToolUse")
-    print(f"          exit {code}, out {out[:150]!r}")
+    report("FAIL", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
+    print(f"          exit {code}, out {out[:150]!r}; autosave off: exit {code_off}, out {out_off[:80]!r}")
+
+
+# --- stallcheck.py (issue 120). The agentcap cases live with the spawn-cap tests above.
+import tempfile as _cap_tf
+def _cap_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    print("          " + detail)
+
+_sc = os.path.join(HERE, "stallcheck.py")
+_home = _cap_tf.mkdtemp(prefix="house-rules-home-", dir=_FIXTURE_ROOT)
+_sd = os.path.join(_home, ".claude", "projects", "p", "s", "subagents")
+os.makedirs(_sd)
+_henv = dict(os.environ, HOME=_home, USERPROFILE=_home)
+
+
+def _sc_file(name, text, age_s):
+    path = os.path.join(_sd, "agent-%s.jsonl" % name)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.utime(path, (time.time() - age_s, time.time() - age_s))
+
+
+def _sc_run(*extra):
+    pr = subprocess.run([sys.executable, _sc] + list(extra), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_henv)
+    return pr.returncode, pr.stdout.decode("utf-8", "replace")
+
+
+# #122: a row that stays STALLED is printed again every threshold period, not once.
+_sc_file("stuck122", '{"type":"assistant"}\n', 600)
+try:
+    _pr = subprocess.run([sys.executable, _sc, "--watch", "--threshold", "1", "--poll", "0.2", "--agent", "stuck122"],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_henv, timeout=4)
+    _o = _pr.stdout.decode("utf-8", "replace")
+except subprocess.TimeoutExpired as _e:
+    _o = (_e.stdout or b"").decode("utf-8", "replace")  # expected: the watch never ends; the limit stops it
+_cap_case("stallcheck: --watch re-prints a row that stays STALLED every threshold period (#122)",
+          _o.count("STALLED") >= 2, "STALLED lines in 4 s: %d, out %r" % (_o.count("STALLED"), _o[:200]))
+os.remove(os.path.join(_sd, "agent-stuck122.jsonl"))
+_sc_file("fresh", '{"type":"assistant"}\n', 20)
+_c, _o = _sc_run()
+_cap_case("stallcheck: a transcript written 20 s ago is ok, exit 0", _c == 0 and "ok" in _o and "fresh" in _o, "exit %d out %r" % (_c, _o[:100]))
+_sc_file("quiet", '{"type":"assistant"}\n', 600)
+_c, _o = _sc_run()
+_cap_case("stallcheck: a transcript silent for 10 minutes is STALLED, exit 1",
+          _c == 1 and "STALLED" in _o and "quiet" in _o, "exit %d out %r" % (_c, _o[:160]))
+_sc_file("done", '{"type":"attachment","attachment":{"hookEvent":"SubagentStop"}}\n', 3000)
+_c, _o = _sc_run("--threshold", "9999")
+_cap_case("stallcheck: a transcript holding SubagentStop is finished, never STALLED",
+          "finished  subagent done" in _o, "out %r" % _o[:200])
+_sc_file("resumed", '{"type":"attachment","attachment":{"hookEvent":"SubagentStop"}}\n{"type":"assistant"}\n', 5)
+_c, _o = _sc_run("--agent", "resumed")
+_cap_case("stallcheck: a transcript with records after SubagentStop (resumed agent) is ok, not finished",
+          "ok" in _o and "finished" not in _o, "out %r" % _o[:200])
+os.remove(os.path.join(_sd, "agent-resumed.jsonl"))
+_c, _o = _sc_run("--file", os.path.join(_home, "no-such.out"))
+_cap_case("stallcheck: a watched file that does not exist is STALLED, not skipped", _c == 1 and "no-such.out" in _o, "exit %d out %r" % (_c, _o[:160]))
+for _n in os.listdir(_sd):
+    os.remove(os.path.join(_sd, _n))
+_c, _o = _sc_run()
+_cap_case("stallcheck: with nothing to check it says so and exits 2, never silent",
+          _c == 2 and "nothing was checked" in _o, "exit %d out %r" % (_c, _o[:160]))
+
+# Scope (issue 123): a watch covers only the calling session's / named agent's transcripts.
+_sdA = os.path.join(_home, ".claude", "projects", "p", "sessA", "subagents")
+_sdB = os.path.join(_home, ".claude", "projects", "p", "sessB", "subagents")
+os.makedirs(_sdA)
+os.makedirs(_sdB)
+for _d, _n in ((_sdA, "aaa"), (_sdA, "xxx"), (_sdB, "bbb")):
+    with open(os.path.join(_d, "agent-%s.jsonl" % _n), "w", encoding="utf-8") as _f:
+        _f.write('{"type":"assistant"}' + chr(10))
+_c, _o = _sc_run("--session", "sessA")
+_cap_case("stallcheck: --session sessA reports only sessA's agents, never sessB's",
+          _c == 0 and "aaa" in _o and "xxx" in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--agent", "xxx")
+_cap_case("stallcheck: --agent xxx reports only that agent",
+          _c == 0 and "xxx" in _o and "aaa" not in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--session", "sessA", "--agent", "bbb")
+_cap_case("stallcheck: --session sessA with another session's agent matches nothing, exit 2, says so",
+          _c == 2 and "sessA" in _o and "bbb" in _o and "nothing was checked" in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run("--session", "nosuch")
+_cap_case("stallcheck: a --session matching nothing exits 2 and names the session",
+          _c == 2 and "nosuch" in _o and "nothing was checked" in _o and "bbb" not in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _sc_run()
+_cap_case("stallcheck: no-flag mode says it is watching all sessions",
+          "watching ALL sessions" in _o and "aaa" in _o and "bbb" in _o, "exit %d out %r" % (_c, _o[:200]))
+_ctx_bad = run_hook("audit", post_agent_payload(
+    session_id="bad;id", tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}))[1]
+_cap_case("audit: an unsafe session_id is omitted from the suggested command and the watch is called unscoped",
+          "--threshold 300 --agent audit1`" in _ctx_bad and "bad;id" not in _ctx_bad and "unscoped" in _ctx_bad, "out %r" % _ctx_bad[:300])
 
 audq = []
 code, out, err = run_hook("audit", "")
@@ -3985,7 +6203,7 @@ except Exception as exc:
     upa.append(f"could not parse userpromptaudit output: {exc}")
     up_ctx = ""
 for needle in (
-    "finished (background)", "Bash [ok]: pytest -q", "Bash [ERROR]: false",
+    "finished (background)", "FAILED commands", "cmd: Bash [ERROR]: false",
     "Reconcile the subagent's report against this record",
 ):
     if needle not in up_ctx:
@@ -4066,8 +6284,57 @@ def vc_payload(session_id):
     return json.dumps({"session_id": session_id, "hook_event_name": "SessionStart"})
 
 
-def vc_env(**overrides):
+# Every case gets a fake `claude` and its own installed_plugins.json, so no case can run a real
+# update or read this machine's real install. The fake logs each call and, when told to, writes
+# the "updated" version into that JSON the way a real `claude plugin update` would.
+_vc_fake_dir = tempfile.mkdtemp(prefix="house-rules-vc-fake-")
+_vc_fake_claude = os.path.join(_vc_fake_dir, "fake_claude.py")
+with open(_vc_fake_claude, "w", encoding="utf-8") as f:
+    f.write(
+        "import json, os, sys\n"
+        "with open(os.environ['VC_FAKE_LOG'], 'a', encoding='utf-8') as log:\n"
+        "    log.write(' '.join(sys.argv[1:]) + '\\n')\n"
+        "target = os.environ.get('VC_FAKE_INSTALLS', '')\n"
+        "if sys.argv[1:3] == ['plugin', 'update'] and target:\n"
+        "    with open(os.environ['HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON'], 'w', encoding='utf-8') as out:\n"
+        "        json.dump({'version': 2, 'plugins': {sys.argv[3]: [{'version': target}]}}, out)\n"
+        "print('fake claude: ' + ' '.join(sys.argv[1:]))\n"
+        "sys.exit(int(os.environ.get('VC_FAKE_EXIT', '1')))\n"
+    )
+
+
+def vc_installed_json(case, version=None):
+    path = os.path.join(_vc_fake_dir, f"installed-{case}.json")
+    if version is not None:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(
+                {"version": 2, "plugins": {"house-rules@aj-house-rules": [{"version": version}]}}, f
+            )
+    return path
+
+
+def vc_clear(case):
+    """Remove what an earlier run left for this case, so a stale marker or log cannot pass or
+    fail it."""
+    for path in (vc_marker_path(case), os.path.join(_vc_fake_dir, f"calls-{case}.log")):
+        if os.path.isfile(path):
+            os.remove(path)
+
+
+def vc_fake_calls(case):
+    path = os.path.join(_vc_fake_dir, f"calls-{case}.log")
+    if not os.path.isfile(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
+
+
+def vc_env(case="default", **overrides):
     e = dict(os.environ)
+    e["HOUSE_RULES_VC_CLAUDE"] = json.dumps([sys.executable, _vc_fake_claude])
+    e["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = vc_installed_json(case)
+    e["VC_FAKE_LOG"] = os.path.join(_vc_fake_dir, f"calls-{case}.log")
+    e.pop("HOUSE_RULES_AUTO_UPDATE", None)
     e.update(overrides)
     return e
 
@@ -4109,19 +6376,22 @@ else:
     print(f"          rc={rc} out={out[:300]!r}")
 
 # --- the out-of-date banner tells Claude to hand the command over properly and then stop -----
-# Why this is its own check, not folded into the mismatch check above: docs/systems/verify-suites.md, "Traps".
+# Why this is its own check, not folded into the mismatch check above: docs/4-systems/verify-suites.md, "Traps".
 vc_banner_out = out
 banner_ok = (
     "UNTESTED" in vc_banner_out
     and "step-card" in vc_banner_out
     and "stop and wait" in vc_banner_out
     and "permission" in vc_banner_out
+    and "run the command(s) below yourself" in vc_banner_out
+    and "Do not ask in chat" in vc_banner_out
+    and "could not finish" in vc_banner_out
 )
 if banner_ok:
-    report("PASS", "the out-of-date banner tells Claude to ask permission to run the update itself, falling back to the card marked UNTESTED, then stop and wait")
-    print("          banner carries the ask-permission/run-it-yourself instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
+    report("PASS", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
+    print("          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
 else:
-    report("FAIL", "the out-of-date banner tells Claude to ask permission to run the update itself, falling back to the card marked UNTESTED, then stop and wait")
+    report("FAIL", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
     print(f"          out={vc_banner_out[:400]!r}")
 
 # --- that same instruction has not drifted from the rules document, bidirectionally ----------
@@ -4217,6 +6487,201 @@ else:
     )
 if os.path.isfile(marker_c):
     os.remove(marker_c)
+
+# --- versioncheck: the GitHub fetch falls back to the API, and a failure reaches the model ------
+# 2026-09-24: raw.githubusercontent.com was reset by a sandbox while api.github.com worked, and the
+# "couldn't verify" result went only to a systemMessage the model never sees. file:// URLs stand in
+# for both routes, so these cases never touch the network: a missing file is a failed fetch.
+_vc_dir = tempfile.mkdtemp(prefix="house-rules-vc-")
+_vc_dead_url = pathlib.Path(_vc_dir, "missing.json").as_uri()
+_vc_api_json = pathlib.Path(_vc_dir, "api-plugin.json")
+_vc_api_json.write_text(json.dumps({"version": "99.0.0"}), encoding="utf-8")
+
+session_d = "vc-raw-fails-api-works"
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(session_d),
+    vc_env(
+        HOUSE_RULES_VC_MARKETPLACE=_installed_version,
+        HOUSE_RULES_VC_GITHUB_URL=_vc_dead_url,
+        HOUSE_RULES_VC_GITHUB_API_URL=_vc_api_json.as_uri(),
+    ),
+)
+marker_d = vc_marker_path(session_d)
+ok = (
+    rc == 0
+    and "OUT OF DATE" in out
+    and "GitHub's default branch has 99.0.0" in out
+    and os.path.isfile(marker_d)
+)
+if ok:
+    report("PASS", "versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy")
+    print("          raw route dead, API route reports 99.0.0 - banner fires and the marker is armed")
+else:
+    report("FAIL", "versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy")
+    print(f"          rc={rc} out={out[:300]!r} err={err[:200]!r}")
+if os.path.isfile(marker_d):
+    os.remove(marker_d)
+
+session_e = "vc-both-routes-fail"
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(session_e),
+    vc_env(
+        HOUSE_RULES_VC_MARKETPLACE=_installed_version,
+        HOUSE_RULES_VC_GITHUB_URL=_vc_dead_url,
+        HOUSE_RULES_VC_GITHUB_API_URL=_vc_dead_url,
+    ),
+)
+marker_e = vc_marker_path(session_e)
+try:
+    _vc_ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+except Exception:
+    _vc_ctx = ""
+ok = (
+    rc == 0
+    and "could not confirm the plugin is current" in _vc_ctx
+    and "raw.githubusercontent.com (URLError" in _vc_ctx
+    and "api.github.com (URLError" in _vc_ctx
+    and _installed_version in _vc_ctx
+    and "OUT OF DATE" not in out
+    and not os.path.isfile(marker_e)
+)
+if ok:
+    report("PASS", "versioncheck tells the model, not just the UI, when neither GitHub route could be reached")
+    print("          additionalContext names both failed routes and the installed version; no banner, no marker")
+else:
+    report("FAIL", "versioncheck tells the model, not just the UI, when neither GitHub route could be reached")
+    print(f"          rc={rc} out={out[:400]!r} marker exists: {os.path.isfile(marker_e)}")
+if os.path.isfile(marker_e):
+    os.remove(marker_e)
+
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload("vc-agree-no-context"),
+    vc_env(HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB=_installed_version),
+)
+if rc == 0 and "additionalContext" not in out:
+    report("PASS", "versioncheck adds nothing to the model's context when all three copies agree")
+    print("          a verified-current plugin stays a UI-only trace line")
+else:
+    report("FAIL", "versioncheck adds nothing to the model's context when all three copies agree")
+    print(f"          rc={rc} out={out[:200]!r}")
+shutil.rmtree(_vc_dir, ignore_errors=True)
+
+# --- versioncheck updates the plugin itself, and reads what is installed, not only what runs -----
+# 2026-09-26: a session ran 2.29.0 while 2.36.0 was already installed on disk, and the banner asked
+# for an update that would have done nothing; the fix is a restart. And the update is now run by
+# the hook itself, confirmed by re-reading installed_plugins.json rather than trusting exit 0.
+case = "vc-restart-needed"
+vc_clear(case)
+vc_installed_json(case, "99.0.0")
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(case, HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"),
+)
+ok = (
+    rc == 0
+    and "OUT OF DATE" not in out
+    and "start a new session" in out
+    and "Do not run any update command" in out
+    and vc_fake_calls(case) == []
+    and not os.path.isfile(vc_marker_path(case))
+)
+if ok:
+    report("PASS", "versioncheck says 'start a new session', not 'update', when the newer version is already installed on disk")
+    print("          running copy is old, installed_plugins.json has 99.0.0: no banner, no marker, no update run")
+else:
+    report("FAIL", "versioncheck says 'start a new session', not 'update', when the newer version is already installed on disk")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+
+case = "vc-auto-update-works"
+vc_clear(case)
+vc_installed_json(case, _installed_version)
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(
+        case,
+        HOUSE_RULES_VC_MARKETPLACE=_installed_version,
+        HOUSE_RULES_VC_GITHUB="99.0.0",
+        VC_FAKE_EXIT="0",
+        VC_FAKE_INSTALLS="99.0.0",
+    ),
+)
+ok = (
+    rc == 0
+    and vc_fake_calls(case)
+    == ["plugin marketplace update aj-house-rules", "plugin update house-rules@aj-house-rules"]
+    and "updated automatically at session start" in out
+    and "99.0.0" in out
+    and "OUT OF DATE" not in out
+    and not os.path.isfile(vc_marker_path(case))
+)
+if ok:
+    report("PASS", "versioncheck refreshes the stale marketplace, runs the update itself, and confirms it on disk")
+    print("          both commands ran in order; installed_plugins.json then read 99.0.0, so no banner and no marker")
+else:
+    report("FAIL", "versioncheck refreshes the stale marketplace, runs the update itself, and confirms it on disk")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+
+case = "vc-update-exits-0-but-nothing-installed"
+vc_clear(case)
+vc_installed_json(case, _installed_version)
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(
+        case,
+        HOUSE_RULES_VC_MARKETPLACE="99.0.0",
+        HOUSE_RULES_VC_GITHUB="99.0.0",
+        VC_FAKE_EXIT="0",
+    ),
+)
+ok = (
+    rc == 0
+    and vc_fake_calls(case) == ["plugin update house-rules@aj-house-rules"]
+    and "OUT OF DATE" in out
+    and "exited 0, but installed_plugins.json lists" in out
+    and os.path.isfile(vc_marker_path(case))
+)
+if ok:
+    report("PASS", "versioncheck does not trust an update's exit code: nothing new on disk still means out of date")
+    print("          only `plugin update` ran (marketplace already current); exit 0 with no new install -> banner and marker")
+else:
+    report("FAIL", "versioncheck does not trust an update's exit code: nothing new on disk still means out of date")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+if os.path.isfile(vc_marker_path(case)):
+    os.remove(vc_marker_path(case))
+
+case = "vc-auto-update-off"
+vc_clear(case)
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(
+        case,
+        HOUSE_RULES_VC_MARKETPLACE="99.0.0",
+        HOUSE_RULES_VC_GITHUB="99.0.0",
+        HOUSE_RULES_AUTO_UPDATE="off",
+    ),
+)
+ok = (
+    rc == 0
+    and vc_fake_calls(case) == []
+    and "OUT OF DATE" in out
+    and "HOUSE_RULES_AUTO_UPDATE=off" in out
+)
+if ok:
+    report("PASS", "HOUSE_RULES_AUTO_UPDATE=off keeps the check but never runs the update")
+    print("          no `claude` call; the banner says automatic updating is off")
+else:
+    report("FAIL", "HOUSE_RULES_AUTO_UPDATE=off keeps the check but never runs the update")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+if os.path.isfile(vc_marker_path(case)):
+    os.remove(vc_marker_path(case))
+shutil.rmtree(_vc_fake_dir, ignore_errors=True)
 
 # --- docref.py: the doc-ref pointer checker ----------------------------------------------------
 # Design: docs/superpowers/specs/2026-09-20-pointer-integrity-design.md
@@ -4361,9 +6826,9 @@ docref_case(
 
 docref_case(
     "docref check: prose pointers are counted as legacy, not judged",
-    {"docs/systems/physics.md": "## T\n", "src/a.c": "// see docs/systems/physics.md, Traps\n"},
+    {"docs/4-systems/physics.md": "## T\n", "src/a.c": "// see docs/4-systems/physics.md, Traps\n"},
     ["check"], 0,
-    expect_in=["1 line(s) mention docs/systems/", "legacy prose pointers"],
+    expect_in=["1 line(s) mention docs/4-systems/", "legacy prose pointers"],
 )
 
 docref_case(
@@ -4897,7 +7362,7 @@ finally:
 # --- the repo's own docs and code pass docref check ----------------------------------------------
 # verify.py and docref.py are excluded: they hold well-formed example pointers on purpose.
 _dr_live = "docref check passes on this repo's own docs and code"
-_absent = absent_repo_files("docs/Decisions.md", "docs/README.md")
+_absent = absent_repo_files("docs/6-decisions/Decisions.md", "docs/README.md")
 if _absent:
     skip_repo_check(_dr_live, _absent)
 else:
@@ -4912,6 +7377,477 @@ else:
     else:
         report("FAIL", _dr_live)
         print("          " + _dr_failure_detail(_rc, _out, _err).replace("\n", "\n          "))
+
+# --- plain_docs_check.py: the plain-English doc copy checker -----------------------------------
+# Design: docs/plans/2026-09-24-plain-docs-skill.md
+PLAIN_CHECK = os.path.join(HERE, "plain_docs_check.py")
+
+PD_HASH_RE = re.compile(r"@HASHOF:([\w./-]+)@")
+
+
+def _pd_prepare(d):
+    """git init the fixture, then resolve every @HASHOF:<relpath>@ token in every file to that
+    file's real git blob hash, so header lines can reference a source's actual current hash
+    without the test data hardcoding one."""
+    subprocess.run(["git", "init", "-q"], cwd=d, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    for dirpath, _dirnames, filenames in os.walk(d):
+        if ".git" in dirpath.split(os.sep):
+            continue
+        for name in filenames:
+            full = os.path.join(dirpath, name)
+            with open(full, "r", encoding="utf-8") as f:
+                text = f.read()
+            if "@HASHOF:" not in text:
+                continue
+
+            def repl(m, d=d):
+                target = os.path.join(d, m.group(1))
+                proc = subprocess.run(
+                    ["git", "hash-object", target], cwd=d,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+                )
+                return proc.stdout.decode("utf-8", "replace").strip()
+
+            new_text = PD_HASH_RE.sub(repl, text)
+            if new_text != text:
+                with open(full, "w", encoding="utf-8") as f:
+                    f.write(new_text)
+
+
+def pd_run(root, *args):
+    cmd = [sys.executable, PLAIN_CHECK, "--root", root] + list(args)
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return (
+        proc.returncode,
+        proc.stdout.decode("utf-8", "replace"),
+        proc.stderr.decode("utf-8", "replace"),
+    )
+
+
+def pd_case(title, files, args=(), expect_rc=0, expect_in=(), expect_out=()):
+    d = make_fixture(files)
+    try:
+        _pd_prepare(d)
+        resolved_args = [a.replace("{ROOT}", d) if isinstance(a, str) else a for a in args]
+        rc, out, err = pd_run(d, *resolved_args)
+        problems = []
+        if rc != expect_rc:
+            problems.append(f"exit {rc}, expected {expect_rc}")
+        for needle in expect_in:
+            if needle not in out:
+                problems.append(f"output is missing {needle!r}")
+        for needle in expect_out:
+            if needle in out:
+                problems.append(f"output should not contain {needle!r}")
+        if not problems:
+            report("PASS", title)
+            print("          " + (out.strip().splitlines() or ["(no output)"])[-1][:100])
+        else:
+            report("FAIL", title)
+            for p in problems:
+                print(f"          {p}")
+            print(f"          stdout: {out[:500]!r} stderr: {err[:200]!r}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+PD_OK_HEADER = "<!-- plain copy of: docs/4-systems/x.md @ @HASHOF:docs/4-systems/x.md@ -->\n"
+PD_SOURCE = (
+    "# X\n\nA source doc with a decent number of words in it so the ratio math has room to work. "
+    + " ".join(f"word{i}" for i in range(1, 300))
+    + "\n"
+)
+PD_OK_BODY = (
+    "\n# X, in plain English\n\n"
+    "Full technical doc: [x.md](../../4-systems/x.md)\n\n"
+    "**What it is.** A short, clean plain copy.\n\n"
+    "**Why it matters.** Nothing breaks if this one is missing.\n\n"
+    "**How it works.**\n\n1. Step one.\n\n"
+    "**Risks and safeguards.**\n\n- **Nothing.** No known risk.\n\n"
+    "**Related.**\n\n- **Nothing.** No related systems.\n\n"
+    "**Left out**, see the full doc: nothing.\n"
+)
+
+CHECK_NO_PLUGIN_FILE = "plain_docs_check.py is missing"
+if not os.path.isfile(PLAIN_CHECK):
+    report("FAIL", CHECK_NO_PLUGIN_FILE)
+    print(f"          expected {PLAIN_CHECK}; the plain-docs tests that run it are skipped")
+else:
+    pd_case(
+        "plain_docs_check: a well-formed plain copy passes clean",
+        {"docs/4-systems/x.md": PD_SOURCE, "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY},
+        expect_rc=0,
+        expect_in=["0 fail", "plain_docs_check: OK"],
+    )
+
+    pd_case(
+        "plain_docs_check: no docs/plain/ folder is reported plainly and still exits 0",
+        {"docs/4-systems/x.md": PD_SOURCE},
+        expect_rc=0,
+        expect_in=["no docs/plain/ folder", "nothing to check"],
+    )
+
+    pd_case(
+        "plain_docs_check: an em dash fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "A short plain copy — written badly."
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "em dash or en dash"],
+    )
+
+    pd_case(
+        "plain_docs_check: a banned word fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "A short plain copy, built from the payload."
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "banned word 'payload'"],
+    )
+
+    pd_case(
+        "plain_docs_check: a code block fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY + "\n```\ncode here\n```\n",
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "fenced code block"],
+    )
+
+    pd_case(
+        "plain_docs_check: a file path in prose fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "See scripts/hook.py for the real code."
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "a file path in prose"],
+    )
+
+    pd_case(
+        "plain_docs_check: a file:line reference fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "See hook.py:71 for the real code."
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "file:line reference"],
+    )
+
+    pd_case(
+        "plain_docs_check: a missing header fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_BODY.lstrip("\n"),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "missing or malformed header"],
+    )
+
+    pd_case(
+        "plain_docs_check: a missing full-doc link fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "Full technical doc: [x.md](../../4-systems/x.md)\n\n", ""
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "missing the 'Full technical doc:"],
+    )
+
+    pd_case(
+        "plain_docs_check: a source file that no longer exists fails",
+        {"docs/plain/4-systems/x.md": PD_OK_HEADER.replace("@HASHOF:docs/4-systems/x.md@", "0" * 40) + PD_OK_BODY},
+        expect_rc=1,
+        expect_in=["FAIL", "does not exist"],
+    )
+
+    pd_case(
+        "plain_docs_check: a word count over a third of the source's fails",
+        {
+            "docs/4-systems/x.md": "# X\n\n" + " ".join(f"w{i}" for i in range(1, 13)) + "\n",
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "over a third of the source's"],
+    )
+
+    pd_case(
+        "plain_docs_check: a word count over a quarter (but not a third) only warns",
+        {
+            # source has 183 words, plain body has 55 -> 30%, between a quarter and a third
+            "docs/4-systems/x.md": "# X\n\n" + " ".join(f"w{i}" for i in range(1, 183)) + "\n",
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+        },
+        expect_rc=0,
+        expect_in=["WARN", "over a quarter of the source's", "plain_docs_check: OK"],
+    )
+
+    pd_case(
+        "plain_docs_check: a broken relative link fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "- **Nothing.** No related systems.\n",
+                "- **Missing.** [missing.md](../../4-systems/missing.md)\n",
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "broken relative link"],
+    )
+
+    pd_case(
+        "plain_docs_check: a stale source blob hash warns, not fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER.replace("@HASHOF:docs/4-systems/x.md@", "f" * 40) + PD_OK_BODY,
+        },
+        expect_rc=0,
+        expect_in=["WARN", "stale: source", "plain_docs_check: OK"],
+    )
+
+    pd_case(
+        "plain_docs_check: a related link to a doc that already has a plain copy fails",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/4-systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/4-systems/y.md": (
+                "<!-- plain copy of: docs/4-systems/y.md @ @HASHOF:docs/4-systems/y.md@ -->\n\n"
+                "# Y, in plain English\n\nFull technical doc: [y.md](../../4-systems/y.md)\n\n"
+                "**What it is.** Stub.\n"
+            ),
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "- **Nothing.** No related systems.\n",
+                "- **Y.** The y system.\n  [y.md](../../4-systems/y.md)\n",
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "already has a plain copy", "link to the plain copy instead"],
+    )
+
+    pd_case(
+        "plain_docs_check: an unupgraded '(no plain copy yet)' pointer fails once the plain copy exists",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/4-systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/4-systems/y.md": (
+                "<!-- plain copy of: docs/4-systems/y.md @ @HASHOF:docs/4-systems/y.md@ -->\n\n"
+                "# Y, in plain English\n\nFull technical doc: [y.md](../../4-systems/y.md)\n\n"
+                "**What it is.** Stub.\n"
+            ),
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "- **Nothing.** No related systems.\n",
+                "- **Y.** The y system.\n  [y.md](../../4-systems/y.md) *(no plain copy yet)*\n",
+            ),
+        },
+        expect_rc=1,
+        expect_in=["FAIL", "upgrade the pointer"],
+    )
+
+    pd_case(
+        "plain_docs_check: '(no plain copy yet)' and '(needs a doc)' lines are listed as to-do items",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/4-systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "- **Nothing.** No related systems.\n",
+                "- **Y.** The y system.\n  [y.md](../../4-systems/y.md) *(no plain copy yet)*\n"
+                "- **Z.** No doc yet.\n  Z *(needs a doc)*\n",
+            ),
+        },
+        expect_rc=0,
+        expect_in=[
+            "to-do, plain copies not yet written",
+            "docs/4-systems/y.md",
+            "to-do, systems that need a technical doc first",
+            "(needs a doc)",
+        ],
+    )
+
+    QUEUE_SYSTEM_A = "# A\n\nStub source.\n"
+    QUEUE_SYSTEM_B = "# B\n\nStub source, different content.\n"
+    QUEUE_ROOT_README = "# Project\n\nStub root README.\n"
+    QUEUE_STALE_HEADER = "<!-- plain copy of: docs/4-systems/a.md @ " + "f" * 40 + " -->\n\nStale.\n"
+    QUEUE_CURRENT_BODY = "<!-- plain copy of: docs/4-systems/a.md @ @HASHOF:docs/4-systems/a.md@ -->\n\nCurrent.\n"
+
+    pd_case(
+        "plain_docs_check --queue: ordering, MISSING/STALE/CURRENT, and the summary line",
+        {
+            "docs/4-systems/README.md": "# Systems\n\nIndex, not a system.\n",
+            "docs/4-systems/b.md": QUEUE_SYSTEM_B,  # MISSING, but alphabetically after a.md
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,  # CURRENT
+            "docs/plain/4-systems/a.md": QUEUE_CURRENT_BODY,
+            "docs/1-landing/README.md": QUEUE_ROOT_README,  # MISSING
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "docs/4-systems/a.md  CURRENT  docs/plain/4-systems/a.md",
+            "docs/4-systems/b.md  MISSING  docs/plain/4-systems/b.md",
+            "docs/1-landing/README.md  MISSING  docs/plain/1-landing/README.md",
+            "plain_docs_check: queue: 2 missing, 0 stale, 1 current, 0 deferred",
+        ],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: a plain copy with a stale header is STALE, not CURRENT",
+        {
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
+            "docs/plain/4-systems/a.md": QUEUE_STALE_HEADER,
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "docs/4-systems/a.md  STALE  docs/plain/4-systems/a.md",
+            "plain_docs_check: queue: 0 missing, 1 stale, 0 current, 0 deferred",
+        ],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: docs/4-systems/README.md is never queued, itself an index",
+        {
+            "docs/4-systems/README.md": "# Systems\n\nIndex, not a system.\n",
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=["docs/4-systems/a.md  MISSING"],
+        expect_out=["docs/4-systems/README.md  MISSING", "docs/4-systems/README.md  CURRENT",
+                    "docs/4-systems/README.md  STALE"],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: docs/architecture.md is shown as DEFERRED, never queued",
+        {
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
+            "docs/architecture.md": "# Architecture\n\nStub.\n",
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "docs/architecture.md  DEFERRED  done only once the others have proven useful",
+            "plain_docs_check: queue: 1 missing, 0 stale, 0 current, 1 deferred",
+        ],
+        expect_out=["docs/architecture.md  MISSING", "docs/architecture.md  CURRENT"],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: excluded folders are named, not queued",
+        {
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
+            "docs/6-decisions/Decisions.md": "# Decisions\n\nStub.\n",
+            "docs/plans/2026-01-01-x.md": "# X\n\nStub.\n",
+            "docs/archive/old.md": "# Old\n\nStub.\n",
+            "docs/sessions/2026-01-01.md": "# Session\n\nStub.\n",
+            "docs/generated/gen.md": "# Gen\n\nStub.\n",
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "EXCLUDED: docs/6-decisions/Decisions.md, docs/plans/, docs/archive/, docs/sessions/, "
+            "docs/generated/, docs/plain/, docs/4-systems/README.md",
+        ],
+        expect_out=["docs/6-decisions/Decisions.md  MISSING", "docs/plans/2026-01-01-x.md",
+                    "docs/archive/old.md", "docs/sessions/2026-01-01.md", "docs/generated/gen.md"],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: an unlisted docs/*.md is named in the EXCLUDED summary",
+        {
+            "docs/4-systems/a.md": QUEUE_SYSTEM_A,
+            "docs/some-other-note.md": "# Note\n\nStub.\n",
+        },
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=[
+            "any other docs/*.md not in the eligible list: docs/some-other-note.md",
+        ],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: honours --root",
+        {
+            "sub/docs/4-systems/a.md": QUEUE_SYSTEM_A,
+        },
+        args=("--queue", "--root", "{ROOT}/sub"),
+        expect_rc=0,
+        expect_in=["docs/4-systems/a.md  MISSING  docs/plain/4-systems/a.md"],
+    )
+
+    pd_case(
+        "plain_docs_check --queue: no docs/ folder is reported plainly and still exits 0",
+        {"README.md": "# Not docs\n"},
+        args=("--queue",),
+        expect_rc=0,
+        expect_in=["no docs/ folder", "nothing to queue"],
+    )
+
+    pd_case(
+        "plain_docs_check: a single file path argument checks only that file",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/4-systems/y.md": "# Y\n\nStub.\n",
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY,
+            "docs/plain/4-systems/y.md": "not a header at all\n",
+        },
+        args=("{ROOT}/docs/plain/4-systems/x.md",),
+        expect_rc=0,
+        expect_in=["checked 1 file(s)", "plain_docs_check: OK"],
+        expect_out=["docs/plain/4-systems/y.md"],
+    )
+
+    def pd_closed_reader_case(title, files, args, expect_rc):
+        """Run the checker with stdout already closed at the reading end, the way `| head` leaves
+        it, and check the exit code is still the real result with no internal error."""
+        d = make_fixture(files)
+        read_end, write_end = os.pipe()
+        os.close(read_end)
+        try:
+            _pd_prepare(d)
+            proc = subprocess.run(
+                [sys.executable, PLAIN_CHECK, "--root", d] + list(args),
+                stdout=write_end, stderr=subprocess.PIPE,
+            )
+            err = proc.stderr.decode("utf-8", "replace")
+            if proc.returncode == expect_rc and "internal error" not in err:
+                report("PASS", title)
+            else:
+                report("FAIL", title)
+                print(f"          exit {proc.returncode}, expected {expect_rc}; stderr: {err[:300]!r}")
+        finally:
+            os.close(write_end)
+            shutil.rmtree(d, ignore_errors=True)
+
+    pd_closed_reader_case(
+        "plain_docs_check --queue: a reader that stops early (| head) is not an internal error",
+        {"docs/4-systems/x.md": PD_SOURCE, "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY},
+        args=("--queue",),
+        expect_rc=0,
+    )
+
+    pd_closed_reader_case(
+        "plain_docs_check: a reader that stops early still gets the real failing exit code",
+        {
+            "docs/4-systems/x.md": PD_SOURCE,
+            "docs/plain/4-systems/x.md": PD_OK_HEADER + PD_OK_BODY.replace(
+                "A short, clean plain copy.", "A short plain copy, built from the payload."
+            ),
+        },
+        args=(),
+        expect_rc=1,
+    )
 
 print()
 print("-" * 32)

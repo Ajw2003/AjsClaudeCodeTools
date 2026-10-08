@@ -11,9 +11,9 @@ and project instead of a file that has to be copied around. Published as a GitHu
 not-yet-load-bearing offshoots (`claude-prompt-workshop/`, `claude-agent-router/`) share its
 shim-plus-Python-file shape; see [docs/offshoots-plan.md](docs/offshoots-plan.md).
 
-**[docs/README.md](docs/README.md) is the entry point** for everything except running a command
-in this repo — what's built, where it stands, how each system works, why past decisions were
-made.
+**[docs/1-landing/README.md](docs/1-landing/README.md) is the entry point** for everything except
+running a command in this repo — what's built, where it stands, how each system works, why past
+decisions were made. (`docs/README.md` is the short, plain-English version, for people.)
 
 **This file is a pointer, not a copy.** The actual rules text lives at
 [claude-house-rules/plugins/house-rules/rules/house-rules.md](claude-house-rules/plugins/house-rules/rules/house-rules.md),
@@ -26,8 +26,9 @@ change has a shell signature add a `guard` pattern and a `verify.py` case in the
 For the hook-by-hook table, the design constraints `hook.py`/`run.sh` are built on, and which
 surfaces the step-card handover format actually reaches, see
 [docs/architecture.md](docs/architecture.md). This file stays small on purpose — it is
-auto-loaded every session, though (docs/architecture.md, "SessionStart is not re-paid on
-subagent spawn") a spawned subagent never sees it.
+auto-loaded every session, and most subagent types (general-purpose and claude-code-guide, not
+Explore) are handed it too (docs/architecture.md, "Subagents do receive CLAUDE.md"), so it is
+paid again on every such spawn.
 
 ## Commands
 
@@ -46,6 +47,8 @@ All commands run from the repo root; each is detailed in docs/architecture.md or
   `docs/sessions/`.
 - `python claude-house-rules/plugins/house-rules/scripts/docref.py check` — proves the
   archivist's `doc-ref` pointers still resolve (`fix --write` repairs, `new` prints an unused id).
+- `python claude-house-rules/plugins/house-rules/scripts/plain_docs_check.py` — checks the
+  plain-English doc copies under `docs/plain/` against the `plain-docs` skill's rules.
 
 [`.github/workflows/verify.yml`](.github/workflows/verify.yml) runs the first two on every push
 and pull request.

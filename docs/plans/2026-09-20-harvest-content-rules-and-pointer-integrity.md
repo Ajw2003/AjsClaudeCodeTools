@@ -11,7 +11,7 @@ designed or built.
 
 `git status` in this clone showed **uncommitted** changes in `CLAUDE.md`, `plugin.json` (2.27.0),
 `commands/harvest-scan.md`, `scripts/harvest_scan.py`, `scripts/hook.py`, `scripts/verify.py`,
-`docs/Decisions.md`, `docs/architecture.md`, and `docs/comment-harvest-calibration.md`. Read
+`docs/6-decisions/Decisions.md`, `docs/architecture.md`, and `docs/comment-harvest-calibration.md`. Read
 `git status` and `git diff` first and do not clobber them.
 
 One of those changes already delivers part of what the session asked for: **the line criterion is
@@ -107,7 +107,7 @@ lie silently.
   plans to `house-rules:executor`. In RockSkipping the user also asked that findings go to `.md`
   before source changes and that the agent not run mutating git; check this repo's `CLAUDE.md` for
   what applies here.
-- Non-trivial plugin changes get a `docs/Decisions.md` entry, and `verify.py` must pass (it asserts
+- Non-trivial plugin changes get a `docs/6-decisions/Decisions.md` entry, and `verify.py` must pass (it asserts
   on the archivist text and the harvest hook behaviour).
 - Brainstorming reached: classified **architectural**, context explored, decomposition presented.
   Still owed: clarifying questions, 2-3 approaches, sectioned design, a written spec, user review,

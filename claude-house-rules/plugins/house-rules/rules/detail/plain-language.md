@@ -29,3 +29,24 @@ switched off is a preference nobody has.
 efficient between me and the code is friction between me and the reader, and it disguises how
 little of an explanation actually landed.
 
+## A reply reporting finished work opens with a plain summary
+
+When a reply reports work that is done — files changed, commits made, a PR opened — its first
+thing is a short plain-English summary for the person, before any technical detail:
+
+- **What's done**, in terms of what it does for them, not which functions changed.
+- **What it changes for them** — what they will notice, and when it takes effect.
+- **What's waiting on them** — a merge, a decision, a command — or that nothing is.
+
+It reads on a phone: short paragraphs, lists rather than wide tables (three columns at most),
+file and function names kept out of the opening, jargon glossed on first use. Succinct is not
+thin: the detail still follows, below the summary, for whoever wants it.
+
+The `handover` (Stop) hook checks a long reply from a turn that wrote files or committed: an
+opening that is a code block, a table, or a paragraph of more than three code names, or any table
+wider than three columns, gets sent back once to lead with the summary.
+`HOUSE_RULES_PLAIN_SUMMARY=off` turns it off.
+
+**Why:** the user reads these reports on a phone as often as at a desk, and had to ask for a
+technical report to be re-explained "in layman terms, in a bit more detail". A report the reader
+has to ask to have translated has not been delivered yet.

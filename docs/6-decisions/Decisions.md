@@ -7,6 +7,508 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-07 - Destructive git steps run unasked only on my branch, and only when the work is saved elsewhere (#153, 2.53.0)
+
+**Context.** aj: "destructive actions are permitted only on a Claude created branch and only if the work already is saved somewhere else the destructive action would not affect." Asked whether "otherwise" meant ask or never, aj chose ask as today; asked whether `guard` should enforce it, aj chose rule text plus `guard`.
+
+**Decision.** The two rules now draw the line: on a `claude/` branch with a clean tree and every commit on a remote, a destructive step needs no asking; anywhere else it asks exactly as before. `guard` enforces the safe case for `reset`, `revert`, `rebase`, `checkout --` and `restore` through `work_saved_elsewhere()`.
+
+**Rejected.** Exempting force-push: it overwrites the remote, which is the copy that makes the work "saved elsewhere". Exempting `clean`, `stash drop` and `rm`: what they remove (ignored files, stashes, arbitrary paths) is never on the remote, or guard can't tell. Exempting merge-like verbs: a separate rule (don't finish what aj started) covers them.
+
+**Status.** Built; `verify.py` drives a real repo with a local bare remote (safe case passes; dirty tree, unpushed commit and aj's branch ask; force-push, clean, stash drop, merge and rm ask). To fit the 9,700-character inject margin, three phrasings elsewhere in `house-rules.md` were shortened without changing what they say (docs tiers, local paths, the step card), and the commit rule carries no pointer to the destructive one (its detail file does). The injected length includes the plugin's absolute path: 9,650 in this sandbox, about 26 more on the CI runner, where a first attempt at 9,687 failed at 9,713.
+
+**Consequence.** `guard` now runs up to two `git` subprocesses on a matching command on my branch. On aj's branch nothing changes.
+
+---
+
+## 2026-10-07 - The prompt timer skips questions, refuses at once once aj is away, and learns when an action ran (#149, #151, #152, 2.53.0)
+
+**Context.** #149: on 2026-10-06 a subagent's `git push` dialog stayed on screen overnight after the timer refused it, a second push prompt waited another full 5 minutes, and a third push that actually ran was recorded as timed out. aj asked that the timer actually move the agent on to a route that is not blocked rather than leave it waiting long after aj had the chance to answer, and that questions and multiple-choice prompts be left out of it.
+
+**Decision.** (1) `AskUserQuestion` and `ExitPlanMode` get no timer. (2) After one timeout in a session, later prompts in it are refused at once until aj's next message; the refusal names the earlier unanswered prompt. (3) A new `promptran` handler on `PostToolUse`/`PostToolUseFailure` marks an action that ran, so the waiting timer stops with no decision, and reports a timed-out action that ran anyway.
+
+**Rejected.** A `PostToolUse` entry with no matcher: about 130 ms per call on every Read and Grep, where nothing else runs; it is matched to the tools that raise prompts instead. Exempting by a `hooks.json` matcher: a negative match needs a lookahead regex whose support was not checked; the exemption in `hook.py` is explicit and tested. Closing the stale dialog: there is no hook output for it.
+
+**Status.** Built; `verify.py` covers each part. Seen live in the build session itself (cloud, auto mode, 2.52.0 installed): three Bash calls that ran were listed by `scope` as "waiting on you", because auto mode approved them without stopping the timer - the #149 symptom `promptran` removes. Not verified in a real session: whether the stale dialog's Allow can still run the command (if it does, `promptran` now reports it), and whether `PermissionRequest` ever fired for `AskUserQuestion` before this change.
+
+**Consequence.** An aj who is present but missed one prompt sees the next prompts refused until they write anything; writing restores normal prompts.
+
+---
+
+## 2026-10-04 - A permission prompt nobody answers for 5 minutes is refused, never approved (#142, 2.52.0)
+
+**Context.** Overnight, one unanswered permission prompt held up a whole session. Issue #136 is the same failure in background builders. aj: "Permission as a blocker should be isolated, not affect the rest of the project."
+
+**Decision.** A `prompttimer` handler on `PermissionRequest`, the one hook event that runs at the same time as the dialog ("whichever finishes first determines the outcome", hooks reference). It waits `HOUSE_RULES_PROMPT_TIMEOUT` seconds (default 300, `off` disables) and then refuses. It never approves, because an unanswered prompt is a no. The refusal tells Claude not to retry, to route around without the same effect, and to carry on with the rest. The action goes on a waiting-on-you list in `<git common dir>/house-rules/waiting-on-you.json`. That list is shown on aj's next real message and at the next session start. It is the second deliberate exception to "no hook keeps state", after `versioncheck`'s marker, and is kept for the same reason: each entry is keyed by session.
+
+The refusal text goes in both `decision.message` and `decision.reason`. Probed on Claude Code 2.1.289: only `message` reached the model, although `reason` is the documented name.
+
+**Rejected.** Approving after the timeout: that would turn silence into consent for exactly the destructive actions the prompts exist for. A timer inside `PreToolUse`: that hook finishes before the dialog opens, so it cannot time one.
+
+**Status.** Decided and built. Not yet settled (#143): headless, a `guard` `ask` never reached `PermissionRequest`. Whether it does in the desktop app is untested, so whether the house-rules prompts themselves are timed is unknown until #143 runs. If they are not, the fallback in the plan (an absence check) goes to aj first.
+
+**Consequence.** A refused action can sit on the list unseen until aj next writes or a new session starts. That is the point: it waits, and the rest of the session carries on.
+
+---
+
+## 2026-10-01 - Commits and pull requests credit "aj's agent", never Claude (#133, 2.51.0)
+
+**Context.** Claude Code adds a `Co-Authored-By: Claude` trailer to commits and a "Generated with Claude Code" line to pull requests. aj wants the distinction that an agent did the work but not the Claude branding, and no email shown.
+
+**Decision.** Credit "aj's agent": commit text `Committed by AJ's agent`, pull request text `Opened by AJ's agent`, no `Co-Authored-By` trailer (it needs an email), `sessionUrl` false. Two mechanisms. (1) Claude Code's `attribution` setting, written by `tools/install.py` into the user's settings file; it exists in the program (found in 2.1.286) though not in the public docs, and the app applied it to a running session at once. A plugin cannot ship it: Claude Code reads only `agent` and `subagentStatusLine` from a plugin's settings.json. (2) A `guard` check that refuses text crediting Claude, for sessions that never read the settings file (cloud sessions). `HOUSE_RULES_ATTRIBUTION=off` disables the check.
+
+**Status.** Decided. Old commits and pull requests are not rewritten.
+
+**Consequence.** A new machine gets the setting only when the installer runs there. The guard cannot add the right wording, only refuse the wrong one.
+
+---
+
+## 2026-10-01 - "Never hide work in the background" becomes "work stays visible, reachable and readable"; every background job gets a 5-minute stall check (#120)
+
+**Context.** The rule said nothing runs in the background. That stopped being true or useful: subagents, Monitor and `run_in_background` are tools the user can follow, and aj works from a phone. aj amended it: "work should never be hidden, unreachable and unreadable. If I cannot see what is being done or reliably check in on or audit long running tasks on mobile then the rule is being broken." Earlier the same day a subagent sat silent for 26 minutes and nothing said so.
+
+**Decision.** The rule is renamed (*Never hide work: it stays visible, reachable and readable*) and rewritten around that test. Hidden windows, `nohup`, detached jobs and logs only Claude reads stay banned (the `guard` patterns are unchanged). Followable background work is allowed. Every background job is checked every 5 minutes with `scripts/stallcheck.py`: the age of the newest write to its transcript or output file against 300 seconds, no model call. Run under Monitor with `--watch` it costs nothing until something stalls. The reminder hooks that said "check in every 10 minutes" now name that command. `worktreesweep`'s 10-minute commit rule is a separate mechanism and is unchanged.
+
+**Status.** Decided. Supersedes the old rule text and heading; the heading string changed in `guard`'s bucket title and the tests.
+
+**Consequence.** A long model call or a usage-limit wait writes nothing, so it reads as STALLED. That is the definition; the answer is to look and tell aj, not to assume the job died. The check is enforced for subagents by the reminder hook text, not by a hook that blocks; for other background commands it relies on Claude following the rule.
+
+---
+
+## 2026-10-01 - Three helper tiers replace the executor; spawns are capped (2.50.0)
+
+**Context.** Issues #110-#112. aj found the executor too slow (a build ran 32 minutes), too costly
+(about 54k tokens just to start) and too chatty. Measured spawn cost is dominated by tool definitions,
+so a short tool allowlist is the main lever.
+
+**Decision.** `agents/executor.md` is deleted. `scout` (haiku; Read, Grep, Glob), `builder` (sonnet; Read,
+Edit, Write, Bash, Grep, Glob) and `reviewer` (opus; Read, Grep, Glob, Bash) replace it; none has the
+`Agent` tool, so nesting is impossible by construction. Tier files carry only model, tools and role; the
+rules core reaches them through `subagentrules`. A PreToolUse `agentcap` entry (matched to Agent only)
+denies a third running subagent, using a list in the common repository directory; a record older than 45
+minutes is ignored because SubagentStop did not fire during the 2026-09-29 outage; it fails open and loud,
+and `HOUSE_RULES_AGENTS=off` disables it. The subagent audit now prints tool counts, failed commands in
+full, files written and a count of other commands. `issuelist` shows a visible loaded note.
+
+**Alternatives rejected.** Keeping the executor with a trimmed prompt (the tool definitions were the cost);
+blocking nesting only by a hook (the tool list does it with no process).
+
+**Left alone on purpose.** The archivist, `commitgate`, `autosave`, `worktreesweep`, `subagentcommit`.
+
+**Supersedes.** The executor-based delegation in the 2026-09 entries; those entries stay as history.
+
+---
+
+## 2026-09-30 - Hooks force the issue workflow; Claude still performs it (2.49.0)
+
+**Context.** Issues #108-#110, parent #107. Plans, pull requests and closures were not tied to
+issues, and a merged PR could close an issue before the user had tested. Focus Deck, the user's
+board, only shows issues labelled `Claude created this`.
+
+**Decision.** (1) The hooks force; they never act. No hook runs `gh issue create` or `gh issue close`:
+a plan over three steps makes `commitgate` deny Write/Edit/NotebookEdit on source files until a
+parent and a child issue, both labelled `Claude created this`, are recorded. `docs/`, `.claude/`,
+any `.md`, files outside the project and the state file stay editable, so the plan and the issues'
+text can still be written. The kill switch is `HOUSE_RULES_ISSUES=off`. (2) Pull request bodies say
+`Refs #N`, `Part of #N` or `No-issue: <reason>`; a closing word followed by an issue reference is
+denied, because GitHub closes the issue at merge. (3) `gh issue close` always asks; the prompt is the
+user's go-ahead after testing, and on approval Claude adds `Claude completed this`, removes `in
+progress`, and comments the merged PR link. (4) On 2026-09-30 the user permitted Claude to apply an
+`in progress` label to an issue when work on it starts.
+
+**Alternatives rejected.** A hook that creates the issues itself (hooks must not write to GitHub on a
+tool call and cannot write plain-language titles). A warning instead of a block (the efficiency review
+and past lapses show reminders get ignored). A new hook process per gate (about 114 ms each).
+
+**Status.** Decided. Supersedes nothing.
+
+**Consequence.** `inject` grew by about 115 tokens and its `verify.py` margin moved from 9,000 to
+9,700 characters. The open-issue list is its own SessionStart entry because of that margin. `gh
+issue create` through the `PowerShell` tool is not recorded. A subagent worktree has its own git
+directory, so a plan approved in the main session does not gate it.
+
+## 2026-09-30 — Subagents do receive CLAUDE.md; the "never sees it" claim is withdrawn
+
+**Context.** While measuring what a subagent spawn costs, the transcripts of one
+`general-purpose` and one `claude-code-guide` subagent each held an `instructions` attachment
+listing the user `CLAUDE.md`, the project `CLAUDE.md` files and `MEMORY.md`. The `Explore` subagent
+held none. `CLAUDE.md` said a spawned subagent never sees it, resting on the 2026-09-22 entry
+below, which tested `SessionStart`'s `additionalContext` only.
+
+**Decision.** `CLAUDE.md` and `docs/architecture.md` now say most subagent types receive it. The
+2026-09-22 finding stands for `SessionStart` `additionalContext`, and is not rewritten.
+
+**Status.** Decided. Replaces the `CLAUDE.md` sentence only; supersedes nothing else.
+
+**Consequence.** Anything added to `CLAUDE.md` is paid again on every general-purpose spawn, which
+weighs against adding to it. Not yet measured: whether Explore omits it on purpose or by accident.
+
+---
+
+## 2026-09-30 — Subagent work is saved while it runs, not only when it finishes
+
+**Context.** On 2026-09-29 a safety-classifier outage stopped an executor mid-run. `SubagentStop`
+never fired, so `subagentcommit` (the only commit enforcement for subagents) never ran, and
+`hook.py`, `verify.py` and six docs sat uncommitted in its worktree until the parent noticed and
+committed them by hand. aj asked for the executor to be held to committing constantly, with
+progress saved against outages, and then asked for the parent's own 10-minute check (which the
+parent had been doing by hand) to become a plugin behaviour too.
+
+**Decision.** Three hooks, all limited to `worktree-agent-` branches (the ones Claude Code creates
+for `isolation: "worktree"`), all off with `HOUSE_RULES_AUTOSAVE=off`:
+- `autosave` (PostToolUse): snapshots the worktree to `refs/house-rules/autosave/<branch>` through
+  a temporary index, pushes it once a minute, and commits for the subagent after 10 minutes
+  without a commit.
+- `commitgate` (PreToolUse): blocks edits at 3+ uncommitted files. aj chose "tell the executor"
+  over auto-committing every edit. aj then added that if the executor ignores it, the hook
+  commits itself; `subagentcommit`'s retry path does the same.
+- `worktreesweep` (UserPromptSubmit): on every parent wake, commits any subagent worktree left
+  untouched 10+ minutes. That is the one case no subagent-side hook can cover, a dead subagent.
+  `audit` asks for a 10-minute check-in when a subagent launches in the background, so the
+  parent wakes.
+
+aj chose to push the autosave ref, so the save outlives the container.
+
+**Rejected.** Auto-committing every edit (the branch fills with wip commits). An instruction-only
+rule, which is what failed on 2026-09-29.
+
+**Consequence.** `autosave` and `commitgate` are the first handlers to keep state between calls:
+three small files per branch inside that worktree's git dir, deleted on a clean finish.
+`docs/4-systems/hook-engine.md`'s stateless invariant now names them as the exception. In a
+Claude Code cloud session the push is refused (HTTP 403 from the session's git proxy, which only
+accepts the session's own branch), measured 2026-09-30. There the save stays local and each
+failed push says so. Whether GitHub accepts `refs/house-rules/*` from a user's own machine is
+untested. Building it was itself blocked twice by the auto-mode classifier as
+`[Self-Modification]` when the executor tried it. aj then had the main session build it directly.
+
+**Related.** Issue #105 (replace the single executor with dynamic dispatch) is the longer-term
+direction. This protection is needed whatever replaces the executor.
+
+---
+
+## 2026-09-29 — Open source first; the Unity rule leaves the core; the profile records hardware
+
+**Context.** aj asked for two things: build locally for the hardware we have, and prefer free
+open-source solutions with paid as the last resort (on Pro or Max, first scope building our own).
+The plan is `docs/plans/2026-09-29-local-first-free-first.md`. The core `inject` text had 81
+characters of room, so the new rule needed space. Two ways of making it were measured; aj chose
+Option B, moving the Unity rule out of the core. Measuring Option B showed that `standards` in a
+Unity project already emitted 9,832 chars (budget 9,500) and 13,376 with a Node service beside
+it (hard limit 10,000).
+
+**Decision.**
+1. A core rule "Open source first; paid is the last resort" with a five-rung ladder, and
+   `rules/detail/free-first.md` (the ladder, the build-your-own estimate table, an example). The
+   "Find out what machine you are on" rule gains "Detected hardware is the local budget", and
+   `rules/detail/environment.md` says what "doesn't fit" means.
+2. "Unity work starts with the Unity plugin and the Unity CLI" moves from `house-rules.md` to
+   `rules/standards/csharp-unity-standards.md`, so only Unity projects load it. That document
+   splits into an always-injected core (C# style, a pointer, the Unity rule) and
+   `rules/standards/csharp-unity-detail.md`, holding six sections moved unchanged: Project & folder
+   structure, Unity-specific patterns, Performance, Testing, Verifying compilation, Tooling
+   (Rider). `standards` now emits 5,782 chars for Unity only and 9,326 for Unity + Node.
+3. The `profile` fallback detects CPU, RAM, GPU/VRAM, free disk and the Claude plan at runtime
+   (nothing hardcoded), with per-probe timeouts and a `not detected (<reason>)` line on failure.
+   On a remote session the numbers are labelled as the sandbox's; the local budget is the
+   user's machine, from `rules/handover-target.md`.
+4. `verify.py` gains the check that was missing: `standards` measured in a Unity-only and a
+   Unity + Node project, plus cases for the Unity rule's placement, the hardware and plan
+   fields, and the rule/detail agreement.
+
+**Why.** Option B suits a plugin others install: people who do not use Unity stop paying for a
+Unity rule. It only worked once the Unity standards were split, since adding the rule to the
+existing document would have put a Unity + Node project past the hard limit. The overrun went
+unseen because `verify.py` measured `standards` only in this repo, which has no Unity markers.
+The plan tier is read from `claude auth status --json` and never assumed; in a cloud session
+that output has no plan field, so the profile says "not detected" and Claude asks once.
+
+**Rejected.** Option A (tightening three other rules' wording) kept the Unity rule in every
+session for people who never open Unity. No `guard` pattern: recommending a product is prose,
+not a shell command.
+
+**Consequence (superseded by the path move below).** `tools/sync_standards.py` overwrites the vendored Unity document from
+`Ajw2003/Coding-Standards`, which reverts the split. The new size check would fail after such a
+sync; the fix is to make the same change upstream. Not verified: the macOS and Windows probe
+branches, and whether a local claude.ai login reports a plan in `claude auth status`.
+
+**Follow-up, same day: the detail file moved to `rules/standards/`.** The Unity detail file now
+lives at `rules/standards/csharp-unity-detail.md`, not `rules/detail/`, so the plugin layout
+mirrors upstream (`Ajw2003/coding-standards` carries both Unity files) and `sync_standards.py`
+can no longer revert the split. `event_standards` loads only exact stems, so the extra file is
+never injected.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — A reply reporting finished work opens with a plain summary (#98)
+
+**Context.** #98 asked for a human-facing document first, in plain terms, readable on mobile or
+desktop. The user had just asked for a technical report to be re-explained in layman terms. Asked
+which form "document" meant, the user chose a plain summary at the top of the chat reply — not a
+file, and not a page, which would have reversed "never publish a page unasked".
+
+**Decision.** A rule under "Plain language": a reply reporting finished work opens with what's
+done, what it changes for the user and what waits on them, readable on a phone, before technical
+detail. A `handover` (Stop) check for turns that wrote files or committed: a reply of 600+ chars
+whose opening paragraph is a code block, a table or more than three code names, or which has a
+table wider than three columns, is sent back once. `HOUSE_RULES_PLAIN_SUMMARY=off`.
+
+**Why.** "Plain" cannot be judged from text, but its opposites can: an opening that is code, a
+table, or a list of identifiers is not a summary for a person. Measured on this session before
+shipping: the 4 real end-of-work replies all passed — which shows no false alarms, not that it
+catches bad ones; the tests supply those. The core line brings inject to 8,919 of 9,000 chars.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — Re-creating behaviour starts from an inventory; a visual change gets looked at
+
+**Context.** #90 (with #86 and #87): a port to GitHub Pages silently dropped 10 features because
+its spec was written from memory, only forced losses were disclosed, and every check compared the
+new page with itself. #88 and #96: visual changes were judged by reading code, never by looking.
+
+**Decision.** Rules: a port, rewrite, restructure or migration inventories the original from its
+code first (keep/change/drop, shown before building), verifies against the original, names every
+drop, and files an issue per deferred re-add (`rules/detail/parity-inventory.md`, pointed to from
+the "Edit in place" core section, which already reaches subagents); a visual change is
+screenshotted before and after (`rules/detail/visual-check.md`, one sentence under "A green test
+suite"). Hooks: `scope` adds an inventory clause to a prompt that reads like re-creation;
+`delegate` adds one to such a plan with no inventory; `handover` (Stop) reminds a re-creation
+turn that wrote files but names nothing kept or dropped, and a turn that wrote a visual file
+without capturing or reading an image.
+
+**Why.** The failure happens at three points — the ask, the plan handed to a subagent, and the
+report — so each gets a check. Rejected for the pattern: "replace" and "move to", which are
+everyday edit words; a false positive at Stop costs a whole continuation. Measured: none of the
+12 genuine prompts in this machine's transcripts matched; none was a port, so this shows no false
+positives rather than proving true ones. Not built from #90's list: the feature-surface diff
+tripwire (element IDs, workflow triggers, migration columns), which needs per-project knowledge
+of what "the surface" is; the rule carries it instead. Both core additions fit the inject budget
+(8,748 of 9,000 chars).
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — Subagents commit as they go, and cannot finish with unsaved work
+
+**Context.** The user reported subagents committing less often than the main session. The cause
+was in the agents' own instructions: `executor.md` and `archivist.md` both said "Commit messages
+(only if asked to commit)", so a subagent never told to commit never did. 2.39.0's `audit` line
+only named the leftovers to the parent afterwards. The user suggested either the same save logic
+for subagents or a 1-minute autosave timer run by the main session.
+
+**Decision.** The same save logic, at the subagent's own finish line. Both agents now commit each
+finished piece as they go, scoped, unless the delegation said not to run git. A new
+`subagentcommit` handler on `SubagentStop` returns `decision: "block"` when files the subagent
+wrote are still uncommitted, judging each file in its own repo so worktrees are covered, and only
+reports on the retry. Its own hook entry, so `verdict`'s report never depends on it.
+
+**Why.** Probed live on CLI 2.1.284 before building: a `SubagentStop` block sent the subagent back
+with the reason as its instruction, and the retry's payload carried `stop_hook_active: true`.
+End to end in a throwaway repo, a subagent asked only to write a file committed it with the hook
+(`Add hello.py`, clean tree) and left `?? hello.py` without it — one run each. Rejected: a
+1-minute timer — it commits whatever state the files are in mid-edit, cannot tell the subagent's
+edits from the user's, and would be exactly the unwatched background process "never hide work"
+forbids. A hook at the point a piece of work finishes is the save point a timer approximates.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — An instruction names its exact input (#47)
+
+**Context.** Queued in `docs/rules-backlog.md` since 2026-09-07: verification steps whose whole
+input was "ask for a multi-step handover", so no two runs could disagree.
+
+**Decision.** A rule under "Deliver a whole workflow", core line plus a section in
+`rules/detail/deliver-workflow.md`: an instruction the user acts on names the literal input, and
+records the expected result when runs are to be compared. The backlog's two open questions: it
+does not join the six handover items, which are about shell commands and would be diluted by a
+broader rule; and it ships as rule text with no `verify.py` check, since whether an instruction is
+specific enough is not a string match.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — Verify a wait's target and working state before leaving it (#85)
+
+**Context.** A test-runner wait reported "running" for its full 10-minute timeout on a run that
+finished in 62 seconds: it was called with a bare class name while its verdict script matched by
+full-name prefix, and it was piped through `tail`, so nothing showed until it ended.
+
+**Decision.** A rule under "Nothing fails silently" (core line plus
+`rules/detail/fails-silently.md`): before leaving a wait or background task, check its target
+name against the source and run one status check. `guard` gains a `GUARD_R1` pattern that prompts
+on a `while`/`until`/`sleep`/`timeout`/`watch` wait piped through `tail`/`head`.
+
+**Why.** The pipe is the one part of the failure with a shell signature, so it is the part a hook
+can catch. Rejected for now: matching test-wrapper names against test classes and Monitor
+conditions against source — both need per-project knowledge the guard does not have; the rule
+carries them. A plain `cmd | head` with no wait keyword stays silent.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — The Stop evidence check catches "can't be done" and an unreasoned "not checked"
+
+**Context.** #91, #92, #93 and #89 all report the same gap after 2.38.0 widened the evidence
+rule: the rule text covered any claim of fact, but the `Stop` check only recognised success words.
+"That isn't supported" said from memory went through, and so did "I haven't checked X" when X was
+one command away.
+
+**Decision.** Two additions to `handover`'s evidence check, sharing its one emission:
+impossibility phrases ("can't be done", "isn't supported", "doesn't exist", "there is no
+setting/flag/api/…") count as claims, under the same no-tool-this-turn and no-quoted-output
+conditions as success words; and a "not checked" / "unverified" / lowercase "untested" phrase
+fires whether or not tools ran, unless its own sentence gives a reason the check could not run.
+A phrase opening right after a quote mark is exempt. The rules core now says "can't be done" is a
+claim and checking is the default, not an offer.
+
+**Why.** Rejected: a bare "can't" — it is everywhere in ordinary prose. Rejected: firing on the
+card's `UNTESTED:` marker — the card rule already requires a reason beside it. The one existing
+test that expected a bare "This is untested; I have not run it." to stay silent was flipped on
+purpose: that sentence is exactly the disclosure-instead-of-checking #89 asks to stop. Measured on
+this session's 49 real replies before shipping: 2 false positives, both quoted meta-talk, fixed
+by the quote exemption; 0 after.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-28 — The commit rule's obligation half gets hooks: Stop, first change, audit, memory
+
+**Context.** Issue #97: a multi-day task finished with nothing committed, on the user's `main`,
+and no hook fired, because the plugin only enforced the *prohibition* half of the commit rule
+(`guard` judges git commands that are run; a session that runs none gets no signal). A saved
+memory restating the replaced "never commit without asking" rule had quietly won over the current
+rule, and three executor runs told "no git" left the commit to a parent that never made it.
+
+**Decision.** Four signals, all stateless and all behind `HOUSE_RULES_COMMIT_CHECK=off`:
+- `handover` (Stop) gains a commit check: the `Write`/`Edit`/`NotebookEdit` paths since the last
+  genuine user message, intersected with `git status --porcelain -uall`. Any left → a note naming
+  them, with branch-aware advice. Only files this turn wrote count, so the user's own edits never
+  trip it.
+- A new `branchnudge` handler (`PostToolUse` `Write|Edit`) fires when the path just written is the
+  **only** dirty path on a non-`claude/` branch — that is what makes it the first change, with no
+  state kept.
+- `audit`'s summary names files a subagent wrote that are still uncommitted: the parent owns them.
+- `profile`'s preflight warnings flag an auto-memory file whose wording restates the old commit
+  rule, and the rules core says a memory contradicting a rule is stale.
+Both `scope` forms gain a commit line (long 911 chars, short 263, inside the +10% budgets).
+
+**Why.** The failure was an omission, and only a check that looks for the omission can see it.
+Rejected: a `PreToolUse` first-write nudge — its context reaches the model only alongside a
+permission decision, and `allow` would skip the user's own write prompt. Rejected: a per-session
+marker for "first write" — a second exception to the no-state rule, when "the only dirty path is
+this one" answers the same question. Accepted limitation: `branchnudge` stays quiet when the user
+already has uncommitted edits (the Stop check still covers the turn), and neither hook can tell a
+harness-assigned session branch from the user's, so both say "if this branch was opened for this
+session's work, commit there". The memory folder path (`<config>/projects/<project, non-alphanumerics
+as ->/memory`) matched this machine's project folder naming; the `memory/` subfolder itself was not
+present here to confirm.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-26 — versioncheck installs the update itself, and reads the install on disk
+
+**Context.** A cloud session opened with the out-of-date banner: running 2.29.0, marketplace
+2.36.0. Claude stopped and asked to run `claude plugin update`. But 2.36.0 was already installed
+— something had updated it after the Claude process started — and `/clear` re-ran the check from
+the old loaded copy. The update would have done nothing; a restart was the fix. Separately, the
+user's environment setup script, which runs the update commands, is skipped when a cloud session
+resumes from a cached environment, so it cannot keep the plugin current. The user asked for the
+update prompt to do everything itself and install the update properly.
+
+**Decision.** `event_versioncheck()` now reads `~/.claude/plugins/installed_plugins.json`. If the
+newest version is already installed and only the running copy is old, it says "start a new
+session" — no banner, no marker, no command. If an update is needed, the hook runs
+`claude plugin marketplace update` (only if that clone is stale) and `claude plugin update`
+itself, in a 60 s budget (hook timeout raised 10 → 90 s), then re-reads `installed_plugins.json`.
+Only the new version appearing there counts as success, which is a one-line notice. On failure
+the banner fires as before, now naming the failure, and tells Claude to run the commands itself
+without asking in chat first — the `guard` prompt on that first command is the user's yes. The
+card-and-stop fallback is kept for a declined prompt or no shell tool.
+`HOUSE_RULES_AUTO_UPDATE=off` skips the automatic run. Shipped in 2.37.0.
+
+**Why.** Asking permission for an update the user always wants is a question with one answer.
+Re-reading the install, not the exit code, follows "a reported update is not a completed one".
+Rejected: a detached background update — faster to start, but its result could not be checked
+or reported. Rejected: relying on the setup script — it does not run on a cached resume.
+
+**Supersedes.** 2026-09-17, "Ask permission to run the plugin's own update commands", for the
+plugin's own update only; the general rule for other commands is unchanged.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-24 — versioncheck falls back to the GitHub API, and tells the model when it cannot verify
+
+**Context.** On 2026-09-24 a session started with house-rules 2.31.0 installed while GitHub had
+2.33.0, and nothing told the model. Two causes in `hook.py`: `_github_version()` fetched only
+`raw.githubusercontent.com`, which that machine's sandbox reset while `api.github.com` worked; and
+when installed and the marketplace clone agreed (both stale) and GitHub was unreachable, the
+handler emitted only a `systemMessage` — shown in the UI, never seen by the model, easy to miss in
+the desktop app. An unverified result looked the same as a verified one from the model's side.
+
+**Decision.** `_github_version()` now tries the raw URL, then the contents API derived from the
+same owner/repo/ref/path (`Accept: application/vnd.github.raw`, `HOUSE_RULES_VC_GITHUB_API_URL`
+to override), both inside the existing 4-second budget, and records each failed route and why.
+When the check could not finish and found no mismatch, it now also emits `additionalContext`
+telling the model to say in its first reply that freshness could not be checked, naming each
+failure and the installed version. It is still not "out of date": no banner, no `guard` marker.
+The all-agree path stays a `systemMessage` trace only. Shipped in 2.35.0.
+
+**Why.** "Nothing fails silently": a best-effort check that fails is fine, one that fails without
+anyone who can act on it being told is not. A second route is cheaper than asking users to
+diagnose a blocked host. Rejected: treating "couldn't verify" as "out of date" — it would block
+every offline session on a question the user can't answer.
+
+**Supersedes.** The previous behaviour, in which an unverifiable check told the model nothing.
+
+**Status.** Standing.
+
+---
+
+## 2026-09-24 — Give each documentation tier its own numbered folder
+
+**Context.** The six tiers all lived as flat files directly under `docs/` (`docs/Roadmap.md`,
+`docs/ProjectState.md`, `docs/Today.md`, `docs/Decisions.md`, plus a `docs/systems/` folder), with
+no signal in the filesystem itself that they sort in tier order or that they're a fixed set of
+six. See [docs/plans/tiered-doc-folders.md](../plans/tiered-doc-folders.md) for the plan this
+carried out.
+
+**Decision.** Each tier now gets its own numbered folder: `docs/1-landing/`, `docs/2-roadmap/`,
+`docs/3-state/`, `docs/4-systems/`, `docs/5-today/`, `docs/6-decisions/`, with the same filenames
+inside them (so `docs/Roadmap.md` becomes `docs/2-roadmap/Roadmap.md`, and so on). The full tier-1
+index moved into its folder as `docs/1-landing/README.md`; a new, short, human-facing
+`docs/README.md` now sits at the top of `docs/` in its place, pointing back at the full index.
+`docs/plain/` mirrors the same folder layout, so `docs/plain/systems/hook-engine.md` became
+`docs/plain/4-systems/hook-engine.md`. This repo migrated its own docs at the same time as the
+tooling changed, rather than leaving them on the old layout: every link and `doc-ref` pointer was
+fixed, except inside `docs/archive/` and `docs/sessions/`, which stay untouched as historical
+record, and except that old `docs/6-decisions/Decisions.md` entries below only had their link
+paths repaired, not their prose — they describe what was true when they were written.
+
+**Why.** Numbered folders sort in tier order in any file browser or `ls`, which a flat pile of
+similarly-named files does not. Splitting the tier-1 index out from a short, people-facing landing
+page lets each serve its own reader: `docs/README.md` for a person skimming the repo, and
+`docs/1-landing/README.md` for the full technical index. The `docstiers` `SessionStart` hook and
+the `plain_docs_check.py`/`docref.py` scripts were updated to the new paths in the same change; a
+project still on the old flat layout is told which file moves to which new path, rather than
+being told to scaffold tiers it already has.
+
+**Status.** Standing.
+
+---
+
 ## 2026-09-22 — A SessionStart check for the six documentation tiers, in every repo
 
 **Context.** Step 3 of the rules-that-actually-load plan. The "Documentation goes in tiers" rule
@@ -303,7 +805,7 @@ wrong for everyone else. Words instead of characters — same signal, needs a to
 
 **Why.** The threshold only narrows what gets looked at; each flagged block is still moved or kept
 by judgement (a subtle-ordering-bug comment can stay in place with a pointer). The table is in
-[comment-harvest-calibration.md](comment-harvest-calibration.md); if 218 is still noise, raise
+[comment-harvest-calibration.md](../comment-harvest-calibration.md); if 218 is still noise, raise
 `HOUSE_RULES_HARVEST_MIN_CHARS` to 800 rather than editing the constant.
 
 **Status.** Standing.
@@ -365,7 +867,7 @@ just a plausible-sounding invariant.
 
 **Context.** Running `/house-rules:harvest-scan` against this repo at the harvest hook's own
 default thresholds (3 lines / 150 chars — see
-[`comment-harvest-calibration.md`](comment-harvest-calibration.md)) found 162 blocks across 16
+[`comment-harvest-calibration.md`](../comment-harvest-calibration.md)) found 162 blocks across 16
 files. The archivist agent's instructions describe per-block judgment (tier-4 systems doc vs.
 `docs/Decisions.md`) but say nothing about how to behave at that scale. Dispatched with 162
 blocks in one shot, nothing stopped a plausible shortcut: paste everything into one tier-4 doc,
@@ -374,7 +876,7 @@ redistribution the harvest rule asks for (see "Long-form reasoning goes in a doc
 comment" in `rules/house-rules.md`).
 
 **Decision.** Added a "Working from a batch" section to
-[`agents/archivist.md`](../claude-house-rules/plugins/house-rules/agents/archivist.md) requiring
+[`agents/archivist.md`](../../claude-house-rules/plugins/house-rules/agents/archivist.md) requiring
 two explicit passes whenever more than a handful of blocks are handed over at once: Pass 1 lands
 every block verbatim, with `file:line` citations, into a dated scratch file at
 `docs/plans/<date>-harvest-staging.md`; Pass 2 works through that staging file entry by entry,
@@ -459,7 +961,7 @@ fix. It's also the more reliable path here specifically: the CLI refresh works e
 surface that would otherwise run it (a greyed-out desktop button) does not, so offering to run it
 directly sidesteps a UI bug rather than routing the user straight into it.
 
-**Status.** Standing.
+**Status.** Superseded for the plugin's own update by 2026-09-26, "versioncheck installs the update itself"; standing for every other command.
 
 ---
 
@@ -542,7 +1044,7 @@ that hash-compares the installed cache against the marketplace source tree) conf
 and, once run, confirmed the fix after #35 bumped the version. The real failure was not "forgot to
 bump a number" — it was that a tool's own "already up to date" message was trusted without
 checking whether the underlying content actually matched. Full design:
-[`docs/plans/2026-09-15-plugin-version-bump-guard.md`](plans/2026-09-15-plugin-version-bump-guard.md).
+[`docs/plans/2026-09-15-plugin-version-bump-guard.md`](../plans/2026-09-15-plugin-version-bump-guard.md).
 
 **Decision.** Two separable fixes for the two places this failed. (1) This repo: a new
 `tools/check_plugin_version_bump.py` compares `plugin.json`'s version between a PR's base and
@@ -585,7 +1087,7 @@ conflation instead of catching it. The evidence needed to fix this without guess
 existed in the repo: `docs/example-environment.md`, a committed worked-example record of aj's real
 machine (Windows 11 Pro, PowerShell, Git Bash for POSIX, `sh`/`bash` not on PATH), dated
 2026-08-25 — and the user separately confirmed PowerShell was in fact right. Full design in
-[`docs/plans/2026-09-15-handover-target-machine.md`](plans/2026-09-15-handover-target-machine.md).
+[`docs/plans/2026-09-15-handover-target-machine.md`](../plans/2026-09-15-handover-target-machine.md).
 
 **Decision.** Give the plugin a second, distinct machine-local record —
 `rules/handover-target.md`, gitignored, same shape and lifecycle as `rules/environment.md` — that
@@ -618,7 +1120,7 @@ markdown doc from an HTML report or other tool output, so both landed in `docs/`
 two loose examples proving the gap: `docs/architecture-review-2026-09-07.html` and
 `docs/2026-09-09-branch-aware-guard-rollout.html`, sitting directly in `docs/` with no other
 document like them. Full design and exact wording constraints are in the plan this decision
-executed: [`docs/plans/2026-09-15-generated-artifacts-directory.md`](plans/2026-09-15-generated-artifacts-directory.md).
+executed: [`docs/plans/2026-09-15-generated-artifacts-directory.md`](../plans/2026-09-15-generated-artifacts-directory.md).
 
 **Decision.** Add `docs/generated/` — a third non-tier folder for tool-produced deliverables:
 HTML reports, exported diagrams/images, anything from the Artifact tool or a generated-report
@@ -646,14 +1148,14 @@ output as a tracked, committable file instead of leaving it in a scratchpad or t
 None of the five was *why*: tier 3 says where things stand, tier 4 says how a system works
 *today*, but nothing durable recorded why a choice was made, what was tried and rejected, or what
 an earlier decision used to say before it was reversed. That gap was already visible as ad hoc
-workarounds in this repo — [`docs/rules-backlog.md`](rules-backlog.md) and
-[`docs/architecture-backlog.md`](architecture-backlog.md) are hand-rolled decision logs (Status /
+workarounds in this repo — [`docs/rules-backlog.md`](../rules-backlog.md) and
+[`docs/architecture-backlog.md`](../architecture-backlog.md) are hand-rolled decision logs (Status /
 Defect / Evidence / "what the rule should say" per entry) that exist only because nothing in the
 shipped tier system covered this. The `harvest` hook and `archivist` subagent also misfiled this
 material — design rationale or a bug post-mortem got routed into a tier-4 system doc's *How it
 works*/*Traps*, which is supposed to describe current truth, not carry historical narrative. Full
 design and the exact wording constraints are in the plan this decision executed:
-[`docs/archive/2026-09-15-sixth-documentation-tier.md`](archive/2026-09-15-sixth-documentation-tier.md).
+[`docs/archive/2026-09-15-sixth-documentation-tier.md`](../archive/2026-09-15-sixth-documentation-tier.md).
 
 **Decision.** Add Tier 6 — `docs/Decisions.md` — to the house-rules tiered-docs system: one
 running, dated, append-mostly log (Context/Decision/Why/Status per entry), as designed in the
@@ -876,5 +1378,31 @@ unchanged.
 **Why.** A reminder that keeps restating a rule with its own live enforcement is paying twice for
 one thing; the two rules that had no enforcement point at all are the ones worth the recurring
 nudge.
+
+**Status.** Standing.
+
+## 2026-09-26 — Evidence before claims covers any claim of fact, and a doc is not a test
+
+**Context.** Issue #72 asked that Claude never assert something is correct without verifying it,
+and that statements in chat, memory or docs not count as verification — only an applied test
+does. The rule as written already refused chat/docs/reasoning/memory, but it had two gaps against
+that ask: it covered *success* claims only ("it works"), not plain statements of fact ("this API
+accepts X"), and it accepted "a tool call" as evidence, so reading a README with the Read tool
+technically satisfied it.
+
+**Decision.** Rule text only. `rules/house-rules.md` now says any claim that something is true or
+correct — a success claim included — needs an applied test behind it: run it, or read the thing
+itself. `rules/detail/evidence-before-claims.md` defines what counts (running, calling, loading,
+reading the source or config the claim names, observing output) and what does not (a doc,
+README, comment, commit message, memory, an earlier chat message, reasoning — even when read with
+a tool), and says an unverified fact is attributed to its source and marked unverified. The
+`handover` evidence check was deliberately left unchanged: telling "read a doc" apart from
+"tested the thing" in a transcript needs a heuristic, and widening its claim-word list to words
+like "correct" would fire on ordinary replies. `success claim` stays in the rule text, so the
+`scope` reminder's drift pin in `verify.py` still holds.
+
+**Why.** The distinction the issue draws is between a statement about a thing and a test of it;
+"a tool call" drew the line in the wrong place. Enforcement can follow if the text alone proves
+insufficient.
 
 **Status.** Standing.

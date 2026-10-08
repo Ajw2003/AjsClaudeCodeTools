@@ -55,7 +55,7 @@ proof against what a stranger's machine would actually get, not just the working
 2026-09-15: all PASS) covers the logic inside `session_ledger.py`, `clean_install_test.py`, and
 `measure_footprint.py` — deliberately *not* anything that shells out to the real `claude` CLI or
 mutates a real machine's config, which is what `clean_install_test.py` itself is for.
-`measure_footprint.py`'s `split_output` (`measure_footprint.py:104-112`) is part of what that
+`measure_footprint.py`'s `split_output` (`measure_footprint.py:108-126`) is part of what that
 coverage protects: `reminder_text()` collapses a hook call's `additionalContext` and
 `systemMessage` into one value, which is right for the per-prompt/per-session figures but wrong
 for pricing a trace, because a `PostToolUse` handler can emit *both* a reminder and a trace in

@@ -113,7 +113,7 @@ The file-header exemption below only makes sense against a whole file, where lin
 the file's first line. It was being applied unconditionally, including to an `Edit`'s
 `new_string` — a replacement fragment whose own line 1 is wherever the edit happens to start.
 A comment block placed at the top of an edited fragment was silently exempted as a "file
-header" it was never anywhere near. See `docs/Decisions.md`, "Fix the harvest handler treating
+header" it was never anywhere near. See `docs/6-decisions/Decisions.md`, "Fix the harvest handler treating
 an Edit fragment's line 1 as the file's header", for the fix and the trace-wording bug that
 shipped alongside it (the trace used to say "none met the threshold" even when a run met it and
 was excluded for a different reason).

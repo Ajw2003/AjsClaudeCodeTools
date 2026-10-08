@@ -26,7 +26,7 @@ Three facts about how the plugin reaches a session make its cost non-obvious:
   `general-purpose` subagent could not see a word planted by a SessionStart hook in the parent
   session. This corrects an earlier, wrong version of this doc that claimed the opposite. A
   subagent's context is its own agent file plus whatever the delegation prompt passes it, full
-  stop — see docs/architecture.md for the consequence (`@house-rules:executor` and
+  stop — see docs/architecture.md for the consequence (`@house-rules:builder` and
   `@house-rules:archivist` carry their own rules digest for exactly this reason). Whether
   `UserPromptSubmit`'s output (the bullet above) reaches a subagent has not been tested the same
   way and is not claimed here either way.
@@ -92,12 +92,21 @@ only when it detects those markers, so the same command gives a bigger number in
 project. This is the figure paid once per session — not re-paid per subagent spawn, see "Why
 this needed its own tool" above.
 
-### 4. Per-tool-call cost
+`docstiers` and `versioncheck` are silent in the common case and large in the rare one, so each
+is priced in every state it can be in: `docstiers` against this repo and against an empty
+project, `versioncheck` up to date, with GitHub unreachable, and out of date. `versioncheck` is
+fed fixed versions through its own `HOUSE_RULES_VC_*` overrides with `HOUSE_RULES_AUTO_UPDATE=off`
+— run for real it reaches GitHub and, when out of date, runs `claude plugin update`, and a cost
+measurement must never update the plugin it is measuring.
 
-`guard`, `artifact`, `runnable`, `harvest` and `delegate` fire per **tool call**, not per turn,
-so frequency is as much of the cost as size is. Sections 1–3 price the per-prompt and per-session
-hooks, which left every `PreToolUse`/`PostToolUse` handler unpriced — and with them every decision
-trace.
+### 4. Per-tool-call and per-turn cost
+
+`guard`, `guardwrite`, `artifact`, `runnable`, `harvest` and `delegate` fire per **tool call**,
+the subagent handlers per spawn or return, and `handover` at the end of **every turn** — so
+frequency is as much of the cost as size is. `handover` is priced for a plain reply (silent),
+a reply with an uncarded shell fence, and a success claim with no tool run behind it.
+Sections 1–3 price the per-prompt and per-session hooks, which left every
+`PreToolUse`/`PostToolUse` handler unpriced — and with them every decision trace.
 
 The reminder and the trace are reported **separately**, because one call can emit both and it is
 the trace this section exists to price. `reminder_text()` collapses them into one value, which is

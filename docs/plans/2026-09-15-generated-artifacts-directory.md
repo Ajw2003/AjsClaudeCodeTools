@@ -2,7 +2,7 @@
 
 ## Context
 
-The previous change added Tier 6 (`docs/Decisions.md`) and landed clean (`verify.py`: 194/194,
+The previous change added Tier 6 (`docs/6-decisions/Decisions.md`) and landed clean (`verify.py`: 194/194,
 pushed as `da3892b` + `716e649`). The tiered-docs system now has two folders that aren't tiers:
 `docs/plans/` (forward intent) and `docs/archive/` (inert docs). The `artifact` hook
 (`PostToolUse` on `Write`/`Edit`, `hook.py:event_artifact`) already catches a document written
@@ -46,7 +46,7 @@ classify a run as "remind".
 2. **`claude-house-rules/plugins/house-rules/skills/project-docs/SKILL.md`** — "Plus two folders
    that are not tiers:" → "three folders"; add a `docs/generated/` bullet (tool-produced, not
    hand-edited, regenerated rather than fixed in place). Update the scaffolding step that creates
-   `docs/`, `docs/systems/`, `docs/plans/`, `docs/archive/` to also create `docs/generated/`.
+   `docs/`, `docs/4-systems/`, `docs/plans/`, `docs/archive/` to also create `docs/generated/`.
 
 3. **`claude-house-rules/plugins/house-rules/scripts/hook.py`** — `event_artifact()` /
    `ARTIFACT_NOTE` (~lines 862-935): add `_DOC_EXT_RE` (`md|txt`) and `_GENERATED_EXT_RE`
@@ -75,8 +75,8 @@ classify a run as "remind".
   `docs/2026-09-09-branch-aware-guard-rollout.html` (confirmed: nothing in the repo links to
   either file by path, so no pointers need fixing).
 - Add `docs/generated/README.md` — one line saying what the folder holds and that its contents are
-  regenerated, not hand-edited (mirrors `docs/systems/README.md` indexing the folder it sits in).
-- Add a `docs/Decisions.md` entry recording this decision, same shape as the tier-6 entry, citing
+  regenerated, not hand-edited (mirrors `docs/4-systems/README.md` indexing the folder it sits in).
+- Add a `docs/6-decisions/Decisions.md` entry recording this decision, same shape as the tier-6 entry, citing
   the two loose HTML files as the evidence.
 
 ## Verification

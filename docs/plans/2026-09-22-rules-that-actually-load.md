@@ -31,7 +31,7 @@ plan (20.8KB → 43KB), and the repo `CLAUDE.md` is 32KB despite claiming to "st
   goes to what already owns a topic (the `project-docs` skill, the output style, the executor and
   archivist agents), and the rest to `rules/detail/<topic>.md`, which the core names by path. The
   "Why:" rationale leaves the injected text for `docs/` (reverses the 2026-09-07 decision to keep
-  every Why: block injected — record it in `docs/Decisions.md`).
+  every Why: block injected — record it in `docs/6-decisions/Decisions.md`).
 - **One size constant** (`INJECT_CHAR_LIMIT = 10_000` in `hook.py`, with a safety margin applied by
   the check) enforced by `verify.py` on the actual `inject` and `standards` output, each checked
   separately, since the limit is per hook. The same suite caps the root `CLAUDE.md` (~4KB).
@@ -39,7 +39,7 @@ plan (20.8KB → 43KB), and the repo `CLAUDE.md` is 32KB despite claiming to "st
   one-line pointer. `verify.py`'s six-field drift check is moved accordingly.
 - **Root `CLAUDE.md` becomes a real pointer:** commands and links. The hook table moves to
   `docs/architecture.md`, and `verify.py`'s table-vs-hooks.json check follows it.
-- **SessionStart docs check** (stateless file test): a project missing `docs/README.md` or any of
+- **SessionStart docs check** (stateless file test): a project missing `docs/1-landing/README.md` or any of
   the six tiers gets a loud instruction to load `house-rules:project-docs` and scaffold before other
   work, **in every repo**. In a repo not owned by the configured GitHub account (read from the git
   remote), the scaffolded paths are also added to `.git/info/exclude`, so they never leave the
@@ -81,7 +81,7 @@ plan (20.8KB → 43KB), and the repo `CLAUDE.md` is 32KB despite claiming to "st
 5. Commit-time docs reminder in `guard`; verify cases on fixture repos (`claude/` branch and `main`).
 6. `handover`: shell-fence gating + evidence check; verify cases.
 7. `scope` rebalance; update its drift checks.
-8. Version bump, `docs/ProjectState.md` / `Today.md` updated, `measure_footprint.py --repo` re-run
+8. Version bump, `docs/3-state/ProjectState.md` / `Today.md` updated, `measure_footprint.py --repo` re-run
    and the before/after recorded.
 
 Afterwards, as a separate PR: repo-wide `/house-rules:harvest-scan` and archivist pass.
@@ -107,7 +107,7 @@ both exit 0 (336 and 39 checks respectively as of the closing commit).
 | `inject` (SessionStart) | 44,507 chars, combined with `profile` | 8,917 chars, `profile` split into its own hook (1,316 chars) - 10,233 combined, still under the two hooks' separate 9,000/9,500-char margins |
 | `standards` (SessionStart) | 3,765 chars | 3,765 chars (unchanged - this hook was never part of the size problem) |
 | root `CLAUDE.md` | 33,083 bytes | 3,151 bytes - a real pointer, not a second copy of the rules |
-| `scope` short form | 260 chars | 222 chars (step-card line traded for a docs-tier line + an evidence line, doc-ref in `docs/Decisions.md`, 2026-09-23) |
+| `scope` short form | 260 chars | 222 chars (step-card line traded for a docs-tier line + an evidence line, doc-ref in `docs/6-decisions/Decisions.md`, 2026-09-23) |
 | `scope` long form | 909 chars | 795 chars |
 
 New per-hook costs this plan added, none of which existed on 2026-09-22:
@@ -125,6 +125,6 @@ The headline finding this plan started from - `inject` emitting 44,506 chars aga
 is fixed: every `SessionStart` hook now measures well under its margin, verified by `verify.py`
 on the real emitted output, not source file size, on every run.
 
-`docs/ProjectState.md` and `docs/Today.md` updated to describe what this branch built, citing
+`docs/3-state/ProjectState.md` and `docs/5-today/Today.md` updated to describe what this branch built, citing
 `file:line` per the docs-tiers convention (`rules/detail/docs-tiers.md`: "Cite claims to
 `file:line`. It is what makes an audit mechanical instead of a matter of opinion.").

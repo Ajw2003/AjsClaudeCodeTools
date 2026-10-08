@@ -9,3 +9,9 @@ claude-house-rules/plugins/house-rules/rules/handover-target.md
 
 # Subagent-driven-development workspace: machine-local scratch, briefs full of example pointers.
 .superpowers/
+
+# Isolated working copies the executor subagent works in; merged into the branch, then removed.
+.claude/worktrees/
+
+# Interpreter cache written by scripts/run.sh - machine-local.
+claude-house-rules/plugins/house-rules/scripts/.python-cache

@@ -33,7 +33,7 @@ its own classifier (`workshop` or `route`), which pattern-matches the raw prompt
 case fits, emits `additionalContext` suggesting a next action. Neither can do more than suggest:
 **no hook output can switch the model a running session is already on** — there is no
 `$CLAUDE_MODEL` and no hook field that changes it. What actually pins a model is a subagent's own
-`model:` frontmatter, the same mechanism `house-rules` uses for `@house-rules:executor`. So
+`model:` frontmatter, the same mechanism `house-rules` uses for `@house-rules:builder`. So
 "routing" here means classify-and-suggest; Claude still decides whether to delegate.
 
 `agent-router`'s `route` handler reads each agent's declared model live off its
@@ -82,7 +82,7 @@ presented — both READMEs describe installing them the same way, once ready, vi
   [`docs/offshoots-plan.md`](../offshoots-plan.md), not a surprise to discover independently.
 - **Nothing confirms a fired suggestion was acted on, or that a subagent it led to actually ran
   on its declared model.** `house-rules`' `announce`/`verdict` `SubagentStart`/`SubagentStop` pair
-  closes exactly this gap for `@house-rules:executor`; neither offshoot ships the equivalent yet.
+  closes exactly this gap for `@house-rules:builder`; neither offshoot ships the equivalent yet.
   A routed-to-`architect` delegation that silently ran on the parent's own model would currently
   go unnoticed.
 - **No handling for a prompt that genuinely spans two of `agent-router`'s tiers** (part doc fix,

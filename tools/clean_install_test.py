@@ -71,7 +71,7 @@ def residual_config(settings):
     """Which of OUR entries are still in a settings dict. Empty means clean.
 
     Why this checks entries and not container keys:
-    doc-ref 47f6 docs/systems/plugin-distribution.md (Traps).
+    doc-ref 47f6 docs/4-systems/plugin-distribution.md (Traps).
     """
     residue = []
     settings = settings or {}
@@ -290,7 +290,7 @@ def main():
         bad("no installed_plugins.json after install")
 
     # Why this byte-compares instead of trusting the SHA/version check above, and the PR #13
-    # incident that made it necessary: doc-ref 3470 docs/systems/plugin-distribution.md (Traps).
+    # incident that made it necessary: doc-ref 3470 docs/4-systems/plugin-distribution.md (Traps).
     step("Does the installed copy match the repo, byte for byte?")
     repo_plugin_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

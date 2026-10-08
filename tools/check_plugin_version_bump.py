@@ -5,14 +5,14 @@ bumping the plugin's version.
 Two merged PRs changed files under claude-house-rules/plugins/house-rules/ without bumping
 .claude-plugin/plugin.json's `version`. Nothing enforced the convention, so it silently lapsed,
 and claude plugin update (version-gated) reported "already at the latest version" while the
-installed cache held stale content. See docs/Decisions.md for the full incident.
+installed cache held stale content. See docs/6-decisions/Decisions.md for the full incident.
 
 "Plugin-relevant" is wider than "ships inside the installed plugin package": root CLAUDE.md is
 auto-loaded into every live session working in this repo, and docs/ is what a session reads (and,
 per house-rules' own artifact rule, writes) while following the rules — both are as directly used
 by the plugin, live, as the files under PLUGIN_ROOT itself, even though neither is packaged into
 the install. A PR that only touches one of these still needs the same version bump this check
-exists to enforce; see docs/Decisions.md for that decision too.
+exists to enforce; see docs/6-decisions/Decisions.md for that decision too.
 
 Usage:
     python tools/check_plugin_version_bump.py [--base origin/main] [--head HEAD]

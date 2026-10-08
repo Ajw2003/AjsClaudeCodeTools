@@ -18,7 +18,7 @@ transcript held the answer the whole time. Nothing was missing except a way to r
 "turn continuations" section below is the one this tool exists for.
 
 The actual rendering (build_turns/render and the constants they use) lives in
-claude-house-rules/plugins/house-rules/scripts/session_ledger_render.py, not here (docs/Decisions.md,
+claude-house-rules/plugins/house-rules/scripts/session_ledger_render.py, not here (docs/6-decisions/Decisions.md,
 2026-09-23, doc-ref c67d): hook.py's verdict handler needs the same renderer for a subagent
 transcript, and it runs from inside the installed plugin cache, where this tools/ directory does
 not exist. This file is the CLI: find a transcript, load it, call the shared renderer, write the

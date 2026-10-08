@@ -16,11 +16,11 @@ many blocks at once. For each block:
   An ongoing invariant or an operational/platform-quirk trap still goes to tier-4: something
   that must stay true into *Invariants*, an operational gotcha into *Traps*. Design rationale,
   a derivation, a rejected approach, or a post-mortem is a record of a choice, not current
-  truth about the system — append it as a dated entry to `docs/Decisions.md` instead.
-- **Find the tier-4 document that owns that code** under `docs/systems/`. If none does,
+  truth about the system — append it as a dated entry to `docs/6-decisions/Decisions.md` instead.
+- **Find the tier-4 document that owns that code** under `docs/4-systems/`. If none does,
   create one, covering the same four things in order: what it owns, how it works,
-  invariants, traps. Add it to `docs/systems/README.md`. For a Decisions.md entry, append
-  to `docs/Decisions.md` at the repo root, creating it with a header if it does not exist.
+  invariants, traps. Add it to `docs/4-systems/README.md`. For a Decisions.md entry, append
+  to `docs/6-decisions/Decisions.md`, creating it with a header if it does not exist.
 - **Move the prose, do not paraphrase it.** The wording is the author's and carries the
   reasoning; edit only what is needed to read as a document rather than as a comment.
   Cite the code it describes as `file:line`.
@@ -57,8 +57,8 @@ staging entry carries its `<!-- ref:<id> -->` marker line from the start.
 
 **Pass 2 — redistribute.** Work through the staging file entry by entry, applying the same
 per-block judgment above: an ongoing mechanism, invariant, or trap goes to the tier-4 doc under
-`docs/systems/` that owns it (a new one if none does, added to `docs/systems/README.md`); design
-rationale, a rejected approach, or a post-mortem becomes a dated entry in `docs/Decisions.md`.
+`docs/4-systems/` that owns it (a new one if none does, added to `docs/4-systems/README.md`); design
+rationale, a rejected approach, or a post-mortem becomes a dated entry in `docs/6-decisions/Decisions.md`.
 Once a block lands at its real destination, move its marker line with it, then run
 `python "${CLAUDE_PLUGIN_ROOT}/scripts/docref.py" fix --write`, which repoints every site by id
 instead of you editing each one. Delete the entry from the staging file.
@@ -81,8 +81,8 @@ Follow this digest instead:
 - Long-form reasoning belongs in a document, not a comment; the site keeps a one-line
   pointer, `doc-ref <id> <path>`, backed by a `<!-- ref:<id> -->` marker under the note's
   heading, so the code still leads to it. Route by what it is: an ongoing mechanism,
-  invariant, or operational gotcha goes to the tier-4 system doc under `docs/systems`;
-  rationale, a rejected approach, or a post-mortem goes to `docs/Decisions.md` instead,
+  invariant, or operational gotcha goes to the tier-4 system doc under `docs/4-systems`;
+  rationale, a rejected approach, or a post-mortem goes to `docs/6-decisions/Decisions.md` instead,
   since it is a record of a choice, not current truth about the system.
 - Documentation goes in tiers. Write to the tier that changed. A document that has gone
   inert moves to `docs/archive/`, it does not get deleted, and you fix the pointers into it.
@@ -95,5 +95,8 @@ Follow this digest instead:
 - Hand any remaining manual step over in the step-card format: `---` delimiters, `### Step 1
   of N — title`, the folder and shell named in prose, one fenced block per step, `You should
   see:` for the expected output, and `UNTESTED:` above the fence for anything you did not run.
-- Commit messages (only if asked to commit): `<type>: <short summary>` — feat, fix, refactor,
-  chore, docs, test.
+- Commit each finished piece as you go, scoped to the files you changed (`git commit -- <paths>`),
+  on your own branch or the worktree opened for you; on the user's branch, branch off first. If
+  the prompt that delegated this says not to run git, don't, and list the uncommitted files in
+  your report instead. A hook sends you back once if you try to finish with files you wrote
+  still uncommitted. Commit messages: `<type>: <short summary>` — feat, fix, refactor, chore, docs, test.

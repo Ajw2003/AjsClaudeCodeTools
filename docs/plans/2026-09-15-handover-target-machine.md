@@ -88,7 +88,7 @@ remote-only handover-target behavior in one clause.
   then, re-confirmed today 2026-09-15 that PowerShell is the right shell), Git Bash for POSIX
   commands, `sh`/`bash` not on PATH. This makes the fix immediately real for the rest of this
   session and any future session in this same remote environment — no more asking.
-- Add a `docs/Decisions.md` entry recording this exact incident and fix: what went wrong (Step 2
+- Add a `docs/6-decisions/Decisions.md` entry recording this exact incident and fix: what went wrong (Step 2
   assumed Linux/bash), why (environment detection conflated sandbox with handover target), the
   fix (the new file + conditional inject block), evidence cited (`CLAUDE_CODE_REMOTE`,
   `docs/example-environment.md`).

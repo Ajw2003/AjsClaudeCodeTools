@@ -31,7 +31,7 @@ summary line. Then:
 
 - If nothing was found, say so in one line. Do not invent follow-up work.
 - If blocks were found, **do not port them automatically.** Deciding where each one belongs
-  (which tier-4 system doc, or a dated `docs/Decisions.md` entry) is the judgement call the
+  (which tier-4 system doc, or a dated `docs/6-decisions/Decisions.md` entry) is the judgement call the
   `harvest` rule reserves for a human-reviewed turn, not a mechanical sweep — these are often
   comments a person wrote before the plugin existed, not something Claude just produced. List
   what was found and ask whether to port some, all, or none of it, the same way `@house-rules:

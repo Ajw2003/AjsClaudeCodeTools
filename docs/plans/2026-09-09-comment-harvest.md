@@ -195,7 +195,7 @@ claims to `file:line`" convention the destination docs rely on. Cap the report a
 `_TOGGLE_OFF` (`hook.py:783`) for the first.
 
 **`HARVEST_NOTE`** restates the rule and names the destination and the delegation: port each block
-into the tier-4 system document that owns that code (`docs/systems/*.md` — *How it works*,
+into the tier-4 system document that owns that code (`docs/4-systems/*.md` — *How it works*,
 *Invariants*, *Traps*), creating one if none owns it; leave a one-line pointer at the site; hand
 the port to `@house-rules:archivist`; close with the standard "This is a reminder to you; the user
 was not prompted and does not need to do anything."

@@ -312,7 +312,7 @@ check(
 
 # --- install.py's upgrade path ----------------------------------------------------------------
 # Why this exists and how the fix was reproduced against the real CLI before being trusted:
-# docs/Decisions.md, "Reproduce the install-upgrade fix against the real CLI before trusting it".
+# docs/6-decisions/Decisions.md, "Reproduce the install-upgrade fix against the real CLI before trusting it".
 steps = install.install_steps()
 argvs = [argv for argv, _ in steps]
 flat = [" ".join(a) for a in argvs]
@@ -386,7 +386,7 @@ check(
 
 # --- update.bat states the same four commands, in the same order -------------------------------
 # Why update.bat restates rather than calls install_steps(), and why the two are bound here:
-# doc-ref 20e2 docs/systems/plugin-distribution.md (Invariants).
+# doc-ref 20e2 docs/4-systems/plugin-distribution.md (Invariants).
 BAT = os.path.join(HERE, "update.bat")
 bat_present = os.path.isfile(BAT)
 bat_raw = open(BAT, "rb").read() if bat_present else b""
@@ -628,6 +628,47 @@ try:
     )
 finally:
     shutil.rmtree(heal_root, ignore_errors=True)
+
+# --- install.py's settings step (attribution, #133) ------------------------------------------
+def _run_settings(initial, skip=()):
+    d = tempfile.mkdtemp(prefix="install-settings-")
+    path = os.path.join(d, "settings.json")
+    if initial is not None:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(initial)
+    msgs = {"ok": [], "bad": []}
+    install.apply_settings(d, set(skip), msgs["ok"].append, msgs["bad"].append, lambda m: None)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        text = None
+    shutil.rmtree(d, ignore_errors=True)
+    return text, msgs
+
+
+_want = {"commit": "Committed by AJ's agent", "pr": "Opened by AJ's agent", "sessionUrl": False}
+_t, _m = _run_settings(None)
+_j = json.loads(_t)
+check(_j.get("attribution") == _want and not _m["bad"],
+      "install.py writes attribution into a missing settings file", f"got {_j.get('attribution')!r}")
+_t, _m = _run_settings(json.dumps({"theme": "dark", "hooks": {"a": 1}}))
+_j = json.loads(_t)
+check(_j.get("attribution") == _want and _j.get("theme") == "dark" and _j.get("hooks") == {"a": 1},
+      "install.py writes attribution and preserves every other key", f"got {_j!r}")
+_t, _m = _run_settings(json.dumps({"attribution": {"commit": "Co-Authored-By: Claude", "pr": "x"}}))
+check(json.loads(_t).get("attribution") == _want,
+      "install.py replaces a different existing attribution exactly", f"got {_t!r}")
+_t, _m = _run_settings(json.dumps({"attribution": {"commit": "mine"}}), skip=("attribution",))
+check(json.loads(_t).get("attribution") == {"commit": "mine"},
+      "install.py --no-attribution leaves attribution alone", f"got {_t!r}")
+_t, _m = _run_settings(None)
+check(any("reads back attribution" in x for x in _m["ok"]),
+      "install.py reads attribution back after writing", f"ok lines {_m['ok']!r}")
+_t, _m = _run_settings("{not json")
+check(_t == "{not json" and _m["bad"],
+      "install.py reports a settings file that does not parse and does not overwrite it",
+      f"file now {_t!r}, bad {_m['bad']!r}")
 
 print()
 print("-" * 32)

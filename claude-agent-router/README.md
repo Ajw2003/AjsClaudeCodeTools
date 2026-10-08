@@ -14,7 +14,7 @@ built against and what's still open.
 **This plugin cannot switch the model your Claude Code session is already running on.** There
 is no hook output for that. What it *can* do is notice a prompt's shape and suggest delegating
 it to a subagent whose `model:` frontmatter really is pinned — the same mechanism `house-rules`
-uses for `@house-rules:executor`. Claude reads the suggestion and decides whether to delegate;
+uses for `@house-rules:builder`. Claude reads the suggestion and decides whether to delegate;
 this plugin only ever nudges. Full explanation, including which surfaces this even reaches
 (plugins don't load in WSL sessions or the Desktop Cowork tab), is in
 [rules/agent-router.md](plugins/agent-router/rules/agent-router.md).
