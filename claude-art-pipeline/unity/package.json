@@ -1,0 +1,10 @@
+{
+  "name": "com.aj.art-pipeline",
+  "displayName": "Aj Art Pipeline (Unity adapter)",
+  "version": "0.1.0",
+  "unity": "6000.0",
+  "description": "Editor-only Unity adapter for the art-pipeline plugin: sidecar-driven FBX import, URP setup, prefab/animator generation and headless review capture.",
+  "dependencies": {
+    "com.unity.render-pipelines.universal": "17.3.0"
+  }
+}

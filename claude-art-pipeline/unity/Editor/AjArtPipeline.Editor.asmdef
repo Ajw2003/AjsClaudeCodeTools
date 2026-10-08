@@ -1,0 +1,11 @@
+{
+  "name": "AjArtPipeline.Editor",
+  "rootNamespace": "AjArtPipeline",
+  "references": [
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false
+}
