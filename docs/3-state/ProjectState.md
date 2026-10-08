@@ -174,7 +174,9 @@ invocation.
   #175 is built (2.56.0): owned branches are `AjsAgent/` (`claude/` still recognised) and the issue
   label is `AjsAgent created this` (`Claude created this` still counts). #176 is built (2.57.0): a
   cloud session on `claude/<name>` is told at start to move to `AjsAgent/<name>`; whether the app's
-  own PR button follows the new branch is still unchecked. Not built: #177 git author, #178 guard on
+  own PR button follows the new branch is still unchecked. #177 is built (2.58.0): `guard` refuses a
+  commit authored as Claude and session start tells a cloud session to set the repo-local identity.
+  Not built: #178 guard on
   GitHub tools, #179 cloud settings, #180 Focus Deck label, #181-#182 retroactive report and renames.
 - **[`docs/architecture-backlog.md`](../architecture-backlog.md)** — seven open refactor candidates
   against `hook.py`/`verify.py` (deduplicating nine restatement checks, unifying the three

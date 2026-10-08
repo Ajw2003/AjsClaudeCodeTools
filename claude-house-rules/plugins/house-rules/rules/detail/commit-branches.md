@@ -66,3 +66,7 @@ and the `guard` hook refuses a `git commit`, `gh pr create/edit` or `gh issue cr
 text carries the old forms, naming the replacement wording. The guard is the backstop for sessions
 that never read the settings file (cloud sessions). `HOUSE_RULES_ATTRIBUTION=off` disables it.
 
+The commit's author is credited too: the agent's identity is `AJ's agent
+<79066376+Ajw2003@users.noreply.github.com>`. A cloud container ships `user.name=Claude`, so the guard refuses
+a commit authored as Claude and names the repo-local `git config` fix, and a cloud session start tells you to run it.
+

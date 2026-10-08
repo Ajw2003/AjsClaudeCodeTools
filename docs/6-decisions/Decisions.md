@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-08 - Commits are authored as AJ's agent, enforced by the guard and a session-start line (#177, part of #174, 2.58.0)
+
+**Context.** Cloud containers ship `user.name=Claude`, `user.email=noreply@anthropic.com`; 103 of 227 commits on main carry that author. The attribution guard read message text only.
+
+**Decision.** The agent's identity is `AJ's agent <79066376+Ajw2003@users.noreply.github.com>`: a GitHub noreply address attaches commits to aj's account without publishing a real email, and the account id form is the one GitHub accepts. `guard` refuses a `git commit` whose effective author is Claude or `*anthropic.com`, naming the repo-local `git config` fix. `profile` on a remote session adds one line telling the agent to run it. Both honour `HOUSE_RULES_ATTRIBUTION=off`; an unreadable identity is allowed silently.
+
+**Rejected.** The hook writing the git config itself (the issue text said "sets"): the #176 decision that hooks instruct and don't act wins. A `--global` fix: it would alter the machine's config, not the repo.
+
+**Status.** Built; `verify.py` covers repo config, `--author`, `-c`, inline `GIT_AUTHOR_EMAIL`, a name merely containing claude, the kill switch, PowerShell, and the profile line. It now points git at a fixture global config so results do not depend on the machine's own.
+
+---
+
 ## 2026-10-08 - Cloud sessions move off the app's claude/ branch onto AjsAgent/ (#176, part of #174, 2.57.0)
 
 **Context.** The cloud app assigns each session a `claude/<name>` branch and tells the agent to push only there. aj decided every agent branch should be `AjsAgent/`, cloud ones included.

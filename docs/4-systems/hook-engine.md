@@ -138,6 +138,14 @@ whose text credits Claude (a `Co-Authored-By` line naming Claude or anthropic.co
 setting, which `tools/install.py` writes into the user's settings file. Kill switch `HOUSE_RULES_ATTRIBUTION=off`.
 A `--body-file` is read; a commit `-F file` is not.
 
+**Author identity (2.58.0, issue #177).** Cloud containers ship `user.name=Claude`, which signs every commit as
+Claude whatever its message says. `_author_guard` (next to `_attribution_guard`, same kill switch) works out a
+`git commit`'s author in this order: `--author`, `-c user.name/user.email`, inline `GIT_AUTHOR_NAME/EMAIL`, then
+`git var GIT_AUTHOR_IDENT` in the payload's cwd (5 s timeout). It denies a name that is exactly `Claude` (any case) or
+an email ending `anthropic.com`, naming the fix `git config user.name "AJ's agent" && git config user.email
+"79066376+Ajw2003@users.noreply.github.com"` (repo-local). If `git var` fails it allows silently. Works through
+the PowerShell tool via `_decoded_command`.
+
 **Helper tiers and the spawn cap (2.50.0, issues #110-#112).** `agents/executor.md` is retired; `scout`
 (haiku; Read, Grep, Glob), `builder` (sonnet; Read, Edit, Write, Bash, Grep, Glob) and `reviewer` (opus;
 Read, Grep, Glob, Bash) replace it, each a short role with a tool allowlist, and none can start a
@@ -224,7 +232,9 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   session on a `claude/<name>` branch also gets `_agent_branch_block`: an instruction to
   `git switch -c AjsAgent/<name>` (or `git switch` to it when it already exists locally or on
   `origin`) and to push and open PRs from there. Text only, the hook never switches;
-  `HOUSE_RULES_AGENT_BRANCH=off` disables it. Only the
+  `HOUSE_RULES_AGENT_BRANCH=off` disables it. A remote session whose `git var GIT_AUTHOR_IDENT` is Claude also gets
+  `_agent_identity_block`, one line telling it to run the repo-local `git config` fix before its first commit
+  (text only; nothing when the identity is fine or unreadable; `HOUSE_RULES_ATTRIBUTION=off` disables it). Only the
   fallback probes: a hand-recorded `rules/environment.md` replaces it, so hardware missing from
   that file is not re-detected. The macOS and Windows branches were written to the documented
   command shapes and not run on those systems.

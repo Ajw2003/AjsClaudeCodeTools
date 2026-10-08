@@ -1,5 +1,10 @@
 # Today — 2026-10-08
 
+Commit author, plugin 2.58.0 (issue #177): cloud containers sign commits as "Claude", so the guard now refuses
+a commit authored as Claude (or an anthropic.com email) and says the one command that fixes it, and a cloud session
+is told at start to run it. The agent's identity is "AJ's agent" with your GitHub noreply address. Not yet tried in
+a real cloud session.
+
 Cloud branches, plugin 2.57.0 (issue #176): a cloud session that the app starts on a `claude/<name>`
 branch is now told to move to `AjsAgent/<name>` before its first edit, and to push and open pull
 requests from there. Still to check in a real cloud session: whether the app's own "Create PR"
