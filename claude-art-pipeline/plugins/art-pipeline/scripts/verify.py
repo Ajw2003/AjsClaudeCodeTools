@@ -232,6 +232,35 @@ try:
     rc, out, _ = run([sys.executable, REVIEW, "status"], cwd=d)
     report(rc == 0 and "PASS  art/hero.fbx" in out and "BLOCK  art/other.obj" in out, "review.py status reports per-model pass/block")
 
+    # doc_check
+    def dcrepo(cmd, **kw):
+        d = mkrepo(); hook("start", d)
+        write(d, ".art-pipeline.json", json.dumps(dict({"doc_check": cmd}, **kw)))
+        sh_git(d, "add", "-A"); sh_git(d, "commit", "-qm", "cfg")
+        hook("start", d)
+        return d
+    d = dcrepo("echo ran > ran.txt"); write(d, "docs/scale.md", "x")
+    rc, o = gate(d)
+    report(o == {} and os.path.exists(os.path.join(d, "ran.txt")), "doc_check: configured check passes when docs changed (ran, silent)")
+    d = dcrepo("echo ROSTER-DRIFT; exit 3"); write(d, "docs/scale.md", "x")
+    rc, o = gate(d)
+    report(o.get("decision") == "block" and "ROSTER-DRIFT" in o["reason"] and "exited 3" in o["reason"], "doc_check: failing check blocks with its output")
+    d = dcrepo("echo ran > ran.txt exit 3"); write(d, "notes.txt", "x")
+    rc, o = gate(d)
+    report(o == {} and not os.path.exists(os.path.join(d, "ran.txt")), "doc_check: not run when nothing relevant changed")
+    d = dcrepo("sleep 5"); write(d, "docs/a.md", "x")
+    rc, out, _ = run([sys.executable, "-c", "import sys;sys.path.insert(0,%r);import artlib;artlib.DOC_TIMEOUT=1;import hook;sys.argv=['h','gate'];sys.exit(hook.main(sys.argv))" % HERE],
+                     json.dumps({"session_id": "s1", "cwd": d}))
+    o = json.loads(out)
+    report(rc == 0 and "decision" not in o and "timed out" in o["systemMessage"], "doc_check: timeout fails open with a systemMessage")
+    d = mkrepo(); hook("start", d); write(d, "docs/a.md", "x")
+    rc, out, _ = hook("gate", d)
+    report(rc == 0 and out == "", "doc_check: missing config is silent")
+    d = dcrepo("exit 1", doc_check_paths=["data/*"]); write(d, "docs/a.md", "x")
+    ok1 = gate(d)[1] == {}
+    write(d, "data/x.csv", "x")
+    report(ok1 and gate(d)[1].get("decision") == "block", "doc_check_paths overrides the default paths")
+
     # 18-20 run.sh
     env_np = {"PATH": "", "ART_PIPELINE_PYTHON": ""}
     for ev, want in (("start", "NOT armed"), ("gate", "did NOT run")):

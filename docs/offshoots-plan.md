@@ -137,6 +137,11 @@ identical block releases with an `UNREVIEWED` systemMessage; mtime ordering stan
 sheet shows the current model"; globs default to `*.fbx *.glb *.gltf *.blend *.obj`, overridable
 by `.art-pipeline.json`; `review.py status` picks the newest ledger as "this session".
 
+**Doc-drift check.** `.art-pipeline.json` may set `doc_check` (shell command, repo root, 60 s) and
+`doc_check_paths` (default `docs/**`, `**/*.json`), so docs describing art cannot silently drift
+from the data. It runs at Stop only if a model or matching path changed; non-zero blocks with the
+output tail, timeout fails open loudly, and it counts in the same loop guard as `doc_check`.
+
 **Open questions.** The gate proves a sheet was opened, not that the reviewer looked at it
 honestly or compared it to the concept; a record's `seen` text is self-reported. A model edited
 without changing its mtime ordering is not detected. Per-model concept linkage is not checked.

@@ -85,7 +85,7 @@ def event_gate():
     cfg, led, res, bad = artlib.evaluate(root, gitdir, p.get("session_id"))
     unmet = [(m, pr) for m, st, pr in res if st == "fail"]
     waived = [m for m, st, _ in res if st == "waived"]
-    notes = []
+    notes = ["art-pipeline: " + pr[0] for m, st, pr in res if st == "timeout"]
     if waived:
         notes.append("art-pipeline: WAIVED review for: " + ", ".join(waived))
     path = artlib.ledger_path(gitdir, p.get("session_id"))
@@ -113,7 +113,9 @@ def event_gate():
         lines += ["    * " + x for x in pr]
     if bad:
         lines.append("Unreadable review records: " + "; ".join(bad))
-    lines.append("To fix: " + artlib.fix_hint(cfg))
+    if any(m != "doc_check" for m, _ in unmet):
+        lines.append("To fix models: " + artlib.fix_hint(cfg))
+    lines += notes
     emit({"decision": "block", "reason": "\n".join(lines)})
     return 0
 

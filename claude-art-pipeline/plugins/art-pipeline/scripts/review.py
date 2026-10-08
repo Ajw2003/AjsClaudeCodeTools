@@ -64,7 +64,8 @@ def main(argv):
     if not res:
         print("no changed models")
     for m, st, pr in res:
-        print("%s  %s" % ("PASS" if st != "fail" else "BLOCK", m) + ("  [waived]" if st == "waived" else ""))
+        print("%s  %s" % ("PASS" if st not in ("fail", "timeout") else ("BLOCK" if st == "fail" else "UNCHECKED"), m)
+              + ("  [waived]" if st == "waived" else ""))
         for p in pr:
             print("      - " + p)
     for b in bad:

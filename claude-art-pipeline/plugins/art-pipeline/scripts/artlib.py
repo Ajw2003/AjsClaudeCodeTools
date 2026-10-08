@@ -14,6 +14,8 @@ DEFAULT_REVIEW_DIR = "docs/art/reviews"
 MIN_SEEN = 40
 IMG_EXT = (".png", ".jpg", ".jpeg", ".webp")
 MAX_BLOCKS = 3
+DOC_PATHS = ["docs/**", "**/*.json"]
+DOC_TIMEOUT = 60
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -43,7 +45,8 @@ def head_sha(root):
 
 
 def load_config(root):
-    cfg = {"model_globs": DEFAULT_GLOBS, "exclude": DEFAULT_EXCLUDE, "review_dir": DEFAULT_REVIEW_DIR}
+    cfg = {"model_globs": DEFAULT_GLOBS, "exclude": DEFAULT_EXCLUDE, "review_dir": DEFAULT_REVIEW_DIR,
+           "doc_check": "", "doc_check_paths": DOC_PATHS}
     path = os.path.join(root, ".art-pipeline.json")
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as fh:
@@ -69,7 +72,7 @@ def tracked_has_art(root, cfg):
     return any(is_model(f, cfg) for f in out.splitlines())
 
 
-def changed_models(root, start, cfg):
+def changed_files(root, start):
     names = set()
     if start and start != head_sha(root):
         names.update(git(root, "diff", "--name-only", "%s..HEAD" % start).splitlines())
@@ -83,7 +86,33 @@ def changed_models(root, start, cfg):
         names.add(t[3:])
         if t[0] in "RC":
             i += 1  # skip the rename source
-    return sorted(n for n in names if is_model(n, cfg) and os.path.isfile(os.path.join(root, n)))
+    return sorted(names)
+
+
+def changed_models(root, start, cfg):
+    return [n for n in changed_files(root, start) if is_model(n, cfg) and os.path.isfile(os.path.join(root, n))]
+
+
+def _path_match(rel, pat):
+    return fnmatch.fnmatch(rel, pat) or (pat.startswith("**/") and fnmatch.fnmatch(rel, pat[3:]))
+
+
+def run_doc_check(root, cfg, names):
+    """None when not configured / nothing relevant changed, else ('ok'|'fail'|'timeout', [detail])."""
+    cmd = cfg.get("doc_check")
+    if not cmd:
+        return None
+    pats = cfg.get("doc_check_paths") or DOC_PATHS
+    if not any(is_model(n, cfg) or any(_path_match(n, g) for g in pats) for n in names):
+        return None
+    try:
+        p = subprocess.run(cmd, shell=True, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=DOC_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return "timeout", ["doc_check `%s` timed out after %ds; not checked" % (cmd, DOC_TIMEOUT)]
+    if p.returncode == 0:
+        return "ok", []
+    tail = p.stdout.decode("utf-8", "replace").strip().splitlines()[-20:]
+    return "fail", ["doc_check `%s` exited %d:" % (cmd, p.returncode)] + tail
 
 
 # --- ledger -----------------------------------------------------------------------------
@@ -177,9 +206,14 @@ def evaluate(root, gitdir, session_id):
     seen = {norm(e["path"]) for e in led["seen"] if isinstance(e, dict) and "path" in e}
     recs, bad = load_records(root, cfg)
     res = []
-    for m in changed_models(root, led["start"], cfg):
-        st, pr = check_model(root, m, recs, seen, cfg)
-        res.append((m, st, pr))
+    names = changed_files(root, led["start"])
+    for m in names:
+        if is_model(m, cfg) and os.path.isfile(os.path.join(root, m)):
+            st, pr = check_model(root, m, recs, seen, cfg)
+            res.append((m, st, pr))
+    dc = run_doc_check(root, cfg, names)
+    if dc:
+        res.append(("doc_check", dc[0], dc[1]))
     return cfg, led, res, bad
 
 
