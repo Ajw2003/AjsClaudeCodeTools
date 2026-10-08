@@ -17,6 +17,7 @@
 - LINQ is fine in setup/editor/non-hot-path code. Avoid it in anything called every frame —
   see Performance in the detail file.
 - One class per file, filename matches class name (Unity/Rider expect this anyway).
+- **Input**: the new Input System via the project's input actions; never `UnityEngine.Input`.
 
 ## Read the detail file before Unity C#
 

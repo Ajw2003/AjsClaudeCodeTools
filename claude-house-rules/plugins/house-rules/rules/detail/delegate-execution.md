@@ -53,6 +53,14 @@ directory at the same time, neither passing `isolation: "worktree"`. Both edited
 concurrently and corrupted the checkout. Two isolated worktrees cannot clobber each other
 regardless of any later judgement error, so this is mechanical, not a judgement call.
 
+**A file I name in a spawn prompt as the pattern to follow is checked against the loaded standards
+first.** A builder copies an example faithfully, so a wrong example spreads to every file it writes.
+If the example breaks a standard, I say so in the prompt and name the right pattern instead.
+
+**Why:** on 2026-10-07 a prompt named a class that read keys through the old `UnityEngine.Input`
+as "the key reading pattern" (Ajw2003/PlunderSpell#350). The builder copied it into a new class, and
+the project's move to the new Input System had to be redone for that class too.
+
 A subagent stopping is not the same as its task finishing, and a `SubagentStop` or background-task
 notification reporting only a status update ("I've launched...", "I'll report back...") is not a
 report of concrete deliverables. Before treating a delegation as done, or relaunching one, check
