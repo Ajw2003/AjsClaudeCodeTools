@@ -101,7 +101,7 @@ namespace AjArtPipeline
             cap.transform.localScale = new Vector3(0.5f, CapsuleHeight / 2f, 0.5f); // Unity capsule is 2 m tall
             var lit = Shader.Find(ArtPipelineImporter.LitShaderName);
             Material Mat(Color c) { var m = new Material(lit); m.SetColor("_BaseColor", c); return m; }
-            cap.GetComponent<Renderer>().sharedMaterial = Mat(new Color(0.38f, 0.38f, 0.40f))  // neutral: never compete with the asset's palette;
+            cap.GetComponent<Renderer>().sharedMaterial = Mat(new Color(0.38f, 0.38f, 0.40f));  // neutral: never compete with the asset's palette
 
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.transform.localScale = new Vector3(2f, 1f, 2f);
