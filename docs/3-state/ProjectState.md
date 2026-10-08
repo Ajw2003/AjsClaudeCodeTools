@@ -75,6 +75,33 @@ same call sequence replayed through `run.sh` in a scratch clone of PlunderSpell 
 verified: a real Claude Code session in another repo, and a `gh issue create` made through the
 `PowerShell` tool, which is not recorded.
 
+Live test of 2.53.0 in a cloud session on the mobile app (2026-10-07/08, transcript timestamps UTC):
+a prompt Claude Code raised itself was refused by `prompttimer` after 300.0 s unanswered and listed on aj's
+next message, as designed. `guard`'s own `ask` does reach aj as a real dialog (#143, first half). When aj
+answered first, the timer stopped with no leftover process or entry (R2). A `guard` prompt left unanswered
+(a delete, 02:15:57 UTC) was refused after 300.0 s and the file was not deleted, so the timer covers the
+house-rules prompts too (#143); the next prompt was then refused at once (#152). aj's screenshot afterwards
+shows both refused steps as "Failed" with the refusal text and no Allow/Deny card left (#149, seen in the
+app view aj screenshotted; the phone view was not checked separately). New gap: the worker restarted as a prompt opened; the dialog stayed on aj's screen for 12 minutes while no
+hook ran (`guard` ran only after aj pressed Deny), so the timer cannot cover a dialog that outlives its worker (#159).
+
+2.53.0 (2026-10-07, #149, #151, #152) follows the prompt timer up: questions and plan approval are never
+timed; after one timeout, later prompts in that session are refused at once until aj writes; and a new
+`promptran` hook stops the timer when the action actually ran, and reports one recorded as timed out that ran
+anyway. Verified by `verify.py` (562 checks; 7 new). Not verified: the desktop app's stale dialog (#149) and a
+real session (#147). The same release (#153) lets `reset`/`revert`/`rebase`/`checkout --`/`restore` run unasked
+on a `claude/` branch only when the tree is clean and every commit is on a remote; everything else still asks.
+Verified by `verify.py` against a real repo with a local remote.
+
+2.52.0 (2026-10-04, #142-#146) adds `prompttimer`: a permission prompt nobody answers for 5 minutes is
+refused (never approved) and goes on a waiting-on-you list, shown on aj's next message and at the next session
+start. Verified by `verify.py` (554 checks, 18 of them for the timer, the lock and the list) and by a real
+headless Claude Code 2.1.289 run against the built hook: refused after the timeout, the file was never created,
+Claude replied with a "Waiting on you" line. Stopping the hook mid-wait with SIGTERM through `run.sh`
+removed its "waiting" entry and made no decision (checked by hand, Linux). Not verified: whether Claude Code
+actually stops the hook when aj answers first, Windows locking and signals, the desktop app, including whether `guard`'s own
+prompts reach the timer (#143), and the overnight-style run (#147).
+
 2.51.0 (2026-10-01, #133) credits "aj's agent" instead of Claude: `tools/install.py` writes the `attribution` setting
 (a plugin cannot carry it: Claude Code accepts only `agent` and `subagentStatusLine` from a plugin's settings.json), and
 `guard` refuses text crediting Claude (kill switch `HOUSE_RULES_ATTRIBUTION=off`).

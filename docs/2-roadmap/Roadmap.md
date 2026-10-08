@@ -159,6 +159,12 @@ Refactors with no change in behaviour, needed before group A adds more handlers.
 
 ### D3. Issue workflow follow-ups (from `docs/plans/issue-workflow-build-plan.md`; #108-#110 shipped in 2.49.0)
 
+- **#142.** Shipped in 2.52.0: the prompt timer and the waiting-on-you list (#144-#146). 2.53.0: questions
+  exempt (#151), refuse at once once aj is away (#152), an action that ran is never recorded as timed out
+  (#149). Open: #143 (do `guard` prompts reach the timer in the desktop app?), #147 (overnight-style
+  check) and #149's stale dialog, all on aj's machine.
+- **#153.** Built for 2.53.0: destructive git steps unasked only on a `claude/` branch with the work
+  pushed. Open: a real session confirming the prompt disappears in that case and stays everywhere else.
 - **#133.** Shipped in 2.51.0: the installer sets the `attribution` setting and `guard` refuses text crediting Claude.
   Open: other machines get the setting only when `bootstrap` or `update` runs there.
 - **#111, #112.** Shipped in 2.50.0: the `scout`/`builder`/`reviewer` tiers and the `agentcap` spawn cap.

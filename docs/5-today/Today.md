@@ -1,4 +1,30 @@
-# Today — 2026-10-01
+# Today — 2026-10-08
+
+Prompt timer, live test on the phone app: the timer refused an unanswered prompt after exactly 5 minutes and
+the refused action showed on your next message. The house-rules delete prompt reaches you as a real dialog.
+Found a gap: if the session's worker restarts while a prompt is open, the prompt sits on your screen with no
+timer behind it (it waited 12 minutes until you denied it), issue #159. A house-rules delete prompt left alone
+was refused after exactly 5 minutes and nothing was deleted, so the timer covers those too. The refused
+dialog then closed by itself and showed as "Failed" (#149).
+
+Prompt timer follow-ups, plugin 2.53.0 (issues #149, #151, #152): questions and plan approvals are never
+timed out. Once one permission prompt goes unanswered, the next ones in that session are refused straight
+away instead of each waiting another 5 minutes; your next message puts prompts back to normal. An action that
+actually ran is no longer recorded as timed out. Still open: the app may keep showing a dialog the timer
+already refused (#149), which needs checking on the desktop app.
+
+Destructive steps (issue #153, same release): Claude may now reset, rebase, revert or restore without asking
+only on its own `claude/` branch, and only when nothing is uncommitted and every commit is already pushed, so
+nothing can be lost. Anywhere else it asks you, as before. Force-push, `git clean`, dropping a stash and
+deleting files always ask.
+
+Prompt timer, plugin 2.52.0 (issue #142): a permission prompt nobody answers for 5 minutes is now refused,
+never approved, and Claude carries on with the rest of the work. The refused action goes on a waiting-on-you
+list, which shows on your next message and at the next session start. Plan:
+[`2026-10-04-permission-prompt-timeout.md`](../plans/2026-10-04-permission-prompt-timeout.md). Next: on the
+desktop app, check whether the house-rules prompts (`guard`) are timed too (#143), then the overnight-style
+run (#147).
+
 
 Credit "aj's agent", never Claude, plugin 2.51.0 (issue #133): the installer now writes Claude Code's
 `attribution` setting (commit `Committed by AJ's agent`, pull request `Opened by AJ's agent`, no session link, no

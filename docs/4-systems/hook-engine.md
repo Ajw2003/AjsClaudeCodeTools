@@ -95,6 +95,42 @@ and treated as no gate. `HOUSE_RULES_ISSUES=off` disables all of it. Known limit
 through the `PowerShell` tool is not recorded (the `autosave` entry matches `Bash`, not `PowerShell`, and
 widening it would add a process per PowerShell call). Plan: `docs/plans/issue-workflow-build-plan.md`.
 
+**Prompt timer (2.52.0, issues #142-#146).** `prompttimer` is the plugin's one `PermissionRequest` entry (no
+matcher, timeout 330). That event runs at the same time as the permission dialog, and whichever finishes first
+decides. The handler waits `HOUSE_RULES_PROMPT_TIMEOUT` seconds (default 300; `off` or `0` disables), then
+refuses with the same text in `decision.message` and `decision.reason`. Probed on 2.1.289: only `message` reached
+the model. It never emits an allow. The refused action goes into `<git common dir>/house-rules/waiting-on-you.json`
+(outside a repository: a session-keyed temp file), changed only through `_waiting_update`, which holds a
+`.lock` file (O_EXCL, 3 s wait, stale after 15 s, loud and unlocked if the lock can't be taken). The same
+action again in the same session is refused at once until aj's next real message. On that message `scope`
+lists the session's timed-out entries and marks them `reported`; a background task notice does not count.
+`issuelist` shows entries other sessions left (newest 10) at session start and drops them, plus anything older
+than 7 days. `guard` and `guardwrite` prompts carry one line naming the timeout. Untested: whether a `guard`
+`ask` reaches `PermissionRequest` in the desktop app (#143); headless it does not. Plan:
+`docs/plans/2026-10-04-permission-prompt-timeout.md`.
+
+**Prompt timer follow-ups (2.53.0, issues #149, #151, #152).** Three changes. (1) `AskUserQuestion` and
+`ExitPlanMode` are in `PROMPT_TIMER_EXEMPT_TOOLS`: the handler says so on stderr and makes no decision, because
+refusing a question throws the question away rather than routing around a blocked action. (2) If the session
+already holds a `timed-out` entry (aj has not written since), any new prompt is refused at once and queued as
+`timed-out`: aj has had the full wait once, and each further prompt would cost another. `scope` marks the
+entries `reported` on aj's next message, which ends this. (3) `promptran`, on `PostToolUse` and
+`PostToolUseFailure` for the prompt-capable tools, keys the call the same way (`_waiting_key`): a `waiting`
+entry becomes `ran`, and the waiting `prompttimer` checks the list once a second and exits with no decision
+when it sees that. This covers an approval that never sent the hook SIGTERM (#149: a push that landed was
+recorded as timed out). A `timed-out` entry for a call that ran is removed and reported, which is how a late
+answer on a stale dialog would show up. `scope` and `issuelist` drop `ran` entries. Known limit: no hook
+output closes the app's dialog once the timer has refused (#149); the refusal reaches the model, the dialog
+can stay on screen.
+
+**Saved-work exemption (2.53.0, issue #153).** Patterns marked `SAVED` (`reset`, `revert`, `rebase`,
+`checkout --`, `restore`) stand down only when the checkout is on a `claude/` branch, the command names no
+other repo, and `work_saved_elsewhere()` reports a clean tree (`git status --porcelain -uall` empty) and no
+commit missing from every remote (`git rev-list --count HEAD --not --remotes` is 0). It runs at most once
+per command, only when such a pattern matched on my branch, with a 2-second budget; any failure is a no. A
+prompt that this could have silenced adds one line saying why it did not. Force-push, `clean`,
+`stash drop/clear`, `rm`, and merge-like verbs never use it.
+
 **Attribution (2.51.0, issue #133).** `guard` also refuses a `git commit`, `gh pr create|edit` or `gh issue create|comment`
 whose text credits Claude (a `Co-Authored-By` line naming Claude or anthropic.com, `Generated with [Claude Code]`, a
 `Claude-Session` trailer or a claude.ai/code link). The wording to use is `Committed by AJ's agent` and
