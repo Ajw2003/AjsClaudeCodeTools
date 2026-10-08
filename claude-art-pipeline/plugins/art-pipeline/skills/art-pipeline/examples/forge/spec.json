@@ -1,0 +1,29 @@
+{
+  "assets": {
+    "lantern": {
+      "name": "Lantern",
+      "height_m": 0.40,
+      "tolerance": 0.05,
+      "dims": [0.16, 0.16, 0.40],
+      "tri_budget": 1500,
+      "families": {
+        "iron":  {"base": "#2E2C30"},
+        "brass": {"base": "#B08A3C"},
+        "wax":   {"base": "#E8DCC0"},
+        "flame": {"base": "#FFB43A"}
+      }
+    },
+    "dummy": {
+      "name": "Dummy",
+      "height_m": 1.80,
+      "tolerance": 0.02,
+      "tri_budget": 4000,
+      "families": {
+        "paint": {"base": "#D9A441"},
+        "joint": {"base": "#26262B"},
+        "mark":  {"base": "#C23B22"}
+      },
+      "clips": {"idle": {}, "walk": {"speed": 1.4}}
+    }
+  }
+}
