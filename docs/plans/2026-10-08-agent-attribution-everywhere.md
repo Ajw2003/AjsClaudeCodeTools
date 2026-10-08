@@ -1,7 +1,9 @@
 # Plan: "aj's agent" attribution and `AjsAgent/` branches, in every repo, going forward and backward
 
-STATUS: decisions D1-D4 answered by aj 2026-10-08 (see bottom); D5 defaulted. Nothing built yet;
-next is the parent issue plus one child per step.
+STATUS: decisions D1-D4 answered by aj 2026-10-08 (see bottom); D5 defaulted. Nothing built yet.
+Issues (2026-10-08): parent #174; Step 1 + label rename #175, Step 2 #176, Step 3 #177,
+Step 4 #178, Steps 5-6 #179, Focus Deck reserved label #180, R1 inventory #181,
+R2-R3 + label rename across repos #182. New label: `AjsAgent created this`.
 Builds on [attribution-build-plan.md](attribution-build-plan.md) (issue #133, shipped in 2.51.0).
 
 ## What exists today, checked 2026-10-08 in a cloud session on this repo

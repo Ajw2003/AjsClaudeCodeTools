@@ -168,6 +168,11 @@ invocation.
 
 ## Cross-cutting issues that belong to no milestone
 
+- **Agent attribution everywhere (#174, planned 2026-10-08, nothing built).** Credit "aj's agent"
+  and `AjsAgent/` branches in every own repo; old `claude/` branches renamed, no history rewrite.
+  Plan: [`docs/plans/2026-10-08-agent-attribution-everywhere.md`](../plans/2026-10-08-agent-attribution-everywhere.md).
+  The issue label is moving from `Claude created this` to `AjsAgent created this`; until #175
+  lands, `hook.py`'s issue gate still looks for the old name.
 - **[`docs/architecture-backlog.md`](../architecture-backlog.md)** — seven open refactor candidates
   against `hook.py`/`verify.py` (deduplicating nine restatement checks, unifying the three
   places the failure-mode contract is stated, one open item about agent frontmatter fields
