@@ -28,6 +28,13 @@ the sheet PNG exists, is at least as new as the model, and was opened this sessi
 Override per project with `.art-pipeline.json` at the repo root:
 `{"model_globs": [...], "exclude": [...], "review_dir": "..."}`.
 
+Doc-drift check: add `"doc_check": "<shell command>"` (run from the repo root, 60 s timeout) and
+optionally `"doc_check_paths": [...]` (fnmatch on repo-relative paths, default
+`["docs/**", "**/*.json"]`). At Stop it runs only when this session changed a model or a matching
+path. Non-zero exit blocks with the last 20 lines of output; a timeout fails open with a
+systemMessage; not configured is silent. It shares the loop guard (key `doc_check`) and shows in
+`review.py status`.
+
 Loop guard: the 3rd consecutive block for the same unmet set releases the stop with a loud
 `UNREVIEWED models` systemMessage. Fail modes: start loud, seen never blocks, gate fails open
 loudly.
