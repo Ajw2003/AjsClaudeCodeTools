@@ -175,6 +175,12 @@ _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
 # Simulated spawns in this file must never leave records in the real repository's agent list.
 os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
+# The author guard (#177) reads the git identity, and a cloud container's ~/.gitconfig is Claude. Point
+# git at a fixture global config with the agent identity so these cases do not depend on the machine.
+_GIT_GLOBAL = os.path.join(_FIXTURE_ROOT, "gitconfig-global")
+with open(_GIT_GLOBAL, "w", encoding="utf-8") as _gf:
+    _gf.write("[user]\n\tname = AJ's agent\n\temail = 79066376+Ajw2003@users.noreply.github.com\n")
+os.environ["GIT_CONFIG_GLOBAL"] = _GIT_GLOBAL
 
 
 def _repo_on(name, head_line):
@@ -3751,6 +3757,65 @@ commit_case(
     "out %r" % _opw[:140],
 )
 
+# -- #177: a commit authored as Claude is refused ----------
+AGENT_IDENTITY_FIX_TEXT = (
+    "git config user.name \"AJ's agent\" && git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
+)
+
+
+def _au_repo(name, email):
+    d = _iss_repo()
+    subprocess.run(["git", "config", "user.name", name], cwd=d, check=True)
+    subprocess.run(["git", "config", "user.email", email], cwd=d, check=True)
+    return d
+
+
+_AU_GOOD = ("AJ's agent", "79066376+Ajw2003@users.noreply.github.com")
+_au_bad, _au_good = _au_repo("Claude", "noreply@anthropic.com"), _au_repo(*_AU_GOOD)
+_au1 = _iss_guard("git commit -m x", _au_bad)
+_au2 = _iss_guard("git commit -m x", _au_good)
+_au3 = _iss_guard('git commit --author "Claude <noreply@anthropic.com>" -m x', _au_good)
+_au4 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=79066376+Ajw2003@users.noreply.github.com commit -m x", _au_bad)
+_au5 = _iss_guard("GIT_AUTHOR_EMAIL=noreply@anthropic.com git commit -m x", _au_good)
+_au6 = _iss_guard("git commit --author='Claudette <c@example.com>' -m x", _au_bad)
+_au7 = _iss_guard("git commit -m x", _au_bad, HOUSE_RULES_ATTRIBUTION="off")
+_au8 = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _au_bad, command="git commit -m x"), _au_bad)[1]
+commit_case(
+    "author: a Claude repo identity is refused with the repo-local fix command; AJ's agent passes",
+    _iss_decision(_au1) == "deny" and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au1) and "--global" not in _iss_reason(_au1)
+    and _iss_decision(_au2) != "deny",
+    "out %r | %r" % (_au1[:200], _au2[:80]),
+)
+commit_case(
+    "author: --author Claude and GIT_AUTHOR_EMAIL at anthropic.com are refused; inline -c identity overrides a Claude config",
+    _iss_decision(_au3) == "deny" and _iss_decision(_au5) == "deny" and _iss_decision(_au4) != "deny",
+    "out %r | %r | %r" % (_au3[:80], _au5[:80], _au4[:80]),
+)
+commit_case(
+    "author: a name merely containing claude passes, and HOUSE_RULES_ATTRIBUTION=off disables the check",
+    _iss_decision(_au6) != "deny" and _iss_decision(_au7) != "deny",
+    "out %r | %r" % (_au6[:80], _au7[:80]),
+)
+commit_case(
+    "author: the same refusal applies through the PowerShell tool",
+    _iss_decision(_au8) == "deny" and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au8),
+    "out %r" % _au8[:140],
+)
+
+
+def _au_profile(d, remote=True, **extra):
+    return _ab_out(d, remote=remote, **extra)
+
+
+_ap1 = _au_profile(_au_bad)
+_ap2, _ap3 = _au_profile(_au_good), _au_profile(_au_bad, remote=False)
+_ap4 = _au_profile(_au_bad, HOUSE_RULES_ATTRIBUTION="off")
+commit_case(
+    "author: a remote profile with a Claude identity says to run the repo-local git config; good identity, local session and kill switch add nothing",
+    "Git identity is Claude" in _ap1 and "git config user.email" in _ap1 and all("Git identity is Claude" not in o for o in (_ap2, _ap3, _ap4)),
+    "out %r" % _ap1[-260:],
+)
+
 # -- #109: gh issue close ---------------------------------------------------------------------------
 _occ = _iss_guard("gh issue close 5")
 _issues_outputs.append(("issue close", _occ))
@@ -3894,10 +3959,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.57.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.58.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.57.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.58.0",
     "rules section + detail file + version",
 )
 

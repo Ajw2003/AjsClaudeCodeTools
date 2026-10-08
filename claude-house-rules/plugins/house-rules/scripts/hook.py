@@ -641,6 +641,7 @@ def event_profile():
             )
 
         handover_block += _agent_branch_block()
+        handover_block += _agent_identity_block()
 
     # Truncate only the environment body if it runs the whole thing over budget - preflight
     # warnings and the remote handover-target block are never the part that gets cut, since
@@ -1990,6 +1991,21 @@ def _agent_branch_block():
         return "\n\n---\n\nAjsAgent branch check: branch not read (%s)." % exc
 
 
+def _agent_identity_block():
+    """Cloud session whose git identity is Claude: tell the agent to set the repo-local identity.
+
+    Text only - the hook never runs git config. Never raises; adds nothing when fine or unreadable.
+    """
+    try:
+        if not _attribution_enabled():
+            return ""
+        ident = _git_author_ident(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if ident is None or not _is_claude_identity(*ident):
+            return ""
+        return "\n\n---\n\nGit identity is Claude: before your first commit run `%s`." % AGENT_IDENTITY_FIX
+    except Exception: return ""  # unreadable identity adds no text, by design (#177)
+
+
 SAVED_CHECK_TIMEOUT = 2.0
 
 
@@ -2081,7 +2097,8 @@ def event_guard():
 
     # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
     # an ask is folded into the prompt built below so a compound command is asked about once.
-    issue_hit = _attribution_guard(subject, payload) or _issues_guard(subject, payload)
+    issue_hit = (_attribution_guard(subject, payload) or _author_guard(subject, payload)
+                 or _issues_guard(subject, payload))
     if issue_hit and issue_hit[0] == "deny":
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": issue_hit[1]}})
@@ -4639,6 +4656,87 @@ def _attribution_guard(subject, payload):
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
             return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)
     return None
+
+
+# The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
+# noreply@anthropic.com, which signs every commit as Claude whatever the message says.
+AGENT_IDENTITY_FIX = (
+    "git config user.name \"AJ's agent\" && "
+    "git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
+)
+_ARG = r"(\"[^\"]*\"|'[^']*'|\S+)"
+_AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
+_C_NAME_RE = re.compile(r"(?:^|\s)-c\s*user\.name=" + _ARG, re.IGNORECASE)
+_C_EMAIL_RE = re.compile(r"(?:^|\s)-c\s*user\.email=" + _ARG, re.IGNORECASE)
+_ENV_NAME_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_NAME=" + _ARG)
+_ENV_EMAIL_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_EMAIL=" + _ARG)
+
+
+def _unquote(s):
+    return s.strip().strip("\"'").strip()
+
+
+def _is_claude_identity(name, email):
+    return (name or "").strip().lower() == "claude" or (email or "").strip().lower().endswith("anthropic.com")
+
+
+def _git_author_ident(cwd):
+    """(name, email) from `git var GIT_AUTHOR_IDENT` in cwd, or None when it cannot be read."""
+    import subprocess
+    try:
+        p = subprocess.run(["git", "var", "GIT_AUTHOR_IDENT"], cwd=cwd, capture_output=True,
+                           text=True, timeout=5)
+    except Exception: return None  # git missing or timed out: identity unreadable, callers stay silent
+    if p.returncode != 0:
+        return None
+    m = re.match(r"\s*(.*?)\s*<([^>]*)>", p.stdout)
+    return (m.group(1), m.group(2)) if m else None
+
+
+def _effective_author(cmd, cwd):
+    """(name, email) the commit would carry; either may be None, whole result None when unreadable."""
+    name = email = None
+    m = _AUTHOR_FLAG_RE.search(cmd)
+    if m:
+        a = _unquote(m.group(1))
+        am = re.match(r"(.*?)\s*<([^>]*)>\s*$", a)
+        if am:
+            name, email = am.group(1).strip(), am.group(2).strip()
+        else:
+            name = a
+        return name, email
+    for rx, which in ((_C_NAME_RE, 0), (_C_EMAIL_RE, 1), (_ENV_NAME_RE, 0), (_ENV_EMAIL_RE, 1)):
+        m = rx.search(cmd)
+        if m:
+            if which == 0 and name is None:
+                name = _unquote(m.group(1))
+            elif which == 1 and email is None:
+                email = _unquote(m.group(1))
+    if name is None or email is None:
+        ident = _git_author_ident(cwd)
+        if ident is None:
+            return (name, email) if (name or email) else None
+        name = ident[0] if name is None else name
+        email = ident[1] if email is None else email
+    return name, email
+
+
+def _author_guard(subject, payload):
+    """None unless a git commit would be authored as Claude, else ("deny", reason, None)."""
+    if not _attribution_enabled():
+        return None
+    cmd = _decoded_command(subject)
+    if not _GIT_COMMIT_RE.search(cmd):
+        return None
+    try:
+        who = _effective_author(cmd, _payload_cwd(payload))
+    except Exception: return None  # unreadable identity: let the commit through, as for an unreadable body file
+    if who is None or not _is_claude_identity(*who):
+        return None
+    return ("deny", "House rules, credit aj's agent: this commit would be authored as `%s <%s>`, "
+            "which signs it as Claude. Set the agent's identity in this repo and retry: `%s`. "
+            "HOUSE_RULES_ATTRIBUTION=off disables this check."
+            % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
 
 
 def _issues_guard(subject, payload):
