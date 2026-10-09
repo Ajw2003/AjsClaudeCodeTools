@@ -1648,19 +1648,23 @@ def event_scope():
 
 # The 14 guard patterns, ported character-for-character from guard.sh's grep -E regexes to
 # Python re syntax. [[:alnum:]] -> [0-9A-Za-z] (never \w — the patterns list "_" separately).
+# The subject is the JSON-encoded command, so a new line or tab before a word reads as the two
+# characters \n or \t; _LINE_START accepts those as a word start, or `ls` + newline + `rm` slips by (#200).
+_LINE_START = r"\\[nrt]|"
+
 GUARD_R1 = [
     (r"-WindowStyle\s+Hidden", "starts a hidden window you cannot watch"),
     (r"Start-Process", "spawns a separate process with Start-Process"),
     (r"Start-Job|\s-AsJob", "runs the work as a background job"),
     (
-        r"(^|[^0-9A-Za-z_.-])(nohup|setsid|disown)([^0-9A-Za-z_-]|$)",
+        r"(^|" + _LINE_START + r"[^0-9A-Za-z_.-])(nohup|setsid|disown)([^0-9A-Za-z_-]|$)",
         "detaches the process from your terminal",
     ),
-    (r'[^&]&\s*\\?"', "backgrounds the command with a trailing ampersand"),
+    (r'[^&]&\s*(\\?"|\\[nr])', "backgrounds the command with a trailing ampersand"),
     # #85: a wait piped through tail/head shows nothing until it exits - a stuck wait and a
     # working one look identical for its whole timeout.
     (
-        r"(^|[^0-9A-Za-z_-])(while|until|sleep|timeout|watch)\s.*\|\s*(tail|head)([^0-9A-Za-z_-]|$)",
+        r"(^|" + _LINE_START + r"[^0-9A-Za-z_-])(while|until|sleep|timeout|watch)\s.*\|\s*(tail|head)([^0-9A-Za-z_-]|$)",
         "pipes a wait or loop through tail/head, which hides its output until it exits",
     ),
 ]
@@ -1730,7 +1734,7 @@ GUARD_R4 = [
         # Was -r/-f only, so a plain `rm styles.css` - no recursive or force flag needed to
         # delete a single existing file - slipped through unasked. Deleting one file this way is
         # exactly the mechanism behind the CSS-file regression this rule now also has to catch.
-        r"(^|[^0-9A-Za-z_./-])rm\s+\S",
+        r"(^|" + _LINE_START + r"[^0-9A-Za-z_./-])rm\s+\S",
         "deletes one or more files",
     ),
     (r"Remove-Item", "deletes files (Remove-Item)"),
@@ -1993,7 +1997,9 @@ def branch_ownership(start=None):
 
 
 _LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*&&""")
-_ANY_CD_RE = re.compile(r"(?:^|[\s;&|(])(?:cd|pushd)(?=\s|$)")
+# cd/pushd only where a command can start, so `git commit -m "fix cd handling"` keeps the
+# exemption (#203); shell keywords count, so `if t; then cd x; fi` is still seen.
+_ANY_CD_RE = re.compile(r"(?:^|[;&|({!\n]|\b(?:if|elif|while|until|then|do|else|time|exec)\b)\s*(?:cd|pushd)(?=\s|$)")
 
 
 def _command_dir(payload):
