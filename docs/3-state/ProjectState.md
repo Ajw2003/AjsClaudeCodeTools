@@ -144,6 +144,12 @@ Then a Canadian dead-maple theme (the user picked it over frost, trophies and an
 crowns on every head, rotting maple leaves in the plumage, and, at the user's request, the breast
 maw and blood stain replaced by a maple-leaf brand over blood-soaked feathers. 6.52 m tall,
 161,844 tris. Passes 7-11 recorded.
+Passes 12-19: detail moved into a baked texture set (new `art/goose/goose_texture.py`: procedural
+surfaces baked to colour, normal and roughness with ambient occlusion folded in), the body re-traced
+off a photo and stood up proud, the heads made horrifying (hide, brows, split cheeks, bloody teeth),
+hackles, mud and blood added, and colours matched to the concept by measurement. 6.75 m,
+272,380 tris against a 300k budget. `render_views.py` gained `--background` (art-pipeline 0.1.1) so
+reviews can sit on the concept's paper colour. A full build takes about 10 minutes on the sandbox CPU.
 
 ## 4. Distribution & install tooling — built and verified
 
