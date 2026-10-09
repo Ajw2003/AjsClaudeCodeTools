@@ -146,6 +146,16 @@ an email ending `anthropic.com`, naming the fix `git config user.name "AJ's agen
 "79066376+Ajw2003@users.noreply.github.com"` (repo-local). If `git var` fails it allows silently. Works through
 the PowerShell tool via `_decoded_command`.
 
+**GitHub tools (2.59.0, issue #178).** `guard` only sees shell commands, so writes through the GitHub MCP tools
+skipped the attribution check. `event_guardgithub` (own `PreToolUse` entry, matcher
+`mcp__(github|GitHub)__(create_pull_request|...|create_branch)`, eleven write tools) reads `title`, `body` and
+`message` and denies on any `_ATTRIBUTION_TEXT_RES` hit with the `ATTRIBUTION_DENY` wording ("commit message" for
+`push_files` and `create_or_update_file`, else "pull request or issue text"). It also denies a `create_branch`
+`branch` or `create_pull_request` `head` starting `claude/`, telling the agent to use `AjsAgent/<topic>`. File
+`content` is never read, and a push onto an existing `claude/` branch is allowed. Kill switch
+`HOUSE_RULES_ATTRIBUTION=off`. Unlike `guard` it fails open: an unreadable payload is a one-line `systemMessage`
+and an internal error falls to `main()`'s "hook hit an internal error" message, exit 0.
+
 **Helper tiers and the spawn cap (2.50.0, issues #110-#112).** `agents/executor.md` is retired; `scout`
 (haiku; Read, Grep, Glob), `builder` (sonnet; Read, Edit, Write, Bash, Grep, Glob) and `reviewer` (opus;
 Read, Grep, Glob, Bash) replace it, each a short role with a tool allowlist, and none can start a

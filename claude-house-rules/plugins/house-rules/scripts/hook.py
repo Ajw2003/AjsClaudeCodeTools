@@ -4658,6 +4658,65 @@ def _attribution_guard(subject, payload):
     return None
 
 
+# Issue #178: the same credit check for writes made through the GitHub MCP tools, which never
+# pass through `guard`. Only title/body/message and branch/head are read, never file content.
+_GITHUB_COMMIT_TOOLS = ("push_files", "create_or_update_file")
+BRANCH_DENY = (
+    "House rules, credit aj's agent: `%s` is a new branch under `claude/`. Name agent branches "
+    "`AjsAgent/<topic>` instead. HOUSE_RULES_ATTRIBUTION=off disables this check."
+)
+
+
+def event_guardgithub():
+    # Fails open, loud (the plan: a broken check must not stop a GitHub write), unlike guard.
+    try:
+        raw = read_payload()
+        payload = json.loads(raw) if raw else None
+        if payload is not None and not isinstance(payload, dict):
+            raise ValueError("payload is not a JSON object")
+    except Exception as exc:
+        emit({"systemMessage": "house-rules guardgithub: could not read the hook payload (%s); "
+                               "the GitHub write was NOT checked for Claude credit." % exc})
+        return 0
+    if not payload:
+        trace("guardgithub: empty payload - nothing was checked for this call.")
+        return 0
+    if not _attribution_enabled():
+        trace_noop("guardgithub: HOUSE_RULES_ATTRIBUTION=off - nothing was checked.")
+        return 0
+    tool = str(payload.get("tool_name") or "")
+    short = tool.split("__")[-1]
+    args = payload.get("tool_input")
+    if not isinstance(args, dict):
+        trace("guardgithub: no tool_input object - nothing was checked for this call.")
+        return 0
+    kind = "commit message" if short in _GITHUB_COMMIT_TOOLS else "pull request or issue text"
+    reason = None
+    for field in ("title", "body", "message"):
+        val = args.get(field)
+        if not isinstance(val, str):
+            continue
+        for rx in _ATTRIBUTION_TEXT_RES:
+            m = rx.search(val)
+            if m:
+                reason = ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60])
+                break
+        if reason:
+            break
+    if not reason:
+        new_branch = None
+        if short == "create_branch":
+            new_branch = args.get("branch")
+        elif short == "create_pull_request":
+            new_branch = args.get("head")
+        if isinstance(new_branch, str) and new_branch.startswith("claude/"):
+            reason = BRANCH_DENY % new_branch
+    if reason:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": reason}})
+    return 0
+
+
 # The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
 # noreply@anthropic.com, which signs every commit as Claude whatever the message says.
 AGENT_IDENTITY_FIX = (
@@ -6378,6 +6437,7 @@ EVENTS = {
     "scope": event_scope,
     "guard": event_guard,
     "guardwrite": event_guardwrite,
+    "guardgithub": event_guardgithub,
     "artifact": event_artifact,
     "branchnudge": event_branchnudge,
     "runnable": event_runnable,

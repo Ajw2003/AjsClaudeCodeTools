@@ -3750,6 +3750,69 @@ commit_case(
     _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
     "out %r | off %r" % (_oc1[:90], _off[:80]),
 )
+# -- #178: the same credit check on GitHub MCP writes ---------------------------------------------------
+def _gg(tool, env_extra=None, **tool_input):
+    e = dict(os.environ)
+    e.pop("HOUSE_RULES_ATTRIBUTION", None)
+    e.update(env_extra or {})
+    pl = json.dumps({"session_id": "verify", "tool_name": tool, "tool_input": tool_input})
+    return run_hook("guardgithub", pl, env=e)[1]
+
+
+def _ggd(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["permissionDecision"]
+    except (ValueError, KeyError, TypeError):
+        return "allow"
+
+
+_gh = "mcp__github__"
+_g1 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)")
+_g2 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nOpened by AJ's agent")
+commit_case(
+    "guardgithub: a pull request body crediting Claude is denied; crediting aj's agent is allowed",
+    _ggd(_g1) == "deny" and "pull request or issue text" in _g1 and _ggd(_g2) == "allow",
+    "out %r | %r" % (_g1[:120], _g2[:80]),
+)
+_g3 = _gg(_gh + "issue_write", method="create", title="T", body="x\n\nCo-Authored-By: Claude <a@b>")
+_g4 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nClaude-Session: https://x", files=[{"path": "a", "content": "x"}])
+_g5 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nCommitted by AJ's agent",
+          files=[{"path": "a", "content": "Co-Authored-By: Claude <noreply@anthropic.com>"}])
+commit_case(
+    "guardgithub: an issue trailer and a push_files commit message are denied; file content naming the patterns is not scanned",
+    _ggd(_g3) == "deny" and _ggd(_g4) == "deny" and "commit message" in _g4 and _ggd(_g5) == "allow",
+    "out %r | %r | %r" % (_g3[:80], _g4[:80], _g5[:80]),
+)
+_g6 = _gg(_gh + "create_branch", branch="claude/x")
+_g7 = _gg(_gh + "create_branch", branch="AjsAgent/x")
+_g8 = _gg(_gh + "create_pull_request", title="T", head="claude/x", body="Opened by AJ's agent")
+_g9 = _gg(_gh + "push_files", branch="claude/x", message="fix\n\nCommitted by AJ's agent", files=[])
+commit_case(
+    "guardgithub: a new claude/ branch (create_branch, PR head) is denied naming AjsAgent/; AjsAgent/ and a push to an existing claude/ branch are allowed",
+    _ggd(_g6) == "deny" and "AjsAgent/<topic>" in _g6 and _ggd(_g7) == "allow"
+    and _ggd(_g8) == "deny" and _ggd(_g9) == "allow",
+    "out %r | %r | %r | %r" % (_g6[:60], _g7[:40], _g8[:60], _g9[:40]),
+)
+_g10 = _gg("mcp__GitHub__create_pull_request", title="T", head="AjsAgent/x", body="Generated with [Claude Code]")
+_g11 = _gg("mcp__GitHub__create_branch", branch="claude/x")
+_g12 = _gg(_gh + "create_branch", {"HOUSE_RULES_ATTRIBUTION": "off"}, branch="claude/x")
+commit_case(
+    "guardgithub: the mcp__GitHub__ prefix is checked the same way, and HOUSE_RULES_ATTRIBUTION=off allows",
+    _ggd(_g10) == "deny" and _ggd(_g11) == "deny" and _ggd(_g12) == "allow",
+    "out %r | %r | off %r" % (_g10[:60], _g11[:60], _g12[:60]),
+)
+_hj = json.load(open(os.path.join(HERE, "..", "hooks", "hooks.json"), encoding="utf-8"))
+_gm = [b["matcher"] for b in _hj["hooks"]["PreToolUse"]
+       if any(h["command"].endswith(" guardgithub") for h in b["hooks"])]
+_names = ["create_pull_request", "update_pull_request", "issue_write", "add_issue_comment",
+          "update_issue_comment", "add_reply_to_pull_request_comment", "add_comment_to_pending_review",
+          "pull_request_review_write", "push_files", "create_or_update_file", "create_branch"]
+commit_case(
+    "guardgithub: the hooks.json matcher fully matches every GitHub write tool under both prefixes, and not a read tool",
+    len(_gm) == 1 and all(re.fullmatch(_gm[0], p + n) for p in ("mcp__github__", "mcp__GitHub__") for n in _names)
+    and not re.fullmatch(_gm[0], "mcp__github__issue_read") and not re.fullmatch(_gm[0], "mcp__GitHub__get_file_contents"),
+    "matchers %r" % (_gm,),
+)
 _opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
 commit_case(
     "attribution: the same refusal applies through the PowerShell tool",
@@ -3945,10 +4008,11 @@ for _name, _o in _issues_outputs:
 commit_case("issues: every new output parses as exactly one JSON object", not _multi, "; ".join(_multi) or "%d outputs checked" % len(_issues_outputs))
 
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
-# The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count.
+# The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count;
+# so is guardgithub (#178), which runs only on a GitHub MCP write.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -3959,10 +4023,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.58.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.59.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.58.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.59.0",
     "rules section + detail file + version",
 )
 

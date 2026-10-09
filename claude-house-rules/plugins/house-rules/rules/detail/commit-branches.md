@@ -69,4 +69,5 @@ that never read the settings file (cloud sessions). `HOUSE_RULES_ATTRIBUTION=off
 The commit's author is credited too: the agent's identity is `AJ's agent
 <79066376+Ajw2003@users.noreply.github.com>`. A cloud container ships `user.name=Claude`, so the guard refuses
 a commit authored as Claude and names the repo-local `git config` fix, and a cloud session start tells you to run it.
+The GitHub tools are checked too: pull request, issue, comment and commit text that credits Claude is refused, as is a new `claude/` branch.
 

@@ -176,8 +176,8 @@ invocation.
   cloud session on `claude/<name>` is told at start to move to `AjsAgent/<name>`; whether the app's
   own PR button follows the new branch is still unchecked. #177 is built (2.58.0): `guard` refuses a
   commit authored as Claude and session start tells a cloud session to set the repo-local identity.
-  Not built: #178 guard on
-  GitHub tools, #179 cloud settings, #180 Focus Deck label, #181-#182 retroactive report and renames.
+  #178 is built (2.59.0): the GitHub write tools get the same credit check and refuse a new
+  `claude/` branch. Not built: #179 cloud settings, #180 Focus Deck label, #181-#182 retroactive report and renames.
 - **[`docs/architecture-backlog.md`](../architecture-backlog.md)** — seven open refactor candidates
   against `hook.py`/`verify.py` (deduplicating nine restatement checks, unifying the three
   places the failure-mode contract is stated, one open item about agent frontmatter fields

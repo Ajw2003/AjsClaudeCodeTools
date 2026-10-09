@@ -1,4 +1,9 @@
-# Today — 2026-10-08
+# Today — 2026-10-09
+
+GitHub tools, plugin 2.59.0 (issue #178): pull requests, issues, comments and pushes made through the GitHub tools
+now get the same check as shell commands. Text that credits Claude is refused, and so is creating a new `claude/`
+branch (use `AjsAgent/<name>`). File contents are not read, and pushing to an existing `claude/` branch is still
+allowed. Checked with the test suite and a simulated call, not yet in a real session.
 
 Commit author, plugin 2.58.0 (issue #177): cloud containers sign commits as "Claude", so the guard now refuses
 a commit authored as Claude (or an anthropic.com email) and says the one command that fixes it, and a cloud session

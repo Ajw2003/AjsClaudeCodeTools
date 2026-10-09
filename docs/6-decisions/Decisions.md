@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-09 - The GitHub write tools get their own credit check, text and new branches only (#178, part of #174, 2.59.0)
+
+**Context.** The attribution checks ran only in `guard`, wired to `Bash|PowerShell`. A pull request, issue, comment or push made through the GitHub MCP tools skipped them.
+
+**Decision.** A separate `PreToolUse` entry (`guardgithub`) matched to the eleven write tools under both `mcp__github__` and `mcp__GitHub__`. It checks `title`, `body`, `message` against the existing text patterns and refuses a new `claude/` branch (`create_branch`, a PR `head`). File `content` is never scanned: this repo's own source contains the patterns, so scanning would refuse the work that maintains them. A push onto an existing `claude/` branch is allowed: old branches still get work until #182 renames them, and refusing would strand that work; only creating a new one is refused. It fails open and loud, unlike `guard`: a GitHub write is not a destructive local action, and a broken check should say so rather than stop the write.
+
+**Rejected.** Folding the tools into the `guard` matcher (different payload shape, and every shell call would pay for it). Scanning file content.
+
+**Status.** Built; `verify.py` covers both prefixes, each deny and allow, the kill switch and the matcher regex.
+
+---
+
 ## 2026-10-08 - Commits are authored as AJ's agent, enforced by the guard and a session-start line (#177, part of #174, 2.58.0)
 
 **Context.** Cloud containers ship `user.name=Claude`, `user.email=noreply@anthropic.com`; 103 of 227 commits on main carry that author. The attribution guard read message text only.
