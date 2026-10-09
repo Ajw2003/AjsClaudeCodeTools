@@ -1,0 +1,22 @@
+{
+  "slug": "reaper_scythe",
+  "name": "Reaper scythe",
+  "kind": "prop",
+  "concept": "art/scythe/concept.jpg",
+  "height_m": 1.8,
+  "scale_note": "Measured off the 374x534 px concept: 515 px from knob to butt = 1.80 m, so 1 px = 3.5 mm. Model faces -Y; the blade sweeps to -X as in the concept.",
+  "triangle_budget": 6000,
+  "materials": [
+    {"name": "BladeSteel", "hex": "#B9BDC0", "metallic": 1.0, "roughness": 0.42, "notes": "pale pitted silver"},
+    {"name": "HeadIron", "hex": "#8D9195", "metallic": 1.0, "roughness": 0.5, "notes": "collar block, darker than the blade"},
+    {"name": "SkullBone", "hex": "#6F7377", "metallic": 0.6, "roughness": 0.6, "notes": "skull boss, same metal family, darker"},
+    {"name": "SocketDark", "hex": "#202224", "metallic": 0.0, "roughness": 0.9, "notes": "eye and nose sockets"},
+    {"name": "RopeWood", "hex": "#5B544E", "metallic": 0.0, "roughness": 0.85, "notes": "grey-brown twisted shaft"}
+  ],
+  "build": [
+    "Shaft: 3-strand twisted sweep, radius 25 mm, along a wandering path through the concept's centreline (top x=+0.01 m, bulge to +0.14 m at 0.95 m height, back to +0.07 m at the butt), 1.62 m long, about 4 twists per metre.",
+    "Head: block 0.23 m wide x 0.15 m tall x 0.065 m deep at the top of the shaft, with a pointed tang running +X and a short square knob on top.",
+    "Skull: boss on the front face of the head, 55 mm tall, cranium plus jaw, dark sockets.",
+    "Blade: extruded crescent, 12 mm thick, from the head's left face sweeping -X and down to a tip 0.48 m left of the shaft and 0.27 m below the head top; back edge convex, cutting edge concave."
+  ]
+}

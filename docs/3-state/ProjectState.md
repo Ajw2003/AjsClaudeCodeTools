@@ -136,6 +136,31 @@ mechanism is worth trusting": no tuning against real prompt traffic, no
 that spans two of `agent-router`'s tiers. These are stated as open by
 [`docs/offshoots-plan.md`](../offshoots-plan.md), not discovered here.
 
+`art-pipeline` (third offshoot) made its first asset in this repo on 2026-10-08: a reaper
+scythe from a reference image, in [`art/scythe/`](../../art/scythe/README.md) — spec, blueprint,
+GLB/FBX/.blend, review sheet at `docs/art/reviews/scythe-review.png`. The render and sheet scripts
+ran for real; the Stop-hook gate did not, because the plugin was not installed in that session.
+
+Second asset, 2026-10-09: an eldritch Canada goose boss (hero tier, 189,596 tris against a 200k
+budget) in [`art/goose/`](../../art/goose/README.md), from a prompt rather than a reference image.
+The concept sheet is drawn by code from the same design module the model is built from, so sheet and
+model share every number. Three review passes, recorded beside the scythe's. Again the gate did not
+run (plugin not installed in the session). No rig or clips yet (issue #183).
+Restyled the same day toward Bloodborne at the user's request: the 64 glowing eyes and six
+tentacles are gone (one small dark eye a side per head), palette moved to soot, ash, grimy bone
+and dried blood with no emission, bare ribs through the flanks, rattier feathers, a blood stain
+round the breast maw. Now 124,068 tris. Passes 4-6 recorded.
+Then a Canadian dead-maple theme (the user picked it over frost, trophies and antlers): dead maple
+crowns on every head, rotting maple leaves in the plumage, and, at the user's request, the breast
+maw and blood stain replaced by a maple-leaf brand over blood-soaked feathers. 6.52 m tall,
+161,844 tris. Passes 7-11 recorded.
+Passes 12-19: detail moved into a baked texture set (new `art/goose/goose_texture.py`: procedural
+surfaces baked to colour, normal and roughness with ambient occlusion folded in), the body re-traced
+off a photo and stood up proud, the heads made horrifying (hide, brows, split cheeks, bloody teeth),
+hackles, mud and blood added, and colours matched to the concept by measurement. 6.75 m,
+272,380 tris against a 300k budget. `render_views.py` gained `--background` (art-pipeline 0.1.1) so
+reviews can sit on the concept's paper colour. A full build takes about 10 minutes on the sandbox CPU.
+
 ## 4. Distribution & install tooling — built and verified
 
 `install_steps()`'s four-command order, `bootstrap.ps1`/`.sh`, `update.bat`, and both
