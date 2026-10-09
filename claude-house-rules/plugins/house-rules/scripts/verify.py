@@ -642,7 +642,7 @@ _sv_git("push", "-q", "-u", "origin", "main")
 _sv_theirs = _sv_guard("git reset --hard HEAD")
 _sv_case(
     "guard: on aj's branch, reset asks even with a clean tree and everything pushed",
-    _sv_theirs[0] == "ask" and "not an `AjsAgent/` (or `claude/`) branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
+    _sv_theirs[0] == "ask" and "not an `AjsAgent/` (or `claude/`, `ccr-`) branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
 )
 
 # The exemption is a silent success path, and guard's silent paths trace by contract.
@@ -667,6 +667,61 @@ if "mine to commit on" in out:
 else:
     report("FAIL", "a linked worktree resolves its branch through the gitdir: pointer")
     print(f"          got: {out!r}")
+
+# Branch ownership follows where the command runs (payload cwd), not CLAUDE_PROJECT_DIR: a
+# subagent's linked worktree on its own AjsAgent/ branch while the main checkout is on main.
+if shutil.which("git"):
+    def _own_git(d, *a):
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", d] + list(a),
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
+    def _own_branch_repo(name, branch):
+        d = os.path.join(_FIXTURE_ROOT, name)
+        os.makedirs(d)
+        _own_git(d, "init", "-q", "-b", "main")
+        _own_git(d, "commit", "-q", "--allow-empty", "-m", "init")
+        if branch != "main":
+            _own_git(d, "switch", "-q", "-c", branch)
+        return d
+
+    def _own_ask(cmd, project, cwd=None, **extra):
+        pl = {"session_id": "verify", "tool_name": "Bash", "tool_input": {"command": cmd}}
+        if cwd:
+            pl["cwd"] = cwd
+        env = env_in(project)
+        env.pop("HOUSE_RULES_OWNED_BRANCHES", None)
+        env.update(extra)
+        return '"permissionDecision":"ask"' in run_hook("guard", json.dumps(pl), env=env)[1]
+
+    _own_main = _own_branch_repo("own-main", "main")
+    _own_wt = os.path.join(_FIXTURE_ROOT, "own-main-wt")
+    _own_git(_own_main, "worktree", "add", "-q", "-b", "AjsAgent/sub", _own_wt)
+    _own_ccr = _own_branch_repo("own-ccr", "ccr-a03de58c-0j19tb")
+    _own_foo = _own_branch_repo("own-foo", "foo/x")
+    _own_res = {
+        "wt commit": _own_ask("git commit -m x", _own_main, _own_wt),
+        "wt push": _own_ask("git push", _own_main, _own_wt),
+        "wt force push": _own_ask("git push --force", _own_main, _own_wt),
+        "wt merge": _own_ask("git merge other", _own_main, _own_wt),
+        "no cwd": _own_ask("git commit -m x", _own_main),
+        "cd into wt": _own_ask('cd "%s" && git commit -m x' % _own_wt, _own_main, _own_main),
+        "two cds": _own_ask("cd %s && cd %s && git commit -m x" % (_own_wt, _own_main), _own_main, _own_main),
+        "ccr": _own_ask("git commit -m x", _own_ccr),
+        "foo off": _own_ask("git commit -m x", _own_foo),
+        "foo on": _own_ask("git commit -m x", _own_foo, HOUSE_RULES_OWNED_BRANCHES="bar/, foo/"),
+    }
+    _own_want = {"wt commit": False, "wt push": False, "wt force push": True, "wt merge": True,
+                 "no cwd": True, "cd into wt": False, "two cds": True, "ccr": False,
+                 "foo off": True, "foo on": False}
+    if _own_res == _own_want:
+        report("PASS", "guard judges ownership by the payload cwd: worktree, cd, ccr- and HOUSE_RULES_OWNED_BRANCHES")
+        print("          worktree commit/push allowed, force push/merge ask, missing cwd as before")
+    else:
+        report("FAIL", "guard judges ownership by the payload cwd: worktree, cd, ccr- and HOUSE_RULES_OWNED_BRANCHES")
+        print(f"          got: {_own_res}")
+else:
+    report("SKIP", "guard judges ownership by the payload cwd (real git worktree)")
+    print("          no git binary on PATH")
 
 # --- guard's commit-time docs-tier reminder: real git fixtures, since this path itself uses -----
 # git diff --cached, unlike the rest of guard which stays subprocess-free.
@@ -4023,10 +4078,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.59.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.59.1",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.59.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.59.1",
     "rules section + detail file + version",
 )
 

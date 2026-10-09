@@ -555,7 +555,7 @@ def event_inject():
         "The following are the user standing house rules. They apply to every project and "
         "override default behaviour. A PreToolUse hook also prompts for destructive "
         "commands, backgrounded/hidden processes, and mutating git commands - except a "
-        "plain commit or push on an `AjsAgent/` branch. That hook is a backstop, not "
+        "plain commit or push on an `AjsAgent/` (or `claude/`, `ccr-`) branch. That hook is a backstop, not "
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
 
@@ -1802,7 +1802,7 @@ def _parse_status_porcelain(lines):
     return out
 
 
-def _staged_docs_status(subject, elsewhere):
+def _staged_docs_status(subject, elsewhere, root=None):
     """('needs-docs'|'clear'|'unknown', detail) for what this commit will ACTUALLY include -
     not just what is staged right now, since guard runs before the command it is judging.
 
@@ -1812,8 +1812,8 @@ def _staged_docs_status(subject, elsewhere):
     shows may gain a line. doc-ref c79f docs/6-decisions/Decisions.md.
     """
     if elsewhere:
-        return "unknown", "the command names another repo (-C/--git-dir/--work-tree)"
-    root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        return "unknown", "the command names another repo (-C/--git-dir/--work-tree) or changes directory"
+    root = root or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
     import shlex
     import subprocess
@@ -1894,7 +1894,13 @@ DOCS_COMMIT_REMINDER = (
     "message why none needed updating."
 )
 
-OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/")  # claude/ = cloud app branches, old branches
+OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-")  # claude/ = cloud app branches, old branches; ccr- = cloud sessions
+
+
+def owned_branch_prefixes():
+    """The defaults plus HOUSE_RULES_OWNED_BRANCHES (comma-separated extras, never replacing)."""
+    extra = tuple(p.strip() for p in os.environ.get("HOUSE_RULES_OWNED_BRANCHES", "").split(",") if p.strip())
+    return OWNED_BRANCH_PREFIXES + extra
 
 # A command that names its own repo, git dir or work tree is not talking about the checkout
 # this hook can see, so the branch read below would be the wrong branch to judge it by. Broad
@@ -1923,14 +1929,15 @@ def _git_dir(start):
         d = parent
 
 
-def branch_ownership():
+def branch_ownership(start=None):
     """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
+    `start` is where the command runs (payload cwd); None keeps CLAUDE_PROJECT_DIR / getcwd.
 
     Mechanism and invariants: doc-ref ee0f docs/4-systems/hook-engine.md (Invariants) and
     doc-ref d2a4 docs/4-systems/hook-engine.md (Traps).
     """
     try:
-        git_dir = _git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        git_dir = _git_dir(start or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return False, None, "this directory is not inside a git repository"
         head = _read_text(os.path.join(git_dir, "HEAD")).strip()
@@ -1945,7 +1952,41 @@ def branch_ownership():
         return False, None, "HEAD points at %s, which is not a branch" % ref
 
     branch = ref[len("refs/heads/") :]
-    return branch.startswith(OWNED_BRANCH_PREFIXES), branch, None
+    return branch.startswith(owned_branch_prefixes()), branch, None
+
+
+_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*&&""")
+_ANY_CD_RE = re.compile(r"(?:^|[\s;&|(])(?:cd|pushd)(?=\s|$)")
+
+
+def _command_dir(payload):
+    """(dir, moved_unclear): where a guarded Bash command runs. The payload's `cwd`, else
+    CLAUDE_PROJECT_DIR, else getcwd(); a lone leading `cd <dir> &&` moves it to <dir>. Any other
+    cd/pushd, or a leading one that does not resolve to a directory, sets moved_unclear and the
+    caller withholds the exemption. doc-ref d2a4 docs/4-systems/hook-engine.md (Traps).
+    """
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = None
+    cwd = data.get("cwd") if isinstance(data, dict) else None
+    base = cwd if isinstance(cwd, str) and cwd else (os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    try:
+        cmd = data["tool_input"]["command"]
+    except (TypeError, KeyError):
+        m = _COMMAND_VALUE_RE.search(payload)
+        try:
+            cmd = json.loads('"%s"' % m.group(1)) if m else ""
+        except ValueError:
+            cmd = ""
+    if not isinstance(cmd, str) or not _ANY_CD_RE.search(cmd):
+        return base, False
+    m = _LEADING_CD_RE.match(cmd)
+    if m and len(_ANY_CD_RE.findall(cmd)) == 1:
+        target = os.path.abspath(os.path.join(base, m.group(1) or m.group(2) or m.group(3)))
+        if os.path.isdir(target):
+            return target, False
+    return base, True
 
 
 def _agent_branch_enabled():
@@ -2009,7 +2050,7 @@ def _agent_identity_block():
 SAVED_CHECK_TIMEOUT = 2.0
 
 
-def work_saved_elsewhere():
+def work_saved_elsewhere(root=None):
     """(saved, note): is everything a reset/rebase/restore could lose already somewhere it
     cannot reach? Yes only when the working tree is clean (nothing uncommitted or untracked)
     and no commit reachable from HEAD is missing from every remote-tracking ref (#153).
@@ -2017,7 +2058,7 @@ def work_saved_elsewhere():
     pattern matched on my branch. Anything it cannot tell is a no, with the reason."""
     import subprocess
 
-    root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    root = root or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
     deadline = time.time() + SAVED_CHECK_TIMEOUT
 
     def git(args):
@@ -2104,10 +2145,11 @@ def event_guard():
                                      "permissionDecisionReason": issue_hit[1]}})
         return 0
 
-    is_mine, branch, ownership_note = branch_ownership()
+    where, moved_unclear = _command_dir(payload)
+    is_mine, branch, ownership_note = branch_ownership(where)
     # A command carrying -C / --git-dir / --work-tree acts on a repo other than the one we
     # just read the branch from, so the exemption cannot be justified and is withheld.
-    elsewhere = bool(_OTHER_REPO_RE.search(subject))
+    elsewhere = bool(_OTHER_REPO_RE.search(subject)) or moved_unclear
     exempting = is_mine and not elsewhere
 
     hits = {title: [] for title, _ in GUARD_BUCKETS}
@@ -2125,7 +2167,7 @@ def event_guard():
                 continue
             if exempting and marker == SAVED:
                 if saved_state is None:
-                    saved_state = work_saved_elsewhere()
+                    saved_state = work_saved_elsewhere(where)
                 if saved_state[0]:
                     exempted.append(reason)
                     continue
@@ -2133,7 +2175,7 @@ def event_guard():
             hits[title].append(reason)
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
-    docs_status, docs_detail = _staged_docs_status(subject, elsewhere) if is_commit else (None, None)
+    docs_status, docs_detail = _staged_docs_status(subject, elsewhere, where) if is_commit else (None, None)
 
     if not any(hits.values()) and not outdated and not issue_hit:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
@@ -2198,7 +2240,7 @@ def event_guard():
             why_not_exempt = "  I could not establish branch ownership: %s." % ownership_note
         elif not is_mine:
             why_not_exempt = (
-                "  You are on `%s`, which is yours, not an `AjsAgent/` (or `claude/`) branch." % branch
+                "  You are on `%s`, which is yours, not an `AjsAgent/` (or `claude/`, `ccr-`) branch." % branch
             )
         if why_not_exempt:
             lines.append("")
@@ -2491,14 +2533,14 @@ def event_branchnudge():
         file_path = _extract_file_path(payload)
         if not file_path:
             return 0
-        is_mine, branch, note = branch_ownership()
+        is_mine, branch, note = branch_ownership(_payload_cwd(payload))
         if is_mine:
             trace_noop("branchnudge: on own branch %s - nothing to nudge." % branch)
             return 0
         if not branch:
             trace("branchnudge: no branch to judge (%s) - not checked." % note)
             return 0
-        root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        root = _payload_cwd(payload)
         try:
             status = _dirty_paths(root)
             dirty = status[1]
@@ -4107,7 +4149,7 @@ def event_subagentcommit():
             )
             return 0
         advice = " ".join(
-            _branch_advice(bool(branch and branch.startswith(OWNED_BRANCH_PREFIXES)), branch,
+            _branch_advice(bool(branch and branch.startswith(owned_branch_prefixes())), branch,
                            "HEAD is detached in %s" % top)
             for top, branch, _files in left
         )

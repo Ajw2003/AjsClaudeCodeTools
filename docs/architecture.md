@@ -364,7 +364,7 @@ a lesson about greping prose for the absence of an idea.
 
 ### What the exemption does and does not cover
 
-A plain `commit` and a plain `push` on a branch named `AjsAgent/…` (or `claude/…`); and, only when the work is
+A plain `commit` and a plain `push` on a branch named `AjsAgent/…` (or `claude/…`, `ccr-…`, or a prefix in `HOUSE_RULES_OWNED_BRANCHES`), judged in the directory the command runs in (payload `cwd`, or a lone leading `cd <dir> &&`); and, only when the work is
 already saved elsewhere, the history-rewriting steps below (#153). Everything else prompts on
 every branch:
 
@@ -372,7 +372,7 @@ every branch:
   replaces. It is the one push that can destroy something already backed up.
 - **`reset`, `revert`, `rebase`** (and, in the destructive bucket, `checkout --` / `restore`) discard
   work that is not yet a checkpoint — including the user's uncommitted edits sitting in the same
-  tree. Since #153 they run unasked on an `AjsAgent/` (or `claude/`) branch **only** when `work_saved_elsewhere()`
+  tree. Since #153 they run unasked on an `AjsAgent/` (or `claude/`, `ccr-`) branch **only** when `work_saved_elsewhere()`
   finds nothing to lose: `git status --porcelain -uall` empty and `git rev-list HEAD --not
   --remotes` empty. That is the second deliberate subprocess in `guard` (2 s budget, after the docs
   check), run only when one of these matched on my branch; anything it cannot tell is a no, and the

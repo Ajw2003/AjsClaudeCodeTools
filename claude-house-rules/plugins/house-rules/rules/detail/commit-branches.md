@@ -8,7 +8,7 @@ freely and often, without asking. That is the whole point: frequent commits *are
 the revert checkpoints. A session's work must never sit uncommitted for hours. When I finish a
 coherent piece, it gets committed before I start the next one.
 
-`claude/` is still treated as mine too, because the cloud app names its branches that way. A cloud
+`claude/` and `ccr-` (cloud sessions) are still treated as mine too, because the cloud names its branches that way; `HOUSE_RULES_OWNED_BRANCHES` adds more prefixes. A cloud
 session that starts on `claude/<name>` is told to move to `AjsAgent/<name>` before its first edit,
 and to push and open pull requests from there.
 
