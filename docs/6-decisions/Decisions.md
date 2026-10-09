@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-09 - Git writes are judged by the default branch, not branch prefixes; unanswerable prompts are refused (#196-#199, 2.60.0)
+
+**Context.** Subagents in worktrees sit on `worktree-agent-<id>` branches, which were not "owned", so every
+commit they made asked and a background subagent waited on it (#134, #136). After one timeout the prompt timer
+refused every later prompt and said never retry, so a refused commit or push stopped the whole job (#173, #192).
+A dialog can also outlive a restarted worker with no timer behind it (#159). aj asked for: no prompt for a normal
+commit or push, nothing committed or pushed to `main` directly, and only deletions and unrecoverable steps asking.
+**Decision.** `guard` draws the line at the repo's default branch (`main`, `master`, `origin/HEAD`). There, a
+commit, push, merge, rebase, revert, cherry-pick, `am` or `apply` is denied, as is a push aimed at it from any
+branch; elsewhere they run unasked, approved outright (`allow`) when the command is only `git`/`cd`.
+`git -C <dir>` is judged by `<dir>`; the author check reads that repo. `guardgithub` denies `push_files` and
+`create_or_update_file` to `main`/`master`. A remaining ask becomes a deny, queued on the waiting-on-you list,
+inside a subagent (`agent_id`) or when aj last wrote longer ago than the prompt timeout.
+**Rejected.** Adding `worktree-agent-` to the owned prefixes (fixes #134 only; aj's feature branches and Claude
+Code's own prompts still stall). Keeping `ask` on `main` with the timer behind it (the timer is the part that fails).
+**Supersedes.** The 2026-10-09 payload-cwd entry below, and the 2026-10-07 #153 entry, for where the line sits;
+their mechanisms (payload cwd, the saved-elsewhere check) are kept.
+**Status.** Built; `verify.py` covers each case. Not yet seen in a live session.
+Plan: `docs/plans/2026-10-09-stop-permission-stalls.md`.
+
+---
+
 ## 2026-10-09 - Branch ownership is judged from the payload cwd; `ccr-` branches are owned (2.59.1)
 
 **Context.** A worktree subagent's commits on its own `AjsAgent/` branch were prompted, because `branch_ownership()` read `CLAUDE_PROJECT_DIR` (the main checkout, on a non-owned branch).

@@ -109,6 +109,18 @@ than 7 days. `guard` and `guardwrite` prompts carry one line naming the timeout.
 `ask` reaches `PermissionRequest` in the desktop app (#143); headless it does not. Plan:
 `docs/plans/2026-10-04-permission-prompt-timeout.md`.
 
+**Default-branch rule and unattended refusals (2.60.0, issues #196-#199).** `guard` marks commit, plain push,
+merge, rebase, revert, cherry-pick, `am` and `apply` `BRANCH_WRITE`. On the default branch (`is_protected_branch`:
+`main`, `master`, or `default_branch()`, a file read of `<common git dir>/refs/remotes/origin/HEAD`) they are denied
+with `PROTECTED_DENY`; `_push_targets_protected` also denies a push from any branch whose destination is one of
+those names. Off it they are exempt, and `_only_git_statements` decides whether the hook returns `allow` (every
+statement `git` or `cd`) or stays silent (anything else rides along, so Claude Code's own rules still judge it).
+`_command_dir` follows `git -C <dir>` when every `-C` names the same directory and nothing `cd`s; any other `-C`
+(`grep -C 3` included) leaves the branch unknown, which asks. The remaining asks go through `_ask_or_refuse`: a
+payload with `agent_id`, or a `house-rules-last-seen-<session>` temp file (written by `scope` on each real message)
+older than the prompt timeout, turns the ask into a deny and adds a `refused` / `timed-out` entry to the
+waiting-on-you list, which `scope` reports on aj's next message. Plan: `docs/plans/2026-10-09-stop-permission-stalls.md`.
+
 **Prompt timer follow-ups (2.53.0, issues #149, #151, #152).** Three changes. (1) `AskUserQuestion` and
 `ExitPlanMode` are in `PROMPT_TIMER_EXEMPT_TOOLS`: the handler says so on stderr and makes no decision, because
 refusing a question throws the question away rather than routing around a blocked action. (2) If the session

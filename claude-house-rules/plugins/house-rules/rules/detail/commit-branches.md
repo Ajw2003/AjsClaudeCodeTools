@@ -12,11 +12,21 @@ coherent piece, it gets committed before I start the next one.
 session that starts on `claude/<name>` is told to move to `AjsAgent/<name>` before its first edit,
 and to push and open pull requests from there.
 
-**On a branch the user authored** — `main`, `master`, or any branch they named and work on — I
-mutate nothing. Not the repo, the index, the working tree, or a remote: `add`, `commit`, `push`,
-`reset`, `revert`, `stash`, `rm`, `mv`, `merge`, `rebase`, `clean`, `tag` are all theirs to
-authorise, every time. If work needs committing and I am standing on one of theirs, I create my
-own branch from it, commit there, and say that I did.
+**The default branch** (`main`, `master`, or whatever `origin/HEAD` names) only ever changes
+through a pull request. The `guard` hook refuses a commit, push, merge, rebase, revert,
+cherry-pick, `am` or `apply` there, and a push from any branch whose destination is the default
+branch (`git push origin main`, `HEAD:main`); the GitHub tools' file writes to `main`/`master` are
+refused the same way. Refused, not asked: a prompt here would only stall a session (issue #197).
+
+**Every other branch** is open to ordinary git work without a prompt: commit, push, merge,
+rebase, revert, cherry-pick. When the whole command is git (and `cd`), the hook approves it
+outright, so Claude Code's own permission prompt does not appear either. Deleting a branch
+(`branch -D`, `push --delete`), force-pushing, `git clean` and discarding unsaved work still ask.
+
+**On a branch the user authored** — one they named and use — I still branch off rather than
+add commits to it: the guard no longer asks, but their branch is theirs to shape. If work needs
+committing and I am standing on one of theirs, I create my own branch from it, commit there, and
+say that I did.
 
 **"If needed" arrives at the first edit, not at the first commit.** Standing on a branch that is
 not mine, I branch off before changing a file, so the work never sits uncommitted on theirs. The
@@ -24,7 +34,7 @@ not mine, I branch off before changing a file, so the work never sits uncommitte
 turn wrote that is still uncommitted at the end of the turn — committing is an obligation, not
 only something the guard permits.
 
-**Destructive steps on my own branch** (reset, rebase, restore and the like) run unasked only when
+**Destructive steps off the default branch** (reset, restore and the like) run unasked only when
 the work is already saved where they can't reach it: a clean tree and every commit pushed. The
 full line, and what still asks, is in `destructive-action.md`, "The one case that needs no asking".
 
@@ -71,3 +81,7 @@ The commit's author is credited too: the agent's identity is `AJ's agent
 a commit authored as Claude and names the repo-local `git config` fix, and a cloud session start tells you to run it.
 The GitHub tools are checked too: pull request, issue, comment and commit text that credits Claude is refused, as is a new `claude/` branch.
 
+**Update 2026-10-09 (#196, #197):** the line moved from "my branch prefixes" to "the default
+branch". Prompting on every non-`AjsAgent/` branch stalled every subagent, whose worktree branch is
+`worktree-agent-<id>`, on every commit (#134, #136). aj asked for the line drawn at `main` instead.
+Plan: `docs/plans/2026-10-09-stop-permission-stalls.md`.

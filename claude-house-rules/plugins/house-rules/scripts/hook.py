@@ -554,8 +554,8 @@ def event_inject():
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
         "override default behaviour. A PreToolUse hook also prompts for destructive "
-        "commands, backgrounded/hidden processes, and mutating git commands - except a "
-        "plain commit or push on an `AjsAgent/` (or `claude/`, `ccr-`) branch. That hook is a backstop, not "
+        "commands and hidden processes, and refuses commit/push/merge on `main`. "
+        "That hook is a backstop, not "
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
 

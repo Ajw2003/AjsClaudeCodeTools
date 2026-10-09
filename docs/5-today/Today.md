@@ -1,5 +1,12 @@
 # Today — 2026-10-09
 
+Permission stalls, plugin 2.60.0 (issues #196-#199): a commit, push or merge on any branch except `main` now
+runs with no prompt at all, helpers' worktree branches included. On `main` they are refused at once with
+"make a branch and open a pull request". Only deletions, force pushes and discarding unsaved work still ask,
+and those are refused instead of asked inside a helper or when you have not written for 5 minutes, so
+nothing sits waiting. Checked with the test suite (602 checks) and by running the hook on test repos; not yet
+in a live session.
+
 Guard branch ownership, plugin 2.59.1: a commit or push is now judged on the branch of the directory it runs in, so a
 worktree subagent on its own `AjsAgent/` branch is no longer prompted. `ccr-` cloud-session branches count as yours,
 and `HOUSE_RULES_OWNED_BRANCHES=foo/,bar-` adds more. Force push, merge and the rest still ask.
