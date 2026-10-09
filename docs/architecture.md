@@ -399,6 +399,12 @@ always "prompt anyway for something", and became load-bearing the moment `-C` wa
 an exemption. The prefix is now a shared `_GIT` constant that knows which global options take a
 separate argument, and `GUARD_R4`'s git patterns were fixed with it.
 
+It still read each option or value as a run of non-space characters, so a quoted value with a space
+in it (`git -c user.name="aj's agent" commit`) stopped the scan the same way, and every rule keyed
+on a git subcommand, the credit check included, matched nothing (#189, 2.60.0). Values are now read
+as shell words (`_WORD`): quoted runs may hold spaces. `_author_guard`'s `-c user.name/user.email`
+reader also takes a wholly quoted pair (`-c "user.name=aj's agent"`).
+
 ### Fixture repos, not the developer's branch
 
 `verify.py`'s guard cases used to inherit whatever branch the suite happened to be run from. Once

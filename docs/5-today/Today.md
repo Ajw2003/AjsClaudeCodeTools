@@ -1,5 +1,10 @@
 # Today — 2026-10-09
 
+Quoted git options, plugin 2.60.0 (issue #189): the guard missed any git command that set an option
+with a quoted value containing a space, like `git -c user.name="aj's agent" commit`, so commits crediting
+Claude went through unchecked. Every git rule now reads those values whole. Checked with the test suite,
+including every command form from the issue; not yet in a real session.
+
 GitHub tools, plugin 2.59.0 (issue #178): pull requests, issues, comments and pushes made through the GitHub tools
 now get the same check as shell commands. Text that credits Claude is refused, and so is creating a new `claude/`
 branch (use `AjsAgent/<name>`). File contents are not read, and pushing to an existing `claude/` branch is still

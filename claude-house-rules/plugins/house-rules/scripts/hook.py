@@ -1664,11 +1664,13 @@ GUARD_R1 = [
     ),
 ]
 
+# One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
+_WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
 # `git` plus any run of global options before the subcommand.
 # Why the alternation's first branch exists: docs/architecture.md, "The pre-existing hole this exposed".
 _GIT = (
     r"git\s+((?:-[cC]|--git-dir|--work-tree|--namespace|--exec-path|--super-prefix)"
-    r"[=\s]\s*[^\s]+\s+|-[^\s]+\s+)*"
+    r"[=\s]\s*" + _WORD + r"\s+|-" + _WORD + r"\s+)*"
 )
 
 # Marks a pattern the commit rule stands down for when the checkout is on a branch I created.
@@ -4725,8 +4727,18 @@ AGENT_IDENTITY_FIX = (
 )
 _ARG = r"(\"[^\"]*\"|'[^']*'|\S+)"
 _AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
-_C_NAME_RE = re.compile(r"(?:^|\s)-c\s*user\.name=" + _ARG, re.IGNORECASE)
-_C_EMAIL_RE = re.compile(r"(?:^|\s)-c\s*user\.email=" + _ARG, re.IGNORECASE)
+
+
+def _c_option_re(key):
+    """-c key=value, also with the whole pair quoted (-c "user.name=aj's agent", #189)."""
+    return re.compile(
+        r"(?:^|\s)-c\s*(?:\"" + key + r"=([^\"]*)\"|'" + key + r"=([^']*)'|" + key + r"=" + _ARG + r")",
+        re.IGNORECASE,
+    )
+
+
+_C_NAME_RE = _c_option_re(r"user\.name")
+_C_EMAIL_RE = _c_option_re(r"user\.email")
 _ENV_NAME_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_NAME=" + _ARG)
 _ENV_EMAIL_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_EMAIL=" + _ARG)
 
@@ -4767,10 +4779,11 @@ def _effective_author(cmd, cwd):
     for rx, which in ((_C_NAME_RE, 0), (_C_EMAIL_RE, 1), (_ENV_NAME_RE, 0), (_ENV_EMAIL_RE, 1)):
         m = rx.search(cmd)
         if m:
+            # lastindex: _C_*_RE capture in whichever quoting branch matched.
             if which == 0 and name is None:
-                name = _unquote(m.group(1))
+                name = _unquote(m.group(m.lastindex))
             elif which == 1 and email is None:
-                email = _unquote(m.group(1))
+                email = _unquote(m.group(m.lastindex))
     if name is None or email is None:
         ident = _git_author_ident(cwd)
         if ident is None:

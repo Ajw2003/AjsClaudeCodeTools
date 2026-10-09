@@ -479,6 +479,11 @@ GUARD_CASES = [
     ("ask", "Never take a destructive action without checking first", "git stash drop"),
     ("ask", "Never take a destructive action without checking first", "git stash clear"),
     ("ask", "Commit constantly on my own branches, never on theirs", 'echo "starting" && git commit -m "wip"'),
+    # #189: a quoted -c value with a space in it used to end git's option run early, so no
+    # rule keyed on the subcommand ever matched.
+    ("ask", "Commit constantly on my own branches, never on theirs", 'git -c user.name="aj\'s agent" commit -m "wip"'),
+    ("ask", "Commit constantly on my own branches, never on theirs", "git -c 'core.pager=less -R' reset --hard"),
+    ("ask", "Never take a destructive action without checking first", 'git -c "user.name=aj s agent" stash drop'),
 ]
 
 for expect, rule, cmd in GUARD_CASES:
@@ -3743,6 +3748,23 @@ commit_case(
     and _iss_decision(_opr3) == "deny" and "credit aj's agent" not in _opr2 and _opr2.strip() == "",
     "out %r | %r | %r" % (_opr1[:90], _opr2[:60], _opr3[:90]),
 )
+# #189: every form from the issue's table, the quoted -c ones included, is refused.
+_att_body = ' -m "fix\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"'
+_att_heredoc = " -F - <<'EOF'\nfix\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nEOF"
+_att_forms = [
+    "git commit" + _att_body,
+    "git -c user.name=x commit" + _att_body,
+    "git -c user.name=aj -c user.email=a@b commit" + _att_heredoc,
+    "git -c user.name=\"aj's agent\" commit" + _att_body,
+    "git -c user.name=\"aj's agent\" -c user.email=a@b commit -q" + _att_heredoc,
+    "git -c 'user.name=aj s agent' commit" + _att_body,
+]
+_att_missed = [f for f in _att_forms if _iss_decision(_iss_guard(f)) != "deny"]
+commit_case(
+    "attribution: a Claude trailer is refused however -c sets the author, quoted values with spaces included",
+    not _att_missed,
+    "allowed %r" % _att_missed,
+)
 _oc1 = _iss_guard('gh issue comment 5 --body "Co-Authored-By: Claude <x>"')
 _off = _iss_guard(_att_trailer, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
@@ -3842,6 +3864,9 @@ _au4 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=79066376+Ajw200
 _au5 = _iss_guard("GIT_AUTHOR_EMAIL=noreply@anthropic.com git commit -m x", _au_good)
 _au6 = _iss_guard("git commit --author='Claudette <c@example.com>' -m x", _au_bad)
 _au7 = _iss_guard("git commit -m x", _au_bad, HOUSE_RULES_ATTRIBUTION="off")
+_au9 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=bot@anthropic.com commit -m x", _au_good)
+_au10 = _iss_guard("git -c \"user.name=Claude\" commit -m x", _au_good)
+_au11 = _iss_guard("git -c \"user.name=AJ's agent\" -c 'user.email=79066376+Ajw2003@users.noreply.github.com' commit -m x", _au_bad)
 _au8 = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _au_bad, command="git commit -m x"), _au_bad)[1]
 commit_case(
     "author: a Claude repo identity is refused with the repo-local fix command; AJ's agent passes",
@@ -3853,6 +3878,12 @@ commit_case(
     "author: --author Claude and GIT_AUTHOR_EMAIL at anthropic.com are refused; inline -c identity overrides a Claude config",
     _iss_decision(_au3) == "deny" and _iss_decision(_au5) == "deny" and _iss_decision(_au4) != "deny",
     "out %r | %r | %r" % (_au3[:80], _au5[:80], _au4[:80]),
+)
+commit_case(
+    "author: a quoted -c identity with a space is read (#189): a Claude email or name is refused, AJ's agent overrides a Claude config",
+    _iss_decision(_au9) == "deny" and _iss_decision(_au10) == "deny" and _iss_decision(_au11) != "deny"
+    and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au9),
+    "out %r | %r | %r" % (_au9[:80], _au10[:80], _au11[:80]),
 )
 commit_case(
     "author: a name merely containing claude passes, and HOUSE_RULES_ATTRIBUTION=off disables the check",
@@ -4023,10 +4054,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.59.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.60.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.59.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.60.0",
     "rules section + detail file + version",
 )
 

@@ -144,7 +144,9 @@ Claude whatever its message says. `_author_guard` (next to `_attribution_guard`,
 `git var GIT_AUTHOR_IDENT` in the payload's cwd (5 s timeout). It denies a name that is exactly `Claude` (any case) or
 an email ending `anthropic.com`, naming the fix `git config user.name "AJ's agent" && git config user.email
 "79066376+Ajw2003@users.noreply.github.com"` (repo-local). If `git var` fails it allows silently. Works through
-the PowerShell tool via `_decoded_command`.
+the PowerShell tool via `_decoded_command`. Quoted `-c` values with spaces, and a wholly quoted
+`-c "user.name=..."`, are read as one value (2.60.0, issue #189); before that the shared `_GIT` prefix
+stopped at the space and neither check saw the commit at all.
 
 **GitHub tools (2.59.0, issue #178).** `guard` only sees shell commands, so writes through the GitHub MCP tools
 skipped the attribution check. `event_guardgithub` (own `PreToolUse` entry, matcher
