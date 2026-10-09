@@ -1,29 +1,31 @@
 {
  "model": "goose.glb",
- "triangles": 124068,
+ "triangles": 161844,
  "bbox_m": [
   8.495,
   5.341,
-  5.12
+  6.518
  ],
- "height_m": 5.12,
+ "height_m": 6.518,
  "mesh_count": 1,
  "bones": {
   "count": 0,
   "names": []
  },
  "materials": [
+  "BrandScar",
   "BreastPale",
   "ChinWhite",
+  "DeadBark",
   "EyeDark",
   "GooseBlack",
   "LegDark",
-  "MawDark",
   "MawRed",
   "PlumageBrown",
   "PlumageEdge",
   "PrimaryDark",
-  "RawFlesh",
+  "RotLeafBrown",
+  "RotMaple",
   "ToothBone"
  ],
  "forward": "-Y"

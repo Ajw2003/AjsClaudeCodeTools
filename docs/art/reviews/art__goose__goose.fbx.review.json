@@ -2,6 +2,6 @@
   "model": "art/goose/goose.fbx",
   "sheet": "docs/art/reviews/goose-review.png",
   "verdict": "pass",
-  "seen": "Pass 6 (Bloodborne restyle), renders checked full size: all 64 glowing eyes and the six tentacles are gone; each head keeps one small dark sunken eye; palette is soot, ash, grimy bone, dried blood with no emission; five dull ribs break each flank; feathers more ragged; blood is a ragged stain round the breast maw (pass 5 stripes read as tribal paint, replaced). Gaps: stain edge is blocky (per-face paint); the concept's circle-stack drawer paints the whole breast disc red in the front view, the model does not. Same build for glb/fbx/blend; sheet rendered from the glb.",
-  "date": "2026-10-09T03:16:00+0000"
+  "seen": "Pass 11 (dead maple), renders and a breast close-up checked: every head wears a crown of dead bare maple branches spread like antlers with a few rotting leaves hanging (pass 7 crowns were spindly, enlarged in 8); 16 large rotting leaves on the back, 4 on the main neck, 4 per wing arm (pass 7 leaves were unreadable red flecks); breast maw and blood stain removed; a dark 0.85 m maple-leaf brand bent to the breast's curve sits centred where the maw was, reads clearly from the front; three rows of ragged breast feathers hang below it soaked in dried blood from the tips (pass 10 top row poked out as dashes, lowered). Height now 6.52 m with the crown. Concept sheet now agrees with the model. Same build for glb/fbx/blend.",
+  "date": "2026-10-09T03:27:33+0000"
 }

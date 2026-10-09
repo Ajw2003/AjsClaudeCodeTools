@@ -140,6 +140,10 @@ Restyled the same day toward Bloodborne at the user's request: the 64 glowing ey
 tentacles are gone (one small dark eye a side per head), palette moved to soot, ash, grimy bone
 and dried blood with no emission, bare ribs through the flanks, rattier feathers, a blood stain
 round the breast maw. Now 124,068 tris. Passes 4-6 recorded.
+Then a Canadian dead-maple theme (the user picked it over frost, trophies and antlers): dead maple
+crowns on every head, rotting maple leaves in the plumage, and, at the user's request, the breast
+maw and blood stain replaced by a maple-leaf brand over blood-soaked feathers. 6.52 m tall,
+161,844 tris. Passes 7-11 recorded.
 
 ## 4. Distribution & install tooling — built and verified
 

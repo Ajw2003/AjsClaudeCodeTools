@@ -4,8 +4,8 @@
   "kind": "creature",
   "tier": "hero",
   "concept": "art/goose/concept.png",
-  "height_m": 5.1,
-  "scale_note": "Boss scale against the 1.80 m reference human: 5.1 m to the tips of the main head's quill crest (crown of the head about 4.95 m), 8.5 m across from finger-claw to finger-claw. Faces -Y, +Z up, origin on the ground between the feet. All design numbers below are metres in that frame.",
+  "height_m": 6.5,
+  "scale_note": "Boss scale against the 1.80 m reference human: about 6.5 m to the twig tips of the main head's dead maple crown (crown of the head about 4.95 m), 8.5 m across from finger-claw to finger-claw. Faces -Y, +Z up, origin on the ground between the feet. All design numbers below are metres in that frame.",
   "triangle_budget": 200000,
   "budget_note": "Hero asset: about 30x the scythe prop's budget. Every tooth, rib and feather is real geometry, not a texture.",
   "materials": [
@@ -59,25 +59,11 @@
       "notes": "legs, toes and webs"
     },
     {
-      "name": "RawFlesh",
-      "hex": "#5C3530",
-      "metallic": 0.0,
-      "roughness": 0.3,
-      "notes": "wet raw flesh: the maw lips"
-    },
-    {
       "name": "MawRed",
       "hex": "#5A1714",
       "metallic": 0.0,
       "roughness": 0.35,
-      "notes": "dried blood: mouths, tongues, the run down the breast"
-    },
-    {
-      "name": "MawDark",
-      "hex": "#1A0606",
-      "metallic": 0.0,
-      "roughness": 0.5,
-      "notes": "the throat of the breast maw"
+      "notes": "dried blood: the heads' mouths and tongues, the soaked breast feathers"
     },
     {
       "name": "ToothBone",
@@ -92,6 +78,34 @@
       "metallic": 0.0,
       "roughness": 0.12,
       "notes": "one small wet sunken eye a side per head, no glow"
+    },
+    {
+      "name": "DeadBark",
+      "hex": "#2B2621",
+      "metallic": 0.0,
+      "roughness": 0.92,
+      "notes": "the dead maple crown on every head"
+    },
+    {
+      "name": "RotMaple",
+      "hex": "#6E2216",
+      "metallic": 0.0,
+      "roughness": 0.7,
+      "notes": "rotting red maple leaves"
+    },
+    {
+      "name": "RotLeafBrown",
+      "hex": "#4B2C1B",
+      "metallic": 0.0,
+      "roughness": 0.75,
+      "notes": "leaves further gone"
+    },
+    {
+      "name": "BrandScar",
+      "hex": "#2E110D",
+      "metallic": 0.0,
+      "roughness": 0.8,
+      "notes": "the maple leaf burnt into the breast"
     }
   ],
   "design": {
@@ -341,13 +355,6 @@
       "toe_length": 0.48,
       "toe_spread_deg": 32
     },
-    "breast_maw": {
-      "body_y": -1.3,
-      "half_width": 0.17,
-      "half_height": 0.42,
-      "lip_radius": 0.07,
-      "teeth": 22
-    },
     "tail": {
       "root": [
         0,
@@ -358,17 +365,43 @@
       "length": 0.9,
       "spread_deg": 80
     },
-    "eye_seed": 7
+    "eye_seed": 7,
+    "maple": {
+      "seed": 21,
+      "back_leaves": 16,
+      "neck_leaves": 4,
+      "wing_leaves": 4,
+      "brand": {
+        "body_y": -1.43,
+        "size": 1.3,
+        "breast_radius": 0.85,
+        "raised": 0.03
+      },
+      "soaked_feathers": {
+        "rows_y": [
+          -1.3,
+          -1.22,
+          -1.14
+        ],
+        "per_row": 9,
+        "spread_deg": 120,
+        "length": [
+          0.85,
+          1.1
+        ],
+        "width": 0.28
+      }
+    }
   },
   "build": [
-    "Body: lofted ellipse rings, about 3.7 m long, 1.88 m wide, lowest point 1.06 m; soot-brown back, ashen bars on the flanks, grimy breast (straight seam at y = -0.42 m) with dried blood run down from the maw, dirty-bone belly and undertail; five bare ribs break through each flank.",
+    "Body: lofted ellipse rings, about 3.7 m long, 1.88 m wide, lowest point 1.06 m; soot-brown back, ashen bars on the flanks, grimy breast (straight seam at y = -0.42 m), dirty-bone belly and undertail; five bare ribs break through each flank.",
     "Necks: one main S-neck from the breast to 4.7 m, radius 0.36 m tapering to 0.165 m; two side necks out to +/-1.36 m, radius 0.26 to 0.13 m. All black, a ridge of 13 bone spines down the back of the main neck.",
-    "Heads: goose heads with the white chinstrap, one small sunken dark eye a side, beaks gaping (42 deg main, 58 deg side) with rows of teeth on both mandibles and a spiked tongue. Side heads at 0.74 scale.",
-    "Breast maw: a vertical mouth 0.34 m wide x 0.84 m tall on the breast, raw lips, 22 teeth around the rim, dark throat.",
+    "Heads: goose heads crowned with dead bare maple branches (two gnarled limbs 0.85 m long, spread sideways like antlers and forking three times, a few rotting leaves still hanging), the white chinstrap, one small sunken dark eye a side, beaks gaping (42 deg main, 58 deg side) with rows of teeth on both mandibles and a spiked tongue. Side heads at 0.74 scale.",
     "Wings: raised and spread, 8.5 m across including the bare finger bones, arm 0.17 m to 0.04 m thick; 10 badly ragged primaries 1.45 to 1.05 m, 12 secondaries, 5 tertials, two covert rows; two finger bones 1.25 m long with claws break out past the primaries.",
     "Legs: black, hip 1.55 m to ankle; three webbed toes 0.48 m long spread 32 deg, bone claws, a small back toe.",
     "Tail: nine ragged black feathers 0.9 m long in a cupped fan over 80 deg, outer feathers banked and drooping so the fan reads from the side.",
-    "Spines: a bone ridge along the back and down the main neck; a crest of quills behind each head."
+    "Spines: a bone ridge along the back and down the main neck.",
+    "Dead maple: 16 rotting maple leaves 0.42 to 0.62 m matted into the back, 4 on the main neck, 4 on each wing arm; a maple leaf about 0.85 m across branded into the centre of the breast as a raised dark scar bent to its curve; below it three rows of ragged breast feathers (9, 10, 11) 0.85 to 1.10 m long hanging down, soaked in dried blood from the tips up."
   ],
-  "style": "Bloodborne-leaning gothic beast horror: soot, ash, grimy bone and dried blood; starved and ragged rather than many-eyed. No emissive materials."
+  "style": "Canadian Bloodborne-style beast horror: a goose gone feral in a dead maple wood. Soot, ash, grimy bone, dried blood and rotting maple red; starved and ragged; no emissive materials."
 }

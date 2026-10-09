@@ -1,10 +1,12 @@
 # The Honking Deep (eldritch goose boss)
 
-A hero-tier boss built by the `art-pipeline` skill from a one-line prompt: a 5.1 m Canada goose
-with three heads, a toothed mouth on its breast, bare finger bones breaking out of its wings and
-bare ribs through its flanks, styled toward Bloodborne: soot, ash, grimy bone and dried blood, one
-small sunken eye a side per head, nothing glowing. 124,068 triangles against a 200,000 budget; one
-mesh, 12 materials, faces -Y, origin on the ground between the feet.
+A hero-tier boss built by the `art-pipeline` skill from a one-line prompt: a Canada goose gone feral
+in a dead maple wood, styled toward Bloodborne. Three heads, each crowned with dead bare maple
+branches spread like antlers; one small sunken eye a side; bare finger bones breaking out of its
+wings and bare ribs through its flanks; rotting maple leaves matted into its plumage; a maple leaf
+branded into its breast above a skirt of blood-soaked feathers. Soot, ash, grimy bone, dried blood
+and rotting maple red, nothing glowing. 6.52 m to the crown's twig tips, 161,844 triangles against a
+200,000 budget; one mesh, 14 materials, faces -Y, origin on the ground between the feet.
 
 | File | What it is |
 |---|---|
@@ -36,8 +38,11 @@ pass 2 and 3 fixed those, and the validator caught a tentacle dipping 3 cm below
 Passes 4-6 (the Bloodborne restyle) removed the 64 glowing eyes and the six tentacles, darkened the
 palette, added ribs and rattier feathers, and turned blood stripes that read as tribal paint
 (pass 5) into a ragged stain round the maw.
+Passes 7-11 (dead maple) replaced the quill crests with dead maple crowns (enlarged after pass 7
+read as spindly), scattered rotting leaves (made fewer and larger after pass 7's read as red
+flecks), removed the breast maw and the blood stain, and put a maple-leaf brand bent to the breast
+in their place, with blood-soaked breast feathers below it.
 
-Known gaps: the blood stain's edge is blocky because paint is per face; the concept sheet draws
-the body as one flat circle per ring, so its front view paints the whole breast disc red where the
-model has only the stain; colours are flat per-face materials, not a baked texture, so there is no feather or skin detail below the geometry;
-no rig, no animation clips, not yet imported into an engine.
+Known gaps: colours are flat per-face materials, not a baked texture, so there is no feather, bark
+or skin detail below the geometry; flat leaves on a curved back can sit a centimetre or two proud at
+their edges; no rig, no animation clips, not yet imported into an engine.

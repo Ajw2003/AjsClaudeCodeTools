@@ -7,7 +7,7 @@ from the same numbers and cannot disagree. Metres; +Z up; the goose faces -Y.
 A part is a dict with a "kind":
   "loft"      rings of vertices skinned into a closed shell (tubes, the body, cones, feathers, webs),
               with per-face materials;
-  "ellipsoid" a UV sphere stretched along three axes (eyes, knuckles, the maw's throat).
+  "ellipsoid" a UV sphere stretched along three axes (eyes, knuckles).
 Every loft also carries "draw": how the concept sheet should draw it (a "tube" of circles, or a
 flat "outline" polygon).
 """
@@ -223,6 +223,117 @@ def slab(name, outline, normal, thickness, material):
     return loft(name, [bottom, top], material, draw={"type": "outline", "points": outline})
 
 
+# right half of a maple leaf, tip at (0, 1), stem down to (0, -0.25); mirrored for the left half
+MAPLE_HALF = [(0.00, 1.00), (0.10, 0.80), (0.21, 0.85), (0.16, 0.52), (0.37, 0.73), (0.42, 0.62),
+              (0.60, 0.67), (0.53, 0.46), (0.64, 0.41), (0.33, 0.17), (0.39, 0.05), (0.05, 0.09),
+              (0.04, -0.25)]
+MAPLE_LEAF = MAPLE_HALF + [(-x, y) for x, y in reversed(MAPLE_HALF[1:])]
+
+
+def maple_leaf(name, centre, normal, up_hint, size, spin_deg, thickness, material):
+    """A flat maple leaf lying on a surface: centre and normal from surface(), spun about the normal."""
+    up = rotate(perpendicular(normal, up_hint), normal, spin_deg)
+    side = cross(normal, up)
+    outline = [combine((centre, 1), (side, x * size * 0.5), (up, (y - 0.4) * size * 0.5)) for x, y in MAPLE_LEAF]
+    return slab(name, outline, normal, thickness, material)
+
+
+def dead_branch(name, start, direction, length_m, radius, depth, rng):
+    """A gnarled bare maple limb that forks depth more times, every twig ending in a sharp point."""
+    d = norm(direction)
+    kink = perpendicular(d, (rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-1, 1)))
+    ctrl = [start,
+            combine((start, 1), (d, length_m * 0.35), (kink, length_m * 0.06)),
+            combine((start, 1), (d, length_m * 0.70), (kink, -length_m * 0.05)),
+            combine((start, 1), (d, length_m))]
+    parts = [tube(name, ctrl, [radius, radius * 0.82, radius * 0.62, radius * 0.45], "DeadBark",
+                  step=max(0.025, length_m / 10), segments=8)]
+    end = ctrl[-1]
+    if depth == 0:
+        parts.append(cone(name + "_tip", end, combine((end, 1), (d, length_m * 0.25)), radius * 0.5, "DeadBark",
+                          segments=6))
+        return parts
+    for k in range(3 if depth > 1 else 2):
+        at = lerp(ctrl[1], end, rng.uniform(0.45, 1.0))
+        spin = perpendicular(d, (rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-1, 1)))
+        child = norm(combine((rotate(d, spin, rng.uniform(25, 48)), 1), (UP, 0.35)))  # forks reach upward
+        parts += dead_branch(f"{name}_{k}", at, child, length_m * rng.uniform(0.55, 0.72), radius * 0.58,
+                             depth - 1, rng)
+    return parts
+
+
+def maple_crown(prefix, head, f, u, s, rng):
+    """Two dead maple limbs growing out of the back of the skull in place of a crest, with a few leaves
+    that have not fallen yet."""
+    parts = []
+    for k, a in enumerate((-34, 34)):
+        p, n, _ = surface(head, 0.14, a)
+        out = norm(combine((u, 0.8), (f, -0.45), (n, 1.0)))  # reach out sideways like antlers, not straight up
+        parts += dead_branch(f"{prefix}_branch{k}", add(p, mul(n, -0.03 * s)), out, 0.85 * s, 0.075 * s, 3, rng)
+    twigs = [pt for pt in parts if pt["name"].endswith("_tip")]
+    for k, twig in enumerate(rng.sample(twigs, min(3, len(twigs)))):
+        base = twig["sweep"]["path"][0]
+        hang = combine((base, 1), (UP, -0.08 * s))
+        facing = norm(combine((f, 1), (perpendicular(f, UP), 0.2)))
+        parts.append(maple_leaf(f"{prefix}_crown_leaf{k}", hang, facing, (0.0, 0.0, -1.0), 0.30 * s,
+                                rng.uniform(-30, 30), 0.008, "RotMaple"))
+    return parts
+
+
+def matted_leaves(name, part, count, t_range, a_range, size_range, rng):
+    """Rotting maple leaves stuck flat into the plumage of a tube-shaped part."""
+    parts = []
+    for k in range(count):
+        p, n, _ = surface(part, rng.uniform(*t_range), rng.uniform(*a_range))
+        size = rng.uniform(*size_range)
+        parts.append(maple_leaf(f"{name}{k}", add(p, mul(n, 0.012)), n, (0.0, 1.0, 0.0), size,
+                                rng.uniform(0, 360), 0.012, rng.choice(["RotMaple", "RotMaple", "RotLeafBrown"])))
+    return parts
+
+
+def body_t(body, y):
+    """Fraction along the body tube of the ring nearest world y."""
+    sw = body["sweep"]
+    i = min(range(len(sw["path"])), key=lambda k: abs(sw["path"][k][1] - y))
+    return i / (len(sw["path"]) - 1)
+
+
+def breast_brand(body, B):
+    """A maple leaf burnt into the centre of the breast: a raised, dark keloid scar. A flat slab would
+    float off a curved breast at its edges, so each outline point sinks by the sag of a sphere of the
+    breast's radius."""
+    p, n, _ = surface(body, body_t(body, B["body_y"]), 180)
+    up = perpendicular(n, UP)
+    side = cross(n, up)
+    bottom, top, outline = [], [], []
+    for x, y in MAPLE_LEAF:
+        dx, dy = x * B["size"] * 0.5, (y - 0.4) * B["size"] * 0.5
+        sag = (dx * dx + dy * dy) / (2 * B["breast_radius"])
+        q = combine((p, 1), (side, dx), (up, dy), (n, -sag))
+        bottom.append(add(q, mul(n, -0.02)))
+        top.append(add(q, mul(n, B["raised"])))
+        outline.append(q)
+    return [loft("breast_brand", [bottom, top], "BrandScar", draw={"type": "outline", "points": outline})]
+
+
+def soaked_breast_feathers(body, F, rng):
+    """Rows of ragged breast feathers hanging below the brand, the lower part of each soaked in dried blood."""
+    parts = []
+    for row, y in enumerate(F["rows_y"]):
+        count = F["per_row"] + row
+        for k in range(count):
+            a = 180 - F["spread_deg"] / 2 + F["spread_deg"] * (k + 0.5 * (row % 2)) / count
+            p, n, _ = surface(body, body_t(body, y), a + rng.uniform(-3, 3))
+            hang = perpendicular(n, (0.0, 0.0, -1.0))
+            length_m = rng.uniform(*F["length"]) * (1 - 0.12 * row)
+            feather_part = feather(f"breast_feather{row}_{k}", add(p, mul(n, -0.02)), hang, n, length_m,
+                                   F["width"], "BreastPale", rng, curl=0.10, ragged=0.5)
+            soaked_from = rng.choice([2, 4, 5, 6])  # some soaked almost to the root, most at the tips
+            feather_part["paint"] = lambda i, j, soaked_from=soaked_from: "MawRed" if i >= soaked_from else None
+            parts.append(feather_part)
+    return parts
+
+
 # ---------------------------------------------------------------- the goose
 
 def body_paint(t, a, centre):
@@ -231,11 +342,6 @@ def body_paint(t, a, centre):
     if around > 128 and y > -0.35:
         return "ChinWhite"
     if around > 62 and y < -0.42:  # straight seam: a curved one stair-steps on the face grid
-        # a dried-blood stain spreading round the maw (y -1.3, underneath), with a ragged wobbling edge
-        spread = math.hypot((y + 1.30) / 0.32, (around - 180) / 38)
-        edge = 1.0 + 0.30 * math.sin(math.radians(a) * 7) * math.cos(y * 11) + 0.15 * math.sin(math.radians(a) * 17)
-        if spread < edge:
-            return "MawRed"
         return "BreastPale"
     phase = ((y + 3.0) / 0.14) % 1.0
     if 40 < around < 118 and phase < 0.28:  # narrow pale feather-edge bars on the flanks
@@ -250,7 +356,7 @@ def build_body(D):
 
 
 def build_head(prefix, spec_head, rng, sign=1):
-    """A goose head on a neck end: crown, chinstrap, one sunken eye a side, a gaping toothed beak, a spiked tongue."""
+    """A goose head on a neck end: a crown of dead maple, chinstrap, one sunken eye a side, a gaping toothed beak, a spiked tongue."""
     s = spec_head["scale"]
     base, f = tuple(spec_head["base"]), norm(spec_head["dir"])
     u = perpendicular(f, UP)
@@ -275,12 +381,7 @@ def build_head(prefix, spec_head, rng, sign=1):
         p, n, _ = surface(head, (0.27 + 0.10) / 0.50, a_side)
         parts += eye(f"{prefix}_eye_{tag}", p, n, 0.034 * s, u)
 
-    for k in range(5):  # crest of quills behind the head
-        a = -40 + 20 * k
-        p, n, _ = surface(head, 0.12, a)
-        tip = combine((p, 1), (n, 0.10 * s), (f, -0.20 * s), (u, 0.05 * s))
-        parts.append(cone(f"{prefix}_quill{k}", add(p, mul(n, -0.02 * s)), tip, 0.022 * s, "ToothBone",
-                          bend=mul(u, 0.02 * s)))
+    parts += maple_crown(prefix, head, f, u, s, rng)
 
     beak_base = combine((base, 1), (f, 0.36 * s))
     jaws = []
@@ -471,40 +572,6 @@ def build_leg(L, sign):
     return parts
 
 
-def build_breast_maw(M, body):
-    """A vertical mouth on the breast: raw lips, a ring of teeth, a dark throat."""
-    sw = body["sweep"]
-    i = min(range(len(sw["path"])), key=lambda k: abs(sw["path"][k][1] - M["body_y"]))
-    t = i / (len(sw["path"]) - 1)
-    point, normal, _ = surface(body, t, 180)
-    # tip the mouth to face forward-down regardless of how steep the breast is there
-    normal = norm(combine((normal, 1), ((0.0, -1.0, 0.0), 1.2)))
-    up = perpendicular(normal, UP)
-    side = cross(normal, up)
-    centre = add(point, mul(normal, -0.05))
-    hw, hh = M["half_width"], M["half_height"]
-    parts = []
-    rim = []
-    for k in range(28):
-        ang = 2 * math.pi * k / 28
-        rim.append(combine((centre, 1), (side, hw * math.cos(ang)), (up, hh * math.sin(ang))))
-    lip_r = [M["lip_radius"] * (0.75 + 0.45 * abs(math.cos(2 * math.pi * k / 28))) for k in range(28)]
-    parts.append(tube("maw_lips", rim, lip_r, "RawFlesh", step=0.03, segments=14, ref=normal, closed=True))
-    parts.append(ellipsoid("maw_throat", add(centre, mul(normal, -0.06)), (side, up, normal),
-                           (hw * 0.95, hh * 0.95, 0.16), "MawDark", (20, 12)))
-    parts.append(ellipsoid("maw_gums", add(centre, mul(normal, -0.015)), (side, up, normal),
-                           (hw * 1.02, hh * 1.0, 0.06), "MawRed", (24, 12)))
-    for k in range(M["teeth"]):
-        ang = 2 * math.pi * (k + 0.5) / M["teeth"]
-        edge = combine((centre, 1), (side, hw * 0.9 * math.cos(ang)), (up, hh * 0.9 * math.sin(ang)))
-        inward = norm(sub(centre, edge))
-        size = 0.10 + 0.05 * abs(math.sin(ang))
-        tip = combine((edge, 1), (inward, size * 0.75), (normal, size * 0.55))
-        parts.append(cone(f"maw_tooth{k}", add(edge, mul(normal, 0.02)), tip, 0.022, "ToothBone",
-                          bend=mul(normal, 0.015)))
-    return parts
-
-
 def build_tail(T, rng):
     parts = []
     root = tuple(T["root"])
@@ -561,13 +628,27 @@ def build_parts(spec=None):
     parts = [body]
     parts += body_ribs(body)
     parts += build_back_spines(body, rng)
-    parts += build_breast_maw(D["breast_maw"], body)
     parts += build_necks(D, rng)
     for sign in (1, -1):
         parts += build_wing(D["wing"], sign, rng)
         parts += build_leg(D["legs"], sign)
     parts += build_tail(D["tail"], rng)
+    parts += build_maple(D["maple"], body, parts)
     return parts
+
+
+def build_maple(M, body, parts):
+    """Rotting leaves matted into the back, necks and wing arms; the brand and blood-soaked feathers on the breast."""
+    rng = random.Random(M["seed"])
+    named = {p["name"]: p for p in parts}
+    out = matted_leaves("leaf_back", body, M["back_leaves"], (0.12, 0.85), (-75, 75), (0.42, 0.62), rng)
+    out += matted_leaves("leaf_neck", named["main_neck"], M["neck_leaves"], (0.10, 0.75), (-60, 60), (0.24, 0.32), rng)
+    for tag in ("R", "L"):
+        out += matted_leaves(f"leaf_wing_{tag}", named[f"wing_arm_{tag}"], M["wing_leaves"], (0.15, 0.75),
+                             (-50, 50), (0.26, 0.34), rng)
+    out += breast_brand(body, M["brand"])
+    out += soaked_breast_feathers(body, M["soaked_feathers"], rng)
+    return out
 
 
 # ---------------------------------------------------------------- meshing

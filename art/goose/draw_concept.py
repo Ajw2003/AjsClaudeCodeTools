@@ -198,22 +198,25 @@ def main():
     draw_ladder(dr, 110, 6)
 
     dr.text((60, 30), spec["name"].upper(), fill=INK, font=font(40, True))
-    dr.text((60, 80), f"Concept sheet  |  boss, hero tier  |  {spec['height_m']:.1f} m to the crown, faces -Y  |  "
+    dr.text((60, 80), f"Concept sheet  |  boss, hero tier  |  {spec['height_m']:.2f} m to the crown, faces -Y  |  "
                       f"budget {spec['triangle_budget']:,} tris  |  orthographic, 1 m = {PX_PER_M} px",
             fill=DIM, font=font(22))
     for view, x in ((front, 900), (side, 2450)):
         dr.text((x, 120), view.name, fill=INK, font=font(26, True), anchor="mt")
 
     callouts(dr, parts, front, [
+        ("Crown of dead maple branches", "main_branch0_1"),
         ("Main head: jaw 42 deg,\ntooth rows, spiked tongue", "main_tongue"),
         ("Side heads x2 at 0.74 scale", "side_R_head"),
         ("Bare finger bones, claws", "finger_bone0_R"),
         ("Ragged primaries", "primary3_R"),
-        ("Breast maw: 22 teeth", "maw_lips"),
+        ("Blood-soaked breast feathers", "breast_feather1_4"),
+        ("Maple leaf branded into the breast", "breast_brand"),
         ("Bare ribs through the flanks", "rib3_R"),
     ], 1620, "left")
     callouts(dr, parts, side, [
         ("Bone ridge down the neck", "neck_spine6"),
+        ("Rotting maple leaves in the plumage", "leaf_back5"),
         ("One sunken eye a side per head", "main_eye_R"),
         ("Chinstrap: ChinWhite", "main_head"),
         ("Webbed feet, bone claws", "web1_R"),
