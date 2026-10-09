@@ -8,13 +8,21 @@ A part is a dict with a "kind":
   "loft"      rings of vertices skinned into a closed shell (tubes, the body, cones, feathers, webs),
               with per-face materials;
   "ellipsoid" a UV sphere stretched along three axes (eyes, knuckles).
+  "decal"     not geometry: a design painted into the baked texture (the breast brand), kept here so
+              the concept sheet draws it from the same numbers.
 Every loft also carries "draw": how the concept sheet should draw it (a "tube" of circles, or a
-flat "outline" polygon).
+flat "outline" polygon), and for texturing "uv" (per ring, per vertex plus a closing entry: metres
+around/across and along), "along" (0 to 1 down its length per ring), "pattern" (which procedural
+surface build_goose.py paints it with) and "soak" (the fraction along it where dried blood starts,
+or None).
 """
 import json, math, os, random
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 UP = (0.0, 0.0, 1.0)
+PATTERNS = ["plumage", "vane", "bark", "bone", "wet", "skin", "hide"]  # index = the pattern_kind face attribute
+PATTERN_BY_MATERIAL = {"ToothBone": "bone", "DeadBark": "bark", "MawRed": "wet", "EyeDark": "wet",
+                       "LegDark": "skin"}
 
 
 def load_spec():
@@ -54,6 +62,26 @@ def rotate(v, axis, degrees):
     k, t = norm(axis), math.radians(degrees)
     c, s = math.cos(t), math.sin(t)
     return combine((v, c), (cross(k, v), s), (k, dot(k, v) * (1 - c)))
+
+
+def _hash(ix, iy, iz, seed):
+    h = (ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791) ^ (seed * 2654435761)
+    h = (h ^ (h >> 13)) * 1274126177
+    return ((h ^ (h >> 16)) & 0xFFFFFF) / 0xFFFFFF
+
+
+def value_noise(p, seed=0):
+    """Smooth 3D value noise in 0..1, deterministic: the same point always gives the same value."""
+    base = [math.floor(c) for c in p]
+    f = [c - b for c, b in zip(p, base)]
+    w = [t * t * (3 - 2 * t) for t in f]
+    total = 0.0
+    for dx in (0, 1):
+        for dy in (0, 1):
+            for dz in (0, 1):
+                weight = ((w[0] if dx else 1 - w[0]) * (w[1] if dy else 1 - w[1]) * (w[2] if dz else 1 - w[2]))
+                total += weight * _hash(base[0] + dx, base[1] + dy, base[2] + dz, seed)
+    return total
 
 
 def perpendicular(v, hint):
@@ -120,17 +148,28 @@ def frames(path, ref):
 
 # ---------------------------------------------------------------- parts
 
-def loft(name, rings, material, paint=None, draw=None, closed_path=False, cap=True):
-    """rings: lists of equal length. paint(i, j) -> material name or None for the default."""
+def loft(name, rings, material, paint=None, draw=None, closed_path=False, cap=True, uv=None, along=None,
+         pattern=None):
+    """rings: lists of equal length. paint(i, j) -> material name or None for the default.
+    uv: per ring, len(ring) + 1 (u, v) pairs in metres; the extra one closes the ring. Defaults to ring
+    and vertex index, which is enough for parts whose texture is plain."""
+    width = len(rings[0])
+    if uv is None:
+        uv = [[(j * 0.02, i * 0.02) for j in range(width + 1)] for i in range(len(rings))]
+    if along is None:
+        along = [i / max(1, len(rings) - 1) for i in range(len(rings))]
     return {"kind": "loft", "name": name, "rings": rings, "material": material, "paint": paint,
-            "draw": draw, "closed_path": closed_path, "cap": cap}
+            "draw": draw, "closed_path": closed_path, "cap": cap, "uv": uv, "along": along,
+            "pattern": pattern or PATTERN_BY_MATERIAL.get(material, "plumage"), "soak": None, "soak_root": False}
 
 
 def tube(name, control, radii, material, step=0.03, segments=24, ref=UP, flat=(1.0, 1.0), paint=None,
-         closed=False):
+         closed=False, lumps=None):
     """A swept tube. radii: one number per control point, or (rx, ry) pairs for an elliptic section
     (rx along the frame normal, which leans toward ref; ry along the binormal).
-    paint(t, a_degrees, centre) -> material or None; a = 0 on the ref side, 90 toward the binormal."""
+    paint(t, a_degrees, centre) -> material or None; a = 0 on the ref side, 90 toward the binormal.
+    lumps: (amplitude m, frequency per m, seed) pushes each vertex in or out by value noise, so the
+    surface is knotted, wasted and uneven instead of a machined tube."""
     values = [(r * flat[0], r * flat[1]) if isinstance(r, (int, float)) else tuple(r) for r in radii]
     if closed:
         control = list(control) + [control[0]]
@@ -141,13 +180,29 @@ def tube(name, control, radii, material, step=0.03, segments=24, ref=UP, flat=(1
     fr = frames(path, ref)
     rings = []
     for c, (rx, ry), (_, nrm, bin_) in zip(path, vals, fr):
-        rings.append([combine((c, 1), (nrm, rx * math.cos(2 * math.pi * j / segments)),
-                              (bin_, ry * math.sin(2 * math.pi * j / segments))) for j in range(segments)])
+        ring = []
+        for j in range(segments):
+            ca, sa = math.cos(2 * math.pi * j / segments), math.sin(2 * math.pi * j / segments)
+            p = combine((c, 1), (nrm, rx * ca), (bin_, ry * sa))
+            if lumps:
+                amplitude, frequency, seed = lumps
+                push = amplitude * (2 * value_noise(mul(p, frequency), seed) - 1)
+                p = combine((p, 1), (nrm, ca * push), (bin_, sa * push))
+            ring.append(p)
+        rings.append(ring)
+    travelled = [0.0]
+    for a, b in zip(path, path[1:]):
+        travelled.append(travelled[-1] + length(sub(b, a)))
+    uv = []
+    for (rx, ry), v in zip(vals, travelled):
+        circumference = math.pi * (rx + ry)
+        uv.append([(circumference * j / segments, v) for j in range(segments + 1)])
+    along = [v / max(1e-9, travelled[-1]) for v in travelled]
     last = max(1, len(path) - 1)
     face_paint = None
     if paint:
         face_paint = lambda i, j: paint((i + 0.5) / last, 360.0 * (j + 0.5) / segments, path[i])
-    part = loft(name, rings, material, face_paint, closed_path=closed,
+    part = loft(name, rings, material, face_paint, closed_path=closed, uv=uv, along=along,
                 draw={"type": "tube", "path": path, "radii": [max(v) for v in vals], "paint": paint, "frames": fr})
     part["sweep"] = {"path": path, "radii": vals, "frames": fr}
     return part
@@ -164,7 +219,7 @@ def surface(part, t, a):
     return point, normal, max(rx, ry)
 
 
-def cone(name, base, tip, radius, material, bend=None, segments=8):
+def cone(name, base, tip, radius, material, bend=None, segments=10):
     """A tapering spike from base to tip; bend pushes the middle sideways so it hooks."""
     mid = lerp(base, tip, 0.5)
     if bend:
@@ -192,7 +247,7 @@ def feather(name, root, direction, plane_normal, length_m, width, material, rng,
     """A flight feather: a vane in the plane, a raised shaft, curling out of the plane toward plane_normal."""
     d = norm(direction)
     side = norm(cross(plane_normal, d))
-    rings, left_edge, right_edge = [], [], []
+    rings, left_edge, right_edge, uv, along = [], [], [], [], []
     for k in range(stations + 1):
         s = k / stations
         half = 0.5 * width * (0.45 + 0.55 * math.sin(math.pi * s * 0.9)) * (1 - s ** 3)
@@ -211,9 +266,13 @@ def feather(name, root, direction, plane_normal, length_m, width, material, rng,
                       combine((centre, 1), (side, rw * 0.5), (plane_normal, -thick * 0.4)),
                       add(centre, mul(plane_normal, -thick * 0.8)),
                       combine((centre, 1), (side, -lw * 0.5), (plane_normal, -thick * 0.4))])
+        across = [-lw, -lw * 0.5, 0.0, rw * 0.5, rw, rw * 0.5, 0.0, -lw * 0.5]
+        uv.append([(u, s * length_m) for u in across + [across[0]]])
+        along.append(s)
         left_edge.append(L)
         right_edge.append(R)
-    return loft(name, rings, material, draw={"type": "outline", "points": left_edge + right_edge[::-1]})
+    return loft(name, rings, material, draw={"type": "outline", "points": left_edge + right_edge[::-1]},
+                uv=uv, along=along, pattern="vane")
 
 
 def slab(name, outline, normal, thickness, material):
@@ -230,14 +289,6 @@ MAPLE_HALF = [(0.00, 1.00), (0.10, 0.80), (0.21, 0.85), (0.16, 0.52), (0.37, 0.7
 MAPLE_LEAF = MAPLE_HALF + [(-x, y) for x, y in reversed(MAPLE_HALF[1:])]
 
 
-def maple_leaf(name, centre, normal, up_hint, size, spin_deg, thickness, material):
-    """A flat maple leaf lying on a surface: centre and normal from surface(), spun about the normal."""
-    up = rotate(perpendicular(normal, up_hint), normal, spin_deg)
-    side = cross(normal, up)
-    outline = [combine((centre, 1), (side, x * size * 0.5), (up, (y - 0.4) * size * 0.5)) for x, y in MAPLE_LEAF]
-    return slab(name, outline, normal, thickness, material)
-
-
 def dead_branch(name, start, direction, length_m, radius, depth, rng):
     """A gnarled bare maple limb that forks depth more times, every twig ending in a sharp point."""
     d = norm(direction)
@@ -246,8 +297,9 @@ def dead_branch(name, start, direction, length_m, radius, depth, rng):
             combine((start, 1), (d, length_m * 0.35), (kink, length_m * 0.06)),
             combine((start, 1), (d, length_m * 0.70), (kink, -length_m * 0.05)),
             combine((start, 1), (d, length_m))]
-    parts = [tube(name, ctrl, [radius, radius * 0.82, radius * 0.62, radius * 0.45], "DeadBark",
-                  step=max(0.025, length_m / 10), segments=8)]
+    limb = tube(name, ctrl, [radius, radius * 0.82, radius * 0.62, radius * 0.45], "DeadBark",
+                step=max(0.02, length_m / 14), segments=12, lumps=(radius * 0.22, 9.0, 3))
+    parts = [limb]
     end = ctrl[-1]
     if depth == 0:
         parts.append(cone(name + "_tip", end, combine((end, 1), (d, length_m * 0.25)), radius * 0.5, "DeadBark",
@@ -263,31 +315,18 @@ def dead_branch(name, start, direction, length_m, radius, depth, rng):
 
 
 def maple_crown(prefix, head, f, u, s, rng):
-    """Two dead maple limbs growing out of the back of the skull in place of a crest, with a few leaves
-    that have not fallen yet."""
+    """Two dead maple limbs growing out of the back of the skull in place of a crest, stripped bare."""
     parts = []
     for k, a in enumerate((-34, 34)):
         p, n, _ = surface(head, 0.14, a)
         out = norm(combine((u, 0.8), (f, -0.45), (n, 1.0)))  # reach out sideways like antlers, not straight up
-        parts += dead_branch(f"{prefix}_branch{k}", add(p, mul(n, -0.03 * s)), out, 0.85 * s, 0.075 * s, 3, rng)
-    twigs = [pt for pt in parts if pt["name"].endswith("_tip")]
-    for k, twig in enumerate(rng.sample(twigs, min(3, len(twigs)))):
-        base = twig["sweep"]["path"][0]
-        hang = combine((base, 1), (UP, -0.08 * s))
-        facing = norm(combine((f, 1), (perpendicular(f, UP), 0.2)))
-        parts.append(maple_leaf(f"{prefix}_crown_leaf{k}", hang, facing, (0.0, 0.0, -1.0), 0.30 * s,
-                                rng.uniform(-30, 30), 0.008, "RotMaple"))
-    return parts
-
-
-def matted_leaves(name, part, count, t_range, a_range, size_range, rng):
-    """Rotting maple leaves stuck flat into the plumage of a tube-shaped part."""
-    parts = []
-    for k in range(count):
-        p, n, _ = surface(part, rng.uniform(*t_range), rng.uniform(*a_range))
-        size = rng.uniform(*size_range)
-        parts.append(maple_leaf(f"{name}{k}", add(p, mul(n, 0.012)), n, (0.0, 1.0, 0.0), size,
-                                rng.uniform(0, 360), 0.012, rng.choice(["RotMaple", "RotMaple", "RotLeafBrown"])))
+        limb = dead_branch(f"{prefix}_branch{k}", add(p, mul(n, -0.03 * s)), out, 0.85 * s, 0.075 * s, 3, rng)
+        limb[0]["soak"], limb[0]["soak_root"] = 0.75, True  # bloody where it tore out through the skull
+        parts += limb
+        torn = [combine((p, 1), (n, 0.01 * s), (perpendicular(n, out), 0.11 * s * math.cos(2 * math.pi * j / 10)),
+                        (cross(n, perpendicular(n, out)), 0.11 * s * math.sin(2 * math.pi * j / 10))) for j in range(10)]
+        parts.append(tube(f"{prefix}_torn_skin{k}", torn, [0.03 * s] * 10, "MawRed", step=0.02 * s, segments=8,
+                          ref=n, closed=True, lumps=(0.015 * s, 30.0, k)))  # ragged lip of skin round the wound
     return parts
 
 
@@ -298,38 +337,54 @@ def body_t(body, y):
     return i / (len(sw["path"]) - 1)
 
 
-def breast_brand(body, B):
-    """A maple leaf burnt into the centre of the breast: a raised, dark keloid scar. A flat slab would
-    float off a curved breast at its edges, so each outline point sinks by the sag of a sphere of the
-    breast's radius."""
-    p, n, _ = surface(body, body_t(body, B["body_y"]), 180)
+def breast_brand(B):
+    """A maple leaf burnt into the centre of the breast. Painted into the baked texture, not modelled:
+    goose_texture.py projects decal_image (drawn from MAPLE_LEAF) along "facing" onto whatever plumage
+    lies within "depth" metres of the decal plane, so the front view sees the leaf undistorted."""
+    p, n = tuple(B["centre"]), norm(B["facing"])
     up = perpendicular(n, UP)
     side = cross(n, up)
-    bottom, top, outline = [], [], []
-    for x, y in MAPLE_LEAF:
-        dx, dy = x * B["size"] * 0.5, (y - 0.4) * B["size"] * 0.5
-        sag = (dx * dx + dy * dy) / (2 * B["breast_radius"])
-        q = combine((p, 1), (side, dx), (up, dy), (n, -sag))
-        bottom.append(add(q, mul(n, -0.02)))
-        top.append(add(q, mul(n, B["raised"])))
-        outline.append(q)
-    return [loft("breast_brand", [bottom, top], "BrandScar", draw={"type": "outline", "points": outline})]
+    outline = [combine((p, 1), (side, x * B["size"] * 0.5), (up, (y - 0.4) * B["size"] * 0.5)) for x, y in MAPLE_LEAF]
+    return [{"kind": "decal", "name": "breast_brand", "material": "BrandScar", "centre": p, "normal": n,
+             "up": up, "side": side, "size": B["size"], "depth": B["depth"], "draw": {"type": "outline", "points": outline}}]
+
+
+DECAL_HALF_EXTENT = 0.36  # of the decal's size: the square the leaf image covers, centred on the decal
+
+
+def decal_image(pixels):
+    """The brand as a (pixels x pixels) list of rows of (interior, rim) pairs in 0..1, from MAPLE_LEAF in the
+    same frame breast_brand uses: image x along side, image y along up, centre at the decal centre."""
+    from PIL import Image, ImageDraw, ImageFilter
+    scale = pixels / (2 * DECAL_HALF_EXTENT)
+    pts = [(pixels / 2 + x * 0.5 * scale, pixels / 2 - (y - 0.4) * 0.5 * scale) for x, y in MAPLE_LEAF]
+    fill = Image.new("L", (pixels, pixels), 0)
+    ImageDraw.Draw(fill).polygon(pts, fill=255)
+    fill = fill.filter(ImageFilter.GaussianBlur(pixels / 300))
+    rim = Image.new("L", (pixels, pixels), 0)
+    ImageDraw.Draw(rim).line(pts + [pts[0]], fill=255, width=max(2, pixels // 40), joint="curve")
+    rim = rim.filter(ImageFilter.GaussianBlur(pixels / 160))
+    return fill, rim
 
 
 def soaked_breast_feathers(body, F, rng):
-    """Rows of ragged breast feathers hanging below the brand, the lower part of each soaked in dried blood."""
+    """Rows of ragged breast feathers hanging straight down below the brand like a matted bib, the lower part
+    of each soaked in dried blood."""
     parts = []
     for row, y in enumerate(F["rows_y"]):
         count = F["per_row"] + row
         for k in range(count):
             a = 180 - F["spread_deg"] / 2 + F["spread_deg"] * (k + 0.5 * (row % 2)) / count
             p, n, _ = surface(body, body_t(body, y), a + rng.uniform(-3, 3))
-            hang = perpendicular(n, (0.0, 0.0, -1.0))
+            side = cross(n, (0.0, 0.0, 1.0))
+            # down, leaning just off the chest, each one splayed a little so the bib reads as matted, not combed
+            hang = norm(combine(((0.0, 0.0, -1.0), 1), (n, 0.15), (side, rng.uniform(-0.3, 0.3))))
+            facing = perpendicular(n, (0.0, -1.0, 0.0))
             length_m = rng.uniform(*F["length"]) * (1 - 0.12 * row)
-            feather_part = feather(f"breast_feather{row}_{k}", add(p, mul(n, -0.02)), hang, n, length_m,
-                                   F["width"], "BreastPale", rng, curl=0.10, ragged=0.5)
-            soaked_from = rng.choice([2, 4, 5, 6])  # some soaked almost to the root, most at the tips
-            feather_part["paint"] = lambda i, j, soaked_from=soaked_from: "MawRed" if i >= soaked_from else None
+            feather_part = feather(f"breast_feather{row}_{k}", add(p, mul(n, -0.02)), hang, facing, length_m,
+                                   F["width"], "BreastPale", rng, curl=-0.06, ragged=0.5)
+            soaked_from = rng.choice([1, 2, 3, 4, 5])  # of 10 stations: some soaked to the root, most halfway
+            feather_part["soak"] = soaked_from / 10
             parts.append(feather_part)
     return parts
 
@@ -352,11 +407,14 @@ def body_paint(t, a, centre):
 def build_body(D):
     rings = D["body_rings"]["rings"]
     return tube("body", [(0.0, y, z) for y, z, _, _ in rings], [(h, w) for _, _, w, h in rings],
-                "PlumageBrown", step=0.035, segments=48, ref=UP, paint=body_paint)
+                "PlumageBrown", step=0.03, segments=64, ref=UP, paint=body_paint, lumps=(0.03, 1.8, 17))
 
 
 def build_head(prefix, spec_head, rng, sign=1):
-    """A goose head on a neck end: a crown of dead maple, chinstrap, one sunken eye a side, a gaping toothed beak, a spiked tongue."""
+    """A goose head on a neck end, gone wrong: a crown of dead maple torn out through the skull, wrinkled hide
+    over a chinstrap, bony brows in a scowl over one sunken eye a side, cheeks split back from the beak and
+    lined with teeth, a gaping beak crowded with broken, blood-rooted teeth, a spiked tongue, gore caked
+    over the front of the face."""
     s = spec_head["scale"]
     base, f = tuple(spec_head["base"]), norm(spec_head["dir"])
     u = perpendicular(f, UP)
@@ -374,8 +432,16 @@ def build_head(prefix, spec_head, rng, sign=1):
         return "ChinWhite" if 0.0 < along < 0.24 - 0.05 * math.cos(math.radians(a)) and 100 < a < 260 else None
 
     head = tube(prefix + "_head", control, [(r * s, r * s * 0.82) for r in radii], "GooseBlack",
-                step=0.022 * s, segments=36, ref=u, paint=chinstrap)
+                step=0.012 * s, segments=48, ref=u, paint=chinstrap, lumps=(0.010 * s, 22.0 / s, 5))
+    head["pattern"], head["soak"] = "hide", 0.62  # gore caked over the front of the face
     parts.append(head)
+
+    for a_side, tag in ((38, "R"), (322, "L")):  # brow ridges: bone pushing through, angled down to the beak
+        brow = [add(surface(head, t, a_side + (8 if a_side < 180 else -8) * k)[0],
+                    mul(surface(head, t, a_side)[1], 0.012 * s))
+                for k, t in enumerate((0.58, 0.68, 0.78, 0.86))]
+        parts.append(tube(f"{prefix}_brow_{tag}", brow, [0.020 * s, 0.032 * s, 0.030 * s, 0.012 * s], "ToothBone",
+                          step=0.01 * s, segments=12, lumps=(0.006 * s, 40.0 / s, 9)))
 
     for a_side, tag in ((60, "R"), (300, "L")):
         p, n, _ = surface(head, (0.27 + 0.10) / 0.50, a_side)
@@ -394,20 +460,43 @@ def build_head(prefix, spec_head, rng, sign=1):
         ctrl = [combine((start, 1), (d, k * length_m * s), (du, (hook * s if k == 1.0 else 0.0)))
                 for k in (0.0, 0.35, 0.7, 1.0)]
         mandible = tube(f"{prefix}_{label}_beak", ctrl, [(r * s * flat_v, r * s) for r in rr], "GooseBlack",
-                        step=0.015 * s, segments=24, ref=du)
+                        step=0.010 * s, segments=32, ref=du, lumps=(0.005 * s, 30.0 / s, 11))
+        mandible["pattern"], mandible["soak"] = "hide", 0.35  # blood from the feeding end back
         parts.append(mandible)
         jaws.append((label, mandible, du, d))
 
     for label, mandible, du, d in jaws:  # teeth on the inner edges, pointing at the other jaw
         inward = mul(du, -1) if label == "upper" else du
         edge = 180 if label == "upper" else 0
-        for k in range(9):
-            t = 0.12 + 0.72 * k / 8
-            for a_side in (edge - 62, edge + 62):
+        for k in range(15):  # crowded, uneven, some snapped off short
+            t = 0.08 + 0.82 * k / 14
+            for row, a_side in enumerate((edge - 62, edge + 62, edge - 40, edge + 40)):
+                if row >= 2 and k % 2:  # a second, inner row on every other station
+                    continue
                 p, _, _ = surface(mandible, t, a_side)
-                size = (0.055 if k in (1, 2) else 0.036) * s * rng.uniform(0.85, 1.15)
-                tip = combine((p, 1), (inward, size), (d, -size * 0.35))
-                parts.append(cone(f"{prefix}_{label}_tooth{k}_{a_side}", p, tip, 0.011 * s, "ToothBone"))
+                size = (0.065 if k in (1, 2, 3) else 0.04) * s * rng.uniform(0.6, 1.25) * (0.7 if row >= 2 else 1)
+                if rng.random() < 0.2:
+                    size *= 0.4  # broken
+                tip = combine((p, 1), (inward, size), (d, -size * rng.uniform(0.15, 0.5)))
+                tooth = cone(f"{prefix}_{label}_tooth{k}_{a_side}", p, tip, 0.012 * s, "ToothBone",
+                             bend=mul(d, -size * 0.12))
+                tooth["soak"], tooth["soak_root"] = rng.uniform(0.35, 0.8), True  # gums bled into the roots
+                parts.append(tooth)
+
+    for a_side, tag in ((105, "R"), (255, "L")):  # cheeks split back from the beak, lined with teeth
+        gash = [add(surface(head, t, a_side)[0], mul(surface(head, t, a_side)[1], -0.012 * s))
+                for t in (0.97, 0.86, 0.74, 0.62)]
+        parts.append(tube(f"{prefix}_cheek_split_{tag}", gash, [(0.035 * s, 0.016 * s), (0.04 * s, 0.018 * s),
+                                                              (0.03 * s, 0.014 * s), (0.012 * s, 0.006 * s)],
+                          "MawRed", step=0.01 * s, segments=14, ref=u))
+        for k in range(7):
+            t = 0.95 - 0.045 * k
+            for lip in (-14, 14):
+                p, n, _ = surface(head, t, a_side + lip)
+                into = norm(sub(surface(head, t, a_side)[0], p))
+                size = 0.03 * s * rng.uniform(0.6, 1.2)
+                parts.append(cone(f"{prefix}_cheek_tooth{k}_{tag}_{lip}", p,
+                                  combine((p, 1), (into, size), (n, size * 0.3)), 0.008 * s, "ToothBone"))
 
     mouth_dir = rotate(f, side, -jaw * 0.2)
     mu = perpendicular(mouth_dir, u)
@@ -421,7 +510,7 @@ def build_head(prefix, spec_head, rng, sign=1):
                  combine((beak_base, 1), (mouth_dir, 0.46 * s), (mu, 0.09 * s), (side, 0.04 * s * sign)),
                  combine((beak_base, 1), (mouth_dir, 0.56 * s), (mu, 0.20 * s), (side, 0.02 * s * sign))]
         tongue = tube(f"{prefix}_tongue", tctrl, [0.045 * s, 0.04 * s, 0.028 * s, 0.01 * s], "MawRed",
-                      step=0.012 * s, segments=16, ref=mu)
+                      step=0.008 * s, segments=18, ref=mu, lumps=(0.006 * s, 40.0 / s, 13))
         parts.append(tongue)
         for k in range(6):
             for a_side in (70, 290):
@@ -433,11 +522,28 @@ def build_head(prefix, spec_head, rng, sign=1):
     return parts
 
 
+def hackles(name, neck, count, length_range, rng):
+    """Ragged, matted feathers hanging off the back of a neck, both sides of the spine, pointing down it."""
+    parts = []
+    for k in range(count):
+        t = 0.12 + 0.70 * rng.random()
+        a = rng.choice((1, -1)) * rng.uniform(22, 75)
+        p, n, _ = surface(neck, t, a % 360)
+        i = int(t * (len(neck["sweep"]["path"]) - 1))
+        down_neck = mul(neck["sweep"]["frames"][i][0], -1)
+        d = norm(combine((down_neck, 1), (n, 0.35), (UP, -0.3)))
+        parts.append(feather(f"{name}_hackle{k}", add(p, mul(n, -0.02)), d, n, rng.uniform(*length_range), 0.07,
+                             rng.choice(["GooseBlack", "PrimaryDark"]), rng, curl=0.12, ragged=0.65, stations=8))
+    return parts
+
+
 def build_necks(D, rng):
     parts = []
     main = tube("main_neck", D["main_neck"]["path"], D["main_neck"]["radii"], "GooseBlack",
-                step=0.03, segments=36, ref=(0.0, 1.0, 0.0))
+                step=0.025, segments=44, ref=(0.0, 1.0, 0.0), lumps=(0.014, 4.0, 21))
+    main["soak"] = 0.8  # blood run down from the jaws
     parts.append(main)
+    parts += hackles("main_neck", main, 34, (0.32, 0.6), rng)
     for k in range(13):  # bone ridge down the back of the neck
         t = 0.10 + 0.78 * k / 12
         p, n, r = surface(main, t, 0)
@@ -450,9 +556,11 @@ def build_necks(D, rng):
     for sign in (1, -1):
         tag = "R" if sign > 0 else "L"
         ctrl = [p if sign > 0 else mirror(p) for p in D["side_neck"]["path"]]
-        neck = tube(f"side_neck_{tag}", ctrl, D["side_neck"]["radii"], "GooseBlack", step=0.03, segments=30,
-                    ref=(0.0, 1.0, 0.0))
+        neck = tube(f"side_neck_{tag}", ctrl, D["side_neck"]["radii"], "GooseBlack", step=0.025, segments=36,
+                    ref=(0.0, 1.0, 0.0), lumps=(0.010, 5.0, 23 + sign))
+        neck["soak"] = 0.78
         parts.append(neck)
+        parts += hackles(f"side_neck_{tag}", neck, 18, (0.22, 0.42), rng)
         head = dict(D["side_head"])
         if sign < 0:
             head["base"] = mirror(head["base"])
@@ -528,7 +636,8 @@ def build_leg(L, sign):
     pick = (lambda p: tuple(p)) if sign > 0 else (lambda p: mirror(p))
     tag = "R" if sign > 0 else "L"
     hip, knee, ankle, foot = (pick(L[k]) for k in ("hip", "knee", "ankle", "foot"))
-    parts = [tube(f"leg_{tag}", [hip, knee, ankle, foot], L["radii"], "LegDark", step=0.025, segments=24,
+    parts = [tube(f"leg_{tag}", [hip, knee, ankle, foot], L["radii"], "LegDark", step=0.02, segments=28,
+                  lumps=(0.008, 12.0, 31 if sign > 0 else 32),
                   ref=(0.0, -1.0, 0.0))]
     for k in range(5):  # scutes: raised scale rings on the shank
         c = lerp(ankle, foot, 0.1 + 0.18 * k)
@@ -575,7 +684,7 @@ def build_leg(L, sign):
 def build_tail(T, rng):
     parts = []
     root = tuple(T["root"])
-    base_dir = norm((0.0, 1.0, 0.55))
+    base_dir = norm((0.0, 1.0, T["rise"]))  # a standing goose carries its tail level with the sloping back
     plane_normal = norm(cross((1.0, 0.0, 0.0), base_dir))
     for k in range(T["feathers"]):
         angle = -T["spread_deg"] / 2 + T["spread_deg"] * k / (T["feathers"] - 1)
@@ -633,85 +742,104 @@ def build_parts(spec=None):
         parts += build_wing(D["wing"], sign, rng)
         parts += build_leg(D["legs"], sign)
     parts += build_tail(D["tail"], rng)
-    parts += build_maple(D["maple"], body, parts)
+    parts += build_maple(D["maple"], body)
     return parts
 
 
-def build_maple(M, body, parts):
-    """Rotting leaves matted into the back, necks and wing arms; the brand and blood-soaked feathers on the breast."""
+def build_maple(M, body):
+    """The brand and the blood-soaked feathers on the breast."""
     rng = random.Random(M["seed"])
-    named = {p["name"]: p for p in parts}
-    out = matted_leaves("leaf_back", body, M["back_leaves"], (0.12, 0.85), (-75, 75), (0.42, 0.62), rng)
-    out += matted_leaves("leaf_neck", named["main_neck"], M["neck_leaves"], (0.10, 0.75), (-60, 60), (0.24, 0.32), rng)
-    for tag in ("R", "L"):
-        out += matted_leaves(f"leaf_wing_{tag}", named[f"wing_arm_{tag}"], M["wing_leaves"], (0.15, 0.75),
-                             (-50, 50), (0.26, 0.34), rng)
-    out += breast_brand(body, M["brand"])
+    out = breast_brand(M["brand"])
     out += soaked_breast_feathers(body, M["soaked_feathers"], rng)
     return out
 
 
 # ---------------------------------------------------------------- meshing
 
+class Mesh:
+    """All parts as one vertex list and polygon list, with per-polygon material and texture pattern, and
+    per-corner texture coordinates: pattern_uv (metres) and shape_uv (along 0..1, soak threshold or 9)."""
+
+    def __init__(self):
+        self.verts, self.faces, self.materials, self.patterns = [], [], [], []
+        self.pattern_uv, self.shape_uv = [], []
+
+    def add_face(self, corners, material, pattern, uvs, alongs, soak):
+        self.faces.append(tuple(corners))
+        self.materials.append(material)
+        self.patterns.append(PATTERNS.index(pattern))
+        self.pattern_uv.append(tuple(uvs))
+        self.shape_uv.append(tuple((a, 9.0 if soak is None else soak) for a in alongs))
+
+
 def mesh_parts(parts):
-    """All parts as one vertex list, polygon list and per-polygon material name. Each part is a closed shell."""
-    verts, faces, mats = [], [], []
+    """Every geometry part meshed into one Mesh; decals are skipped (they are texture). Each part is a closed shell."""
+    mesh = Mesh()
     for part in parts:
+        if part["kind"] == "decal":
+            continue
         if part["kind"] == "ellipsoid":
-            _mesh_ellipsoid(part, verts, faces, mats)
+            _mesh_ellipsoid(part, mesh)
         else:
-            _mesh_loft(part, verts, faces, mats)
-    return verts, faces, mats
+            _mesh_loft(part, mesh)
+    return mesh
 
 
-def _mesh_loft(part, verts, faces, mats):
-    rings = part["rings"]
-    base = len(verts)
+def _mesh_loft(part, mesh):
+    rings, uv, along = part["rings"], part["uv"], part["along"]
+    base = len(mesh.verts)
     width = len(rings[0])
     for ring in rings:
         if len(ring) != width:
             raise ValueError(f"{part['name']}: rings differ in length")
-        verts.extend(ring)
+        mesh.verts.extend(ring)
     n = len(rings)
     spans = n if part["closed_path"] else n - 1
+    pattern, soak = part["pattern"], part["soak"]
+    if part["soak_root"]:  # blood rises from the root instead of the tip: run "along" backwards
+        along = [1 - a for a in along]
     for i in range(spans):
         i2 = (i + 1) % n
         for j in range(width):
             j2 = (j + 1) % width
-            faces.append((base + i * width + j, base + i * width + j2, base + i2 * width + j2, base + i2 * width + j))
+            corners = (base + i * width + j, base + i * width + j2, base + i2 * width + j2, base + i2 * width + j)
+            uvs = (uv[i][j], uv[i][j + 1], uv[i2][j + 1], uv[i2][j])  # j + 1, not j2: the closing entry
             m = part["paint"](i, j) if part["paint"] else None
-            mats.append(m or part["material"])
+            mesh.add_face(corners, m or part["material"], pattern, uvs, (along[i], along[i], along[i2], along[i2]), soak)
     if part["cap"] and not part["closed_path"]:
-        faces.append(tuple(base + j for j in reversed(range(width))))
-        mats.append(part["material"])
-        faces.append(tuple(base + (n - 1) * width + j for j in range(width)))
-        mats.append(part["material"])
+        first = list(reversed(range(width)))
+        mesh.add_face([base + j for j in first], part["material"], pattern, [uv[0][j] for j in first],
+                      [along[0]] * width, soak)
+        mesh.add_face([base + (n - 1) * width + j for j in range(width)], part["material"], pattern,
+                      [uv[n - 1][j] for j in range(width)], [along[n - 1]] * width, soak)
 
 
-def _mesh_ellipsoid(part, verts, faces, mats):
+def _mesh_ellipsoid(part, mesh):
     us, vs = part["segments"]
     c, (ax, ay, az), (rx, ry, rz) = part["centre"], part["axes"], part["radii"]
-    base = len(verts)
-    verts.append(combine((c, 1), (ax, -rx)))  # pole along the first axis
+    r = (rx + ry + rz) / 3
+    pattern = PATTERN_BY_MATERIAL.get(part["material"], "plumage")
+    base = len(mesh.verts)
+    mesh.verts.append(combine((c, 1), (ax, -rx)))  # pole along the first axis
     for i in range(1, vs):
         phi = math.pi * i / vs
         for j in range(us):
             th = 2 * math.pi * j / us
-            verts.append(combine((c, 1), (ax, -rx * math.cos(phi)), (ay, ry * math.sin(phi) * math.cos(th)),
-                                 (az, rz * math.sin(phi) * math.sin(th))))
-    verts.append(combine((c, 1), (ax, rx)))
-    top, bottom = base, len(verts) - 1
+            mesh.verts.append(combine((c, 1), (ax, -rx * math.cos(phi)), (ay, ry * math.sin(phi) * math.cos(th)),
+                                      (az, rz * math.sin(phi) * math.sin(th))))
+    mesh.verts.append(combine((c, 1), (ax, rx)))
+    top, bottom = base, len(mesh.verts) - 1
     ring = lambda i, j: base + 1 + (i - 1) * us + (j % us)
+    at = lambda i, j: (2 * math.pi * r * j / us, math.pi * r * i / vs)
+    add_face = lambda corners, uvs: mesh.add_face(corners, part["material"], pattern, uvs, [0.0] * len(corners), None)
     for j in range(us):
-        faces.append((top, ring(1, j + 1), ring(1, j)))
-        mats.append(part["material"])
+        add_face((top, ring(1, j + 1), ring(1, j)), (at(0, j + 0.5), at(1, j + 1), at(1, j)))
     for i in range(1, vs - 1):
         for j in range(us):
-            faces.append((ring(i, j), ring(i, j + 1), ring(i + 1, j + 1), ring(i + 1, j)))
-            mats.append(part["material"])
+            add_face((ring(i, j), ring(i, j + 1), ring(i + 1, j + 1), ring(i + 1, j)),
+                     (at(i, j), at(i, j + 1), at(i + 1, j + 1), at(i + 1, j)))
     for j in range(us):
-        faces.append((bottom, ring(vs - 1, j), ring(vs - 1, j + 1)))
-        mats.append(part["material"])
+        add_face((bottom, ring(vs - 1, j), ring(vs - 1, j + 1)), (at(vs, j + 0.5), at(vs - 1, j), at(vs - 1, j + 1)))
 
 
 def triangle_count(faces):
@@ -720,7 +848,8 @@ def triangle_count(faces):
 
 if __name__ == "__main__":
     ps = build_parts()
-    v, f, m = mesh_parts(ps)
+    mesh = mesh_parts(ps)
+    v, f = mesh.verts, mesh.faces
     zs = [p[2] for p in v]
     xs = [p[0] for p in v]
     print(f"{len(ps)} parts, {len(v)} verts, {triangle_count(f)} tris, "

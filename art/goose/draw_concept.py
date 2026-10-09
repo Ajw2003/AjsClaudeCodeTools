@@ -211,12 +211,12 @@ def main():
         ("Bare finger bones, claws", "finger_bone0_R"),
         ("Ragged primaries", "primary3_R"),
         ("Blood-soaked breast feathers", "breast_feather1_4"),
-        ("Maple leaf branded into the breast", "breast_brand"),
+        ("Maple leaf brand (texture)", "breast_brand"),
         ("Bare ribs through the flanks", "rib3_R"),
     ], 1620, "left")
     callouts(dr, parts, side, [
         ("Bone ridge down the neck", "neck_spine6"),
-        ("Rotting maple leaves in the plumage", "leaf_back5"),
+        ("Blood soaked up from the tips (texture)", "breast_feather2_5"),
         ("One sunken eye a side per head", "main_eye_R"),
         ("Chinstrap: ChinWhite", "main_head"),
         ("Webbed feet, bone claws", "web1_R"),

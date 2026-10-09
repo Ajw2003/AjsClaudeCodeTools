@@ -3,9 +3,12 @@
 
   python3.11 art/goose/build_goose.py
 
-Writes art/goose/goose.glb, goose.fbx and goose.blend next to this script. The shapes come from
-goose_design.py (pure Python, shared with the concept sheet); this script only turns them into one
-Blender mesh, assigns materials, checks the result against the spec and exports. A fix to the shape
+  GOOSE_TEXTURE_PX=1024 python3.11 art/goose/build_goose.py   # quicker, lower-resolution bake
+
+Writes art/goose/goose.glb, goose.fbx and goose.blend next to this script, and the baked textures to
+art/goose/textures/. The shapes come from goose_design.py (pure Python, shared with the concept
+sheet); this script turns them into one Blender mesh, checks it against the spec, has
+goose_texture.py bake its surfaces into one texture set, and exports. A fix to the shape
 is a fix to spec.json or goose_design.py, never a hand edit of the output.
 """
 import os, sys
@@ -18,6 +21,7 @@ except ImportError:
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import goose_design as g  # noqa: E402  (bpy must be imported first)
+import goose_texture  # noqa: E402
 
 HEIGHT_TOLERANCE_M = 0.15
 
@@ -45,7 +49,8 @@ def make_materials(spec):
     return mats
 
 
-def build_mesh(spec, verts, faces, face_mats, mats):
+def build_mesh(spec, parts_mesh, mats):
+    verts, faces, face_mats = parts_mesh.verts, parts_mesh.faces, parts_mesh.materials
     index = {m.name: k for k, m in enumerate(mats)}
     unknown = sorted(set(face_mats) - set(index))
     if unknown:
@@ -56,6 +61,10 @@ def build_mesh(spec, verts, faces, face_mats, mats):
     mesh.from_pydata(verts, [], faces)
     mesh.polygons.foreach_set("material_index", [index[n] for n in face_mats])
     mesh.polygons.foreach_set("use_smooth", [True] * len(faces))
+    for name, corners in (("Pattern", parts_mesh.pattern_uv), ("Shape", parts_mesh.shape_uv)):
+        layer = mesh.uv_layers.new(name=name)
+        layer.data.foreach_set("uv", [x for face in corners for uv in face for x in uv])  # loops follow face order
+    mesh.attributes.new("pattern_kind", "FLOAT", "FACE").data.foreach_set("value", [float(k) for k in parts_mesh.patterns])
     mesh.update()
 
     bm = bmesh.new()
@@ -100,21 +109,23 @@ def main():
     spec = g.load_spec()
     bpy.ops.wm.read_factory_settings(use_empty=True)
     parts = g.build_parts(spec)
-    verts, faces, face_mats = g.mesh_parts(parts)
+    parts_mesh = g.mesh_parts(parts)
     mats = make_materials(spec)
-    obj = build_mesh(spec, verts, faces, face_mats, mats)
-    tris, height = validate(spec, obj, face_mats, mats)
+    obj = build_mesh(spec, parts_mesh, mats)
+    tris, height = validate(spec, obj, parts_mesh.materials, mats)
+    pixels = int(os.environ.get("GOOSE_TEXTURE_PX", spec["texture"]["pixels"]))
+    textures = goose_texture.bake(obj, spec, os.path.join(HERE, "textures"), pixels)
 
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
     out = lambda ext: os.path.join(HERE, "goose" + ext)
     bpy.ops.export_scene.gltf(filepath=out(".glb"), export_format="GLB")
     bpy.ops.export_scene.fbx(filepath=out(".fbx"), axis_forward="-Z", axis_up="Y",
-                             apply_scale_options="FBX_SCALE_UNITS")
+                             apply_scale_options="FBX_SCALE_UNITS", path_mode="RELATIVE")
     bpy.ops.wm.save_as_mainfile(filepath=out(".blend"), compress=True)
     xs = [v.co.x for v in obj.data.vertices]
     print(f"build_goose: {len(parts)} parts, {tris} tris, height {height:.3f} m, "
-          f"span {max(xs) - min(xs):.2f} m, {len(mats)} materials -> goose.glb .fbx .blend")
+          f"span {max(xs) - min(xs):.2f} m, {len(mats)} materials baked to {pixels} px textures -> goose.glb .fbx .blend")
 
 
 main()

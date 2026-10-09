@@ -2,10 +2,14 @@
 """Render review views of a model with Blender-as-a-module (bpy). Run with the BPY_PYTHON interpreter.
 
   render_views.py MODEL --out DIR [--samples 32] [--res 700] [--forward -Y] [--reference-height 1.8] [--no-reference]
+                  [--background "#EDE6D6"]
 
 MODEL: .fbx .glb .gltf .obj .blend. Writes DIR/{three_quarter,front,side,wireframe}.png and DIR/stats.json.
 --forward is the world axis the model FACES after import into Blender (default -Y, which is where
 glTF, and FBX exported from Blender for Unity, land). Cycles CPU only (EEVEE/Workbench need a GPU).
+--background puts the renders on a flat colour (say, the concept sheet's paper) instead of the dark
+studio: the model is lit exactly as before, rendered over a transparent film with the floor as a
+shadow catcher, then composited onto the colour, so only the backdrop changes.
 """
 import argparse, json, math, os, sys
 
@@ -111,6 +115,20 @@ def reference_figure(height, base_z, yaw0, centre_xy, lo_r, hi_r):
     return obj
 
 
+def onto_background(path, hex_colour):
+    """Composite a transparent render onto a flat colour, in place."""
+    try:
+        from PIL import Image
+    except ImportError:
+        fail("--background needs Pillow in the bpy interpreter (setup_bpy.sh installs it)")
+    h = hex_colour.lstrip("#")
+    if len(h) != 6:
+        fail(f"--background wants a hex colour like #EDE6D6, got {hex_colour}")
+    render = Image.open(path).convert("RGBA")
+    flat = Image.new("RGBA", render.size, tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (255,))
+    Image.alpha_composite(flat, render).convert("RGB").save(path)
+
+
 def look_at(obj, direction):
     obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
 
@@ -122,6 +140,7 @@ def main():
     ap.add_argument("--forward", default="-Y", choices=sorted(AXES) + ["+Z", "-Z"])
     ap.add_argument("--reference-height", type=float, default=1.8)
     ap.add_argument("--no-reference", action="store_true")
+    ap.add_argument("--background", help="hex colour to composite the renders onto, e.g. #EDE6D6")
     a = ap.parse_args()
     if not os.path.isfile(a.model):
         fail(f"model not found: {a.model}")
@@ -167,6 +186,10 @@ def main():
     gm = bpy.data.meshes.new("Ground"); g = max(span, 0.25) * 40
     gm.from_pydata([(-g, -g, lo.z), (g, -g, lo.z), (g, g, lo.z), (-g, g, lo.z)], [], [(0, 1, 2, 3)])
     ground = bpy.data.objects.new("Ground", gm); sc.collection.objects.link(ground)
+    if a.background:
+        sc.render.film_transparent = True
+        sc.render.image_settings.color_mode = "RGBA"
+        ground.is_shadow_catcher = True
     gmat = bpy.data.materials.new("Ground"); gmat.use_nodes = True
     gmat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.05, 0.045, 0.04, 1)
     gm.materials.append(gmat)
@@ -214,6 +237,8 @@ def main():
         bpy.ops.render.render(write_still=True)
         if not os.path.exists(sc.render.filepath):
             fail(f"render did not write {sc.render.filepath}")
+        if a.background:
+            onto_background(sc.render.filepath, a.background)
 
     arms = [o for o in sc.objects if o.type == "ARMATURE"]
     bones = [b.name for o in arms for b in o.data.bones]
