@@ -325,8 +325,10 @@ def maple_crown(prefix, head, f, u, s, rng):
         parts += limb
         torn = [combine((p, 1), (n, 0.01 * s), (perpendicular(n, out), 0.11 * s * math.cos(2 * math.pi * j / 10)),
                         (cross(n, perpendicular(n, out)), 0.11 * s * math.sin(2 * math.pi * j / 10))) for j in range(10)]
-        parts.append(tube(f"{prefix}_torn_skin{k}", torn, [0.03 * s] * 10, "MawRed", step=0.02 * s, segments=8,
-                          ref=n, closed=True, lumps=(0.015 * s, 30.0, k)))  # ragged lip of skin round the wound
+        torn_skin = tube(f"{prefix}_torn_skin{k}", torn, [0.018 * s] * 10, "MawRed", step=0.02 * s, segments=8,
+                         ref=n, closed=True, lumps=(0.02 * s, 30.0, k))  # ragged lip of skin round the wound
+        torn_skin["soak"] = 0.0  # caked in dried blood all over
+        parts.append(torn_skin)
     return parts
 
 

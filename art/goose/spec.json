@@ -41,7 +41,7 @@
       "name": "GooseBlack",
       "hex": "#121110",
       "metallic": 0.0,
-      "roughness": 0.6,
+      "roughness": 0.85,
       "notes": "necks, heads, beaks, tail"
     },
     {
@@ -402,11 +402,11 @@
   "texture": {
     "pixels": 4096,
     "bake_samples": 4,
-    "grime_dark": 0.55,
+    "grime_dark": 0.75,
     "blood_hex": "#3A0C0A",
     "blood_roughness": 0.35,
-    "brand_char_hex": "#0E0504",
-    "brand_rim_hex": "#7A4436",
+    "brand_char_hex": "#3A0F0C",
+    "brand_rim_hex": "#6B1E16",
     "brand_roughness": 0.55,
     "bump_strength": 0.5,
     "blood_drip_reach": 0.45,
@@ -414,6 +414,6 @@
     "mud_low": 0.25,
     "mud_high": 1.25,
     "ao_samples": 32,
-    "occlusion_strength": 0.85
+    "occlusion_strength": 0.55
   }
 }
