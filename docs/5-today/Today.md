@@ -1,5 +1,10 @@
 # Today — 2026-10-09
 
+Roadmap re-triaged: all 97 open issues are placed in `docs/2-roadmap/Roadmap.md` by how bad each is and how
+often it gets in the way, from P0 (safety holes and daily blockers, led by #200 and the #196 permission-stall work)
+to P3 (separate tracks), plus a list of built issues waiting on your test before they close. Audit findings
+#200-#206 were filed today.
+
 Guard branch ownership, plugin 2.59.1: a commit or push is now judged on the branch of the directory it runs in, so a
 worktree subagent on its own `AjsAgent/` branch is no longer prompted. `ccr-` cloud-session branches count as yours,
 and `HOUSE_RULES_OWNED_BRANCHES=foo/,bar-` adds more. Force push, merge and the rest still ask.
