@@ -10,8 +10,8 @@ approve or edit; step 2 designs the new plugin from whatever survives it.
 - Today's 29 hooks become about **8**. The 6,500-line `hook.py` and 8,100-line `verify.py` get
   rewritten small. The target is under 1,500 lines each, with the tests written as a table.
 - Of the 97 open issues: **32 are fixed by the rebuild** (bugs in code being rewritten or dropped),
-  **38 are carried in** (they become requirements for the new plugin), **12 look already done**
-  (aj decides whether to close them), and **15 belong to other projects**.
+  **38 are carried in** (they become requirements for the new plugin), **9 look already done**
+  (aj decides whether to close them), and **18 belong to other projects**.
 
 ## What today's plugin costs (measured 2026-10-09, cloud container, Python 3.13)
 
@@ -125,21 +125,21 @@ These become requirements. Step 2's design must say how each is met.
   (installer false failure, needed for the switch-over), #95 (cost of delegating, measured in step 3).
 - **Research for step 2**: #69 (superpowers workflow), #62 (agyrules dynamic helpers).
 
-### Looks already done: aj decides whether to close (12)
+### Looks already done: aj decides whether to close (9)
 
-These shipped according to `docs/5-today/Today.md` or their own text. Nothing closes without aj's
+These shipped, according to `docs/5-today/Today.md` or their own text. Nothing closes without aj's
 say-so.
 
 - #133, #175, #177, #178: credit and branch naming (shipped 2.55.0 to 2.59.0).
 - #142, #144, #145, #146: the prompt timer (shipped 2.52.0 to 2.53.0). Its rework is carried in the list above.
 - #113: the note about helpers and the instructions file (fixed, waiting on aj's look).
-- #182, #181, #180: the cross-repo attribution clean-up. It's a one-off migration, not plugin code,
-  so it can run separately whenever aj wants.
 
-### Other projects, left out (15)
+### Other projects, left out (18)
 
 - Art pipeline: #161, #162, #163, #164, #167, #168, #169, #170, #171.
 - Eldritch goose: #183 to #187.
+- Old Claude credits across aj's repos: #180, #181, #182. Not done yet. It's a one-off
+  migration, not plugin code, so it runs separately whenever aj wants.
 - Unity: #116 (always open a fresh Unity project). It belongs in the Unity standards file, not
   the core rules.
 
@@ -147,6 +147,6 @@ say-so.
 
 1. **Approve the drop list.** The biggest cuts are `harvest` plus the archivist, `stallcheck`,
    the helper model reports (`announce`, `verdict`, `audit`) and the plain-docs copies.
-2. **Close the 12 "looks done" issues**, or name the ones to keep open.
+2. **Close the 9 "looks done" issues**, or name the ones to keep open.
 
 Next, step 2 (#210): design the eight hooks, the short rules file, and one issue per piece to build.
