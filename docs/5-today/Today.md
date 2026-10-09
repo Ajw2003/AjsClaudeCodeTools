@@ -1,5 +1,7 @@
 # Today — 2026-10-09
 
+House-rules rebuild started (#208): step 1's triage page is up for your approval, `docs/plans/2026-10-09-house-rules-rebuild-triage.md`. It sorts every part of the plugin into keep, merge or drop, and every open issue into fixed by the rebuild, carried in, looks done, or another project. Nothing is cut yet.
+
 Guard branch ownership, plugin 2.59.1: a commit or push is now judged on the branch of the directory it runs in, so a
 worktree subagent on its own `AjsAgent/` branch is no longer prompted. `ccr-` cloud-session branches count as yours,
 and `HOUSE_RULES_OWNED_BRANCHES=foo/,bar-` adds more. Force push, merge and the rest still ask.
