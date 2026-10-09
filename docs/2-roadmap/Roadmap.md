@@ -80,7 +80,8 @@ means for how fresh this claim is.
 
 Triaged 2026-10-09 against `main` at `34639ce` (house-rules 2.59.1), with every one of the 97 open
 issues read in full, the open pull requests (Ajw2003/AjsClaudeCodeTools#166, #190) and the unmerged
-`ccr-9ab94e76-iufs44` branch checked for work already under way.
+`ccr-9ab94e76-iufs44` branch checked for work already under way. Updated the same day after that
+branch merged as #207 (2.60.0).
 
 **How the order was set.** Each issue is placed by two things together: how bad it is when it bites
 (a safety hole or lost work beats an annoyance), and how often it gets in the way of a normal working
@@ -100,16 +101,11 @@ helper on ordinary work.
 1. **#200 The guard misses `rm`, `nohup` and background jobs on a second line.** A multi-line
    command can delete files or hide a process with no prompt. It's a one-pattern fix plus a test.
    It's been there since 2026-09-11, and neither open branch changes it.
-2. **#196 Permission prompts stop stalling sessions and helpers** (children #197, #198, #199). This
-   is the most common day-to-day blocker: helpers stall on every commit, and one unanswered prompt
-   refuses everything after it. Built on `ccr-9ab94e76-iufs44`, which has no pull request yet. It
-   covers #134 (helpers prompt on every commit), #136 (builders blocked on deletes and scripted
-   writes), #173 (a timeout blocks safe work), #159 (the timer is lost on a worker restart), the
-   `-C` half of #192, and the timed-out-prompt part of #172.
-   - **Do with it:** #203 (any "cd" in a command, even in a commit message, makes commits prompt).
-     It's the same code (`_ANY_CD_RE`), and that branch keeps the bug.
-   - **Do with it:** #193 (prompts say in plain words what they're asking). Once only destructive
-     prompts are left, each one needs to be readable from a phone at a glance.
+2. **#203 Any "cd" in a command, even in a commit message, makes commits prompt.** It's daily
+   friction on exactly the commits the #196 work (shipped in 2.60.0, below) meant to free up.
+   `_ANY_CD_RE` is unchanged on `main` after that merge. It's a one-line fix.
+   - **Do with it:** #193 (prompts say in plain words what they're asking). Now that only
+     destructive prompts are left, each one needs to be readable from a phone at a glance.
 3. **#189 The attribution guard misses commits that set the author with a quoted `-c` value.**
    Commits credited to Claude went out unchecked in another repo. The fix is pull request #190
    (`AjsAgent/quoted-git-options`), which is open and ready to review. The same `_GIT` prefix is
@@ -233,7 +229,16 @@ session that can't be done from the test suite. That check is noted where it app
 - **Prompt timer:** #142 and its children.
   - #144, #145, #146, #149, #151, #152 are built.
   - #147 still needs the overnight-style check in a real session.
-  - #159 isn't fixable from the plugin as it stands; #198 removes the case.
+  - #159 isn't fixable from the plugin as it stands; #198 (built) removes the case.
+- **Permission stalls:** #196 and its children #197, #198, #199 (2.60.0, merged as #207). Still
+  needs a live session showing a helper commit and push with no prompt, and a commit on `main`
+  refused at once. This also covers:
+  - #134: helpers prompt on every commit;
+  - #136: builders blocked on deletes and scripted writes;
+  - #173: a timeout blocks safe work;
+  - #159: the timer is lost on a worker restart;
+  - the `-C` half of #192;
+  - the timed-out part of #172.
 - **Destructive steps on a pushed agent branch:** #153. Still needs a real session confirming the
   prompt disappears.
 - **Attribution:**
@@ -245,10 +250,10 @@ session that can't be done from the test suite. That check is noted where it app
   - #177: commit author;
   - #178: GitHub tool calls.
 - **#192 Commits on an agent branch prompt outside the session's main folder.** The `cd` and
-  worktree half shipped in 2.59.1. The `git -C` half is in #197.
+  worktree half shipped in 2.59.1. The `git -C` half shipped with #197 in 2.60.0.
 - **Issue workflow:**
   - #110: approved plans become issues (2.49.0);
   - #107: the parent plan, with the helper tiers (#111, #112, closed).
 - **#113 The note that said helpers never see the project instructions file.** Fixed in 7c57cf4.
 - **#172 Builders can't recover from failed or timed-out tasks.** This issue has no description. The
-  timed-out part is covered by #196. Say what else it meant, or close it.
+  timed-out part is covered by #196 (built). Say what else it meant, or close it.

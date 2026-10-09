@@ -19,25 +19,40 @@ it is their work, and removing it is their call.
 
 A destructive step may run without asking only when **both** hold:
 
-1. **The branch is mine:** an `AjsAgent/` branch I created for this work. Never one aj authored.
+1. **The branch is not the default branch** (`main`, `master`, or what `origin/HEAD` names).
 2. **The work is already saved where the step cannot reach it:** `git status` shows nothing
    uncommitted or untracked, and every commit on the branch is already on a remote.
 
-Then `git reset`, `git revert`, `git rebase`, `git checkout --` and `git restore` lose nothing that
-isn't on the remote, so the `guard` hook lets them through (issue #153). Everything else still asks:
+Then `git reset`, `git checkout --` and `git restore` lose nothing that isn't on the remote, so
+the `guard` hook lets them through (issue #153). Merge, rebase, revert and cherry-pick are not
+destructive at all off the default branch (the old commits stay in the reflog and on the remote)
+and run unasked there (#197). Everything else still asks:
 
-- **force-push:** it overwrites the remote, which is the "saved elsewhere" copy;
+- **force-push, `push --all` / `--mirror`:** they overwrite the remote, the "saved elsewhere" copy;
+- **deleting a branch** (`branch -D`, `push --delete`): its unmerged work may exist nowhere else;
 - **`git clean`:** can remove ignored files that exist nowhere else;
 - **`git stash drop` / `clear`:** stashes are never pushed;
 - **`rm` and other file deletion:** guard can't tell where the target is saved;
-- **merge, cherry-pick, am, apply, filter-branch:** finishing what aj started is theirs to do,
-  whatever the branch.
+- **`filter-branch`:** rewrites every commit.
+
+On the default branch every one of these asks, and a commit, push or merge there is refused.
 
 If either condition fails, the guard prompt says which one.
 
-**Why:** aj asked for exactly this line: destructive actions are permitted only on a branch I
-created, and only if the work is already saved somewhere the action wouldn't affect. Asking costs a
-round trip; when nothing can be lost, that round trip protects nothing.
+**Why:** aj asked for exactly this line: destructive actions are permitted only off `main`, and
+only if the work is already saved somewhere the action wouldn't affect. Asking costs a round trip;
+when nothing can be lost, that round trip protects nothing.
+
+## When nobody can answer
+
+A prompt that nobody can answer is refused at once instead of opened (#198):
+
+- **inside a subagent** (the hook input carries `agent_id`): a subagent cannot answer a prompt;
+- **when aj last wrote longer ago than the timeout** (5 minutes): the `scope` hook records each of
+  aj's messages, and `guard` and `guardwrite` refuse instead of asking once that is stale.
+
+Each refusal goes on the waiting-on-you list, like a timed-out prompt. `HOUSE_RULES_PROMPT_TIMEOUT=off`
+turns these refusals off with the timer.
 
 ## When nobody answers the prompt
 
