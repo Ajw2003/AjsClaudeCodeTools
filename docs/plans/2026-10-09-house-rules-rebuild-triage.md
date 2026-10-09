@@ -9,8 +9,8 @@ approve or edit; step 2 designs the new plugin from whatever survives it.
   Anything that does none of those goes.
 - Today's 29 hooks become about **8**. The 6,500-line `hook.py` and 8,100-line `verify.py` get
   rewritten small. The target is under 1,500 lines each, with the tests written as a table.
-- Of the 97 open issues: **32 are fixed by the rebuild** (bugs in code being rewritten or dropped),
-  **38 are carried in** (they become requirements for the new plugin), **9 look already done**
+- Of the 97 open issues: **31 are fixed by the rebuild** (bugs in code being rewritten or dropped),
+  **34 are carried in** (they become requirements for the new plugin), **14 look already done**
   (aj decides whether to close them), and **18 belong to other projects**.
 
 ## What today's plugin costs (measured 2026-10-09, cloud container, Python 3.13)
@@ -87,7 +87,7 @@ part. **Drop** means it goes; a drop that loses something says what.
 
 ## Where every open issue lands
 
-### Fixed by the rebuild (32)
+### Fixed by the rebuild (31)
 
 These are bugs in code being rewritten or dropped. Each still gets a test in the new suite where it
 was a guard bug, so the fix is proven, not assumed.
@@ -96,19 +96,17 @@ was a guard bug, so the fix is proven, not assumed.
   second line slips through), #203 (`cd` in a commit message prompts), #189 (quoted `-c` slips
   past the credit check), #192 (`git -C` reads the wrong repo), #206 (two copies of the folder lookup).
 - **Too many prompts** (only truly destructive steps ask; nothing else prompts on a non-default branch):
-  #134, #136, #173, #149, #152, #159.
+  #136, #173, #149, #152, #159.
 - **Code being dropped**: #201 (helper cap), #202 (docref), #122, #123, #124, #127 and #120 (stallcheck).
 - **Speed** (small file, cached): #204.
 - **Old architecture notes** made moot by the rewrite: #41, #42, #43, #44, #45, #46.
 - **Plan-mode-only issue gate** (gate arms however work was planned): #119, #128, #129, #130, #110, #94, #103.
 
-### Carried into the rebuild (38)
+### Carried into the rebuild (34)
 
 These become requirements. Step 2's design must say how each is met.
 
-- **Guards and branches**: #196 (parent: stop prompts stalling work), #197 (commit and push freely
-  off the default branch, refused on it), #198 (never leave a session waiting on a prompt), #199
-  (rule text for that), #153 (destructive steps on own pushed branch), #205 (fail closed when
+- **Guards and branches**: #153 (destructive steps on own pushed branch), #205 (fail closed when
   Python is missing), #193 (prompts say in plain words what they'll do), #151 (questions never time out).
 - **Credit "aj's agent", never Claude**: #174 (parent), #176 (cloud sessions move to `AjsAgent/`),
   #179 (cloud attribution setting), #191 (the PR footer the app appends).
@@ -125,13 +123,17 @@ These become requirements. Step 2's design must say how each is met.
   (installer false failure, needed for the switch-over), #95 (cost of delegating, measured in step 3).
 - **Research for step 2**: #69 (superpowers workflow), #62 (agyrules dynamic helpers).
 
-### Looks already done: aj decides whether to close (9)
+### Looks already done: aj decides whether to close (14)
 
-These shipped, according to `docs/5-today/Today.md` or their own text. Nothing closes without aj's
+Re-checked on 2026-10-09 against plugin 2.60.1 by feeding the real hooks test commands in
+throwaway repos. All 14 passed. #113 and the timer wording were checked by
+reading the files. Nothing closes without aj's
 say-so.
 
 - #133, #175, #177, #178: credit and branch naming (shipped 2.55.0 to 2.59.0).
 - #142, #144, #145, #146: the prompt timer (shipped 2.52.0 to 2.53.0). Its rework is carried in the list above.
+- #196, #197, #198, #199, #134: stop prompts stalling work (shipped 2.60.0). Commits run unasked
+  off `main` and are refused on it, and a helper's destructive step is refused instead of left waiting.
 - #113: the note about helpers and the instructions file (fixed, waiting on aj's look).
 
 ### Other projects, left out (18)
@@ -147,6 +149,6 @@ say-so.
 
 1. **Approve the drop list.** The biggest cuts are `harvest` plus the archivist, `stallcheck`,
    the helper model reports (`announce`, `verdict`, `audit`) and the plain-docs copies.
-2. **Close the 9 "looks done" issues**, or name the ones to keep open.
+2. **Close the 14 "looks done" issues**, or name the ones to keep open.
 
 Next, step 2 (#210): design the eight hooks, the short rules file, and one issue per piece to build.
