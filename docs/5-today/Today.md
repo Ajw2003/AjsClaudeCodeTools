@@ -2,6 +2,11 @@
 
 House-rules rebuild started (#208): step 1's triage page is up for your approval, `docs/plans/2026-10-09-house-rules-rebuild-triage.md`. It sorts every part of the plugin into keep, merge or drop, and every open issue into fixed by the rebuild, carried in, looks done, or another project. Nothing is cut yet.
 
+Roadmap re-triaged: all 97 open issues are placed in `docs/2-roadmap/Roadmap.md` by how bad each is and how
+often it gets in the way, from P0 (safety holes and daily blockers, led by #200; the #196 permission-stall work below has since shipped and moved to the built list)
+to P3 (separate tracks), plus a list of built issues waiting on your test before they close. Audit findings
+#200-#206 were filed today.
+
 Permission stalls, plugin 2.60.0 (issues #196-#199): a commit, push or merge on any branch except `main` now
 runs with no prompt at all, helpers' worktree branches included. On `main` they are refused at once with
 "make a branch and open a pull request". Only deletions, force pushes and discarding unsaved work still ask,
