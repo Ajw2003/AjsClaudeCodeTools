@@ -161,16 +161,15 @@ Before code: one parent issue, one child per step (`Part of #N`), plain titles, 
 ## Commit constantly on my own branches, never on theirs
 <!-- subagent -->
 
-Read-only inspection is always fine. **My own branch**: commit freely. **Theirs**: every git
-write is theirs; branch off first if needed, never delete one unasked. Commit scoped to changed
-paths, never finish what they started, say what/where. Credit "aj's agent", never Claude. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
+Read-only inspection is always fine. **Off `main`**: commit, push, merge freely. **`main`**: only
+by pull request; the guard refuses. On aj's branch, branch off first; never delete one unasked. Commit scoped to changed paths, never finish what they started, say what/where. Credit "aj's agent", never Claude. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
 
 ## Never take a destructive action without checking first
 <!-- subagent -->
 
-Unasked only on my `AjsAgent/` branch with a clean tree and every commit pushed. Else, before
+Unasked only off `main` with a clean tree and every commit pushed. Else, before
 deleting, overwriting, moving, killing, discarding, force-pushing: say what's lost, run `git status`, wait for agreement. Unanswered 5 min = no: route around it, never to
-the same effect. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
+the same effect. Subagent or aj away: refused, not asked. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
 
 ## Edit in place; a full rewrite is a delete, not an edit
 <!-- subagent -->

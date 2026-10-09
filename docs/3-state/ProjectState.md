@@ -114,6 +114,10 @@ verified: a real spawn of each tier, which needs the plugin updated and Claude C
 real PreToolUse `Agent` payload carries `agent_id` for a call made from inside a subagent (the cap relies
 on the tier files omitting the `Agent` tool if it does not).
 
+2.60.0 (#196-#199): `guard` refuses commit/push/merge on the default branch and approves them on every other
+branch; prompts nobody can answer (subagent, aj away) are refused and queued. Verified by `verify.py`; not yet in
+a live session.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

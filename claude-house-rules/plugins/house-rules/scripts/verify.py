@@ -168,6 +168,7 @@ print()
 
 RULE_COMMIT = "Commit constantly on my own branches, never on theirs"
 RULE_DESTRUCTIVE = "Never take a destructive action without checking first"
+DEFAULT = "is the default branch"  # in every refusal of a default-branch git write (#197)
 
 # --- branch fixtures -------------------------------------------------------------------------
 # Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
@@ -412,9 +413,8 @@ else:
 
 
 # --- guard cases: 29 commands ---------------------------------------------------------------
-# All judged from REPO_THEIRS, so these pin the behaviour on a branch that is not mine - the
-# conservative baseline the plugin had before branch-awareness. BRANCH_CASES below covers the
-# ownership axis.
+# All judged from REPO_THEIRS, which is on main: the default branch, where a commit, push or
+# merge is refused outright (#197). BRANCH_CASES below covers every other branch.
 GUARD_CASES = [
     ("pass", None, "git status"),
     ("pass", None, "git log --oneline -n 20"),
@@ -423,10 +423,10 @@ GUARD_CASES = [
     ("pass", None, "ls -la src"),
     ("pass", None, r"Get-ChildItem C:\Users"),
     ("pass", None, "npm run build && npm test"),
-    ("ask", "Commit constantly on my own branches, never on theirs", 'git commit -m "wip"'),
+    ("deny", "is the default branch", 'git commit -m "wip"'),
     ("pass", None, "git add -A"),
-    ("ask", "Commit constantly on my own branches, never on theirs", "git push origin main"),
-    ("ask", "Commit constantly on my own branches, never on theirs", "git push --force-with-lease"),
+    ("deny", "is the default branch", "git push origin main"),
+    ("deny", "is the default branch", "git push --force-with-lease"),
     ("pass", None, "git checkout -b feature/x"),
     ("pass", None, "git switch main"),
     ("pass", None, "git branch -d old-feature"),
@@ -478,13 +478,15 @@ GUARD_CASES = [
     ("ask", "Never take a destructive action without checking first", "git restore src/app.js"),
     ("ask", "Never take a destructive action without checking first", "git stash drop"),
     ("ask", "Never take a destructive action without checking first", "git stash clear"),
-    ("ask", "Commit constantly on my own branches, never on theirs", 'echo "starting" && git commit -m "wip"'),
+    ("deny", "is the default branch", 'echo "starting" && git commit -m "wip"'),
 ]
 
 for expect, rule, cmd in GUARD_CASES:
     code, out, err = run_hook("guard", payload_for(cmd), env=env_in(REPO_THEIRS))
     if '"permissionDecision":"ask"' in out:
         got = "ask"
+    elif '"permissionDecision":"deny"' in out:
+        got = "deny"
     elif not out.strip() or "no house rule matched" in out:
         # Not prompting is the decision; the allow path now says so out loud rather than
         # being indistinguishable from the hook never having run.
@@ -506,8 +508,7 @@ print()
 
 # --- branch-aware guard: the same command, judged by whose branch the checkout is on ---------
 BRANCH_CASES = [
-    # On a branch I created, a commit and an ordinary push are checkpoints, not mutations of
-    # the user's history. These are the only two the exemption covers.
+    # Off the default branch, a commit, an ordinary push and a merge or rebase run unasked (#197).
     (REPO_MINE, "claude/some-topic", "pass", None, 'git commit -m "checkpoint"'),
     (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git -c user.name=x commit -m y"),
@@ -515,19 +516,24 @@ BRANCH_CASES = [
     # exemption does not reach it - on any branch.
     (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push --force-with-lease"),
     (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push -f origin HEAD"),
-    # Discarding work, or finishing something the user started, stays a prompt on my branch too.
+    # Discarding unsaved work still asks; replaying commits loses nothing (old ones stay in the reflog).
     (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git reset --hard origin/main"),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git rebase -i HEAD~3"),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git merge main"),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git cherry-pick abc123"),
+    (REPO_MINE, "claude/some-topic", "pass", None, "git rebase -i HEAD~3"),
+    (REPO_MINE, "claude/some-topic", "pass", None, "git merge main"),
+    (REPO_MINE, "claude/some-topic", "pass", None, "git cherry-pick abc123"),
+    # Deleting a branch, here or on the remote, still asks.
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git branch -D old"),
+    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push origin --delete old"),
+    # A push whose destination is the default branch is refused from any branch.
+    (REPO_MINE, "claude/some-topic", "deny", DEFAULT, "git push origin HEAD:main"),
     # A command naming another repo is not talking about the branch we just read.
     (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, 'git -C /other/repo commit -m "x"'),
     (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git --git-dir=/other/.git push"),
     # Ownership buys nothing outside the commit rule.
     (REPO_MINE, "claude/some-topic", "ask", RULE_DESTRUCTIVE, "rm -rf build"),
-    # Every branch that is not mine, and every branch I could not read, still prompts.
-    (REPO_THEIRS, "main", "ask", RULE_COMMIT, 'git commit -m "wip"'),
-    (REPO_THEIRS, "main", "ask", RULE_COMMIT, "git push origin main"),
+    # The default branch refuses; a branch I could not read still prompts.
+    (REPO_THEIRS, "main", "deny", DEFAULT, 'git commit -m "wip"'),
+    (REPO_THEIRS, "main", "deny", DEFAULT, "git push origin main"),
     (REPO_DETACHED, "a detached HEAD", "ask", RULE_COMMIT, 'git commit -m "wip"'),
     (REPO_NONE, "a directory that is not a repo", "ask", RULE_COMMIT, 'git commit -m "wip"'),
 ]
@@ -536,7 +542,9 @@ for project_dir, label, expect, rule, cmd in BRANCH_CASES:
     code, out, err = run_hook("guard", payload_for(cmd), env=env_in(project_dir))
     if '"permissionDecision":"ask"' in out:
         got = "ask"
-    elif not out.strip() or "no house rule matched" in out or "mine to commit on" in out:
+    elif '"permissionDecision":"deny"' in out:
+        got = "deny"
+    elif not out.strip() or "no house rule matched" in out or '"permissionDecision":"allow"' in out:
         got = "pass"
     else:
         got = "malformed"
@@ -556,7 +564,7 @@ for project_dir, label, expect, rule, cmd in BRANCH_CASES:
 # it can fail to apply names itself.
 prompt_problems = []
 for project_dir, cmd, wanted in [
-    (REPO_THEIRS, 'git commit -m "wip"', "You are on `main`, which is yours"),
+    (REPO_THEIRS, 'git reset --hard HEAD', "`main` is the default branch"),
     (REPO_DETACHED, 'git commit -m "wip"', "HEAD is detached"),
     (REPO_NONE, 'git commit -m "wip"', "not inside a git repository"),
     (REPO_MINE, 'git -C /other/repo commit -m "x"', "names another repo"),
@@ -605,21 +613,20 @@ def _sv_case(title, ok, detail):  # commit_case is defined further down this fil
 
 
 _sv_fail = []
-for _cmd in ("git reset --hard HEAD", "git rebase -i HEAD", "git revert --no-edit HEAD", "git restore f.txt",
-             "git checkout -- f.txt"):
+for _cmd in ("git reset --hard HEAD", "git restore f.txt", "git checkout -- f.txt"):
     _got, _out = _sv_guard(_cmd)
     if _got != "pass" or "every commit on a remote" not in _out:
         _sv_fail.append("%s: %s %r" % (_cmd, _got, _out[:120]))
 _sv_case(
-    "guard: on a claude/ branch with a clean tree and every commit pushed, reset/rebase/revert/restore run unasked",
-    not _sv_fail, "; ".join(_sv_fail) or "5 commands passed, each trace names the saved-elsewhere check",
+    "guard: off the default branch with a clean tree and every commit pushed, reset/restore/checkout -- run unasked",
+    not _sv_fail, "; ".join(_sv_fail) or "3 commands passed, each trace names the saved-elsewhere check",
 )
 _sv_fail = []
-for _cmd in ("git push --force-with-lease", "git clean -fdx", "git stash drop", "git merge main", "rm f.txt"):
+for _cmd in ("git push --force-with-lease", "git clean -fdx", "git stash drop", "git branch -D other", "rm f.txt"):
     if _sv_guard(_cmd)[0] != "ask":
         _sv_fail.append(_cmd)
 _sv_case(
-    "guard: even with the work saved, force-push, clean, stash drop, merge and rm still ask",
+    "guard: even with the work saved, force-push, clean, stash drop, branch -D and rm still ask",
     not _sv_fail, "did not ask: %s" % ", ".join(_sv_fail) if _sv_fail else "all 5 asked",
 )
 with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
@@ -641,13 +648,13 @@ _sv_git("switch", "-q", "-c", "main")
 _sv_git("push", "-q", "-u", "origin", "main")
 _sv_theirs = _sv_guard("git reset --hard HEAD")
 _sv_case(
-    "guard: on aj's branch, reset asks even with a clean tree and everything pushed",
-    _sv_theirs[0] == "ask" and "not an `AjsAgent/` (or `claude/`, `ccr-`) branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
+    "guard: on the default branch, reset asks even with a clean tree and everything pushed",
+    _sv_theirs[0] == "ask" and "`main` is the default branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
 )
 
 # The exemption is a silent success path, and guard's silent paths trace by contract.
-code, out, err = run_hook("guard", payload_for("git commit -m x"), env=env_in(REPO_MINE))
-if '"systemMessage"' in out and "claude/some-topic" in out and "mine to commit on" in out:
+code, out, err = run_hook("guard", payload_for("git commit -m x"), env=verbose_env(env_in(REPO_MINE)))
+if '"systemMessage"' in out and "claude/some-topic" in out and "not the default branch" in out:
     report("PASS", "an exempted command traces the branch it was exempted on")
     print(f"          said: {json.loads(out)['systemMessage']}")
 else:
@@ -660,8 +667,8 @@ _wt = os.path.join(_FIXTURE_ROOT, "worktree")
 os.makedirs(_wt)
 with open(os.path.join(_wt, ".git"), "w", encoding="utf-8") as f:
     f.write("gitdir: %s\n" % os.path.join(REPO_MINE, ".git"))
-code, out, err = run_hook("guard", payload_for("git commit -m x"), env=env_in(_wt))
-if "mine to commit on" in out:
+code, out, err = run_hook("guard", payload_for("git commit -m x"), env=verbose_env(env_in(_wt)))
+if "not the default branch" in out:
     report("PASS", "a linked worktree resolves its branch through the gitdir: pointer")
     print("          .git as a file is followed, not mistaken for an unreadable repo")
 else:
@@ -691,7 +698,9 @@ if shutil.which("git"):
         env = env_in(project)
         env.pop("HOUSE_RULES_OWNED_BRANCHES", None)
         env.update(extra)
-        return '"permissionDecision":"ask"' in run_hook("guard", json.dumps(pl), env=env)[1]
+        out = run_hook("guard", json.dumps(pl), env=env)[1]
+        m = re.search(r'"permissionDecision":"(\w+)"', out)
+        return m.group(1) if m else "silent"
 
     _own_main = _own_branch_repo("own-main", "main")
     _own_wt = os.path.join(_FIXTURE_ROOT, "own-main-wt")
@@ -710,18 +719,90 @@ if shutil.which("git"):
         "foo off": _own_ask("git commit -m x", _own_foo),
         "foo on": _own_ask("git commit -m x", _own_foo, HOUSE_RULES_OWNED_BRANCHES="bar/, foo/"),
     }
-    _own_want = {"wt commit": False, "wt push": False, "wt force push": True, "wt merge": True,
-                 "no cwd": True, "cd into wt": False, "two cds": True, "ccr": False,
-                 "foo off": True, "foo on": False}
+    _own_res["-C wt"] = _own_ask("git -C %s commit -m x" % _own_wt, _own_main, _own_main)
+    _own_want = {"wt commit": "allow", "wt push": "allow", "wt force push": "ask", "wt merge": "allow",
+                 "no cwd": "deny", "cd into wt": "allow", "two cds": "ask", "ccr": "allow",
+                 "foo off": "allow", "foo on": "allow", "-C wt": "allow"}
     if _own_res == _own_want:
-        report("PASS", "guard judges ownership by the payload cwd: worktree, cd, ccr- and HOUSE_RULES_OWNED_BRANCHES")
-        print("          worktree commit/push allowed, force push/merge ask, missing cwd as before")
+        report("PASS", "guard judges the branch by the payload cwd, a leading cd and git -C")
+        print("          worktree commit/push/merge allowed, force push asks, main refused, two cds ask")
     else:
-        report("FAIL", "guard judges ownership by the payload cwd: worktree, cd, ccr- and HOUSE_RULES_OWNED_BRANCHES")
+        report("FAIL", "guard judges the branch by the payload cwd, a leading cd and git -C")
         print(f"          got: {_own_res}")
 else:
     report("SKIP", "guard judges ownership by the payload cwd (real git worktree)")
     print("          no git binary on PATH")
+
+# --- #198: a prompt nobody can answer is refused, not left waiting ----------------------------
+# Inside a subagent (payload agent_id) or when aj last wrote longer ago than the prompt timeout,
+# guard refuses instead of asking, and the refusal goes on the waiting-on-you list.
+_ua_dir = os.path.join(_FIXTURE_ROOT, "unattended")
+os.makedirs(_ua_dir)
+subprocess.run(["git", "init", "-q", "-b", "AjsAgent/ua", _ua_dir], check=True)
+
+
+def _ua_guard(session, extra=None, env_extra=None, tool="Bash", tool_input=None):
+    pl = {"session_id": session, "cwd": _ua_dir, "tool_name": tool,
+          "tool_input": tool_input or {"command": "rm -rf build"}}
+    pl.update(extra or {})
+    e = env_in(_ua_dir)
+    e.pop("HOUSE_RULES_PROMPT_TIMEOUT", None)
+    e.update(env_extra or {})
+    return run_hook("guardwrite" if tool == "Write" else "guard", json.dumps(pl), env=e)[1]
+
+
+def _ua_seen(session, ago):
+    p = os.path.join(tempfile.gettempdir(), "house-rules-last-seen-%s" % session)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(str(time.time() - ago))
+    atexit.register(lambda: os.path.exists(p) and os.remove(p))
+
+
+def _ua_dec(out):
+    m = re.search(r'"permissionDecision":"(\w+)"', out)
+    return m.group(1) if m else "silent"
+
+
+_ua_sub = _ua_guard("verify-ua-sub", {"agent_id": "a1"})
+_ua_sub_off = _ua_guard("verify-ua-sub-off", {"agent_id": "a1"}, {"HOUSE_RULES_PROMPT_TIMEOUT": "off"})
+_ua_sub_commit = _ua_guard("verify-ua-sub-c", {"agent_id": "a1"}, tool_input={"command": "git commit -m x"})
+with open(os.path.join(_ua_dir, "kept.txt"), "w", encoding="utf-8") as _f:
+    _f.write("a\nb\n")
+_ua_sub_write = _ua_guard("verify-ua-sub-w", {"agent_id": "a1"}, tool="Write",
+                          tool_input={"file_path": os.path.join(_ua_dir, "kept.txt"), "content": "c\n"})
+_ua_case_ok = (_ua_dec(_ua_sub) == "deny" and "inside a helper (subagent)" in _ua_sub
+               and _ua_dec(_ua_sub_off) == "ask" and _ua_dec(_ua_sub_commit) == "allow"
+               and _ua_dec(_ua_sub_write) == "deny")
+report("PASS" if _ua_case_ok else "FAIL",
+       "guard: inside a subagent a destructive step (and a full-file Write) is refused, not asked; a commit still runs")
+print("          rm %s, rm with timer off %s, commit %s, Write %s"
+      % (_ua_dec(_ua_sub), _ua_dec(_ua_sub_off), _ua_dec(_ua_sub_commit), _ua_dec(_ua_sub_write)))
+
+_ua_seen("verify-ua-away", 600)
+_ua_seen("verify-ua-here", 30)
+_ua_away = _ua_guard("verify-ua-away")
+_ua_here = _ua_guard("verify-ua-here")
+_ua_never = _ua_guard("verify-ua-never-wrote")
+report("PASS" if _ua_dec(_ua_away) == "deny" and "aj has not written for 10 minutes" in _ua_away
+       and _ua_dec(_ua_here) == "ask" and _ua_dec(_ua_never) == "ask" else "FAIL",
+       "guard: when aj last wrote over 5 minutes ago a prompt is refused; recently, or with no record, it asks")
+print("          away %s, here %s, no record %s" % (_ua_dec(_ua_away), _ua_dec(_ua_here), _ua_dec(_ua_never)))
+
+_ua_list = os.path.join(_ua_dir, ".git", "house-rules", "waiting-on-you.json")
+try:
+    _ua_entries = json.load(open(_ua_list, encoding="utf-8"))
+except (OSError, ValueError):
+    _ua_entries = []
+_ua_st = {e.get("session_id"): e.get("status") for e in _ua_entries}
+_ua_scope = run_hook("scope", json.dumps({"session_id": "verify-ua-sub", "prompt": "back now"}),
+                     env=env_in(_ua_dir))[1]
+_ua_seen_file = os.path.join(tempfile.gettempdir(), "house-rules-last-seen-verify-ua-sub")
+report("PASS" if _ua_st.get("verify-ua-sub") == "refused" and _ua_st.get("verify-ua-away") == "timed-out"
+       and "rm -rf build" in _ua_scope and os.path.isfile(_ua_seen_file) else "FAIL",
+       "guard: refusals go on the waiting-on-you list, aj's next message reports them and records when aj wrote")
+print("          statuses %r, scope reported it: %s" % (_ua_st, "rm -rf build" in _ua_scope))
+if os.path.isfile(_ua_seen_file):
+    os.remove(_ua_seen_file)
 
 # --- guard's commit-time docs-tier reminder: real git fixtures, since this path itself uses -----
 # git diff --cached, unlike the rest of guard which stays subprocess-free.
@@ -782,9 +863,8 @@ if shutil.which("git"):
             DOCSGUARD_CLAUDE_CONFIG_ONLY, "allow", False,
         ),
         (
-            "a non-owned branch commit with a staged source file gets the docs reason appended "
-            "to guard's existing prompt",
-            DOCSGUARD_MAIN_SOURCE_ONLY, "ask", True,
+            "a default-branch commit is refused before any docs reminder",
+            DOCSGUARD_MAIN_SOURCE_ONLY, "deny", False,
         ),
     ]
     for title, repo, expect_decision, expect_reminder in docsguard_cases:
@@ -795,9 +875,8 @@ if shutil.which("git"):
         if expect_decision == "allow":
             if '"permissionDecision":"ask"' in out:
                 problems.append("guard asked, expected a silent/allow decision")
-        else:
-            if '"permissionDecision":"ask"' not in out:
-                problems.append("guard did not ask, expected it to (non-owned branch always asks on a commit)")
+        elif '"permissionDecision":"deny"' not in out or "is the default branch" not in out:
+            problems.append("guard did not refuse, expected it to (the default branch refuses a commit)")
         has_reminder = "documentation goes in tiers" in out.lower() or "Documentation goes in tiers" in out
         if expect_reminder and not has_reminder:
             problems.append("no docs-tier reminder in the output, expected one")
@@ -819,7 +898,7 @@ if shutil.which("git"):
     if (
         code == 0
         and '"permissionDecision":"ask"' not in out
-        and "mine to commit on" in out
+        and "not the default branch" in out
         and "could not tell" in out
     ):
         report("PASS", "a missing git binary leaves guard's own decision unchanged, and says so")
@@ -926,7 +1005,7 @@ if shutil.which("git"):
     code, out, err = run_hook(
         "guard", payload_for('git add "unbalanced.py && git commit -m x'), env=env_in(DOCSGUARD_QUOTED_PATH)
     )
-    if code == 0 and '"permissionDecision":"ask"' not in out and "mine to commit on" in out and "could not tell" in out.lower():
+    if code == 0 and '"permissionDecision":"ask"' not in out and "not the default branch" in out and "could not tell" in out.lower():
         report("PASS", "an add statement with unbalanced quotes is a could-not-tell, not a guess")
         print(f"          {out[:200]}")
     else:
@@ -999,7 +1078,7 @@ nocmd_payload = json.dumps(
     {"session_id": "verify", "tool_name": "PowerShell", "tool_input": {"script": "git commit -m wip"}}
 )
 code, out, err = run_hook("guard", nocmd_payload, env=env_in(REPO_THEIRS))
-if '"permissionDecision":"ask"' in out and "Commit constantly on my own branches, never on theirs" in out:
+if '"permissionDecision":"deny"' in out and "is the default branch" in out:
     report("PASS", "a payload with no command field still gets checked (whole-payload fallback)")
     print("          fell back to the old behaviour rather than passing it unchecked")
 else:
@@ -2162,7 +2241,7 @@ for event, payload, _, why in trace_cases:
     if out.strip():
         quiet_failures.append(f"{event} still emitted with HOUSE_RULES_TRACE=off: {out[:80]}")
 code, out, err = run_hook(
-    "guard", json.dumps({"tool_input": {"command": "git commit -m wip"}}), env=off
+    "guard", json.dumps({"tool_input": {"command": "rm -rf build"}}), env=off
 )
 if '"permissionDecision":"ask"' not in out:
     quiet_failures.append("HOUSE_RULES_TRACE=off also silenced guard's prompt, which it must not")
@@ -3856,6 +3935,14 @@ commit_case(
     _ggd(_g10) == "deny" and _ggd(_g11) == "deny" and _ggd(_g12) == "allow",
     "out %r | %r | off %r" % (_g10[:60], _g11[:60], _g12[:60]),
 )
+_g13 = _gg(_gh + "push_files", branch="main", message="fix\n\nCommitted by AJ's agent", files=[])
+_g14 = _gg(_gh + "create_or_update_file", branch="master", message="fix", path="a", content="x")
+_g15 = _gg(_gh + "create_or_update_file", branch="AjsAgent/x", message="fix", path="a", content="x")
+commit_case(
+    "guardgithub: a file write straight to main or master is refused; one to another branch is allowed",
+    _ggd(_g13) == "deny" and "is the default branch" in _g13 and _ggd(_g14) == "deny" and _ggd(_g15) == "allow",
+    "out %r | %r | %r" % (_g13[:80], _g14[:60], _g15[:40]),
+)
 _hj = json.load(open(os.path.join(HERE, "..", "hooks", "hooks.json"), encoding="utf-8"))
 _gm = [b["matcher"] for b in _hj["hooks"]["PreToolUse"]
        if any(h["command"].endswith(" guardgithub") for h in b["hooks"])]
@@ -3885,6 +3972,7 @@ def _au_repo(name, email):
     d = _iss_repo()
     subprocess.run(["git", "config", "user.name", name], cwd=d, check=True)
     subprocess.run(["git", "config", "user.email", email], cwd=d, check=True)
+    subprocess.run(["git", "switch", "-q", "-c", "AjsAgent/author"], cwd=d, check=True)
     return d
 
 
@@ -3955,10 +4043,10 @@ for _c in ("gh issue comment 5 --body hi", 'gh issue create --title t --body b',
     if _iss_decision(_iss_guard(_c)) == "ask" and "closing an issue" in _iss_reason(_iss_guard(_c)):
         _bad.append(_c)
 commit_case("close: comment, create, label edits, reads and a commit message mentioning it are not affected", not _bad, "affected: %r" % _bad)
-_ocm = _iss_guard("git add -A && git commit -m x && gh issue close 5")
+_ocm = _iss_guard("rm old.txt && gh issue close 5")
 commit_case(
     "close: a chained command asks once with both reasons in the prompt",
-    _iss_decision(_ocm) == "ask" and "closing an issue" in _iss_reason(_ocm) and "writes history" in _iss_reason(_ocm),
+    _iss_decision(_ocm) == "ask" and "closing an issue" in _iss_reason(_ocm) and "deletes one or more files" in _iss_reason(_ocm),
     "out %r" % _ocm[:120],
 )
 
@@ -4078,10 +4166,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.59.1",
+    "issues: the rules section and its detail file exist, and the plugin is 2.60.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.59.1",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.60.0",
     "rules section + detail file + version",
 )
 
