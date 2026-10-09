@@ -414,6 +414,16 @@
     "mud_low": 0.25,
     "mud_high": 1.25,
     "ao_samples": 32,
-    "occlusion_strength": 0.55
+    "occlusion_strength": 0.55,
+    "albedo_gain": {
+      "note": "multipliers on each palette colour in the bake only, so the lit render reads at the concept sheet's flat tones (measured: breast rendered 0.67x, wings 0.8x, black 1.8x the concept)",
+      "BreastPale": 1.5,
+      "ChinWhite": 1.4,
+      "PlumageEdge": 1.3,
+      "PlumageBrown": 1.25,
+      "PrimaryDark": 1.2,
+      "ToothBone": 1.15,
+      "GooseBlack": 0.55
+    }
   }
 }

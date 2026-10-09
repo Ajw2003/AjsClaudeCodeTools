@@ -166,8 +166,9 @@ def surface_patterns(G, kind, u, v):
     return tone_sum, height_sum
 
 
-def build_shader(material, colour_hex, roughness, decal, decal_images, T):
-    """The baking shader for one material. T: the spec's "texture" block (blood and brand colours, strengths)."""
+def build_shader(material, colour_hex, roughness, decal, decal_images, T, gain=1.0):
+    """The baking shader for one material. T: the spec's "texture" block (blood and brand colours, strengths);
+    gain: this material's albedo multiplier from T["albedo_gain"]."""
     G = Graph(material)
     pattern_uv = G.node("ShaderNodeUVMap", uv_map="Pattern").outputs[0]
     shape_uv = G.node("ShaderNodeUVMap", uv_map="Shape").outputs[0]
@@ -178,7 +179,7 @@ def build_shader(material, colour_hex, roughness, decal, decal_images, T):
 
     tone, height = surface_patterns(G, kind, u, v)
     grime = G.remap(G.noise(position, 0.6, 4.0), 0.35, 0.65, T["grime_dark"], 1.05)
-    colour = G.vmath("SCALE", linear(colour_hex), scale=G.math("MULTIPLY", tone, grime))
+    colour = G.vmath("SCALE", linear(colour_hex), scale=G.math("MULTIPLY", G.math("MULTIPLY", tone, grime), gain))
     rough = roughness
 
     # mud climbing from the ground, patchy at its edge, and dark grit speckled over everything
@@ -268,7 +269,8 @@ def bake(obj, spec, out_dir, pixels):
     by_name = {m["name"]: m for m in spec["materials"]}
     for material in obj.data.materials:
         m = by_name[material.name]
-        build_shader(material, m["hex"], m["roughness"], decal, decal_images, T)
+        gain = T["albedo_gain"].get(material.name, 1.0)
+        build_shader(material, m["hex"], m["roughness"], decal, decal_images, T, gain)
 
     mesh = obj.data
     bake_uv = mesh.uv_layers.new(name="Bake")
