@@ -175,6 +175,12 @@ _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
 # Simulated spawns in this file must never leave records in the real repository's agent list.
 os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
+# The author guard (#177) reads the git identity, and a cloud container's ~/.gitconfig is Claude. Point
+# git at a fixture global config with the agent identity so these cases do not depend on the machine.
+_GIT_GLOBAL = os.path.join(_FIXTURE_ROOT, "gitconfig-global")
+with open(_GIT_GLOBAL, "w", encoding="utf-8") as _gf:
+    _gf.write("[user]\n\tname = AJ's agent\n\temail = 79066376+Ajw2003@users.noreply.github.com\n")
+os.environ["GIT_CONFIG_GLOBAL"] = _GIT_GLOBAL
 
 
 def _repo_on(name, head_line):
@@ -636,7 +642,7 @@ _sv_git("push", "-q", "-u", "origin", "main")
 _sv_theirs = _sv_guard("git reset --hard HEAD")
 _sv_case(
     "guard: on aj's branch, reset asks even with a clean tree and everything pushed",
-    _sv_theirs[0] == "ask" and "not a `claude/` branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
+    _sv_theirs[0] == "ask" and "not an `AjsAgent/` (or `claude/`) branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
 )
 
 # The exemption is a silent success path, and guard's silent paths trace by contract.
@@ -2842,8 +2848,8 @@ _, out, _ = run_hook(
 )
 _ctx = _stop_context(out)
 commit_case(
-    "Stop: the same on the user's main says to branch off to claude/<topic> first",
-    "not a claude/ branch" in _ctx and "branch off first" in _ctx and "git switch -c claude/<topic>" in _ctx,
+    "Stop: the same on the user's main says to branch off to AjsAgent/<topic> first",
+    "not an AjsAgent/ (or claude/) branch" in _ctx and "branch off first" in _ctx and "git switch -c AjsAgent/<topic>" in _ctx,
     "context: %r" % _ctx[:160],
 )
 
@@ -2926,6 +2932,15 @@ commit_case(
     "branch off now" not in out,
     "stdout: %r" % out[:160],
 )
+for _br, _owned in (("AjsAgent/x", True), ("claude/x", True), ("main", False), ("feature/x", False)):
+    _r = _commit_repo(_br, committed=["a.py"], dirty=["a.py"])
+    out = _nudge(_r, "a.py")
+    commit_case(
+        "branchnudge: `%s` is %s" % (_br, "owned (AjsAgent/ and claude/ both count), no nudge" if _owned
+                                     else "not owned, so it nudges"),
+        ("branch off now" not in out) == _owned,
+        "stdout: %r" % out[:160],
+    )
 _r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
 out = _nudge(_r, "a.py", HOUSE_RULES_COMMIT_CHECK="off")
 commit_case(
@@ -3430,7 +3445,7 @@ _ctx = _stop_context(_o)
 commit_case(
     "issues: a 5-step plan writes the gate state and the delegate note says to create the issues",
     bool(_st) and _st.get("needs_issues") is True and _st.get("plan_steps") == 5 and "5 steps" in _ctx
-    and "parent issue" in _ctx and "Claude created this" in _ctx and "in progress" in _ctx
+    and "parent issue" in _ctx and "AjsAgent created this" in _ctx and "in progress" in _ctx
     and "Claude completed this" not in _ctx,
     "state %r" % _st,
 )
@@ -3484,7 +3499,7 @@ _, _ob, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Bash", _d, comma
 commit_case("issues: Bash is never gated", _ob.strip() == "", "out %r" % _ob[:80])
 
 # -- #110: recording creations clears the gate --------------------------------------------------
-_label_cmd = 'gh issue create --title "t" --body "b" --label "Claude created this" --label bug'
+_label_cmd = 'gh issue create --title "t" --body "b" --label "AjsAgent created this" --label bug'
 _bare_cmd = 'gh issue create --title "t" --body "b" --label bug'
 
 
@@ -3498,7 +3513,7 @@ _issues_outputs.append(("unlabelled create", _ou))
 _st = _iss_state(_d)
 commit_case(
     "issues: an unlabelled `gh issue create` gets a correction note and does not count",
-    "without the `Claude created this` label" in _ou and _st["needs_issues"] is True
+    "without the `AjsAgent created this` label" in _ou and _st["needs_issues"] is True
     and _st["created"] and _st["created"][0]["labelled"] is False,
     "state %r out %r" % (_st, _ou[:100]),
 )
@@ -3515,6 +3530,16 @@ commit_case(
 )
 _, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp("Assets/Foo.cs")), _d)
 commit_case("issues: once cleared the same source Write is allowed", _oa.strip() == "", "out %r" % _oa[:80])
+_old_label_cmd = 'gh issue create --title "t" --body "b" --label "Claude created this" --label bug'
+for _lc, _nm in ((_label_cmd, "AjsAgent created this"), (_old_label_cmd, "Claude created this (old)")):
+    _dl = _iss_repo()
+    _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dl, plan=_ISS_PLAN5), _dl)
+    _iss_created(_dl, _lc, 70)
+    _stl = _iss_state(_dl)
+    commit_case(
+        "issues: a `gh issue create` with the `%s` label counts as labelled" % _nm,
+        _stl["created"] and _stl["created"][0]["labelled"] is True, "state %r" % (_stl,),
+    )
 _dn = _iss_repo()
 _, _onone, _ = _iss_created(_dn, _label_cmd, 60)
 commit_case(
@@ -3643,6 +3668,54 @@ commit_case(
     "two commands that only mention it",
 )
 
+# -- #176: cloud sessions move off claude/<name> onto AjsAgent/<name> ---------------------------------
+def _ab_repo(branch, extra_branch=None):
+    d = tempfile.mkdtemp(prefix="hr-ab-", dir=_FIXTURE_ROOT)
+    g = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run(g + ["init", "-q", "-b", branch], cwd=d, check=True)
+    subprocess.run(g + ["commit", "-q", "--allow-empty", "-m", "x"], cwd=d, check=True)
+    if extra_branch:
+        subprocess.run(["git", "branch", extra_branch], cwd=d, check=True)
+    return d
+
+
+def _ab_out(d, remote=True, **extra):
+    e = env_in(d, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV, **extra)
+    e.pop("CLAUDE_CODE_REMOTE", None)
+    if remote:
+        e["CLAUDE_CODE_REMOTE"] = "true"
+    e.pop("HOUSE_RULES_AGENT_BRANCH", None)
+    e.update(extra)
+    return run_hook("profile", "", env=e)[1]
+
+
+_ab1 = _ab_out(_ab_repo("claude/foo"))
+_ab2 = _ab_out(_ab_repo("claude/foo", "AjsAgent/foo"))
+_ab3, _ab4 = _ab_out(_ab_repo("AjsAgent/foo")), _ab_out(_ab_repo("main"))
+_ab5 = _ab_out(_ab_repo("claude/foo"), remote=False)
+_ab6 = _ab_out(_ab_repo("claude/foo"), HOUSE_RULES_AGENT_BRANCH="off")
+_ab7 = _ab_out(tempfile.mkdtemp(prefix="hr-ab-nogit-", dir=_FIXTURE_ROOT))
+commit_case(
+    "agent-branch: claude/foo is told to git switch -c AjsAgent/foo, with aj's standing permission",
+    "git switch -c AjsAgent/foo" in _ab1 and "git push -u origin AjsAgent/foo" in _ab1 and "standing permission" in _ab1,
+    "out %r" % _ab1[-420:],
+)
+commit_case(
+    "agent-branch: an existing AjsAgent/foo gets git switch AjsAgent/foo, no -c",
+    "git switch AjsAgent/foo" in _ab2 and "switch -c" not in _ab2,
+    "out %r" % _ab2[-200:],
+)
+commit_case(
+    "agent-branch: AjsAgent/foo, main, a local session, and the kill switch add no switch text",
+    all("git switch" not in o for o in (_ab3, _ab4, _ab5, _ab6)),
+    "hit idx %s" % [i for i, o in enumerate((_ab3, _ab4, _ab5, _ab6)) if "git switch" in o],
+)
+commit_case(
+    "agent-branch: outside a git repo it does not crash and says the branch was not read",
+    "AjsAgent branch check: branch not read" in _ab7 and "git switch" not in _ab7,
+    "out %r" % _ab7[-200:],
+)
+
 # -- #133: credit aj's agent, never Claude -------------------------------------------------------------
 _att_trailer = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\nEOF\n)\""
 _att_gen = "git commit -m \"feat: x\n\nGenerated with [Claude Code](https://claude.com/claude-code)\""
@@ -3677,11 +3750,133 @@ commit_case(
     _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
     "out %r | off %r" % (_oc1[:90], _off[:80]),
 )
+# -- #178: the same credit check on GitHub MCP writes ---------------------------------------------------
+def _gg(tool, env_extra=None, **tool_input):
+    e = dict(os.environ)
+    e.pop("HOUSE_RULES_ATTRIBUTION", None)
+    e.update(env_extra or {})
+    pl = json.dumps({"session_id": "verify", "tool_name": tool, "tool_input": tool_input})
+    return run_hook("guardgithub", pl, env=e)[1]
+
+
+def _ggd(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["permissionDecision"]
+    except (ValueError, KeyError, TypeError):
+        return "allow"
+
+
+_gh = "mcp__github__"
+_g1 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)")
+_g2 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nOpened by AJ's agent")
+commit_case(
+    "guardgithub: a pull request body crediting Claude is denied; crediting aj's agent is allowed",
+    _ggd(_g1) == "deny" and "pull request or issue text" in _g1 and _ggd(_g2) == "allow",
+    "out %r | %r" % (_g1[:120], _g2[:80]),
+)
+_g3 = _gg(_gh + "issue_write", method="create", title="T", body="x\n\nCo-Authored-By: Claude <a@b>")
+_g4 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nClaude-Session: https://x", files=[{"path": "a", "content": "x"}])
+_g5 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nCommitted by AJ's agent",
+          files=[{"path": "a", "content": "Co-Authored-By: Claude <noreply@anthropic.com>"}])
+commit_case(
+    "guardgithub: an issue trailer and a push_files commit message are denied; file content naming the patterns is not scanned",
+    _ggd(_g3) == "deny" and _ggd(_g4) == "deny" and "commit message" in _g4 and _ggd(_g5) == "allow",
+    "out %r | %r | %r" % (_g3[:80], _g4[:80], _g5[:80]),
+)
+_g6 = _gg(_gh + "create_branch", branch="claude/x")
+_g7 = _gg(_gh + "create_branch", branch="AjsAgent/x")
+_g8 = _gg(_gh + "create_pull_request", title="T", head="claude/x", body="Opened by AJ's agent")
+_g9 = _gg(_gh + "push_files", branch="claude/x", message="fix\n\nCommitted by AJ's agent", files=[])
+commit_case(
+    "guardgithub: a new claude/ branch (create_branch, PR head) is denied naming AjsAgent/; AjsAgent/ and a push to an existing claude/ branch are allowed",
+    _ggd(_g6) == "deny" and "AjsAgent/<topic>" in _g6 and _ggd(_g7) == "allow"
+    and _ggd(_g8) == "deny" and _ggd(_g9) == "allow",
+    "out %r | %r | %r | %r" % (_g6[:60], _g7[:40], _g8[:60], _g9[:40]),
+)
+_g10 = _gg("mcp__GitHub__create_pull_request", title="T", head="AjsAgent/x", body="Generated with [Claude Code]")
+_g11 = _gg("mcp__GitHub__create_branch", branch="claude/x")
+_g12 = _gg(_gh + "create_branch", {"HOUSE_RULES_ATTRIBUTION": "off"}, branch="claude/x")
+commit_case(
+    "guardgithub: the mcp__GitHub__ prefix is checked the same way, and HOUSE_RULES_ATTRIBUTION=off allows",
+    _ggd(_g10) == "deny" and _ggd(_g11) == "deny" and _ggd(_g12) == "allow",
+    "out %r | %r | off %r" % (_g10[:60], _g11[:60], _g12[:60]),
+)
+_hj = json.load(open(os.path.join(HERE, "..", "hooks", "hooks.json"), encoding="utf-8"))
+_gm = [b["matcher"] for b in _hj["hooks"]["PreToolUse"]
+       if any(h["command"].endswith(" guardgithub") for h in b["hooks"])]
+_names = ["create_pull_request", "update_pull_request", "issue_write", "add_issue_comment",
+          "update_issue_comment", "add_reply_to_pull_request_comment", "add_comment_to_pending_review",
+          "pull_request_review_write", "push_files", "create_or_update_file", "create_branch"]
+commit_case(
+    "guardgithub: the hooks.json matcher fully matches every GitHub write tool under both prefixes, and not a read tool",
+    len(_gm) == 1 and all(re.fullmatch(_gm[0], p + n) for p in ("mcp__github__", "mcp__GitHub__") for n in _names)
+    and not re.fullmatch(_gm[0], "mcp__github__issue_read") and not re.fullmatch(_gm[0], "mcp__GitHub__get_file_contents"),
+    "matchers %r" % (_gm,),
+)
 _opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
 commit_case(
     "attribution: the same refusal applies through the PowerShell tool",
     _iss_decision(_opw) == "deny" and "credit aj's agent" in _iss_reason(_opw),
     "out %r" % _opw[:140],
+)
+
+# -- #177: a commit authored as Claude is refused ----------
+AGENT_IDENTITY_FIX_TEXT = (
+    "git config user.name \"AJ's agent\" && git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
+)
+
+
+def _au_repo(name, email):
+    d = _iss_repo()
+    subprocess.run(["git", "config", "user.name", name], cwd=d, check=True)
+    subprocess.run(["git", "config", "user.email", email], cwd=d, check=True)
+    return d
+
+
+_AU_GOOD = ("AJ's agent", "79066376+Ajw2003@users.noreply.github.com")
+_au_bad, _au_good = _au_repo("Claude", "noreply@anthropic.com"), _au_repo(*_AU_GOOD)
+_au1 = _iss_guard("git commit -m x", _au_bad)
+_au2 = _iss_guard("git commit -m x", _au_good)
+_au3 = _iss_guard('git commit --author "Claude <noreply@anthropic.com>" -m x', _au_good)
+_au4 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=79066376+Ajw2003@users.noreply.github.com commit -m x", _au_bad)
+_au5 = _iss_guard("GIT_AUTHOR_EMAIL=noreply@anthropic.com git commit -m x", _au_good)
+_au6 = _iss_guard("git commit --author='Claudette <c@example.com>' -m x", _au_bad)
+_au7 = _iss_guard("git commit -m x", _au_bad, HOUSE_RULES_ATTRIBUTION="off")
+_au8 = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _au_bad, command="git commit -m x"), _au_bad)[1]
+commit_case(
+    "author: a Claude repo identity is refused with the repo-local fix command; AJ's agent passes",
+    _iss_decision(_au1) == "deny" and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au1) and "--global" not in _iss_reason(_au1)
+    and _iss_decision(_au2) != "deny",
+    "out %r | %r" % (_au1[:200], _au2[:80]),
+)
+commit_case(
+    "author: --author Claude and GIT_AUTHOR_EMAIL at anthropic.com are refused; inline -c identity overrides a Claude config",
+    _iss_decision(_au3) == "deny" and _iss_decision(_au5) == "deny" and _iss_decision(_au4) != "deny",
+    "out %r | %r | %r" % (_au3[:80], _au5[:80], _au4[:80]),
+)
+commit_case(
+    "author: a name merely containing claude passes, and HOUSE_RULES_ATTRIBUTION=off disables the check",
+    _iss_decision(_au6) != "deny" and _iss_decision(_au7) != "deny",
+    "out %r | %r" % (_au6[:80], _au7[:80]),
+)
+commit_case(
+    "author: the same refusal applies through the PowerShell tool",
+    _iss_decision(_au8) == "deny" and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au8),
+    "out %r" % _au8[:140],
+)
+
+
+def _au_profile(d, remote=True, **extra):
+    return _ab_out(d, remote=remote, **extra)
+
+
+_ap1 = _au_profile(_au_bad)
+_ap2, _ap3 = _au_profile(_au_good), _au_profile(_au_bad, remote=False)
+_ap4 = _au_profile(_au_bad, HOUSE_RULES_ATTRIBUTION="off")
+commit_case(
+    "author: a remote profile with a Claude identity says to run the repo-local git config; good identity, local session and kill switch add nothing",
+    "Git identity is Claude" in _ap1 and "git config user.email" in _ap1 and all("Git identity is Claude" not in o for o in (_ap2, _ap3, _ap4)),
+    "out %r" % _ap1[-260:],
 )
 
 # -- #109: gh issue close ---------------------------------------------------------------------------
@@ -3813,10 +4008,11 @@ for _name, _o in _issues_outputs:
 commit_case("issues: every new output parses as exactly one JSON object", not _multi, "; ".join(_multi) or "%d outputs checked" % len(_issues_outputs))
 
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
-# The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count.
+# The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count;
+# so is guardgithub (#178), which runs only on a GitHub MCP write.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -3827,10 +4023,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.55.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.59.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.55.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.59.0",
     "rules section + detail file + version",
 )
 
@@ -3907,7 +4103,7 @@ RESTATEMENTS = [
         ["own branch", "branch off first", "scoped to"],
         False,
         ("commit on your own branch", "scoped to those paths", "say what you committed and where",
-         "not a checkpoint", "claude/<topic>"),
+         "not a checkpoint", "AjsAgent/<topic>"),
     ),
     Restatement(
         "the branch nudge (#97)",

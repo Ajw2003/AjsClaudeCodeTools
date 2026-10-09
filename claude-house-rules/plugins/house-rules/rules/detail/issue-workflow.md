@@ -7,7 +7,7 @@ The loop, in order:
 2. Before any source edit, I create one parent issue for the plan and one child issue per step with
    `gh issue create`. Each child says `Part of #<parent>` in its body. Titles are plain language a
    non-programmer can follow. I show the user the issue numbers.
-3. Until a parent and at least one child exist (two issues with the `Claude created this` label),
+3. Until a parent and at least one child exist (two issues with the `AjsAgent created this` label),
    the `commitgate` hook refuses Write, Edit and NotebookEdit on source files. Files under `docs/`
    and `.claude/`, any `.md` file, and files outside the project stay editable.
 4. When work on a step starts I mark its issue `in progress`
@@ -19,7 +19,7 @@ The loop, in order:
    run `gh issue edit N --add-label "Claude completed this" --remove-label "in progress"` and comment
    with the merged pull request link. Commenting on or creating issues is never gated.
 
-Label rules: every issue I create carries at least one category label and `Claude created this`.
+Label rules: every issue I create carries at least one category label and `AjsAgent created this`.
 If the repo lacks that label I create it first with `gh label create`. An issue created without it
 does not count toward the gate, and the Focus Deck board ignores it.
 

@@ -85,7 +85,7 @@ subagent's worktree has its own and is not gated by the main session's plan); `c
 before its subagent logic and denies Write/Edit/NotebookEdit on source files while `needs_issues` is
 true (`docs/`, `.claude/`, any `.md`, files outside the project and the state file stay open); the
 existing Bash PostToolUse entry that runs `autosave` parses `gh issue create` output for the issue URL and
-the `Claude created this` label and clears the gate at two labelled issues; `handover` adds one Stop
+the `AjsAgent created this` label (the old `Claude created this` still counts) and clears the gate at two labelled issues; `handover` adds one Stop
 line while the gate is shut; `guard` denies a `gh pr create` whose body lacks `Refs #N` / `Part of #N` /
 `No-issue:` or pairs a closing word with an issue reference, and asks on `gh issue close`, `gh issue edit
 --state closed` and a `gh api` PATCH to closed. `issuelist` is a sixth SessionStart entry (its own, because
@@ -124,7 +124,7 @@ output closes the app's dialog once the timer has refused (#149); the refusal re
 can stay on screen.
 
 **Saved-work exemption (2.53.0, issue #153).** Patterns marked `SAVED` (`reset`, `revert`, `rebase`,
-`checkout --`, `restore`) stand down only when the checkout is on a `claude/` branch, the command names no
+`checkout --`, `restore`) stand down only when the checkout is on an `AjsAgent/` (or `claude/`) branch, the command names no
 other repo, and `work_saved_elsewhere()` reports a clean tree (`git status --porcelain -uall` empty) and no
 commit missing from every remote (`git rev-list --count HEAD --not --remotes` is 0). It runs at most once
 per command, only when such a pattern matched on my branch, with a 2-second budget; any failure is a no. A
@@ -137,6 +137,24 @@ whose text credits Claude (a `Co-Authored-By` line naming Claude or anthropic.co
 `Opened by AJ's agent`, with no email. This is the backstop: the primary mechanism is the Claude Code `attribution`
 setting, which `tools/install.py` writes into the user's settings file. Kill switch `HOUSE_RULES_ATTRIBUTION=off`.
 A `--body-file` is read; a commit `-F file` is not.
+
+**Author identity (2.58.0, issue #177).** Cloud containers ship `user.name=Claude`, which signs every commit as
+Claude whatever its message says. `_author_guard` (next to `_attribution_guard`, same kill switch) works out a
+`git commit`'s author in this order: `--author`, `-c user.name/user.email`, inline `GIT_AUTHOR_NAME/EMAIL`, then
+`git var GIT_AUTHOR_IDENT` in the payload's cwd (5 s timeout). It denies a name that is exactly `Claude` (any case) or
+an email ending `anthropic.com`, naming the fix `git config user.name "AJ's agent" && git config user.email
+"79066376+Ajw2003@users.noreply.github.com"` (repo-local). If `git var` fails it allows silently. Works through
+the PowerShell tool via `_decoded_command`.
+
+**GitHub tools (2.59.0, issue #178).** `guard` only sees shell commands, so writes through the GitHub MCP tools
+skipped the attribution check. `event_guardgithub` (own `PreToolUse` entry, matcher
+`mcp__(github|GitHub)__(create_pull_request|...|create_branch)`, eleven write tools) reads `title`, `body` and
+`message` and denies on any `_ATTRIBUTION_TEXT_RES` hit with the `ATTRIBUTION_DENY` wording ("commit message" for
+`push_files` and `create_or_update_file`, else "pull request or issue text"). It also denies a `create_branch`
+`branch` or `create_pull_request` `head` starting `claude/`, telling the agent to use `AjsAgent/<topic>`. File
+`content` is never read, and a push onto an existing `claude/` branch is allowed. Kill switch
+`HOUSE_RULES_ATTRIBUTION=off`. Unlike `guard` it fails open: an unreadable payload is a one-line `systemMessage`
+and an internal error falls to `main()`'s "hook hit an internal error" message, exit 0.
 
 **Helper tiers and the spawn cap (2.50.0, issues #110-#112).** `agents/executor.md` is retired; `scout`
 (haiku; Read, Grep, Glob), `builder` (sonnet; Read, Edit, Write, Bash, Grep, Glob) and `reviewer` (opus;
@@ -220,7 +238,13 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   profile hook's 10 s timeout in `hooks/hooks.json`. A failed probe prints `not detected
   (<reason>)`. Where `claude auth status` has no plan field (as in a cloud session) it says so
   rather than guessing. On a remote session the block is headed as the sandbox's, for Claude's
-  own checks, and points at `rules/handover-target.md` for the local build budget. Only the
+  own checks, and points at `rules/handover-target.md` for the local build budget. A remote
+  session on a `claude/<name>` branch also gets `_agent_branch_block`: an instruction to
+  `git switch -c AjsAgent/<name>` (or `git switch` to it when it already exists locally or on
+  `origin`) and to push and open PRs from there. Text only, the hook never switches;
+  `HOUSE_RULES_AGENT_BRANCH=off` disables it. A remote session whose `git var GIT_AUTHOR_IDENT` is Claude also gets
+  `_agent_identity_block`, one line telling it to run the repo-local `git config` fix before its first commit
+  (text only; nothing when the identity is fine or unreadable; `HOUSE_RULES_ATTRIBUTION=off` disables it). Only the
   fallback probes: a hand-recorded `rules/environment.md` replaces it, so hardware missing from
   that file is not re-detected. The macOS and Windows branches were written to the documented
   command shapes and not run on those systems.
@@ -263,7 +287,7 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
 - **`verify.py`'s guard/branch cases must use hand-written fixture `.git/HEAD` files, not
   whichever branch the suite happens to be run from.** Once a decision depends on branch
   ownership, a suite that inherits the developer's real branch makes the result a property of
-  the checkout: it would pass on `main`, fail on a `claude/…` branch, and agree with neither —
+  the checkout: it would pass on `main`, fail on an `AjsAgent/…` branch, and agree with neither —
   CI checks out a detached `HEAD`.
 - **Every uncertainty in branch ownership resolves to "not mine," never to "assume it's fine."**
   The user's branch, a detached `HEAD`, a directory that isn't a repo, an unreadable `HEAD` all

@@ -149,12 +149,12 @@ minutes. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
 ## Never name a local path in an issue or a pull request
 
 Issue/PR text never carries a local path — repo-relative paths, other repos as `owner/repo`
-(commands handed over still use absolute paths). See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-local-paths.md`.
+(handed-over commands use absolute paths). See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-local-paths.md`.
 
 ## A plan over three steps becomes issues; a pull request links, never closes
 
 Before code: one parent issue, one child per step (`Part of #N`), plain titles, each labelled
-`Claude created this` plus a category; a hook blocks source edits until they exist. PR bodies say
+`AjsAgent created this` plus a category; a hook blocks source edits until they exist. PR bodies say
 `Refs #N`, never Closes/Fixes/Resolves. Closing an issue always asks the user, who has tested first.
 `HOUSE_RULES_ISSUES=off` disables it. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/issue-workflow.md`.
 
@@ -168,7 +168,7 @@ paths, never finish what they started, say what/where. Credit "aj's agent", neve
 ## Never take a destructive action without checking first
 <!-- subagent -->
 
-Unasked only on my `claude/` branch with a clean tree and every commit pushed. Else, before
+Unasked only on my `AjsAgent/` branch with a clean tree and every commit pushed. Else, before
 deleting, overwriting, moving, killing, discarding, force-pushing: say what's lost, run `git status`, wait for agreement. Unanswered 5 min = no: route around it, never to
 the same effect. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
 

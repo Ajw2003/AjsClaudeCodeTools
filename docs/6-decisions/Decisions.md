@@ -7,6 +7,58 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-09 - The GitHub write tools get their own credit check, text and new branches only (#178, part of #174, 2.59.0)
+
+**Context.** The attribution checks ran only in `guard`, wired to `Bash|PowerShell`. A pull request, issue, comment or push made through the GitHub MCP tools skipped them.
+
+**Decision.** A separate `PreToolUse` entry (`guardgithub`) matched to the eleven write tools under both `mcp__github__` and `mcp__GitHub__`. It checks `title`, `body`, `message` against the existing text patterns and refuses a new `claude/` branch (`create_branch`, a PR `head`). File `content` is never scanned: this repo's own source contains the patterns, so scanning would refuse the work that maintains them. A push onto an existing `claude/` branch is allowed: old branches still get work until #182 renames them, and refusing would strand that work; only creating a new one is refused. It fails open and loud, unlike `guard`: a GitHub write is not a destructive local action, and a broken check should say so rather than stop the write.
+
+**Rejected.** Folding the tools into the `guard` matcher (different payload shape, and every shell call would pay for it). Scanning file content.
+
+**Status.** Built; `verify.py` covers both prefixes, each deny and allow, the kill switch and the matcher regex.
+
+---
+
+## 2026-10-08 - Commits are authored as AJ's agent, enforced by the guard and a session-start line (#177, part of #174, 2.58.0)
+
+**Context.** Cloud containers ship `user.name=Claude`, `user.email=noreply@anthropic.com`; 103 of 227 commits on main carry that author. The attribution guard read message text only.
+
+**Decision.** The agent's identity is `AJ's agent <79066376+Ajw2003@users.noreply.github.com>`: a GitHub noreply address attaches commits to aj's account without publishing a real email, and the account id form is the one GitHub accepts. `guard` refuses a `git commit` whose effective author is Claude or `*anthropic.com`, naming the repo-local `git config` fix. `profile` on a remote session adds one line telling the agent to run it. Both honour `HOUSE_RULES_ATTRIBUTION=off`; an unreadable identity is allowed silently.
+
+**Rejected.** The hook writing the git config itself (the issue text said "sets"): the #176 decision that hooks instruct and don't act wins. A `--global` fix: it would alter the machine's config, not the repo.
+
+**Status.** Built; `verify.py` covers repo config, `--author`, `-c`, inline `GIT_AUTHOR_EMAIL`, a name merely containing claude, the kill switch, PowerShell, and the profile line. It now points git at a fixture global config so results do not depend on the machine's own.
+
+---
+
+## 2026-10-08 - Cloud sessions move off the app's claude/ branch onto AjsAgent/ (#176, part of #174, 2.57.0)
+
+**Context.** The cloud app assigns each session a `claude/<name>` branch and tells the agent to push only there. aj decided every agent branch should be `AjsAgent/`, cloud ones included.
+
+**Decision.** `profile` (SessionStart), on a remote session whose branch starts `claude/`, tells the agent to `git switch -c AjsAgent/<name>` before its first edit (or `git switch AjsAgent/<name>` when that branch already exists locally or on `origin`), push there, and open pull requests from there. The text names aj's standing permission as overriding the app's "push only to the designated branch" line. The hook only instructs; it never switches. `HOUSE_RULES_AGENT_BRANCH=off` disables it.
+
+**Rejected.** Having the hook run `git switch` itself: hooks force, they don't act. Switching only fresh branches: switching carries existing commits along, so there is nothing to protect.
+
+**Status.** Built; `verify.py` covers `claude/foo`, an existing `AjsAgent/foo`, `AjsAgent/foo`, `main`, a local session, the kill switch, and a non-git folder.
+
+**Open.** Not yet checked in a real cloud session: whether the app's "Create PR" button and branch display follow the new branch. If they don't, the PR is opened from `AjsAgent/<name>` with the GitHub tools instead.
+
+---
+
+## 2026-10-08 - Agent branches are AjsAgent/ and the issue label is AjsAgent created this (#175, part of #174, 2.56.0)
+
+**Context.** The agent's work is credited to "aj's agent", not Claude; branch prefix and issue label still said `claude/` and `Claude created this`.
+
+**Decision.** New branches are `AjsAgent/<topic>` and new issues carry `AjsAgent created this`; every message and rules file names the new forms. `OWNED_BRANCH_PREFIXES` in `hook.py` is `("AjsAgent/", "claude/")` and the issue gate also accepts the old label (`ISSUES_LABEL_OLD`).
+
+**Rejected.** Dropping the old names: the cloud app still creates `claude/<name>` branches, 56 old ones exist, and a plan already in flight has old-labelled issues that must not be blocked.
+
+**Status.** Built; `verify.py` cases cover both prefixes, a non-owned branch, and both labels. Injected rules stay under the 9,700 margin.
+
+**Consequence.** Old names are accepted but no longer suggested. Guard attribution text, SessionStart branch switching, git author and MCP matchers are #176-#179.
+
+---
+
 ## 2026-10-07 - Destructive git steps run unasked only on my branch, and only when the work is saved elsewhere (#153, 2.53.0)
 
 **Context.** aj: "destructive actions are permitted only on a Claude created branch and only if the work already is saved somewhere else the destructive action would not affect." Asked whether "otherwise" meant ask or never, aj chose ask as today; asked whether `guard` should enforce it, aj chose rule text plus `guard`.

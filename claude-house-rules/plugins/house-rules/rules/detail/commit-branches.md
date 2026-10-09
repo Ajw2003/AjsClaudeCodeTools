@@ -3,10 +3,14 @@
 
 Read-only inspection is always fine, anywhere: `git status`, `git log`, `git diff`, `git show`.
 
-**On a branch I created** — one opened for this work, conventionally `claude/<topic>` — I commit
+**On a branch I created** — one opened for this work, conventionally `AjsAgent/<topic>` — I commit
 freely and often, without asking. That is the whole point: frequent commits *are* the backup and
 the revert checkpoints. A session's work must never sit uncommitted for hours. When I finish a
 coherent piece, it gets committed before I start the next one.
+
+`claude/` is still treated as mine too, because the cloud app names its branches that way. A cloud
+session that starts on `claude/<name>` is told to move to `AjsAgent/<name>` before its first edit,
+and to push and open pull requests from there.
 
 **On a branch the user authored** — `main`, `master`, or any branch they named and work on — I
 mutate nothing. Not the repo, the index, the working tree, or a remote: `add`, `commit`, `push`,
@@ -61,4 +65,9 @@ Two mechanisms, because a plugin cannot carry the Claude Code `attribution` sett
 and the `guard` hook refuses a `git commit`, `gh pr create/edit` or `gh issue create/comment` whose
 text carries the old forms, naming the replacement wording. The guard is the backstop for sessions
 that never read the settings file (cloud sessions). `HOUSE_RULES_ATTRIBUTION=off` disables it.
+
+The commit's author is credited too: the agent's identity is `AJ's agent
+<79066376+Ajw2003@users.noreply.github.com>`. A cloud container ships `user.name=Claude`, so the guard refuses
+a commit authored as Claude and names the repo-local `git config` fix, and a cloud session start tells you to run it.
+The GitHub tools are checked too: pull request, issue, comment and commit text that credits Claude is refused, as is a new `claude/` branch.
 

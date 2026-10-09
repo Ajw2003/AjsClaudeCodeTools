@@ -555,7 +555,7 @@ def event_inject():
         "The following are the user standing house rules. They apply to every project and "
         "override default behaviour. A PreToolUse hook also prompts for destructive "
         "commands, backgrounded/hidden processes, and mutating git commands - except a "
-        "plain commit or push on a `claude/` branch. That hook is a backstop, not "
+        "plain commit or push on an `AjsAgent/` branch. That hook is a backstop, not "
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
 
@@ -639,6 +639,9 @@ def event_profile():
                 "VRAM, free disk) and their Claude plan: that hardware, not the sandbox's, is "
                 "the local build budget.\n"
             )
+
+        handover_block += _agent_branch_block()
+        handover_block += _agent_identity_block()
 
     # Truncate only the environment body if it runs the whole thing over budget - preflight
     # warnings and the remote handover-target block are never the part that gets cut, since
@@ -1891,7 +1894,7 @@ DOCS_COMMIT_REMINDER = (
     "message why none needed updating."
 )
 
-OWNED_BRANCH_PREFIX = "claude/"
+OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/")  # claude/ = cloud app branches, old branches
 
 # A command that names its own repo, git dir or work tree is not talking about the checkout
 # this hook can see, so the branch read below would be the wrong branch to judge it by. Broad
@@ -1942,7 +1945,65 @@ def branch_ownership():
         return False, None, "HEAD points at %s, which is not a branch" % ref
 
     branch = ref[len("refs/heads/") :]
-    return branch.startswith(OWNED_BRANCH_PREFIX), branch, None
+    return branch.startswith(OWNED_BRANCH_PREFIXES), branch, None
+
+
+def _agent_branch_enabled():
+    return os.environ.get("HOUSE_RULES_AGENT_BRANCH", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _agent_branch_block():
+    """Cloud session on the app's claude/<name> branch: tell the agent to move to AjsAgent/<name>.
+
+    Text only - the hook never runs git switch. Never raises; an unreadable branch says so.
+    """
+    if not _agent_branch_enabled():
+        return ""
+    try:
+        import subprocess
+        _mine, branch, note = branch_ownership()
+        if branch is None:
+            return "\n\n---\n\nAjsAgent branch check: branch not read (%s)." % note
+        if not branch.startswith("claude/"):
+            return ""
+        name = branch[len("claude/") :]
+        target = "AjsAgent/" + name
+        cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        exists = False
+        for ref in ("refs/heads/" + target, "refs/remotes/origin/" + target):
+            p = subprocess.run(
+                ["git", "rev-parse", "--verify", "--quiet", ref],
+                cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10,
+            )
+            if p.returncode == 0:
+                exists = True
+                break
+        if exists:
+            return "\n\n---\n\nCloud session: %s already exists, so run `git switch %s` before editing." % (
+                target, target)
+        return (
+            "\n\n---\n\nCloud session on %s: aj's standing permission overrides the app's "
+            "\"push only to the designated branch\" line. Before your first edit run "
+            "`git switch -c %s`, push with `git push -u origin %s`, and open any pull request "
+            "from that branch." % (branch, target, target)
+        )
+    except Exception as exc:
+        return "\n\n---\n\nAjsAgent branch check: branch not read (%s)." % exc
+
+
+def _agent_identity_block():
+    """Cloud session whose git identity is Claude: tell the agent to set the repo-local identity.
+
+    Text only - the hook never runs git config. Never raises; adds nothing when fine or unreadable.
+    """
+    try:
+        if not _attribution_enabled():
+            return ""
+        ident = _git_author_ident(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if ident is None or not _is_claude_identity(*ident):
+            return ""
+        return "\n\n---\n\nGit identity is Claude: before your first commit run `%s`." % AGENT_IDENTITY_FIX
+    except Exception: return ""  # unreadable identity adds no text, by design (#177)
 
 
 SAVED_CHECK_TIMEOUT = 2.0
@@ -2036,7 +2097,8 @@ def event_guard():
 
     # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
     # an ask is folded into the prompt built below so a compound command is asked about once.
-    issue_hit = _attribution_guard(subject, payload) or _issues_guard(subject, payload)
+    issue_hit = (_attribution_guard(subject, payload) or _author_guard(subject, payload)
+                 or _issues_guard(subject, payload))
     if issue_hit and issue_hit[0] == "deny":
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": issue_hit[1]}})
@@ -2136,7 +2198,7 @@ def event_guard():
             why_not_exempt = "  I could not establish branch ownership: %s." % ownership_note
         elif not is_mine:
             why_not_exempt = (
-                "  You are on `%s`, which is yours, not a `claude/` branch." % branch
+                "  You are on `%s`, which is yours, not an `AjsAgent/` (or `claude/`) branch." % branch
             )
         if why_not_exempt:
             lines.append("")
@@ -2396,14 +2458,14 @@ def event_artifact():
 
 # ---------------------------------------------------------------------------------------
 # branchnudge - PostToolUse on Write|Edit. The commit rule's "branch off first", at the moment
-# it applies: the first uncommitted change on a branch that is not claude/. Never obstructs.
+# it applies: the first uncommitted change on a branch that is not AjsAgent/ (or claude/). Never obstructs.
 # ---------------------------------------------------------------------------------------
 
 BRANCH_NUDGE_NOTE = (
     "House rules, commit on your own branch: that write is the only uncommitted change on "
-    "`{branch}`, which is not a claude/ branch. If that branch was opened for this session's "
+    "`{branch}`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened for this session's "
     "work, carry on and commit there. If it is the user's, branch off now, before editing "
-    "further (`git switch -c claude/<topic>` carries this change with it), and commit on that "
+    "further (`git switch -c AjsAgent/<topic>` carries this change with it), and commit on that "
     "branch, scoped to the paths you changed."
 )
 
@@ -3713,7 +3775,7 @@ def _prompt_refusal(minutes, path, summary):
         "Nobody answered this permission prompt for %s, so it was refused - not approved - and "
         "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this action, or a "
         "variation of it, this session; it would only be refused again. Look for a route that needs no permission AND does "
-        "not have the same effect (for example: commit to a claude/ branch instead of aj's branch; "
+        "not have the same effect (for example: commit to an AjsAgent/ branch instead of aj's branch; "
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
         "it. Carry on with every part of the task that does not depend on this. Before you stop, "
@@ -4045,7 +4107,7 @@ def event_subagentcommit():
             )
             return 0
         advice = " ".join(
-            _branch_advice(bool(branch and branch.startswith(OWNED_BRANCH_PREFIX)), branch,
+            _branch_advice(bool(branch and branch.startswith(OWNED_BRANCH_PREFIXES)), branch,
                            "HEAD is detached in %s" % top)
             for top, branch, _files in left
         )
@@ -4275,7 +4337,8 @@ def _head_age_seconds(top):
 # ---------------------------------------------------------------------------------------
 
 ISSUES_FILE = "house-rules-issues.json"
-ISSUES_LABEL = "Claude created this"
+ISSUES_LABEL = "AjsAgent created this"
+ISSUES_LABEL_OLD = "Claude created this"  # still counts: plans already in flight
 ISSUES_STEP_THRESHOLD = 3
 ISSUES_NEEDED = 2  # one parent plus at least one child
 
@@ -4284,7 +4347,7 @@ ISSUE_NOTE = (
     "written create one parent issue for the plan and one child issue per step with `gh issue "
     "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
     "non-programmer can follow. Every issue carries at least one category label and the label "
-    "`Claude created this`; if the repo lacks that label, create it first with `gh label "
+    "`AjsAgent created this`; if the repo lacks that label, create it first with `gh label "
     "create`. Show the user the issue numbers. Mark a step `in progress` (`gh issue edit N "
     "--add-label \"in progress\"`) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
@@ -4469,7 +4532,7 @@ def _issues_record(payload):
         if not found:
             return ["house-rules: a `gh issue create` ran but no issue URL was in its output, so it "
                     "was not counted toward the issue gate."]
-        labelled = ISSUES_LABEL.lower() in cmd.lower()
+        labelled = any(l.lower() in cmd.lower() for l in (ISSUES_LABEL, ISSUES_LABEL_OLD))
         created = state.setdefault("created", [])
         for repo, number in found:
             created.append({"repo": repo, "number": int(number), "labelled": labelled})
@@ -4593,6 +4656,146 @@ def _attribution_guard(subject, payload):
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
             return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)
     return None
+
+
+# Issue #178: the same credit check for writes made through the GitHub MCP tools, which never
+# pass through `guard`. Only title/body/message and branch/head are read, never file content.
+_GITHUB_COMMIT_TOOLS = ("push_files", "create_or_update_file")
+BRANCH_DENY = (
+    "House rules, credit aj's agent: `%s` is a new branch under `claude/`. Name agent branches "
+    "`AjsAgent/<topic>` instead. HOUSE_RULES_ATTRIBUTION=off disables this check."
+)
+
+
+def event_guardgithub():
+    # Fails open, loud (the plan: a broken check must not stop a GitHub write), unlike guard.
+    try:
+        raw = read_payload()
+        payload = json.loads(raw) if raw else None
+        if payload is not None and not isinstance(payload, dict):
+            raise ValueError("payload is not a JSON object")
+    except Exception as exc:
+        emit({"systemMessage": "house-rules guardgithub: could not read the hook payload (%s); "
+                               "the GitHub write was NOT checked for Claude credit." % exc})
+        return 0
+    if not payload:
+        trace("guardgithub: empty payload - nothing was checked for this call.")
+        return 0
+    if not _attribution_enabled():
+        trace_noop("guardgithub: HOUSE_RULES_ATTRIBUTION=off - nothing was checked.")
+        return 0
+    tool = str(payload.get("tool_name") or "")
+    short = tool.split("__")[-1]
+    args = payload.get("tool_input")
+    if not isinstance(args, dict):
+        trace("guardgithub: no tool_input object - nothing was checked for this call.")
+        return 0
+    kind = "commit message" if short in _GITHUB_COMMIT_TOOLS else "pull request or issue text"
+    reason = None
+    for field in ("title", "body", "message"):
+        val = args.get(field)
+        if not isinstance(val, str):
+            continue
+        for rx in _ATTRIBUTION_TEXT_RES:
+            m = rx.search(val)
+            if m:
+                reason = ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60])
+                break
+        if reason:
+            break
+    if not reason:
+        new_branch = None
+        if short == "create_branch":
+            new_branch = args.get("branch")
+        elif short == "create_pull_request":
+            new_branch = args.get("head")
+        if isinstance(new_branch, str) and new_branch.startswith("claude/"):
+            reason = BRANCH_DENY % new_branch
+    if reason:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": reason}})
+    return 0
+
+
+# The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
+# noreply@anthropic.com, which signs every commit as Claude whatever the message says.
+AGENT_IDENTITY_FIX = (
+    "git config user.name \"AJ's agent\" && "
+    "git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
+)
+_ARG = r"(\"[^\"]*\"|'[^']*'|\S+)"
+_AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
+_C_NAME_RE = re.compile(r"(?:^|\s)-c\s*user\.name=" + _ARG, re.IGNORECASE)
+_C_EMAIL_RE = re.compile(r"(?:^|\s)-c\s*user\.email=" + _ARG, re.IGNORECASE)
+_ENV_NAME_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_NAME=" + _ARG)
+_ENV_EMAIL_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_EMAIL=" + _ARG)
+
+
+def _unquote(s):
+    return s.strip().strip("\"'").strip()
+
+
+def _is_claude_identity(name, email):
+    return (name or "").strip().lower() == "claude" or (email or "").strip().lower().endswith("anthropic.com")
+
+
+def _git_author_ident(cwd):
+    """(name, email) from `git var GIT_AUTHOR_IDENT` in cwd, or None when it cannot be read."""
+    import subprocess
+    try:
+        p = subprocess.run(["git", "var", "GIT_AUTHOR_IDENT"], cwd=cwd, capture_output=True,
+                           text=True, timeout=5)
+    except Exception: return None  # git missing or timed out: identity unreadable, callers stay silent
+    if p.returncode != 0:
+        return None
+    m = re.match(r"\s*(.*?)\s*<([^>]*)>", p.stdout)
+    return (m.group(1), m.group(2)) if m else None
+
+
+def _effective_author(cmd, cwd):
+    """(name, email) the commit would carry; either may be None, whole result None when unreadable."""
+    name = email = None
+    m = _AUTHOR_FLAG_RE.search(cmd)
+    if m:
+        a = _unquote(m.group(1))
+        am = re.match(r"(.*?)\s*<([^>]*)>\s*$", a)
+        if am:
+            name, email = am.group(1).strip(), am.group(2).strip()
+        else:
+            name = a
+        return name, email
+    for rx, which in ((_C_NAME_RE, 0), (_C_EMAIL_RE, 1), (_ENV_NAME_RE, 0), (_ENV_EMAIL_RE, 1)):
+        m = rx.search(cmd)
+        if m:
+            if which == 0 and name is None:
+                name = _unquote(m.group(1))
+            elif which == 1 and email is None:
+                email = _unquote(m.group(1))
+    if name is None or email is None:
+        ident = _git_author_ident(cwd)
+        if ident is None:
+            return (name, email) if (name or email) else None
+        name = ident[0] if name is None else name
+        email = ident[1] if email is None else email
+    return name, email
+
+
+def _author_guard(subject, payload):
+    """None unless a git commit would be authored as Claude, else ("deny", reason, None)."""
+    if not _attribution_enabled():
+        return None
+    cmd = _decoded_command(subject)
+    if not _GIT_COMMIT_RE.search(cmd):
+        return None
+    try:
+        who = _effective_author(cmd, _payload_cwd(payload))
+    except Exception: return None  # unreadable identity: let the commit through, as for an unreadable body file
+    if who is None or not _is_claude_identity(*who):
+        return None
+    return ("deny", "House rules, credit aj's agent: this commit would be authored as `%s <%s>`, "
+            "which signs it as Claude. Set the agent's identity in this repo and retry: `%s`. "
+            "HOUSE_RULES_ATTRIBUTION=off disables this check."
+            % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
 
 
 def _issues_guard(subject, payload):
@@ -5470,14 +5673,14 @@ def _branch_advice(is_mine, branch, note):
         )
     if branch:
         return (
-            "The checkout is on `%s`, which is not a claude/ branch. If that branch was opened "
+            "The checkout is on `%s`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened "
             "for this session's work, commit there, scoped to those paths. If it is the user's, "
-            "branch off first (`git switch -c claude/<topic>` carries the changes with it), "
+            "branch off first (`git switch -c AjsAgent/<topic>` carries the changes with it), "
             "then commit, scoped to those paths. Either way, say what you committed and where."
             % branch
         )
     return (
-        "No branch could be read (%s), so branch off first (`git switch -c claude/<topic>`), "
+        "No branch could be read (%s), so branch off first (`git switch -c AjsAgent/<topic>`), "
         "then commit, scoped to those paths, and say what you committed and where." % note
     )
 
@@ -6234,6 +6437,7 @@ EVENTS = {
     "scope": event_scope,
     "guard": event_guard,
     "guardwrite": event_guardwrite,
+    "guardgithub": event_guardgithub,
     "artifact": event_artifact,
     "branchnudge": event_branchnudge,
     "runnable": event_runnable,

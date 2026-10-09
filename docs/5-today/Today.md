@@ -1,4 +1,19 @@
-# Today — 2026-10-08
+# Today — 2026-10-09
+
+GitHub tools, plugin 2.59.0 (issue #178): pull requests, issues, comments and pushes made through the GitHub tools
+now get the same check as shell commands. Text that credits Claude is refused, and so is creating a new `claude/`
+branch (use `AjsAgent/<name>`). File contents are not read, and pushing to an existing `claude/` branch is still
+allowed. Checked with the test suite and a simulated call, not yet in a real session.
+
+Commit author, plugin 2.58.0 (issue #177): cloud containers sign commits as "Claude", so the guard now refuses
+a commit authored as Claude (or an anthropic.com email) and says the one command that fixes it, and a cloud session
+is told at start to run it. The agent's identity is "AJ's agent" with your GitHub noreply address. Not yet tried in
+a real cloud session.
+
+Cloud branches, plugin 2.57.0 (issue #176): a cloud session that the app starts on a `claude/<name>`
+branch is now told to move to `AjsAgent/<name>` before its first edit, and to push and open pull
+requests from there. Still to check in a real cloud session: whether the app's own "Create PR"
+button follows the new branch.
 
 Prompt timer, live test on the phone app: the timer refused an unanswered prompt after exactly 5 minutes and
 the refused action showed on your next message. The house-rules delete prompt reaches you as a real dialog.
@@ -14,7 +29,7 @@ actually ran is no longer recorded as timed out. Still open: the app may keep sh
 already refused (#149), which needs checking on the desktop app.
 
 Destructive steps (issue #153, same release): Claude may now reset, rebase, revert or restore without asking
-only on its own `claude/` branch, and only when nothing is uncommitted and every commit is already pushed, so
+only on its own `AjsAgent/` (or `claude/`) branch, and only when nothing is uncommitted and every commit is already pushed, so
 nothing can be lost. Anywhere else it asks you, as before. Force-push, `git clean`, dropping a stash and
 deleting files always ask.
 

@@ -68,7 +68,7 @@ Findings 4-8 of that plan are follow-ups in the Roadmap.
 
 2.49.0 (2026-09-30, #108-#110) adds the issue workflow: `delegate` counts a plan's steps and over
 three sets an issue gate, `commitgate` refuses source edits until a parent and a child issue labelled
-`Claude created this` are recorded, `guard` denies a `gh pr create` without `Refs #N` or with a
+`AjsAgent created this` (or the older `Claude created this`) are recorded, `guard` denies a `gh pr create` without `Refs #N` or with a
 closing word and always asks on `gh issue close`, and a new `issuelist` SessionStart entry lists open
 issues. Verified by `verify.py` (new cases driving real throwaway repos with a stub `gh`) and by the
 same call sequence replayed through `run.sh` in a scratch clone of PlunderSpell and in this repo. Not
@@ -90,7 +90,7 @@ timed; after one timeout, later prompts in that session are refused at once unti
 `promptran` hook stops the timer when the action actually ran, and reports one recorded as timed out that ran
 anyway. Verified by `verify.py` (562 checks; 7 new). Not verified: the desktop app's stale dialog (#149) and a
 real session (#147). The same release (#153) lets `reset`/`revert`/`rebase`/`checkout --`/`restore` run unasked
-on a `claude/` branch only when the tree is clean and every commit is on a remote; everything else still asks.
+on an `AjsAgent/` (or `claude/`) branch only when the tree is clean and every commit is on a remote; everything else still asks.
 Verified by `verify.py` against a real repo with a local remote.
 
 2.52.0 (2026-10-04, #142-#146) adds `prompttimer`: a permission prompt nobody answers for 5 minutes is
@@ -168,6 +168,16 @@ invocation.
 
 ## Cross-cutting issues that belong to no milestone
 
+- **Agent attribution everywhere (#174, planned 2026-10-08).** Credit "aj's agent" and `AjsAgent/`
+  branches in every own repo; old `claude/` branches renamed, no history rewrite. Plan:
+  [`docs/plans/2026-10-08-agent-attribution-everywhere.md`](../plans/2026-10-08-agent-attribution-everywhere.md).
+  #175 is built (2.56.0): owned branches are `AjsAgent/` (`claude/` still recognised) and the issue
+  label is `AjsAgent created this` (`Claude created this` still counts). #176 is built (2.57.0): a
+  cloud session on `claude/<name>` is told at start to move to `AjsAgent/<name>`; whether the app's
+  own PR button follows the new branch is still unchecked. #177 is built (2.58.0): `guard` refuses a
+  commit authored as Claude and session start tells a cloud session to set the repo-local identity.
+  #178 is built (2.59.0): the GitHub write tools get the same credit check and refuse a new
+  `claude/` branch. Not built: #179 cloud settings, #180 Focus Deck label, #181-#182 retroactive report and renames.
 - **[`docs/architecture-backlog.md`](../architecture-backlog.md)** — seven open refactor candidates
   against `hook.py`/`verify.py` (deduplicating nine restatement checks, unifying the three
   places the failure-mode contract is stated, one open item about agent frontmatter fields
