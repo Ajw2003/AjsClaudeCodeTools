@@ -294,3 +294,12 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   fall through to a prompt. A change that adds a new "can't tell" case must route it the same
   way, not default it open.
   <!-- ref:d2a4 -->
+- **Ownership is judged where the command runs, not at the project root.** `branch_ownership(start)`
+  gets the PreToolUse payload's `cwd` (`_command_dir`), falling back to `CLAUDE_PROJECT_DIR`, then
+  `getcwd()`. A subagent with `isolation: "worktree"` runs in `.claude/worktrees/agent-<id>/` on its own
+  `AjsAgent/` branch while `CLAUDE_PROJECT_DIR` stays the main checkout; reading the project root judged
+  every such commit as "theirs" and prompted (timed out and refused when aj was away). A linked
+  worktree's `.git` is a file; `_git_dir` follows it to the worktree's own `HEAD`. A lone leading
+  `cd <dir> &&` moves the judged directory; any other `cd`/`pushd`, or a `cd` that does not resolve,
+  withholds the exemption (same path as `-C`). Owned prefixes are `AjsAgent/`, `claude/`, `ccr-`
+  (cloud sessions) plus `HOUSE_RULES_OWNED_BRANCHES` (comma-separated extras, never replacing).

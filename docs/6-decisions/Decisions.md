@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-09 - Branch ownership is judged from the payload cwd; `ccr-` branches are owned (2.59.1)
+
+**Context.** A worktree subagent's commits on its own `AjsAgent/` branch were prompted, because `branch_ownership()` read `CLAUDE_PROJECT_DIR` (the main checkout, on a non-owned branch).
+**Decision.** Judge from the payload `cwd` (then `CLAUDE_PROJECT_DIR`, then `getcwd()`), honour one leading `cd <dir> &&`, add `ccr-` as an owned prefix and `HOUSE_RULES_OWNED_BRANCHES` for extras. Exemption stays plain commit and plain push only; `-C`/`--git-dir`, other `cd`s, force push, merge and the rest still prompt.
+**Rejected.** Exempting by branch name regardless of cwd (would trust the wrong checkout); parsing arbitrary `cd` chains (unsafe, a wrong guess widens the exemption).
+**Status.** Current. Mechanism: docs/4-systems/hook-engine.md, Traps.
+
+---
+
 ## 2026-10-09 - The GitHub write tools get their own credit check, text and new branches only (#178, part of #174, 2.59.0)
 
 **Context.** The attribution checks ran only in `guard`, wired to `Bash|PowerShell`. A pull request, issue, comment or push made through the GitHub MCP tools skipped them.

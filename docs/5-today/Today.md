@@ -1,5 +1,9 @@
 # Today — 2026-10-09
 
+Guard branch ownership, plugin 2.59.1: a commit or push is now judged on the branch of the directory it runs in, so a
+worktree subagent on its own `AjsAgent/` branch is no longer prompted. `ccr-` cloud-session branches count as yours,
+and `HOUSE_RULES_OWNED_BRANCHES=foo/,bar-` adds more. Force push, merge and the rest still ask.
+
 GitHub tools, plugin 2.59.0 (issue #178): pull requests, issues, comments and pushes made through the GitHub tools
 now get the same check as shell commands. Text that credits Claude is refused, and so is creating a new `claude/`
 branch (use `AjsAgent/<name>`). File contents are not read, and pushing to an existing `claude/` branch is still
