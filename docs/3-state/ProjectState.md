@@ -136,6 +136,10 @@ budget) in [`art/goose/`](../../art/goose/README.md), from a prompt rather than 
 The concept sheet is drawn by code from the same design module the model is built from, so sheet and
 model share every number. Three review passes, recorded beside the scythe's. Again the gate did not
 run (plugin not installed in the session). No rig or clips yet (issue #183).
+Restyled the same day toward Bloodborne at the user's request: the 64 glowing eyes and six
+tentacles are gone (one small dark eye a side per head), palette moved to soot, ash, grimy bone
+and dried blood with no emission, bare ribs through the flanks, rattier feathers, a blood stain
+round the breast maw. Now 124,068 tris. Passes 4-6 recorded.
 
 ## 4. Distribution & install tooling — built and verified
 

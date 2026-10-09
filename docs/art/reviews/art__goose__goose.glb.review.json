@@ -2,6 +2,6 @@
   "model": "art/goose/goose.glb",
   "sheet": "docs/art/reviews/goose-review.png",
   "verdict": "pass",
-  "seen": "Pass 3 vs concept: three-headed S-neck silhouette, raised wings with bare finger bones, breast maw with tooth ring, gaping toothed beaks with tongues, chinstraps, glowing slit-pupil eyes, cupped black tail and arched tentacle sprawl all match; 189596 tris under 200k; 5.12 m to quill tips against 1.8 m human. Fixed over passes: barcode flank bars, washed-out over-dense eyes, stilt tentacles, needle tail, square feather tips, ground dip. Known gaps: side-on the near tentacles still read leg-like; flat materials, no baked texture; no rig.",
-  "date": "2026-10-09T01:48:27+0000"
+  "seen": "Pass 6 (Bloodborne restyle), renders checked full size: all 64 glowing eyes and the six tentacles are gone; each head keeps one small dark sunken eye; palette is soot, ash, grimy bone, dried blood with no emission; five dull ribs break each flank; feathers more ragged; blood is a ragged stain round the breast maw (pass 5 stripes read as tribal paint, replaced). Gaps: stain edge is blocky (per-face paint); the concept's circle-stack drawer paints the whole breast disc red in the front view, the model does not. Same build for glb/fbx/blend; sheet rendered from the glb.",
+  "date": "2026-10-09T03:16:00+0000"
 }

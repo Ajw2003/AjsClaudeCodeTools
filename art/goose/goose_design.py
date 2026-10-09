@@ -7,7 +7,7 @@ from the same numbers and cannot disagree. Metres; +Z up; the goose faces -Y.
 A part is a dict with a "kind":
   "loft"      rings of vertices skinned into a closed shell (tubes, the body, cones, feathers, webs),
               with per-face materials;
-  "ellipsoid" a UV sphere stretched along three axes (eyes, pupils, suckers).
+  "ellipsoid" a UV sphere stretched along three axes (eyes, knuckles, the maw's throat).
 Every loft also carries "draw": how the concept sheet should draw it (a "tube" of circles, or a
 flat "outline" polygon).
 """
@@ -180,19 +180,11 @@ def ellipsoid(name, centre, axes, radii, material, segments=(16, 10)):
 
 
 def eye(name, point, normal, radius, up_hint=UP):
-    """A glowing eyeball half sunk into the surface, a slit pupil and a fleshy lid ring."""
+    """A small wet dark eye sunk deep in its socket: it should catch a highlight, never glow."""
     up = perpendicular(normal, up_hint)
     side = cross(normal, up)
-    parts = [ellipsoid(name + "_ball", add(point, mul(normal, radius * 0.25)), (normal, up, side),
-                       (radius, radius, radius), "EyeGlow", (14, 9)),
-             ellipsoid(name + "_pupil", add(point, mul(normal, radius * 1.17)), (normal, up, side),
-                       (radius * 0.12, radius * 0.62, radius * 0.17), "PupilBlack", (10, 6))]
-    lid_centre = add(point, mul(normal, radius * 0.55))
-    ring = [combine((lid_centre, 1), (up, radius * 0.98 * math.cos(2 * math.pi * k / 12)),
-                    (side, radius * 0.98 * math.sin(2 * math.pi * k / 12))) for k in range(12)]
-    parts.append(tube(name + "_lid", ring, [radius * 0.24] * 12, "FleshViolet", step=radius * 0.45,
-                      segments=6, ref=normal, closed=True))
-    return parts
+    return [ellipsoid(name, add(point, mul(normal, -radius * 0.35)), (normal, up, side),
+                      (radius * 0.8, radius, radius * 1.1), "EyeDark", (12, 8))]
 
 
 def feather(name, root, direction, plane_normal, length_m, width, material, rng, curl=0.08,
@@ -239,6 +231,11 @@ def body_paint(t, a, centre):
     if around > 128 and y > -0.35:
         return "ChinWhite"
     if around > 62 and y < -0.42:  # straight seam: a curved one stair-steps on the face grid
+        # a dried-blood stain spreading round the maw (y -1.3, underneath), with a ragged wobbling edge
+        spread = math.hypot((y + 1.30) / 0.32, (around - 180) / 38)
+        edge = 1.0 + 0.30 * math.sin(math.radians(a) * 7) * math.cos(y * 11) + 0.15 * math.sin(math.radians(a) * 17)
+        if spread < edge:
+            return "MawRed"
         return "BreastPale"
     phase = ((y + 3.0) / 0.14) % 1.0
     if 40 < around < 118 and phase < 0.28:  # narrow pale feather-edge bars on the flanks
@@ -253,7 +250,7 @@ def build_body(D):
 
 
 def build_head(prefix, spec_head, rng, sign=1):
-    """A goose head on a neck end: crown, chinstrap, three eyes a side, a gaping toothed beak, a spiked tongue."""
+    """A goose head on a neck end: crown, chinstrap, one sunken eye a side, a gaping toothed beak, a spiked tongue."""
     s = spec_head["scale"]
     base, f = tuple(spec_head["base"]), norm(spec_head["dir"])
     u = perpendicular(f, UP)
@@ -274,10 +271,9 @@ def build_head(prefix, spec_head, rng, sign=1):
                 step=0.022 * s, segments=36, ref=u, paint=chinstrap)
     parts.append(head)
 
-    for k, (along, a) in enumerate([(0.27, 55), (0.19, 47), (0.32, 72)]):
-        for a_side in (a, 360 - a):
-            p, n, _ = surface(head, (along + 0.10) / 0.50, a_side)
-            parts += eye(f"{prefix}_eye{k}_{a_side}", p, n, (0.042 - 0.006 * k) * s, u)
+    for a_side, tag in ((60, "R"), (300, "L")):
+        p, n, _ = surface(head, (0.27 + 0.10) / 0.50, a_side)
+        parts += eye(f"{prefix}_eye_{tag}", p, n, 0.034 * s, u)
 
     for k in range(5):  # crest of quills behind the head
         a = -40 + 20 * k
@@ -336,22 +332,11 @@ def build_head(prefix, spec_head, rng, sign=1):
     return parts
 
 
-def neck_eyes(prefix, neck, rng, count):
-    parts = []
-    for k in range(count):
-        t = 0.12 + 0.76 * (k + rng.random() * 0.6) / count
-        a = rng.choice([1, -1]) * rng.uniform(70, 125) % 360
-        p, n, r = surface(neck, t, a)
-        parts += eye(f"{prefix}_eye{k}", p, n, min(0.075, r * rng.uniform(0.22, 0.38)))
-    return parts
-
-
 def build_necks(D, rng):
     parts = []
     main = tube("main_neck", D["main_neck"]["path"], D["main_neck"]["radii"], "GooseBlack",
                 step=0.03, segments=36, ref=(0.0, 1.0, 0.0))
     parts.append(main)
-    parts += neck_eyes("main_neck", main, rng, 8)
     for k in range(13):  # bone ridge down the back of the neck
         t = 0.10 + 0.78 * k / 12
         p, n, r = surface(main, t, 0)
@@ -367,7 +352,6 @@ def build_necks(D, rng):
         neck = tube(f"side_neck_{tag}", ctrl, D["side_neck"]["radii"], "GooseBlack", step=0.03, segments=30,
                     ref=(0.0, 1.0, 0.0))
         parts.append(neck)
-        parts += neck_eyes(f"side_neck_{tag}", neck, rng, 4)
         head = dict(D["side_head"])
         if sign < 0:
             head["base"] = mirror(head["base"])
@@ -409,11 +393,11 @@ def build_wing(W, sign, rng):
     p_len, s_len = W["primary_length"], W["secondary_length"]
     # primaries: from the tip (pointing out along the hand) back to the wrist (pointing down)
     parts += fan("primary", tip, wrist, W["primaries"], (12, 72), (p_len[0], p_len[1]), 0.17, "PrimaryDark",
-                 0.0, 0.35, lead=0.55)
+                 0.0, 0.6, lead=0.55)
     parts += fan("secondary", wrist, elbow, W["secondaries"], (82, 100), (s_len[0], s_len[1]), 0.20,
-                 "PlumageBrown", 0.0, 0.25)
+                 "PlumageBrown", 0.0, 0.5)
     parts += fan("tertial", elbow, lerp(elbow, shoulder, 0.85), W["tertials"], (100, 115), (0.85, 0.70), 0.20,
-                 "PlumageBrown", 0.0, 0.1)
+                 "PlumageBrown", 0.0, 0.35)
     parts += fan("covert", lerp(wrist, tip, 0.6), lerp(elbow, shoulder, 0.3), 16, (60, 100), (0.55, 0.50), 0.16,
                  "PlumageEdge", 0.06, 0.0, curl=0.05)
     parts += fan("lesser_covert", lerp(wrist, tip, 0.3), elbow, 11, (70, 100), (0.32, 0.30), 0.14,
@@ -436,10 +420,6 @@ def build_wing(W, sign, rng):
         parts.append(cone(f"finger_claw{k}_{tag}", end, combine((end, 1), (d, 0.12), (down, 0.10)), 0.026,
                           "ToothBone", bend=mul(down, 0.03)))
 
-    for k in range(6):  # eyes along the leading edge of the arm
-        t = 0.18 + 0.12 * k
-        p, n, r = surface(arm, t, 300 if sign > 0 else 60)
-        parts += eye(f"wing_eye{k}_{tag}", p, n, min(0.075, r * 0.7))
     return parts
 
 
@@ -491,58 +471,8 @@ def build_leg(L, sign):
     return parts
 
 
-def build_tentacles(T, body, rng):
-    parts = []
-    r0, r1 = T["base_radius"], T["tip_radius"]
-    trng = random.Random(T["seed"])
-    for k in range(T["count"]):
-        x = (0.25 + 0.35 * (k % 3) / 2) * (1 if k < 3 else -1)
-        y = -0.55 + 0.6 * (k % 3) + trng.uniform(-0.1, 0.1)
-        start = (x, y, 1.35)
-        out = norm((x, y * 0.6 + trng.uniform(-0.2, 0.2), 0.0))
-        side = cross(UP, out)
-        turn = 1 if trng.random() < 0.5 else -1
-        p1 = combine((start, 1), (out, 0.30), (UP, -0.42))
-        if k in T["raised"]:
-            ctrl = [start, p1, combine((p1, 1), (out, 0.65), (UP, -0.20)),
-                    combine((p1, 1), (out, 1.15), (UP, 0.45), (side, 0.2 * turn)),
-                    combine((p1, 1), (out, 1.30), (UP, 1.05), (side, -0.1 * turn)),
-                    combine((p1, 1), (out, 1.05), (UP, 1.35), (side, -0.25 * turn)),
-                    combine((p1, 1), (out, 0.90), (UP, 1.15), (side, -0.15 * turn))]
-        else:
-            # arch out and over like an octopus arm, then sag to the ground with a sideways wave
-            p1 = combine((start, 1), (out, 0.55), (UP, -0.20), (side, 0.12 * turn))
-            p2 = combine((p1, 1), (out, 0.60), (UP, -0.05), (side, -0.25 * turn))
-            p3 = combine((p2, 1), (out, 0.70), (side, 0.15 * turn))
-            p3 = (p3[0], p3[1], 0.20)
-            centre = combine((p3, 1), (side, 0.30 * turn))
-            ctrl = [start, p1, p2, p3]
-            radius = 0.30
-            start_angle = math.atan2(p3[1] - centre[1], p3[0] - centre[0])
-            for m in range(1, 7):
-                ang = start_angle + turn * math.radians(62 * m)
-                radius *= 0.80
-                ctrl.append((centre[0] + radius * math.cos(ang), centre[1] + radius * math.sin(ang),
-                             0.13 - 0.008 * m + (0.12 if m == 6 else 0.0)))  # sits on the floor as it thins
-        n = len(ctrl)
-        radii = [r0 + (r1 - r0) * (i / (n - 1)) ** 0.8 for i in range(n)]
-        tent = tube(f"tentacle{k}", ctrl, radii, "FleshViolet", step=0.032, segments=18, ref=UP)
-        parts.append(tent)
-        path_len = sum(length(sub(b, a)) for a, b in zip(tent["sweep"]["path"], tent["sweep"]["path"][1:]))
-        count = int(path_len / 0.085)
-        for m in range(count):
-            t = 0.22 + 0.74 * m / max(1, count - 1)
-            a = 130 if m % 2 else 230  # staggered between the two lower sides
-            p, nn, r = surface(tent, t, a)
-            sr = r * 0.42
-            parts.append(ellipsoid(f"sucker{k}_{m}", add(p, mul(nn, -sr * 0.1)),
-                                   (nn, perpendicular(nn, UP), cross(nn, perpendicular(nn, UP))),
-                                   (sr * 0.38, sr, sr), "MawRed", (8, 5)))
-    return parts
-
-
 def build_breast_maw(M, body):
-    """A vertical mouth on the breast: violet lips, a ring of teeth, a dark throat."""
+    """A vertical mouth on the breast: raw lips, a ring of teeth, a dark throat."""
     sw = body["sweep"]
     i = min(range(len(sw["path"])), key=lambda k: abs(sw["path"][k][1] - M["body_y"]))
     t = i / (len(sw["path"]) - 1)
@@ -559,7 +489,7 @@ def build_breast_maw(M, body):
         ang = 2 * math.pi * k / 28
         rim.append(combine((centre, 1), (side, hw * math.cos(ang)), (up, hh * math.sin(ang))))
     lip_r = [M["lip_radius"] * (0.75 + 0.45 * abs(math.cos(2 * math.pi * k / 28))) for k in range(28)]
-    parts.append(tube("maw_lips", rim, lip_r, "FleshViolet", step=0.03, segments=14, ref=normal, closed=True))
+    parts.append(tube("maw_lips", rim, lip_r, "RawFlesh", step=0.03, segments=14, ref=normal, closed=True))
     parts.append(ellipsoid("maw_throat", add(centre, mul(normal, -0.06)), (side, up, normal),
                            (hw * 0.95, hh * 0.95, 0.16), "MawDark", (20, 12)))
     parts.append(ellipsoid("maw_gums", add(centre, mul(normal, -0.015)), (side, up, normal),
@@ -589,7 +519,7 @@ def build_tail(T, rng):
         length_m = T["length"] * (1.0 - 0.15 * abs(spread))
         r = add(root, mul(plane_normal, 0.012 * (T["feathers"] // 2 - abs(k - T["feathers"] // 2))))
         parts.append(feather(f"tail{k}", r, d, own_normal, length_m, 0.22, "GooseBlack", rng, curl=-0.05,
-                             ragged=0.15))
+                             ragged=0.45))
     return parts
 
 
@@ -606,15 +536,20 @@ def build_back_spines(body, rng):
     return parts
 
 
-def body_eyes(body, rng):
+def body_ribs(body):
+    """Bare ribs breaking through the matted flanks: the starved-beast look, where the eyes used to be."""
     parts = []
-    for side_sign in (1, -1):
-        for k in range(9):
-            t = 0.25 + 0.45 * (k + rng.random() * 0.7) / 9
-            a = rng.uniform(65, 112)
-            a = a if side_sign > 0 else 360 - a
-            p, n, _ = surface(body, t, a)
-            parts += eye(f"body_eye{k}_{side_sign}", p, n, rng.uniform(0.05, 0.11))
+    for side_sign, tag in ((1, "R"), (-1, "L")):
+        for k in range(5):
+            t = 0.28 + 0.32 * k / 4
+            arc = [a if side_sign > 0 else 360 - a for a in (52, 66, 80, 94, 108, 120)]
+            ctrl = []
+            for m, a in enumerate(arc):
+                p, n, _ = surface(body, t + 0.012 * m, a)  # each rib sweeps slightly back as it goes down
+                ctrl.append(add(p, mul(n, 0.035 * math.sin(math.pi * (m + 0.5) / len(arc)))))
+            size = 0.030 + 0.012 * math.sin(math.pi * k / 4)
+            parts.append(tube(f"rib{k}_{tag}", ctrl, [size * 0.7, size, size, size * 0.9, size * 0.7, size * 0.45],
+                              "ToothBone", step=0.04, segments=10))
     return parts
 
 
@@ -624,14 +559,13 @@ def build_parts(spec=None):
     rng = random.Random(D["eye_seed"])
     body = build_body(D)
     parts = [body]
-    parts += body_eyes(body, rng)
+    parts += body_ribs(body)
     parts += build_back_spines(body, rng)
     parts += build_breast_maw(D["breast_maw"], body)
     parts += build_necks(D, rng)
     for sign in (1, -1):
         parts += build_wing(D["wing"], sign, rng)
         parts += build_leg(D["legs"], sign)
-    parts += build_tentacles(D["tentacles"], body, rng)
     parts += build_tail(D["tail"], rng)
     return parts
 

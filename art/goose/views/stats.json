@@ -1,6 +1,6 @@
 {
  "model": "goose.glb",
- "triangles": 189596,
+ "triangles": 124068,
  "bbox_m": [
   8.495,
   5.341,
@@ -15,8 +15,7 @@
  "materials": [
   "BreastPale",
   "ChinWhite",
-  "EyeGlow",
-  "FleshViolet",
+  "EyeDark",
   "GooseBlack",
   "LegDark",
   "MawDark",
@@ -24,7 +23,7 @@
   "PlumageBrown",
   "PlumageEdge",
   "PrimaryDark",
-  "PupilBlack",
+  "RawFlesh",
   "ToothBone"
  ],
  "forward": "-Y"

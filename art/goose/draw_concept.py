@@ -210,11 +210,11 @@ def main():
         ("Bare finger bones, claws", "finger_bone0_R"),
         ("Ragged primaries", "primary3_R"),
         ("Breast maw: 22 teeth", "maw_lips"),
-        ("Tentacles x6, suckers", "tentacle1"),
+        ("Bare ribs through the flanks", "rib3_R"),
     ], 1620, "left")
     callouts(dr, parts, side, [
         ("Bone ridge down the neck", "neck_spine6"),
-        ("Glowing eyes, 3 a side per head,\nrows on every neck and flank", "body_eye4_1_ball"),
+        ("One sunken eye a side per head", "main_eye_R"),
         ("Chinstrap: ChinWhite", "main_head"),
         ("Webbed feet, bone claws", "web1_R"),
         ("Undertail: ChinWhite", "tail4"),
