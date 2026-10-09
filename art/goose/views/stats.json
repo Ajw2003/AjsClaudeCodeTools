@@ -1,0 +1,31 @@
+{
+ "model": "goose.glb",
+ "triangles": 189596,
+ "bbox_m": [
+  8.495,
+  5.341,
+  5.12
+ ],
+ "height_m": 5.12,
+ "mesh_count": 1,
+ "bones": {
+  "count": 0,
+  "names": []
+ },
+ "materials": [
+  "BreastPale",
+  "ChinWhite",
+  "EyeGlow",
+  "FleshViolet",
+  "GooseBlack",
+  "LegDark",
+  "MawDark",
+  "MawRed",
+  "PlumageBrown",
+  "PlumageEdge",
+  "PrimaryDark",
+  "PupilBlack",
+  "ToothBone"
+ ],
+ "forward": "-Y"
+}

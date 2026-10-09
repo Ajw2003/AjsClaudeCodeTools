@@ -1,0 +1,392 @@
+{
+  "slug": "eldritch_goose",
+  "name": "The Honking Deep (eldritch goose boss)",
+  "kind": "creature",
+  "tier": "hero",
+  "concept": "art/goose/concept.png",
+  "height_m": 5.1,
+  "scale_note": "Boss scale against the 1.80 m reference human: 5.1 m to the tips of the main head's quill crest (crown of the head about 4.95 m), 8.5 m across from finger-claw to finger-claw. Faces -Y, +Z up, origin on the ground between the feet. All design numbers below are metres in that frame.",
+  "triangle_budget": 200000,
+  "budget_note": "Hero asset: about 30x the scythe prop's budget. Every eye, tooth, sucker and feather is real geometry, not a texture.",
+  "materials": [
+    {
+      "name": "PlumageBrown",
+      "hex": "#6B5A48",
+      "metallic": 0.0,
+      "roughness": 0.8,
+      "notes": "back and wing coverts, the Canada goose's brown"
+    },
+    {
+      "name": "PlumageEdge",
+      "hex": "#8C7A63",
+      "metallic": 0.0,
+      "roughness": 0.8,
+      "notes": "pale feather-edge bars on the flanks"
+    },
+    {
+      "name": "BreastPale",
+      "hex": "#C4B49A",
+      "metallic": 0.0,
+      "roughness": 0.8,
+      "notes": "tan breast"
+    },
+    {
+      "name": "ChinWhite",
+      "hex": "#E9E5DA",
+      "metallic": 0.0,
+      "roughness": 0.7,
+      "notes": "chinstrap, belly and undertail"
+    },
+    {
+      "name": "GooseBlack",
+      "hex": "#18181A",
+      "metallic": 0.0,
+      "roughness": 0.6,
+      "notes": "necks, heads, beaks, tail"
+    },
+    {
+      "name": "PrimaryDark",
+      "hex": "#2E2925",
+      "metallic": 0.0,
+      "roughness": 0.7,
+      "notes": "primary flight feathers"
+    },
+    {
+      "name": "LegDark",
+      "hex": "#26221F",
+      "metallic": 0.0,
+      "roughness": 0.65,
+      "notes": "legs, toes and webs"
+    },
+    {
+      "name": "FleshViolet",
+      "hex": "#4E2B52",
+      "metallic": 0.0,
+      "roughness": 0.35,
+      "notes": "wet flesh: tentacles, eyelids, maw lips"
+    },
+    {
+      "name": "MawRed",
+      "hex": "#8A2232",
+      "metallic": 0.0,
+      "roughness": 0.35,
+      "notes": "mouths, tongues, suckers"
+    },
+    {
+      "name": "MawDark",
+      "hex": "#2A0A12",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "notes": "the throat of the breast maw"
+    },
+    {
+      "name": "ToothBone",
+      "hex": "#DCD2B4",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "notes": "teeth, spines, claws, finger bones"
+    },
+    {
+      "name": "EyeGlow",
+      "hex": "#C6FF3A",
+      "metallic": 0.0,
+      "roughness": 0.3,
+      "emission": 1.6,
+      "notes": "every eye, emissive"
+    },
+    {
+      "name": "PupilBlack",
+      "hex": "#050505",
+      "metallic": 0.0,
+      "roughness": 0.2,
+      "notes": "slit pupils"
+    }
+  ],
+  "design": {
+    "body_rings": {
+      "note": "[y, z_centre, half_width, half_height] from breast to tail tip",
+      "rings": [
+        [
+          -1.48,
+          2.3,
+          0.2,
+          0.22
+        ],
+        [
+          -1.38,
+          2.12,
+          0.5,
+          0.58
+        ],
+        [
+          -1.15,
+          1.98,
+          0.78,
+          0.82
+        ],
+        [
+          -0.75,
+          1.92,
+          0.92,
+          0.86
+        ],
+        [
+          -0.2,
+          1.94,
+          0.94,
+          0.82
+        ],
+        [
+          0.4,
+          2.02,
+          0.86,
+          0.72
+        ],
+        [
+          0.95,
+          2.16,
+          0.7,
+          0.6
+        ],
+        [
+          1.4,
+          2.34,
+          0.5,
+          0.46
+        ],
+        [
+          1.7,
+          2.48,
+          0.3,
+          0.3
+        ],
+        [
+          1.86,
+          2.54,
+          0.1,
+          0.12
+        ]
+      ]
+    },
+    "main_neck": {
+      "path": [
+        [
+          0,
+          -1.15,
+          2.4
+        ],
+        [
+          0,
+          -1.55,
+          2.95
+        ],
+        [
+          0,
+          -1.8,
+          3.55
+        ],
+        [
+          0,
+          -1.72,
+          4.1
+        ],
+        [
+          0,
+          -1.82,
+          4.55
+        ],
+        [
+          0,
+          -1.98,
+          4.72
+        ]
+      ],
+      "radii": [
+        0.36,
+        0.27,
+        0.22,
+        0.19,
+        0.17,
+        0.165
+      ]
+    },
+    "side_neck": {
+      "note": "the +X neck; the -X one is its mirror",
+      "path": [
+        [
+          0.4,
+          -1.05,
+          2.45
+        ],
+        [
+          0.85,
+          -1.35,
+          2.85
+        ],
+        [
+          1.15,
+          -1.58,
+          3.28
+        ],
+        [
+          1.32,
+          -1.78,
+          3.58
+        ],
+        [
+          1.36,
+          -1.92,
+          3.68
+        ]
+      ],
+      "radii": [
+        0.26,
+        0.21,
+        0.17,
+        0.14,
+        0.13
+      ]
+    },
+    "main_head": {
+      "base": [
+        0,
+        -1.98,
+        4.72
+      ],
+      "dir": [
+        0,
+        -1,
+        -0.22
+      ],
+      "scale": 1.0,
+      "jaw_open_deg": 42,
+      "tongue": true
+    },
+    "side_head": {
+      "base": [
+        1.36,
+        -1.92,
+        3.68
+      ],
+      "dir": [
+        0.55,
+        -1,
+        -0.15
+      ],
+      "scale": 0.74,
+      "jaw_open_deg": 58,
+      "tongue": true
+    },
+    "wing": {
+      "note": "the +X wing, raised in a threat display; the -X one is its mirror",
+      "shoulder": [
+        0.7,
+        -0.55,
+        2.55
+      ],
+      "elbow": [
+        1.55,
+        -0.4,
+        3.25
+      ],
+      "wrist": [
+        2.55,
+        -0.62,
+        3.7
+      ],
+      "tip": [
+        3.4,
+        -0.35,
+        3.25
+      ],
+      "radii": [
+        0.17,
+        0.12,
+        0.09,
+        0.04
+      ],
+      "primaries": 10,
+      "secondaries": 12,
+      "tertials": 5,
+      "primary_length": [
+        1.45,
+        1.05
+      ],
+      "secondary_length": [
+        1.0,
+        0.88
+      ],
+      "finger_bones": 2,
+      "finger_bone_length": 1.25
+    },
+    "legs": {
+      "hip": [
+        0.4,
+        0.1,
+        1.55
+      ],
+      "knee": [
+        0.5,
+        0.0,
+        0.95
+      ],
+      "ankle": [
+        0.52,
+        -0.06,
+        0.45
+      ],
+      "foot": [
+        0.52,
+        -0.12,
+        0.11
+      ],
+      "radii": [
+        0.17,
+        0.11,
+        0.075,
+        0.065
+      ],
+      "toe_length": 0.48,
+      "toe_spread_deg": 32
+    },
+    "tentacles": {
+      "count": 6,
+      "raised": [
+        0,
+        3
+      ],
+      "base_radius": 0.14,
+      "tip_radius": 0.015,
+      "seed": 13
+    },
+    "breast_maw": {
+      "body_y": -1.3,
+      "half_width": 0.17,
+      "half_height": 0.42,
+      "lip_radius": 0.07,
+      "teeth": 22
+    },
+    "tail": {
+      "root": [
+        0,
+        1.62,
+        2.58
+      ],
+      "feathers": 9,
+      "length": 0.9,
+      "spread_deg": 80
+    },
+    "eye_seed": 7
+  },
+  "build": [
+    "Body: lofted ellipse rings, about 3.7 m long, 1.88 m wide, lowest point 1.06 m; brown back, narrow pale bars on the flanks, tan breast (straight seam at y = -0.42 m), white belly and undertail.",
+    "Necks: one main S-neck from the breast to 4.7 m, radius 0.36 m tapering to 0.165 m; two side necks out to +/-1.36 m, radius 0.26 to 0.13 m. All black, a ridge of 13 bone spines down the back of the main neck, glowing eyes along every neck (8 main, 4 per side neck).",
+    "Heads: goose heads with the white chinstrap, three glowing eyes a side, beaks gaping (42 deg main, 58 deg side) with rows of teeth on both mandibles and a spiked tongue. Side heads at 0.74 scale.",
+    "Breast maw: a vertical mouth 0.34 m wide x 0.84 m tall on the breast, violet lips, 22 teeth around the rim, dark throat.",
+    "Wings: raised and spread, 8.5 m across including the bare finger bones, arm 0.17 m to 0.04 m thick; 10 ragged primaries 1.45 to 1.05 m, 12 secondaries, 5 tertials, two covert rows; two finger bones 1.25 m long with claws break out past the primaries; six glowing eyes along each leading edge.",
+    "Legs: black, hip 1.55 m to ankle; three webbed toes 0.48 m long spread 32 deg, bone claws, a small back toe.",
+    "Tentacles: six from under the belly, 0.14 m at the root to 0.015 m; four arch out and coil on the ground, two rise and curl; one staggered row of red suckers each (250 in all).",
+    "Tail: nine black feathers 0.9 m long in a cupped fan over 80 deg, outer feathers banked and drooping so the fan reads from the side.",
+    "Spines: a bone ridge along the back and down the main neck; a crest of quills behind each head."
+  ]
+}

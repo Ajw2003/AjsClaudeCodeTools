@@ -131,6 +131,12 @@ scythe from a reference image, in [`art/scythe/`](../../art/scythe/README.md) â€
 GLB/FBX/.blend, review sheet at `docs/art/reviews/scythe-review.png`. The render and sheet scripts
 ran for real; the Stop-hook gate did not, because the plugin was not installed in that session.
 
+Second asset, 2026-10-09: an eldritch Canada goose boss (hero tier, 189,596 tris against a 200k
+budget) in [`art/goose/`](../../art/goose/README.md), from a prompt rather than a reference image.
+The concept sheet is drawn by code from the same design module the model is built from, so sheet and
+model share every number. Three review passes, recorded beside the scythe's. Again the gate did not
+run (plugin not installed in the session). No rig or clips yet (issue #183).
+
 ## 4. Distribution & install tooling â€” built and verified
 
 `install_steps()`'s four-command order, `bootstrap.ps1`/`.sh`, `update.bat`, and both
