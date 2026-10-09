@@ -126,7 +126,7 @@ These become requirements. Step 2's design must say how each is met.
 ### Looks already done: aj decides whether to close (14)
 
 Re-checked on 2026-10-09 against plugin 2.60.1 by feeding the real hooks test commands in
-throwaway repos. All 14 passed. #113 and the timer wording were checked by
+throwaway repos; every check for these issues passed. #113 and the timer wording were checked by
 reading the files. Nothing closes without aj's
 say-so.
 
