@@ -1605,6 +1605,7 @@ def event_scope():
     waiting = ""
     try:
         payload = read_payload()
+        _record_last_seen(payload)
         waiting = _waiting_scope_note(payload)
         m = _PROMPT_FIELD_RE.search(payload)
         if m:
@@ -1671,44 +1672,56 @@ _GIT = (
     r"[=\s]\s*[^\s]+\s+|-[^\s]+\s+)*"
 )
 
-# Marks a pattern the commit rule stands down for when the checkout is on a branch I created.
-# Everything without it prompts on every branch, mine included. See the ownership helpers below
-# and "Commit constantly on my own branches, never on theirs" in rules/house-rules.md.
-OWNED = "owned-branch-exempt"
-# Marks a destructive pattern that runs unasked only on my branch AND when everything it could
-# lose is already saved elsewhere: a clean tree and every commit on a remote (#153).
+# Marks a git write that runs unasked on any branch except the repo's default branch, and is
+# refused outright on the default branch: that branch only changes through a pull request (#197).
+BRANCH_WRITE = "branch-write"
+# Marks a destructive pattern that runs unasked only off the default branch AND when everything
+# it could lose is already saved elsewhere: a clean tree and every commit on a remote (#153).
 SAVED = "saved-work-exempt"
 
 GUARD_R3 = [
-    # Force-pushing is not a checkpoint — it rewrites history that was already backed up — so
-    # it prompts even on my own branch. Listed before the plain push so that when both match,
-    # the non-exempt reason is the one that survives into the prompt.
+    # Force-pushing rewrites history that was already backed up, and --all/--mirror push (or
+    # delete) every branch, the default one included, so they ask on every branch.
     (
-        _GIT + r"push\b.*(--force|--force-with-lease|(^|\s)-f([^0-9A-Za-z-]|$))",
-        "rewrites remote history (force push)",
+        _GIT + r"push\b.*(--force|--force-with-lease|--mirror|--all|(^|\s)-f([^0-9A-Za-z-]|$))",
+        "rewrites remote history or pushes every branch (force push, --all, --mirror)",
+    ),
+    (
+        _GIT + r"push\b.*(--delete|(^|\s)-d(\s|$)|\s:[^\s:]+)",
+        "deletes a branch on the remote (push --delete)",
     ),
     (
         _GIT + r"push([^0-9A-Za-z-]|$)",
         "reaches a remote (push)",
-        OWNED,
+        BRANCH_WRITE,
     ),
     (
         _GIT + r"commit([^0-9A-Za-z-]|$)",
         "writes history (commit)",
-        OWNED,
+        BRANCH_WRITE,
     ),
-    # reset/revert/rebase only lose work that is not saved elsewhere, so on my branch with a
-    # clean tree and every commit pushed they run unasked (SAVED, #153). clean can remove
-    # ignored files that exist nowhere else, and merge/cherry-pick/am/apply/filter-branch are
-    # how a hook would end up finishing something the user started - not exemptible anywhere.
+    # These add or replay commits; the old ones stay in the reflog and on the remote, so off the
+    # default branch nothing is lost (#197).
     (
-        _GIT + r"(reset|revert|rebase)([^0-9A-Za-z-]|$)",
-        "discards work or rewrites history (reset / revert / rebase)",
+        _GIT + r"(merge|cherry-pick|revert|rebase|am|apply)([^0-9A-Za-z-]|$)",
+        "adds or replays commits (merge / cherry-pick / revert / rebase / am / apply)",
+        BRANCH_WRITE,
+    ),
+    # reset only loses work that is not saved elsewhere, so off the default branch with a clean
+    # tree and every commit pushed it runs unasked (SAVED, #153).
+    (
+        _GIT + r"reset([^0-9A-Za-z-]|$)",
+        "discards work (reset)",
         SAVED,
     ),
+    # clean can remove ignored files that exist nowhere else; filter-branch rewrites every commit.
     (
-        _GIT + r"(clean|merge|filter-branch|cherry-pick|am|apply)([^0-9A-Za-z-]|$)",
-        "discards work or finishes an operation you started",
+        _GIT + r"(clean|filter-branch)([^0-9A-Za-z-]|$)",
+        "deletes untracked files or rewrites all history (clean / filter-branch)",
+    ),
+    (
+        _GIT + r"branch\s+(.*\s)?((?-i:-D)|--delete\s+--force|--force\s+--delete)(\s|$)",
+        "deletes a local branch even if its work is not merged (branch -D)",
     ),
 ]
 
@@ -1906,7 +1919,31 @@ def owned_branch_prefixes():
 # this hook can see, so the branch read below would be the wrong branch to judge it by. Broad
 # on purpose — `grep -C 3` in the same command line costs an extra keypress, and that is the
 # direction guard is allowed to be wrong in.
-_OTHER_REPO_RE = re.compile(r"(^|\s)(-C(\s|=)|--git-dir|--work-tree)")
+_OTHER_REPO_RE = re.compile(r"(^|\s)(--git-dir|--work-tree)")
+# Any -C at all, broad on purpose (`grep -C 3` included); only the `git -C <dir>` form below is
+# resolved to a directory, and a -C it does not explain leaves where the command runs unclear.
+_ANY_C_FLAG_RE = re.compile(r"(^|\s)-C(\s|=)")
+_GIT_C_DIR_RE = re.compile(r"""\bgit\s+-C\s*(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))""")
+
+
+PROTECTED_BRANCHES = ("main", "master")
+
+
+def default_branch(start):
+    """The repo's default branch as origin/HEAD names it (a file read, no git process), or None."""
+    try:
+        cd = _common_git_dir(start)
+        if not cd:
+            return None
+        head = _read_text(os.path.join(cd, "refs", "remotes", "origin", "HEAD")).strip()
+    except Exception: return None  # no origin/HEAD recorded: main and master are still protected
+    prefix = "ref: refs/remotes/origin/"
+    return head[len(prefix):] if head.startswith(prefix) else None
+
+
+def is_protected_branch(branch, start):
+    """Is `branch` the one that only changes through a pull request (#197)?"""
+    return branch in PROTECTED_BRANCHES or branch == default_branch(start)
 
 
 def _git_dir(start):
@@ -1961,7 +1998,8 @@ _ANY_CD_RE = re.compile(r"(?:^|[\s;&|(])(?:cd|pushd)(?=\s|$)")
 
 def _command_dir(payload):
     """(dir, moved_unclear): where a guarded Bash command runs. The payload's `cwd`, else
-    CLAUDE_PROJECT_DIR, else getcwd(); a lone leading `cd <dir> &&` moves it to <dir>. Any other
+    CLAUDE_PROJECT_DIR, else getcwd(); a lone leading `cd <dir> &&`, or `git -C <dir>` naming one
+    directory, moves it to <dir>. Any other -C, any other
     cd/pushd, or a leading one that does not resolve to a directory, sets moved_unclear and the
     caller withholds the exemption. doc-ref d2a4 docs/4-systems/hook-engine.md (Traps).
     """
@@ -1979,7 +2017,17 @@ def _command_dir(payload):
             cmd = json.loads('"%s"' % m.group(1)) if m else ""
         except ValueError:
             cmd = ""
-    if not isinstance(cmd, str) or not _ANY_CD_RE.search(cmd):
+    if not isinstance(cmd, str):
+        return base, False
+    c_flags = _ANY_C_FLAG_RE.findall(cmd)
+    if c_flags:
+        # `git -C <dir>` (#192): judged by <dir> when every -C names the same one and nothing cds.
+        dirs = set(m.group(1) or m.group(2) or m.group(3) for m in _GIT_C_DIR_RE.finditer(cmd))
+        if _ANY_CD_RE.search(cmd) or len(dirs) != 1 or len(_GIT_C_DIR_RE.findall(cmd)) != len(c_flags):
+            return base, True
+        target = os.path.abspath(os.path.join(base, dirs.pop()))
+        return (target, False) if os.path.isdir(target) else (base, True)
+    if not _ANY_CD_RE.search(cmd):
         return base, False
     m = _LEADING_CD_RE.match(cmd)
     if m and len(_ANY_CD_RE.findall(cmd)) == 1:
@@ -2117,6 +2165,43 @@ def _trace_subject(subject, limit=60):
     return "`%s`" % flat
 
 
+PROTECTED_DENY = (
+    "House rules: `%s` is the default branch, and it only changes through a pull request - never "
+    "a direct commit, push or merge (refused: %s). Do this on a branch instead: `git switch -c "
+    "AjsAgent/<topic>`, commit and push there, then open a pull request. Do not retry it on the "
+    "default branch."
+)
+_GIT_PUSH_RE = re.compile(_GIT + r"push([^0-9A-Za-z-]|$)", re.IGNORECASE)
+
+
+def _push_targets_protected(subject, where):
+    """The protected branch a push names as its destination (`git push origin main`,
+    `HEAD:main`), or None."""
+    names = set(PROTECTED_BRANCHES)
+    d = default_branch(where)
+    if d:
+        names.add(d)
+    for stmt in _STATEMENT_SPLIT_RE.split(_decoded_command(subject)):
+        m = _GIT_PUSH_RE.search(stmt)
+        if not m:
+            continue
+        for tok in stmt[m.end():].split():
+            ref = tok.strip("\"'").lstrip("+").split(":")[-1]
+            ref = ref[len("refs/heads/"):] if ref.startswith("refs/heads/") else ref
+            if ref in names:
+                return ref
+    return None
+
+
+_ONLY_GIT_STMT_RE = re.compile(r"^\s*(git\s|cd\s)")
+
+
+def _only_git_statements(subject):
+    """True when every statement of the command (pipes split too) is a git or cd statement."""
+    stmts = [x for x in re.split(r"&&|\|\||;|\n|\|", _decoded_command(subject)) if x.strip()]
+    return bool(stmts) and all(_ONLY_GIT_STMT_RE.match(x) for x in stmts)
+
+
 def event_guard():
     try:
         payload = read_payload()
@@ -2146,14 +2231,21 @@ def event_guard():
         return 0
 
     where, moved_unclear = _command_dir(payload)
-    is_mine, branch, ownership_note = branch_ownership(where)
-    # A command carrying -C / --git-dir / --work-tree acts on a repo other than the one we
-    # just read the branch from, so the exemption cannot be justified and is withheld.
+    _mine, branch, ownership_note = branch_ownership(where)
+    # --git-dir / --work-tree, or a cd / -C that could not be followed, acts on a repo other than
+    # the one we just read the branch from, so the branch cannot justify anything.
     elsewhere = bool(_OTHER_REPO_RE.search(subject)) or moved_unclear
-    exempting = is_mine and not elsewhere
+    known = branch is not None and not elsewhere
+    protected = known and is_protected_branch(branch, where)
+    # A push naming the default branch as its destination writes to it from any branch.
+    if known and not protected:
+        target = _push_targets_protected(subject, where)
+        if target:
+            protected, branch = True, target
 
     hits = {title: [] for title, _ in GUARD_BUCKETS}
     exempted = []
+    refused = []  # branch writes aimed at the default branch: refused, never asked (#197)
     saved_state = None  # (saved, note), computed at most once and only when a SAVED pattern matched
     saved_blocked = None
     for title, patterns in GUARD_BUCKETS:
@@ -2162,10 +2254,10 @@ def event_guard():
             if not re.search(pattern, subject, re.IGNORECASE):
                 continue
             marker = entry[2] if len(entry) > 2 else None
-            if exempting and marker == OWNED:
-                exempted.append(reason)
+            if marker == BRANCH_WRITE and known:
+                (refused if protected else exempted).append(reason)
                 continue
-            if exempting and marker == SAVED:
+            if marker == SAVED and known and not protected:
                 if saved_state is None:
                     saved_state = work_saved_elsewhere(where)
                 if saved_state[0]:
@@ -2173,6 +2265,11 @@ def event_guard():
                     continue
                 saved_blocked = saved_state[1]
             hits[title].append(reason)
+
+    if refused:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": PROTECTED_DENY % (branch, "; ".join(refused))}})
+        return 0
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _staged_docs_status(subject, elsewhere, where) if is_commit else (None, None)
@@ -2184,7 +2281,7 @@ def event_guard():
         # would be two concatenated JSON objects on stdout, which is not valid hook output.
         if exempted:
             allow_trace = (
-                "guard: checked %s - %s on `%s`, which is mine to commit on%s."
+                "guard: checked %s - %s on `%s`, which is not the default branch%s."
                 % (_trace_subject(subject), " and ".join(exempted), branch,
                    ", with nothing uncommitted and every commit on a remote"
                    if saved_state and saved_state[0] else "")
@@ -2192,19 +2289,19 @@ def event_guard():
         else:
             allow_trace = "guard: checked %s - no house rule matched." % _trace_subject(subject)
 
-        if docs_status == "needs-docs":
-            # Still an allow - the commit rule already lets this through - but Claude gets a
-            # reminder in-context. PreToolUse's additionalContext reaches the model on an
-            # "allow" decision (probed live, doc-ref 8713 docs/6-decisions/Decisions.md), the channel
-            # guard did not otherwise use before this.
-            out = {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "allow",
-                    "additionalContext": DOCS_COMMIT_REMINDER,
-                }
-            }
-            if trace_verbose():
+        # An exempted git write is approved outright so Claude Code's own prompt cannot stall it
+        # either (#197) - only when every statement is git or cd, so the approval never carries an
+        # unrelated command along. docs/plans/2026-10-09-stop-permission-stalls.md
+        approve = bool(exempted) and _only_git_statements(subject)
+        if docs_status == "needs-docs" or approve:
+            # PreToolUse's additionalContext reaches the model on an "allow" decision (probed
+            # live, doc-ref 8713 docs/6-decisions/Decisions.md).
+            out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
+            if docs_status == "needs-docs":
+                out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
+            if docs_status == "unknown" and trace_enabled():
+                out["systemMessage"] = "%s - docs check could not tell: %s." % (allow_trace, docs_detail)
+            elif trace_verbose():
                 out["systemMessage"] = allow_trace
             emit(out)
             return 0
@@ -2233,15 +2330,13 @@ def event_guard():
         why_not_exempt = None
         if elsewhere:
             why_not_exempt = (
-                "  This command names another repo (-C / --git-dir), so the branch I can see "
-                "is not the one it acts on."
+                "  This command names another repo (--git-dir, or a cd / -C I could not follow), so "
+                "the branch I can see is not the one it acts on."
             )
         elif ownership_note:
-            why_not_exempt = "  I could not establish branch ownership: %s." % ownership_note
-        elif not is_mine:
-            why_not_exempt = (
-                "  You are on `%s`, which is yours, not an `AjsAgent/` (or `claude/`, `ccr-`) branch." % branch
-            )
+            why_not_exempt = "  I could not read which branch this is on: %s." % ownership_note
+        elif protected:
+            why_not_exempt = "  `%s` is the default branch, which only changes through a pull request." % branch
         if why_not_exempt:
             lines.append("")
             lines.append(why_not_exempt)
@@ -2279,17 +2374,7 @@ def event_guard():
         "Approve to let it run, or reject and Claude will explain what it was about to do."
     )
     reason_text = "\n".join(lines)
-
-    emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "ask",
-                "permissionDecisionReason": reason_text,
-                **({"additionalContext": issue_hit[2]} if issue_hit and issue_hit[2] else {}),
-            }
-        }
-    )
+    _ask_or_refuse(payload, reason_text, issue_hit[2] if issue_hit and issue_hit[2] else None)
     return 0
 
 
@@ -2395,16 +2480,7 @@ def event_guardwrite():
         "Approve to let it run, or reject and Claude will explain what it was about to do."
     )
     reason_text = "\n".join(lines)
-
-    emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "ask",
-                "permissionDecisionReason": reason_text,
-            }
-        }
-    )
+    _ask_or_refuse(payload, reason_text)
     return 0
 
 
@@ -3727,7 +3803,7 @@ def _waiting_scope_note(payload):
 
         def fn(entries):
             mine = [e for e in entries if e.get("session_id") == session_id]
-            timed = [e for e in mine if e.get("status") == "timed-out"]
+            timed = [e for e in mine if e.get("status") in ("timed-out", "refused")]
             if not mine:
                 return None
             shown.extend(dict(e) for e in timed)
@@ -3736,7 +3812,7 @@ def _waiting_scope_note(payload):
                 if e.get("session_id") == session_id:
                     if e.get("status") in ("waiting", "ran"):
                         continue
-                    if e.get("status") == "timed-out":
+                    if e.get("status") in ("timed-out", "refused"):
                         e = dict(e, status="reported")
                 out.append(e)
             return out
@@ -3837,6 +3913,78 @@ def _prompt_timeout_line():
         return ""
     return ("If nobody answers within %s, this is refused (never approved) and added to the "
             "waiting-on-you list." % _prompt_minutes(secs))
+
+
+def _last_seen_path(session_id):
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-last-seen-%s" % safe)
+
+
+def _record_last_seen(payload):
+    """UserPromptSubmit: note when aj last wrote, for the away check in _ask_or_refuse (#198).
+    A background task notice is not aj. Never raises; a failure is said on stderr."""
+    try:
+        m = _PROMPT_VALUE_RE.search(payload or "")
+        if not m or _TASK_NOTIFICATION_RE.search(m.group(1)):
+            return
+        data = json.loads(payload)
+        with open(_last_seen_path(str(data.get("session_id") or "")), "w", encoding="utf-8") as f:
+            f.write(str(time.time()))
+    except Exception as exc:
+        sys.stderr.write("house-rules scope: could not record when aj last wrote (%s: %s); the away "
+                         "check will ask as usual.\n" % (type(exc).__name__, exc))
+
+
+UNATTENDED_REFUSAL = (
+    "\n\nRefused, not asked: %s, so a prompt would only sit unanswered. Do not retry this action, "
+    "or reach the same result another way. Carry on with everything that does not depend on it, "
+    "and list it under 'Waiting on you' before you stop."
+)
+
+
+def _ask_or_refuse(payload, reason_text, context=None):
+    """Emit the guard's ask - or, when nobody can answer it, a refusal (#198): inside a subagent
+    (the payload carries agent_id), or when aj has not written for the prompt timeout. Refusals go
+    on the waiting-on-you list. HOUSE_RULES_PROMPT_TIMEOUT=off turns both refusals off."""
+    why = None
+    secs, _ = _prompt_timeout_seconds()
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = {}
+    data = data if isinstance(data, dict) else {}
+    session_id = str(data.get("session_id") or "")
+    status = "refused"
+    if secs is not None and data.get("agent_id"):
+        why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
+    elif secs is not None:
+        try:
+            idle = time.time() - float(_read_text(_last_seen_path(session_id)).strip())
+        except (OSError, ValueError):
+            idle = None  # no record of aj writing: ask as usual
+        if idle is not None and idle > secs:
+            why = "aj has not written for %s" % _prompt_minutes(idle)
+            status = "timed-out"  # aj is away: prompttimer refuses later prompts at once too
+    if not why:
+        out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",
+               "permissionDecisionReason": reason_text}
+    else:
+        tool, ti = str(data.get("tool_name") or "?"), data.get("tool_input")
+        now = time.time()
+        entry = {"session_id": session_id, "key": _waiting_key(tool, ti), "tool": tool,
+                 "summary": _waiting_summary(tool, ti), "started": now, "status": status, "timed_out_at": now}
+        try:
+            path, _ = _waiting_path(session_id)
+            _waiting_update(path, lambda es: [e for e in es if not (e.get("session_id") == session_id
+                                                                     and e.get("key") == entry["key"])] + [entry], "guard")
+        except Exception as exc:
+            sys.stderr.write("house-rules guard: could not add the refused action to the waiting-on-you "
+                             "list (%s: %s); it is still refused.\n" % (type(exc).__name__, exc))
+        out = {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+               "permissionDecisionReason": reason_text + UNATTENDED_REFUSAL % why}
+    if context:
+        out["additionalContext"] = context
+    emit({"hookSpecificOutput": out})
 
 
 def _prompt_minutes(secs):
@@ -4753,6 +4901,10 @@ def event_guardgithub():
             new_branch = args.get("head")
         if isinstance(new_branch, str) and new_branch.startswith("claude/"):
             reason = BRANCH_DENY % new_branch
+    if not reason and short in _GITHUB_COMMIT_TOOLS:
+        target = args.get("branch")
+        if isinstance(target, str) and is_protected_branch(target, _payload_cwd(raw)):
+            reason = PROTECTED_DENY % (target, "a file write through the GitHub tools")
     if reason:
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": reason}})
@@ -4830,7 +4982,7 @@ def _author_guard(subject, payload):
     if not _GIT_COMMIT_RE.search(cmd):
         return None
     try:
-        who = _effective_author(cmd, _payload_cwd(payload))
+        who = _effective_author(cmd, _command_dir(payload)[0])  # the repo a cd / -C moves to
     except Exception: return None  # unreadable identity: let the commit through, as for an unreadable body file
     if who is None or not _is_claude_identity(*who):
         return None
