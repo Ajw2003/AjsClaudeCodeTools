@@ -5,6 +5,17 @@ leaves you to work out what a bare "#2" or "option B" meant. An issue number alw
 under "Plain language on the surfaces a human reads", with examples in `rules/detail/plain-language.md`. It takes
 effect in the next session after the plugin updates.
 
+Guard fixes, plugin 2.61.0 (issues #200, #203, #189):
+
+- A risky command on a second line, or after a tab, now asks like any other. Before, `ls` + new line + `rm -rf build`
+  ran with no prompt, and so did `nohup`, `setsid`, `sleep 99 &` and a wait piped to `tail` on a second line (#200).
+- A commit message that mentions "cd" no longer makes a commit on the agent's own branch ask (#203).
+- A commit that sets its author with a quoted value, like `git -c user.name="aj's agent" commit`, is now checked for a
+  Claude credit like any other commit (#189, PR #190's change, ported here).
+
+Checked with the test suite, including every command form from the three issues, and by running each one through
+the guard before and after the change. Not yet tried in a live session.
+
 ## 2026-10-09
 
 Roadmap re-triaged: all 97 open issues are placed in `docs/2-roadmap/Roadmap.md` by how bad each is and how

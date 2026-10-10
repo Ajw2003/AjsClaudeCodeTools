@@ -156,7 +156,9 @@ Claude whatever its message says. `_author_guard` (next to `_attribution_guard`,
 `git var GIT_AUTHOR_IDENT` in the payload's cwd (5 s timeout). It denies a name that is exactly `Claude` (any case) or
 an email ending `anthropic.com`, naming the fix `git config user.name "AJ's agent" && git config user.email
 "79066376+Ajw2003@users.noreply.github.com"` (repo-local). If `git var` fails it allows silently. Works through
-the PowerShell tool via `_decoded_command`.
+the PowerShell tool via `_decoded_command`. Quoted `-c` values with spaces, and a wholly quoted
+`-c "user.name=..."`, are read as one value (2.61.0, issue #189); before that the shared `_GIT` prefix
+stopped at the space and neither check saw the commit at all.
 
 **GitHub tools (2.59.0, issue #178).** `guard` only sees shell commands, so writes through the GitHub MCP tools
 skipped the attribution check. `event_guardgithub` (own `PreToolUse` entry, matcher
@@ -313,5 +315,7 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   every such commit as "theirs" and prompted (timed out and refused when aj was away). A linked
   worktree's `.git` is a file; `_git_dir` follows it to the worktree's own `HEAD`. A lone leading
   `cd <dir> &&` moves the judged directory; any other `cd`/`pushd`, or a `cd` that does not resolve,
-  withholds the exemption (same path as `-C`). Owned prefixes are `AjsAgent/`, `claude/`, `ccr-`
+  withholds the exemption (same path as `-C`). A `cd` counts only where a command can start (line
+  start, after `;` `&` `|` `(` `{` `!` or a new line, or after `if`/`then`/`do`/`else` and the like),
+  so `git commit -m "fix cd handling"` keeps the exemption (2.61.0, #203). Owned prefixes are `AjsAgent/`, `claude/`, `ccr-`
   (cloud sessions) plus `HOUSE_RULES_OWNED_BRANCHES` (comma-separated extras, never replacing).
