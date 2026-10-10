@@ -181,7 +181,7 @@ invocation.
   own PR button follows the new branch is still unchecked. #177 is built (2.58.0): `guard` refuses a
   commit authored as Claude and session start tells a cloud session to set the repo-local identity.
   #178 is built (2.59.0): the GitHub write tools get the same credit check and refuse a new
-  `claude/` branch. 2.59.1: `guard` judges branch ownership by the payload cwd (worktree subagents), `ccr-` is owned, `HOUSE_RULES_OWNED_BRANCHES` adds prefixes. Not built: #179 cloud settings, #180 Focus Deck label, #181-#182 retroactive report and renames.
+  `claude/` branch. 2.59.1: `guard` judges branch ownership by the payload cwd (worktree subagents), `ccr-` is owned, `HOUSE_RULES_OWNED_BRANCHES` adds prefixes. 2.61.0: #189 is fixed, so git rules no longer miss a command whose `-c` value is quoted with a space in it (`-c user.name="aj's agent"`), which had let six Claude-credited commits through; PR #190's change, ported. Not built: #179 cloud settings, #180 Focus Deck label, #181-#182 retroactive report and renames.
 - **[`docs/architecture-backlog.md`](../architecture-backlog.md)** — seven open refactor candidates
   against `hook.py`/`verify.py` (deduplicating nine restatement checks, unifying the three
   places the failure-mode contract is stated, one open item about agent frontmatter fields
