@@ -1,5 +1,10 @@
 # Today — 2026-10-10
 
+New rule, plugin 2.62.0 (issue #216): a reply that refers back to something names it in a few words, and never
+leaves you to work out what a bare "#2" or "option B" meant. An issue number always comes with its title. It sits
+under "Plain language on the surfaces a human reads", with examples in `rules/detail/plain-language.md`. It takes
+effect in the next session after the plugin updates.
+
 Guard fixes, plugin 2.61.0 (issues #200, #203, #189):
 
 - A risky command on a second line, or after a tab, now asks like any other. Before, `ls` + new line + `rm -rf build`

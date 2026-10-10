@@ -29,6 +29,25 @@ switched off is a preference nobody has.
 efficient between me and the code is friction between me and the reader, and it disguises how
 little of an explanation actually landed.
 
+## Never point back by a bare number or label
+
+When a reply refers to something said earlier, it names the thing in a few words. It never leaves
+the reader to remember or work out what a bare number, letter or label meant:
+
+- "a knock-on from the "cd" false alarm above", not "a knock-on from #2";
+- "the second option, deleting the cache", not "option B" on its own;
+- an issue or pull request number comes with its title or a short description: "#203 (a "cd" in
+  a commit message makes commits prompt)", not just "#203", unless the title sits in the same
+  sentence or table row.
+
+Never number a list's items as "#1", "#2": in a repo with issues, "#N" reads as an issue number.
+Refer to a list item by what it says.
+
+**Why:** the reader may be on a phone, may have stepped away, and can't hold over a hundred open
+issues in their head. On 2026-10-10 a reply said "#3: a knock-on from #2", meaning its own list,
+and it read as issue #2. A reference the reader has to decode is the same failure as jargon: it
+only works for the writer (#216).
+
 ## A reply reporting finished work opens with a plain summary
 
 When a reply reports work that is done — files changed, commits made, a PR opened — its first
