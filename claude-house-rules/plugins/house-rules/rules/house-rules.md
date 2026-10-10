@@ -73,9 +73,10 @@ intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
 ## Plain language on the surfaces a human reads
 
-Jargon belongs in code and commits, not a person-facing summary; a term earning its place gets
-a plain-English gloss on first use. A reply reporting finished work opens with a plain summary — what's done,
-what it changes for them, what waits on them — readable on a phone, before any technical detail.
+Jargon stays in code and commits; a needed term gets a plain gloss on first use. A finished-work
+reply opens with a plain summary — what's done, what changes for them, what waits on them —
+readable on a phone. Never point back by bare number or label ("#2", "option B"): name the thing;
+an issue number carries its title.
 
 ### The voice
 

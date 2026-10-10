@@ -1,4 +1,11 @@
-# Today — 2026-10-09
+# Today — 2026-10-10
+
+New rule, plugin 2.62.0 (issue #216): a reply that refers back to something names it in a few words, and never
+leaves you to work out what a bare "#2" or "option B" meant. An issue number always comes with its title. It sits
+under "Plain language on the surfaces a human reads", with examples in `rules/detail/plain-language.md`. It takes
+effect in the next session after the plugin updates.
+
+## 2026-10-09
 
 Roadmap re-triaged: all 97 open issues are placed in `docs/2-roadmap/Roadmap.md` by how bad each is and how
 often it gets in the way, from P0 (safety holes and daily blockers, led by #200; the #196 permission-stall work below has since shipped and moved to the built list)
