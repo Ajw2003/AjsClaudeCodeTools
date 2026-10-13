@@ -7,6 +7,34 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-13 - Show, don't tell; the user designs - its own SessionStart slot, three rules merged in (#223, #224)
+
+**Context.** aj's biggest blocker with agents: work told, not shown; design choices made for them; code written
+before they had seen any idea. They asked for a rule where every plan reaches them as a visual, interactive
+proposal they approve or deny, design is theirs, and nothing is built before an approved design.
+
+**Decision.** Approved by aj in chat, in this order: picks 1A 2A 3B 4C 5A (one new rule; a page for every plan;
+options with my suggestion marked, aj picks; a hook blocks code until a design is approved; replies end on one
+question); Q1A Q2A Q3B Q4A (sessions start locked; "approved" plus a name lifts the block; "skip design" lets one
+change through; a 200-word no-page reminder ships with the block); "show" definition B (a page shows how the change
+works and affects the current product, with correct icons, consistent styling and a fitting design language, and
+nothing more); consolidate-first option A (every proposal opens with what exists: merges, cuts, reuses); overlap
+map (merge "Build only what was asked", "Match response depth" and the "Prefer proposing a plan" standards line;
+replace step cards; reuse the plain-summary and issue-gate checks); rule placement B (its own SessionStart slot).
+Built in #224: `rules/show-dont-tell.md` injected by a new `showrule` handler; the two merged rules and their detail
+files removed; `verify.py` 618 PASS, run twice. Proposal pages: `docs/plans/show-dont-tell*.html`,
+`docs/plans/consolidate-first.html`.
+
+**Rejected.** The rule inside `house-rules.md` (it was 47 chars from `inject`'s 9,700 margin; the rule is 927);
+the coding-standards slot (9,304 chars in a Unity + Node project, measured); a short pointer only, or cutting ~930
+chars from other rules.
+
+**Why.** The rule exists so aj keeps authorship. A first plan page made of styled text was rejected ("You showed
+me nothing you just made the text pretty"), which is why "show" is now defined in the rule itself.
+
+**Status.** Standing. Step cards (replace), the design block (#225), the reminder (#226) and their proof (#227) are
+not built yet.
+
 ## 2026-10-09 - Git writes are judged by the default branch, not branch prefixes; unanswerable prompts are refused (#196-#199, 2.60.0)
 
 **Context.** Subagents in worktrees sit on `worktree-agent-<id>` branches, which were not "owned", so every
