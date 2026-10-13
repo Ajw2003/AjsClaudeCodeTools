@@ -22,6 +22,16 @@ try (tap, drag, type and see the result), and icons or colour for state. Text on
 those; on its own, however nicely styled, it is still telling. The design language fits the idea
 being proposed. The page carries everything the proposal needs and nothing more.
 
+The design language is one system and never contradicts itself. Every colour, shape and icon means
+one thing everywhere on the page, and the legend says exactly what that is. If a colour means "your
+step", nothing else on the page uses it for something different. A page that says one thing in its
+legend and shows another is wrong, however polished. Checking this is part of my own review before
+the user sees the page.
+
+**Why:** on 2026-10-13 a stage diagram's legend said orange meant "your words move it on", while two
+blue stages also needed the user's words to move on. The user caught it; the legend had told them
+the opposite of the truth.
+
 The user answers with "approved" plus what they approved, or with what to change. A page made to
 look finished is still a proposal until they say so.
 

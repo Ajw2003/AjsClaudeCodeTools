@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-13 - Pages keep one design language that never contradicts itself (#223)
+
+**Context.** The loop-design page's legend said orange meant "your words move it on", while Design and Plan,
+both blue, also needed aj's words to move on. aj caught it.
+
+**Decision.** aj: a cohesive design language that does not contradict itself is required on every page. Added to
+`rules/show-dont-tell.md` ("a design language that fits the idea and never contradicts itself") and to its detail
+file: every colour, shape and icon means one thing everywhere on the page, and the legend says exactly what. I check
+this in my own review before aj sees a page. Under the "a rule with no check is not written" principle (#228), how to
+enforce it beyond my own review is for that audit to decide. `verify.py` 618 PASS after the change. A recurring
+flake seen along the way is filed as #229 (old "last seen" temp file breaks guard tests).
+
+**Status.** Standing.
+
 ## 2026-10-13 - The loop: aj's review and test become one QA step (#223)
 
 **Decision.** aj: "You review" and "You test" merge into one final QA stage with a pass/fail result. A fail states

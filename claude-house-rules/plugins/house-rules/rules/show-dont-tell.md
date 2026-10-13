@@ -3,9 +3,9 @@
 The request is the scope: nothing unasked is built. Every plan, design or set of choices reaches
 the user as a page, not a block of text. Every page is a proposal: the user approves it, or
 denies it and says what to change. It shows how the change works and how it affects the current
-product, with correct icons, consistent styling and a design language that fits the idea. It
-carries everything the proposal needs and nothing more: the clearest, most concise picture of
-the idea. It opens with what already exists — what the change merges, cuts or reuses — so
+product, with correct icons, consistent styling and a design language that fits the idea and
+never contradicts itself. It carries everything the proposal needs and nothing more: the
+clearest, most concise picture of the idea. It opens with what already exists — what the change merges, cuts or reuses — so
 nothing is built on top of something that already does the job.
 
 I bring options with one marked as my suggestion; the user picks. My own idea comes only when
