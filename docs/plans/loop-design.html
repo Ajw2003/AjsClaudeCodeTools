@@ -53,6 +53,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .g{border:0;background:none;padding:0;cursor:pointer}
 .lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
 .glance .lk .ico{width:14px;height:14px}
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
 .g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
 .g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
 .g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
@@ -159,9 +166,9 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
     <h2 id="s1" tabindex="-1">In short</h2>
     <div class="card">
       <p class="lead">Each feature has a stage. The plugin reads your messages and only lets me do what that stage allows. Code can only change in the build stage, after you approve the plan.</p>
-      <div class="key"><span><i></i>We work on it</span><span><i class="y"></i>Your check</span><span><b class="lk"><svg class="ico" style="width:14px;height:14px"><use href="#i-lock"/></svg></b>Needs your words to move on</span></div>
+      <div class="key"><span><i></i>We work on it</span><span><i class="y"></i>You decide</span></div>
       <div class="glance" id="glance" role="group" aria-label="The stages. Tap one to see what is allowed."></div>
-      <p class="muted" style="font-size:.85rem">Tap a stage to see what I can do in it.</p>
+      <p class="muted" style="font-size:.85rem">Tap a step to see what it creates and what it needs.</p>
       <div class="sd" id="sd" aria-live="polite"></div>
     </div>
     <div class="card">
@@ -185,7 +192,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
   <section class="panel" data-step="4" aria-labelledby="s4" hidden>
     <h2 id="s4" tabindex="-1">Wrap-up</h2>
     <div class="wrapup">
-      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>Each feature moves through six stages. Your typed approvals move it on, and the plugin only allows the work each stage allows.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>Each feature goes through eight steps, three of them yours. Your typed approvals move it on, and the plugin only allows the work each stage allows.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>2 new things (a stage tracker and a home for each feature) and 8 changes, including how issues show progress and that I review before you do. Nothing changes until you approve.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Your approval of this design, and of the page format. Your three answers are in.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--ok-soft);color:var(--ok)"><svg class="ico"><use href="#i-next"/></svg></span><div><h3>What's next</h3><p>The build plan: the steps to build this, as a page, for you to approve. Then the rule audit (issue #228, checking every house rule has a check behind it).</p></div></div>
@@ -211,23 +218,27 @@ const ic=id=>`<svg class="ico"><use href="#i-${id}"/></svg>`;
 const STEPS=["In short","Changes","Choices","Wrap-up"];
 
 const STAGES=[
- ["bulb","Design","Together",0,"Pages, docs and notes. No code.","You type \"Design approved: <name>\"."],
- ["list","Plan","Together",0,"Pages, docs and GitHub issues for each step. No code.","You type \"Build plan approved: <name>\"."],
- ["hammer","Build","Me",0,"Code, only for the approved steps. Each step is logged and committed.","All steps done. I show you the result."],
- ["search","I review","Me",0,"Screenshots of every screen it touches, a real run of how it works, and fixes for anything that doesn't match the approved design. No design changes.","Everything I could fix without you is fixed. I show you what I checked and what I fixed."],
- ["flask","Your QA","You",1,"Nothing new. I give you what I checked, what I fixed, and test steps I've run myself first.","Pass: you type \"QA passed: <name>\". Fail: \"QA failed: <name>\" and what needs to change, which goes back to Design."],
- ["check","Done","",2,"The feature is closed and logged.","The next feature starts at Design."]
+ ["bulb","Design",0,"A design page with options; the feature's systems doc is started.","Your ideas, and your picks on the page."],
+ ["lock","Approve the design",1,"A line in the decisions log. Planning opens.","You type \"Design approved: <name>\"."],
+ ["list","Plan",0,"A build-plan page, and a GitHub issue with a sub-issue per step, each naming its dependencies and done-criteria.","Your changes to the steps."],
+ ["lock","Approve the plan",1,"A line in the decisions log. Code edits unlock.","You type \"Build plan approved: <name>\"."],
+ ["hammer","Build",0,"The code for the approved steps. Each step is tested, logged, documented and committed.","Nothing from you. Anything unexpected stops the build and comes back to you."],
+ ["search","I review",0,"Screenshots of every screen it touches, a real run, and fixes for anything that doesn't match the approved design.","Nothing from you. A fix that would change the design comes back to you instead."],
+ ["flask","Your QA",1,"Pass: the feature closes. Fail: your list of changes, and the feature goes back to Design.","You type \"QA passed: <name>\", or \"QA failed: <name>\" and what to change."],
+ ["check","Done",2,"The feature is closed and its log and docs are final.","Nothing. The next feature starts at Design."]
 ];
-const SHORT=["Design","Plan","Build","I review","Your QA","Done"];
+const SHORT=["Design","Approve design","Plan","Approve plan","Build","I review","Your QA","Done"];
 const glance=document.getElementById("glance"),sd=document.getElementById("sd");
-const GATE=new Set([0,1,4]);// your words needed after Design, Plan and QA
-glance.innerHTML=STAGES.map(([i,t,who,you],n)=>`${n?(GATE.has(n-1)?`<span class="lk" title="Needs your words" aria-label="needs your words">${ic("lock")}</span>`:'<span class="arrow" aria-hidden="true">›</span>'):""}<button type="button" class="g${you===1?" you":you===2?" done":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
+const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+glance.innerHTML=STAGES.map(([i,t,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you===1?" you":you===2?" done":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
 function showStage(n){
   glance.querySelectorAll(".g").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.s===n));
-  const [i,t,who,you,allowed,next]=STAGES[n];
+  const [i,t,you,creates,requires]=STAGES[n];
+  const who=you===1?"You decide":you===2?"":"We work on it";
   sd.innerHTML=`<h3>${t}${who?` <span class="muted" style="font-weight:400;font-size:.85rem">· ${who}</span>`:""}</h3>
-   <div class="row"><span>Allowed</span><span>${allowed}</span></div><div class="row"><span>Moves on</span><span>${next.replace(/</g,"&lt;").replace(/&lt;name>/g,"&lt;name&gt;")}</span></div>
-   ${n===4?`<p class="back">${ic("loop")}Failed? Back to Design with your list of changes.</p>`:""}`;
+   <div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span><p>${esc(creates)}</p></div>
+   <div class="crb${/^Nothing/.test(requires)?"":" you"}"><span class="crh">${ic("hand")}Requires</span><p>${esc(requires)}</p></div></div>
+   ${n===6?`<p class="back">${ic("loop")}Failed? Back to Design with your list of changes.</p>`:""}`;
 }
 glance.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b)showStage(+b.dataset.s)});
 showStage(0);
