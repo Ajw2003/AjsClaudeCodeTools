@@ -51,6 +51,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
 .arrow{color:var(--muted);font-size:1.1rem}
 .g{border:0;background:none;padding:0;cursor:pointer}
+.lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
+.glance .lk .ico{width:14px;height:14px}
+.g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
 .g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
 .g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
 .g[aria-pressed="true"]{color:var(--fg);font-weight:700}
@@ -156,7 +159,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
     <h2 id="s1" tabindex="-1">In short</h2>
     <div class="card">
       <p class="lead">Each feature has a stage. The plugin reads your messages and only lets me do what that stage allows. Code can only change in the build stage, after you approve the plan.</p>
-      <div class="key"><span><i></i>Work happens here</span><span><i class="y"></i>Your words move it on</span></div>
+      <div class="key"><span><i></i>We work on it</span><span><i class="y"></i>Your check</span><span><b class="lk"><svg class="ico" style="width:14px;height:14px"><use href="#i-lock"/></svg></b>Needs your words to move on</span></div>
       <div class="glance" id="glance" role="group" aria-label="The stages. Tap one to see what is allowed."></div>
       <p class="muted" style="font-size:.85rem">Tap a stage to see what I can do in it.</p>
       <div class="sd" id="sd" aria-live="polite"></div>
@@ -213,15 +216,16 @@ const STAGES=[
  ["hammer","Build","Me",0,"Code, only for the approved steps. Each step is logged and committed.","All steps done. I show you the result."],
  ["search","I review","Me",0,"Screenshots of every screen it touches, a real run of how it works, and fixes for anything that doesn't match the approved design. No design changes.","Everything I could fix without you is fixed. I show you what I checked and what I fixed."],
  ["flask","Your QA","You",1,"Nothing new. I give you what I checked, what I fixed, and test steps I've run myself first.","Pass: you type \"QA passed: <name>\". Fail: \"QA failed: <name>\" and what needs to change, which goes back to Design."],
- ["check","Done","You",1,"The feature is closed and logged.","The next feature starts at Design."]
+ ["check","Done","",2,"The feature is closed and logged.","The next feature starts at Design."]
 ];
 const SHORT=["Design","Plan","Build","I review","Your QA","Done"];
 const glance=document.getElementById("glance"),sd=document.getElementById("sd");
-glance.innerHTML=STAGES.map(([i,t,who,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you?" you":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
+const GATE=new Set([0,1,4]);// your words needed after Design, Plan and QA
+glance.innerHTML=STAGES.map(([i,t,who,you],n)=>`${n?(GATE.has(n-1)?`<span class="lk" title="Needs your words" aria-label="needs your words">${ic("lock")}</span>`:'<span class="arrow" aria-hidden="true">›</span>'):""}<button type="button" class="g${you===1?" you":you===2?" done":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
 function showStage(n){
   glance.querySelectorAll(".g").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.s===n));
   const [i,t,who,you,allowed,next]=STAGES[n];
-  sd.innerHTML=`<h3>${t} <span class="muted" style="font-weight:400;font-size:.85rem">· ${who}</span></h3>
+  sd.innerHTML=`<h3>${t}${who?` <span class="muted" style="font-weight:400;font-size:.85rem">· ${who}</span>`:""}</h3>
    <div class="row"><span>Allowed</span><span>${allowed}</span></div><div class="row"><span>Moves on</span><span>${next.replace(/</g,"&lt;").replace(/&lt;name>/g,"&lt;name&gt;")}</span></div>
    ${n===4?`<p class="back">${ic("loop")}Failed? Back to Design with your list of changes.</p>`:""}`;
 }
