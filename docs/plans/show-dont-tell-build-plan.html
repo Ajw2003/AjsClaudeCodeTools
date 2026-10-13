@@ -1,0 +1,91 @@
+<title>Show, Don't Tell Build Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: the build plan — four issue cards in order, each with what changes and which existing hook carries it. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#5a6578; --line:#d8dee8;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --part:#9a6200; --part-soft:#fbefd6; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:36px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2rem,6vw,2.8rem);font-weight:800}
+h2{font-size:1.35rem;font-weight:600}
+p{margin:0}
+.lede{color:var(--muted);max-width:60ch;margin-top:8px}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+section{display:grid;gap:14px}
+/* tally bar */
+.tally{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.tally span{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+/* coverage rows */
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.row > div{min-width:0}
+.pill{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 8px;text-align:center}
+.ok{background:var(--ok-soft);color:var(--ok)} .part{background:var(--part-soft);color:var(--part)} .gap{background:var(--gap-soft);color:var(--gap)}
+.ask{font-weight:700}
+.src{font-size:.85rem;color:var(--muted);margin-top:2px}
+code{font-size:.85em;background:var(--accent-soft);color:var(--fg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+/* before / after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:620px){.ba{grid-template-columns:1fr}}
+.pane{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
+.pane .wall{font-size:.8rem;color:var(--muted);line-height:1.45}
+.pane .short{display:grid;gap:8px;font-size:.92rem}
+.fake-link{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:6px 10px;font-weight:700;font-size:.85rem}
+.fake-q{border-left:3px solid var(--accent);padding-left:10px}
+/* decisions */
+.dec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px}
+.dec .q{font-weight:700}
+.dec .why{font-size:.88rem;color:var(--muted)}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input{margin-top:4px;accent-color:var(--accent)}
+.opt:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.sug{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-left:6px}
+.opt small{display:block;color:var(--muted);font-size:.85rem}
+textarea{width:100%;box-sizing:border-box;min-height:80px;border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;background:var(--card);color:var(--fg)}
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:620px){.flow{grid-template-columns:1fr 1fr}}
+.step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.88rem}
+.step b{display:block;font-family:var(--display);font-size:1.4rem;color:var(--accent)}
+.step.now{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+/* copy bar */
+.copybar{display:grid;gap:10px}
+button{font:inherit;font-weight:700;background:var(--accent);color:var(--bg);border:0;border-radius:9px;padding:12px 16px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px;margin:0;font-size:.85rem;overflow-x:auto}
+.status{font-size:.85rem;color:var(--muted)}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">House rules · step 3 of 4 · nothing built yet</div>
+    <h1>Show, Don't Tell: Build Plan</h1>
+    <p class="lede">Your approved wording becomes four pieces of work, done in this order. Each is a GitHub issue under <a href="https://github.com/Ajw2003/AjsClaudeCodeTools/issues/223" style="color:var(--accent)">#223</a>. None of them has started.</p>
+  </header>
+  <section><div class="dec"><div class="q"><a href="https://github.com/Ajw2003/AjsClaudeCodeTools/issues/224" style="color:var(--accent)">#224</a> · Write the rule into the house rules</div><p>Adds the approved section to the rules file, a detail file with examples, and swaps the one clashing line in build-what-asked.</p><div class="why">Where: Rules files only</div><span class="pill ok" style="justify-self:start">2 files changed, 1 new</span></div><div class="dec"><div class="q"><a href="https://github.com/Ajw2003/AjsClaudeCodeTools/issues/225" style="color:var(--accent)">#225</a> · Block code edits until you approve a design</div><p>Session start turns the block on. Your "approved" plus a name lifts it; "skip design" lets one change through. Docs and pages stay editable.</p><div class="why">Where: Rides on hooks that already run: session start, your messages, and the edit check that holds the issue block</div><span class="pill ok" style="justify-self:start">No new hook processes</span></div><div class="dec"><div class="q"><a href="https://github.com/Ajw2003/AjsClaudeCodeTools/issues/226" style="color:var(--accent)">#226</a> · Remind me when a reply is long and has no page</div><p>At the end of a reply, a long answer with no page or picture gets flagged so the detail moves into a page.</p><div class="why">Where: Rides on the end-of-reply check that already reminds me to look at visual changes</div><span class="pill ok" style="justify-self:start">No new hook processes</span></div><div class="dec"><div class="q"><a href="https://github.com/Ajw2003/AjsClaudeCodeTools/issues/227" style="color:var(--accent)">#227</a> · Prove it works and update the docs</div><p>Test cases for every example on the approval page, then a real run: an edit refused, then allowed after your approval. You see the actual output.</p><div class="why">Where: verify.py, architecture doc, state doc, decisions log</div><span class="pill ok" style="justify-self:start">The proof you'll see</span></div></section>
+  <section>
+    <h2>Left out on purpose</h2>
+    <p class="lede" style="margin:0">Quoting your last approval back in a new session. I added it to the example without you deciding, so it isn't in the plan. Say if you want it.</p>
+  </section>
+  <section>
+    <h2>Your move</h2>
+    <p class="lede" style="margin:0">Reply <b>"Build plan approved"</b> to start. Or name the issue and what to change.</p>
+  </section>
+</div>
