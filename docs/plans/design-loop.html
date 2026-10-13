@@ -32,7 +32,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
 
 /* stepper */
-.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .stepper button{border:0;background:none;display:grid;justify-items:center;gap:4px;padding:4px 0;font-size:.72rem;color:var(--muted)}
 .stepper .bar{width:100%;height:6px;border-radius:3px;background:var(--line)}
 .stepper button.done .bar{background:var(--accent)}
@@ -50,6 +50,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .g span.c{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
 .g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
 .arrow{color:var(--muted);font-size:1.1rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.sd h3{display:flex;gap:8px;align-items:center}
+.sd .back{padding-left:0}
 .key{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
 .key i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent)}
 .key i.y{border-radius:4px;background:var(--you-soft);border-color:var(--you)}
@@ -92,8 +99,9 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
 .opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
 .opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
-.opt input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.opt input[type=radio]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
 .opt small{display:block;color:var(--muted);font-size:.86rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
 .rec{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
 .rec .ico{width:12px;height:12px}
 .why{font-size:.88rem}
@@ -147,17 +155,10 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
     <h2 id="s1" tabindex="-1">In short</h2>
     <div class="card">
       <p class="lead">Every feature goes round the same loop. We design it together, then plan the build together. I build, we review it, and you test it. It doesn't move past a lock until you approve.</p>
-      <div class="glance" role="img" aria-label="Design, you approve, plan, you approve, build, review, you test, done">
-        <span class="g"><span class="c"><svg class="ico"><use href="#i-bulb"/></svg></span>Design</span><span class="arrow" aria-hidden="true">›</span>
-        <span class="g you"><span class="c"><svg class="ico"><use href="#i-lock"/></svg></span>You OK</span><span class="arrow" aria-hidden="true">›</span>
-        <span class="g"><span class="c"><svg class="ico"><use href="#i-list"/></svg></span>Plan</span><span class="arrow" aria-hidden="true">›</span>
-        <span class="g you"><span class="c"><svg class="ico"><use href="#i-lock"/></svg></span>You OK</span><span class="arrow" aria-hidden="true">›</span>
-        <span class="g"><span class="c"><svg class="ico"><use href="#i-hammer"/></svg></span>Build</span><span class="arrow" aria-hidden="true">›</span>
-        <span class="g"><span class="c"><svg class="ico"><use href="#i-eye"/></svg></span>Review</span><span class="arrow" aria-hidden="true">›</span>
-        <span class="g you"><span class="c"><svg class="ico"><use href="#i-flask"/></svg></span>You test</span><span class="arrow" aria-hidden="true">›</span>
-        <span class="g you"><span class="c"><svg class="ico"><use href="#i-check"/></svg></span>Done</span>
-      </div>
       <div class="key"><span><i></i>We work on it</span><span><i class="y"></i>Only you can pass it</span></div>
+      <div class="glance" id="glance" role="group" aria-label="The loop. Tap a stage for detail."></div>
+      <p class="muted" style="font-size:.85rem">Tap a stage for detail.</p>
+      <div class="sd" id="sd" aria-live="polite"></div>
     </div>
     <div class="card">
       <h3>Why</h3>
@@ -166,32 +167,26 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
   </section>
 
   <section class="panel" data-step="2" aria-labelledby="s2" hidden>
-    <h2 id="s2" tabindex="-1">The loop, stage by stage</h2>
-    <p class="muted">Tap a stage for who does what and what gets written down.</p>
-    <div class="stages" id="stages"></div>
-  </section>
-
-  <section class="panel" data-step="3" aria-labelledby="s3" hidden>
-    <h2 id="s3" tabindex="-1">What this creates or changes</h2>
+    <h2 id="s2" tabindex="-1">What this creates or changes</h2>
     <p class="muted">2 new things, 5 changes, 2 kept as they are. Tap one for before and after.</p>
     <div class="cc" id="cc"></div>
   </section>
 
-  <section class="panel" data-step="4" aria-labelledby="s4" hidden>
-    <h2 id="s4" tabindex="-1">Your choices</h2>
-    <p class="muted">Five decisions. My suggestion is marked; nothing is picked for you.</p>
+  <section class="panel" data-step="3" aria-labelledby="s3" hidden>
+    <h2 id="s3" tabindex="-1">Your choices</h2>
+    <p class="muted">Five decisions. My suggestion is marked, nothing is picked for you, and each one has room for your own answer.</p>
     <div id="qs" style="display:grid;gap:22px"></div>
   </section>
 
-  <section class="panel" data-step="5" aria-labelledby="s5" hidden>
-    <h2 id="s5" tabindex="-1">Wrap-up</h2>
+  <section class="panel" data-step="4" aria-labelledby="s4" hidden>
+    <h2 id="s4" tabindex="-1">Wrap-up</h2>
     <div class="wrapup">
       <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>A loop that every feature goes through, with your approval at each lock and everything logged as it happens.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>2 new things (a stage tracker and a log per feature) and 5 changes to how the plugin works today. Nothing changes until you approve.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Your five choices. The paused work (issues #225 to #227) waits on choice 5.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--ok-soft);color:var(--ok)"><svg class="ico"><use href="#i-next"/></svg></span><div><h3>What's next</h3><p>I turn your choices into a design page for the loop, for you to approve. Nothing is built before that.</p></div></div>
       <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3>
-        <ol><li>Pick an option for each of the five choices (step 4).</li><li>Tap <b>Copy my reply</b> below.</li><li>Paste it into the chat and send.</li></ol></div></div>
+        <ol><li>Pick an option for each of the five choices (step 3), or write your own.</li><li>Tap <b>Copy my reply</b> below.</li><li>Paste it into the chat and send.</li></ol></div></div>
     </div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
@@ -209,7 +204,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 
 <script>
 const ic=id=>`<svg class="ico"><use href="#i-${id}"/></svg>`;
-const STEPS=["In short","The loop","Changes","Choices","Wrap-up"];
+const STEPS=["In short","Changes","Choices","Wrap-up"];
 
 const STAGES=[
  ["bulb","Design it together","Together",0,"Show you what exists, bring options with my suggestion marked, draw them on a page.","Decide. Your ideas lead.","Decisions"],
@@ -221,10 +216,18 @@ const STAGES=[
  ["flask","You test it","You",1,"Give you exact test steps that I've run myself first.","Test it. Tell me what you saw.","Test result"],
  ["check","You approve, next feature","You",1,"Close out the log and docs.","Reply \"Feature approved\".","Final entry"]
 ];
-document.getElementById("stages").innerHTML=STAGES.map(([i,t,who,you,me,yd,log],n)=>`
- <details class="st${you?" you":""}"><summary><span class="c">${ic(i)}</span><span class="nm"><b>${t}</b><small>${who}</small></span><span class="more">More</span></summary>
- <div class="detail"><div class="row"><span>I do</span><span>${me}</span></div><div class="row"><span>You do</span><span>${yd}</span></div><div class="row"><span>Logged</span><span>${log}</span></div></div></details>
- ${n===5?`<p class="back">${ic("loop")}Asked for changes? Back to the start of the loop.</p>`:""}`).join("");
+const SHORT=["Design","You OK","Plan","You OK","Build","Review","You test","Done"];
+const glance=document.getElementById("glance"),sd=document.getElementById("sd");
+glance.innerHTML=STAGES.map(([i,t,who,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you?" you":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
+function showStage(n){
+  glance.querySelectorAll(".g").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.s===n));
+  const [i,t,who,you,me,yd,log]=STAGES[n];
+  sd.innerHTML=`<h3>${t} <span class="muted" style="font-weight:400;font-size:.85rem">· ${who}</span></h3>
+   <div class="row"><span>I do</span><span>${me}</span></div><div class="row"><span>You do</span><span>${yd}</span></div><div class="row"><span>Logged</span><span>${log}</span></div>
+   ${n===5?`<p class="back">${ic("loop")}Asked for changes? Back to the start of the loop.</p>`:""}`;
+}
+glance.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b)showStage(+b.dataset.s)});
+showStage(0);
 
 const CC=[
  ["new","A stage tracker","A small note per project saying which stage each feature is in.",null,"Kept inside the project's hidden git folder, never committed, like the issue block's note today. The plugin's checks read it to know which approvals have been given."],
@@ -251,17 +254,22 @@ const QS=[
 document.getElementById("qs").innerHTML=QS.map(([id,q,opts,why],n)=>`
  <fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n+1}</span>${q}</h3></legend>
  ${opts.map(([v,l,rec,d])=>`<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${l}</b>${rec?'<span class="rec">'+ic("check")+'Suggested</span>':""}${d?`<small>${d}</small>`:""}</span></label>`).join("")}
+ <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to choice ${n+1}" placeholder="Type your idea here"></span></label>
  ${why?`<details class="why"><summary>Why I suggest this</summary><p>${why}</p></details>`:""}</fieldset>`).join("");
 
 const out=document.getElementById("out"),miss=document.getElementById("miss");
 function reply(){
-  const picks=QS.map(([id],i)=>{const c=document.querySelector(`input[name=${id}]:checked`);return [i+1,c&&c.value]});
-  out.textContent="Design loop: "+picks.map(([n,v])=>`${n}${v||"?"}`).join(" ");
+  const picks=QS.map(([id],i)=>{const c=document.querySelector(`input[name=${id}]:checked`);
+    if(c&&c.value==="own"){const t=document.querySelector(`.owntext[data-for=${id}]`).value.trim();return [i+1,t?"own":null,t]}
+    return [i+1,c&&c.value]});
+  out.textContent="Design loop: "+picks.map(([n,v])=>`${n}${v==="own"?"*":v||"?"}`).join(" ")
+    +picks.filter(([,v])=>v==="own").map(([n,,t])=>`\nChoice ${n}, my own answer: ${t}`).join("");
   const m=picks.filter(([,v])=>!v).map(([n])=>n);
   miss.innerHTML=m.length?`<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>`:"All five picked.";
-  const g=document.getElementById("goq");if(g)g.onclick=()=>go(4);
+  const g=document.getElementById("goq");if(g)g.onclick=()=>go(3);
 }
 document.addEventListener("change",reply);
+document.addEventListener("input",e=>{if(e.target.classList.contains("owntext")){const r=document.querySelector(`input[name=${e.target.dataset.for}][value=own]`);if(e.target.value.trim())r.checked=true;reply()}});
 document.getElementById("copy").onclick=()=>{const st=document.getElementById("st");
   navigator.clipboard.writeText(out.textContent).then(()=>st.textContent="Copied. Paste it into the chat.")
   .catch(()=>{const r=document.createRange();r.selectNodeContents(out);getSelection().removeAllRanges();getSelection().addRange(r);st.textContent="Couldn't copy automatically. The reply is selected; copy it by hand."})};
@@ -270,17 +278,17 @@ let cur=1;
 const stepper=document.getElementById("stepper");
 stepper.innerHTML=STEPS.map((s,i)=>`<button type="button" data-go="${i+1}"><span class="bar"></span>${s}</button>`).join("");
 function go(n,focus=true){
-  cur=Math.min(5,Math.max(1,n));
+  cur=Math.min(4,Math.max(1,n));
   document.querySelectorAll("[data-step]").forEach(p=>p.hidden=+p.dataset.step!==cur);
   stepper.querySelectorAll("button").forEach((b,i)=>{b.classList.toggle("done",i+1<cur);if(i+1===cur)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current")});
   document.getElementById("prev").hidden=cur===1;
-  const nx=document.getElementById("next");nx.hidden=cur===5;nx.textContent=cur===4?"Wrap-up ›":"Next ›";
+  const nx=document.getElementById("next");nx.hidden=cur===4;nx.textContent=cur===3?"Wrap-up ›":"Next ›";
   if(focus){document.getElementById("s"+cur).focus({preventScroll:true});window.scrollTo({top:0})}
-  try{localStorage.setItem("loop-step",cur)}catch(e){}
+  try{localStorage.setItem("loop-step2",cur)}catch(e){}
 }
 stepper.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)go(+b.dataset.go)});
 document.getElementById("prev").onclick=()=>go(cur-1);
 document.getElementById("next").onclick=()=>go(cur+1);
-const h=location.hash.match(/^#step([1-5])$/);let saved=null;try{saved=+localStorage.getItem("loop-step")}catch(e){}
+const h=location.hash.match(/^#step([1-4])$/);let saved=null;try{saved=+localStorage.getItem("loop-step2")}catch(e){}
 go(h?+h[1]:(saved||1),false);reply();
 </script>
