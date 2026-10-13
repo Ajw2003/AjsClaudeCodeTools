@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-13 - A rule with no check is not written (#228)
+
+**Context.** The no-bare-numbers rule (#216) was broken twice in one session. It shipped text only, covers chat
+replies but not pages, and no end-of-turn check reads pages (`docs/plans/bare-references.html`).
+
+**Decision.** aj: every rule needs a check that enforces it, because the agent can otherwise ignore it. A rule
+nobody can enforce should not be written. Issue #228 (audit every house rule for a check that enforces it) audits
+the whole rule set for unenforced rules and fixes the cause at the source. It is taken up after the show-don't-tell
+design loop (#223) is agreed and documented. The three choices on the bare-references page wait for that audit.
+
+**Status.** Standing. Audit not started.
+
 ## 2026-10-13 - The design loop: four of five choices made (#223)
 
 **Context.** aj asked for auto mode to work like plan mode but force one workflow: design together, aj approves;
