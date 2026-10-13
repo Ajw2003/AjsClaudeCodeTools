@@ -7,6 +7,24 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-13 - The design loop: four of five choices made (#223)
+
+**Context.** aj asked for auto mode to work like plan mode but force one workflow: design together, aj approves;
+plan the build together, aj approves; build; review together; plan changes, aj approves; aj tests and approves.
+Every step logs decisions and changes and updates docs, never left for later, and helpers follow the same loop.
+Proposal page: `docs/plans/design-loop.html`.
+
+**Decision.** Choices answered by aj: (1) the plugin's own check holds every approval lock (not Claude Code's
+plan mode, which docs say switches the session into an editing mode on approval, and which helpers cannot enter);
+(2) aj's own answer: a feature lives in the systems docs and as a GitHub issue with sub-issues, plus a line in
+this log; features are planned, built, adjusted and finished, and the whole process is trackable at a glance;
+(3) helpers only build approved steps and report into the log; (4) "skip design" lets one small fix through, still
+logged. Choice 5 (what happens to the paused lock, reminder and tests, issues #225-#227) was asked with bare issue
+numbers; aj's answer was that a choice must name what is changed and what it means, never only a numbered issue.
+Re-asked with the pieces named.
+
+**Status.** Open: choice 5, and approval of the handover page format itself.
+
 ## 2026-10-13 - Show, don't tell; the user designs - its own SessionStart slot, three rules merged in (#223, #224)
 
 **Context.** aj's biggest blocker with agents: work told, not shown; design choices made for them; code written

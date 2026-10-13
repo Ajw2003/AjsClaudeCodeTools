@@ -95,7 +95,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 
 /* choices */
 .q{display:grid;gap:8px}
-.q h3{display:flex;gap:10px;align-items:center}
+.q h3{display:flex;gap:10px;align-items:flex-start}
 .qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
 .opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
 .opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
@@ -182,11 +182,11 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
     <h2 id="s4" tabindex="-1">Wrap-up</h2>
     <div class="wrapup">
       <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>A loop that every feature goes through, with your approval at each lock and everything logged as it happens.</p></div></div>
-      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>2 new things (a stage tracker and a log per feature) and 5 changes to how the plugin works today. Nothing changes until you approve.</p></div></div>
-      <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Your five choices. The paused work (issues #225 to #227) waits on choice 5.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>2 new things (a stage tracker, and a home for each feature: a systems doc plus a GitHub issue with sub-issues) and 5 changes to how the plugin works today. Nothing changes until you approve.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>One choice left: what happens to the three paused pieces of work (the code-edit lock, the long-reply reminder, and the tests that prove them).</p></div></div>
       <div class="wu"><span class="c" style="background:var(--ok-soft);color:var(--ok)"><svg class="ico"><use href="#i-next"/></svg></span><div><h3>What's next</h3><p>I turn your choices into a design page for the loop, for you to approve. Nothing is built before that.</p></div></div>
       <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3>
-        <ol><li>Pick an option for each of the five choices (step 3), or write your own.</li><li>Tap <b>Copy my reply</b> below.</li><li>Paste it into the chat and send.</li></ol></div></div>
+        <ol><li>Answer choice 5 (step 3). Choices 1 to 4 are already filled in with your answers.</li><li>Tap <b>Copy my reply</b> below.</li><li>Paste it into the chat and send.</li></ol></div></div>
     </div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
@@ -231,8 +231,8 @@ showStage(0);
 
 const CC=[
  ["new","A stage tracker","A small note per project saying which stage each feature is in.",null,"Kept inside the project's hidden git folder, never committed, like the issue block's note today. The plugin's checks read it to know which approvals have been given."],
- ["new","A log for each feature","One page per feature: decisions, changes, docs touched.",null,"Depends on choice 2. The project-wide decisions log stays where it is and gets a line at every approval."],
- ["chg","The design block","One lock before code becomes a lock at every orange stage.",["One lock, before any code","A lock at each approval"],"The design-block work (#225) was approved as a single lock. With the loop, the same mechanism holds each approval instead."],
+ ["new","A home for each feature","A systems doc, a GitHub issue with a sub-issue per step, and a line in the decisions log.",null,"Your answer to choice 2. Each feature is planned, built, adjusted and finished, and the whole process can be followed at a glance. How it shows at a glance is a design question for the next page."],
+ ["chg","The design block","One lock before code becomes a lock at every orange stage.",["One lock, before any code","A lock at each approval"],"The code-edit lock (issue #225, not built yet) was approved as a single lock. With the loop, the same mechanism holds each approval instead."],
  ["chg","Hand-off to a helper","No more guessing that you've said \"go\".",["A guess from your wording hands work to a helper","Only \"Build plan approved\" starts a build"],"Today the plugin reads a message as a go-ahead if it sounds like one. That guess is what hands work off without a clear yes."],
  ["chg","Helper rules","Helpers only build approved steps, and report into the log.",["Helpers get the rules","Helpers also get the approved plan and the loop"],"Depends on choice 3. Helpers already receive the rules when they start; they'd also receive the approved plan."],
  ["chg","Docs and decisions logging","From a reminder to a required part of each stage.",["A reminder I can skip","A stage can't close until it's logged"],"Today I skipped logging decisions until you asked. This makes that impossible."],
@@ -249,7 +249,7 @@ const QS=[
  ["log","Where is each feature logged?",[["A","A log page per feature, plus a line in the decisions log",1,"Everything about one feature in one place."],["B","Comments on the GitHub issue",0,"Visible on GitHub, but scattered."],["C","Both",0,""]],"The decisions log (docs/6-decisions/Decisions.md) already exists and stays either way."],
  ["helpers","What can helpers do?",[["A","Only build approved steps, and report into the log",1,"They never design or decide."],["B","Nothing unless you ask for one",0,""],["C","Run the whole loop with you",0,"More voices talking to you."]],"Helpers are the subagents I can start. Today they get a copy of the rules when they start."],
  ["small","Do tiny fixes go round the whole loop?",[["A","Yes, every change",0,"Even a typo."],["B","\"skip design\" lets one small fix through, still logged",1,""],["C","I decide what's small",0,"That's me deciding, which this is meant to stop."]],""],
- ["order","What happens to the paused work (#225 to #227)?",[["A","Fold it into this loop as one design",1,"The design block becomes the locks. One build instead of two."],["B","Finish it as approved, then extend",0,""]],""]
+ ["order",'<span>What happens to the 3 paused pieces of work?<small style="display:block;font:400 .86rem var(--body);color:var(--muted);margin-top:4px">The lock that stops code until you approve · the reminder for long replies with no page · the tests for both</small></span>',[["A","Fold them into the loop",1,"The code-edit lock becomes the locks at every approval. The reminder and tests are built as part of the loop. One build."],["B","Build them first exactly as approved, then build the loop on top",0,"One lock before code, the 200-word reminder, their tests. Then a second build for the loop."]],"They are GitHub issues #225, #226 and #227, children of #223. Folding them in avoids building one lock and then rebuilding it as several."]
 ];
 document.getElementById("qs").innerHTML=QS.map(([id,q,opts,why],n)=>`
  <fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n+1}</span>${q}</h3></legend>
@@ -290,5 +290,8 @@ stepper.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)
 document.getElementById("prev").onclick=()=>go(cur-1);
 document.getElementById("next").onclick=()=>go(cur+1);
 const h=location.hash.match(/^#step([1-4])$/);let saved=null;try{saved=+localStorage.getItem("loop-step2")}catch(e){}
+const ANS={gates:"A",helpers:"A",small:"B",log:"own"};
+for(const [k,v] of Object.entries(ANS)){const r=document.querySelector(`input[name=${k}][value=${v}]`);if(r)r.checked=true}
+document.querySelector('.owntext[data-for=log]').value="Features live in systems docs and as an issue with sub issues in the git. Plus a line decision log. Features get planned, built, adjusted and then finished and the whole process is trackable at a glance";
 go(h?+h[1]:(saved||1),false);reply();
 </script>
