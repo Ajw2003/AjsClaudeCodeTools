@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-13 - The design loop: last choice made (#223)
+
+**Decision.** aj picked "fold them into the loop" for the three paused pieces of work: the code-edit lock (#225), the
+long-reply reminder (#226) and their tests (#227). The code-edit lock becomes the lock at every approval and all
+three are built as part of the loop, in one build. With the four choices logged earlier today, all five design-loop
+choices are made.
+
+**Status.** Standing. Open: approval of the handover page format, and of the loop's own design page.
+
 ## 2026-10-13 - A rule with no check is not written (#228)
 
 **Context.** The no-bare-numbers rule (#216) was broken twice in one session. It shipped text only, covers chat
