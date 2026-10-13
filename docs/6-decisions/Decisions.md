@@ -7,6 +7,14 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-13 - The loop: aj's review and test become one QA step (#223)
+
+**Decision.** aj: "You review" and "You test" merge into one final QA stage with a pass/fail result. A fail states
+clearly what needs to change and goes back to Design. Proposed wording: "QA passed: <feature>" and "QA failed:
+<feature>" plus the changes. Stages are now Design, Plan, Build, I review, Your QA, Done.
+
+**Status.** Open: aj's approval of the loop design and the handover page format.
+
 ## 2026-10-13 - The loop: I review before aj does (#223)
 
 **Decision.** aj: review is split in two. First I review on my own: visual check of every screen the change
