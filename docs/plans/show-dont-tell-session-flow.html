@@ -1,0 +1,192 @@
+<title>Session Flow</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a tabbed chat timeline — Before, After, Edge cases — each a column of message bubbles with hook events between them. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#5a6578; --line:#d8dee8;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --part:#9a6200; --part-soft:#fbefd6; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:36px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2rem,6vw,2.8rem);font-weight:800}
+h2{font-size:1.35rem;font-weight:600}
+p{margin:0}
+.lede{color:var(--muted);max-width:60ch;margin-top:8px}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+section{display:grid;gap:14px}
+/* tally bar */
+.tally{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.tally span{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+/* coverage rows */
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.row > div{min-width:0}
+.pill{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 8px;text-align:center}
+.ok{background:var(--ok-soft);color:var(--ok)} .part{background:var(--part-soft);color:var(--part)} .gap{background:var(--gap-soft);color:var(--gap)}
+.ask{font-weight:700}
+.src{font-size:.85rem;color:var(--muted);margin-top:2px}
+code{font-size:.85em;background:var(--accent-soft);color:var(--fg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+/* before / after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:620px){.ba{grid-template-columns:1fr}}
+.pane{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
+.pane .wall{font-size:.8rem;color:var(--muted);line-height:1.45}
+.pane .short{display:grid;gap:8px;font-size:.92rem}
+.fake-link{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:6px 10px;font-weight:700;font-size:.85rem}
+.fake-q{border-left:3px solid var(--accent);padding-left:10px}
+/* decisions */
+.dec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px}
+.dec .q{font-weight:700}
+.dec .why{font-size:.88rem;color:var(--muted)}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input{margin-top:4px;accent-color:var(--accent)}
+.opt:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.sug{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-left:6px}
+.opt small{display:block;color:var(--muted);font-size:.85rem}
+textarea{width:100%;box-sizing:border-box;min-height:80px;border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;background:var(--card);color:var(--fg)}
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:620px){.flow{grid-template-columns:1fr 1fr}}
+.step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.88rem}
+.step b{display:block;font-family:var(--display);font-size:1.4rem;color:var(--accent)}
+.step.now{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+/* copy bar */
+.copybar{display:grid;gap:10px}
+button{font:inherit;font-weight:700;background:var(--accent);color:var(--bg);border:0;border-radius:9px;padding:12px 16px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px;margin:0;font-size:.85rem;overflow-x:auto}
+.status{font-size:.85rem;color:var(--muted)}
+</style>
+<style>
+.tabs{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:8px;z-index:2}
+.tabs button{background:var(--card);color:var(--fg);border:1px solid var(--line);padding:8px 14px}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+[hidden]{display:none!important}
+.chat{display:grid;gap:10px}
+.ev{background:var(--card);border:1px solid var(--line);color:var(--muted)}
+.msg{max-width:88%;border-radius:14px;padding:10px 13px;font-size:.93rem;display:grid;gap:6px;min-width:0}
+.msg .who{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.you{justify-self:end;background:var(--accent);color:var(--bg)} .you .who{color:var(--bg);opacity:.8}
+.me{justify-self:start;background:var(--card);border:1px solid var(--line)}
+.me.wall{font-size:.78rem;color:var(--muted);line-height:1.4}
+.ev{justify-self:center;font-size:.78rem;font-weight:700;border-radius:999px;padding:4px 12px;text-align:center;max-width:95%}
+.note{font-size:.82rem;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
+.note.bad{border-color:var(--gap)} .note.good{border-color:var(--ok)}
+.mini{display:grid;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.82rem}
+.mini b{font-family:var(--display)}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.summary{grid-template-columns:1fr}}
+.sumcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;font-size:.9rem;min-width:0}
+.sumcard ul{margin:0;padding-left:18px;display:grid;gap:4px}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">House rules · example · not a real transcript</div>
+    <h1>Session Flow</h1>
+    <p class="lede">The same request, played out twice: once under today's rules, once under the draft. The request is the blockers feature from your screenshot. The messages are made up to show the shape. Grey pills are the plugin acting on its own, not me.</p>
+  </header>
+
+  <div class="summary">
+    <div class="sumcard"><span class="pill gap" style="justify-self:start">Before</span><ul><li>You ask once, then you're told what was built</li><li>Code is written before you've seen any design</li><li>You find out what happened by reading a long summary</li></ul></div>
+    <div class="sumcard"><span class="pill ok" style="justify-self:start">After</span><ul><li>You choose between ideas you can see</li><li>No code until you type "approved" and name what</li><li>Each reply ends on one question</li></ul></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-t="before">Before</button>
+    <button role="tab" aria-selected="false" data-t="after">After</button>
+    <button role="tab" aria-selected="false" data-t="edge">Edge cases</button>
+  </div>
+
+  <section class="chat" data-p="before">
+    <div class="msg you"><span class="who">You</span>Add a way to track blockers.</div>
+    <div class="ev chip">Session started · rules loaded</div>
+    <div class="msg me"><span class="who">Me</span>On it.</div>
+    <div class="ev chip">12 files edited · 3 docs changed · 2 tests added</div>
+    <div class="note bad">Every design choice (what a blocker is, where it shows, who clears it) was made here, by me, without you.</div>
+    <div class="msg me wall"><span class="who">Me</span>Done. I built the blockers feature: a new hook that records blockers to a state file, a SessionStart reader that lists them, a waiting-on-you integration, updated verify.py with four new cases, refactored the payload reader to share code with the issue gate, added docs to 4-systems and 3-state, and noticed the archivist could reuse this so I started on that too. Here are the 12 files and 9 decisions I made, plus 6 follow-ups you might want to consider…</div>
+    <div class="msg you"><span class="who">You</span>You moved fast and told me very little.</div>
+    <div class="msg me"><span class="who">Me</span>You're right. I'll slow down: one feature at a time, with a page you can tap through…</div>
+    <div class="note bad">The page arrives after the build. Undoing choices now means unpicking code.</div>
+  </section>
+
+  <section class="chat" data-p="after" hidden>
+    <div class="ev chip" style="background:var(--gap-soft);color:var(--gap)">Session started · design block ON</div>
+    <div class="msg you"><span class="who">You</span>Add a way to track blockers.</div>
+    <div class="msg me"><span class="who">Me</span>
+      Here are two ways it could work.
+      <div class="mini"><b>Blockers: two ideas</b><span>A · a list you see at the start of every session</span><span>B · a badge on each issue, cleared when you close it</span><span class="fake-link" style="justify-self:start">Open the page →</span></div>
+      Which fits how you work, A or B? Or neither?
+    </div>
+    <div class="note good">One question. You do the deciding; the page carries the detail.</div>
+    <div class="msg you"><span class="who">You</span>A, but only for blockers older than a day.</div>
+    <div class="msg me"><span class="who">Me</span>
+      Updated idea A with your one-day limit.
+      <div class="mini"><b>Blockers: idea A, revised</b><span>Mock-up of the session-start list, with your change in green</span><span class="fake-link" style="justify-self:start">Open the page →</span></div>
+      Is this the one to build?
+    </div>
+    <div class="ev chip">I try to edit hook.py → refused: no approval yet</div>
+    <div class="note good">If I jump ahead, the plugin stops me. Pages and notes can still be written.</div>
+    <div class="msg you"><span class="who">You</span>Idea A approved</div>
+    <div class="ev chip" style="background:var(--ok-soft);color:var(--ok)">Approval saved: "Idea A" · block lifted</div>
+    <div class="ev chip">Builds idea A · 4 files edited</div>
+    <div class="msg me"><span class="who">Me</span>
+      Idea A is built. Here's it running in a fresh session, with a blocker from two days ago showing and one from today hidden.
+      <div class="mini"><b>Screenshot</b><span>The session-start list, as it really appeared</span></div>
+      Does this match what you approved?
+    </div>
+    <div class="ev chip" style="background:var(--gap-soft);color:var(--gap)">Next design · block ON again</div>
+  </section>
+
+  <section class="chat" data-p="edge" hidden>
+    <div class="eyebrow">A bare "approved"</div>
+    <div class="msg you"><span class="who">You</span>approved</div>
+    <div class="ev chip">Doesn't say what · block stays on</div>
+    <div class="msg me"><span class="who">Me</span>Which one: idea A, or the revised idea A with the one-day limit?</div>
+
+    <div class="eyebrow" style="margin-top:14px">A small fix</div>
+    <div class="msg you"><span class="who">You</span>There's a typo in the session-start message. skip design</div>
+    <div class="ev chip">"skip design" · one change allowed</div>
+    <div class="msg me"><span class="who">Me</span>Fixed "recieved" → "received". Here's the line before and after. Anything else?</div>
+    <div class="ev chip" style="background:var(--gap-soft);color:var(--gap)">Block ON again</div>
+
+    <div class="eyebrow" style="margin-top:14px">A wall of text</div>
+    <div class="msg me wall"><span class="who">Me (draft, not sent yet)</span>So there are a few things to consider here. First, the state file could live in .git or in the project root, and each has trade-offs around…</div>
+    <div class="ev chip">Long reply, no page · reminder</div>
+    <div class="msg me"><span class="who">Me (what you actually get)</span>Two places the data could live. <span class="fake-link">Open the comparison →</span> Which one?</div>
+
+    <div class="eyebrow" style="margin-top:14px">Approval in a later session</div>
+    <div class="ev chip" style="background:var(--gap-soft);color:var(--gap)">New session · design block ON</div>
+    <div class="msg you"><span class="who">You</span>Carry on with the blockers feature.</div>
+    <div class="msg me"><span class="who">Me</span>Last approval was "Idea A", yesterday. Is that still the plan, or has anything changed?</div>
+    <div class="note">Approvals don't carry over between sessions (your answer Q1A), so I ask again and quote what you approved last time.</div>
+  </section>
+
+  <section aria-labelledby="next">
+    <h2 id="next">Your move</h2>
+    <p class="lede" style="margin:0">If the After tab is how you want sessions to go, reply <b>"Draft wording approved"</b> in the chat. If anything in it is off, tell me which message and what should happen instead.</p>
+  </section>
+</div>
+
+<script>
+const tabs=document.querySelectorAll(".tabs button"),panels=document.querySelectorAll("[data-p]");
+function show(t){tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.t===t));panels.forEach(p=>p.hidden=p.dataset.p!==t);try{localStorage.setItem("sdt-flow-tab",t)}catch(e){}}
+tabs.forEach(b=>b.addEventListener("click",()=>show(b.dataset.t)));
+const h=location.hash.slice(1);let saved=null;try{saved=localStorage.getItem("sdt-flow-tab")}catch(e){}
+show(["before","after","edge"].includes(h)?h:(saved||"before"));
+</script>
