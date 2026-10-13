@@ -7,6 +7,16 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-13 - The loop's design: three choices made (#223)
+
+**Decision.** On `docs/plans/loop-design.html`, aj chose: (1) own answer: a feature is labelled in progress while
+worked on, its steps are sub-issues that are labelled and trackable in GitHub, and every issue and sub-issue names
+its dependencies, dependants and completion criteria so blockers and progress are easy to see; the existing
+"in progress" label from the issue workflow is reused; (2) an approval does not count until the stage is logged;
+(3) approvals read "<stage> approved: <feature>", e.g. "Design approved: blockers".
+
+**Status.** Open: aj's approval of the loop design, and of the handover page format.
+
 ## 2026-10-13 - The design loop: last choice made (#223)
 
 **Decision.** aj picked "fold them into the loop" for the three paused pieces of work: the code-edit lock (#225), the

@@ -168,7 +168,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 
   <section class="panel" data-step="2" aria-labelledby="s2" hidden>
     <h2 id="s2" tabindex="-1">What this creates or changes</h2>
-    <p class="muted">2 new things, 6 changes, 1 kept. Tap one for before and after.</p>
+    <p class="muted">2 new things, 7 changes, 1 kept. Tap one for before and after.</p>
     <div class="cc" id="cc"></div>
   </section>
 
@@ -182,11 +182,11 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
     <h2 id="s4" tabindex="-1">Wrap-up</h2>
     <div class="wrapup">
       <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>Each feature moves through six stages. Your typed approvals move it on, and the plugin only allows the work each stage allows.</p></div></div>
-      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>2 new things (a stage tracker and a home for each feature) and 6 changes to the plugin's checks. Nothing changes until you approve.</p></div></div>
-      <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Three choices, and your approval of this design and of the page format.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>2 new things (a stage tracker and a home for each feature) and 7 changes, including how issues show progress and blockers. Nothing changes until you approve.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Your approval of this design, and of the page format. Your three answers are in.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--ok-soft);color:var(--ok)"><svg class="ico"><use href="#i-next"/></svg></span><div><h3>What's next</h3><p>The build plan: the steps to build this, as a page, for you to approve. Then the rule audit (issue #228, checking every house rule has a check behind it).</p></div></div>
       <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3>
-        <ol><li>Pick your three answers (step 3).</li><li>Tap <b>Copy my reply</b>.</li><li>Send it, adding "Design approved: design loop" if this design is right, and "Handover format approved" if the page format is.</li></ol></div></div>
+        <ol><li>Check the change marked "Feature and step issues" (step 2) says what you meant.</li><li>Send "Design approved: design loop" if this design is right, or what to change.</li><li>Add "Handover format approved" if the page format is right.</li></ol></div></div>
     </div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
@@ -230,6 +230,7 @@ showStage(0);
 const CC=[
  ["new","A stage tracker","One small note per project: the current feature, its stage, and what you approved.",null,"Kept in the project's hidden git folder and never committed, the same way the issue block keeps its note today."],
  ["new","A home for each feature","A systems doc, a GitHub issue with a sub-issue per step, and a decisions-log line per approval.",null,"Your own answer from the Design Loop choices. The systems doc lives in docs/4-systems/, named after the feature."],
+ ["chg","Feature and step issues","Labelled while in progress, and each names its dependencies, dependants and when it counts as done.",["Steps get an \"in progress\" label","The feature and every step get it, and each issue lists what it depends on, what depends on it, and its done-criteria"],"Your answer on showing progress at a glance. The \"in progress\" label already exists in the issue workflow and is reused, not duplicated. Blockers show as an unfinished dependency."],
  ["chg","The message check","Reads your approvals and moves the stage on.",["Reminds me of the rules on each message","Also reads \"Design approved: …\", \"Build plan approved: …\", \"Feature approved: …\" and \"skip design\""],"It already runs on every message you send. I can't write your messages, so I can't approve on your behalf."],
  ["chg","The edit check","Refuses code edits outside the build stage, for me and for helpers.",["Blocks code until a plan's issues exist","Also blocks code unless the feature is in Build"],"The same check that holds the issue block today. Docs, .md files and pages stay editable in every stage, and it already sees helpers' edits."],
  ["chg","The end-of-reply check","Reminds me when a reply is over 200 words with no page.",["Checks the reply opens with a plain summary","Also flags a long reply with no page"],"This is the long-reply reminder you approved, folded in."],
@@ -286,5 +287,7 @@ stepper.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)
 document.getElementById("prev").onclick=()=>go(cur-1);
 document.getElementById("next").onclick=()=>go(cur+1);
 const h=location.hash.match(/^#step([1-4])$/);let saved=null;try{saved=+localStorage.getItem("loopdesign-step")}catch(e){}
+for(const [k,v] of Object.entries({logcheck:"A",words:"A",glance:"own"})){const r=document.querySelector(`input[name=${k}][value=${v}]`);if(r)r.checked=true}
+document.querySelector('.owntext[data-for=glance]').value="Labels where a feature is marked in progress if it's being worked on, then its steps/sub-issues are viewable and trackable from git and labelled as well. Clearly names dependencies, dependants and completion criteria in the issue and sub-issues so blockers and progress are easy to track.";
 go(h?+h[1]:(saved||1),false);reply();
 </script>
