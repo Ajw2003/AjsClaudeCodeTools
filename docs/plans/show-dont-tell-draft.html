@@ -96,11 +96,11 @@ pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);bor
 </style>
 <div class="wrap">
   <header>
-    <div class="eyebrow">House rules · step 2 of 4 · nothing built yet</div>
+    <div class="eyebrow">House rules · step 2 of 4 · revised · nothing built yet</div>
     <h1>Show, Don't Tell: The Draft</h1>
-    <p class="lede">This is the rule your picks add up to, word for word. Each sentence is tagged with the pick it came from. Approve it, or say what to change.</p>
+    <p class="lede">This is the rule your picks add up to, word for word. Revised with your answers and your note on approving. <span class="add">Green</span> marks what changed since the last version.</p>
     <div class="picks" style="margin-top:12px">
-      <span class="chip"><b>1A</b> one new rule</span><span class="chip"><b>2A</b> page for every plan</span><span class="chip"><b>3B</b> I suggest, you pick</span><span class="chip"><b>4C</b> block the build</span><span class="chip"><b>5A</b> end on one step</span>
+      <span class="chip"><b>1A</b> one new rule</span><span class="chip"><b>2A</b> page for every plan</span><span class="chip"><b>3B</b> I suggest, you pick</span><span class="chip"><b>4C</b> block the build</span><span class="chip"><b>5A</b> end on one step</span><span class="chip"><b>Q1A</b> every session starts locked</span><span class="chip"><b>Q2A</b> you type "approved"</span><span class="chip"><b>Q3B</b> "skip design" unlocks one change</span><span class="chip"><b>Q4A</b> reminder and block</span>
     </div>
   </header>
 
@@ -110,13 +110,14 @@ pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);bor
       <h3>Show, don't tell; the user designs</h3>
       <p>Every plan, design or set of choices reaches the user as a page they can look at and tap through, not as a block of text.<span class="tag">2A</span></p>
       <p>I bring options and mark one as my suggestion. The user picks. I never pick for them, and I only bring my own idea when they ask for one.<span class="tag">3B</span></p>
-      <p>Each reply ends with one question or one next step.<span class="tag">5A</span></p>
-      <p>Ideas and prototypes come before code. No source file is edited until the user has approved a design shown this way, and a hook blocks the edit until they have.<span class="tag">4C</span></p>
+      <p>Each reply ends with one question or one next step.<span class="tag">5A</span> <span class="add">A long reply with no page gets a reminder before it reaches the user.</span><span class="tag">Q4A</span></p>
+      <p><span class="add">Every session starts locked. The user can type "skip design" to let one change through without a design.</span><span class="tag">Q1A</span><span class="tag">Q3B</span></p>
+      <p>Ideas and prototypes come before code. No source file is edited until the user has approved a design shown this way, <span class="add">by typing "approved" together with what they approved, such as "Idea A approved" or "approved 1A 2C 3A 4D"</span>. A hook blocks the edit until they have.<span class="tag">4C</span><span class="tag">Q2A</span></p>
     </div>
     <div class="cost">
       <span>Rules file</span>
-      <div class="bar" role="img" aria-label="182 lines today, about 9 added"><span style="flex:182;background:var(--muted)"></span><span style="flex:9;background:var(--accent)"></span></div>
-      <span>182 → ~191 lines</span>
+      <div class="bar" role="img" aria-label="182 lines today, about 11 added"><span style="flex:182;background:var(--muted)"></span><span style="flex:11;background:var(--accent)"></span></div>
+      <span>182 → ~193 lines</span>
     </div>
     <p class="status">It goes in as one section of <code>house-rules.md</code> (choice 1A), which loads every session. The longer explanation goes in a new <code>rules/detail/show-dont-tell.md</code>, which only loads when it's needed.</p>
   </section>
@@ -134,62 +135,33 @@ pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);bor
     <h2 id="g">How the block would work (4C)</h2>
     <p class="lede" style="margin:0">It copies a block that already exists. Since version 2.49 the plugin stops source edits until a plan's issues are created. <code>docs/</code> and <code>.md</code> files stay editable, so a design page can always be written.</p>
     <div class="gate">
-      <div class="g"><span class="n">1</span><div><b>A design is needed.</b> The block switches on. <i>When exactly? See question 1.</i></div></div>
+      <div class="g"><span class="n">1</span><div><b>A session starts.</b> The block is on.</div></div>
       <div class="g lock"><span class="n">✕</span><div><b>Source edits are refused.</b> Pages, docs and notes can still be written.</div></div>
       <div class="g"><span class="n">2</span><div><b>I show you the page.</b> You tap through it.</div></div>
-      <div class="g"><span class="n">3</span><div><b>You approve.</b> <i>What counts as approving? See question 2.</i></div></div>
+      <div class="g"><span class="n">3</span><div><b>You type "approved" and name what.</b> The plugin reads your message before I do, so I can't approve on your behalf. <span class="add">What you named is saved alongside the approval, so I can quote it back.</span></div></div>
       <div class="g open"><span class="n">✓</span><div><b>The block lifts</b> for that design only. The next design starts locked again.</div></div>
     </div>
   </section>
 
   <section aria-labelledby="q">
-    <h2 id="q">Four things your picks didn't settle</h2>
-
-    <div class="dec">
-      <div class="q">1. What switches the block on?</div>
-      <div class="opts">
-        <label class="opt"><input type="radio" name="q1" value="A"><span>The start of any session, until you approve something <span class="sug">my suggestion</span><small>Simplest. Every session begins locked.</small></span></label>
-        <label class="opt"><input type="radio" name="q1" value="B"><span>Any new request from you that asks for something to be built<small>Needs me to guess what "asks for a build" means.</small></span></label>
-        <label class="opt"><input type="radio" name="q1" value="C"><span>The same moment the issue block switches on (a plan with more than three steps)<small>Smallest change, but small builds slip through.</small></span></label>
-      </div>
+    <h2 id="q">What counts as approving</h2>
+    <p class="lede" style="margin:0">"approved" has to come with a name for what you're approving. If it doesn't, the block stays on and I ask you what you meant.</p>
+    <div class="rows">
+      <div class="row"><span class="pill ok">Lifts</span><div><div class="ask">Idea A approved</div></div></div>
+      <div class="row"><span class="pill ok">Lifts</span><div><div class="ask">approved 1A 2C 3A 4D</div></div></div>
+      <div class="row"><span class="pill ok">Lifts</span><div><div class="ask">Draft wording approved</div></div></div>
+      <div class="row"><span class="pill gap">Stays on</span><div><div class="ask">approved</div><div class="src">Doesn't say what. I ask which one.</div></div></div>
+      <div class="row"><span class="pill gap">Stays on</span><div><div class="ask">looks good, go ahead</div><div class="src">No "approved", so I ask you to confirm.</div></div></div>
+      <div class="row"><span class="pill part">One change</span><div><div class="ask">skip design</div><div class="src">Lets one change through, then locks again.</div></div></div>
     </div>
 
     <div class="dec">
-      <div class="q">2. What counts as you approving?</div>
-      <div class="why">The plugin can read your messages before I do, so it can watch for your approval itself. I can't fake it.</div>
-      <div class="opts">
-        <label class="opt"><input type="radio" name="q2" value="A"><span>You type the word "approved" in a message <span class="sug">my suggestion</span><small>Clear, and hard to say by accident.</small></span></label>
-        <label class="opt"><input type="radio" name="q2" value="B"><span>Any answer you paste back from a page, like the picks you just sent<small>Less typing, but picking options isn't the same as approving.</small></span></label>
-        <label class="opt"><input type="radio" name="q2" value="C"><span>An "Approve" button on the page itself<small>Nicest to use. Needs the page to save your click where I can read it, which is more to build.</small></span></label>
-      </div>
-    </div>
-
-    <div class="dec">
-      <div class="q">3. Is anything allowed through without a design?</div>
-      <div class="why">You picked the strict option knowing small fixes get stopped too. This is how strict.</div>
-      <div class="opts">
-        <label class="opt"><input type="radio" name="q3" value="A"><span>Nothing except docs and notes<small>Strictest.</small></span></label>
-        <label class="opt"><input type="radio" name="q3" value="B"><span>You can say "skip design" in a message to unlock one change <span class="sug">my suggestion</span><small>You decide when, not me.</small></span></label>
-        <label class="opt"><input type="radio" name="q3" value="C"><span>Tiny fixes (one file, a few lines) pass on their own<small>I'd be the one judging "tiny".</small></span></label>
-      </div>
-    </div>
-
-    <div class="dec">
-      <div class="q">4. Does it also remind me when a reply has no page?</div>
-      <div class="why">Choice 4C read "plus block", so I'm not sure whether it includes the reminder from 4B.</div>
-      <div class="opts">
-        <label class="opt"><input type="radio" name="q4" value="A"><span>Yes, both: the reminder and the block <span class="sug">my suggestion</span><small>The block stops code; the reminder stops walls of text.</small></span></label>
-        <label class="opt"><input type="radio" name="q4" value="B"><span>No, just the block</span></label>
-      </div>
-    </div>
-
-    <div class="dec">
-      <div class="q">The rule wording above</div>
+      <div class="q">This version of the rule</div>
       <div class="opts">
         <label class="opt"><input type="radio" name="q5" value="approved"><span>Approved as written</span></label>
         <label class="opt"><input type="radio" name="q5" value="change"><span>Change it (say what below)</span></label>
       </div>
-      <textarea id="notes" aria-label="Notes" placeholder="e.g. 'Drop the word never in the second sentence'"></textarea>
+      <textarea id="notes" aria-label="Notes" placeholder="e.g. 'Also accept the word yes'"></textarea>
     </div>
   </section>
 
@@ -210,14 +182,14 @@ pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);bor
 </div>
 
 <script>
-const KEY="sdt-draft";
+const KEY="sdt-draft-v2";
 const notes=document.getElementById("notes"), out=document.getElementById("out");
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||"{}");
   for(const [k,v] of Object.entries(s.picks||{})){const el=document.querySelector(`input[name="${k}"][value="${v}"]`);if(el)el.checked=true}
   notes.value=s.notes||""}catch(e){}}
 function summary(){const p={};document.querySelectorAll("input[type=radio]:checked").forEach(i=>p[i.name]=i.value);
   try{localStorage.setItem(KEY,JSON.stringify({picks:p,notes:notes.value}))}catch(e){}
-  out.textContent="Draft review: "+[1,2,3,4].map(n=>`Q${n}${p["q"+n]||"?"}`).join(" ")+" · wording: "+(p.q5||"?")+(notes.value.trim()?"\nNotes: "+notes.value.trim():"");
+  out.textContent=(p.q5==="approved"?"Draft wording approved":p.q5==="change"?"Draft wording: change":"Pick approved or change above.")+(notes.value.trim()?"\nNotes: "+notes.value.trim():"");
   return out.textContent}
 document.addEventListener("change",summary);notes.addEventListener("input",summary);
 document.getElementById("copy").addEventListener("click",()=>{const t=summary(),st=document.getElementById("st");
