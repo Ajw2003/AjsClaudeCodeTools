@@ -572,6 +572,32 @@ def event_inject():
 
 
 # ---------------------------------------------------------------------------------------
+# showrule — the "Show, don't tell" rule, injected by its own SessionStart entry for the same
+# reason profile was split out: house-rules.md was 47 chars from inject's size margin when the
+# rule was approved (issue #224). Full rationale: rules/detail/show-dont-tell.md.
+# ---------------------------------------------------------------------------------------
+
+
+def event_showrule():
+    here = os.path.dirname(os.path.abspath(__file__))
+    try:
+        body = _read_text(os.path.join(here, "..", "rules", "show-dont-tell.md")).replace("\r\n", "\n")
+    except OSError:
+        emit({"systemMessage": "house-rules plugin: cannot read rules/show-dont-tell.md. "
+              "The show-don't-tell rule was NOT loaded into this session."})
+        return 0
+    if not body.strip():
+        emit({"systemMessage": "house-rules plugin: rules/show-dont-tell.md is empty. "
+              "The show-don't-tell rule was NOT loaded into this session."})
+        return 0
+    emit({"suppressOutput": True, "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": "A standing house rule, loaded separately from the rest:\n\n"
+        + _expand_detail_paths(body)}})
+    return 0
+
+
+# ---------------------------------------------------------------------------------------
 # profile — a third SessionStart handler, split out of inject in 2.17.1 (docs/6-decisions/Decisions.md,
 # 2026-09-22): the per-hook additionalContext limit is 10,000 chars, and a recorded
 # rules/environment.md can by itself be large enough that appending it to inject's own text
@@ -1537,8 +1563,8 @@ SCOPE_REMINDER = (
     # separately bought nothing. Every rule the old text carried is still here - this is the
     # same content said once instead of twice, not a shorter list of rules.
     "Standing house rules (full text was injected at session start):\n"
-    "- Match response depth to the task; build only what was asked, and ask instead of "
-    "assuming.\n"
+    "- Show, don't tell: plans reach the user as a page to approve; nothing unasked is "
+    "built.\n"
     "- Find out what machine you are on and build for that. The coding standards injected "
     "at session start are binding, each governing only its own languages.\n"
     "- Deliver a whole workflow: exact commands to run, nothing left for the user to "
@@ -6642,6 +6668,7 @@ def event_harvest():
 
 EVENTS = {
     "inject": event_inject,
+    "showrule": event_showrule,
     "issuelist": event_issuelist,
     "profile": event_profile,
     "standards": event_standards,

@@ -118,6 +118,14 @@ on the tier files omitting the `Agent` tool if it does not).
 branch; prompts nobody can answer (subagent, aj away) are refused and queued. Verified by `verify.py`; not yet in
 a live session.
 
+Unreleased, on `AjsAgent/agent-communication-patterns-xo0l8x` (#223, step #224 of 4): the "Show, don't tell;
+the user designs" rule is written and loads through its own SessionStart handler, `showrule` (1,510 chars), because
+`house-rules.md` was 47 chars from `inject`'s margin. "Build only what was asked" and "Match response depth" are
+merged into it and removed (inject 9,653 → 9,381 chars). `verify.py` 618 PASS, run twice, 2026-10-13. The design
+block (#225), the long-reply reminder (#226) and their proof (#227) are not built yet, so the rule describes a
+hook that does not exist on this branch until #225 lands. Found on the way: `verify.py`'s guard cases go red if a
+`house-rules-last-seen-*` temp file from an earlier run is over five minutes old; a rerun passes.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

@@ -13,14 +13,6 @@ discover it, write it down. Detected hardware is the local budget. Remote handov
 Local OSS → cloud OSS → local free closed → cloud free closed → paid; each step down reasoned.
 Paid on Pro/Max: estimate building our own. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/free-first.md`.
 
-## Match response depth to the task
-
-Short answer for a simple question; depth earned by difficulty. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/response-depth.md`.
-
-## Build only what was asked
-
-The request is the scope; ambiguous → ask. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/build-what-asked.md`.
-
 ## Read the docs first, then check them against the code
 
 Verify docs against code/tree/history; disagree → say so, follow observed behaviour. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/read-docs-first.md`.

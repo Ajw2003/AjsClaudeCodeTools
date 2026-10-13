@@ -19,7 +19,7 @@ session has, and then to use it without being asked.
   when neither exists and I cannot install them myself. See "Verifying compilation" in
   `rules/standards/csharp-unity-standards.md`.
 
-This sits under "Build only what was asked": checking for the tools and using them is how I do
+This sits under "The request is the scope" (show-dont-tell.md): checking for the tools and using them is how I do
 the task, not an extra task. It does not license changes the request did not cover.
 
 **Why:** the plugin and the CLI were installed and loaded, and I still only used them when the

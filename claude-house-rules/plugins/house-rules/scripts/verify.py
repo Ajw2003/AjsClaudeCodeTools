@@ -110,6 +110,8 @@ def rules_corpus():
     See docs/6-decisions/Decisions.md, 2026-09-22, for why drift checks read this instead of the core alone.
     """
     corpus = read(RULES_FILE)
+    # The show-don't-tell rule is injected by its own handler (showrule), not inside house-rules.md.
+    corpus += "\n\n" + read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))
     if os.path.isdir(DETAIL_DIR):
         for name in sorted(os.listdir(DETAIL_DIR)):
             if name.endswith(".md"):
@@ -295,6 +297,7 @@ def _additional_context(event, payload="", env=None):
 
 _size_cases = [
     ("inject", 9_700, env_in(ROOT)),
+    ("showrule", 9_500, env_in(ROOT)),
     ("standards", 9_500, env_in(ROOT)),
     ("profile", 9_500, env_in(ROOT, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV)),
     ("docstiers", 9_500, env_in(DOCSTIERS_NOT_OWNED)),
@@ -310,6 +313,29 @@ for _event, _margin, _env in _size_cases:
     else:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
         print(f"          {len(_ctx)} chars > {_margin} margin - Claude Code will truncate this")
+
+# --- the show-don't-tell rule reaches the session through its own slot (issue #224) ----------
+_code, _ctx, _err = _additional_context("showrule", "", env=env_in(ROOT))
+_sdt_missing = [p for p in (
+    "## Show, don't tell; the user designs",
+    "The request is the scope",
+    "Every page is a proposal",
+    "what the change merges, cuts or reuses",
+    "one marked as my suggestion",
+    "over 200 words with no page",
+    "A bare\n\"approved\" does not count",
+    "rules/detail/show-dont-tell.md",
+) if p not in (_ctx or "")]
+if not os.path.isfile(os.path.join(DETAIL_DIR, "show-dont-tell.md")):
+    _sdt_missing.append("rules/detail/show-dont-tell.md does not exist")
+if "## Show, don't tell" in read(RULES_FILE):
+    _sdt_missing.append("house-rules.md also carries the rule - it would load twice")
+if _sdt_missing:
+    report("FAIL", "showrule injects the show-don't-tell rule, once, with a live detail pointer")
+    print(f"          missing or wrong: {'; '.join(_sdt_missing)}")
+else:
+    report("PASS", "showrule injects the show-don't-tell rule, once, with a live detail pointer")
+    print(f"          {len(_ctx)} chars; every approved clause present")
 
 # --- docstiers: complete/missing, owned/not-owned, ssh, no .git, unreadable/garbage config ----
 _docstiers_cases = [
@@ -1191,8 +1217,6 @@ code, out, err = run_hook("inject", "")
 missing = []
 for h in [
     "Find out what machine you are on",
-    "Match response depth to the task",
-    "Build only what was asked",
     "Read the docs first, then check them against the code",
     "Documentation goes in tiers",
     "Build for a human working alone",
@@ -1314,10 +1338,10 @@ def check_scope(title, payload, expect, empty_path=False):
     if '"hookEventName":"UserPromptSubmit"' not in out:
         bad.append("wrong or missing hookEventName")
     if expect == "long":
-        if "response depth" not in out or "machine you are on" not in out:
+        if "Show, don't tell" not in out or "machine you are on" not in out:
             bad.append("expected the long form, did not see its content")
     elif expect == "short":
-        if "response depth" in out or "machine you are on" in out:
+        if "Show, don't tell" in out or "machine you are on" in out:
             bad.append("expected the short form, but the long form's content is present")
         if "docs tier that changed" not in out:
             bad.append("short form missing the docs-tier line")
@@ -4273,7 +4297,7 @@ RESTATEMENTS = [
         "the scope reminder (long form)",
         lambda: run_hook("scope", json.dumps({"prompt": "run the build script"}))[1],
         [
-            "response depth", "only what was asked", "ask instead of assuming",
+            "show, don't tell", "nothing unasked is built",
             "project directory", "hand over a command", "tier that changed",
             "success claim", "whole workflow", "have not run", "own branch", "branch off first",
         ],
@@ -5354,9 +5378,9 @@ if "## Open source first; paid is the last resort" not in _core:
     _free_problems.append("house-rules.md lacks the rule heading")
 if "${CLAUDE_PLUGIN_ROOT}/rules/detail/free-first.md" not in _core:
     _free_problems.append("house-rules.md does not point at rules/detail/free-first.md")
-if "## Open source first; paid is the last resort" in _core and "## Match response depth" in _core and \
-        _core.index("## Open source first") > _core.index("## Match response depth"):
-    _free_problems.append("the rule is not placed before 'Match response depth'")
+if "## Open source first; paid is the last resort" in _core and "## Read the docs first" in _core and \
+        _core.index("## Open source first") > _core.index("## Read the docs first"):
+    _free_problems.append("the rule is not placed before 'Read the docs first'")
 if "free-first.md" not in read(os.path.join(DETAIL_DIR, "environment.md")):
     _free_problems.append("environment.md does not link free-first.md")
 report("FAIL" if _free_problems else "PASS", "the open-source-first rule and rules/detail/free-first.md exist and agree")
@@ -5817,14 +5841,14 @@ else:
     for s in sar:
         print(f"          {s}")
 
-# A section NOT marked <!-- subagent --> (e.g. "Match response depth to the task") must not
+# A section NOT marked <!-- subagent --> (e.g. "Open source first") must not
 # appear as its own heading in the core - otherwise "marked sections only" is not what ships.
-if "## Match response depth to the task" in core:
+if "## Open source first; paid is the last resort" in core:
     report("FAIL", "subagentrules includes only the sections marked <!-- subagent -->")
     print("          an unmarked heading leaked into the subagent core")
 else:
     report("PASS", "subagentrules includes only the sections marked <!-- subagent -->")
-    print("          an unmarked rule (response depth) is absent from the subagent core")
+    print("          an unmarked rule (open source first) is absent from the subagent core")
 
 # SubagentStart also tells the user the transcript's EXPECTED path, before it exists.
 if code == 0 and "systemMessage" in parsed and "transcript expected at" in parsed["systemMessage"] \

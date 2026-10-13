@@ -95,6 +95,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .stop small{color:var(--muted);font-size:.78rem}
 .stop a{color:var(--accent);font-size:.8rem}
 .dots{display:flex;gap:3px}
+.r224{display:grid;gap:4px;font-size:.88rem}.r224 small{color:var(--muted);font-size:.8rem}.b224{height:12px;border-radius:6px;background:var(--bg);border:1px solid var(--line);overflow:hidden}.b224 i{display:block;height:100%}
 .dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
 
 /* show definition */
@@ -140,7 +141,7 @@ pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);bor
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">House rules · build plan · version 3 · nothing built yet</div>
+    <div class="eyebrow">House rules · build plan · version 4 · #224 built, waiting on your check</div>
     <h1>Show, Don't Tell: Build Plan</h1>
     <p class="lede">Tap the diagram to see where each piece runs. Try the block yourself before any of it is built. Drag the meter to set what counts as a long reply.</p>
   </header>
@@ -200,6 +201,27 @@ pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);bor
     <h2 id="h4"><svg class="ico" style="color:var(--accent)"><use href="#i-check"/></svg>Build order</h2>
     <div class="track" id="track"></div>
     <p class="status">Grey dots are steps not started. They fill as each issue is built, and this page gets republished each time.</p>
+  </section>
+
+  <!-- 4b. #224 result -->
+  <section aria-labelledby="h4b">
+    <h2 id="h4b"><svg class="ico" style="color:var(--ok)"><use href="#i-check"/></svg>#224: what changed</h2>
+    <div class="meter" style="gap:10px">
+      <div class="r224"><span>Rules file (loads every session)</span><div class="b224"><i style="width:calc(9653/11000*100%);background:var(--muted)"></i></div><small>Before: 9,653 / 10,000</small>
+        <div class="b224"><i style="width:calc(9381/11000*100%);background:var(--ok)"></i></div><small>After: 9,381 · two rules merged out, 272 chars of room back</small></div>
+      <div class="r224"><span>New rule slot (its own 10,000 limit)</span><div class="b224"><i style="width:calc(1510/11000*100%);background:var(--accent)"></i></div><small>1,510 chars · the full rule, every session</small></div>
+      <div class="files">
+        <span class="file" style="border-color:var(--ok)">+ show-dont-tell.md (rule)</span>
+        <span class="file" style="border-color:var(--ok)">+ detail/show-dont-tell.md</span>
+        <span class="file" style="border-color:var(--gap);text-decoration:line-through">detail/build-what-asked.md</span>
+        <span class="file" style="border-color:var(--gap);text-decoration:line-through">detail/response-depth.md</span>
+        <span class="file">house-rules.md −2 rules</span>
+        <span class="file">coding-philosophy.md −1 line</span>
+        <span class="file">hook.py · hooks.json · run.sh</span>
+        <span class="file">verify.py +1 check</span>
+      </div>
+      <p class="status">Checks: verify.py 618 passed, 0 failed. Not released yet: it reaches your sessions after #225–#227 and a version bump.</p>
+    </div>
   </section>
 
   <!-- 5. Definition -->
@@ -315,8 +337,8 @@ function meter(){
 [lim,len,hp].forEach(x=>x.addEventListener("input",meter));
 
 /* ---- track ---- */
-const STOPS=[["book","#224","Write the rule","3 rules files",224],["shield","#225","The block","3 checks, 0 new hooks",225],["bell","#226","The reminder","1 check",226],["flask","#227","Prove it + docs","tests, a real run, docs",227]];
-document.getElementById("track").innerHTML=STOPS.map(([i,n,t,s,num])=>`<div class="stop"><div class="top">${ic(i)}<span class="dots"><i></i><i></i><i></i></span></div><b>${t}</b><small>${s}</small><a href="https://github.com/Ajw2003/AjsClaudeCodeTools/issues/${num}">${n}</a></div>`).join("");
+const STOPS=[["book","#224","Write the rule","built · not released",224,3],["shield","#225","The block","3 checks, 0 new hooks",225,0],["bell","#226","The reminder","1 check",226,0],["flask","#227","Prove it + docs","tests, a real run, docs",227,0]];
+document.getElementById("track").innerHTML=STOPS.map(([i,n,t,s,num,done])=>`<div class="stop"${done?' style="border-color:var(--ok)"':''}><div class="top">${ic(done?"check":i)}<span class="dots">${[0,1,2].map(k=>`<i${k<done?' style="background:var(--ok)"':''}></i>`).join("")}</span></div><b>${t}</b><small>${s}</small><a href="https://github.com/Ajw2003/AjsClaudeCodeTools/issues/${num}">${n}</a></div>`).join("");
 
 /* ---- answers ---- */
 const notes=document.getElementById("notes"),outEl=document.getElementById("out");
