@@ -7,6 +7,16 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-13 - The loop: I review before aj does (#223)
+
+**Decision.** aj: review is split in two. First I review on my own: visual check of every screen the change
+touches, a real run of how it works, and fixes for anything that does not match the approved design. Only then
+does aj review, separately, and we iterate. Anything that would change the design goes back to aj instead of being
+fixed. Reuses the visual-check and "a green test suite is not proof" rules rather than adding a new mechanism. The
+loop now has seven stages: Design, Plan, Build, I review, You review, You test, Done.
+
+**Status.** Open: aj's approval of the loop design and the handover page format.
+
 ## 2026-10-13 - The loop's design: three choices made (#223)
 
 **Decision.** On `docs/plans/loop-design.html`, aj chose: (1) own answer: a feature is labelled in progress while

@@ -132,6 +132,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
   <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L3 15l3 3 8-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
@@ -168,7 +169,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 
   <section class="panel" data-step="2" aria-labelledby="s2" hidden>
     <h2 id="s2" tabindex="-1">What this creates or changes</h2>
-    <p class="muted">2 new things, 7 changes, 1 kept. Tap one for before and after.</p>
+    <p class="muted">2 new things, 8 changes, 1 kept. Tap one for before and after.</p>
     <div class="cc" id="cc"></div>
   </section>
 
@@ -181,8 +182,8 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
   <section class="panel" data-step="4" aria-labelledby="s4" hidden>
     <h2 id="s4" tabindex="-1">Wrap-up</h2>
     <div class="wrapup">
-      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>Each feature moves through six stages. Your typed approvals move it on, and the plugin only allows the work each stage allows.</p></div></div>
-      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>2 new things (a stage tracker and a home for each feature) and 7 changes, including how issues show progress and blockers. Nothing changes until you approve.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>Each feature moves through seven stages. Your typed approvals move it on, and the plugin only allows the work each stage allows.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>2 new things (a stage tracker and a home for each feature) and 8 changes, including how issues show progress and that I review before you do. Nothing changes until you approve.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Your approval of this design, and of the page format. Your three answers are in.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--ok-soft);color:var(--ok)"><svg class="ico"><use href="#i-next"/></svg></span><div><h3>What's next</h3><p>The build plan: the steps to build this, as a page, for you to approve. Then the rule audit (issue #228, checking every house rule has a check behind it).</p></div></div>
       <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3>
@@ -210,11 +211,12 @@ const STAGES=[
  ["bulb","Design","Together",0,"Pages, docs and notes. No code.","You type \"Design approved: <name>\"."],
  ["list","Plan","Together",0,"Pages, docs and GitHub issues for each step. No code.","You type \"Build plan approved: <name>\"."],
  ["hammer","Build","Me",0,"Code, only for the approved steps. Each step is logged and committed.","All steps done. I show you the result."],
- ["eye","Review","Together",0,"Pages and docs. No code.","You accept it, or ask for changes, which goes back to Design."],
+ ["search","I review","Me",0,"Screenshots of every screen it touches, a real run of how it works, and fixes for anything that doesn't match the approved design. No design changes.","Everything I could fix without you is fixed. I show you what I checked and what I fixed."],
+ ["eye","You review","You",1,"Pages and docs. No code.","You accept it, or ask for changes, which goes back to Design."],
  ["flask","You test","You",1,"Nothing new. I give you test steps I've run myself first.","You type \"Feature approved: <name>\"."],
  ["check","Done","You",1,"The feature is closed and logged.","The next feature starts at Design."]
 ];
-const SHORT=["Design","Plan","Build","Review","You test","Done"];
+const SHORT=["Design","Plan","Build","I review","You review","You test","Done"];
 const glance=document.getElementById("glance"),sd=document.getElementById("sd");
 glance.innerHTML=STAGES.map(([i,t,who,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you?" you":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
 function showStage(n){
@@ -222,7 +224,7 @@ function showStage(n){
   const [i,t,who,you,allowed,next]=STAGES[n];
   sd.innerHTML=`<h3>${t} <span class="muted" style="font-weight:400;font-size:.85rem">· ${who}</span></h3>
    <div class="row"><span>Allowed</span><span>${allowed}</span></div><div class="row"><span>Moves on</span><span>${next.replace(/</g,"&lt;").replace(/&lt;name>/g,"&lt;name&gt;")}</span></div>
-   ${n===3?`<p class="back">${ic("loop")}Asked for changes? Back to Design.</p>`:""}`;
+   ${n===4?`<p class="back">${ic("loop")}Asked for changes? Back to Design.</p>`:""}`;
 }
 glance.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b)showStage(+b.dataset.s)});
 showStage(0);
@@ -233,6 +235,7 @@ const CC=[
  ["chg","Feature and step issues","Labelled while in progress, and each names its dependencies, dependants and when it counts as done.",["Steps get an \"in progress\" label","The feature and every step get it, and each issue lists what it depends on, what depends on it, and its done-criteria"],"Your answer on showing progress at a glance. The \"in progress\" label already exists in the issue workflow and is reused, not duplicated. Blockers show as an unfinished dependency."],
  ["chg","The message check","Reads your approvals and moves the stage on.",["Reminds me of the rules on each message","Also reads \"Design approved: …\", \"Build plan approved: …\", \"Feature approved: …\" and \"skip design\""],"It already runs on every message you send. I can't write your messages, so I can't approve on your behalf."],
  ["chg","The edit check","Refuses code edits outside the build stage, for me and for helpers.",["Blocks code until a plan's issues exist","Also blocks code unless the feature is in Build"],"The same check that holds the issue block today. Docs, .md files and pages stay editable in every stage, and it already sees helpers' edits."],
+ ["chg","Review","I review first; you start only after I'm done.",["We review together","I check visuals and how it works, fix what doesn't need you, then hand it to you"],"Reuses two existing rules: the visual check (screenshot before and after, and look) and \"a green test suite is not proof\" (run it for real). Anything that would change the design comes back to you instead of being fixed."],
  ["chg","The end-of-reply check","Reminds me when a reply is over 200 words with no page.",["Checks the reply opens with a plain summary","Also flags a long reply with no page"],"This is the long-reply reminder you approved, folded in."],
  ["chg","Helper start-up","Helpers get the approved plan and may only build.",["Helpers get a copy of the rules","Also get the approved plan; they can't design or approve"],"Your answer about helpers."],
  ["chg","The go-ahead guess","Removed. Only \"Build plan approved\" starts a build.",["A message that sounds like a go-ahead hands work to a helper","Only your build-plan approval starts building"],"The guess is what started work without a clear yes."],
