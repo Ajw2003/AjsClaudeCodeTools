@@ -7,6 +7,17 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Build plan approved: design loop (#223)
+
+**Decision.** aj approved the build plan (`docs/plans/loop-build-plan.html`) with "Build plan approved: design loop".
+Seven steps, each a sub-issue of #223 naming its dependencies and done-criteria: stage tracker, approvals and the
+code lock (#225); an approval only counts once logged (#230); a home for each feature (#231); helpers build only
+approved steps (#232); long-reply reminder (#226); handover page template (#233); prove it and update the docs
+(#227). Choices: (1) the step cards are replaced later as their own feature through the loop; (2) one version bump
+at the end, so nothing reaches aj's sessions until the whole loop is proved. I build it myself, one step at a time.
+
+**Status.** Standing. Stage: Build.
+
 ## 2026-10-14 - Design approved: handover format (#223)
 
 **Decision.** aj approved the handover format (`docs/plans/handover-format.html`). Every page has four parts in this
