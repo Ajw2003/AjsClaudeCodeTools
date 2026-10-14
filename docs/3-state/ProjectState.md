@@ -140,7 +140,7 @@ fills its four parts from one PAGE block and drops an empty part; the rule descr
 Claude Code session loading this branch's plugin - code refused in Design, approvals moved the stage, two issues
 recorded, code allowed in Build, QA passed moved it to Done. The run found one bug (a feature name took the whole
 line), fixed with a test. Version 2.63.0. `verify.py` 646 PASS, run twice. Systems doc: `docs/4-systems/design-loop.md`.
-QA passed (aj, 2026-10-14); a pull request to main is the release. Releasing needs a merge to main, which is at 2.53.0 while this branch carries 2.54-2.62 too. Not released: one version bump at the end, after #227 proves the whole loop.
+QA passed (aj, 2026-10-14); a pull request to main is the release. Releasing needs a merge to main, which is at 2.62.0 (checked 2026-10-14: the 2.54-2.62 work is already merged, so this pull request carries only the design loop and the label check). Not released: one version bump at the end, after #227 proves the whole loop.
 
 2026-10-14, same branch: the label check (#235), plugin 2.64.0, built and waiting on aj's QA. Every stage move reads
 the feature's issue labels: from GitHub (`gh api`), or from the changes `autosave` recorded when GitHub can't be

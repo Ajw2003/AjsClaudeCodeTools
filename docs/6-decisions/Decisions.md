@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Correction: the pull request does not carry 2.54-2.62
+
+The design loop pull request's description said the earlier 2.54-2.62 work rode along unmerged. Checked
+against `origin/main`: main is at 2.62.0, and the diff holds only the design loop and the label check (36 files).
+The claim came from an old note, not a check. The description and `docs/3-state/ProjectState.md` are corrected.
+The full breakdown is `docs/plans/design-loop-changes.html`.
+
+---
+
 ## 2026-10-14 - Label check built (2.64.0); the real run
 
 **What.** #236, #237 and #238 are built in `hook.py` and covered by `verify.py` (658 PASS, run twice). #239: docs,
