@@ -1,5 +1,12 @@
 # Today — 2026-10-14
 
+The label check, plugin 2.64.0 (issue #235). An issue's label now says whose move it is, and every step of the
+design loop checks it: `in progress` while I work, `needs review` when it's your turn. Swapping every issue to
+`needs review` starts a new QA stage and closes code; your QA answer only counts then; after "QA failed" the
+issues go back to `in progress` before the redo's design can be approved. Labels are read from GitHub, or from my
+own recorded label changes when GitHub can't be read, and the check says which. It ships in the same pull request
+as the design loop.
+
 The design loop, plugin 2.63.0 (issue #223). Every feature now goes Design → Plan → Build → my review → your QA →
 Done, and only your own message moves it on: "Design approved: <feature>", "Build plan approved: <feature>",
 "QA passed: <feature>" or "QA failed: <feature>". Code edits are refused outside Build, for helpers too; "skip

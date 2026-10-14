@@ -81,7 +81,12 @@ again (#230).
 When a design is approved, the feature gets a systems doc in `docs/4-systems/` and a GitHub issue
 of its own, marked `in progress` while it is worked on. When it reaches the user's QA, `in progress`
 is swapped for `needs review`. The user then closes it, or asks for changes and it goes back to
-`in progress`. The plan adds a sub-issue per step. Every
+`in progress`. Every step checks this, reading the labels from GitHub (or, when GitHub can't be read,
+from the label changes I made, and saying so): "Build plan approved" needs every issue `in progress`;
+swapping them all to `needs review` starts the QA stage and closes code; a QA answer counts only in
+QA; after "QA failed" the redo's "Design approved" needs them back to `in progress`; in Build a code
+edit is refused while any label is wrong; and the end-of-reply check names any label that doesn't
+fit (#235). The plan adds a sub-issue per step. Every
 issue and sub-issue names what it depends on, what depends on it, and when it counts as done, so a
 blocker shows as an unfinished dependency and progress is visible at a glance. "Build plan
 approved" does not count until at least two issues labelled `AjsAgent created this` were made

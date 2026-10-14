@@ -7,6 +7,32 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Label check built (2.64.0); the real run
+
+**What.** #236, #237 and #238 are built in `hook.py` and covered by `verify.py` (658 PASS, run twice). #239: docs,
+2.64.0, and the real run below.
+
+**The real run.** A scratch repo at Plan, its tracker holding two real issues (#236, #237), the real `gh` read,
+and nested `claude -p` sessions loading this branch's plugin:
+1. "Build plan approved: label check", then create `app.py` → GitHub said both `in progress`; `STAGE: build`,
+   `app.py: print('hello')`.
+2. I swapped both real issues to `needs review`; a session asked to edit `app.py` → refused, `STAGE: qa`,
+   `app.py` unchanged.
+3. "QA failed: label check - it should say hi" → `STAGE: design redo: True`; the end-of-reply check told that
+   session to move the labels back.
+4. "Design approved: label check" with the labels still `needs review` → refused, `STAGE: design`.
+5. I moved both back to `in progress`; "Design approved: label check" (through `run.sh scope`) →
+   `STAGE: plan redo: False issues kept: [236, 237]`.
+
+A direct read of all five label check issues took 0.71 s; a missing issue fell back to the record with "the
+GitHub read failed (gh: Not Found (HTTP 404))".
+
+**Found.** The QA-failed name took the whole line ("label check - it should say hi"): a spaced dash now ends a
+name, with a test. Also, `guard` refused a doc-editing command because the text held the word "until" beside a
+`| head`; I re-ran the edit from a script file with no pipe. That false match belongs to the rule audit (#228).
+
+---
+
 ## 2026-10-14 - Design approved: label check; build plan proposed
 
 **Decision.** aj approved the design ("Design approved: label check"). Planning made a feature

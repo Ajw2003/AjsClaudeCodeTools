@@ -16,5 +16,6 @@ reply over 200 words with no page gets a reminder.
 
 Ideas come before code. Every session starts locked: a hook refuses source edits until the user
 types "approved" naming what was approved ("Idea A approved", "approved 1A 2C"). A bare
-"approved" does not count. "skip design" lets one change through. Docs and `.md` files stay
+"approved" does not count. "skip design" lets one change through. Each issue's label says whose move it is (`in progress`
+mine, `needs review` the user's) and every step checks it. Docs and `.md` files stay
 editable. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/show-dont-tell.md`.

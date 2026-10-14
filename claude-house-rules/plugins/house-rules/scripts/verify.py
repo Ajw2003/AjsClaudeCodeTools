@@ -4237,10 +4237,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.63.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.64.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.63.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.64.0",
     "rules section + detail file + version",
 )
 
@@ -8422,6 +8422,8 @@ _loop_cases.append(("label check: the last swap to needs review starts QA and cl
                     _loop_stage() == "qa" and "the stage is QA" in _o and _loop_edit("app.py") == "deny"))
 _loop_gh("needs review", 101, 102, 103)
 _n = _loop_say("QA failed: blockers - the list is too long")
+_loop_cases.append(("the feature name stops at a spaced dash (found in the label check's real run)",
+                    _loop_state().get("approvals", [{}])[-1].get("name") == "blockers"))
 _loop_cases.append(('"QA failed" goes back to Design and closes code', _loop_stage() == "design"
                     and _loop_edit("app.py") == "deny"))
 _n = _loop_say("skip design")

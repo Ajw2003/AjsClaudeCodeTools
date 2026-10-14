@@ -142,6 +142,14 @@ recorded, code allowed in Build, QA passed moved it to Done. The run found one b
 line), fixed with a test. Version 2.63.0. `verify.py` 646 PASS, run twice. Systems doc: `docs/4-systems/design-loop.md`.
 QA passed (aj, 2026-10-14); a pull request to main is the release. Releasing needs a merge to main, which is at 2.53.0 while this branch carries 2.54-2.62 too. Not released: one version bump at the end, after #227 proves the whole loop.
 
+2026-10-14, same branch: the label check (#235), plugin 2.64.0, built and waiting on aj's QA. Every stage move reads
+the feature's issue labels: from GitHub (`gh api`), or from the changes `autosave` recorded when GitHub can't be
+read, and it says which. "Build plan approved" needs every issue `in progress`; swapping all to `needs review` starts
+a new QA stage and closes code; QA answers count only in QA; after "QA failed" the redo needs the labels back; in
+Build an edit is refused while a label is wrong; the end-of-reply check names wrong labels. `verify.py` 658 PASS,
+run twice. A real run against two real issues (#236, #237) walked Plan → Build → QA → QA failed → refused redo →
+Plan. It found one bug (a name ran on past a dash), fixed with a test. Rides the open design loop pull request.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

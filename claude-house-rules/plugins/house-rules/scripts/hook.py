@@ -4810,8 +4810,9 @@ def _loop_unlogged(state, top, label, name):
 
 
 # A feature name ends at the end of its sentence, or where a pasted reply such as "Build plan: 1A 2A"
-# starts on the same line - found in the real run, where the whole line became the name.
-_LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+[A-Z][A-Za-z ]{0,30}:\s")
+# starts on the same line - found in the real run, where the whole line became the name. A spaced
+# dash ends it too: "QA failed: label check - it should say hi" (found in the label check's real run).
+_LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+[A-Z][A-Za-z ]{0,30}:\s|\s+[-–—]\s")
 
 
 def _loop_name(raw):
