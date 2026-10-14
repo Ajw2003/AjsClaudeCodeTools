@@ -157,7 +157,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 
 <div class="wrap">
   <header style="display:grid;gap:6px">
-    <span class="eyebrow">Build plan for approval · loop and format designs approved · no code yet</span>
+    <span class="eyebrow">Build plan approved · building · 2 of 7 done</span>
     <h1>Loop Build Plan</h1>
   </header>
 
@@ -167,6 +167,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
     <h2 id="s1" tabindex="-1">In short</h2>
     <div class="card">
       <p class="lead">Seven pieces of work build the loop and the handover format you approved. The lock comes first, because everything else depends on it. Each piece is a GitHub issue that names what it depends on and when it counts as done.</p>
+      <div class="key"><span><i style="background:var(--ok-soft);border-color:var(--ok)"></i>Built and tested</span><span><i class="y"></i>Waiting on you</span><span><i></i>Not started</span></div>
       <div class="glance" id="glance" role="group" aria-label="The build steps. Tap one for detail."></div>
       <p class="muted" style="font-size:.85rem">Tap a step to see what it builds, what it needs, and when it's done.</p>
       <div class="sd" id="sd" aria-live="polite"></div>
@@ -218,18 +219,18 @@ const ic=id=>`<svg class="ico"><use href="#i-${id}"/></svg>`;
 const STEPS=["In short","Changes","Choices","Wrap-up"];
 
 const STAGES=[
- ["lock","Stage tracker, approvals and the code lock",0,"A stage note per project; your approval phrases move the stage; code edits refused outside Build, for helpers too.","Nothing before it.","Issue #225. Done when a test passes for each approval phrase, a bare \"approved\" moves nothing, \"skip design\" allows one edit, and a real run shows an edit refused then allowed."],
- ["file","An approval only counts once logged",0,"Your approval waits until the decisions log has a new line for the stage.","The lock.","Issue #230. Done when tests pass for an approval with and without a new log line."],
- ["list","A home for each feature",0,"A systems doc and an issue with sub-issues naming dependencies and done-criteria; \"in progress\" labels; the build-plan approval waits for those issues.","The lock.","Issue #231. Done when tests pass for a build-plan approval with and without its issues."],
+ ["lock","Stage tracker, approvals and the code lock",2,"A stage note per project; your approval phrases move the stage; code edits refused outside Build, for helpers too.","Nothing before it.","Issue #225. Done when a test passes for each approval phrase, a bare \"approved\" moves nothing, \"skip design\" allows one edit, and a real run shows an edit refused then allowed."],
+ ["file","An approval only counts once logged",2,"Your approval waits until the decisions log has a new line for the stage.","The lock.","Issue #230. Done when tests pass for an approval with and without a new log line."],
+ ["list","A home for each feature",3,"Paused, needs your choice: A systems doc and an issue with sub-issues naming dependencies and done-criteria; \"in progress\" labels; the build-plan approval waits for those issues.","The lock.","Issue #231. Done when tests pass for a build-plan approval with and without its issues."],
  ["hand","Helpers build only approved steps",0,"Helpers get the approved plan at start-up; the go-ahead guess is removed.","The lock.","Issue #232. Done when tests show a helper's start-up carrying the plan and the guess gone."],
  ["stop","Long-reply reminder",0,"The end-of-reply check flags a reply over 200 words with no page.","Nothing before it.","Issue #226. Done when tests pass for 250 words with no link, 250 words with a page, and 150 words."],
  ["layout","Handover page template",0,"The four-part page template in the plugin, and the format written into the rule.","Nothing before it.","Issue #233. Done when a test confirms the template's four parts and copy-reply, and it's been looked at on a phone screen in light and dark."],
  ["flask","Prove it and update the docs",0,"A real run of the whole loop shown to you; systems doc, hook tables, state doc, decisions log; a version bump.","All six steps above.","Issue #227. Done when the test suite passes twice, the real run is on a page for you, and the docs and version are updated."]
 ];
-const SHORT=["The lock","Logged first","Feature home","Helpers","Reminder","Template","Prove it"];
+const SHORT=["The lock ✓","Logged first ✓","Feature home","Helpers","Reminder","Template","Prove it"];
 const glance=document.getElementById("glance"),sd=document.getElementById("sd");
 const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-glance.innerHTML=STAGES.map(([i,t,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you===1?" you":you===2?" done":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
+glance.innerHTML=STAGES.map(([i,t,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you===1||you===3?" you":you===2?" done":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
 function showStage(n){
   glance.querySelectorAll(".g").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.s===n));
   const [i,t,you,creates,needs,done]=STAGES[n];
