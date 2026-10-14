@@ -9,7 +9,15 @@ pointer, when a later entry replaces it.
 
 ## 2026-10-14 - Design proposed: new item visual
 
-**Status.** Proposed; waiting on "Design approved: new item visual".
+**Status.** Approved: "Design approved : New item visual: 1C". Option C: a New item opens to what sets it
+off → what it does → what you get.
+
+**Plan.** Issue #240 with sub-issues #241 (the template draws the flow) and #242 (the changes page's 13
+New items), all `in progress`. Plan page: `docs/plans/new-item-visual-plan.html`. Found while planning: the
+loop reads aj's two real messages as the features "New item visual: 1C" and "Label check plan: 1A 2A"
+(checked by calling `_loop_name` on both). A redo after "QA failed" is matched by name, so its label check
+would be skipped. Whether to fix it in this build is aj's choice on the plan page. Waiting on "Build plan
+approved: new item visual".
 
 **What.** aj on the changes page: Changed items "are fantastic and need nothing", but New items "lack the same
 visual flare". New items open to text only. Since it's the page template that would change, it goes through the
