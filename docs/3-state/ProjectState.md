@@ -126,6 +126,11 @@ block (#225), the long-reply reminder (#226) and their proof (#227) are not buil
 hook that does not exist on this branch until #225 lands. Found on the way: `verify.py`'s guard cases go red if a
 `house-rules-last-seen-*` temp file from an earlier run is over five minutes old; a rerun passes.
 
+2026-10-14, same branch: the design loop (#223) is in Build. Step 1 of 7, "Stage tracker, approvals, and the code
+lock" (#225), is built: `scope` reads aj's approvals and moves the stage in `.git/house-rules-loop.json`;
+`commitgate` refuses code edits outside Build. The stage carries across sessions (aj's answer, 2026-10-14).
+`verify.py` 631 PASS. Not released: one version bump at the end, after #227 proves the whole loop.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

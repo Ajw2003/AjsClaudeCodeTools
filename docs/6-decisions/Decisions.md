@@ -7,6 +7,14 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - The loop's stage carries across sessions (#225)
+
+**Decision.** Asked while building the code lock: a new session that opens while a feature is in Build keeps Build,
+so code stays open under the plan aj already approved; every other stage stays closed to code. This replaces the
+earlier "every session starts locked" (Q1A, 2026-10-13), which predates the staged loop.
+
+**Status.** Standing.
+
 ## 2026-10-14 - Build plan approved: design loop (#223)
 
 **Decision.** aj approved the build plan (`docs/plans/loop-build-plan.html`) with "Build plan approved: design loop".
