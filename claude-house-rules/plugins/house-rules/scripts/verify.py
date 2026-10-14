@@ -8262,7 +8262,38 @@ else:
 # --- the design loop: stage tracker, approvals and the code lock (#225) ------------------------
 _loop_dir = tempfile.mkdtemp(prefix="house-rules-loop-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _loop_dir], check=True)
-_loop_env = dict(os.environ, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off")
+_loop_labels_file = os.path.join(_FIXTURE_ROOT, "loop-labels.json")
+_loop_env = dict(os.environ, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
+                 HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+
+
+def _loop_gh(label, *numbers):
+    """#236: what the stand-in for GitHub says each issue's labels are."""
+    try:
+        have = json.load(open(_loop_labels_file, encoding="utf-8"))
+    except (OSError, ValueError):
+        have = {}
+    for n in numbers:
+        have["o/r#%d" % n] = ["Feature", "AjsAgent created this", label]
+    with open(_loop_labels_file, "w", encoding="utf-8") as f:
+        json.dump(have, f)
+
+
+def _loop_post(tool, tool_input, response):
+    p = {"hook_event_name": "PostToolUse", "tool_name": tool, "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": tool_input, "tool_response": response}
+    return run_hook("autosave", json.dumps(p), env=_loop_env)[1]
+
+
+def _loop_state():
+    try:
+        return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _loop_stop():
+    return run_hook("handover", stop_payload(last_assistant_message="Done.", cwd=_loop_dir), env=_loop_env)[1]
 
 
 def _loop_edit(rel, **extra):
@@ -8339,9 +8370,14 @@ _loop_cases.append(("an unlabelled issue does not count toward the feature's iss
                     "has 1 labelled issue(s)" in _n and _loop_stage() == "plan"))
 _loop_issue(103, via="bash")
 _n = _loop_say("Build plan approved: blockers")
-_loop_cases.append(("issues from the GitHub tool and from gh both count; then the log is checked",
-                    "nothing has been added to the decisions log" in _n and _loop_stage() == "plan"))
+_loop_cases.append(("issues from the GitHub tool and from gh both count, so the next check is reached",
+                    "labelled issue(s)" not in _n and _loop_stage() == "plan"))
 _loop_log("plan decisions for blockers")
+_loop_gh("in progress", 101, 102)
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("label check: a build-plan approval is refused while an issue isn't in progress, naming it",
+                    "not labelled `in progress`: #103" in _n and _loop_stage() == "plan"))
+_loop_gh("in progress", 103)
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(('"Build plan approved: <feature>" opens code', _loop_stage() == "build"
                     and _loop_edit("app.py") == "allow"))
@@ -8361,12 +8397,46 @@ _loop_cases.append(("a helper starts knowing the feature, its stage and issues, 
 _loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
                     and _loop_edit("app.py", session_id="other") == "allow"))
 _loop_log("build log for blockers")
+_loop_cases.append(("label check: quiet at the end of a reply when every label fits", "design loop" not in _loop_stop()))
+_loop_gh("needs review", 102)
+_loop_cases.append(("label check: in Build, a code edit is refused while an issue isn't in progress",
+                    _loop_edit("app.py") == "deny"))
+_loop_cases.append(("label check: the end-of-reply check names the wrong label",
+                    "should be labelled `in progress`" in _loop_stop() and "#102" in _loop_stop()))
+_n = _loop_say("QA passed: blockers")
+_loop_cases.append(("label check: a QA answer before every issue says needs review moves nothing",
+                    "QA starts only once" in _n and "#101" in _n and _loop_stage() == "build"))
+os.remove(_loop_labels_file)
+_o = _loop_post("mcp__github__issue_write", {"method": "update", "owner": "o", "repo": "r", "issue_number": 101,
+                "labels": ["Feature", "needs review"]}, {"url": "https://github.com/o/r/issues/101"})
+_o += _loop_post("Bash", {"command": 'gh issue edit 102 --add-label "needs review" --remove-label "in progress"'},
+                 {"stdout": "https://github.com/o/r/issues/102\n"})
+_loop_cases.append(("label check: label changes from the GitHub tool and from gh are recorded",
+                    _loop_state().get("labels", {}).get("o/r#101") == ["Feature", "needs review"]
+                    and _loop_state().get("labels", {}).get("o/r#102") == ["Feature", "AjsAgent created this", "needs review"]))
+_loop_cases.append(("label check: when the GitHub read fails, it says so and uses the record",
+                    "GitHub read failed" in _loop_stop() and _loop_stage() == "build"))
+_o = _loop_post("mcp__github__issue_write", {"method": "update", "owner": "o", "repo": "r", "issue_number": 103,
+                "labels": ["needs review"]}, {"url": "https://github.com/o/r/issues/103"})
+_loop_cases.append(("label check: the last swap to needs review starts QA and closes code",
+                    _loop_stage() == "qa" and "the stage is QA" in _o and _loop_edit("app.py") == "deny"))
+_loop_gh("needs review", 101, 102, 103)
 _n = _loop_say("QA failed: blockers - the list is too long")
 _loop_cases.append(('"QA failed" goes back to Design and closes code', _loop_stage() == "design"
                     and _loop_edit("app.py") == "deny"))
 _n = _loop_say("skip design")
 _loop_cases.append(('"skip design" lets exactly one code edit through',
                     _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
+_loop_cases.append(('label check: after "QA failed", the end-of-reply check asks for in progress again',
+                    "should be labelled `in progress`" in _loop_stop()))
+_loop_log("redo design for blockers")
+_n = _loop_say("Design approved: blockers")
+_loop_cases.append(("label check: the redo's design approval is refused until the issues are back in progress",
+                    "not labelled `in progress`" in _n and _loop_stage() == "design"))
+_loop_gh("in progress", 101, 102, 103)
+_n = _loop_say("Design approved: blockers")
+_loop_cases.append(("label check: then it moves to Plan and keeps the same issues",
+                    _loop_stage() == "plan" and len(_loop_state().get("issues", [])) == 3))
 _loop_log("v2 design"); _loop_say("Design approved: blockers v2. Reply in one sentence.")
 try:
     _feat = json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["feature"]
@@ -8374,7 +8444,9 @@ except (OSError, ValueError, KeyError):
     _feat = None
 _loop_cases.append(("the feature name stops at the end of its sentence (found in the real run)", _feat == "blockers v2"))
 _loop_issue(201); _loop_issue(202)
+_loop_gh("in progress", 201, 202)
 _loop_log("v2 plan"); _loop_say("Build plan approved: blockers v2")
+_loop_gh("needs review", 201, 202)
 _loop_log("v2 build"); _n = _loop_say("QA passed: blockers v2")
 _loop_cases.append(('"QA passed" moves to Done and closes code', _loop_stage() == "done"
                     and _loop_edit("app.py") == "deny"))

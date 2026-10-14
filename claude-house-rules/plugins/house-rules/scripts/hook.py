@@ -4746,7 +4746,7 @@ def _issues_gate(payload):
 # ---------------------------------------------------------------------------------------
 
 LOOP_FILE = "house-rules-loop.json"
-LOOP_STAGE_NAMES = {"design": "Design", "plan": "Plan", "build": "Build", "done": "Done"}
+LOOP_STAGE_NAMES = {"design": "Design", "plan": "Plan", "build": "Build", "qa": "QA", "done": "Done"}
 _LOOP_DESIGN_RE = re.compile(r"\bdesign\s+approved\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 _LOOP_PLAN_RE = re.compile(r"\bbuild\s+plan\s+approved\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 _LOOP_QA_RE = re.compile(r"\bqa\s+(passed|failed)\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
@@ -4819,6 +4819,85 @@ def _loop_name(raw):
     return (raw[:m.start()] if m else raw).strip() or raw.strip()
 
 
+# #235: an issue's label says whose move it is - `in progress` is mine, `needs review` is aj's - and
+# every stage move checks it. Labels are read from GitHub every time (#236); when that read fails,
+# from the label changes this hook recorded, and the note says why.
+LOOP_WORKING, LOOP_REVIEW = "in progress", "needs review"
+LOOP_GH_SECONDS = 5  # the reads run in parallel, well inside hooks.json's 10s per hook
+# Tests point this at a JSON file of {"owner/repo#n": [labels]} standing in for GitHub; a missing
+# file reads as a failed GitHub read.
+LOOP_LABELS_FILE_ENV = "HOUSE_RULES_LOOP_LABELS_FILE"
+
+
+def _loop_key(repo, number):
+    return "%s#%d" % (repo, int(number))
+
+
+def _loop_gh_labels(repo, number):
+    import subprocess
+    proc = subprocess.run(["gh", "api", "repos/%s/issues/%d" % (repo, number), "--jq", "[.labels[].name]"],
+                          capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip().splitlines()
+        raise RuntimeError(detail[0] if detail else "gh exited %d" % proc.returncode)
+    return json.loads(proc.stdout)
+
+
+def _loop_labels(state):
+    """({key: [labels] or None}, note) for the feature's issues. The note is "" when GitHub answered,
+    else it says the labels came from the record and why."""
+    import subprocess
+    issues = [i for i in state.get("issues", []) if isinstance(i, dict) and i.get("repo") and "number" in i]
+    if not issues:
+        return {}, ""
+    keys = [_loop_key(i["repo"], i["number"]) for i in issues]
+    stand_in = os.environ.get(LOOP_LABELS_FILE_ENV)
+    try:
+        if stand_in:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                found = json.load(f)
+            return {k: found.get(k) for k in keys}, ""
+        if not shutil.which("gh"):
+            raise RuntimeError("gh is not installed")
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            got = list(pool.map(lambda i: _loop_gh_labels(i["repo"], i["number"]), issues))
+        return dict(zip(keys, got)), ""
+    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
+        why = "Labels were taken from the changes this hook recorded, because the GitHub read failed (%s)." % exc
+    recorded = state.get("labels") if isinstance(state.get("labels"), dict) else {}
+    return {k: recorded.get(k) for k in keys}, why
+
+
+def _loop_wrong(labels, want):
+    """The issues whose labels don't fit `want` (LOOP_WORKING or LOOP_REVIEW), named with what they have."""
+    wrong = []
+    for key, have in labels.items():
+        low = [str(l).lower() for l in have] if isinstance(have, list) else None
+        ok = low is not None and (LOOP_WORKING in low if want == LOOP_WORKING
+                                  else LOOP_REVIEW in low and LOOP_WORKING not in low)
+        if not ok:
+            wrong.append("#%s (%s)" % (key.split("#")[1], ", ".join(have) if low else "no labels known"))
+    return wrong
+
+
+def _loop_to_qa(state, labels):
+    """Build becomes QA once every issue says needs review and none says in progress. True if it moved."""
+    if state["stage"] == "build" and labels and not _loop_wrong(labels, LOOP_REVIEW):
+        state["stage"] = "qa"
+        return True
+    return False
+
+
+_LOOP_QA_NOTE = (" Every issue of the feature says `needs review`, so the stage is QA: code edits are closed, "
+                 "and aj answers \"QA passed: <feature>\" or \"QA failed: <feature>\" with the changes.")
+
+
+def _loop_label_refusal(said, want, wrong, note):
+    return ('Design loop: aj wrote "%s", but these issues are not labelled `%s`: %s. Nothing moved. Fix the '
+            "labels, then ask aj to approve again.%s" % (said, want, "; ".join(wrong), " " + note if note else ""))
+
+
 def _loop_apply(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
     message approves nothing. Mutates state."""
@@ -4837,6 +4916,10 @@ def _loop_apply(state, text, top):
                     "and a sub-issue per step, each naming what it depends on, what depends on it and when "
                     "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again."
                     % (name, have, ISSUES_NEEDED, ISSUES_LABEL))
+        labels, src = _loop_labels(state)
+        wrong = _loop_wrong(labels, LOOP_WORKING)
+        if wrong:
+            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src)
         unlogged = _loop_unlogged(state, top, "Build plan approved", name)
         if unlogged:
             return unlogged
@@ -4845,22 +4928,40 @@ def _loop_apply(state, text, top):
         m = _LOOP_DESIGN_RE.search(text)
         if m:
             name = _loop_name(m.group(1))
+            redo = state.get("redo") and name.lower() == feature.lower()
+            if redo:
+                labels, src = _loop_labels(state)
+                wrong = _loop_wrong(labels, LOOP_WORKING)
+                if wrong:
+                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src)
             unlogged = _loop_unlogged(state, top, "Design approved", name)
             if unlogged:
                 return unlogged
             state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
-            state["issues"] = []
+            state["redo"] = False
+            if not redo:
+                state["issues"] = []
         else:
             m = _LOOP_QA_RE.search(text)
             if m:
                 verdict, name = m.group(1).lower(), _loop_name(m.group(2))
-                if stage != "build":
+                if stage == "build":
+                    labels, src = _loop_labels(state)
+                    if not _loop_to_qa(state, labels):
+                        wrong = _loop_wrong(labels, LOOP_REVIEW)
+                        return ('Design loop: aj wrote "QA %s: %s", but QA starts only once every issue of the '
+                                "feature says `needs review`, and these don't: %s. Nothing moved. Swap their "
+                                "labels when the build is ready for aj, then ask again.%s"
+                                % (verdict, name, "; ".join(wrong) or "no issues are recorded",
+                                   " " + src if src else ""))
+                elif stage != "qa":
                     return ('Design loop: aj wrote "QA %s: %s", but the stage is %s, so nothing moved. QA '
                             "follows a build." % (verdict, name, LOOP_STAGE_NAMES[stage]))
                 unlogged = _loop_unlogged(state, top, "QA " + verdict, name)
                 if unlogged:
                     return unlogged
                 state["stage"] = "done" if verdict == "passed" else "design"
+                state["redo"] = verdict == "failed"
                 approval = ("QA " + verdict, name)
     if approval:
         state.setdefault("approvals", []).append(
@@ -4870,14 +4971,20 @@ def _loop_apply(state, text, top):
         if state["stage"] == "plan":
             note += (" Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue "
                      "for the feature and a sub-issue per step, each naming dependencies, dependants and "
-                     "done-criteria, labelled `%s`, the feature marked `in progress`." % ISSUES_LABEL)
+                     "done-criteria, labelled `%s` and `%s`." % (ISSUES_LABEL, LOOP_WORKING))
             return note
         if state["stage"] == "build":
-            note += (" Code edits are open for the approved steps. Hand each approved step to "
-                     "@house-rules:builder (one per issue; at most two running) unless aj said to build it "
-                     "yourself; helpers build only approved steps and never design or approve.")
+            note += (" Code edits are open for the approved steps while every issue says `%s`. Hand each "
+                     "approved step to @house-rules:builder (one per issue; at most two running) unless aj said "
+                     "to build it yourself; helpers build only approved steps and never design or approve. When "
+                     "the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA."
+                     % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
         elif approval[0] == "QA failed":
-            note += " Their list of changes starts the next design."
+            note += (" Their list of changes starts the next design. Move every issue back to `%s` now; the "
+                     "redo's \"Design approved\" is refused until they are." % LOOP_WORKING)
+        elif approval[0] == "QA passed":
+            note += (" Code edits stay closed. The issues keep `%s` until aj closes them; never close one."
+                     % LOOP_REVIEW)
         else:
             note += " Code edits stay closed."
         return note
@@ -4938,6 +5045,34 @@ def _loop_helper_note(payload):
             "; its issues are %s" % issues if issues else ""))
 
 
+def _loop_stop_line(payload):
+    """#238, handover: (line or None, problem or None) - name every issue whose label doesn't fit the
+    stage. Quiet when there is no feature with issues, or every label fits."""
+    if not _loop_enabled():
+        return None, None
+    _, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return None, None
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return None, problem
+    stage = state["stage"]
+    if stage == "done" or (stage == "design" and not state.get("redo")) or not state.get("issues"):
+        return None, None
+    labels, src = _loop_labels(state)
+    if _loop_to_qa(state, labels):
+        _loop_write(git_dir, state)
+        return "House rules, design loop:" + _LOOP_QA_NOTE, src or None
+    want = LOOP_REVIEW if stage == "qa" else LOOP_WORKING
+    wrong = _loop_wrong(labels, want)
+    if not wrong:
+        return None, src or None
+    return ("House rules, design loop: \"%s\" is in %s, so every issue should be labelled `%s`, and these "
+            "are not: %s. Fix the labels before this turn ends.%s"
+            % (state.get("feature") or "", LOOP_STAGE_NAMES[stage], want, "; ".join(wrong),
+               " Code edits are refused until they are." if stage == "build" else "")), src or None
+
+
 def _loop_gate(payload):
     """(deny reason or None, problem or None): code edits only in Build, or once after skip design."""
     git_dir, problem = _gated_edit(payload, "design-loop lock")
@@ -4947,7 +5082,16 @@ def _loop_gate(payload):
     if problem:
         return None, problem
     if state["stage"] == "build":
-        return None, None
+        labels, src = _loop_labels(state)
+        if _loop_to_qa(state, labels):
+            _loop_write(git_dir, state)
+            return "House rules, design loop:" + _LOOP_QA_NOTE, None
+        wrong = _loop_wrong(labels, LOOP_WORKING)
+        if not wrong:
+            return None, src or None
+        return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, and "
+                "these are not: %s. Fix the labels, then edit again.%s"
+                % (state.get("feature") or "", LOOP_WORKING, "; ".join(wrong), " " + src if src else "")), None
     if state.get("skip"):
         state["skip"] = False
         _loop_write(git_dir, state)
@@ -5015,6 +5159,85 @@ def _loop_record_issues(git_dir, found, labelled):
         state.setdefault("issues", []).append({"repo": repo, "number": int(number), "labelled": labelled})
     _loop_write(git_dir, state)
     return []
+
+
+_GH_ISSUE_EDIT_RE = re.compile(_GH_PREFIX + r"issue\s+edit\s+(\d+)\b([^\n;&|]*)")
+_GH_LABEL_FLAG_RE = re.compile(r"(?:--(add-label|remove-label|label)|-(l))(?:=|\s+)(\"[^\"]*\"|'[^']*'|[^\s\"']+)")
+
+
+def _gh_label_flags(cmd):
+    """{"add": [...], "remove": [...]} from a gh command's label flags (--label and -l count as add)."""
+    out = {"add": [], "remove": []}
+    for long_flag, _short, value in _GH_LABEL_FLAG_RE.findall(cmd):
+        names = [v.strip() for v in value.strip("\"'").split(",") if v.strip()]
+        out["remove" if long_flag == "remove-label" else "add"].extend(names)
+    return out
+
+
+def _label_changes(data):
+    """#236: [(repo, number, set_to or None, add, remove)] for a tool call that set issue labels and
+    succeeded - the GitHub tool's issue_write, or `gh issue create` / `gh issue edit`."""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    tool = data.get("tool_name") or ""
+    resp = data.get("tool_response")
+    text = resp if isinstance(resp, str) else json.dumps(resp)
+    urls = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
+    if _GITHUB_ISSUE_WRITE_RE.match(tool) and isinstance(ti.get("labels"), list):
+        labels = [str(l) for l in ti["labels"]]
+        if str(ti.get("method", "")).lower() == "create":
+            return [(repo, int(n), labels, [], []) for repo, n in urls]
+        number = ti.get("issue_number")
+        repo = "%s/%s" % (ti.get("owner"), ti.get("repo"))
+        if number and any(r.lower() == repo.lower() and int(n) == int(number) for r, n in urls):
+            return [(repo, int(number), labels, [], [])]
+        return []
+    if tool != "Bash":
+        return []
+    cmd = ti.get("command") or ""
+    if _GH_ISSUE_CREATE_RE.search(cmd):
+        flags = _gh_label_flags(cmd)
+        return [(repo, int(n), flags["add"], [], []) for repo, n in urls]
+    m = _GH_ISSUE_EDIT_RE.search(cmd)
+    if m:
+        flags = _gh_label_flags(m.group(2))
+        if flags["add"] or flags["remove"]:
+            return [(repo, int(n), None, flags["add"], flags["remove"]) for repo, n in urls if int(n) == int(m.group(1))]
+    return []
+
+
+def _loop_record_labels(payload):
+    """PostToolUse: record label changes for the GitHub-read fallback, and move Build to QA once every
+    issue says needs review. Returns notes. Never raises."""
+    if not _loop_enabled():
+        return []
+    try:
+        data = json.loads(payload)
+        changes = _label_changes(data) if isinstance(data, dict) else []
+        if not changes:
+            return []
+        _, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if not git_dir:
+            return []
+        state, problem = _loop_read(git_dir)
+        if problem:
+            return [problem]
+        recorded = state.setdefault("labels", {})
+        for repo, number, set_to, add, remove in changes:
+            key = _loop_key(repo, number)
+            now = list(set_to) if set_to is not None else list(recorded.get(key) or [])
+            now = [l for l in now if l.lower() not in {r.lower() for r in remove}]
+            now += [a for a in add if a.lower() not in {l.lower() for l in now}]
+            recorded[key] = now
+        notes = []
+        if state["stage"] == "build":
+            labels, src = _loop_labels(state)
+            if _loop_to_qa(state, labels):
+                notes.append("Design loop:" + _LOOP_QA_NOTE + (" " + src if src else ""))
+        _loop_write(git_dir, state)
+        return notes
+    except Exception as exc:
+        return ["house-rules: could not record an issue label change for the design loop (%s: %s)."
+                % (type(exc).__name__, exc)]
 
 
 def _issues_record(payload):
@@ -5466,6 +5689,7 @@ def event_autosave():
             emit({"systemMessage": "house-rules plugin: autosave got an empty payload and did not run for this call."})
             return 0
         issue_notes = _issues_record(payload) if (_issues_enabled() or _loop_enabled()) else []
+        issue_notes += _loop_record_labels(payload)
         target = _autosave_target(payload) if _autosave_enabled() else None
         if target is None:
             if issue_notes:
@@ -6511,10 +6735,17 @@ def event_handover():
                     visual_files = visual
 
     issue_line, issue_problem = _issues_stop_line(payload)
+    try:
+        label_line, label_problem = _loop_stop_line(payload)
+    except Exception as exc:
+        label_line, label_problem = None, "house-rules: the design-loop label check hit an error (%s: %s)." % (
+            type(exc).__name__, exc)
 
     trace_lines = []
     if issue_problem:
         trace_lines.append(issue_problem)
+    if label_problem:
+        trace_lines.append(label_problem)
     if could_not_tell:
         # Fail open, loud: a claim was made and this could not confirm or deny it, so it says
         # so rather than silently assuming either answer - but it never blocks, and it never
@@ -6532,7 +6763,7 @@ def event_handover():
     long_words = _long_reply_words(reply_text) if (vm is not None and _loop_enabled()) else 0
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
-            and not long_words):
+            and not long_words and not label_line):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -6562,6 +6793,8 @@ def event_handover():
         parts.append(_commit_note(uncommitted))
     if issue_line:
         parts.append(issue_line)
+    if label_line:
+        parts.append(label_line)
     out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}
     if trace_lines:
         out["systemMessage"] = " ".join(trace_lines)

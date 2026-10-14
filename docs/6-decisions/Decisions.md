@@ -17,7 +17,8 @@ names its dependencies and done-criteria. Build plan page: `docs/plans/label-che
 It has two open choices: who builds it (suggested: me), and how it ships (suggested: on this branch,
 inside the open design loop pull request).
 
-**Status.** Waiting on "Build plan approved: label check".
+**Status.** Approved: "Build plan approved Label check plan: 1A 2A". I build it myself, on this
+branch, so the open design loop pull request carries it.
 
 ---
 
