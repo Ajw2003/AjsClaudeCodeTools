@@ -8346,6 +8346,18 @@ _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(('"Build plan approved: <feature>" opens code', _loop_stage() == "build"
                     and _loop_edit("app.py") == "allow"))
 _loop_say("hello", session="other")
+_loop_cases.append(('"Build plan approved" carries the hand-to-a-helper instruction', "@house-rules:builder" in _n))
+_g = _loop_say("go ahead and build it")
+_loop_cases.append(("with the loop on, a go-ahead message no longer gets the guess", "reads like a go-ahead" not in _g))
+_sp = {"hook_event_name": "SubagentStart", "session_id": "loop", "agent_id": "h1", "agent_type": "house-rules:builder",
+       "cwd": _loop_dir, "transcript_path": os.path.join(_FIXTURE_ROOT, "loop.jsonl")}
+_, _so, _ = run_hook("subagentrules", json.dumps(_sp), env=_loop_env)
+try:
+    _so = json.loads(_so)["hookSpecificOutput"]["additionalContext"]
+except Exception:
+    pass
+_loop_cases.append(("a helper starts knowing the feature, its stage and issues, and that it only builds",
+                    '"blockers"' in _so and "Build" in _so and "#102" in _so and "never design" in _so))
 _loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
                     and _loop_edit("app.py", session_id="other") == "allow"))
 _loop_log("build log for blockers")

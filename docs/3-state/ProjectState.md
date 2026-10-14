@@ -132,7 +132,9 @@ lock" (#225), is built: `scope` reads aj's approvals and moves the stage in `.gi
 `verify.py` 631 PASS. Step 2, "An approval only counts once the stage is logged" (#230), is built: no new
 decisions-log entry since the last approval, no stage move. `verify.py` 633 PASS. Step 3, "A home for each
 feature" (#231), is built: issues made with the GitHub tool are now recorded, and "Build plan approved" waits
-for two labelled issues made during Plan. `verify.py` 635 PASS. Not released: one version bump at the end, after #227 proves the whole loop.
+for two labelled issues made during Plan. `verify.py` 635 PASS. Step 4, "Helpers build only approved steps"
+(#232), is built: helpers start with the feature, stage and issues; the go-ahead guess is off while the loop is on.
+`verify.py` 638 PASS. Not released: one version bump at the end, after #227 proves the whole loop.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

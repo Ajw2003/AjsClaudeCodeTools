@@ -1641,7 +1641,9 @@ def event_scope():
             field = m.group(0)
             if _SCOPE_COMMAND_HINT_RE.search(field):
                 reminder = SCOPE_REMINDER
-            if _SCOPE_GOAHEAD_RE.search(field):
+            # With the design loop on, only "Build plan approved" starts a build (#232), so the
+            # go-ahead guess runs only when the loop is off.
+            if _SCOPE_GOAHEAD_RE.search(field) and not _loop_enabled():
                 reminder = reminder + SCOPE_DELEGATE_CLAUSE
             if _PARITY_RE.search(field) and _parity_enabled():
                 reminder = reminder + SCOPE_PARITY_CLAUSE
@@ -2965,6 +2967,9 @@ def event_subagentrules():
             return 0
         payload = read_payload()
         core, problems = _subagent_core(agent_type=_field(_AGENT_TYPE_RE, payload))
+        loop_note = _loop_helper_note(payload or "")
+        if loop_note:
+            core = (core + "\n\n" + loop_note) if core else loop_note
         bits = []
         if not payload:
             problems.append("the SubagentStart payload was empty")
@@ -4858,7 +4863,9 @@ def _loop_apply(state, text, top):
                      "done-criteria, labelled `%s`, the feature marked `in progress`." % ISSUES_LABEL)
             return note
         if state["stage"] == "build":
-            note += " Code edits are open for the approved steps."
+            note += (" Code edits are open for the approved steps. Hand each approved step to "
+                     "@house-rules:builder (one per issue; at most two running) unless aj said to build it "
+                     "yourself; helpers build only approved steps and never design or approve.")
         elif approval[0] == "QA failed":
             note += " Their list of changes starts the next design."
         else:
@@ -4897,6 +4904,28 @@ def _loop_scope_note(payload):
     except Exception as exc:
         return "house-rules: the design-loop check hit an error (%s: %s), so this message moved nothing." % (
             type(exc).__name__, exc)
+
+
+def _loop_helper_note(payload):
+    """#232: what a helper is told at start-up about the feature it works inside. "" when the loop
+    is off or the helper is not in a repo."""
+    if not _loop_enabled():
+        return ""
+    _, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return ""
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return problem
+    issues = ", ".join("#%d" % i["number"] for i in state.get("issues", []) if isinstance(i, dict) and "number" in i)
+    return (
+        "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
+        "build plan; you never design, change the plan, or approve anything - an approval only counts from "
+        "aj's own message. Anything unexpected comes back to the main session, not into the code. Code edits "
+        "are refused outside Build." % (
+            '"%s"' % state["feature"] if state.get("feature") else "not started",
+            LOOP_STAGE_NAMES[state["stage"]],
+            "; its issues are %s" % issues if issues else ""))
 
 
 def _loop_gate(payload):

@@ -86,6 +86,13 @@ approved" does not count until at least two issues labelled `AjsAgent created th
 during the plan; issues made with the GitHub tool count the same as a terminal `gh issue create`
 (#231).
 
+## Helpers build only approved steps
+
+A helper (subagent) starts knowing the feature, its stage and its issues, and that it builds only
+the steps the user approved: it never designs, changes the plan or approves. The code lock holds its
+edits the same as mine. With the loop on, only "Build plan approved" starts a build; the old guess
+that a message "reads like a go-ahead" is not used (#232).
+
 ## Where this rule loads
 
 This rule is injected by its own SessionStart handler (`showrule`), not inside
