@@ -7,6 +7,14 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - QA passed: design loop (#223)
+
+**Decision.** aj passed QA on `docs/plans/loop-qa.html` ("Design loop QA: 1A 2A"): QA passed, and release by a pull
+request from `AjsAgent/agent-communication-patterns-xo0l8x` to main. The PR also carries the unmerged 2.54-2.62 work
+already on this branch. Issues are marked done, not closed: closing stays aj's, after testing in a real session.
+
+**Status.** Standing. Feature: Done.
+
 ## 2026-10-14 - The design loop is built; it goes to aj's QA (#223)
 
 **Decision.** All seven build steps are done (#225, #230, #231, #232, #226, #233, #227). My own review included a real
