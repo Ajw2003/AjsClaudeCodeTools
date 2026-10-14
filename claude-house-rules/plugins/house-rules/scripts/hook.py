@@ -4815,6 +4815,13 @@ def _loop_apply(state, text, top):
         if stage != "plan":
             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
+        have = sum(1 for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled"))
+        if have < ISSUES_NEEDED:
+            return ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
+                    "made since its design was approved, and needs at least %d: one issue for the feature "
+                    "and a sub-issue per step, each naming what it depends on, what depends on it and when "
+                    "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again."
+                    % (name, have, ISSUES_NEEDED, ISSUES_LABEL))
         unlogged = _loop_unlogged(state, top, "Build plan approved", name)
         if unlogged:
             return unlogged
@@ -4827,6 +4834,7 @@ def _loop_apply(state, text, top):
             if unlogged:
                 return unlogged
             state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
+            state["issues"] = []
         else:
             m = _LOOP_QA_RE.search(text)
             if m:
@@ -4844,6 +4852,11 @@ def _loop_apply(state, text, top):
             {"stage": approval[0], "name": approval[1], "at": int(time.time())})
         note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
             approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        if state["stage"] == "plan":
+            note += (" Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue "
+                     "for the feature and a sub-issue per step, each naming dependencies, dependants and "
+                     "done-criteria, labelled `%s`, the feature marked `in progress`." % ISSUES_LABEL)
+            return note
         if state["stage"] == "build":
             note += " Code edits are open for the approved steps."
         elif approval[0] == "QA failed":
@@ -4923,32 +4936,73 @@ _GH_ISSUE_CLOSE_RES = (
 _ISSUE_URL_RE = re.compile(r"github\.com/([\w.-]+/[\w.-]+)/issues/(\d+)")
 
 
-def _issues_record(payload):
-    """PostToolUse Bash: record a `gh issue create` in the gate state. Returns a list of note
-    strings (empty when nothing applies). Never raises."""
-    try:
-        data = json.loads(payload)
-        if not isinstance(data, dict) or data.get("tool_name") != "Bash":
-            return []
-        ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+_GITHUB_ISSUE_WRITE_RE = re.compile(r"^mcp__(github|GitHub)__issue_write$")
+
+
+def _created_issue(data):
+    """(found, labelled, how) for a tool call that created a GitHub issue - a terminal
+    `gh issue create` or the GitHub tool's issue_write with method create (#231) - or None for any
+    other call. `found` lists (repo, number) pairs from the response; `labelled` says whether the
+    project label was set."""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    tool = data.get("tool_name") or ""
+    if tool == "Bash":
         cmd = ti.get("command") or ""
         if not _GH_ISSUE_CREATE_RE.search(cmd):
+            return None
+        label_text, how = cmd, "`gh issue create`"
+    elif _GITHUB_ISSUE_WRITE_RE.match(tool) and str(ti.get("method", "")).lower() == "create":
+        labels = ti.get("labels") if isinstance(ti.get("labels"), list) else []
+        label_text, how = " ".join(str(l) for l in labels), "GitHub tool issue_write"
+    else:
+        return None
+    resp = data.get("tool_response")
+    text = resp if isinstance(resp, str) else json.dumps(resp)
+    found = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
+    labelled = any(l.lower() in label_text.lower() for l in (ISSUES_LABEL, ISSUES_LABEL_OLD))
+    return found, labelled, how
+
+
+def _loop_record_issues(git_dir, found, labelled):
+    """#231: issues made while a feature is in Plan count toward its build-plan approval."""
+    if not _loop_enabled() or not found:
+        return []
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return [problem]
+    if state["stage"] != "plan":
+        return []
+    for repo, number in found:
+        state.setdefault("issues", []).append({"repo": repo, "number": int(number), "labelled": labelled})
+    _loop_write(git_dir, state)
+    return []
+
+
+def _issues_record(payload):
+    """PostToolUse Bash or GitHub tool: record a created issue in the issue-gate and design-loop
+    state. Returns a list of note strings (empty when nothing applies). Never raises."""
+    try:
+        data = json.loads(payload)
+        if not isinstance(data, dict):
             return []
+        hit = _created_issue(data)
+        if hit is None:
+            return []
+        found, labelled, how = hit
         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return []
+        loop_notes = _loop_record_issues(git_dir, found, labelled)
+        if not _issues_enabled():
+            return loop_notes
         state, problem = _issues_read(git_dir)
         if problem:
-            return [problem]
+            return loop_notes + [problem]
         if not state or not state.get("needs_issues"):
-            return []
-        resp = data.get("tool_response")
-        text = resp if isinstance(resp, str) else json.dumps(resp)
-        found = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
+            return loop_notes
         if not found:
-            return ["house-rules: a `gh issue create` ran but no issue URL was in its output, so it "
-                    "was not counted toward the issue gate."]
-        labelled = any(l.lower() in cmd.lower() for l in (ISSUES_LABEL, ISSUES_LABEL_OLD))
+            return loop_notes + ["house-rules: a %s ran but no issue URL was in its output, so it "
+                                 "was not counted toward the issue gate." % how]
         created = state.setdefault("created", [])
         for repo, number in found:
             created.append({"repo": repo, "number": int(number), "labelled": labelled})
@@ -4963,9 +5017,9 @@ def _issues_record(payload):
             state["needs_issues"] = False
             notes.append("house-rules: %d labelled issues recorded, so source edits are unblocked." % have)
         _issues_write(git_dir, state)
-        return notes
+        return loop_notes + notes
     except Exception as exc:
-        return ["house-rules: could not record the `gh issue create` in the issue gate (%s: %s)."
+        return ["house-rules: could not record a created issue in the issue gate (%s: %s)."
                 % (type(exc).__name__, exc)]
 
 
@@ -5366,13 +5420,13 @@ def event_autosave():
     worktree to the autosave ref and push it. The same entry records `gh issue create` calls for
     the issue gate (_issues_record), which is why it runs on any branch."""
     try:
-        if not _autosave_enabled() and not _issues_enabled():
+        if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
             return 0
         payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: autosave got an empty payload and did not run for this call."})
             return 0
-        issue_notes = _issues_record(payload) if _issues_enabled() else []
+        issue_notes = _issues_record(payload) if (_issues_enabled() or _loop_enabled()) else []
         target = _autosave_target(payload) if _autosave_enabled() else None
         if target is None:
             if issue_notes:

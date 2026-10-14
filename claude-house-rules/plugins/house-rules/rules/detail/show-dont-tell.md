@@ -76,6 +76,16 @@ An approval only counts once the stage it closes is logged: the decisions log
 has not, the stage does not move and I am told to log the stage, then ask the user to approve
 again (#230).
 
+## A home for each feature
+
+When a design is approved, the feature gets a systems doc in `docs/4-systems/` and a GitHub issue
+of its own, marked `in progress` while it is worked on. The plan adds a sub-issue per step. Every
+issue and sub-issue names what it depends on, what depends on it, and when it counts as done, so a
+blocker shows as an unfinished dependency and progress is visible at a glance. "Build plan
+approved" does not count until at least two issues labelled `AjsAgent created this` were made
+during the plan; issues made with the GitHub tool count the same as a terminal `gh issue create`
+(#231).
+
 ## Where this rule loads
 
 This rule is injected by its own SessionStart handler (`showrule`), not inside

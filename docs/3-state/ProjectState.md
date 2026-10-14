@@ -130,7 +130,9 @@ hook that does not exist on this branch until #225 lands. Found on the way: `ver
 lock" (#225), is built: `scope` reads aj's approvals and moves the stage in `.git/house-rules-loop.json`;
 `commitgate` refuses code edits outside Build. The stage carries across sessions (aj's answer, 2026-10-14).
 `verify.py` 631 PASS. Step 2, "An approval only counts once the stage is logged" (#230), is built: no new
-decisions-log entry since the last approval, no stage move. `verify.py` 633 PASS. Not released: one version bump at the end, after #227 proves the whole loop.
+decisions-log entry since the last approval, no stage move. `verify.py` 633 PASS. Step 3, "A home for each
+feature" (#231), is built: issues made with the GitHub tool are now recorded, and "Build plan approved" waits
+for two labelled issues made during Plan. `verify.py` 635 PASS. Not released: one version bump at the end, after #227 proves the whole loop.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

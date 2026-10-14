@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Issues made with the GitHub tool count too (#231)
+
+**Context.** Building step 3 ("A home for each feature") showed the existing issue record only counts a terminal
+`gh issue create`; in cloud sessions issues are made with the GitHub tool and were never counted
+(`docs/plans/issue-check-gap.html`).
+
+**Decision.** aj chose 1A: the issue record also counts issues made with the GitHub tool, with the same label
+check. Rejected: asking GitHub with `gh` at approval time (no `gh` in cloud sessions); no check (a rule with no
+check, ruled out under #228).
+
+**Status.** Standing.
+
 ## 2026-10-14 - The loop's stage carries across sessions (#225)
 
 **Decision.** Asked while building the code lock: a new session that opens while a feature is in Build keeps Build,

@@ -197,7 +197,7 @@
         ]
       },
       {
-        "matcher": "Write|Edit|NotebookEdit|Bash",
+        "matcher": "Write|Edit|NotebookEdit|Bash|mcp__(github|GitHub)__issue_write",
         "hooks": [
           {
             "type": "command",

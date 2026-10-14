@@ -8292,6 +8292,19 @@ def _loop_log(line):
         f.write(line + "\n")
 
 
+def _loop_issue(number, labelled=True, via="mcp"):
+    if via == "mcp":
+        p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "loop",
+             "cwd": _loop_dir, "tool_input": {"method": "create", "title": "t",
+             "labels": ["Feature", "AjsAgent created this"] if labelled else ["Feature"]},
+             "tool_response": {"url": "https://github.com/o/r/issues/%d" % number}}
+    else:
+        p = {"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "loop", "cwd": _loop_dir,
+             "tool_input": {"command": 'gh issue create --title t --label "%s"' % ("AjsAgent created this" if labelled else "x")},
+             "tool_response": {"stdout": "https://github.com/o/r/issues/%d\n" % number}}
+    run_hook("autosave", json.dumps(p), env=_loop_env)
+
+
 def _loop_stage():
     try:
         return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["stage"]
@@ -8317,7 +8330,16 @@ _n = _loop_say("Design approved: blockers")
 _loop_cases.append(('"Design approved: <feature>" moves to Plan, code still closed',
                     _loop_stage() == "plan" and "now Plan" in _n and _loop_edit("app.py") == "deny"))
 _n = _loop_say("Build plan approved: blockers")
-_loop_cases.append(("an approval with nothing new in the decisions log moves nothing",
+_loop_cases.append(("a build-plan approval with no feature issues moves nothing",
+                    "labelled issue(s)" in _n and _loop_stage() == "plan"))
+_loop_issue(101, labelled=False)
+_loop_issue(102)
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("an unlabelled issue does not count toward the feature's issues",
+                    "has 1 labelled issue(s)" in _n and _loop_stage() == "plan"))
+_loop_issue(103, via="bash")
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("issues from the GitHub tool and from gh both count; then the log is checked",
                     "nothing has been added to the decisions log" in _n and _loop_stage() == "plan"))
 _loop_log("plan decisions for blockers")
 _n = _loop_say("Build plan approved: blockers")
@@ -8334,6 +8356,7 @@ _n = _loop_say("skip design")
 _loop_cases.append(('"skip design" lets exactly one code edit through',
                     _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
 _loop_log("v2 design"); _loop_say("Design approved: blockers v2")
+_loop_issue(201); _loop_issue(202)
 _loop_log("v2 plan"); _loop_say("Build plan approved: blockers v2")
 _loop_log("v2 build"); _n = _loop_say("QA passed: blockers v2")
 _loop_cases.append(('"QA passed" moves to Done and closes code', _loop_stage() == "done"
