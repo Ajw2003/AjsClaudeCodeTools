@@ -151,12 +151,13 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
   <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
   <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+  <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
 </defs></svg>
 
 <div class="wrap">
   <header style="display:grid;gap:6px">
-    <span class="eyebrow">Build plan for approval · design approved · no code yet</span>
+    <span class="eyebrow">Build plan for approval · loop and format designs approved · no code yet</span>
     <h1>Loop Build Plan</h1>
   </header>
 
@@ -165,7 +166,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
   <section class="panel" data-step="1" aria-labelledby="s1">
     <h2 id="s1" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead">Six pieces of work build the loop you approved. The lock comes first, because everything else depends on it. Each piece is a GitHub issue that names what it depends on and when it counts as done.</p>
+      <p class="lead">Seven pieces of work build the loop and the handover format you approved. The lock comes first, because everything else depends on it. Each piece is a GitHub issue that names what it depends on and when it counts as done.</p>
       <div class="glance" id="glance" role="group" aria-label="The build steps. Tap one for detail."></div>
       <p class="muted" style="font-size:.85rem">Tap a step to see what it builds, what it needs, and when it's done.</p>
       <div class="sd" id="sd" aria-live="polite"></div>
@@ -191,12 +192,12 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
   <section class="panel" data-step="4" aria-labelledby="s4" hidden>
     <h2 id="s4" tabindex="-1">Wrap-up</h2>
     <div class="wrapup">
-      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>Six steps build the loop. The lock comes first; four steps build on it; the last proves it all works.</p></div></div>
-      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>Already done in GitHub: three step issues rewritten, three new ones, and the feature labelled in progress. No code yet.</p></div></div>
-      <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Your approval of this plan, your two choices, and your approval of the page format.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>Seven steps build the loop and the handover format. The lock comes first; the last proves it all works.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>Already done in GitHub: three step issues rewritten, four new ones, and the feature labelled in progress. No code yet.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Your approval of this plan and your two choices.</p></div></div>
       <div class="wu"><span class="c" style="background:var(--ok-soft);color:var(--ok)"><svg class="ico"><use href="#i-next"/></svg></span><div><h3>What's next</h3><p>Once approved, I build the lock first and show you after my own review.</p></div></div>
       <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3>
-        <ol><li>Pick your two answers (step 3).</li><li>Tap <b>Copy my reply</b>.</li><li>Send it with "Build plan approved: design loop" if the plan is right, and "Handover format approved" if the format is.</li></ol></div></div>
+        <ol><li>Pick your two answers (step 3).</li><li>Tap <b>Copy my reply</b>.</li><li>Send it with "Build plan approved: design loop" if the plan is right, or what to change.</li></ol></div></div>
     </div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
@@ -222,9 +223,10 @@ const STAGES=[
  ["list","A home for each feature",0,"A systems doc and an issue with sub-issues naming dependencies and done-criteria; \"in progress\" labels; the build-plan approval waits for those issues.","The lock.","Issue #231. Done when tests pass for a build-plan approval with and without its issues."],
  ["hand","Helpers build only approved steps",0,"Helpers get the approved plan at start-up; the go-ahead guess is removed.","The lock.","Issue #232. Done when tests show a helper's start-up carrying the plan and the guess gone."],
  ["stop","Long-reply reminder",0,"The end-of-reply check flags a reply over 200 words with no page.","Nothing before it.","Issue #226. Done when tests pass for 250 words with no link, 250 words with a page, and 150 words."],
- ["flask","Prove it and update the docs",0,"A real run of the whole loop shown to you; systems doc, hook tables, state doc, decisions log; a version bump.","All five steps above.","Issue #227. Done when the test suite passes twice, the real run is on a page for you, and the docs and version are updated."]
+ ["layout","Handover page template",0,"The four-part page template in the plugin, and the format written into the rule.","Nothing before it.","Issue #233. Done when a test confirms the template's four parts and copy-reply, and it's been looked at on a phone screen in light and dark."],
+ ["flask","Prove it and update the docs",0,"A real run of the whole loop shown to you; systems doc, hook tables, state doc, decisions log; a version bump.","All six steps above.","Issue #227. Done when the test suite passes twice, the real run is on a page for you, and the docs and version are updated."]
 ];
-const SHORT=["The lock","Logged first","Feature home","Helpers","Reminder","Prove it"];
+const SHORT=["The lock","Logged first","Feature home","Helpers","Reminder","Template","Prove it"];
 const glance=document.getElementById("glance"),sd=document.getElementById("sd");
 const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 glance.innerHTML=STAGES.map(([i,t,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you===1?" you":you===2?" done":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
@@ -243,8 +245,8 @@ const CC=[
  ["chg","Issue \"Block code edits until aj approves a design\"","Becomes \"Stage tracker, approvals, and the code lock\".",["One lock before any code","A lock at every approval, from the approved design"],"Issue #225, rewritten rather than replaced."],
  ["chg","Issue \"Remind the agent when a reply is long\"","Now names the 200-word limit and its tests.",["Long reply, no number","Over 200 words with no page"],"Issue #226, rewritten."],
  ["chg","Issue \"Prove the block works\"","Now proves the whole loop.",["Proves one lock","Proves the full loop with a real run, plus docs and a version bump"],"Issue #227, rewritten."],
- ["new","Three new step issues","Logged first, a home for each feature, helpers build only approved steps.",null,"Issues #230, #231 and #232, each naming what it depends on and when it counts as done."],
- ["chg","The feature issue","Labelled \"in progress\".",["No status label","\"in progress\""],"Issue #223, the parent of all six. Your design said a feature carries the label while it's worked on."],
+ ["new","Four new step issues","Logged first, a home for each feature, helpers build only approved steps, the handover template.",null,"Issues #230, #231, #232 and #233, each naming what it depends on and when it counts as done."],
+ ["chg","The feature issue","Labelled \"in progress\".",["No status label","\"in progress\""],"Issue #223, the parent of all seven. Your design said a feature carries the label while it's worked on."],
  ["keep","Writing the rule (issue #224)","Built yesterday; waits for your QA at the end.",null,"No change."]
 ];
 document.getElementById("cc").innerHTML=CC.map(([k,t,s,ft,d])=>`
