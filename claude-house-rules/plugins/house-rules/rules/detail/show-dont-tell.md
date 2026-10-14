@@ -86,6 +86,20 @@ approved" does not count until at least two issues labelled `AjsAgent created th
 during the plan; issues made with the GitHub tool count the same as a terminal `gh issue create`
 (#231).
 
+## The handover page
+
+Every page is built from `templates/handover-page.html`, which fills in from one PAGE block. It has
+four parts, in this order: In short (plain sentences and a row of icons to tap, each showing what
+it creates or changes beside what it needs from the user), Changes (each item tagged New, Changed
+or Kept, before and after on tap), Choices (options with my suggestion marked, a "why" to open,
+and a box for the user's own answer), and Wrap-up (summary, what's changing, what's blocking,
+what's next, and numbered steps for what the user needs to do, then a reply built for them to
+copy). A part is left out only when it would be empty. Every part keeps four rules: detail only
+on tap; names, never bare numbers; one colour, one meaning (orange is always something the user
+acts on and nothing else is orange; green is done); I check it first, at phone width in light and
+dark, every tap tried, and a search for bare numbers. My chat reply around a page is a plain
+summary, the link, then numbered steps for what the user needs to do (#233).
+
 ## Helpers build only approved steps
 
 A helper (subagent) starts knowing the feature, its stage and its issues, and that it builds only

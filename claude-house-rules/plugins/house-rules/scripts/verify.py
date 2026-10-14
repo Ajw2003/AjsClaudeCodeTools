@@ -8401,6 +8401,18 @@ _loop_env["HOUSE_RULES_LOOP"] = "off"
 _loop_cases.append(("HOUSE_RULES_LOOP=off also turns the reminder off", not _long_reply(_words250)))
 _loop_env["HOUSE_RULES_LOOP"] = "on"
 
+# -- #233: the handover page template -----------------------------------------------------------
+_tpl_path = os.path.join(HERE, "..", "templates", "handover-page.html")
+_tpl = read(_tpl_path) if os.path.isfile(_tpl_path) else ""
+_tpl_missing = [m for m in ('data-part="short"', 'data-part="changes"', 'data-part="choices"', 'data-part="wrapup"',
+                            "Copy my reply", 'class="owntext"', "const PAGE = {", "What you need to do")
+                if m not in _tpl]
+_loop_cases.append(("the handover template has its four parts, the own-answer box and the copy-reply",
+                    bool(_tpl) and not _tpl_missing))
+_sdt_detail = read(os.path.join(DETAIL_DIR, "show-dont-tell.md"))
+_loop_cases.append(("the rule names the template and its four parts",
+                    all(w in _sdt_detail for w in ("templates/handover-page.html", "In short", "Changes", "Choices", "Wrap-up"))))
+
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 

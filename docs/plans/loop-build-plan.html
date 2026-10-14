@@ -157,7 +157,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 
 <div class="wrap">
   <header style="display:grid;gap:6px">
-    <span class="eyebrow">Build plan approved · building · 5 of 7 done</span>
+    <span class="eyebrow">Build plan approved · building · 6 of 7 done</span>
     <h1>Loop Build Plan</h1>
   </header>
 
@@ -224,10 +224,10 @@ const STAGES=[
  ["list","A home for each feature",2,"A systems doc and an issue with sub-issues naming dependencies and done-criteria; \"in progress\" labels; the build-plan approval waits for those issues.","The lock.","Issue #231. Done when tests pass for a build-plan approval with and without its issues."],
  ["hand","Helpers build only approved steps",2,"Helpers get the approved plan at start-up; the go-ahead guess is removed.","The lock.","Issue #232. Done when tests show a helper's start-up carrying the plan and the guess gone."],
  ["stop","Long-reply reminder",2,"The end-of-reply check flags a reply over 200 words with no page.","Nothing before it.","Issue #226. Done when tests pass for 250 words with no link, 250 words with a page, and 150 words."],
- ["layout","Handover page template",0,"The four-part page template in the plugin, and the format written into the rule.","Nothing before it.","Issue #233. Done when a test confirms the template's four parts and copy-reply, and it's been looked at on a phone screen in light and dark."],
+ ["layout","Handover page template",2,"The four-part page template in the plugin, and the format written into the rule.","Nothing before it.","Issue #233. Done when a test confirms the template's four parts and copy-reply, and it's been looked at on a phone screen in light and dark."],
  ["flask","Prove it and update the docs",0,"A real run of the whole loop shown to you; systems doc, hook tables, state doc, decisions log; a version bump.","All six steps above.","Issue #227. Done when the test suite passes twice, the real run is on a page for you, and the docs and version are updated."]
 ];
-const SHORT=["The lock ✓","Logged first ✓","Feature home ✓","Helpers ✓","Reminder ✓","Template","Prove it"];
+const SHORT=["The lock ✓","Logged first ✓","Feature home ✓","Helpers ✓","Reminder ✓","Template ✓","Prove it"];
 const glance=document.getElementById("glance"),sd=document.getElementById("sd");
 const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 glance.innerHTML=STAGES.map(([i,t,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you===1||you===3?" you":you===2?" done":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
