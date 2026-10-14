@@ -7,7 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - At QA an issue moves to `needs review`; changes send it back to `in progress`
+
+**Decision.** aj changed the label flow: when an issue reaches aj's QA, `in progress` is swapped for
+`needs review`. aj then closes it, or asks for changes and it goes back to `in progress`. This
+replaces the `in review` label from the entry below, which is no longer used. The design loop's
+parent issue and seven step issues now carry `needs review`.
+
+**Why.** aj's call: one label says whose move it is: `in progress` is mine, `needs review` is aj's.
+
+**Not enforced yet.** Labels are set by hand; no hook checks them. Noted for the rule audit (#228).
+
+---
+
 ## 2026-10-14 - `in progress` stays on through review; new `in review` label
+
+**Status.** Superseded by the entry above.
 
 **Decision.** When the design loop's pull request opened I removed `in progress` from its issues.
 aj said to keep it and add a new `in review` label instead. The parent issue and the seven step
