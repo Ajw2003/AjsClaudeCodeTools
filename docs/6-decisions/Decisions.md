@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Design approved: design loop (#223)
+
+**Decision.** aj approved the loop design (`docs/plans/loop-design.html`) with "Design approved: design loop".
+Eight steps: Design, Approve design, Plan, Approve plan, Build, I review, Your QA, Done. Colour shows whose step it
+is; each step shows what it creates or changes and what it requires, at equal weight. Approvals read
+"<Stage> approved: <feature>"; QA reads "QA passed: <feature>" or "QA failed: <feature>" plus the changes. An
+approval does not count until the stage is logged. Feature and step issues carry the "in progress" label and name
+dependencies, dependants and completion criteria. The paused code-edit lock (#225), long-reply reminder (#226) and
+their tests (#227) fold into this build.
+
+**Status.** Standing. Next: the build plan. Still open: approval of the handover page format.
+
 ## 2026-10-13 - Pages keep one design language that never contradicts itself (#223)
 
 **Context.** The loop-design page's legend said orange meant "your words move it on", while Design and Plan,
