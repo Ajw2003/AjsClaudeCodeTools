@@ -79,7 +79,8 @@ again (#230).
 ## A home for each feature
 
 When a design is approved, the feature gets a systems doc in `docs/4-systems/` and a GitHub issue
-of its own, marked `in progress` while it is worked on. The plan adds a sub-issue per step. Every
+of its own, marked `in progress` while it is worked on. Once its pull request is open it also gets
+`in review`; `in progress` stays on until the user closes the issue. The plan adds a sub-issue per step. Every
 issue and sub-issue names what it depends on, what depends on it, and when it counts as done, so a
 blocker shows as an unfinished dependency and progress is visible at a glance. "Build plan
 approved" does not count until at least two issues labelled `AjsAgent created this` were made

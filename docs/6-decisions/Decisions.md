@@ -7,6 +7,17 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - `in progress` stays on through review; new `in review` label
+
+**Decision.** When the design loop's pull request opened I removed `in progress` from its issues.
+aj said to keep it and add a new `in review` label instead. The parent issue and the seven step
+issues now carry both. `in progress` comes off only when aj closes the issue.
+
+**Why.** aj's call: an issue isn't finished until it's tested and closed, so review is still work
+in progress. Written into `rules/detail/show-dont-tell.md`, "A home for each feature".
+
+---
+
 ## 2026-10-14 - QA passed: design loop (#223)
 
 **Decision.** aj passed QA on `docs/plans/loop-qa.html` ("Design loop QA: 1A 2A"): QA passed, and release by a pull
