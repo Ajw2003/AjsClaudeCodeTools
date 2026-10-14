@@ -1,0 +1,298 @@
+<title>Loop Build Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#566174; --line:#d5dbe6;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --you:#b35f00; --you-soft:#fdeed9;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.55 var(--body)}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:1.9rem;font-weight:800}
+h2{font-size:1.45rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.ico{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* stepper */
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stepper button{border:0;background:none;display:grid;justify-items:center;gap:4px;padding:4px 0;font-size:.72rem;color:var(--muted)}
+.stepper .bar{width:100%;height:6px;border-radius:3px;background:var(--line)}
+.stepper button.done .bar{background:var(--accent)}
+.stepper button[aria-current="step"]{color:var(--fg);font-weight:700}
+.stepper button[aria-current="step"] .bar{background:var(--accent)}
+
+.panel{display:grid;gap:18px}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.lead{font-size:1.1rem}
+
+/* at-a-glance strip */
+.glance{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.g{display:grid;justify-items:center;gap:4px;width:56px;text-align:center;font-size:.72rem;color:var(--muted)}
+.g span.c{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
+.arrow{color:var(--muted);font-size:1.1rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
+.glance .lk .ico{width:14px;height:14px}
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
+.g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.sd h3{display:flex;gap:8px;align-items:center}
+.sd .back{padding-left:0}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.key i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent)}
+.key i.y{border-radius:4px;background:var(--you-soft);border-color:var(--you)}
+
+/* stage list */
+.stages{display:grid;gap:8px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.st > summary{list-style:none;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;cursor:pointer;min-height:48px}
+.st > summary::-webkit-details-marker{display:none}
+.st .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.st.you .c{border-radius:11px;background:var(--you-soft);color:var(--you)}
+.st.you{border-color:var(--you)}
+.st .nm b{display:block}
+.st .nm small{color:var(--muted);font-size:.85rem}
+.more{font-size:.78rem;color:var(--accent);font-weight:700;white-space:nowrap}
+details[open] > summary .more::after{content:" ▲"} details:not([open]) > summary .more::after{content:" ▼"}
+.detail{padding:0 14px 14px 68px;display:grid;gap:8px;font-size:.92rem}
+@media (max-width:420px){.detail{padding-left:14px}}
+.row{display:grid;grid-template-columns:72px 1fr;gap:8px}
+.row > span:first-child{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.back{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--you);padding-left:12px}
+
+/* created / changed */
+.cc{display:grid;gap:8px}
+.ci{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.ci > summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;cursor:pointer;min-height:48px}
+.ci > summary::-webkit-details-marker{display:none}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ci b{display:block}
+.ci small{color:var(--muted);font-size:.86rem}
+.ci .detail{padding:0 14px 14px 14px}
+.fromto{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;font-size:.88rem}
+.fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
+.fromto span.to{background:var(--accent-soft)}
+
+/* choices */
+.q{display:grid;gap:8px}
+.q h3{display:flex;gap:10px;align-items:flex-start}
+.qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input[type=radio]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.opt small{display:block;color:var(--muted);font-size:.86rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+.rec{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.rec .ico{width:12px;height:12px}
+.why{font-size:.88rem}
+.why summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:32px}
+.why p{margin-top:6px;color:var(--muted)}
+
+/* wrap-up */
+.wrapup{display:grid;gap:10px}
+.wu{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.wu .c{width:40px;height:40px;border-radius:10px;display:grid;place-items:center}
+.wu h3{margin-bottom:2px}
+.wu p,.wu li{font-size:.94rem}
+.wu ol{margin:4px 0 0;padding-left:20px;display:grid;gap:4px}
+.wu.do{border:2px solid var(--you)}
+.reply{display:grid;gap:8px}
+.reply pre{white-space:pre-wrap;margin:0;background:var(--card);border:1px dashed var(--accent);border-radius:10px;padding:12px;font-size:.92rem}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:12px;padding:14px 18px;font-weight:800;min-height:48px}
+.secondary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:700;min-height:48px}
+.nav{display:flex;justify-content:space-between;gap:10px}
+.nav .primary{margin-left:auto}
+.status{font-size:.88rem;color:var(--muted)}
+.missing{color:var(--gap);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.panel{animation:in .2s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L3 15l3 3 8-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="eyebrow">Build plan for approval · design approved · no code yet</span>
+    <h1>Loop Build Plan</h1>
+  </header>
+
+  <nav class="stepper" aria-label="Steps" id="stepper"></nav>
+
+  <section class="panel" data-step="1" aria-labelledby="s1">
+    <h2 id="s1" tabindex="-1">In short</h2>
+    <div class="card">
+      <p class="lead">Six pieces of work build the loop you approved. The lock comes first, because everything else depends on it. Each piece is a GitHub issue that names what it depends on and when it counts as done.</p>
+      <div class="glance" id="glance" role="group" aria-label="The build steps. Tap one for detail."></div>
+      <p class="muted" style="font-size:.85rem">Tap a step to see what it builds, what it needs, and when it's done.</p>
+      <div class="sd" id="sd" aria-live="polite"></div>
+    </div>
+    <div class="card">
+      <h3>Who builds it</h3>
+      <p>Me, in this session, one step at a time. You said this work is too core for helpers.</p>
+    </div>
+  </section>
+
+  <section class="panel" data-step="2" aria-labelledby="s2" hidden>
+    <h2 id="s2" tabindex="-1">What this creates or changes</h2>
+    <p class="muted">What this plan already changed in GitHub. Tap one for before and after.</p>
+    <div class="cc" id="cc"></div>
+  </section>
+
+  <section class="panel" data-step="3" aria-labelledby="s3" hidden>
+    <h2 id="s3" tabindex="-1">Your choices</h2>
+    <p class="muted">Two decisions. My suggestion is marked, nothing is picked for you, and each has room for your own answer.</p>
+    <div id="qs" style="display:grid;gap:22px"></div>
+  </section>
+
+  <section class="panel" data-step="4" aria-labelledby="s4" hidden>
+    <h2 id="s4" tabindex="-1">Wrap-up</h2>
+    <div class="wrapup">
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Summary</h3><p>Six steps build the loop. The lock comes first; four steps build on it; the last proves it all works.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-swap"/></svg></span><div><h3>What's changing</h3><p>Already done in GitHub: three step issues rewritten, three new ones, and the feature labelled in progress. No code yet.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--gap-soft);color:var(--gap)"><svg class="ico"><use href="#i-stop"/></svg></span><div><h3>What's blocking</h3><p>Your approval of this plan, your two choices, and your approval of the page format.</p></div></div>
+      <div class="wu"><span class="c" style="background:var(--ok-soft);color:var(--ok)"><svg class="ico"><use href="#i-next"/></svg></span><div><h3>What's next</h3><p>Once approved, I build the lock first and show you after my own review.</p></div></div>
+      <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3>
+        <ol><li>Pick your two answers (step 3).</li><li>Tap <b>Copy my reply</b>.</li><li>Send it with "Build plan approved: design loop" if the plan is right, and "Handover format approved" if the format is.</li></ol></div></div>
+    </div>
+    <div class="reply">
+      <pre id="out" aria-live="polite"></pre>
+      <p class="status" id="miss"></p>
+      <button class="primary" id="copy" type="button">Copy my reply</button>
+      <p class="status" id="st"></p>
+    </div>
+  </section>
+
+  <div class="nav">
+    <button class="secondary" id="prev" type="button">‹ Back</button>
+    <button class="primary" id="next" type="button">Next ›</button>
+  </div>
+</div>
+
+<script>
+const ic=id=>`<svg class="ico"><use href="#i-${id}"/></svg>`;
+const STEPS=["In short","Changes","Choices","Wrap-up"];
+
+const STAGES=[
+ ["lock","Stage tracker, approvals and the code lock",0,"A stage note per project; your approval phrases move the stage; code edits refused outside Build, for helpers too.","Nothing before it.","Issue #225. Done when a test passes for each approval phrase, a bare \"approved\" moves nothing, \"skip design\" allows one edit, and a real run shows an edit refused then allowed."],
+ ["file","An approval only counts once logged",0,"Your approval waits until the decisions log has a new line for the stage.","The lock.","Issue #230. Done when tests pass for an approval with and without a new log line."],
+ ["list","A home for each feature",0,"A systems doc and an issue with sub-issues naming dependencies and done-criteria; \"in progress\" labels; the build-plan approval waits for those issues.","The lock.","Issue #231. Done when tests pass for a build-plan approval with and without its issues."],
+ ["hand","Helpers build only approved steps",0,"Helpers get the approved plan at start-up; the go-ahead guess is removed.","The lock.","Issue #232. Done when tests show a helper's start-up carrying the plan and the guess gone."],
+ ["stop","Long-reply reminder",0,"The end-of-reply check flags a reply over 200 words with no page.","Nothing before it.","Issue #226. Done when tests pass for 250 words with no link, 250 words with a page, and 150 words."],
+ ["flask","Prove it and update the docs",0,"A real run of the whole loop shown to you; systems doc, hook tables, state doc, decisions log; a version bump.","All five steps above.","Issue #227. Done when the test suite passes twice, the real run is on a page for you, and the docs and version are updated."]
+];
+const SHORT=["The lock","Logged first","Feature home","Helpers","Reminder","Prove it"];
+const glance=document.getElementById("glance"),sd=document.getElementById("sd");
+const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+glance.innerHTML=STAGES.map(([i,t,you],n)=>`${n?'<span class="arrow" aria-hidden="true">›</span>':""}<button type="button" class="g${you===1?" you":you===2?" done":""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${SHORT[n]}</button>`).join("");
+function showStage(n){
+  glance.querySelectorAll(".g").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.s===n));
+  const [i,t,you,creates,needs,done]=STAGES[n];
+  sd.innerHTML=`<h3>${t}</h3>
+   <div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span><p>${esc(creates)}</p></div>
+   <div class="crb"><span class="crh">${ic("next")}Needs first</span><p>${esc(needs)}</p></div></div>
+   <p class="muted" style="font-size:.88rem">${esc(done)}</p>`;
+}
+glance.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b)showStage(+b.dataset.s)});
+showStage(0);
+
+const CC=[
+ ["chg","Issue \"Block code edits until aj approves a design\"","Becomes \"Stage tracker, approvals, and the code lock\".",["One lock before any code","A lock at every approval, from the approved design"],"Issue #225, rewritten rather than replaced."],
+ ["chg","Issue \"Remind the agent when a reply is long\"","Now names the 200-word limit and its tests.",["Long reply, no number","Over 200 words with no page"],"Issue #226, rewritten."],
+ ["chg","Issue \"Prove the block works\"","Now proves the whole loop.",["Proves one lock","Proves the full loop with a real run, plus docs and a version bump"],"Issue #227, rewritten."],
+ ["new","Three new step issues","Logged first, a home for each feature, helpers build only approved steps.",null,"Issues #230, #231 and #232, each naming what it depends on and when it counts as done."],
+ ["chg","The feature issue","Labelled \"in progress\".",["No status label","\"in progress\""],"Issue #223, the parent of all six. Your design said a feature carries the label while it's worked on."],
+ ["keep","Writing the rule (issue #224)","Built yesterday; waits for your QA at the end.",null,"No change."]
+];
+document.getElementById("cc").innerHTML=CC.map(([k,t,s,ft,d])=>`
+ <details class="ci"><summary><span class="tag ${k}">${{new:"New",chg:"Changed",keep:"Kept"}[k]}</span><span><b>${t}</b><small>${s}</small></span><span class="more">More</span></summary>
+ <div class="detail">${ft?`<div class="fromto"><span>${ft[0]}</span><span aria-hidden="true">→</span><span class="to">${ft[1]}</span></div>`:""}<p>${d}</p></div></details>`).join("");
+
+const QS=[
+ ["cards","Step cards for commands were approved for replacement. When?",[["A","As their own feature, after this one, through the loop",1,"They need their own before-and-after inventory first, under your edit-in-place rule."],["B","As a seventh step in this build",0,"Sooner, but this build gets bigger."]],"Replacing them removes a style that loads in every session; showing you what it does today, and what's kept, is a design step of its own."],
+ ["release","When does it reach your sessions?",[["A","One version bump at the end",1,"You get the whole loop at once, already proved."],["B","A bump after each step",0,"You see pieces sooner, but half a loop can lock code with no way to approve a plan."]],""]
+];
+document.getElementById("qs").innerHTML=QS.map(([id,q,opts,why],n)=>`
+ <fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n+1}</span>${q}</h3></legend>
+ ${opts.map(([v,l,rec,d])=>`<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${l}</b>${rec?'<span class="rec">'+ic("check")+'Suggested</span>':""}${d?`<small>${d}</small>`:""}</span></label>`).join("")}
+ <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to choice ${n+1}" placeholder="Type your idea here"></span></label>
+ ${why?`<details class="why"><summary>Why I suggest this</summary><p>${why}</p></details>`:""}</fieldset>`).join("");
+
+const out=document.getElementById("out"),miss=document.getElementById("miss");
+function reply(){
+  const picks=QS.map(([id],i)=>{const c=document.querySelector(`input[name=${id}]:checked`);
+    if(c&&c.value==="own"){const t=document.querySelector(`.owntext[data-for=${id}]`).value.trim();return [i+1,t?"own":null,t]}
+    return [i+1,c&&c.value]});
+  out.textContent="Build plan: "+picks.map(([n,v])=>`${n}${v==="own"?"*":v||"?"}`).join(" ")
+    +picks.filter(([,v])=>v==="own").map(([n,,t])=>`\nChoice ${n}, my own answer: ${t}`).join("");
+  const m=picks.filter(([,v])=>!v).map(([n])=>n);
+  miss.innerHTML=m.length?`<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>`:"Both picked.";
+  const g=document.getElementById("goq");if(g)g.onclick=()=>go(3);
+}
+document.addEventListener("change",reply);
+document.addEventListener("input",e=>{if(e.target.classList.contains("owntext")){const r=document.querySelector(`input[name=${e.target.dataset.for}][value=own]`);if(e.target.value.trim())r.checked=true;reply()}});
+document.getElementById("copy").onclick=()=>{const st=document.getElementById("st");
+  navigator.clipboard.writeText(out.textContent).then(()=>st.textContent="Copied. Paste it into the chat.")
+  .catch(()=>{const r=document.createRange();r.selectNodeContents(out);getSelection().removeAllRanges();getSelection().addRange(r);st.textContent="Couldn't copy automatically. The reply is selected; copy it by hand."})};
+
+let cur=1;
+const stepper=document.getElementById("stepper");
+stepper.innerHTML=STEPS.map((s,i)=>`<button type="button" data-go="${i+1}"><span class="bar"></span>${s}</button>`).join("");
+function go(n,focus=true){
+  cur=Math.min(4,Math.max(1,n));
+  document.querySelectorAll("[data-step]").forEach(p=>p.hidden=+p.dataset.step!==cur);
+  stepper.querySelectorAll("button").forEach((b,i)=>{b.classList.toggle("done",i+1<cur);if(i+1===cur)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current")});
+  document.getElementById("prev").hidden=cur===1;
+  const nx=document.getElementById("next");nx.hidden=cur===4;nx.textContent=cur===3?"Wrap-up ›":"Next ›";
+  if(focus){document.getElementById("s"+cur).focus({preventScroll:true});window.scrollTo({top:0})}
+  try{localStorage.setItem("loopplan-step",cur)}catch(e){}
+}
+stepper.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)go(+b.dataset.go)});
+document.getElementById("prev").onclick=()=>go(cur-1);
+document.getElementById("next").onclick=()=>go(cur+1);
+const h=location.hash.match(/^#step([1-4])$/);let saved=null;try{saved=+localStorage.getItem("loopplan-step")}catch(e){}
+go(h?+h[1]:(saved||1),false);reply();
+</script>
