@@ -7,9 +7,23 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Design approved: label check; build plan proposed
+
+**Decision.** aj approved the design ("Design approved: label check"). Planning made a feature
+issue, #235, with four sub-issues: #236 (read labels from GitHub, falling back to my recorded
+changes), #237 (the QA stage and label-checked stage moves), #238 (the code lock in Build and the
+end-of-reply note), and #239 (docs, 2.64.0 and a real run). All are labelled `in progress` and each
+names its dependencies and done-criteria. Build plan page: `docs/plans/label-check-plan.html`.
+It has two open choices: who builds it (suggested: me), and how it ships (suggested: on this branch,
+inside the open design loop pull request).
+
+**Status.** Waiting on "Build plan approved: label check".
+
+---
+
 ## 2026-10-14 - Design proposed: label check (the loop enforced at each step)
 
-**Status.** Choices answered; waiting on "Design approved: label check".
+**Status.** Approved; see the entry above.
 
 **aj's answers** ("Label check: 1A 2* 3A 4B"):
 - **QA starts** when I switch every issue to `needs review`.
