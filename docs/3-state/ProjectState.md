@@ -134,7 +134,8 @@ decisions-log entry since the last approval, no stage move. `verify.py` 633 PASS
 feature" (#231), is built: issues made with the GitHub tool are now recorded, and "Build plan approved" waits
 for two labelled issues made during Plan. `verify.py` 635 PASS. Step 4, "Helpers build only approved steps"
 (#232), is built: helpers start with the feature, stage and issues; the go-ahead guess is off while the loop is on.
-`verify.py` 638 PASS. Not released: one version bump at the end, after #227 proves the whole loop.
+`verify.py` 638 PASS. Step 5, "Long-reply reminder" (#226), is built: over 200 words with no page link gets a
+reminder at the end of the reply. `verify.py` 643 PASS. Not released: one version bump at the end, after #227 proves the whole loop.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

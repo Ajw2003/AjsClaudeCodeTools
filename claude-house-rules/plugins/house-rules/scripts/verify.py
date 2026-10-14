@@ -8384,6 +8384,23 @@ _p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop"
       "tool_input": {"file_path": os.path.join(_loop_dir, "app.py")}}
 _, _o, _ = run_hook("commitgate", json.dumps(_p), env=_loop_env)
 _loop_cases.append(("an unreadable tracker says so instead of failing silently", "could not read house-rules-loop.json" in _o))
+# -- #226: the long-reply reminder -------------------------------------------------------------
+def _long_reply(text):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=_loop_env)
+    return "show don't tell: this reply is" in out
+
+
+_words250 = " ".join(["word"] * 250)
+_loop_cases.append(("a 250-word reply with no page link gets the reminder", _long_reply(_words250)))
+_loop_cases.append(("a 250-word reply that links a page does not",
+                    not _long_reply(_words250 + " https://claude.ai/artifact/abc")))
+_loop_cases.append(("a 150-word reply does not", not _long_reply(" ".join(["word"] * 150))))
+_loop_cases.append(("words inside a code block are not counted",
+                    not _long_reply(" ".join(["word"] * 150) + "\n```\n" + " ".join(["x"] * 200) + "\n```")))
+_loop_env["HOUSE_RULES_LOOP"] = "off"
+_loop_cases.append(("HOUSE_RULES_LOOP=off also turns the reminder off", not _long_reply(_words250)))
+_loop_env["HOUSE_RULES_LOOP"] = "on"
+
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 

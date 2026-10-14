@@ -6311,6 +6311,30 @@ def _plain_summary_problems(reply):
     return problems
 
 
+# #226: a reply over LONG_REPLY_WORDS words that links no page or picture gets a reminder to move
+# the detail onto a page and end on one question. Code blocks are not counted as words.
+LONG_REPLY_WORDS = 200
+_PAGE_LINK_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(|\.html\b", re.IGNORECASE)
+_MD_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
+_WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'\u2019-]*")
+
+
+def _long_reply_words(reply):
+    """The word count when the reply is too long and links no page or picture, else 0."""
+    if not reply or _PAGE_LINK_RE.search(reply):
+        return 0
+    words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply)))
+    return words if words > LONG_REPLY_WORDS else 0
+
+
+def _long_reply_note(words):
+    return (
+        "House rules, show don't tell: this reply is %d words and links no page or picture. Over %d words, "
+        "the detail belongs on a page: move it there, keep the reply to a plain summary, the link, and "
+        "numbered steps for what aj needs to do, and end on one question or next step." % (words, LONG_REPLY_WORDS)
+    )
+
+
 def _plain_summary_note(problems):
     return (
         "House rules, plain summary first: this reply reports finished work, but %s. Rewrite it "
@@ -6495,8 +6519,10 @@ def event_handover():
             "(%s)." % commit_could_not_tell
         )
 
+    long_words = _long_reply_words(reply_text) if (vm is not None and _loop_enabled()) else 0
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
-            and not parity_word and not visual_files and not plain_problems and not issue_line):
+            and not parity_word and not visual_files and not plain_problems and not issue_line
+            and not long_words):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -6516,6 +6542,8 @@ def event_handover():
         parts.append(_not_checked_note(not_checked))
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
+    if long_words:
+        parts.append(_long_reply_note(long_words))
     if parity_word:
         parts.append(_parity_report_note(parity_word))
     if visual_files:
