@@ -4237,10 +4237,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.62.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.63.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.62.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.63.0",
     "rules section + detail file + version",
 )
 
@@ -8367,7 +8367,12 @@ _loop_cases.append(('"QA failed" goes back to Design and closes code', _loop_sta
 _n = _loop_say("skip design")
 _loop_cases.append(('"skip design" lets exactly one code edit through',
                     _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
-_loop_log("v2 design"); _loop_say("Design approved: blockers v2")
+_loop_log("v2 design"); _loop_say("Design approved: blockers v2. Reply in one sentence.")
+try:
+    _feat = json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["feature"]
+except (OSError, ValueError, KeyError):
+    _feat = None
+_loop_cases.append(("the feature name stops at the end of its sentence (found in the real run)", _feat == "blockers v2"))
 _loop_issue(201); _loop_issue(202)
 _loop_log("v2 plan"); _loop_say("Build plan approved: blockers v2")
 _loop_log("v2 build"); _n = _loop_say("QA passed: blockers v2")

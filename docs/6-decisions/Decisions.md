@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - The design loop is built; it goes to aj's QA (#223)
+
+**Decision.** All seven build steps are done (#225, #230, #231, #232, #226, #233, #227). My own review included a real
+run: five messages to a real Claude Code session loading this branch's plugin in a scratch repo; it found that a
+feature name took the whole line (fixed, with a test). Plugin version 2.63.0. Releasing it needs a merge to main,
+which is still at 2.53.0; this branch also carries the unmerged 2.54-2.62 work. QA page: `docs/plans/loop-qa.html`.
+
+**Status.** Waiting on aj's QA.
+
 ## 2026-10-14 - Issues made with the GitHub tool count too (#231)
 
 **Context.** Building step 3 ("A home for each feature") showed the existing issue record only counts a terminal

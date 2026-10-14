@@ -1,4 +1,13 @@
-# Today — 2026-10-10
+# Today — 2026-10-14
+
+The design loop, plugin 2.63.0 (issue #223). Every feature now goes Design → Plan → Build → my review → your QA →
+Done, and only your own message moves it on: "Design approved: <feature>", "Build plan approved: <feature>",
+"QA passed: <feature>" or "QA failed: <feature>". Code edits are refused outside Build, for helpers too; "skip
+design" lets one small change through. An approval only counts once the decisions log has a new entry, and a
+build plan needs its GitHub issues first. A reply over 200 words with no page gets a reminder, and every page is
+built from `templates/handover-page.html`. `HOUSE_RULES_LOOP=off` turns it all off. It reaches your sessions once
+this branch is merged and the plugin updates. Proof: a real run in a scratch repo (`docs/plans/loop-qa.html`).
+
 
 New rule, plugin 2.62.0 (issue #216): a reply that refers back to something names it in a few words, and never
 leaves you to work out what a bare "#2" or "option B" meant. An issue number always comes with its title. It sits

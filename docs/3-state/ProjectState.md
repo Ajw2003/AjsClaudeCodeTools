@@ -136,7 +136,11 @@ for two labelled issues made during Plan. `verify.py` 635 PASS. Step 4, "Helpers
 (#232), is built: helpers start with the feature, stage and issues; the go-ahead guess is off while the loop is on.
 `verify.py` 638 PASS. Step 5, "Long-reply reminder" (#226), is built: over 200 words with no page link gets a
 reminder at the end of the reply. `verify.py` 643 PASS. Step 6, "Handover page template" (#233), is built: `templates/handover-page.html`
-fills its four parts from one PAGE block and drops an empty part; the rule describes it. `verify.py` 645 PASS. Not released: one version bump at the end, after #227 proves the whole loop.
+fills its four parts from one PAGE block and drops an empty part; the rule describes it. `verify.py` 645 PASS. Step 7 (#227): a real run in a scratch repo, five messages to a real
+Claude Code session loading this branch's plugin - code refused in Design, approvals moved the stage, two issues
+recorded, code allowed in Build, QA passed moved it to Done. The run found one bug (a feature name took the whole
+line), fixed with a test. Version 2.63.0. `verify.py` 646 PASS, run twice. Systems doc: `docs/4-systems/design-loop.md`.
+Waiting on aj's QA. Releasing needs a merge to main, which is at 2.53.0 while this branch carries 2.54-2.62 too. Not released: one version bump at the end, after #227 proves the whole loop.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

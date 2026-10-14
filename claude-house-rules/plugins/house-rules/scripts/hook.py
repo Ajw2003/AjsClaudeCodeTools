@@ -4809,6 +4809,16 @@ def _loop_unlogged(state, top, label, name):
     return ""
 
 
+# A feature name ends at the end of its sentence, or where a pasted reply such as "Build plan: 1A 2A"
+# starts on the same line - found in the real run, where the whole line became the name.
+_LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+[A-Z][A-Za-z ]{0,30}:\s")
+
+
+def _loop_name(raw):
+    m = _LOOP_NAME_END_RE.search(raw)
+    return (raw[:m.start()] if m else raw).strip() or raw.strip()
+
+
 def _loop_apply(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
     message approves nothing. Mutates state."""
@@ -4816,7 +4826,7 @@ def _loop_apply(state, text, top):
     approval = None
     m = _LOOP_PLAN_RE.search(text)
     if m:
-        name = m.group(1).strip()
+        name = _loop_name(m.group(1))
         if stage != "plan":
             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
@@ -4834,7 +4844,7 @@ def _loop_apply(state, text, top):
     else:
         m = _LOOP_DESIGN_RE.search(text)
         if m:
-            name = m.group(1).strip()
+            name = _loop_name(m.group(1))
             unlogged = _loop_unlogged(state, top, "Design approved", name)
             if unlogged:
                 return unlogged
@@ -4843,7 +4853,7 @@ def _loop_apply(state, text, top):
         else:
             m = _LOOP_QA_RE.search(text)
             if m:
-                verdict, name = m.group(1).lower(), m.group(2).strip()
+                verdict, name = m.group(1).lower(), _loop_name(m.group(2))
                 if stage != "build":
                     return ('Design loop: aj wrote "QA %s: %s", but the stage is %s, so nothing moved. QA '
                             "follows a build." % (verdict, name, LOOP_STAGE_NAMES[stage]))
