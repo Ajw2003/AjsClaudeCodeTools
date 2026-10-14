@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Design approved: handover format (#223)
+
+**Decision.** aj approved the handover format (`docs/plans/handover-format.html`). Every page has four parts in this
+order: In short, Changes, Choices, Wrap-up; In short and Changes are read, Choices and Wrap-up are acted on. Every
+part keeps four rules: detail only on tap; names, never bare numbers; one colour, one meaning (orange is always
+something aj acts on, nothing else is orange, green is done); I check it first (phone width, light and dark, every
+tap, a bare-number search). Choices: (1) a part is left out only when it would be empty; (2) my chat reply around a
+page is a plain summary, the link, then numbered steps for what aj needs to do; (3) the template lives in the
+plugin's templates folder, next to `templates/step-card.html`, which it replaces when the step cards are replaced.
+
+**Status.** Standing. Building it joins the loop's build plan.
+
 ## 2026-10-14 - Design approved: design loop (#223)
 
 **Decision.** aj approved the loop design (`docs/plans/loop-design.html`) with "Design approved: design loop".
