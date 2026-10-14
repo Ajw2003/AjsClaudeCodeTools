@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Design proposed: label check (the loop enforced at each step)
+
+**Status.** Proposed; waiting on "Design approved: label check".
+
+**What.** aj: "Build the check now, the loop doesn't function without it. The loop must be enforced
+at each step." Proposal page: `docs/plans/label-check.html`. It adds a QA stage between Build and Done,
+entered when every issue of the feature says `needs review`, and a record of each issue's labels
+taken from my own label changes. "Build plan approved" needs every issue `in progress`. aj's QA answer
+counts only in the QA stage. After "QA failed", the redo's design approval needs every issue back
+to `in progress`. An end-of-reply check names any label that doesn't match the stage.
+
+**Why a page first.** The loop applies to its own changes. Four choices are open for aj: what
+starts QA, where the labels are read from, which issues carry a redo, and what a wrong label blocks.
+
+---
+
 ## 2026-10-14 - At QA an issue moves to `needs review`; changes send it back to `in progress`
 
 **Decision.** aj changed the label flow: when an issue reaches aj's QA, `in progress` is swapped for
