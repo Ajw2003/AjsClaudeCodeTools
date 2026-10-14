@@ -1633,6 +1633,9 @@ def event_scope():
         payload = read_payload()
         _record_last_seen(payload)
         waiting = _waiting_scope_note(payload)
+        loop_note = _loop_scope_note(payload)
+        if loop_note:
+            waiting = loop_note + ("\n\n" + waiting if waiting else "")
         m = _PROMPT_FIELD_RE.search(payload)
         if m:
             field = m.group(0)
@@ -4675,12 +4678,14 @@ def _issues_plan_note(payload):
 _ISSUE_EDIT_ALLOWED_TOPS = ("docs", ".claude")
 
 
-def _issues_gate(payload):
-    """(deny reason or None, problem or None) for a Write/Edit/NotebookEdit payload."""
+def _gated_edit(payload, who):
+    """(git_dir or None, problem or None) for a Write/Edit/NotebookEdit of a source file inside a
+    repo. None for anything the edit blocks never cover: another tool, a path outside the
+    project, docs/, .claude/, any .md file. `who` names the block in the problem message."""
     try:
         data = json.loads(payload)
     except ValueError:
-        return None, "house-rules: the issue gate could not parse the hook payload, so it is off for this call."
+        return None, "house-rules: the %s could not parse the hook payload, so it is off for this call." % who
     if not isinstance(data, dict) or data.get("tool_name") not in _GATED_TOOLS:
         return None, None
     ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
@@ -4691,11 +4696,6 @@ def _issues_gate(payload):
     top, git_dir = _issues_locate(cwd)
     if not git_dir:
         return None, None
-    state, problem = _issues_read(git_dir)
-    if problem:
-        return None, problem
-    if not state or not state.get("needs_issues"):
-        return None, None
     if not os.path.isabs(fp):
         fp = os.path.join(cwd, fp)
     try:
@@ -4704,7 +4704,20 @@ def _issues_gate(payload):
         rel = ".."  # another drive: outside the project
     parts = rel.replace("\\", "/").split("/")
     if (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
-            or os.path.basename(rel) == ISSUES_FILE):
+            or os.path.basename(rel) in (ISSUES_FILE, LOOP_FILE)):
+        return None, None
+    return git_dir, None
+
+
+def _issues_gate(payload):
+    """(deny reason or None, problem or None) for a Write/Edit/NotebookEdit payload."""
+    git_dir, problem = _gated_edit(payload, "issue gate")
+    if not git_dir:
+        return None, problem
+    state, problem = _issues_read(git_dir)
+    if problem:
+        return None, problem
+    if not state or not state.get("needs_issues"):
         return None, None
     have = _labelled_count(state)
     return (
@@ -4715,6 +4728,147 @@ def _issues_gate(payload):
         "the numbers, then repeat this edit. docs/, .md files and .claude/ are editable meanwhile. "
         "To switch this off: HOUSE_RULES_ISSUES=off." % (state.get("plan_steps", "more than 3"),
                                                           ISSUES_LABEL, have, ISSUES_NEEDED, ISSUES_LABEL),
+        None,
+    )
+
+
+# ---------------------------------------------------------------------------------------
+# The design loop (#223, #225): each project has a stage - design, plan, build, done - kept in
+# LOOP_FILE in the git directory and carried across sessions. Only aj's own message moves it
+# (scope reads it before the model does), and code edits are refused outside build. "I review"
+# happens inside build, because fixing what the review finds is code. Design:
+# docs/plans/loop-design.html. HOUSE_RULES_LOOP=off disables it.
+# ---------------------------------------------------------------------------------------
+
+LOOP_FILE = "house-rules-loop.json"
+LOOP_STAGE_NAMES = {"design": "Design", "plan": "Plan", "build": "Build", "done": "Done"}
+_LOOP_DESIGN_RE = re.compile(r"\bdesign\s+approved\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+_LOOP_PLAN_RE = re.compile(r"\bbuild\s+plan\s+approved\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+_LOOP_QA_RE = re.compile(r"\bqa\s+(passed|failed)\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+_LOOP_SKIP_RE = re.compile(r"\bskip\s+design\b", re.IGNORECASE)
+_LOOP_BARE_RE = re.compile(r"\b(approved|qa\s+passed|qa\s+failed)\b", re.IGNORECASE)
+
+
+def _loop_enabled():
+    return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _loop_read(git_dir):
+    """(state, problem). No file means a project that has not started a feature: Design."""
+    fresh = {"feature": "", "stage": "design", "skip": False, "approvals": []}
+    path = os.path.join(git_dir, LOOP_FILE)
+    if not os.path.isfile(path):
+        return fresh, None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or data.get("stage") not in LOOP_STAGE_NAMES:
+            raise ValueError("no valid stage")
+    except (OSError, ValueError) as exc:
+        return None, ("house-rules: could not read %s (%s), so the design-loop lock is off for this call."
+                      % (LOOP_FILE, exc))
+    return dict(fresh, **data), None
+
+
+def _loop_write(git_dir, state):
+    with open(os.path.join(git_dir, LOOP_FILE), "w", encoding="utf-8") as f:
+        json.dump(state, f)
+
+
+def _loop_apply(state, text):
+    """Move the stage for one message of aj's. Returns a note for the model, or "" when the
+    message approves nothing. Mutates state."""
+    stage, feature = state["stage"], state.get("feature") or ""
+    approval = None
+    m = _LOOP_PLAN_RE.search(text)
+    if m:
+        name = m.group(1).strip()
+        if stage != "plan":
+            return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
+                    "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
+        state["stage"], approval = "build", ("Build plan approved", name)
+    else:
+        m = _LOOP_DESIGN_RE.search(text)
+        if m:
+            name = m.group(1).strip()
+            state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
+        else:
+            m = _LOOP_QA_RE.search(text)
+            if m:
+                verdict, name = m.group(1).lower(), m.group(2).strip()
+                if stage != "build":
+                    return ('Design loop: aj wrote "QA %s: %s", but the stage is %s, so nothing moved. QA '
+                            "follows a build." % (verdict, name, LOOP_STAGE_NAMES[stage]))
+                state["stage"] = "done" if verdict == "passed" else "design"
+                approval = ("QA " + verdict, name)
+    if approval:
+        state.setdefault("approvals", []).append(
+            {"stage": approval[0], "name": approval[1], "at": int(time.time())})
+        note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
+            approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        if state["stage"] == "build":
+            note += " Code edits are open for the approved steps."
+        elif approval[0] == "QA failed":
+            note += " Their list of changes starts the next design."
+        else:
+            note += " Code edits stay closed."
+        return note
+    if _LOOP_SKIP_RE.search(text):
+        state["skip"] = True
+        return 'Design loop: aj wrote "skip design", so the next code edit goes through, then the lock is back.'
+    if _LOOP_BARE_RE.search(text):
+        return ('Design loop: aj\'s message says "approved" but names no stage and feature, so nothing moved. '
+                'Ask which they mean; an approval reads like "Design approved: <feature>", '
+                '"Build plan approved: <feature>", "QA passed: <feature>" or "QA failed: <feature>".')
+    return ""
+
+
+def _loop_scope_note(payload):
+    """scope's half: read aj's message, move the stage, say what happened. Never raises."""
+    if not _loop_enabled():
+        return ""
+    try:
+        m = _PROMPT_VALUE_RE.search(payload or "")
+        if not m:
+            return ""
+        text = json.loads('"%s"' % m.group(1))
+        _, git_dir = _issues_locate(_payload_cwd(payload))
+        if not git_dir:
+            return ""
+        state, problem = _loop_read(git_dir)
+        if problem:
+            return problem
+        before = json.dumps(state, sort_keys=True)
+        note = _loop_apply(state, text)
+        if json.dumps(state, sort_keys=True) != before:
+            _loop_write(git_dir, state)
+        return note
+    except Exception as exc:
+        return "house-rules: the design-loop check hit an error (%s: %s), so this message moved nothing." % (
+            type(exc).__name__, exc)
+
+
+def _loop_gate(payload):
+    """(deny reason or None, problem or None): code edits only in Build, or once after skip design."""
+    git_dir, problem = _gated_edit(payload, "design-loop lock")
+    if not git_dir:
+        return None, problem
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return None, problem
+    if state["stage"] == "build":
+        return None, None
+    if state.get("skip"):
+        state["skip"] = False
+        _loop_write(git_dir, state)
+        return None, None
+    feature = state.get("feature") or ""
+    return (
+        "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
+        "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
+        "change. docs/, .claude/ and .md files stay open, so write the design or plan as a page "
+        "now. To switch this off: HOUSE_RULES_LOOP=off." % (
+            LOOP_STAGE_NAMES[state["stage"]], ' of "%s"' % feature if feature else ""),
         None,
     )
 
@@ -5219,12 +5373,20 @@ def event_commitgate():
     moved), commit for the subagent instead and let the edit through. It also carries the issue
     gate (_issues_gate), which applies on any branch of the main session."""
     try:
-        if not _autosave_enabled() and not _issues_enabled():
+        if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
             return 0
         payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: commitgate got an empty payload and did not run for this call."})
             return 0
+        if _loop_enabled():
+            deny, problem = _loop_gate(payload)
+            if deny:
+                emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                             "permissionDecisionReason": deny}})
+                return 0
+            if problem:
+                emit({"systemMessage": problem})
         if _issues_enabled():
             deny, problem = _issues_gate(payload)
             if deny:

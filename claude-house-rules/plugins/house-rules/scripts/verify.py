@@ -175,6 +175,9 @@ DEFAULT = "is the default branch"  # in every refusal of a default-branch git wr
 # --- branch fixtures -------------------------------------------------------------------------
 # Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
 _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
+# The design-loop lock (#225) refuses code edits outside Build in any repo, which would turn every
+# fixture edit below into a refusal. It is off for the suite and switched on by its own cases.
+os.environ["HOUSE_RULES_LOOP"] = "off"
 # Simulated spawns in this file must never leave records in the real repository's agent list.
 os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
@@ -8255,6 +8258,83 @@ else:
         args=(),
         expect_rc=1,
     )
+
+# --- the design loop: stage tracker, approvals and the code lock (#225) ------------------------
+_loop_dir = tempfile.mkdtemp(prefix="house-rules-loop-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _loop_dir], check=True)
+_loop_env = dict(os.environ, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off")
+
+
+def _loop_edit(rel, **extra):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": {"file_path": os.path.join(_loop_dir, rel)}}
+    p.update(extra)
+    _, out, _ = run_hook("commitgate", json.dumps(p), env=_loop_env)
+    try:
+        return json.loads(out)["hookSpecificOutput"].get("permissionDecision") or "allow"
+    except Exception:
+        return "allow"
+
+
+def _loop_say(prompt, session="loop"):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": session, "cwd": _loop_dir, "prompt": prompt}
+    _, out, _ = run_hook("scope", json.dumps(p), env=_loop_env)
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _loop_stage():
+    try:
+        return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["stage"]
+    except (OSError, ValueError, KeyError):
+        return "design (no file)"
+
+
+_loop_cases = []
+_loop_cases.append(("a fresh project refuses a code edit", _loop_edit("app.py") == "deny"))
+_loop_cases.append(("docs/, .claude/ and .md files stay open",
+                    _loop_edit("docs/page.html") == _loop_edit(".claude/x.json") == _loop_edit("notes.md") == "allow"))
+_n = _loop_say("looks good, approved")
+_loop_cases.append(('a bare "approved" moves nothing and asks which', "names no stage and feature" in _n
+                    and _loop_stage() == "design (no file)"))
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("a build-plan approval before its design moves nothing", "nothing moved" in _n
+                    and _loop_stage() == "design (no file)"))
+_n = _loop_say("Design approved: blockers")
+_loop_cases.append(('"Design approved: <feature>" moves to Plan, code still closed',
+                    _loop_stage() == "plan" and "now Plan" in _n and _loop_edit("app.py") == "deny"))
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(('"Build plan approved: <feature>" opens code', _loop_stage() == "build"
+                    and _loop_edit("app.py") == "allow"))
+_loop_say("hello", session="other")
+_loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
+                    and _loop_edit("app.py", session_id="other") == "allow"))
+_n = _loop_say("QA failed: blockers - the list is too long")
+_loop_cases.append(('"QA failed" goes back to Design and closes code', _loop_stage() == "design"
+                    and _loop_edit("app.py") == "deny"))
+_n = _loop_say("skip design")
+_loop_cases.append(('"skip design" lets exactly one code edit through',
+                    _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
+_loop_say("Design approved: blockers v2")
+_loop_say("Build plan approved: blockers v2")
+_n = _loop_say("QA passed: blockers v2")
+_loop_cases.append(('"QA passed" moves to Done and closes code', _loop_stage() == "done"
+                    and _loop_edit("app.py") == "deny"))
+_loop_cases.append(("a helper's edit is held by the same lock",
+                    _loop_edit("app.py", agent_id="helper1") == "deny"))
+_loop_env["HOUSE_RULES_LOOP"] = "off"
+_loop_cases.append(("HOUSE_RULES_LOOP=off lifts the lock", _loop_edit("app.py") == "allow"))
+_loop_env["HOUSE_RULES_LOOP"] = "on"
+with open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), "w") as _f:
+    _f.write("{not json")
+_p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop", "cwd": _loop_dir,
+      "tool_input": {"file_path": os.path.join(_loop_dir, "app.py")}}
+_, _o, _ = run_hook("commitgate", json.dumps(_p), env=_loop_env)
+_loop_cases.append(("an unreadable tracker says so instead of failing silently", "could not read house-rules-loop.json" in _o))
+for _t, _ok in _loop_cases:
+    report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
 print()
 print("-" * 32)
