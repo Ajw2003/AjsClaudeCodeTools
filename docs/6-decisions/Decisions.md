@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-14 - Design proposed: new item visual
+
+**Status.** Proposed; waiting on "Design approved: new item visual".
+
+**What.** aj on the changes page: Changed items "are fantastic and need nothing", but New items "lack the same
+visual flare". New items open to text only. Since it's the page template that would change, it goes through the
+loop. Proposal page: `docs/plans/new-item-visual.html`. It shows three looks on the same item: A, before and
+after with an empty "wasn't there" box; B, a strip of session moments with where it acts lit up; C, what sets it
+off → what it does → what you get (suggested). Changed and Kept items stay as they are.
+
+---
+
 ## 2026-10-14 - Correction: the pull request does not carry 2.54-2.62
 
 The design loop pull request's description said the earlier 2.54-2.62 work rode along unmerged. Checked
