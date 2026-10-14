@@ -9,7 +9,16 @@ pointer, when a later entry replaces it.
 
 ## 2026-10-14 - Design proposed: label check (the loop enforced at each step)
 
-**Status.** Proposed; waiting on "Design approved: label check".
+**Status.** Choices answered; waiting on "Design approved: label check".
+
+**aj's answers** ("Label check: 1A 2* 3A 4B"):
+- **QA starts** when I switch every issue to `needs review`.
+- **Labels are read from GitHub every time.** When no GitHub account is linked, the check falls
+  back to the label changes I made. Tested here: `gh auth status` reports a failed login, yet a REST
+  read of an issue's labels works in about half a second, so "linked" means "the GitHub read
+  succeeds", not what `gh auth status` says. Each fallback says so; nothing falls back silently.
+- **After "QA failed"**, the same issues go back to `in progress`.
+- **A wrong label** refuses aj's approval and also blocks my code edits until it's fixed.
 
 **What.** aj: "Build the check now, the loop doesn't function without it. The loop must be enforced
 at each step." Proposal page: `docs/plans/label-check.html`. It adds a QA stage between Build and Done,
