@@ -4775,7 +4775,36 @@ def _loop_write(git_dir, state):
         json.dump(state, f)
 
 
-def _loop_apply(state, text):
+LOOP_LOG = os.path.join("docs", "6-decisions", "Decisions.md")
+
+
+def _loop_log_mark(top):
+    """A fingerprint of the decisions log, or None when the project has none. Any other read error
+    propagates to _loop_scope_note, which reports it."""
+    path = os.path.join(top, LOOP_LOG)
+    if not os.path.isfile(path):
+        return None
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def _loop_unlogged(state, top, label, name):
+    """#230: an approval counts only once the stage being closed is in the decisions log - the log
+    must exist and have changed since the last approval. A refusal note, or "" when it may count."""
+    mark = _loop_log_mark(top)
+    if mark is None:
+        return ('Design loop: aj wrote "%s: %s", but this project has no decisions log (%s), so nothing '
+                "moved. Create it, log this stage's decisions, then ask aj to approve again."
+                % (label, name, LOOP_LOG.replace(os.sep, "/")))
+    if mark == state.get("log_mark"):
+        return ('Design loop: aj wrote "%s: %s", but nothing has been added to the decisions log (%s) since '
+                "the last approval, so nothing moved. Log this stage's decisions and changes first, then ask "
+                "aj to approve again." % (label, name, LOOP_LOG.replace(os.sep, "/")))
+    state["log_mark"] = mark
+    return ""
+
+
+def _loop_apply(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
     message approves nothing. Mutates state."""
     stage, feature = state["stage"], state.get("feature") or ""
@@ -4786,11 +4815,17 @@ def _loop_apply(state, text):
         if stage != "plan":
             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
+        unlogged = _loop_unlogged(state, top, "Build plan approved", name)
+        if unlogged:
+            return unlogged
         state["stage"], approval = "build", ("Build plan approved", name)
     else:
         m = _LOOP_DESIGN_RE.search(text)
         if m:
             name = m.group(1).strip()
+            unlogged = _loop_unlogged(state, top, "Design approved", name)
+            if unlogged:
+                return unlogged
             state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
         else:
             m = _LOOP_QA_RE.search(text)
@@ -4799,6 +4834,9 @@ def _loop_apply(state, text):
                 if stage != "build":
                     return ('Design loop: aj wrote "QA %s: %s", but the stage is %s, so nothing moved. QA '
                             "follows a build." % (verdict, name, LOOP_STAGE_NAMES[stage]))
+                unlogged = _loop_unlogged(state, top, "QA " + verdict, name)
+                if unlogged:
+                    return unlogged
                 state["stage"] = "done" if verdict == "passed" else "design"
                 approval = ("QA " + verdict, name)
     if approval:
@@ -4832,14 +4870,14 @@ def _loop_scope_note(payload):
         if not m:
             return ""
         text = json.loads('"%s"' % m.group(1))
-        _, git_dir = _issues_locate(_payload_cwd(payload))
+        top, git_dir = _issues_locate(_payload_cwd(payload))
         if not git_dir:
             return ""
         state, problem = _loop_read(git_dir)
         if problem:
             return problem
         before = json.dumps(state, sort_keys=True)
-        note = _loop_apply(state, text)
+        note = _loop_apply(state, text, top)
         if json.dumps(state, sort_keys=True) != before:
             _loop_write(git_dir, state)
         return note

@@ -8285,6 +8285,13 @@ def _loop_say(prompt, session="loop"):
         return ""
 
 
+def _loop_log(line):
+    d = os.path.join(_loop_dir, "docs", "6-decisions")
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "Decisions.md"), "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+
+
 def _loop_stage():
     try:
         return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["stage"]
@@ -8303,23 +8310,32 @@ _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("a build-plan approval before its design moves nothing", "nothing moved" in _n
                     and _loop_stage() == "design (no file)"))
 _n = _loop_say("Design approved: blockers")
+_loop_cases.append(("an approval in a project with no decisions log moves nothing",
+                    "no decisions log" in _n and _loop_stage() == "design (no file)"))
+_loop_log("design decisions for blockers")
+_n = _loop_say("Design approved: blockers")
 _loop_cases.append(('"Design approved: <feature>" moves to Plan, code still closed',
                     _loop_stage() == "plan" and "now Plan" in _n and _loop_edit("app.py") == "deny"))
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("an approval with nothing new in the decisions log moves nothing",
+                    "nothing has been added to the decisions log" in _n and _loop_stage() == "plan"))
+_loop_log("plan decisions for blockers")
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(('"Build plan approved: <feature>" opens code', _loop_stage() == "build"
                     and _loop_edit("app.py") == "allow"))
 _loop_say("hello", session="other")
 _loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
                     and _loop_edit("app.py", session_id="other") == "allow"))
+_loop_log("build log for blockers")
 _n = _loop_say("QA failed: blockers - the list is too long")
 _loop_cases.append(('"QA failed" goes back to Design and closes code', _loop_stage() == "design"
                     and _loop_edit("app.py") == "deny"))
 _n = _loop_say("skip design")
 _loop_cases.append(('"skip design" lets exactly one code edit through',
                     _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
-_loop_say("Design approved: blockers v2")
-_loop_say("Build plan approved: blockers v2")
-_n = _loop_say("QA passed: blockers v2")
+_loop_log("v2 design"); _loop_say("Design approved: blockers v2")
+_loop_log("v2 plan"); _loop_say("Build plan approved: blockers v2")
+_loop_log("v2 build"); _n = _loop_say("QA passed: blockers v2")
 _loop_cases.append(('"QA passed" moves to Done and closes code', _loop_stage() == "done"
                     and _loop_edit("app.py") == "deny"))
 _loop_cases.append(("a helper's edit is held by the same lock",

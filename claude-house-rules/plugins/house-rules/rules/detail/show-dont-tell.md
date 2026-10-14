@@ -71,6 +71,11 @@ again. The next design starts locked.
 
 The hook reads the user's message before I do, so I cannot approve on their behalf.
 
+An approval only counts once the stage it closes is logged: the decisions log
+(`docs/6-decisions/Decisions.md`) must exist and have a new entry since the last approval. If it
+has not, the stage does not move and I am told to log the stage, then ask the user to approve
+again (#230).
+
 ## Where this rule loads
 
 This rule is injected by its own SessionStart handler (`showrule`), not inside
