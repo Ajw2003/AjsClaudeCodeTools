@@ -476,8 +476,8 @@ def _preflight_warnings():
 
 # The voice is a preference, so it gets a lever - but it ships ON, for the same reason the
 # decision trace does: a setting nobody enables until they are already unhappy is not a setting.
-# Off removes only the "### The voice" subsection; the plain-language rule above it is not a
-# preference and always loads.
+# Off removes only the "### The voice" subsection; the clear-writing rule above it is not a
+# preference and always loads. Since #245 the voice lives in rules/clear-writing.md (showrule).
 _VOICE_HEADING = "### The voice"
 
 
@@ -489,7 +489,7 @@ def _apply_voice_toggle(body):
         # The section this is meant to remove is gone, which means the rules text moved and this
         # toggle now silently does nothing. Say so rather than pretending it worked.
         sys.stderr.write(
-            "house-rules inject: HOUSE_RULES_VOICE=off, but the %r section was not found in "
+            "house-rules: HOUSE_RULES_VOICE=off, but the %r section was not found in "
             "the rules - the toggle had no effect.\n" % _VOICE_HEADING
         )
         return body
@@ -527,7 +527,6 @@ def event_inject():
         return 0
 
     body = body.replace("\r\n", "\n")
-    body = _apply_voice_toggle(body)
     # The <!-- subagent --> markers are a build-time signal for _subagent_core() (which
     # sections of this same file to re-inject at a subagent's own SubagentStart), not
     # something the main session needs to read - stripping them here keeps this file the
@@ -578,22 +577,33 @@ def event_inject():
 # ---------------------------------------------------------------------------------------
 
 
+# The rules loaded in their own slot, in order: show-dont-tell (#225) and clear-writing (#245).
+SHOWRULE_FILES = (("show-dont-tell.md", "show-don't-tell"), ("clear-writing.md", "clear-writing"))
+
+
 def event_showrule():
     here = os.path.dirname(os.path.abspath(__file__))
-    try:
-        body = _read_text(os.path.join(here, "..", "rules", "show-dont-tell.md")).replace("\r\n", "\n")
-    except OSError:
-        emit({"systemMessage": "house-rules plugin: cannot read rules/show-dont-tell.md. "
-              "The show-don't-tell rule was NOT loaded into this session."})
+    bodies, missing = [], []
+    for name, label in SHOWRULE_FILES:
+        try:
+            body = _read_text(os.path.join(here, "..", "rules", name)).replace("\r\n", "\n")
+        except OSError:
+            missing.append("cannot read rules/%s, so the %s rule was NOT loaded" % (name, label))
+            continue
+        if not body.strip():
+            missing.append("rules/%s is empty, so the %s rule was NOT loaded" % (name, label))
+            continue
+        bodies.append(_apply_voice_toggle(body) if name == "clear-writing.md" else body)
+    if not bodies:
+        emit({"systemMessage": "house-rules plugin: " + "; ".join(missing) + "."})
         return 0
-    if not body.strip():
-        emit({"systemMessage": "house-rules plugin: rules/show-dont-tell.md is empty. "
-              "The show-don't-tell rule was NOT loaded into this session."})
-        return 0
-    emit({"suppressOutput": True, "hookSpecificOutput": {
+    out = {"suppressOutput": True, "hookSpecificOutput": {
         "hookEventName": "SessionStart",
-        "additionalContext": "A standing house rule, loaded separately from the rest:\n\n"
-        + _expand_detail_paths(body)}})
+        "additionalContext": "Standing house rules, loaded separately from the rest:\n\n"
+        + _expand_detail_paths("\n\n".join(bodies))}}
+    if missing:
+        out["systemMessage"] = "house-rules plugin: " + "; ".join(missing) + "."
+    emit(out)
     return 0
 
 

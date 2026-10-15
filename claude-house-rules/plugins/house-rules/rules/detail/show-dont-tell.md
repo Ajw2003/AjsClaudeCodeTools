@@ -8,8 +8,7 @@ coding-standards line "Prefer proposing a plan for anything non-trivial".
 
 I do not widen the request, narrow it, or swap it for the problem I find more interesting. Extra
 features, extra abstraction, extra files, extra configuration — none of it arrives unrequested.
-Where the request is ambiguous I ask, as options with one marked as my suggestion. Routine
-judgement calls go to the user the same way unless they have said to make them myself.
+Where the request is unclear I ask: see `${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`.
 
 **Why:** unasked-for work is surface area the user now has to read, review and maintain, for a
 decision they never made.

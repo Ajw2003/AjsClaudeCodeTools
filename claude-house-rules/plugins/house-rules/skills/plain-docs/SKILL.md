@@ -100,11 +100,9 @@ settings, exact numbers, test names, code detail - so the reader knows where to 
 | Rule | Limit |
 |---|---|
 | Length | Aim for a quarter of the source's word count (excluding the header line). Up to a third only when the system is too dense to cover in less. Never over a third. |
-| Sentences | 20 words or fewer as a target. |
-| Dashes | No em dashes or en dashes used as punctuation. Use a full stop, comma or colon. |
-| Jargon | None. A technical word that can't be avoided (like "hook") gets explained in plain words the first time, in the same sentence. |
-| Code detail | No file paths, line numbers, function names or code blocks. The full-doc link covers that. |
-| Filler | No intros, no "in summary", no restating the heading. |
+
+The sentence, dash, jargon, code-detail and filler limits live with the clear writing rule:
+`${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`, "Plain doc copies".
 
 The goal above all of them: the shortest, easiest read that still covers everything necessary.
 

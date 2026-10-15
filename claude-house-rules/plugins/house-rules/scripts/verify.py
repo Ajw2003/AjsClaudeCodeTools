@@ -112,6 +112,7 @@ def rules_corpus():
     corpus = read(RULES_FILE)
     # The show-don't-tell rule is injected by its own handler (showrule), not inside house-rules.md.
     corpus += "\n\n" + read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))
+    corpus += "\n\n" + read(os.path.join(HERE, "..", "rules", "clear-writing.md"))
     if os.path.isdir(DETAIL_DIR):
         for name in sorted(os.listdir(DETAIL_DIR)):
             if name.endswith(".md"):
@@ -339,6 +340,26 @@ if _sdt_missing:
 else:
     report("PASS", "showrule injects the show-don't-tell rule, once, with a live detail pointer")
     print(f"          {len(_ctx)} chars; every approved clause present")
+
+# --- the clear-writing rule loads in the same slot, once (#246) -------------------------------
+_cw_missing = [p for p in (
+    "## Write it so nothing is left to guess",
+    "Proper sentences", "Said once", "Explicit context", "Measured, not guessed", "Named references",
+    "Exact inputs", "Done-criteria", "Ask when unclear", "Plain words", "### The voice",
+    "rules/detail/clear-writing.md",
+) if p not in (_ctx or "")]
+if _ctx.count("## Write it so nothing is left to guess") > 1:
+    _cw_missing.append("the rule loads twice")
+if not os.path.isfile(os.path.join(DETAIL_DIR, "clear-writing.md")):
+    _cw_missing.append("rules/detail/clear-writing.md does not exist")
+if os.path.isfile(os.path.join(DETAIL_DIR, "plain-language.md")):
+    _cw_missing.append("rules/detail/plain-language.md still exists beside its replacement")
+if "Never softens a failure" in read(RULES_FILE):
+    _cw_missing.append("house-rules.md still carries the voice - it would load twice")
+report("FAIL" if _cw_missing else "PASS",
+       "showrule injects the clear-writing rule, once, and the old plain-language homes point to it")
+if _cw_missing:
+    print(f"          missing or wrong: {'; '.join(_cw_missing)}")
 
 # --- docstiers: complete/missing, owned/not-owned, ssh, no .git, unreadable/garbage config ----
 _docstiers_cases = [
@@ -1821,7 +1842,7 @@ else:
 missing = [
     ph
     for ph in [
-        "Plain language on the surfaces a human reads",
+        "Write it so nothing is left to guess",
         "### The voice",
         "gloss",
         "never buys warmth with accuracy",
@@ -1830,29 +1851,29 @@ missing = [
     if ph.lower() not in rules_text.lower()
 ]
 if not missing:
-    report("PASS", "the plain-language rule carries the voice and its hard constraint")
+    report("PASS", "the clear-writing rule carries the voice and its hard constraint")
     print("          tone is a preference; not softening a failure is not")
 else:
-    report("FAIL", "the plain-language rule carries the voice and its hard constraint")
+    report("FAIL", "the clear-writing rule carries the voice and its hard constraint")
     print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
 # --- HOUSE_RULES_VOICE=off removes the voice and nothing else -------------------------------
 # The section is cut by locating the next "## " heading. If that boundary is wrong the toggle
 # eats the rule after it, silently, and nobody notices until a rule stops being enforced.
-code, on_out, err = run_hook("inject", "")
+# Since #245 the voice lives in rules/clear-writing.md, loaded by showrule.
+code, on_out, err = run_hook("showrule", "")
 env_off = dict(os.environ)
 env_off["HOUSE_RULES_VOICE"] = "off"
-code_off, off_out, err_off = run_hook("inject", "", env=env_off)
+code_off, off_out, err_off = run_hook("showrule", "", env=env_off)
 voice_problems = []
 if "### The voice" not in on_out:
     voice_problems.append("the voice is missing by default, but it ships on")
 if "### The voice" in off_out:
     voice_problems.append("HOUSE_RULES_VOICE=off did not remove the voice section")
 for kept in [
-    "Plain language on the surfaces a human reads",
-    "Deliver a whole workflow",
-    "Never hand over a command",
-    "A green test suite is not proof it works",
+    "Write it so nothing is left to guess",
+    "Named references",
+    "Show, don't tell; the user designs",
 ]:
     if kept not in off_out:
         voice_problems.append(f"turning the voice off also removed {kept!r}")

@@ -43,6 +43,11 @@ are:
 New lines are estimates, each labelled "Estimated, because it isn't written yet." A plan should always list its
 files like this; the clear writing check and the automatic change log (#244) are where that gets enforced.
 
+**Build plan approved:** "Build plan approved: clear writing check: 1A 2A". The rule loads beside Show, don't
+tell, and the editor helper runs on Sonnet. aj added a requirement for the QA page: it must name explicitly what
+changed between the plan and what was actually built, file by file, setting each estimate against the real line
+counts.
+
 **What.** aj: "we need to fix wording and ambiguity first, let's fold ambiguity and wording into a single check…
 proper sentence structure and human tone, a lack of repetition and clear concise speech that is explicit with
 context and leaves nothing for the user to extrapolate." It replaces the ambiguity check design below, which aj
