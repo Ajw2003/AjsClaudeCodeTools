@@ -1,5 +1,10 @@
 # Today — 2026-10-15
 
+The new item visual v2, plugin 2.65.1 (issue #240). On a handover page a New item now opens to three boxes:
+what exists today, what this creates, and how it impacts you. Every item you open lists the files it touched,
+with lines added and removed, counted from git by `tools/diff_parts.py`. The changes page covers the whole pull
+request this way. `verify.py` also no longer fails when an earlier run left a stale temp file (#229).
+
 The clear writing check, plugin 2.65.0 (issue #245). One rule, "Write it so nothing is left to guess", now
 covers how everything you read is written: proper sentences, a human tone, said once, context spelled out,
 numbers counted rather than guessed, and references named. A checker reads every reply, page and issue for

@@ -13,7 +13,8 @@ import re
 import subprocess
 import sys
 
-_PY_TOP = re.compile(r"^(?:def |class |async def )([A-Za-z_]\w*)|^([A-Za-z_]\w*)\s*[:=]")
+# Top-level definitions and assignments only: "try:" or a docstring line ending in a colon is not a part.
+_PY_TOP = re.compile(r"^(?:def |class |async def )([A-Za-z_]\w*)|^([A-Za-z_]\w*)\s*(?::\s*[\w\[\], .]+)?=(?!=)")
 _MD_TOP = re.compile(r"^#{1,4}\s+(.+?)\s*$")
 
 

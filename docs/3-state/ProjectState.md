@@ -162,6 +162,11 @@ pages and issues; issues missing their three sections are refused; `agents/edito
 long replies, with a reminder when it didn't run. `verify.py` 684 PASS. System doc: `docs/4-systems/clear-writing.md`.
 QA passed (aj, 2026-10-15).
 
+2026-10-15, same branch: the new item visual v2 (#240), plugin 2.65.1, built and waiting on aj's QA. The template
+labels a New item's boxes What exists today / What this creates / How it impacts you, and any item can list its
+files with counts; `tools/diff_parts.py` does the counting, checked in `tools/verify_tools.py`. The changes page
+covers the whole pull request: 27 items, every changed hook part placed once. The stale-temp-file flake (#229) is fixed.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
