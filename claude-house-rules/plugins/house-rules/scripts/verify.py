@@ -211,6 +211,7 @@ def _repo_on(name, head_line):
 REPO_THEIRS = _repo_on("theirs", "ref: refs/heads/main\n")
 REPO_MINE = _repo_on("mine", "ref: refs/heads/claude/some-topic\n")
 REPO_DETACHED = _repo_on("detached", "9f1c0de0000000000000000000000000000000ab\n")
+REPO_THEIRS_FEATURE = _repo_on("theirs-feature", "ref: refs/heads/feature/theirs\n")
 REPO_NONE = os.path.join(_FIXTURE_ROOT, "not-a-repo")
 os.makedirs(REPO_NONE)
 
@@ -491,69 +492,46 @@ GUARD_CASES = [
     ("pass", None, "git switch main"),
     ("pass", None, "git branch -d old-feature"),
     ("pass", None, "git tag v1.2.0"),
-    ("ask", "Commit constantly on my own branches, never on theirs", "git reset --hard origin/main"),
-    (
-        "ask",
-        "Never hide work: it stays visible, reachable and readable",
-        'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"',
-    ),
-    (
-        "ask",
-        "Never hide work: it stays visible, reachable and readable",
-        "npm run dev > dev.log 2>&1 &",
-    ),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "nohup ./long-task.sh"),
-    # #85: a wait piped through tail/head shows nothing until it exits.
-    (
-        "ask",
-        "Never hide work: it stays visible, reachable and readable",
-        "until grep -q done status.txt; do sleep 5; done | tail -5",
-    ),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "timeout 600 ./run_tests.sh | head -40"),
+    # #291: each destructive step is refused, and the refusal names the safe way (the cited text).
+    ("deny", "commit the work on a new branch first", "git reset --hard origin/main"),
+    # #292: background and hidden work, and a wait piped through tail/head, run without a prompt.
+    ("pass", None, 'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"'),
+    ("pass", None, "npm run dev > dev.log 2>&1 &"),
+    ("pass", None, "nohup ./long-task.sh"),
+    ("pass", None, "until grep -q done status.txt; do sleep 5; done | tail -5"),
+    ("pass", None, "timeout 600 ./run_tests.sh | head -40"),
     ("pass", None, "git log | head -5"),
     ("pass", None, "cat build.log | tail -50"),
     ("pass", None, "python sleepy.py | tail"),
-    (
-        "ask",
-        "Never hide work: it stays visible, reachable and readable",
-        "Start-Job -ScriptBlock { ./build.ps1 }",
-    ),
-    ("ask", "Never take a destructive action without checking first", "rm -rf node_modules"),
-    (
-        "ask",
-        "Never take a destructive action without checking first",
-        "rm styles.css",
-    ),
-    (
-        "ask",
-        "Never take a destructive action without checking first",
-        "Remove-Item -Recurse -Force ./dist",
-    ),
-    ("ask", "Never take a destructive action without checking first", "taskkill /IM node.exe /F"),
-    (
-        "ask",
-        "Never take a destructive action without checking first",
-        "git checkout -- src/app.js",
-    ),
-    ("ask", "Never take a destructive action without checking first", "git restore src/app.js"),
-    ("ask", "Never take a destructive action without checking first", "git stash drop"),
-    ("ask", "Never take a destructive action without checking first", "git stash clear"),
+    ("pass", None, "Start-Job -ScriptBlock { ./build.ps1 }"),
+    ("deny", "move the folder into a `_to_delete/` folder", "rm -rf node_modules"),
+    ("deny", "move the file into a `_to_delete/` folder", "rm styles.css"),  # never committed
+    ("deny", "move the folder into a `_to_delete/` folder", "Remove-Item -Recurse -Force ./dist"),
+    ("pass", None, "taskkill /IM node.exe /F"),
+    ("pass", None, "kill 1234"),
+    ("deny", "commit the work on a new branch first", "git checkout -- src/app.js"),
+    ("deny", "commit the work on a new branch first", "git restore src/app.js"),
+    ("deny", "keep the stash", "git stash drop"),
+    ("deny", "keep the stash", "git stash clear"),
+    ("deny", "for clean, move the files into a `_to_delete/` folder", "git clean -fdx"),
+    ("deny", "rewrite on a copy branch", "git filter-branch --tree-filter x HEAD"),
+    ("deny", "write a new file beside it", "truncate -s 0 app.log"),
     ("deny", "is the default branch", 'echo "starting" && git commit -m "wip"'),
     # #200: a new line or tab before the word used to hide it, since the subject is JSON-encoded.
-    ("ask", "Never take a destructive action without checking first", "ls\nrm -rf build"),
-    ("ask", "Never take a destructive action without checking first", "ls\trm -rf build"),
-    ("ask", "Never take a destructive action without checking first", "ls &&\nrm -rf build"),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "ls\nnohup ./long-task.sh"),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "ls\nsetsid ./long-task.sh"),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "sleep 99 &\nls"),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "ls\nsleep 5 | tail -1"),
+    ("deny", "_to_delete/", "ls\nrm -rf build"),
+    ("deny", "_to_delete/", "ls\trm -rf build"),
+    ("deny", "_to_delete/", "ls &&\nrm -rf build"),
+    ("pass", None, "ls\nnohup ./long-task.sh"),
+    ("pass", None, "ls\nsetsid ./long-task.sh"),
+    ("pass", None, "sleep 99 &\nls"),
+    ("pass", None, "ls\nsleep 5 | tail -1"),
     ("pass", None, "ls -la\necho done"),
     ("pass", None, "make 2>&1\nls"),
     # #189: a quoted -c value with a space in it used to end git's option run early, so no
     # rule keyed on the subcommand ever matched.
     ("deny", "is the default branch", 'git -c user.name="aj\'s agent" commit -m "wip"'),
-    ("ask", "Commit constantly on my own branches, never on theirs", "git -c 'core.pager=less -R' reset --hard"),
-    ("ask", "Never take a destructive action without checking first", 'git -c "user.name=aj s agent" stash drop'),
+    ("deny", "commit the work on a new branch first", "git -c 'core.pager=less -R' reset --hard"),
+    ("deny", "keep the stash", 'git -c "user.name=aj s agent" stash drop'),
 ]
 
 for expect, rule, cmd in GUARD_CASES:
@@ -588,29 +566,31 @@ BRANCH_CASES = [
     (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git -c user.name=x commit -m y"),
     # Force-pushing rewrites history that was already safe, so it is not a checkpoint and the
-    # exemption does not reach it - on any branch.
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push --force-with-lease"),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push -f origin HEAD"),
-    # Discarding unsaved work still asks; replaying commits loses nothing (old ones stay in the reflog).
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git reset --hard origin/main"),
+    # exemption does not reach it - on any branch. #291: refused, naming the safe way.
+    (REPO_MINE, "claude/some-topic", "deny", "push a new branch instead", "git push --force-with-lease"),
+    (REPO_MINE, "claude/some-topic", "deny", "push a new branch instead", "git push -f origin HEAD"),
+    # Discarding unsaved work is refused; replaying commits loses nothing (old ones stay in the reflog).
+    (REPO_MINE, "claude/some-topic", "deny", "commit the work on a new branch first", "git reset --hard origin/main"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git rebase -i HEAD~3"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git merge main"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git cherry-pick abc123"),
-    # Deleting a branch, here or on the remote, still asks.
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git branch -D old"),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push origin --delete old"),
+    # Deleting a branch, here or on the remote, is refused: aj deletes branches.
+    (REPO_MINE, "claude/some-topic", "deny", "leave the branch for aj to delete", "git branch -D old"),
+    (REPO_MINE, "claude/some-topic", "deny", "leave the branch for aj to delete", "git push origin --delete old"),
     # A push whose destination is the default branch is refused from any branch.
     (REPO_MINE, "claude/some-topic", "deny", DEFAULT, "git push origin HEAD:main"),
-    # A command naming another repo is not talking about the branch we just read.
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, 'git -C /other/repo commit -m "x"'),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git --git-dir=/other/.git push"),
+    # A command naming another repo is not talking about the branch we just read: refused, with the rewrite.
+    (REPO_MINE, "claude/some-topic", "deny", "run it as plain `git ...`", 'git -C /other/repo commit -m "x"'),
+    (REPO_MINE, "claude/some-topic", "deny", "run it as plain `git ...`", "git --git-dir=/other/.git push"),
     # Ownership buys nothing outside the commit rule.
-    (REPO_MINE, "claude/some-topic", "ask", RULE_DESTRUCTIVE, "rm -rf build"),
-    # The default branch refuses; a branch I could not read still prompts.
+    (REPO_MINE, "claude/some-topic", "deny", "_to_delete/", "rm -rf build"),
+    # The default branch refuses; so does a branch I could not read (#291).
     (REPO_THEIRS, "main", "deny", DEFAULT, 'git commit -m "wip"'),
     (REPO_THEIRS, "main", "deny", DEFAULT, "git push origin main"),
-    (REPO_DETACHED, "a detached HEAD", "ask", RULE_COMMIT, 'git commit -m "wip"'),
-    (REPO_NONE, "a directory that is not a repo", "ask", RULE_COMMIT, 'git commit -m "wip"'),
+    (REPO_DETACHED, "a detached HEAD", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
+    (REPO_NONE, "a directory that is not a repo", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
+    # #291: a commit on a branch the guard can't confirm is mine is refused, naming a new branch.
+    (REPO_THEIRS_FEATURE, "feature/theirs", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
 ]
 
 for project_dir, label, expect, rule, cmd in BRANCH_CASES:
@@ -679,7 +659,8 @@ _sv_git("push", "-q", "-u", "origin", "claude/saved-topic")
 
 def _sv_guard(cmd):
     code, out, err = run_hook("guard", payload_for(cmd), env=verbose_env(env_in(_sv_repo)))
-    return ("ask" if '"permissionDecision":"ask"' in out else "pass"), out
+    m = re.search(r'"permissionDecision":"(ask|deny)"', out)
+    return (m.group(1) if m else "pass"), out
 
 
 def _sv_case(title, ok, detail):  # commit_case is defined further down this file
@@ -697,15 +678,28 @@ _sv_case(
     not _sv_fail, "; ".join(_sv_fail) or "3 commands passed, each trace names the saved-elsewhere check",
 )
 _sv_fail = []
-for _cmd in ("git push --force-with-lease", "git clean -fdx", "git stash drop", "git branch -D other", "rm f.txt"):
-    if _sv_guard(_cmd)[0] != "ask":
+for _cmd in ("git push --force-with-lease", "git clean -fdx", "git stash drop", "git branch -D other", "rm -r sub"):
+    if _sv_guard(_cmd)[0] != "deny":
         _sv_fail.append(_cmd)
 _sv_case(
-    "guard: even with the work saved, force-push, clean, stash drop, branch -D and rm still ask",
-    not _sv_fail, "did not ask: %s" % ", ".join(_sv_fail) if _sv_fail else "all 5 asked",
+    "guard: even with the work saved, force-push, clean, stash drop, branch -D and a recursive rm are refused (#291)",
+    not _sv_fail, "not refused: %s" % ", ".join(_sv_fail) if _sv_fail else "all 5 refused",
 )
+# #291: deletes are narrowed. A committed, unchanged file goes through; an edited or a never-committed one is refused.
+_sv_del_clean = _sv_guard("rm f.txt")
+with open(os.path.join(_sv_repo, "new.txt"), "w") as _f:
+    _f.write("never committed\n")
+_sv_del_new = _sv_guard("rm new.txt")
+os.remove(os.path.join(_sv_repo, "new.txt"))
 with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
     _f.write("uncommitted\n")
+_sv_del_dirty = _sv_guard("rm f.txt")
+_sv_case(
+    "guard: deleting a committed, unchanged file goes through; an edited or never-committed file is refused, naming _to_delete/ (#291)",
+    _sv_del_clean[0] == "pass" and _sv_del_new[0] == "deny" and _sv_del_dirty[0] == "deny"
+    and "_to_delete/" in _sv_del_new[1] and "_to_delete/" in _sv_del_dirty[1],
+    "clean %s | new %s | dirty %s" % (_sv_del_clean[0], _sv_del_new[0], _sv_del_dirty[0]),
+)
 _sv_dirty = _sv_guard("git reset --hard HEAD")
 _sv_git("checkout", "--", "f.txt")
 with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
@@ -713,9 +707,9 @@ with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
 _sv_git("commit", "-q", "-am", "two")
 _sv_unpushed = _sv_guard("git reset --hard HEAD~1")
 _sv_case(
-    "guard: an uncommitted change or an unpushed commit makes reset ask, and the prompt says which",
-    _sv_dirty[0] == "ask" and "1 uncommitted or untracked file would be lost" in _sv_dirty[1]
-    and _sv_unpushed[0] == "ask" and "1 commit on this branch is not on any remote" in _sv_unpushed[1],
+    "guard: an uncommitted change or an unpushed commit makes reset refused, and the refusal says which",
+    _sv_dirty[0] == "deny" and "1 uncommitted or untracked file would be lost" in _sv_dirty[1]
+    and _sv_unpushed[0] == "deny" and "1 commit on this branch is not on any remote" in _sv_unpushed[1],
     "dirty %r | unpushed %r" % (_sv_dirty[1][-160:], _sv_unpushed[1][-160:]),
 )
 _sv_git("push", "-q")
@@ -723,8 +717,8 @@ _sv_git("switch", "-q", "-c", "main")
 _sv_git("push", "-q", "-u", "origin", "main")
 _sv_theirs = _sv_guard("git reset --hard HEAD")
 _sv_case(
-    "guard: on the default branch, reset asks even with a clean tree and everything pushed",
-    _sv_theirs[0] == "ask" and "`main` is the default branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
+    "guard: on the default branch, reset is refused even with a clean tree and everything pushed",
+    _sv_theirs[0] == "deny" and "`main` is the default branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
 )
 
 # The exemption is a silent success path, and guard's silent paths trace by contract.
@@ -797,13 +791,15 @@ if shutil.which("git"):
     _own_res["-C wt"] = _own_ask("git -C %s commit -m x" % _own_wt, _own_main, _own_main)
     # #203: "cd" inside a commit message is not a directory change.
     _own_res["cd in message"] = _own_ask('git commit -m "fix cd handling"', _own_main, _own_wt)
-    _own_want = {"wt commit": "allow", "wt push": "allow", "wt force push": "ask", "wt merge": "allow",
-                 "no cwd": "deny", "cd into wt": "allow", "two cds": "ask", "ccr": "allow",
-                 "foo off": "allow", "foo on": "allow", "-C wt": "allow",
+    # #291: a force push, a folder the guard can't follow (two cds) and a branch not confirmed mine
+    # (foo/x without HOUSE_RULES_OWNED_BRANCHES) are refused, not asked.
+    _own_want = {"wt commit": "allow", "wt push": "allow", "wt force push": "deny", "wt merge": "allow",
+                 "no cwd": "deny", "cd into wt": "allow", "two cds": "deny", "ccr": "allow",
+                 "foo off": "deny", "foo on": "allow", "-C wt": "allow",
                  "cd in message": "allow"}
     if _own_res == _own_want:
         report("PASS", "guard judges the branch by the payload cwd, a leading cd and git -C")
-        print("          worktree commit/push/merge allowed, force push asks, main refused, two cds ask")
+        print("          worktree commit/push/merge allowed; force push, main, two cds and a branch not mine refused")
     else:
         report("FAIL", "guard judges the branch by the payload cwd, a leading cd and git -C")
         print(f"          got: {_own_res}")
@@ -820,8 +816,9 @@ subprocess.run(["git", "init", "-q", "-b", "AjsAgent/ua", _ua_dir], check=True)
 
 
 def _ua_guard(session, extra=None, env_extra=None, tool="Bash", tool_input=None):
+    # #291: a destructive step is asked about only when it cites a source proving no safe way exists.
     pl = {"session_id": session, "cwd": _ua_dir, "tool_name": tool,
-          "tool_input": tool_input or {"command": "rm -rf build"}}
+          "tool_input": tool_input or {"command": "rm -rf build", "description": "no safe way: the rm manual page"}}
     pl.update(extra or {})
     e = env_in(_ua_dir)
     e.pop("HOUSE_RULES_PROMPT_TIMEOUT", None)
@@ -889,26 +886,26 @@ for _n, _cmd in (
     _d, _r = _fr(_cmd)
     if _d == "deny" and "Do not retry" in _r:
         _fr_fail.append("%s: refused with Do not retry" % _n)
-    elif _n == "7b" and not (_d == "deny" and "Write the output to a file instead of piping it through tail/head" in _r):
-        _fr_fail.append("7b: %s %r" % (_d, _r[-120:]))
-    elif _n == "9" and not (_d == "deny" and ("Run it as plain `git ...` from %s, with no cd, -C or variables, "
-                                              "and it will be checked normally." % _fr_top) in _r):
+    elif _n == "9" and not (_d == "deny" and ("run it as plain `git ...` from %s, with no cd, -C or variables, "
+                                              "and it will be checked normally" % _fr_top) in _r):
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
-    elif _n not in ("7b", "9") and _d == "deny":
+    elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
-for _cmd in ("rm -rf /home/user/x", "kill -9 1", "git push origin main",
-             "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
+for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)
-    if _d != "deny" or (_cmd.startswith(("rm -rf /home", "kill", "git push")) and "Do not retry" not in _r):
+    if _d != "deny" or (_cmd.startswith("rm -rf /home") and "_to_delete/" not in _r) \
+            or (_cmd.startswith("git push") and "Do not retry" not in _r):
         _fr_fail.append("still-refused %r: %s" % (_cmd, _d))
+if _fr("kill -9 1")[0] == "deny":  # #292: killing a process no longer stops the agent
+    _fr_fail.append("kill -9 1 was refused")
 _d, _r = _fr("S=%s/old-plugin; rm -rf $S" % _fr_scratch)
 if _d == "deny":
     _fr_fail.append("rm via a same-command assignment inside the scratchpad was refused %r" % _r[-120:])
 _d, _r = _fr("S=/home/user/x; rm -rf $S")
-if _d != "deny" or "Do not retry" not in _r:
+if _d != "deny" or "_to_delete/" not in _r:
     _fr_fail.append("rm via an assignment outside the scratchpad: %s %r" % (_d, _r[-120:]))
-_sv_case("guard: audit entries 1, 2, 3, 5, 7, 8, 9 no longer dead-end routine work; deletes, kills and a push to main still refuse",
-         not _fr_fail, "; ".join(_fr_fail) or "routine ones pass or get the rewrite text, the rest say Do not retry")
+_sv_case("guard: audit entries 1, 2, 3, 5, 7, 8, 9 no longer dead-end routine work; deletes and a push to main still refuse",
+         not _fr_fail, "; ".join(_fr_fail) or "routine ones pass or get the rewrite text; deletes name _to_delete/")
 
 _ua_seen("verify-ua-away", 600)
 _ua_seen("verify-ua-here", 30)
@@ -1047,11 +1044,12 @@ if shutil.which("git"):
         payload_for('git -C /some/other/repo commit -m "wip"'),
         env=env_in(DOCSGUARD_CLAUDE_SOURCE_ONLY),
     )
-    if '"permissionDecision":"ask"' in out and "could not tell" in out.lower() and "another repo" in out:
-        report("PASS", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
+    # #291: refused with the rewrite named, before the docs check reads any other repo's staged files.
+    if '"permissionDecision":"deny"' in out and "another repo" in out and "run it as plain `git ...`" in out:
+        report("PASS", "a -C/--git-dir commit is refused naming the rewrite, not answered with another repo's files")
         print(f"          {out[:250]}")
     else:
-        report("FAIL", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
+        report("FAIL", "a -C/--git-dir commit is refused naming the rewrite, not answered with another repo's files")
         print(f"          out {out[:250]!r}")
 
     # --- what a commit will ACTUALLY include, not just what is already staged -----------------
@@ -1312,13 +1310,14 @@ for h in [
     "Deliver a whole workflow, not a starting point",
     "Never hand over a command I have not run",
     "Every artifact lives in the project directory",
-    "Never hide work: it stays visible, reachable and readable",
     "Commit constantly on my own branches, never on theirs",
     "Never take a destructive action without checking first",
     "Edit in place; a full rewrite is a delete, not an edit",
 ]:
     if h not in out:
         missing.append(h)
+if "Never hide work" in out:  # #292: the rule was removed
+    missing.append("the removed 'Never hide work' rule is still injected")
 if not missing:
     report("PASS", "SessionStart injects every rule heading into context")
     print(f"          {len(out)} characters injected")
@@ -2373,8 +2372,8 @@ for event, payload, _, why in trace_cases:
 code, out, err = run_hook(
     "guard", json.dumps({"tool_input": {"command": "rm -rf build"}}), env=off
 )
-if '"permissionDecision":"ask"' not in out:
-    quiet_failures.append("HOUSE_RULES_TRACE=off also silenced guard's prompt, which it must not")
+if '"permissionDecision":"deny"' not in out:  # #291: rm -rf is refused, naming the safe way
+    quiet_failures.append("HOUSE_RULES_TRACE=off also silenced guard's refusal, which it must not")
 code, out, err = run_hook(
     "harvest",
     json.dumps({"tool_name": "Write", "tool_input": {"file_path": "/p/a.cs", "content": ESSAY_CS}}),
@@ -4201,8 +4200,8 @@ for _c in ("gh issue comment 5 --body hi", 'gh issue create --title t --body b',
 commit_case("close: comment, create, label edits, reads and a commit message mentioning it are not affected", not _bad, "affected: %r" % _bad)
 _ocm = _iss_guard("rm old.txt && gh issue close 5")
 commit_case(
-    "close: a chained command asks once with both reasons in the prompt",
-    _iss_decision(_ocm) == "ask" and "closing an issue" in _iss_reason(_ocm) and "deletes one or more files" in _iss_reason(_ocm),
+    "close: a chained command whose delete is unsafe is refused as a whole, naming the safe way (#291)",
+    _iss_decision(_ocm) == "deny" and "deletes one or more files" in _iss_reason(_ocm) and "_to_delete/" in _iss_reason(_ocm),
     "out %r" % _ocm[:120],
 )
 
@@ -6316,7 +6315,8 @@ commit_case(
 
 # guard: the timeout line, omitted when off
 _g_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Bash",
-                         "tool_input": {"command": "rm -rf /tmp/pt-victim"}, "cwd": _pt_repo})
+                         "tool_input": {"command": "rm -rf /tmp/pt-victim", "description": "no safe way: rm(1)"},
+                         "cwd": _pt_repo})
 _gw_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Write",
                           "tool_input": {"file_path": os.path.join(_pt_repo, "existing.txt"), "content": "x\n"},
                           "cwd": _pt_repo})
@@ -6374,8 +6374,8 @@ commit_case(
     "elapsed %.2fs" % _a3[3],
 )
 # (a) a second guard prompt after a timeout is ASKED by the guard normally, not refused
-_a5 = _ua_guard("verify-290-a", tool_input={"command": "rm -rf build"})
-_a5b = _ua_guard("verify-290-a", tool_input={"command": "rm -rf other-build"})
+_a5 = _ua_guard("verify-290-a", tool_input={"command": "rm -rf build", "description": "no safe way: rm(1)"})
+_a5b = _ua_guard("verify-290-a", tool_input={"command": "rm -rf other-build", "description": "no safe way: rm(1)"})
 commit_case(
     "guard (#290): after a prompt timed out, a second guard prompt is asked normally",
     _ua_dec(_a5) == "ask" and _ua_dec(_a5b) == "ask", "first %s second %s" % (_ua_dec(_a5), _ua_dec(_a5b)),
@@ -6560,13 +6560,13 @@ _async_payload = post_agent_payload(
 )
 code, out, err = run_hook("audit", _async_payload)
 code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
-if (code == 0 and "checked for stalls every 5 minutes" in out and "stallcheck.py" in out and "AUDIT" not in out
-        and code_off == 0 and not out_off.strip()
-        and "--session sess1 --agent audit1" in out):
-    report("PASS", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
-    print("          nothing to audit yet; the check-in nudge appears, and not with HOUSE_RULES_AUTOSAVE=off")
+# #292: the 5-minute stall-check reminder is gone, so a backgrounded call's launch gets neither an audit
+# nor a reminder; its hand-back is audited when it arrives.
+if code == 0 and not out.strip() and code_off == 0 and not out_off.strip():
+    report("PASS", "audit gives no audit and no stall-check reminder on a backgrounded call's async_launched PostToolUse (#292)")
+    print("          nothing to audit yet, and no reminder, with autosave on or off")
 else:
-    report("FAIL", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
+    report("FAIL", "audit gives no audit and no stall-check reminder on a backgrounded call's async_launched PostToolUse (#292)")
     print(f"          exit {code}, out {out[:150]!r}; autosave off: exit {code_off}, out {out_off[:80]!r}")
 
 
@@ -6653,10 +6653,6 @@ _cap_case("stallcheck: a --session matching nothing exits 2 and names the sessio
 _c, _o = _sc_run()
 _cap_case("stallcheck: no-flag mode says it is watching all sessions",
           "watching ALL sessions" in _o and "aaa" in _o and "bbb" in _o, "exit %d out %r" % (_c, _o[:200]))
-_ctx_bad = run_hook("audit", post_agent_payload(
-    session_id="bad;id", tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}))[1]
-_cap_case("audit: an unsafe session_id is omitted from the suggested command and the watch is called unscoped",
-          "--threshold 300 --agent audit1`" in _ctx_bad and "bad;id" not in _ctx_bad and "unscoped" in _ctx_bad, "out %r" % _ctx_bad[:300])
 
 audq = []
 code, out, err = run_hook("audit", "")

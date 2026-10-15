@@ -622,8 +622,8 @@ def event_inject():
 
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
-        "override default behaviour. A PreToolUse hook also prompts for destructive "
-        "commands and hidden processes, and refuses commit/push/merge on `main`. "
+        "override default behaviour. A PreToolUse hook also refuses destructive commands, "
+        "naming the safe way, and refuses commit/push/merge on `main`. "
         "That hook is a backstop, not "
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
@@ -1763,25 +1763,9 @@ def event_scope():
 # characters \n or \t; _LINE_START accepts those as a word start, or `ls` + newline + `rm` slips by (#200).
 _LINE_START = r"\\[nrt]|"
 
-GUARD_R1 = [
-    (r"-WindowStyle\s+Hidden", "starts a hidden window you cannot watch"),
-    (r"Start-Process", "spawns a separate process with Start-Process"),
-    (r"Start-Job|\s-AsJob", "runs the work as a background job"),
-    (
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_.-])(nohup|setsid|disown)([^0-9A-Za-z_-]|$)",
-        "detaches the process from your terminal",
-    ),
-    (r'[^&]&\s*(\\?"|\\[nr])', "backgrounds the command with a trailing ampersand"),
-    # #85: a wait piped through tail/head shows nothing until it exits - a stuck wait and a
-    # working one look identical for its whole timeout.
-    (
-        # #261: the keyword and the tail/head must share one pipeline segment (no ; && || or
-        # newline between them); a while/until loop is one segment up to its `done`.
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_-])(?:(?:while|until)\s.*?\bdone\s*|"
-        r"(?:while|until|sleep|timeout|watch)\s(?:(?!\\[nrt]|;|&&|\|\|).)*?)\|(?!\|)\s*(tail|head)([^0-9A-Za-z_-]|$)",
-        "pipes a wait or loop through tail/head, which hides its output until it exits",
-    ),
-]
+# #292: the background-work patterns (hidden windows, Start-Process, background jobs, nohup/setsid/
+# disown, a trailing &, a wait piped through tail/head) and the process-kill pattern were removed:
+# none of them changes a branch or deletes saved work, so none of them stops the agent any more.
 
 # One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
 _WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
@@ -1855,7 +1839,6 @@ GUARD_R4 = [
     ),
     (r"Remove-Item", "deletes files (Remove-Item)"),
     (r"(del|erase)\s+/[fqs]|rmdir\s+/s", "deletes files (del /f or rmdir /s)"),
-    (r"Stop-Process|taskkill|pkill|kill\s+-9", "kills a running process"),
     (
         r"Clear-Content|truncate\s+-s",
         "truncates or overwrites file contents in place",
@@ -1872,10 +1855,37 @@ GUARD_R4 = [
 ]
 
 GUARD_BUCKETS = [
-    ("Never hide work: it stays visible, reachable and readable", GUARD_R1),
     ("Commit constantly on my own branches, never on theirs", GUARD_R3),
     ("Never take a destructive action without checking first", GUARD_R4),
 ]
+
+# #291: a destructive action is refused outright, and the refusal names the safe way to do the job.
+# aj is asked only when the command's description cites a source proving no safe way exists.
+_DELETE_REASONS = ("deletes one or more files", "deletes files (Remove-Item)", "deletes files (del /f or rmdir /s)")
+SAFE_WAYS = {
+    "rewrites remote history or pushes every branch (force push, --all, --mirror)":
+        "push a new branch instead: `git push -u origin AjsAgent/<topic>`",
+    "deletes a branch on the remote (push --delete)": "leave the branch for aj to delete",
+    "deletes a local branch even if its work is not merged (branch -D)": "leave the branch for aj to delete",
+    "discards work (reset)": "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
+    "deletes untracked files or rewrites all history (clean / filter-branch)":
+        "for clean, move the files into a `_to_delete/` folder; for filter-branch, rewrite on a copy branch "
+        "(`git branch <name>-copy`)",
+    "truncates or overwrites file contents in place": "write a new file beside it",
+    "throws away uncommitted edits to a file (git checkout -- / git restore)":
+        "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
+    "deletes stashed work permanently (git stash drop / clear)": "keep the stash",
+    "recursive": "move the folder into a `_to_delete/` folder instead",
+    "unsaved": "move the file into a `_to_delete/` folder instead",
+    "not mine": "make a new branch and commit there: `git switch -c AjsAgent/<topic>`",
+}
+_NO_SAFE_WAY_RE = re.compile(r"\bno safe way:\s*(\S.*)", re.IGNORECASE)
+GUARD_REFUSAL = (
+    "House rules: refused, because this could destroy data with no way back, or change work that may not "
+    "be yours:\n%s\nDo it the safe way named above. If no safe way exists, put `no safe way: <source>` in the "
+    "command's description, citing the source that proves it (for example the git manual page), and aj "
+    "will be asked instead."
+)
 
 # Reuses GUARD_R3's own commit pattern rather than a second copy - "is this a commit" and "is
 # this exempt from asking" are different questions, and the docs check needs the first one
@@ -2426,6 +2436,8 @@ def event_guard():
     exempted = []
     plain_hits = []  # branch writes asked only because the folder is unclear (#261)
     refused = []  # branch writes aimed at the default branch: refused, never asked (#197)
+    not_mine = []  # branch writes on a branch the guard can't confirm is the agent's: refused (#291)
+    delete_kind = None  # "recursive" or "unsaved" once a delete pattern matched (#291)
     saved_state = None  # (saved, note), computed at most once and only when a SAVED pattern matched
     saved_blocked = None
     for title, patterns in GUARD_BUCKETS:
@@ -2436,8 +2448,18 @@ def event_guard():
             marker = entry[2] if len(entry) > 2 else None
             if reason == "deletes one or more files" and _rm_only_in_scratchpad(subject, payload):
                 continue  # #261: every rm path is inside this session's scratchpad
+            if reason in _DELETE_REASONS:
+                delete_kind = delete_kind or _delete_refusal(subject, where)
+                if not delete_kind:
+                    exempted.append(reason)  # committed and unchanged, so git can bring it back (#291)
+                    continue
             if marker == BRANCH_WRITE and known:
-                (refused if protected else exempted).append(reason)
+                if protected:
+                    refused.append(reason)
+                elif branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+                    exempted.append(reason)
+                else:
+                    not_mine.append(reason)
                 continue
             if marker == BRANCH_WRITE:
                 plain_hits.append(reason)
@@ -2454,6 +2476,40 @@ def event_guard():
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": PROTECTED_DENY % (branch, "; ".join(refused))}})
         return 0
+
+    # #291: destructive actions are refused with the safe way named, unless the command cites a source
+    # proving no safe way exists; then aj is asked below, with the citation shown.
+    cited = _cites_no_safe_way(payload)
+    danger = []
+    for r in (x for rs in hits.values() for x in rs):
+        if r in plain_hits and elsewhere:
+            safe = ("run it as plain `git ...` from %s, with no cd, -C or variables, and it will be checked "
+                    "normally" % _payload_toplevel(payload))
+        elif r in plain_hits:
+            safe = SAFE_WAYS["not mine"]
+        elif r in _DELETE_REASONS:
+            safe = SAFE_WAYS[delete_kind or "unsaved"]
+        else:
+            safe = SAFE_WAYS.get(r, "do the job without this step")
+        danger.append("  - %s: %s" % (r, safe))
+    danger += ["  - %s on `%s`, which the guard can't confirm is mine: %s" % (r, branch, SAFE_WAYS["not mine"])
+               for r in not_mine]
+    if danger and not cited:
+        if elsewhere:
+            danger.append("  (This command names another repo, with --git-dir or a cd / -C I could not follow, so "
+                          "the branch I can see is not the one it acts on.)")
+        elif ownership_note and (plain_hits or not_mine):
+            danger.append("  (I could not read which branch this is on: %s.)" % ownership_note)
+        elif protected:
+            danger.append("  (`%s` is the default branch, which only changes through a pull request.)" % branch)
+        if saved_blocked:
+            danger.append("  (On `%s`, this runs unasked only when the work is saved elsewhere: %s.)"
+                          % (branch, saved_blocked))
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": GUARD_REFUSAL % "\n".join(danger)}})
+        return 0
+    for r in not_mine:
+        hits["Commit constantly on my own branches, never on theirs"].append(r)
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _staged_docs_status(subject, elsewhere, where) if is_commit else (None, None)
@@ -2540,6 +2596,10 @@ def event_guard():
             % (branch, saved_blocked)
         )
 
+    if cited and danger:
+        lines.append("")
+        lines.append("  No safe way exists, the agent says, citing: %s" % cited)
+
     if issue_hit:
         lines.append("")
         lines.append("  Rule: Issue workflow (PRs link with Refs, the user closes issues)")
@@ -2569,10 +2629,7 @@ def event_guard():
     rewrite = None
     all_hits = [r for rs in hits.values() for r in rs]
     if all_hits and not outdated and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
-        pipe_reason = GUARD_R1[-1][1]
-        if all(r == pipe_reason for r in all_hits):
-            rewrite = "Write the output to a file instead of piping it through tail/head."
-        elif elsewhere and not protected and all(r in plain_hits for r in all_hits):
+        if elsewhere and not protected and all(r in plain_hits for r in all_hits):
             rewrite = ("Run it as plain `git ...` from %s, with no cd, -C or variables, and it will be "
                        "checked normally." % _payload_toplevel(payload))
     _ask_or_refuse(payload, reason_text, issue_hit[2] if issue_hit and issue_hit[2] else None, rewrite)
@@ -2598,6 +2655,60 @@ def _payload_toplevel(payload):
         sys.stderr.write("house-rules guard: could not read the repo top-level (%s: %s); naming the "
                          "working folder instead.\n" % (type(exc).__name__, exc))
     return cwd
+
+
+_DELETE_CMD_RE = re.compile(r"(^|[\s;&|(])(rm|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
+_RECURSIVE_DELETE_RE = re.compile(
+    r"(^|[\s;&|(])rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
+    r"|rmdir\s+/s|Remove-Item\b.*-Recurse|(del|erase)\s+(?:\S+\s+)*?/s(\s|$)", re.IGNORECASE)
+
+
+def _delete_refusal(subject, where):
+    """#291: "recursive" for a recursive delete, "unsaved" when any target has uncommitted changes, was
+    never committed, or can't be checked (a glob or variable), else None: every target is committed and
+    unchanged, so git can bring it back."""
+    import shlex
+    text = _decoded_command(subject)
+    if _RECURSIVE_DELETE_RE.search(text):
+        return "recursive"
+    base = where or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    for stmt in re.split(r"&&|\|\||;|\n|\|", text):
+        m = _DELETE_CMD_RE.search(stmt)
+        if not m:
+            continue
+        try:
+            words = shlex.split(stmt[m.end(2):])
+        except ValueError:
+            return "unsaved"
+        targets = [w for w in words if not w.startswith(("-", "/")) or os.path.isabs(w) and not re.match(r"^/[a-zA-Z]$", w)]
+        if not targets:
+            return "unsaved"
+        for t in targets:
+            if re.search(r"[*?\[\]$`~]", t):
+                return "unsaved"
+            path = t if os.path.isabs(t) else os.path.join(base, t)
+            folder = os.path.dirname(os.path.abspath(path))
+            try:
+                tracked, _o, _e = _ag(folder, ["ls-files", "--error-unmatch", "--", path], check=False)
+                changed, _o, _e = _ag(folder, ["diff", "--quiet", "HEAD", "--", path], check=False)
+            except RuntimeError:
+                return "unsaved"
+            if tracked != 0 or changed != 0:
+                return "unsaved"
+    return None
+
+
+def _cites_no_safe_way(payload):
+    """The source the agent cites for "no safe way exists", from the command's description, or None."""
+    try:
+        data = json.loads(payload)
+    except ValueError as exc:
+        sys.stderr.write("house-rules guard: could not read the command's description (%s), so no "
+                         "\"no safe way\" citation was found; the refusal stands.\n" % exc)
+        return None
+    ti = data.get("tool_input") if isinstance(data, dict) else None
+    m = _NO_SAFE_WAY_RE.search(str(ti.get("description") or "")) if isinstance(ti, dict) else None
+    return m.group(1).strip() if m else None
 
 
 def _rm_only_in_scratchpad(subject, payload):
@@ -4634,7 +4745,6 @@ AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
 COMMITGATE_THRESHOLD = 3
 COMMITGATE_LIST_MAX = 8
 CHECKPOINT_MINUTES = 10
-STALLCHECK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stallcheck.py")
 AUTOSAVE_PUSH_INTERVAL = 60
 AUTOSAVE_PUSH_TIMEOUT = 6.0
 AUTOSAVE_GIT_TIMEOUT = 4.0
@@ -6448,39 +6558,8 @@ def event_audit():
             return 0
 
         status = _field(_RESPONSE_STATUS_RE, payload)
-        if status == "async_launched" and _autosave_enabled():
-            watch_cmd = "python \"%s\" --watch --threshold 300" % STALLCHECK_PATH
-            scope_notes = []
-            for flag, label, value in (
-                ("--session", "session_id", _field(_SESSION_ID_RE, payload)),
-                ("--agent", "agentId", _field(_RESPONSE_AGENT_ID_RE, payload)),
-            ):
-                if re.fullmatch(r"[A-Za-z0-9_-]+", value or ""):
-                    watch_cmd += " %s %s" % (flag, value)
-                elif value:
-                    scope_notes.append("the %s in the payload is not shell-safe, so %s is omitted" % (label, flag))
-                else:
-                    scope_notes.append("the payload has no %s, so %s is omitted" % (label, flag))
-            scope_note = ""
-            if scope_notes:
-                scope_note = ("Note: " + "; ".join(scope_notes) + (
-                    "; with no --session the watch is unscoped and reports every session's subagents. "
-                    if "--session" not in watch_cmd else ". "))
-            # Nothing to audit yet. A killed background subagent runs no hooks of its own, so
-            # the parent's worktreesweep is what commits its work - and that only runs when the
-            # parent wakes. Ask for a check-in so it does.
-            emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": (
-                "house-rules: a subagent is running in the background, so it must be checked for stalls "
-                "every 5 minutes. Cheapest reliable way, no model call until something stalls: start "
-                "Monitor with the command `%s` (it prints only on a "
-                "STALLED or finished line), or run that command without --watch each time you wake. %s"
-                "A parent that wakes also lets worktreesweep commit a stalled subagent's work (every "
-                "%d min). On a STALLED line: find the agent's last tool call or blocking child process "
-                "(newest transcript record, process list), tell the user how long it has been stuck and what it is "
-                "blocked on, and ask before stopping a command that cannot finish. Do not assume it died or is "
-                "fine; no later STALLED line is not progress; SendMessage cannot reach an agent blocked inside a "
-                "tool call." % (watch_cmd, scope_note, CHECKPOINT_MINUTES))}})
-            return 0
+        # #292: a background subagent no longer gets the 5-minute stall-check reminder; its hand-back is
+        # still audited when it arrives (userpromptaudit).
         if status != "completed":
             # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing
             # to audit yet, not a failure to report - userpromptaudit picks up a backgrounded

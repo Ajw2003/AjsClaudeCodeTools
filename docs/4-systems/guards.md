@@ -24,7 +24,9 @@ approved".
    `_to_delete/` folder or a copy branch. A delete is refused only when it is recursive, or when the
    file has uncommitted changes or was never committed.
 3. **Asking aj (#290).** aj is asked only when no safe way exists and the agent cites a source proving
-   it. Each prompt waits on its own timer, and an unanswered prompt never causes later refusals.
+   it: the Bash call's `description` carries `no safe way: <source>` (`_cites_no_safe_way` in
+   `hook.py`), and the prompt shows the citation. Each prompt waits on its own timer, and an
+   unanswered prompt never causes later refusals.
 4. **Enforced workflow checks (#293).** Five checks refuse and name the exact fix: a hand-written page,
    a Claude credit or a `claude/` branch on GitHub, an issue missing its sections, a third helper or a
    helper's own helper, and a whole-file overwrite of a file the agent did not create.
