@@ -231,7 +231,7 @@ const PAGE = {
   eyebrow: "Build plan for approval · design approved, nothing built yet",
   replyPrefix: "Clear writing plan",
   short: {
-    lead: "Five build steps, each a sub-issue under \"Clear writing check: one rule and one checker so nothing I write is left to guess\", all labelled in progress. Two choices are yours: where the rule loads, and which model the editor helper runs on.",
+    lead: "Five build steps that create 5 files, change 13 and delete 1, each a sub-issue under \"Clear writing check: one rule and one checker so nothing I write is left to guess\", all labelled in progress. Two choices are yours: where the rule loads, and which model the editor helper runs on.",
     hint: "Tap a step to see what it builds and when it counts as done.",
     key: [["I build it", ""], ["You act on it", "you"]],
     items: [
@@ -244,9 +244,20 @@ const PAGE = {
     ]
   },
   changes: [
-    ["chg", "Rules that move", "Four homes become one.", ["Plain language, two lines in Show don't tell and Deliver a whole workflow, the plain-docs limits", "One rule, with pointers left behind"], "Nothing is dropped; each moved line is listed with where it now lives."],
-    ["chg", "End-of-reply check", "One note for every writing finding.", ["Separate not-checked and long-reply notes", "One note listing each finding"], "Evidence before claims keeps its own note."],
-    ["chg", "Plain-docs checker", "Uses the shared checker.", ["Its own banned-word list and sentence limit", "The shared ones"], "Its shape checks (header, sections, Left out) stay."]
+    ["new", "The rule (rules/clear-writing.md)", "New file, estimated 25 lines.", ["No such file", "The rule, loaded every session"], "\"Write it so nothing is left to guess\": proper sentences, a human tone, no repetition, explicit context, measured numbers, named references, exact inputs, done-criteria. Loaded beside Show, don't tell if you pick that slot. Estimated, because it isn't written yet."],
+    ["new", "The rule's detail (rules/detail/clear-writing.md)", "New file, estimated 135 lines.", ["No such file", "The why behind each part, with examples"], "Moved in: 71 lines from the plain-language detail, 13 from Deliver a whole workflow, 2 from Show, don't tell, 10 from the plain-docs skill. New: an estimated 40 lines on proper sentences, tone, repetition and explicit context, using today's real failures as examples. Estimated, because it isn't written yet."],
+    ["new", "The shared checker (scripts/clarity.py)", "New file, estimated 200 lines.", ["No such file", "One list of writing checks for every tool"], "Moved in: the 33-line not-checked detector from the hook and the 16-line banned-word list from the plain-docs checker. New: an estimated 150 lines for vague claims, bare references, repetition and long sentences. Estimated, because it isn't written yet."],
+    ["new", "The editor helper (agents/editor.md)", "New file, estimated 40 lines.", ["No such file", "A helper that rewrites what doesn't read as proper English"], "Its checklist is the rule; its model is your second choice. Estimated, because it isn't written yet."],
+    ["new", "System doc (docs/4-systems/clear-writing.md)", "New file, estimated 50 lines.", ["No such file", "How the check works, its rules and its traps"], "Plus a row in the systems index. Estimated, because it isn't written yet."],
+    ["chg", "Main rules file (rules/house-rules.md)", "12 lines out, a 2-line pointer in.", ["The 12-line Plain language section", "A 2-line pointer to the new rule"], "Frees 584 characters in the slot that has 319 to spare."],
+    ["chg", "Deliver a whole workflow (rules/detail/deliver-workflow.md)", "13 lines out, a 1-line pointer in.", ["\"An instruction names its exact input\", 13 lines", "A 1-line pointer"], "The text moves into the new detail file unchanged."],
+    ["chg", "Show, don't tell (rules/detail/show-dont-tell.md)", "2 lines out, a 1-line pointer in.", ["\"Where the request is ambiguous I ask…\"", "A pointer to the new rule"], "The rest of \"The request is the scope\" stays."],
+    ["chg", "Plain-docs skill (skills/plain-docs/SKILL.md)", "10 lines out, a 1-line pointer in.", ["Its own sentence, dash, jargon, code-detail and filler limits", "A pointer to the shared limits"], "Its own shape rules and its length limit stay."],
+    ["chg", "Plain-docs checker (scripts/plain_docs_check.py)", "16 lines out, an estimated 3 in.", ["Its own 16-line banned-word list", "Imports the shared list and sentence check"], "Its header, section and link checks stay. Estimated, because it isn't written yet."],
+    ["chg", "The hook (scripts/hook.py)", "33 lines out, an estimated 130 in.", ["Separate not-checked and long-reply notes; no page or issue checks", "One writing note per reply, a page check, an issue check, an editor-ran check"], "The 33-line not-checked detector moves to the shared checker. The rule loader also reads the new rule file. Estimated, because it isn't written yet."],
+    ["chg", "The tests (scripts/verify.py)", "An estimated 150 lines in.", ["616 on main, 659 on this branch", "A passing and a failing case per new check"], "Including \"about 43 tests\", \"see #229\" alone, the \"Not checked:\" false alarm, a refused issue and the editor reminder. Estimated, because it isn't written yet."],
+    ["chg", "Docs and version", "Four docs and the version number.", ["2.64.1", "2.65.0"], "The architecture doc, the state, today and decisions tiers, and plugin.json."],
+    ["chg", "Plain-language detail (rules/detail/plain-language.md)", "Deleted: all 71 lines move into the new detail file.", ["71 lines", "Removed"], "Nothing in it is dropped; each section reappears in the new detail file under the same heading."]
   ],
   choices: [
     ["where", "Where should the new rule load?", [

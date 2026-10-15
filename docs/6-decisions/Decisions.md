@@ -28,6 +28,21 @@ Plan page: `docs/plans/clear-writing-plan.html`, with two choices for aj. One is
 rules slot uses 9,381 of 9,700 characters, while the show-don't-tell slot uses 1,654 of 9,500 (both measured by
 `verify.py`). The other is the editor helper's model. Waiting on "Build plan approved: clear writing check".
 
+**Plan fixed (aj: "How can a build plan list nothing new it creates in the changes section? No files no
+nothing, not an actual plan").** The first version listed three vague changes and no files. It now has one entry
+per file: 5 created, 13 changed and 1 deleted. Lines that move or go are counted exactly from the files as they
+are:
+- `rules/house-rules.md`: the Plain language section, 12 lines (584 characters)
+- `rules/detail/plain-language.md`: 71 lines
+- `rules/detail/deliver-workflow.md`: the exact-input section, 13 lines
+- `rules/detail/show-dont-tell.md`: "ask when unclear", 2 lines
+- `skills/plain-docs/SKILL.md`: the writing limits, 10 lines
+- `scripts/plain_docs_check.py`: the banned-word list, 16 lines
+- `scripts/hook.py`: the not-checked detector, 33 lines
+
+New lines are estimates, each labelled "Estimated, because it isn't written yet." A plan should always list its
+files like this; the clear writing check and the automatic change log (#244) are where that gets enforced.
+
 **What.** aj: "we need to fix wording and ambiguity first, let's fold ambiguity and wording into a single check…
 proper sentence structure and human tone, a lack of repetition and clear concise speech that is explicit with
 context and leaves nothing for the user to extrapolate." It replaces the ambiguity check design below, which aj
