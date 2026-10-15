@@ -256,7 +256,7 @@ const PAGE = {
   },
   changes: [
     ["chg", "Page template (templates/handover-page.html)", "Estimated +90 −5 lines.", ["Text only, one look.", "Picture slots, a before-and-after compare, and colours taken from the project's style."], "Estimated, because it isn't written yet. Built in the Pictures step."],
-    ["new", "Page builder (scripts/make_page.py)", "New file, estimated 220 lines.", null, "Reads a page's content as JSON and the project's style file, writes the page, copies its pictures beside it, stamps a mark (a comment line naming the builder and its version), and renders it at phone width when a browser is available. Estimated, because it isn't written yet.",
+    ["new", "Page builder (scripts/make_page.py)", "New file, estimated 220 lines.", null, "Reads a page's content as JSON and the project's style file, writes the page, and copies its pictures beside it. It stamps a mark, a comment line naming the builder and its version, and renders the page at phone width when a browser is available. Estimated, because it isn't written yet.",
      ["Pages are copied from the template by hand.", "One command that builds every page.", "Every page you get is a real template page in the project's own style."]],
     ["new", "Design page content (docs/plans/enforced-checkpoints-design.page.json)", "New file: today's design page as builder input.", null, "The builder's first real test is rebuilding this page with the same content.",
      ["The design page's content lives inside its HTML.", "The content as a separate file.", "Proof the builder makes the same page that was approved."]],
