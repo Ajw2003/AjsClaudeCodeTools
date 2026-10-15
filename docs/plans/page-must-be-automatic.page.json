@@ -1,0 +1,46 @@
+{
+  "title": "Pages Must Be Automatic",
+  "eyebrow": "The automatic-pages issue in AjsClaudeCodeTools · opened, nothing changed yet",
+  "replyPrefix": "Issue 281",
+  "short": {
+    "lead": "A long reply is supposed to come with a page automatically. Today the agent can skip it: the check blocks a reply once, then lets the retry through. I opened an issue, \"Page after a long reply must be automatic, not skippable\" (number 281), to make the page mandatory from 160 words.",
+    "hint": "Tap a card for the detail.",
+    "key": [["Found", "done"], ["Your call", "you"]],
+    "items": [
+      ["search", "What happened", "How the page was skipped", "done",
+       "In a session working on Unblock on 15 October, the agent sent a 406-word reply with no page. It laid out a plan and asked you to choose. The page check flagged it, the agent answered \"No page.\", and the reply went through. You had to ask \"Why no page?\" before a page was made.",
+       "Nothing for you to do."],
+      ["file", "Where", "The lines in hook.py", "done",
+       "All in claude-house-rules/plugins/house-rules/scripts/hook.py, version 2.67.1. The word threshold is 200 (line 7012). A skip should only count when you say \"no page\" (line 7187), but the page check's own message tells the agent to \"say no page\" (line 7193). The checkpoint table, which lists what the agent must do before a reply is sent, blocks once and then lets the retry through (lines 7392 and 7556). Whatever the agent says on the retry, the reply is sent.",
+       "Nothing for you to do here."],
+      ["eye", "Side bug", "Cloned pages counted as written", "done",
+       "After cloning this repo, the editor checkpoint listed 36 existing pages as written in the current turn. A fix should count only pages the agent actually wrote or changed.",
+       "Nothing from you; added to the issue."],
+      ["hand", "Decide", "Two questions for you", "you",
+       "Whether your own \"no page\" should still skip a page. And whether your message, which broke off at \"that meets that criteria not\", was going to end \"not optional\".",
+       "Your answers in the Choices section."]
+    ]
+  },
+  "changes": [
+    ["chg", "Word threshold", "A page is needed from 160 words instead of over 200.", ["Over 200 words", "160 words or more"], "Plans and choices still need a page at any length.", null, null],
+    ["chg", "Missing page", "A reply with no page keeps being blocked until it links a page.", ["Blocks once, then the retry goes through", "Blocks every time until the reply links a page"], "The agent can no longer get past it by answering the check.", null, null],
+    ["chg", "The check's message", "No longer offers \"no page\" to the agent.", ["\"or say no page in your next message to skip it\"", "Only names the fix: build a page and link it"], "Whether you keep your own \"no page\" is the first question in the Choices section below.", null, null]
+  ],
+  "choices": [
+    ["escape", "Should your own \"no page\" still skip a page?", [
+      ["A", "Yes, mine only", 1, "You can still say \"no page\" for a quick answer you want in chat; the agent never can."],
+      ["B", "No, remove it", 0, "Every long reply gets a page, with no way round it."]
+    ], "Keeping it for you costs nothing, because the page check already tells your messages apart from the agent's."],
+    ["meaning", "Your message ended \"that meets that criteria not\". What was the rest?", [
+      ["A", "Not optional", 1, "The page is required, which is how I wrote the issue."],
+      ["B", "Something else", 0, "Tell me what you meant, in your reply."]
+    ], ""]
+  ],
+  "wrapup": {
+    "summary": "The automatic-pages issue asks for a page on every reply of 160 words or more, and on any reply with a plan or choices.",
+    "changing": "Nothing yet. The issue is open; the plugin is unchanged.",
+    "blocking": "Your answers to the two questions in the Choices section.",
+    "next": "With your go-ahead I fix it on a branch and open a pull request for you to test.",
+    "todo": ["Pick your answers in the Choices section.", "Tap <b>Copy my reply</b>.", "Send it."]
+  }
+}
