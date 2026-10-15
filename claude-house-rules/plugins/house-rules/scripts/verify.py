@@ -8520,9 +8520,11 @@ _tpl = read(_tpl_path) if os.path.isfile(_tpl_path) else ""
 _tpl_missing = [m for m in ('data-part="short"', 'data-part="changes"', 'data-part="choices"', 'data-part="wrapup"',
                             "Copy my reply", 'class="owntext"', "const PAGE = {", "What you need to do",
                             '<div class="flow">', "<small>What exists today</small>", "<small>How it impacts you</small>",
-                            '<div class="files">')
+                            '<div class="files">',
+                            # #254: picture slots, the tap-to-enlarge overlay and the before-and-after slider
+                            'data-pic="', "const picOf", "lightbox", 'type="range"')
                 if m not in _tpl]
-_loop_cases.append(("the handover template has its four parts, the own-answer box, the copy-reply and the New-item flow",
+_loop_cases.append(("the handover template has its four parts, the own-answer box, the copy-reply, the New-item flow and the picture slots",
                     bool(_tpl) and not _tpl_missing))
 _sdt_detail = read(os.path.join(DETAIL_DIR, "show-dont-tell.md"))
 _loop_cases.append(("the rule names the template and its four parts",
