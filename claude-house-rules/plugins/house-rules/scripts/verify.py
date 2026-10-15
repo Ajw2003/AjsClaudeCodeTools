@@ -8570,6 +8570,28 @@ _o += _loop_post("Bash", {"command": 'gh issue edit 102 --add-label "needs revie
 _loop_cases.append(("label check: label changes from the GitHub tool and from gh are recorded",
                     _loop_state().get("labels", {}).get("o/r#101") == ["Feature", "needs review"]
                     and _loop_state().get("labels", {}).get("o/r#102") == ["Feature", "AjsAgent created this", "needs review"]))
+_o = _loop_post("Bash", {"command": 'gh api repos/o/r/issues/201/labels -f "labels[]=in progress"'}, [{"name": "in progress"}])
+_o += _loop_post("Bash", {"command": "gh api -X POST repos/o/r/issues/202/labels -f 'labels[]=needs review' -f labels[]=bug"}, [{"name": "bug"}])
+_loop_cases.append(("#278: a REST label add (gh api .../issues/N/labels) is recorded against the issue in the path",
+                    _loop_state().get("labels", {}).get("o/r#201") == ["in progress"]
+                    and _loop_state().get("labels", {}).get("o/r#202") == ["needs review", "bug"]))
+_o = _loop_post("Bash", {"command": "gh api -X DELETE repos/o/r/issues/201/labels/in%20progress"}, "")
+_loop_cases.append(("#278: a REST label remove with %20 is recorded as removing `in progress`",
+                    _loop_state().get("labels", {}).get("o/r#201") == []))
+_loop_post("Bash", {"command": "gh api --method DELETE repos/o/r/issues/202/labels/bug"}, "")
+_loop_cases.append(("#278: the --method DELETE form is recorded too",
+                    _loop_state().get("labels", {}).get("o/r#202") == ["needs review"]))
+_loop_post("Bash", {"command": "gh api repos/o/r/labels"}, [{"name": "bug"}])
+_loop_post("Bash", {"command": 'gh api repos/o/r/issues/203/labels -f "labels[]=bug"'}, "gh: Resource not accessible (HTTP 403)")
+_loop_cases.append(("#278: a repo label list, or a failed call, records nothing",
+                    "o/r#203" not in _loop_state().get("labels", {})
+                    and not any(k.endswith("/r") or k == "o/r" for k in _loop_state().get("labels", {}))))
+_hook_src = open(os.path.join(HERE, "hook.py"), encoding="utf-8").read()
+_wf_src = open(os.path.join(HERE, "..", "rules", "detail", "issue-workflow.md"), encoding="utf-8").read()
+_created_note = _hook_src.split("was created without the", 1)[1][:400]
+_loop_cases.append(("#278: none of the five label-advice places still says --add-label",
+                    not any("--add-label" in _t for _t in (_ig_mod.ISSUE_NOTE, _ig_mod.CLOSE_ASK_NOTE, _created_note, _wf_src))
+                    and "labels[]=" in _created_note and "labels[]=" in _ig_mod.ISSUE_NOTE))
 _loop_cases.append(("label check: when the GitHub read fails, it says so and uses the record",
                     "GitHub read failed" in _loop_stop() and _loop_stage() == "build"))
 _o = _loop_post("mcp__github__issue_write", {"method": "update", "owner": "o", "repo": "r", "issue_number": 103,
