@@ -1,6 +1,6 @@
 # Audit: guards that stopped approved, routine work (2026-10-15)
 
-Status: **collected; fixes proposed** on `docs/plans/guard-fixes.html`. This lists each time a guard or hook stopped an action this session that was already
+Status: **fixed** in 2.66.0 (#261 `26a4b34`, #262 `f15fbd8`), from the proposal `docs/plans/guard-fixes.html`; each entry's real command is replayed in `scripts/verify.py`. This lists each time a guard or hook stopped an action this session that was already
 approved and routine. Every entry is quoted from the session. The fixes come to aj as a proposal page before the
 #251 pull request (decision logged 2026-10-15, "Before the pull request: guards must not stall an approved,
 autonomous build").
