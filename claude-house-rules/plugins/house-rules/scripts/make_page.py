@@ -5,7 +5,7 @@
     make_page.py style --quick
     make_page.py style --draft [--from <tokens.json>] [--project <root>]
 
-Content JSON has the same keys as the template's PAGE block (title, eyebrow, replyPrefix, reply,
+Content JSON has the same keys as the template's PAGE block (title, eyebrow, approval,
 short, changes, choices, wrapup). A Changes item may carry `{"visual": true}` as a trailing object
 element (any position after the detail); it marks a visual change. The template ignores it. In a
 project whose style file says `"pictures": "required"`, such an item must also carry a picture
@@ -290,8 +290,60 @@ def apply_qa(page, project):
     page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
                             " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv), None, None])
     page.setdefault("choices", [])  # a QA page usually has none, and the template maps over the list
-    page["replyPrefix"] = "QA passed: %s" % qa["feature"]
-    page["reply"] = ""
+    page["approval"] = "QA passed: %s" % qa["feature"]
+    page.pop("replyPrefix", None)
+    page.pop("reply", None)
+
+
+def load_gate_patterns():
+    """The design-loop gate's own regexes, loaded from hook.py beside this script, not copied.
+    hook.py only runs main() under __main__, so importing it by path has no side effects
+    (verify.py loads it the same way)."""
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hook.py")
+    spec = importlib.util.spec_from_file_location("hook_for_make_page", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod._LOOP_DESIGN_RE, mod._LOOP_PLAN_RE, mod._LOOP_QA_RE
+
+
+def is_qa_approval(page):
+    return "qa" in page or str(page.get("approval", "")).startswith("QA passed")
+
+
+def check_approval(page):
+    """The copy box holds the approval phrase (plus picks); it must be text the gate accepts."""
+    appr = page.get("approval")
+    if not isinstance(appr, str) or not appr.strip():
+        die("content needs an 'approval' field: the exact phrase the design-loop gate accepts, such as "
+            "\"Build plan approved: <feature>\" or \"Design approved: <feature>\" (a QA page gets \"QA passed: <feature>\")")
+    if appr != appr.strip() or "\n" in appr:
+        die("approval must be one line with no spaces at either end")
+    design, plan, qa = load_gate_patterns()
+    qa_page = is_qa_approval(page)
+    pats = [qa] if qa_page else [design, plan]
+    want = "QA passed: <feature>" if qa_page else "Design approved: <feature> or Build plan approved: <feature>"
+    for text in (appr, appr + " 1A"):
+        if not any(p.search(text) for p in pats):
+            die("approval %r would not open the design-loop gate (checked %r); write it as %s" % (appr, text, want))
+
+
+def apply_approval_todo(page):
+    """Make the wrap-up's last to-do line say the phrase the copy box holds."""
+    import html
+    appr = html.escape(page["approval"], quote=False)
+    if is_qa_approval(page):
+        feature = appr.split(":", 1)[1].strip()
+        line = ('Tap <b>Copy my reply</b> and send it: "%s", or send "QA failed: %s" with what to change.'
+                % (appr, feature))
+    else:
+        line = 'Tap <b>Copy my reply</b> and send it: "%s", or say what to change.' % appr
+    wrap = page.setdefault("wrapup", {})
+    todo = wrap.get("todo")
+    if not isinstance(todo, list) or not todo:
+        wrap["todo"] = [line]
+    else:
+        todo[-1] = line
 
 
 def record_qa_page(project, out):
@@ -330,6 +382,8 @@ def build(args):
         die("content %s must be a JSON object" % args.content)
     if "qa" in page:
         apply_qa(page, project)
+    check_approval(page)
+    apply_approval_todo(page)
     check_reserved(page, style)
     check_pictures(page, style)
     stem = os.path.basename(args.content)

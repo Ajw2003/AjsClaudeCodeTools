@@ -1,8 +1,7 @@
 {
   "title": "Guards Audit",
   "eyebrow": "Audit for approval · GitHub issue 285, \"Guards block only unrecoverable actions\" · nothing changed yet",
-  "replyPrefix": "Build plan approved: guards audit",
-  "reply": "Build plan approved: guards audit",
+  "approval": "Build plan approved: guards audit",
   "short": {
     "lead": "I went through every hook in hook.py (a hook is an automatic check) that can stop me. My test was yours: only data loss with no way back, or a change to someone else's work, should stop me. Nine kinds of destructive action are refused outright, and each refusal names the safe way to do the job instead. Deletes are refused only when the data isn't saved. You are asked only when no safe way exists and I cite a source proving it. Five workflow checks keep refusing, and each refusal now gives the exact fix, so I can correct course without stalling. The background-work guard is removed entirely. A page built by make_page.py is never refused again.",
     "hint": "Tap a card for what it guards today and what changes.",
@@ -57,6 +56,6 @@
     "changing": "hook.py's guard lists, the page check, the prompt timer, the GitHub and helper-count guards, the whole-file rewrite prompt, the rule text in house-rules.md, and the checks in verify.py that test each.",
     "blocking": "Your approval of this audit. Reply with the words \"Build plan approved: guards audit\". Nothing else is waiting on you.",
     "next": "I open one child issue per area and run one builder at a time, then open one pull request for you to test. The fixes for automatic pages follow on the same branch.",
-    "todo": ["Read the cards at the top, then the Changes list below them.", "Tap <b>Copy my reply</b>, then paste it into the chat and send it. Or tell me what to change."]
+    "todo": ["Read the cards at the top, then the Changes list below them.", "Tap <b>Copy my reply</b> and send it: \"Build plan approved: guards audit\", or say what to change."]
   }
 }

@@ -9235,11 +9235,15 @@ def _mp_proj(name, style=None):
     return d
 
 
-def _mp_content(name, extra_changes=None, text="Plain."):
-    page = {"title": "T " + name, "eyebrow": "e", "replyPrefix": "R", "reply": "",
+def _mp_content(name, extra_changes=None, text="Plain.", approval="Build plan approved: demo thing", choices=None):
+    page = {"title": "T " + name, "eyebrow": "e", "approval": approval,
             "short": {"lead": text, "hint": "h", "key": [["We", ""]], "items": [["bulb", "Idea", "The idea", "", "c", "r"]]},
             "changes": [["new", "A thing", "One line.", None, "Detail.", None, None]] + (extra_changes or []),
             "wrapup": {"summary": "s", "changing": "c", "blocking": "b", "next": "n", "todo": ["t"]}}
+    if approval is None:
+        del page["approval"]
+    if choices is not None:
+        page["choices"] = choices
     path = os.path.join(_mp_tmp, name + ".page.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(page, f)
@@ -9418,8 +9422,8 @@ _mp_cases.append(("make_page: QA mode marks an unplanned file 'Not in the plan' 
                   _rows.get("extra.py", [0] * 4)[3] == [["Not in the plan", 0, 0]]
                   and _rows.get("untouched.py", [0] * 4)[3] == [["Planned but not changed: tidy", 3, 1]]
                   and _rows.get("planned.py", [0] * 4)[3] == [["Plan estimate: grow", 5, 0]]))
-_mp_cases.append(("make_page: QA mode sets replyPrefix, empties reply and adds the Still unverified item",
-                  _pg["replyPrefix"] == "QA passed: demo feature" and _pg["reply"] == ""
+_mp_cases.append(("make_page: QA mode sets approval to the QA passed phrase and adds the Still unverified item",
+                  _pg.get("approval") == "QA passed: demo feature" and "replyPrefix" not in _pg
                   and any(c[0] == "keep" and c[1] == "Still unverified" and c[2] == "1 things not yet proven" for c in _pg["changes"])))
 _rc, _o = _mp("build", _mp_qa_content("qa2", dict(_qa, unverified=[])), "--project", _d)
 _mp_cases.append(("make_page: QA mode with an empty unverified list is refused with exit 2",
@@ -9432,6 +9436,53 @@ with open(_stage, encoding="utf-8") as _f:
     _sd = json.load(_f)
 _mp_cases.append(("make_page: QA mode writes qa_page into an existing stage file and keeps its other keys",
                   _rc == 0 and _sd == {"feature": "demo", "stage": "Build", "qa_page": "docs/plans/qa3.html"}))
+
+# The copy box must hold the exact phrase the design-loop gate accepts (#286).
+_hk_spec = _ig_util.spec_from_file_location("hook_for_approval", HOOK)
+_hk = _ig_util.module_from_spec(_hk_spec)
+_hk_spec.loader.exec_module(_hk)
+_gate = lambda t: bool(_hk._LOOP_DESIGN_RE.search(t) or _hk._LOOP_PLAN_RE.search(t))
+_d = _mp_proj("appr", {"use": "defaults"})
+_rc, _o = _mp("build", _mp_content("noappr", approval=None), "--project", _d)
+_mp_cases.append(("make_page: a non-QA page with no approval field is refused with exit 2 naming approval",
+                  _rc == 2 and "approval" in _o))
+_rc, _o = _mp("build", _mp_content("badappr", approval="Guards audit"), "--project", _d)
+_mp_cases.append(("make_page: an approval the gate would not accept is refused with exit 2",
+                  _rc == 2 and "gate" in _o))
+_ch = [["c1", "Which?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""]]
+_ph = "Build plan approved: guards <audit> & more"
+_rc1, _ = _mp("build", _mp_content("withch", approval=_ph, choices=_ch), "--project", _d)
+_rc2, _ = _mp("build", _mp_content("noch", approval=_ph, choices=[]), "--project", _d)
+_pw = {n: _mp_page_of(os.path.join(_d, "docs", "plans", n + ".html")) for n in ("withch", "noch")} if _rc1 == _rc2 == 0 else {}
+_mp_cases.append(("make_page: the last to-do line carries the approval phrase, HTML-escaped",
+                  bool(_pw) and all(pg["wrapup"]["todo"][-1] == 'Tap <b>Copy my reply</b> and send it: "Build plan approved: guards &lt;audit&gt; &amp; more", or say what to change.'
+                                    for pg in _pw.values())))
+_NODE = shutil.which("node") or "/opt/node22/bin/node"
+_PWMOD = "/opt/node22/lib/node_modules"
+_JS = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const out={};
+for(const f of process.argv.slice(2)){const p=await b.newPage();await p.goto('file://'+f);
+await p.evaluate(()=>{for(const n of new Set([...document.querySelectorAll('input[type=radio]')].map(r=>r.name))){const r=document.querySelector('input[name='+n+']');r.checked=true;r.dispatchEvent(new Event('input',{bubbles:true}));r.dispatchEvent(new Event('change',{bubbles:true}));}});
+out[f]=await p.evaluate(()=>document.getElementById('out').textContent);}
+console.log(JSON.stringify(out));await b.close();})();""")
+if not (_pw and os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, "playwright"))):
+    report("SKIP", "make_page: the copied text of a built page matches the gate (no node or node playwright here)")
+else:
+    _jsf = os.path.join(_mp_tmp, "copy.js")
+    with open(_jsf, "w", encoding="utf-8") as _f:
+        _f.write(_JS)
+    _pgs = [os.path.join(_d, "docs", "plans", n + ".html") for n in ("withch", "noch")]
+    _r = subprocess.run([_NODE, _jsf] + _pgs, capture_output=True, text=True, timeout=180,
+                        env=dict(os.environ, NODE_PATH=_PWMOD, PLAYWRIGHT_BROWSERS_PATH=os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")))
+    try:
+        _cp = json.loads(_r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        _cp = None
+    if _cp is None:
+        report("SKIP", "make_page: the copied text of a built page matches the gate (browser did not run: %s)" % (_r.stderr.strip()[-200:] or "no output"))
+    else:
+        _w, _n = _cp[_pgs[0]], _cp[_pgs[1]]
+        _mp_cases.append(("make_page: the copied text, with choices (approval then picks) and without (approval alone), matches the gate",
+                          _w == _ph + " 1A" and _n == _ph and _gate(_w) and _gate(_n)))
 
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
