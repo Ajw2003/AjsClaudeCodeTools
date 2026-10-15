@@ -18,6 +18,7 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 | Feature home | `_loop_record_issues`, `autosave` (PostToolUse) | Issues made during Plan, by `gh issue create` or the GitHub tool, are recorded; "Build plan approved" needs two labelled `AjsAgent created this` (#231). |
 | Issue labels | `_loop_labels`, `_loop_wrong` | An issue's label says whose move it is: `in progress` is mine, `needs review` is aj's. Read from GitHub every time (`gh api`, in parallel, 5-second limit); if that fails, from the changes `autosave` recorded (`_loop_record_labels`), and the note says why (#235, #236). Design `docs/plans/label-check.html`, plan `docs/plans/label-check-plan.html`. |
 | Label checks | `scope`, `commitgate`, `handover` | "Build plan approved" needs every issue `in progress`. Swapping every issue to `needs review` moves Build to QA and closes code; so does a pull request opening during Build (#267). A QA answer counts only in QA. "QA failed" keeps the issues, and the redo's "Design approved" needs them back to `in progress`. In Build an edit is refused while any label is wrong. The end-of-reply check names wrong labels (#237, #238). |
+| QA start and page | `autosave`, `make_page.py` QA mode, `handover` (`qa page` row) | A pull request opening during Build moves the stage to QA (#267); the QA page is built by the page builder and its path stored as `qa_page` (#268); a reply in QA is sent back once until that page is linked (#269). See below. |
 | Code lock | `commitgate` (PreToolUse), `_loop_gate` | Refuses Write/Edit/NotebookEdit of source files outside Build. `docs/`, `.claude/` and `.md` files stay open. Holds helpers' edits too. |
 | Helpers | `subagentrules` (SubagentStart), `_loop_helper_note` | A helper starts knowing the feature, stage and issues, and that it only builds approved steps. The "reads like a go-ahead" guess is off while the loop is on (#232). |
 | Long replies | `handover` (Stop), `_long_reply_words` | A reply over 200 words (code blocks not counted) with no page or picture link gets a reminder (#226). |
@@ -26,21 +27,19 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 "I review" happens inside Build, because fixing what my own review finds is code. aj's review and
 test are one QA step with a pass/fail answer.
 
-### Enforced QA stage (planned, #264)
+### Enforced QA stage (built, #264)
 
-Designed in `docs/plans/qa-stage-design.html`, approved 2026-10-15; build plan `docs/plans/qa-stage-plan.html`.
-Not built yet. When built:
+Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.html`, both approved 2026-10-15.
 
 - **QA starts** when a pull request is opened for the feature (`gh pr create` or the GitHub tool's
-  `create_pull_request`, seen by `autosave` on PostToolUse) or when every issue says `needs review`, whichever
-  comes first. Code is closed from that moment.
-- **The QA page** is built by `make_page.py` in QA mode. The builder counts each changed file's added and
-  removed lines from `git diff --numstat <base>...HEAD`; the content file gives only the plan's estimate and a
-  note per file, plus a required list of what is unverified. The page's reply is fixed to
-  "QA passed: <feature>". The builder writes the page's path into the stage file (`qa_page`).
-- **The checkpoint** is a sixth "reply ends" row, `qa page`: in QA, a reply blocks once until `qa_page` is set
-  and a reply has linked it.
-- **The stage survives a new session**, according to the stage-file choice on the build plan page.
+  `create_pull_request`, seen by `autosave`, #267) or when every issue says `needs review`, whichever comes first.
+  Code is closed from that moment.
+- **The QA page** is built by `make_page.py build` in QA mode (`qa` block: feature, base, unverified, files). It
+  counts each file's added and removed lines from `git diff --numstat <base>...HEAD`, refuses an empty
+  unverified list, fixes the reply to "QA passed: <feature>" and records the path as `qa_page` in the stage file (#268).
+- **The checkpoint** is a sixth "reply ends" row, `qa page`: in QA a reply is sent back once until `qa_page` is
+  set and the page is linked (#269).
+- **The stage survives a new session**: the stage file is committed with the branch (#265).
 
 ## Invariants
 
