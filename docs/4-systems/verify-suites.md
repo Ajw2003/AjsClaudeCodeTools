@@ -73,6 +73,13 @@ file there is still a real failure.
 
 ## Traps
 
+- **A stale temp file from an earlier run turned asks into refusals (#229).** The hooks keep
+  state in the temp folder (`house-rules-last-seen-<session>`, the waiting-on-you list) and the
+  suite reuses session names, so a file over five minutes old made `guard` believe aj was away:
+  41 checks failed until a rerun refreshed it. Since 2026-10-15 every run sets its own `TMPDIR`.
+  Reproduced before the fix by planting 20-minute-old files: the old suite failed 41, the new
+  one passed 684 of 684, twice.
+
 - **Most drift checks run in one direction only.** Most restatement checks in `house-rules`' suite
   assert that a phrase still appears in `house-rules.md`; they do not assert that the phrase still
   appears in the *restatement* the check is named for. So a phrase can be quietly deleted from

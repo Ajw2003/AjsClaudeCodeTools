@@ -1,0 +1,271 @@
+<title>Consolidate First</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: overlap map — one tile per existing rule this touches, coloured by what happens to it, with a live fit meter. Was: a working bench — tappable diagram of where each piece runs, a live mock of the block, a reply meter, then the build track. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#5a6578; --line:#d8dee8;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --part:#9a6200; --part-soft:#fbefd6; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:24px 64px;display:grid;gap:34px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(1.8rem,6vw,2.5rem);font-weight:800}
+h2{font-size:1.3rem;font-weight:600;display:flex;align-items:center;gap:10px}
+p{margin:0}
+.lede{color:var(--muted);max-width:60ch}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+section{display:grid;gap:14px}
+.ico{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ico.lg{width:44px;height:44px}
+.num{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .9rem var(--display);flex:none}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* diagram */
+.diagram{position:relative;display:grid;gap:12px;padding-left:4px}
+.diagram::before{content:"";position:absolute;left:31px;top:20px;bottom:20px;width:3px;background:var(--line);border-radius:2px}
+.node{position:relative;display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px 10px 0;text-align:left}
+.node > span{min-width:0}
+.node .bubble{justify-self:center;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent);border:3px solid var(--bg)}
+.node[aria-expanded="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.node b{display:block}
+.node small{color:var(--muted);font-size:.82rem}
+.tagi{font-size:.72rem;font-weight:700;border-radius:999px;padding:3px 8px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.detail{background:var(--card);border:1px dashed var(--accent);border-radius:12px;padding:12px 14px;display:grid;gap:8px;font-size:.92rem;margin-left:56px}
+.files{display:flex;flex-wrap:wrap;gap:6px}
+.file{display:inline-flex;align-items:center;gap:5px;font-size:.78rem;border:1px solid var(--line);border-radius:6px;padding:2px 7px;background:var(--bg)}
+.file .ico{width:14px;height:14px}
+
+/* simulator */
+.sim{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:14px}
+.lockrow{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.lockbadge{width:72px;height:72px;border-radius:18px;display:grid;place-items:center;transition:background .25s,color .25s}
+.lockbadge.locked{background:var(--gap-soft);color:var(--gap)}
+.lockbadge.open{background:var(--ok-soft);color:var(--ok)}
+.lockbadge.once{background:var(--part-soft);color:var(--part)}
+.state b{font-family:var(--display);font-size:1.15rem;display:block}
+.state small{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chipbtn{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 11px;font-size:.85rem}
+.chipbtn:hover{border-color:var(--accent)}
+.say{display:flex;gap:8px}
+.say input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:var(--bg);color:var(--fg)}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:10px;padding:10px 14px;font-weight:700}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:520px){.acts{grid-template-columns:1fr}}
+.act{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;font-size:.88rem;text-align:left}
+.log{display:grid;gap:6px;max-height:220px;overflow-y:auto}
+.logline{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;font-size:.86rem;padding:6px 8px;border-radius:8px;background:var(--bg)}
+.logline.ok{color:var(--ok)} .logline.no{color:var(--gap)} .logline.mid{color:var(--part)} .logline.info{color:var(--muted)}
+.logline span{color:var(--fg);min-width:0}
+
+/* meter */
+.meter{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.reply{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+.bell{width:60px;height:60px;border-radius:16px;display:grid;place-items:center;background:var(--bg);color:var(--muted);transition:background .2s,color .2s}
+.bell.ring{background:var(--part-soft);color:var(--part);animation:ring .5s 1}
+@keyframes ring{25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+@media (prefers-reduced-motion:reduce){.bell.ring{animation:none}}
+.bars{display:flex;gap:2px;align-items:flex-end;height:46px}
+.bars i{flex:1;background:var(--line);border-radius:2px 2px 0 0}
+.bars i.on{background:var(--accent)} .bars i.over{background:var(--part)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.toggle{display:flex;align-items:center;gap:8px;font-size:.9rem}
+.toggle input{width:20px;height:20px;accent-color:var(--accent)}
+
+/* track */
+.track{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:560px){.track{grid-template-columns:1fr 1fr}}
+.stop{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;align-content:start;text-align:left}
+.stop .top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.stop .ico{color:var(--accent)}
+.stop b{font-size:.9rem}
+.stop small{color:var(--muted);font-size:.78rem}
+.stop a{color:var(--accent);font-size:.8rem}
+.dots{display:flex;gap:3px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+
+/* show definition */
+.define{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media (max-width:520px){.define{grid-template-columns:1fr}}
+.d{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.d .ico{color:var(--accent);margin-top:2px}
+.d.no .ico{color:var(--gap)}
+.d small{display:block;color:var(--muted);font-size:.82rem}
+.defpick{cursor:pointer}.defpick:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.sug{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-left:6px}
+.dec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}
+.opt{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:9px 12px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input{accent-color:var(--accent)}
+textarea{width:100%;box-sizing:border-box;min-height:70px;border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;background:var(--bg);color:var(--fg)}
+pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px;margin:0;font-size:.85rem}
+.status{font-size:.85rem;color:var(--muted)}
+</style>
+<style>
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.lg{display:inline-flex;align-items:center;gap:5px;font-size:.8rem;font-weight:700;border-radius:999px;padding:4px 10px}
+.k-merge{--k:var(--accent);--ks:var(--accent-soft)} .k-swap{--k:var(--gap);--ks:var(--gap-soft)}
+.k-plug{--k:var(--ok);--ks:var(--ok-soft)} .k-keep{--k:var(--muted);--ks:var(--bg)}
+.lg{background:var(--ks);color:var(--k)} .lg .ico{width:16px;height:16px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:560px){.tiles{grid-template-columns:1fr}}
+.tile{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--k);border-radius:10px;padding:10px 12px;display:grid;gap:6px;text-align:left;align-content:start}
+.tile .top{display:flex;align-items:center;gap:8px}
+.tile .top .ico{color:var(--k)}
+.tile .top b{flex:1;font-size:.92rem}
+.tile .chars{font-size:.75rem;color:var(--muted);white-space:nowrap}
+.tile .verdict{font-size:.82rem;color:var(--k);font-weight:700}
+.tile[aria-expanded="true"]{box-shadow:0 0 0 2px var(--ks)}
+.ba2{display:grid;gap:6px;font-size:.84rem}
+.ba2 div{border-radius:8px;padding:7px 9px;background:var(--bg)}
+.ba2 .lab{display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.ba2 code{font-size:.78em}
+.sw2{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:700;padding-top:4px}
+.sw2 input{width:20px;height:20px;accent-color:var(--accent)}
+.fit{position:sticky;bottom:0;padding:8px 12px!important;gap:6px!important;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px;box-shadow:0 -6px 18px rgba(0,0,0,.08)}
+.fitbar{position:relative;height:22px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.fitbar span{position:absolute;top:0;bottom:0;transition:left .25s,width .25s}
+.fitbar .lim{position:absolute;top:0;bottom:0;width:2px;background:var(--gap)}
+.fitline{display:flex;align-items:center;gap:8px;font-size:.88rem}
+.fitline .ico{flex:none}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol>
+    <symbol id="i-once" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/><path d="M12 14v3"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4"/><path d="M16 8l4 4-4 4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M19 19v2H6"/></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
+    <symbol id="i-flow" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="6" rx="1"/><rect x="14" y="15" width="7" height="6" rx="1"/><path d="M6.5 9v4a2 2 0 0 0 2 2H14"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h10"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></symbol>
+  </defs>
+</svg><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-merge" viewBox="0 0 24 24"><path d="M6 3v6a6 6 0 0 0 6 6h0a6 6 0 0 0 6-6V3"/><path d="M12 15v6"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+<symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21v-7"/><circle cx="12" cy="8" r="5"/></symbol>
+</defs></svg>
+
+<style>
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:8px 16px;font-weight:700}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--bg)}
+.wires{display:grid;gap:8px}
+.wire{display:grid;grid-template-columns:1fr 26px 1fr;gap:6px;align-items:center}
+.box{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 10px;font-size:.85rem;display:flex;gap:6px;align-items:center;min-width:0;transition:background .25s,border-color .25s}
+.box code{background:none;padding:0;font-size:.82rem;overflow-wrap:anywhere}
+.box.dup{border-color:var(--gap);background:var(--gap-soft);color:var(--gap)}
+.box.good{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.arrow{color:var(--muted);text-align:center}
+.tally2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.t2{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+.t2 b{display:block;font:800 1.8rem var(--display);transition:color .25s}
+.t2 small{color:var(--muted);font-size:.8rem}
+.today{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.choice{display:grid;gap:8px}
+.ch{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.ch:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.ch input{margin-top:4px;accent-color:var(--accent)}
+.ch small{display:block;color:var(--muted);font-size:.84rem}
+.mini{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.mini span{font-size:.72rem;border-radius:999px;padding:2px 8px;font-weight:700}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">New idea · before building · nothing changed yet</div>
+    <h1>Consolidate First</h1>
+    <p class="lede">Check what already exists and cut, merge or reuse it before building anything new on top. Here's the pattern from your Unity example, then where it would live.</p>
+  </header>
+
+  <section aria-labelledby="h1">
+    <h2 id="h1"><svg class="ico" style="color:var(--accent)"><use href="#i-flow"/></svg>The pattern</h2>
+    <div class="seg" role="group" aria-label="Show"><button type="button" data-v="before" aria-pressed="true">Built on top</button><button type="button" data-v="after" aria-pressed="false">Consolidated</button></div>
+    <div class="tally2">
+      <div class="t2"><b id="nIn">3</b><small>ways to read input</small></div>
+      <div class="t2"><b id="nEv">2</b><small>event managers</small></div>
+    </div>
+    <div class="wires" id="wires"></div>
+    <p class="status" id="wnote"></p>
+  </section>
+
+  <section aria-labelledby="h2">
+    <h2 id="h2"><svg class="ico" style="color:var(--accent)"><use href="#i-eye"/></svg>What covers this today</h2>
+    <div class="today"><svg class="ico" style="color:var(--part)"><use href="#i-once"/></svg><div><b>One line, a preference, nothing checks it</b><br><small style="color:var(--muted)">standards/coding-philosophy.md:15: "Delete before you add. Before introducing a new abstraction, dependency, or file, check whether an existing one already does the job." Nothing makes me show you the check.</small></div></div>
+  </section>
+
+  <section aria-labelledby="h3">
+    <h2 id="h3"><svg class="ico" style="color:var(--accent)"><use href="#i-hand"/></svg>Where it lives: pick one</h2>
+    <div class="choice">
+      <label class="ch"><input type="radio" name="c" value="A"><span><b>A · Part of show, don't tell</b> <span class="sug">my suggestion</span><small>Every proposal page opens with an overlap map like the one you just approved: what exists, what merges, gets cut, gets reused. One added sentence. You can't approve a design without seeing what it builds on.</small>
+        <span class="mini"><span style="background:var(--ok-soft);color:var(--ok)">+1 sentence</span><span style="background:var(--ok-soft);color:var(--ok)">shown every time</span></span></span></label>
+      <label class="ch"><input type="radio" name="c" value="B"><span><b>B · Its own rule</b><small>"Consolidate before you build" as a separate house rule, with its own detail file.</small>
+        <span class="mini"><span style="background:var(--part-soft);color:var(--part)">+ ~300 chars</span><span style="background:var(--part-soft);color:var(--part)">rules file is full</span></span></span></label>
+      <label class="ch"><input type="radio" name="c" value="C"><span><b>C · Strengthen the standards line</b><small>Turn "Delete before you add" into a must, in the coding standards only. Applies to code, not to rules or plugin design.</small>
+        <span class="mini"><span style="background:var(--gap-soft);color:var(--gap)">not shown to you</span></span></span></label>
+    </div>
+  </section>
+
+  <section aria-labelledby="h4">
+    <h2 id="h4"><svg class="ico" style="color:var(--accent)"><use href="#i-book"/></svg>Still open: where the rule goes</h2>
+    <p class="lede">With your merges the rules file is still about 420 characters over its safe line. Two ways out.</p>
+    <div class="choice">
+      <label class="ch"><input type="radio" name="p" value="B"><span><b>Its own slot at session start</b> <span class="sug">my suggestion</span><small>Loaded in full every session through the slot that loads the coding standards (about half full). The merges still go ahead and free room in the rules file.</small></span></label>
+      <label class="ch"><input type="radio" name="p" value="short"><span><b>Shorten the rule until it fits</b><small>Cut about 420 characters from the approved wording. I'd show you the cut version for approval.</small></span></label>
+    </div>
+  </section>
+
+  <section>
+    <button class="primary" id="copy" type="button">Copy my answers</button>
+    <pre id="out" aria-live="polite">Pick one in each section.</pre>
+  </section>
+</div>
+<script>
+const W={before:[
+  ["PlayerController","Input.GetKey directly","dup"],
+  ["MenuUI","Input.GetKey directly","dup"],
+  ["Inventory","InputManager",""],
+  ["New quest feature","new QuestEventManager","dup"]],
+ after:[
+  ["PlayerController","InputManager","good"],
+  ["MenuUI","InputManager","good"],
+  ["Inventory","InputManager",""],
+  ["New quest feature","EventManager (existing)","good"]]};
+const NOTE={before:"Red: built beside something that already does the job. Each one is a second place to fix every bug.",after:"Green: rerouted to what already existed. QuestEventManager is never written."};
+function show(v){
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
+  document.getElementById("wires").innerHTML=W[v].map(([a,b,c])=>`<div class="wire"><div class="box"><svg class="ico" style="width:16px;height:16px"><use href="#i-code"/></svg><code>${a}</code></div><span class="arrow">→</span><div class="box ${c}"><code>${b}</code></div></div>`).join("");
+  const nIn=v==="before"?3:1,nEv=v==="before"?2:1;
+  const a=document.getElementById("nIn"),e=document.getElementById("nEv");a.textContent=nIn;e.textContent=nEv;
+  a.style.color=e.style.color=v==="before"?"var(--gap)":"var(--ok)";
+  document.getElementById("wnote").textContent=NOTE[v];
+}
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>show(b.dataset.v));show("before");
+const out=document.getElementById("out");
+document.addEventListener("change",()=>{const c=document.querySelector("input[name=c]:checked"),p=document.querySelector("input[name=p]:checked");
+  out.textContent=[c?`Consolidate-first option ${c.value} approved`:"Consolidate-first: ?",p?(p.value==="B"?"Rule placement B approved":"Rule placement: shorten approved"):"Rule placement: ?"].join(" · ")});
+document.getElementById("copy").onclick=()=>navigator.clipboard.writeText(out.textContent).catch(()=>{const r=document.createRange();r.selectNodeContents(out);getSelection().removeAllRanges();getSelection().addRange(r)});
+</script>

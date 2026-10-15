@@ -59,7 +59,6 @@
   changing a public API/signature.
 - Don't ask before: fixing an obvious bug in the file already being edited, formatting,
   writing tests for code just written.
-- Prefer proposing a plan for anything non-trivial before writing code.
 - Match the style already present in a file over the rules in this doc, if they conflict —
   consistency within a file beats a global rule.
 

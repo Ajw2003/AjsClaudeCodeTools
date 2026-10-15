@@ -1,4 +1,36 @@
-# Today — 2026-10-10
+# Today — 2026-10-15
+
+The new item visual v2, plugin 2.65.1 (issue #240). On a handover page a New item now opens to three boxes:
+what exists today, what this creates, and how it impacts you. Every item you open lists the files it touched,
+with lines added and removed, counted from git by `tools/diff_parts.py`. The changes page covers the whole pull
+request this way. `verify.py` also no longer fails when an earlier run left a stale temp file (#229).
+
+The clear writing check, plugin 2.65.0 (issue #245). One rule, "Write it so nothing is left to guess", now
+covers how everything you read is written: proper sentences, a human tone, said once, context spelled out,
+numbers counted rather than guessed, and references named. A checker reads every reply, page and issue for
+vague numbers, bare "#229"s, repetition, jargon and overlong sentences; an issue without "Depends on",
+"Depended on by" and "Done when" is refused; and a new editor helper rewrites pages and long replies. It
+replaced the plain-language rule and folded in three other lines. `HOUSE_RULES_CLEAR_WRITING=off` turns it off.
+
+The new item visual, plugin 2.64.1 (issue #240). On a handover page, a New item now opens to three boxes:
+what sets it off, what it does, what you get. The changes page has one for each of its 13 new items. A pasted
+page reply such as ": 1C" no longer becomes part of a feature's name, so a redo after "QA failed" is recognised.
+
+The label check, plugin 2.64.0 (issue #235). An issue's label now says whose move it is, and every step of the
+design loop checks it: `in progress` while I work, `needs review` when it's your turn. Swapping every issue to
+`needs review` starts a new QA stage and closes code; your QA answer only counts then; after "QA failed" the
+issues go back to `in progress` before the redo's design can be approved. Labels are read from GitHub, or from my
+own recorded label changes when GitHub can't be read, and the check says which. It ships in the same pull request
+as the design loop.
+
+The design loop, plugin 2.63.0 (issue #223). Every feature now goes Design → Plan → Build → my review → your QA →
+Done, and only your own message moves it on: "Design approved: <feature>", "Build plan approved: <feature>",
+"QA passed: <feature>" or "QA failed: <feature>". Code edits are refused outside Build, for helpers too; "skip
+design" lets one small change through. An approval only counts once the decisions log has a new entry, and a
+build plan needs its GitHub issues first. A reply over 200 words with no page gets a reminder, and every page is
+built from `templates/handover-page.html`. `HOUSE_RULES_LOOP=off` turns it all off. It reaches your sessions once
+this branch is merged and the plugin updates. Proof: a real run in a scratch repo (`docs/plans/loop-qa.html`).
+
 
 New rule, plugin 2.62.0 (issue #216): a reply that refers back to something names it in a few words, and never
 leaves you to work out what a bare "#2" or "option B" meant. An issue number always comes with its title. It sits

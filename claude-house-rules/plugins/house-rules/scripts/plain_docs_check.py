@@ -39,22 +39,9 @@ import re
 import subprocess
 import sys
 
-# Small, editable list. Whole-word, case-insensitive. Add to this list as new jargon slips
-# through; it is meant to be tuned, not exhaustive on day one.
-BANNED_WORDS = [
-    "payload",
-    "stdin",
-    "stdout",
-    "dispatch",
-    "handler",
-    "idempotent",
-    "shim",
-    "argv",
-    "callback",
-    "boilerplate",
-    "serialize",
-    "deserialize",
-]
+# The banned-word list is shared with the writing checker (#247): one list for every surface.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from clarity import BANNED_WORDS  # noqa: E402
 
 HEADER_RE = re.compile(
     r"^<!--\s*plain copy of:\s*(?P<path>\S+)\s*@\s*(?P<hash>[0-9a-f]{40})\s*-->\s*$"

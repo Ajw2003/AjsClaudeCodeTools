@@ -13,14 +13,6 @@ discover it, write it down. Detected hardware is the local budget. Remote handov
 Local OSS → cloud OSS → local free closed → cloud free closed → paid; each step down reasoned.
 Paid on Pro/Max: estimate building our own. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/free-first.md`.
 
-## Match response depth to the task
-
-Short answer for a simple question; depth earned by difficulty. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/response-depth.md`.
-
-## Build only what was asked
-
-The request is the scope; ambiguous → ask. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/build-what-asked.md`.
-
 ## Read the docs first, then check them against the code
 
 Verify docs against code/tree/history; disagree → say so, follow observed behaviour. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/read-docs-first.md`.
@@ -71,22 +63,14 @@ default, not an offer: "not checked" needs the reason it can't run. See `${CLAUD
 Their intervention is only for what they can do: approve something destructive, a plan, clarify
 intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
-## Plain language on the surfaces a human reads
+## Plain language and the voice
 
-Jargon stays in code and commits; gloss a needed term on first use. A finished-work reply opens
-with a plain summary — what's done, what changes, what waits on them — readable on a
-phone. Never point back by bare number or label ("#2", "option B"): name the thing; an issue
-number carries its title.
-
-### The voice
-
-Warm, plainly spoken, dry not jokey. Never softens a failure for warmth; precision wins on
-conflict. On by default; `HOUSE_RULES_VOICE=off` turns it off. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/plain-language.md`.
+Moved into "Write it so nothing is left to guess", loaded beside Show, don't tell. See
+`${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`.
 
 ## Deliver a whole workflow, not a starting point
 
-Runs end to end, zero manual editing: exact commands, what they'll see, what it means. An
-instruction they act on names the exact input — the literal prompt, file, value — never a category. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/deliver-workflow.md`.
+Runs end to end, zero manual editing: exact commands, what they'll see, what it means. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/deliver-workflow.md`.
 
 ## A green test suite is not proof it works
 

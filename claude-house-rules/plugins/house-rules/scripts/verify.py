@@ -34,6 +34,15 @@ import sys
 import tempfile
 import time
 
+# #229: every run gets its own temp folder. The hooks keep small state files in the temp folder
+# (when aj last wrote, the waiting-on-you list), and these tests reuse session names, so a file
+# left by an earlier run made the guard believe aj was away and turn its asks into refusals.
+# TMPDIR reaches every hook these tests start; tempfile.tempdir covers this process.
+_RUN_TMP = tempfile.mkdtemp(prefix="house-rules-verify-run-")
+os.environ["TMPDIR"] = _RUN_TMP
+tempfile.tempdir = _RUN_TMP
+atexit.register(shutil.rmtree, _RUN_TMP, True)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOOK = os.path.join(HERE, "hook.py")
 RUN = os.path.join(HERE, "run.sh")
@@ -42,7 +51,7 @@ RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
 AGENTS_DIR = os.path.join(HERE, "..", "agents")
 # The three tier agents and the model each must declare (and, at SubagentStop, actually run on).
-TIERS = {"scout": "haiku", "builder": "sonnet", "reviewer": "opus"}
+TIERS = {"scout": "haiku", "builder": "sonnet", "reviewer": "opus", "editor": "sonnet"}
 ARCHIVIST = os.path.join(HERE, "..", "agents", "archivist.md")
 STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
 TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
@@ -110,6 +119,9 @@ def rules_corpus():
     See docs/6-decisions/Decisions.md, 2026-09-22, for why drift checks read this instead of the core alone.
     """
     corpus = read(RULES_FILE)
+    # The show-don't-tell rule is injected by its own handler (showrule), not inside house-rules.md.
+    corpus += "\n\n" + read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))
+    corpus += "\n\n" + read(os.path.join(HERE, "..", "rules", "clear-writing.md"))
     if os.path.isdir(DETAIL_DIR):
         for name in sorted(os.listdir(DETAIL_DIR)):
             if name.endswith(".md"):
@@ -173,6 +185,9 @@ DEFAULT = "is the default branch"  # in every refusal of a default-branch git wr
 # --- branch fixtures -------------------------------------------------------------------------
 # Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
 _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
+# The design-loop lock (#225) refuses code edits outside Build in any repo, which would turn every
+# fixture edit below into a refusal. It is off for the suite and switched on by its own cases.
+os.environ["HOUSE_RULES_LOOP"] = "off"
 # Simulated spawns in this file must never leave records in the real repository's agent list.
 os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
@@ -295,6 +310,7 @@ def _additional_context(event, payload="", env=None):
 
 _size_cases = [
     ("inject", 9_700, env_in(ROOT)),
+    ("showrule", 9_500, env_in(ROOT)),
     ("standards", 9_500, env_in(ROOT)),
     ("profile", 9_500, env_in(ROOT, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV)),
     ("docstiers", 9_500, env_in(DOCSTIERS_NOT_OWNED)),
@@ -310,6 +326,49 @@ for _event, _margin, _env in _size_cases:
     else:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
         print(f"          {len(_ctx)} chars > {_margin} margin - Claude Code will truncate this")
+
+# --- the show-don't-tell rule reaches the session through its own slot (issue #224) ----------
+_code, _ctx, _err = _additional_context("showrule", "", env=env_in(ROOT))
+_sdt_missing = [p for p in (
+    "## Show, don't tell; the user designs",
+    "The request is the scope",
+    "Every page is a proposal",
+    "what the change merges, cuts or reuses",
+    "one marked as my suggestion",
+    "over 200 words with no page",
+    "A bare\n\"approved\" does not count",
+    "rules/detail/show-dont-tell.md",
+) if p not in (_ctx or "")]
+if not os.path.isfile(os.path.join(DETAIL_DIR, "show-dont-tell.md")):
+    _sdt_missing.append("rules/detail/show-dont-tell.md does not exist")
+if "## Show, don't tell" in read(RULES_FILE):
+    _sdt_missing.append("house-rules.md also carries the rule - it would load twice")
+if _sdt_missing:
+    report("FAIL", "showrule injects the show-don't-tell rule, once, with a live detail pointer")
+    print(f"          missing or wrong: {'; '.join(_sdt_missing)}")
+else:
+    report("PASS", "showrule injects the show-don't-tell rule, once, with a live detail pointer")
+    print(f"          {len(_ctx)} chars; every approved clause present")
+
+# --- the clear-writing rule loads in the same slot, once (#246) -------------------------------
+_cw_missing = [p for p in (
+    "## Write it so nothing is left to guess",
+    "Proper sentences", "Said once", "Explicit context", "Measured, not guessed", "Named references",
+    "Exact inputs", "Done-criteria", "Ask when unclear", "Plain words", "### The voice",
+    "rules/detail/clear-writing.md",
+) if p not in (_ctx or "")]
+if _ctx.count("## Write it so nothing is left to guess") > 1:
+    _cw_missing.append("the rule loads twice")
+if not os.path.isfile(os.path.join(DETAIL_DIR, "clear-writing.md")):
+    _cw_missing.append("rules/detail/clear-writing.md does not exist")
+if os.path.isfile(os.path.join(DETAIL_DIR, "plain-language.md")):
+    _cw_missing.append("rules/detail/plain-language.md still exists beside its replacement")
+if "Never softens a failure" in read(RULES_FILE):
+    _cw_missing.append("house-rules.md still carries the voice - it would load twice")
+report("FAIL" if _cw_missing else "PASS",
+       "showrule injects the clear-writing rule, once, and the old plain-language homes point to it")
+if _cw_missing:
+    print(f"          missing or wrong: {'; '.join(_cw_missing)}")
 
 # --- docstiers: complete/missing, owned/not-owned, ssh, no .git, unreadable/garbage config ----
 _docstiers_cases = [
@@ -1191,8 +1250,6 @@ code, out, err = run_hook("inject", "")
 missing = []
 for h in [
     "Find out what machine you are on",
-    "Match response depth to the task",
-    "Build only what was asked",
     "Read the docs first, then check them against the code",
     "Documentation goes in tiers",
     "Build for a human working alone",
@@ -1314,10 +1371,10 @@ def check_scope(title, payload, expect, empty_path=False):
     if '"hookEventName":"UserPromptSubmit"' not in out:
         bad.append("wrong or missing hookEventName")
     if expect == "long":
-        if "response depth" not in out or "machine you are on" not in out:
+        if "Show, don't tell" not in out or "machine you are on" not in out:
             bad.append("expected the long form, did not see its content")
     elif expect == "short":
-        if "response depth" in out or "machine you are on" in out:
+        if "Show, don't tell" in out or "machine you are on" in out:
             bad.append("expected the short form, but the long form's content is present")
         if "docs tier that changed" not in out:
             bad.append("short form missing the docs-tier line")
@@ -1794,7 +1851,7 @@ else:
 missing = [
     ph
     for ph in [
-        "Plain language on the surfaces a human reads",
+        "Write it so nothing is left to guess",
         "### The voice",
         "gloss",
         "never buys warmth with accuracy",
@@ -1803,29 +1860,29 @@ missing = [
     if ph.lower() not in rules_text.lower()
 ]
 if not missing:
-    report("PASS", "the plain-language rule carries the voice and its hard constraint")
+    report("PASS", "the clear-writing rule carries the voice and its hard constraint")
     print("          tone is a preference; not softening a failure is not")
 else:
-    report("FAIL", "the plain-language rule carries the voice and its hard constraint")
+    report("FAIL", "the clear-writing rule carries the voice and its hard constraint")
     print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
 # --- HOUSE_RULES_VOICE=off removes the voice and nothing else -------------------------------
 # The section is cut by locating the next "## " heading. If that boundary is wrong the toggle
 # eats the rule after it, silently, and nobody notices until a rule stops being enforced.
-code, on_out, err = run_hook("inject", "")
+# Since #245 the voice lives in rules/clear-writing.md, loaded by showrule.
+code, on_out, err = run_hook("showrule", "")
 env_off = dict(os.environ)
 env_off["HOUSE_RULES_VOICE"] = "off"
-code_off, off_out, err_off = run_hook("inject", "", env=env_off)
+code_off, off_out, err_off = run_hook("showrule", "", env=env_off)
 voice_problems = []
 if "### The voice" not in on_out:
     voice_problems.append("the voice is missing by default, but it ships on")
 if "### The voice" in off_out:
     voice_problems.append("HOUSE_RULES_VOICE=off did not remove the voice section")
 for kept in [
-    "Plain language on the surfaces a human reads",
-    "Deliver a whole workflow",
-    "Never hand over a command",
-    "A green test suite is not proof it works",
+    "Write it so nothing is left to guess",
+    "Named references",
+    "Show, don't tell; the user designs",
 ]:
     if kept not in off_out:
         voice_problems.append(f"turning the voice off also removed {kept!r}")
@@ -4210,10 +4267,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.62.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.65.1",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.62.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.65.1",
     "rules section + detail file + version",
 )
 
@@ -4273,7 +4330,7 @@ RESTATEMENTS = [
         "the scope reminder (long form)",
         lambda: run_hook("scope", json.dumps({"prompt": "run the build script"}))[1],
         [
-            "response depth", "only what was asked", "ask instead of assuming",
+            "show, don't tell", "nothing unasked is built",
             "project directory", "hand over a command", "tier that changed",
             "success claim", "whole workflow", "have not run", "own branch", "branch off first",
         ],
@@ -4480,6 +4537,7 @@ TIER_TOOLS = {
     "scout": ["Read", "Grep", "Glob"],
     "builder": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
     "reviewer": ["Read", "Grep", "Glob", "Bash"],
+    "editor": ["Read"],
 }
 agentdrift = []
 for _name, _model in TIERS.items():
@@ -4507,10 +4565,10 @@ for _name, _model in TIERS.items():
 if os.path.isfile(os.path.join(AGENTS_DIR, "executor.md")):
     agentdrift.append("agents/executor.md still exists, it was retired")
 if not agentdrift:
-    report("PASS", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
+    report("PASS", "the scout, builder, reviewer and editor agents exist, pinned to haiku, sonnet, opus and sonnet")
     print("          short tool allowlists, no Agent tool, bodies of 15 lines or fewer, executor.md gone")
 else:
-    report("FAIL", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
+    report("FAIL", "the scout, builder, reviewer and editor agents exist, pinned to haiku, sonnet, opus and sonnet")
     print(f"          {'; '.join(agentdrift)}")
 
 # --- no live file still names the retired executor agent ----------------------------------------
@@ -5354,9 +5412,9 @@ if "## Open source first; paid is the last resort" not in _core:
     _free_problems.append("house-rules.md lacks the rule heading")
 if "${CLAUDE_PLUGIN_ROOT}/rules/detail/free-first.md" not in _core:
     _free_problems.append("house-rules.md does not point at rules/detail/free-first.md")
-if "## Open source first; paid is the last resort" in _core and "## Match response depth" in _core and \
-        _core.index("## Open source first") > _core.index("## Match response depth"):
-    _free_problems.append("the rule is not placed before 'Match response depth'")
+if "## Open source first; paid is the last resort" in _core and "## Read the docs first" in _core and \
+        _core.index("## Open source first") > _core.index("## Read the docs first"):
+    _free_problems.append("the rule is not placed before 'Read the docs first'")
 if "free-first.md" not in read(os.path.join(DETAIL_DIR, "environment.md")):
     _free_problems.append("environment.md does not link free-first.md")
 report("FAIL" if _free_problems else "PASS", "the open-source-first rule and rules/detail/free-first.md exist and agree")
@@ -5817,14 +5875,14 @@ else:
     for s in sar:
         print(f"          {s}")
 
-# A section NOT marked <!-- subagent --> (e.g. "Match response depth to the task") must not
+# A section NOT marked <!-- subagent --> (e.g. "Open source first") must not
 # appear as its own heading in the core - otherwise "marked sections only" is not what ships.
-if "## Match response depth to the task" in core:
+if "## Open source first; paid is the last resort" in core:
     report("FAIL", "subagentrules includes only the sections marked <!-- subagent -->")
     print("          an unmarked heading leaked into the subagent core")
 else:
     report("PASS", "subagentrules includes only the sections marked <!-- subagent -->")
-    print("          an unmarked rule (response depth) is absent from the subagent core")
+    print("          an unmarked rule (open source first) is absent from the subagent core")
 
 # SubagentStart also tells the user the transcript's EXPECTED path, before it exists.
 if code == 0 and "systemMessage" in parsed and "transcript expected at" in parsed["systemMessage"] \
@@ -8231,6 +8289,387 @@ else:
         args=(),
         expect_rc=1,
     )
+
+# --- the design loop: stage tracker, approvals and the code lock (#225) ------------------------
+_loop_dir = tempfile.mkdtemp(prefix="house-rules-loop-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _loop_dir], check=True)
+_loop_labels_file = os.path.join(_FIXTURE_ROOT, "loop-labels.json")
+_loop_env = dict(os.environ, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
+                 HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+
+
+def _loop_gh(label, *numbers):
+    """#236: what the stand-in for GitHub says each issue's labels are."""
+    try:
+        have = json.load(open(_loop_labels_file, encoding="utf-8"))
+    except (OSError, ValueError):
+        have = {}
+    for n in numbers:
+        have["o/r#%d" % n] = ["Feature", "AjsAgent created this", label]
+    with open(_loop_labels_file, "w", encoding="utf-8") as f:
+        json.dump(have, f)
+
+
+def _loop_post(tool, tool_input, response):
+    p = {"hook_event_name": "PostToolUse", "tool_name": tool, "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": tool_input, "tool_response": response}
+    return run_hook("autosave", json.dumps(p), env=_loop_env)[1]
+
+
+def _loop_state():
+    try:
+        return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _loop_stop():
+    return run_hook("handover", stop_payload(last_assistant_message="Done.", cwd=_loop_dir), env=_loop_env)[1]
+
+
+def _loop_edit(rel, **extra):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": {"file_path": os.path.join(_loop_dir, rel)}}
+    p.update(extra)
+    _, out, _ = run_hook("commitgate", json.dumps(p), env=_loop_env)
+    try:
+        return json.loads(out)["hookSpecificOutput"].get("permissionDecision") or "allow"
+    except Exception:
+        return "allow"
+
+
+def _loop_say(prompt, session="loop"):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": session, "cwd": _loop_dir, "prompt": prompt}
+    _, out, _ = run_hook("scope", json.dumps(p), env=_loop_env)
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _loop_log(line):
+    d = os.path.join(_loop_dir, "docs", "6-decisions")
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "Decisions.md"), "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+
+
+def _loop_issue(number, labelled=True, via="mcp"):
+    if via == "mcp":
+        p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "loop",
+             "cwd": _loop_dir, "tool_input": {"method": "create", "title": "t",
+             "labels": ["Feature", "AjsAgent created this"] if labelled else ["Feature"]},
+             "tool_response": {"url": "https://github.com/o/r/issues/%d" % number}}
+    else:
+        p = {"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "loop", "cwd": _loop_dir,
+             "tool_input": {"command": 'gh issue create --title t --label "%s"' % ("AjsAgent created this" if labelled else "x")},
+             "tool_response": {"stdout": "https://github.com/o/r/issues/%d\n" % number}}
+    run_hook("autosave", json.dumps(p), env=_loop_env)
+
+
+def _loop_stage():
+    try:
+        return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["stage"]
+    except (OSError, ValueError, KeyError):
+        return "design (no file)"
+
+
+_loop_cases = []
+_loop_cases.append(("a fresh project refuses a code edit", _loop_edit("app.py") == "deny"))
+_loop_cases.append(("docs/, .claude/ and .md files stay open",
+                    _loop_edit("docs/page.html") == _loop_edit(".claude/x.json") == _loop_edit("notes.md") == "allow"))
+_n = _loop_say("looks good, approved")
+_loop_cases.append(('a bare "approved" moves nothing and asks which', "names no stage and feature" in _n
+                    and _loop_stage() == "design (no file)"))
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("a build-plan approval before its design moves nothing", "nothing moved" in _n
+                    and _loop_stage() == "design (no file)"))
+_n = _loop_say("Design approved: blockers")
+_loop_cases.append(("an approval in a project with no decisions log moves nothing",
+                    "no decisions log" in _n and _loop_stage() == "design (no file)"))
+_loop_log("design decisions for blockers")
+_n = _loop_say("Design approved: blockers")
+_loop_cases.append(('"Design approved: <feature>" moves to Plan, code still closed',
+                    _loop_stage() == "plan" and "now Plan" in _n and _loop_edit("app.py") == "deny"))
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("a build-plan approval with no feature issues moves nothing",
+                    "labelled issue(s)" in _n and _loop_stage() == "plan"))
+_loop_issue(101, labelled=False)
+_loop_issue(102)
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("an unlabelled issue does not count toward the feature's issues",
+                    "has 1 labelled issue(s)" in _n and _loop_stage() == "plan"))
+_loop_issue(103, via="bash")
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("issues from the GitHub tool and from gh both count, so the next check is reached",
+                    "labelled issue(s)" not in _n and _loop_stage() == "plan"))
+_loop_log("plan decisions for blockers")
+_loop_gh("in progress", 101, 102)
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(("label check: a build-plan approval is refused while an issue isn't in progress, naming it",
+                    "not labelled `in progress`: #103" in _n and _loop_stage() == "plan"))
+_loop_gh("in progress", 103)
+_n = _loop_say("Build plan approved: blockers")
+_loop_cases.append(('"Build plan approved: <feature>" opens code', _loop_stage() == "build"
+                    and _loop_edit("app.py") == "allow"))
+_loop_say("hello", session="other")
+_loop_cases.append(('"Build plan approved" carries the hand-to-a-helper instruction', "@house-rules:builder" in _n))
+_g = _loop_say("go ahead and build it")
+_loop_cases.append(("with the loop on, a go-ahead message no longer gets the guess", "reads like a go-ahead" not in _g))
+_sp = {"hook_event_name": "SubagentStart", "session_id": "loop", "agent_id": "h1", "agent_type": "house-rules:builder",
+       "cwd": _loop_dir, "transcript_path": os.path.join(_FIXTURE_ROOT, "loop.jsonl")}
+_, _so, _ = run_hook("subagentrules", json.dumps(_sp), env=_loop_env)
+try:
+    _so = json.loads(_so)["hookSpecificOutput"]["additionalContext"]
+except Exception:
+    pass
+_loop_cases.append(("a helper starts knowing the feature, its stage and issues, and that it only builds",
+                    '"blockers"' in _so and "Build" in _so and "#102" in _so and "never design" in _so))
+_loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
+                    and _loop_edit("app.py", session_id="other") == "allow"))
+_loop_log("build log for blockers")
+_loop_cases.append(("label check: quiet at the end of a reply when every label fits", "design loop" not in _loop_stop()))
+_loop_gh("needs review", 102)
+_loop_cases.append(("label check: in Build, a code edit is refused while an issue isn't in progress",
+                    _loop_edit("app.py") == "deny"))
+_loop_cases.append(("label check: the end-of-reply check names the wrong label",
+                    "should be labelled `in progress`" in _loop_stop() and "#102" in _loop_stop()))
+_n = _loop_say("QA passed: blockers")
+_loop_cases.append(("label check: a QA answer before every issue says needs review moves nothing",
+                    "QA starts only once" in _n and "#101" in _n and _loop_stage() == "build"))
+os.remove(_loop_labels_file)
+_o = _loop_post("mcp__github__issue_write", {"method": "update", "owner": "o", "repo": "r", "issue_number": 101,
+                "labels": ["Feature", "needs review"]}, {"url": "https://github.com/o/r/issues/101"})
+_o += _loop_post("Bash", {"command": 'gh issue edit 102 --add-label "needs review" --remove-label "in progress"'},
+                 {"stdout": "https://github.com/o/r/issues/102\n"})
+_loop_cases.append(("label check: label changes from the GitHub tool and from gh are recorded",
+                    _loop_state().get("labels", {}).get("o/r#101") == ["Feature", "needs review"]
+                    and _loop_state().get("labels", {}).get("o/r#102") == ["Feature", "AjsAgent created this", "needs review"]))
+_loop_cases.append(("label check: when the GitHub read fails, it says so and uses the record",
+                    "GitHub read failed" in _loop_stop() and _loop_stage() == "build"))
+_o = _loop_post("mcp__github__issue_write", {"method": "update", "owner": "o", "repo": "r", "issue_number": 103,
+                "labels": ["needs review"]}, {"url": "https://github.com/o/r/issues/103"})
+_loop_cases.append(("label check: the last swap to needs review starts QA and closes code",
+                    _loop_stage() == "qa" and "the stage is QA" in _o and _loop_edit("app.py") == "deny"))
+_loop_gh("needs review", 101, 102, 103)
+_n = _loop_say("QA failed: blockers - the list is too long")
+_loop_cases.append(("the feature name stops at a spaced dash (found in the label check's real run)",
+                    _loop_state().get("approvals", [{}])[-1].get("name") == "blockers"))
+_loop_cases.append(('"QA failed" goes back to Design and closes code', _loop_stage() == "design"
+                    and _loop_edit("app.py") == "deny"))
+_n = _loop_say("skip design")
+_loop_cases.append(('"skip design" lets exactly one code edit through',
+                    _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
+_loop_cases.append(('label check: after "QA failed", the end-of-reply check asks for in progress again',
+                    "should be labelled `in progress`" in _loop_stop()))
+_loop_log("redo design for blockers")
+_n = _loop_say("Design approved: blockers")
+_loop_cases.append(("label check: the redo's design approval is refused until the issues are back in progress",
+                    "not labelled `in progress`" in _n and _loop_stage() == "design"))
+_loop_gh("in progress", 101, 102, 103)
+_n = _loop_say("Design approved: blockers")
+_loop_cases.append(("label check: then it moves to Plan and keeps the same issues",
+                    _loop_stage() == "plan" and len(_loop_state().get("issues", [])) == 3))
+_loop_log("v2 design"); _loop_say("Design approved: blockers v2. Reply in one sentence.")
+try:
+    _feat = json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["feature"]
+except (OSError, ValueError, KeyError):
+    _feat = None
+_loop_cases.append(("the feature name stops at the end of its sentence (found in the real run)", _feat == "blockers v2"))
+_names = [_ig_mod._loop_name(_r) for _r in ("New item visual: 1C", "Label check plan: 1A 2A", "label check: 2*")]
+_loop_cases.append(("a pasted page reply's answer codes are not part of the name (aj's real messages, #243)",
+                    _names == ["New item visual", "Label check plan", "label check"]))
+_loop_issue(201); _loop_issue(202)
+_loop_gh("in progress", 201, 202)
+_loop_log("v2 plan"); _loop_say("Build plan approved: blockers v2")
+_loop_gh("needs review", 201, 202)
+_loop_log("v2 build"); _n = _loop_say("QA passed: blockers v2")
+_loop_cases.append(('"QA passed" moves to Done and closes code', _loop_stage() == "done"
+                    and _loop_edit("app.py") == "deny"))
+_loop_cases.append(("a helper's edit is held by the same lock",
+                    _loop_edit("app.py", agent_id="helper1") == "deny"))
+_loop_env["HOUSE_RULES_LOOP"] = "off"
+_loop_cases.append(("HOUSE_RULES_LOOP=off lifts the lock", _loop_edit("app.py") == "allow"))
+_loop_env["HOUSE_RULES_LOOP"] = "on"
+with open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), "w") as _f:
+    _f.write("{not json")
+_p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop", "cwd": _loop_dir,
+      "tool_input": {"file_path": os.path.join(_loop_dir, "app.py")}}
+_, _o, _ = run_hook("commitgate", json.dumps(_p), env=_loop_env)
+_loop_cases.append(("an unreadable tracker says so instead of failing silently", "could not read house-rules-loop.json" in _o))
+# -- #226: the long-reply reminder -------------------------------------------------------------
+def _long_reply(text):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=_loop_env)
+    return "show don't tell: this reply is" in out
+
+
+_words250 = " ".join(["word"] * 250)
+_loop_cases.append(("a 250-word reply with no page link gets the reminder", _long_reply(_words250)))
+_loop_cases.append(("a 250-word reply that links a page does not",
+                    not _long_reply(_words250 + " https://claude.ai/artifact/abc")))
+_loop_cases.append(("a 150-word reply does not", not _long_reply(" ".join(["word"] * 150))))
+_loop_cases.append(("words inside a code block are not counted",
+                    not _long_reply(" ".join(["word"] * 150) + "\n```\n" + " ".join(["x"] * 200) + "\n```")))
+_loop_env["HOUSE_RULES_LOOP"] = "off"
+_loop_cases.append(("HOUSE_RULES_LOOP=off also turns the reminder off", not _long_reply(_words250)))
+_loop_env["HOUSE_RULES_LOOP"] = "on"
+
+# -- #233: the handover page template -----------------------------------------------------------
+_tpl_path = os.path.join(HERE, "..", "templates", "handover-page.html")
+_tpl = read(_tpl_path) if os.path.isfile(_tpl_path) else ""
+_tpl_missing = [m for m in ('data-part="short"', 'data-part="changes"', 'data-part="choices"', 'data-part="wrapup"',
+                            "Copy my reply", 'class="owntext"', "const PAGE = {", "What you need to do",
+                            '<div class="flow">', "<small>What exists today</small>", "<small>How it impacts you</small>",
+                            '<div class="files">')
+                if m not in _tpl]
+_loop_cases.append(("the handover template has its four parts, the own-answer box, the copy-reply and the New-item flow",
+                    bool(_tpl) and not _tpl_missing))
+_sdt_detail = read(os.path.join(DETAIL_DIR, "show-dont-tell.md"))
+_loop_cases.append(("the rule names the template and its four parts",
+                    all(w in _sdt_detail for w in ("templates/handover-page.html", "In short", "Changes", "Choices", "Wrap-up"))))
+
+for _t, _ok in _loop_cases:
+    report("PASS" if _ok else "FAIL", "design loop: " + _t)
+
+# --- the clear writing check: the shared checker and where it runs (#247, #248) -----------------
+import clarity as _cw
+_cw_cases = []
+
+
+def _cw_has(fn, text, phrase):
+    return any(phrase in p for p in fn(text))
+
+
+# Each detector, against a real failure from 2026-10-14/15 and its honest rewrite.
+_cw_cases.append(('vague: "about 43 tests" is flagged (aj: "not the kind of thing that is ambiguous")',
+                  _cw_has(_cw.vague_claims, "The pull request adds about 43 tests.", "about 43")))
+_cw_cases.append(("vague: an estimate that says why it's an estimate passes",
+                  not _cw.vague_claims("New file, estimated 25 lines, because it isn't written yet.")))
+_cw_cases.append(('vague: "should work" is flagged; "should work from now on" (a rule, not a guess) is not',
+                  _cw.vague_claims("It should work now.") and not _cw.vague_claims("Every page should work from now on.")))
+_cw_cases.append(('not-checked: a list label "Not checked:" is not a confession (the false alarm of 2026-10-15)',
+                  not _cw.unreasoned_not_checked("**Not checked:** vague numbers, by any hook.")
+                  and _cw.unreasoned_not_checked("I haven't checked the CI logs.")))
+_cw_cases.append(('bare-ref: "see #229." alone is flagged; with its title, or a quoted title after it, it passes',
+                  _cw_has(_cw.bare_references, "Rerun it; see #229.", "#229")
+                  and not _cw.bare_references("See #229 (the stale temp file flake).")
+                  and not _cw.bare_references('Filed as #228, "Audit every house rule".')))
+_cw_cases.append(('bare-ref: a quoted example ("see #229" alone) and a step card ("Step 1 of 3") pass',
+                  not _cw.bare_references('Including "see #229" alone as a test.')
+                  and not _cw.bare_references("### Step 1 of 3 — open the folder")))
+_cw_cases.append(('bare-ref: "option D showed the text" is flagged; "option D: delete the cache" is not',
+                  _cw.bare_references("On that look, option D showed the trimmed text.")
+                  and not _cw.bare_references("Pick option D: delete the cache.")))
+_cw_cases.append(("repeat: three sentences opening \"Nothing\" in a row, and a repeated four-word phrase, are flagged",
+                  _cw.repetition("Nothing changed. Nothing else has changed. Nothing new.")
+                  and _cw.repetition("The check on the count passed. The check on the newest commit is running.")))
+_cw_cases.append(("repeat: parallel list items and a phrase quoted twice are not",
+                  not _cw.repetition("- two sections moved out of the main rules file\n- one line moved out of the standards")
+                  and not _cw.repetition('He said "ask instead of assuming", and the rule says "ask instead of assuming".')))
+_cw_cases.append(("jargon and long sentences are flagged; code spans are not read",
+                  _cw.jargon("The payload is read.") and not _cw.jargon("The `payload` field is read.")
+                  and _cw.long_sentences(" ".join(["word"] * 45) + ".")))
+_cw_cases.append(("issue sections: all three found, or each missing one named",
+                  not _cw.missing_issue_sections("## Depends on\nx\n## Depended on by\ny\n## Done when\nz")
+                  and _cw.missing_issue_sections("## Depends on\nx") == ["Depended on by", "Done when"]))
+_cw_cases.append(("page text: a template page's PAGE strings are what gets read",
+                  "about 43 tests" in _cw.page_text('<p>Hi there all</p><script>const PAGE = {\n lead: "It adds about 43 tests in all."\n};</script>')))
+
+# The reply check: one note, quiet on a clean reply, off with its switch.
+def _cw_stop(text, env=None):
+    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=env or _loop_env)[1]
+
+
+_cw_cases.append(("reply: a vague number and a bare reference get one writing note naming both",
+                  "write it so nothing is left to guess" in _cw_stop("The suite adds about 43 tests; see #229.")
+                  and "#229" in _cw_stop("The suite adds about 43 tests; see #229.")
+                  and "about 43" in _cw_stop("The suite adds about 43 tests; see #229.")))
+_cw_cases.append(("reply: a clean reply gets no writing note",
+                  "write it so nothing is left to guess" not in _cw_stop("The suite adds 43 tests: 616 on main, 659 here.")))
+_cw_cases.append(("reply: HOUSE_RULES_CLEAR_WRITING=off turns the note off",
+                  "write it so nothing is left to guess" not in _cw_stop(
+                      "The suite adds about 43 tests.", env=dict(_loop_env, HOUSE_RULES_CLEAR_WRITING="off"))))
+
+# The page check: a write to docs/plans/*.html.
+_cw_pages = os.path.join(_loop_dir, "docs", "plans")
+os.makedirs(_cw_pages, exist_ok=True)
+
+
+def _cw_page(html):
+    path = os.path.join(_cw_pages, "probe.html")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html)
+    p = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": {"file_path": path, "content": html}}
+    return run_hook("artifact", json.dumps(p), env=_loop_env)[1]
+
+
+_cw_cases.append(("page: a page under docs/plans with a vague number is named before publishing",
+                  "the page probe.html" in _cw_page("<p>This adds about 43 tests to the suite.</p>")))
+_cw_cases.append(("page: a clean page gets no note",
+                  "the page probe.html" not in _cw_page("<p>This adds 43 tests to the suite.</p>")))
+
+# The issue check: the GitHub tool and gh.
+_CW_GOOD_BODY = "## Depends on\nNothing.\n## Depended on by\nNothing.\n## Done when\nIt passes."
+
+
+def _cw_issue_tool(body):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "mcp__github__issue_write", "session_id": "loop",
+         "cwd": _loop_dir, "tool_input": {"method": "create", "owner": "o", "repo": "r", "title": "t", "body": body}}
+    return run_hook("guardgithub", json.dumps(p), env=dict(_loop_env, HOUSE_RULES_ISSUES="on"))[1]
+
+
+def _cw_issue_gh(body):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": {"command": "gh issue create --title t --body %s" % json.dumps(body)}}
+    return run_hook("guard", json.dumps(p), env=dict(_loop_env, HOUSE_RULES_ISSUES="on"))[1]
+
+
+_cw_cases.append(("issue: the GitHub tool's issue with no sections is refused, naming all three",
+                  '"deny"' in _cw_issue_tool("Just a title.") and "Done when" in _cw_issue_tool("Just a title.")))
+_cw_cases.append(("issue: the GitHub tool's issue with all three sections goes through",
+                  "missing" not in _cw_issue_tool(_CW_GOOD_BODY)))
+_cw_cases.append(("issue: gh issue create with no sections is refused; with them it is not",
+                  "is missing" in _cw_issue_gh("Just a title.") and "is missing" not in _cw_issue_gh(_CW_GOOD_BODY)))
+
+# The editor reminder (#249): a page written, or a long reply, with no editor helper run this turn.
+_CW_USER = json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "make the page"}})
+_CW_WRITE = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Write",
+                        "input": {"file_path": os.path.join(_cw_pages, "plan.html"), "content": "<p>x</p>"}}]}})
+_CW_EDITOR = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent",
+                         "input": {"subagent_type": "house-rules:editor", "prompt": "edit the page"}}]}})
+_cw_t_page = _hand_transcript("cw-page", [_CW_USER, _CW_WRITE])
+_cw_t_edited = _hand_transcript("cw-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
+_cw_t_none = _hand_transcript("cw-none", [_CW_USER])
+
+
+def _cw_editor(transcript, text="The page is up."):
+    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir,
+                                             transcript_path=transcript), env=_loop_env)[1]
+
+
+_cw_cases.append(("editor: writing a page under docs/plans with no editor run gets the reminder",
+                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+_cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
+                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
+_cw_cases.append(("editor: a reply over 200 words with no editor run gets the reminder; a short one does not",
+                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ".")
+                  and "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, "Done.")))
+
+# A page written by a shell command never passes the Write hook (found in the real run, #250).
+with open(os.path.join(_cw_pages, "shellpage.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>This adds about 43 tests to the suite.</p>")
+_cw_t_shell = _hand_transcript("cw-shell", [
+    json.dumps({"type": "user", "origin": {"kind": "human"}, "timestamp": "2000-01-01T00:00:00Z",
+                "message": {"content": "make the page"}}),
+    json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash",
+                "input": {"command": "printf '<p>x</p>' > docs/plans/shellpage.html"}}]}})])
+_cw_shell_out = _cw_editor(_cw_t_shell)
+_cw_cases.append(("page: a page written by a shell command is checked at the end of the reply, editor reminder too",
+                  "the page shellpage.html" in _cw_shell_out and "no @house-rules:editor helper ran" in _cw_shell_out))
+
+for _t, _ok in _cw_cases:
+    report("PASS" if _ok else "FAIL", "clear writing: " + _t)
 
 print()
 print("-" * 32)

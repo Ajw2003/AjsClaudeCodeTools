@@ -1,0 +1,209 @@
+<title>Show, Don't Tell</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one narrow review sheet — map of what exists, then the choices only aj makes, then copy-back. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#5a6578; --line:#d8dee8;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --part:#9a6200; --part-soft:#fbefd6; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:36px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2rem,6vw,2.8rem);font-weight:800}
+h2{font-size:1.35rem;font-weight:600}
+p{margin:0}
+.lede{color:var(--muted);max-width:60ch;margin-top:8px}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+section{display:grid;gap:14px}
+/* tally bar */
+.tally{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.tally span{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+/* coverage rows */
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.row > div{min-width:0}
+.pill{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 8px;text-align:center}
+.ok{background:var(--ok-soft);color:var(--ok)} .part{background:var(--part-soft);color:var(--part)} .gap{background:var(--gap-soft);color:var(--gap)}
+.ask{font-weight:700}
+.src{font-size:.85rem;color:var(--muted);margin-top:2px}
+code{font-size:.85em;background:var(--accent-soft);color:var(--fg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+/* before / after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:620px){.ba{grid-template-columns:1fr}}
+.pane{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
+.pane .wall{font-size:.8rem;color:var(--muted);line-height:1.45}
+.pane .short{display:grid;gap:8px;font-size:.92rem}
+.fake-link{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:6px 10px;font-weight:700;font-size:.85rem}
+.fake-q{border-left:3px solid var(--accent);padding-left:10px}
+/* decisions */
+.dec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px}
+.dec .q{font-weight:700}
+.dec .why{font-size:.88rem;color:var(--muted)}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input{margin-top:4px;accent-color:var(--accent)}
+.opt:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.sug{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-left:6px}
+.opt small{display:block;color:var(--muted);font-size:.85rem}
+textarea{width:100%;box-sizing:border-box;min-height:80px;border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;background:var(--card);color:var(--fg)}
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:620px){.flow{grid-template-columns:1fr 1fr}}
+.step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.88rem}
+.step b{display:block;font-family:var(--display);font-size:1.4rem;color:var(--accent)}
+.step.now{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+/* copy bar */
+.copybar{display:grid;gap:10px}
+button{font:inherit;font-weight:700;background:var(--accent);color:var(--bg);border:0;border-radius:9px;padding:12px 16px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px;margin:0;font-size:.85rem;overflow-x:auto}
+.status{font-size:.85rem;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">House rules · proposal · nothing built yet</div>
+    <h1>Show, Don't Tell</h1>
+    <p class="lede">Your seven asks, checked against the rules you already have. Then five choices that are yours to make. Tap your picks and copy them back to me. I build nothing until you've approved the draft that comes next.</p>
+  </header>
+
+  <section aria-labelledby="map">
+    <h2 id="map">What the rules already say</h2>
+    <p class="lede" style="margin:0">I read each rule file in <code>rules/detail/</code> this session. Two of your asks are covered, three are half-covered, two have no rule at all.</p>
+    <div class="tally" role="img" aria-label="2 covered, 3 partly covered, 2 missing">
+      <span style="flex:2;background:var(--ok)"></span><span style="flex:3;background:var(--part)"></span><span style="flex:2;background:var(--gap)"></span>
+    </div>
+    <div class="legend"><span><i class="dot" style="background:var(--ok)"></i>Covered · 2</span><span><i class="dot" style="background:var(--part)"></i>Partly · 3</span><span><i class="dot" style="background:var(--gap)"></i>Missing · 2</span></div>
+    <div class="rows">
+      <div class="row"><span class="pill gap">Missing</span><div><div class="ask">Show, don't tell: something visual or interactive, not only text</div><div class="src">Closest is <code>visual-check.md</code>, but that's about checking UI I changed, not about explaining things to you.</div></div></div>
+      <div class="row"><span class="pill gap">Missing</span><div><div class="ask">You design, I suggest. My own idea only when you ask for one</div><div class="src"><code>build-what-asked.md</code> says to ask when unclear, then adds "Routine judgement calls I still make myself". Nothing stops me designing for you.</div></div></div>
+      <div class="row"><span class="pill part">Partly</span><div><div class="ask">No wall of text. One clear next step, not thirty</div><div class="src"><code>response-depth.md</code> says keep simple answers short. Nothing limits a reply to one next step.</div></div></div>
+      <div class="row"><span class="pill part">Partly</span><div><div class="ask">Ideas and prototypes first, as a conversation, before any code</div><div class="src"><code>coding-philosophy.md</code>: "Prefer proposing a plan for anything non-trivial". A plan is not a design conversation.</div></div></div>
+      <div class="row"><span class="pill part">Partly</span><div><div class="ask">I show it, you approve or reject and say what to change</div><div class="src"><code>users-hands.md</code> lists "approving a plan" as your job. It doesn't say I have to show you the plan as something you can look at.</div></div></div>
+      <div class="row"><span class="pill ok">Covered</span><div><div class="ask">Explained in plain words</div><div class="src"><code>plain-language.md</code>: jargon stays in code; anything you read gets plain English.</div></div></div>
+      <div class="row"><span class="pill ok">Covered</span><div><div class="ask">Real research and evidence, never memory</div><div class="src"><code>evidence-before-claims.md</code>: "memory, or reasoning about what probably happens" doesn't count as proof.</div></div></div>
+    </div>
+    <p class="status">"Covered" means the words exist. The screenshot you sent shows the words weren't enough on their own. That's what choice 4 is about.</p>
+  </section>
+
+  <section aria-labelledby="ba">
+    <h2 id="ba">What a reply could look like</h2>
+    <div class="ba">
+      <div class="pane"><span class="pill gap" style="justify-self:start">Today</span>
+        <p class="wall">I built the blockers feature, added a hook, updated three docs, changed the verify script, refactored the payload reader, added two tests, and also noticed that the archivist could be improved so I started on that. Here are the 12 files I touched and the 9 decisions I made along the way, plus 6 follow-ups you might want to consider and a list of commands to run…</p>
+      </div>
+      <div class="pane"><span class="pill ok" style="justify-self:start">With the new rule</span>
+        <div class="short">
+          <p>Here's how blockers could work. Two ways, side by side.</p>
+          <span class="fake-link">Open the page →</span>
+          <p class="fake-q">Which one fits how you work, A or B? Or neither?</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="dec">
+    <h2 id="dec">Your five choices</h2>
+    <p class="lede" style="margin:0">Each has a <span class="sug" style="margin:0">my suggestion</span> tag. That's a suggestion only. Nothing is picked for you.</p>
+
+    <div class="dec" data-id="1">
+      <div class="q">1. Where should this live?</div>
+      <div class="why">The rules file is loaded into every session, so every line costs a little every time.</div>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="d1" value="A"><span>One new rule: "Show, don't tell; design with me" <span class="sug">my suggestion</span><small>Covers all five gaps in one place. Cheapest to load.</small></span></label>
+        <label class="opt"><input type="radio" name="d1" value="B"><span>Three small rules<small>Visual first · you design · one next step. Easier to find, more to load.</small></span></label>
+        <label class="opt"><input type="radio" name="d1" value="C"><span>Edit the existing rules instead<small>Change response-depth, build-what-asked and users-hands. No new rule.</small></span></label>
+      </div>
+    </div>
+
+    <div class="dec" data-id="2">
+      <div class="q">2. When must I show you a page instead of text?</div>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="d2" value="A"><span>Every plan, design or set of choices<small>Most visual. Even small questions get a page.</small></span></label>
+        <label class="opt"><input type="radio" name="d2" value="B"><span>When there are 2+ options, or anything new gets built <span class="sug">my suggestion</span><small>A yes/no question stays a one-line question.</small></span></label>
+        <label class="opt"><input type="radio" name="d2" value="C"><span>Only when you ask<small>Least change from today.</small></span></label>
+      </div>
+    </div>
+
+    <div class="dec" data-id="3">
+      <div class="q">3. How much do I choose for you?</div>
+      <div class="why">This changes the line in build-what-asked that says I make routine calls myself.</div>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="d3" value="A"><span>Options only, I never pick<small>You decide everything, even small things.</small></span></label>
+        <label class="opt"><input type="radio" name="d3" value="B"><span>Options with one marked as my suggestion, you pick <span class="sug">my suggestion</span><small>Like this page.</small></span></label>
+        <label class="opt"><input type="radio" name="d3" value="C"><span>I decide small technical things, you decide anything you'll see or use<small>Fewer questions, but I'm drawing the line.</small></span></label>
+      </div>
+    </div>
+
+    <div class="dec" data-id="4">
+      <div class="q">4. How is it enforced?</div>
+      <div class="why">There's already a check that runs when I finish a reply. It reminds me to look at visual changes. This would work the same way.</div>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="d4" value="A"><span>Words in the rules only<small>Nothing checks it. That's how it works today.</small></span></label>
+        <label class="opt"><input type="radio" name="d4" value="B"><span>Plus a reminder when a reply is long and has no page or picture <span class="sug">my suggestion</span><small>Catches the wall of text after it's written, before it reaches you.</small></span></label>
+        <label class="opt"><input type="radio" name="d4" value="C"><span>Plus block a build until you've approved a design<small>Strongest. Small fixes get stopped too.</small></span></label>
+      </div>
+    </div>
+
+    <div class="dec" data-id="5">
+      <div class="q">5. What does "not a wall of text" mean?</div>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="d5" value="A"><span>Each reply ends with one question or next step <span class="sug">my suggestion</span><small>Short is the result, not the rule.</small></span></label>
+        <label class="opt"><input type="radio" name="d5" value="B"><span>A word limit on the reply (about 150 words); detail goes in the page<small>Easy to check, sometimes too tight.</small></span></label>
+        <label class="opt"><input type="radio" name="d5" value="C"><span>Both</span></label>
+      </div>
+    </div>
+
+    <div class="dec">
+      <div class="q">Anything I missed or got wrong?</div>
+      <textarea id="notes" aria-label="Notes" placeholder="e.g. 'Choice 2 should also cover bug fixes'"></textarea>
+    </div>
+  </section>
+
+  <section aria-labelledby="next">
+    <h2 id="next">What happens next</h2>
+    <div class="flow">
+      <div class="step now"><b>1</b>You pick here and send me your answers</div>
+      <div class="step"><b>2</b>I draft the rule wording as a page, with a before/after reply</div>
+      <div class="step"><b>3</b>You approve it, or tell me what to change</div>
+      <div class="step"><b>4</b>Only then I write it into the plugin and prove it runs</div>
+    </div>
+    <div class="copybar">
+      <button id="copy" type="button">Copy my answers</button>
+      <pre id="out" aria-live="polite">Pick an option in each choice above.</pre>
+      <p class="status" id="st">Paste this into the chat. You can also just type "1A 2B 3B 4B 5A".</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const KEY="sdt-picks";
+const notes=document.getElementById("notes"), out=document.getElementById("out");
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||"{}");
+  for(const [k,v] of Object.entries(s.picks||{})){const el=document.querySelector(`input[name="${k}"][value="${v}"]`);if(el)el.checked=true}
+  notes.value=s.notes||""}catch(e){}}
+function summary(){const picks={};document.querySelectorAll("input[type=radio]:checked").forEach(i=>picks[i.name]=i.value);
+  try{localStorage.setItem(KEY,JSON.stringify({picks,notes:notes.value}))}catch(e){}
+  const line=[1,2,3,4,5].map(n=>`${n}${picks["d"+n]||"?"}`).join(" ");
+  out.textContent="Show, Don't Tell — my picks: "+line+(notes.value.trim()?"\nNotes: "+notes.value.trim():"");
+  return out.textContent}
+document.addEventListener("change",summary);notes.addEventListener("input",summary);
+document.getElementById("copy").addEventListener("click",()=>{const t=summary(),st=document.getElementById("st");
+  navigator.clipboard.writeText(t).then(()=>st.textContent="Copied. Paste it into the chat.")
+  .catch(()=>{const r=document.createRange();r.selectNodeContents(out);const s=getSelection();s.removeAllRanges();s.addRange(r);st.textContent="Couldn't copy automatically. The text is selected, so copy it by hand."})});
+load();summary();
+</script>

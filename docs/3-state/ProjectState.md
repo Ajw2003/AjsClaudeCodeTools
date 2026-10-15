@@ -118,6 +118,55 @@ on the tier files omitting the `Agent` tool if it does not).
 branch; prompts nobody can answer (subagent, aj away) are refused and queued. Verified by `verify.py`; not yet in
 a live session.
 
+Unreleased, on `AjsAgent/agent-communication-patterns-xo0l8x` (#223, step #224 of 4): the "Show, don't tell;
+the user designs" rule is written and loads through its own SessionStart handler, `showrule` (1,510 chars), because
+`house-rules.md` was 47 chars from `inject`'s margin. "Build only what was asked" and "Match response depth" are
+merged into it and removed (inject 9,653 → 9,381 chars). `verify.py` 618 PASS, run twice, 2026-10-13. The design
+block (#225), the long-reply reminder (#226) and their proof (#227) are not built yet, so the rule describes a
+hook that does not exist on this branch until #225 lands. Found on the way: `verify.py`'s guard cases go red if a
+`house-rules-last-seen-*` temp file from an earlier run is over five minutes old; a rerun passes. Fixed
+2026-10-15 (#229): each `verify.py` run now uses its own temp folder.
+
+2026-10-14, same branch: the design loop (#223) is in Build. Step 1 of 7, "Stage tracker, approvals, and the code
+lock" (#225), is built: `scope` reads aj's approvals and moves the stage in `.git/house-rules-loop.json`;
+`commitgate` refuses code edits outside Build. The stage carries across sessions (aj's answer, 2026-10-14).
+`verify.py` 631 PASS. Step 2, "An approval only counts once the stage is logged" (#230), is built: no new
+decisions-log entry since the last approval, no stage move. `verify.py` 633 PASS. Step 3, "A home for each
+feature" (#231), is built: issues made with the GitHub tool are now recorded, and "Build plan approved" waits
+for two labelled issues made during Plan. `verify.py` 635 PASS. Step 4, "Helpers build only approved steps"
+(#232), is built: helpers start with the feature, stage and issues; the go-ahead guess is off while the loop is on.
+`verify.py` 638 PASS. Step 5, "Long-reply reminder" (#226), is built: over 200 words with no page link gets a
+reminder at the end of the reply. `verify.py` 643 PASS. Step 6, "Handover page template" (#233), is built: `templates/handover-page.html`
+fills its four parts from one PAGE block and drops an empty part; the rule describes it. `verify.py` 645 PASS. Step 7 (#227): a real run in a scratch repo, five messages to a real
+Claude Code session loading this branch's plugin - code refused in Design, approvals moved the stage, two issues
+recorded, code allowed in Build, QA passed moved it to Done. The run found one bug (a feature name took the whole
+line), fixed with a test. Version 2.63.0. `verify.py` 646 PASS, run twice. Systems doc: `docs/4-systems/design-loop.md`.
+QA passed (aj, 2026-10-14); a pull request to main is the release. Releasing needs a merge to main, which is at 2.62.0 (checked 2026-10-14: the 2.54-2.62 work is already merged, so this pull request carries only the design loop and the label check). Not released: one version bump at the end, after #227 proves the whole loop.
+
+2026-10-14, same branch: the label check (#235), plugin 2.64.0, built and waiting on aj's QA. Every stage move reads
+the feature's issue labels: from GitHub (`gh api`), or from the changes `autosave` recorded when GitHub can't be
+read, and it says which. "Build plan approved" needs every issue `in progress`; swapping all to `needs review` starts
+a new QA stage and closes code; QA answers count only in QA; after "QA failed" the redo needs the labels back; in
+Build an edit is refused while a label is wrong; the end-of-reply check names wrong labels. `verify.py` 658 PASS,
+run twice. A real run against two real issues (#236, #237) walked Plan → Build → QA → QA failed → refused redo →
+Plan. It found one bug (a name ran on past a dash), fixed with a test. Rides the open design loop pull request.
+
+2026-10-14, same branch: the new item visual (#240), plugin 2.64.1, built and waiting on aj's QA. The page template
+draws a New item's three phrases as when → it does → you get (#241); the changes page has one per New item (#242);
+a feature name stops before a pasted page reply's answer codes (#243).
+
+2026-10-15, same branch: the new item visual failed aj's QA (box wording, and a per-file breakdown wanted); its
+redesign waits behind the clear writing check (#245), plugin 2.65.0, now built and waiting on aj's QA. One rule,
+`rules/clear-writing.md`, loads beside Show, don't tell; the shared checker `scripts/clarity.py` reads replies,
+pages and issues; issues missing their three sections are refused; `agents/editor.md` (Sonnet) rewrites pages and
+long replies, with a reminder when it didn't run. `verify.py` 684 PASS. System doc: `docs/4-systems/clear-writing.md`.
+QA passed (aj, 2026-10-15).
+
+2026-10-15, same branch: the new item visual v2 (#240), plugin 2.65.1, built and waiting on aj's QA. The template
+labels a New item's boxes What exists today / What this creates / How it impacts you, and any item can list its
+files with counts; `tools/diff_parts.py` does the counting, checked in `tools/verify_tools.py`. The changes page
+covers the whole pull request: 27 items, every changed hook part placed once. The stale-temp-file flake (#229) is fixed.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

@@ -49,6 +49,16 @@ import sys
 import tempfile
 import time
 
+# The shared writing checker (#247), a sibling file. A missing or broken copy must not take every
+# hook down with it, so it is loaded here and each check that needs it reports when it is absent.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import clarity
+    CLARITY_ERROR = None
+except ImportError as _clarity_exc:
+    clarity = None
+    CLARITY_ERROR = "house-rules: the writing checker (scripts/clarity.py) could not load (%s)." % _clarity_exc
+
 
 def read_payload():
     try:
@@ -476,8 +486,8 @@ def _preflight_warnings():
 
 # The voice is a preference, so it gets a lever - but it ships ON, for the same reason the
 # decision trace does: a setting nobody enables until they are already unhappy is not a setting.
-# Off removes only the "### The voice" subsection; the plain-language rule above it is not a
-# preference and always loads.
+# Off removes only the "### The voice" subsection; the clear-writing rule above it is not a
+# preference and always loads. Since #245 the voice lives in rules/clear-writing.md (showrule).
 _VOICE_HEADING = "### The voice"
 
 
@@ -489,7 +499,7 @@ def _apply_voice_toggle(body):
         # The section this is meant to remove is gone, which means the rules text moved and this
         # toggle now silently does nothing. Say so rather than pretending it worked.
         sys.stderr.write(
-            "house-rules inject: HOUSE_RULES_VOICE=off, but the %r section was not found in "
+            "house-rules: HOUSE_RULES_VOICE=off, but the %r section was not found in "
             "the rules - the toggle had no effect.\n" % _VOICE_HEADING
         )
         return body
@@ -527,7 +537,6 @@ def event_inject():
         return 0
 
     body = body.replace("\r\n", "\n")
-    body = _apply_voice_toggle(body)
     # The <!-- subagent --> markers are a build-time signal for _subagent_core() (which
     # sections of this same file to re-inject at a subagent's own SubagentStart), not
     # something the main session needs to read - stripping them here keeps this file the
@@ -568,6 +577,43 @@ def event_inject():
             },
         }
     )
+    return 0
+
+
+# ---------------------------------------------------------------------------------------
+# showrule — the "Show, don't tell" rule, injected by its own SessionStart entry for the same
+# reason profile was split out: house-rules.md was 47 chars from inject's size margin when the
+# rule was approved (issue #224). Full rationale: rules/detail/show-dont-tell.md.
+# ---------------------------------------------------------------------------------------
+
+
+# The rules loaded in their own slot, in order: show-dont-tell (#225) and clear-writing (#245).
+SHOWRULE_FILES = (("show-dont-tell.md", "show-don't-tell"), ("clear-writing.md", "clear-writing"))
+
+
+def event_showrule():
+    here = os.path.dirname(os.path.abspath(__file__))
+    bodies, missing = [], []
+    for name, label in SHOWRULE_FILES:
+        try:
+            body = _read_text(os.path.join(here, "..", "rules", name)).replace("\r\n", "\n")
+        except OSError:
+            missing.append("cannot read rules/%s, so the %s rule was NOT loaded" % (name, label))
+            continue
+        if not body.strip():
+            missing.append("rules/%s is empty, so the %s rule was NOT loaded" % (name, label))
+            continue
+        bodies.append(_apply_voice_toggle(body) if name == "clear-writing.md" else body)
+    if not bodies:
+        emit({"systemMessage": "house-rules plugin: " + "; ".join(missing) + "."})
+        return 0
+    out = {"suppressOutput": True, "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": "Standing house rules, loaded separately from the rest:\n\n"
+        + _expand_detail_paths("\n\n".join(bodies))}}
+    if missing:
+        out["systemMessage"] = "house-rules plugin: " + "; ".join(missing) + "."
+    emit(out)
     return 0
 
 
@@ -1537,8 +1583,8 @@ SCOPE_REMINDER = (
     # separately bought nothing. Every rule the old text carried is still here - this is the
     # same content said once instead of twice, not a shorter list of rules.
     "Standing house rules (full text was injected at session start):\n"
-    "- Match response depth to the task; build only what was asked, and ask instead of "
-    "assuming.\n"
+    "- Show, don't tell: plans reach the user as a page to approve; nothing unasked is "
+    "built.\n"
     "- Find out what machine you are on and build for that. The coding standards injected "
     "at session start are binding, each governing only its own languages.\n"
     "- Deliver a whole workflow: exact commands to run, nothing left for the user to "
@@ -1607,12 +1653,17 @@ def event_scope():
         payload = read_payload()
         _record_last_seen(payload)
         waiting = _waiting_scope_note(payload)
+        loop_note = _loop_scope_note(payload)
+        if loop_note:
+            waiting = loop_note + ("\n\n" + waiting if waiting else "")
         m = _PROMPT_FIELD_RE.search(payload)
         if m:
             field = m.group(0)
             if _SCOPE_COMMAND_HINT_RE.search(field):
                 reminder = SCOPE_REMINDER
-            if _SCOPE_GOAHEAD_RE.search(field):
+            # With the design loop on, only "Build plan approved" starts a build (#232), so the
+            # go-ahead guess runs only when the loop is off.
+            if _SCOPE_GOAHEAD_RE.search(field) and not _loop_enabled():
                 reminder = reminder + SCOPE_DELEGATE_CLAUSE
             if _PARITY_RE.search(field) and _parity_enabled():
                 reminder = reminder + SCOPE_PARITY_CLAUSE
@@ -2537,6 +2588,31 @@ ARTIFACT_NOTE = (
 )
 
 
+_PLANS_PAGE_RE = re.compile(r"(?:^|[\\/])docs[\\/]plans[\\/][^\\/]+\.html?$", re.IGNORECASE)
+
+
+def _page_writing_note(file_path):
+    """#248: the shared writing checker on a page just written under docs/plans/, or "" when the
+    file is not such a page, is clean, or the check is off."""
+    if not _PLANS_PAGE_RE.search(file_path.replace("\\", "/")) or not _clear_writing_enabled():
+        return ""
+    if clarity is None:
+        return CLARITY_ERROR
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            html = f.read()
+    except OSError as exc:
+        return "house-rules: the page writing check could not read %s (%s)." % (file_path, exc)
+    found = clarity.findings(clarity.page_text(html), skip=("not-checked",))
+    if not found:
+        return ""
+    return ("House rules, write it so nothing is left to guess: the page %s has %d thing(s) to fix "
+            "before you publish it:\n%s\nCount what can be counted, name what you point at, and say "
+            "each thing once. Then hand the page to @house-rules:editor before publishing."
+            % (os.path.basename(file_path), len(found),
+               "\n".join("- \"%s\": %s" % (p, why) for _k, p, why in found[:12])))
+
+
 def event_artifact():
     try:
         payload = read_payload()
@@ -2557,8 +2633,12 @@ def event_artifact():
         if not _ARTIFACT_EXT_RE.search(base):
             trace_noop("artifact: %s is not a document extension - not checked." % base)
             return 0
+        page_note = _page_writing_note(file_path)
         if not _is_outside_project(file_path):
-            trace_noop("artifact: %s is inside the project - nothing to copy." % base)
+            if page_note:
+                emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": page_note}})
+            else:
+                trace_noop("artifact: %s is inside the project - nothing to copy." % base)
             return 0
         if _GENERATED_EXT_RE.search(base):
             where = "docs/generated/ for generated or visual artifacts"
@@ -2568,7 +2648,8 @@ def event_artifact():
             {
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": ARTIFACT_NOTE.format(where=where),
+                    "additionalContext": ARTIFACT_NOTE.format(where=where)
+                    + ("\n\n" + page_note if page_note else ""),
                 }
             }
         )
@@ -2936,6 +3017,9 @@ def event_subagentrules():
             return 0
         payload = read_payload()
         core, problems = _subagent_core(agent_type=_field(_AGENT_TYPE_RE, payload))
+        loop_note = _loop_helper_note(payload or "")
+        if loop_note:
+            core = (core + "\n\n" + loop_note) if core else loop_note
         bits = []
         if not payload:
             problems.append("the SubagentStart payload was empty")
@@ -4649,12 +4733,14 @@ def _issues_plan_note(payload):
 _ISSUE_EDIT_ALLOWED_TOPS = ("docs", ".claude")
 
 
-def _issues_gate(payload):
-    """(deny reason or None, problem or None) for a Write/Edit/NotebookEdit payload."""
+def _gated_edit(payload, who):
+    """(git_dir or None, problem or None) for a Write/Edit/NotebookEdit of a source file inside a
+    repo. None for anything the edit blocks never cover: another tool, a path outside the
+    project, docs/, .claude/, any .md file. `who` names the block in the problem message."""
     try:
         data = json.loads(payload)
     except ValueError:
-        return None, "house-rules: the issue gate could not parse the hook payload, so it is off for this call."
+        return None, "house-rules: the %s could not parse the hook payload, so it is off for this call." % who
     if not isinstance(data, dict) or data.get("tool_name") not in _GATED_TOOLS:
         return None, None
     ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
@@ -4665,11 +4751,6 @@ def _issues_gate(payload):
     top, git_dir = _issues_locate(cwd)
     if not git_dir:
         return None, None
-    state, problem = _issues_read(git_dir)
-    if problem:
-        return None, problem
-    if not state or not state.get("needs_issues"):
-        return None, None
     if not os.path.isabs(fp):
         fp = os.path.join(cwd, fp)
     try:
@@ -4678,7 +4759,20 @@ def _issues_gate(payload):
         rel = ".."  # another drive: outside the project
     parts = rel.replace("\\", "/").split("/")
     if (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
-            or os.path.basename(rel) == ISSUES_FILE):
+            or os.path.basename(rel) in (ISSUES_FILE, LOOP_FILE)):
+        return None, None
+    return git_dir, None
+
+
+def _issues_gate(payload):
+    """(deny reason or None, problem or None) for a Write/Edit/NotebookEdit payload."""
+    git_dir, problem = _gated_edit(payload, "issue gate")
+    if not git_dir:
+        return None, problem
+    state, problem = _issues_read(git_dir)
+    if problem:
+        return None, problem
+    if not state or not state.get("needs_issues"):
         return None, None
     have = _labelled_count(state)
     return (
@@ -4689,6 +4783,379 @@ def _issues_gate(payload):
         "the numbers, then repeat this edit. docs/, .md files and .claude/ are editable meanwhile. "
         "To switch this off: HOUSE_RULES_ISSUES=off." % (state.get("plan_steps", "more than 3"),
                                                           ISSUES_LABEL, have, ISSUES_NEEDED, ISSUES_LABEL),
+        None,
+    )
+
+
+# ---------------------------------------------------------------------------------------
+# The design loop (#223, #225): each project has a stage - design, plan, build, done - kept in
+# LOOP_FILE in the git directory and carried across sessions. Only aj's own message moves it
+# (scope reads it before the model does), and code edits are refused outside build. "I review"
+# happens inside build, because fixing what the review finds is code. Design:
+# docs/plans/loop-design.html. HOUSE_RULES_LOOP=off disables it.
+# ---------------------------------------------------------------------------------------
+
+LOOP_FILE = "house-rules-loop.json"
+LOOP_STAGE_NAMES = {"design": "Design", "plan": "Plan", "build": "Build", "qa": "QA", "done": "Done"}
+_LOOP_DESIGN_RE = re.compile(r"\bdesign\s+approved\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+_LOOP_PLAN_RE = re.compile(r"\bbuild\s+plan\s+approved\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+_LOOP_QA_RE = re.compile(r"\bqa\s+(passed|failed)\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+_LOOP_SKIP_RE = re.compile(r"\bskip\s+design\b", re.IGNORECASE)
+_LOOP_BARE_RE = re.compile(r"\b(approved|qa\s+passed|qa\s+failed)\b", re.IGNORECASE)
+
+
+def _loop_enabled():
+    return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _loop_read(git_dir):
+    """(state, problem). No file means a project that has not started a feature: Design."""
+    fresh = {"feature": "", "stage": "design", "skip": False, "approvals": []}
+    path = os.path.join(git_dir, LOOP_FILE)
+    if not os.path.isfile(path):
+        return fresh, None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or data.get("stage") not in LOOP_STAGE_NAMES:
+            raise ValueError("no valid stage")
+    except (OSError, ValueError) as exc:
+        return None, ("house-rules: could not read %s (%s), so the design-loop lock is off for this call."
+                      % (LOOP_FILE, exc))
+    return dict(fresh, **data), None
+
+
+def _loop_write(git_dir, state):
+    with open(os.path.join(git_dir, LOOP_FILE), "w", encoding="utf-8") as f:
+        json.dump(state, f)
+
+
+LOOP_LOG = os.path.join("docs", "6-decisions", "Decisions.md")
+
+
+def _loop_log_mark(top):
+    """A fingerprint of the decisions log, or None when the project has none. Any other read error
+    propagates to _loop_scope_note, which reports it."""
+    path = os.path.join(top, LOOP_LOG)
+    if not os.path.isfile(path):
+        return None
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def _loop_unlogged(state, top, label, name):
+    """#230: an approval counts only once the stage being closed is in the decisions log - the log
+    must exist and have changed since the last approval. A refusal note, or "" when it may count."""
+    mark = _loop_log_mark(top)
+    if mark is None:
+        return ('Design loop: aj wrote "%s: %s", but this project has no decisions log (%s), so nothing '
+                "moved. Create it, log this stage's decisions, then ask aj to approve again."
+                % (label, name, LOOP_LOG.replace(os.sep, "/")))
+    if mark == state.get("log_mark"):
+        return ('Design loop: aj wrote "%s: %s", but nothing has been added to the decisions log (%s) since '
+                "the last approval, so nothing moved. Log this stage's decisions and changes first, then ask "
+                "aj to approve again." % (label, name, LOOP_LOG.replace(os.sep, "/")))
+    state["log_mark"] = mark
+    return ""
+
+
+# A feature name ends at the end of its sentence, or where a pasted reply such as "Build plan: 1A 2A"
+# starts on the same line - found in the real run, where the whole line became the name. A spaced
+# dash ends it too: "QA failed: label check - it should say hi" (found in the label check's real run). So
+# does a pasted page reply's answer codes: "New item visual: 1C", "Label check plan: 1A 2A" (#243).
+_LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+[A-Z][A-Za-z ]{0,30}:\s|\s+[-–—]\s"
+                               r"|\s*:\s*\d+[A-Za-z*](?:\s|$)")
+
+
+def _loop_name(raw):
+    m = _LOOP_NAME_END_RE.search(raw)
+    return (raw[:m.start()] if m else raw).strip() or raw.strip()
+
+
+# #235: an issue's label says whose move it is - `in progress` is mine, `needs review` is aj's - and
+# every stage move checks it. Labels are read from GitHub every time (#236); when that read fails,
+# from the label changes this hook recorded, and the note says why.
+LOOP_WORKING, LOOP_REVIEW = "in progress", "needs review"
+LOOP_GH_SECONDS = 5  # the reads run in parallel, well inside hooks.json's 10s per hook
+# Tests point this at a JSON file of {"owner/repo#n": [labels]} standing in for GitHub; a missing
+# file reads as a failed GitHub read.
+LOOP_LABELS_FILE_ENV = "HOUSE_RULES_LOOP_LABELS_FILE"
+
+
+def _loop_key(repo, number):
+    return "%s#%d" % (repo, int(number))
+
+
+def _loop_gh_labels(repo, number):
+    import subprocess
+    proc = subprocess.run(["gh", "api", "repos/%s/issues/%d" % (repo, number), "--jq", "[.labels[].name]"],
+                          capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip().splitlines()
+        raise RuntimeError(detail[0] if detail else "gh exited %d" % proc.returncode)
+    return json.loads(proc.stdout)
+
+
+def _loop_labels(state):
+    """({key: [labels] or None}, note) for the feature's issues. The note is "" when GitHub answered,
+    else it says the labels came from the record and why."""
+    import subprocess
+    issues = [i for i in state.get("issues", []) if isinstance(i, dict) and i.get("repo") and "number" in i]
+    if not issues:
+        return {}, ""
+    keys = [_loop_key(i["repo"], i["number"]) for i in issues]
+    stand_in = os.environ.get(LOOP_LABELS_FILE_ENV)
+    try:
+        if stand_in:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                found = json.load(f)
+            return {k: found.get(k) for k in keys}, ""
+        if not shutil.which("gh"):
+            raise RuntimeError("gh is not installed")
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            got = list(pool.map(lambda i: _loop_gh_labels(i["repo"], i["number"]), issues))
+        return dict(zip(keys, got)), ""
+    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
+        why = "Labels were taken from the changes this hook recorded, because the GitHub read failed (%s)." % exc
+    recorded = state.get("labels") if isinstance(state.get("labels"), dict) else {}
+    return {k: recorded.get(k) for k in keys}, why
+
+
+def _loop_wrong(labels, want):
+    """The issues whose labels don't fit `want` (LOOP_WORKING or LOOP_REVIEW), named with what they have."""
+    wrong = []
+    for key, have in labels.items():
+        low = [str(l).lower() for l in have] if isinstance(have, list) else None
+        ok = low is not None and (LOOP_WORKING in low if want == LOOP_WORKING
+                                  else LOOP_REVIEW in low and LOOP_WORKING not in low)
+        if not ok:
+            wrong.append("#%s (%s)" % (key.split("#")[1], ", ".join(have) if low else "no labels known"))
+    return wrong
+
+
+def _loop_to_qa(state, labels):
+    """Build becomes QA once every issue says needs review and none says in progress. True if it moved."""
+    if state["stage"] == "build" and labels and not _loop_wrong(labels, LOOP_REVIEW):
+        state["stage"] = "qa"
+        return True
+    return False
+
+
+_LOOP_QA_NOTE = (" Every issue of the feature says `needs review`, so the stage is QA: code edits are closed, "
+                 "and aj answers \"QA passed: <feature>\" or \"QA failed: <feature>\" with the changes.")
+
+
+def _loop_label_refusal(said, want, wrong, note):
+    return ('Design loop: aj wrote "%s", but these issues are not labelled `%s`: %s. Nothing moved. Fix the '
+            "labels, then ask aj to approve again.%s" % (said, want, "; ".join(wrong), " " + note if note else ""))
+
+
+def _loop_apply(state, text, top):
+    """Move the stage for one message of aj's. Returns a note for the model, or "" when the
+    message approves nothing. Mutates state."""
+    stage, feature = state["stage"], state.get("feature") or ""
+    approval = None
+    m = _LOOP_PLAN_RE.search(text)
+    if m:
+        name = _loop_name(m.group(1))
+        if stage != "plan":
+            return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
+                    "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
+        have = sum(1 for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled"))
+        if have < ISSUES_NEEDED:
+            return ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
+                    "made since its design was approved, and needs at least %d: one issue for the feature "
+                    "and a sub-issue per step, each naming what it depends on, what depends on it and when "
+                    "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again."
+                    % (name, have, ISSUES_NEEDED, ISSUES_LABEL))
+        labels, src = _loop_labels(state)
+        wrong = _loop_wrong(labels, LOOP_WORKING)
+        if wrong:
+            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src)
+        unlogged = _loop_unlogged(state, top, "Build plan approved", name)
+        if unlogged:
+            return unlogged
+        state["stage"], approval = "build", ("Build plan approved", name)
+    else:
+        m = _LOOP_DESIGN_RE.search(text)
+        if m:
+            name = _loop_name(m.group(1))
+            redo = state.get("redo") and name.lower() == feature.lower()
+            if redo:
+                labels, src = _loop_labels(state)
+                wrong = _loop_wrong(labels, LOOP_WORKING)
+                if wrong:
+                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src)
+            unlogged = _loop_unlogged(state, top, "Design approved", name)
+            if unlogged:
+                return unlogged
+            state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
+            state["redo"] = False
+            if not redo:
+                state["issues"] = []
+        else:
+            m = _LOOP_QA_RE.search(text)
+            if m:
+                verdict, name = m.group(1).lower(), _loop_name(m.group(2))
+                if stage == "build":
+                    labels, src = _loop_labels(state)
+                    if not _loop_to_qa(state, labels):
+                        wrong = _loop_wrong(labels, LOOP_REVIEW)
+                        return ('Design loop: aj wrote "QA %s: %s", but QA starts only once every issue of the '
+                                "feature says `needs review`, and these don't: %s. Nothing moved. Swap their "
+                                "labels when the build is ready for aj, then ask again.%s"
+                                % (verdict, name, "; ".join(wrong) or "no issues are recorded",
+                                   " " + src if src else ""))
+                elif stage != "qa":
+                    return ('Design loop: aj wrote "QA %s: %s", but the stage is %s, so nothing moved. QA '
+                            "follows a build." % (verdict, name, LOOP_STAGE_NAMES[stage]))
+                unlogged = _loop_unlogged(state, top, "QA " + verdict, name)
+                if unlogged:
+                    return unlogged
+                state["stage"] = "done" if verdict == "passed" else "design"
+                state["redo"] = verdict == "failed"
+                approval = ("QA " + verdict, name)
+    if approval:
+        state.setdefault("approvals", []).append(
+            {"stage": approval[0], "name": approval[1], "at": int(time.time())})
+        note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
+            approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        if state["stage"] == "plan":
+            note += (" Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue "
+                     "for the feature and a sub-issue per step, each naming dependencies, dependants and "
+                     "done-criteria, labelled `%s` and `%s`." % (ISSUES_LABEL, LOOP_WORKING))
+            return note
+        if state["stage"] == "build":
+            note += (" Code edits are open for the approved steps while every issue says `%s`. Hand each "
+                     "approved step to @house-rules:builder (one per issue; at most two running) unless aj said "
+                     "to build it yourself; helpers build only approved steps and never design or approve. When "
+                     "the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA."
+                     % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
+        elif approval[0] == "QA failed":
+            note += (" Their list of changes starts the next design. Move every issue back to `%s` now; the "
+                     "redo's \"Design approved\" is refused until they are." % LOOP_WORKING)
+        elif approval[0] == "QA passed":
+            note += (" Code edits stay closed. The issues keep `%s` until aj closes them; never close one."
+                     % LOOP_REVIEW)
+        else:
+            note += " Code edits stay closed."
+        return note
+    if _LOOP_SKIP_RE.search(text):
+        state["skip"] = True
+        return 'Design loop: aj wrote "skip design", so the next code edit goes through, then the lock is back.'
+    if _LOOP_BARE_RE.search(text):
+        return ('Design loop: aj\'s message says "approved" but names no stage and feature, so nothing moved. '
+                'Ask which they mean; an approval reads like "Design approved: <feature>", '
+                '"Build plan approved: <feature>", "QA passed: <feature>" or "QA failed: <feature>".')
+    return ""
+
+
+def _loop_scope_note(payload):
+    """scope's half: read aj's message, move the stage, say what happened. Never raises."""
+    if not _loop_enabled():
+        return ""
+    try:
+        m = _PROMPT_VALUE_RE.search(payload or "")
+        if not m:
+            return ""
+        text = json.loads('"%s"' % m.group(1))
+        top, git_dir = _issues_locate(_payload_cwd(payload))
+        if not git_dir:
+            return ""
+        state, problem = _loop_read(git_dir)
+        if problem:
+            return problem
+        before = json.dumps(state, sort_keys=True)
+        note = _loop_apply(state, text, top)
+        if json.dumps(state, sort_keys=True) != before:
+            _loop_write(git_dir, state)
+        return note
+    except Exception as exc:
+        return "house-rules: the design-loop check hit an error (%s: %s), so this message moved nothing." % (
+            type(exc).__name__, exc)
+
+
+def _loop_helper_note(payload):
+    """#232: what a helper is told at start-up about the feature it works inside. "" when the loop
+    is off or the helper is not in a repo."""
+    if not _loop_enabled():
+        return ""
+    _, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return ""
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return problem
+    issues = ", ".join("#%d" % i["number"] for i in state.get("issues", []) if isinstance(i, dict) and "number" in i)
+    return (
+        "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
+        "build plan; you never design, change the plan, or approve anything - an approval only counts from "
+        "aj's own message. Anything unexpected comes back to the main session, not into the code. Code edits "
+        "are refused outside Build." % (
+            '"%s"' % state["feature"] if state.get("feature") else "not started",
+            LOOP_STAGE_NAMES[state["stage"]],
+            "; its issues are %s" % issues if issues else ""))
+
+
+def _loop_stop_line(payload):
+    """#238, handover: (line or None, problem or None) - name every issue whose label doesn't fit the
+    stage. Quiet when there is no feature with issues, or every label fits."""
+    if not _loop_enabled():
+        return None, None
+    _, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return None, None
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return None, problem
+    stage = state["stage"]
+    if stage == "done" or (stage == "design" and not state.get("redo")) or not state.get("issues"):
+        return None, None
+    labels, src = _loop_labels(state)
+    if _loop_to_qa(state, labels):
+        _loop_write(git_dir, state)
+        return "House rules, design loop:" + _LOOP_QA_NOTE, src or None
+    want = LOOP_REVIEW if stage == "qa" else LOOP_WORKING
+    wrong = _loop_wrong(labels, want)
+    if not wrong:
+        return None, src or None
+    return ("House rules, design loop: \"%s\" is in %s, so every issue should be labelled `%s`, and these "
+            "are not: %s. Fix the labels before this turn ends.%s"
+            % (state.get("feature") or "", LOOP_STAGE_NAMES[stage], want, "; ".join(wrong),
+               " Code edits are refused until they are." if stage == "build" else "")), src or None
+
+
+def _loop_gate(payload):
+    """(deny reason or None, problem or None): code edits only in Build, or once after skip design."""
+    git_dir, problem = _gated_edit(payload, "design-loop lock")
+    if not git_dir:
+        return None, problem
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return None, problem
+    if state["stage"] == "build":
+        labels, src = _loop_labels(state)
+        if _loop_to_qa(state, labels):
+            _loop_write(git_dir, state)
+            return "House rules, design loop:" + _LOOP_QA_NOTE, None
+        wrong = _loop_wrong(labels, LOOP_WORKING)
+        if not wrong:
+            return None, src or None
+        return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, and "
+                "these are not: %s. Fix the labels, then edit again.%s"
+                % (state.get("feature") or "", LOOP_WORKING, "; ".join(wrong), " " + src if src else "")), None
+    if state.get("skip"):
+        state["skip"] = False
+        _loop_write(git_dir, state)
+        return None, None
+    feature = state.get("feature") or ""
+    return (
+        "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
+        "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
+        "change. docs/, .claude/ and .md files stay open, so write the design or plan as a page "
+        "now. To switch this off: HOUSE_RULES_LOOP=off." % (
+            LOOP_STAGE_NAMES[state["stage"]], ' of "%s"' % feature if feature else ""),
         None,
     )
 
@@ -4705,32 +5172,152 @@ _GH_ISSUE_CLOSE_RES = (
 _ISSUE_URL_RE = re.compile(r"github\.com/([\w.-]+/[\w.-]+)/issues/(\d+)")
 
 
-def _issues_record(payload):
-    """PostToolUse Bash: record a `gh issue create` in the gate state. Returns a list of note
-    strings (empty when nothing applies). Never raises."""
-    try:
-        data = json.loads(payload)
-        if not isinstance(data, dict) or data.get("tool_name") != "Bash":
-            return []
-        ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+_GITHUB_ISSUE_WRITE_RE = re.compile(r"^mcp__(github|GitHub)__issue_write$")
+
+
+def _created_issue(data):
+    """(found, labelled, how) for a tool call that created a GitHub issue - a terminal
+    `gh issue create` or the GitHub tool's issue_write with method create (#231) - or None for any
+    other call. `found` lists (repo, number) pairs from the response; `labelled` says whether the
+    project label was set."""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    tool = data.get("tool_name") or ""
+    if tool == "Bash":
         cmd = ti.get("command") or ""
         if not _GH_ISSUE_CREATE_RE.search(cmd):
+            return None
+        label_text, how = cmd, "`gh issue create`"
+    elif _GITHUB_ISSUE_WRITE_RE.match(tool) and str(ti.get("method", "")).lower() == "create":
+        labels = ti.get("labels") if isinstance(ti.get("labels"), list) else []
+        label_text, how = " ".join(str(l) for l in labels), "GitHub tool issue_write"
+    else:
+        return None
+    resp = data.get("tool_response")
+    text = resp if isinstance(resp, str) else json.dumps(resp)
+    found = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
+    labelled = any(l.lower() in label_text.lower() for l in (ISSUES_LABEL, ISSUES_LABEL_OLD))
+    return found, labelled, how
+
+
+def _loop_record_issues(git_dir, found, labelled):
+    """#231: issues made while a feature is in Plan count toward its build-plan approval."""
+    if not _loop_enabled() or not found:
+        return []
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return [problem]
+    if state["stage"] != "plan":
+        return []
+    for repo, number in found:
+        state.setdefault("issues", []).append({"repo": repo, "number": int(number), "labelled": labelled})
+    _loop_write(git_dir, state)
+    return []
+
+
+_GH_ISSUE_EDIT_RE = re.compile(_GH_PREFIX + r"issue\s+edit\s+(\d+)\b([^\n;&|]*)")
+_GH_LABEL_FLAG_RE = re.compile(r"(?:--(add-label|remove-label|label)|-(l))(?:=|\s+)(\"[^\"]*\"|'[^']*'|[^\s\"']+)")
+
+
+def _gh_label_flags(cmd):
+    """{"add": [...], "remove": [...]} from a gh command's label flags (--label and -l count as add)."""
+    out = {"add": [], "remove": []}
+    for long_flag, _short, value in _GH_LABEL_FLAG_RE.findall(cmd):
+        names = [v.strip() for v in value.strip("\"'").split(",") if v.strip()]
+        out["remove" if long_flag == "remove-label" else "add"].extend(names)
+    return out
+
+
+def _label_changes(data):
+    """#236: [(repo, number, set_to or None, add, remove)] for a tool call that set issue labels and
+    succeeded - the GitHub tool's issue_write, or `gh issue create` / `gh issue edit`."""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    tool = data.get("tool_name") or ""
+    resp = data.get("tool_response")
+    text = resp if isinstance(resp, str) else json.dumps(resp)
+    urls = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
+    if _GITHUB_ISSUE_WRITE_RE.match(tool) and isinstance(ti.get("labels"), list):
+        labels = [str(l) for l in ti["labels"]]
+        if str(ti.get("method", "")).lower() == "create":
+            return [(repo, int(n), labels, [], []) for repo, n in urls]
+        number = ti.get("issue_number")
+        repo = "%s/%s" % (ti.get("owner"), ti.get("repo"))
+        if number and any(r.lower() == repo.lower() and int(n) == int(number) for r, n in urls):
+            return [(repo, int(number), labels, [], [])]
+        return []
+    if tool != "Bash":
+        return []
+    cmd = ti.get("command") or ""
+    if _GH_ISSUE_CREATE_RE.search(cmd):
+        flags = _gh_label_flags(cmd)
+        return [(repo, int(n), flags["add"], [], []) for repo, n in urls]
+    m = _GH_ISSUE_EDIT_RE.search(cmd)
+    if m:
+        flags = _gh_label_flags(m.group(2))
+        if flags["add"] or flags["remove"]:
+            return [(repo, int(n), None, flags["add"], flags["remove"]) for repo, n in urls if int(n) == int(m.group(1))]
+    return []
+
+
+def _loop_record_labels(payload):
+    """PostToolUse: record label changes for the GitHub-read fallback, and move Build to QA once every
+    issue says needs review. Returns notes. Never raises."""
+    if not _loop_enabled():
+        return []
+    try:
+        data = json.loads(payload)
+        changes = _label_changes(data) if isinstance(data, dict) else []
+        if not changes:
             return []
+        _, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if not git_dir:
+            return []
+        state, problem = _loop_read(git_dir)
+        if problem:
+            return [problem]
+        recorded = state.setdefault("labels", {})
+        for repo, number, set_to, add, remove in changes:
+            key = _loop_key(repo, number)
+            now = list(set_to) if set_to is not None else list(recorded.get(key) or [])
+            now = [l for l in now if l.lower() not in {r.lower() for r in remove}]
+            now += [a for a in add if a.lower() not in {l.lower() for l in now}]
+            recorded[key] = now
+        notes = []
+        if state["stage"] == "build":
+            labels, src = _loop_labels(state)
+            if _loop_to_qa(state, labels):
+                notes.append("Design loop:" + _LOOP_QA_NOTE + (" " + src if src else ""))
+        _loop_write(git_dir, state)
+        return notes
+    except Exception as exc:
+        return ["house-rules: could not record an issue label change for the design loop (%s: %s)."
+                % (type(exc).__name__, exc)]
+
+
+def _issues_record(payload):
+    """PostToolUse Bash or GitHub tool: record a created issue in the issue-gate and design-loop
+    state. Returns a list of note strings (empty when nothing applies). Never raises."""
+    try:
+        data = json.loads(payload)
+        if not isinstance(data, dict):
+            return []
+        hit = _created_issue(data)
+        if hit is None:
+            return []
+        found, labelled, how = hit
         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return []
+        loop_notes = _loop_record_issues(git_dir, found, labelled)
+        if not _issues_enabled():
+            return loop_notes
         state, problem = _issues_read(git_dir)
         if problem:
-            return [problem]
+            return loop_notes + [problem]
         if not state or not state.get("needs_issues"):
-            return []
-        resp = data.get("tool_response")
-        text = resp if isinstance(resp, str) else json.dumps(resp)
-        found = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
+            return loop_notes
         if not found:
-            return ["house-rules: a `gh issue create` ran but no issue URL was in its output, so it "
-                    "was not counted toward the issue gate."]
-        labelled = any(l.lower() in cmd.lower() for l in (ISSUES_LABEL, ISSUES_LABEL_OLD))
+            return loop_notes + ["house-rules: a %s ran but no issue URL was in its output, so it "
+                                 "was not counted toward the issue gate." % how]
         created = state.setdefault("created", [])
         for repo, number in found:
             created.append({"repo": repo, "number": int(number), "labelled": labelled})
@@ -4745,9 +5332,9 @@ def _issues_record(payload):
             state["needs_issues"] = False
             notes.append("house-rules: %d labelled issues recorded, so source edits are unblocked." % have)
         _issues_write(git_dir, state)
-        return notes
+        return loop_notes + notes
     except Exception as exc:
-        return ["house-rules: could not record the `gh issue create` in the issue gate (%s: %s)."
+        return ["house-rules: could not record a created issue in the issue gate (%s: %s)."
                 % (type(exc).__name__, exc)]
 
 
@@ -4879,6 +5466,18 @@ def event_guardgithub():
     if not payload:
         trace("guardgithub: empty payload - nothing was checked for this call.")
         return 0
+    # #248: an issue made with the GitHub tool needs its three sections, like one made with gh.
+    ti = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    if (_GITHUB_ISSUE_WRITE_RE.match(str(payload.get("tool_name") or ""))
+            and str(ti.get("method", "")).lower() == "create" and _issues_enabled() and _clear_writing_enabled()):
+        if clarity is None:
+            emit({"systemMessage": CLARITY_ERROR + " The issue was NOT checked for its sections."})
+        else:
+            missing = clarity.missing_issue_sections(str(ti.get("body") or ""))
+            if missing:
+                emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                      "permissionDecisionReason": ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing)}})
+                return 0
     if not _attribution_enabled():
         trace_noop("guardgithub: HOUSE_RULES_ATTRIBUTION=off - nothing was checked.")
         return 0
@@ -5047,9 +5646,33 @@ def _issues_guard(subject, payload):
                     "`Refs #N`, `Refs owner/repo#N` or `Part of #N`, or a line `No-issue: <reason>`. "
                     "Add it and run the command again.", None)
         return None
+    if _GH_ISSUE_CREATE_RE.search(cmd) and _clear_writing_enabled() and clarity is not None:
+        body = cmd
+        fm = _PR_BODY_FILE_RE.search(cmd)
+        if fm and fm.group(1).strip("\"'") != "-":
+            name = fm.group(1).strip("\"'")
+            path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    body = f.read()
+            except OSError as exc:
+                return ("ask", "House rules: could not read the issue body file %s (%s), so I could not "
+                        "check it for its three sections." % (name, exc), None)
+        missing = clarity.missing_issue_sections(body)
+        if missing:
+            return ("deny", ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing), None)
     if any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
         return ("ask", CLOSE_ASK_NOTE, CLOSE_ASK_NOTE)
     return None
+
+
+# #248: an issue says what it depends on, what depends on it, and when it's done.
+ISSUE_SECTIONS_DENY = (
+    "House rules, write it so nothing is left to guess: this issue is missing %s. Every issue needs "
+    "\"Depends on\", \"Depended on by\" and \"Done when\" sections (\"Nothing\" is a fine answer), so "
+    "a blocker shows up as an unfinished dependency and done means something. Add them and create it "
+    "again. HOUSE_RULES_CLEAR_WRITING=off turns this off."
+)
 
 
 def _open_issues_text(cwd):
@@ -5148,13 +5771,14 @@ def event_autosave():
     worktree to the autosave ref and push it. The same entry records `gh issue create` calls for
     the issue gate (_issues_record), which is why it runs on any branch."""
     try:
-        if not _autosave_enabled() and not _issues_enabled():
+        if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
             return 0
         payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: autosave got an empty payload and did not run for this call."})
             return 0
-        issue_notes = _issues_record(payload) if _issues_enabled() else []
+        issue_notes = _issues_record(payload) if (_issues_enabled() or _loop_enabled()) else []
+        issue_notes += _loop_record_labels(payload)
         target = _autosave_target(payload) if _autosave_enabled() else None
         if target is None:
             if issue_notes:
@@ -5193,12 +5817,20 @@ def event_commitgate():
     moved), commit for the subagent instead and let the edit through. It also carries the issue
     gate (_issues_gate), which applies on any branch of the main session."""
     try:
-        if not _autosave_enabled() and not _issues_enabled():
+        if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
             return 0
         payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: commitgate got an empty payload and did not run for this call."})
             return 0
+        if _loop_enabled():
+            deny, problem = _loop_gate(payload)
+            if deny:
+                emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                             "permissionDecisionReason": deny}})
+                return 0
+            if problem:
+                emit({"systemMessage": problem})
         if _issues_enabled():
             deny, problem = _issues_gate(payload)
             if deny:
@@ -5657,39 +6289,11 @@ def _impossibility_claims(text):
     return found
 
 
-# #89: a disclosure that something was not checked. The default is to check; a disclosure is
-# right only when the check cannot run here, and then the reply says why. Lowercase-only for
-# "untested"/"unverified" so a handover card's own "UNTESTED:" marker - which the card rule
-# already requires a reason beside - is never what trips it.
-_NOT_CHECKED_RE = re.compile(
-    r"\b((?:[Nn]ot|[Hh]aven't|[Hh]ave not|[Dd]idn't|[Dd]id not|[Ww]asn't|[Ww]as not|[Hh]asn't|"
-    r"[Hh]as not) (?:been )?(?:checked|verified|tested|run it|confirmed)|unverified|untested)\b"
-)
-# A reason in the same sentence makes the disclosure the rule-compliant kind.
-_REASON_RE = re.compile(
-    r"\b(because|since|as there|no access|not available|unavailable|not installed|"
-    r"not reachable|(?:can't|cannot) (?:reach|run|access)|requires|would need|needs a|"
-    r"no .{0,20} (?:here|on this machine)|on your machine|prohibitively|had no|has no|"
-    r"there (?:is|was) no|does(?:n't| not) have|did(?:n't| not) have)\b",
-    re.IGNORECASE,
-)
-_SENTENCE_END_RE = re.compile(r"[.!?\n]")
-
-
+# #89: a disclosure that something was not checked. Since #247 the detector lives in the shared
+# writing checker (scripts/clarity.py), which also tells a list label ("Not checked:") from a
+# disclosure.
 def _unreasoned_not_checked(text):
-    """'Not checked' phrases whose own sentence gives no reason the check could not run."""
-    found = []
-    text = text or ""
-    for m in _NOT_CHECKED_RE.finditer(text):
-        if _is_quoted(text, m.start()):
-            continue
-        start = max((e.end() for e in _SENTENCE_END_RE.finditer(text, 0, m.start())), default=0)
-        end_m = _SENTENCE_END_RE.search(text, m.end())
-        sentence = text[start : end_m.start() if end_m else len(text)]
-        if _REASON_RE.search(sentence):
-            continue
-        found.append(m.group(1).lower())
-    return found
+    return clarity.unreasoned_not_checked(text) if clarity else []
 
 
 def _is_genuine_user_message(record):
@@ -6002,6 +6606,106 @@ def _plain_summary_problems(reply):
     return problems
 
 
+# #226: a reply over LONG_REPLY_WORDS words that links no page or picture gets a reminder to move
+# the detail onto a page and end on one question. Code blocks are not counted as words.
+LONG_REPLY_WORDS = 200
+_PAGE_LINK_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(|\.html\b", re.IGNORECASE)
+_MD_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
+_WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'\u2019-]*")
+
+
+def _long_reply_words(reply):
+    """The word count when the reply is too long and links no page or picture, else 0."""
+    if not reply or _PAGE_LINK_RE.search(reply):
+        return 0
+    words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply)))
+    return words if words > LONG_REPLY_WORDS else 0
+
+
+def _long_reply_note(words):
+    return (
+        "House rules, show don't tell: this reply is %d words and links no page or picture. Over %d words, "
+        "the detail belongs on a page: move it there, keep the reply to a plain summary, the link, and "
+        "numbered steps for what aj needs to do, and end on one question or next step." % (words, LONG_REPLY_WORDS)
+    )
+
+
+def _clear_writing_enabled():
+    return os.environ.get("HOUSE_RULES_CLEAR_WRITING", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _writing_findings(text):
+    """(findings, problem): the shared checker's findings on a reply, minus not-checked, which the
+    evidence rule reports on its own. [] when the check is off or the text is empty."""
+    if not text or not _clear_writing_enabled():
+        return [], None
+    if clarity is None:
+        return [], CLARITY_ERROR
+    return clarity.findings(text, skip=("not-checked",)), None
+
+
+# #249: a page or a long reply goes past the editor helper before aj reads it.
+EDITOR_NOTE = (
+    "House rules, write it so nothing is left to guess: %s, and no @house-rules:editor helper ran this "
+    "turn. Hand the text (or the page's path) to @house-rules:editor (Agent tool, subagent_type "
+    "house-rules:editor), apply its rewrites, then send the result. HOUSE_RULES_CLEAR_WRITING=off "
+    "turns this off."
+)
+
+
+def _pages_changed_this_turn(transcript_path, cwd):
+    """(pages, problem): docs/plans/*.html pages modified since aj's last message, however they
+    were written. No pages when the project has no docs/plans folder or the message carries no
+    timestamp; a timestamp that can't be read is reported as the problem."""
+    import datetime
+    _records, user, _detail = _load_turn(transcript_path)
+    stamp = (user or {}).get("timestamp")
+    top = _issues_locate(cwd)[0] or cwd
+    plans = os.path.join(top, "docs", "plans")
+    if not stamp or not os.path.isdir(plans):
+        return [], None
+    try:
+        since = datetime.datetime.fromisoformat(str(stamp).replace("Z", "+00:00")).timestamp()
+    except ValueError as exc:
+        return [], "house-rules: could not read aj's message time (%s), so pages written by a shell command were not checked." % exc
+    return sorted(os.path.join(plans, n) for n in os.listdir(plans)
+                  if n.lower().endswith((".html", ".htm")) and os.path.getmtime(os.path.join(plans, n)) >= since), None
+
+
+def _editor_owed(written, tool_uses, reply):
+    """What makes the editor helper owed this turn ("" when nothing does, or when it ran)."""
+    for block in tool_uses:
+        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+        if block.get("name") in ("Agent", "Task") and str(inp.get("subagent_type", "")).endswith("editor"):
+            return ""
+    pages = [os.path.basename(p) for p in written if _PLANS_PAGE_RE.search(str(p).replace("\\", "/"))]
+    if pages:
+        return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
+    words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
+    if words > LONG_REPLY_WORDS:
+        return "this reply is %d words" % words
+    return ""
+
+
+def _writing_note(not_checked, writing, long_words):
+    """#248: one end-of-reply note for every writing finding, in place of separate notes."""
+    lines = []
+    if not_checked:
+        lines.append(_not_checked_note(not_checked))
+    if writing:
+        lines.append(
+            "House rules, write it so nothing is left to guess: before this turn ends, rewrite "
+            "these and send the reply again:\n" + "\n".join(
+                "- \"%s\": %s" % (phrase, why) for _kind, phrase, why in writing[:12])
+            + ("\n(and %d more)" % (len(writing) - 12) if len(writing) > 12 else "")
+            + "\nCount what can be counted, name what you point at, say each thing once, and give a "
+            "reason in the same sentence for anything that genuinely can't be measured. "
+            "HOUSE_RULES_CLEAR_WRITING=off turns this off.")
+    if long_words:
+        lines.append(_long_reply_note(long_words))
+    return "\n\n".join(lines)
+
+
 def _plain_summary_note(problems):
     return (
         "House rules, plain summary first: this reply reports finished work, but %s. Rewrite it "
@@ -6141,8 +6845,12 @@ def event_handover():
     parity_word = None
     visual_files = []
     plain_problems = []
+    editor_owed = None
+    shell_page_notes = []
+    trace_lines_early = []
     transcript_path = _field(_TRANSCRIPT_RE, payload)
-    if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()):
+    if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
+                            or _clear_writing_enabled()):
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
             written_now = []
@@ -6162,16 +6870,36 @@ def event_handover():
                 reply_for_parity = reply_text if vm is not None else ""
                 if pm and not _PARITY_ACCOUNTED_RE.search(reply_for_parity):
                     parity_word = pm.group(1)
+            if _clear_writing_enabled():
+                # A page written by a shell command never passes the Write hook (found in the real
+                # run, #250), so pages changed since aj's message are checked here too.
+                changed, page_problem = _pages_changed_this_turn(transcript_path, _payload_cwd(payload))
+                if page_problem:
+                    trace_lines_early.append(page_problem)
+                shell_pages = [pg for pg in changed if pg not in written_now]
+                for pg in shell_pages:
+                    note = _page_writing_note(pg)
+                    if note:
+                        shell_page_notes.append(note)
+                editor_owed = _editor_owed(written_now + shell_pages, list(_turn_tool_uses(turn_records)),
+                                           reply_text if vm is not None else "")
             if written_now and _visual_check_enabled():
                 visual = [os.path.basename(p) for p in written_now if _VISUAL_EXT_RE.search(p)]
                 if visual and not _looked_at_result(list(_turn_tool_uses(turn_records))):
                     visual_files = visual
 
     issue_line, issue_problem = _issues_stop_line(payload)
+    try:
+        label_line, label_problem = _loop_stop_line(payload)
+    except Exception as exc:
+        label_line, label_problem = None, "house-rules: the design-loop label check hit an error (%s: %s)." % (
+            type(exc).__name__, exc)
 
-    trace_lines = []
+    trace_lines = list(trace_lines_early)
     if issue_problem:
         trace_lines.append(issue_problem)
+    if label_problem:
+        trace_lines.append(label_problem)
     if could_not_tell:
         # Fail open, loud: a claim was made and this could not confirm or deny it, so it says
         # so rather than silently assuming either answer - but it never blocks, and it never
@@ -6186,8 +6914,14 @@ def event_handover():
             "(%s)." % commit_could_not_tell
         )
 
+    long_words = _long_reply_words(reply_text) if (vm is not None and _loop_enabled()) else 0
+    writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
+    if writing_problem:
+        trace_lines.append(writing_problem)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
-            and not parity_word and not visual_files and not plain_problems and not issue_line):
+            and not parity_word and not visual_files and not plain_problems and not issue_line
+            and not long_words and not label_line and not writing and not editor_owed
+            and not shell_page_notes):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -6203,10 +6937,13 @@ def event_handover():
         parts.append(HANDOVER_NOTE)
     if needs_evidence:
         parts.append(_evidence_note(evidence_words, impossible_words))
-    if not_checked:
-        parts.append(_not_checked_note(not_checked))
+    if not_checked or writing or long_words:
+        parts.append(_writing_note(not_checked, writing, long_words))
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
+    parts.extend(shell_page_notes)
+    if editor_owed:
+        parts.append(EDITOR_NOTE % editor_owed)
     if parity_word:
         parts.append(_parity_report_note(parity_word))
     if visual_files:
@@ -6215,6 +6952,8 @@ def event_handover():
         parts.append(_commit_note(uncommitted))
     if issue_line:
         parts.append(issue_line)
+    if label_line:
+        parts.append(label_line)
     out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}
     if trace_lines:
         out["systemMessage"] = " ".join(trace_lines)
@@ -6642,6 +7381,7 @@ def event_harvest():
 
 EVENTS = {
     "inject": event_inject,
+    "showrule": event_showrule,
     "issuelist": event_issuelist,
     "profile": event_profile,
     "standards": event_standards,

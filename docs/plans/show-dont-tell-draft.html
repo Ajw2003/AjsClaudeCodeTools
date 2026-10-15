@@ -1,0 +1,199 @@
+<title>Show, Don't Tell Draft</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: step 2 of the review — the draft rule, how the block works, three open questions, approve/change. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#5a6578; --line:#d8dee8;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --part:#9a6200; --part-soft:#fbefd6; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#e8edf5; --muted:#9aa6b8; --line:#2b3546;
+  --accent:#7fa2ff; --accent-soft:#1f2c4a;
+  --ok:#5fd39a; --ok-soft:#173527; --part:#f0b54a; --part-soft:#3a2d12; --gap:#ff7b86; --gap-soft:#3d1a1f; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:36px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2rem,6vw,2.8rem);font-weight:800}
+h2{font-size:1.35rem;font-weight:600}
+p{margin:0}
+.lede{color:var(--muted);max-width:60ch;margin-top:8px}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+section{display:grid;gap:14px}
+/* tally bar */
+.tally{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.tally span{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+/* coverage rows */
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.row > div{min-width:0}
+.pill{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 8px;text-align:center}
+.ok{background:var(--ok-soft);color:var(--ok)} .part{background:var(--part-soft);color:var(--part)} .gap{background:var(--gap-soft);color:var(--gap)}
+.ask{font-weight:700}
+.src{font-size:.85rem;color:var(--muted);margin-top:2px}
+code{font-size:.85em;background:var(--accent-soft);color:var(--fg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+/* before / after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:620px){.ba{grid-template-columns:1fr}}
+.pane{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
+.pane .wall{font-size:.8rem;color:var(--muted);line-height:1.45}
+.pane .short{display:grid;gap:8px;font-size:.92rem}
+.fake-link{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:6px 10px;font-weight:700;font-size:.85rem}
+.fake-q{border-left:3px solid var(--accent);padding-left:10px}
+/* decisions */
+.dec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px}
+.dec .q{font-weight:700}
+.dec .why{font-size:.88rem;color:var(--muted)}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input{margin-top:4px;accent-color:var(--accent)}
+.opt:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.sug{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-left:6px}
+.opt small{display:block;color:var(--muted);font-size:.85rem}
+textarea{width:100%;box-sizing:border-box;min-height:80px;border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;background:var(--card);color:var(--fg)}
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:620px){.flow{grid-template-columns:1fr 1fr}}
+.step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.88rem}
+.step b{display:block;font-family:var(--display);font-size:1.4rem;color:var(--accent)}
+.step.now{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+/* copy bar */
+.copybar{display:grid;gap:10px}
+button{font:inherit;font-weight:700;background:var(--accent);color:var(--bg);border:0;border-radius:9px;padding:12px 16px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px;margin:0;font-size:.85rem;overflow-x:auto}
+.status{font-size:.85rem;color:var(--muted)}
+</style>
+<style>
+.rule{background:var(--card);border:2px solid var(--accent);border-radius:12px;padding:16px;display:grid;gap:10px}
+.rule h3{font-family:var(--display);margin:0;font-size:1.15rem}
+.rule p{position:relative}
+.tag{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.05em;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:1px 7px;margin-left:4px;vertical-align:1px;white-space:nowrap}
+.diff{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;font-size:.92rem}
+.del{background:var(--gap-soft);color:var(--gap);text-decoration:line-through;padding:2px 6px;border-radius:4px}
+.add{background:var(--ok-soft);color:var(--ok);padding:2px 6px;border-radius:4px}
+.gate{display:grid;gap:8px}
+.g{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.g > div{min-width:0}
+.g .n{font-family:var(--display);font-weight:800;font-size:1.2rem;color:var(--accent);text-align:center}
+.g.lock{border-color:var(--gap)} .g.lock .n{color:var(--gap)}
+.g.open{border-color:var(--ok)} .g.open .n{color:var(--ok)}
+.picks{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.85rem}
+.chip b{color:var(--accent)}
+.cost{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:.85rem;color:var(--muted)}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;display:flex}
+.bar span{display:block;height:100%}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">House rules · step 2 of 4 · revised · nothing built yet</div>
+    <h1>Show, Don't Tell: The Draft</h1>
+    <p class="lede">This is the rule your picks add up to, word for word. Revised with your answers and your note on approving. <span class="add">Green</span> marks what changed since the last version.</p>
+    <div class="picks" style="margin-top:12px">
+      <span class="chip"><b>1A</b> one new rule</span><span class="chip"><b>2A</b> page for every plan</span><span class="chip"><b>3B</b> I suggest, you pick</span><span class="chip"><b>4C</b> block the build</span><span class="chip"><b>5A</b> end on one step</span><span class="chip"><b>Q1A</b> every session starts locked</span><span class="chip"><b>Q2A</b> you type "approved"</span><span class="chip"><b>Q3B</b> "skip design" unlocks one change</span><span class="chip"><b>Q4A</b> reminder and block</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="r">
+    <h2 id="r">The rule, as it would read</h2>
+    <div class="rule">
+      <h3>Show, don't tell; the user designs</h3>
+      <p>Every plan, design or set of choices reaches the user as a page they can look at and tap through, not as a block of text.<span class="tag">2A</span></p>
+      <p>I bring options and mark one as my suggestion. The user picks. I never pick for them, and I only bring my own idea when they ask for one.<span class="tag">3B</span></p>
+      <p>Each reply ends with one question or one next step.<span class="tag">5A</span> <span class="add">A long reply with no page gets a reminder before it reaches the user.</span><span class="tag">Q4A</span></p>
+      <p><span class="add">Every session starts locked. The user can type "skip design" to let one change through without a design.</span><span class="tag">Q1A</span><span class="tag">Q3B</span></p>
+      <p>Ideas and prototypes come before code. No source file is edited until the user has approved a design shown this way, <span class="add">by typing "approved" together with what they approved, such as "Idea A approved" or "approved 1A 2C 3A 4D"</span>. A hook blocks the edit until they have.<span class="tag">4C</span><span class="tag">Q2A</span></p>
+    </div>
+    <div class="cost">
+      <span>Rules file</span>
+      <div class="bar" role="img" aria-label="182 lines today, about 11 added"><span style="flex:182;background:var(--muted)"></span><span style="flex:11;background:var(--accent)"></span></div>
+      <span>182 → ~193 lines</span>
+    </div>
+    <p class="status">It goes in as one section of <code>house-rules.md</code> (choice 1A), which loads every session. The longer explanation goes in a new <code>rules/detail/show-dont-tell.md</code>, which only loads when it's needed.</p>
+  </section>
+
+  <section aria-labelledby="c">
+    <h2 id="c">One existing line has to change</h2>
+    <p class="lede" style="margin:0">Choice 3B clashes with this line in <code>build-what-asked.md</code> (line 9):</p>
+    <div class="diff">
+      <span class="del">Routine judgement calls I still make myself — the test is whether two honest readings would produce materially different work.</span>
+      <span class="add">Routine judgement calls go to the user as options with my suggestion marked; I make one myself only when they've said to.</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="g">
+    <h2 id="g">How the block would work (4C)</h2>
+    <p class="lede" style="margin:0">It copies a block that already exists. Since version 2.49 the plugin stops source edits until a plan's issues are created. <code>docs/</code> and <code>.md</code> files stay editable, so a design page can always be written.</p>
+    <div class="gate">
+      <div class="g"><span class="n">1</span><div><b>A session starts.</b> The block is on.</div></div>
+      <div class="g lock"><span class="n">✕</span><div><b>Source edits are refused.</b> Pages, docs and notes can still be written.</div></div>
+      <div class="g"><span class="n">2</span><div><b>I show you the page.</b> You tap through it.</div></div>
+      <div class="g"><span class="n">3</span><div><b>You type "approved" and name what.</b> The plugin reads your message before I do, so I can't approve on your behalf. <span class="add">What you named is saved alongside the approval, so I can quote it back.</span></div></div>
+      <div class="g open"><span class="n">✓</span><div><b>The block lifts</b> for that design only. The next design starts locked again.</div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="q">
+    <h2 id="q">What counts as approving</h2>
+    <p class="lede" style="margin:0">"approved" has to come with a name for what you're approving. If it doesn't, the block stays on and I ask you what you meant.</p>
+    <div class="rows">
+      <div class="row"><span class="pill ok">Lifts</span><div><div class="ask">Idea A approved</div></div></div>
+      <div class="row"><span class="pill ok">Lifts</span><div><div class="ask">approved 1A 2C 3A 4D</div></div></div>
+      <div class="row"><span class="pill ok">Lifts</span><div><div class="ask">Draft wording approved</div></div></div>
+      <div class="row"><span class="pill gap">Stays on</span><div><div class="ask">approved</div><div class="src">Doesn't say what. I ask which one.</div></div></div>
+      <div class="row"><span class="pill gap">Stays on</span><div><div class="ask">looks good, go ahead</div><div class="src">No "approved", so I ask you to confirm.</div></div></div>
+      <div class="row"><span class="pill part">One change</span><div><div class="ask">skip design</div><div class="src">Lets one change through, then locks again.</div></div></div>
+    </div>
+
+    <div class="dec">
+      <div class="q">This version of the rule</div>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="q5" value="approved"><span>Approved as written</span></label>
+        <label class="opt"><input type="radio" name="q5" value="change"><span>Change it (say what below)</span></label>
+      </div>
+      <textarea id="notes" aria-label="Notes" placeholder="e.g. 'Also accept the word yes'"></textarea>
+    </div>
+  </section>
+
+  <section aria-labelledby="next">
+    <h2 id="next">What happens next</h2>
+    <div class="flow">
+      <div class="step"><b>1</b>You picked ✓</div>
+      <div class="step now"><b>2</b>You review this draft</div>
+      <div class="step"><b>3</b>I show you the issues for the build, then build it</div>
+      <div class="step"><b>4</b>I show it working: the block refusing an edit, then lifting</div>
+    </div>
+    <div class="copybar">
+      <button id="copy" type="button">Copy my answers</button>
+      <pre id="out" aria-live="polite">Pick an option in each question above.</pre>
+      <p class="status" id="st">Paste this into the chat.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const KEY="sdt-draft-v2";
+const notes=document.getElementById("notes"), out=document.getElementById("out");
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||"{}");
+  for(const [k,v] of Object.entries(s.picks||{})){const el=document.querySelector(`input[name="${k}"][value="${v}"]`);if(el)el.checked=true}
+  notes.value=s.notes||""}catch(e){}}
+function summary(){const p={};document.querySelectorAll("input[type=radio]:checked").forEach(i=>p[i.name]=i.value);
+  try{localStorage.setItem(KEY,JSON.stringify({picks:p,notes:notes.value}))}catch(e){}
+  out.textContent=(p.q5==="approved"?"Draft wording approved":p.q5==="change"?"Draft wording: change":"Pick approved or change above.")+(notes.value.trim()?"\nNotes: "+notes.value.trim():"");
+  return out.textContent}
+document.addEventListener("change",summary);notes.addEventListener("input",summary);
+document.getElementById("copy").addEventListener("click",()=>{const t=summary(),st=document.getElementById("st");
+  navigator.clipboard.writeText(t).then(()=>st.textContent="Copied. Paste it into the chat.")
+  .catch(()=>{const r=document.createRange();r.selectNodeContents(out);const s=getSelection();s.removeAllRanges();s.addRange(r);st.textContent="Couldn't copy automatically. The text is selected, so copy it by hand."})});
+load();summary();
+</script>

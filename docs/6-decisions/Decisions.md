@@ -7,6 +7,544 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - New item visual v2 built (2.65.1); handed to aj for QA
+
+**Built:** the template labels a New item's boxes "What exists today / What this creates / How it impacts you" and
+draws any item's file list on open (#241). `tools/diff_parts.py` counts each file's parts, checked by
+`tools/verify_tools.py` (47 of 47). The changes page was rebuilt for the whole pull request by
+`docs/plans/design-loop-changes.build.py` (#242): 27 items, all 80 changed hook parts placed exactly once, and every
+changed file listed; the build stops otherwise. In a browser at 375px, light and dark: every New item has its
+boxes, no other item does, and every item opens to its files. `verify.py` 684 of 684, twice.
+
+**Plan beside build**, on `docs/plans/new-item-visual-qa.html`:
+- template: estimated +30 −2, built +21 −5
+- changes page: estimated 32 items, built 27
+- counting tool: estimated 60 lines, built 85 (Markdown sections, and a fix after it took a `try:` block for a
+  function)
+- tool checks: estimated +20, built +21
+- `verify.py`: estimated +4 −2, built +13 −3 (9 of those lines are the #229 fix)
+
+Not planned: the 161-line page builder, and the test-suite system doc's trap note.
+
+---
+
+## 2026-10-15 - Fixed: verify.py's stale-temp-file flake (#229)
+
+aj: "fix the known failures, we never do a pr if there are things broken". The cause: the hooks keep state in the
+temp folder (when aj last wrote, the waiting-on-you list), and `verify.py` reuses session names, so a
+`house-rules-last-seen-verify` file left over five minutes earlier made `guard` treat aj as away and refuse
+instead of ask. Fix: every run creates its own temp folder and points `TMPDIR` at it, so the hooks it starts can't
+see another run's files. Proof: with 20-minute-old last-seen files planted, the previous suite failed 41 of 684
+(34 of them "expected ask, got deny"), and the fixed suite passed 684 of 684 on two runs. Calling it a "known
+flake" and rerunning was wrong: a failure that a rerun hides is still a failure.
+
+---
+
+## 2026-10-15 - Design approved: new item visual v2
+
+aj: "Design approved New item visual v2: 1A 2A 3A".
+- **1A:** the same three labels on every New item: "What exists today", "What this creates", "How it impacts
+  you", each with a full sentence under it.
+- **3A:** an opened item lists each file it touched once, with what happened in plain words and lines added and
+  removed.
+- **2A** answered the old wording question, which aj had already replaced with their own format; that question
+  stayed on the page by my mistake. Its option A ("one sentence across the boxes, no labels") contradicts 1A, so
+  I read it as stale. The build plan shows the box format exactly, so aj can correct this before anything is
+  built.
+
+**Plan.** Sub-issues #241 (template: the labelled boxes and every item's file list) and #242 (rebuild the
+changes page for the whole pull request, with counts from git, and move the counting script into `tools/`)
+were rewritten for v2. #243, the name fix, is already built. Plan page: `docs/plans/new-item-visual-v2-plan.html`,
+listing 1 file created and 9 changed, with estimates marked. Approved: "Build plan approved: new item visual". The box format stands as shown.
+
+---
+
+## 2026-10-15 - QA passed: clear writing check
+
+aj: "QA passed: clear writing check". Its issues (#245-#250) stay `needs review` until aj closes them. Next, the
+new item visual resumes: its v2 redesign is waiting on aj's pick between the two readings of the box labels.
+
+The real page session, refused earlier while aj was away, was rerun with aj present. The session wrote
+`docs/plans/probe2.html` with a shell command, and its record shows both notes: "the page probe2.html has 1
+thing(s) to fix" and "this turn wrote the page probe2.html" (the editor reminder). Its reply: "the one note
+about it flags "about 43" as "a vague number or claim with no reason it can't be measured"".
+
+---
+
+## 2026-10-15 - Clear writing check built (2.65.0); handed to aj for QA
+
+**Built** across #246-#250, from `3b95462^` to this commit: 5 files created, 15 changed and 1 deleted. `verify.py`
+went from 659 to 684 checks, all passing on two clean runs; `tools/verify_tools.py` and `plain_docs_check.py` pass.
+QA page: `docs/plans/clear-writing-qa.html`, listing each file's plan beside its build, as aj asked.
+
+**Calibration.** The checker was run over this session's 93 long replies. After removing false alarms (a title
+after a number, step cards, quoted examples, parallel list items), 31 replies still had findings. They are the
+failures the rule is for: vague numbers that could have been counted, and bare "choice 5"s.
+
+**The real run** used nested `claude -p` sessions with this branch's plugin and a stand-in `gh`:
+1. A reply "The pull request adds about 43 tests; see #229." got the writing note naming "about 43" and "#229",
+   per the session's own record.
+2. `gh issue create --body 'Just a body.'` was refused, naming the three sections; the stand-in `gh` was never
+   called.
+3. The editor helper rewrote "The lock checks it's Build" as "The design lock checks that the feature is in the
+   Build stage and that every issue carries the "in progress" label".
+4. A page written with `printf` was not checked: it never passes the Write hook. Fixed: pages under `docs/plans`
+   changed since aj's message are now checked when the reply ends, with a test. A rerun of that real session
+   was refused by `guard` while aj was away (the words `timeout` and `| head` in one command), so it is waiting
+   on aj.
+
+**Six changes beyond the plan**, each named on the QA page:
+- the exact-input sentence also left the main rules file
+- `clarity.py` gained page-text reading
+- the voice switch and the rule loader moved in `hook.py`
+- the shell-written page fix
+- two extra doc rows
+- the template now offers a page's exact reply when it has no choices (it offered "approved", which the loop
+  rejects)
+
+**Guard false matches, for the rule audit (#228):** a loop or a `timeout` in one command with `| tail` or `| head`
+in another was refused twice as a "hidden wait".
+
+---
+
+## 2026-10-15 - Design proposed: clear writing check (replaces the ambiguity check design)
+
+**Status.** Approved: "Design approved: clear writing check: 1A 2A 3A 4A". The answers:
+- **Who judges the wording:** the shared checker on everything, plus the editor helper on pages and long replies.
+- **What folds in:** plain language, the ambiguity lines and the plain-docs writing limits.
+- **A vague claim:** gets a reminder unless the same sentence says why it can't be measured.
+- **An issue missing a section:** is refused.
+
+The new item visual waits behind it.
+
+**Plan.** Issue #245 has five sub-issues, all `in progress`:
+- #246: the rule, with the old lines folded in
+- #247: the shared checker
+- #248: checking replies, pages and issues
+- #249: the editor helper, and the check that it ran
+- #250: docs, 2.65.0 and a real run
+
+Plan page: `docs/plans/clear-writing-plan.html`, with two choices for aj. One is where the rule loads: the main
+rules slot uses 9,381 of 9,700 characters, while the show-don't-tell slot uses 1,654 of 9,500 (both measured by
+`verify.py`). The other is the editor helper's model. Waiting on "Build plan approved: clear writing check".
+
+**Plan fixed (aj: "How can a build plan list nothing new it creates in the changes section? No files no
+nothing, not an actual plan").** The first version listed three vague changes and no files. It now has one entry
+per file: 5 created, 13 changed and 1 deleted. Lines that move or go are counted exactly from the files as they
+are:
+- `rules/house-rules.md`: the Plain language section, 12 lines (584 characters)
+- `rules/detail/plain-language.md`: 71 lines
+- `rules/detail/deliver-workflow.md`: the exact-input section, 13 lines
+- `rules/detail/show-dont-tell.md`: "ask when unclear", 2 lines
+- `skills/plain-docs/SKILL.md`: the writing limits, 10 lines
+- `scripts/plain_docs_check.py`: the banned-word list, 16 lines
+- `scripts/hook.py`: the not-checked detector, 33 lines
+
+New lines are estimates, each labelled "Estimated, because it isn't written yet." A plan should always list its
+files like this; the clear writing check and the automatic change log (#244) are where that gets enforced.
+
+**Build plan approved:** "Build plan approved: clear writing check: 1A 2A". The rule loads beside Show, don't
+tell, and the editor helper runs on Sonnet. aj added a requirement for the QA page: it must name explicitly what
+changed between the plan and what was actually built, file by file, setting each estimate against the real line
+counts.
+
+**What.** aj: "we need to fix wording and ambiguity first, let's fold ambiguity and wording into a single check…
+proper sentence structure and human tone, a lack of repetition and clear concise speech that is explicit with
+context and leaves nothing for the user to extrapolate." It replaces the ambiguity check design below, which aj
+never answered.
+
+**What exists, checked in the code.** The plain-language rule covers jargon, voice, bare references and a plain
+summary first; only the plain summary is checked. The plain-docs skill and `plain_docs_check.py` limit sentence
+length, ban jargon and keep out code detail, but only for plain doc copies. There's also the long-reply reminder.
+Nothing checks grammar, tone or repetition.
+
+**Proposal page:** `docs/plans/clear-writing-check.html`. One rule, "Write it so nothing is left to guess", takes
+in plain language, the ambiguity lines and the plain-docs writing limits. A shared checker covers vague claims,
+bare references, repetition, jargon, sentence length and issue sections, on every reply, page and issue. A new
+editor helper judges grammar, tone and gaps on pages and long replies; a pattern can't see "checks it's Build". The
+not-checked and long-reply checks join the shared checker, and Evidence before claims stays its own check.
+
+---
+
+## 2026-10-15 - New item visual v2: aj's answers; automatic change log filed for later
+
+**aj's answers** ("New item visual v2: 1* 2A"):
+- **The file list** is option A: each file once, then each part in plain words with its exact counts, shown only
+  when an item is opened.
+- **The boxes**, in aj's own words: "Labels wrote per item but let's change the format here to, what exists today,
+  what this creates, how it impacts the user." This reads two ways: the same three labels on every item, or
+  per-item labels in those three roles. Both are shown on the code lock in `docs/plans/new-item-visual-v2.html`,
+  with one question; the first is suggested. Still waiting on that answer and "Design approved: new item visual v2".
+
+**Filed for later: #244**, an automatic change log. Written before the turn ends and checked after it, plain
+words first with exact detail on open, new files described by what they are (a wizard model with textures and four
+animations, not "wizard.fbx"), and visual files previewed from the screenshot check. It goes through the loop when
+started.
+
+---
+
+## 2026-10-15 - QA failed: new item visual; redesign proposed
+
+**aj's QA.** "Before this design moves forward we need to fix the wording of the 3 new boxes… It does and you
+get are too rigid and don't always sound proper when reading the sentence." aj also wants to see which files
+were created or changed, and by how much, "only if I open the change". aj didn't type "QA failed", but the meaning
+is clear. #240-#243 are back to `in progress`, and the ambiguity check (proposed below) waits until this is done.
+
+**Redesign page:** `docs/plans/new-item-visual-v2.html`. It shows three wordings on the code lock: one sentence
+across the boxes with no labels (suggested), labels written per item, or fixed When / Then / So. It also shows a
+file list that appears only in an opened item: each file once, with its total, then each part in plain words
+with its own count. The code lock's numbers are real (`scripts/hook.py` +53 −1: +34, +10, +9 −1). They come from a
+script that gives each diff line to the function around it, and it matches git's own total for the file
+(+616 −32). Known wrinkle for the build: a comment just above a function is counted with the function before it.
+
+---
+
+## 2026-10-15 - Design proposed: ambiguity check
+
+**Status.** Superseded by the clear writing check design (2026-10-15, above), at aj's request.
+
+**What.** aj: "Let's add in an ambiguity check… fold in some of the rules and checks too as ambiguity needs
+checking in several places and stages." What exists today:
+- Asking when a request is unclear is rule text only (show-dont-tell); in practice the code lock is the check.
+- Approvals are checked: a bare "approved" is refused, and names drop pasted answer codes (#243).
+- Issue sections (depends on, done when) are asked for in the plan note but not checked.
+- Replies: success claims, "can't be done" and unreasoned "not checked" are checked. Vague numbers and
+  claims ("about 43", "should work") and bare references ("#2", "option B") are not.
+- Pages: only my own hand search.
+
+Proposal page: `docs/plans/ambiguity-check.html`. One "Nothing left vague" rule takes in four lines from three
+rules: ask when unclear, exact inputs, named references, and done-criteria. One detector runs three new checks: a
+vague claim with no reason in a reply, a bare reference in a reply, and the same two on a page written under
+`docs/plans`. Issues are refused without "Depends on", "Depended on by" and "Done when". The not-checked check joins
+the vague-claim check, and Evidence before claims stays its own check. Four choices for aj.
+
+---
+
+## 2026-10-15 - Correction: "about 43 tests" was a guess where a count was possible
+
+The changes page said "about 43 tests" and "658 checks"; aj: "That's not the kind of thing that is ambiguous."
+Counted by running `verify.py` on `origin/main` and on this branch, then comparing check names: main has 616 and
+the branch 659, so 43 new (41 design loop, label check and page template cases, and 2 for the new rule's loading
+and size). One more check exists on both and only changed its version number. `verify.py` gained 280 lines and
+lost 13. The page now gives these numbers. A count that can be run is run, not estimated.
+
+Side finding: on main, run from a long checkout path, "inject stays under the per-hook additionalContext limit"
+failed at 9723 characters against its 9700 margin. The injected text names the plugin path, so a longer path costs
+characters. It passes in the normal checkout. Left for the rule audit (#228).
+
+---
+
+## 2026-10-14 - Design proposed: new item visual
+
+**Status.** Approved: "Design approved : New item visual: 1C". Option C: a New item opens to what sets it
+off → what it does → what you get.
+
+**Plan.** Issue #240 with sub-issues #241 (the template draws the flow) and #242 (the changes page's 13
+New items), all `in progress`. Plan page: `docs/plans/new-item-visual-plan.html`. Found while planning: the
+loop reads aj's two real messages as the features "New item visual: 1C" and "Label check plan: 1A 2A"
+(checked by calling `_loop_name` on both). A redo after "QA failed" is matched by name, so its label check
+would be skipped. Whether to fix it in this build is aj's choice on the plan page.
+
+**Build plan approved:** "Build plan approved: new item visual: 1A". The name fix is a third step,
+sub-issue #243.
+
+**Built (2.64.1).** #241: the template draws a New item's `[when, it does, you get]` as three boxes; a New item
+without them still shows text. #242: the changes page's 13 New items each have a flow. A browser check at phone
+width, light and dark, found 0 New items without a flow and 0 flows on other items, with the page width at 400.
+#243: a name stops before ": 1C"-style answer codes. `_loop_name` on aj's real messages now gives "New item
+visual" and "Label check plan". `verify.py` 659 PASS on two clean runs (one earlier run hit the stale-file
+flake, #229).
+
+**What.** aj on the changes page: Changed items "are fantastic and need nothing", but New items "lack the same
+visual flare". New items open to text only. Since it's the page template that would change, it goes through the
+loop. Proposal page: `docs/plans/new-item-visual.html`. It shows three looks on the same item: A, before and
+after with an empty "wasn't there" box; B, a strip of session moments with where it acts lit up; C, what sets it
+off → what it does → what you get (suggested). Changed and Kept items stay as they are.
+
+---
+
+## 2026-10-14 - Correction: the pull request does not carry 2.54-2.62
+
+The design loop pull request's description said the earlier 2.54-2.62 work rode along unmerged. Checked
+against `origin/main`: main is at 2.62.0, and the diff holds only the design loop and the label check (36 files).
+The claim came from an old note, not a check. The description and `docs/3-state/ProjectState.md` are corrected.
+The full breakdown is `docs/plans/design-loop-changes.html`.
+
+---
+
+## 2026-10-14 - Label check built (2.64.0); the real run
+
+**What.** #236, #237 and #238 are built in `hook.py` and covered by `verify.py` (658 PASS, run twice). #239: docs,
+2.64.0, and the real run below.
+
+**The real run.** A scratch repo at Plan, its tracker holding two real issues (#236, #237), the real `gh` read,
+and nested `claude -p` sessions loading this branch's plugin:
+1. "Build plan approved: label check", then create `app.py` → GitHub said both `in progress`; `STAGE: build`,
+   `app.py: print('hello')`.
+2. I swapped both real issues to `needs review`; a session asked to edit `app.py` → refused, `STAGE: qa`,
+   `app.py` unchanged.
+3. "QA failed: label check - it should say hi" → `STAGE: design redo: True`; the end-of-reply check told that
+   session to move the labels back.
+4. "Design approved: label check" with the labels still `needs review` → refused, `STAGE: design`.
+5. I moved both back to `in progress`; "Design approved: label check" (through `run.sh scope`) →
+   `STAGE: plan redo: False issues kept: [236, 237]`.
+
+A direct read of all five label check issues took 0.71 s; a missing issue fell back to the record with "the
+GitHub read failed (gh: Not Found (HTTP 404))".
+
+**Found.** The QA-failed name took the whole line ("label check - it should say hi"): a spaced dash now ends a
+name, with a test. Also, `guard` refused a doc-editing command because the text held the word "until" beside a
+`| head`; I re-ran the edit from a script file with no pipe. That false match belongs to the rule audit (#228).
+
+---
+
+## 2026-10-14 - Design approved: label check; build plan proposed
+
+**Decision.** aj approved the design ("Design approved: label check"). Planning made a feature
+issue, #235, with four sub-issues: #236 (read labels from GitHub, falling back to my recorded
+changes), #237 (the QA stage and label-checked stage moves), #238 (the code lock in Build and the
+end-of-reply note), and #239 (docs, 2.64.0 and a real run). All are labelled `in progress` and each
+names its dependencies and done-criteria. Build plan page: `docs/plans/label-check-plan.html`.
+It has two open choices: who builds it (suggested: me), and how it ships (suggested: on this branch,
+inside the open design loop pull request).
+
+**Status.** Approved: "Build plan approved Label check plan: 1A 2A". I build it myself, on this
+branch, so the open design loop pull request carries it.
+
+---
+
+## 2026-10-14 - Design proposed: label check (the loop enforced at each step)
+
+**Status.** Approved; see the entry above.
+
+**aj's answers** ("Label check: 1A 2* 3A 4B"):
+- **QA starts** when I switch every issue to `needs review`.
+- **Labels are read from GitHub every time.** When no GitHub account is linked, the check falls
+  back to the label changes I made. Tested here: `gh auth status` reports a failed login, yet a REST
+  read of an issue's labels works in about half a second, so "linked" means "the GitHub read
+  succeeds", not what `gh auth status` says. Each fallback says so; nothing falls back silently.
+- **After "QA failed"**, the same issues go back to `in progress`.
+- **A wrong label** refuses aj's approval and also blocks my code edits until it's fixed.
+
+**What.** aj: "Build the check now, the loop doesn't function without it. The loop must be enforced
+at each step." Proposal page: `docs/plans/label-check.html`. It adds a QA stage between Build and Done,
+entered when every issue of the feature says `needs review`, and a record of each issue's labels
+taken from my own label changes. "Build plan approved" needs every issue `in progress`. aj's QA answer
+counts only in the QA stage. After "QA failed", the redo's design approval needs every issue back
+to `in progress`. An end-of-reply check names any label that doesn't match the stage.
+
+**Why a page first.** The loop applies to its own changes. Four choices are open for aj: what
+starts QA, where the labels are read from, which issues carry a redo, and what a wrong label blocks.
+
+---
+
+## 2026-10-14 - At QA an issue moves to `needs review`; changes send it back to `in progress`
+
+**Decision.** aj changed the label flow: when an issue reaches aj's QA, `in progress` is swapped for
+`needs review`. aj then closes it, or asks for changes and it goes back to `in progress`. This
+replaces the `in review` label from the entry below, which is no longer used. The design loop's
+parent issue and seven step issues now carry `needs review`.
+
+**Why.** aj's call: one label says whose move it is: `in progress` is mine, `needs review` is aj's.
+
+**Not enforced yet.** Labels are set by hand; no hook checks them. Noted for the rule audit (#228).
+
+---
+
+## 2026-10-14 - `in progress` stays on through review; new `in review` label
+
+**Status.** Superseded by the entry above.
+
+**Decision.** When the design loop's pull request opened I removed `in progress` from its issues.
+aj said to keep it and add a new `in review` label instead. The parent issue and the seven step
+issues now carry both. `in progress` comes off only when aj closes the issue.
+
+**Why.** aj's call: an issue isn't finished until it's tested and closed, so review is still work
+in progress. Written into `rules/detail/show-dont-tell.md`, "A home for each feature".
+
+---
+
+## 2026-10-14 - QA passed: design loop (#223)
+
+**Decision.** aj passed QA on `docs/plans/loop-qa.html` ("Design loop QA: 1A 2A"): QA passed, and release by a pull
+request from `AjsAgent/agent-communication-patterns-xo0l8x` to main. The PR also carries the unmerged 2.54-2.62 work
+already on this branch. Issues are marked done, not closed: closing stays aj's, after testing in a real session.
+
+**Status.** Standing. Feature: Done.
+
+## 2026-10-14 - The design loop is built; it goes to aj's QA (#223)
+
+**Decision.** All seven build steps are done (#225, #230, #231, #232, #226, #233, #227). My own review included a real
+run: five messages to a real Claude Code session loading this branch's plugin in a scratch repo; it found that a
+feature name took the whole line (fixed, with a test). Plugin version 2.63.0. Releasing it needs a merge to main,
+which is still at 2.53.0; this branch also carries the unmerged 2.54-2.62 work. QA page: `docs/plans/loop-qa.html`.
+
+**Status.** Waiting on aj's QA.
+
+## 2026-10-14 - Issues made with the GitHub tool count too (#231)
+
+**Context.** Building step 3 ("A home for each feature") showed the existing issue record only counts a terminal
+`gh issue create`; in cloud sessions issues are made with the GitHub tool and were never counted
+(`docs/plans/issue-check-gap.html`).
+
+**Decision.** aj chose 1A: the issue record also counts issues made with the GitHub tool, with the same label
+check. Rejected: asking GitHub with `gh` at approval time (no `gh` in cloud sessions); no check (a rule with no
+check, ruled out under #228).
+
+**Status.** Standing.
+
+## 2026-10-14 - The loop's stage carries across sessions (#225)
+
+**Decision.** Asked while building the code lock: a new session that opens while a feature is in Build keeps Build,
+so code stays open under the plan aj already approved; every other stage stays closed to code. This replaces the
+earlier "every session starts locked" (Q1A, 2026-10-13), which predates the staged loop.
+
+**Status.** Standing.
+
+## 2026-10-14 - Build plan approved: design loop (#223)
+
+**Decision.** aj approved the build plan (`docs/plans/loop-build-plan.html`) with "Build plan approved: design loop".
+Seven steps, each a sub-issue of #223 naming its dependencies and done-criteria: stage tracker, approvals and the
+code lock (#225); an approval only counts once logged (#230); a home for each feature (#231); helpers build only
+approved steps (#232); long-reply reminder (#226); handover page template (#233); prove it and update the docs
+(#227). Choices: (1) the step cards are replaced later as their own feature through the loop; (2) one version bump
+at the end, so nothing reaches aj's sessions until the whole loop is proved. I build it myself, one step at a time.
+
+**Status.** Standing. Stage: Build.
+
+## 2026-10-14 - Design approved: handover format (#223)
+
+**Decision.** aj approved the handover format (`docs/plans/handover-format.html`). Every page has four parts in this
+order: In short, Changes, Choices, Wrap-up; In short and Changes are read, Choices and Wrap-up are acted on. Every
+part keeps four rules: detail only on tap; names, never bare numbers; one colour, one meaning (orange is always
+something aj acts on, nothing else is orange, green is done); I check it first (phone width, light and dark, every
+tap, a bare-number search). Choices: (1) a part is left out only when it would be empty; (2) my chat reply around a
+page is a plain summary, the link, then numbered steps for what aj needs to do; (3) the template lives in the
+plugin's templates folder, next to `templates/step-card.html`, which it replaces when the step cards are replaced.
+
+**Status.** Standing. Building it joins the loop's build plan.
+
+## 2026-10-14 - Design approved: design loop (#223)
+
+**Decision.** aj approved the loop design (`docs/plans/loop-design.html`) with "Design approved: design loop".
+Eight steps: Design, Approve design, Plan, Approve plan, Build, I review, Your QA, Done. Colour shows whose step it
+is; each step shows what it creates or changes and what it requires, at equal weight. Approvals read
+"<Stage> approved: <feature>"; QA reads "QA passed: <feature>" or "QA failed: <feature>" plus the changes. An
+approval does not count until the stage is logged. Feature and step issues carry the "in progress" label and name
+dependencies, dependants and completion criteria. The paused code-edit lock (#225), long-reply reminder (#226) and
+their tests (#227) fold into this build.
+
+**Status.** Standing. Next: the build plan. Still open: approval of the handover page format.
+
+## 2026-10-13 - Pages keep one design language that never contradicts itself (#223)
+
+**Context.** The loop-design page's legend said orange meant "your words move it on", while Design and Plan,
+both blue, also needed aj's words to move on. aj caught it.
+
+**Decision.** aj: a cohesive design language that does not contradict itself is required on every page. Added to
+`rules/show-dont-tell.md` ("a design language that fits the idea and never contradicts itself") and to its detail
+file: every colour, shape and icon means one thing everywhere on the page, and the legend says exactly what. I check
+this in my own review before aj sees a page. Under the "a rule with no check is not written" principle (#228), how to
+enforce it beyond my own review is for that audit to decide. `verify.py` 618 PASS after the change. A recurring
+flake seen along the way is filed as #229 (old "last seen" temp file breaks guard tests).
+
+**Status.** Standing.
+
+## 2026-10-13 - The loop: aj's review and test become one QA step (#223)
+
+**Decision.** aj: "You review" and "You test" merge into one final QA stage with a pass/fail result. A fail states
+clearly what needs to change and goes back to Design. Proposed wording: "QA passed: <feature>" and "QA failed:
+<feature>" plus the changes. Stages are now Design, Plan, Build, I review, Your QA, Done.
+
+**Status.** Open: aj's approval of the loop design and the handover page format.
+
+## 2026-10-13 - The loop: I review before aj does (#223)
+
+**Decision.** aj: review is split in two. First I review on my own: visual check of every screen the change
+touches, a real run of how it works, and fixes for anything that does not match the approved design. Only then
+does aj review, separately, and we iterate. Anything that would change the design goes back to aj instead of being
+fixed. Reuses the visual-check and "a green test suite is not proof" rules rather than adding a new mechanism. The
+loop now has seven stages: Design, Plan, Build, I review, You review, You test, Done.
+
+**Status.** Open: aj's approval of the loop design and the handover page format.
+
+## 2026-10-13 - The loop's design: three choices made (#223)
+
+**Decision.** On `docs/plans/loop-design.html`, aj chose: (1) own answer: a feature is labelled in progress while
+worked on, its steps are sub-issues that are labelled and trackable in GitHub, and every issue and sub-issue names
+its dependencies, dependants and completion criteria so blockers and progress are easy to see; the existing
+"in progress" label from the issue workflow is reused; (2) an approval does not count until the stage is logged;
+(3) approvals read "<stage> approved: <feature>", e.g. "Design approved: blockers".
+
+**Status.** Open: aj's approval of the loop design, and of the handover page format.
+
+## 2026-10-13 - The design loop: last choice made (#223)
+
+**Decision.** aj picked "fold them into the loop" for the three paused pieces of work: the code-edit lock (#225), the
+long-reply reminder (#226) and their tests (#227). The code-edit lock becomes the lock at every approval and all
+three are built as part of the loop, in one build. With the four choices logged earlier today, all five design-loop
+choices are made.
+
+**Status.** Standing. Open: approval of the handover page format, and of the loop's own design page.
+
+## 2026-10-13 - A rule with no check is not written (#228)
+
+**Context.** The no-bare-numbers rule (#216) was broken twice in one session. It shipped text only, covers chat
+replies but not pages, and no end-of-turn check reads pages (`docs/plans/bare-references.html`).
+
+**Decision.** aj: every rule needs a check that enforces it, because the agent can otherwise ignore it. A rule
+nobody can enforce should not be written. Issue #228 (audit every house rule for a check that enforces it) audits
+the whole rule set for unenforced rules and fixes the cause at the source. It is taken up after the show-don't-tell
+design loop (#223) is agreed and documented. The three choices on the bare-references page wait for that audit.
+
+**Status.** Standing. Audit not started.
+
+## 2026-10-13 - The design loop: four of five choices made (#223)
+
+**Context.** aj asked for auto mode to work like plan mode but force one workflow: design together, aj approves;
+plan the build together, aj approves; build; review together; plan changes, aj approves; aj tests and approves.
+Every step logs decisions and changes and updates docs, never left for later, and helpers follow the same loop.
+Proposal page: `docs/plans/design-loop.html`.
+
+**Decision.** Choices answered by aj: (1) the plugin's own check holds every approval lock (not Claude Code's
+plan mode, which docs say switches the session into an editing mode on approval, and which helpers cannot enter);
+(2) aj's own answer: a feature lives in the systems docs and as a GitHub issue with sub-issues, plus a line in
+this log; features are planned, built, adjusted and finished, and the whole process is trackable at a glance;
+(3) helpers only build approved steps and report into the log; (4) "skip design" lets one small fix through, still
+logged. Choice 5 (what happens to the paused lock, reminder and tests, issues #225-#227) was asked with bare issue
+numbers; aj's answer was that a choice must name what is changed and what it means, never only a numbered issue.
+Re-asked with the pieces named.
+
+**Status.** Open: choice 5, and approval of the handover page format itself.
+
+## 2026-10-13 - Show, don't tell; the user designs - its own SessionStart slot, three rules merged in (#223, #224)
+
+**Context.** aj's biggest blocker with agents: work told, not shown; design choices made for them; code written
+before they had seen any idea. They asked for a rule where every plan reaches them as a visual, interactive
+proposal they approve or deny, design is theirs, and nothing is built before an approved design.
+
+**Decision.** Approved by aj in chat, in this order: picks 1A 2A 3B 4C 5A (one new rule; a page for every plan;
+options with my suggestion marked, aj picks; a hook blocks code until a design is approved; replies end on one
+question); Q1A Q2A Q3B Q4A (sessions start locked; "approved" plus a name lifts the block; "skip design" lets one
+change through; a 200-word no-page reminder ships with the block); "show" definition B (a page shows how the change
+works and affects the current product, with correct icons, consistent styling and a fitting design language, and
+nothing more); consolidate-first option A (every proposal opens with what exists: merges, cuts, reuses); overlap
+map (merge "Build only what was asked", "Match response depth" and the "Prefer proposing a plan" standards line;
+replace step cards; reuse the plain-summary and issue-gate checks); rule placement B (its own SessionStart slot).
+Built in #224: `rules/show-dont-tell.md` injected by a new `showrule` handler; the two merged rules and their detail
+files removed; `verify.py` 618 PASS, run twice. Proposal pages: `docs/plans/show-dont-tell*.html`,
+`docs/plans/consolidate-first.html`.
+
+**Rejected.** The rule inside `house-rules.md` (it was 47 chars from `inject`'s 9,700 margin; the rule is 927);
+the coding-standards slot (9,304 chars in a Unity + Node project, measured); a short pointer only, or cutting ~930
+chars from other rules.
+
+**Why.** The rule exists so aj keeps authorship. A first plan page made of styled text was rejected ("You showed
+me nothing you just made the text pretty"), which is why "show" is now defined in the rule itself.
+
+**Status.** Standing. Step cards (replace), the design block (#225), the reminder (#226) and their proof (#227) are
+not built yet.
+
 ## 2026-10-09 - Git writes are judged by the default branch, not branch prefixes; unanswerable prompts are refused (#196-#199, 2.60.0)
 
 **Context.** Subagents in worktrees sit on `worktree-agent-<id>` branches, which were not "owned", so every

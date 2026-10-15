@@ -121,6 +121,10 @@ if [ -z "$PY" ]; then
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The rules were NOT loaded into this session. Run /house-rules:doctor."}'
       exit 0
       ;;
+    showrule)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The show-don'"'"'t-tell rule was NOT loaded into this session. Run /house-rules:doctor."}'
+      exit 0
+      ;;
     standards)
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. No coding standards were loaded into this session. Run /house-rules:doctor."}'
       exit 0
