@@ -22,6 +22,11 @@ genuine message lets one reply past the page and editor rows; a helper's hand-ba
 
 ---
 
+## 2026-10-15 - QA passed: handover pages and checkpoints
+
+**Status.** aj: "QA passed: handover pages and checkpoints". Stage Done. QA page: `docs/plans/handover-pages-qa.html`.
+Pull request #263 waits on aj's merge. Issues stay `needs review` until aj closes them. Handoff: `docs/handoff-2026-10-15.md`.
+
 ## 2026-10-15 - Guard fixes: aj's answers
 
 **Status.** Answered: "Guard fixes answers: 1A 2A 3A 4A", on `docs/plans/guard-fixes.html`, from the nine
