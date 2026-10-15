@@ -1,0 +1,42 @@
+{
+  "title": "Automatic Pages Build Plan",
+  "eyebrow": "Build plan for approval · the automatic-pages issue in AjsClaudeCodeTools · nothing built yet",
+  "replyPrefix": "Automatic pages build plan",
+  "short": {
+    "lead": "Three small fixes, built one at a time by builder helpers, then one pull request for you to test. The design is what you approved on the issue page; this page adds how each fix works and one safety choice.",
+    "hint": "Tap a step for what it changes and how it is checked.",
+    "key": [["I build it", ""], ["You decide or test", "you"]],
+    "items": [
+      ["list", "160 words", "Step 1: the 160-word threshold", "",
+       "hook.py asks for a page at 160 words or more instead of over 200. The rule files, the editor helper's description and the system docs that say 200 change to match. History in Decisions and old session notes stays as written. Child issue: \"Page threshold: 160 words or more, everywhere it is stated\" (282).",
+       "The self-test (verify.py) passes, with new cases showing a 159-word reply needs no page and a 160-word reply does."],
+      ["lock", "Keeps blocking", "Step 2: no way past a missing page", "",
+       "Today a reply with no page is blocked once, then the retry goes through. After this, the page check blocks the retry too, until the reply links a page. Only your own \"no page\" or turning the loop off lets it through. The check's message stops mentioning \"no page\". Child issue: \"Page checkpoint: keep blocking until a page is linked; never offer \"no page\" to the agent\" (283).",
+       "New self-test cases: a retry with no page blocks, a retry with a page passes, your \"no page\" passes, and the message never says \"no page\"."],
+      ["search", "Real pages only", "Step 3: count only pages the agent wrote", "",
+       "The page checks count a page only when git shows it as new, edited, or committed since your last message. A freshly cloned repo's pages no longer count, so the 36-page editor list and the repeating wording warnings stop. Outside a git repo it works as today. Child issue: \"Page scans: count only pages the agent wrote or changed, not cloned or checked-out ones\" (284).",
+       "New self-test cases: cloned pages are not counted; an edited page and a new page are."],
+      ["hand", "Test", "You test the pull request", "you",
+       "One pull request covers all three steps, with the self-test result quoted.",
+       "On your machine, send me a reply-length question and check a page arrives without asking."]
+    ]
+  },
+  "changes": [
+    ["chg", "Page threshold", "From over 200 words to 160 words or more.", ["Over 200 words", "160 words or more"], "Applies to the page check and the editor-helper check alike.", null, null],
+    ["chg", "A missing page", "Keeps blocking until a page is linked.", ["Blocked once, retry goes through", "Blocked on every retry, up to the safety limit you choose below"], "Only the page row changes; the editor, evidence, commit and summary rows keep blocking once.", null, null],
+    ["chg", "Which pages count as written", "Only pages git shows as new, edited or freshly committed.", ["Any page with a file time after your message, including cloned ones", "Only pages the agent actually wrote or changed"], "Fixes the false editor list and the warnings that repeated after every reply.", null, null]
+  ],
+  "choices": [
+    ["cap", "If the agent truly can't make a page (for example the page builder itself breaks), what should happen?", [
+      ["A", "Stop after 3 blocks in a row and tell you", 1, "Three tries, then the reply goes through with a line saying no page could be made and why."],
+      ["B", "Never stop blocking", 0, "Strictest, but a broken page builder would loop until you step in."]
+    ], "Without a limit, one broken script could keep a session looping and using tokens with nobody watching."]
+  ],
+  "wrapup": {
+    "summary": "How the three automatic-pages fixes get built and checked.",
+    "changing": "hook.py, verify.py, the show-don't-tell and clear-writing rule files, the editor helper's description, and three system docs.",
+    "blocking": "Your approval of this plan and your answer on the safety limit.",
+    "next": "Builders make the three fixes one at a time; I open one pull request for you to test.",
+    "todo": ["Pick your answer in the Choices section.", "Tap <b>Copy my reply</b>.", "Send it with \"Build plan approved: automatic pages\", or say what to change."]
+  }
+}
