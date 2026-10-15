@@ -237,7 +237,10 @@ def style_css(style):
         css.append(".g.you span.c,.st.you .c{color:var(--you)}.g.done span.c{color:var(--ok)}"
                    ".g:not(.you):not(.done) span.c{color:var(--accent)}")
     out = "<style>\n" + "\n".join(css) + "\n</style>\n"
-    load = fonts.get("load")
+    families = [fonts[k] for k in ("display", "body", "label") if fonts.get(k)]
+    # shortcut: asks Google Fonts for 400 and 700, which a single-weight family lacks; set fonts.load then
+    load = fonts.get("load") or (families and "https://fonts.googleapis.com/css2?%s&display=swap" % "&".join(
+        "family=%s:wght@400;700" % f.replace(" ", "+") for f in dict.fromkeys(families)))
     if load:
         out = '<link rel="stylesheet" href="%s">\n' % load + out
     return out
@@ -349,6 +352,8 @@ def build(args):
     html = re.sub(r"<title>.*?</title>", lambda _: "<title>%s</title>" % esc, html, count=1, flags=re.S)
     if has_look(style):
         block = style_css(style)
+        if "fonts.googleapis.com" in block:  # the project's fonts replace the template's default ones
+            html = re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com/[^"]*">\n', "", html, count=1)
         i = html.index("<svg width=\"0\"") if "<svg width=\"0\"" in html else html.index("<script>")
         html = html[:i] + block + html[i:]
     html = "<!doctype html>\n<!-- house-rules make_page %s -->\n" % plugin_version() + html
