@@ -22,6 +22,13 @@ genuine message lets one reply past the page and editor rows; a helper's hand-ba
 
 ---
 
+## 2026-10-15 - Test method for the PlunderSpell regeneration: after the merge
+
+**Status.** Answered: "Test method: 1B", on `docs/plans/plunderspell-test-method.html`, which was the first page
+built by the page builder. A brand-new cloud session installs house-rules from main, so it can't load this
+branch. The order is now: guard fixes, aj's QA on the pull request, merge, then a genuinely new PlunderSpell
+session for #259. This replaces build plan choice 1B ("install from this branch before it is merged").
+
 ## 2026-10-15 - Before the pull request: guards must not stall an approved, autonomous build
 
 **Context.** A routine commit of finished, tested work on this session's own branch was refused while aj was
