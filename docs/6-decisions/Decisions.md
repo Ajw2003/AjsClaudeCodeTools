@@ -7,6 +7,41 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Design approved: Label setup (approved in Ajw2003/Unblocked, built here)
+
+**Context.** A new repo has none of the three house labels the issue workflow and the design loop
+depend on, so work stalls until someone creates them by hand. The GitHub tool in a cloud session
+cannot create a label, and `gh issue edit --add-label` fails there because it goes through GitHub's
+GraphQL API, which answers 403. aj approved the design on 2026-10-15 in a session on
+`Ajw2003/Unblocked`: "Design approved: Label setup: 1A 2A 3*", with "handoff" as their own answer to
+question 3. That repo holds the decision (`docs/6-decisions/Decisions.md`, entry "Label setup moves
+into the house-rules plugin, built by a handed-off session"), the design page
+(`docs/plans/label-tool.html`) and the handoff brief (`docs/plans/label-setup-handoff.md`). This
+session picked up the handoff from a background-task notice, not from a message aj typed here.
+
+**Decision.**
+- **Where:** inside the house-rules plugin, not a standalone script or a GitHub Action.
+- **Which labels:** only `AjsAgent created this` (`5b6b7a`, "Opened by AJ's agent"), `in progress`
+  (`FBCA04`, "AJ's agent is working on it") and `needs review` (`0E8A16`, "Waiting on aj"). GitHub's
+  own category labels are left alone.
+- **Behaviour:** when the plugin needs a house label the repo lacks, it creates it with
+  `gh label create` and says so. A `/house-rules:labels` command does the same on demand. An existing
+  label is never changed or deleted, even one with a different colour or description.
+- **Advice:** the plugin's `gh issue edit --add-label` advice moves to the REST form
+  (`gh api repos/<owner>/<repo>/issues/<n>/labels`), which works in cloud sessions.
+
+**Checked against this repo.** The handoff cites `scripts/hook.py` lines at commit `e879981`; `main`
+is still at `e879981`, and all ten cited lines (4809, 4814, 4820, 5197, 5201, 5208, 5218, 5244, 5268,
+5594) say what the handoff says. Two things the handoff does not mention: the `gh issue edit` advice
+appears in five places, not one (`scripts/hook.py:4820`, `:5661`, `:5711`, and
+`rules/detail/issue-workflow.md:14` and `:19`). And the label recorder (`_label_changes`,
+`scripts/hook.py:5563`) only understands `gh issue edit` and the GitHub tool, so a REST label change
+would go unrecorded. The build plan covers both.
+
+**Status.** Standing. Stage Plan. Build plan: `docs/plans/label-setup-build-plan.html`.
+
+---
+
 ## 2026-10-15 - The end-of-reply check blocks once, from a checkpoint table
 
 **Context.** aj approved "Design approved: handover pages and checkpoints" (below), which reverses the
