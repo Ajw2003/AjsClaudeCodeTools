@@ -1,8 +1,7 @@
 {
   "title": "Handover Pages and Checkpoints",
   "eyebrow": "Design for approval, second version · nothing built yet",
-  "replyPrefix": "Design approved: handover pages and checkpoints",
-  "reply": "",
+  "approval": "Design approved: handover pages and checkpoints",
   "short": {
     "lead": "This happens in two steps, in this order. First, the page template stops being one fixed shape: it gains places for pictures, and each project sets its own look and how visual its pages are. Then the checkpoints from the first version of this design make the template mandatory. Your plunderspell page shows why the order matters: when it was forced into today's template, the render of the Wick and the Ophan was dropped, and that render was the most useful thing on the page.",
     "hint": "Tap a step to see what it creates and what it needs from you.",
@@ -391,7 +390,7 @@
     "next": "A build plan page with an issue for each step, the template and builder first and the checkpoints after. No code is written until you send \"Build plan approved\".",
     "todo": [
       "Pick your answers under Choices.",
-      "Tap <b>Copy my reply</b> and send it (sending it approves the design), or tell me what to change."
+      "Tap <b>Copy my reply</b> and send it: \"Design approved: handover pages and checkpoints\", or say what to change."
     ]
   }
 }

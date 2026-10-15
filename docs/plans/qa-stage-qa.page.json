@@ -1,8 +1,7 @@
 {
   "title": "Enforced QA Stage QA",
   "eyebrow": "QA for issue #264 (Enforce the QA stage) · plugin 2.67.0 · branch AjsAgent/vigilant-meitner-8pp618",
-  "replyPrefix": "",
-  "reply": "",
+  "approval": "QA passed: enforced QA stage",
   "short": {
     "lead": "All seven steps of issue #264 (Enforce the QA stage) are built, and this page was itself built by the new QA mode, so the file counts below come from git. A real nested session proved the main path: opening a pull request started QA, the reply was sent back until a QA page existed, and the session then built one. That run also found a bug, which is now fixed, and an older reply loop that this build does not touch.",
     "hint": "Tap a step to see what was built and how it was checked.",
@@ -52,7 +51,7 @@
     "next": "On QA passed, the issues stay needs review until you close them, and the branch is ready for a pull request when you ask. On QA failed, your list of changes starts the next design.",
     "todo": [
       "Read the steps and the two findings.",
-      "Tap <b>Copy my reply</b> and send it, or send \"QA failed: enforced QA stage\" with what to change."
+      "Tap <b>Copy my reply</b> and send it: \"QA passed: enforced QA stage\", or send \"QA failed: enforced QA stage\" with what to change."
     ]
   }
 }

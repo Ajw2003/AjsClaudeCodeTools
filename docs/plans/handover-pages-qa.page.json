@@ -1,8 +1,7 @@
 {
   "title": "Handover Pages QA",
   "eyebrow": "QA for handover pages and checkpoints · 2.66.0 · pull request 263",
-  "replyPrefix": "QA passed: handover pages and checkpoints",
-  "reply": "QA passed: handover pages and checkpoints",
+  "approval": "QA passed: handover pages and checkpoints",
   "short": {
     "lead": "Everything in the build plan is built, plus the guard fixes you asked for before the pull request. Each item under Changes shows what the plan estimated beside what was built, counted from git against main: 33 files changed before this QA page was added, 4 of them screenshots. Two things can only be proved in a live session running this version: a checkpoint sending a reply back, and the page check running on claude.ai. Proving both needs the merge, because a session loads the plugin that was installed when it started. The PlunderSpell test, which runs after you merge, covers both.",
     "hint": "Tap a step to see what it changed and what it needs from you.",
@@ -30,6 +29,6 @@
     "changing": "Pages, the page builder and style files, the end-of-reply checkpoints, the page check, the guards and the design loop.",
     "blocking": "Your QA answer comes first. Merging pull request 263 comes after it.",
     "next": "On QA passed, you merge, then a new PlunderSpell session runs the regeneration test. On QA failed, the build goes back to the design stage with your changes.",
-    "todo": ["Open pull request 263, and open any page you want to check, at phone width.", "Tap <b>Copy my reply</b> and send it if it passes. If not, send \"QA failed: handover pages and checkpoints\" with what to change."]
+    "todo": ["Open pull request 263, and open any page you want to check, at phone width.", "Tap <b>Copy my reply</b> and send it: \"QA passed: handover pages and checkpoints\", or send \"QA failed: handover pages and checkpoints\" with what to change."]
   }
 }

@@ -5,7 +5,7 @@
     make_page.py style --quick
     make_page.py style --draft [--from <tokens.json>] [--project <root>]
 
-Content JSON has the same keys as the template's PAGE block (title, eyebrow, replyPrefix, reply,
+Content JSON has the same keys as the template's PAGE block (title, eyebrow, approval,
 short, changes, choices, wrapup). A Changes item may carry `{"visual": true}` as a trailing object
 element (any position after the detail); it marks a visual change. The template ignores it. In a
 project whose style file says `"pictures": "required"`, such an item must also carry a picture
