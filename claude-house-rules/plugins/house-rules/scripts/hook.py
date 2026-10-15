@@ -1711,7 +1711,6 @@ def event_scope():
     waiting = ""
     try:
         payload = read_payload()
-        _record_last_seen(payload)
         waiting = _waiting_scope_note(payload)
         loop_note = _loop_scope_note(payload)
         if loop_note:
@@ -4217,7 +4216,7 @@ def _prompt_refusal(minutes, path, summary):
     return (
         "Nobody answered this permission prompt for %s, so it was refused - not approved - and "
         "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this action, or a "
-        "variation of it, this session; it would only be refused again. Look for a route that needs no permission AND does "
+        "variation of it, this session; aj has not approved it. Look for a route that needs no permission AND does "
         "not have the same effect (for example: commit to an AjsAgent/ branch instead of aj's branch; "
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
@@ -4240,24 +4239,19 @@ def _prompt_timeout_line():
             "waiting-on-you list." % _prompt_minutes(secs))
 
 
-def _last_seen_path(session_id):
+def _asked_path(session_id):
     safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
-    return os.path.join(tempfile.gettempdir(), "house-rules-last-seen-%s" % safe)
+    return os.path.join(tempfile.gettempdir(), "house-rules-asked-%s" % safe)
 
 
-def _record_last_seen(payload):
-    """UserPromptSubmit: note when aj last wrote, for the away check in _ask_or_refuse (#198).
-    A background task notice is not aj. Never raises; a failure is said on stderr."""
+def _record_ask(session_id, key):
+    """A guard raised this prompt: note its key so prompttimer times it (#290). Never raises."""
     try:
-        m = _PROMPT_VALUE_RE.search(payload or "")
-        if not m or _TASK_NOTIFICATION_RE.search(m.group(1)):
-            return
-        data = json.loads(payload)
-        with open(_last_seen_path(str(data.get("session_id") or "")), "w", encoding="utf-8") as f:
-            f.write(str(time.time()))
-    except Exception as exc:
-        sys.stderr.write("house-rules scope: could not record when aj last wrote (%s: %s); the away "
-                         "check will ask as usual.\n" % (type(exc).__name__, exc))
+        with open(_asked_path(session_id), "a", encoding="utf-8") as f:
+            f.write(key + "\n")
+    except OSError as exc:
+        sys.stderr.write("house-rules guard: could not record this prompt for the timer (%s); "
+                         "it will get no timer.\n" % exc)
 
 
 UNATTENDED_REFUSAL = (
@@ -4268,9 +4262,9 @@ UNATTENDED_REFUSAL = (
 
 
 def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
-    """Emit the guard's ask - or, when nobody can answer it, a refusal (#198): inside a subagent
-    (the payload carries agent_id), or when aj has not written for the prompt timeout. Refusals go
-    on the waiting-on-you list. HOUSE_RULES_PROMPT_TIMEOUT=off turns both refusals off."""
+    """Emit the guard's ask - or, inside a subagent (the payload carries agent_id), a refusal
+    (#198): a helper cannot answer a prompt. Refusals go on the waiting-on-you list.
+    HOUSE_RULES_PROMPT_TIMEOUT=off turns the refusal off. An ask is recorded for prompttimer."""
     why = None
     secs, _ = _prompt_timeout_seconds()
     try:
@@ -4279,18 +4273,10 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
         data = {}
     data = data if isinstance(data, dict) else {}
     session_id = str(data.get("session_id") or "")
-    status = "refused"
     if secs is not None and data.get("agent_id"):
         why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
-    elif secs is not None:
-        try:
-            idle = time.time() - float(_read_text(_last_seen_path(session_id)).strip())
-        except (OSError, ValueError):
-            idle = None  # no record of aj writing: ask as usual
-        if idle is not None and idle > secs:
-            why = "aj has not written for %s" % _prompt_minutes(idle)
-            status = "timed-out"  # aj is away: prompttimer refuses later prompts at once too
     if not why:
+        _record_ask(session_id, _waiting_key(str(data.get("tool_name") or "?"), data.get("tool_input")))
         out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",
                "permissionDecisionReason": reason_text}
     elif rewrite:
@@ -4303,7 +4289,7 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
         tool, ti = str(data.get("tool_name") or "?"), data.get("tool_input")
         now = time.time()
         entry = {"session_id": session_id, "key": _waiting_key(tool, ti), "tool": tool,
-                 "summary": _waiting_summary(tool, ti), "started": now, "status": status, "timed_out_at": now}
+                 "summary": _waiting_summary(tool, ti), "started": now, "status": "refused", "timed_out_at": now}
         try:
             path, _ = _waiting_path(session_id)
             _waiting_update(path, lambda es: [e for e in es if not (e.get("session_id") == session_id
@@ -4367,6 +4353,14 @@ def event_prompttimer():
     except Exception as exc:
         sys.stderr.write("house-rules prompttimer: never-blocked check failed (%s); timer applies.\n" % exc)
     key = _waiting_key(tool_name, tool_input)
+    try:
+        asked = key in _read_text(_asked_path(session_id)).split()
+    except OSError:
+        asked = False
+    if not asked:
+        sys.stderr.write("house-rules prompttimer: no house-rules guard raised this prompt (%s); no timer, "
+                         "the dialog decides.\n" % tool_name)
+        return 0
     summary = _waiting_summary(tool_name, tool_input)
     path, in_repo = _waiting_path(session_id)
     if not in_repo:
@@ -4383,32 +4377,6 @@ def event_prompttimer():
         except Exception as exc:
             sys.stderr.write("house-rules prompttimer: could not write %s (%s: %s); the timer still "
                              "applies.\n" % (path, type(exc).__name__, exc))
-
-    try:
-        existing = _waiting_load(path)
-    except (ValueError, OSError) as exc:
-        sys.stderr.write("house-rules prompttimer: could not read %s (%s: %s); treating the list as "
-                         "empty.\n" % (path, type(exc).__name__, exc))
-        existing = []
-    if any(mine(e) and e.get("status") == "timed-out" for e in existing):
-        _prompt_deny(
-            "This exact action already timed out this session and is still waiting on aj, so it was "
-            "refused again without waiting. " + _prompt_refusal(_prompt_minutes(secs), path, summary))
-        return 0
-    away = [e for e in existing if e.get("session_id") == session_id and e.get("status") == "timed-out"]
-    if away:
-        # aj had the full wait on an earlier prompt and has not written since: they are away, and a
-        # new prompt would only cost another full wait before the same refusal (#152).
-        now = time.time()
-        update(lambda es: [e for e in es if not mine(e)] + [
-            {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,
-             "started": now, "status": "timed-out", "timed_out_at": now}])
-        _prompt_deny(
-            "Another permission prompt this session already went unanswered (%s, since %s) and aj has "
-            "not written since, so this one was refused at once instead of waiting again. "
-            % (away[0].get("summary", "?"), _waiting_clock(away[0].get("started")))
-            + _prompt_refusal(_prompt_minutes(secs), path, summary))
-        return 0
 
     started = time.time()
     entry = {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,

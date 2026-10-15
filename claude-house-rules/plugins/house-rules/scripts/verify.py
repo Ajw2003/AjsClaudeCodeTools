@@ -24,6 +24,7 @@ computed at runtime, so it cannot drift out from under an added case.
 
 import atexit
 from collections import namedtuple
+import hashlib
 import json
 import os
 import pathlib
@@ -914,9 +915,9 @@ _ua_seen("verify-ua-here", 30)
 _ua_away = _ua_guard("verify-ua-away")
 _ua_here = _ua_guard("verify-ua-here")
 _ua_never = _ua_guard("verify-ua-never-wrote")
-report("PASS" if _ua_dec(_ua_away) == "deny" and "aj has not written for 10 minutes" in _ua_away
+report("PASS" if _ua_dec(_ua_away) == "ask" and "aj has not written" not in _ua_away
        and _ua_dec(_ua_here) == "ask" and _ua_dec(_ua_never) == "ask" else "FAIL",
-       "guard: when aj last wrote over 5 minutes ago a prompt is refused; recently, or with no record, it asks")
+       "guard (#290): aj idle past the timeout still gets an ask, not an immediate deny; same when recent or no record")
 print("          away %s, here %s, no record %s" % (_ua_dec(_ua_away), _ua_dec(_ua_here), _ua_dec(_ua_never)))
 
 _ua_list = os.path.join(_ua_dir, ".git", "house-rules", "waiting-on-you.json")
@@ -928,9 +929,9 @@ _ua_st = {e.get("session_id"): e.get("status") for e in _ua_entries}
 _ua_scope = run_hook("scope", json.dumps({"session_id": "verify-ua-sub", "prompt": "back now"}),
                      env=env_in(_ua_dir))[1]
 _ua_seen_file = os.path.join(tempfile.gettempdir(), "house-rules-last-seen-verify-ua-sub")
-report("PASS" if _ua_st.get("verify-ua-sub") == "refused" and _ua_st.get("verify-ua-away") == "timed-out"
-       and "rm -rf build" in _ua_scope and os.path.isfile(_ua_seen_file) else "FAIL",
-       "guard: refusals go on the waiting-on-you list, aj's next message reports them and records when aj wrote")
+report("PASS" if _ua_st.get("verify-ua-sub") == "refused" and "verify-ua-away" not in _ua_st
+       and "rm -rf build" in _ua_scope and not os.path.isfile(_ua_seen_file) else "FAIL",
+       "guard: a subagent refusal goes on the waiting-on-you list and scope reports it; an idle-aj ask is not listed")
 print("          statuses %r, scope reported it: %s" % (_ua_st, "rm -rf build" in _ua_scope))
 if os.path.isfile(_ua_seen_file):
     os.remove(_ua_seen_file)
@@ -6099,7 +6100,17 @@ _pt_payload = json.dumps({"hook_event_name": "PermissionRequest", "session_id": 
                           "tool_input": {"command": "rm -rf /tmp/pt-victim"}})
 
 
-def _pt_run(payload=_pt_payload, **extra):
+def _pt_run(payload=_pt_payload, guarded=True, **extra):
+    if guarded:  # #290: only a prompt a guard raised is timed; record its key as the guard would
+        try:
+            _d = json.loads(payload)
+            _k = hashlib.sha256((_d["tool_name"] + json.dumps(_d["tool_input"], sort_keys=True, separators=(",", ":"),
+                                                              default=str)).encode("utf-8")).hexdigest()[:16]
+            with open(os.path.join(tempfile.gettempdir(), "house-rules-asked-%s" % re.sub(
+                    r"[^0-9A-Za-z_-]", "_", _d["session_id"])), "a", encoding="utf-8") as _af:
+                _af.write(_k + "\n")
+        except (ValueError, KeyError, TypeError):
+            pass  # a malformed payload case: nothing to record
     t0 = time.time()
     code, out, err = run_hook("prompttimer", payload, env=_pt_env(**extra))
     return code, out, err, time.time() - t0
@@ -6133,8 +6144,8 @@ commit_case(
 )
 _p2 = _pt_run()
 commit_case(
-    "prompttimer: the same action again in the same session is denied at once",
-    _p2[3] < 0.5 and _pt_decision(_p2[1]).get("behavior") == "deny" and "already timed out" in _pt_decision(_p2[1]).get("message", ""),
+    "prompttimer (#290): the same action again in the same session waits its own full timer, not denied at once",
+    _p2[3] >= 0.9 and "already timed out" not in _pt_decision(_p2[1]).get("message", ""),
     "elapsed %.2fs out %r" % (_p2[3], _p2[1][:100]),
 )
 shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
@@ -6347,16 +6358,14 @@ commit_case(
     "q1 %r q2 %r state %s" % (_q1[2][:120], _q2[2][:120], os.path.exists(_pt_state)),
 )
 
-_a1 = _pt_run()  # rm -rf /tmp/pt-victim times out: aj is away
+_a1 = _pt_run()  # the first prompt times out
 _a2 = _pt_run(_pt_pl("git push -q origin claude/x"))
 _a2d = _pt_decision(_a2[1])
-_a2s = _pt_state_now()
 commit_case(
-    "prompttimer: after one timeout, a DIFFERENT action in the same session is refused at once and queued",
-    _a1[3] >= 0.9 and _a2[3] < 0.5 and _a2d.get("behavior") == "deny" and _a2d.get("message") == _a2d.get("reason")
-    and "already went unanswered" in _a2d.get("message", "") and "rm -rf /tmp/pt-victim" in _a2d.get("message", "")
-    and sorted(e["status"] for e in _a2s) == ["timed-out", "timed-out"],
-    "elapsed %.2fs out %r state %r" % (_a2[3], _a2[1][:120], _a2s),
+    "prompttimer (#290): after one timeout, a DIFFERENT guard prompt in the same session waits its own full timer",
+    _a1[3] >= 0.9 and _a2[3] >= 0.9 and _a2d.get("behavior") == "deny"
+    and "already went unanswered" not in _a2d.get("message", ""),
+    "elapsed %.2fs out %r" % (_a2[3], _a2[1][:120]),
 )
 _a3 = _pt_run(_pt_pl("git push -q origin claude/x", sid="other-sess"))
 commit_case(
@@ -6364,12 +6373,22 @@ commit_case(
     _a3[3] >= 0.9 and "already went unanswered" not in _pt_decision(_a3[1]).get("message", ""),
     "elapsed %.2fs" % _a3[3],
 )
-_pt_scope("I'm back")
-_a4 = _pt_run(_pt_pl("echo after-aj-wrote"))
+# (a) a second guard prompt after a timeout is ASKED by the guard normally, not refused
+_a5 = _ua_guard("verify-290-a", tool_input={"command": "rm -rf build"})
+_a5b = _ua_guard("verify-290-a", tool_input={"command": "rm -rf other-build"})
 commit_case(
-    "prompttimer: once aj writes (scope), a new prompt waits normally again",
-    _a4[3] >= 0.9 and "already went unanswered" not in _pt_decision(_a4[1]).get("message", ""),
-    "elapsed %.2fs out %r" % (_a4[3], _a4[1][:100]),
+    "guard (#290): after a prompt timed out, a second guard prompt is asked normally",
+    _ua_dec(_a5) == "ask" and _ua_dec(_a5b) == "ask", "first %s second %s" % (_ua_dec(_a5), _ua_dec(_a5b)),
+)
+# (b) a dialog no guard raised gets no timer and no refusal
+shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
+_b1 = _pt_run(_pt_tool("Artifact", {"action": "publish"}), guarded=False)
+_b2 = _pt_run(_pt_tool("mcp__github__create_issue", {"title": "x"}), guarded=False)
+commit_case(
+    "prompttimer (#290): a dialog no guard raised (Artifact, mcp__ tool) gets no timer, no refusal, no state, said on stderr",
+    all(x[0] == 0 and x[1] == "" and x[3] < 0.9 and "no house-rules guard raised" in x[2] for x in (_b1, _b2))
+    and not os.path.exists(_pt_state),
+    "b1 %r b2 %r" % (_b1[2][:100], _b2[2][:100]),
 )
 
 # an action approved some other way runs: promptran marks it, the waiting timer stops without a decision
