@@ -899,6 +899,12 @@ for _cmd in ("rm -rf /home/user/x", "kill -9 1", "git push origin main",
     _d, _r = _fr(_cmd)
     if _d != "deny" or (_cmd.startswith(("rm -rf /home", "kill", "git push")) and "Do not retry" not in _r):
         _fr_fail.append("still-refused %r: %s" % (_cmd, _d))
+_d, _r = _fr("S=%s/old-plugin; rm -rf $S" % _fr_scratch)
+if _d == "deny":
+    _fr_fail.append("rm via a same-command assignment inside the scratchpad was refused %r" % _r[-120:])
+_d, _r = _fr("S=/home/user/x; rm -rf $S")
+if _d != "deny" or "Do not retry" not in _r:
+    _fr_fail.append("rm via an assignment outside the scratchpad: %s %r" % (_d, _r[-120:]))
 _sv_case("guard: audit entries 1, 2, 3, 5, 7, 8, 9 no longer dead-end routine work; deletes, kills and a push to main still refuse",
          not _fr_fail, "; ".join(_fr_fail) or "routine ones pass or get the rewrite text, the rest say Do not retry")
 
@@ -8630,6 +8636,64 @@ _p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop"
       "tool_input": {"file_path": os.path.join(_loop_dir, "app.py")}}
 _, _o, _ = run_hook("commitgate", json.dumps(_p), env=_loop_env)
 _loop_cases.append(("an unreadable tracker says so instead of failing silently", "could not read house-rules-loop.json" in _o))
+# -- #262: one stage per repo (worktrees share it) and the lock covers script writes ------------
+_wt_main = tempfile.mkdtemp(prefix="house-rules-wt-", dir=_FIXTURE_ROOT)
+_wt_tree = _wt_main + "-tree"
+for _a in (["init", "-q"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "i"],
+           ["worktree", "add", "-q", "-b", "wt-branch", _wt_tree]):
+    subprocess.run(["git"] + _a, cwd=_wt_main, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def _wt_stage(stage):
+    with open(os.path.join(_wt_main, ".git", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+        json.dump({"feature": "f", "stage": stage, "skip": False, "approvals": []}, f)
+
+
+def _wt_gate(tool, tool_input, cwd):
+    p = {"hook_event_name": "PreToolUse", "tool_name": tool, "session_id": "wt", "cwd": cwd, "tool_input": tool_input}
+    _, out, _ = run_hook("commitgate", json.dumps(p), env=_loop_env)
+    try:
+        h = json.loads(out)["hookSpecificOutput"]
+        return h.get("permissionDecision") or "allow", h.get("permissionDecisionReason", "")
+    except Exception:
+        return "allow", ""
+
+
+def _wt_bash(cmd, cwd=None):
+    return _wt_gate("Bash", {"command": cmd}, cwd or _wt_main)
+
+
+_wt_heredoc = "python3 - <<'E'\nopen('app.py', 'w').write('x = 1')\nE"
+_wt_stage("build")
+_wt_a = _wt_gate("Edit", {"file_path": os.path.join(_wt_tree, "app.py")}, _wt_tree)[0]
+_wt_b = _wt_bash(_wt_heredoc)[0]
+_wt_c = _wt_bash("sed -i 's/a/b/' app.py")[0]
+_wt_stage("design")
+_wt_d = _wt_gate("Edit", {"file_path": os.path.join(_wt_tree, "app.py")}, _wt_tree)[0]
+_wt_e = _wt_bash(_wt_heredoc)
+_wt_f = _wt_bash("sed -i 's/a/b/' app.py")[0]
+_wt_g = _wt_bash("echo hi > notes.md")[0]
+_wt_h = _wt_bash("echo hi >> app.py")[0]
+_wt_i = _wt_bash("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" app.py")
+_wt_j = _wt_bash("cat f | tee out.py")[0]
+_wt_k = _wt_bash("ls -la 2>&1 | grep x; echo done > /dev/null")[0]
+_wt_l = _wt_bash("python3 -c \"open('docs/x.txt', 'w').write('x')\"")[0]
+_wt_loop_off = dict(_loop_env, HOUSE_RULES_LOOP="off")
+_, _wt_o, _ = run_hook("commitgate", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt",
+                       "cwd": _wt_main, "tool_input": {"command": _wt_heredoc}}), env=_wt_loop_off)
+for _t, _ok in (
+        ("a worktree reads the main checkout's stage: Build lets its Edit through", _wt_a == "allow"),
+        ("a worktree reads the main checkout's stage: Design refuses its Edit", _wt_d == "deny"),
+        ("a python heredoc writing a .py file is allowed in Build", _wt_b == "allow"),
+        ("a python heredoc writing a .py file is refused in Design", _wt_e[0] == "deny" and "closed in the Design stage" in _wt_e[1]),
+        ("sed -i on a .py file is allowed in Build and refused in Design", _wt_c == "allow" and _wt_f == "deny"),
+        ("a Bash write to a .md file stays open in Design", _wt_g == "allow"),
+        ("a >> redirect into a .py file and tee are refused in Design", _wt_h == "deny" and _wt_j == "deny"),
+        ("a script whose target path is a variable is refused with the Edit/Write hint",
+         _wt_i[0] == "deny" and "Edit or Write tool" in _wt_i[1] and "retry" not in _wt_i[1].lower()),
+        ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow"),
+        ("HOUSE_RULES_LOOP=off leaves script writes alone", "deny" not in _wt_o)):
+    _loop_cases.append((_t, _ok))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):
     # The retry (#256): the first pass of a missed page rule blocks; the note is what the retry reports.

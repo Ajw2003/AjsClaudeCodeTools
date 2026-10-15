@@ -2120,6 +2120,18 @@ _ASSIGN_RE = re.compile(r"""(?:^|(?<=[;&\n]))\s*([A-Za-z_]\w*)=(?:"([^"$`\\\n]*)
 _ANY_CD_RE = re.compile(r"(?:^|[;&|({!\n]|\b(?:if|elif|while|until|then|do|else|time|exec)\b)\s*(?:cd|pushd)(?=\s|$)")
 
 
+def _apply_assigns(cmd):
+    """#261/#262: drop simple same-command NAME=value assignments and expand $NAME / ${NAME}
+    from them; a name that was not assigned stays as written."""
+    assigns = {}
+    for am in _ASSIGN_RE.finditer(cmd):
+        assigns[am.group(1)] = am.group(2) if am.group(2) is not None else (am.group(3) if am.group(3) is not None else am.group(4))
+    if assigns:
+        cmd = _ASSIGN_RE.sub("", cmd)
+        cmd = re.sub(r"\$\{(\w+)\}|\$(\w+)", lambda mm: assigns.get(mm.group(1) or mm.group(2), mm.group(0)), cmd)
+    return cmd
+
+
 def _command_dir(payload):
     """(dir, moved_unclear): where a guarded Bash command runs. The payload's `cwd`, else
     CLAUDE_PROJECT_DIR, else getcwd(); a lone leading `cd <dir> &&`, or `git -C <dir>` naming one
@@ -2145,12 +2157,7 @@ def _command_dir(payload):
         return base, False
     # #261: simple NAME=value / NAME="value" assignments earlier in the command expand into a
     # cd or -C target; a target that still holds a $ afterwards stays unclear.
-    assigns = {}
-    for am in _ASSIGN_RE.finditer(cmd):
-        assigns[am.group(1)] = am.group(2) if am.group(2) is not None else (am.group(3) if am.group(3) is not None else am.group(4))
-    if assigns:
-        cmd = _ASSIGN_RE.sub("", cmd)
-        cmd = re.sub(r"\$\{(\w+)\}|\$(\w+)", lambda mm: assigns.get(mm.group(1) or mm.group(2), mm.group(0)), cmd)
+    cmd = _apply_assigns(cmd)
     c_flags = _ANY_C_FLAG_RE.findall(cmd)
     if c_flags:
         # `git -C <dir>` (#192): judged by <dir> when every -C names the same one and nothing cds.
@@ -2562,7 +2569,7 @@ def _rm_only_in_scratchpad(subject, payload):
     cwd = data.get("cwd") if isinstance(data.get("cwd"), str) else ""
     proj = re.sub(r"[^A-Za-z0-9]", "-", cwd) if cwd else None
     seen = False
-    for stmt in re.split(r"&&|\|\||;|\n|\|", _decoded_command(subject)):
+    for stmt in re.split(r"&&|\|\||;|\n|\|", _apply_assigns(_decoded_command(subject))):
         try:
             words = shlex.split(stmt)
         except ValueError:
@@ -4931,6 +4938,14 @@ def _gated_edit(payload, who):
     top, git_dir = _issues_locate(cwd)
     if not git_dir:
         return None, None
+    if not _is_source_path(fp, cwd, top):
+        return None, None
+    return git_dir, None
+
+
+def _is_source_path(fp, cwd, top):
+    """The commitgate test: is `fp` a source file of the checkout at `top`? False for a path
+    outside it, docs/, .claude/, any .md file and the tracker files."""
     if not os.path.isabs(fp):
         fp = os.path.join(cwd, fp)
     try:
@@ -4938,10 +4953,121 @@ def _gated_edit(payload, who):
     except ValueError:
         rel = ".."  # another drive: outside the project
     parts = rel.replace("\\", "/").split("/")
-    if (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
-            or os.path.basename(rel) in (ISSUES_FILE, LOOP_FILE)):
-        return None, None
-    return git_dir, None
+    return not (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
+                or os.path.basename(rel) in (ISSUES_FILE, LOOP_FILE))
+
+
+_SHELL_TOOLS = ("Bash", "PowerShell")
+_HEREDOC_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.DOTALL)
+_QUOTED_RE = re.compile(r"(>>?[ \t]*)?(\"[^\"\n]*\"|'[^'\n]*')")
+_REDIRECT_RE = re.compile(r"(?<![<>&|])(?:\d|&)?>>?(?![&(>])[ \t]*(\"[^\"\n]+\"|'[^'\n]+'|[^\s;&|<>()\"']+)")
+_PY_OPEN_RE = re.compile(r"\bopen\(\s*([^,()]+?)\s*,\s*(?:mode\s*=\s*)?['\"][wax]")
+_PY_WRITE_TEXT_RE = re.compile(r"\.write_text\(")
+_PY_WRITE_TEXT_LIT_RE = re.compile(r"Path\(\s*(['\"])([^'\"]+)\1\s*\)\s*\.write_text\(")
+_NODE_WRITE_RE = re.compile(r"\bwriteFileSync\(")
+_NODE_WRITE_LIT_RE = re.compile(r"\bwriteFileSync\(\s*(['\"])([^'\"]+)\1")
+_SCRIPT_RUNNER_RE = re.compile(r"(?:^|[\s;&|(/])(?:python3?|py|node)(?:\.exe)?(?=\s|$)")
+_LITERAL_RE = re.compile(r"^(['\"])(.+)\1$")
+
+
+def _script_write_targets(cmd):
+    """(targets, unreadable): file paths a shell command writes through a python/node script
+    (open w/a, write_text, writeFileSync), sed -i / perl -pi, tee, or a > / >> redirect, and
+    whether some write's path could not be read from the command text (#262)."""
+    import shlex
+    targets, unreadable = [], False
+    body = _HEREDOC_RE.sub("", cmd)
+    if _SCRIPT_RUNNER_RE.search(cmd):
+        for m in _PY_OPEN_RE.finditer(cmd):
+            lit = _LITERAL_RE.match(m.group(1))
+            if lit and "$" not in lit.group(2):
+                targets.append(lit.group(2))
+            else:
+                unreadable = True
+        lits = _PY_WRITE_TEXT_LIT_RE.findall(cmd)
+        targets += [p for _, p in lits]
+        if len(_PY_WRITE_TEXT_RE.findall(cmd)) > len(lits):
+            unreadable = True
+        lits = _NODE_WRITE_LIT_RE.findall(cmd)
+        targets += [p for _, p in lits]
+        if len(_NODE_WRITE_RE.findall(cmd)) > len(lits):
+            unreadable = True
+    for stmt in re.split(r"&&|\|\||;|\n|\|", body):
+        try:
+            words = shlex.split(stmt)
+        except ValueError:
+            sys.stderr.write("house-rules design-loop lock: could not split a statement (unbalanced quotes) "
+                             "to look for sed -i / tee; skipping that statement.\n")
+            continue
+        for i, w in enumerate(words):
+            if w not in ("sed", "perl", "tee"):
+                continue
+            if any(p not in ("sudo", "env", "time", "nohup") and "=" not in p for p in words[:i]):
+                continue  # not in command position (e.g. `echo sed -i`, `grep tee f`)
+            rest = words[i + 1:]
+            files, has_script, skip = [], False, False
+            in_place = w == "tee"
+            for a in rest:
+                if skip:
+                    skip = False
+                elif a in ("-e", "-f", "--expression", "--file"):
+                    has_script, skip = True, True
+                elif re.match(r"^-[A-Za-z]+$", a) and a.endswith("e") and not re.match(r"^-[A-Za-z]*i", a):
+                    has_script, skip = True, True  # -ne / -pe: the next word is the script
+                elif a.startswith("-"):
+                    if a == "--in-place" or a.startswith("--in-place=") or re.match(r"^-[A-Za-z]*i", a):
+                        in_place = True
+                else:
+                    files.append(a)
+            if not in_place:
+                continue
+            if w == "sed" and not has_script and files:
+                files = files[1:]
+            if not files:
+                unreadable = True
+            for f in files:
+                if re.search(r"[$`~*?]", f):
+                    unreadable = True
+                else:
+                    targets.append(f)
+            break
+    plain = _QUOTED_RE.sub(lambda m: m.group(0) if m.group(1) else " ", body)
+    for m in _REDIRECT_RE.finditer(plain):
+        t = m.group(1).strip("'\"")
+        if t.startswith("/dev/"):
+            continue
+        if re.search(r"[$`~*?]", t):
+            unreadable = True
+        else:
+            targets.append(t)
+    return targets, unreadable
+
+
+def _gated_script_write(payload):
+    """(git_dir, problem, paths, unreadable) for a Bash/PowerShell command that writes a source
+    file through a script, sed -i, tee or a redirect. git_dir None when nothing is gated."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        return None, "house-rules: the design-loop lock could not parse the hook payload, so it is off for this call.", [], False
+    if not isinstance(data, dict) or data.get("tool_name") not in _SHELL_TOOLS:
+        return None, None, [], False
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    cmd = ti.get("command")
+    if not isinstance(cmd, str) or not cmd:
+        return None, None, [], False
+    cmd = _apply_assigns(cmd)
+    targets, unreadable = _script_write_targets(cmd)
+    if not targets and not unreadable:
+        return None, None, [], False
+    cwd = data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    top, git_dir = _issues_locate(cwd)
+    if not git_dir:
+        return None, None, [], False
+    src = [t for t in targets if _is_source_path(t, cwd, top)]
+    if not src and not unreadable:
+        return None, None, [], False
+    return git_dir, None, src, unreadable
 
 
 def _issues_gate(payload):
@@ -4988,10 +5114,23 @@ def _loop_enabled():
     return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
 
 
+def _loop_dir(git_dir):
+    """#262: where the stage file lives - the COMMON git directory (what `git rev-parse
+    --git-common-dir` prints, read from the worktree's `commondir` file so no git process is
+    spawned on every edit), so every worktree of a repo shares one stage. A git directory with no
+    readable commondir is its own common directory (a plain checkout, or git unreadable)."""
+    cd = os.path.join(git_dir, "commondir")
+    if os.path.isfile(cd):
+        rel = _read_text(cd).strip()
+        if rel:
+            return os.path.abspath(rel if os.path.isabs(rel) else os.path.join(git_dir, rel))
+    return git_dir
+
+
 def _loop_read(git_dir):
     """(state, problem). No file means a project that has not started a feature: Design."""
     fresh = {"feature": "", "stage": "design", "skip": False, "approvals": []}
-    path = os.path.join(git_dir, LOOP_FILE)
+    path = os.path.join(_loop_dir(git_dir), LOOP_FILE)
     if not os.path.isfile(path):
         return fresh, None
     try:
@@ -5006,7 +5145,7 @@ def _loop_read(git_dir):
 
 
 def _loop_write(git_dir, state):
-    with open(os.path.join(git_dir, LOOP_FILE), "w", encoding="utf-8") as f:
+    with open(os.path.join(_loop_dir(git_dir), LOOP_FILE), "w", encoding="utf-8") as f:
         json.dump(state, f)
 
 
@@ -5312,11 +5451,18 @@ def _loop_stop_line(payload):
 def _loop_gate(payload):
     """(deny reason or None, problem or None): code edits only in Build, or once after skip design."""
     git_dir, problem = _gated_edit(payload, "design-loop lock")
+    script_paths, script_unreadable, script = [], False, False
+    if not git_dir and not problem:
+        # #262: a Bash/PowerShell script write of a source file is held to the same lock.
+        git_dir, problem, script_paths, script_unreadable = _gated_script_write(payload)
+        script = bool(git_dir)
     if not git_dir:
         return None, problem
     state, problem = _loop_read(git_dir)
     if problem:
         return None, problem
+    if script and state["stage"] == "build":
+        return None, None  # Build: nothing changes for shell commands
     if state["stage"] == "build":
         labels, src = _loop_labels(state)
         if _loop_to_qa(state, labels):
@@ -5333,6 +5479,10 @@ def _loop_gate(payload):
         _loop_write(git_dir, state)
         return None, None
     feature = state.get("feature") or ""
+    if script and script_unreadable and not script_paths:
+        return ("House rules, design loop: code is locked in the %s stage and I cannot read which file this "
+                "command writes, so make the change with the Edit or Write tool instead, which names the "
+                "file." % LOOP_STAGE_NAMES[state["stage"]]), None
     return (
         "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
         "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
