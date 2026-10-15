@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Build plan approved: enforced QA stage
+
+**Context.** `docs/plans/qa-stage-plan.html`, seven sub-issues of #264 (Enforce the QA stage), #265 to #271.
+
+**Decision.** aj approved with "1A 2A":
+- **1A, where the stage lives:** a committed file on the branch, `.claude/house-rules-loop.json`, that only the
+  hook may change; Write or Edit of it is refused. Rejected: staying in `.git` (lost in every new cloud
+  container) and a GitHub label (the hook cannot read GitHub in a cloud session, where `gh` is not logged in).
+- **2A, who builds:** `@house-rules:builder` helpers, one step at a time, because five of the seven steps edit
+  `hook.py`.
+
+**Status.** Standing.
+
 ## 2026-10-15 - Design approved: enforced QA stage
 
 **Context.** Issue #264 (Enforce the QA stage). Pull request #263 (Handover pages and checkpoints) was opened and
