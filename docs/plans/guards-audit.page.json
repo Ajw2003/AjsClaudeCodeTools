@@ -5,7 +5,7 @@
   "short": {
     "lead": "I went through every hook (an automatic check) in hook.py that can stop me, against your test: only data loss with no way back should stop me. Seven kinds of action keep asking or stay refused. Deletes ask only when the data isn't saved. Four refusals become reminders. The background-work guard goes completely. Publishing a page is never refused again.",
     "hint": "Tap a card for what it guards today and what changes.",
-    "key": [["Goes through, never stops me", "done"], ["Still asks you first", ""], ["Your call", "you"]],
+    "key": [["Goes through, never stops me", "done"], ["Still asks you first, or is refused", ""], ["Your call", "you"]],
     "items": [
       ["check", "Never blocked", "Three things no guard may ever stop", "done",
        "You set these three requirements at 14:45 on 15 October. First, a routine commit or push to an agent-created branch other than main is never blocked. That means a branch named AjsAgent/ or claude/, or a helper's own working-copy branch. Second, publishing an artifact is never blocked. Third, the agent, or a helper it starts, can always change its own files inside the folder it was given. No prompt, refusal or timeout applies to any of them.",
