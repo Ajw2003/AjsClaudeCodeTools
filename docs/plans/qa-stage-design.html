@@ -268,7 +268,7 @@ const PAGE = {
   "replyPrefix": "Design approved: enforced QA stage",
   "reply": "",
   "short": {
-    "lead": "The QA stage already exists, but nothing makes me show you the build. When I opened pull request #263, the build of issue #251 (Handover pages and checkpoints), I swapped every issue to needs review without making a QA page, so you had to ask me for one. This design makes the QA page a checkpoint, makes the page builder count each file's added and removed lines from git so the numbers are never guessed, and fixes two problems found during that QA: an edit that got through while QA was open, and a duplicated reply.",
+    "lead": "The QA stage already exists, but nothing makes me show you the build. When I opened pull request #263 (Handover pages and checkpoints), I swapped every issue to needs review without making a QA page, so you had to ask me for one. This design makes the QA page a checkpoint, and the page builder counts each file's added and removed lines from git so the numbers are never guessed. It also fixes two problems found during that QA: an edit that got through while QA was open, and a duplicated reply.",
     "hint": "Tap a step to see what it creates and what it needs from you.",
     "key": [
       [
@@ -358,7 +358,7 @@ const PAGE = {
         "QA starts only when every issue's label says needs review.",
         "QA starts on that label swap or when a pull request is opened for the feature, whichever comes first."
       ],
-      "Pull request #263 was opened before the labels were swapped. In that gap, code edits were still allowed and no QA page was owed.",
+      "Pull request #263 (Handover pages and checkpoints) was opened before the labels were swapped. In that gap, code edits were still allowed and no QA page was owed.",
       null,
       null
     ],
@@ -414,7 +414,7 @@ const PAGE = {
           "B",
           "Only the needs review swap, as today",
           0,
-          "Leaves the gap that pull request #263 showed."
+          "Leaves the gap that pull request #263 (Handover pages and checkpoints) showed."
         ],
         [
           "C",
@@ -423,7 +423,7 @@ const PAGE = {
           "A feature merged without a pull request would skip QA."
         ]
       ],
-      "Pull request #263 was opened before the swap. With A, the QA page would be owed from the moment it opened."
+      "Pull request #263 (Handover pages and checkpoints) was opened before the swap. With A, the QA page would be owed from the moment it opened."
     ],
     [
       "detect",
@@ -461,7 +461,7 @@ const PAGE = {
           "More to check, for the same result as A."
         ]
       ],
-      "Issue #264 asks for counts from git, and counting is the page builder's job, not mine."
+      "Issue #264 (Enforce the QA stage) asks for counts from git, and counting is the page builder's job, not mine."
     ],
     [
       "writing",
@@ -485,7 +485,7 @@ const PAGE = {
   ],
   "wrapup": {
     "summary": "Make the QA page a checkpoint that the page builder satisfies, start QA when a pull request opens, fix the edit that got through during QA, and fix the duplicated reply.",
-    "changing": "scripts/hook.py (the checkpoint table, when QA starts, the QA code lock and the writing note), scripts/make_page.py (the QA mode), rules/house-rules.md (one line), the systems doc for handover pages, verify.py, and the plugin version.",
+    "changing": "In scripts/hook.py: the checkpoint table, when QA starts, the QA code lock and the writing note. Also scripts/make_page.py (the QA mode), rules/house-rules.md (one line), the systems doc for handover pages, verify.py and the plugin version.",
     "blocking": "Your approval of this design and your answers to the four choices.",
     "next": "A build plan page with one issue for each step, starting with the reproduction of the code-lock failure. Two things are unverified so far. First, why the edit went through during QA. Second, whether the stage file survives a cloud container being replaced, because if it doesn't, the feature would lose its stage in the middle of QA.",
     "todo": [
