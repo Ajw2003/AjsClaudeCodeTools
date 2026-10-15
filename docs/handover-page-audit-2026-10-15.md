@@ -48,13 +48,10 @@ structure is there:
    exactly that: colour tokens on `:root`, dark-mode guards, Google-font pairing. That instruction
    sits in the system prompt, and the template is two levels away in a file nobody points at. So the
    model followed the instruction it could see.
-4. **The template may not have existed for that session.** The template arrived in commit `ad05f34`
-   at 2026-10-14 20:58 UTC (2.63.0), on the `AjsAgent/agent-communication-patterns` branch. It reached
-   `main` only with the PR #234 merge at 2026-10-15 02:28 UTC. Before that merge, `main` was 2.62.0
-   and had no show-don't-tell rule at all. The page clearly follows that rule, so your plunderspell
-   install came from the branch. If it was a build from before 20:58 UTC on the 14th, the template
-   wasn't there to use. The page doesn't say which version it ran, so I can't tell which applies.
-   Causes 1 to 3 hold either way.
+4. **Ruled out: the template was live.** At first I suspected the session predated the template. The
+   template reached `main` with the PR #234 merge at 2026-10-14 20:28 local time (02:28 UTC on
+   2026-10-15). aj confirmed the page was made after that merge, so the template existed and was simply
+   not used. That leaves causes 1 to 3.
 
 ## Fixes this points to (not built; each needs your approval)
 
