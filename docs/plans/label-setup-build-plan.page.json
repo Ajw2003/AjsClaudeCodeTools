@@ -1,0 +1,41 @@
+{
+  "title": "Label Setup Build Plan",
+  "eyebrow": "Build plan · design approved 2026-10-15 in Ajw2003/Unblocked",
+  "replyPrefix": "Build plan approved: Label setup",
+  "reply": "",
+  "short": {
+    "lead": "A new repo has none of the three house labels, so the issue workflow and the design loop stall until someone adds them by hand. You approved the fix in the Unblocked session: the plugin creates whichever house label is missing, a command does the same on demand, and the label advice moves to a form that works in cloud sessions. The new code reuses two things the plugin already has. It reads issue labels (_loop_labels in hook.py). Its tests use a stand-in file instead of GitHub. Nothing is cut. The repo hasn't changed since the handoff document was written, and every line number it cites still matches. Two gaps the handoff missed are covered below. The broken advice is in five places, not one. And the hook's label record would miss changes made the new way.",
+    "hint": "Tap a step to see what it creates and what it needs from you.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["file", "Script", "A label setup script creates only the missing labels", "", "Issue #275, \"A label setup script that creates only the missing house labels\". It lists the repo's labels, creates any of the three that is missing, and never changes one that exists. A failure becomes a one-line note, never a crash.", "Nothing from you."],
+      ["loop", "Hook", "The hook runs it when the labels are first needed", "", "Issue #276, \"The hook creates missing house labels when it first needs them\". The note you already get then names the labels it created.", "Nothing from you."],
+      ["search", "Command", "/house-rules:labels sets up a repo on demand", "", "Issue #277, \"A /house-rules:labels command that sets up a repo's labels on demand\". It works on this repo, or on a repo you name, and lists what it created and what was already there.", "Nothing from you."],
+      ["check", "Advice", "The label advice uses the form that works in the cloud", "", "Issue #278, \"Label advice uses the form that works in cloud sessions\". Five pieces of advice move off gh issue edit, which fails in cloud sessions, and the hook learns to record the new form.", "Nothing from you."],
+      ["lock", "Prove", "A real run, then version 2.67.0", "", "Issue #279, \"Prove it on a real repo, bump the version and update the docs\". The script runs against a repo with no house labels and against Unblocked, and both outputs go in the pull request.", "Nothing from you."],
+      ["hand", "Answer", "You answer the choices and approve the plan", "you", "Building starts once you send the reply below. Feature issue: #274, \"The plugin creates the house labels a repo is missing\".", "Your answers under Choices."]
+    ]
+  },
+  "changes": [
+    ["new", "Label setup script (scripts/labels.py)", "Creates only the house labels a repo lacks.", null, "Lists the repo's labels with gh api, then creates each missing one with gh label create, using the colours and descriptions now on Unblocked: AjsAgent created this (5b6b7a), in progress (FBCA04), needs review (0E8A16). Tests stand in for GitHub with a file, as the issue-label tests already do.",
+     ["A new repo has no house labels until someone creates them by hand.", "The plugin creates the missing ones, and only those.", "An existing label, even one with a different colour, is left exactly as it is."]],
+    ["chg", "Hook: where labels get created (hook.py)", "Creates the labels at the three moments the plugin first needs them.", ["The issue note tells the agent to run gh label create itself, and a missing label makes the design loop refuse to move.", "The hook creates the missing labels when you approve a design, when the issue note is given, and before any refusal over labels. The note says which labels it created, or why it couldn't."], "Each moment stays inside the 10-second limit every hook has."],
+    ["new", "Command: /house-rules:labels (commands/labels.md)", "Sets up the labels on any repo you name.", null, "Runs the same script on the current repo, or on the owner/repo you give it, for example /house-rules:labels Ajw2003/Unblocked.",
+     ["No way to set up a repo's labels before work starts.", "One command does it.", "A repo can be ready before its first issue."]],
+    ["chg", "Label advice (hook.py and rules/detail/issue-workflow.md)", "Five pieces of advice switch to the form that works in cloud sessions.", ["gh issue edit N --add-label \"in progress\", which GitHub refuses in a cloud session (HTTP 403).", "gh api repos/<owner>/<repo>/issues/<n>/labels -f \"labels[]=in progress\" to add, and gh api -X DELETE .../labels/in%20progress to remove."], "Found in hook.py lines 4820, 5661 and 5711, and in issue-workflow.md lines 14 and 19. The handoff named only the first of these five places."],
+    ["chg", "Label record (_label_changes in hook.py)", "Records label changes made with the new form.", ["Only gh issue edit and the GitHub tool are recorded. A change made with the new form would be missed.", "The two gh api forms above are recorded too."], "The design loop uses this record only when it can't read labels from GitHub. A gap would rarely matter, but when it did, the loop would act on wrong labels."]
+  ],
+  "choices": [
+    ["where", "Where should the label setup code live?", [["A", "In a new file, scripts/labels.py", 1, "The hook and the command share it. The command runs it the way /house-rules:docref runs docref.py."], ["B", "Inside hook.py", 0, "One file fewer, but hook.py is already 8,015 lines long and the command would need a separate way to call this code."]], "The command needs something it can run directly, and the hook needs something it can call."],
+    ["when", "When should the hook create missing labels?", [["A", "At all three moments: design approved, the issue note, and before a label refusal", 1, "The labels exist before the first issue is made."], ["B", "Only the two the handoff names: the issue note and before a label refusal", 0, "The first issues of a plan can still be made before the labels exist."]], "Planning creates its issues right after you approve a design, and those issues need the labels at that point."],
+    ["record", "Should the hook also learn to record label changes made with the new form?", [["A", "Yes, alongside the advice change", 1, "The hook's record of label changes stays accurate."], ["B", "No, change the advice only", 0, "Smaller, but the advice would then lead to changes the hook misses."]], "If the advice changes but the record doesn't, following the advice makes the record go stale."],
+    ["proof", "Where should the real \"no labels yet\" run happen?", [["A", "A new private repo, Ajw2003/label-setup-scratch, that I create for the run", 1, "A real test of the empty case. You delete the repo afterwards, because deleting it is yours to decide."], ["B", "No real run; the stand-in file only, plus the Unblocked check", 0, "Nothing new on your account, but the empty case is only tested against a stand-in, not GitHub."]], "The handoff's done-criteria ask for a run on a repo with none of the labels, and none of your repos is in that state."]
+  ],
+  "wrapup": {
+    "summary": "A build plan for label setup: one script, three hook moments, one command, corrected advice and a real-run proof, as five issues under #274.",
+    "changing": "A new scripts/labels.py and commands/labels.md, label calls and advice in hook.py, two lines of rules/detail/issue-workflow.md, new verify.py cases, and version 2.67.0.",
+    "blocking": "Your answers to the four choices and your approval of the plan.",
+    "next": "I build the five issues on the branch AjsAgent/label-setup, run verify.py and the real runs, then open a pull request for you to test.",
+    "todo": ["Pick your answers under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}

@@ -48,6 +48,7 @@ import re
 import sys
 import tempfile
 import time
+import urllib.parse
 
 # The shared writing checker (#247), a sibling file. A missing or broken copy must not take every
 # hook down with it, so it is loaded here and each check that needs it reports when it is absent.
@@ -4848,8 +4849,8 @@ ISSUE_NOTE = (
     "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
     "non-programmer can follow. Every issue carries at least one category label and the label "
     "`AjsAgent created this`; if the repo lacks that label, create it first with `gh label "
-    "create`. Show the user the issue numbers. Mark a step `in progress` (`gh issue edit N "
-    "--add-label \"in progress\"`) when work on it starts and remove it when the issue closes. "
+    "create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels "
+    "-f \"labels[]=in progress\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
     "(docs/, .md files and .claude/ stay open). Do not close any issue yourself: closing always "
     "asks the user."
@@ -5645,6 +5646,29 @@ def _gh_label_flags(cmd):
     return out
 
 
+_GH_API_LABELS_RE = re.compile(_GH_PREFIX + r"api\s+([^\n;&|]*?)\brepos/([\w.-]+/[\w.-]+)/issues/(\d+)/labels(?:/([^\s\"']+))?([^\n;&|]*)")
+_GH_API_METHOD_RE = re.compile(r"(?:-X|--method)(?:=|\s+)[\"']?(\w+)", re.I)
+_GH_API_LABEL_FIELD_RE = re.compile(r"(?:-f|-F|--raw-field|--field)(?:=|\s+)(?:\"labels\[\]=([^\"]*)\"|'labels\[\]=([^']*)'|labels\[\]=(\S+))")
+_GH_API_FAILED_RE = re.compile(r"\(HTTP [45]\d\d\)|^gh: |\"status\":\s*\"[45]\d\d\"", re.M)
+
+
+def _gh_api_label_change(cmd, text):
+    """#278: (repo, number, None, add, remove) for a succeeded `gh api repos/O/R/issues/N/labels` call (the REST
+    form that works in cloud sessions), else None. Repo and number come from the path, not the response."""
+    m = _GH_API_LABELS_RE.search(cmd)
+    if not m or _GH_API_FAILED_RE.search(text):
+        return None
+    pre, repo, number, name, post = m.groups()
+    method = (_GH_API_METHOD_RE.search(pre + " " + post) or [None, "POST" if "-f" in post or "-F" in post or "field" in post else "GET"])[1].upper()
+    if method == "DELETE" and name:
+        return (repo, int(number), None, [], [urllib.parse.unquote(name)])
+    if method == "POST" and not name:
+        adds = [(x or y or z).strip("\"'") for x, y, z in _GH_API_LABEL_FIELD_RE.findall(pre + " " + post)]
+        if adds:
+            return (repo, int(number), None, adds, [])
+    return None
+
+
 def _label_changes(data):
     """#236: [(repo, number, set_to or None, add, remove)] for a tool call that set issue labels and
     succeeded - the GitHub tool's issue_write, or `gh issue create` / `gh issue edit`."""
@@ -5668,6 +5692,9 @@ def _label_changes(data):
     if _GH_ISSUE_CREATE_RE.search(cmd):
         flags = _gh_label_flags(cmd)
         return [(repo, int(n), flags["add"], [], []) for repo, n in urls]
+    api = _gh_api_label_change(cmd, text)
+    if api:
+        return [api]
     m = _GH_ISSUE_EDIT_RE.search(cmd)
     if m:
         flags = _gh_label_flags(m.group(2))
@@ -5757,8 +5784,8 @@ def _issues_record(payload):
         if not labelled:
             notes.append("house-rules: issue #%s was created without the `%s` label, so it does not "
                          "count toward the issue gate and Focus Deck will ignore it. Add it with `gh "
-                         "issue edit %s --add-label \"%s\"` and create the next issues with it."
-                         % (found[0][1], ISSUES_LABEL, found[0][1], ISSUES_LABEL))
+                         "api repos/%s/issues/%s/labels -f \"labels[]=%s\"` and create the next issues with it."
+                         % (found[0][1], ISSUES_LABEL, found[0][0], found[0][1], ISSUES_LABEL))
         have = _labelled_count(state)
         if have >= ISSUES_NEEDED:
             state["needs_issues"] = False
@@ -5806,8 +5833,9 @@ PR_ASK_NOTE = (
 )
 CLOSE_ASK_NOTE = (
     "House rules, closing an issue always asks the user: the user must have tested the work first, "
-    "and this approval prompt is their go-ahead. On approval, also run `gh issue edit N "
-    "--add-label \"Claude completed this\" --remove-label \"in progress\"` and comment on the "
+    "and this approval prompt is their go-ahead. On approval, also add `Claude completed this` with `gh api "
+    "repos/<owner>/<repo>/issues/N/labels -f \"labels[]=Claude completed this\"`, remove `in progress` with "
+    "`gh api -X DELETE repos/<owner>/<repo>/issues/N/labels/in%20progress`, and comment on the "
     "issue with the merged PR link."
 )
 
