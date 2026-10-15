@@ -7,6 +7,31 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Project style file: aj's answers
+
+**Status.** Answered: "Style file answers: 1A 2A 3A 4A 5A", on `docs/plans/project-style-file.html`. #255 is built
+to these answers:
+- **Colour roles:** each page role (you act, accent, blocking, done) maps to one of the project's colours. The
+  rule "orange means you act" becomes "one colour means you act in each project". The template's default stays
+  orange.
+- **Contents:** colours, roles, reserved colours, themes, fonts, shape, labels, icons, pictures and picture
+  folders. The worked example is `docs/plans/page-style/plunderspell.page-style.json`.
+- **Drafting:** the builder drafts the file from the project's design system or style guide, and aj approves it.
+- **No style file:** aj is asked once per project. Choosing the quick option writes a one-line file that says to
+  use the defaults.
+- **Themes:** each project decides. PlunderSpell is dark only.
+
+**Also received in the same message, for PlunderSpell (not this repo):** aj's picks on the Wick and Ophan plan,
+"PlunderSpell Build plan approved: fear entities, picks: 1* 2C 3* 4B 5A 6A 7*":
+- **Choice 1 (own answer):** quota first, then the Wick, then the Ophan. The quota and the Wick change the game
+  loop most, and the Ophan is the face of the quota.
+- **Choice 3 (own answer):** a catch lights the player ablaze, which prevents a revive, and they respawn when the
+  team returns home.
+- **Choice 7 (own answer):** as originally proposed, the player is spared when carrying the artifacts it wants,
+  and killed once it finds them empty-handed.
+
+This session can't act on PlunderSpell (read-only). They're kept here for #259, which rebuilds that page.
+
 ## 2026-10-15 - Build plan approved: handover pages and checkpoints
 
 **Status.** Approved: "Build plan approved: handover pages and checkpoints: 1B 2A 3A". The answers:
