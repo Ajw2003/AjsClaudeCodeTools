@@ -25,9 +25,9 @@
       ["loop", "Prompt timer", "No more chain of refusals", "",
        "Today one unanswered prompt (a question asking for your OK) makes every later prompt in the session get refused straight away. That chain of refusals blocked both page publishes and the commit of the automatic-pages page. After this, you are asked only in the rare case where no safe way exists and I have cited a source proving it. The timer applies only to those prompts, never to anything else, such as publishing a page. Each prompt waits on its own, and nothing is refused because an earlier prompt went unanswered.",
        "Nothing from you."],
-      ["hand", "Decide", "One guard needs your call", "you",
-       "The design-loop lock stops code edits until you approve a build plan. It stopped a builder today, but it also makes plans reach you as a page first. Choose in the Choices section below.",
-       "Your choice on the design-loop lock."]
+      ["hand", "Decided", "The design-loop lock keeps blocking", "you",
+       "The design-loop lock stops code edits until you approve a build plan. You chose to keep it blocking (15 October, 15:04), so plans always reach you as a page first, even though builders wait while you're away.",
+       "Nothing more; your pick is recorded."]
     ]
   },
   "changes": [
@@ -50,8 +50,8 @@
   "wrapup": {
     "summary": "An audit of every hook that can stop me, sorted by whether what it stops can be recovered.",
     "changing": "hook.py's guard lists, the page check, the prompt timer, the GitHub and helper-count guards, the whole-file rewrite prompt, the rule text in house-rules.md, and the checks in verify.py that test each.",
-    "blocking": "Your pick of A or B in the Choices section for the design-loop lock, and your approval of this audit.",
+    "blocking": "Your approval of this audit, typed as \"Guards audit approved\". The design-loop lock is settled: it keeps blocking.",
     "next": "I open one child issue per area and run one builder at a time, then open one pull request for you to test. The fixes for automatic pages follow on the same branch.",
-    "todo": ["Pick your answers in the Choices section.", "Tap <b>Copy my reply</b>.", "Send it with \"Build plan approved: guards audit\", or say what to change."]
+    "todo": ["Read the cards and the Changes list.", "Send \"Guards audit approved\", or say what to change."]
   }
 }
