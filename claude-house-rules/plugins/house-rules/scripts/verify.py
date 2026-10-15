@@ -4258,10 +4258,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.64.1",
+    "issues: the rules section and its detail file exist, and the plugin is 2.65.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.64.1",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.65.0",
     "rules section + detail file + version",
 )
 
@@ -8645,6 +8645,18 @@ _cw_cases.append(("editor: the same turn with the editor helper run stays quiet 
 _cw_cases.append(("editor: a reply over 200 words with no editor run gets the reminder; a short one does not",
                   "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ".")
                   and "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, "Done.")))
+
+# A page written by a shell command never passes the Write hook (found in the real run, #250).
+with open(os.path.join(_cw_pages, "shellpage.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>This adds about 43 tests to the suite.</p>")
+_cw_t_shell = _hand_transcript("cw-shell", [
+    json.dumps({"type": "user", "origin": {"kind": "human"}, "timestamp": "2000-01-01T00:00:00Z",
+                "message": {"content": "make the page"}}),
+    json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash",
+                "input": {"command": "printf '<p>x</p>' > docs/plans/shellpage.html"}}]}})])
+_cw_shell_out = _cw_editor(_cw_t_shell)
+_cw_cases.append(("page: a page written by a shell command is checked at the end of the reply, editor reminder too",
+                  "the page shellpage.html" in _cw_shell_out and "no @house-rules:editor helper ran" in _cw_shell_out))
 
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)

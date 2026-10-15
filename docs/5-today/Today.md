@@ -1,4 +1,11 @@
-# Today — 2026-10-14
+# Today — 2026-10-15
+
+The clear writing check, plugin 2.65.0 (issue #245). One rule, "Write it so nothing is left to guess", now
+covers how everything you read is written: proper sentences, a human tone, said once, context spelled out,
+numbers counted rather than guessed, and references named. A checker reads every reply, page and issue for
+vague numbers, bare "#229"s, repetition, jargon and overlong sentences; an issue without "Depends on",
+"Depended on by" and "Done when" is refused; and a new editor helper rewrites pages and long replies. It
+replaced the plain-language rule and folded in three other lines. `HOUSE_RULES_CLEAR_WRITING=off` turns it off.
 
 The new item visual, plugin 2.64.1 (issue #240). On a handover page, a New item now opens to three boxes:
 what sets it off, what it does, what you get. The changes page has one for each of its 13 new items. A pasted

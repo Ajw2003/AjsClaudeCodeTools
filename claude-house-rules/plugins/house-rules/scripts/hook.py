@@ -6653,6 +6653,25 @@ EDITOR_NOTE = (
 )
 
 
+def _pages_changed_this_turn(transcript_path, cwd):
+    """(pages, problem): docs/plans/*.html pages modified since aj's last message, however they
+    were written. No pages when the project has no docs/plans folder or the message carries no
+    timestamp; a timestamp that can't be read is reported as the problem."""
+    import datetime
+    _records, user, _detail = _load_turn(transcript_path)
+    stamp = (user or {}).get("timestamp")
+    top = _issues_locate(cwd)[0] or cwd
+    plans = os.path.join(top, "docs", "plans")
+    if not stamp or not os.path.isdir(plans):
+        return [], None
+    try:
+        since = datetime.datetime.fromisoformat(str(stamp).replace("Z", "+00:00")).timestamp()
+    except ValueError as exc:
+        return [], "house-rules: could not read aj's message time (%s), so pages written by a shell command were not checked." % exc
+    return sorted(os.path.join(plans, n) for n in os.listdir(plans)
+                  if n.lower().endswith((".html", ".htm")) and os.path.getmtime(os.path.join(plans, n)) >= since), None
+
+
 def _editor_owed(written, tool_uses, reply):
     """What makes the editor helper owed this turn ("" when nothing does, or when it ran)."""
     for block in tool_uses:
@@ -6827,6 +6846,8 @@ def event_handover():
     visual_files = []
     plain_problems = []
     editor_owed = None
+    shell_page_notes = []
+    trace_lines_early = []
     transcript_path = _field(_TRANSCRIPT_RE, payload)
     if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
                             or _clear_writing_enabled()):
@@ -6850,7 +6871,17 @@ def event_handover():
                 if pm and not _PARITY_ACCOUNTED_RE.search(reply_for_parity):
                     parity_word = pm.group(1)
             if _clear_writing_enabled():
-                editor_owed = _editor_owed(written_now, list(_turn_tool_uses(turn_records)),
+                # A page written by a shell command never passes the Write hook (found in the real
+                # run, #250), so pages changed since aj's message are checked here too.
+                changed, page_problem = _pages_changed_this_turn(transcript_path, _payload_cwd(payload))
+                if page_problem:
+                    trace_lines_early.append(page_problem)
+                shell_pages = [pg for pg in changed if pg not in written_now]
+                for pg in shell_pages:
+                    note = _page_writing_note(pg)
+                    if note:
+                        shell_page_notes.append(note)
+                editor_owed = _editor_owed(written_now + shell_pages, list(_turn_tool_uses(turn_records)),
                                            reply_text if vm is not None else "")
             if written_now and _visual_check_enabled():
                 visual = [os.path.basename(p) for p in written_now if _VISUAL_EXT_RE.search(p)]
@@ -6864,7 +6895,7 @@ def event_handover():
         label_line, label_problem = None, "house-rules: the design-loop label check hit an error (%s: %s)." % (
             type(exc).__name__, exc)
 
-    trace_lines = []
+    trace_lines = list(trace_lines_early)
     if issue_problem:
         trace_lines.append(issue_problem)
     if label_problem:
@@ -6889,7 +6920,8 @@ def event_handover():
         trace_lines.append(writing_problem)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
-            and not long_words and not label_line and not writing and not editor_owed):
+            and not long_words and not label_line and not writing and not editor_owed
+            and not shell_page_notes):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -6909,6 +6941,7 @@ def event_handover():
         parts.append(_writing_note(not_checked, writing, long_words))
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
+    parts.extend(shell_page_notes)
     if editor_owed:
         parts.append(EDITOR_NOTE % editor_owed)
     if parity_word:
