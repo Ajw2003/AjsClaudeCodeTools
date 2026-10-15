@@ -6796,6 +6796,77 @@ else:
     report("FAIL", "versioncheck is quiet when installed, marketplace and GitHub all agree")
     print(f"          rc={rc} out={out[:200]!r}")
 
+# --- SessionStart loads the newest installed rules after an update (issue #252) -----------
+# An older folder runs SessionStart; installed_plugins.json names a newer folder. inject and
+# showrule must load the newer folder's rule text and say so in one line, and must say it in one
+# line when installed_plugins.json cannot be read (never silent).
+_nr_dir = tempfile.mkdtemp(prefix="house-rules-newest-rules-")
+
+
+def _nr_make(name, version, tag, with_showrule):
+    root = os.path.join(_nr_dir, name)
+    os.makedirs(os.path.join(root, "scripts"))
+    os.makedirs(os.path.join(root, "rules"))
+    os.makedirs(os.path.join(root, ".claude-plugin"))
+    shutil.copy(HOOK, os.path.join(root, "scripts", "hook.py"))
+    with open(os.path.join(root, ".claude-plugin", "plugin.json"), "w", encoding="utf-8") as f:
+        json.dump({"name": "house-rules", "version": version}, f)
+    with open(os.path.join(root, "rules", "house-rules.md"), "w", encoding="utf-8") as f:
+        f.write(f"{tag} CORE RULES, see ${{CLAUDE_PLUGIN_ROOT}}/rules/detail/x.md\n")
+    if with_showrule:
+        for fname in ("show-dont-tell.md", "clear-writing.md"):
+            with open(os.path.join(root, "rules", fname), "w", encoding="utf-8") as f:
+                f.write(f"{tag} {fname} ${{CLAUDE_PLUGIN_ROOT}}/rules/detail/x.md\n")
+    return root
+
+
+def _nr_run(event, root, installed_json):
+    e = dict(os.environ)
+    e["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = installed_json
+    proc = subprocess.run(
+        [sys.executable, os.path.join(root, "scripts", "hook.py"), event],
+        input=b"", stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=e,
+    )
+    out = proc.stdout.decode("utf-8", "replace")
+    try:
+        parsed = json.loads(out)
+    except Exception:
+        return proc.returncode, "", "", out
+    ctx = parsed.get("hookSpecificOutput", {}).get("additionalContext", "")
+    return proc.returncode, ctx, parsed.get("systemMessage", ""), out
+
+
+_nr_old = _nr_make("old", "1.0.0", "OLDTAG", False)
+_nr_new = _nr_make("new", "2.0.0", "NEWTAG", True)
+_nr_json = os.path.join(_nr_dir, "installed.json")
+with open(_nr_json, "w", encoding="utf-8") as f:
+    json.dump({"version": 2, "plugins": {"house-rules@aj-house-rules": [
+        {"installPath": _nr_new, "version": "2.0.0"}]}}, f)
+
+for _ev, _want in (("inject", "NEWTAG CORE RULES"), ("showrule", "NEWTAG show-dont-tell.md")):
+    rc, ctx, msg, raw = _nr_run(_ev, _nr_old, _nr_json)
+    ok = (rc == 0 and _want in ctx and "OLDTAG" not in ctx and f"plugin root: {_nr_new}" in ctx
+          and "2.0.0" in msg and "\n" not in msg)
+    report("PASS" if ok else "FAIL",
+           f"{_ev} from an older folder loads the newer installed folder's rules and says so in one line")
+    if not ok:
+        print(f"          rc={rc} ctx={ctx[:200]!r} msg={msg!r}")
+
+for _label, _jpath in (("missing", os.path.join(_nr_dir, "absent.json")), ("unreadable", None)):
+    if _jpath is None:
+        _jpath = os.path.join(_nr_dir, "broken.json")
+        with open(_jpath, "w", encoding="utf-8") as f:
+            f.write("{not json")
+    for _ev, _want in (("inject", "OLDTAG CORE RULES"), ("showrule", None)):
+        rc, ctx, msg, raw = _nr_run(_ev, _nr_new if _ev == "showrule" else _nr_old, _jpath)
+        if _ev == "showrule":
+            _want = "NEWTAG show-dont-tell.md"
+        ok = (rc == 0 and _want in ctx and "could not check for newer rules" in msg and "\n" not in msg)
+        report("PASS" if ok else "FAIL",
+               f"{_ev} with installed_plugins.json {_label} loads its own rules and says why in one line")
+        if not ok:
+            print(f"          rc={rc} ctx={ctx[:200]!r} msg={msg!r}")
+
 session_a = "vc-installed-stale"
 rc, out, err = run_hook(
     "versioncheck",

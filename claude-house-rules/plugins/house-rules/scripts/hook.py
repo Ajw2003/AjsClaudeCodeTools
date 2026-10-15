@@ -511,10 +511,69 @@ def _plugin_root():
     return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 
-def _expand_detail_paths(text):
+def _version_tuple(text):
+    parts = []
+    for piece in str(text).split("."):
+        m = re.match(r"\d+", piece)
+        parts.append(int(m.group()) if m else 0)
+    return tuple(parts)
+
+
+def _rules_root(needed):
+    """(root, note): the plugin folder whose rules SessionStart should load.
+
+    A session starts on the folder the harness resolved at launch. If an update lands during
+    that same SessionStart (versioncheck, last in hooks.json), inject and showrule already ran
+    from the old folder, so a session carried the old rules beside the new checks (issue #252).
+    So: use installed_plugins.json's installPath when it exists, is newer by version, and has
+    every file in `needed` (paths under rules/); otherwise this folder. `note` is one line, or
+    "" when nothing differs. It is never silent when the answer could not be worked out.
+    """
+    own = _plugin_root()
+    path = _installed_plugins_path()
+    if not os.path.isfile(path):
+        return own, "could not check for newer rules: %s does not exist, so this folder's rules (%s) were loaded" % (path, own)
+    try:
+        data = json.loads(_read_text(path))
+        plugins = data.get("plugins", {}) if isinstance(data, dict) else {}
+        entry = None
+        for plugin_id, entries in sorted(plugins.items()):
+            if plugin_id.split("@", 1)[0] != _VC_PLUGIN_NAME:
+                continue
+            if isinstance(entries, dict):
+                entries = [entries]
+            entry = next((e for e in entries if isinstance(e, dict) and e.get("installPath")), None)
+            break
+    except Exception as exc:
+        return own, "could not check for newer rules: installed_plugins.json is unreadable (%s), so this folder's rules (%s) were loaded" % (type(exc).__name__, own)
+    if entry is None:
+        return own, "could not check for newer rules: installed_plugins.json has no installPath for %s, so this folder's rules (%s) were loaded" % (_VC_PLUGIN_NAME, own)
+    new_root = os.path.normpath(entry["installPath"])
+    if os.path.realpath(new_root) == os.path.realpath(own):
+        return own, ""
+    try:
+        new_version = str(entry.get("version", "")) or _plugin_version_of(new_root)
+    except Exception as exc:
+        return own, "could not check for newer rules: no version for %s (%s), so this folder's rules (%s) were loaded" % (new_root, type(exc).__name__, own)
+    own_version = _plugin_version()
+    if not new_version or _version_tuple(new_version) <= _version_tuple(own_version):
+        return own, ""
+    missing = [n for n in needed if not os.path.isfile(os.path.join(new_root, "rules", n))]
+    if missing:
+        return own, "newer rules %s are installed at %s but lack rules/%s, so this folder's %s rules were loaded" % (
+            new_version, new_root, ", rules/".join(missing), own_version or "unknown")
+    return new_root, "loaded the rules from house-rules %s (%s), not this session's %s, because an update installed it after this session started" % (
+        new_version, new_root, own_version or "unknown")
+
+
+def _plugin_version_of(root):
+    return json.loads(_read_text(os.path.join(root, ".claude-plugin", "plugin.json"))).get("version", "") or ""
+
+
+def _expand_detail_paths(text, root=None):
     """Write every plugin path as <plugin>/... and state the absolute plugin root once, so the
     injected size does not grow with the install path's length or the number of pointers."""
-    root = _plugin_root()
+    root = root or _plugin_root()
     if "${CLAUDE_PLUGIN_ROOT}" not in text:
         return text
     text = text.replace("${CLAUDE_PLUGIN_ROOT}", "<plugin>")
@@ -522,8 +581,8 @@ def _expand_detail_paths(text):
 
 
 def event_inject():
-    here = os.path.dirname(os.path.abspath(__file__))
-    rules_path = os.path.join(here, "..", "rules", "house-rules.md")
+    root, note = _rules_root(("house-rules.md",))
+    rules_path = os.path.join(root, "rules", "house-rules.md")
 
     try:
         body = _read_text(rules_path)
@@ -558,7 +617,7 @@ def event_inject():
     # text is going into additionalContext, which nothing expands. The root is stated once
     # rather than substituted into every pointer: 26 copies of a long install path pushed this
     # past its size margin on a CI runner whose checkout path was merely 26 chars longer.
-    body = _expand_detail_paths(body)
+    body = _expand_detail_paths(body, root)
 
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
@@ -568,15 +627,16 @@ def event_inject():
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
 
-    emit(
-        {
-            "suppressOutput": True,
-            "hookSpecificOutput": {
-                "hookEventName": "SessionStart",
-                "additionalContext": preamble + body,
-            },
-        }
-    )
+    out = {
+        "suppressOutput": True,
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": preamble + body,
+        },
+    }
+    if note:
+        out["systemMessage"] = "house-rules plugin: " + note + "."
+    emit(out)
     return 0
 
 
@@ -592,11 +652,11 @@ SHOWRULE_FILES = (("show-dont-tell.md", "show-don't-tell"), ("clear-writing.md",
 
 
 def event_showrule():
-    here = os.path.dirname(os.path.abspath(__file__))
+    root, note = _rules_root(tuple(n for n, _ in SHOWRULE_FILES))
     bodies, missing = [], []
     for name, label in SHOWRULE_FILES:
         try:
-            body = _read_text(os.path.join(here, "..", "rules", name)).replace("\r\n", "\n")
+            body = _read_text(os.path.join(root, "rules", name)).replace("\r\n", "\n")
         except OSError:
             missing.append("cannot read rules/%s, so the %s rule was NOT loaded" % (name, label))
             continue
@@ -605,14 +665,14 @@ def event_showrule():
             continue
         bodies.append(_apply_voice_toggle(body) if name == "clear-writing.md" else body)
     if not bodies:
-        emit({"systemMessage": "house-rules plugin: " + "; ".join(missing) + "."})
+        emit({"systemMessage": "house-rules plugin: " + "; ".join(missing + ([note] if note else [])) + "."})
         return 0
     out = {"suppressOutput": True, "hookSpecificOutput": {
         "hookEventName": "SessionStart",
         "additionalContext": "Standing house rules, loaded separately from the rest:\n\n"
-        + _expand_detail_paths("\n\n".join(bodies))}}
-    if missing:
-        out["systemMessage"] = "house-rules plugin: " + "; ".join(missing) + "."
+        + _expand_detail_paths("\n\n".join(bodies), root)}}
+    if missing or note:
+        out["systemMessage"] = "house-rules plugin: " + "; ".join(missing + ([note] if note else [])) + "."
     emit(out)
     return 0
 
