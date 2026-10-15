@@ -5302,6 +5302,12 @@ def _loop_to_qa(state, labels):
     return False
 
 
+_PR_URL_RE = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/pull/\d+")
+_GITHUB_PR_CREATE_RE = re.compile(r"^mcp__(github|GitHub)__create_pull_request$")
+_LOOP_PR_NOTE = (" QA started because a pull request was opened: code edits are now closed. Swap every issue to "
+                 "`needs review` and build the QA page with make_page.py; aj answers \"QA passed: <feature>\" "
+                 "or \"QA failed: <feature>\".")
+
 _LOOP_QA_NOTE = (" Every issue of the feature says `needs review`, so the stage is QA: code edits are closed, "
                  "and aj answers \"QA passed: <feature>\" or \"QA failed: <feature>\" with the changes.")
 
@@ -5636,6 +5642,16 @@ def _label_changes(data):
     return []
 
 
+def _pr_opened(data):
+    """True for a successful pull request creation: the GitHub tool or `gh pr create`, with a PR URL in the response."""
+    tool = data.get("tool_name") or ""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    if not (_GITHUB_PR_CREATE_RE.match(tool) or (tool == "Bash" and _GH_PR_CREATE_RE.search(ti.get("command") or ""))):
+        return False
+    resp = data.get("tool_response")
+    return bool(_PR_URL_RE.search(resp if isinstance(resp, str) else json.dumps(resp)))
+
+
 def _loop_record_labels(payload):
     """PostToolUse: record label changes for the GitHub-read fallback, and move Build to QA once every
     issue says needs review. Returns notes. Never raises."""
@@ -5644,7 +5660,8 @@ def _loop_record_labels(payload):
     try:
         data = json.loads(payload)
         changes = _label_changes(data) if isinstance(data, dict) else []
-        if not changes:
+        pr = isinstance(data, dict) and _pr_opened(data)
+        if not changes and not pr:
             return []
         _, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
@@ -5660,7 +5677,10 @@ def _loop_record_labels(payload):
             now += [a for a in add if a.lower() not in {l.lower() for l in now}]
             recorded[key] = now
         notes = []
-        if state["stage"] == "build":
+        if pr and state["stage"] == "build":
+            state["stage"] = "qa"
+            notes.append("Design loop:" + _LOOP_PR_NOTE)
+        elif state["stage"] == "build" and changes:
             labels, src = _loop_labels(state)
             if _loop_to_qa(state, labels):
                 notes.append("Design loop:" + _LOOP_QA_NOTE + (" " + src if src else ""))
