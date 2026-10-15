@@ -107,6 +107,13 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .flow > span.mid{background:var(--accent-soft)}
 .flow > i{align-self:center;color:var(--muted);font-style:normal}
 .flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.files{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.files h4{margin:0;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.frow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;align-items:baseline}
+.frow code{font-size:.82rem;word-break:break-all}
+.files .n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.parts{margin:0 0 4px;padding-left:18px;display:grid;gap:4px;font-size:.86rem}
+.parts li span:first-child{margin-right:8px}
 
 /* choices */
 .q{display:grid;gap:8px}
@@ -240,8 +247,12 @@ const PAGE = {
       ["lock", "Approve", "You approve it", "you", "A line in the decisions log.", "You type \"Design approved: <name>\"."]
     ]
   },
-  changes: [   // [tag ("new" | "chg" | "keep"), name, one line, [before, after] or null, detail, [when, it does, you get] (optional, for New)]
-    ["new", "A named new thing", "What it is, in one line.", null, "Detail shown on tap.", ["What sets it off", "What it does", "What you get"]],
+  changes: [   // [tag ("new" | "chg" | "keep"), name, one line, [before, after] or null, detail,
+               //  [what exists today, what this creates, how it impacts you] (New items; null otherwise),
+               //  [[file, added, removed, [[part in plain words, added, removed], ...]], ...] (optional, shown on open)]
+    ["new", "A named new thing", "What it is, in one line.", null, "Detail shown on tap.",
+     ["Nothing does this today.", "A thing that does it.", "You no longer have to do it by hand."],
+     [["scripts/thing.py", 40, 0, [["The thing added", 40, 0]]]]],
     ["chg", "A named existing thing", "How it changes.", ["Before", "After"], "Detail shown on tap."]
   ],
   choices: [   // [id, question, [[letter, label, suggested (1/0), one line]], why or ""]
@@ -290,10 +301,15 @@ if (document.getElementById("cc")) {
   document.getElementById("cc-count").textContent =
     `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
   // A New item's picture (#241): what sets it off -> what it does -> what you get.
-  const flow = fl => `<div class="flow"><span><small>When</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>It does</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>You get</small>${esc(fl[2])}</span></div>`;
-  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl]) =>
+  const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+  // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
+  const lineCounts = (a, r) => `+${a} \u2212${r}`;
+  const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+    fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+      (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl, fs]) =>
     `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
-     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p></div></details>`).join("");
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${files(fs)}</div></details>`).join("");
 }
 
 if (document.getElementById("qs")) {

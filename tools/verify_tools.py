@@ -670,6 +670,27 @@ check(_t == "{not json" and _m["bad"],
       "install.py reports a settings file that does not parse and does not overwrite it",
       f"file now {_t!r}, bad {_m['bad']!r}")
 
+# --- diff_parts: a file's changes split into the parts they belong to (#242) ---------------
+import diff_parts as _dp
+_dpr = tempfile.mkdtemp(prefix="diff-parts-")
+subprocess.run(["git", "init", "-q", _dpr], check=True)
+_dpg = ["git", "-C", _dpr, "-c", "user.name=t", "-c", "user.email=t@t"]
+with open(os.path.join(_dpr, "m.py"), "w") as _f:
+    _f.write("def a():\n    return 1\n\n\ndef b():\n    return 2\n")
+subprocess.run(_dpg + ["add", "."], check=True)
+subprocess.run(_dpg + ["commit", "-qm", "one"], check=True)
+with open(os.path.join(_dpr, "m.py"), "w") as _f:
+    _f.write("def a():\n    return 1\n\n\ndef b():\n    return 3\n\n\n# why c exists\ndef c():\n    return 4\n")
+subprocess.run(_dpg + ["commit", "-qam", "two"], check=True)
+_dpo = _dp.parts(_dpr, "HEAD~1", "HEAD", "m.py")
+_dpn = subprocess.run(["git", "-C", _dpr, "diff", "--numstat", "HEAD~1", "HEAD"], capture_output=True, text=True).stdout.split()
+_dpp = {p[0]: (p[1], p[2]) for p in _dpo["parts"]}
+check([_dpo["added"], _dpo["removed"]] == [int(_dpn[0]), int(_dpn[1])],
+      "diff_parts: the totals equal git diff --numstat", f"got {_dpo['added']} {_dpo['removed']}, git {_dpn[:2]}")
+check(_dpp.get("b") == (1, 1) and _dpp.get("c") == (5, 0),
+      "diff_parts: a changed line belongs to its function, and a comment above a function to that function",
+      f"got {_dpp!r}")
+
 print()
 print("-" * 32)
 if FAILURES:
