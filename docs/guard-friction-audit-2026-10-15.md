@@ -17,6 +17,8 @@ autonomous build").
 | 7 | A builder helper running the test suite with its output piped through `tail` | subagent | "pipes a wait or loop through tail/head, which hides its output until it exits" (refused, not asked, inside a subagent) | Partly right: the rule is real. But a foreground run that ends on its own isn't a hidden wait. The helper re-ran it without the pipe. |
 | 8 | Clearing a scratch folder of my own (`rm -rf` under the session scratchpad) before a check | main session | "deletes one or more files… Refused, not asked: aj has not written for 12 minutes… Do not retry this action" | The scratchpad is session-private and holds nothing of aj's. Deleting there is never destructive to aj's work. |
 
+| 9 | A builder helper's commit preceded by `cd` (same as 3, hit again by the page-check helper) | subagent | "This command names another repo (--git-dir, or a cd / -C I could not follow)… Refused, not asked: this runs inside a helper (subagent)" | Repeats 3 even though the helper was told not to use `cd`, which shows that instructions alone don't prevent it. The helper re-ran it as plain `git commit`. |
+
 ## Not friction: these worked as intended
 
 - The commit hook refusing a `Co-Authored-By: Claude` trailer and an author of `Claude <noreply@anthropic.com>`. That's aj's attribution rule.
