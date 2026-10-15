@@ -268,7 +268,7 @@ const PAGE = {
   "eyebrow": "Audit for approval · GitHub issue 285, \"Guards block only unrecoverable actions\" · nothing changed yet",
   "replyPrefix": "Guards audit",
   "short": {
-    "lead": "I went through every hook (an automatic check) in hook.py that can stop me, against your test: only data loss with no way back should stop me. Seven kinds of action keep asking or stay refused. Deletes ask only when the data isn't saved. Four refusals become reminders. The background-work guard goes completely. Publishing a page is never refused again.",
+    "lead": "I went through every hook (an automatic check) in hook.py that can stop me, against your test: only data loss with no way back, or a change to someone else's work, should stop me. Nine kinds of action keep asking or stay refused. Deletes ask only when the data isn't saved. Four refusals become reminders. The background-work guard goes completely. Publishing a page is never refused again.",
     "hint": "Tap a card for what it guards today and what changes.",
     "key": [
       [
@@ -296,10 +296,10 @@ const PAGE = {
       [
         "lock",
         "Keep",
-        "Seven kinds of action that still stop me",
+        "Nine kinds of action that still stop me",
         "",
-        "Pushing or committing to main (the shared primary branch) stays refused. These still ask first: a force-push (overwriting history on the server) and a push with --all or --mirror. Deleting a branch also asks, local (branch -D) or remote (push --delete), as do git clean (deletes untracked files) and filter-branch (rewrites history). So do reset, checkout -- and restore while uncommitted work (changes not yet saved in git) exists, stash drop and clear (discarding set-aside work), and truncating (emptying) a file.",
-        "Nothing; these already match your test."
+        "Pushing or committing to main (the shared primary branch) stays refused. Commits, merges, rebases, cherry-picks and reverts are now refused too on any branch the guard can't confirm is mine; the refusal tells me to make a new AjsAgent/ branch and commit there. These still ask first: a force-push (overwriting history on the server), a push with --all or --mirror, deleting a branch (local with branch -D, remote with push --delete), git clean (deletes untracked files), and filter-branch (rewrites history). Reset, checkout -- and restore also ask while uncommitted work (changes not yet saved in git) exists. So do stash drop and clear (discarding set-aside work) and truncating (emptying) a file.",
+        "Nothing from you. Refusing commits on a branch that isn't clearly mine is stricter than today, which only asks."
       ],
       [
         "swap",
@@ -312,9 +312,9 @@ const PAGE = {
       [
         "stop",
         "Drop",
-        "Background work, kills and branch commits stop asking",
+        "Background work and process kills stop asking",
         "done",
-        "Background or hidden commands stop asking: nohup, a trailing &, Start-Process and background jobs. So do cutting a wait's output short with tail or head, and killing a process. Commits, merges and rebases also stop asking when the guard can't tell which branch the command runs on; main stays refused whenever it can tell. The \"Never hide work\" rule text goes too, and so does its 5-minute stall-check reminder.",
+        "These stop asking: background or hidden commands (nohup, a trailing &, Start-Process, background jobs), cutting a wait's output short with tail or head, and killing a process. None of these changes a branch or deletes saved work. The \"Never hide work\" rule text goes too, along with its 5-minute stall-check reminder.",
         "Nothing from you."
       ],
       [
@@ -418,6 +418,18 @@ const PAGE = {
       null
     ],
     [
+      "chg",
+      "Commits on a branch that isn't clearly mine",
+      "Refused, with a pointer to a new branch.",
+      [
+        "Asks you first",
+        "Refused; I make a new AjsAgent/ branch and commit there"
+      ],
+      "Covers commit, merge, rebase, cherry-pick, revert, am and apply (the last two apply a patch). Your rule: risking someone's work is not worth the speed.",
+      null,
+      null
+    ],
+    [
       "keep",
       "Refusals on main, and asking before history or branch loss",
       "Unchanged.",
@@ -446,31 +458,12 @@ const PAGE = {
         ]
       ],
       "It doesn't protect data, so your test says reminder; the cost is that sending the plan as a page first becomes a habit rather than an enforced rule."
-    ],
-    [
-      "force",
-      "Force-pushing (overwriting the server's copy of a branch) to my own branch, not main: ask first, or allow?",
-      [
-        [
-          "A",
-          "Allow it",
-          1,
-          "Old commits stay in the local history (the reflog, git's private record of where a branch used to point), so it can be undone on this machine."
-        ],
-        [
-          "B",
-          "Keep asking",
-          0,
-          "Safer if you ever push to my branches too."
-        ]
-      ],
-      "Force-pushing to main stays refused either way."
     ]
   ],
   "wrapup": {
     "summary": "An audit of every hook that can stop me, sorted by whether what it stops can be recovered.",
     "changing": "hook.py's guard lists, the page check, the prompt timer, the GitHub and helper-count guards, the whole-file rewrite prompt, the rule text in house-rules.md, and the checks in verify.py that test each.",
-    "blocking": "Your answers on the design-loop lock and on force-pushing to my own branch, and approval of the audit.",
+    "blocking": "Your pick of A or B in the Choices section for the design-loop lock, and your approval of this audit.",
     "next": "I open one child issue per area and run one builder at a time, then open one pull request for you to test. The fixes for automatic pages follow on the same branch.",
     "todo": [
       "Pick your answers in the Choices section.",
