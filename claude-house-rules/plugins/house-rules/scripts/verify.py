@@ -4253,10 +4253,11 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count;
-# so is guardgithub (#178), which runs only on a GitHub MCP write.
+# so is guardgithub (#178), which runs only on a GitHub MCP write; and pagecheck (#257), which
+# exits at once unless the call is an .html page Write or an Artifact call.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -9007,6 +9008,68 @@ else:
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
+
+# ---- pagecheck: the page check before saving or publishing (#257) ----
+_pc_tmp = tempfile.mkdtemp(prefix="pc-")
+_pc_env = dict(os.environ, HOUSE_RULES_LOOP="on")
+_pc_off = dict(os.environ, HOUSE_RULES_LOOP="off")
+_pc_hand = "<!doctype html>\n<html><body>by hand</body></html>\n"
+_pc_built = "<!doctype html>\n<!-- house-rules make_page 9.9.9 -->\n<html><body>built</body></html>\n"
+
+
+def _pc_file(name, text):
+    p = os.path.join(_pc_tmp, name)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(text)
+    return p
+
+
+def _pc(tool, ti, env=None):
+    _rc, out, _err = run_hook("pagecheck", json.dumps({"tool_name": tool, "tool_input": ti}), env=env or _pc_env)
+    return out
+
+
+def _pc_denied(out):
+    return '"permissionDecision":"deny"' in out
+
+
+_pc_plans = os.path.join(_pc_tmp, "docs", "plans", "x.html")
+_pc_elsewhere = os.path.join(_pc_tmp, "notes", "x.html")
+_pc_hand_f = _pc_file("hand.html", _pc_hand)
+_pc_built_f = _pc_file("built.html", _pc_built)
+_pc_data_f = _pc_file("data.json", "{}")
+_pc_cases = []
+_o = _pc("Write", {"file_path": _pc_plans, "content": _pc_hand})
+_pc_cases.append(("Write of a hand-written docs/plans page is refused, naming the page and the builder command",
+                  _pc_denied(_o) and _pc_plans in _o and "make_page.py build <content.json>" in _o))
+_pc_cases.append(("Write of a builder page under docs/plans is allowed",
+                  _pc("Write", {"file_path": _pc_plans, "content": _pc_built}) == ""))
+_pc_cases.append(("Write of an .html outside docs/plans is allowed",
+                  _pc("Write", {"file_path": _pc_elsewhere, "content": _pc_hand}) == ""))
+_pc_cases.append(("Artifact publish of a hand-written page is refused",
+                  _pc_denied(_pc("Artifact", {"file_path": _pc_hand_f}))))
+_pc_cases.append(("Artifact publish of a hand-written page named in files is refused",
+                  _pc_denied(_pc("Artifact", {"files": {"index": _pc_hand_f}}))))
+_pc_cases.append(("Artifact publish of a builder page is allowed",
+                  _pc("Artifact", {"file_path": _pc_built_f}) == ""))
+_o = _pc("Artifact", {"action": "read", "file_path": _pc_hand_f})
+_pc_cases.append(("Artifact read is skipped with a note", not _pc_denied(_o) and "skipped" in _o))
+_o = _pc("Artifact", {"action": "list"})
+_pc_cases.append(("Artifact list is skipped with a note", not _pc_denied(_o) and "skipped" in _o))
+_o = _pc("Artifact", {"asset": True, "file_path": _pc_hand_f})
+_pc_cases.append(("Artifact asset upload is skipped with a note", not _pc_denied(_o) and "asset upload" in _o))
+_o = _pc("Artifact", {"type": "chart", "file_path": _pc_data_f})
+_pc_cases.append(("Artifact typed data file is skipped with a note", not _pc_denied(_o) and "skipped" in _o))
+_o = _pc("Artifact", {"file_path": os.path.join(_pc_tmp, "missing.html")})
+_pc_cases.append(("Artifact unreadable file is allowed with a note", not _pc_denied(_o) and "could not read" in _o))
+_pc_cases.append(("HOUSE_RULES_LOOP=off allows a hand-written Write and a hand-written publish",
+                  _pc("Write", {"file_path": _pc_plans, "content": _pc_hand}, _pc_off) == ""
+                  and _pc("Artifact", {"file_path": _pc_hand_f}, _pc_off) == ""))
+_pc_cases.append(("a payload with no tool_input fails open with a note",
+                  "could not run" in _pc("Write", None)))
+for _t, _ok in _pc_cases:
+    report("PASS" if _ok else "FAIL", "pagecheck: " + _t)
+shutil.rmtree(_pc_tmp, True)
 
 print()
 print("-" * 32)

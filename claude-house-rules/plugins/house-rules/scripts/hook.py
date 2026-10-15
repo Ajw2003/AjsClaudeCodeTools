@@ -6909,7 +6909,105 @@ def _check_plain(ctx):
     return "open with a short plain-English summary (%s)" % "; ".join(ctx["plain_problems"])
 
 
+# --- pagecheck (#257): a handover page must come from make_page.py -------------------------
+# PreToolUse on Write and Artifact. The two rows below sit in CHECKPOINTS so the list shows every
+# moment; only "reply ends" rows run at Stop, so these checks do nothing there (pagecheck acts).
+PAGE_MARK_RE = re.compile(r"<!--\s*house-rules make_page\b")
+_PAGE_EXT = (".html", ".htm")
+_PAGE_SKIP_ACTIONS = {"read", "list", "open", "delete", "view", "get", "ls", "remove"}
+_PAGE_DENY = (
+    "House rules, page check: %s is a hand-written page - it has no house-rules make_page mark. "
+    "Pages are built, not typed. Write the content file, then run: python3 %s build <content.json> "
+    "and use the page it builds. HOUSE_RULES_LOOP=off turns this check off."
+)
+
+
+def _page_note(text):
+    emit({"systemMessage": "house-rules page check: " + text})
+
+
+def _page_in_plans(path):
+    parts = [p for p in re.split(r"[\\/]+", path) if p]
+    return any(parts[i] == "docs" and parts[i + 1] == "plans" for i in range(len(parts) - 1))
+
+
+def _page_deny(page):
+    script = os.path.join(_plugin_root(), "scripts", "make_page.py")
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                 "permissionDecisionReason": _PAGE_DENY % (page, script)}})
+
+
+def _page_candidates(ti):
+    out = []
+    fp = ti.get("file_path")
+    if isinstance(fp, str) and fp:
+        out.append(fp)
+    files = ti.get("files")
+    vals = list(files.values()) if isinstance(files, dict) else (files if isinstance(files, list) else [])
+    out.extend(v for v in vals if isinstance(v, str) and v and v not in out)
+    return out
+
+
+def event_pagecheck():
+    try:
+        if not _loop_enabled():
+            return 0
+        payload = read_payload()
+        data = json.loads(payload) if payload else {}
+        ti = data.get("tool_input") if isinstance(data, dict) else None
+        if not isinstance(ti, dict):
+            _page_note("the call carried no tool_input, so the check could not run; the call is allowed.")
+            return 0
+        tool = str(data.get("tool_name") or "")
+        if tool == "Write":
+            fp = ti.get("file_path")
+            if not (isinstance(fp, str) and fp.lower().endswith(_PAGE_EXT) and _page_in_plans(fp)):
+                return 0  # not a docs/plans page: nothing to check, nothing to say
+            if PAGE_MARK_RE.search(str(ti.get("content") or "")):
+                return 0
+            _page_deny(fp)
+            return 0
+        # Artifact (or any other tool the matcher routes here)
+        action = str(ti.get("action") or ti.get("command") or ti.get("operation") or "").lower()
+        if action in _PAGE_SKIP_ACTIONS:
+            _page_note("skipped, the Artifact call is a %s action, not a page save." % action)
+            return 0
+        if ti.get("asset") is True:
+            _page_note("skipped, the Artifact call is an asset upload, not a page.")
+            return 0
+        cands = _page_candidates(ti)
+        pages = [c for c in cands if c.lower().endswith(_PAGE_EXT)]
+        if not pages:
+            if ti.get("type") or ti.get("artifact_type"):
+                _page_note("skipped, the Artifact input is the data file of a typed artifact, not an HTML page.")
+            else:
+                _page_note("skipped, the Artifact input names no HTML file (%s)."
+                           % (", ".join(cands) or "no file path"))
+            return 0
+        for page in pages:
+            try:
+                with open(page, encoding="utf-8", errors="replace") as fh:
+                    head = fh.read(4096)
+            except OSError as exc:
+                _page_note("could not read %s (%s), so the check did not run; the publish is allowed."
+                           % (page, type(exc).__name__))
+                continue
+            if not PAGE_MARK_RE.search(head):
+                _page_deny(page)
+                return 0
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: the page check hit an error (%s: %s) and did not "
+                               "run for this call; the call is allowed." % (type(exc).__name__, exc)})
+    return 0
+
+
+def _check_page_saved(ctx):
+    return ""  # runs as the PreToolUse hook event_pagecheck, never at Stop
+
+
 CHECKPOINTS = [
+    ("page saved", "page built", _check_page_saved, "block"),
+    ("page published", "page built", _check_page_saved, "block"),
     ("reply ends", "page", _check_page, "block"),
     ("reply ends", "editor", _check_editor, "block"),
     ("reply ends", "evidence", _check_evidence, "block"),
@@ -6918,6 +7016,7 @@ CHECKPOINTS = [
 ]
 
 CHECKPOINT_RULES = {
+    "page built": "A handover page is built by make_page.py, never typed by hand.",
     "page": "A reply that offers choices, lays out a plan, or runs over %d words links a page." % LONG_REPLY_WORDS,
     "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
@@ -7613,6 +7712,7 @@ EVENTS = {
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,
     "harvest": event_harvest,
+    "pagecheck": event_pagecheck,
 }
 
 
