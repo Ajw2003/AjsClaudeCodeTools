@@ -1,0 +1,55 @@
+{
+  "title": "Guards Audit",
+  "eyebrow": "Audit for approval · issue 285, \"Guards block only unrecoverable actions\" · nothing changed yet",
+  "replyPrefix": "Guards audit",
+  "short": {
+    "lead": "I went through every hook in hook.py that can stop me, against your test: only data loss with no way back should stop me. Seven kinds of action keep asking or stay refused, deletes ask only when the data isn't saved, four refusals become reminders, and the background-work guard goes completely. Publishing a page is never refused again.",
+    "hint": "Tap a card for what it guards today and what changes.",
+    "key": [["Keeps asking or refusing", "done"], ["Becomes a reminder or goes", ""], ["Your call", "you"]],
+    "items": [
+      ["lock", "Keep", "Seven kinds of action that still stop me", "done",
+       "Pushing or committing to main stays refused. Asking first stays for: force-push, --all or --mirror push; deleting a branch, local (branch -D) or remote (push --delete); git clean and filter-branch; reset, checkout -- and restore while uncommitted work exists; stash drop and clear; truncating a file.",
+       "Nothing; these already match your test."],
+      ["swap", "Narrow", "Deletes ask only when the file isn't saved", "",
+       "Today every rm asks, even for a committed file git can restore. After this, a delete asks only when it is recursive (rm -r, rmdir /s, Remove-Item -Recurse) or when a file it deletes has uncommitted changes or was never committed. Deleting a committed, unchanged file runs without asking.",
+       "Nothing from you."],
+      ["stop", "Drop", "Background work, kills and branch commits stop asking", "",
+       "These no longer ask: background or hidden commands (nohup, a trailing &, Start-Process, background jobs), piping a wait through tail or head, killing a process, and commits, merges or rebases on my own branch when the folder isn't clear. The \"Never hide work\" rule text goes too, and so does its 5-minute stall-check reminder.",
+       "Nothing from you."],
+      ["eye", "Soften", "Four deny-guards become reminders", "",
+       "First, publishing a page not built by make_page.py: today it is denied, afterwards it goes through with a reminder. Second, Claude credit or a claude/ branch on GitHub, and an issue without its sections: denied, afterwards a reminder. Third, a third helper or a helper's own helper: denied, afterwards a reminder. Fourth, overwriting a whole file: today it always asks; afterwards it asks only when that file has uncommitted changes.",
+       "Nothing from you."],
+      ["loop", "Prompt timer", "No more cascade of refusals", "",
+       "Today one unanswered prompt makes every later prompt in the session refuse at once. That cascade blocked both page publishes and the commit. After this, the timer only acts on prompts the guards above raise, never on others such as publishing a page. Each prompt waits on its own, and nothing is refused just because an earlier one went unanswered.",
+       "Nothing from you."],
+      ["hand", "Decide", "One guard needs your call", "you",
+       "The design-loop lock stops code edits until you approve a build plan. It stopped a builder today, but it is also what makes plans reach you as a page first. Choose below.",
+       "Your answer in the Choices section."]
+    ]
+  },
+  "changes": [
+    ["chg", "Background and hidden work", "No longer asks; the rule text is removed.", ["Asks before nohup, &, Start-Process, background jobs, and tail or head on a wait", "Runs without asking"], "Removes the \"Never hide work\" rule from house-rules.md (lines 128-132) and its detail file, and the stall-check reminder after starting a helper.", null, null],
+    ["chg", "Deleting files", "Asks only when the data can't come back.", ["Every rm asks", "Only recursive deletes, or deletes of uncommitted or never-committed files"], "A committed, unchanged file comes back with git, so deleting it doesn't ask.", null, null],
+    ["chg", "Publishing a page", "Never refused.", ["Denied if not built by make_page.py, and auto-refused after an earlier prompt went unanswered", "Always goes through; a reminder if make_page.py wasn't used"], "This is what failed silently today.", null, null],
+    ["chg", "Unanswered prompts", "Each prompt waits on its own.", ["One unanswered prompt refuses every later one at once", "Only prompts for the kept guards time out, one at a time"], "Prompts the guards didn't raise are never refused by the timer.", null, null],
+    ["chg", "GitHub wording, helper count, whole-file rewrites", "Reminders, not refusals.", ["Denied or asked every time", "Allowed, with a reminder; a rewrite asks only over uncommitted changes"], "None of these lose data that can't be restored.", null, null],
+    ["keep", "Refusals on main, and asking before history or branch loss", "Unchanged.", null, "Push or commit to main, force-push, deleting a branch, git clean, filter-branch, reset or restore over uncommitted work, stash drop or clear, truncate.", null, null]
+  ],
+  "choices": [
+    ["lock", "What should the design-loop lock do?", [
+      ["A", "Reminder only", 1, "Code edits go through, with a reminder that the plan hasn't been approved. It matches your test, but nothing forces the page step."],
+      ["B", "Keep blocking code edits", 0, "Plans always reach you first, but builders stall while you're away."]
+    ], "It doesn't protect data, so your test says reminder; the cost is that the plan step becomes a habit rather than a gate."],
+    ["force", "Force-pushing to my own branch (not main): ask, or allow?", [
+      ["A", "Allow it", 1, "Old commits stay in the local history (reflog), so it can be undone on this machine."],
+      ["B", "Keep asking", 0, "Safer if you ever push to my branches too."]
+    ], "Force-pushing to main stays refused either way."]
+  ],
+  "wrapup": {
+    "summary": "An audit of every hook that can stop me, sorted by whether what it stops can be recovered.",
+    "changing": "hook.py's guard lists, the page check, the prompt timer, the GitHub and helper-count guards, the whole-file rewrite prompt, the rule text in house-rules.md, and verify.py's cases for each.",
+    "blocking": "Your answers on the design-loop lock and on force-pushing to my own branch, and approval of the audit.",
+    "next": "Child issues per area, one builder at a time, one pull request for you to test. The automatic-pages fixes follow on the same branch.",
+    "todo": ["Pick your answers in the Choices section.", "Tap <b>Copy my reply</b>.", "Send it with \"Build plan approved: guards audit\", or say what to change."]
+  }
+}
