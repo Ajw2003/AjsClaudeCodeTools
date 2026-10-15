@@ -14,6 +14,9 @@ autonomous build").
 | 5 | Stopping my own stalled screenshot script while aj was away | main session | "Refused, not asked: aj has not written for 7 minutes… Do not retry this action" | A `kill` of a process this session started, matched by the destructive-action rule. Harmless here, since the script ended on its own. |
 | 6 | A builder helper editing its own new file with a Bash Python script | subagent | Waiting-on-you entry for "python3 - <<'E' p='make_page.py'…" | Partly right: code edits through Bash do bypass the code lock (see 4). The helper should have used the Edit tool. |
 
+| 7 | A builder helper running the test suite with its output piped through `tail` | subagent | "pipes a wait or loop through tail/head, which hides its output until it exits" (refused, not asked, inside a subagent) | Partly right: the rule is real. But a foreground run that ends on its own isn't a hidden wait. The helper re-ran it without the pipe. |
+| 8 | Clearing a scratch folder of my own (`rm -rf` under the session scratchpad) before a check | main session | "deletes one or more files… Refused, not asked: aj has not written for 12 minutes… Do not retry this action" | The scratchpad is session-private and holds nothing of aj's. Deleting there is never destructive to aj's work. |
+
 ## Not friction: these worked as intended
 
 - The commit hook refusing a `Co-Authored-By: Claude` trailer and an author of `Claude <noreply@anthropic.com>`. That's aj's attribution rule.
