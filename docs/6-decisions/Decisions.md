@@ -7,6 +7,27 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Design proposed: ambiguity check
+
+**Status.** Proposed; waiting on "Design approved: ambiguity check".
+
+**What.** aj: "Let's add in an ambiguity check… fold in some of the rules and checks too as ambiguity needs
+checking in several places and stages." What exists today:
+- Asking when a request is unclear is rule text only (show-dont-tell); in practice the code lock is the check.
+- Approvals are checked: a bare "approved" is refused, and names drop pasted answer codes (#243).
+- Issue sections (depends on, done when) are asked for in the plan note but not checked.
+- Replies: success claims, "can't be done" and unreasoned "not checked" are checked. Vague numbers and
+  claims ("about 43", "should work") and bare references ("#2", "option B") are not.
+- Pages: only my own hand search.
+
+Proposal page: `docs/plans/ambiguity-check.html`. One "Nothing left vague" rule takes in four lines from three
+rules: ask when unclear, exact inputs, named references, and done-criteria. One detector runs three new checks: a
+vague claim with no reason in a reply, a bare reference in a reply, and the same two on a page written under
+`docs/plans`. Issues are refused without "Depends on", "Depended on by" and "Done when". The not-checked check joins
+the vague-claim check, and Evidence before claims stays its own check. Four choices for aj.
+
+---
+
 ## 2026-10-15 - Correction: "about 43 tests" was a guess where a count was possible
 
 The changes page said "about 43 tests" and "658 checks"; aj: "That's not the kind of thing that is ambiguous."
