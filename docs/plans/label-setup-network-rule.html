@@ -265,7 +265,7 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Label Setup Network Rule",
-  "eyebrow": "One choice during the build · Label setup, issue #276",
+  "eyebrow": "One choice during the build · Label setup, the hook step",
   "replyPrefix": "Label setup network rule",
   "reply": "",
   "short": {
@@ -287,7 +287,7 @@ const PAGE = {
         "Fine",
         "Two moments keep the rule",
         "",
-        "Approving a design and refusing over labels both happen when your message arrives, not during a tool call. The check that runs when your message arrives already reads issue labels from GitHub today.",
+        "Approving a design and refusing over labels both happen when your message arrives, not during a tool call. That same message check already reads issue labels from GitHub today.",
         "Nothing from you."
       ],
       [
@@ -315,7 +315,7 @@ const PAGE = {
       "What happens when a plan over three steps is approved.",
       [
         "Tells the agent to create the label by hand with gh label create.",
-        "Option A: tells the agent to run /house-rules:labels if a house label is missing. Option B: the hook creates the missing labels itself and says so."
+        "If the rule stays, it tells the agent to run /house-rules:labels when a house label is missing. If the rule changes, the hook creates the missing labels itself and says so."
       ],
       "Either way, the advice to create labels by hand goes."
     ]
@@ -343,9 +343,9 @@ const PAGE = {
   ],
   "wrapup": {
     "summary": "One moment in the approved plan breaks the plugin's rule that no hook goes to the network during a tool call.",
-    "changing": "Only the issue note's behaviour in hook.py, and with option B, the rule's wording in two docs and its test.",
-    "blocking": "Your answer before I merge issue #276, \"The hook creates missing house labels when it first needs them\".",
-    "next": "I adjust #276 to your answer, merge it, and carry on with the last two steps: the /house-rules:labels command (issue #277) and the real-repo proof with the version bump (issue #279).",
+    "changing": "Only the issue note's behaviour in hook.py, and if the rule changes, its wording in two docs and its test.",
+    "blocking": "Your answer before I merge the hook step, \"The hook creates missing house labels when it first needs them\".",
+    "next": "I adjust the hook step to your answer, merge it, and carry on with the last two steps: the /house-rules:labels command (issue #277) and the real-repo proof with the version bump (issue #279).",
     "todo": [
       "Pick your answer under Choices.",
       "Tap <b>Copy my reply<\/b> and send it in the chat, or tell me what to change."
