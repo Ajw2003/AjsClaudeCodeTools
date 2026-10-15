@@ -7,6 +7,24 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Found in the Label setup build: the issue-note moment breaks the no-network rule
+
+**Context.** Approved choice 2A has the hook create missing labels at three moments. The issue note comes
+from the `delegate` hook, which `hooks/hooks.json` runs on `PostToolUse` for `ExitPlanMode`, a tool call.
+`docs/architecture.md:48` and `docs/4-systems/hook-engine.md:93` say the issue workflow's only network call
+never runs on a tool call, and `scripts/verify.py` asserts it ("never run gh (no network on a tool call)").
+The plan missed this. The builder of #276 found it when that case failed and gave the case a stand-in, which
+hid the clash. The other two moments run on `UserPromptSubmit`, which already reads issue labels from GitHub
+(`_loop_labels`), so they keep the rule.
+
+**Decision.** Pending aj's answer on `docs/plans/label-setup-network-rule.html`: A, keep the rule and point
+the issue note at `/house-rules:labels` (suggested); or B, create labels there and rewrite the rule and its
+test. #276 is not merged until then.
+
+**Status.** Open.
+
+---
+
 ## 2026-10-15 - Build plan approved: Label setup
 
 **Context.** Build plan `docs/plans/label-setup-build-plan.html`, five sub-issues of #274 (The plugin

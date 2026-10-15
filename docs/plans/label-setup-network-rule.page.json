@@ -1,0 +1,29 @@
+{
+  "title": "Label Setup Network Rule",
+  "eyebrow": "One choice during the build · Label setup, issue #276",
+  "replyPrefix": "Label setup network rule",
+  "reply": "",
+  "short": {
+    "lead": "The build plan you approved has the hook create missing labels at three moments: when you approve a design, when the issue note is given after you approve a plan, and before a refusal over labels. One of them breaks a rule the plugin already has: no hook goes to the network while the agent is carrying out a tool call (one action, such as editing a file or running a command). The docs state the rule in docs/architecture.md (line 48) and docs/4-systems/hook-engine.md (line 93), and a test in verify.py checks it. I missed it when writing the plan. The builder found it when that test failed, and changed the test to pass, which hid the clash. Nothing is merged yet.",
+    "hint": "Tap a step to see what it means.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["check", "Fine", "Two moments keep the rule", "", "Approving a design and refusing over labels both happen when your message arrives, not during a tool call. The check that runs when your message arrives already reads issue labels from GitHub today.", "Nothing from you."],
+      ["lock", "Clash", "One moment breaks it", "", "The issue note is a reminder to the agent. It comes from the delegate hook, a script that runs right after a plan is approved. Approving a plan is itself a tool call, named ExitPlanMode. Label setup there would list the repo's labels, then create up to three side by side; each of those two waits is allowed 5 seconds, so up to 10 seconds in all.", "Nothing from you."],
+      ["hand", "Answer", "You pick which way to go", "you", "Building carries on with the /house-rules:labels command (issue #277, \"A /house-rules:labels command that sets up a repo's labels on demand\") while you decide.", "Your answer under Choices."]
+    ]
+  },
+  "changes": [
+    ["chg", "The issue note (ISSUE_NOTE in hook.py)", "What happens when a plan over three steps is approved.", ["Tells the agent to create the label by hand with gh label create.", "Option A: tells the agent to run /house-rules:labels if a house label is missing. Option B: the hook creates the missing labels itself and says so."], "Either way, the advice to create labels by hand goes."]
+  ],
+  "choices": [
+    ["net", "Should the issue note's hook create labels, given the no-network rule?", [["A", "No: keep the rule, and point the note at /house-rules:labels", 1, "Approving a design already creates the labels before planning makes any issue. The note covers repos where the design loop is off."], ["B", "Yes: create them there, and change the rule and its test", 0, "Labels appear automatically even with the design loop off, but approving a plan can then wait up to 10 seconds on GitHub."]], "The rule keeps tool calls fast and offline. Creating labels when you approve a design covers every repo that uses the design loop, which is every repo of yours today."]
+  ],
+  "wrapup": {
+    "summary": "One moment in the approved plan breaks the plugin's rule that no hook goes to the network during a tool call.",
+    "changing": "Only the issue note's behaviour in hook.py, and with option B, the rule's wording in two docs and its test.",
+    "blocking": "Your answer before I merge issue #276, \"The hook creates missing house labels when it first needs them\".",
+    "next": "I adjust #276 to your answer, merge it, and carry on with the last two steps: the /house-rules:labels command (issue #277) and the real-repo proof with the version bump (issue #279).",
+    "todo": ["Pick your answer under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}
