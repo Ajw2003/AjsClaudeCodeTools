@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - QA passed: enforced QA stage
+
+**Context.** QA page `docs/plans/qa-stage-qa.html`, built by `make_page.py`'s new QA mode. All seven sub-issues of
+#264 (Enforce the QA stage), #265 to #271, are built as plugin 2.67.0. The real run is recorded in
+`docs/generated/2026-10-15-qa-stage-real-run.md`.
+
+**Decision.** aj answered "QA passed: enforced QA stage". There were two fixes beyond the plan, both found while
+testing: a QA page linked only in a retry reply is now recorded, and a QA page with no choices now renders. The
+label check's reply loop (#238) was left out of this build.
+
+**Status.** Standing. The issues keep `needs review` until aj closes them.
+
 ## 2026-10-15 - Build plan approved: enforced QA stage
 
 **Context.** `docs/plans/qa-stage-plan.html`, seven sub-issues of #264 (Enforce the QA stage), #265 to #271.
