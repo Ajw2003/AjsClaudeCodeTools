@@ -8687,6 +8687,162 @@ _cw_cases.append(("page: a page written by a shell command is checked at the end
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)
 
+# ---- make_page.py: the handover page builder and project style file (#255) ----
+MAKE_PAGE = os.path.join(HERE, "make_page.py")
+_mp_tmp = tempfile.mkdtemp(prefix="mp-")
+_mp_cases = []
+
+
+def _mp(*args):
+    r = subprocess.run([sys.executable, MAKE_PAGE] + list(args), capture_output=True, text=True, timeout=300)
+    return r.returncode, r.stdout + r.stderr
+
+
+def _mp_proj(name, style=None):
+    d = os.path.join(_mp_tmp, name)
+    os.makedirs(os.path.join(d, "docs"), exist_ok=True)
+    if style is not None:
+        with open(os.path.join(d, "docs", "page-style.json"), "w", encoding="utf-8") as f:
+            json.dump(style, f)
+    return d
+
+
+def _mp_content(name, extra_changes=None, text="Plain."):
+    page = {"title": "T " + name, "eyebrow": "e", "replyPrefix": "R", "reply": "",
+            "short": {"lead": text, "hint": "h", "key": [["We", ""]], "items": [["bulb", "Idea", "The idea", "", "c", "r"]]},
+            "changes": [["new", "A thing", "One line.", None, "Detail.", None, None]] + (extra_changes or []),
+            "wrapup": {"summary": "s", "changing": "c", "blocking": "b", "next": "n", "todo": ["t"]}}
+    path = os.path.join(_mp_tmp, name + ".page.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(page, f)
+    return path
+
+
+def _mp_page_of(html_path):
+    with open(html_path, encoding="utf-8") as f:
+        h = f.read()
+    m = re.search(r"^const PAGE = (\{.*?^\});$", h, re.S | re.M)
+    return json.loads(m.group(1)) if m else None
+
+
+_PS_STYLE = {"name": "X", "themes": ["dark"],
+             "colors": {"background": "#14120E", "surface": "#1E1A14", "text": "#DCD2BA", "text_muted": "#9A9078", "line": "#332D22"},
+             "roles": {"you_act": {"color": "#5FA288"}, "accent": {"color": "#7A6AA0"}, "blocking": {"color": "#C4542E"}, "done": {"color": "#9A9078"}},
+             "reserved": [{"color": "#C9A227", "rule": "gold only"}],
+             "fonts": {"display": "Eczar", "body": "Spectral", "label": "Overpass Mono",
+                       "load": "https://fonts.googleapis.com/css2?family=Eczar&display=swap"},
+             "shape": {"corner_radius": 0}, "labels": {"family": "label", "case": "upper"}, "icons": {"frame": "sigil"},
+             "pictures": "required"}
+
+_c1 = _mp_content("basic")
+_d = _mp_proj("nostyle")
+_rc, _o = _mp("build", _c1, "--project", _d)
+_mp_cases.append(("make_page: build with no style file exits 3 and names both commands",
+                  _rc == 3 and "make_page.py style --draft" in _o and "make_page.py style --quick" in _o))
+
+_rc1, _ = _mp("style", "--quick", "--project", _d)
+_rc2, _o2 = _mp("build", _c1, "--project", _d)
+_html = os.path.join(_d, "docs", "plans", "basic.html")
+_txt = open(_html, encoding="utf-8").read() if os.path.isfile(_html) else ""
+with open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8") as _f:
+    _ver = json.load(_f)["version"]
+_mp_cases.append(("make_page: style --quick then build succeeds and stamps the mark right after the doctype",
+                  _rc1 == 0 and _rc2 == 0 and _txt.startswith("<!doctype html>\n<!-- house-rules make_page %s -->" % _ver)
+                  and "visual check" in _o2 and "<title>T basic</title>" in _txt))
+
+_d = _mp_proj("ps", _PS_STYLE)
+_rc, _o = _mp("build", _c1, "--project", _d)
+_txt = open(os.path.join(_d, "docs", "plans", "basic.html"), encoding="utf-8").read() if _rc == 0 else ""
+_mp_cases.append(("make_page: the PlunderSpell-shaped style file puts its role colours, fonts link and sigil frame in the page",
+                  _rc == 0 and "--you:#5FA288" in _txt and "--accent:#7A6AA0" in _txt and "--gap:#C4542E" in _txt
+                  and "family=Eczar" in _txt and "border-radius:0!important" in _txt and "dashed" in _txt))
+
+_cr = _mp_content("reserved", text="Gold is #c9a227 here.")
+_rc, _o = _mp("build", _cr, "--project", _d)
+_mp_cases.append(("make_page: a PAGE colour equal to a reserved colour is refused, naming the colour",
+                  _rc == 2 and "#c9a227" in _o.lower() and "reserved" in _o))
+
+_bad = dict(_PS_STYLE, roles=dict(_PS_STYLE["roles"], accent={"color": "#c9a227"}))
+_dd = _mp_proj("ps-bad", _bad)
+_rc, _o = _mp("build", _c1, "--project", _dd)
+_mp_cases.append(("make_page: a style-file role colour equal to a reserved colour is refused",
+                  _rc == 2 and "role 'accent'" in _o))
+
+_cv = _mp_content("visual", [["chg", "Shiny button", "Looks new.", None, "Detail.", None, None, {"visual": True}]])
+_rc, _o = _mp("build", _cv, "--project", _d)
+_mp_cases.append(("make_page: a required-pictures project refuses a visual Changes item with no picture, naming it",
+                  _rc == 2 and "Shiny button" in _o))
+
+_cv2 = _mp_content("visual2", [["chg", "Shiny button", "Looks new.", None, "Detail.", None, None, {"visual": True},
+                                {"src": "data:image/png;base64,AAAA", "alt": "a", "caption": "c"}]])
+_rc, _o = _mp("build", _cv2, "--project", _d)
+_mp_cases.append(("make_page: the same visual item with a picture builds", _rc == 0))
+
+_tk = os.path.join(_mp_tmp, "tokens.json")
+with open(_tk, "w", encoding="utf-8") as f:
+    json.dump({"color": {"tokens": [{"name": "background", "value": {"dark": "#101010"}},
+                                    {"name": "text", "value": {"dark": "#eeeeee"}},
+                                    {"name": "accent-lapis", "value": {"dark": "#7A6AA0"}}]},
+               "type": {"families": {"display": "Eczar, serif", "body": "Spectral, serif"}},
+               "radius": {"tokens": [{"name": "sm", "value": "0"}]}}, f)
+_d = _mp_proj("drafty", {"use": "defaults"})
+_rc, _o = _mp("style", "--draft", "--from", _tk, "--project", _d)
+_dp = os.path.join(_d, "docs", "page-style.draft.json")
+if os.path.isfile(_dp):
+    with open(_dp, encoding="utf-8") as _f:
+        _dj = json.load(_f)
+else:
+    _dj = {}
+with open(os.path.join(_d, "docs", "page-style.json"), encoding="utf-8") as _f:
+    _kept = json.load(_f)
+_mp_cases.append(("make_page: style --draft --from writes docs/page-style.draft.json, prints the role guesses, leaves page-style.json alone",
+                  _rc == 0 and _dj.get("colors", {}).get("background") == "#101010" and _dj.get("fonts", {}).get("display") == "Eczar"
+                  and _dj.get("shape", {}).get("corner_radius") == 0 and "confirm" in _o and _kept == {"use": "defaults"}))
+
+# Colours named for what they are, with their job only in the usage note, shaped like PlunderSpell's
+# tokens.json (checked against the real file on 2026-10-15).
+_tk2 = os.path.join(_mp_tmp, "pigments.json")
+with open(_tk2, "w", encoding="utf-8") as f:
+    json.dump({"color": {"tokens": [
+        {"name": "bone-black", "value": {"dark": "#14120E"}, "usage": "Page/app background."},
+        {"name": "vellum", "value": {"dark": "#DCD2BA"}, "usage": "Primary text."},
+        {"name": "vellum-faint", "value": {"dark": "#635C4C"}, "usage": "Tertiary text and rules -- hairline dividers."},
+        {"name": "verdigris", "value": {"dark": "#5FA288"}, "usage": "The accent. Carries every interactive element."},
+        {"name": "verdigris-lo", "value": {"dark": "#2E4C41"}, "usage": "Low-emphasis verdigris -- deep accent fields."},
+        {"name": "orpiment", "value": {"dark": "#C9A227"}, "usage": "Spent on nothing but gold. No other UI element may use it."},
+        {"name": "madder", "value": {"dark": "#C4542E"}, "usage": "Danger. Alarm states."},
+        {"name": "lapis", "value": {"dark": "#7A6AA0"}, "usage": "Reserved for the voice."},
+        {"name": "line", "value": {"dark": "#332D22"}, "usage": "Structural hairline border."}]}}, f)
+_d = _mp_proj("pigments", {"use": "defaults"})
+_rc, _o = _mp("style", "--draft", "--from", _tk2, "--project", _d)
+with open(os.path.join(_d, "docs", "page-style.draft.json"), encoding="utf-8") as _f:
+    _dj = json.load(_f)
+_roles = {k: v.get("color") for k, v in _dj.get("roles", {}).items()}
+_mp_cases.append(("make_page: a draft reads usage notes, prefers a token's own name, keeps shades out of a second role and reserves a one-meaning colour",
+                  _rc == 0 and _dj.get("colors", {}).get("background") == "#14120E" and _dj.get("colors", {}).get("line") == "#332D22"
+                  and _roles.get("you_act") == "#5FA288" and _roles.get("blocking") == "#C4542E" and _roles.get("accent") == "#7A6AA0"
+                  and [r["color"] for r in _dj.get("reserved", [])] == ["#C9A227"]))
+
+_orig = os.path.join(ROOT, "docs", "plans", "enforced-checkpoints-design.page.json")
+if not os.path.isfile(_orig):
+    if IN_REPO:
+        _mp_cases.append(("make_page: rebuilding the enforced-checkpoints design page (content file missing in a checkout)", False))
+    else:
+        report("SKIP", "make_page: rebuilding the enforced-checkpoints design page reproduces its PAGE data (repo-only file)")
+else:
+    _d = _mp_proj("rebuild")
+    _mp("style", "--quick", "--project", _d)
+    _rc, _o = _mp("build", _orig, "--project", _d)
+    _built = _mp_page_of(os.path.join(_d, "docs", "plans", "enforced-checkpoints-design.html")) if _rc == 0 else None
+    with open(_orig, encoding="utf-8") as _f:
+        _want = json.load(_f)
+    _mp_cases.append(("make_page: rebuilding the enforced-checkpoints design page gives the PAGE data of the content file",
+                      _built is not None and _built == _want))
+
+for _t, _ok in _mp_cases:
+    report("PASS" if _ok else "FAIL", _t)
+shutil.rmtree(_mp_tmp, True)
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:
