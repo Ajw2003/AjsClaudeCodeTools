@@ -5221,8 +5221,10 @@ def _loop_unlogged(state, top, label, name):
 # starts on the same line - found in the real run, where the whole line became the name. A spaced
 # dash ends it too: "QA failed: label check - it should say hi" (found in the label check's real run). So
 # does a pasted page reply's answer codes: "New item visual: 1C", "Label check plan: 1A 2A" (#243).
-_LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+[A-Z][A-Za-z ]{0,30}:\s|\s+[-–—]\s"
-                               r"|\s*:\s*\d+[A-Za-z*](?:\s|$)")
+# A capitalised header before a colon ends it only when an answer code does not follow (#266): "enforced QA
+# stage: 1A" is a name and its codes, but a pasted "Build plan: 1A" header is cut whole.
+_LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+(?:Build|Design) plan:|\s+[A-Z][A-Za-z ]{0,30}:\s(?!\d+[A-Za-z*](?:\s|$))"
+                               r"|\s+[-–—]\s|\s*:\s*\d+[A-Za-z*](?:\s|$)")
 
 
 def _loop_name(raw):

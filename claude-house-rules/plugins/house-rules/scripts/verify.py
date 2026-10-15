@@ -8726,6 +8726,38 @@ for _t, _ok in (
         ("the next write after a legacy read lands in .claude/", os.path.isfile(_leg_new)
          and json.load(open(_leg_new, encoding="utf-8")).get("feature") == "old")):
     _loop_cases.append((_t, _ok))
+# -- #266: the QA edit that got through, and a feature name that keeps "QA stage" ---------------
+_qa_state = {"feature": "f", "stage": "build", "skip": False, "approvals": [],
+             "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)],
+             "labels": {"o/r#%d" % n: ["Feature", "in progress"] for n in (1, 2)}}
+_qa_sf = os.path.join(_wt_main, ".claude", "house-rules-loop.json")
+with open(_qa_sf, "w", encoding="utf-8") as _f:
+    json.dump(_qa_state, _f)
+_qa_env = dict(_loop_env, HOUSE_RULES_LOOP_LABELS_FILE=os.path.join(_FIXTURE_ROOT, "no-such-labels.json"))  # GitHub read fails
+for _n in (1, 2):
+    run_hook("autosave", json.dumps({"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write",
+             "session_id": "qa", "cwd": _wt_tree, "tool_input": {"method": "update", "owner": "o", "repo": "r", "issue_number": _n,
+             "labels": ["Feature", "needs review"]}, "tool_response": {"url": "https://github.com/o/r/issues/%d" % _n}}),
+             env=_qa_env)
+_qa_edits = []
+for _cwd in (_wt_main, _wt_tree):
+    _p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "qa", "cwd": _cwd,
+          "tool_input": {"file_path": os.path.join(_cwd, "claude-house-rules/plugins/house-rules/templates/handover-page.html")}}
+    _qa_edits.append(json.loads(run_hook("commitgate", json.dumps(_p), env=_qa_env)[1] or "{}")
+                     .get("hookSpecificOutput", {}).get("permissionDecision", "allow"))
+_loop_cases.append(("#266: with every issue swapped to needs review through the GitHub tool, an Edit is refused from the main checkout and a worktree",
+                    _qa_edits == ["deny", "deny"]))
+_wt_stage("design")
+os.makedirs(os.path.join(_wt_main, "docs", "6-decisions"), exist_ok=True)
+with open(os.path.join(_wt_main, "docs", "6-decisions", "Decisions.md"), "w", encoding="utf-8") as _f:
+    _f.write("design decisions\n")
+run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": "qa", "cwd": _wt_main,
+         "prompt": "Design approved: enforced QA stage: 1A 2A 3A 4A"}), env=_loop_env)
+_loop_cases.append(('#266: "Design approved: enforced QA stage: 1A 2A 3A 4A" records "enforced QA stage"',
+                    json.load(open(_qa_sf, encoding="utf-8")).get("feature") == "enforced QA stage"))
+_loop_cases.append(('#266: "Build plan approved: enforced QA stage: 1A 2A" names "enforced QA stage"; a pasted "Build plan: 1A" is still cut',
+                    _ig_mod._loop_name("enforced QA stage: 1A 2A") == "enforced QA stage"
+                    and _ig_mod._loop_name("blockers v2 Build plan: 1A 2A") == "blockers v2"))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):
     # The retry (#256): the first pass of a missed page rule blocks; the note is what the retry reports.
