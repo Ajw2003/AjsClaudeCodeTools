@@ -34,3 +34,18 @@ at Build with one issue, `o/r#1`, labelled `in progress`. The prompt was to run
    this build and raised with aj.
 
 Counts come from parsing the session's record: 1 Stop block, 12 label notes, 17 assistant text messages.
+
+## The real pull request, replayed (added after QA)
+
+aj pointed out that pull request #272 (Enforce the QA stage: a QA page is mandatory once a pull request opens) was
+itself a real pull request, opened with the GitHub tool `mcp__github__create_pull_request`. This session runs the
+installed 2.66.0 hooks, so the new trigger was not live when it opened. Its exact tool name and the response GitHub
+returned (`{"id":"4870266947","url":"https://github.com/Ajw2003/AjsClaudeCodeTools/pull/272"}`) were then fed to
+this branch's `run.sh autosave`, in the scratch clone with the stage at Build:
+
+- The hook printed "Design loop: QA started because a pull request was opened: code edits are now closed. ..."
+- The stage file changed from `"stage": "build"` to `"stage": "qa"`.
+- A PreToolUse Edit of `claude-house-rules/plugins/house-rules/scripts/hook.py`, sent to `run.sh commitgate` right
+  after, was denied: "code edits are closed in the QA stage of "enforced QA stage"".
+
+So the GitHub-tool path works on a real response, not only on a made-up one.
