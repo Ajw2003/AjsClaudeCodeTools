@@ -124,7 +124,8 @@ the user designs" rule is written and loads through its own SessionStart handler
 merged into it and removed (inject 9,653 → 9,381 chars). `verify.py` 618 PASS, run twice, 2026-10-13. The design
 block (#225), the long-reply reminder (#226) and their proof (#227) are not built yet, so the rule describes a
 hook that does not exist on this branch until #225 lands. Found on the way: `verify.py`'s guard cases go red if a
-`house-rules-last-seen-*` temp file from an earlier run is over five minutes old; a rerun passes.
+`house-rules-last-seen-*` temp file from an earlier run is over five minutes old; a rerun passes. Fixed
+2026-10-15 (#229): each `verify.py` run now uses its own temp folder.
 
 2026-10-14, same branch: the design loop (#223) is in Build. Step 1 of 7, "Stage tracker, approvals, and the code
 lock" (#225), is built: `scope` reads aj's approvals and moves the stage in `.git/house-rules-loop.json`;

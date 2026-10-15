@@ -34,6 +34,15 @@ import sys
 import tempfile
 import time
 
+# #229: every run gets its own temp folder. The hooks keep small state files in the temp folder
+# (when aj last wrote, the waiting-on-you list), and these tests reuse session names, so a file
+# left by an earlier run made the guard believe aj was away and turn its asks into refusals.
+# TMPDIR reaches every hook these tests start; tempfile.tempdir covers this process.
+_RUN_TMP = tempfile.mkdtemp(prefix="house-rules-verify-run-")
+os.environ["TMPDIR"] = _RUN_TMP
+tempfile.tempdir = _RUN_TMP
+atexit.register(shutil.rmtree, _RUN_TMP, True)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOOK = os.path.join(HERE, "hook.py")
 RUN = os.path.join(HERE, "run.sh")
@@ -8510,7 +8519,8 @@ _tpl_path = os.path.join(HERE, "..", "templates", "handover-page.html")
 _tpl = read(_tpl_path) if os.path.isfile(_tpl_path) else ""
 _tpl_missing = [m for m in ('data-part="short"', 'data-part="changes"', 'data-part="choices"', 'data-part="wrapup"',
                             "Copy my reply", 'class="owntext"', "const PAGE = {", "What you need to do",
-                            '<div class="flow">', "<small>You get</small>")
+                            '<div class="flow">', "<small>What exists today</small>", "<small>How it impacts you</small>",
+                            '<div class="files">')
                 if m not in _tpl]
 _loop_cases.append(("the handover template has its four parts, the own-answer box, the copy-reply and the New-item flow",
                     bool(_tpl) and not _tpl_missing))

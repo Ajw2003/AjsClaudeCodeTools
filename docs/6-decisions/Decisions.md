@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Fixed: verify.py's stale-temp-file flake (#229)
+
+aj: "fix the known failures, we never do a pr if there are things broken". The cause: the hooks keep state in the
+temp folder (when aj last wrote, the waiting-on-you list), and `verify.py` reuses session names, so a
+`house-rules-last-seen-verify` file left over five minutes earlier made `guard` treat aj as away and refuse
+instead of ask. Fix: every run creates its own temp folder and points `TMPDIR` at it, so the hooks it starts can't
+see another run's files. Proof: with 20-minute-old last-seen files planted, the previous suite failed 41 of 684
+(34 of them "expected ask, got deny"), and the fixed suite passed 684 of 684 on two runs. Calling it a "known
+flake" and rerunning was wrong: a failure that a rerun hides is still a failure.
+
+---
+
 ## 2026-10-15 - Design approved: new item visual v2
 
 aj: "Design approved New item visual v2: 1A 2A 3A".
@@ -22,7 +34,7 @@ aj: "Design approved New item visual v2: 1A 2A 3A".
 **Plan.** Sub-issues #241 (template: the labelled boxes and every item's file list) and #242 (rebuild the
 changes page for the whole pull request, with counts from git, and move the counting script into `tools/`)
 were rewritten for v2. #243, the name fix, is already built. Plan page: `docs/plans/new-item-visual-v2-plan.html`,
-listing 1 file created and 9 changed, with estimates marked. Waiting on "Build plan approved: new item visual".
+listing 1 file created and 9 changed, with estimates marked. Approved: "Build plan approved: new item visual". The box format stands as shown.
 
 ---
 
