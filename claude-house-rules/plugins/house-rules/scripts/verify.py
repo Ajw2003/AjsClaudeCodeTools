@@ -9180,6 +9180,72 @@ else:
     _mp_cases.append(("make_page: rebuilding the enforced-checkpoints design page gives the PAGE data of the content file",
                       _built is not None and _built == _want))
 
+# QA mode (#268): counts from git, the plan's estimates beside them, the page recorded in the stage file.
+def _mp_git(d, *a):
+    return subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"] + list(a),
+                          capture_output=True, text=True, timeout=60).stdout
+
+
+_d = _mp_proj("qa", {"use": "defaults"})
+_mp_git(_d, "init", "-q", "-b", "main")
+for _n, _t in (("planned.py", "a\n"), ("untouched.py", "u\n")):
+    with open(os.path.join(_d, _n), "w", encoding="utf-8") as _f:
+        _f.write(_t)
+_mp_git(_d, "add", "-A")
+_mp_git(_d, "commit", "-q", "-m", "base")
+with open(os.path.join(_d, "planned.py"), "w", encoding="utf-8") as _f:
+    _f.write("a\nb\nc\n")
+with open(os.path.join(_d, "extra.py"), "w", encoding="utf-8") as _f:
+    _f.write("x\ny\n")
+_mp_git(_d, "add", "-A")
+_mp_git(_d, "commit", "-q", "-m", "work")
+_ns = {}
+for _l in _mp_git(_d, "diff", "--numstat", "main~1...HEAD").splitlines():
+    _a, _r, _f = _l.split("\t")
+    _ns[_f] = (int(_a), int(_r))
+_qa = {"feature": "demo feature", "base": "main~1", "unverified": ["The live run."],
+       "files": {"planned.py": [5, 0, "grow"], "untouched.py": [3, 1, "tidy"]}}
+
+
+def _mp_qa_content(name, qa):
+    c = _mp_content(name)
+    with open(c, encoding="utf-8") as f:
+        pg = json.load(f)
+    pg["qa"], pg["reply"] = qa, "old reply"
+    with open(c, "w", encoding="utf-8") as f:
+        json.dump(pg, f)
+    return c
+
+
+_stage = os.path.join(_d, ".claude", "house-rules-loop.json")
+_rc, _o = _mp("build", _mp_qa_content("qa1", _qa), "--project", _d)
+_mp_cases.append(("make_page: QA mode with no stage file builds, creates none and says it did not record",
+                  _rc == 0 and not os.path.exists(_stage) and "not recorded" in _o))
+_pg = _mp_page_of(os.path.join(_d, "docs", "plans", "qa1.html")) or {"changes": [], "replyPrefix": "", "reply": "x"}
+_fc = next((c for c in _pg["changes"] if c[1].startswith("Files changed, counted from git against main~1")), None)
+_rows = {r[0]: r for r in (_fc[6] if _fc else [])}
+_mp_cases.append(("make_page: QA mode file counts equal git diff --numstat",
+                  _fc is not None and all(_rows[f][1:3] == list(v) for f, v in _ns.items()) and set(_ns) <= set(_rows)
+                  and _fc[2] == "%d files, +%d −%d" % (len(_ns), sum(v[0] for v in _ns.values()), sum(v[1] for v in _ns.values()))))
+_mp_cases.append(("make_page: QA mode marks an unplanned file 'Not in the plan' and an untouched planned file 'Planned but not changed'",
+                  _rows.get("extra.py", [0] * 4)[3] == [["Not in the plan", 0, 0]]
+                  and _rows.get("untouched.py", [0] * 4)[3] == [["Planned but not changed: tidy", 3, 1]]
+                  and _rows.get("planned.py", [0] * 4)[3] == [["Plan estimate: grow", 5, 0]]))
+_mp_cases.append(("make_page: QA mode sets replyPrefix, empties reply and adds the Still unverified item",
+                  _pg["replyPrefix"] == "QA passed: demo feature" and _pg["reply"] == ""
+                  and any(c[0] == "keep" and c[1] == "Still unverified" and c[2] == "1 things not yet proven" for c in _pg["changes"])))
+_rc, _o = _mp("build", _mp_qa_content("qa2", dict(_qa, unverified=[])), "--project", _d)
+_mp_cases.append(("make_page: QA mode with an empty unverified list is refused with exit 2",
+                  _rc == 2 and "unverified" in _o))
+os.makedirs(os.path.dirname(_stage))
+with open(_stage, "w", encoding="utf-8") as _f:
+    json.dump({"feature": "demo", "stage": "Build"}, _f)
+_rc, _o = _mp("build", _mp_qa_content("qa3", _qa), "--project", _d)
+with open(_stage, encoding="utf-8") as _f:
+    _sd = json.load(_f)
+_mp_cases.append(("make_page: QA mode writes qa_page into an existing stage file and keeps its other keys",
+                  _rc == 0 and _sd == {"feature": "demo", "stage": "Build", "qa_page": "docs/plans/qa3.html"}))
+
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
