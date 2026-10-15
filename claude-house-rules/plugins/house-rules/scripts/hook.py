@@ -5617,7 +5617,7 @@ def _gh_label_flags(cmd):
 
 _GH_API_LABELS_RE = re.compile(_GH_PREFIX + r"api\s+([^\n;&|]*?)\brepos/([\w.-]+/[\w.-]+)/issues/(\d+)/labels(?:/([^\s\"']+))?([^\n;&|]*)")
 _GH_API_METHOD_RE = re.compile(r"(?:-X|--method)(?:=|\s+)[\"']?(\w+)", re.I)
-_GH_API_LABEL_FIELD_RE = re.compile(r"(?:-f|-F|--raw-field|--field)(?:=|\s+)[\"']?labels\[\]=(\"[^\"]*\"|'[^']*'|[^\s\"']+)")
+_GH_API_LABEL_FIELD_RE = re.compile(r"(?:-f|-F|--raw-field|--field)(?:=|\s+)(?:\"labels\[\]=([^\"]*)\"|'labels\[\]=([^']*)'|labels\[\]=(\S+))")
 _GH_API_FAILED_RE = re.compile(r"\(HTTP [45]\d\d\)|^gh: |\"status\":\s*\"[45]\d\d\"", re.M)
 
 
@@ -5632,7 +5632,7 @@ def _gh_api_label_change(cmd, text):
     if method == "DELETE" and name:
         return (repo, int(number), None, [], [urllib.parse.unquote(name)])
     if method == "POST" and not name:
-        adds = [v.strip("\"'") for v in _GH_API_LABEL_FIELD_RE.findall(pre + " " + post)]
+        adds = [(x or y or z).strip("\"'") for x, y, z in _GH_API_LABEL_FIELD_RE.findall(pre + " " + post)]
         if adds:
             return (repo, int(number), None, adds, [])
     return None

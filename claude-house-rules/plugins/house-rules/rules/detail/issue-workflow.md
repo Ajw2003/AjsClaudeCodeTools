@@ -11,7 +11,7 @@ The loop, in order:
    the `commitgate` hook refuses Write, Edit and NotebookEdit on source files. Files under `docs/`
    and `.claude/`, any `.md` file, and files outside the project stay editable.
 4. When work on a step starts I mark its issue `in progress`
-   (`gh api repos/<owner>/<repo>/issues/N/labels -f "labels[]=in progress"`; `gh issue edit --add-label` fails in cloud sessions); I remove the label when the issue closes.
+   (`gh api repos/<owner>/<repo>/issues/N/labels -f "labels[]=in progress"`; the `gh issue edit` label flags fail in cloud sessions); I remove the label when the issue closes.
 5. The pull request body says `Refs #N` (or `Refs owner/repo#N`, or `Part of #N`, or a line
    `No-issue: <reason>`). A closing word (close, fix, resolve in any tense) followed by an issue
    reference is refused, because GitHub would close the issue at merge, before the user has tested.
