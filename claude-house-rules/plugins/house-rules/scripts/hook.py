@@ -2376,7 +2376,8 @@ def _never_blocked_own_file(file_path):
             return False
         rc, _o, _e = _ag(os.path.dirname(path), ["ls-files", "--error-unmatch", path], check=False)
         return rc != 0 and os.path.isfile(path)
-    except Exception:
+    except (OSError, ValueError) as exc:
+        sys.stderr.write("house-rules guardwrite: could not tell whether %s is untracked (%s); the normal check applies.\n" % (file_path, exc))
         return False
 
 
@@ -2420,11 +2421,6 @@ def event_guard():
         target = _push_targets_protected(subject, where)
         if target:
             protected, branch = True, target
-
-    if known and not issue_hit and _never_blocked_git(subject, branch, where):
-        trace_noop("guard: never-blocked list - routine git commit/push on own branch `%s`." % branch)
-        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}})
-        return 0
 
     hits = {title: [] for title, _ in GUARD_BUCKETS}
     exempted = []
@@ -2497,6 +2493,14 @@ def event_guard():
             trace("%s - docs check could not tell: %s." % (allow_trace, docs_detail))
         else:
             trace_noop(allow_trace)
+        return 0
+
+    if known and not issue_hit and not outdated and _never_blocked_git(subject, branch, where):
+        # Never-blocked list: a routine commit/push on the agent's own branch is let through, silently.
+        out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
+        if docs_status == "needs-docs":
+            out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
+        emit(out)
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
