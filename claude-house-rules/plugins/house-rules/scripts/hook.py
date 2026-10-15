@@ -6644,6 +6644,30 @@ def _writing_findings(text):
     return clarity.findings(text, skip=("not-checked",)), None
 
 
+# #249: a page or a long reply goes past the editor helper before aj reads it.
+EDITOR_NOTE = (
+    "House rules, write it so nothing is left to guess: %s, and no @house-rules:editor helper ran this "
+    "turn. Hand the text (or the page's path) to @house-rules:editor (Agent tool, subagent_type "
+    "house-rules:editor), apply its rewrites, then send the result. HOUSE_RULES_CLEAR_WRITING=off "
+    "turns this off."
+)
+
+
+def _editor_owed(written, tool_uses, reply):
+    """What makes the editor helper owed this turn ("" when nothing does, or when it ran)."""
+    for block in tool_uses:
+        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+        if block.get("name") in ("Agent", "Task") and str(inp.get("subagent_type", "")).endswith("editor"):
+            return ""
+    pages = [os.path.basename(p) for p in written if _PLANS_PAGE_RE.search(str(p).replace("\\", "/"))]
+    if pages:
+        return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
+    words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
+    if words > LONG_REPLY_WORDS:
+        return "this reply is %d words" % words
+    return ""
+
+
 def _writing_note(not_checked, writing, long_words):
     """#248: one end-of-reply note for every writing finding, in place of separate notes."""
     lines = []
@@ -6802,8 +6826,10 @@ def event_handover():
     parity_word = None
     visual_files = []
     plain_problems = []
+    editor_owed = None
     transcript_path = _field(_TRANSCRIPT_RE, payload)
-    if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()):
+    if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
+                            or _clear_writing_enabled()):
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
             written_now = []
@@ -6823,6 +6849,9 @@ def event_handover():
                 reply_for_parity = reply_text if vm is not None else ""
                 if pm and not _PARITY_ACCOUNTED_RE.search(reply_for_parity):
                     parity_word = pm.group(1)
+            if _clear_writing_enabled():
+                editor_owed = _editor_owed(written_now, list(_turn_tool_uses(turn_records)),
+                                           reply_text if vm is not None else "")
             if written_now and _visual_check_enabled():
                 visual = [os.path.basename(p) for p in written_now if _VISUAL_EXT_RE.search(p)]
                 if visual and not _looked_at_result(list(_turn_tool_uses(turn_records))):
@@ -6860,7 +6889,7 @@ def event_handover():
         trace_lines.append(writing_problem)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
-            and not long_words and not label_line and not writing):
+            and not long_words and not label_line and not writing and not editor_owed):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -6880,6 +6909,8 @@ def event_handover():
         parts.append(_writing_note(not_checked, writing, long_words))
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
+    if editor_owed:
+        parts.append(EDITOR_NOTE % editor_owed)
     if parity_word:
         parts.append(_parity_report_note(parity_word))
     if visual_files:

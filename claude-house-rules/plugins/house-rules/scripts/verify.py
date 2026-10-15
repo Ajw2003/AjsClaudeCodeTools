@@ -42,7 +42,7 @@ RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
 AGENTS_DIR = os.path.join(HERE, "..", "agents")
 # The three tier agents and the model each must declare (and, at SubagentStop, actually run on).
-TIERS = {"scout": "haiku", "builder": "sonnet", "reviewer": "opus"}
+TIERS = {"scout": "haiku", "builder": "sonnet", "reviewer": "opus", "editor": "sonnet"}
 ARCHIVIST = os.path.join(HERE, "..", "agents", "archivist.md")
 STYLE = os.path.join(HERE, "..", "output-styles", "handover-cards.md")
 TEMPLATE = os.path.join(HERE, "..", "templates", "step-card.html")
@@ -4528,6 +4528,7 @@ TIER_TOOLS = {
     "scout": ["Read", "Grep", "Glob"],
     "builder": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
     "reviewer": ["Read", "Grep", "Glob", "Bash"],
+    "editor": ["Read"],
 }
 agentdrift = []
 for _name, _model in TIERS.items():
@@ -4555,10 +4556,10 @@ for _name, _model in TIERS.items():
 if os.path.isfile(os.path.join(AGENTS_DIR, "executor.md")):
     agentdrift.append("agents/executor.md still exists, it was retired")
 if not agentdrift:
-    report("PASS", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
+    report("PASS", "the scout, builder, reviewer and editor agents exist, pinned to haiku, sonnet, opus and sonnet")
     print("          short tool allowlists, no Agent tool, bodies of 15 lines or fewer, executor.md gone")
 else:
-    report("FAIL", "the scout, builder and reviewer agents exist, pinned to haiku, sonnet and opus")
+    report("FAIL", "the scout, builder, reviewer and editor agents exist, pinned to haiku, sonnet, opus and sonnet")
     print(f"          {'; '.join(agentdrift)}")
 
 # --- no live file still names the retired executor agent ----------------------------------------
@@ -8620,6 +8621,30 @@ _cw_cases.append(("issue: the GitHub tool's issue with all three sections goes t
                   "missing" not in _cw_issue_tool(_CW_GOOD_BODY)))
 _cw_cases.append(("issue: gh issue create with no sections is refused; with them it is not",
                   "is missing" in _cw_issue_gh("Just a title.") and "is missing" not in _cw_issue_gh(_CW_GOOD_BODY)))
+
+# The editor reminder (#249): a page written, or a long reply, with no editor helper run this turn.
+_CW_USER = json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "make the page"}})
+_CW_WRITE = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Write",
+                        "input": {"file_path": os.path.join(_cw_pages, "plan.html"), "content": "<p>x</p>"}}]}})
+_CW_EDITOR = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent",
+                         "input": {"subagent_type": "house-rules:editor", "prompt": "edit the page"}}]}})
+_cw_t_page = _hand_transcript("cw-page", [_CW_USER, _CW_WRITE])
+_cw_t_edited = _hand_transcript("cw-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
+_cw_t_none = _hand_transcript("cw-none", [_CW_USER])
+
+
+def _cw_editor(transcript, text="The page is up."):
+    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir,
+                                             transcript_path=transcript), env=_loop_env)[1]
+
+
+_cw_cases.append(("editor: writing a page under docs/plans with no editor run gets the reminder",
+                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+_cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
+                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
+_cw_cases.append(("editor: a reply over 200 words with no editor run gets the reminder; a short one does not",
+                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ".")
+                  and "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, "Done.")))
 
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)
