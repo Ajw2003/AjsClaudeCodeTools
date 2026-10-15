@@ -1,5 +1,6 @@
 <!doctype html>
-<!-- house-rules make_page 2.66.0 -->
+<!-- house-rules make_page 2.67.1 -->
+<meta charset="utf-8">
 <title>Label Setup Build Plan</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
@@ -405,7 +406,7 @@ const PAGE = {
           "One file fewer, but hook.py is already 8,015 lines long and the command would need a separate way to call this code."
         ]
       ],
-      "The command needs something it can run directly, and the hook needs something it can call."
+      "The command has to run the code directly, and the hook has to call it from inside hook.py."
     ],
     [
       "when",
@@ -466,7 +467,7 @@ const PAGE = {
     ]
   ],
   "wrapup": {
-    "summary": "A build plan for label setup: one script, three hook moments, one command, corrected advice and a real-run proof, as five issues under #274.",
+    "summary": "A build plan for label setup: one script, three hook moments, one command, corrected advice and a real-run proof, as five issues under feature issue #274, \"The plugin creates the house labels a repo is missing\".",
     "changing": "A new scripts/labels.py and commands/labels.md, label calls and advice in hook.py, two lines of rules/detail/issue-workflow.md, new verify.py cases, and version 2.67.0.",
     "blocking": "Your answers to the four choices and your approval of the plan.",
     "next": "I build the five issues on the branch AjsAgent/label-setup, run verify.py and the real runs, then open a pull request for you to test.",
