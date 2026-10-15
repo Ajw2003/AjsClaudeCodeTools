@@ -7095,8 +7095,8 @@ def _writing_note(not_checked, writing, long_words):
         lines.append(_not_checked_note(not_checked))
     if writing:
         lines.append(
-            "House rules, write it so nothing is left to guess: before this turn ends, rewrite "
-            "these and send the reply again:\n" + "\n".join(
+            "House rules, write it so nothing is left to guess: aj has already seen this "
+            "reply, so send only the corrected sentences, not the whole reply again:\n" + "\n".join(
                 "- \"%s\": %s" % (phrase, why) for _kind, phrase, why in writing[:12])
             + ("\n(and %d more)" % (len(writing) - 12) if len(writing) > 12 else "")
             + "\nCount what can be counted, name what you point at, say each thing once, and give a "
@@ -7381,7 +7381,7 @@ def _checkpoint_reason(missed):
         len(missed), "" if len(missed) == 1 else "s")]
     for name, fix in missed:
         lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
-    lines.append("Fix these and send the reply again. This blocks once; the retry only reports. "
+    lines.append("Fix these and send only what changed, not the whole reply again. This blocks once; the retry only reports. "
                  "HOUSE_RULES_LOOP=off turns it off.")
     return "\n".join(lines)
 

@@ -8867,6 +8867,10 @@ _cw_cases.append(("reply: HOUSE_RULES_CLEAR_WRITING=off turns the note off",
                   "write it so nothing is left to guess" not in _cw_stop(
                       "The suite adds about 43 tests.", env=dict(_loop_env, HOUSE_RULES_CLEAR_WRITING="off"))))
 
+_cw_note = _cw_stop("The suite adds about 43 tests; see #229.")
+_cw_cases.append(("reply: the writing note asks for only the corrected sentences",
+                  "only the corrected sentences" in _cw_note and "send the reply again" not in _cw_note))
+
 # The page check: a write to docs/plans/*.html.
 _cw_pages = os.path.join(_loop_dir, "docs", "plans")
 os.makedirs(_cw_pages, exist_ok=True)
@@ -9052,6 +9056,8 @@ _ck_cases.append(("qa page: the retry never blocks", not _ck_b))
 _ck_stage("qa", qa_page=_ck_qa_page)
 _ck_b, _ck_r, _ = _ck_run(_ck_t_plain, "The build is ready.")
 _ck_cases.append(("qa page: built but not linked blocks, saying so", _ck_b and "not linked" in _ck_r))
+_ck_cases.append(("blocked checkpoint reason asks for what changed only, not the reply again",
+                  "send only what changed" in _ck_r and "send the reply again" not in _ck_r))
 _ck_b, _, _ = _ck_run(_ck_t_nopage, "The build is ready.")
 _ck_cases.append(('qa page: "no page" in aj\'s message does not skip it', _ck_b))
 _ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page)
