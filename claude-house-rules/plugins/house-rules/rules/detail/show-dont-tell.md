@@ -94,16 +94,45 @@ during the plan; issues made with the GitHub tool count the same as a terminal `
 
 ## The handover page
 
-Every page is built from `templates/handover-page.html`, which fills in from one PAGE block. It has
-four parts, in this order: In short (plain sentences and a row of icons to tap, each showing what
+Every page is built by the page builder, `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py build
+<content.json>`, from `templates/handover-page.html`, which fills in from one PAGE block. The builder
+overrides the claude.ai publish tool's own page design, writes the page under `docs/plans/`, copies
+its pictures beside it and stamps a builder mark that the page check looks for.
+
+**Why:** pages made outside the template skipped the four parts and the pictures (the audit,
+`docs/handover-page-audit-2026-10-15.md`); a mark the check can see makes the template unskippable.
+
+Pictures: an In short step, a Changes item or a choice option can carry a captioned picture slot, and
+a Changed item can carry a before-and-after compare (side by side when wide, a slider on a phone). The
+project's style file sets whether pictures are `required` (art and visual changes), `optional` or
+`off`; the builder refuses a required picture that is missing.
+
+The style file is `docs/page-style.json`, read only by the builder. It holds colours, roles (you act,
+accent, blocking, done, each mapped to one of the project's colours), reserved colours, themes, fonts,
+shape, labels, icons, pictures and picture folders. The builder drafts it from the project's design
+system or style guide and aj approves it. With no file, the session asks aj once per project: "create
+one" or "use the defaults" (the quick choice writes a one-line file saying to use the defaults).
+
+**Why:** projects need different amounts of visual, and "orange means you act" can't hold in a project
+whose own palette uses orange; now one colour means you act in each project (aj, 2026-10-15).
+
+Checkpoints: at reply end one table runs the page, editor, evidence, commit and plain-summary rules.
+A miss blocks the reply once with the exact fix; on the retry it only reports. "no page" in aj's own
+message lets one reply through; `HOUSE_RULES_LOOP=off` turns them all off. A page that was saved or
+published without the builder mark is refused.
+
+**Why:** a rule the model must remember to follow was skipped; a check at a fixed point doesn't depend
+on that.
+
+The page has four parts, in this order: In short (plain sentences and a row of icons to tap, each showing what
 it creates or changes beside what it needs from the user), Changes (each item tagged New, Changed
 or Kept; on tap, a Changed item shows before and after, and a New item shows what sets it off,
 what it does and what you get), Choices (options with my suggestion marked, a "why" to open,
 and a box for the user's own answer), and Wrap-up (summary, what's changing, what's blocking,
 what's next, and numbered steps for what the user needs to do, then a reply built for them to
 copy). A part is left out only when it would be empty. Every part keeps four rules: detail only
-on tap; names, never bare numbers; one colour, one meaning (orange is always something the user
-acts on and nothing else is orange; green is done); I check it first, at phone width in light and
+on tap; names, never bare numbers; one colour, one meaning (one colour means the user acts, in
+each project, and nothing else uses it; the default is orange; green is done); I check it first, at phone width in light and
 dark, every tap tried, and a search for bare numbers. My chat reply around a page is a plain
 summary, the link, then numbered steps for what the user needs to do (#233).
 

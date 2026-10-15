@@ -1,5 +1,11 @@
 # Today — 2026-10-15
 
+Handover pages and checkpoints, plugin 2.66.0 (issues #251 to #258). Every page is now made by
+`scripts/make_page.py` from the template, with picture slots and before-and-after compare, and takes its look from
+the project's `docs/page-style.json`. At the end of a reply, a missing page, editor pass, evidence, commit or plain
+summary blocks once; "no page" in your message lets one reply through. Built, waiting on your QA and the PlunderSpell
+regeneration test (issue 259), which has not run.
+
 The new item visual v2, plugin 2.65.1 (issue #240). On a handover page a New item now opens to three boxes:
 what exists today, what this creates, and how it impacts you. Every item you open lists the files it touched,
 with lines added and removed, counted from git by `tools/diff_parts.py`. The changes page covers the whole pull

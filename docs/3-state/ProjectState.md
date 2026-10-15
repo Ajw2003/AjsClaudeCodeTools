@@ -171,7 +171,11 @@ covers the whole pull request: 27 items, every changed hook part placed once. Th
 pictures and project style on pages, then rules that run at fixed points"). Design approved, now in Plan, nothing
 built. It started from a plunderspell page that skipped the template (`docs/handover-page-audit-2026-10-15.md`).
 There are eight sub-issues, #252 to #259, all `in progress`. Build plan page: `docs/plans/handover-pages-plan.html`.
-System doc: `docs/4-systems/handover-pages.md`. Waiting on "Build plan approved: handover pages and checkpoints".
+System doc: `docs/4-systems/handover-pages.md`.
+
+2026-10-15, same branch: build plan approved ("1B 2A 3A"); #252 to #258 built, plugin 2.66.0: the page builder
+`scripts/make_page.py`, template picture slots and compare, `docs/page-style.json`, the end-of-reply checkpoint table,
+the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regeneration test (#259), not yet run.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
