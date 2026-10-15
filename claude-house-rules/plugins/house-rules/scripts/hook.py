@@ -1775,7 +1775,10 @@ GUARD_R1 = [
     # #85: a wait piped through tail/head shows nothing until it exits - a stuck wait and a
     # working one look identical for its whole timeout.
     (
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_-])(while|until|sleep|timeout|watch)\s.*\|\s*(tail|head)([^0-9A-Za-z_-]|$)",
+        # #261: the keyword and the tail/head must share one pipeline segment (no ; && || or
+        # newline between them); a while/until loop is one segment up to its `done`.
+        r"(^|" + _LINE_START + r"[^0-9A-Za-z_-])(?:(?:while|until)\s.*?\bdone\s*|"
+        r"(?:while|until|sleep|timeout|watch)\s(?:(?!\\[nrt]|;|&&|\|\|).)*?)\|(?!\|)\s*(tail|head)([^0-9A-Za-z_-]|$)",
         "pipes a wait or loop through tail/head, which hides its output until it exits",
     ),
 ]
@@ -2109,7 +2112,9 @@ def branch_ownership(start=None):
     return branch.startswith(owned_branch_prefixes()), branch, None
 
 
-_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*&&""")
+_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*(?:&&|;)""")
+# A statement-leading NAME=value, NAME="value" or NAME='value' followed by ; or && (#261).
+_ASSIGN_RE = re.compile(r"""(?:^|(?<=[;&\n]))\s*([A-Za-z_]\w*)=(?:"([^"$`\\\n]*)"|'([^'\n]*)'|([^\s;&|"'$`\\()<>*?]*))[ \t]*(?:&&|;)""")
 # cd/pushd only where a command can start, so `git commit -m "fix cd handling"` keeps the
 # exemption (#203); shell keywords count, so `if t; then cd x; fi` is still seen.
 _ANY_CD_RE = re.compile(r"(?:^|[;&|({!\n]|\b(?:if|elif|while|until|then|do|else|time|exec)\b)\s*(?:cd|pushd)(?=\s|$)")
@@ -2138,6 +2143,14 @@ def _command_dir(payload):
             cmd = ""
     if not isinstance(cmd, str):
         return base, False
+    # #261: simple NAME=value / NAME="value" assignments earlier in the command expand into a
+    # cd or -C target; a target that still holds a $ afterwards stays unclear.
+    assigns = {}
+    for am in _ASSIGN_RE.finditer(cmd):
+        assigns[am.group(1)] = am.group(2) if am.group(2) is not None else (am.group(3) if am.group(3) is not None else am.group(4))
+    if assigns:
+        cmd = _ASSIGN_RE.sub("", cmd)
+        cmd = re.sub(r"\$\{(\w+)\}|\$(\w+)", lambda mm: assigns.get(mm.group(1) or mm.group(2), mm.group(0)), cmd)
     c_flags = _ANY_C_FLAG_RE.findall(cmd)
     if c_flags:
         # `git -C <dir>` (#192): judged by <dir> when every -C names the same one and nothing cds.
@@ -2364,6 +2377,7 @@ def event_guard():
 
     hits = {title: [] for title, _ in GUARD_BUCKETS}
     exempted = []
+    plain_hits = []  # branch writes asked only because the folder is unclear (#261)
     refused = []  # branch writes aimed at the default branch: refused, never asked (#197)
     saved_state = None  # (saved, note), computed at most once and only when a SAVED pattern matched
     saved_blocked = None
@@ -2373,9 +2387,13 @@ def event_guard():
             if not re.search(pattern, subject, re.IGNORECASE):
                 continue
             marker = entry[2] if len(entry) > 2 else None
+            if reason == "deletes one or more files" and _rm_only_in_scratchpad(subject, payload):
+                continue  # #261: every rm path is inside this session's scratchpad
             if marker == BRANCH_WRITE and known:
                 (refused if protected else exempted).append(reason)
                 continue
+            if marker == BRANCH_WRITE:
+                plain_hits.append(reason)
             if marker == SAVED and known and not protected:
                 if saved_state is None:
                     saved_state = work_saved_elsewhere(where)
@@ -2493,8 +2511,85 @@ def event_guard():
         "Approve to let it run, or reject and Claude will explain what it was about to do."
     )
     reason_text = "\n".join(lines)
-    _ask_or_refuse(payload, reason_text, issue_hit[2] if issue_hit and issue_hit[2] else None)
+    rewrite = None
+    all_hits = [r for rs in hits.values() for r in rs]
+    if all_hits and not outdated and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
+        pipe_reason = GUARD_R1[-1][1]
+        if all(r == pipe_reason for r in all_hits):
+            rewrite = "Write the output to a file instead of piping it through tail/head."
+        elif elsewhere and not protected and all(r in plain_hits for r in all_hits):
+            rewrite = ("Run it as plain `git ...` from %s, with no cd, -C or variables, and it will be "
+                       "checked normally." % _payload_toplevel(payload))
+    _ask_or_refuse(payload, reason_text, issue_hit[2] if issue_hit and issue_hit[2] else None, rewrite)
     return 0
+
+
+def _payload_toplevel(payload):
+    """The repo top-level of the payload cwd; the cwd itself when git cannot say (#261)."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = None
+    cwd = data.get("cwd") if isinstance(data, dict) else None
+    cwd = cwd if isinstance(cwd, str) and cwd else (os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    try:
+        import subprocess
+        p = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd, capture_output=True,
+                           text=True, timeout=10)
+        top = p.stdout.strip()
+        if p.returncode == 0 and top:
+            return top
+    except Exception as exc:
+        sys.stderr.write("house-rules guard: could not read the repo top-level (%s: %s); naming the "
+                         "working folder instead.\n" % (type(exc).__name__, exc))
+    return cwd
+
+
+def _rm_only_in_scratchpad(subject, payload):
+    """True when every `rm` in the command has only absolute path arguments inside this session's
+    scratchpad (/tmp/claude-*/<project>/<session_id>/scratchpad), or - if that cannot be derived -
+    under /tmp/claude- with the session_id as a path component. Globs/.. that could leave: False."""
+    import shlex
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        sys.stderr.write("house-rules guard: could not read the payload to check whether rm stays in the "
+                         "scratchpad; asking as usual.\n")
+        return False
+    if not isinstance(data, dict) or not data.get("session_id"):
+        return False
+    sid = str(data["session_id"])
+    cwd = data.get("cwd") if isinstance(data.get("cwd"), str) else ""
+    proj = re.sub(r"[^A-Za-z0-9]", "-", cwd) if cwd else None
+    seen = False
+    for stmt in re.split(r"&&|\|\||;|\n|\|", _decoded_command(subject)):
+        try:
+            words = shlex.split(stmt)
+        except ValueError:
+            sys.stderr.write("house-rules guard: could not split an rm statement (unbalanced quotes); "
+                             "asking as usual.\n")
+            return False
+        if "rm" not in words:
+            continue
+        args = words[words.index("rm") + 1:]
+        paths = [a for a in args if not a.startswith("-")]
+        if not paths:
+            return False
+        for a in paths:
+            if not a.startswith("/") or re.search(r"[$`~]", a) or ".." in a.split("/"):
+                return False
+            norm = os.path.normpath(a)
+            parts = norm.split("/")
+            ok = False
+            if proj and re.match(r"^/tmp/claude-[^/]+/%s/%s/scratchpad(/|$)" % (re.escape(proj), re.escape(sid)), norm):
+                ok = True
+            elif norm.startswith("/tmp/claude-") and sid in parts:
+                ok = True
+            # a glob in the directory part before the session folder could escape it
+            if not ok or re.search(r"[*?\[]", norm.split(sid)[0]):
+                return False
+        seen = True
+    return seen
 
 
 # ---------------------------------------------------------------------------------------
@@ -4113,7 +4208,7 @@ UNATTENDED_REFUSAL = (
 )
 
 
-def _ask_or_refuse(payload, reason_text, context=None):
+def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
     """Emit the guard's ask - or, when nobody can answer it, a refusal (#198): inside a subagent
     (the payload carries agent_id), or when aj has not written for the prompt timeout. Refusals go
     on the waiting-on-you list. HOUSE_RULES_PROMPT_TIMEOUT=off turns both refusals off."""
@@ -4139,6 +4234,12 @@ def _ask_or_refuse(payload, reason_text, context=None):
     if not why:
         out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",
                "permissionDecisionReason": reason_text}
+    elif rewrite:
+        # #261: a routine command that only needs rewriting: say how, no "Do not retry", and it
+        # is not a waiting-on-you item.
+        out = {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+               "permissionDecisionReason": reason_text + "\n\nRefused, not asked: %s, so a prompt would "
+               "only sit unanswered. %s" % (why, rewrite)}
     else:
         tool, ti = str(data.get("tool_name") or "?"), data.get("tool_input")
         now = time.time()

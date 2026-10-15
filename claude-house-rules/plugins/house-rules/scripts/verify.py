@@ -855,6 +855,53 @@ report("PASS" if _ua_case_ok else "FAIL",
 print("          rm %s, rm with timer off %s, commit %s, Write %s"
       % (_ua_dec(_ua_sub), _ua_dec(_ua_sub_off), _ua_dec(_ua_sub_commit), _ua_dec(_ua_sub_write)))
 
+# --- #261: replay the 2026-10-15 audit entries (docs/guard-friction-audit-2026-10-15.md) --------
+_fr_sid = "verify-fr-sub"
+_fr_scratch = "/tmp/claude-0/%s/%s/scratchpad" % (re.sub(r"[^A-Za-z0-9]", "-", _ua_dir), _fr_sid)
+
+
+def _fr(cmd, agent=True):
+    out = _ua_guard(_fr_sid, {"agent_id": "a1"} if agent else None, tool_input={"command": cmd})
+    try:
+        reason = json.loads(out)["hookSpecificOutput"].get("permissionDecisionReason", "")
+    except (ValueError, KeyError):
+        reason = ""
+    return _ua_dec(out), reason
+
+
+_fr_fail = []
+_fr_top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=_ua_dir, stdout=subprocess.PIPE,
+                         universal_newlines=True).stdout.strip()
+for _n, _cmd in (
+    ("1", "G=%s; git -C $G add f && git -C $G commit -m x -- f && git -C $G push -q origin AjsAgent/ua" % _ua_dir),
+    ("2", "git -C %s commit -m x" % _ua_dir),
+    ("3", "cd %s && git commit -m x" % _ua_dir),
+    ("3b", "cd %s; git commit -m x" % _ua_dir),
+    ("3c", 'D="%s"; cd ${D} && git commit -m x' % _ua_dir),
+    ("5", "sleep 1; ls | head"),
+    ("7", "python3 x.py | tail -5"),
+    ("7b", "until grep x f; do sleep 1; done | tail"),
+    ("8", "rm -rf %s/build" % _fr_scratch),
+    ("9", "cd /nonexistent/other && git commit -m x"),
+):
+    _d, _r = _fr(_cmd)
+    if _d == "deny" and "Do not retry" in _r:
+        _fr_fail.append("%s: refused with Do not retry" % _n)
+    elif _n == "7b" and not (_d == "deny" and "Write the output to a file instead of piping it through tail/head" in _r):
+        _fr_fail.append("7b: %s %r" % (_d, _r[-120:]))
+    elif _n == "9" and not (_d == "deny" and ("Run it as plain `git ...` from %s, with no cd, -C or variables, "
+                                              "and it will be checked normally." % _fr_top) in _r):
+        _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
+    elif _n not in ("7b", "9") and _d == "deny":
+        _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
+for _cmd in ("rm -rf /home/user/x", "kill -9 1", "git push origin main",
+             "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
+    _d, _r = _fr(_cmd)
+    if _d != "deny" or (_cmd.startswith(("rm -rf /home", "kill", "git push")) and "Do not retry" not in _r):
+        _fr_fail.append("still-refused %r: %s" % (_cmd, _d))
+_sv_case("guard: audit entries 1, 2, 3, 5, 7, 8, 9 no longer dead-end routine work; deletes, kills and a push to main still refuse",
+         not _fr_fail, "; ".join(_fr_fail) or "routine ones pass or get the rewrite text, the rest say Do not retry")
+
 _ua_seen("verify-ua-away", 600)
 _ua_seen("verify-ua-here", 30)
 _ua_away = _ua_guard("verify-ua-away")
