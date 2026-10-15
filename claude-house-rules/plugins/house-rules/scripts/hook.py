@@ -49,6 +49,16 @@ import sys
 import tempfile
 import time
 
+# The shared writing checker (#247), a sibling file. A missing or broken copy must not take every
+# hook down with it, so it is loaded here and each check that needs it reports when it is absent.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import clarity
+    CLARITY_ERROR = None
+except ImportError as _clarity_exc:
+    clarity = None
+    CLARITY_ERROR = "house-rules: the writing checker (scripts/clarity.py) could not load (%s)." % _clarity_exc
+
 
 def read_payload():
     try:
@@ -2578,6 +2588,31 @@ ARTIFACT_NOTE = (
 )
 
 
+_PLANS_PAGE_RE = re.compile(r"(?:^|[\\/])docs[\\/]plans[\\/][^\\/]+\.html?$", re.IGNORECASE)
+
+
+def _page_writing_note(file_path):
+    """#248: the shared writing checker on a page just written under docs/plans/, or "" when the
+    file is not such a page, is clean, or the check is off."""
+    if not _PLANS_PAGE_RE.search(file_path.replace("\\", "/")) or not _clear_writing_enabled():
+        return ""
+    if clarity is None:
+        return CLARITY_ERROR
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            html = f.read()
+    except OSError as exc:
+        return "house-rules: the page writing check could not read %s (%s)." % (file_path, exc)
+    found = clarity.findings(clarity.page_text(html), skip=("not-checked",))
+    if not found:
+        return ""
+    return ("House rules, write it so nothing is left to guess: the page %s has %d thing(s) to fix "
+            "before you publish it:\n%s\nCount what can be counted, name what you point at, and say "
+            "each thing once. Then hand the page to @house-rules:editor before publishing."
+            % (os.path.basename(file_path), len(found),
+               "\n".join("- \"%s\": %s" % (p, why) for _k, p, why in found[:12])))
+
+
 def event_artifact():
     try:
         payload = read_payload()
@@ -2598,8 +2633,12 @@ def event_artifact():
         if not _ARTIFACT_EXT_RE.search(base):
             trace_noop("artifact: %s is not a document extension - not checked." % base)
             return 0
+        page_note = _page_writing_note(file_path)
         if not _is_outside_project(file_path):
-            trace_noop("artifact: %s is inside the project - nothing to copy." % base)
+            if page_note:
+                emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": page_note}})
+            else:
+                trace_noop("artifact: %s is inside the project - nothing to copy." % base)
             return 0
         if _GENERATED_EXT_RE.search(base):
             where = "docs/generated/ for generated or visual artifacts"
@@ -2609,7 +2648,8 @@ def event_artifact():
             {
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": ARTIFACT_NOTE.format(where=where),
+                    "additionalContext": ARTIFACT_NOTE.format(where=where)
+                    + ("\n\n" + page_note if page_note else ""),
                 }
             }
         )
@@ -5426,6 +5466,18 @@ def event_guardgithub():
     if not payload:
         trace("guardgithub: empty payload - nothing was checked for this call.")
         return 0
+    # #248: an issue made with the GitHub tool needs its three sections, like one made with gh.
+    ti = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    if (_GITHUB_ISSUE_WRITE_RE.match(str(payload.get("tool_name") or ""))
+            and str(ti.get("method", "")).lower() == "create" and _issues_enabled() and _clear_writing_enabled()):
+        if clarity is None:
+            emit({"systemMessage": CLARITY_ERROR + " The issue was NOT checked for its sections."})
+        else:
+            missing = clarity.missing_issue_sections(str(ti.get("body") or ""))
+            if missing:
+                emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                      "permissionDecisionReason": ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing)}})
+                return 0
     if not _attribution_enabled():
         trace_noop("guardgithub: HOUSE_RULES_ATTRIBUTION=off - nothing was checked.")
         return 0
@@ -5594,9 +5646,33 @@ def _issues_guard(subject, payload):
                     "`Refs #N`, `Refs owner/repo#N` or `Part of #N`, or a line `No-issue: <reason>`. "
                     "Add it and run the command again.", None)
         return None
+    if _GH_ISSUE_CREATE_RE.search(cmd) and _clear_writing_enabled() and clarity is not None:
+        body = cmd
+        fm = _PR_BODY_FILE_RE.search(cmd)
+        if fm and fm.group(1).strip("\"'") != "-":
+            name = fm.group(1).strip("\"'")
+            path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    body = f.read()
+            except OSError as exc:
+                return ("ask", "House rules: could not read the issue body file %s (%s), so I could not "
+                        "check it for its three sections." % (name, exc), None)
+        missing = clarity.missing_issue_sections(body)
+        if missing:
+            return ("deny", ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing), None)
     if any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
         return ("ask", CLOSE_ASK_NOTE, CLOSE_ASK_NOTE)
     return None
+
+
+# #248: an issue says what it depends on, what depends on it, and when it's done.
+ISSUE_SECTIONS_DENY = (
+    "House rules, write it so nothing is left to guess: this issue is missing %s. Every issue needs "
+    "\"Depends on\", \"Depended on by\" and \"Done when\" sections (\"Nothing\" is a fine answer), so "
+    "a blocker shows up as an unfinished dependency and done means something. Add them and create it "
+    "again. HOUSE_RULES_CLEAR_WRITING=off turns this off."
+)
 
 
 def _open_issues_text(cwd):
@@ -6213,39 +6289,11 @@ def _impossibility_claims(text):
     return found
 
 
-# #89: a disclosure that something was not checked. The default is to check; a disclosure is
-# right only when the check cannot run here, and then the reply says why. Lowercase-only for
-# "untested"/"unverified" so a handover card's own "UNTESTED:" marker - which the card rule
-# already requires a reason beside - is never what trips it.
-_NOT_CHECKED_RE = re.compile(
-    r"\b((?:[Nn]ot|[Hh]aven't|[Hh]ave not|[Dd]idn't|[Dd]id not|[Ww]asn't|[Ww]as not|[Hh]asn't|"
-    r"[Hh]as not) (?:been )?(?:checked|verified|tested|run it|confirmed)|unverified|untested)\b"
-)
-# A reason in the same sentence makes the disclosure the rule-compliant kind.
-_REASON_RE = re.compile(
-    r"\b(because|since|as there|no access|not available|unavailable|not installed|"
-    r"not reachable|(?:can't|cannot) (?:reach|run|access)|requires|would need|needs a|"
-    r"no .{0,20} (?:here|on this machine)|on your machine|prohibitively|had no|has no|"
-    r"there (?:is|was) no|does(?:n't| not) have|did(?:n't| not) have)\b",
-    re.IGNORECASE,
-)
-_SENTENCE_END_RE = re.compile(r"[.!?\n]")
-
-
+# #89: a disclosure that something was not checked. Since #247 the detector lives in the shared
+# writing checker (scripts/clarity.py), which also tells a list label ("Not checked:") from a
+# disclosure.
 def _unreasoned_not_checked(text):
-    """'Not checked' phrases whose own sentence gives no reason the check could not run."""
-    found = []
-    text = text or ""
-    for m in _NOT_CHECKED_RE.finditer(text):
-        if _is_quoted(text, m.start()):
-            continue
-        start = max((e.end() for e in _SENTENCE_END_RE.finditer(text, 0, m.start())), default=0)
-        end_m = _SENTENCE_END_RE.search(text, m.end())
-        sentence = text[start : end_m.start() if end_m else len(text)]
-        if _REASON_RE.search(sentence):
-            continue
-        found.append(m.group(1).lower())
-    return found
+    return clarity.unreasoned_not_checked(text) if clarity else []
 
 
 def _is_genuine_user_message(record):
@@ -6582,6 +6630,39 @@ def _long_reply_note(words):
     )
 
 
+def _clear_writing_enabled():
+    return os.environ.get("HOUSE_RULES_CLEAR_WRITING", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _writing_findings(text):
+    """(findings, problem): the shared checker's findings on a reply, minus not-checked, which the
+    evidence rule reports on its own. [] when the check is off or the text is empty."""
+    if not text or not _clear_writing_enabled():
+        return [], None
+    if clarity is None:
+        return [], CLARITY_ERROR
+    return clarity.findings(text, skip=("not-checked",)), None
+
+
+def _writing_note(not_checked, writing, long_words):
+    """#248: one end-of-reply note for every writing finding, in place of separate notes."""
+    lines = []
+    if not_checked:
+        lines.append(_not_checked_note(not_checked))
+    if writing:
+        lines.append(
+            "House rules, write it so nothing is left to guess: before this turn ends, rewrite "
+            "these and send the reply again:\n" + "\n".join(
+                "- \"%s\": %s" % (phrase, why) for _kind, phrase, why in writing[:12])
+            + ("\n(and %d more)" % (len(writing) - 12) if len(writing) > 12 else "")
+            + "\nCount what can be counted, name what you point at, say each thing once, and give a "
+            "reason in the same sentence for anything that genuinely can't be measured. "
+            "HOUSE_RULES_CLEAR_WRITING=off turns this off.")
+    if long_words:
+        lines.append(_long_reply_note(long_words))
+    return "\n\n".join(lines)
+
+
 def _plain_summary_note(problems):
     return (
         "House rules, plain summary first: this reply reports finished work, but %s. Rewrite it "
@@ -6774,9 +6855,12 @@ def event_handover():
         )
 
     long_words = _long_reply_words(reply_text) if (vm is not None and _loop_enabled()) else 0
+    writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
+    if writing_problem:
+        trace_lines.append(writing_problem)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
-            and not long_words and not label_line):
+            and not long_words and not label_line and not writing):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -6792,12 +6876,10 @@ def event_handover():
         parts.append(HANDOVER_NOTE)
     if needs_evidence:
         parts.append(_evidence_note(evidence_words, impossible_words))
-    if not_checked:
-        parts.append(_not_checked_note(not_checked))
+    if not_checked or writing or long_words:
+        parts.append(_writing_note(not_checked, writing, long_words))
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
-    if long_words:
-        parts.append(_long_reply_note(long_words))
     if parity_word:
         parts.append(_parity_report_note(parity_word))
     if visual_files:

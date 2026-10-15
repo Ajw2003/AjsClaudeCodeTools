@@ -8520,6 +8520,110 @@ _loop_cases.append(("the rule names the template and its four parts",
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
+# --- the clear writing check: the shared checker and where it runs (#247, #248) -----------------
+import clarity as _cw
+_cw_cases = []
+
+
+def _cw_has(fn, text, phrase):
+    return any(phrase in p for p in fn(text))
+
+
+# Each detector, against a real failure from 2026-10-14/15 and its honest rewrite.
+_cw_cases.append(('vague: "about 43 tests" is flagged (aj: "not the kind of thing that is ambiguous")',
+                  _cw_has(_cw.vague_claims, "The pull request adds about 43 tests.", "about 43")))
+_cw_cases.append(("vague: an estimate that says why it's an estimate passes",
+                  not _cw.vague_claims("New file, estimated 25 lines, because it isn't written yet.")))
+_cw_cases.append(('vague: "should work" is flagged; "should work from now on" (a rule, not a guess) is not',
+                  _cw.vague_claims("It should work now.") and not _cw.vague_claims("Every page should work from now on.")))
+_cw_cases.append(('not-checked: a list label "Not checked:" is not a confession (the false alarm of 2026-10-15)',
+                  not _cw.unreasoned_not_checked("**Not checked:** vague numbers, by any hook.")
+                  and _cw.unreasoned_not_checked("I haven't checked the CI logs.")))
+_cw_cases.append(('bare-ref: "see #229." alone is flagged; with its title, or a quoted title after it, it passes',
+                  _cw_has(_cw.bare_references, "Rerun it; see #229.", "#229")
+                  and not _cw.bare_references("See #229 (the stale temp file flake).")
+                  and not _cw.bare_references('Filed as #228, "Audit every house rule".')))
+_cw_cases.append(('bare-ref: a quoted example ("see #229" alone) and a step card ("Step 1 of 3") pass',
+                  not _cw.bare_references('Including "see #229" alone as a test.')
+                  and not _cw.bare_references("### Step 1 of 3 — open the folder")))
+_cw_cases.append(('bare-ref: "option D showed the text" is flagged; "option D: delete the cache" is not',
+                  _cw.bare_references("On that look, option D showed the trimmed text.")
+                  and not _cw.bare_references("Pick option D: delete the cache.")))
+_cw_cases.append(("repeat: three sentences opening \"Nothing\" in a row, and a repeated four-word phrase, are flagged",
+                  _cw.repetition("Nothing changed. Nothing else has changed. Nothing new.")
+                  and _cw.repetition("The check on the count passed. The check on the newest commit is running.")))
+_cw_cases.append(("repeat: parallel list items and a phrase quoted twice are not",
+                  not _cw.repetition("- two sections moved out of the main rules file\n- one line moved out of the standards")
+                  and not _cw.repetition('He said "ask instead of assuming", and the rule says "ask instead of assuming".')))
+_cw_cases.append(("jargon and long sentences are flagged; code spans are not read",
+                  _cw.jargon("The payload is read.") and not _cw.jargon("The `payload` field is read.")
+                  and _cw.long_sentences(" ".join(["word"] * 45) + ".")))
+_cw_cases.append(("issue sections: all three found, or each missing one named",
+                  not _cw.missing_issue_sections("## Depends on\nx\n## Depended on by\ny\n## Done when\nz")
+                  and _cw.missing_issue_sections("## Depends on\nx") == ["Depended on by", "Done when"]))
+_cw_cases.append(("page text: a template page's PAGE strings are what gets read",
+                  "about 43 tests" in _cw.page_text('<p>Hi there all</p><script>const PAGE = {\n lead: "It adds about 43 tests in all."\n};</script>')))
+
+# The reply check: one note, quiet on a clean reply, off with its switch.
+def _cw_stop(text, env=None):
+    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=env or _loop_env)[1]
+
+
+_cw_cases.append(("reply: a vague number and a bare reference get one writing note naming both",
+                  "write it so nothing is left to guess" in _cw_stop("The suite adds about 43 tests; see #229.")
+                  and "#229" in _cw_stop("The suite adds about 43 tests; see #229.")
+                  and "about 43" in _cw_stop("The suite adds about 43 tests; see #229.")))
+_cw_cases.append(("reply: a clean reply gets no writing note",
+                  "write it so nothing is left to guess" not in _cw_stop("The suite adds 43 tests: 616 on main, 659 here.")))
+_cw_cases.append(("reply: HOUSE_RULES_CLEAR_WRITING=off turns the note off",
+                  "write it so nothing is left to guess" not in _cw_stop(
+                      "The suite adds about 43 tests.", env=dict(_loop_env, HOUSE_RULES_CLEAR_WRITING="off"))))
+
+# The page check: a write to docs/plans/*.html.
+_cw_pages = os.path.join(_loop_dir, "docs", "plans")
+os.makedirs(_cw_pages, exist_ok=True)
+
+
+def _cw_page(html):
+    path = os.path.join(_cw_pages, "probe.html")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html)
+    p = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": {"file_path": path, "content": html}}
+    return run_hook("artifact", json.dumps(p), env=_loop_env)[1]
+
+
+_cw_cases.append(("page: a page under docs/plans with a vague number is named before publishing",
+                  "the page probe.html" in _cw_page("<p>This adds about 43 tests to the suite.</p>")))
+_cw_cases.append(("page: a clean page gets no note",
+                  "the page probe.html" not in _cw_page("<p>This adds 43 tests to the suite.</p>")))
+
+# The issue check: the GitHub tool and gh.
+_CW_GOOD_BODY = "## Depends on\nNothing.\n## Depended on by\nNothing.\n## Done when\nIt passes."
+
+
+def _cw_issue_tool(body):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "mcp__github__issue_write", "session_id": "loop",
+         "cwd": _loop_dir, "tool_input": {"method": "create", "owner": "o", "repo": "r", "title": "t", "body": body}}
+    return run_hook("guardgithub", json.dumps(p), env=dict(_loop_env, HOUSE_RULES_ISSUES="on"))[1]
+
+
+def _cw_issue_gh(body):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": {"command": "gh issue create --title t --body %s" % json.dumps(body)}}
+    return run_hook("guard", json.dumps(p), env=dict(_loop_env, HOUSE_RULES_ISSUES="on"))[1]
+
+
+_cw_cases.append(("issue: the GitHub tool's issue with no sections is refused, naming all three",
+                  '"deny"' in _cw_issue_tool("Just a title.") and "Done when" in _cw_issue_tool("Just a title.")))
+_cw_cases.append(("issue: the GitHub tool's issue with all three sections goes through",
+                  "missing" not in _cw_issue_tool(_CW_GOOD_BODY)))
+_cw_cases.append(("issue: gh issue create with no sections is refused; with them it is not",
+                  "is missing" in _cw_issue_gh("Just a title.") and "is missing" not in _cw_issue_gh(_CW_GOOD_BODY)))
+
+for _t, _ok in _cw_cases:
+    report("PASS" if _ok else "FAIL", "clear writing: " + _t)
+
 print()
 print("-" * 32)
 if FAILURES == 0 and not SKIPPED:
