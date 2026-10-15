@@ -9484,6 +9484,33 @@ else:
         _mp_cases.append(("make_page: the copied text, with choices (approval then picks) and without (approval alone), matches the gate",
                           _w == _ph + " 1A" and _n == _ph and _gate(_w) and _gate(_n)))
 
+# a 40-character unbroken word in card text must not clip on a phone (#288); the old 1fr CSS must be caught
+_LONGW = "HOUSE_RULES_AGENT_NAME_WITH_A_VERY_LONG_TAIL_X"
+_lw = _mp_content("longword")
+with open(_lw, encoding="utf-8") as _f:
+    _lwp = json.load(_f)
+_lwp["short"]["items"] = [["bulb", "Your name", "The idea", "", _LONGW, _LONGW]]
+_lwp["changes"] = [["new", "A thing", "One line.", ["old " + _LONGW, _LONGW], "Detail " + _LONGW, None, None]]
+with open(_lw, "w", encoding="utf-8") as _f:
+    json.dump(_lwp, _f)
+_d = _mp_proj("longword")
+_mp("style", "--quick", "--project", _d)
+_rc, _o = _mp("build", _lw, "--project", _d)
+if "visual check did not run" in _o or "visual check" not in _o:
+    report("SKIP", "make_page: a 40-character unbroken word does not clip a card (no usable Chromium/playwright: %s)" % _o.strip()[-200:])
+else:
+    _mp_cases.append(("make_page: a 40-character unbroken word in card text builds with no clipped card",
+                      _rc == 0 and "clipped card" not in _o and "overflow none" in _o))
+    _hp = os.path.join(_d, "docs", "plans", "longword.html")
+    _old = re.sub(r"@media \(max-width:479px\)[^\n]*\n", "", open(_hp, encoding="utf-8").read()
+                  .replace("minmax(0,1fr)", "1fr").replace("overflow-wrap:anywhere", "overflow-wrap:normal"))
+    _hp2 = os.path.join(_d, "docs", "plans", "oldcss.html")
+    with open(_hp2, "w", encoding="utf-8") as _f:
+        _f.write(_old)
+    _r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, %r); import make_page; make_page.visual_check(sys.argv[1], {})" % HERE, _hp2],
+                        capture_output=True, text=True, timeout=300)
+    _mp_cases.append(("make_page: the same page with the old 1fr CSS is reported as a clipped card and fails the check",
+                      'clipped card' in _r.stdout and _r.returncode == 2))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
