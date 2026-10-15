@@ -9,7 +9,24 @@ pointer, when a later entry replaces it.
 
 ## 2026-10-15 - Design proposed: clear writing check (replaces the ambiguity check design)
 
-**Status.** Proposed; waiting on "Design approved: clear writing check". The new item visual waits behind it.
+**Status.** Approved: "Design approved: clear writing check: 1A 2A 3A 4A". The answers:
+- **Who judges the wording:** the shared checker on everything, plus the editor helper on pages and long replies.
+- **What folds in:** plain language, the ambiguity lines and the plain-docs writing limits.
+- **A vague claim:** gets a reminder unless the same sentence says why it can't be measured.
+- **An issue missing a section:** is refused.
+
+The new item visual waits behind it.
+
+**Plan.** Issue #245 has five sub-issues, all `in progress`:
+- #246: the rule, with the old lines folded in
+- #247: the shared checker
+- #248: checking replies, pages and issues
+- #249: the editor helper, and the check that it ran
+- #250: docs, 2.65.0 and a real run
+
+Plan page: `docs/plans/clear-writing-plan.html`, with two choices for aj. One is where the rule loads: the main
+rules slot uses 9,381 of 9,700 characters, while the show-don't-tell slot uses 1,654 of 9,500 (both measured by
+`verify.py`). The other is the editor helper's model. Waiting on "Build plan approved: clear writing check".
 
 **What.** aj: "we need to fix wording and ambiguity first, let's fold ambiguity and wording into a single check…
 proper sentence structure and human tone, a lack of repetition and clear concise speech that is explicit with
