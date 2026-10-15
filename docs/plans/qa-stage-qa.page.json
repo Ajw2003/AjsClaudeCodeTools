@@ -1,0 +1,58 @@
+{
+  "title": "Enforced QA Stage QA",
+  "eyebrow": "QA for issue #264 (Enforce the QA stage) · plugin 2.67.0 · branch AjsAgent/vigilant-meitner-8pp618",
+  "replyPrefix": "",
+  "reply": "",
+  "short": {
+    "lead": "All seven steps of issue #264 (Enforce the QA stage) are built, and this page was itself built by the new QA mode, so the file counts below come from git. A real nested session proved the main path: opening a pull request started QA, the reply was sent back until a QA page existed, and the session then built one. That run also found a bug, which is now fixed, and an older reply loop that this build does not touch.",
+    "hint": "Tap a step to see what was built and how it was checked.",
+    "key": [["Built", "done"], ["You act on it", "you"]],
+    "items": [
+      ["lock", "Stage kept", "The stage survives a new session", "done", "Sub-issue #265 (the stage survives a new cloud session). The stage file is now the committed .claude/house-rules-loop.json, and Write, Edit or a shell write of it is refused.", "Checked by a verify.py case that reads the stage back from a fresh git clone."],
+      ["search", "Leak found", "The QA leak, reproduced", "done", "Sub-issue #266 (reproduce and fix the edit that got through during QA). Replaying the 2.65.1 hooks showed the leak: one checkout saw a label swap, an edit was made from another checkout, and the GitHub read failed. The hooks on this branch refused the edit in all 8 replayed scenarios. The feature-name parser now keeps \"enforced QA stage\" whole.", "Checked by verify.py replays from the main checkout and a worktree."],
+      ["flask", "PR starts QA", "A pull request opening starts QA", "done", "Sub-issue #267 (a pull request opening starts QA). In the real run, gh pr create moved the stage from Build to QA and printed the note.", "Checked by verify.py and the real run."],
+      ["hammer", "QA mode", "The page builder's QA mode", "done", "Sub-issue #268 (the page builder's QA mode). This page is its first real use.", "Checked by verify.py in a temporary repo, by the real run, and by this page."],
+      ["stop", "Checkpoint", "The QA page checkpoint", "done", "Sub-issue #269 (the QA page checkpoint). In the real run the first reply was sent back once with the exact command. The run then showed that a link given only in a retry reply was never recorded, which is now fixed.", "Checked by verify.py (11 cases) and the real run."],
+      ["file", "Wording", "Notes ask for corrections only", "done", "Sub-issue #270 (the writing note asks for the corrected sentences only). In the real run, the session answered with \"Corrections only:\" replies.", "Checked by verify.py and the real run."],
+      ["check", "Your QA", "You test it and answer", "you", "Sub-issue #271 (rule text, docs, version and a real run): the rule line, the docs and version 2.67.0 are in. The real run's record is docs/generated/2026-10-15-qa-stage-real-run.md.", "Read this page, then send \"QA passed: enforced QA stage\", or \"QA failed: enforced QA stage\" with what to change."]
+    ]
+  },
+  "changes": [
+    ["new", "Retry link fix, beyond the plan", "Found by the real run.", null, "The QA page checkpoint (#269) does not run on a retry reply, so a QA page linked only in a retry was never recorded, and your next reply would have been sent back again. A retry reply that links the page now records it, and the retry still never blocks.",
+     ["A QA page linked in a retry reply was not recorded.", "The retry path records the link too.", "You are not sent a second QA page request after you already have one."], null],
+    ["new", "Empty choices fix, beyond the plan", "Found while building this page.", null, "A QA page with no choices made the page's script fail (\"Cannot read properties of undefined (reading 'map')\"). The QA mode now supplies an empty list, and this page builds with no errors in light or dark.",
+     ["A QA page with no choices failed to render its parts.", "The QA mode fills in an empty choices list.", "QA pages build cleanly without a choices section."], null],
+    ["keep", "A reply loop in the label check, not fixed here", "An older problem the real run exposed.", null, "The end-of-reply label check (#238) says \"Fix the labels before this turn ends\" after every reply, with no limit. In the real run, the stand-in for the gh command could not change labels, so the check fired on 12 replies in a row. It is outside this build. I suggest a follow-up issue that makes it fire once, like the checkpoints.", null, null]
+  ],
+  "qa": {
+    "feature": "enforced QA stage",
+    "base": "origin/main",
+    "unverified": [
+      "The gh pr create path was tested with a stand-in gh in the real run, not with a real pull request",
+      "The GitHub tool's create_pull_request path was tested only with replayed hook payloads",
+      "The QA leak's cause is the best fit from a replay of the 2.65.1 hooks; it is not proven from the original session for issue #251 (Handover pages and checkpoints)",
+      "The stage surviving a new cloud session is proven by a verify.py fresh-clone case, not by a real second cloud session",
+      "This session runs the installed 2.66.0 hooks, so none of the 2.67.0 changes act here until the branch is merged and the plugin is updated",
+      "docref.py check (the tool that checks doc pointers) reports 38 problems; the same 38 were there before this build's docs merge, and they sit in verify.py's test fixtures"
+    ],
+    "files": {
+      "claude-house-rules/plugins/house-rules/scripts/hook.py": [102, 10, "the stage file (#265), the QA leak fix (#266), the pull request trigger (#267), the QA page checkpoint (#269) and the writing note (#270), all in this one file"],
+      "claude-house-rules/plugins/house-rules/scripts/verify.py": [213, 0, "tests for every step"],
+      "claude-house-rules/plugins/house-rules/scripts/make_page.py": [70, 0, "the page builder's QA mode (#268)"],
+      "claude-house-rules/plugins/house-rules/rules/house-rules.md": [1, 0, "one rule line, added to rules/show-dont-tell.md instead of this file, because that file carries the label rules"],
+      "docs/4-systems/design-loop.md": [15, 10, "what was built"],
+      "docs/architecture.md": [3, 1, "hook table rows"],
+      "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json": [1, 1, "version 2.67.0"]
+    }
+  },
+  "wrapup": {
+    "summary": "All seven steps of issue #264 (Enforce the QA stage) are built, and a real run proved the main path.",
+    "changing": "scripts/hook.py, scripts/make_page.py, scripts/verify.py, the show-dont-tell rule and its detail, four docs, and the plugin version (2.67.0).",
+    "blocking": "Your QA verdict.",
+    "next": "On QA passed, the issues stay needs review until you close them, and the branch is ready for a pull request when you ask. On QA failed, your list of changes starts the next design.",
+    "todo": [
+      "Read the steps and the two findings.",
+      "Tap <b>Copy my reply</b> and send it, or send \"QA failed: enforced QA stage\" with what to change."
+    ]
+  }
+}

@@ -4321,10 +4321,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.66.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.67.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.66.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.67.0",
     "rules section + detail file + version",
 )
 
@@ -8443,7 +8443,7 @@ def _loop_post(tool, tool_input, response):
 
 def _loop_state():
     try:
-        return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))
+        return json.load(open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 
@@ -8494,7 +8494,7 @@ def _loop_issue(number, labelled=True, via="mcp"):
 
 def _loop_stage():
     try:
-        return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["stage"]
+        return json.load(open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))["stage"]
     except (OSError, ValueError, KeyError):
         return "design (no file)"
 
@@ -8611,7 +8611,7 @@ _loop_cases.append(("label check: then it moves to Plan and keeps the same issue
                     _loop_stage() == "plan" and len(_loop_state().get("issues", [])) == 3))
 _loop_log("v2 design"); _loop_say("Design approved: blockers v2. Reply in one sentence.")
 try:
-    _feat = json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["feature"]
+    _feat = json.load(open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))["feature"]
 except (OSError, ValueError, KeyError):
     _feat = None
 _loop_cases.append(("the feature name stops at the end of its sentence (found in the real run)", _feat == "blockers v2"))
@@ -8620,7 +8620,19 @@ _loop_cases.append(("a pasted page reply's answer codes are not part of the name
                     _names == ["New item visual", "Label check plan", "label check"]))
 _loop_issue(201); _loop_issue(202)
 _loop_gh("in progress", 201, 202)
+_loop_post("mcp__github__create_pull_request", {"owner": "o", "repo": "r"}, {"url": "https://github.com/o/r/pull/9"})
+_loop_cases.append(("#267: a pull request opening in Plan moves nothing", _loop_stage() == "plan"))
 _loop_log("v2 plan"); _loop_say("Build plan approved: blockers v2")
+_loop_post("mcp__github__create_pull_request", {"owner": "o", "repo": "r"}, {"error": "422 validation failed"})
+_loop_post("Bash", {"command": 'gh pr create --body "Refs #267"'}, {"stdout": "", "stderr": "no commits"})
+_loop_cases.append(("#267: a failed pull request creation (no URL) leaves Build", _loop_stage() == "build"))
+_o = _loop_post("mcp__github__create_pull_request", {"owner": "o", "repo": "r"}, {"url": "https://github.com/o/r/pull/9"})
+_loop_cases.append(("#267: the GitHub tool opening a pull request in Build starts QA", _loop_stage() == "qa" and "pull request" in _o))
+_loop_cases.append(("#267: after that a code edit is refused", _loop_edit("app.py") == "deny"))
+_back = _loop_state(); _back["stage"] = "build"
+json.dump(_back, open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), "w", encoding="utf-8"))
+_loop_post("Bash", {"command": 'gh pr create --body "Refs #267"'}, {"stdout": "https://github.com/o/r/pull/10\n"})
+_loop_cases.append(("#267: gh pr create opening a pull request in Build starts QA", _loop_stage() == "qa"))
 _loop_gh("needs review", 201, 202)
 _loop_log("v2 build"); _n = _loop_say("QA passed: blockers v2")
 _loop_cases.append(('"QA passed" moves to Done and closes code', _loop_stage() == "done"
@@ -8630,7 +8642,8 @@ _loop_cases.append(("a helper's edit is held by the same lock",
 _loop_env["HOUSE_RULES_LOOP"] = "off"
 _loop_cases.append(("HOUSE_RULES_LOOP=off lifts the lock", _loop_edit("app.py") == "allow"))
 _loop_env["HOUSE_RULES_LOOP"] = "on"
-with open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), "w") as _f:
+os.makedirs(os.path.join(_loop_dir, ".claude"), exist_ok=True)
+with open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), "w") as _f:
     _f.write("{not json")
 _p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop", "cwd": _loop_dir,
       "tool_input": {"file_path": os.path.join(_loop_dir, "app.py")}}
@@ -8645,7 +8658,8 @@ for _a in (["init", "-q"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit
 
 
 def _wt_stage(stage):
-    with open(os.path.join(_wt_main, ".git", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+    os.makedirs(os.path.join(_wt_main, ".claude"), exist_ok=True)
+    with open(os.path.join(_wt_main, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
         json.dump({"feature": "f", "stage": stage, "skip": False, "approvals": []}, f)
 
 
@@ -8694,6 +8708,68 @@ for _t, _ok in (
         ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow"),
         ("HOUSE_RULES_LOOP=off leaves script writes alone", "deny" not in _wt_o)):
     _loop_cases.append((_t, _ok))
+# -- #265: the stage lives in a committed .claude file and survives a fresh clone ---------------
+_wt_stage("build")
+_sf = os.path.join(_wt_main, ".claude", "house-rules-loop.json")
+_g = lambda *a, cwd=_wt_main: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=cwd,
+                                             check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+_g("add", ".claude/house-rules-loop.json"); _g("commit", "-q", "-m", "stage")
+_clone = _wt_main + "-clone"
+subprocess.run(["git", "clone", "-q", _wt_main, _clone], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+_clone_edit = _wt_gate("Edit", {"file_path": os.path.join(_clone, "app.py")}, _clone)[0]
+_wt_stage("design")
+_stage_edits = [_wt_gate(t, {"file_path": _sf}, _wt_tree)[0] for t in ("Write", "Edit")]
+_wt_stage("build")
+_stage_edits += [_wt_gate(t, {"file_path": _sf}, _wt_tree)[0] for t in ("Write", "Edit")]
+_stage_sh = _wt_bash("echo '{}' > .claude/house-rules-loop.json")[0]
+_leg = tempfile.mkdtemp(prefix="house-rules-legacy-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _leg], check=True)
+with open(os.path.join(_leg, ".git", "house-rules-loop.json"), "w") as _f:
+    json.dump({"feature": "old", "stage": "design", "skip": False, "approvals": []}, _f)
+_leg_a = _wt_gate("Edit", {"file_path": os.path.join(_leg, "app.py")}, _leg)[0]  # Design: deny proves it was read
+_leg_p = {"hook_event_name": "UserPromptSubmit", "session_id": "leg", "cwd": _leg, "prompt": "skip design"}
+run_hook("scope", json.dumps(_leg_p), env=_loop_env)
+_leg_new = os.path.join(_leg, ".claude", "house-rules-loop.json")
+for _t, _ok in (
+        ("the stage committed in one checkout reads back in a fresh git clone", _clone_edit == "allow"),
+        ("a Write and an Edit of the stage file are refused in Build and in Design", _stage_edits == ["deny"] * 4),
+        ("a shell redirect into the stage file is refused", _stage_sh == "deny"),
+        ("a legacy .git stage file is read (its Design stage refuses the edit)", _leg_a == "deny"),
+        ("the next write after a legacy read lands in .claude/", os.path.isfile(_leg_new)
+         and json.load(open(_leg_new, encoding="utf-8")).get("feature") == "old")):
+    _loop_cases.append((_t, _ok))
+# -- #266: the QA edit that got through, and a feature name that keeps "QA stage" ---------------
+_qa_state = {"feature": "f", "stage": "build", "skip": False, "approvals": [],
+             "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)],
+             "labels": {"o/r#%d" % n: ["Feature", "in progress"] for n in (1, 2)}}
+_qa_sf = os.path.join(_wt_main, ".claude", "house-rules-loop.json")
+with open(_qa_sf, "w", encoding="utf-8") as _f:
+    json.dump(_qa_state, _f)
+_qa_env = dict(_loop_env, HOUSE_RULES_LOOP_LABELS_FILE=os.path.join(_FIXTURE_ROOT, "no-such-labels.json"))  # GitHub read fails
+for _n in (1, 2):
+    run_hook("autosave", json.dumps({"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write",
+             "session_id": "qa", "cwd": _wt_tree, "tool_input": {"method": "update", "owner": "o", "repo": "r", "issue_number": _n,
+             "labels": ["Feature", "needs review"]}, "tool_response": {"url": "https://github.com/o/r/issues/%d" % _n}}),
+             env=_qa_env)
+_qa_edits = []
+for _cwd in (_wt_main, _wt_tree):
+    _p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "qa", "cwd": _cwd,
+          "tool_input": {"file_path": os.path.join(_cwd, "claude-house-rules/plugins/house-rules/templates/handover-page.html")}}
+    _qa_edits.append(json.loads(run_hook("commitgate", json.dumps(_p), env=_qa_env)[1] or "{}")
+                     .get("hookSpecificOutput", {}).get("permissionDecision", "allow"))
+_loop_cases.append(("#266: with every issue swapped to needs review through the GitHub tool, an Edit is refused from the main checkout and a worktree",
+                    _qa_edits == ["deny", "deny"]))
+_wt_stage("design")
+os.makedirs(os.path.join(_wt_main, "docs", "6-decisions"), exist_ok=True)
+with open(os.path.join(_wt_main, "docs", "6-decisions", "Decisions.md"), "w", encoding="utf-8") as _f:
+    _f.write("design decisions\n")
+run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": "qa", "cwd": _wt_main,
+         "prompt": "Design approved: enforced QA stage: 1A 2A 3A 4A"}), env=_loop_env)
+_loop_cases.append(('#266: "Design approved: enforced QA stage: 1A 2A 3A 4A" records "enforced QA stage"',
+                    json.load(open(_qa_sf, encoding="utf-8")).get("feature") == "enforced QA stage"))
+_loop_cases.append(('#266: "Build plan approved: enforced QA stage: 1A 2A" names "enforced QA stage"; a pasted "Build plan: 1A" is still cut',
+                    _ig_mod._loop_name("enforced QA stage: 1A 2A") == "enforced QA stage"
+                    and _ig_mod._loop_name("blockers v2 Build plan: 1A 2A") == "blockers v2"))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):
     # The retry (#256): the first pass of a missed page rule blocks; the note is what the retry reports.
@@ -8790,6 +8866,10 @@ _cw_cases.append(("reply: a clean reply gets no writing note",
 _cw_cases.append(("reply: HOUSE_RULES_CLEAR_WRITING=off turns the note off",
                   "write it so nothing is left to guess" not in _cw_stop(
                       "The suite adds about 43 tests.", env=dict(_loop_env, HOUSE_RULES_CLEAR_WRITING="off"))))
+
+_cw_note = _cw_stop("The suite adds about 43 tests; see #229.")
+_cw_cases.append(("reply: the writing note asks for only the corrected sentences",
+                  "only the corrected sentences" in _cw_note and "send the reply again" not in _cw_note))
 
 # The page check: a write to docs/plans/*.html.
 _cw_pages = os.path.join(_loop_dir, "docs", "plans")
@@ -8955,6 +9035,55 @@ _ck_t_relayed = _hand_transcript("ck-relayed", _ck_user("explain the storage opt
     {"type": "user", "message": {"content": "<task-notification>helper says: no page needed</task-notification>"}})]))
 _ck_b, _ck_r, _ = _ck_run(_ck_t_relayed, _ck_proposal)
 _ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count', _ck_b and "- page:" in _ck_r))
+# 6 qa page (#269)
+_ck_sf = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
+_ck_sf_old = open(_ck_sf, encoding="utf-8").read() if os.path.isfile(_ck_sf) else None
+
+
+def _ck_stage(stage, **extra):
+    os.makedirs(os.path.dirname(_ck_sf), exist_ok=True)
+    with open(_ck_sf, "w", encoding="utf-8") as f:
+        json.dump(dict({"feature": "f", "stage": stage, "skip": False, "approvals": []}, **extra), f)
+
+
+_ck_qa_page = "docs/plans/f-qa.html"
+_ck_stage("qa")
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, "The build is ready.")
+_ck_cases.append(("qa page: in QA with no page built a reply blocks, naming the rule and make_page.py",
+                  _ck_b and "- qa page:" in _ck_r and "make_page.py" in _ck_r and "no QA page is built" in _ck_r))
+_ck_b, _, _o = _ck_run(_ck_t_plain, "The build is ready.", active=True)
+_ck_cases.append(("qa page: the retry never blocks", not _ck_b))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, "The build is ready.")
+_ck_cases.append(("qa page: built but not linked blocks, saying so", _ck_b and "not linked" in _ck_r))
+_ck_cases.append(("blocked checkpoint reason asks for what changed only, not the reply again",
+                  "send only what changed" in _ck_r and "send the reply again" not in _ck_r))
+_ck_b, _, _ = _ck_run(_ck_t_nopage, "The build is ready.")
+_ck_cases.append(('qa page: "no page" in aj\'s message does not skip it', _ck_b))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page)
+_ck_cases.append(("qa page: a reply linking the page path passes and records it",
+                  not _ck_b and json.load(open(_ck_sf, encoding="utf-8")).get("qa_page_linked") is True))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")
+_ck_cases.append(("qa page: a later reply without the link passes", not _ck_b))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _, _ = _ck_run(_ck_t_plain, "Here: https://claude.ai/artifact/abc123")
+_ck_cases.append(("qa page: a claude.ai artifact link passes", not _ck_b))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page, active=True)
+_ck_cases.append(("qa page: a retry reply linking the page does not block and records it",
+                  not _ck_b and json.load(open(_ck_sf, encoding="utf-8")).get("qa_page_linked") is True))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.", active=True)
+_ck_cases.append(("qa page: a retry reply without the link does not block and records nothing",
+                  not _ck_b and "qa_page_linked" not in json.load(open(_ck_sf, encoding="utf-8"))))
+for _st in ("build", "design"):
+    _ck_stage(_st)
+    _ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")
+    _ck_cases.append(("qa page: the %s stage never blocks" % _st, not _ck_b))
+if _ck_sf_old is None:
+    os.remove(_ck_sf)
+else:
+    open(_ck_sf, "w", encoding="utf-8").write(_ck_sf_old)
 # the switch
 _ck_b, _, out = _ck_run(_ck_t_plain, _ck_proposal, env=dict(_CK_ENV, HOUSE_RULES_LOOP="off"))
 _ck_cases.append(("HOUSE_RULES_LOOP=off turns every checkpoint off", not _ck_b))
@@ -9115,6 +9244,72 @@ else:
         _want = json.load(_f)
     _mp_cases.append(("make_page: rebuilding the enforced-checkpoints design page gives the PAGE data of the content file",
                       _built is not None and _built == _want))
+
+# QA mode (#268): counts from git, the plan's estimates beside them, the page recorded in the stage file.
+def _mp_git(d, *a):
+    return subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"] + list(a),
+                          capture_output=True, text=True, timeout=60).stdout
+
+
+_d = _mp_proj("qa", {"use": "defaults"})
+_mp_git(_d, "init", "-q", "-b", "main")
+for _n, _t in (("planned.py", "a\n"), ("untouched.py", "u\n")):
+    with open(os.path.join(_d, _n), "w", encoding="utf-8") as _f:
+        _f.write(_t)
+_mp_git(_d, "add", "-A")
+_mp_git(_d, "commit", "-q", "-m", "base")
+with open(os.path.join(_d, "planned.py"), "w", encoding="utf-8") as _f:
+    _f.write("a\nb\nc\n")
+with open(os.path.join(_d, "extra.py"), "w", encoding="utf-8") as _f:
+    _f.write("x\ny\n")
+_mp_git(_d, "add", "-A")
+_mp_git(_d, "commit", "-q", "-m", "work")
+_ns = {}
+for _l in _mp_git(_d, "diff", "--numstat", "main~1...HEAD").splitlines():
+    _a, _r, _f = _l.split("\t")
+    _ns[_f] = (int(_a), int(_r))
+_qa = {"feature": "demo feature", "base": "main~1", "unverified": ["The live run."],
+       "files": {"planned.py": [5, 0, "grow"], "untouched.py": [3, 1, "tidy"]}}
+
+
+def _mp_qa_content(name, qa):
+    c = _mp_content(name)
+    with open(c, encoding="utf-8") as f:
+        pg = json.load(f)
+    pg["qa"], pg["reply"] = qa, "old reply"
+    with open(c, "w", encoding="utf-8") as f:
+        json.dump(pg, f)
+    return c
+
+
+_stage = os.path.join(_d, ".claude", "house-rules-loop.json")
+_rc, _o = _mp("build", _mp_qa_content("qa1", _qa), "--project", _d)
+_mp_cases.append(("make_page: QA mode with no stage file builds, creates none and says it did not record",
+                  _rc == 0 and not os.path.exists(_stage) and "not recorded" in _o))
+_pg = _mp_page_of(os.path.join(_d, "docs", "plans", "qa1.html")) or {"changes": [], "replyPrefix": "", "reply": "x"}
+_fc = next((c for c in _pg["changes"] if c[1].startswith("Files changed, counted from git against main~1")), None)
+_rows = {r[0]: r for r in (_fc[6] if _fc else [])}
+_mp_cases.append(("make_page: QA mode file counts equal git diff --numstat",
+                  _fc is not None and all(_rows[f][1:3] == list(v) for f, v in _ns.items()) and set(_ns) <= set(_rows)
+                  and _fc[2] == "%d files, +%d −%d" % (len(_ns), sum(v[0] for v in _ns.values()), sum(v[1] for v in _ns.values()))))
+_mp_cases.append(("make_page: QA mode marks an unplanned file 'Not in the plan' and an untouched planned file 'Planned but not changed'",
+                  _rows.get("extra.py", [0] * 4)[3] == [["Not in the plan", 0, 0]]
+                  and _rows.get("untouched.py", [0] * 4)[3] == [["Planned but not changed: tidy", 3, 1]]
+                  and _rows.get("planned.py", [0] * 4)[3] == [["Plan estimate: grow", 5, 0]]))
+_mp_cases.append(("make_page: QA mode sets replyPrefix, empties reply and adds the Still unverified item",
+                  _pg["replyPrefix"] == "QA passed: demo feature" and _pg["reply"] == ""
+                  and any(c[0] == "keep" and c[1] == "Still unverified" and c[2] == "1 things not yet proven" for c in _pg["changes"])))
+_rc, _o = _mp("build", _mp_qa_content("qa2", dict(_qa, unverified=[])), "--project", _d)
+_mp_cases.append(("make_page: QA mode with an empty unverified list is refused with exit 2",
+                  _rc == 2 and "unverified" in _o))
+os.makedirs(os.path.dirname(_stage))
+with open(_stage, "w", encoding="utf-8") as _f:
+    json.dump({"feature": "demo", "stage": "Build"}, _f)
+_rc, _o = _mp("build", _mp_qa_content("qa3", _qa), "--project", _d)
+with open(_stage, encoding="utf-8") as _f:
+    _sd = json.load(_f)
+_mp_cases.append(("make_page: QA mode writes qa_page into an existing stage file and keeps its other keys",
+                  _rc == 0 and _sd == {"feature": "demo", "stage": "Build", "qa_page": "docs/plans/qa3.html"}))
 
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)

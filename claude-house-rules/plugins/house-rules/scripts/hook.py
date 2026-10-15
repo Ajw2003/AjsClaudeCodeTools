@@ -5095,7 +5095,7 @@ def _issues_gate(payload):
 
 # ---------------------------------------------------------------------------------------
 # The design loop (#223, #225): each project has a stage - design, plan, build, done - kept in
-# LOOP_FILE in the git directory and carried across sessions. Only aj's own message moves it
+# LOOP_FILE in .claude/ of the main checkout and carried across sessions. Only aj's own message moves it
 # (scope reads it before the model does), and code edits are refused outside build. "I review"
 # happens inside build, because fixing what the review finds is code. Design:
 # docs/plans/loop-design.html. HOUSE_RULES_LOOP=off disables it.
@@ -5127,10 +5127,19 @@ def _loop_dir(git_dir):
     return git_dir
 
 
+def _loop_path(git_dir):
+    """#265: the stage file lives in .claude/ of the MAIN checkout (the parent of the common git
+    directory), so it is committed with the branch and a fresh clone keeps the stage."""
+    return os.path.join(os.path.dirname(_loop_dir(git_dir)), ".claude", LOOP_FILE)
+
+
 def _loop_read(git_dir):
-    """(state, problem). No file means a project that has not started a feature: Design."""
+    """(state, problem). No file means a project that has not started a feature: Design. The old
+    place, LOOP_FILE in the git directory, is read until the next write moves it."""
     fresh = {"feature": "", "stage": "design", "skip": False, "approvals": []}
-    path = os.path.join(_loop_dir(git_dir), LOOP_FILE)
+    path = _loop_path(git_dir)
+    if not os.path.isfile(path):
+        path = os.path.join(_loop_dir(git_dir), LOOP_FILE)
     if not os.path.isfile(path):
         return fresh, None
     try:
@@ -5145,8 +5154,38 @@ def _loop_read(git_dir):
 
 
 def _loop_write(git_dir, state):
-    with open(os.path.join(_loop_dir(git_dir), LOOP_FILE), "w", encoding="utf-8") as f:
+    path = _loop_path(git_dir)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(state, f)
+
+
+def _loop_file_refusal(payload):
+    """Deny reason when a Write/Edit/NotebookEdit or a shell redirect/script names the stage file:
+    only aj's approval messages move the stage. None otherwise."""
+    data = json.loads(payload)  # _loop_gate calls this only after _gated_edit parsed the same payload
+    if not isinstance(data, dict):
+        return None
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    if data.get("tool_name") in _GATED_TOOLS:
+        paths = [ti.get("file_path") or ti.get("notebook_path")]
+    elif data.get("tool_name") in _SHELL_TOOLS and isinstance(ti.get("command"), str):
+        paths = _script_write_targets(_apply_assigns(ti["command"]))[0]
+    else:
+        return None
+    cwd = data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    top, git_dir = _issues_locate(cwd)
+    if not git_dir:
+        return None
+    want = os.path.normcase(os.path.abspath(_loop_path(git_dir)))
+    for p in paths:
+        if isinstance(p, str) and p:
+            p = p if os.path.isabs(p) else os.path.join(cwd, p)
+            if os.path.normcase(os.path.abspath(p)) == want:
+                return ("House rules, design loop: %s is the stage tracker and only aj's approval messages "
+                        "move the stage, so it cannot be edited by hand. To switch the loop off: "
+                        "HOUSE_RULES_LOOP=off." % LOOP_FILE)
+    return None
 
 
 LOOP_LOG = os.path.join("docs", "6-decisions", "Decisions.md")
@@ -5182,8 +5221,10 @@ def _loop_unlogged(state, top, label, name):
 # starts on the same line - found in the real run, where the whole line became the name. A spaced
 # dash ends it too: "QA failed: label check - it should say hi" (found in the label check's real run). So
 # does a pasted page reply's answer codes: "New item visual: 1C", "Label check plan: 1A 2A" (#243).
-_LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+[A-Z][A-Za-z ]{0,30}:\s|\s+[-–—]\s"
-                               r"|\s*:\s*\d+[A-Za-z*](?:\s|$)")
+# A capitalised header before a colon ends it only when an answer code does not follow (#266): "enforced QA
+# stage: 1A" is a name and its codes, but a pasted "Build plan: 1A" header is cut whole.
+_LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+(?:Build|Design) plan:|\s+[A-Z][A-Za-z ]{0,30}:\s(?!\d+[A-Za-z*](?:\s|$))"
+                               r"|\s+[-–—]\s|\s*:\s*\d+[A-Za-z*](?:\s|$)")
 
 
 def _loop_name(raw):
@@ -5261,6 +5302,12 @@ def _loop_to_qa(state, labels):
     return False
 
 
+_PR_URL_RE = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/pull/\d+")
+_GITHUB_PR_CREATE_RE = re.compile(r"^mcp__(github|GitHub)__create_pull_request$")
+_LOOP_PR_NOTE = (" QA started because a pull request was opened: code edits are now closed. Swap every issue to "
+                 "`needs review` and build the QA page with make_page.py; aj answers \"QA passed: <feature>\" "
+                 "or \"QA failed: <feature>\".")
+
 _LOOP_QA_NOTE = (" Every issue of the feature says `needs review`, so the stage is QA: code edits are closed, "
                  "and aj answers \"QA passed: <feature>\" or \"QA failed: <feature>\" with the changes.")
 
@@ -5313,6 +5360,7 @@ def _loop_apply(state, text, top):
             state["redo"] = False
             if not redo:
                 state["issues"] = []
+                state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: not the next feature's
         else:
             m = _LOOP_QA_RE.search(text)
             if m:
@@ -5334,6 +5382,8 @@ def _loop_apply(state, text, top):
                     return unlogged
                 state["stage"] = "done" if verdict == "passed" else "design"
                 state["redo"] = verdict == "failed"
+                if state["redo"]:
+                    state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: the redo gets a new page
                 approval = ("QA " + verdict, name)
     if approval:
         state.setdefault("approvals", []).append(
@@ -5451,6 +5501,10 @@ def _loop_stop_line(payload):
 def _loop_gate(payload):
     """(deny reason or None, problem or None): code edits only in Build, or once after skip design."""
     git_dir, problem = _gated_edit(payload, "design-loop lock")
+    if not problem:
+        refusal = _loop_file_refusal(payload)
+        if refusal:
+            return refusal, None
     script_paths, script_unreadable, script = [], False, False
     if not git_dir and not problem:
         # #262: a Bash/PowerShell script write of a source file is held to the same lock.
@@ -5591,6 +5645,16 @@ def _label_changes(data):
     return []
 
 
+def _pr_opened(data):
+    """True for a successful pull request creation: the GitHub tool or `gh pr create`, with a PR URL in the response."""
+    tool = data.get("tool_name") or ""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    if not (_GITHUB_PR_CREATE_RE.match(tool) or (tool == "Bash" and _GH_PR_CREATE_RE.search(ti.get("command") or ""))):
+        return False
+    resp = data.get("tool_response")
+    return bool(_PR_URL_RE.search(resp if isinstance(resp, str) else json.dumps(resp)))
+
+
 def _loop_record_labels(payload):
     """PostToolUse: record label changes for the GitHub-read fallback, and move Build to QA once every
     issue says needs review. Returns notes. Never raises."""
@@ -5599,7 +5663,8 @@ def _loop_record_labels(payload):
     try:
         data = json.loads(payload)
         changes = _label_changes(data) if isinstance(data, dict) else []
-        if not changes:
+        pr = isinstance(data, dict) and _pr_opened(data)
+        if not changes and not pr:
             return []
         _, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
@@ -5615,7 +5680,10 @@ def _loop_record_labels(payload):
             now += [a for a in add if a.lower() not in {l.lower() for l in now}]
             recorded[key] = now
         notes = []
-        if state["stage"] == "build":
+        if pr and state["stage"] == "build":
+            state["stage"] = "qa"
+            notes.append("Design loop:" + _LOOP_PR_NOTE)
+        elif state["stage"] == "build" and changes:
             labels, src = _loop_labels(state)
             if _loop_to_qa(state, labels):
                 notes.append("Design loop:" + _LOOP_QA_NOTE + (" " + src if src else ""))
@@ -7027,8 +7095,8 @@ def _writing_note(not_checked, writing, long_words):
         lines.append(_not_checked_note(not_checked))
     if writing:
         lines.append(
-            "House rules, write it so nothing is left to guess: before this turn ends, rewrite "
-            "these and send the reply again:\n" + "\n".join(
+            "House rules, write it so nothing is left to guess: aj has already seen this "
+            "reply, so send only the corrected sentences, not the whole reply again:\n" + "\n".join(
                 "- \"%s\": %s" % (phrase, why) for _kind, phrase, why in writing[:12])
             + ("\n(and %d more)" % (len(writing) - 12) if len(writing) > 12 else "")
             + "\nCount what can be counted, name what you point at, say each thing once, and give a "
@@ -7256,6 +7324,36 @@ def _check_page_saved(ctx):
     return ""  # runs as the PreToolUse hook event_pagecheck, never at Stop
 
 
+_QA_ARTIFACT_RE = re.compile(r"https://claude\.ai/artifact/\S+|claude\.ai/code/artifact/\S+", re.IGNORECASE)
+
+
+def _record_qa_link(ctx):
+    """True (and qa_page_linked recorded) when the reply links the QA page. Also used on a retry."""
+    page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
+    if not (page and (page in reply or os.path.basename(page) in reply or _QA_ARTIFACT_RE.search(reply))):
+        return False
+    state, problem = _loop_read(ctx["qa_git_dir"])
+    if problem:
+        raise OSError(problem)
+    state["qa_page_linked"] = True
+    _loop_write(ctx["qa_git_dir"], state)
+    return True
+
+
+def _check_qa_page(ctx):
+    """#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not
+    skipped by "no page": a QA page is mandatory."""
+    if ctx.get("qa_stage") != "qa" or ctx.get("qa_linked"):
+        return ""
+    page = ctx.get("qa_page") or ""
+    if _record_qa_link(ctx):
+        return ""
+    missing = "the QA page is built but not linked in the reply" if page else "no QA page is built yet"
+    return ("%s: build it with `python3 %s build docs/plans/<name>-qa.page.json`, where the content file has a "
+            "`qa` block (feature, base, unverified, files), then link the page in the reply"
+            % (missing, os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_page.py")))
+
+
 CHECKPOINTS = [
     ("page saved", "page built", _check_page_saved, "block"),
     ("page published", "page built", _check_page_saved, "block"),
@@ -7264,6 +7362,7 @@ CHECKPOINTS = [
     ("reply ends", "evidence", _check_evidence, "block"),
     ("reply ends", "commit", _check_commit, "block"),
     ("reply ends", "plain summary", _check_plain, "block"),
+    ("reply ends", "qa page", _check_qa_page, "block"),
 ]
 
 CHECKPOINT_RULES = {
@@ -7272,6 +7371,7 @@ CHECKPOINT_RULES = {
     "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
+    "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
 
@@ -7289,7 +7389,7 @@ def _checkpoint_reason(missed):
         len(missed), "" if len(missed) == 1 else "s")]
     for name, fix in missed:
         lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
-    lines.append("Fix these and send the reply again. This blocks once; the retry only reports. "
+    lines.append("Fix these and send only what changed, not the whole reply again. This blocks once; the retry only reports. "
                  "HOUSE_RULES_LOOP=off turns it off.")
     return "\n".join(lines)
 
@@ -7465,6 +7565,17 @@ def event_handover():
                 "plain_problems": plain_problems,
                 "user_text": _last_user_text(transcript_path) if transcript_path else "",
             }
+            try:
+                _top, _gd = _issues_locate(_payload_cwd(payload))
+                if _gd:
+                    _st, _pr = _loop_read(_gd)
+                    if _pr:
+                        raise OSError(_pr)
+                    ctx.update(qa_stage=_st.get("stage"), qa_page=_st.get("qa_page"),
+                               qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd)
+            except Exception as exc:
+                trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
+                                   "so it is off for this reply." % (type(exc).__name__, exc))
             missed = _missed_checkpoints(ctx)
             if missed:
                 emit({"decision": "block", "reason": _checkpoint_reason(missed)})
@@ -7472,6 +7583,20 @@ def event_handover():
         except Exception as exc:
             trace_lines.append("house-rules: the checkpoint table hit an error (%s: %s), so this reply was "
                                "not blocked." % (type(exc).__name__, exc))
+    else:
+        # #269: a QA page linked only in the retry reply is still recorded; the retry never blocks.
+        try:
+            _top, _gd = _issues_locate(_payload_cwd(payload))
+            if _gd:
+                _st, _pr = _loop_read(_gd)
+                if _pr:
+                    raise OSError(_pr)
+                if _st.get("stage") == "qa" and _st.get("qa_page") and not _st.get("qa_page_linked"):
+                    _record_qa_link({"reply": reply_text if vm is not None else "",
+                                     "qa_page": _st.get("qa_page"), "qa_git_dir": _gd})
+        except Exception as exc:
+            trace_lines.append("house-rules: the QA page link could not be recorded on the retry (%s: %s)."
+                               % (type(exc).__name__, exc))
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed
