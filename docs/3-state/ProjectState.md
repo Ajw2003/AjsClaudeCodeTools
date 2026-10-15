@@ -150,6 +150,10 @@ Build an edit is refused while a label is wrong; the end-of-reply check names wr
 run twice. A real run against two real issues (#236, #237) walked Plan → Build → QA → QA failed → refused redo →
 Plan. It found one bug (a name ran on past a dash), fixed with a test. Rides the open design loop pull request.
 
+2026-10-14, same branch: the new item visual (#240), plugin 2.64.1, built and waiting on aj's QA. The page template
+draws a New item's three phrases as when → it does → you get (#241); the changes page has one per New item (#242);
+a feature name stops before a pasted page reply's answer codes (#243).
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

@@ -1,5 +1,9 @@
 # Today — 2026-10-14
 
+The new item visual, plugin 2.64.1 (issue #240). On a handover page, a New item now opens to three boxes:
+what sets it off, what it does, what you get. The changes page has one for each of its 13 new items. A pasted
+page reply such as ": 1C" no longer becomes part of a feature's name, so a redo after "QA failed" is recognised.
+
 The label check, plugin 2.64.0 (issue #235). An issue's label now says whose move it is, and every step of the
 design loop checks it: `in progress` while I work, `needs review` when it's your turn. Swapping every issue to
 `needs review` starts a new QA stage and closes code; your QA answer only counts then; after "QA failed" the

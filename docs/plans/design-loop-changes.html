@@ -102,6 +102,11 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .fromto{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;font-size:.88rem}
 .fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
 .fromto span.to{background:var(--accent-soft)}
+.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:6px;align-items:stretch;font-size:.84rem}
+.flow > span{border-radius:8px;padding:8px;background:var(--bg);display:grid;gap:2px;align-content:start;min-width:0}
+.flow > span.mid{background:var(--accent-soft)}
+.flow > i{align-self:center;color:var(--muted);font-style:normal}
+.flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 
 /* choices */
 .q{display:grid;gap:8px}
@@ -226,39 +231,39 @@ const PAGE = {
   eyebrow: "What the design loop pull request changes · 36 files · 51 commits",
   replyPrefix: "Changes page",
   short: {
-    lead: "This pull request adds the design loop and its label check to the house-rules plugin. It moves the plugin from 2.62.0 (what main has now) to 2.64.0. It adds one rule, changes five hooks, adds a page template, about 43 tests, and the design pages behind it all. It removes two old rules, which were merged into the new one.",
+    lead: "This pull request adds the design loop and its label check to the house-rules plugin. It moves the plugin from 2.62.0 (what main has now) to 2.64.1. It adds one rule, changes five hooks, adds a page template, about 43 tests, and the design pages behind it all. It removes two old rules, which were merged into the new one.",
     hint: "Tap a group to see what it adds and what it needs from you.",
     key: [["Built and checked", "done"], ["You act on it", "you"]],
     items: [
       ["file", "Rule", "The show-don't-tell rule", "done", "A new rule, loaded every session in its own slot, replacing two older rules.", "Nothing from you."],
       ["lock", "Hooks", "Five hooks changed, one added", "done", "Approvals, the code lock, issue and label recording, the helper note, and the end-of-reply checks.", "Nothing from you."],
       ["check", "Tests", "About 43 new checks", "done", "The test suite is at 658 checks, passing on GitHub and here.", "Nothing from you."],
-      ["list", "Template", "The handover page template", "done", "The four-part page every proposal is built from.", "Nothing from you."],
+      ["list", "Template", "The handover page template", "done", "The four-part page every proposal is built from; a New item opens to what sets it off, what it does and what you get.", "Nothing from you."],
       ["eye", "Docs", "Docs and design pages", "done", "A system doc for the loop, the state, today and decisions tiers, and 16 design pages.", "Nothing from you."],
-      ["hand", "Merge", "QA, then merge", "you", "Version 2.64.0 reaches your machines once it's on main.", "QA the label check, then merge the pull request."]
+      ["hand", "Merge", "QA, then merge", "you", "Version 2.64.1 reaches your machines once it's on main.", "QA the label check, then merge the pull request."]
     ]
   },
   changes: [
-    ["new", "Show-don't-tell rule", "rules/show-dont-tell.md, 21 lines, loaded by its own hook.", null, "The request is the scope; every plan reaches you as a page; options with my suggestion, you pick; short answers to simple questions; no code before an approved design; issue labels say whose move it is."],
-    ["new", "Rule detail", "rules/detail/show-dont-tell.md, 122 lines.", null, "The why behind each part: the request as scope, a page is a proposal, check what exists first, depth matches the task, the code lock, logging before approval, a home for each feature with its labels, the handover page, helpers."],
-    ["new", "Rule loader (showrule)", "A new start-of-session hook entry.", null, "The main rules file was 47 characters from its size limit, so the new rule loads in its own slot. If no Python is found, it says so instead of loading nothing."],
-    ["new", "Stage tracker and approvals", "Your messages move a feature through Design, Plan, Build, QA, Done.", null, "\"Design approved\", \"Build plan approved\", \"QA passed\", \"QA failed\" and \"skip design\" move the stage. A bare \"approved\" moves nothing. The stage lives in a file git never commits and carries across sessions."],
-    ["new", "Code lock", "Source edits are refused outside Build.", null, "Docs and .md files stay open. Helpers' edits are held too. In Build, an edit is refused while any issue isn't labelled in progress."],
-    ["new", "Logged first", "An approval only counts after the decisions log changed.", null, "If nothing was logged since the last approval, the stage doesn't move and I'm told to log it, then ask again."],
-    ["new", "Feature home", "A build plan needs at least two labelled issues.", null, "Issues made during Plan are recorded, whether made from a terminal or with the GitHub tool."],
-    ["new", "Label check", "Every step checks the issue labels.", null, "Read from GitHub, or from my recorded label changes when GitHub can't be read. Switching every issue to needs review starts QA. After QA failed, the labels go back to in progress before the redo."],
-    ["new", "Helper note", "A helper starts knowing the feature, stage and issues.", null, "It builds only approved steps and never designs or approves."],
-    ["new", "Long-reply reminder", "Over 200 words with no page link gets a reminder.", null, "Code blocks aren't counted. It also names wrong issue labels at the end of a reply."],
-    ["new", "Handover page template", "templates/handover-page.html, the approved four-part page.", null, "In short, Changes, Choices, Wrap-up, filled from one block. An empty part is left out. This page is built from it."],
-    ["new", "Design loop system doc", "docs/4-systems/design-loop.md.", null, "How each piece works, the rules that must stay true, and the traps already hit."],
-    ["new", "Design pages", "16 pages in docs/plans/.", null, "Every proposal you approved or turned down along the way, from the first show-don't-tell draft to the label check plan."],
+    ["new", "Show-don't-tell rule", "rules/show-dont-tell.md, 21 lines, loaded by its own hook.", null, "The request is the scope; every plan reaches you as a page; options with my suggestion, you pick; short answers to simple questions; no code before an approved design; issue labels say whose move it is.", ["A session starts", "Loads the rule into my instructions", "Pages, options and short answers from me"]],
+    ["new", "Rule detail", "rules/detail/show-dont-tell.md, 122 lines.", null, "The why behind each part: the request as scope, a page is a proposal, check what exists first, depth matches the task, the code lock, logging before approval, a home for each feature with its labels, the handover page, helpers.", ["I need the reason behind a rule", "Explains each part, with what went wrong before", "Rules I can apply to cases they don't name"]],
+    ["new", "Rule loader (showrule)", "A new start-of-session hook entry.", null, "The main rules file was 47 characters from its size limit, so the new rule loads in its own slot. If no Python is found, it says so instead of loading nothing.", ["A session starts", "Prints the rule in its own slot", "The rule loaded, or a loud note if Python is missing"]],
+    ["new", "Stage tracker and approvals", "Your messages move a feature through Design, Plan, Build, QA, Done.", null, "\"Design approved\", \"Build plan approved\", \"QA passed\", \"QA failed\" and \"skip design\" move the stage. A bare \"approved\" moves nothing. The stage lives in a file git never commits and carries across sessions.", ["You send \"Design approved: <feature>\"", "Checks the stage and the log, then moves it", "The feature in its next stage, kept across sessions"]],
+    ["new", "Code lock", "Source edits are refused outside Build.", null, "Docs and .md files stay open. Helpers' edits are held too. In Build, an edit is refused while any issue isn't labelled in progress.", ["I edit a source file", "Is it Build, with every issue in progress?", "Yes: the edit goes in. No: refused, with why."]],
+    ["new", "Logged first", "An approval only counts after the decisions log changed.", null, "If nothing was logged since the last approval, the stage doesn't move and I'm told to log it, then ask again.", ["You approve a stage", "Has the decisions log changed since the last one?", "Yes: the stage moves. No: I log it and ask again."]],
+    ["new", "Feature home", "A build plan needs at least two labelled issues.", null, "Issues made during Plan are recorded, whether made from a terminal or with the GitHub tool.", ["You approve a build plan", "Counts the labelled issues made during Plan", "Two or more: Build starts. Fewer: I make them first."]],
+    ["new", "Label check", "Every step checks the issue labels.", null, "Read from GitHub, or from my recorded label changes when GitHub can't be read. Switching every issue to needs review starts QA. After QA failed, the labels go back to in progress before the redo.", ["A stage move, a code edit, or a reply ends", "Reads each issue's labels from GitHub", "The label always says whose move it is"]],
+    ["new", "Helper note", "A helper starts knowing the feature, stage and issues.", null, "It builds only approved steps and never designs or approves.", ["A helper starts", "Tells it the feature, stage and issues", "A helper that builds only approved steps"]],
+    ["new", "Long-reply reminder", "Over 200 words with no page link gets a reminder.", null, "Code blocks aren't counted. It also names wrong issue labels at the end of a reply.", ["My reply passes 200 words with no page", "Reminds me before the turn ends", "A short reply and a link, not a wall of text"]],
+    ["new", "Handover page template", "templates/handover-page.html, the approved four-part page.", null, "In short, Changes, Choices, Wrap-up, filled from one block. An empty part is left out. This page is built from it.", ["I make a proposal", "Fills four parts from one block", "Pages that look and work the same every time"]],
+    ["new", "Design loop system doc", "docs/4-systems/design-loop.md.", null, "How each piece works, the rules that must stay true, and the traps already hit.", ["Someone needs to change the loop", "Lists each piece, its rules and its traps", "One place to read first"]],
+    ["new", "Design pages", "16 pages in docs/plans/.", null, "Every proposal you approved or turned down along the way, from the first show-don't-tell draft to the label check plan.", ["You want to know why something was decided", "Keeps every proposal you saw", "Each choice's history, as you saw it"]],
     ["chg", "Main rules file", "Two sections moved into the new rule.", ["Has \"Match response depth to the task\" and \"Build only what was asked\"", "Both live in the show-don't-tell rule"], "Eight lines out of rules/house-rules.md."],
     ["chg", "Coding standards", "One line moved into the new rule.", ["\"Prefer proposing a plan for anything non-trivial\"", "Covered by the code lock and pages"], "rules/standards/coding-philosophy.md."],
     ["chg", "Unity tools rule", "Points at the new rule's name.", ["Under \"Build only what was asked\"", "Under \"The request is the scope\""], "rules/detail/unity-tools-first.md, one line."],
     ["chg", "The go-ahead guess", "Off while the loop is on.", ["A message that reads like a go-ahead starts the build", "Only \"Build plan approved\" starts it"], "With the loop off, the old guess comes back."],
     ["chg", "Issue recorder matcher", "Also watches the GitHub tool's issue writes.", ["Write, Edit, NotebookEdit, Bash", "Those, plus the GitHub tool's issue_write"], "hooks/hooks.json."],
     ["chg", "Test suite", "verify.py, 289 lines added.", ["Checks before this work", "658 checks, all passing"], "40 design loop and label check cases, plus size and wording checks for the new rule."],
-    ["chg", "Plugin version", "plugin.json.", ["2.62.0", "2.64.0"], "2.63.0 was the design loop and 2.64.0 the label check; both ship together."],
+    ["chg", "Plugin version", "plugin.json.", ["2.62.0", "2.64.1"], "2.63.0 was the design loop, 2.64.0 the label check, and 2.64.1 the New-item flow on these pages; all ship together."],
     ["chg", "Docs tiers", "Architecture, README, state, today, decisions.", null, "Each hook row names what it gained. The decisions log has every approval and the two real runs quoted."],
     ["chg", "Build only what was asked (detail)", "Deleted; merged into the new rule.", ["rules/detail/build-what-asked.md, 14 lines", "Removed"], "Its text now lives under \"The request is the scope\" in the show-don't-tell detail."],
     ["chg", "Match response depth (detail)", "Deleted; merged into the new rule.", ["rules/detail/response-depth.md, 11 lines", "Removed"], "Its text now lives under \"Depth matches the task\" in the show-don't-tell detail."]
@@ -273,7 +278,7 @@ const PAGE = {
     summary: "Everything the design loop pull request adds, changes and removes, against main.",
     changing: "Nothing: this page reports what's already built.",
     blocking: "Your QA of the label check, then your merge.",
-    next: "Once merged, the update reaches your machines as plugin 2.64.0.",
+    next: "Once merged, the update reaches your machines as plugin 2.64.1.",
     todo: ["Look through Changes; tap any item for before and after.", "Answer the template question under Choices, if you like.", "Send \"QA passed: label check\" or \"QA failed: label check\" with the changes, then merge."]
   }
 };
@@ -311,9 +316,11 @@ if (document.getElementById("cc")) {
   const counts = { new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
   document.getElementById("cc-count").textContent =
     `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
-  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d]) =>
+  // A New item's picture (#241): what sets it off -> what it does -> what you get.
+  const flow = fl => `<div class="flow"><span><small>When</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>It does</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>You get</small>${esc(fl[2])}</span></div>`;
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl]) =>
     `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
-     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}<p>${esc(d)}</p></div></details>`).join("");
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p></div></details>`).join("");
 }
 
 if (document.getElementById("qs")) {

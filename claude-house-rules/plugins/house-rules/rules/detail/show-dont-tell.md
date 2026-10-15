@@ -98,7 +98,8 @@ during the plan; issues made with the GitHub tool count the same as a terminal `
 Every page is built from `templates/handover-page.html`, which fills in from one PAGE block. It has
 four parts, in this order: In short (plain sentences and a row of icons to tap, each showing what
 it creates or changes beside what it needs from the user), Changes (each item tagged New, Changed
-or Kept, before and after on tap), Choices (options with my suggestion marked, a "why" to open,
+or Kept; on tap, a Changed item shows before and after, and a New item shows what sets it off,
+what it does and what you get), Choices (options with my suggestion marked, a "why" to open,
 and a box for the user's own answer), and Wrap-up (summary, what's changing, what's blocking,
 what's next, and numbered steps for what the user needs to do, then a reply built for them to
 copy). A part is left out only when it would be empty. Every part keeps four rules: detail only

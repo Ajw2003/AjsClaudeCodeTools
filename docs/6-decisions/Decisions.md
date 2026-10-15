@@ -16,8 +16,17 @@ off → what it does → what you get.
 New items), all `in progress`. Plan page: `docs/plans/new-item-visual-plan.html`. Found while planning: the
 loop reads aj's two real messages as the features "New item visual: 1C" and "Label check plan: 1A 2A"
 (checked by calling `_loop_name` on both). A redo after "QA failed" is matched by name, so its label check
-would be skipped. Whether to fix it in this build is aj's choice on the plan page. Waiting on "Build plan
-approved: new item visual".
+would be skipped. Whether to fix it in this build is aj's choice on the plan page.
+
+**Build plan approved:** "Build plan approved: new item visual: 1A". The name fix is a third step,
+sub-issue #243.
+
+**Built (2.64.1).** #241: the template draws a New item's `[when, it does, you get]` as three boxes; a New item
+without them still shows text. #242: the changes page's 13 New items each have a flow. A browser check at phone
+width, light and dark, found 0 New items without a flow and 0 flows on other items, with the page width at 400.
+#243: a name stops before ": 1C"-style answer codes. `_loop_name` on aj's real messages now gives "New item
+visual" and "Label check plan". `verify.py` 659 PASS on two clean runs (one earlier run hit the stale-file
+flake, #229).
 
 **What.** aj on the changes page: Changed items "are fantastic and need nothing", but New items "lack the same
 visual flare". New items open to text only. Since it's the page template that would change, it goes through the

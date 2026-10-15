@@ -4237,10 +4237,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.64.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.64.1",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.64.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.64.1",
     "rules section + detail file + version",
 )
 
@@ -8445,6 +8445,9 @@ try:
 except (OSError, ValueError, KeyError):
     _feat = None
 _loop_cases.append(("the feature name stops at the end of its sentence (found in the real run)", _feat == "blockers v2"))
+_names = [_ig_mod._loop_name(_r) for _r in ("New item visual: 1C", "Label check plan: 1A 2A", "label check: 2*")]
+_loop_cases.append(("a pasted page reply's answer codes are not part of the name (aj's real messages, #243)",
+                    _names == ["New item visual", "Label check plan", "label check"]))
 _loop_issue(201); _loop_issue(202)
 _loop_gh("in progress", 201, 202)
 _loop_log("v2 plan"); _loop_say("Build plan approved: blockers v2")
@@ -8484,9 +8487,10 @@ _loop_env["HOUSE_RULES_LOOP"] = "on"
 _tpl_path = os.path.join(HERE, "..", "templates", "handover-page.html")
 _tpl = read(_tpl_path) if os.path.isfile(_tpl_path) else ""
 _tpl_missing = [m for m in ('data-part="short"', 'data-part="changes"', 'data-part="choices"', 'data-part="wrapup"',
-                            "Copy my reply", 'class="owntext"', "const PAGE = {", "What you need to do")
+                            "Copy my reply", 'class="owntext"', "const PAGE = {", "What you need to do",
+                            '<div class="flow">', "<small>You get</small>")
                 if m not in _tpl]
-_loop_cases.append(("the handover template has its four parts, the own-answer box and the copy-reply",
+_loop_cases.append(("the handover template has its four parts, the own-answer box, the copy-reply and the New-item flow",
                     bool(_tpl) and not _tpl_missing))
 _sdt_detail = read(os.path.join(DETAIL_DIR, "show-dont-tell.md"))
 _loop_cases.append(("the rule names the template and its four parts",

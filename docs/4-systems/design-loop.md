@@ -21,7 +21,7 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 | Code lock | `commitgate` (PreToolUse), `_loop_gate` | Refuses Write/Edit/NotebookEdit of source files outside Build. `docs/`, `.claude/` and `.md` files stay open. Holds helpers' edits too. |
 | Helpers | `subagentrules` (SubagentStart), `_loop_helper_note` | A helper starts knowing the feature, stage and issues, and that it only builds approved steps. The "reads like a go-ahead" guess is off while the loop is on (#232). |
 | Long replies | `handover` (Stop), `_long_reply_words` | A reply over 200 words (code blocks not counted) with no page or picture link gets a reminder (#226). |
-| Page template | `templates/handover-page.html` | The approved four-part page, filled from one PAGE block; an empty part is left out (#233). |
+| Page template | `templates/handover-page.html` | The approved four-part page, filled from one PAGE block; an empty part is left out (#233). A New change item can carry three phrases, drawn as when → it does → you get (#240). |
 
 "I review" happens inside Build, because fixing what my own review finds is code. aj's review and
 test are one QA step with a pass/fail answer.
