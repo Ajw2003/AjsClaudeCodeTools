@@ -179,6 +179,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-15, branch `ccr-fd3ee01d-o448i8`: handover pages and checkpoints (#251) is built, 2.66.0, in aj's QA. Pull request #263. Every issue (#251 to #259, #261, #262) is `needs review`. `verify.py` 753 PASS and `tools/verify_tools.py` 47 PASS, each run twice. The guard fixes from `docs/guard-friction-audit-2026-10-15.md` are in. #259 (the PlunderSpell regeneration) runs in a new session after the merge.
 
+2026-10-15, branch `AjsAgent/vigilant-meitner-8pp618`: pull request #263 is merged. Enforcing the QA stage (#264) is in Design, `in progress`, nothing built. Design page: `docs/plans/qa-stage-design.html`, waiting on aj's approval and four choices.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
