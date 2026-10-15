@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Design proposed: clear writing check (replaces the ambiguity check design)
+
+**Status.** Proposed; waiting on "Design approved: clear writing check". The new item visual waits behind it.
+
+**What.** aj: "we need to fix wording and ambiguity first, let's fold ambiguity and wording into a single check…
+proper sentence structure and human tone, a lack of repetition and clear concise speech that is explicit with
+context and leaves nothing for the user to extrapolate." It replaces the ambiguity check design below, which aj
+never answered.
+
+**What exists, checked in the code.** The plain-language rule covers jargon, voice, bare references and a plain
+summary first; only the plain summary is checked. The plain-docs skill and `plain_docs_check.py` limit sentence
+length, ban jargon and keep out code detail, but only for plain doc copies. There's also the long-reply reminder.
+Nothing checks grammar, tone or repetition.
+
+**Proposal page:** `docs/plans/clear-writing-check.html`. One rule, "Write it so nothing is left to guess", takes
+in plain language, the ambiguity lines and the plain-docs writing limits. A shared checker covers vague claims,
+bare references, repetition, jargon, sentence length and issue sections, on every reply, page and issue. A new
+editor helper judges grammar, tone and gaps on pages and long replies; a pattern can't see "checks it's Build". The
+not-checked and long-reply checks join the shared checker, and Evidence before claims stays its own check.
+
+---
+
 ## 2026-10-15 - New item visual v2: aj's answers; automatic change log filed for later
 
 **aj's answers** ("New item visual v2: 1* 2A"):
@@ -42,7 +64,7 @@ script that gives each diff line to the function around it, and it matches git's
 
 ## 2026-10-15 - Design proposed: ambiguity check
 
-**Status.** Proposed; waiting on "Design approved: ambiguity check".
+**Status.** Superseded by the clear writing check design (2026-10-15, above), at aj's request.
 
 **What.** aj: "Let's add in an ambiguity check… fold in some of the rules and checks too as ambiguity needs
 checking in several places and stages." What exists today:
