@@ -269,7 +269,7 @@ const PAGE = {
   "replyPrefix": "Build plan approved: guards audit",
   "reply": "Build plan approved: guards audit",
   "short": {
-    "lead": "I went through every hook in hook.py (a hook is an automatic check) that can stop me. My test was yours: only data loss with no way back, or a change to someone else's work, should stop me. Nine kinds of destructive action are refused outright, and each refusal names the safe way to do the job instead. Deletes are refused only when the data isn't saved. You are asked only when no safe way exists and I cite a source proving it. Four refusals become reminders. The background-work guard is removed entirely. Publishing a page is never refused again.",
+    "lead": "I went through every hook in hook.py (a hook is an automatic check) that can stop me. My test was yours: only data loss with no way back, or a change to someone else's work, should stop me. Nine kinds of destructive action are refused outright, and each refusal names the safe way to do the job instead. Deletes are refused only when the data isn't saved. You are asked only when no safe way exists and I cite a source proving it. Five workflow checks keep refusing, and each refusal now gives the exact fix, so I can correct course without stalling. The background-work guard is removed entirely. A page built by make_page.py is never refused again.",
     "hint": "Tap a card for what it guards today and what changes.",
     "key": [
       [
@@ -291,7 +291,7 @@ const PAGE = {
         "Never blocked",
         "Three things no guard may ever stop",
         "done",
-        "You set these three requirements at 14:45 on 15 October. First, a routine commit or push to an agent-created branch other than main is never blocked. That means a branch named AjsAgent/ or claude/, or a helper's own working-copy branch. Second, publishing an artifact is never blocked. Third, the agent, or a helper it starts, can always change its own files inside the folder it was given. No prompt, refusal or timeout applies to any of them.",
+        "You set these three requirements at 14:45 on 15 October. First, a routine commit or push to an agent-created branch other than main is never blocked. That means a branch named AjsAgent/, or a helper's own working-copy branch. Second, publishing a page built by make_page.py is never blocked. Third, I, or a helper I start, can always change files I created myself, inside the folder I was given. No prompt, refusal or timeout applies to any of them.",
         "Nothing from you. It will be built first and tested by verify.py."
       ],
       [
@@ -320,10 +320,10 @@ const PAGE = {
       ],
       [
         "eye",
-        "Soften",
-        "Four refusals become reminders",
-        "done",
-        "The first three are refused today and become reminders. First, publishing a page not built by make_page.py. Second, a Claude credit line or a claude/ branch name on GitHub, and an issue without its sections. Third, a third helper (a sub-agent) running, or a helper starting its own helper. Fourth, overwriting a whole file. Today it always asks you first. Afterwards it goes through, unless the file has uncommitted changes. In that case it is refused, and the refusal says to commit first.",
+        "Enforce",
+        "Five workflow checks keep refusing, with the fix named",
+        "",
+        "These force the right way of working, so they refuse outright. Each refusal gives the exact fix, so I correct course myself instead of stalling. 1. A page not built by make_page.py: the refusal gives the make_page.py command. 2. A Claude credit line or a claude/ branch name on GitHub: credit \"AJ's agent\" and use an AjsAgent/ branch. 3. An issue without its sections: add the missing ones it names. 4. A third helper (a sub-agent) running at once, or a helper starting its own helper: wait for one to finish. 5. Overwriting a whole file: a file I created myself goes through, while anyone else's file is refused with \"edit it in place\".",
         "Nothing from you."
       ],
       [
@@ -356,7 +356,7 @@ const PAGE = {
     [
       "new",
       "Never-blocked list",
-      "Commits and pushes on agent branches, artifact publishes, and file edits in the agent's own folder always go through.",
+      "Commits and pushes on agent branches, publishing a page built by make_page.py, and edits to files I created in the folder I was given always go through.",
       null,
       "Checked before every guard, the page check and the prompt timer, so none of them can refuse these.",
       [
@@ -393,12 +393,12 @@ const PAGE = {
     [
       "chg",
       "Publishing a page",
-      "Never refused.",
+      "A make_page.py page always publishes; a hand-written one is refused with the command to fix it.",
       [
         "Denied if not built by make_page.py, and auto-refused after an earlier prompt went unanswered",
-        "Always goes through; a reminder if make_page.py wasn't used"
+        "A make_page.py page is never refused; a hand-written page is refused with the exact make_page.py command"
       ],
-      "Today, a refused page publish fails silently.",
+      "Today, a refused page publish fails silently. After this, a refusal always names its fix.",
       null,
       null
     ],
@@ -416,13 +416,13 @@ const PAGE = {
     ],
     [
       "chg",
-      "Claude credit lines and claude/ branch names on GitHub, helper count, whole-file rewrites",
-      "Reminders, not refusals, except overwriting a file with uncommitted changes.",
+      "Claude credit lines and claude/ branch names on GitHub, issues missing sections, a third helper at once, whole-file rewrites",
+      "Still refused, and every refusal now names its exact fix.",
       [
-        "Denied or asked every time",
-        "Allowed, with a reminder; overwriting a whole file is refused only when it has uncommitted changes"
+        "Denied with a reason, or asked every time",
+        "Refused with the exact fix; overwriting a file I created myself goes through"
       ],
-      "None of these lose data that can't be restored.",
+      "These force the correct way of working; the named fix stops them from stalling me.",
       null,
       null
     ],
