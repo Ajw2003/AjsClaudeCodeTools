@@ -7,6 +7,29 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Design approved: enforced QA stage
+
+**Context.** Issue #264 (Enforce the QA stage). Pull request #263 (Handover pages and checkpoints) was opened and
+every issue swapped to `needs review` with no QA page; aj had to ask for one. During that QA an Edit to
+`templates/handover-page.html` also went through, and the writing note made a whole reply post twice.
+
+**Decision.** aj approved `docs/plans/qa-stage-design.html` with "1A 2A 3A 4A":
+- **1A, when QA starts:** a pull request opening for the feature, or every issue swapped to `needs review`,
+  whichever comes first.
+- **2A, how the QA page is detected:** `make_page.py` records the built QA page in the stage file, and the reply
+  links it.
+- **3A, the file table's numbers:** the builder counts added and removed lines from git against the base branch;
+  the content file supplies only the plan's estimate and a note.
+- **4A, the duplicated reply:** the writing note and the checkpoint reason ask for the corrected sentences only.
+  Blocking was rejected because a Stop hook fires after aj has already seen the reply.
+
+Found after the design was published: the stage file (`.git/house-rules-loop.json`) does not survive a new cloud
+session. This session's fresh container had none, although the previous session moved through every stage. The
+build plan covers it. Also found: the approval parser took the feature name as "enforced", because
+"QA stage: 1A" looked like a pasted answer; the build plan covers that too.
+
+**Status.** Standing.
+
 ## 2026-10-15 - The end-of-reply check blocks once, from a checkpoint table
 
 **Context.** aj approved "Design approved: handover pages and checkpoints" (below), which reverses the

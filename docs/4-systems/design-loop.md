@@ -26,6 +26,22 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 "I review" happens inside Build, because fixing what my own review finds is code. aj's review and
 test are one QA step with a pass/fail answer.
 
+### Enforced QA stage (planned, #264)
+
+Designed in `docs/plans/qa-stage-design.html`, approved 2026-10-15; build plan `docs/plans/qa-stage-plan.html`.
+Not built yet. When built:
+
+- **QA starts** when a pull request is opened for the feature (`gh pr create` or the GitHub tool's
+  `create_pull_request`, seen by `autosave` on PostToolUse) or when every issue says `needs review`, whichever
+  comes first. Code is closed from that moment.
+- **The QA page** is built by `make_page.py` in QA mode. The builder counts each changed file's added and
+  removed lines from `git diff --numstat <base>...HEAD`; the content file gives only the plan's estimate and a
+  note per file, plus a required list of what is unverified. The page's reply is fixed to
+  "QA passed: <feature>". The builder writes the page's path into the stage file (`qa_page`).
+- **The checkpoint** is a sixth "reply ends" row, `qa page`: in QA, a reply blocks once until `qa_page` is set
+  and a reply has linked it.
+- **The stage survives a new session**, according to the stage-file choice on the build plan page.
+
 ## Invariants
 
 - Only aj's message moves the stage. `scope` reads the prompt itself, so the model cannot approve

@@ -1,0 +1,59 @@
+{
+  "title": "Enforced QA Stage Plan",
+  "eyebrow": "Build plan for approval, issue #264 (Enforce the QA stage) · nothing built yet",
+  "replyPrefix": "Build plan approved: enforced QA stage",
+  "reply": "",
+  "short": {
+    "lead": "Seven steps, each its own sub-issue of issue #264 (Enforce the QA stage), built in this order. The first two make the lock that refuses code edits trustworthy before anything relies on it; the QA page and its checkpoint come next; the rule text and a real run come last. Line counts are my estimates; the QA page will show the real counts beside them.",
+    "hint": "Tap a step to see what it changes and what it needs from you.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["lock", "Stage kept", "The stage survives a new session", "", "Sub-issue #265 (the stage survives a new cloud session). The stage file moves to where your first choice says, so a new cloud session no longer restarts at Design.", "Your answer to the first choice."],
+      ["search", "Lock fixed", "The QA leak is reproduced, then fixed", "", "Sub-issue #266 (reproduce and fix the edit that got through during QA). It also fixes the parser that recorded this feature's name as \"enforced\" instead of its full name, \"enforced QA stage\".", "Nothing from you."],
+      ["flask", "PR starts QA", "A pull request opening starts QA", "", "Sub-issue #267 (a pull request opening starts QA).", "Nothing from you."],
+      ["hammer", "QA mode", "The page builder's QA mode", "", "Sub-issue #268 (the page builder's QA mode): counts from git, a required unverified list, and the page recorded in the stage file.", "Nothing from you."],
+      ["stop", "Checkpoint", "The QA page checkpoint", "", "Sub-issue #269 (the QA page checkpoint), the sixth row of the checkpoint table.", "Nothing from you."],
+      ["file", "Wording", "The writing note asks for corrections only", "", "Sub-issue #270 (the writing note asks for the corrected sentences only).", "Nothing from you."],
+      ["check", "Real run", "Rule text, docs, version and a real run", "", "Sub-issue #271 (rule text, docs, version and a real run). Then every issue moves to needs review and the QA page is built.", "You run QA from the QA page."]
+    ]
+  },
+  "changes": [
+    ["chg", "#265: the stage survives a new cloud session", "The stage file moves out of .git.", ["The stage lives in .git/house-rules-loop.json, which a new cloud container does not have.", "The stage lives in the place you pick under the first choice (where the stage lives), and only the hook can change it."], "verify.py replaces the git directory with a fresh clone and reads the stage back unchanged.", null,
+     [["claude-house-rules/plugins/house-rules/scripts/hook.py", 30, 5, [["Stage file location and the refusal to edit it", 30, 5]]], ["claude-house-rules/plugins/house-rules/scripts/verify.py", 40, 0, [["Survives a fresh clone; edits refused", 40, 0]]]]],
+    ["chg", "#266: reproduce and fix the edit that got through during QA", "Reproduce first, then fix the cause.", ["An Edit went through while every issue said needs review, and this feature was recorded as \"enforced\".", "The edit is refused in a replay, and the feature name is read in full."], "If the reproduction shows that the per-worktree stage file caused the leak, the fix already shipped in version 2.66.0 covers it, and this step only adds the test.", null,
+     [["claude-house-rules/plugins/house-rules/scripts/hook.py", 10, 3, [["The leak's cause and the feature-name parser", 10, 3]]], ["claude-house-rules/plugins/house-rules/scripts/verify.py", 30, 0, [["Replay of the QA edit; the name parse", 30, 0]]]]],
+    ["chg", "#267: a pull request opening starts QA", "The PostToolUse part sees a pull request created during Build.", ["Today, QA starts only when the issue labels are swapped to needs review.", "A successful gh pr create or create_pull_request starts it too."], "A failed creation, or one made outside Build, moves nothing.", null,
+     [["claude-house-rules/plugins/house-rules/scripts/hook.py", 25, 0, [["Pull request opening moves Build to QA", 25, 0]]], ["claude-house-rules/plugins/house-rules/scripts/verify.py", 40, 0, [["Both tools, a failure, and outside Build", 40, 0]]]]],
+    ["new", "#268: the page builder's QA mode", "A qa block in the content file turns it on.", null, "The builder runs git diff --numstat against the base branch, puts each file's real counts beside the plan's estimate, marks files the plan didn't name, refuses an empty unverified list, and writes the page's path into the stage file.",
+     ["QA pages are filled in by hand, counts included.", "A QA mode that counts from git and records the page.", "The numbers on a QA page always match git."],
+     [["claude-house-rules/plugins/house-rules/scripts/make_page.py", 70, 0, [["QA mode: git counts, unverified list, stage record", 70, 0]]], ["claude-house-rules/plugins/house-rules/scripts/verify.py", 50, 0, [["Counts match git; refusals; qa_page written", 50, 0]]]]],
+    ["new", "#269: the QA page checkpoint", "A sixth row in the checkpoint table.", null, "In QA, the first reply is sent back until the QA page is built and linked. Once a reply links it, later replies pass.",
+     ["Five checkpoints, none about QA.", "A qa page row that blocks once, then only reports.", "A build is never handed to you without its QA page."],
+     [["claude-house-rules/plugins/house-rules/scripts/hook.py", 35, 0, [["The qa page row and its rule text", 35, 0]]], ["claude-house-rules/plugins/house-rules/scripts/verify.py", 45, 0, [["Block, retry, linked, later reply, outside QA", 45, 0]]]]],
+    ["chg", "#270: the writing note asks for the corrected sentences only", "Two lines of wording.", ["Now both notes say to send the reply again.", "Both say to send only the corrected sentences."], "verify.py checks the new wording and the absence of the old.", null,
+     [["claude-house-rules/plugins/house-rules/scripts/hook.py", 2, 2, [["Writing note and checkpoint reason wording", 2, 2]]], ["claude-house-rules/plugins/house-rules/scripts/verify.py", 8, 0, [["Wording check", 8, 0]]]]],
+    ["chg", "#271: rule text, docs, version and a real run", "One rule line, the docs, and a version bump.", ["The rule says labels show whose move it is.", "It also says a build is handed over with a QA page from the page builder."], "The real run is a session that opens a pull request without a QA page, is sent back once, and then builds one.", null,
+     [["claude-house-rules/plugins/house-rules/rules/house-rules.md", 1, 0, [["One rule line", 1, 0]]], ["docs/4-systems/design-loop.md", 15, 10, [["What was built", 15, 10]]], ["docs/architecture.md", 3, 1, [["Hook table rows", 3, 1]]], ["claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json", 1, 1, [["Version", 1, 1]]]]]
+  ],
+  "choices": [
+    ["stage", "Where does the stage live so a new cloud session keeps it?", [
+      ["A", "A committed file on the branch, .claude/house-rules-loop.json, that only the hook may change", 1, "Travels with the branch, and Write or Edit of it is refused."],
+      ["B", "Stay in .git, and accept a restart at Design in each new cloud session", 0, "No change, and the lock is lost between sessions."],
+      ["C", "On GitHub, as a label on the feature's issue", 0, "The hook can't read GitHub in a cloud session, because the GitHub command-line tool (gh) is not logged in here."]
+    ], "A is the only option that survives a new container without GitHub access. The feature already lives on one branch, so the stage belongs with it."],
+    ["who", "Who builds the steps?", [
+      ["A", "@house-rules:builder helpers, one step at a time", 1, "Five of the seven steps change hook.py, so two helpers working at once would edit the same file."],
+      ["B", "I build them myself in this session", 0, "Faster to start, but the house rule says a settled plan goes to helpers."]
+    ], "The house rule hands each issue to a helper, and running them one after another keeps hook.py edits from overlapping."]
+  ],
+  "wrapup": {
+    "summary": "Seven sub-issues of issue #264 (Enforce the QA stage) that make the stage survive a new session, fix the QA leak, start QA on a pull request, add the QA mode and its checkpoint, fix the note's wording, and finish with the rule text and a real run.",
+    "changing": "scripts/hook.py, scripts/make_page.py, scripts/verify.py, rules/house-rules.md, docs/4-systems/design-loop.md, docs/architecture.md and the plugin version.",
+    "blocking": "Your approval of this plan and your answers to the two choices.",
+    "next": "Code opens for these steps only. Each step goes to a builder helper in the order above, and verify.py runs after each one.",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it (sending it approves the plan), or tell me what to change."
+    ]
+  }
+}
