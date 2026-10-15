@@ -2341,6 +2341,46 @@ def _only_git_statements(subject):
     return bool(stmts) and all(_ONLY_GIT_STMT_RE.match(x) for x in stmts)
 
 
+_NB_GIT_RE = re.compile(r"^\s*(cd\s+\S+\s*&&\s*)?" + _GIT + r"(commit|push)\b")
+_NB_BAD_RE = re.compile(r"(--force|--mirror|--all|--delete|--prune|(^|\s)-[A-Za-z]*[fd]\b|(^|\s):\S|(^|\s)\+\S)")
+
+
+def _never_blocked_git(subject, branch, where):
+    """Never-blocked list, case a: a routine git commit/push on the agent's own branch (an owned
+    prefix or a helper's worktree branch). Force, --all/--mirror, --delete and the default branch
+    are not routine, so they fall through to the normal guard. The design loop is not consulted here."""
+    if not branch or is_protected_branch(branch, where):
+        return False
+    if not branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+        return False
+    if not _only_git_statements(subject):
+        return False
+    stmts = [x for x in re.split(r"&&|\|\||;|\n", _decoded_command(subject)) if x.strip()]
+    for x in stmts:
+        if re.match(r"\s*cd\s", x):
+            continue
+        if not _NB_GIT_RE.match(x):
+            return False
+        if re.search(r"push\b", x) and _NB_BAD_RE.search(x.split("push", 1)[1]):
+            return False
+    return True
+
+
+def _never_blocked_own_file(file_path):
+    """Case c: a file the agent made itself. shortcut: no creation record exists in the hook, so
+    "untracked by git and inside the project root" stands in for it; upgrade by recording creates."""
+    try:
+        path = os.path.abspath(_guardwrite_resolve(file_path))
+        root = os.path.abspath(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if os.path.commonpath([path, root]) != root:
+            return False
+        rc, _o, _e = _ag(os.path.dirname(path), ["ls-files", "--error-unmatch", path], check=False)
+        return rc != 0 and os.path.isfile(path)
+    except (OSError, ValueError) as exc:
+        sys.stderr.write("house-rules guardwrite: could not tell whether %s is untracked (%s); the normal check applies.\n" % (file_path, exc))
+        return False
+
+
 def event_guard():
     try:
         payload = read_payload()
@@ -2453,6 +2493,14 @@ def event_guard():
             trace("%s - docs check could not tell: %s." % (allow_trace, docs_detail))
         else:
             trace_noop(allow_trace)
+        return 0
+
+    if known and not issue_hit and not outdated and _never_blocked_git(subject, branch, where):
+        # Never-blocked list: a routine commit/push on the agent's own branch is let through, silently.
+        out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
+        if docs_status == "needs-docs":
+            out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
+        emit(out)
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
@@ -2645,6 +2693,10 @@ def event_guardwrite():
     file_path = _extract_file_path(payload)
     if not file_path:
         trace("guardwrite: no file_path field found - nothing was checked for this call.")
+        return 0
+
+    if _never_blocked_own_file(file_path):
+        trace_noop("guardwrite: never-blocked list - %s is a file made here, untracked." % file_path)
         return 0
 
     resolved = _guardwrite_resolve(file_path)
@@ -4303,6 +4355,17 @@ def event_prompttimer():
         sys.stderr.write("house-rules prompttimer: %s is a question for aj, not a permission prompt; "
                          "no timer, it waits for the answer.\n" % tool_name)
         return 0
+    try:
+        if isinstance(tool_input, dict):
+            if tool_name in ("Edit", "Write") and isinstance(tool_input.get("file_path"), str) \
+                    and _never_blocked_own_file(tool_input["file_path"]):
+                return 0
+            if tool_name == "Bash" and isinstance(tool_input.get("command"), str):
+                _m, _b, _n = branch_ownership(None)
+                if _never_blocked_git(tool_input["command"], _b, None):
+                    return 0
+    except Exception as exc:
+        sys.stderr.write("house-rules prompttimer: never-blocked check failed (%s); timer applies.\n" % exc)
     key = _waiting_key(tool_name, tool_input)
     summary = _waiting_summary(tool_name, tool_input)
     path, in_repo = _waiting_path(session_id)

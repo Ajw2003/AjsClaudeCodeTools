@@ -845,6 +845,7 @@ _ua_sub_off = _ua_guard("verify-ua-sub-off", {"agent_id": "a1"}, {"HOUSE_RULES_P
 _ua_sub_commit = _ua_guard("verify-ua-sub-c", {"agent_id": "a1"}, tool_input={"command": "git commit -m x"})
 with open(os.path.join(_ua_dir, "kept.txt"), "w", encoding="utf-8") as _f:
     _f.write("a\nb\n")
+subprocess.run(["git", "-C", _ua_dir, "add", "kept.txt"], check=True)
 _ua_sub_write = _ua_guard("verify-ua-sub-w", {"agent_id": "a1"}, tool="Write",
                           tool_input={"file_path": os.path.join(_ua_dir, "kept.txt"), "content": "c\n"})
 _ua_case_ok = (_ua_dec(_ua_sub) == "deny" and "inside a helper (subagent)" in _ua_sub
@@ -6310,6 +6311,7 @@ _gw_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "t
                           "cwd": _pt_repo})
 with open(os.path.join(_pt_repo, "existing.txt"), "w") as _f:
     _f.write("a\nb\n")
+subprocess.run(["git", "-C", _pt_repo, "add", "existing.txt"], check=True)
 _gline = "refused (never approved) and added to the waiting-on-you list."
 _ge = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="300")
 _geoff = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="off")
@@ -9376,6 +9378,43 @@ _pc_cases.append(("a payload with no tool_input fails open with a note",
 for _t, _ok in _pc_cases:
     report("PASS" if _ok else "FAIL", "pagecheck: " + _t)
 shutil.rmtree(_pc_tmp, True)
+
+# ---- never-blocked list (#289): own-branch commits, make_page pages, own files go through ----
+def _nb_bash(repo, cmd):
+    pl = json.dumps({"session_id": "verify", "cwd": repo, "tool_name": "Bash", "tool_input": {"command": cmd}})
+    return run_hook("guard", pl, env=_project_env(repo))[1]
+
+
+def _nb_refused(out):
+    return '"permissionDecision":"ask"' in out or '"permissionDecision":"deny"' in out
+
+
+_nb_r = _commit_repo("AjsAgent/topic", committed=["a.py"])
+_nb_h = _commit_repo("worktree-agent-abc123", committed=["a.py"])
+_nb_cases = [
+    ("git commit on an AjsAgent/ branch goes through with no prompt",
+     not _nb_refused(_nb_bash(_nb_r, 'git commit -m "x"'))),
+    ("git push on a helper's worktree branch goes through with no prompt",
+     not _nb_refused(_nb_bash(_nb_h, "git push origin worktree-agent-abc123"))),
+    ("a force-push on an AjsAgent/ branch is NOT let through by the never-blocked list",
+     _nb_refused(_nb_bash(_nb_r, "git push --force origin AjsAgent/topic"))),
+]
+_nb_new = os.path.join(_nb_r, "mine.py")
+with open(_nb_new, "w", encoding="utf-8") as f:
+    f.write("print(1)\n")
+_nb_old = os.path.join(_nb_r, "a.py")
+_, _o, _ = run_hook("guardwrite", guardwrite_payload(_nb_new), env=_project_env(_nb_r))
+_nb_cases.append(("Write over an untracked file made in the project goes through with no prompt", _o == ""))
+_, _o, _ = run_hook("guardwrite", guardwrite_payload(_nb_old), env=_project_env(_nb_r))
+_nb_cases.append(("Write over a tracked file still asks", '"permissionDecision":"ask"' in _o))
+_nb_pg = os.path.join(_nb_r, "built.html")
+with open(_nb_pg, "w", encoding="utf-8") as f:
+    f.write("<!doctype html>\n<!-- house-rules make_page 9.9.9 -->\n<html></html>\n")
+_nb_cases.append(("publishing a make_page.py page goes through with no prompt or refusal",
+                  run_hook("pagecheck", json.dumps({"tool_name": "Artifact", "tool_input": {"file_path": _nb_pg}}),
+                           env=dict(_project_env(_nb_r), HOUSE_RULES_LOOP="on"))[1] == ""))
+for _t, _ok in _nb_cases:
+    report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
 
 print()
 print("-" * 32)
