@@ -9,8 +9,8 @@ description: Triage a repo's open GitHub issues - find the ones already done on 
 
 # Issue triage
 
-The output is one page, `docs/plans/issue-triage-<YYYY-MM-DD>.md`, and nothing else until the
-user approves it. Closing, relabelling and creating issues all wait for that approval: closing
+The output is a write-up, `docs/plans/issue-triage-<YYYY-MM-DD>.md`, plus the proposal page built
+from it (`docs/plans/issue-triage-<YYYY-MM-DD>.html`), and nothing else until the user approves it. Closing, relabelling and creating issues all wait for that approval: closing
 an issue always asks, and the user tests first (house rule "A plan over three steps becomes
 issues").
 
