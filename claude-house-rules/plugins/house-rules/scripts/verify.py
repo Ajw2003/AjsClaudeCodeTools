@@ -9141,7 +9141,7 @@ def _mp_content(name, extra_changes=None, text="Plain.", approval="Build plan ap
             "wrapup": {"summary": "s", "changing": "c", "blocking": "b", "next": "n", "todo": ["t"]}}
     if approval is None:
         del page["approval"]
-    if choices:
+    if choices is not None:
         page["choices"] = choices
     path = os.path.join(_mp_tmp, name + ".page.json")
     with open(path, "w", encoding="utf-8") as f:
@@ -9351,7 +9351,7 @@ _mp_cases.append(("make_page: an approval the gate would not accept is refused w
 _ch = [["c1", "Which?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""]]
 _ph = "Build plan approved: guards <audit> & more"
 _rc1, _ = _mp("build", _mp_content("withch", approval=_ph, choices=_ch), "--project", _d)
-_rc2, _ = _mp("build", _mp_content("noch", approval=_ph), "--project", _d)
+_rc2, _ = _mp("build", _mp_content("noch", approval=_ph, choices=[]), "--project", _d)
 _pw = {n: _mp_page_of(os.path.join(_d, "docs", "plans", n + ".html")) for n in ("withch", "noch")} if _rc1 == _rc2 == 0 else {}
 _mp_cases.append(("make_page: the last to-do line carries the approval phrase, HTML-escaped",
                   bool(_pw) and all(pg["wrapup"]["todo"][-1] == 'Tap <b>Copy my reply</b> and send it: "Build plan approved: guards &lt;audit&gt; &amp; more", or say what to change.'
