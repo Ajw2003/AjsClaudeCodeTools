@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - QA failed: new item visual; redesign proposed
+
+**aj's QA.** "Before this design moves forward we need to fix the wording of the 3 new boxes… It does and you
+get are too rigid and don't always sound proper when reading the sentence." aj also wants to see which files
+were created or changed, and by how much, "only if I open the change". aj didn't type "QA failed", but the meaning
+is clear. #240-#243 are back to `in progress`, and the ambiguity check (proposed below) waits until this is done.
+
+**Redesign page:** `docs/plans/new-item-visual-v2.html`. It shows three wordings on the code lock: one sentence
+across the boxes with no labels (suggested), labels written per item, or fixed When / Then / So. It also shows a
+file list that appears only in an opened item: each file once, with its total, then each part in plain words
+with its own count. The code lock's numbers are real (`scripts/hook.py` +53 −1: +34, +10, +9 −1). They come from a
+script that gives each diff line to the function around it, and it matches git's own total for the file
+(+616 −32). Known wrinkle for the build: a comment just above a function is counted with the function before it.
+
+---
+
 ## 2026-10-15 - Design proposed: ambiguity check
 
 **Status.** Proposed; waiting on "Design approved: ambiguity check".
