@@ -158,7 +158,8 @@ a feature name stops before a pasted page reply's answer codes (#243).
 redesign waits behind the clear writing check (#245), plugin 2.65.0, now built and waiting on aj's QA. One rule,
 `rules/clear-writing.md`, loads beside Show, don't tell; the shared checker `scripts/clarity.py` reads replies,
 pages and issues; issues missing their three sections are refused; `agents/editor.md` (Sonnet) rewrites pages and
-long replies, with a reminder when it didn't run. `verify.py` 683 PASS. System doc: `docs/4-systems/clear-writing.md`.
+long replies, with a reminder when it didn't run. `verify.py` 684 PASS. System doc: `docs/4-systems/clear-writing.md`.
+QA passed (aj, 2026-10-15).
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

@@ -7,6 +7,13 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - QA passed: clear writing check
+
+aj: "QA passed: clear writing check". Its issues (#245-#250) stay `needs review` until aj closes them. Next, the
+new item visual resumes: its v2 redesign is waiting on aj's pick between the two readings of the box labels.
+
+---
+
 ## 2026-10-15 - Clear writing check built (2.65.0); handed to aj for QA
 
 **Built** across #246-#250, from `3b95462^` to this commit: 5 files created, 15 changed and 1 deleted. `verify.py`
