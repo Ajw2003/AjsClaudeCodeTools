@@ -1,1 +1,89 @@
-{"feature": "guards audit", "stage": "build", "skip": false, "approvals": [{"stage": "Design approved", "name": "guards audit", "at": 1792099612}, {"stage": "Build plan approved", "name": "guard audit", "at": 1792100993}], "log_mark": "9622f3bb85cb77f28485b561547dc54767753a4d56c53b6615fa20959641a13e", "redo": false, "issues": [{"repo": "Ajw2003/AjsClaudeCodeTools", "number": 289, "labelled": true}, {"repo": "Ajw2003/AjsClaudeCodeTools", "number": 290, "labelled": true}, {"repo": "Ajw2003/AjsClaudeCodeTools", "number": 291, "labelled": true}, {"repo": "Ajw2003/AjsClaudeCodeTools", "number": 292, "labelled": true}, {"repo": "Ajw2003/AjsClaudeCodeTools", "number": 293, "labelled": true}], "labels": {"Ajw2003/AjsClaudeCodeTools#289": ["AjsAgent created this", "bug", "in progress"], "Ajw2003/AjsClaudeCodeTools#290": ["AjsAgent created this", "bug", "in progress"], "Ajw2003/AjsClaudeCodeTools#291": ["AjsAgent created this", "bug", "in progress"], "Ajw2003/AjsClaudeCodeTools#292": ["AjsAgent created this", "bug", "in progress"], "Ajw2003/AjsClaudeCodeTools#293": ["AjsAgent created this", "bug", "in progress"], "Ajw2003/AjsClaudeCodeTools#286": ["AjsAgent created this", "bug", "in progress"], "Ajw2003/AjsClaudeCodeTools#287": ["AjsAgent created this", "enhancement", "in progress"], "Ajw2003/AjsClaudeCodeTools#288": ["AjsAgent created this", "bug", "in progress"]}}
+{
+  "feature": "guards audit",
+  "stage": "build",
+  "skip": false,
+  "approvals": [
+    {
+      "stage": "Design approved",
+      "name": "guards audit",
+      "at": 1792099612
+    },
+    {
+      "stage": "Build plan approved",
+      "name": "guard audit",
+      "at": 1792100993
+    }
+  ],
+  "log_mark": "9622f3bb85cb77f28485b561547dc54767753a4d56c53b6615fa20959641a13e",
+  "redo": false,
+  "issues": [
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 289,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 290,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 291,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 292,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 293,
+      "labelled": true
+    }
+  ],
+  "labels": {
+    "Ajw2003/AjsClaudeCodeTools#289": [
+      "AjsAgent created this",
+      "bug",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#290": [
+      "AjsAgent created this",
+      "bug",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#291": [
+      "AjsAgent created this",
+      "bug",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#292": [
+      "AjsAgent created this",
+      "bug",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#293": [
+      "AjsAgent created this",
+      "bug",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#286": [
+      "AjsAgent created this",
+      "bug",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#287": [
+      "AjsAgent created this",
+      "enhancement",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#288": [
+      "AjsAgent created this",
+      "bug",
+      "in progress"
+    ]
+  },
+  "qa_page": "../../../tmp/claude-0/-home-user-AjsClaudeCodeTools/3911354a-d742-579e-bcda-3cee95f5b96d/scratchpad/mp/x.html"
+}
