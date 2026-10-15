@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Build plan approved: handover pages and checkpoints
+
+**Status.** Approved: "Build plan approved: handover pages and checkpoints: 1B 2A 3A". The answers:
+- **Install for the plunderspell test (1B):** the fresh session installs house-rules from this branch before
+  it is merged.
+- **Helper-report fix (2A):** in this build, as #253.
+- **No browser (3A):** the builder writes the page and says the visual check didn't run, and why.
+
+**Added by aj with the approval:** study PlunderSpell's style guide to decide what `docs/page-style.json`
+holds. aj expects fonts and icons, and possibly more. When a project has no style file, the session offers
+two options: create one, or use the defaults for speed. The style file's contents come back to aj as a
+proposal page before #255 (style file and page builder) is built. #253 (helper reports) and #254 (template
+picture slots) don't depend on it and start now.
+
 ## 2026-10-15 - Design approved: handover pages and checkpoints
 
 **Status.** Approved: "Design approved: handover pages and checkpoints: 1A 2A 3A 4A 5A 6A 7B 8A". The answers:
