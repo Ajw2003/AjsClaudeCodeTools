@@ -7327,18 +7327,26 @@ def _check_page_saved(ctx):
 _QA_ARTIFACT_RE = re.compile(r"https://claude\.ai/artifact/\S+|claude\.ai/code/artifact/\S+", re.IGNORECASE)
 
 
+def _record_qa_link(ctx):
+    """True (and qa_page_linked recorded) when the reply links the QA page. Also used on a retry."""
+    page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
+    if not (page and (page in reply or os.path.basename(page) in reply or _QA_ARTIFACT_RE.search(reply))):
+        return False
+    state, problem = _loop_read(ctx["qa_git_dir"])
+    if problem:
+        raise OSError(problem)
+    state["qa_page_linked"] = True
+    _loop_write(ctx["qa_git_dir"], state)
+    return True
+
+
 def _check_qa_page(ctx):
     """#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not
     skipped by "no page": a QA page is mandatory."""
     if ctx.get("qa_stage") != "qa" or ctx.get("qa_linked"):
         return ""
-    page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
-    if page and (page in reply or os.path.basename(page) in reply or _QA_ARTIFACT_RE.search(reply)):
-        state, problem = _loop_read(ctx["qa_git_dir"])
-        if problem:
-            raise OSError(problem)
-        state["qa_page_linked"] = True
-        _loop_write(ctx["qa_git_dir"], state)
+    page = ctx.get("qa_page") or ""
+    if _record_qa_link(ctx):
         return ""
     missing = "the QA page is built but not linked in the reply" if page else "no QA page is built yet"
     return ("%s: build it with `python3 %s build docs/plans/<name>-qa.page.json`, where the content file has a "
@@ -7575,6 +7583,20 @@ def event_handover():
         except Exception as exc:
             trace_lines.append("house-rules: the checkpoint table hit an error (%s: %s), so this reply was "
                                "not blocked." % (type(exc).__name__, exc))
+    else:
+        # #269: a QA page linked only in the retry reply is still recorded; the retry never blocks.
+        try:
+            _top, _gd = _issues_locate(_payload_cwd(payload))
+            if _gd:
+                _st, _pr = _loop_read(_gd)
+                if _pr:
+                    raise OSError(_pr)
+                if _st.get("stage") == "qa" and _st.get("qa_page") and not _st.get("qa_page_linked"):
+                    _record_qa_link({"reply": reply_text if vm is not None else "",
+                                     "qa_page": _st.get("qa_page"), "qa_git_dir": _gd})
+        except Exception as exc:
+            trace_lines.append("house-rules: the QA page link could not be recorded on the retry (%s: %s)."
+                               % (type(exc).__name__, exc))
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed

@@ -9068,6 +9068,14 @@ _ck_cases.append(("qa page: a later reply without the link passes", not _ck_b))
 _ck_stage("qa", qa_page=_ck_qa_page)
 _ck_b, _, _ = _ck_run(_ck_t_plain, "Here: https://claude.ai/artifact/abc123")
 _ck_cases.append(("qa page: a claude.ai artifact link passes", not _ck_b))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page, active=True)
+_ck_cases.append(("qa page: a retry reply linking the page does not block and records it",
+                  not _ck_b and json.load(open(_ck_sf, encoding="utf-8")).get("qa_page_linked") is True))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.", active=True)
+_ck_cases.append(("qa page: a retry reply without the link does not block and records nothing",
+                  not _ck_b and "qa_page_linked" not in json.load(open(_ck_sf, encoding="utf-8"))))
 for _st in ("build", "design"):
     _ck_stage(_st)
     _ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")
