@@ -8808,6 +8808,85 @@ _loop_cases.append(("the rule names the template and its four parts",
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
+# --- label setup: create only the missing house labels (#275) ---------------------------------
+import labels as _lb
+_lb_dir = tempfile.mkdtemp(prefix="house-rules-labels-", dir=_FIXTURE_ROOT)
+_lb_file = os.path.join(_lb_dir, "labels.json")
+_lb_repo = "owner/repo"
+_lb_house = [l[0] for l in _lb.HOUSE_LABELS]
+_lb_cases = []
+
+
+def _lb_run(initial):
+    """Run ensure_labels against the stand-in file; (result, file contents after)."""
+    if initial is not None:
+        with open(_lb_file, "w", encoding="utf-8") as f:
+            f.write(initial)
+    elif os.path.exists(_lb_file):
+        os.remove(_lb_file)
+    os.environ[_lb.REPO_LABELS_FILE_ENV] = _lb_file
+    try:
+        res = _lb.ensure_labels(_lb_repo)
+    finally:
+        del os.environ[_lb.REPO_LABELS_FILE_ENV]
+    after = open(_lb_file, encoding="utf-8").read() if os.path.exists(_lb_file) else None
+    return res, after
+
+
+_r, _a = _lb_run("{}")
+_lb_cases.append(("all three missing: all three created and written to the file",
+                  _r["created"] == _lb_house and not _r["present"] and json.loads(_a)[_lb_repo] == _lb_house))
+_r, _a = _lb_run(json.dumps({_lb_repo: ["bug", "in progress", "needs review"]}))
+_lb_cases.append(("one missing: only it is created", _r["created"] == ["AjsAgent created this"]
+                  and sorted(_r["present"]) == ["in progress", "needs review"]))
+_lb_all = json.dumps({_lb_repo: ["bug"] + _lb_house}, indent=3)
+_r, _a = _lb_run(_lb_all)
+_lb_cases.append(("all present: nothing created and the file is unchanged byte for byte",
+                  not _r["created"] and not _r["failed"] and not _r["error"] and _a == _lb_all
+                  and _lb.summary_note(_r, _lb_repo) == ""))
+_r, _a = _lb_run(json.dumps({_lb_repo: ["In Progress", "needs review", "AjsAgent created this"]}))
+_lb_cases.append(("a label in a different case counts as present, not created",
+                  not _r["created"] and "in progress" in _r["present"]))
+_r, _a = _lb_run(None)
+_lb_cases.append(("stand-in file missing: error set, nothing raised, the note names the failure",
+                  bool(_r["error"]) and not _r["created"] and _r["error"] in _lb.summary_note(_r, _lb_repo)
+                  and "could not check" in _lb.summary_note(_r, _lb_repo)))
+_lb_empty = tempfile.mkdtemp(prefix="house-rules-nogh-", dir=_FIXTURE_ROOT)
+_lb_env = {k: v for k, v in os.environ.items() if k != _lb.REPO_LABELS_FILE_ENV}
+_lb_env["PATH"] = _lb_empty
+_lb_p = subprocess.run([sys.executable, "-c",
+                        "import sys,json; sys.path.insert(0, %r); import labels; "
+                        "print(json.dumps(labels.ensure_labels('owner/repo')))" % HERE],
+                       capture_output=True, text=True, env=_lb_env)
+try:
+    _lb_gh = json.loads(_lb_p.stdout)["error"]
+except (ValueError, KeyError):
+    _lb_gh = ""
+_lb_cases.append(("no stand-in and gh not on PATH: error says gh is not installed", "gh is not installed" in _lb_gh))
+_lb_cfg = os.path.join(_lb_dir, "gitdir")
+os.makedirs(_lb_cfg, exist_ok=True)
+
+
+def _lb_repo_for(url):
+    with open(os.path.join(_lb_cfg, "config"), "w", encoding="utf-8") as f:
+        f.write('[remote "origin"]\n\turl = %s\n' % url)
+    return _lb.repo_from_git(_lb_cfg)
+
+
+_lb_cases.append(("repo_from_git reads https, ssh and cloud-proxy URLs",
+                  _lb_repo_for("https://github.com/o/r.git")[0] == "o/r"
+                  and _lb_repo_for("https://github.com/o/r")[0] == "o/r"
+                  and _lb_repo_for("git@github.com:o/r.git")[0] == "o/r"
+                  and _lb_repo_for("http://local_proxy@127.0.0.1:1234/git/o/r")[0] == "o/r"))
+_lb_nr = _lb_repo_for("https://gitlab.com/o/r.git")
+_lb_cases.append(("repo_from_git gives None and a note for a non-GitHub URL", _lb_nr[0] is None and bool(_lb_nr[1])))
+_lb_src = open(os.path.join(HERE, "labels.py"), encoding="utf-8").read()
+_lb_cases.append(("labels.py has no --force, -X DELETE, PATCH or label edit",
+                  not any(w in _lb_src for w in ("--" + "force", "-X " + "DELETE", "PA" + "TCH", "label " + "edit"))))
+
+for _t, _ok in _lb_cases:
+    report("PASS" if _ok else "FAIL", "label setup: " + _t)
+
 # --- the clear writing check: the shared checker and where it runs (#247, #248) -----------------
 import clarity as _cw
 _cw_cases = []
