@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Before the pull request: guards must not stall an approved, autonomous build
+
+**Context.** A routine commit of finished, tested work on this session's own branch was refused while aj was
+away. The guard couldn't follow `git -C $G`, and its rule then said not to retry, which stopped the build until
+aj came back. aj: "a routine commit should never ever be something that kills a loop and requires my
+intervention… gates that enforce certain stages of planning vs execution and that the autonomous ones can run
+autonomously without intervention unless required."
+
+**Decision.** Finish the eight steps of #251 first. Then, before the pull request, audit every guard or hook
+refusal of an approved, routine action in this session, and fix them so none recurs. The fixes go to aj as a
+proposal page first, because what a guard allows is a design call. The audit list is
+`docs/guard-friction-audit-2026-10-15.md`.
+
 ## 2026-10-15 - Project style file: aj's answers
 
 **Status.** Answered: "Style file answers: 1A 2A 3A 4A 5A", on `docs/plans/project-style-file.html`. #255 is built

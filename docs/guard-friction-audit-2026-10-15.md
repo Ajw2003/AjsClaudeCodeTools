@@ -1,0 +1,24 @@
+# Audit: guards that stopped approved, routine work (2026-10-15)
+
+Status: **collecting.** This lists each time a guard or hook stopped an action this session that was already
+approved and routine. Every entry is quoted from the session. The fixes come to aj as a proposal page before the
+#251 pull request (decision logged 2026-10-15, "Before the pull request: guards must not stall an approved,
+autonomous build").
+
+| # | What was stopped | Where | Message (quoted) | Why it was wrong |
+|---|---|---|---|---|
+| 1 | Committing and pushing finished, tested work on this session's own branch | main session | "This command names another repo (--git-dir, or a cd / -C I could not follow)… Refused, not asked: aj has not written for 8 minutes… Do not retry this action, or reach the same result another way." | `git -C $G`, where `$G` was the repo itself. A guard that can't resolve a path refuses outright instead of resolving it. The "do not retry" rule then stopped the build until aj returned. |
+| 2 | A builder helper committing its own finished step | subagent, main checkout | Helper's report: the guard refuses `git -C <path> commit` from a subagent ("names another repo", no one to ask). | Same cause as 1. A helper can never be asked, so this always stalls. |
+| 3 | A builder helper's commit preceded by `cd` | subagent | Helper's report: the guard "refused a command starting with `cd`". | `cd <repo> && git commit` into the same repo is routine. |
+| 4 | Every code edit by two builder helpers in their own git worktrees, during an approved Build stage | subagents, worktrees | "design loop: code edits are closed in the Design stage" | The loop state lives in each worktree's own git folder, so a worktree reads Design. Filed as a suggested task, "Fix design loop lock inside git worktrees". |
+| 5 | Stopping my own stalled screenshot script while aj was away | main session | "Refused, not asked: aj has not written for 7 minutes… Do not retry this action" | A `kill` of a process this session started, matched by the destructive-action rule. Harmless here, since the script ended on its own. |
+| 6 | A builder helper editing its own new file with a Bash Python script | subagent | Waiting-on-you entry for "python3 - <<'E' p='make_page.py'…" | Partly right: code edits through Bash do bypass the code lock (see 4). The helper should have used the Edit tool. |
+
+## Not friction: these worked as intended
+
+- The commit hook refusing a `Co-Authored-By: Claude` trailer and an author of `Claude <noreply@anthropic.com>`. That's aj's attribution rule.
+- The design loop ignoring helper reports. This was the #253 fix, built today.
+
+## Still to add
+
+Refusals that the remaining #251 steps hit will be appended here, as each builder reports them.
