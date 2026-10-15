@@ -7,6 +7,33 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Guards audit: the design aj approved
+
+**Context.** Issue #285 (Guards block only unrecoverable actions). The audit page is
+`docs/plans/guards-audit.html`, built from `docs/plans/guards-audit.page.json`. aj's test: a guard stops me only
+for data loss with no way back, or for a change to someone else's work.
+
+**Decision.** aj approved the audit's ten cards:
+- **Never blocked:** routine commits and pushes on an `AjsAgent/` or helper working-copy branch, publishing a
+  page built by `make_page.py`, and edits to files I created inside the folder I was given. Checked before every
+  guard, the page check and the prompt timer.
+- **Refuse, with the safe way named:** nine destructive actions (push or commit to `main`; commit, merge,
+  rebase, cherry-pick, revert, am or apply on a branch not confirmed mine; force-push or `--all`/`--mirror`;
+  branch deletes; `git clean`; `filter-branch`; reset, `checkout --` or restore over uncommitted work; stash
+  drop or clear; truncating a file). aj is asked only when no safe way exists and a source proving it is cited.
+- **Deletes narrowed:** refused only when recursive, or when the file has uncommitted changes or was never
+  committed; the refusal names `_to_delete/`.
+- **Dropped:** the background-work guard (nohup, trailing `&`, Start-Process, background jobs, tail or head on a
+  wait, process kills) and the "Never hide work" rule with its 5-minute stall-check reminder.
+- **Enforced with the fix named:** a page not built by `make_page.py`, a Claude credit or `claude/` branch on
+  GitHub, an issue missing sections, a third helper or a helper's own helper, and a whole-file overwrite of a
+  file I did not create.
+- **Prompt timer:** each prompt waits on its own; no chain of refusals after one unanswered prompt.
+- **Copy box (#286), agent name (#287), phone check (#288):** as on the page's cards.
+- **Kept:** the design-loop lock stays blocking (aj's pick, 15 October, 15:04).
+
+**Status.** Standing.
+
 ## 2026-10-15 - QA passed: enforced QA stage
 
 **Context.** QA page `docs/plans/qa-stage-qa.html`, built by `make_page.py`'s new QA mode. All seven sub-issues of
