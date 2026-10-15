@@ -17,7 +17,7 @@ exact-input and ask-when-unclear lines, and the plain-docs writing limits.
 | Replies | `handover` (Stop), `_writing_findings`, `_writing_note` | One note listing every finding, with the not-checked and long-reply notes folded in. |
 | Pages | `artifact` (PostToolUse), `_page_writing_note` | A write to `docs/plans/*.html` runs the checker on what a reader sees: the visible text and a template page's PAGE strings. |
 | Issues | `guard` (`gh issue create`), `guardgithub` (`issue_write` create) | Refused without "Depends on", "Depended on by" and "Done when". |
-| Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page or a long reply. The end-of-reply check reminds me when a page was written, or a reply ran over 200 words, and no editor ran. |
+| Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page or a long reply. The end-of-reply check reminds me when a page was written, or a reply ran to 160 words or more, and no editor ran. |
 
 `HOUSE_RULES_CLEAR_WRITING=off` turns off the reply note, the page check, the issue check and the
 editor reminder. The not-checked disclosure stays on: it belongs to Evidence before claims.

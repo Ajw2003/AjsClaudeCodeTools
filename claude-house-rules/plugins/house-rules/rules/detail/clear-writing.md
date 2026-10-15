@@ -163,6 +163,6 @@ The plain-docs skill writes plain copies of the docs; on top of this rule they h
 - **Issues** missing "Depends on", "Depended on by" or "Done when" are refused when created.
 - **The editor helper** (`@house-rules:editor`, Sonnet) reads a page or a long reply and returns
   rewrites for anything that does not read as proper English. The end-of-reply check reminds me
-  when a turn wrote a page, or a reply ran over 200 words, and no editor helper ran.
+  when a turn wrote a page, or a reply ran to 160 words or more, and no editor helper ran.
 - A pattern cannot judge grammar or tone, which is why the editor exists; it cannot judge whether a
   request is clear either, which is why the design loop's code lock stays the real check on that.

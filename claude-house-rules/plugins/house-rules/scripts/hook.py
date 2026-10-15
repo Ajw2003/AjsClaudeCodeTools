@@ -7066,9 +7066,10 @@ def _plain_summary_problems(reply):
     return problems
 
 
-# #226: a reply over LONG_REPLY_WORDS words that links no page or picture gets a reminder to move
-# the detail onto a page and end on one question. Code blocks are not counted as words.
-LONG_REPLY_WORDS = 200
+# #226: a reply of LONG_REPLY_WORDS words or more that links no page or picture gets a reminder to
+# move the detail onto a page and end on one question. Code blocks are not counted as words.
+# #282: the threshold is 160 words or more (it was over 200).
+LONG_REPLY_WORDS = 160
 _PAGE_LINK_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(|\.html\b", re.IGNORECASE)
 _MD_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
 _WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'\u2019-]*")
@@ -7079,12 +7080,12 @@ def _long_reply_words(reply):
     if not reply or _PAGE_LINK_RE.search(reply):
         return 0
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply)))
-    return words if words > LONG_REPLY_WORDS else 0
+    return words if words >= LONG_REPLY_WORDS else 0
 
 
 def _long_reply_note(words):
     return (
-        "House rules, show don't tell: this reply is %d words and links no page or picture. Over %d words, "
+        "House rules, show don't tell: this reply is %d words and links no page or picture. At %d words or more, "
         "the detail belongs on a page: move it there, keep the reply to a plain summary, the link, and "
         "numbered steps for what aj needs to do, and end on one question or next step." % (words, LONG_REPLY_WORDS)
     )
@@ -7128,8 +7129,24 @@ def _pages_changed_this_turn(transcript_path, cwd):
         since = datetime.datetime.fromisoformat(str(stamp).replace("Z", "+00:00")).timestamp()
     except ValueError as exc:
         return [], "house-rules: could not read aj's message time (%s), so pages written by a shell command were not checked." % exc
-    return sorted(os.path.join(plans, n) for n in os.listdir(plans)
-                  if n.lower().endswith((".html", ".htm")) and os.path.getmtime(os.path.join(plans, n)) >= since), None
+    pages = [n for n in os.listdir(plans) if n.lower().endswith((".html", ".htm"))]
+    if _common_git_dir(top):
+        # #284: a clone, checkout or merge sets every file's time, so in a repository a page counts only
+        # when git shows it new, edited, or in a commit made since aj's message.
+        try:
+            _rc, status, _e = _ag(top, ["status", "--porcelain", "--untracked-files=all", "--", "docs/plans"])
+            rc, log, err = _ag(top, ["log", "--since=@%d" % int(since), "--no-merges", "--name-only",
+                                     "--format=", "--", "docs/plans"], check=False)
+            if rc != 0:
+                if "does not have any commits" not in err:  # a new repository has no log yet; status covers it
+                    raise RuntimeError("git log failed: %s" % (err or "exit %d" % rc))
+                log = ""
+        except RuntimeError as exc:
+            return [], "house-rules: git could not list this turn's pages (%s), so they were not checked." % exc
+        touched = {os.path.basename(line[3:].strip().strip('"')) for line in status.splitlines() if len(line) > 3}
+        touched |= {os.path.basename(line.strip()) for line in log.splitlines() if line.strip()}
+        return sorted(os.path.join(plans, n) for n in pages if n in touched), None
+    return sorted(os.path.join(plans, n) for n in pages if os.path.getmtime(os.path.join(plans, n)) >= since), None
 
 
 def _editor_owed(written, tool_uses, reply):
@@ -7142,7 +7159,7 @@ def _editor_owed(written, tool_uses, reply):
     if pages:
         return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
-    if words > LONG_REPLY_WORDS:
+    if words >= LONG_REPLY_WORDS:
         return "this reply is %d words" % words
     return ""
 
@@ -7257,7 +7274,7 @@ def _check_page(ctx):
         return ""
     if ctx.get("long_words") or _offers_choices(reply):
         return ("put the detail on a page: write a content.json, run `python3 %s build <content.json>` "
-                "and link the page it makes in the reply, or say \"no page\" in your next message to skip it"
+                "and link the page it makes in the reply"
                 % os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_page.py"))
     return ""
 
@@ -7426,7 +7443,7 @@ CHECKPOINTS = [
 
 CHECKPOINT_RULES = {
     "page built": "A handover page is built by make_page.py, never typed by hand.",
-    "page": "A reply that offers choices, lays out a plan, or runs over %d words links a page." % LONG_REPLY_WORDS,
+    "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
     "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
@@ -7448,9 +7465,43 @@ def _checkpoint_reason(missed):
         len(missed), "" if len(missed) == 1 else "s")]
     for name, fix in missed:
         lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
-    lines.append("Fix these and send only what changed, not the whole reply again. This blocks once; the retry only reports. "
-                 "HOUSE_RULES_LOOP=off turns it off.")
+    lines.append("Fix these and send only what changed, not the whole reply again. A missing page blocks every retry "
+                 "until the reply links one; the other checks block once. HOUSE_RULES_LOOP=off turns it off.")
     return "\n".join(lines)
+
+
+# #283: the page checkpoint keeps blocking on the retry until the reply links a page. aj's pick on the
+# automatic-pages build plan: after PAGE_BLOCK_LIMIT blocks in a row the reply goes through with a note,
+# so a broken page builder can't loop a session with nobody watching.
+PAGE_BLOCK_LIMIT = 3
+PAGE_BLOCKS_FILE = "page-blocks.json"
+
+
+def _page_blocks_path(cwd, session_id):
+    """In the common git directory, so worktrees share it; outside a repository, a session-keyed temp file."""
+    cd = _common_git_dir(cwd)
+    if cd:
+        return os.path.join(cd, "house-rules", PAGE_BLOCKS_FILE)
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-page-blocks-%s.json" % safe)
+
+
+def _page_blocks(path, session_id, mark, change=None):
+    """Page blocks in a row for this session since aj's message `mark` (a new message starts again at 0).
+    change "bump" adds one block, "clear" resets the count; either saves the file. Raises OSError or
+    ValueError when the file can't be read or written, and the caller reports it."""
+    data = json.loads(_read_text(path)) if os.path.isfile(path) else {}
+    if not isinstance(data, dict):
+        raise ValueError("%s is not a JSON object" % path)
+    entry = data.get(session_id) if isinstance(data.get(session_id), dict) else {}
+    count = entry.get("count", 0) if entry.get("mark") == mark else 0
+    if change:
+        count = count + 1 if change == "bump" else 0
+        data[session_id] = {"mark": mark, "count": count}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    return count
 
 
 def event_handover():
@@ -7612,7 +7663,32 @@ def event_handover():
     if writing_problem:
         trace_lines.append(writing_problem)
 
-    # #256: the checkpoint table. A miss blocks once; any error here fails open with a message.
+    # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
+    # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.
+    def _page_count(ctx, change=None):
+        mark = hashlib.sha1((ctx.get("user_text") or "").encode("utf-8")).hexdigest()[:16]
+        return _page_blocks(_page_blocks_path(_payload_cwd(payload), _field(_SESSION_ID_RE, payload) or ""),
+                            _field(_SESSION_ID_RE, payload) or "", mark, change)
+
+    if retry and _loop_enabled():
+        try:
+            pctx = {"reply": reply_text if vm is not None else "", "long_words": long_words,
+                    "user_text": _last_user_text(transcript_path) if transcript_path else ""}
+            fix = _check_page(pctx)
+            if not fix:
+                _page_count(pctx, "clear")
+            elif _page_count(pctx) < PAGE_BLOCK_LIMIT:
+                _page_count(pctx, "bump")
+                emit({"decision": "block", "reason": _checkpoint_reason([("page", fix)])})
+                return 0
+            else:
+                trace_lines.append(
+                    "house-rules: the page check blocked %d times in a row and this reply still links no page, "
+                    "so it went through without one. Say in the reply that no page could be made, and why."
+                    % PAGE_BLOCK_LIMIT)
+        except Exception as exc:
+            trace_lines.append("house-rules: the page checkpoint could not run on the retry (%s: %s), so this reply "
+                               "was not blocked." % (type(exc).__name__, exc))
     if not retry:
         try:
             ctx = {
@@ -7636,6 +7712,11 @@ def event_handover():
                 trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                    "so it is off for this reply." % (type(exc).__name__, exc))
             missed = _missed_checkpoints(ctx)
+            try:
+                _page_count(ctx, "bump" if any(name == "page" for name, _fix in missed) else "clear")
+            except (OSError, ValueError) as exc:
+                trace_lines.append("house-rules: the page block count could not be saved (%s: %s), so the retry "
+                                   "counts from zero." % (type(exc).__name__, exc))
             if missed:
                 emit({"decision": "block", "reason": _checkpoint_reason(missed)})
                 return 0

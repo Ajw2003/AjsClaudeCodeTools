@@ -336,7 +336,7 @@ _sdt_missing = [p for p in (
     "Every page is a proposal",
     "what the change merges, cuts or reuses",
     "one marked as my suggestion",
-    "over 200 words with no page",
+    "160 words or more needs a page",
     "A bare\n\"approved\" does not count",
     "rules/detail/show-dont-tell.md",
 ) if p not in (_ctx or "")]
@@ -3016,9 +3016,9 @@ pv_case("delegate: a port plan that carries its inventory does not", "carries no
 
 # --- plain summary first (#98) ------------------------------------------------------------
 _PS_PLAIN = ("The commit hooks are done and pushed. Claude now gets reminded to save its work, and "
-             "nothing is waiting on you.\n\n" + "More detail follows here. " * 40)
+             "nothing is waiting on you.\n\n" + "More detail follows here. " * 30)  # under 160 words, so the page rule (#282) stays out of it
 _PS_TECH = ("`hook.py`: added `_dirty_paths`, `_uncommitted_among`, `branch_ownership` and "
-            "`event_branchnudge`.\n\n" + "More detail follows here. " * 40)
+            "`event_branchnudge`.\n\n" + "More detail follows here. " * 30)
 _PS_WIDE = _PS_PLAIN + "\n\n| a | b | c | d |\n|---|---|---|---|\n| 1 | 2 | 3 | 4 |\n"
 _ps_wrote = _turn_transcript("ps-wrote", "add the commit hooks", [("Edit", "/proj/src/app.py")])
 _ps_read = _turn_transcript("ps-read", "what does this do?", [("Bash", "cat app.py")])
@@ -8815,12 +8815,15 @@ _loop_cases.append(('#266: "Build plan approved: enforced QA stage: 1A 2A" names
                     and _ig_mod._loop_name("blockers v2 Build plan: 1A 2A") == "blockers v2"))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):
-    # The retry (#256): the first pass of a missed page rule blocks; the note is what the retry reports.
+    # Held for a page: since #283 the retry keeps blocking on the page rule (up to the limit), and past
+    # the limit it reports the long-reply note. Either one means the reply was held for a page.
     _, out, _ = run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir,
-                                                  stop_hook_active=True), env=_loop_env)
-    return "show don't tell: this reply is" in out
+                                                  stop_hook_active=True, session_id="verify-long"), env=_loop_env)
+    return "show don't tell: this reply is" in out or "- page:" in out
 
 
+_loop_cases.append(("a 160-word reply with no page link is held for a page (#282)", _long_reply(" ".join(["word"] * 160))))
+_loop_cases.append(("a 159-word reply is not (#282)", not _long_reply(" ".join(["word"] * 159))))
 _words250 = " ".join(["word"] * 250)
 _loop_cases.append(("a 250-word reply with no page link gets the reminder", _long_reply(_words250)))
 _loop_cases.append(("a 250-word reply that links a page does not",
@@ -9055,8 +9058,8 @@ _cw_cases.append(("editor: writing a page under docs/plans with no editor run ge
                   "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
 _cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
                   "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
-_cw_cases.append(("editor: a reply over 200 words with no editor run gets the reminder; a short one does not",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ".")
+_cw_cases.append(("editor: a reply of 160 words or more with no editor run gets the reminder; a short one does not",
+                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ". https://claude.ai/artifact/abc")
                   and "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, "Done.")))
 
 # A page written by a shell command never passes the Write hook (found in the real run, #250).
@@ -9070,6 +9073,35 @@ _cw_t_shell = _hand_transcript("cw-shell", [
 _cw_shell_out = _cw_editor(_cw_t_shell)
 _cw_cases.append(("page: a page written by a shell command is checked at the end of the reply, editor reminder too",
                   "the page shellpage.html" in _cw_shell_out and "no @house-rules:editor helper ran" in _cw_shell_out))
+
+# #284: in a git repository a page counts as written only when git shows it new, edited, or committed
+# since aj's message; a cloned page has a fresh file time but an old commit, so it does not count.
+import importlib.util as _pc_util
+_pc_spec = _pc_util.spec_from_file_location("hook_for_page_scan", HOOK)
+_pc_hook = _pc_util.module_from_spec(_pc_spec)
+_pc_spec.loader.exec_module(_pc_hook)
+_pc_repo = tempfile.mkdtemp(prefix="hr-pagescan-")
+os.makedirs(os.path.join(_pc_repo, "docs", "plans"))
+for _n in ("cloned.html", "edited.html"):
+    with open(os.path.join(_pc_repo, "docs", "plans", _n), "w", encoding="utf-8") as _f:
+        _f.write("<p>old</p>\n")
+_pc_genv = dict(os.environ, GIT_AUTHOR_DATE="2000-01-01T00:00:00Z", GIT_COMMITTER_DATE="2000-01-01T00:00:00Z")
+for _a in (["init", "-q"], ["add", "."], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "old pages"]):
+    subprocess.run(["git"] + _a, cwd=_pc_repo, env=_pc_genv, capture_output=True)
+_pc_stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 60))
+for _n in ("cloned.html", "edited.html"):
+    os.utime(os.path.join(_pc_repo, "docs", "plans", _n), None)  # a clone or checkout sets a fresh file time
+with open(os.path.join(_pc_repo, "docs", "plans", "edited.html"), "a", encoding="utf-8") as _f:
+    _f.write("<p>new line</p>\n")
+with open(os.path.join(_pc_repo, "docs", "plans", "new.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>new</p>\n")
+_pc_t = _hand_transcript("pagescan", [json.dumps({"type": "user", "origin": {"kind": "human"}, "timestamp": _pc_stamp,
+                                                   "message": {"content": "make the page"}})])
+_pc_pages, _pc_problem = _pc_hook._pages_changed_this_turn(_pc_t, _pc_repo)
+_pc_names = sorted(os.path.basename(p) for p in _pc_pages)
+_cw_cases.append(("page scan: a cloned page with a fresh file time is not counted; edited and new pages are (#284)",
+                  _pc_problem is None and _pc_names == ["edited.html", "new.html"]))
+shutil.rmtree(_pc_repo, True)
 
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)
@@ -9110,9 +9142,26 @@ _ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
 # 1 page rule (long reply) - editor ran, so only the page rule is in play
 _ck_long = " ".join(["Words"] * 230) + "."
 _ck_t_ed_only = _hand_transcript("ck-ed-only", _ck_user("explain", [_CW_EDITOR]))
-_ck_triple("page", "page", _ck_t_ed_only, _ck_long, _ck_long + " https://claude.ai/artifact/abc")
-_, _ck_reason, _ = _ck_run(_ck_t_ed_only, _ck_long)
+_ck_b, _ck_reason, _ = _ck_run(_ck_t_ed_only, _ck_long)
+_ck_cases.append(("page: a miss blocks, naming the page rule", _ck_b and "- page:" in _ck_reason))
 _ck_cases.append(("page: the reason gives the exact build command", "make_page.py" in _ck_reason and "build <content.json>" in _ck_reason))
+_ck_cases.append(("page: the block never offers \"no page\" to the agent (#283)", "no page" not in _ck_reason.lower()))
+# #283: the retry keeps blocking until a page is linked, up to three blocks in a row, then reports.
+_ck_retry = [_ck_run(_ck_t_ed_only, _ck_long, active=True) for _ in range(3)]
+_ck_cases.append(("page: retries with no page keep blocking until three blocks in a row (#283)",
+                  [b for b, _r, _o in _ck_retry] == [True, True, False]
+                  and "blocked 3 times in a row" in _ck_retry[2][2]))
+_ck_cases.append(("page: a retry block never offers \"no page\" either (#283)", "no page" not in _ck_retry[0][1].lower()))
+_ck_b, _, _ = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc", active=True)
+_ck_cases.append(("page: a retry that links a page passes and resets the count", not _ck_b))
+_ck_b, _, _ = _ck_run(_ck_t_ed_only, _ck_long, active=True)
+_ck_cases.append(("page: after the reset, a retry with no page blocks again", _ck_b))
+_ck_t_nopage = _hand_transcript("ck-nopage", _ck_user("explain it, no page", [_CW_EDITOR]))
+_ck_b1, _, _ = _ck_run(_ck_t_nopage, _ck_long)
+_ck_b2, _, _ = _ck_run(_ck_t_nopage, _ck_long, active=True)
+_ck_cases.append(("page: aj's own \"no page\" lets the reply through, first pass and retry", not _ck_b1 and not _ck_b2))
+_ck_b, _, _ = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc")
+_ck_cases.append(("page: a compliant reply passes", not _ck_b))
 # 2 editor
 _ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
 # 3 evidence

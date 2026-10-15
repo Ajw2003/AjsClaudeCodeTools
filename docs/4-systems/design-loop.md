@@ -21,7 +21,7 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 | QA start and page | `autosave`, `make_page.py` QA mode, `handover` (`qa page` row) | A pull request opening during Build moves the stage to QA (#267); the QA page is built by the page builder and its path stored as `qa_page` (#268); a reply in QA is sent back once until that page is linked (#269). See below. |
 | Code lock | `commitgate` (PreToolUse), `_loop_gate` | Refuses Write/Edit/NotebookEdit of source files outside Build. `docs/`, `.claude/` and `.md` files stay open. Holds helpers' edits too. |
 | Helpers | `subagentrules` (SubagentStart), `_loop_helper_note` | A helper starts knowing the feature, stage and issues, and that it only builds approved steps. The "reads like a go-ahead" guess is off while the loop is on (#232). |
-| Long replies | `handover` (Stop), `_long_reply_words` | A reply over 200 words (code blocks not counted) with no page or picture link gets a reminder (#226). |
+| Long replies | `handover` (Stop), `_long_reply_words` | A reply of 160 words or more (code blocks not counted) with no page or picture link is blocked until it links one (#226, #282, #283). |
 | Page template | `templates/handover-page.html` | The approved four-part page, filled from one PAGE block; an empty part is left out (#233). A New item carries three labelled boxes (What exists today, What this creates, How it impacts you), and any item can carry a file list shown on open, each file once with its parts and line counts (#240, v2). |
 
 "I review" happens inside Build, because fixing what my own review finds is code. aj's review and
