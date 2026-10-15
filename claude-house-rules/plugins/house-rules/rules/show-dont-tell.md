@@ -18,7 +18,7 @@ act in each project. A missing page, editor pass, evidence, commit or plain summ
 once; "no page" in aj's message lets one reply through.
 
 A simple question gets a short answer. Each reply ends with one question or one next step; a
-reply over 200 words with no page gets a reminder.
+reply over 200 words with no page is sent back once (see above).
 
 Ideas come before code. Every session starts locked: a hook refuses source edits until the user
 types "approved" naming what was approved ("Idea A approved", "approved 1A 2C"). A bare
