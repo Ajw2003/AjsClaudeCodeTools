@@ -19,6 +19,11 @@ aj: "Design approved New item visual v2: 1A 2A 3A".
   I read it as stale. The build plan shows the box format exactly, so aj can correct this before anything is
   built.
 
+**Plan.** Sub-issues #241 (template: the labelled boxes and every item's file list) and #242 (rebuild the
+changes page for the whole pull request, with counts from git, and move the counting script into `tools/`)
+were rewritten for v2. #243, the name fix, is already built. Plan page: `docs/plans/new-item-visual-v2-plan.html`,
+listing 1 file created and 9 changed, with estimates marked. Waiting on "Build plan approved: new item visual".
+
 ---
 
 ## 2026-10-15 - QA passed: clear writing check
