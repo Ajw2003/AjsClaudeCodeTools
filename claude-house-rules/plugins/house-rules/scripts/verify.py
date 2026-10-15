@@ -8443,7 +8443,7 @@ def _loop_post(tool, tool_input, response):
 
 def _loop_state():
     try:
-        return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))
+        return json.load(open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 
@@ -8494,7 +8494,7 @@ def _loop_issue(number, labelled=True, via="mcp"):
 
 def _loop_stage():
     try:
-        return json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["stage"]
+        return json.load(open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))["stage"]
     except (OSError, ValueError, KeyError):
         return "design (no file)"
 
@@ -8611,7 +8611,7 @@ _loop_cases.append(("label check: then it moves to Plan and keeps the same issue
                     _loop_stage() == "plan" and len(_loop_state().get("issues", [])) == 3))
 _loop_log("v2 design"); _loop_say("Design approved: blockers v2. Reply in one sentence.")
 try:
-    _feat = json.load(open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), encoding="utf-8"))["feature"]
+    _feat = json.load(open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))["feature"]
 except (OSError, ValueError, KeyError):
     _feat = None
 _loop_cases.append(("the feature name stops at the end of its sentence (found in the real run)", _feat == "blockers v2"))
@@ -8630,7 +8630,8 @@ _loop_cases.append(("a helper's edit is held by the same lock",
 _loop_env["HOUSE_RULES_LOOP"] = "off"
 _loop_cases.append(("HOUSE_RULES_LOOP=off lifts the lock", _loop_edit("app.py") == "allow"))
 _loop_env["HOUSE_RULES_LOOP"] = "on"
-with open(os.path.join(_loop_dir, ".git", "house-rules-loop.json"), "w") as _f:
+os.makedirs(os.path.join(_loop_dir, ".claude"), exist_ok=True)
+with open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), "w") as _f:
     _f.write("{not json")
 _p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop", "cwd": _loop_dir,
       "tool_input": {"file_path": os.path.join(_loop_dir, "app.py")}}
@@ -8645,7 +8646,8 @@ for _a in (["init", "-q"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit
 
 
 def _wt_stage(stage):
-    with open(os.path.join(_wt_main, ".git", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+    os.makedirs(os.path.join(_wt_main, ".claude"), exist_ok=True)
+    with open(os.path.join(_wt_main, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
         json.dump({"feature": "f", "stage": stage, "skip": False, "approvals": []}, f)
 
 
@@ -8693,6 +8695,36 @@ for _t, _ok in (
          _wt_i[0] == "deny" and "Edit or Write tool" in _wt_i[1] and "retry" not in _wt_i[1].lower()),
         ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow"),
         ("HOUSE_RULES_LOOP=off leaves script writes alone", "deny" not in _wt_o)):
+    _loop_cases.append((_t, _ok))
+# -- #265: the stage lives in a committed .claude file and survives a fresh clone ---------------
+_wt_stage("build")
+_sf = os.path.join(_wt_main, ".claude", "house-rules-loop.json")
+_g = lambda *a, cwd=_wt_main: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=cwd,
+                                             check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+_g("add", ".claude/house-rules-loop.json"); _g("commit", "-q", "-m", "stage")
+_clone = _wt_main + "-clone"
+subprocess.run(["git", "clone", "-q", _wt_main, _clone], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+_clone_edit = _wt_gate("Edit", {"file_path": os.path.join(_clone, "app.py")}, _clone)[0]
+_wt_stage("design")
+_stage_edits = [_wt_gate(t, {"file_path": _sf}, _wt_tree)[0] for t in ("Write", "Edit")]
+_wt_stage("build")
+_stage_edits += [_wt_gate(t, {"file_path": _sf}, _wt_tree)[0] for t in ("Write", "Edit")]
+_stage_sh = _wt_bash("echo '{}' > .claude/house-rules-loop.json")[0]
+_leg = tempfile.mkdtemp(prefix="house-rules-legacy-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _leg], check=True)
+with open(os.path.join(_leg, ".git", "house-rules-loop.json"), "w") as _f:
+    json.dump({"feature": "old", "stage": "design", "skip": False, "approvals": []}, _f)
+_leg_a = _wt_gate("Edit", {"file_path": os.path.join(_leg, "app.py")}, _leg)[0]  # Design: deny proves it was read
+_leg_p = {"hook_event_name": "UserPromptSubmit", "session_id": "leg", "cwd": _leg, "prompt": "skip design"}
+run_hook("scope", json.dumps(_leg_p), env=_loop_env)
+_leg_new = os.path.join(_leg, ".claude", "house-rules-loop.json")
+for _t, _ok in (
+        ("the stage committed in one checkout reads back in a fresh git clone", _clone_edit == "allow"),
+        ("a Write and an Edit of the stage file are refused in Build and in Design", _stage_edits == ["deny"] * 4),
+        ("a shell redirect into the stage file is refused", _stage_sh == "deny"),
+        ("a legacy .git stage file is read (its Design stage refuses the edit)", _leg_a == "deny"),
+        ("the next write after a legacy read lands in .claude/", os.path.isfile(_leg_new)
+         and json.load(open(_leg_new, encoding="utf-8")).get("feature") == "old")):
     _loop_cases.append((_t, _ok))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):

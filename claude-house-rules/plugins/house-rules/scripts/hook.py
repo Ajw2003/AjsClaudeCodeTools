@@ -5095,7 +5095,7 @@ def _issues_gate(payload):
 
 # ---------------------------------------------------------------------------------------
 # The design loop (#223, #225): each project has a stage - design, plan, build, done - kept in
-# LOOP_FILE in the git directory and carried across sessions. Only aj's own message moves it
+# LOOP_FILE in .claude/ of the main checkout and carried across sessions. Only aj's own message moves it
 # (scope reads it before the model does), and code edits are refused outside build. "I review"
 # happens inside build, because fixing what the review finds is code. Design:
 # docs/plans/loop-design.html. HOUSE_RULES_LOOP=off disables it.
@@ -5127,10 +5127,19 @@ def _loop_dir(git_dir):
     return git_dir
 
 
+def _loop_path(git_dir):
+    """#265: the stage file lives in .claude/ of the MAIN checkout (the parent of the common git
+    directory), so it is committed with the branch and a fresh clone keeps the stage."""
+    return os.path.join(os.path.dirname(_loop_dir(git_dir)), ".claude", LOOP_FILE)
+
+
 def _loop_read(git_dir):
-    """(state, problem). No file means a project that has not started a feature: Design."""
+    """(state, problem). No file means a project that has not started a feature: Design. The old
+    place, LOOP_FILE in the git directory, is read until the next write moves it."""
     fresh = {"feature": "", "stage": "design", "skip": False, "approvals": []}
-    path = os.path.join(_loop_dir(git_dir), LOOP_FILE)
+    path = _loop_path(git_dir)
+    if not os.path.isfile(path):
+        path = os.path.join(_loop_dir(git_dir), LOOP_FILE)
     if not os.path.isfile(path):
         return fresh, None
     try:
@@ -5145,8 +5154,38 @@ def _loop_read(git_dir):
 
 
 def _loop_write(git_dir, state):
-    with open(os.path.join(_loop_dir(git_dir), LOOP_FILE), "w", encoding="utf-8") as f:
+    path = _loop_path(git_dir)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(state, f)
+
+
+def _loop_file_refusal(payload):
+    """Deny reason when a Write/Edit/NotebookEdit or a shell redirect/script names the stage file:
+    only aj's approval messages move the stage. None otherwise."""
+    data = json.loads(payload)  # _loop_gate calls this only after _gated_edit parsed the same payload
+    if not isinstance(data, dict):
+        return None
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    if data.get("tool_name") in _GATED_TOOLS:
+        paths = [ti.get("file_path") or ti.get("notebook_path")]
+    elif data.get("tool_name") in _SHELL_TOOLS and isinstance(ti.get("command"), str):
+        paths = _script_write_targets(_apply_assigns(ti["command"]))[0]
+    else:
+        return None
+    cwd = data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    top, git_dir = _issues_locate(cwd)
+    if not git_dir:
+        return None
+    want = os.path.normcase(os.path.abspath(_loop_path(git_dir)))
+    for p in paths:
+        if isinstance(p, str) and p:
+            p = p if os.path.isabs(p) else os.path.join(cwd, p)
+            if os.path.normcase(os.path.abspath(p)) == want:
+                return ("House rules, design loop: %s is the stage tracker and only aj's approval messages "
+                        "move the stage, so it cannot be edited by hand. To switch the loop off: "
+                        "HOUSE_RULES_LOOP=off." % LOOP_FILE)
+    return None
 
 
 LOOP_LOG = os.path.join("docs", "6-decisions", "Decisions.md")
@@ -5451,6 +5490,10 @@ def _loop_stop_line(payload):
 def _loop_gate(payload):
     """(deny reason or None, problem or None): code edits only in Build, or once after skip design."""
     git_dir, problem = _gated_edit(payload, "design-loop lock")
+    if not problem:
+        refusal = _loop_file_refusal(payload)
+        if refusal:
+            return refusal, None
     script_paths, script_unreadable, script = [], False, False
     if not git_dir and not problem:
         # #262: a Bash/PowerShell script write of a source file is held to the same lock.
