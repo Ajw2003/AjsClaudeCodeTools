@@ -7,6 +7,27 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - New item visual v2 built (2.65.1); handed to aj for QA
+
+**Built:** the template labels a New item's boxes "What exists today / What this creates / How it impacts you" and
+draws any item's file list on open (#241). `tools/diff_parts.py` counts each file's parts, checked by
+`tools/verify_tools.py` (47 of 47). The changes page was rebuilt for the whole pull request by
+`docs/plans/design-loop-changes.build.py` (#242): 27 items, all 80 changed hook parts placed exactly once, and every
+changed file listed; the build stops otherwise. In a browser at 375px, light and dark: every New item has its
+boxes, no other item does, and every item opens to its files. `verify.py` 684 of 684, twice.
+
+**Plan beside build**, on `docs/plans/new-item-visual-qa.html`:
+- template: estimated +30 −2, built +21 −5
+- changes page: estimated 32 items, built 27
+- counting tool: estimated 60 lines, built 85 (Markdown sections, and a fix after it took a `try:` block for a
+  function)
+- tool checks: estimated +20, built +21
+- `verify.py`: estimated +4 −2, built +13 −3 (9 of those lines are the #229 fix)
+
+Not planned: the 161-line page builder, and the test-suite system doc's trap note.
+
+---
+
 ## 2026-10-15 - Fixed: verify.py's stale-temp-file flake (#229)
 
 aj: "fix the known failures, we never do a pr if there are things broken". The cause: the hooks keep state in the
