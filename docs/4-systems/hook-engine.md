@@ -101,8 +101,9 @@ decides. The handler waits `HOUSE_RULES_PROMPT_TIMEOUT` seconds (default 300; `o
 refuses with the same text in `decision.message` and `decision.reason`. Probed on 2.1.289: only `message` reached
 the model. It never emits an allow. The refused action goes into `<git common dir>/house-rules/waiting-on-you.json`
 (outside a repository: a session-keyed temp file), changed only through `_waiting_update`, which holds a
-`.lock` file (O_EXCL, 3 s wait, stale after 15 s, loud and unlocked if the lock can't be taken). The same
-action again in the same session is refused at once until aj's next real message. On that message `scope`
+`.lock` file (O_EXCL, 3 s wait, stale after 15 s, loud and unlocked if the lock can't be taken). Each
+prompt waits its own full timer; an earlier timeout never refuses a later prompt (#290), and only prompts a
+guard raised are timed (see below). On aj's next real message `scope`
 lists the session's timed-out entries and marks them `reported`; a background task notice does not count.
 `issuelist` shows entries other sessions left (newest 10) at session start and drops them, plus anything older
 than 7 days. `guard` and `guardwrite` prompts carry one line naming the timeout. Untested: whether a `guard`
@@ -117,16 +118,16 @@ those names. Off it they are exempt, and `_only_git_statements` decides whether 
 statement `git` or `cd`) or stays silent (anything else rides along, so Claude Code's own rules still judge it).
 `_command_dir` follows `git -C <dir>` when every `-C` names the same directory and nothing `cd`s; any other `-C`
 (`grep -C 3` included) leaves the branch unknown, which asks. The remaining asks go through `_ask_or_refuse`: a
-payload with `agent_id`, or a `house-rules-last-seen-<session>` temp file (written by `scope` on each real message)
-older than the prompt timeout, turns the ask into a deny and adds a `refused` / `timed-out` entry to the
-waiting-on-you list, which `scope` reports on aj's next message. Plan: `docs/plans/2026-10-09-stop-permission-stalls.md`.
+payload with `agent_id` turns the ask into a deny and adds a `refused` entry to the waiting-on-you list, which
+`scope` reports on aj's next message. (The idle-aj refusal and its `house-rules-last-seen` file were removed in
+#290.) Every ask it emits is recorded by `_waiting_key` in a `house-rules-asked-<session>` temp file; `prompttimer`
+times a prompt only when its key is there, so a dialog no guard raised (an Artifact publish, an `mcp__` tool) gets
+no timer and is never refused by it (stderr says so). Plan: `docs/plans/2026-10-09-stop-permission-stalls.md`.
 
 **Prompt timer follow-ups (2.53.0, issues #149, #151, #152).** Three changes. (1) `AskUserQuestion` and
 `ExitPlanMode` are in `PROMPT_TIMER_EXEMPT_TOOLS`: the handler says so on stderr and makes no decision, because
-refusing a question throws the question away rather than routing around a blocked action. (2) If the session
-already holds a `timed-out` entry (aj has not written since), any new prompt is refused at once and queued as
-`timed-out`: aj has had the full wait once, and each further prompt would cost another. `scope` marks the
-entries `reported` on aj's next message, which ends this. (3) `promptran`, on `PostToolUse` and
+refusing a question throws the question away rather than routing around a blocked action. (2) Removed in #290: a
+`timed-out` entry used to refuse every later prompt in the session at once; now each prompt waits on its own. (3) `promptran`, on `PostToolUse` and
 `PostToolUseFailure` for the prompt-capable tools, keys the call the same way (`_waiting_key`): a `waiting`
 entry becomes `ran`, and the waiting `prompttimer` checks the list once a second and exits with no decision
 when it sees that. This covers an approval that never sent the hook SIGTERM (#149: a push that landed was
