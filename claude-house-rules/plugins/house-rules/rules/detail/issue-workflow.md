@@ -11,12 +11,12 @@ The loop, in order:
    the `commitgate` hook refuses Write, Edit and NotebookEdit on source files. Files under `docs/`
    and `.claude/`, any `.md` file, and files outside the project stay editable.
 4. When work on a step starts I mark its issue `in progress`
-   (`gh issue edit N --add-label "in progress"`); I remove the label when the issue closes.
+   (`gh api repos/<owner>/<repo>/issues/N/labels -f "labels[]=in progress"`; `gh issue edit --add-label` fails in cloud sessions); I remove the label when the issue closes.
 5. The pull request body says `Refs #N` (or `Refs owner/repo#N`, or `Part of #N`, or a line
    `No-issue: <reason>`). A closing word (close, fix, resolve in any tense) followed by an issue
    reference is refused, because GitHub would close the issue at merge, before the user has tested.
 6. Closing an issue always asks. The approval prompt is the user's go-ahead. On approval I also
-   run `gh issue edit N --add-label "Claude completed this" --remove-label "in progress"` and comment
+   add `Claude completed this` (`gh api repos/<owner>/<repo>/issues/N/labels -f "labels[]=Claude completed this"`), remove `in progress` (`gh api -X DELETE repos/<owner>/<repo>/issues/N/labels/in%20progress`) and comment
    with the merged pull request link. Commenting on or creating issues is never gated.
 
 Label rules: every issue I create carries at least one category label and `AjsAgent created this`.
