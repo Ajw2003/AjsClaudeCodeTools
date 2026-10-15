@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 
 HOUSE_LABELS = (
@@ -132,3 +133,66 @@ def summary_note(result, repo="this repo"):
             _names([f[0] for f in result["failed"]]), repo,
             "; ".join("%s: %s" % (f[0], f[1]) for f in result["failed"])))
     return "house-rules: " + ", and ".join(parts) + "." if parts else ""
+
+
+def _find_git_dir(start):
+    """The git folder for the repo holding `start`: walk up to .git; follow a .git file."""
+    here = os.path.abspath(start)
+    while True:
+        dot = os.path.join(here, ".git")
+        if os.path.isdir(dot):
+            return dot
+        if os.path.isfile(dot):
+            try:
+                with open(dot, "r", encoding="utf-8") as f:
+                    m = re.match(r"gitdir:\s*(.+)", f.read().strip())
+            except OSError:
+                return None
+            if not m:
+                return None
+            gd = m.group(1).strip()
+            gd = gd if os.path.isabs(gd) else os.path.join(here, gd)
+            # a worktree's gitdir keeps no config; its commondir does
+            common = os.path.join(gd, "commondir")
+            if os.path.isfile(common):
+                with open(common, "r", encoding="utf-8") as f:
+                    gd = os.path.normpath(os.path.join(gd, f.read().strip()))
+            return gd
+        parent = os.path.dirname(here)
+        if parent == here:
+            return None
+        here = parent
+
+
+def main(argv):
+    if len(argv) > 1:
+        print("Usage: labels.py [owner/repo]")
+        return 2
+    if argv:
+        repo = argv[0]
+        if not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
+            print("'%s' is not an owner/repo name. Usage: labels.py [owner/repo]" % repo)
+            return 2
+    else:
+        git_dir = _find_git_dir(os.getcwd())
+        if not git_dir:
+            print("No repo found: this folder is not inside a git repo. Pass owner/repo.")
+            return 2
+        repo, note = repo_from_git(git_dir)
+        if not repo:
+            print("No repo found: %s. Pass owner/repo." % note)
+            return 2
+    res = ensure_labels(repo)
+    print("Repo: %s" % repo)
+    if res["error"]:
+        print("Could not read the label list: %s" % res["error"])
+        return 1
+    print("Created: %s" % (", ".join(res["created"]) or "none"))
+    print("Already there: %s" % (", ".join(res["present"]) or "none"))
+    for name, reason in res["failed"]:
+        print("Could not create %s: %s" % (name, reason))
+    return 1 if res["failed"] else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

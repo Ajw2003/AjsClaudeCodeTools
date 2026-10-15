@@ -8906,6 +8906,46 @@ _lb_src = open(os.path.join(HERE, "labels.py"), encoding="utf-8").read()
 _lb_cases.append(("labels.py has no --force, -X DELETE, PATCH or label edit",
                   not any(w in _lb_src for w in ("--" + "force", "-X " + "DELETE", "PA" + "TCH", "label " + "edit"))))
 
+_lb_cmd = os.path.join(HERE, "..", "commands", "labels.md")
+_lb_ctext = open(_lb_cmd, encoding="utf-8").read() if os.path.exists(_lb_cmd) else ""
+_lb_cases.append(("commands/labels.md exists, has description and argument-hint, runs labels.py via ${CLAUDE_PLUGIN_ROOT}",
+                  _lb_ctext.startswith("---") and "\ndescription: " in _lb_ctext and "\nargument-hint: " in _lb_ctext
+                  and 'python "${CLAUDE_PLUGIN_ROOT}/scripts/labels.py" $ARGUMENTS' in _lb_ctext))
+
+
+def _lb_cli(args, initial, cwd=None, with_file=True):
+    env = {k: v for k, v in os.environ.items() if k != _lb.REPO_LABELS_FILE_ENV}
+    if with_file:
+        env[_lb.REPO_LABELS_FILE_ENV] = _lb_file
+        if initial is None:
+            if os.path.exists(_lb_file):
+                os.remove(_lb_file)
+        else:
+            with open(_lb_file, "w", encoding="utf-8") as f:
+                f.write(initial)
+    return subprocess.run([sys.executable, os.path.join(HERE, "labels.py")] + args,
+                          capture_output=True, text=True, env=env, cwd=cwd)
+
+
+_p = _lb_cli(["owner/repo"], "{}")
+_lb_cases.append(("CLI, all missing: exit 0 and all three listed under Created",
+                  _p.returncode == 0 and ("Created: " + ", ".join(_lb_house)) in _p.stdout))
+_p = _lb_cli(["owner/repo"], json.dumps({_lb_repo: _lb_house}))
+_lb_cases.append(("CLI, all present: exit 0 and Created: none", _p.returncode == 0 and "Created: none" in _p.stdout))
+_p = _lb_cli(["owner/repo"], None)
+_lb_cases.append(("CLI, stand-in file missing: exit 1 with the reason",
+                  _p.returncode == 1 and "Could not read the label list" in _p.stdout and len(_p.stdout.strip().splitlines()) >= 2))
+_p = _lb_cli(["notarepo"], "{}")
+_lb_cases.append(("CLI, bad argument notarepo: exit 2 and says so", _p.returncode == 2 and "not an owner/repo" in _p.stdout))
+_lb_gitroot = tempfile.mkdtemp(prefix="house-rules-cligit-", dir=_FIXTURE_ROOT)
+os.makedirs(os.path.join(_lb_gitroot, ".git"))
+with open(os.path.join(_lb_gitroot, ".git", "config"), "w", encoding="utf-8") as _f:
+    _f.write('[remote "origin"]\n\turl = https://github.com/acme/widgets.git\n')
+os.makedirs(os.path.join(_lb_gitroot, "sub"))
+_p = _lb_cli([], json.dumps({"acme/widgets": _lb_house}), cwd=os.path.join(_lb_gitroot, "sub"))
+_lb_cases.append(("CLI, no argument inside a git repo with a github.com remote: uses that repo",
+                  _p.returncode == 0 and "Repo: acme/widgets" in _p.stdout))
+
 for _t, _ok in _lb_cases:
     report("PASS" if _ok else "FAIL", "label setup: " + _t)
 
