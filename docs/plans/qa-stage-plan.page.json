@@ -8,7 +8,7 @@
     "hint": "Tap a step to see what it changes and what it needs from you.",
     "key": [["I build it", ""], ["You act on it", "you"]],
     "items": [
-      ["lock", "Stage kept", "The stage survives a new session", "", "Sub-issue #265 (the stage survives a new cloud session). The stage file moves to where your first choice says, so a new cloud session no longer restarts at Design.", "Your answer to the first choice."],
+      ["lock", "Stage kept", "The stage survives a new session", "", "Sub-issue #265 (the stage survives a new cloud session). The stage file moves to where your first choice says, so the next session in a fresh container no longer restarts at Design.", "Your answer to the first choice."],
       ["search", "Lock fixed", "The QA leak is reproduced, then fixed", "", "Sub-issue #266 (reproduce and fix the edit that got through during QA). It also fixes the parser that recorded this feature's name as \"enforced\" instead of its full name, \"enforced QA stage\".", "Nothing from you."],
       ["flask", "PR starts QA", "A pull request opening starts QA", "", "Sub-issue #267 (a pull request opening starts QA).", "Nothing from you."],
       ["hammer", "QA mode", "The page builder's QA mode", "", "Sub-issue #268 (the page builder's QA mode): counts from git, a required unverified list, and the page recorded in the stage file.", "Nothing from you."],
@@ -47,7 +47,7 @@
     ], "The house rule hands each issue to a helper, and running them one after another keeps hook.py edits from overlapping."]
   ],
   "wrapup": {
-    "summary": "Seven sub-issues of issue #264 (Enforce the QA stage) that make the stage survive a new session, fix the QA leak, start QA on a pull request, add the QA mode and its checkpoint, fix the note's wording, and finish with the rule text and a real run.",
+    "summary": "Seven sub-issues of issue #264 (Enforce the QA stage). They keep the stage across sessions, fix the QA leak and start QA on a pull request. Then they add the QA mode and its checkpoint, fix the note's wording, and finish with the rule text and a real run.",
     "changing": "scripts/hook.py, scripts/make_page.py, scripts/verify.py, rules/house-rules.md, docs/4-systems/design-loop.md, docs/architecture.md and the plugin version.",
     "blocking": "Your approval of this plan and your answers to the two choices.",
     "next": "Code opens for these steps only. Each step goes to a builder helper in the order above, and verify.py runs after each one.",

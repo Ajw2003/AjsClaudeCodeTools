@@ -286,7 +286,7 @@ const PAGE = {
         "Stage kept",
         "The stage survives a new session",
         "",
-        "Sub-issue #265 (the stage survives a new cloud session). The stage file moves to where your first choice says, so a new cloud session no longer restarts at Design.",
+        "Sub-issue #265 (the stage survives a new cloud session). The stage file moves to where your first choice says, so the next session in a fresh container no longer restarts at Design.",
         "Your answer to the first choice."
       ],
       [
@@ -673,7 +673,7 @@ const PAGE = {
     ]
   ],
   "wrapup": {
-    "summary": "Seven sub-issues of issue #264 (Enforce the QA stage) that make the stage survive a new session, fix the QA leak, start QA on a pull request, add the QA mode and its checkpoint, fix the note's wording, and finish with the rule text and a real run.",
+    "summary": "Seven sub-issues of issue #264 (Enforce the QA stage). They keep the stage across sessions, fix the QA leak and start QA on a pull request. Then they add the QA mode and its checkpoint, fix the note's wording, and finish with the rule text and a real run.",
     "changing": "scripts/hook.py, scripts/make_page.py, scripts/verify.py, rules/house-rules.md, docs/4-systems/design-loop.md, docs/architecture.md and the plugin version.",
     "blocking": "Your approval of this plan and your answers to the two choices.",
     "next": "Code opens for these steps only. Each step goes to a builder helper in the order above, and verify.py runs after each one.",
