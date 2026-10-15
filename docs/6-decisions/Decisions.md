@@ -7,6 +7,26 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Design revised: handover pages and checkpoints (second version)
+
+**Status.** Proposed, waiting on "Design approved: handover pages and checkpoints" with eight choices.
+This replaces the first version's reply phrase below.
+
+**Context.** aj agreed with the direction ("yes") but asked for changes before the template is enforced:
+slots for screenshots and images, and a way for a project's own style guide to shape the page, because "some
+projects will require more visual than others". The evidence is plunderspell's rewrite of its Wick and Ophan
+plan into the template. The first version had an Editor render of both creatures. The template version has
+no picture, because `templates/handover-page.html` has no way to show one.
+
+**Proposal.** Page: `docs/plans/enforced-checkpoints-design.html` (same file, same claude.ai link). Template
+first, enforcement second:
+- Picture slots on In short steps, Changes items and choice options, plus a before-and-after compare on
+  Changed items.
+- An optional `docs/page-style.json` in each project, holding colours, fonts and a pictures setting
+  (required for art changes, optional, or off).
+- A page builder, `scripts/make_page.py`, that writes every page and stamps a mark.
+- The first version's checkpoints, with the page check looking for the builder's mark.
+
 ## 2026-10-15 - Design proposed: enforced checkpoints
 
 **Status.** Proposed, waiting on "Design approved: enforced checkpoints" with four choices.
