@@ -7,6 +7,29 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Guards audit: the build plan
+
+**Context.** aj approved the design ("Design approved: guards audit"). The systems document is
+`docs/4-systems/guards.md`.
+
+**Decision.** The build runs on `AjsAgent/issue-281-fix`, one `@house-rules:builder` helper at a time in a
+worktree, with `verify.py` run after each. The order is:
+1. #289 (Never-blocked list).
+2. #290 (Prompt timer: each prompt waits on its own, with no chain of refusals).
+3. #291 (Destructive actions are refused with the safe way named, and deletes are narrowed).
+4. #292 (Remove the background-work guard and the "Never hide work" rule).
+5. #293 (Enforced workflow checks name their exact fix when they refuse).
+6. #286 (Page copy box must hold the full reply the design gate accepts).
+7. #287 (Agent name, credit and branch prefix are configurable, not hard-coded to AJ).
+8. #288 (Page cards clip long words on a phone, and the visual check misses it).
+9. #282 to #284, the automatic-pages issues, from `docs/plans/page-must-be-automatic-build-plan.page.json`.
+   The stop limit for #283 is three blocks, then the helper reports.
+
+One pull request into `main` says `Refs #281` and `Refs #285`, and it comes with a QA page. The `verify.py`
+baseline before the build was "RESULT: PASS - all 785 checks passed".
+
+**Status.** Standing.
+
 ## 2026-10-15 - Guards audit: the design aj approved
 
 **Context.** Issue #285 (Guards block only unrecoverable actions). The audit page is
