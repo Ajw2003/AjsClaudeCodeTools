@@ -177,6 +177,8 @@ System doc: `docs/4-systems/handover-pages.md`.
 `scripts/make_page.py`, template picture slots and compare, `docs/page-style.json`, the end-of-reply checkpoint table,
 the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regeneration test (#259), not yet run.
 
+2026-10-15, branch `ccr-fd3ee01d-o448i8`: handover pages and checkpoints (#251) is built, 2.66.0, in aj's QA. Pull request #263. Every issue (#251 to #259, #261, #262) is `needs review`. `verify.py` 753 PASS and `tools/verify_tools.py` 47 PASS, each run twice. The guard fixes from `docs/guard-friction-audit-2026-10-15.md` are in. #259 (the PlunderSpell regeneration) runs in a new session after the merge.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
@@ -267,5 +269,3 @@ invocation.
 - **`docs/sessions/` has exactly one recorded ledger** (2026-09-09), despite
   `tools/session_ledger.py` existing to produce one per session. The tool works; running it
   isn't yet a habit.
-
-2026-10-15, branch `ccr-fd3ee01d-o448i8`: handover pages and checkpoints (#251) is built, 2.66.0, in aj's QA. Pull request #263. Every issue (#251 to #259, #261, #262) is `needs review`. `verify.py` 753 PASS and `tools/verify_tools.py` 47 PASS, each run twice. The guard fixes from `docs/guard-friction-audit-2026-10-15.md` are in. #259 (the PlunderSpell regeneration) runs in a new session after the merge.
