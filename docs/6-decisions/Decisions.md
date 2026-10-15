@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Design approved: new item visual v2
+
+aj: "Design approved New item visual v2: 1A 2A 3A".
+- **1A:** the same three labels on every New item: "What exists today", "What this creates", "How it impacts
+  you", each with a full sentence under it.
+- **3A:** an opened item lists each file it touched once, with what happened in plain words and lines added and
+  removed.
+- **2A** answered the old wording question, which aj had already replaced with their own format; that question
+  stayed on the page by my mistake. Its option A ("one sentence across the boxes, no labels") contradicts 1A, so
+  I read it as stale. The build plan shows the box format exactly, so aj can correct this before anything is
+  built.
+
+---
+
 ## 2026-10-15 - QA passed: clear writing check
 
 aj: "QA passed: clear writing check". Its issues (#245-#250) stay `needs review` until aj closes them. Next, the
