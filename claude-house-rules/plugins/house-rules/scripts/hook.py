@@ -48,6 +48,7 @@ import re
 import sys
 import tempfile
 import time
+import urllib.parse
 
 # The shared writing checker (#247), a sibling file. A missing or broken copy must not take every
 # hook down with it, so it is loaded here and each check that needs it reports when it is absent.
