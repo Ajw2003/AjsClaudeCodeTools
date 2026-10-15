@@ -7,6 +7,24 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Design approved: handover pages and checkpoints
+
+**Status.** Approved: "Design approved: handover pages and checkpoints: 1A 2A 3A 4A 5A 6A 7B 8A". The answers:
+- **Pictures:** anywhere they help: In short steps, Changes items and choice options. Changed items get a
+  before-and-after compare.
+- **Project style:** lives in `docs/page-style.json`, read only by the page builder.
+- **How visual:** set in the style file: required for art and visual changes, optional, or off. The builder
+  enforces it.
+- **How a page is made:** by the page builder, which stamps a mark the page check looks for.
+- **What needs a page:** choices, a plan, or a reply over 200 words.
+- **On a miss:** block once, then only report on the retry.
+- **Scope (7B):** hard checkpoints for the page rule and the editor helper, and also for the evidence,
+  commit and plain-summary checks.
+- **Escape:** "no page" in aj's message lets one reply through. `HOUSE_RULES_LOOP=off` still turns it all off.
+
+**Added by aj with the approval:** once built, regenerate the plunderspell Wick and Ophan page with the new
+tools, exactly as a new session would, to test the formula.
+
 ## 2026-10-15 - Design revised: handover pages and checkpoints (second version)
 
 **Status.** Proposed, waiting on "Design approved: handover pages and checkpoints" with eight choices.

@@ -167,6 +167,12 @@ labels a New item's boxes What exists today / What this creates / How it impacts
 files with counts; `tools/diff_parts.py` does the counting, checked in `tools/verify_tools.py`. The changes page
 covers the whole pull request: 27 items, every changed hook part placed once. The stale-temp-file flake (#229) is fixed.
 
+2026-10-15, branch `ccr-fd3ee01d-o448i8`: handover pages and checkpoints (#251, "Handover pages and checkpoints:
+pictures and project style on pages, then rules that run at fixed points"). Design approved, now in Plan, nothing
+built. It started from a plunderspell page that skipped the template (`docs/handover-page-audit-2026-10-15.md`).
+There are eight sub-issues, #252 to #259, all `in progress`. Build plan page: `docs/plans/handover-pages-plan.html`.
+System doc: `docs/4-systems/handover-pages.md`. Waiting on "Build plan approved: handover pages and checkpoints".
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
