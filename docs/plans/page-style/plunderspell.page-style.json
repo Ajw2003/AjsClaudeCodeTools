@@ -1,0 +1,33 @@
+{
+  "name": "PlunderSpell",
+  "drafted_from": "docs/generated/design-system/project/tokens.json and its README",
+  "themes": ["dark"],
+  "colors": {
+    "background": "#14120E",
+    "surface": "#1E1A14",
+    "surface_raised": "#282318",
+    "text": "#DCD2BA",
+    "text_muted": "#9A9078",
+    "line": "#332D22"
+  },
+  "roles": {
+    "you_act": { "color": "#5FA288", "pigment": "verdigris", "why": "verdigris is everything the player can touch" },
+    "accent": { "color": "#7A6AA0", "pigment": "lapis", "why": "lapis is the voice, and whatever answers it" },
+    "blocking": { "color": "#C4542E", "pigment": "madder", "why": "madder marks alarm" },
+    "done": { "color": "#9A9078", "pigment": "vellum-dim", "why": "finished work recedes; no pigment is spent on it" }
+  },
+  "reserved": [
+    { "color": "#C9A227", "pigment": "orpiment", "rule": "gold and loot only; never used on a page" }
+  ],
+  "fonts": {
+    "display": "Eczar",
+    "body": "Spectral",
+    "label": "Overpass Mono",
+    "load": "https://fonts.googleapis.com/css2?family=Eczar:wght@500;600;700;800&family=Spectral:wght@300;400;600&family=Overpass+Mono&display=swap"
+  },
+  "shape": { "corner_radius": 0, "separators": "hairline" },
+  "labels": { "family": "label", "case": "upper", "letter_spacing": "0.14em" },
+  "icons": { "frame": "sigil", "ring": "#332D22", "dashed_ring": "role", "glyph_stroke": 2.5, "fill": "none" },
+  "pictures": "required",
+  "picture_folders": ["UI_Verification_Screenshots", "Enemy_Renders_Review", "docs/generated/enemy-stance-screenshots"]
+}

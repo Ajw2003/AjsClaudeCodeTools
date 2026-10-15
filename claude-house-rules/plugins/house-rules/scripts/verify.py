@@ -855,6 +855,59 @@ report("PASS" if _ua_case_ok else "FAIL",
 print("          rm %s, rm with timer off %s, commit %s, Write %s"
       % (_ua_dec(_ua_sub), _ua_dec(_ua_sub_off), _ua_dec(_ua_sub_commit), _ua_dec(_ua_sub_write)))
 
+# --- #261: replay the 2026-10-15 audit entries (docs/guard-friction-audit-2026-10-15.md) --------
+_fr_sid = "verify-fr-sub"
+_fr_scratch = "/tmp/claude-0/%s/%s/scratchpad" % (re.sub(r"[^A-Za-z0-9]", "-", _ua_dir), _fr_sid)
+
+
+def _fr(cmd, agent=True):
+    out = _ua_guard(_fr_sid, {"agent_id": "a1"} if agent else None, tool_input={"command": cmd})
+    try:
+        reason = json.loads(out)["hookSpecificOutput"].get("permissionDecisionReason", "")
+    except (ValueError, KeyError):
+        reason = ""
+    return _ua_dec(out), reason
+
+
+_fr_fail = []
+_fr_top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=_ua_dir, stdout=subprocess.PIPE,
+                         universal_newlines=True).stdout.strip()
+for _n, _cmd in (
+    ("1", "G=%s; git -C $G add f && git -C $G commit -m x -- f && git -C $G push -q origin AjsAgent/ua" % _ua_dir),
+    ("2", "git -C %s commit -m x" % _ua_dir),
+    ("3", "cd %s && git commit -m x" % _ua_dir),
+    ("3b", "cd %s; git commit -m x" % _ua_dir),
+    ("3c", 'D="%s"; cd ${D} && git commit -m x' % _ua_dir),
+    ("5", "sleep 1; ls | head"),
+    ("7", "python3 x.py | tail -5"),
+    ("7b", "until grep x f; do sleep 1; done | tail"),
+    ("8", "rm -rf %s/build" % _fr_scratch),
+    ("9", "cd /nonexistent/other && git commit -m x"),
+):
+    _d, _r = _fr(_cmd)
+    if _d == "deny" and "Do not retry" in _r:
+        _fr_fail.append("%s: refused with Do not retry" % _n)
+    elif _n == "7b" and not (_d == "deny" and "Write the output to a file instead of piping it through tail/head" in _r):
+        _fr_fail.append("7b: %s %r" % (_d, _r[-120:]))
+    elif _n == "9" and not (_d == "deny" and ("Run it as plain `git ...` from %s, with no cd, -C or variables, "
+                                              "and it will be checked normally." % _fr_top) in _r):
+        _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
+    elif _n not in ("7b", "9") and _d == "deny":
+        _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
+for _cmd in ("rm -rf /home/user/x", "kill -9 1", "git push origin main",
+             "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
+    _d, _r = _fr(_cmd)
+    if _d != "deny" or (_cmd.startswith(("rm -rf /home", "kill", "git push")) and "Do not retry" not in _r):
+        _fr_fail.append("still-refused %r: %s" % (_cmd, _d))
+_d, _r = _fr("S=%s/old-plugin; rm -rf $S" % _fr_scratch)
+if _d == "deny":
+    _fr_fail.append("rm via a same-command assignment inside the scratchpad was refused %r" % _r[-120:])
+_d, _r = _fr("S=/home/user/x; rm -rf $S")
+if _d != "deny" or "Do not retry" not in _r:
+    _fr_fail.append("rm via an assignment outside the scratchpad: %s %r" % (_d, _r[-120:]))
+_sv_case("guard: audit entries 1, 2, 3, 5, 7, 8, 9 no longer dead-end routine work; deletes, kills and a push to main still refuse",
+         not _fr_fail, "; ".join(_fr_fail) or "routine ones pass or get the rewrite text, the rest say Do not retry")
+
 _ua_seen("verify-ua-away", 600)
 _ua_seen("verify-ua-here", 30)
 _ua_away = _ua_guard("verify-ua-away")
@@ -4253,10 +4306,11 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count;
-# so is guardgithub (#178), which runs only on a GitHub MCP write.
+# so is guardgithub (#178), which runs only on a GitHub MCP write; and pagecheck (#257), which
+# exits at once unless the call is an .html page Write or an Artifact call.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -4267,10 +4321,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.65.1",
+    "issues: the rules section and its detail file exist, and the plugin is 2.66.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.65.1",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.66.0",
     "rules section + detail file + version",
 )
 
@@ -6796,6 +6850,77 @@ else:
     report("FAIL", "versioncheck is quiet when installed, marketplace and GitHub all agree")
     print(f"          rc={rc} out={out[:200]!r}")
 
+# --- SessionStart loads the newest installed rules after an update (issue #252) -----------
+# An older folder runs SessionStart; installed_plugins.json names a newer folder. inject and
+# showrule must load the newer folder's rule text and say so in one line, and must say it in one
+# line when installed_plugins.json cannot be read (never silent).
+_nr_dir = tempfile.mkdtemp(prefix="house-rules-newest-rules-")
+
+
+def _nr_make(name, version, tag, with_showrule):
+    root = os.path.join(_nr_dir, name)
+    os.makedirs(os.path.join(root, "scripts"))
+    os.makedirs(os.path.join(root, "rules"))
+    os.makedirs(os.path.join(root, ".claude-plugin"))
+    shutil.copy(HOOK, os.path.join(root, "scripts", "hook.py"))
+    with open(os.path.join(root, ".claude-plugin", "plugin.json"), "w", encoding="utf-8") as f:
+        json.dump({"name": "house-rules", "version": version}, f)
+    with open(os.path.join(root, "rules", "house-rules.md"), "w", encoding="utf-8") as f:
+        f.write(f"{tag} CORE RULES, see ${{CLAUDE_PLUGIN_ROOT}}/rules/detail/x.md\n")
+    if with_showrule:
+        for fname in ("show-dont-tell.md", "clear-writing.md"):
+            with open(os.path.join(root, "rules", fname), "w", encoding="utf-8") as f:
+                f.write(f"{tag} {fname} ${{CLAUDE_PLUGIN_ROOT}}/rules/detail/x.md\n")
+    return root
+
+
+def _nr_run(event, root, installed_json):
+    e = dict(os.environ)
+    e["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = installed_json
+    proc = subprocess.run(
+        [sys.executable, os.path.join(root, "scripts", "hook.py"), event],
+        input=b"", stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=e,
+    )
+    out = proc.stdout.decode("utf-8", "replace")
+    try:
+        parsed = json.loads(out)
+    except Exception:
+        return proc.returncode, "", "", out
+    ctx = parsed.get("hookSpecificOutput", {}).get("additionalContext", "")
+    return proc.returncode, ctx, parsed.get("systemMessage", ""), out
+
+
+_nr_old = _nr_make("old", "1.0.0", "OLDTAG", False)
+_nr_new = _nr_make("new", "2.0.0", "NEWTAG", True)
+_nr_json = os.path.join(_nr_dir, "installed.json")
+with open(_nr_json, "w", encoding="utf-8") as f:
+    json.dump({"version": 2, "plugins": {"house-rules@aj-house-rules": [
+        {"installPath": _nr_new, "version": "2.0.0"}]}}, f)
+
+for _ev, _want in (("inject", "NEWTAG CORE RULES"), ("showrule", "NEWTAG show-dont-tell.md")):
+    rc, ctx, msg, raw = _nr_run(_ev, _nr_old, _nr_json)
+    ok = (rc == 0 and _want in ctx and "OLDTAG" not in ctx and f"plugin root: {_nr_new}" in ctx
+          and "2.0.0" in msg and "\n" not in msg)
+    report("PASS" if ok else "FAIL",
+           f"{_ev} from an older folder loads the newer installed folder's rules and says so in one line")
+    if not ok:
+        print(f"          rc={rc} ctx={ctx[:200]!r} msg={msg!r}")
+
+for _label, _jpath in (("missing", os.path.join(_nr_dir, "absent.json")), ("unreadable", None)):
+    if _jpath is None:
+        _jpath = os.path.join(_nr_dir, "broken.json")
+        with open(_jpath, "w", encoding="utf-8") as f:
+            f.write("{not json")
+    for _ev, _want in (("inject", "OLDTAG CORE RULES"), ("showrule", None)):
+        rc, ctx, msg, raw = _nr_run(_ev, _nr_new if _ev == "showrule" else _nr_old, _jpath)
+        if _ev == "showrule":
+            _want = "NEWTAG show-dont-tell.md"
+        ok = (rc == 0 and _want in ctx and "could not check for newer rules" in msg and "\n" not in msg)
+        report("PASS" if ok else "FAIL",
+               f"{_ev} with installed_plugins.json {_label} loads its own rules and says why in one line")
+        if not ok:
+            print(f"          rc={rc} ctx={ctx[:200]!r} msg={msg!r}")
+
 session_a = "vc-installed-stale"
 rc, out, err = run_hook(
     "versioncheck",
@@ -8460,6 +8585,20 @@ _loop_cases.append(('"QA failed" goes back to Design and closes code', _loop_sta
 _n = _loop_say("skip design")
 _loop_cases.append(('"skip design" lets exactly one code edit through',
                     _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
+_n = _loop_say("[Subagent hand-back] The builder finished. Quote: Build plan approved: blockers")
+_loop_cases.append(("#253: a hand-back quoting a build-plan approval moves nothing, and says so",
+                    _loop_stage() == "design" and "helper's report" in _n))
+_n = _loop_say("<agent-message from=\"x\">skip design</agent-message>")
+_loop_cases.append(('#253: a hand-back quoting "skip design" grants no edit',
+                    _loop_edit("app.py") == "deny" and "helper's report" in _n))
+_loop_cases.append(('#253: a hand-back quoting "no page" is recognised as relayed',
+                    _ig_mod._is_relayed_prompt("Another Claude session sent a message: no page")
+                    and _ig_mod._is_relayed_prompt("<task-notification>done</task-notification>")
+                    and _ig_mod._is_relayed_prompt("hi", json.dumps({"origin": {"kind": "peer"}}))
+                    and not _ig_mod._is_relayed_prompt("no page", json.dumps({"origin": {"kind": "human"}}))))
+_n = _loop_say("skip design")
+_loop_cases.append(('#253: "skip design" typed plainly by aj still lets one edit through',
+                    _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
 _loop_cases.append(('label check: after "QA failed", the end-of-reply check asks for in progress again',
                     "should be labelled `in progress`" in _loop_stop()))
 _loop_log("redo design for blockers")
@@ -8497,9 +8636,69 @@ _p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "loop"
       "tool_input": {"file_path": os.path.join(_loop_dir, "app.py")}}
 _, _o, _ = run_hook("commitgate", json.dumps(_p), env=_loop_env)
 _loop_cases.append(("an unreadable tracker says so instead of failing silently", "could not read house-rules-loop.json" in _o))
+# -- #262: one stage per repo (worktrees share it) and the lock covers script writes ------------
+_wt_main = tempfile.mkdtemp(prefix="house-rules-wt-", dir=_FIXTURE_ROOT)
+_wt_tree = _wt_main + "-tree"
+for _a in (["init", "-q"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "i"],
+           ["worktree", "add", "-q", "-b", "wt-branch", _wt_tree]):
+    subprocess.run(["git"] + _a, cwd=_wt_main, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def _wt_stage(stage):
+    with open(os.path.join(_wt_main, ".git", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+        json.dump({"feature": "f", "stage": stage, "skip": False, "approvals": []}, f)
+
+
+def _wt_gate(tool, tool_input, cwd):
+    p = {"hook_event_name": "PreToolUse", "tool_name": tool, "session_id": "wt", "cwd": cwd, "tool_input": tool_input}
+    _, out, _ = run_hook("commitgate", json.dumps(p), env=_loop_env)
+    try:
+        h = json.loads(out)["hookSpecificOutput"]
+        return h.get("permissionDecision") or "allow", h.get("permissionDecisionReason", "")
+    except Exception:
+        return "allow", ""
+
+
+def _wt_bash(cmd, cwd=None):
+    return _wt_gate("Bash", {"command": cmd}, cwd or _wt_main)
+
+
+_wt_heredoc = "python3 - <<'E'\nopen('app.py', 'w').write('x = 1')\nE"
+_wt_stage("build")
+_wt_a = _wt_gate("Edit", {"file_path": os.path.join(_wt_tree, "app.py")}, _wt_tree)[0]
+_wt_b = _wt_bash(_wt_heredoc)[0]
+_wt_c = _wt_bash("sed -i 's/a/b/' app.py")[0]
+_wt_stage("design")
+_wt_d = _wt_gate("Edit", {"file_path": os.path.join(_wt_tree, "app.py")}, _wt_tree)[0]
+_wt_e = _wt_bash(_wt_heredoc)
+_wt_f = _wt_bash("sed -i 's/a/b/' app.py")[0]
+_wt_g = _wt_bash("echo hi > notes.md")[0]
+_wt_h = _wt_bash("echo hi >> app.py")[0]
+_wt_i = _wt_bash("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" app.py")
+_wt_j = _wt_bash("cat f | tee out.py")[0]
+_wt_k = _wt_bash("ls -la 2>&1 | grep x; echo done > /dev/null")[0]
+_wt_l = _wt_bash("python3 -c \"open('docs/x.txt', 'w').write('x')\"")[0]
+_wt_loop_off = dict(_loop_env, HOUSE_RULES_LOOP="off")
+_, _wt_o, _ = run_hook("commitgate", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt",
+                       "cwd": _wt_main, "tool_input": {"command": _wt_heredoc}}), env=_wt_loop_off)
+for _t, _ok in (
+        ("a worktree reads the main checkout's stage: Build lets its Edit through", _wt_a == "allow"),
+        ("a worktree reads the main checkout's stage: Design refuses its Edit", _wt_d == "deny"),
+        ("a python heredoc writing a .py file is allowed in Build", _wt_b == "allow"),
+        ("a python heredoc writing a .py file is refused in Design", _wt_e[0] == "deny" and "closed in the Design stage" in _wt_e[1]),
+        ("sed -i on a .py file is allowed in Build and refused in Design", _wt_c == "allow" and _wt_f == "deny"),
+        ("a Bash write to a .md file stays open in Design", _wt_g == "allow"),
+        ("a >> redirect into a .py file and tee are refused in Design", _wt_h == "deny" and _wt_j == "deny"),
+        ("a script whose target path is a variable is refused with the Edit/Write hint",
+         _wt_i[0] == "deny" and "Edit or Write tool" in _wt_i[1] and "retry" not in _wt_i[1].lower()),
+        ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow"),
+        ("HOUSE_RULES_LOOP=off leaves script writes alone", "deny" not in _wt_o)):
+    _loop_cases.append((_t, _ok))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):
-    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=_loop_env)
+    # The retry (#256): the first pass of a missed page rule blocks; the note is what the retry reports.
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir,
+                                                  stop_hook_active=True), env=_loop_env)
     return "show don't tell: this reply is" in out
 
 
@@ -8520,9 +8719,11 @@ _tpl = read(_tpl_path) if os.path.isfile(_tpl_path) else ""
 _tpl_missing = [m for m in ('data-part="short"', 'data-part="changes"', 'data-part="choices"', 'data-part="wrapup"',
                             "Copy my reply", 'class="owntext"', "const PAGE = {", "What you need to do",
                             '<div class="flow">', "<small>What exists today</small>", "<small>How it impacts you</small>",
-                            '<div class="files">')
+                            '<div class="files">',
+                            # #254: picture slots, the tap-to-enlarge overlay and the before-and-after slider
+                            'data-pic="', "const picOf", "lightbox", 'type="range"')
                 if m not in _tpl]
-_loop_cases.append(("the handover template has its four parts, the own-answer box, the copy-reply and the New-item flow",
+_loop_cases.append(("the handover template has its four parts, the own-answer box, the copy-reply, the New-item flow and the picture slots",
                     bool(_tpl) and not _tpl_missing))
 _sdt_detail = read(os.path.join(DETAIL_DIR, "show-dont-tell.md"))
 _loop_cases.append(("the rule names the template and its four parts",
@@ -8644,7 +8845,7 @@ _cw_t_none = _hand_transcript("cw-none", [_CW_USER])
 
 
 def _cw_editor(transcript, text="The page is up."):
-    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir,
+    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir, stop_hook_active=True,
                                              transcript_path=transcript), env=_loop_env)[1]
 
 
@@ -8670,6 +8871,316 @@ _cw_cases.append(("page: a page written by a shell command is checked at the end
 
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)
+
+# --- the checkpoint table (#256): a miss blocks once, then only reports on the retry -----------
+_ck_cases = []
+_CK_ENV = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_LOOP="on")
+
+
+def _ck_user(text, extra=()):
+    return [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": text}})] + list(extra)
+
+
+def _ck_run(transcript, reply, active=False, env=None):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=_loop_dir, stop_hook_active=active,
+                                                  transcript_path=transcript), env=env or _CK_ENV)
+    try:
+        data = json.loads(out)
+    except ValueError:
+        data = {}
+    return data.get("decision") == "block", data.get("reason", ""), out
+
+
+def _ck_triple(label, rule, transcript, bad, good, env=None, good_transcript=None):
+    blocked, reason, _o = _ck_run(transcript, bad, env=env)
+    _ck_cases.append(("%s: a miss blocks once, naming the %s rule" % (label, rule), blocked and ("- %s:" % rule) in reason))
+    blocked, _r, out = _ck_run(transcript, bad, active=True, env=env)
+    _ck_cases.append(("%s: the same reply on the retry only reports, never blocks" % label, not blocked and out.strip() != ""))
+    blocked, _r, _o = _ck_run(good_transcript or transcript, good, env=env)
+    _ck_cases.append(("%s: a compliant reply passes" % label, not blocked))
+
+
+_ck_t_plain = _hand_transcript("ck-plain", _ck_user("what is up"))
+_ck_t_read = _hand_transcript("ck-read", _ck_user("check it", [json.dumps({"type": "assistant", "message": {"content": [
+    {"type": "tool_use", "id": "r1", "name": "Bash", "input": {"command": "python3 t.py"}}]}})]))
+_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
+
+# 1 page rule (long reply) - editor ran, so only the page rule is in play
+_ck_long = " ".join(["Words"] * 230) + "."
+_ck_t_ed_only = _hand_transcript("ck-ed-only", _ck_user("explain", [_CW_EDITOR]))
+_ck_triple("page", "page", _ck_t_ed_only, _ck_long, _ck_long + " https://claude.ai/artifact/abc")
+_, _ck_reason, _ = _ck_run(_ck_t_ed_only, _ck_long)
+_ck_cases.append(("page: the reason gives the exact build command", "make_page.py" in _ck_reason and "build <content.json>" in _ck_reason))
+# 2 editor
+_ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
+# 3 evidence
+_ck_triple("evidence", "evidence", _ck_t_plain, "All done, the tests passed.", "All done, the tests passed.",
+           good_transcript=_ck_t_read)
+# 4 commit
+_ck_repo_dirty = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_ck_repo_clean = _commit_repo("claude/topic", committed=["a.py"])
+_ck_t_w_dirty = _wrote_transcript("ck-w-dirty", [os.path.join(_ck_repo_dirty, "a.py")])
+_ck_t_w_clean = _wrote_transcript("ck-w-clean", [os.path.join(_ck_repo_clean, "a.py")])
+_ck_cenv = lambda root: _project_env(root, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
+                                     HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+_ck_b, _ck_r, _ = _ck_run(_ck_t_w_dirty, "Changed the file.", env=_ck_cenv(_ck_repo_dirty))
+_ck_cases.append(("commit: a turn that left its file uncommitted blocks once, naming the commit rule", _ck_b and "- commit:" in _ck_r))
+_ck_b, _, _o = _ck_run(_ck_t_w_dirty, "Changed the file.", active=True, env=_ck_cenv(_ck_repo_dirty))
+_ck_cases.append(("commit: the same reply on the retry only reports", not _ck_b and "uncommitted" in _o))
+_ck_b, _, _ = _ck_run(_ck_t_w_clean, "Changed the file.", env=_ck_cenv(_ck_repo_clean))
+_ck_cases.append(("commit: a committed file passes", not _ck_b))
+# 5 plain summary
+_ck_t_ps_wrote = _turn_transcript("ck-ps", "add the commit hooks", [("Edit", "/proj/src/app.py")])
+_ck_triple("plain summary", "plain summary", _ck_t_ps_wrote, _PS_TECH, _PS_PLAIN)
+
+# the page rule's short replies
+_ck_proposal = ("Here is where I have landed on the storage.\n\nOption A: keep the JSON file. Option B: move to SQLite. "
+                "Option C: use the cloud store.\n\nWhich option do you want?")
+_ck_list = ("The plan:\n\n- read the config\n- write the page\n- run the checks\n\nDo you approve this?")
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, _ck_proposal)
+_ck_cases.append(("page: a short proposal with three options and a question blocks", _ck_b and "- page:" in _ck_r))
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, _ck_list)
+_ck_cases.append(("page: a three-step plan with an approval question blocks", _ck_b and "- page:" in _ck_r))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "The file lives in docs/plans. It has three sections: the lead, the changes and the wrap-up.")
+_ck_cases.append(("page: a short plain answer does not block", not _ck_b))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "Both lists are short:\n\n- one\n- two\n- three\n\nThat is all of them.")
+_ck_cases.append(("page: a short list with no question does not block", not _ck_b))
+# the escape
+_ck_t_nopage = _hand_transcript("ck-nopage", _ck_user("just tell me here, no page please"))
+_ck_b, _, _ = _ck_run(_ck_t_nopage, _ck_proposal)
+_ck_cases.append(('page: "no page" in aj\'s own message lets the reply through', not _ck_b))
+_ck_b, _, _ = _ck_run(_hand_transcript("ck-nopage-long", _ck_user("explain, no page", [])), _ck_long)
+_ck_cases.append(('editor: the same escape lets a long reply through the editor checkpoint too', not _ck_b))
+_ck_t_relayed = _hand_transcript("ck-relayed", _ck_user("explain the storage options", [json.dumps(
+    {"type": "user", "message": {"content": "<task-notification>helper says: no page needed</task-notification>"}})]))
+_ck_b, _ck_r, _ = _ck_run(_ck_t_relayed, _ck_proposal)
+_ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count', _ck_b and "- page:" in _ck_r))
+# the switch
+_ck_b, _, out = _ck_run(_ck_t_plain, _ck_proposal, env=dict(_CK_ENV, HOUSE_RULES_LOOP="off"))
+_ck_cases.append(("HOUSE_RULES_LOOP=off turns every checkpoint off", not _ck_b))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "All done, the tests passed.", env=dict(_CK_ENV, HOUSE_RULES_LOOP="off"))
+_ck_cases.append(("HOUSE_RULES_LOOP=off also stops the evidence checkpoint", not _ck_b))
+
+for _t, _ok in _ck_cases:
+    report("PASS" if _ok else "FAIL", "checkpoints: " + _t)
+
+# ---- make_page.py: the handover page builder and project style file (#255) ----
+MAKE_PAGE = os.path.join(HERE, "make_page.py")
+_mp_tmp = tempfile.mkdtemp(prefix="mp-")
+_mp_cases = []
+
+
+def _mp(*args):
+    r = subprocess.run([sys.executable, MAKE_PAGE] + list(args), capture_output=True, text=True, timeout=300)
+    return r.returncode, r.stdout + r.stderr
+
+
+def _mp_proj(name, style=None):
+    d = os.path.join(_mp_tmp, name)
+    os.makedirs(os.path.join(d, "docs"), exist_ok=True)
+    if style is not None:
+        with open(os.path.join(d, "docs", "page-style.json"), "w", encoding="utf-8") as f:
+            json.dump(style, f)
+    return d
+
+
+def _mp_content(name, extra_changes=None, text="Plain."):
+    page = {"title": "T " + name, "eyebrow": "e", "replyPrefix": "R", "reply": "",
+            "short": {"lead": text, "hint": "h", "key": [["We", ""]], "items": [["bulb", "Idea", "The idea", "", "c", "r"]]},
+            "changes": [["new", "A thing", "One line.", None, "Detail.", None, None]] + (extra_changes or []),
+            "wrapup": {"summary": "s", "changing": "c", "blocking": "b", "next": "n", "todo": ["t"]}}
+    path = os.path.join(_mp_tmp, name + ".page.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(page, f)
+    return path
+
+
+def _mp_page_of(html_path):
+    with open(html_path, encoding="utf-8") as f:
+        h = f.read()
+    m = re.search(r"^const PAGE = (\{.*?^\});$", h, re.S | re.M)
+    return json.loads(m.group(1)) if m else None
+
+
+_PS_STYLE = {"name": "X", "themes": ["dark"],
+             "colors": {"background": "#14120E", "surface": "#1E1A14", "text": "#DCD2BA", "text_muted": "#9A9078", "line": "#332D22"},
+             "roles": {"you_act": {"color": "#5FA288"}, "accent": {"color": "#7A6AA0"}, "blocking": {"color": "#C4542E"}, "done": {"color": "#9A9078"}},
+             "reserved": [{"color": "#C9A227", "rule": "gold only"}],
+             "fonts": {"display": "Eczar", "body": "Spectral", "label": "Overpass Mono",
+                       "load": "https://fonts.googleapis.com/css2?family=Eczar&display=swap"},
+             "shape": {"corner_radius": 0}, "labels": {"family": "label", "case": "upper"}, "icons": {"frame": "sigil"},
+             "pictures": "required"}
+
+_c1 = _mp_content("basic")
+_d = _mp_proj("nostyle")
+_rc, _o = _mp("build", _c1, "--project", _d)
+_mp_cases.append(("make_page: build with no style file exits 3 and names both commands",
+                  _rc == 3 and "make_page.py style --draft" in _o and "make_page.py style --quick" in _o))
+
+_rc1, _ = _mp("style", "--quick", "--project", _d)
+_rc2, _o2 = _mp("build", _c1, "--project", _d)
+_html = os.path.join(_d, "docs", "plans", "basic.html")
+_txt = open(_html, encoding="utf-8").read() if os.path.isfile(_html) else ""
+with open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8") as _f:
+    _ver = json.load(_f)["version"]
+_mp_cases.append(("make_page: style --quick then build succeeds and stamps the mark right after the doctype",
+                  _rc1 == 0 and _rc2 == 0 and _txt.startswith("<!doctype html>\n<!-- house-rules make_page %s -->" % _ver)
+                  and "visual check" in _o2 and "<title>T basic</title>" in _txt))
+
+_d = _mp_proj("ps", _PS_STYLE)
+_rc, _o = _mp("build", _c1, "--project", _d)
+_txt = open(os.path.join(_d, "docs", "plans", "basic.html"), encoding="utf-8").read() if _rc == 0 else ""
+_mp_cases.append(("make_page: the PlunderSpell-shaped style file puts its role colours, fonts link and sigil frame in the page",
+                  _rc == 0 and "--you:#5FA288" in _txt and "--accent:#7A6AA0" in _txt and "--gap:#C4542E" in _txt
+                  and "family=Eczar" in _txt and "border-radius:0!important" in _txt and "dashed" in _txt))
+
+_cr = _mp_content("reserved", text="Gold is #c9a227 here.")
+_rc, _o = _mp("build", _cr, "--project", _d)
+_mp_cases.append(("make_page: a PAGE colour equal to a reserved colour is refused, naming the colour",
+                  _rc == 2 and "#c9a227" in _o.lower() and "reserved" in _o))
+
+_bad = dict(_PS_STYLE, roles=dict(_PS_STYLE["roles"], accent={"color": "#c9a227"}))
+_dd = _mp_proj("ps-bad", _bad)
+_rc, _o = _mp("build", _c1, "--project", _dd)
+_mp_cases.append(("make_page: a style-file role colour equal to a reserved colour is refused",
+                  _rc == 2 and "role 'accent'" in _o))
+
+_cv = _mp_content("visual", [["chg", "Shiny button", "Looks new.", None, "Detail.", None, None, {"visual": True}]])
+_rc, _o = _mp("build", _cv, "--project", _d)
+_mp_cases.append(("make_page: a required-pictures project refuses a visual Changes item with no picture, naming it",
+                  _rc == 2 and "Shiny button" in _o))
+
+_cv2 = _mp_content("visual2", [["chg", "Shiny button", "Looks new.", None, "Detail.", None, None, {"visual": True},
+                                {"src": "data:image/png;base64,AAAA", "alt": "a", "caption": "c"}]])
+_rc, _o = _mp("build", _cv2, "--project", _d)
+_mp_cases.append(("make_page: the same visual item with a picture builds", _rc == 0))
+
+_tk = os.path.join(_mp_tmp, "tokens.json")
+with open(_tk, "w", encoding="utf-8") as f:
+    json.dump({"color": {"tokens": [{"name": "background", "value": {"dark": "#101010"}},
+                                    {"name": "text", "value": {"dark": "#eeeeee"}},
+                                    {"name": "accent-lapis", "value": {"dark": "#7A6AA0"}}]},
+               "type": {"families": {"display": "Eczar, serif", "body": "Spectral, serif"}},
+               "radius": {"tokens": [{"name": "sm", "value": "0"}]}}, f)
+_d = _mp_proj("drafty", {"use": "defaults"})
+_rc, _o = _mp("style", "--draft", "--from", _tk, "--project", _d)
+_dp = os.path.join(_d, "docs", "page-style.draft.json")
+if os.path.isfile(_dp):
+    with open(_dp, encoding="utf-8") as _f:
+        _dj = json.load(_f)
+else:
+    _dj = {}
+with open(os.path.join(_d, "docs", "page-style.json"), encoding="utf-8") as _f:
+    _kept = json.load(_f)
+_mp_cases.append(("make_page: style --draft --from writes docs/page-style.draft.json, prints the role guesses, leaves page-style.json alone",
+                  _rc == 0 and _dj.get("colors", {}).get("background") == "#101010" and _dj.get("fonts", {}).get("display") == "Eczar"
+                  and _dj.get("shape", {}).get("corner_radius") == 0 and "confirm" in _o and _kept == {"use": "defaults"}))
+
+# Colours named for what they are, with their job only in the usage note, shaped like PlunderSpell's
+# tokens.json (checked against the real file on 2026-10-15).
+_tk2 = os.path.join(_mp_tmp, "pigments.json")
+with open(_tk2, "w", encoding="utf-8") as f:
+    json.dump({"color": {"tokens": [
+        {"name": "bone-black", "value": {"dark": "#14120E"}, "usage": "Page/app background."},
+        {"name": "vellum", "value": {"dark": "#DCD2BA"}, "usage": "Primary text."},
+        {"name": "vellum-faint", "value": {"dark": "#635C4C"}, "usage": "Tertiary text and rules -- hairline dividers."},
+        {"name": "verdigris", "value": {"dark": "#5FA288"}, "usage": "The accent. Carries every interactive element."},
+        {"name": "verdigris-lo", "value": {"dark": "#2E4C41"}, "usage": "Low-emphasis verdigris -- deep accent fields."},
+        {"name": "orpiment", "value": {"dark": "#C9A227"}, "usage": "Spent on nothing but gold. No other UI element may use it."},
+        {"name": "madder", "value": {"dark": "#C4542E"}, "usage": "Danger. Alarm states."},
+        {"name": "lapis", "value": {"dark": "#7A6AA0"}, "usage": "Reserved for the voice."},
+        {"name": "line", "value": {"dark": "#332D22"}, "usage": "Structural hairline border."}]}}, f)
+_d = _mp_proj("pigments", {"use": "defaults"})
+_rc, _o = _mp("style", "--draft", "--from", _tk2, "--project", _d)
+with open(os.path.join(_d, "docs", "page-style.draft.json"), encoding="utf-8") as _f:
+    _dj = json.load(_f)
+_roles = {k: v.get("color") for k, v in _dj.get("roles", {}).items()}
+_mp_cases.append(("make_page: a draft reads usage notes, prefers a token's own name, keeps shades out of a second role and reserves a one-meaning colour",
+                  _rc == 0 and _dj.get("colors", {}).get("background") == "#14120E" and _dj.get("colors", {}).get("line") == "#332D22"
+                  and _roles.get("you_act") == "#5FA288" and _roles.get("blocking") == "#C4542E" and _roles.get("accent") == "#7A6AA0"
+                  and [r["color"] for r in _dj.get("reserved", [])] == ["#C9A227"]))
+
+_orig = os.path.join(ROOT, "docs", "plans", "enforced-checkpoints-design.page.json")
+if not os.path.isfile(_orig):
+    if IN_REPO:
+        _mp_cases.append(("make_page: rebuilding the enforced-checkpoints design page (content file missing in a checkout)", False))
+    else:
+        report("SKIP", "make_page: rebuilding the enforced-checkpoints design page reproduces its PAGE data (repo-only file)")
+else:
+    _d = _mp_proj("rebuild")
+    _mp("style", "--quick", "--project", _d)
+    _rc, _o = _mp("build", _orig, "--project", _d)
+    _built = _mp_page_of(os.path.join(_d, "docs", "plans", "enforced-checkpoints-design.html")) if _rc == 0 else None
+    with open(_orig, encoding="utf-8") as _f:
+        _want = json.load(_f)
+    _mp_cases.append(("make_page: rebuilding the enforced-checkpoints design page gives the PAGE data of the content file",
+                      _built is not None and _built == _want))
+
+for _t, _ok in _mp_cases:
+    report("PASS" if _ok else "FAIL", _t)
+shutil.rmtree(_mp_tmp, True)
+
+# ---- pagecheck: the page check before saving or publishing (#257) ----
+_pc_tmp = tempfile.mkdtemp(prefix="pc-")
+_pc_env = dict(os.environ, HOUSE_RULES_LOOP="on")
+_pc_off = dict(os.environ, HOUSE_RULES_LOOP="off")
+_pc_hand = "<!doctype html>\n<html><body>by hand</body></html>\n"
+_pc_built = "<!doctype html>\n<!-- house-rules make_page 9.9.9 -->\n<html><body>built</body></html>\n"
+
+
+def _pc_file(name, text):
+    p = os.path.join(_pc_tmp, name)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(text)
+    return p
+
+
+def _pc(tool, ti, env=None):
+    _rc, out, _err = run_hook("pagecheck", json.dumps({"tool_name": tool, "tool_input": ti}), env=env or _pc_env)
+    return out
+
+
+def _pc_denied(out):
+    return '"permissionDecision":"deny"' in out
+
+
+_pc_plans = os.path.join(_pc_tmp, "docs", "plans", "x.html")
+_pc_elsewhere = os.path.join(_pc_tmp, "notes", "x.html")
+_pc_hand_f = _pc_file("hand.html", _pc_hand)
+_pc_built_f = _pc_file("built.html", _pc_built)
+_pc_data_f = _pc_file("data.json", "{}")
+_pc_cases = []
+_o = _pc("Write", {"file_path": _pc_plans, "content": _pc_hand})
+_pc_cases.append(("Write of a hand-written docs/plans page is refused, naming the page and the builder command",
+                  _pc_denied(_o) and _pc_plans in _o and "make_page.py build <content.json>" in _o))
+_pc_cases.append(("Write of a builder page under docs/plans is allowed",
+                  _pc("Write", {"file_path": _pc_plans, "content": _pc_built}) == ""))
+_pc_cases.append(("Write of an .html outside docs/plans is allowed",
+                  _pc("Write", {"file_path": _pc_elsewhere, "content": _pc_hand}) == ""))
+_pc_cases.append(("Artifact publish of a hand-written page is refused",
+                  _pc_denied(_pc("Artifact", {"file_path": _pc_hand_f}))))
+_pc_cases.append(("Artifact publish of a hand-written page named in files is refused",
+                  _pc_denied(_pc("Artifact", {"files": {"index": _pc_hand_f}}))))
+_pc_cases.append(("Artifact publish of a builder page is allowed",
+                  _pc("Artifact", {"file_path": _pc_built_f}) == ""))
+_o = _pc("Artifact", {"action": "read", "file_path": _pc_hand_f})
+_pc_cases.append(("Artifact read is skipped with a note", not _pc_denied(_o) and "skipped" in _o))
+_o = _pc("Artifact", {"action": "list"})
+_pc_cases.append(("Artifact list is skipped with a note", not _pc_denied(_o) and "skipped" in _o))
+_o = _pc("Artifact", {"asset": True, "file_path": _pc_hand_f})
+_pc_cases.append(("Artifact asset upload is skipped with a note", not _pc_denied(_o) and "asset upload" in _o))
+_o = _pc("Artifact", {"type": "chart", "file_path": _pc_data_f})
+_pc_cases.append(("Artifact typed data file is skipped with a note", not _pc_denied(_o) and "skipped" in _o))
+_o = _pc("Artifact", {"file_path": os.path.join(_pc_tmp, "missing.html")})
+_pc_cases.append(("Artifact unreadable file is allowed with a note", not _pc_denied(_o) and "could not read" in _o))
+_pc_cases.append(("HOUSE_RULES_LOOP=off allows a hand-written Write and a hand-written publish",
+                  _pc("Write", {"file_path": _pc_plans, "content": _pc_hand}, _pc_off) == ""
+                  and _pc("Artifact", {"file_path": _pc_hand_f}, _pc_off) == ""))
+_pc_cases.append(("a payload with no tool_input fails open with a note",
+                  "could not run" in _pc("Write", None)))
+for _t, _ok in _pc_cases:
+    report("PASS" if _ok else "FAIL", "pagecheck: " + _t)
+shutil.rmtree(_pc_tmp, True)
 
 print()
 print("-" * 32)

@@ -167,6 +167,18 @@ labels a New item's boxes What exists today / What this creates / How it impacts
 files with counts; `tools/diff_parts.py` does the counting, checked in `tools/verify_tools.py`. The changes page
 covers the whole pull request: 27 items, every changed hook part placed once. The stale-temp-file flake (#229) is fixed.
 
+2026-10-15, branch `ccr-fd3ee01d-o448i8`: handover pages and checkpoints (#251, "Handover pages and checkpoints:
+pictures and project style on pages, then rules that run at fixed points"). Design approved, now in Plan, nothing
+built. It started from a plunderspell page that skipped the template (`docs/handover-page-audit-2026-10-15.md`).
+There are eight sub-issues, #252 to #259, all `in progress`. Build plan page: `docs/plans/handover-pages-plan.html`.
+System doc: `docs/4-systems/handover-pages.md`.
+
+2026-10-15, same branch: build plan approved ("1B 2A 3A"); #252 to #258 built, plugin 2.66.0: the page builder
+`scripts/make_page.py`, template picture slots and compare, `docs/page-style.json`, the end-of-reply checkpoint table,
+the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regeneration test (#259), not yet run.
+
+2026-10-15, branch `ccr-fd3ee01d-o448i8`: handover pages and checkpoints (#251) is built, 2.66.0, in aj's QA. Pull request #263. Every issue (#251 to #259, #261, #262) is `needs review`. `verify.py` 753 PASS and `tools/verify_tools.py` 47 PASS, each run twice. The guard fixes from `docs/guard-friction-audit-2026-10-15.md` are in. #259 (the PlunderSpell regeneration) runs in a new session after the merge.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

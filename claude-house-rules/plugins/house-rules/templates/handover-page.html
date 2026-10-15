@@ -163,6 +163,30 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .g.done span.c{background:var(--ok-soft);color:var(--ok)}
 .sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
 .owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+/* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+.pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+.pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+.pic img,.cmp img{display:block;max-width:100%;height:auto;background:var(--bg)}
+.pic,.pic button{width:100%;box-sizing:border-box}
+/* A tall screenshot shrunk to fit a short box is a sliver: fill the width and show its top instead. */
+.pic button img{width:100%;max-height:280px;object-fit:cover;object-position:top;border-radius:6px}
+.pic figcaption,.cmp figcaption{font-size:.86rem;color:var(--muted)}
+.pic,.cmp{margin:0}
+.cmp{display:grid;gap:6px;min-width:0}
+.cmp-side{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
+.cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cmp-slide{display:none;gap:6px;min-width:0}
+.cmp-frame{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.cmp-frame img{width:100%}
+.cmp-frame img + img{position:absolute;inset:0;height:100%;object-fit:fill;clip-path:inset(0 0 0 var(--pos,50%))}
+.cmp-slide input[type=range]{width:100%;accent-color:var(--accent);min-height:44px;margin:0}
+@media (max-width:639px){.cmp-side{display:none}.cmp-slide{display:grid}}
+dialog.lightbox{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:12px;width:min(96vw,960px);max-height:94vh;box-sizing:border-box;overflow:auto}
+dialog.lightbox::backdrop{background:rgba(0,0,0,.6)}
+dialog.lightbox img{display:block;width:100%;height:auto}
+dialog.lightbox p{margin-top:8px;font-size:.9rem}
+dialog.lightbox button{margin-top:10px}
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol>
@@ -233,6 +257,9 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 
 <script>
 // ---- PAGE: the only part you edit. Example content shows every field. ----------------------
+// Tiny inline SVGs so the template stays one file; real pages use a data: URI or a path next to the page.
+const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
+const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   title: "Example Proposal",
   eyebrow: "Design for approval · nothing built yet",
@@ -244,19 +271,26 @@ const PAGE = {
     key: [["We work on it", ""], ["You act on it", "you"]],      // [label, "" | "you" | "done"]
     items: [   // [icon, short label, title, kind ("" | "you" | "done"), creates, requires]
       ["bulb", "Idea", "The idea", "", "What this step creates or changes.", "Nothing from you."],
-      ["lock", "Approve", "You approve it", "you", "A line in the decisions log.", "You type \"Design approved: <name>\"."]
+      ["lock", "Approve", "You approve it", "you", "A line in the decisions log.", "You type \"Design approved: <name>\".",
+       {src: EXAMPLE_PIC, alt: "A sample picture", caption: "Optional 7th element: a picture {src, alt, caption}. alt is required."}]
     ]
   },
   changes: [   // [tag ("new" | "chg" | "keep"), name, one line, [before, after] or null, detail,
                //  [what exists today, what this creates, how it impacts you] (New items; null otherwise),
                //  [[file, added, removed, [[part in plain words, added, removed], ...]], ...] (optional, shown on open)]
+               // Optional picture: an object appended anywhere after the detail (use null to skip flow or files). Either
+               //  {src, alt, caption} (a thumbnail; tap opens it full width) or
+               //  {before: {src, alt}, after: {src, alt}, caption} (side by side from 640px, a slider below). It is found by having src or before.
     ["new", "A named new thing", "What it is, in one line.", null, "Detail shown on tap.",
      ["Nothing does this today.", "A thing that does it.", "You no longer have to do it by hand."],
      [["scripts/thing.py", 40, 0, [["The thing added", 40, 0]]]]],
-    ["chg", "A named existing thing", "How it changes.", ["Before", "After"], "Detail shown on tap."]
+    ["chg", "A named existing thing", "How it changes.", ["Before", "After"], "Detail shown on tap.", null, null,
+     {before: {src: EXAMPLE_PIC, alt: "How it looked before"}, after: {src: EXAMPLE_PIC_AFTER, alt: "How it looks after"}, caption: "A before-and-after compare."}],
+    ["chg", "A changed thing with one picture", "A picture instead of a compare.", null, "Detail shown on tap.", null, null,
+     {src: EXAMPLE_PIC, alt: "A sample picture", caption: "One picture."}]
   ],
   choices: [   // [id, question, [[letter, label, suggested (1/0), one line]], why or ""]
-    ["first", "An example decision?", [["A", "The suggested option", 1, "Why it fits."], ["B", "Another option", 0, ""]], "Why I suggest it."]
+    ["first", "An example decision?", [["A", "The suggested option", 1, "Why it fits.", {src: EXAMPLE_PIC, alt: "A sample picture", caption: "Optional 5th element on an option: a picture."}], ["B", "Another option", 0, ""]], "Why I suggest it."]
   ],
   wrapup: {
     summary: "One sentence on what this proposal is.",
@@ -270,6 +304,30 @@ const PAGE = {
 
 const ic = id => `<svg class="ico"><use href="#i-${id}"/></svg>`;
 const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// A picture is found by shape (src or before), not position, because flow and files before it are optional.
+const picOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && (x.src || x.before));
+let picN = 0; const PICS = [];
+const picHtml = p => {
+  if (!p) return "";
+  if (p.before && p.after) {
+    const id = "cmp" + (picN++), cap = p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : "";
+    const im = x => `<img src="${esc(x.src)}" alt="${esc(x.alt || p.caption || "")}">`;
+    return `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
+      <div class="cmp-slide"><div class="cmp-frame">${im(p.before)}${im(p.after)}</div><label for="${id}">Reveal after over before: drag to compare</label><input type="range" id="${id}" min="0" max="100" value="50" aria-label="Compare before and after: ${esc(p.caption || "")}"></div>${cap}</figure>`;
+  }
+  const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+  return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+};
+document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+let boxFrom = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-pic]");
+  if (b) { const p = PICS[+b.dataset.pic]; boxFrom = b; box.querySelector("img").src = p.src; box.querySelector("img").alt = p.alt; box.querySelector("p").textContent = p.caption; box.showModal(); return; }
+  if (e.target === box || e.target.closest("dialog.lightbox")) box.close();  // tap anywhere on it closes; Escape does too
+});
+box.addEventListener("close", () => { if (boxFrom) boxFrom.focus(); boxFrom = null; });
 document.title = PAGE.title;
 document.getElementById("title").textContent = PAGE.title;
 document.getElementById("eyebrow").textContent = PAGE.eyebrow;
@@ -288,10 +346,10 @@ glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
   `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
 function showItem(n) {
   glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
-  const [, , t, , creates, requires] = PAGE.short.items[n];
+  const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
   const needsYou = !/^Nothing/.test(requires);
   sd.innerHTML = `<h3>${esc(t)}</h3><div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span><p>${esc(creates)}</p></div>
-    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${ic("hand")}Requires</span><p>${esc(requires)}</p></div></div>`;
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${ic("hand")}Requires</span><p>${esc(requires)}</p></div></div>${picHtml(pic)}`;
 }
 glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
 if (PAGE.short.items.length) showItem(0);
@@ -307,15 +365,14 @@ if (document.getElementById("cc")) {
   const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
     fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
       (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
-  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl, fs]) =>
-    `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
-     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${files(fs)}</div></details>`).join("");
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
 }
 
 if (document.getElementById("qs")) {
   document.getElementById("qs").innerHTML = PAGE.choices.map(([id, q, opts, why], n) =>
     `<fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n + 1}</span>${esc(q)}</h3></legend>
-     ${opts.map(([v, l, rec, d]) => `<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${esc(l)}</b>${rec ? '<span class="rec">' + ic("check") + 'Suggested</span>' : ""}${d ? `<small>${esc(d)}</small>` : ""}</span></label>`).join("")}
+     ${opts.map(o => { const [v, l, rec, d] = o; return `<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${esc(l)}</b>${rec ? '<span class="rec">' + ic("check") + 'Suggested</span>' : ""}${d ? `<small>${esc(d)}</small>` : ""}</span></label>${picHtml(picOf(o, 4))}`; }).join("")}
      <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to: ${esc(q)}" placeholder="Type your idea here"></span></label>
      ${why ? `<details class="why"><summary>Why I suggest this</summary><p>${esc(why)}</p></details>` : ""}</fieldset>`).join("");
 }

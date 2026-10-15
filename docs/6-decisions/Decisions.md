@@ -7,6 +7,157 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - The end-of-reply check blocks once, from a checkpoint table
+
+**Context.** aj approved "Design approved: handover pages and checkpoints" (below), which reverses the
+"never `decision: "block"`" rule for `Stop` recorded in `docs/architecture.md` and the 2026-09-23 entry
+"handover narrows to shell fences" (now marked Superseded in part).
+
+**Decision.** #256 built it. `hook.py` has a `CHECKPOINTS` table of (moment, rule name, check, "block" or
+"remind"). Five rows at "reply ends" block: page, editor, evidence, commit, plain summary. A miss returns
+`decision: "block"` with each missed rule's one-line text and exact fix, once; on the retry
+(`stop_hook_active`) it only reports, as `subagentcommit` does on `SubagentStop`. "no page" in aj's own
+genuine message lets one reply past the page and editor rows; a helper's hand-back never counts.
+`HOUSE_RULES_LOOP=off` turns all rows off. Any error fails open with a `systemMessage`.
+
+---
+
+## 2026-10-15 - QA passed: handover pages and checkpoints
+
+**Status.** aj: "QA passed: handover pages and checkpoints". Stage Done. QA page: `docs/plans/handover-pages-qa.html`.
+Pull request #263 waits on aj's merge. Issues stay `needs review` until aj closes them. Handoff: `docs/handoff-2026-10-15.md`.
+
+## 2026-10-15 - Guard fixes: aj's answers
+
+**Status.** Answered: "Guard fixes answers: 1A 2A 3A 4A", on `docs/plans/guard-fixes.html`, from the nine
+refusals in `docs/guard-friction-audit-2026-10-15.md`. The answers:
+- **Unclear command, nobody to ask:** refuse, but name the plain form that would pass. "Do not retry" stays
+  only for deletes, kills and pushes to the main branch.
+- **Scratch folder:** deleting inside this session's scratchpad doesn't ask.
+- **Code lock:** also covers source files written by a Bash script.
+- **Worktrees:** fixed in this build, so the stage is shared through the repo's common git folder.
+
+Built as two sub-issues of #251, before the pull request. Each one replays today's real refusals as tests.
+
+## 2026-10-15 - Test method for the PlunderSpell regeneration: after the merge
+
+**Status.** Answered: "Test method: 1B", on `docs/plans/plunderspell-test-method.html`, which was the first page
+built by the page builder. A brand-new cloud session installs house-rules from main, so it can't load this
+branch. The order is now: guard fixes, aj's QA on the pull request, merge, then a genuinely new PlunderSpell
+session for #259. This replaces build plan choice 1B ("install from this branch before it is merged").
+
+## 2026-10-15 - Before the pull request: guards must not stall an approved, autonomous build
+
+**Context.** A routine commit of finished, tested work on this session's own branch was refused while aj was
+away. The guard couldn't follow `git -C $G`, and its rule then said not to retry, which stopped the build until
+aj came back. aj: "a routine commit should never ever be something that kills a loop and requires my
+intervention… gates that enforce certain stages of planning vs execution and that the autonomous ones can run
+autonomously without intervention unless required."
+
+**Decision.** Finish the eight steps of #251 first. Then, before the pull request, audit every guard or hook
+refusal of an approved, routine action in this session, and fix them so none recurs. The fixes go to aj as a
+proposal page first, because what a guard allows is a design call. The audit list is
+`docs/guard-friction-audit-2026-10-15.md`.
+
+## 2026-10-15 - Project style file: aj's answers
+
+**Status.** Answered: "Style file answers: 1A 2A 3A 4A 5A", on `docs/plans/project-style-file.html`. #255 is built
+to these answers:
+- **Colour roles:** each page role (you act, accent, blocking, done) maps to one of the project's colours. The
+  rule "orange means you act" becomes "one colour means you act in each project". The template's default stays
+  orange.
+- **Contents:** colours, roles, reserved colours, themes, fonts, shape, labels, icons, pictures and picture
+  folders. The worked example is `docs/plans/page-style/plunderspell.page-style.json`.
+- **Drafting:** the builder drafts the file from the project's design system or style guide, and aj approves it.
+- **No style file:** aj is asked once per project. Choosing the quick option writes a one-line file that says to
+  use the defaults.
+- **Themes:** each project decides. PlunderSpell is dark only.
+
+**Also received in the same message, for PlunderSpell (not this repo):** aj's picks on the Wick and Ophan plan,
+"PlunderSpell Build plan approved: fear entities, picks: 1* 2C 3* 4B 5A 6A 7*":
+- **Choice 1 (own answer):** quota first, then the Wick, then the Ophan. The quota and the Wick change the game
+  loop most, and the Ophan is the face of the quota.
+- **Choice 3 (own answer):** a catch lights the player ablaze, which prevents a revive, and they respawn when the
+  team returns home.
+- **Choice 7 (own answer):** as originally proposed, the player is spared when carrying the artifacts it wants,
+  and killed once it finds them empty-handed.
+
+This session can't act on PlunderSpell (read-only). They're kept here for #259, which rebuilds that page.
+
+## 2026-10-15 - Build plan approved: handover pages and checkpoints
+
+**Status.** Approved: "Build plan approved: handover pages and checkpoints: 1B 2A 3A". The answers:
+- **Install for the plunderspell test (1B):** the fresh session installs house-rules from this branch before
+  it is merged.
+- **Helper-report fix (2A):** in this build, as #253.
+- **No browser (3A):** the builder writes the page and says the visual check didn't run, and why.
+
+**Added by aj with the approval:** study PlunderSpell's style guide to decide what `docs/page-style.json`
+holds. aj expects fonts and icons, and possibly more. When a project has no style file, the session offers
+two options: create one, or use the defaults for speed. The style file's contents come back to aj as a
+proposal page before #255 (style file and page builder) is built. #253 (helper reports) and #254 (template
+picture slots) don't depend on it and start now.
+
+## 2026-10-15 - Design approved: handover pages and checkpoints
+
+**Status.** Approved: "Design approved: handover pages and checkpoints: 1A 2A 3A 4A 5A 6A 7B 8A". The answers:
+- **Pictures:** anywhere they help: In short steps, Changes items and choice options. Changed items get a
+  before-and-after compare.
+- **Project style:** lives in `docs/page-style.json`, read only by the page builder.
+- **How visual:** set in the style file: required for art and visual changes, optional, or off. The builder
+  enforces it.
+- **How a page is made:** by the page builder, which stamps a mark the page check looks for.
+- **What needs a page:** choices, a plan, or a reply over 200 words.
+- **On a miss:** block once, then only report on the retry.
+- **Scope (7B):** hard checkpoints for the page rule and the editor helper, and also for the evidence,
+  commit and plain-summary checks.
+- **Escape:** "no page" in aj's message lets one reply through. `HOUSE_RULES_LOOP=off` still turns it all off.
+
+**Added by aj with the approval:** once built, regenerate the plunderspell Wick and Ophan page with the new
+tools, exactly as a new session would, to test the formula.
+
+## 2026-10-15 - Design revised: handover pages and checkpoints (second version)
+
+**Status.** Proposed, waiting on "Design approved: handover pages and checkpoints" with eight choices.
+This replaces the first version's reply phrase below.
+
+**Context.** aj agreed with the direction ("yes") but asked for changes before the template is enforced:
+slots for screenshots and images, and a way for a project's own style guide to shape the page, because "some
+projects will require more visual than others". The evidence is plunderspell's rewrite of its Wick and Ophan
+plan into the template. The first version had an Editor render of both creatures. The template version has
+no picture, because `templates/handover-page.html` has no way to show one.
+
+**Proposal.** Page: `docs/plans/enforced-checkpoints-design.html` (same file, same claude.ai link). Template
+first, enforcement second:
+- Picture slots on In short steps, Changes items and choice options, plus a before-and-after compare on
+  Changed items.
+- An optional `docs/page-style.json` in each project, holding colours, fonts and a pictures setting
+  (required for art changes, optional, or off).
+- A page builder, `scripts/make_page.py`, that writes every page and stamps a mark.
+- The first version's checkpoints, with the page check looking for the builder's mark.
+
+## 2026-10-15 - Design proposed: enforced checkpoints
+
+**Status.** Proposed, waiting on "Design approved: enforced checkpoints" with four choices.
+
+**Context.** A plunderspell handover page was hand-built instead of coming from
+`templates/handover-page.html`, and this session answered a proposal with no page at all. Audit:
+`docs/handover-page-audit-2026-10-15.md`. aj: rules "need to be run at specific points not just as the agent
+pleases", and a page "needs to be mandatory". Three causes were found. The injected `rules/show-dont-tell.md`
+never names the template. The `Stop` check is recorded as never blocking (`docs/architecture.md:54`). And this
+session loaded 2.55.0's start-of-session rules while its later hooks ran 2.65.1.
+
+**Proposal.** Page: `docs/plans/enforced-checkpoints-design.html`. A checkpoint table in `hook.py`. The
+end-of-reply check blocks once, then only reports on the retry, the same safety `subagentcommit` uses. A new
+check before a page is written under `docs/plans/` or published with the Artifact tool refuses a page without
+the template's parts. The injected rule names the template. Start-of-session rules come from the newest
+installed version, after a diagnostic check of how the version mix happened. If approved, this reverses
+"never `decision: "block"`" on `Stop`.
+
+**Found while proposing, not in this design.** The design loop reads a subagent's hand-back as aj's message.
+It logged "Build plan approved" from an editor report that quoted the phrase, which nothing moved only because
+the stage was Design. It also unlocked a code edit on a report quoting "skip design". That unlock was not used.
+
 ## 2026-10-15 - New item visual v2 built (2.65.1); handed to aj for QA
 
 **Built:** the template labels a New item's boxes "What exists today / What this creates / How it impacts you" and
@@ -1976,7 +2127,7 @@ check exists because "evidence before claims" (this session's own earlier additi
 c67d`) was, until now, a rule stated in the subagent core and nowhere enforced in the main
 session's own replies.
 
-**Status.** Standing.
+**Status.** Superseded in part: "never `decision: "block"`" on `Stop` was replaced by the 2026-10-15 entry "The end-of-reply check blocks once, from a checkpoint table" (#256). The rest stands.
 
 ## 2026-09-23 — scope trades its step-card line for a docs-tier line and an evidence line
 

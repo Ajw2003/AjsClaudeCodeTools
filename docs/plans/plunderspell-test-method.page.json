@@ -1,0 +1,33 @@
+{
+  "title": "PlunderSpell Test Method",
+  "eyebrow": "Choice for the last build step · built with the page builder",
+  "replyPrefix": "Test method",
+  "reply": "",
+  "short": {
+    "lead": "The last build step has a fresh PlunderSpell session rebuild the Wick and Ophan page using only the new tools built in this feature. You chose to run it before merging, from this branch. A brand-new cloud session can't do that, though: it installs house-rules from main when it starts, and a plugin installed partway through a session only loads in the next one. This page asks how you want the test run instead.",
+    "hint": "Tap a step to see what it creates and what it needs from you.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["search", "Found", "Why the branch can't load", "", "Cloud sessions install house-rules from the marketplace, which reads main. This branch is not on main yet.", "Nothing from you."],
+      ["hand", "Choose", "You pick how to run the test", "you", "One of the two methods below.", "Your pick under Choices."],
+      ["flask", "Test", "The Wick and Ophan page is rebuilt", "", "With PlunderSpell's own style, the creature render back on the page, and every checkpoint live.", "Your earlier picks for the plan, which are already logged, and a look at the page the test makes."]
+    ]
+  },
+  "changes": [
+    ["chg", "Issue 259: Regenerate the PlunderSpell Wick and Ophan page as a new session would", "This changes only how the fresh session is started.", ["The old plan: a fresh cloud session installs this branch before it is merged.", "Your pick between A and B under Choices."], "The test itself doesn't change: same prompt, same page, and nothing from this session is passed to it."],
+    ["keep", "The guard audit before the pull request", "The guard audit still comes first.", null, "The nine guard refusals in docs/guard-friction-audit-2026-10-15.md come to you as a proposal page before any pull request, as you asked."]
+  ],
+  "choices": [
+    ["method", "How should the fresh PlunderSpell session be run?", [
+      ["A", "A real session in this sandbox on a copy of PlunderSpell, with this branch's plugin loaded from its first moment", 0, "Runs now, in this sandbox. I relay your answers in and its replies out, so you don't talk to that session directly."],
+      ["B", "Fix the guards, open the pull request and merge it, then start a genuinely new PlunderSpell cloud session", 1, "This is exactly how a new session works. You do your QA on the pull request, before the merge."]
+    ], "You asked for it to run exactly as a new session would. Only merging first and then starting a new cloud session does that, because a new session installs from main. The sandbox session runs the same code, but with me relaying between you and the session."]
+  ],
+  "wrapup": {
+    "summary": "How to run the final PlunderSpell test, given that a new cloud session installs from main.",
+    "changing": "Only the order of the last steps: guard fixes, then the pull request and merge, then the test, if you pick B.",
+    "blocking": "Your pick of the method.",
+    "next": "If you pick B, I send the guard audit page next. If you pick A, I start the session in this sandbox.",
+    "todo": ["Pick a method under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}

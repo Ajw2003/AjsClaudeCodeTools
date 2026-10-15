@@ -1,0 +1,43 @@
+{
+  "title": "Guard Fixes",
+  "eyebrow": "Proposal before the pull request · part of handover pages and checkpoints",
+  "replyPrefix": "Guard fixes answers",
+  "reply": "",
+  "short": {
+    "lead": "Nine times today a guard stopped work you had already signed off, and four of those stalled the build until you came back. The audit (docs/guard-friction-audit-2026-10-15.md) traces them to four causes. The guard can't follow a folder set in a variable, or a cd followed by a semicolon. A refusal it can't ask about says \"do not retry\" even when a plainly written retry would pass. Deleting in the session's own scratch folder counts as destructive. And a helper working in its own worktree (a separate checkout of the repo) sees the wrong design-loop stage. This page fixes each cause, and tests every one of today's nine refusals so none can come back.",
+    "hint": "Tap a step to see what it creates and what it needs from you.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["search", "Follow", "The guard follows where a command really runs", "", "It reads folder variables set in the same command and a cd followed by a semicolon. Your own branch in this repo then counts as routine, whoever runs the command.", "Nothing from you."],
+      ["loop", "Retry", "An unclear command gets a fix, not a dead end", "", "When the guard can't tell what a command does and nobody can answer, the refusal names the plain form that would pass, so the work goes on. \"Do not retry\" stays for actions that are genuinely risky.", "Nothing from you."],
+      ["file", "Scratch", "The session's own scratch folder is free to tidy", "", "Deleting inside this session's scratchpad stops counting as destructive. Your files are still protected as before.", "Nothing from you."],
+      ["lock", "Lock", "The code lock works everywhere and covers every route", "", "Worktrees share the repo's one design-loop stage, and code written through a Bash script is held to the same lock as the edit tool.", "Nothing from you."],
+      ["check", "Replay", "Today's nine refusals become tests", "", "Each of today's nine refusals is replayed as a test, so the suite fails if any comes back.", "Nothing from you."],
+      ["hand", "Answer", "You answer the choices", "you", "These fixes are added to the build as sub-issues, then built before the pull request.", "Your answers under Choices."]
+    ]
+  },
+  "changes": [
+    ["chg", "Guard: following a command's folder (_command_dir in hook.py)", "Follows a folder set in a variable, and a cd followed by a semicolon.", ["A literal folder only, after cd && or git -C. Anything else counts as unclear.", "Also follows a folder set as a variable earlier in the same command, and cd followed by a semicolon."], "Covers audit entries 1, 2, 3 and 9."],
+    ["chg", "Guard: the refusal when nobody can answer (_ask_or_refuse in hook.py)", "Says how to rewrite the command instead of stopping the work.", ["Every refusal says do not retry and do not reach the same result another way.", "A refusal caused only by an unclear folder or pipe names the exact plain form that passes. Do not retry stays for deletes, kills and pushes to the main branch."], "Covers audit entries 1, 5, 7 and 8."],
+    ["chg", "Guard: the wait-pipe rule", "Matches only a wait that really feeds the pipe.", ["Matched a sleep in one part of a command and a head in a different part, even when the wait never fed the pipe.", "Matches only when the wait or loop itself is piped through tail or head."], "Covers audit entry 5. A test run piped through tail is still caught, because that is still a hidden wait."],
+    ["chg", "Guard: deleting files", "The session's own scratch folder is exempt.", ["Any rm asks you first, even in the session's own scratchpad.", "rm inside this session's scratchpad is allowed. Everywhere else asks as before."], "Covers audit entry 8."],
+    ["chg", "Design loop: where the stage is kept (_issues_locate in hook.py)", "One stage per repo, shared by its worktrees.", ["Each worktree reads its own, empty stage, so it is stuck in Design.", "Every worktree reads the repo's shared stage."], "Covers audit entry 4. It replaces the separate suggested task, \"Fix design loop lock inside git worktrees\"."],
+    ["new", "Code lock for Bash writes", "Code written by a script is held to the same lock.", null, "While code is locked, a Bash command that writes a source file is refused. That means a Python or shell script, sed -i, or a redirect into a source file. Docs and .md files stay open, as with the edit tool.",
+     ["The lock only watches the edit tools, so a script can write code in any stage.", "The same lock on script writes.", "Code still only changes after you've approved a build plan, whichever tool writes it."]],
+    ["new", "Replay tests (scripts/verify.py)", "Today's nine refusals, replayed.", null, "Each refusal runs again from its real command. The routine ones must now pass, and the genuinely risky ones must still be refused.",
+     ["Nothing stops a fixed refusal from coming back.", "A test for each of today's nine refusals.", "If any of today's stalls returns, the suite fails before it ships."]]
+  ],
+  "choices": [
+    ["follow", "When the guard still can't tell where a git command acts, and nobody can answer, what happens?", [["A", "Refuse, and name the plain form to retry with", 1, "The work carries on with one rewrite."], ["B", "Refuse with do not retry, as today", 0, "The build waits for you."]], "Today a parse problem and a real risk get the same dead end. Only the real risk should."],
+    ["scratch", "Should deleting inside this session's own scratch folder be allowed without asking?", [["A", "Yes, inside the session's scratchpad only", 1, "Nothing of yours lives there."], ["B", "No, keep asking", 0, "Deleting there still asks you first, as today."]], "The scratchpad is private to one session and is thrown away when the session ends."],
+    ["bashlock", "Should the code lock also cover source files written by a Bash script?", [["A", "Yes: script writes to source files are refused while code is locked", 1, "Closes the gap a builder used today to write code through a script."], ["B", "No: the lock stays on the edit tools only", 0, "Fewer refusals, but the lock can be bypassed."]], "A lock that one tool can step around isn't a lock. Today's builder only stepped around it to finish work you had already signed off, but nothing stops it doing the same for work you hadn't signed off."],
+    ["worktree", "Should the worktree stage fix go in this build?", [["A", "Yes, in this build", 1, "Builders can then use worktrees as your rules ask."], ["B", "No, leave it to the separate suggested task", 0, "Worktrees stay stuck in Design until the separate suggested task is done."]], "Your rules ask for worktrees on multi-file work, and today that is impossible."]
+  ],
+  "wrapup": {
+    "summary": "Fixes for the four causes behind today's nine guard refusals, each tested by replaying the real refusal.",
+    "changing": "The guard's folder following, its refusal text, the wait-pipe and delete rules, where the design loop keeps its stage, and a code lock on script writes.",
+    "blocking": "Your answers to the four choices.",
+    "next": "I add these as sub-issues under the handover pages build, build them, then open the pull request for you to test.",
+    "todo": ["Pick your answers under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}

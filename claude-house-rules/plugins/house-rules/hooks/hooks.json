@@ -114,11 +114,21 @@
         ]
       },
       {
-        "matcher": "Write|Edit|NotebookEdit",
+        "matcher": "Write|Edit|NotebookEdit|Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" commitgate",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Artifact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" pagecheck",
             "timeout": 10
           }
         ]

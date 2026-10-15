@@ -511,10 +511,69 @@ def _plugin_root():
     return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 
-def _expand_detail_paths(text):
+def _version_tuple(text):
+    parts = []
+    for piece in str(text).split("."):
+        m = re.match(r"\d+", piece)
+        parts.append(int(m.group()) if m else 0)
+    return tuple(parts)
+
+
+def _rules_root(needed):
+    """(root, note): the plugin folder whose rules SessionStart should load.
+
+    A session starts on the folder the harness resolved at launch. If an update lands during
+    that same SessionStart (versioncheck, last in hooks.json), inject and showrule already ran
+    from the old folder, so a session carried the old rules beside the new checks (issue #252).
+    So: use installed_plugins.json's installPath when it exists, is newer by version, and has
+    every file in `needed` (paths under rules/); otherwise this folder. `note` is one line, or
+    "" when nothing differs. It is never silent when the answer could not be worked out.
+    """
+    own = _plugin_root()
+    path = _installed_plugins_path()
+    if not os.path.isfile(path):
+        return own, "could not check for newer rules: %s does not exist, so this folder's rules (%s) were loaded" % (path, own)
+    try:
+        data = json.loads(_read_text(path))
+        plugins = data.get("plugins", {}) if isinstance(data, dict) else {}
+        entry = None
+        for plugin_id, entries in sorted(plugins.items()):
+            if plugin_id.split("@", 1)[0] != _VC_PLUGIN_NAME:
+                continue
+            if isinstance(entries, dict):
+                entries = [entries]
+            entry = next((e for e in entries if isinstance(e, dict) and e.get("installPath")), None)
+            break
+    except Exception as exc:
+        return own, "could not check for newer rules: installed_plugins.json is unreadable (%s), so this folder's rules (%s) were loaded" % (type(exc).__name__, own)
+    if entry is None:
+        return own, "could not check for newer rules: installed_plugins.json has no installPath for %s, so this folder's rules (%s) were loaded" % (_VC_PLUGIN_NAME, own)
+    new_root = os.path.normpath(entry["installPath"])
+    if os.path.realpath(new_root) == os.path.realpath(own):
+        return own, ""
+    try:
+        new_version = str(entry.get("version", "")) or _plugin_version_of(new_root)
+    except Exception as exc:
+        return own, "could not check for newer rules: no version for %s (%s), so this folder's rules (%s) were loaded" % (new_root, type(exc).__name__, own)
+    own_version = _plugin_version()
+    if not new_version or _version_tuple(new_version) <= _version_tuple(own_version):
+        return own, ""
+    missing = [n for n in needed if not os.path.isfile(os.path.join(new_root, "rules", n))]
+    if missing:
+        return own, "newer rules %s are installed at %s but lack rules/%s, so this folder's %s rules were loaded" % (
+            new_version, new_root, ", rules/".join(missing), own_version or "unknown")
+    return new_root, "loaded the rules from house-rules %s (%s), not this session's %s, because an update installed it after this session started" % (
+        new_version, new_root, own_version or "unknown")
+
+
+def _plugin_version_of(root):
+    return json.loads(_read_text(os.path.join(root, ".claude-plugin", "plugin.json"))).get("version", "") or ""
+
+
+def _expand_detail_paths(text, root=None):
     """Write every plugin path as <plugin>/... and state the absolute plugin root once, so the
     injected size does not grow with the install path's length or the number of pointers."""
-    root = _plugin_root()
+    root = root or _plugin_root()
     if "${CLAUDE_PLUGIN_ROOT}" not in text:
         return text
     text = text.replace("${CLAUDE_PLUGIN_ROOT}", "<plugin>")
@@ -522,8 +581,8 @@ def _expand_detail_paths(text):
 
 
 def event_inject():
-    here = os.path.dirname(os.path.abspath(__file__))
-    rules_path = os.path.join(here, "..", "rules", "house-rules.md")
+    root, note = _rules_root(("house-rules.md",))
+    rules_path = os.path.join(root, "rules", "house-rules.md")
 
     try:
         body = _read_text(rules_path)
@@ -558,7 +617,7 @@ def event_inject():
     # text is going into additionalContext, which nothing expands. The root is stated once
     # rather than substituted into every pointer: 26 copies of a long install path pushed this
     # past its size margin on a CI runner whose checkout path was merely 26 chars longer.
-    body = _expand_detail_paths(body)
+    body = _expand_detail_paths(body, root)
 
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
@@ -568,15 +627,16 @@ def event_inject():
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
 
-    emit(
-        {
-            "suppressOutput": True,
-            "hookSpecificOutput": {
-                "hookEventName": "SessionStart",
-                "additionalContext": preamble + body,
-            },
-        }
-    )
+    out = {
+        "suppressOutput": True,
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": preamble + body,
+        },
+    }
+    if note:
+        out["systemMessage"] = "house-rules plugin: " + note + "."
+    emit(out)
     return 0
 
 
@@ -592,11 +652,11 @@ SHOWRULE_FILES = (("show-dont-tell.md", "show-don't-tell"), ("clear-writing.md",
 
 
 def event_showrule():
-    here = os.path.dirname(os.path.abspath(__file__))
+    root, note = _rules_root(tuple(n for n, _ in SHOWRULE_FILES))
     bodies, missing = [], []
     for name, label in SHOWRULE_FILES:
         try:
-            body = _read_text(os.path.join(here, "..", "rules", name)).replace("\r\n", "\n")
+            body = _read_text(os.path.join(root, "rules", name)).replace("\r\n", "\n")
         except OSError:
             missing.append("cannot read rules/%s, so the %s rule was NOT loaded" % (name, label))
             continue
@@ -605,14 +665,14 @@ def event_showrule():
             continue
         bodies.append(_apply_voice_toggle(body) if name == "clear-writing.md" else body)
     if not bodies:
-        emit({"systemMessage": "house-rules plugin: " + "; ".join(missing) + "."})
+        emit({"systemMessage": "house-rules plugin: " + "; ".join(missing + ([note] if note else [])) + "."})
         return 0
     out = {"suppressOutput": True, "hookSpecificOutput": {
         "hookEventName": "SessionStart",
         "additionalContext": "Standing house rules, loaded separately from the rest:\n\n"
-        + _expand_detail_paths("\n\n".join(bodies))}}
-    if missing:
-        out["systemMessage"] = "house-rules plugin: " + "; ".join(missing) + "."
+        + _expand_detail_paths("\n\n".join(bodies), root)}}
+    if missing or note:
+        out["systemMessage"] = "house-rules plugin: " + "; ".join(missing + ([note] if note else [])) + "."
     emit(out)
     return 0
 
@@ -1715,7 +1775,10 @@ GUARD_R1 = [
     # #85: a wait piped through tail/head shows nothing until it exits - a stuck wait and a
     # working one look identical for its whole timeout.
     (
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_-])(while|until|sleep|timeout|watch)\s.*\|\s*(tail|head)([^0-9A-Za-z_-]|$)",
+        # #261: the keyword and the tail/head must share one pipeline segment (no ; && || or
+        # newline between them); a while/until loop is one segment up to its `done`.
+        r"(^|" + _LINE_START + r"[^0-9A-Za-z_-])(?:(?:while|until)\s.*?\bdone\s*|"
+        r"(?:while|until|sleep|timeout|watch)\s(?:(?!\\[nrt]|;|&&|\|\|).)*?)\|(?!\|)\s*(tail|head)([^0-9A-Za-z_-]|$)",
         "pipes a wait or loop through tail/head, which hides its output until it exits",
     ),
 ]
@@ -2049,10 +2112,24 @@ def branch_ownership(start=None):
     return branch.startswith(owned_branch_prefixes()), branch, None
 
 
-_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*&&""")
+_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*(?:&&|;)""")
+# A statement-leading NAME=value, NAME="value" or NAME='value' followed by ; or && (#261).
+_ASSIGN_RE = re.compile(r"""(?:^|(?<=[;&\n]))\s*([A-Za-z_]\w*)=(?:"([^"$`\\\n]*)"|'([^'\n]*)'|([^\s;&|"'$`\\()<>*?]*))[ \t]*(?:&&|;)""")
 # cd/pushd only where a command can start, so `git commit -m "fix cd handling"` keeps the
 # exemption (#203); shell keywords count, so `if t; then cd x; fi` is still seen.
 _ANY_CD_RE = re.compile(r"(?:^|[;&|({!\n]|\b(?:if|elif|while|until|then|do|else|time|exec)\b)\s*(?:cd|pushd)(?=\s|$)")
+
+
+def _apply_assigns(cmd):
+    """#261/#262: drop simple same-command NAME=value assignments and expand $NAME / ${NAME}
+    from them; a name that was not assigned stays as written."""
+    assigns = {}
+    for am in _ASSIGN_RE.finditer(cmd):
+        assigns[am.group(1)] = am.group(2) if am.group(2) is not None else (am.group(3) if am.group(3) is not None else am.group(4))
+    if assigns:
+        cmd = _ASSIGN_RE.sub("", cmd)
+        cmd = re.sub(r"\$\{(\w+)\}|\$(\w+)", lambda mm: assigns.get(mm.group(1) or mm.group(2), mm.group(0)), cmd)
+    return cmd
 
 
 def _command_dir(payload):
@@ -2078,6 +2155,9 @@ def _command_dir(payload):
             cmd = ""
     if not isinstance(cmd, str):
         return base, False
+    # #261: simple NAME=value / NAME="value" assignments earlier in the command expand into a
+    # cd or -C target; a target that still holds a $ afterwards stays unclear.
+    cmd = _apply_assigns(cmd)
     c_flags = _ANY_C_FLAG_RE.findall(cmd)
     if c_flags:
         # `git -C <dir>` (#192): judged by <dir> when every -C names the same one and nothing cds.
@@ -2304,6 +2384,7 @@ def event_guard():
 
     hits = {title: [] for title, _ in GUARD_BUCKETS}
     exempted = []
+    plain_hits = []  # branch writes asked only because the folder is unclear (#261)
     refused = []  # branch writes aimed at the default branch: refused, never asked (#197)
     saved_state = None  # (saved, note), computed at most once and only when a SAVED pattern matched
     saved_blocked = None
@@ -2313,9 +2394,13 @@ def event_guard():
             if not re.search(pattern, subject, re.IGNORECASE):
                 continue
             marker = entry[2] if len(entry) > 2 else None
+            if reason == "deletes one or more files" and _rm_only_in_scratchpad(subject, payload):
+                continue  # #261: every rm path is inside this session's scratchpad
             if marker == BRANCH_WRITE and known:
                 (refused if protected else exempted).append(reason)
                 continue
+            if marker == BRANCH_WRITE:
+                plain_hits.append(reason)
             if marker == SAVED and known and not protected:
                 if saved_state is None:
                     saved_state = work_saved_elsewhere(where)
@@ -2433,8 +2518,85 @@ def event_guard():
         "Approve to let it run, or reject and Claude will explain what it was about to do."
     )
     reason_text = "\n".join(lines)
-    _ask_or_refuse(payload, reason_text, issue_hit[2] if issue_hit and issue_hit[2] else None)
+    rewrite = None
+    all_hits = [r for rs in hits.values() for r in rs]
+    if all_hits and not outdated and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
+        pipe_reason = GUARD_R1[-1][1]
+        if all(r == pipe_reason for r in all_hits):
+            rewrite = "Write the output to a file instead of piping it through tail/head."
+        elif elsewhere and not protected and all(r in plain_hits for r in all_hits):
+            rewrite = ("Run it as plain `git ...` from %s, with no cd, -C or variables, and it will be "
+                       "checked normally." % _payload_toplevel(payload))
+    _ask_or_refuse(payload, reason_text, issue_hit[2] if issue_hit and issue_hit[2] else None, rewrite)
     return 0
+
+
+def _payload_toplevel(payload):
+    """The repo top-level of the payload cwd; the cwd itself when git cannot say (#261)."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = None
+    cwd = data.get("cwd") if isinstance(data, dict) else None
+    cwd = cwd if isinstance(cwd, str) and cwd else (os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    try:
+        import subprocess
+        p = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd, capture_output=True,
+                           text=True, timeout=10)
+        top = p.stdout.strip()
+        if p.returncode == 0 and top:
+            return top
+    except Exception as exc:
+        sys.stderr.write("house-rules guard: could not read the repo top-level (%s: %s); naming the "
+                         "working folder instead.\n" % (type(exc).__name__, exc))
+    return cwd
+
+
+def _rm_only_in_scratchpad(subject, payload):
+    """True when every `rm` in the command has only absolute path arguments inside this session's
+    scratchpad (/tmp/claude-*/<project>/<session_id>/scratchpad), or - if that cannot be derived -
+    under /tmp/claude- with the session_id as a path component. Globs/.. that could leave: False."""
+    import shlex
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        sys.stderr.write("house-rules guard: could not read the payload to check whether rm stays in the "
+                         "scratchpad; asking as usual.\n")
+        return False
+    if not isinstance(data, dict) or not data.get("session_id"):
+        return False
+    sid = str(data["session_id"])
+    cwd = data.get("cwd") if isinstance(data.get("cwd"), str) else ""
+    proj = re.sub(r"[^A-Za-z0-9]", "-", cwd) if cwd else None
+    seen = False
+    for stmt in re.split(r"&&|\|\||;|\n|\|", _apply_assigns(_decoded_command(subject))):
+        try:
+            words = shlex.split(stmt)
+        except ValueError:
+            sys.stderr.write("house-rules guard: could not split an rm statement (unbalanced quotes); "
+                             "asking as usual.\n")
+            return False
+        if "rm" not in words:
+            continue
+        args = words[words.index("rm") + 1:]
+        paths = [a for a in args if not a.startswith("-")]
+        if not paths:
+            return False
+        for a in paths:
+            if not a.startswith("/") or re.search(r"[$`~]", a) or ".." in a.split("/"):
+                return False
+            norm = os.path.normpath(a)
+            parts = norm.split("/")
+            ok = False
+            if proj and re.match(r"^/tmp/claude-[^/]+/%s/%s/scratchpad(/|$)" % (re.escape(proj), re.escape(sid)), norm):
+                ok = True
+            elif norm.startswith("/tmp/claude-") and sid in parts:
+                ok = True
+            # a glob in the directory part before the session folder could escape it
+            if not ok or re.search(r"[*?\[]", norm.split(sid)[0]):
+                return False
+        seen = True
+    return seen
 
 
 # ---------------------------------------------------------------------------------------
@@ -2924,6 +3086,25 @@ _TOOL_INPUT_SUBAGENT_TYPE_RE = re.compile(r'"subagent_type"\s*:\s*"((?:[^"\\]|\\
 # A backgrounded call's hand-back prompt shape, probed live - doc-ref 8313 docs/6-decisions/Decisions.md.
 _PROMPT_VALUE_RE = re.compile(r'"prompt"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _TASK_NOTIFICATION_RE = re.compile(r"<task-notification>")
+# #253: prompts that reach UserPromptSubmit but are a helper's report or a system notice, not aj.
+_RELAYED_PROMPT_RE = re.compile(
+    r"<task-notification>|<system-reminder>|<agent-message\b|\[Subagent hand-?back\]"
+    r"|Another Claude session sent a message", re.IGNORECASE)
+
+
+def _is_relayed_prompt(text, payload=None):
+    """True when the prompt is a subagent hand-back, agent message or task/system notification, or
+    the payload carries a non-human `origin` (as _is_genuine_user_message honours)."""
+    if text and _RELAYED_PROMPT_RE.search(text):
+        return True
+    try:
+        data = json.loads(payload) if payload else None
+    except ValueError:
+        data = None
+    origin = data.get("origin") if isinstance(data, dict) else None
+    if isinstance(origin, dict):
+        origin = origin.get("kind") or origin.get("type")
+    return bool(origin) and str(origin).lower() not in ("human", "user")
 _TASK_ID_RE = re.compile(r"<task-id>([0-9A-Za-z]+)</task-id>")
 _TASK_STATUS_RE = re.compile(r"<status>([^<]*)</status>")
 
@@ -3884,7 +4065,7 @@ def _waiting_scope_note(payload):
     its waiting entries. Returns the text for Claude, or "". Never raises."""
     try:
         m = _PROMPT_VALUE_RE.search(payload or "")
-        if not m or _TASK_NOTIFICATION_RE.search(m.group(1)):
+        if not m or _is_relayed_prompt(m.group(1), payload):
             return ""
         data = json.loads(payload)
         session_id = str(data.get("session_id") or "") if isinstance(data, dict) else ""
@@ -4034,7 +4215,7 @@ UNATTENDED_REFUSAL = (
 )
 
 
-def _ask_or_refuse(payload, reason_text, context=None):
+def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
     """Emit the guard's ask - or, when nobody can answer it, a refusal (#198): inside a subagent
     (the payload carries agent_id), or when aj has not written for the prompt timeout. Refusals go
     on the waiting-on-you list. HOUSE_RULES_PROMPT_TIMEOUT=off turns both refusals off."""
@@ -4060,6 +4241,12 @@ def _ask_or_refuse(payload, reason_text, context=None):
     if not why:
         out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",
                "permissionDecisionReason": reason_text}
+    elif rewrite:
+        # #261: a routine command that only needs rewriting: say how, no "Do not retry", and it
+        # is not a waiting-on-you item.
+        out = {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+               "permissionDecisionReason": reason_text + "\n\nRefused, not asked: %s, so a prompt would "
+               "only sit unanswered. %s" % (why, rewrite)}
     else:
         tool, ti = str(data.get("tool_name") or "?"), data.get("tool_input")
         now = time.time()
@@ -4751,6 +4938,14 @@ def _gated_edit(payload, who):
     top, git_dir = _issues_locate(cwd)
     if not git_dir:
         return None, None
+    if not _is_source_path(fp, cwd, top):
+        return None, None
+    return git_dir, None
+
+
+def _is_source_path(fp, cwd, top):
+    """The commitgate test: is `fp` a source file of the checkout at `top`? False for a path
+    outside it, docs/, .claude/, any .md file and the tracker files."""
     if not os.path.isabs(fp):
         fp = os.path.join(cwd, fp)
     try:
@@ -4758,10 +4953,121 @@ def _gated_edit(payload, who):
     except ValueError:
         rel = ".."  # another drive: outside the project
     parts = rel.replace("\\", "/").split("/")
-    if (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
-            or os.path.basename(rel) in (ISSUES_FILE, LOOP_FILE)):
-        return None, None
-    return git_dir, None
+    return not (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
+                or os.path.basename(rel) in (ISSUES_FILE, LOOP_FILE))
+
+
+_SHELL_TOOLS = ("Bash", "PowerShell")
+_HEREDOC_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.DOTALL)
+_QUOTED_RE = re.compile(r"(>>?[ \t]*)?(\"[^\"\n]*\"|'[^'\n]*')")
+_REDIRECT_RE = re.compile(r"(?<![<>&|])(?:\d|&)?>>?(?![&(>])[ \t]*(\"[^\"\n]+\"|'[^'\n]+'|[^\s;&|<>()\"']+)")
+_PY_OPEN_RE = re.compile(r"\bopen\(\s*([^,()]+?)\s*,\s*(?:mode\s*=\s*)?['\"][wax]")
+_PY_WRITE_TEXT_RE = re.compile(r"\.write_text\(")
+_PY_WRITE_TEXT_LIT_RE = re.compile(r"Path\(\s*(['\"])([^'\"]+)\1\s*\)\s*\.write_text\(")
+_NODE_WRITE_RE = re.compile(r"\bwriteFileSync\(")
+_NODE_WRITE_LIT_RE = re.compile(r"\bwriteFileSync\(\s*(['\"])([^'\"]+)\1")
+_SCRIPT_RUNNER_RE = re.compile(r"(?:^|[\s;&|(/])(?:python3?|py|node)(?:\.exe)?(?=\s|$)")
+_LITERAL_RE = re.compile(r"^(['\"])(.+)\1$")
+
+
+def _script_write_targets(cmd):
+    """(targets, unreadable): file paths a shell command writes through a python/node script
+    (open w/a, write_text, writeFileSync), sed -i / perl -pi, tee, or a > / >> redirect, and
+    whether some write's path could not be read from the command text (#262)."""
+    import shlex
+    targets, unreadable = [], False
+    body = _HEREDOC_RE.sub("", cmd)
+    if _SCRIPT_RUNNER_RE.search(cmd):
+        for m in _PY_OPEN_RE.finditer(cmd):
+            lit = _LITERAL_RE.match(m.group(1))
+            if lit and "$" not in lit.group(2):
+                targets.append(lit.group(2))
+            else:
+                unreadable = True
+        lits = _PY_WRITE_TEXT_LIT_RE.findall(cmd)
+        targets += [p for _, p in lits]
+        if len(_PY_WRITE_TEXT_RE.findall(cmd)) > len(lits):
+            unreadable = True
+        lits = _NODE_WRITE_LIT_RE.findall(cmd)
+        targets += [p for _, p in lits]
+        if len(_NODE_WRITE_RE.findall(cmd)) > len(lits):
+            unreadable = True
+    for stmt in re.split(r"&&|\|\||;|\n|\|", body):
+        try:
+            words = shlex.split(stmt)
+        except ValueError:
+            sys.stderr.write("house-rules design-loop lock: could not split a statement (unbalanced quotes) "
+                             "to look for sed -i / tee; skipping that statement.\n")
+            continue
+        for i, w in enumerate(words):
+            if w not in ("sed", "perl", "tee"):
+                continue
+            if any(p not in ("sudo", "env", "time", "nohup") and "=" not in p for p in words[:i]):
+                continue  # not in command position (e.g. `echo sed -i`, `grep tee f`)
+            rest = words[i + 1:]
+            files, has_script, skip = [], False, False
+            in_place = w == "tee"
+            for a in rest:
+                if skip:
+                    skip = False
+                elif a in ("-e", "-f", "--expression", "--file"):
+                    has_script, skip = True, True
+                elif re.match(r"^-[A-Za-z]+$", a) and a.endswith("e") and not re.match(r"^-[A-Za-z]*i", a):
+                    has_script, skip = True, True  # -ne / -pe: the next word is the script
+                elif a.startswith("-"):
+                    if a == "--in-place" or a.startswith("--in-place=") or re.match(r"^-[A-Za-z]*i", a):
+                        in_place = True
+                else:
+                    files.append(a)
+            if not in_place:
+                continue
+            if w == "sed" and not has_script and files:
+                files = files[1:]
+            if not files:
+                unreadable = True
+            for f in files:
+                if re.search(r"[$`~*?]", f):
+                    unreadable = True
+                else:
+                    targets.append(f)
+            break
+    plain = _QUOTED_RE.sub(lambda m: m.group(0) if m.group(1) else " ", body)
+    for m in _REDIRECT_RE.finditer(plain):
+        t = m.group(1).strip("'\"")
+        if t.startswith("/dev/"):
+            continue
+        if re.search(r"[$`~*?]", t):
+            unreadable = True
+        else:
+            targets.append(t)
+    return targets, unreadable
+
+
+def _gated_script_write(payload):
+    """(git_dir, problem, paths, unreadable) for a Bash/PowerShell command that writes a source
+    file through a script, sed -i, tee or a redirect. git_dir None when nothing is gated."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        return None, "house-rules: the design-loop lock could not parse the hook payload, so it is off for this call.", [], False
+    if not isinstance(data, dict) or data.get("tool_name") not in _SHELL_TOOLS:
+        return None, None, [], False
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    cmd = ti.get("command")
+    if not isinstance(cmd, str) or not cmd:
+        return None, None, [], False
+    cmd = _apply_assigns(cmd)
+    targets, unreadable = _script_write_targets(cmd)
+    if not targets and not unreadable:
+        return None, None, [], False
+    cwd = data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    top, git_dir = _issues_locate(cwd)
+    if not git_dir:
+        return None, None, [], False
+    src = [t for t in targets if _is_source_path(t, cwd, top)]
+    if not src and not unreadable:
+        return None, None, [], False
+    return git_dir, None, src, unreadable
 
 
 def _issues_gate(payload):
@@ -4808,10 +5114,23 @@ def _loop_enabled():
     return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
 
 
+def _loop_dir(git_dir):
+    """#262: where the stage file lives - the COMMON git directory (what `git rev-parse
+    --git-common-dir` prints, read from the worktree's `commondir` file so no git process is
+    spawned on every edit), so every worktree of a repo shares one stage. A git directory with no
+    readable commondir is its own common directory (a plain checkout, or git unreadable)."""
+    cd = os.path.join(git_dir, "commondir")
+    if os.path.isfile(cd):
+        rel = _read_text(cd).strip()
+        if rel:
+            return os.path.abspath(rel if os.path.isabs(rel) else os.path.join(git_dir, rel))
+    return git_dir
+
+
 def _loop_read(git_dir):
     """(state, problem). No file means a project that has not started a feature: Design."""
     fresh = {"feature": "", "stage": "design", "skip": False, "approvals": []}
-    path = os.path.join(git_dir, LOOP_FILE)
+    path = os.path.join(_loop_dir(git_dir), LOOP_FILE)
     if not os.path.isfile(path):
         return fresh, None
     try:
@@ -4826,7 +5145,7 @@ def _loop_read(git_dir):
 
 
 def _loop_write(git_dir, state):
-    with open(os.path.join(git_dir, LOOP_FILE), "w", encoding="utf-8") as f:
+    with open(os.path.join(_loop_dir(git_dir), LOOP_FILE), "w", encoding="utf-8") as f:
         json.dump(state, f)
 
 
@@ -5060,6 +5379,9 @@ def _loop_scope_note(payload):
         if not m:
             return ""
         text = json.loads('"%s"' % m.group(1))
+        if _is_relayed_prompt(text, payload):
+            return ("Design loop: this message is a helper's report or a notification, not aj, "
+                    "so it moved nothing.")
         top, git_dir = _issues_locate(_payload_cwd(payload))
         if not git_dir:
             return ""
@@ -5129,11 +5451,18 @@ def _loop_stop_line(payload):
 def _loop_gate(payload):
     """(deny reason or None, problem or None): code edits only in Build, or once after skip design."""
     git_dir, problem = _gated_edit(payload, "design-loop lock")
+    script_paths, script_unreadable, script = [], False, False
+    if not git_dir and not problem:
+        # #262: a Bash/PowerShell script write of a source file is held to the same lock.
+        git_dir, problem, script_paths, script_unreadable = _gated_script_write(payload)
+        script = bool(git_dir)
     if not git_dir:
         return None, problem
     state, problem = _loop_read(git_dir)
     if problem:
         return None, problem
+    if script and state["stage"] == "build":
+        return None, None  # Build: nothing changes for shell commands
     if state["stage"] == "build":
         labels, src = _loop_labels(state)
         if _loop_to_qa(state, labels):
@@ -5150,6 +5479,10 @@ def _loop_gate(payload):
         _loop_write(git_dir, state)
         return None, None
     feature = state.get("feature") or ""
+    if script and script_unreadable and not script_paths:
+        return ("House rules, design loop: code is locked in the %s stage and I cannot read which file this "
+                "command writes, so make the change with the Edit or Write tool instead, which names the "
+                "file." % LOOP_STAGE_NAMES[state["stage"]]), None
     return (
         "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
         "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
@@ -6759,6 +7092,208 @@ def _visual_note(files):
     )
 
 
+# #256: the checkpoint table. Each row is (moment, rule name, check function, "block" or "remind").
+# A check takes the context dict event_handover builds and returns the exact fix when the rule is
+# missed, else "". A "block" row at "reply ends" stops the reply once; on the retry
+# (stop_hook_active) it only reports, the same safety event_subagentcommit uses.
+_LIST_ITEM_RE = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+\S", re.MULTILINE)
+_OPTION_LABEL_RE = re.compile(r"\boption\s+(?:[A-Za-z]|\d+)\b|\(\s*[A-Ca-c1-3]\s*\)", re.IGNORECASE)
+_PICK_QUESTION_RE = re.compile(r"\b(approve|approval|pick|choose|which|sign off|go ahead)\b", re.IGNORECASE)
+_NO_PAGE_RE = re.compile(r"\bno\s+page\b", re.IGNORECASE)
+
+
+def _offers_choices(reply):
+    """True when a reply offers named options or lays out a plan for aj to approve. Conservative:
+    it needs a closing question, plus either two labelled options in it or a list of 3+ items
+    earlier with a question asking aj to pick or approve."""
+    text = _MD_FENCED_BLOCK_RE.sub("", reply or "").strip()
+    if not text.endswith("?"):
+        return False
+    final = text.split("\n\n")[-1] if "\n\n" in text else text.splitlines()[-1]
+    if len({m.group(0).lower() for m in _OPTION_LABEL_RE.finditer(text)}) >= 2:
+        return True
+    items = _LIST_ITEM_RE.findall(text[:len(text) - len(final)] if final else text)
+    return len(items) >= 3 and bool(_PICK_QUESTION_RE.search(final))
+
+
+def _page_escape(ctx):
+    """True when aj's own genuine message says "no page". A helper's hand-back never counts."""
+    text = ctx.get("user_text") or ""
+    return bool(_NO_PAGE_RE.search(text)) and not _is_relayed_prompt(text)
+
+
+def _check_page(ctx):
+    if _page_escape(ctx):
+        return ""
+    reply = ctx.get("reply") or ""
+    if _PAGE_LINK_RE.search(reply):
+        return ""
+    if ctx.get("long_words") or _offers_choices(reply):
+        return ("put the detail on a page: write a content.json, run `python3 %s build <content.json>` "
+                "and link the page it makes in the reply, or say \"no page\" in your next message to skip it"
+                % os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_page.py"))
+    return ""
+
+
+def _check_editor(ctx):
+    if _page_escape(ctx) or not ctx.get("editor_owed"):
+        return ""
+    return ("hand the text to @house-rules:editor (Agent tool, subagent_type house-rules:editor), "
+            "apply its rewrites, then send the reply (%s)" % ctx["editor_owed"])
+
+
+def _check_evidence(ctx):
+    if not ctx.get("needs_evidence"):
+        return ""
+    return "run the check and quote its real output, or restate the claim as untested and say why"
+
+
+def _check_commit(ctx):
+    if not ctx.get("uncommitted"):
+        return ""
+    return "commit %s on your own branch" % ", ".join(ctx["uncommitted"][:8])
+
+
+def _check_plain(ctx):
+    if not ctx.get("plain_problems"):
+        return ""
+    return "open with a short plain-English summary (%s)" % "; ".join(ctx["plain_problems"])
+
+
+# --- pagecheck (#257): a handover page must come from make_page.py -------------------------
+# PreToolUse on Write and Artifact. The two rows below sit in CHECKPOINTS so the list shows every
+# moment; only "reply ends" rows run at Stop, so these checks do nothing there (pagecheck acts).
+PAGE_MARK_RE = re.compile(r"<!--\s*house-rules make_page\b")
+_PAGE_EXT = (".html", ".htm")
+_PAGE_SKIP_ACTIONS = {"read", "list", "open", "delete", "view", "get", "ls", "remove"}
+_PAGE_DENY = (
+    "House rules, page check: %s is a hand-written page - it has no house-rules make_page mark. "
+    "Pages are built, not typed. Write the content file, then run: python3 %s build <content.json> "
+    "and use the page it builds. HOUSE_RULES_LOOP=off turns this check off."
+)
+
+
+def _page_note(text):
+    emit({"systemMessage": "house-rules page check: " + text})
+
+
+def _page_in_plans(path):
+    parts = [p for p in re.split(r"[\\/]+", path) if p]
+    return any(parts[i] == "docs" and parts[i + 1] == "plans" for i in range(len(parts) - 1))
+
+
+def _page_deny(page):
+    script = os.path.join(_plugin_root(), "scripts", "make_page.py")
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                 "permissionDecisionReason": _PAGE_DENY % (page, script)}})
+
+
+def _page_candidates(ti):
+    out = []
+    fp = ti.get("file_path")
+    if isinstance(fp, str) and fp:
+        out.append(fp)
+    files = ti.get("files")
+    vals = list(files.values()) if isinstance(files, dict) else (files if isinstance(files, list) else [])
+    out.extend(v for v in vals if isinstance(v, str) and v and v not in out)
+    return out
+
+
+def event_pagecheck():
+    try:
+        if not _loop_enabled():
+            return 0
+        payload = read_payload()
+        data = json.loads(payload) if payload else {}
+        ti = data.get("tool_input") if isinstance(data, dict) else None
+        if not isinstance(ti, dict):
+            _page_note("the call carried no tool_input, so the check could not run; the call is allowed.")
+            return 0
+        tool = str(data.get("tool_name") or "")
+        if tool == "Write":
+            fp = ti.get("file_path")
+            if not (isinstance(fp, str) and fp.lower().endswith(_PAGE_EXT) and _page_in_plans(fp)):
+                return 0  # not a docs/plans page: nothing to check, nothing to say
+            if PAGE_MARK_RE.search(str(ti.get("content") or "")):
+                return 0
+            _page_deny(fp)
+            return 0
+        # Artifact (or any other tool the matcher routes here)
+        action = str(ti.get("action") or ti.get("command") or ti.get("operation") or "").lower()
+        if action in _PAGE_SKIP_ACTIONS:
+            _page_note("skipped, the Artifact call is a %s action, not a page save." % action)
+            return 0
+        if ti.get("asset") is True:
+            _page_note("skipped, the Artifact call is an asset upload, not a page.")
+            return 0
+        cands = _page_candidates(ti)
+        pages = [c for c in cands if c.lower().endswith(_PAGE_EXT)]
+        if not pages:
+            if ti.get("type") or ti.get("artifact_type"):
+                _page_note("skipped, the Artifact input is the data file of a typed artifact, not an HTML page.")
+            else:
+                _page_note("skipped, the Artifact input names no HTML file (%s)."
+                           % (", ".join(cands) or "no file path"))
+            return 0
+        for page in pages:
+            try:
+                with open(page, encoding="utf-8", errors="replace") as fh:
+                    head = fh.read(4096)
+            except OSError as exc:
+                _page_note("could not read %s (%s), so the check did not run; the publish is allowed."
+                           % (page, type(exc).__name__))
+                continue
+            if not PAGE_MARK_RE.search(head):
+                _page_deny(page)
+                return 0
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: the page check hit an error (%s: %s) and did not "
+                               "run for this call; the call is allowed." % (type(exc).__name__, exc)})
+    return 0
+
+
+def _check_page_saved(ctx):
+    return ""  # runs as the PreToolUse hook event_pagecheck, never at Stop
+
+
+CHECKPOINTS = [
+    ("page saved", "page built", _check_page_saved, "block"),
+    ("page published", "page built", _check_page_saved, "block"),
+    ("reply ends", "page", _check_page, "block"),
+    ("reply ends", "editor", _check_editor, "block"),
+    ("reply ends", "evidence", _check_evidence, "block"),
+    ("reply ends", "commit", _check_commit, "block"),
+    ("reply ends", "plain summary", _check_plain, "block"),
+]
+
+CHECKPOINT_RULES = {
+    "page built": "A handover page is built by make_page.py, never typed by hand.",
+    "page": "A reply that offers choices, lays out a plan, or runs over %d words links a page." % LONG_REPLY_WORDS,
+    "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
+    "evidence": "A success claim needs a tool run and its quoted output behind it.",
+    "commit": "Files a turn writes are committed on your own branch before it ends.",
+    "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
+}
+
+
+def _missed_checkpoints(ctx):
+    """[(rule name, fix)] for every blocking checkpoint at 'reply ends' that the reply misses."""
+    if not _loop_enabled():
+        return []
+    return [(name, fix) for moment, name, fn, mode in CHECKPOINTS
+            if moment == "reply ends" and mode == "block" for fix in [fn(ctx)] if fix]
+
+
+def _checkpoint_reason(missed):
+    lines = ["House rules, the reply is not done yet. It misses %d checkpoint%s:" % (
+        len(missed), "" if len(missed) == 1 else "s")]
+    for name, fix in missed:
+        lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
+    lines.append("Fix these and send the reply again. This blocks once; the retry only reports. "
+                 "HOUSE_RULES_LOOP=off turns it off.")
+    return "\n".join(lines)
+
+
 def event_handover():
     import os as _os
 
@@ -6786,12 +7321,11 @@ def event_handover():
         )
         return 0
 
-    if re.search(r'"stop_hook_active"\s*:\s*true', payload):
-        # The retry after this check already fired. Tracing here would say the same thing
-        # twice for one turn, so this is the one stand-down that stays quiet.
-        return 0
+    # #256: on the retry (stop_hook_active) the checks still run, but only report; never block.
+    retry = bool(re.search(r'"stop_hook_active"\s*:\s*true', payload))
 
-    needs_card = _reply_needs_card_check(payload)
+    # The card check is not a checkpoint: it keeps its old once-only behaviour and stays quiet on the retry.
+    needs_card = False if retry else _reply_needs_card_check(payload)
 
     # The evidence check is independent of the fence gate above - a reply can claim success
     # with no fence in it at all.
@@ -6918,6 +7452,26 @@ def event_handover():
     writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
     if writing_problem:
         trace_lines.append(writing_problem)
+
+    # #256: the checkpoint table. A miss blocks once; any error here fails open with a message.
+    if not retry:
+        try:
+            ctx = {
+                "reply": reply_text if vm is not None else "",
+                "long_words": long_words,
+                "editor_owed": editor_owed,
+                "needs_evidence": needs_evidence,
+                "uncommitted": uncommitted,
+                "plain_problems": plain_problems,
+                "user_text": _last_user_text(transcript_path) if transcript_path else "",
+            }
+            missed = _missed_checkpoints(ctx)
+            if missed:
+                emit({"decision": "block", "reason": _checkpoint_reason(missed)})
+                return 0
+        except Exception as exc:
+            trace_lines.append("house-rules: the checkpoint table hit an error (%s: %s), so this reply was "
+                               "not blocked." % (type(exc).__name__, exc))
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed
@@ -7409,6 +7963,7 @@ EVENTS = {
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,
     "harvest": event_harvest,
+    "pagecheck": event_pagecheck,
 }
 
 
