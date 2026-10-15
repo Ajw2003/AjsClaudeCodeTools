@@ -266,7 +266,8 @@ const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns
 const PAGE = {
   "title": "Guards Audit",
   "eyebrow": "Audit for approval · GitHub issue 285, \"Guards block only unrecoverable actions\" · nothing changed yet",
-  "replyPrefix": "Guards audit",
+  "replyPrefix": "Build plan approved: guards audit",
+  "reply": "Build plan approved: guards audit",
   "short": {
     "lead": "I went through every hook in hook.py (a hook is an automatic check) that can stop me. My test was yours: only data loss with no way back, or a change to someone else's work, should stop me. Nine kinds of destructive action are refused outright, and each refusal names the safe way to do the job instead. Deletes are refused only when the data isn't saved. You are asked only when no safe way exists and I cite a source proving it. Four refusals become reminders. The background-work guard is removed entirely. Publishing a page is never refused again.",
     "hint": "Tap a card for what it guards today and what changes.",
@@ -331,6 +332,14 @@ const PAGE = {
         "No more chain of refusals",
         "",
         "Today one unanswered prompt (a question asking for your OK) makes every later prompt in the session get refused straight away. That chain of refusals blocked both page publishes and the commit of the automatic-pages page. After this, you are asked only in the rare case where no safe way exists and I have cited a source proving it. The timer applies only to those prompts, never to anything else, such as publishing a page. Each prompt waits on its own, and nothing is refused because an earlier prompt went unanswered.",
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Copy box",
+        "The copied reply always opens the gate",
+        "",
+        "Today the copy box holds only the page's short label and your picks, such as \"Guards audit: 1B\". The design gate needs \"Build plan approved: <name>\", so the copied text never counts, and the page has to be redone. After this, the copy box always holds the exact approval phrase plus your picks, and the page builder refuses to build a page whose copied text the gate wouldn't accept. Child issue 286: \"Page copy box must hold the full reply the design gate accepts\".",
         "Nothing from you."
       ],
       [
@@ -442,35 +451,15 @@ const PAGE = {
       null
     ]
   ],
-  "choices": [
-    [
-      "lock",
-      "What should the design-loop lock do?",
-      [
-        [
-          "A",
-          "Reminder only",
-          1,
-          "Code edits go through, with a reminder that the plan hasn't been approved. It matches your test, but nothing forces plans to reach you as a page first."
-        ],
-        [
-          "B",
-          "Keep blocking code edits",
-          0,
-          "Plans always reach you first, but builders stall while you're away."
-        ]
-      ],
-      "It doesn't protect data, so your test says reminder; the cost is that sending the plan as a page first becomes a habit rather than an enforced rule."
-    ]
-  ],
+  "choices": [],
   "wrapup": {
     "summary": "An audit of every hook that can stop me, sorted by whether what it stops can be recovered.",
     "changing": "hook.py's guard lists, the page check, the prompt timer, the GitHub and helper-count guards, the whole-file rewrite prompt, the rule text in house-rules.md, and the checks in verify.py that test each.",
-    "blocking": "Your approval of this audit. Reply with the words \"Guards audit approved\". Nothing else is waiting on you.",
+    "blocking": "Your approval of this audit. Reply with the words \"Build plan approved: guards audit\". Nothing else is waiting on you.",
     "next": "I open one child issue per area and run one builder at a time, then open one pull request for you to test. The fixes for automatic pages follow on the same branch.",
     "todo": [
       "Read the cards at the top, then the Changes list below them.",
-      "Send \"Guards audit approved\", or say what to change."
+      "Tap <b>Copy my reply<\/b> and send it, or say what to change."
     ]
   }
 };
