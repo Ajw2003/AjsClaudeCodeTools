@@ -268,7 +268,7 @@ const PAGE = {
   "eyebrow": "Audit for approval · GitHub issue 285, \"Guards block only unrecoverable actions\" · nothing changed yet",
   "replyPrefix": "Guards audit",
   "short": {
-    "lead": "I went through every hook (an automatic check) in hook.py that can stop me, against your test: only data loss with no way back, or a change to someone else's work, should stop me. Nine kinds of action keep asking or stay refused. Deletes ask only when the data isn't saved. Four refusals become reminders. The background-work guard goes completely. Publishing a page is never refused again.",
+    "lead": "I went through every hook in hook.py (a hook is an automatic check) that can stop me. My test was yours: only data loss with no way back, or a change to someone else's work, should stop me. Nine kinds of destructive action are refused outright, and each refusal names the safe way to do the job instead. Deletes are refused only when the data isn't saved. You are asked only when no safe way exists and I cite a source proving it. Four refusals become reminders. The background-work guard is removed entirely. Publishing a page is never refused again.",
     "hint": "Tap a card for what it guards today and what changes.",
     "key": [
       [
@@ -276,7 +276,7 @@ const PAGE = {
         "done"
       ],
       [
-        "Still asks you first, or is refused",
+        "Refused, with the safe way named",
         ""
       ],
       [
@@ -295,18 +295,18 @@ const PAGE = {
       ],
       [
         "lock",
-        "Keep",
-        "Nine kinds of action that still stop me",
+        "Refuse",
+        "Nine kinds of destructive action, refused outright",
         "",
-        "Pushing or committing to main (the shared primary branch) stays refused. Commits, merges, rebases, cherry-picks and reverts are now refused too on any branch the guard can't confirm is mine; the refusal tells me to make a new AjsAgent/ branch and commit there. These still ask first: a force-push (overwriting history on the server), a push with --all or --mirror, deleting a branch (local with branch -D, remote with push --delete), git clean (deletes untracked files), and filter-branch (rewrites history). Reset, checkout -- and restore also ask while uncommitted work (changes not yet saved in git) exists. So do stash drop and clear (discarding set-aside work) and truncating (emptying) a file.",
-        "Nothing from you. Refusing commits on a branch that isn't clearly mine is stricter than today, which only asks."
+        "1. Pushing or committing to main (the shared primary branch): open a pull request instead. 2. Commits, merges, rebases, cherry-picks and reverts on a branch the guard can't confirm is mine: make a new AjsAgent/ branch and commit there. 3. A force-push (overwriting history on the server), or a push with --all or --mirror: push a new branch instead. 4. Deleting a branch, local (branch -D) or remote (push --delete): leave it for you to delete. 5. git clean (deletes untracked files): move them into a _to_delete/ folder. 6. filter-branch (rewrites all history): rewrite on a copy branch. 7. git reset, git checkout -- or git restore while uncommitted work (changes not yet saved in git) exists: commit it on a new branch first. 8. stash drop or clear (discarding set-aside work): keep the stash. 9. Truncating (emptying) a file: write a new file beside it.",
+        "Nothing from you. You are asked only when no safe way exists and I cite a source proving it, such as the git manual."
       ],
       [
         "swap",
         "Narrow",
-        "Deletes ask only when the file isn't saved",
+        "Deletes are refused only when the file isn't saved",
         "",
-        "Today every rm asks, even for a committed file git can restore. After this, a delete asks only when it is recursive, meaning it removes a whole folder (rm -r, rmdir /s, Remove-Item -Recurse), or when a file it deletes has uncommitted changes or was never committed. Deleting a committed, unchanged file runs without asking.",
+        "Today every delete command (rm) asks you first, even for a committed file git can restore. After this, a delete is refused in two cases. One is a recursive delete, which removes a whole folder (rm -r, rmdir /s, Remove-Item -Recurse). The other is a delete of a file that has uncommitted changes or was never committed. The refusal says to move the files into a _to_delete/ folder instead. Deleting a committed, unchanged file goes through, because git can bring it back.",
         "Nothing from you."
       ],
       [
@@ -322,7 +322,7 @@ const PAGE = {
         "Soften",
         "Four refusals become reminders",
         "done",
-        "Each of these is refused today and becomes a reminder. First, publishing a page not built by make_page.py. Second, a Claude credit line or a claude/ branch name on GitHub, and an issue without its sections. Third, a third helper (a sub-agent) running, or a helper starting its own helper. Fourth, overwriting a whole file: today it always asks; afterwards it asks only when that file has uncommitted changes.",
+        "The first three are refused today and become reminders. First, publishing a page not built by make_page.py. Second, a Claude credit line or a claude/ branch name on GitHub, and an issue without its sections. Third, a third helper (a sub-agent) running, or a helper starting its own helper. Fourth, overwriting a whole file. Today it always asks you first. Afterwards it goes through, unless the file has uncommitted changes. In that case it is refused, and the refusal says to commit first.",
         "Nothing from you."
       ],
       [
@@ -330,7 +330,7 @@ const PAGE = {
         "Prompt timer",
         "No more chain of refusals",
         "",
-        "Today one unanswered prompt (a question asking for your OK) makes every later prompt in the session refuse at once. That chain of refusals blocked both page publishes and the commit of the automatic-pages page. After this, the timeout only acts on prompts the guards above raise, never on others such as publishing a page. Each prompt waits on its own, and nothing is refused just because an earlier one went unanswered.",
+        "Today one unanswered prompt (a question asking for your OK) makes every later prompt in the session get refused straight away. That chain of refusals blocked both page publishes and the commit of the automatic-pages page. After this, you are asked only in the rare case where no safe way exists and I have cited a source proving it. The timer applies only to those prompts, never to anything else, such as publishing a page. Each prompt waits on its own, and nothing is refused because an earlier prompt went unanswered.",
         "Nothing from you."
       ],
       [
@@ -372,12 +372,12 @@ const PAGE = {
     [
       "chg",
       "Deleting files",
-      "Asks only when the data can't come back.",
+      "Refused only when the data can't come back.",
       [
-        "Every rm asks",
-        "Only recursive deletes, or deletes of uncommitted or never-committed files"
+        "Every delete command (rm) asks you first",
+        "Deleting a whole folder, or a file with uncommitted changes or one never committed, is refused; move it to _to_delete/ instead"
       ],
-      "A committed, unchanged file comes back with git, so deleting it doesn't ask.",
+      "A committed, unchanged file comes back with git, so deleting it goes through.",
       null,
       null
     ],
@@ -398,8 +398,8 @@ const PAGE = {
       "Unanswered prompts",
       "Each prompt waits on its own.",
       [
-        "One unanswered prompt refuses every later one at once",
-        "Only prompts for the kept guards time out, one at a time"
+        "One unanswered prompt makes every later prompt get refused at once",
+        "You are asked only when I cite a source proving that no safe way exists, and each prompt waits on its own"
       ],
       "Prompts the guards didn't raise are never refused by the timer.",
       null,
@@ -407,11 +407,11 @@ const PAGE = {
     ],
     [
       "chg",
-      "Claude credit and branch names on GitHub, helper count, whole-file rewrites",
-      "Reminders, not refusals.",
+      "Claude credit lines and claude/ branch names on GitHub, helper count, whole-file rewrites",
+      "Reminders, not refusals, except overwriting a file with uncommitted changes.",
       [
         "Denied or asked every time",
-        "Allowed, with a reminder; a rewrite asks only over uncommitted changes"
+        "Allowed, with a reminder; overwriting a whole file is refused only when it has uncommitted changes"
       ],
       "None of these lose data that can't be restored.",
       null,
@@ -430,11 +430,14 @@ const PAGE = {
       null
     ],
     [
-      "keep",
-      "Refusals on main, and asking before history or branch loss",
-      "Unchanged.",
-      null,
-      "Push or commit to main, force-push, deleting a branch, git clean, filter-branch, reset or restore over uncommitted work, stash drop or clear, truncating a file.",
+      "chg",
+      "Destructive actions",
+      "Refused outright, with the safe way named, instead of asking.",
+      [
+        "Refused on main; elsewhere asks you first",
+        "Refused everywhere; you are asked only when I cite a source proving that no safe way exists"
+      ],
+      "This covers force-push, branch deletes, git clean, filter-branch, reset or restore over uncommitted work, stash drop or clear, and truncating a file. Pushing or committing to main was already refused and stays refused.",
       null,
       null
     ]
