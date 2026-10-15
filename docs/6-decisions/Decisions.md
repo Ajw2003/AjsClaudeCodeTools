@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Design proposed: enforced checkpoints
+
+**Status.** Proposed, waiting on "Design approved: enforced checkpoints" with four choices.
+
+**Context.** A plunderspell handover page was hand-built instead of coming from
+`templates/handover-page.html`, and this session answered a proposal with no page at all. Audit:
+`docs/handover-page-audit-2026-10-15.md`. aj: rules "need to be run at specific points not just as the agent
+pleases", and a page "needs to be mandatory". Three causes were found. The injected `rules/show-dont-tell.md`
+never names the template. The `Stop` check is recorded as never blocking (`docs/architecture.md:54`). And this
+session loaded 2.55.0's start-of-session rules while its later hooks ran 2.65.1.
+
+**Proposal.** Page: `docs/plans/enforced-checkpoints-design.html`. A checkpoint table in `hook.py`. The
+end-of-reply check blocks once, then only reports on the retry, the same safety `subagentcommit` uses. A new
+check before a page is written under `docs/plans/` or published with the Artifact tool refuses a page without
+the template's parts. The injected rule names the template. Start-of-session rules come from the newest
+installed version, after a diagnostic check of how the version mix happened. If approved, this reverses
+"never `decision: "block"`" on `Stop`.
+
+**Found while proposing, not in this design.** The design loop reads a subagent's hand-back as aj's message.
+It logged "Build plan approved" from an editor report that quoted the phrase, which nothing moved only because
+the stage was Design. It also unlocked a code edit on a report quoting "skip design". That unlock was not used.
+
 ## 2026-10-15 - New item visual v2 built (2.65.1); handed to aj for QA
 
 **Built:** the template labels a New item's boxes "What exists today / What this creates / How it impacts you" and
