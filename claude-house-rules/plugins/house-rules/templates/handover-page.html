@@ -230,6 +230,7 @@ const PAGE = {
   title: "Example Proposal",
   eyebrow: "Design for approval · nothing built yet",
   replyPrefix: "Example",                 // the copied reply starts with this
+  reply: "",                              // with no choices: the exact reply to copy (else the prefix alone)
   short: {
     lead: "Two or three plain sentences: what this is, and why it matters to you.",
     hint: "Tap an item to see what it creates and what it needs from you.",
@@ -320,7 +321,7 @@ function reply() {
   out.textContent = picks.length
     ? PAGE.replyPrefix + ": " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
       picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
-    : PAGE.replyPrefix + ": approved";
+    : (PAGE.reply || PAGE.replyPrefix);  // no choices: the exact reply, such as "QA passed: <feature>"
   const m = picks.filter(([, v]) => !v).map(([n]) => n);
   miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
   const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);

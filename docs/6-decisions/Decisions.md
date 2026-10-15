@@ -7,6 +7,42 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Clear writing check built (2.65.0); handed to aj for QA
+
+**Built** across #246-#250, from `3b95462^` to this commit: 5 files created, 15 changed and 1 deleted. `verify.py`
+went from 659 to 684 checks, all passing on two clean runs; `tools/verify_tools.py` and `plain_docs_check.py` pass.
+QA page: `docs/plans/clear-writing-qa.html`, listing each file's plan beside its build, as aj asked.
+
+**Calibration.** The checker was run over this session's 93 long replies. After removing false alarms (a title
+after a number, step cards, quoted examples, parallel list items), 31 replies still had findings. They are the
+failures the rule is for: vague numbers that could have been counted, and bare "choice 5"s.
+
+**The real run** used nested `claude -p` sessions with this branch's plugin and a stand-in `gh`:
+1. A reply "The pull request adds about 43 tests; see #229." got the writing note naming "about 43" and "#229",
+   per the session's own record.
+2. `gh issue create --body 'Just a body.'` was refused, naming the three sections; the stand-in `gh` was never
+   called.
+3. The editor helper rewrote "The lock checks it's Build" as "The design lock checks that the feature is in the
+   Build stage and that every issue carries the "in progress" label".
+4. A page written with `printf` was not checked: it never passes the Write hook. Fixed: pages under `docs/plans`
+   changed since aj's message are now checked when the reply ends, with a test. A rerun of that real session
+   was refused by `guard` while aj was away (the words `timeout` and `| head` in one command), so it is waiting
+   on aj.
+
+**Six changes beyond the plan**, each named on the QA page:
+- the exact-input sentence also left the main rules file
+- `clarity.py` gained page-text reading
+- the voice switch and the rule loader moved in `hook.py`
+- the shell-written page fix
+- two extra doc rows
+- the template now offers a page's exact reply when it has no choices (it offered "approved", which the loop
+  rejects)
+
+**Guard false matches, for the rule audit (#228):** a loop or a `timeout` in one command with `| tail` or `| head`
+in another was refused twice as a "hidden wait".
+
+---
+
 ## 2026-10-15 - Design proposed: clear writing check (replaces the ambiguity check design)
 
 **Status.** Approved: "Design approved: clear writing check: 1A 2A 3A 4A". The answers:
