@@ -266,7 +266,7 @@ const PAGE = {
   "replyPrefix": "QA passed: handover pages and checkpoints",
   "reply": "QA passed: handover pages and checkpoints",
   "short": {
-    "lead": "Everything in the build plan is built, plus the guard fixes you asked for before the pull request. Each item under Changes shows what the plan estimated beside what was built, counted from git against main: 33 files changed before this QA page was added, 4 of them screenshots. Two things can only be proved in a live session: a checkpoint sending a reply back, and the page check running on claude.ai. The PlunderSpell test, which runs after you merge, covers both.",
+    "lead": "Everything in the build plan is built, plus the guard fixes you asked for before the pull request. Each item under Changes shows what the plan estimated beside what was built, counted from git against main: 33 files changed before this QA page was added, 4 of them screenshots. Two things can only be proved in a live session running this version, which only happens after the merge, because a session loads the plugin installed when it starts: a checkpoint sending a reply back, and the page check running on claude.ai. The PlunderSpell test, which runs after you merge, covers both.",
     "hint": "Tap a step to see what it changed and what it needs from you.",
     "key": [
       [
@@ -345,7 +345,7 @@ const PAGE = {
     [
       "new",
       "Page builder (scripts/make_page.py)",
-      "Plan: about 220 lines. Built: 518.",
+      "Plan estimate: 220 lines. Built: 518.",
       null,
       "Larger than planned. You asked after the plan for it to also draft a style file from a design system, and that needs matching rules and refusal rules. The draft was checked against PlunderSpell's real tokens.json, and it matches the approved example on every colour, role, reserved colour and font.",
       [
@@ -393,7 +393,7 @@ const PAGE = {
     [
       "chg",
       "Plugin tests (scripts/verify.py)",
-      "Plan: about +180. Built: +519 −8.",
+      "Plan estimate: +180. Built: +519 −8.",
       [
         "684 checks",
         "753 checks, passing on both runs"
@@ -411,7 +411,7 @@ const PAGE = {
     [
       "chg",
       "Hook list (hooks/hooks.json)",
-      "Plan: about +12. Built: +11 −1.",
+      "Plan estimate: +12. Built: +11 −1.",
       [
         "No page check; the code lock watched only the edit tools",
         "A page check on Write and the publish tool; the code lock also watches scripts"
