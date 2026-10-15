@@ -22,6 +22,18 @@ genuine message lets one reply past the page and editor rows; a helper's hand-ba
 
 ---
 
+## 2026-10-15 - Guard fixes: aj's answers
+
+**Status.** Answered: "Guard fixes answers: 1A 2A 3A 4A", on `docs/plans/guard-fixes.html`, from the nine
+refusals in `docs/guard-friction-audit-2026-10-15.md`. The answers:
+- **Unclear command, nobody to ask:** refuse, but name the plain form that would pass. "Do not retry" stays
+  only for deletes, kills and pushes to the main branch.
+- **Scratch folder:** deleting inside this session's scratchpad doesn't ask.
+- **Code lock:** also covers source files written by a Bash script.
+- **Worktrees:** fixed in this build, so the stage is shared through the repo's common git folder.
+
+Built as two sub-issues of #251, before the pull request. Each one replays today's real refusals as tests.
+
 ## 2026-10-15 - Test method for the PlunderSpell regeneration: after the merge
 
 **Status.** Answered: "Test method: 1B", on `docs/plans/plunderspell-test-method.html`, which was the first page
