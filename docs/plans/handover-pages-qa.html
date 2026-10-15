@@ -268,7 +268,7 @@ const PAGE = {
   "replyPrefix": "QA passed: handover pages and checkpoints",
   "reply": "QA passed: handover pages and checkpoints",
   "short": {
-    "lead": "Everything in the build plan is built, plus the guard fixes you asked for before the pull request. Each item under Changes shows what the plan estimated beside what was built, counted from git against main: 33 files changed before this QA page was added, 4 of them screenshots. Two things can only be proved in a live session running this version, which only happens after the merge, because a session loads the plugin installed when it starts: a checkpoint sending a reply back, and the page check running on claude.ai. The PlunderSpell test, which runs after you merge, covers both.",
+    "lead": "Everything in the build plan is built, plus the guard fixes you asked for before the pull request. Each item under Changes shows what the plan estimated beside what was built, counted from git against main: 33 files changed before this QA page was added, 4 of them screenshots. Two things can only be proved in a live session running this version: a checkpoint sending a reply back, and the page check running on claude.ai. Proving both needs the merge, because a session loads the plugin that was installed when it started. The PlunderSpell test, which runs after you merge, covers both.",
     "hint": "Tap a step to see what it changed and what it needs from you.",
     "key": [
       [
@@ -349,7 +349,7 @@ const PAGE = {
       "Page builder (scripts/make_page.py)",
       "Plan estimate: 220 lines. Built: 518.",
       null,
-      "Larger than planned. You asked after the plan for it to also draft a style file from a design system, and that needs matching rules and refusal rules. The draft was checked against PlunderSpell's real tokens.json, and it matches the approved example on every colour, role, reserved colour and font.",
+      "Larger than planned. You asked after the plan for it to also draft a style file from a design system, and that needs matching rules and refusal rules. The draft was checked against PlunderSpell's real tokens.json, and it matches the example style file you accepted (docs/plans/page-style/plunderspell.page-style.json) on every colour, role, reserved colour and font.",
       [
         "Pages were copied from the template by hand.",
         "One command builds every page, in the project's own style.",
@@ -379,10 +379,10 @@ const PAGE = {
       "Hook engine (scripts/hook.py)",
       "Plan: +260 −30. Built: +591 −36.",
       [
-        "Reminders only, no page check, helper reports treated as if aj wrote them, rules taken from the version the session started with",
-        "Checkpoints that block once, a page check, only aj's own messages counted as aj's words, rules taken from the newest install, and the guard fixes"
+        "Reminders only; no page check; reports from helper agents were treated as if aj had written them; rules came from the version the session started with",
+        "Checkpoints that block once; a page check; only aj's own messages counted as aj's words; rules from the newest install; and the guard fixes"
       ],
-      "About double the planned size, because the guard fixes (issues 261 and 262) were added after the plan was written.",
+      "591 lines added against an estimated 260, because the guard fixes (issues 261 and 262) were added after the plan was written.",
       null,
       [
         [
@@ -398,7 +398,7 @@ const PAGE = {
       "Plan estimate: +180. Built: +519 −8.",
       [
         "684 checks",
-        "753 checks, passing on both runs"
+        "753 checks, passing on both of the two full runs"
       ],
       "Includes a replay of every real refusal from the guard audit.",
       null,
@@ -431,7 +431,7 @@ const PAGE = {
     [
       "chg",
       "Rules (show-dont-tell.md and its detail)",
-      "Plan: +3 and +25. Built: +7 −1 and +33 −4.",
+      "Plan: +3 lines in show-dont-tell.md and +25 in its detail file. Built: +7 −1 in show-dont-tell.md and +33 −4 in its detail file.",
       [
         "Never named the template",
         "Names the builder and the style file, and says that in each project one colour marks a step you must act on"
@@ -517,7 +517,7 @@ const PAGE = {
     [
       "keep",
       "Proposal pages under docs/plans",
-      "The pages you answered today, kept as the record.",
+      "The eight proposal and preview pages listed here, kept as the record.",
       null,
       "Six of the eight pages were hand-made before the builder existed (that count includes the picture-slot test page and the two Wick previews), so the new page check will refuse them the next time they are saved. The other two, the guard fixes page and the test method page, were made by the builder.",
       null,
