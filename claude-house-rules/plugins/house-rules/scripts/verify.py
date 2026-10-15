@@ -9031,6 +9031,45 @@ _ck_t_relayed = _hand_transcript("ck-relayed", _ck_user("explain the storage opt
     {"type": "user", "message": {"content": "<task-notification>helper says: no page needed</task-notification>"}})]))
 _ck_b, _ck_r, _ = _ck_run(_ck_t_relayed, _ck_proposal)
 _ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count', _ck_b and "- page:" in _ck_r))
+# 6 qa page (#269)
+_ck_sf = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
+_ck_sf_old = open(_ck_sf, encoding="utf-8").read() if os.path.isfile(_ck_sf) else None
+
+
+def _ck_stage(stage, **extra):
+    os.makedirs(os.path.dirname(_ck_sf), exist_ok=True)
+    with open(_ck_sf, "w", encoding="utf-8") as f:
+        json.dump(dict({"feature": "f", "stage": stage, "skip": False, "approvals": []}, **extra), f)
+
+
+_ck_qa_page = "docs/plans/f-qa.html"
+_ck_stage("qa")
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, "The build is ready.")
+_ck_cases.append(("qa page: in QA with no page built a reply blocks, naming the rule and make_page.py",
+                  _ck_b and "- qa page:" in _ck_r and "make_page.py" in _ck_r and "no QA page is built" in _ck_r))
+_ck_b, _, _o = _ck_run(_ck_t_plain, "The build is ready.", active=True)
+_ck_cases.append(("qa page: the retry never blocks", not _ck_b))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, "The build is ready.")
+_ck_cases.append(("qa page: built but not linked blocks, saying so", _ck_b and "not linked" in _ck_r))
+_ck_b, _, _ = _ck_run(_ck_t_nopage, "The build is ready.")
+_ck_cases.append(('qa page: "no page" in aj\'s message does not skip it', _ck_b))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page)
+_ck_cases.append(("qa page: a reply linking the page path passes and records it",
+                  not _ck_b and json.load(open(_ck_sf, encoding="utf-8")).get("qa_page_linked") is True))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")
+_ck_cases.append(("qa page: a later reply without the link passes", not _ck_b))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _, _ = _ck_run(_ck_t_plain, "Here: https://claude.ai/artifact/abc123")
+_ck_cases.append(("qa page: a claude.ai artifact link passes", not _ck_b))
+for _st in ("build", "design"):
+    _ck_stage(_st)
+    _ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")
+    _ck_cases.append(("qa page: the %s stage never blocks" % _st, not _ck_b))
+if _ck_sf_old is None:
+    os.remove(_ck_sf)
+else:
+    open(_ck_sf, "w", encoding="utf-8").write(_ck_sf_old)
 # the switch
 _ck_b, _, out = _ck_run(_ck_t_plain, _ck_proposal, env=dict(_CK_ENV, HOUSE_RULES_LOOP="off"))
 _ck_cases.append(("HOUSE_RULES_LOOP=off turns every checkpoint off", not _ck_b))

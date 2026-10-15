@@ -5360,6 +5360,7 @@ def _loop_apply(state, text, top):
             state["redo"] = False
             if not redo:
                 state["issues"] = []
+                state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: not the next feature's
         else:
             m = _LOOP_QA_RE.search(text)
             if m:
@@ -5381,6 +5382,8 @@ def _loop_apply(state, text, top):
                     return unlogged
                 state["stage"] = "done" if verdict == "passed" else "design"
                 state["redo"] = verdict == "failed"
+                if state["redo"]:
+                    state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: the redo gets a new page
                 approval = ("QA " + verdict, name)
     if approval:
         state.setdefault("approvals", []).append(
@@ -7321,6 +7324,28 @@ def _check_page_saved(ctx):
     return ""  # runs as the PreToolUse hook event_pagecheck, never at Stop
 
 
+_QA_ARTIFACT_RE = re.compile(r"https://claude\.ai/artifact/\S+|claude\.ai/code/artifact/\S+", re.IGNORECASE)
+
+
+def _check_qa_page(ctx):
+    """#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not
+    skipped by "no page": a QA page is mandatory."""
+    if ctx.get("qa_stage") != "qa" or ctx.get("qa_linked"):
+        return ""
+    page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
+    if page and (page in reply or os.path.basename(page) in reply or _QA_ARTIFACT_RE.search(reply)):
+        state, problem = _loop_read(ctx["qa_git_dir"])
+        if problem:
+            raise OSError(problem)
+        state["qa_page_linked"] = True
+        _loop_write(ctx["qa_git_dir"], state)
+        return ""
+    missing = "the QA page is built but not linked in the reply" if page else "no QA page is built yet"
+    return ("%s: build it with `python3 %s build docs/plans/<name>-qa.page.json`, where the content file has a "
+            "`qa` block (feature, base, unverified, files), then link the page in the reply"
+            % (missing, os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_page.py")))
+
+
 CHECKPOINTS = [
     ("page saved", "page built", _check_page_saved, "block"),
     ("page published", "page built", _check_page_saved, "block"),
@@ -7329,6 +7354,7 @@ CHECKPOINTS = [
     ("reply ends", "evidence", _check_evidence, "block"),
     ("reply ends", "commit", _check_commit, "block"),
     ("reply ends", "plain summary", _check_plain, "block"),
+    ("reply ends", "qa page", _check_qa_page, "block"),
 ]
 
 CHECKPOINT_RULES = {
@@ -7337,6 +7363,7 @@ CHECKPOINT_RULES = {
     "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
+    "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
 
@@ -7530,6 +7557,17 @@ def event_handover():
                 "plain_problems": plain_problems,
                 "user_text": _last_user_text(transcript_path) if transcript_path else "",
             }
+            try:
+                _top, _gd = _issues_locate(_payload_cwd(payload))
+                if _gd:
+                    _st, _pr = _loop_read(_gd)
+                    if _pr:
+                        raise OSError(_pr)
+                    ctx.update(qa_stage=_st.get("stage"), qa_page=_st.get("qa_page"),
+                               qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd)
+            except Exception as exc:
+                trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
+                                   "so it is off for this reply." % (type(exc).__name__, exc))
             missed = _missed_checkpoints(ctx)
             if missed:
                 emit({"decision": "block", "reason": _checkpoint_reason(missed)})
