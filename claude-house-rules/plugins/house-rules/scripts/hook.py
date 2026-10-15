@@ -6841,6 +6841,109 @@ def _visual_note(files):
     )
 
 
+# #256: the checkpoint table. Each row is (moment, rule name, check function, "block" or "remind").
+# A check takes the context dict event_handover builds and returns the exact fix when the rule is
+# missed, else "". A "block" row at "reply ends" stops the reply once; on the retry
+# (stop_hook_active) it only reports, the same safety event_subagentcommit uses.
+_LIST_ITEM_RE = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+\S", re.MULTILINE)
+_OPTION_LABEL_RE = re.compile(r"\boption\s+(?:[A-Za-z]|\d+)\b|\(\s*[A-Ca-c1-3]\s*\)", re.IGNORECASE)
+_PICK_QUESTION_RE = re.compile(r"\b(approve|approval|pick|choose|which|sign off|go ahead)\b", re.IGNORECASE)
+_NO_PAGE_RE = re.compile(r"\bno\s+page\b", re.IGNORECASE)
+
+
+def _offers_choices(reply):
+    """True when a reply offers named options or lays out a plan for aj to approve. Conservative:
+    it needs a closing question, plus either two labelled options in it or a list of 3+ items
+    earlier with a question asking aj to pick or approve."""
+    text = _MD_FENCED_BLOCK_RE.sub("", reply or "").strip()
+    if not text.endswith("?"):
+        return False
+    final = text.split("\n\n")[-1] if "\n\n" in text else text.splitlines()[-1]
+    if len({m.group(0).lower() for m in _OPTION_LABEL_RE.finditer(text)}) >= 2:
+        return True
+    items = _LIST_ITEM_RE.findall(text[:len(text) - len(final)] if final else text)
+    return len(items) >= 3 and bool(_PICK_QUESTION_RE.search(final))
+
+
+def _page_escape(ctx):
+    """True when aj's own genuine message says "no page". A helper's hand-back never counts."""
+    text = ctx.get("user_text") or ""
+    return bool(_NO_PAGE_RE.search(text)) and not _is_relayed_prompt(text)
+
+
+def _check_page(ctx):
+    if _page_escape(ctx):
+        return ""
+    reply = ctx.get("reply") or ""
+    if _PAGE_LINK_RE.search(reply):
+        return ""
+    if ctx.get("long_words") or _offers_choices(reply):
+        return ("put the detail on a page: write a content.json, run `python3 %s build <content.json>` "
+                "and link the page it makes in the reply, or say \"no page\" in your next message to skip it"
+                % os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_page.py"))
+    return ""
+
+
+def _check_editor(ctx):
+    if _page_escape(ctx) or not ctx.get("editor_owed"):
+        return ""
+    return ("hand the text to @house-rules:editor (Agent tool, subagent_type house-rules:editor), "
+            "apply its rewrites, then send the reply (%s)" % ctx["editor_owed"])
+
+
+def _check_evidence(ctx):
+    if not ctx.get("needs_evidence"):
+        return ""
+    return "run the check and quote its real output, or restate the claim as untested and say why"
+
+
+def _check_commit(ctx):
+    if not ctx.get("uncommitted"):
+        return ""
+    return "commit %s on your own branch" % ", ".join(ctx["uncommitted"][:8])
+
+
+def _check_plain(ctx):
+    if not ctx.get("plain_problems"):
+        return ""
+    return "open with a short plain-English summary (%s)" % "; ".join(ctx["plain_problems"])
+
+
+CHECKPOINTS = [
+    ("reply ends", "page", _check_page, "block"),
+    ("reply ends", "editor", _check_editor, "block"),
+    ("reply ends", "evidence", _check_evidence, "block"),
+    ("reply ends", "commit", _check_commit, "block"),
+    ("reply ends", "plain summary", _check_plain, "block"),
+]
+
+CHECKPOINT_RULES = {
+    "page": "A reply that offers choices, lays out a plan, or runs over %d words links a page." % LONG_REPLY_WORDS,
+    "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
+    "evidence": "A success claim needs a tool run and its quoted output behind it.",
+    "commit": "Files a turn writes are committed on your own branch before it ends.",
+    "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
+}
+
+
+def _missed_checkpoints(ctx):
+    """[(rule name, fix)] for every blocking checkpoint at 'reply ends' that the reply misses."""
+    if not _loop_enabled():
+        return []
+    return [(name, fix) for moment, name, fn, mode in CHECKPOINTS
+            if moment == "reply ends" and mode == "block" for fix in [fn(ctx)] if fix]
+
+
+def _checkpoint_reason(missed):
+    lines = ["House rules, the reply is not done yet. It misses %d checkpoint%s:" % (
+        len(missed), "" if len(missed) == 1 else "s")]
+    for name, fix in missed:
+        lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
+    lines.append("Fix these and send the reply again. This blocks once; the retry only reports. "
+                 "HOUSE_RULES_LOOP=off turns it off.")
+    return "\n".join(lines)
+
+
 def event_handover():
     import os as _os
 
@@ -6868,12 +6971,11 @@ def event_handover():
         )
         return 0
 
-    if re.search(r'"stop_hook_active"\s*:\s*true', payload):
-        # The retry after this check already fired. Tracing here would say the same thing
-        # twice for one turn, so this is the one stand-down that stays quiet.
-        return 0
+    # #256: on the retry (stop_hook_active) the checks still run, but only report; never block.
+    retry = bool(re.search(r'"stop_hook_active"\s*:\s*true', payload))
 
-    needs_card = _reply_needs_card_check(payload)
+    # The card check is not a checkpoint: it keeps its old once-only behaviour and stays quiet on the retry.
+    needs_card = False if retry else _reply_needs_card_check(payload)
 
     # The evidence check is independent of the fence gate above - a reply can claim success
     # with no fence in it at all.
@@ -7000,6 +7102,26 @@ def event_handover():
     writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
     if writing_problem:
         trace_lines.append(writing_problem)
+
+    # #256: the checkpoint table. A miss blocks once; any error here fails open with a message.
+    if not retry:
+        try:
+            ctx = {
+                "reply": reply_text if vm is not None else "",
+                "long_words": long_words,
+                "editor_owed": editor_owed,
+                "needs_evidence": needs_evidence,
+                "uncommitted": uncommitted,
+                "plain_problems": plain_problems,
+                "user_text": _last_user_text(transcript_path) if transcript_path else "",
+            }
+            missed = _missed_checkpoints(ctx)
+            if missed:
+                emit({"decision": "block", "reason": _checkpoint_reason(missed)})
+                return 0
+        except Exception as exc:
+            trace_lines.append("house-rules: the checkpoint table hit an error (%s: %s), so this reply was "
+                               "not blocked." % (type(exc).__name__, exc))
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed

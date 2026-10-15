@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - The end-of-reply check blocks once, from a checkpoint table
+
+**Context.** aj approved "Design approved: handover pages and checkpoints" (below), which reverses the
+"never `decision: "block"`" rule for `Stop` recorded in `docs/architecture.md` and the 2026-09-23 entry
+"handover narrows to shell fences" (now marked Superseded in part).
+
+**Decision.** #256 built it. `hook.py` has a `CHECKPOINTS` table of (moment, rule name, check, "block" or
+"remind"). Five rows at "reply ends" block: page, editor, evidence, commit, plain summary. A miss returns
+`decision: "block"` with each missed rule's one-line text and exact fix, once; on the retry
+(`stop_hook_active`) it only reports, as `subagentcommit` does on `SubagentStop`. "no page" in aj's own
+genuine message lets one reply past the page and editor rows; a helper's hand-back never counts.
+`HOUSE_RULES_LOOP=off` turns all rows off. Any error fails open with a `systemMessage`.
+
+---
+
 ## 2026-10-15 - Before the pull request: guards must not stall an approved, autonomous build
 
 **Context.** A routine commit of finished, tested work on this session's own branch was refused while aj was
@@ -2088,7 +2103,7 @@ check exists because "evidence before claims" (this session's own earlier additi
 c67d`) was, until now, a rule stated in the subagent core and nowhere enforced in the main
 session's own replies.
 
-**Status.** Standing.
+**Status.** Superseded in part: "never `decision: "block"`" on `Stop` was replaced by the 2026-10-15 entry "The end-of-reply check blocks once, from a checkpoint table" (#256). The rest stands.
 
 ## 2026-09-23 — scope trades its step-card line for a docs-tier line and an evidence line
 

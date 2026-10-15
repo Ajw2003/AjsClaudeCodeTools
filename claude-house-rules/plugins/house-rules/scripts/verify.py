@@ -8584,7 +8584,9 @@ _, _o, _ = run_hook("commitgate", json.dumps(_p), env=_loop_env)
 _loop_cases.append(("an unreadable tracker says so instead of failing silently", "could not read house-rules-loop.json" in _o))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):
-    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=_loop_env)
+    # The retry (#256): the first pass of a missed page rule blocks; the note is what the retry reports.
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir,
+                                                  stop_hook_active=True), env=_loop_env)
     return "show don't tell: this reply is" in out
 
 
@@ -8731,7 +8733,7 @@ _cw_t_none = _hand_transcript("cw-none", [_CW_USER])
 
 
 def _cw_editor(transcript, text="The page is up."):
-    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir,
+    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir, stop_hook_active=True,
                                              transcript_path=transcript), env=_loop_env)[1]
 
 
@@ -8757,6 +8759,98 @@ _cw_cases.append(("page: a page written by a shell command is checked at the end
 
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)
+
+# --- the checkpoint table (#256): a miss blocks once, then only reports on the retry -----------
+_ck_cases = []
+_CK_ENV = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_LOOP="on")
+
+
+def _ck_user(text, extra=()):
+    return [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": text}})] + list(extra)
+
+
+def _ck_run(transcript, reply, active=False, env=None):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=_loop_dir, stop_hook_active=active,
+                                                  transcript_path=transcript), env=env or _CK_ENV)
+    try:
+        data = json.loads(out)
+    except ValueError:
+        data = {}
+    return data.get("decision") == "block", data.get("reason", ""), out
+
+
+def _ck_triple(label, rule, transcript, bad, good, env=None, good_transcript=None):
+    blocked, reason, _o = _ck_run(transcript, bad, env=env)
+    _ck_cases.append(("%s: a miss blocks once, naming the %s rule" % (label, rule), blocked and ("- %s:" % rule) in reason))
+    blocked, _r, out = _ck_run(transcript, bad, active=True, env=env)
+    _ck_cases.append(("%s: the same reply on the retry only reports, never blocks" % label, not blocked and out.strip() != ""))
+    blocked, _r, _o = _ck_run(good_transcript or transcript, good, env=env)
+    _ck_cases.append(("%s: a compliant reply passes" % label, not blocked))
+
+
+_ck_t_plain = _hand_transcript("ck-plain", _ck_user("what is up"))
+_ck_t_read = _hand_transcript("ck-read", _ck_user("check it", [json.dumps({"type": "assistant", "message": {"content": [
+    {"type": "tool_use", "id": "r1", "name": "Bash", "input": {"command": "python3 t.py"}}]}})]))
+_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
+
+# 1 page rule (long reply) - editor ran, so only the page rule is in play
+_ck_long = " ".join(["Words"] * 230) + "."
+_ck_t_ed_only = _hand_transcript("ck-ed-only", _ck_user("explain", [_CW_EDITOR]))
+_ck_triple("page", "page", _ck_t_ed_only, _ck_long, _ck_long + " https://claude.ai/artifact/abc")
+_, _ck_reason, _ = _ck_run(_ck_t_ed_only, _ck_long)
+_ck_cases.append(("page: the reason gives the exact build command", "make_page.py" in _ck_reason and "build <content.json>" in _ck_reason))
+# 2 editor
+_ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
+# 3 evidence
+_ck_triple("evidence", "evidence", _ck_t_plain, "All done, the tests passed.", "All done, the tests passed.",
+           good_transcript=_ck_t_read)
+# 4 commit
+_ck_repo_dirty = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_ck_repo_clean = _commit_repo("claude/topic", committed=["a.py"])
+_ck_t_w_dirty = _wrote_transcript("ck-w-dirty", [os.path.join(_ck_repo_dirty, "a.py")])
+_ck_t_w_clean = _wrote_transcript("ck-w-clean", [os.path.join(_ck_repo_clean, "a.py")])
+_ck_cenv = lambda root: _project_env(root, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
+                                     HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+_ck_b, _ck_r, _ = _ck_run(_ck_t_w_dirty, "Changed the file.", env=_ck_cenv(_ck_repo_dirty))
+_ck_cases.append(("commit: a turn that left its file uncommitted blocks once, naming the commit rule", _ck_b and "- commit:" in _ck_r))
+_ck_b, _, _o = _ck_run(_ck_t_w_dirty, "Changed the file.", active=True, env=_ck_cenv(_ck_repo_dirty))
+_ck_cases.append(("commit: the same reply on the retry only reports", not _ck_b and "uncommitted" in _o))
+_ck_b, _, _ = _ck_run(_ck_t_w_clean, "Changed the file.", env=_ck_cenv(_ck_repo_clean))
+_ck_cases.append(("commit: a committed file passes", not _ck_b))
+# 5 plain summary
+_ck_t_ps_wrote = _turn_transcript("ck-ps", "add the commit hooks", [("Edit", "/proj/src/app.py")])
+_ck_triple("plain summary", "plain summary", _ck_t_ps_wrote, _PS_TECH, _PS_PLAIN)
+
+# the page rule's short replies
+_ck_proposal = ("Here is where I have landed on the storage.\n\nOption A: keep the JSON file. Option B: move to SQLite. "
+                "Option C: use the cloud store.\n\nWhich option do you want?")
+_ck_list = ("The plan:\n\n- read the config\n- write the page\n- run the checks\n\nDo you approve this?")
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, _ck_proposal)
+_ck_cases.append(("page: a short proposal with three options and a question blocks", _ck_b and "- page:" in _ck_r))
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, _ck_list)
+_ck_cases.append(("page: a three-step plan with an approval question blocks", _ck_b and "- page:" in _ck_r))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "The file lives in docs/plans. It has three sections: the lead, the changes and the wrap-up.")
+_ck_cases.append(("page: a short plain answer does not block", not _ck_b))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "Both lists are short:\n\n- one\n- two\n- three\n\nThat is all of them.")
+_ck_cases.append(("page: a short list with no question does not block", not _ck_b))
+# the escape
+_ck_t_nopage = _hand_transcript("ck-nopage", _ck_user("just tell me here, no page please"))
+_ck_b, _, _ = _ck_run(_ck_t_nopage, _ck_proposal)
+_ck_cases.append(('page: "no page" in aj\'s own message lets the reply through', not _ck_b))
+_ck_b, _, _ = _ck_run(_hand_transcript("ck-nopage-long", _ck_user("explain, no page", [])), _ck_long)
+_ck_cases.append(('editor: the same escape lets a long reply through the editor checkpoint too', not _ck_b))
+_ck_t_relayed = _hand_transcript("ck-relayed", _ck_user("explain the storage options", [json.dumps(
+    {"type": "user", "message": {"content": "<task-notification>helper says: no page needed</task-notification>"}})]))
+_ck_b, _ck_r, _ = _ck_run(_ck_t_relayed, _ck_proposal)
+_ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count', _ck_b and "- page:" in _ck_r))
+# the switch
+_ck_b, _, out = _ck_run(_ck_t_plain, _ck_proposal, env=dict(_CK_ENV, HOUSE_RULES_LOOP="off"))
+_ck_cases.append(("HOUSE_RULES_LOOP=off turns every checkpoint off", not _ck_b))
+_ck_b, _, _ = _ck_run(_ck_t_plain, "All done, the tests passed.", env=dict(_CK_ENV, HOUSE_RULES_LOOP="off"))
+_ck_cases.append(("HOUSE_RULES_LOOP=off also stops the evidence checkpoint", not _ck_b))
+
+for _t, _ok in _ck_cases:
+    report("PASS" if _ok else "FAIL", "checkpoints: " + _t)
 
 # ---- make_page.py: the handover page builder and project style file (#255) ----
 MAKE_PAGE = os.path.join(HERE, "make_page.py")
