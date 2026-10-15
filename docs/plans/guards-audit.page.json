@@ -3,21 +3,21 @@
   "eyebrow": "Audit for approval · GitHub issue 285, \"Guards block only unrecoverable actions\" · nothing changed yet",
   "replyPrefix": "Guards audit",
   "short": {
-    "lead": "I went through every hook (an automatic check) in hook.py that can stop me, against your test: only data loss with no way back should stop me. Seven kinds of action keep asking or stay refused. Deletes ask only when the data isn't saved. Four refusals become reminders. The background-work guard goes completely. Publishing a page is never refused again.",
+    "lead": "I went through every hook (an automatic check) in hook.py that can stop me, against your test: only data loss with no way back, or a change to someone else's work, should stop me. Eight kinds of action keep asking or stay refused. Deletes ask only when the data isn't saved. Four refusals become reminders. The background-work guard goes completely. Publishing a page is never refused again.",
     "hint": "Tap a card for what it guards today and what changes.",
     "key": [["Goes through, never stops me", "done"], ["Still asks you first, or is refused", ""], ["Your call", "you"]],
     "items": [
       ["check", "Never blocked", "Three things no guard may ever stop", "done",
        "You set these three requirements at 14:45 on 15 October. First, a routine commit or push to an agent-created branch other than main is never blocked. That means a branch named AjsAgent/ or claude/, or a helper's own working-copy branch. Second, publishing an artifact is never blocked. Third, the agent, or a helper it starts, can always change its own files inside the folder it was given. No prompt, refusal or timeout applies to any of them.",
        "Nothing from you. It will be built first and tested by verify.py."],
-      ["lock", "Keep", "Seven kinds of action that still stop me", "",
-       "Pushing or committing to main (the shared primary branch) stays refused. These still ask first: a force-push (overwriting history on the server) and a push with --all or --mirror. Deleting a branch also asks, local (branch -D) or remote (push --delete), as do git clean (deletes untracked files) and filter-branch (rewrites history). So do reset, checkout -- and restore while uncommitted work (changes not yet saved in git) exists, stash drop and clear (discarding set-aside work), and truncating (emptying) a file.",
-       "Nothing; these already match your test."],
+      ["lock", "Keep", "Eight kinds of action that still stop me", "",
+       "Pushing or committing to main (the shared primary branch) stays refused. So do commits, merges, rebases, cherry-picks and reverts on any branch the guard can't confirm is mine; the refusal tells me to make a new AjsAgent/ branch and commit there. These still ask first: a force-push (overwriting history on the server) and a push with --all or --mirror. Deleting a branch also asks, local (branch -D) or remote (push --delete), as do git clean (deletes untracked files) and filter-branch (rewrites history). So do reset, checkout -- and restore while uncommitted work (changes not yet saved in git) exists, stash drop and clear (discarding set-aside work), and truncating (emptying) a file.",
+       "Nothing from you. Refusing commits on a branch that isn't clearly mine is stricter than today, which only asks."],
       ["swap", "Narrow", "Deletes ask only when the file isn't saved", "",
        "Today every rm asks, even for a committed file git can restore. After this, a delete asks only when it is recursive, meaning it removes a whole folder (rm -r, rmdir /s, Remove-Item -Recurse), or when a file it deletes has uncommitted changes or was never committed. Deleting a committed, unchanged file runs without asking.",
        "Nothing from you."],
-      ["stop", "Drop", "Background work, kills and branch commits stop asking", "done",
-       "Background or hidden commands stop asking: nohup, a trailing &, Start-Process and background jobs. So do cutting a wait's output short with tail or head, and killing a process. Commits, merges and rebases also stop asking when the guard can't tell which branch the command runs on; main stays refused whenever it can tell. The \"Never hide work\" rule text goes too, and so does its 5-minute stall-check reminder.",
+      ["stop", "Drop", "Background work and process kills stop asking", "done",
+       "Background or hidden commands stop asking: nohup, a trailing &, Start-Process and background jobs. So do cutting a wait's output short with tail or head, and killing a process. None of these changes a branch or deletes saved work. The \"Never hide work\" rule text goes too, and so does its 5-minute stall-check reminder.",
        "Nothing from you."],
       ["eye", "Soften", "Four refusals become reminders", "done",
        "Each of these is refused today and becomes a reminder. First, publishing a page not built by make_page.py. Second, a Claude credit line or a claude/ branch name on GitHub, and an issue without its sections. Third, a third helper (a sub-agent) running, or a helper starting its own helper. Fourth, overwriting a whole file: today it always asks; afterwards it asks only when that file has uncommitted changes.",
@@ -38,22 +38,19 @@
     ["chg", "Publishing a page", "Never refused.", ["Denied if not built by make_page.py, and auto-refused after an earlier prompt went unanswered", "Always goes through; a reminder if make_page.py wasn't used"], "Today, a refused page publish fails silently.", null, null],
     ["chg", "Unanswered prompts", "Each prompt waits on its own.", ["One unanswered prompt refuses every later one at once", "Only prompts for the kept guards time out, one at a time"], "Prompts the guards didn't raise are never refused by the timer.", null, null],
     ["chg", "Claude credit and branch names on GitHub, helper count, whole-file rewrites", "Reminders, not refusals.", ["Denied or asked every time", "Allowed, with a reminder; a rewrite asks only over uncommitted changes"], "None of these lose data that can't be restored.", null, null],
+    ["chg", "Commits on a branch that isn't clearly mine", "Refused, with a pointer to a new branch.", ["Asks you first", "Refused; I make a new AjsAgent/ branch and commit there"], "Covers commit, merge, rebase, cherry-pick, revert, am and apply. Your rule: risking someone's work is not worth the speed.", null, null],
     ["keep", "Refusals on main, and asking before history or branch loss", "Unchanged.", null, "Push or commit to main, force-push, deleting a branch, git clean, filter-branch, reset or restore over uncommitted work, stash drop or clear, truncating a file.", null, null]
   ],
   "choices": [
     ["lock", "What should the design-loop lock do?", [
       ["A", "Reminder only", 1, "Code edits go through, with a reminder that the plan hasn't been approved. It matches your test, but nothing forces plans to reach you as a page first."],
       ["B", "Keep blocking code edits", 0, "Plans always reach you first, but builders stall while you're away."]
-    ], "It doesn't protect data, so your test says reminder; the cost is that sending the plan as a page first becomes a habit rather than an enforced rule."],
-    ["force", "Force-pushing (overwriting the server's copy of a branch) to my own branch, not main: ask first, or allow?", [
-      ["A", "Allow it", 1, "Old commits stay in the local history (the reflog, git's private record of where a branch used to point), so it can be undone on this machine."],
-      ["B", "Keep asking", 0, "Safer if you ever push to my branches too."]
-    ], "Force-pushing to main stays refused either way."]
+    ], "It doesn't protect data, so your test says reminder; the cost is that sending the plan as a page first becomes a habit rather than an enforced rule."]
   ],
   "wrapup": {
     "summary": "An audit of every hook that can stop me, sorted by whether what it stops can be recovered.",
     "changing": "hook.py's guard lists, the page check, the prompt timer, the GitHub and helper-count guards, the whole-file rewrite prompt, the rule text in house-rules.md, and the checks in verify.py that test each.",
-    "blocking": "Your answers on the design-loop lock and on force-pushing to my own branch, and approval of the audit.",
+    "blocking": "Your answer on the design-loop lock, and approval of the audit.",
     "next": "I open one child issue per area and run one builder at a time, then open one pull request for you to test. The fixes for automatic pages follow on the same branch.",
     "todo": ["Pick your answers in the Choices section.", "Tap <b>Copy my reply</b>.", "Send it with \"Build plan approved: guards audit\", or say what to change."]
   }
