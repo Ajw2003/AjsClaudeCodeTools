@@ -21,7 +21,7 @@
     ["method", "How should the fresh PlunderSpell session be run?", [
       ["A", "A real session in this sandbox on a copy of PlunderSpell, with this branch's plugin loaded from its first moment", 0, "Runs now, in this sandbox. I relay your answers in and its replies out, so you don't talk to that session directly."],
       ["B", "Fix the guards, open the pull request and merge it, then start a genuinely new PlunderSpell cloud session", 1, "This is exactly how a new session works. You do your QA on the pull request, before the merge."]
-    ], "You asked for it to run exactly as a new session would. Only option B does that, because a new session installs from main. Option A runs the same code, but with me relaying between you and the session."]
+    ], "You asked for it to run exactly as a new session would. Only merging first and then starting a new cloud session does that, because a new session installs from main. The sandbox session runs the same code, but with me relaying between you and the session."]
   ],
   "wrapup": {
     "summary": "How to run the final PlunderSpell test, given that a new cloud session installs from main.",
