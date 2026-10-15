@@ -183,6 +183,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-15, branch `AjsAgent/page-charset-fonts`, plugin 2.67.1: built pages carry `<meta charset="utf-8">`, and a style file's `fonts` (display, body, label) now become the page's Google Fonts link in place of the template's default one (`fonts.load` still overrides). Checked on PlunderSpell's fear-entities page served by `python -m http.server`: UTF-8, Eczar and Spectral loaded.
 
+2026-10-15, branch `AjsAgent/issue-triage-skill`, plugin still 2.67.1: new `house-rules:issue-triage` skill and `/house-rules:issue-triage` command, which group a repo's open issues into done, duplicate and burst groups as a proposal page. The version bump to 2.68.0 (`plugin.json` line 4, `verify.py` lines 4324 and 4327) is waiting on aj's approval.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

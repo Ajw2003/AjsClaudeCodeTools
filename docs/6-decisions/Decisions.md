@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Added the issue-triage skill
+
+**Context.** Grouping a repo's open issues into bursts was done by hand for `Ajw2003/focus-deck-app` issue #162
+(page `docs/plans/issue-triage-2026-10-15.md` in that repo). aj approved making it a reusable skill, as a pull
+request ("5A", Focus Deck triage page).
+
+**Decision.** `skills/issue-triage/SKILL.md` and `commands/issue-triage.md`, wired like `plain-docs`. A new skill is
+a minor bump, 2.67.1 to 2.68.0, but the bump (`plugin.json` line 4, `verify.py` lines 4324 and 4327) is waiting on
+aj's approval and is not in this change.
+
+**Status.** Standing; version bump pending.
+
+---
+
 ## 2026-10-15 - QA passed: enforced QA stage
 
 **Context.** QA page `docs/plans/qa-stage-qa.html`, built by `make_page.py`'s new QA mode. All seven sub-issues of
