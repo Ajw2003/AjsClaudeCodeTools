@@ -286,6 +286,7 @@ def apply_qa(page, project):
          "beside them come from the plan." % base, None, rows])
     page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
                             " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv), None, None])
+    page.setdefault("choices", [])  # a QA page usually has none, and the template maps over the list
     page["replyPrefix"] = "QA passed: %s" % qa["feature"]
     page["reply"] = ""
 
