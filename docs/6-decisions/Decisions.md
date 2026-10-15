@@ -7,6 +7,23 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - New item visual v2: aj's answers; automatic change log filed for later
+
+**aj's answers** ("New item visual v2: 1* 2A"):
+- **The file list** is option A: each file once, then each part in plain words with its exact counts, shown only
+  when an item is opened.
+- **The boxes**, in aj's own words: "Labels wrote per item but let's change the format here to, what exists today,
+  what this creates, how it impacts the user." This reads two ways: the same three labels on every item, or
+  per-item labels in those three roles. Both are shown on the code lock in `docs/plans/new-item-visual-v2.html`,
+  with one question; the first is suggested. Still waiting on that answer and "Design approved: new item visual v2".
+
+**Filed for later: #244**, an automatic change log. Written before the turn ends and checked after it, plain
+words first with exact detail on open, new files described by what they are (a wizard model with textures and four
+animations, not "wizard.fbx"), and visual files previewed from the screenshot check. It goes through the loop when
+started.
+
+---
+
 ## 2026-10-15 - QA failed: new item visual; redesign proposed
 
 **aj's QA.** "Before this design moves forward we need to fix the wording of the 3 new boxes… It does and you

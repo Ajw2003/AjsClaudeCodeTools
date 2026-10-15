@@ -226,6 +226,13 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
     .parts li span:first-child{margin-right:8px}
     .parts .n{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
     </style>
+    <div class="pv" style="border:2px solid var(--you);border-radius:12px;padding:12px;background:var(--you-soft)">
+      <h3>Your answer: today → what this creates → how it impacts you. Two ways to read it:</h3>
+      <h3><span class="lbl">Reading 1</span>The same three labels on every item</h3>
+      <div class="pflow"><span><small>What exists today</small>Nothing stops a code edit before you've approved a design.</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>A lock that refuses source edits outside Build.</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>No code appears that you haven't approved; docs stay editable.</span></div>
+      <h3><span class="lbl">Reading 2</span>Labels written per item, in those three roles</h3>
+      <div class="pflow"><span><small>Today, edits are</small>never checked against an approved design</span><i aria-hidden="true">→</i><span class="mid"><small>This adds</small>a lock that opens only in Build</span><i aria-hidden="true">→</i><span><small>So you get</small>no code you haven't approved, and docs stay editable</span></div>
+    </div>
     <div class="pv">
       <h3><span class="lbl">Wording A</span>One sentence across the boxes</h3>
       <div class="pflow"><span>When I edit a source file,</span><i aria-hidden="true">→</i><span class="mid">the lock checks it's Build and every issue is in progress,</span><i aria-hidden="true">→</i><span>so the edit goes in, or is refused with the reason.</span></div>
@@ -270,7 +277,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 // ---- PAGE: the only part you edit. Example content shows every field. ----------------------
 const PAGE = {
   title: "New Item Visuals v2",
-  eyebrow: "Redesign after your QA · nothing built yet",
+  eyebrow: "Redesign after your QA · your answers in, one question left",
   replyPrefix: "New item visual v2",
   short: {
     lead: "Your QA asked for two changes to the changes page. First, the fixed box labels \"It does\" and \"You get\" read stiffly. Second, opening an item should show exactly which files it created or changed, by how many lines. Below are three ways to word the boxes, and the file list, all on the code lock with its real numbers. The ambiguity check waits until this is done.",
@@ -287,6 +294,10 @@ const PAGE = {
     ["new", "File list on open", "Every item, opened, lists its files and line counts.", null, "Each row: the file, what happened to it in plain words, and lines added and removed. Shown only after you open an item; the closed list stays as it is.", ["You open an item", "it lists each file it touched,", "with what changed and how many lines"]]
   ],
   choices: [
+    ["reading", "Which reading of your answer is right?", [
+      ["A", "The same three labels on every item", 1, "\"What exists today\" → \"What this creates\" → \"How it impacts you\", with full sentences under them."],
+      ["B", "Labels written per item, in those three roles", 0, "Each item words its own labels, like \"Today, edits are\" → \"This adds\" → \"So you get\"."]],
+      "With full sentences under them, your three labels read properly on every item, and a reader learns where to look. Per-item labels read more smoothly, but no two items look alike. Either way the three roles are yours."],
     ["words", "How should the three boxes read?", [
       ["A", "As one sentence across the boxes, no labels", 1, "\"When I edit a source file,\" → \"the lock checks it's Build and every issue is in progress,\" → \"so the edit goes in, or is refused with the reason.\""],
       ["B", "Labels written per item to fit", 0, "Code lock: \"When\" / \"It checks\" / \"Then\"; a doc might get \"When\" / \"It explains\" / \"So you can\"."],
