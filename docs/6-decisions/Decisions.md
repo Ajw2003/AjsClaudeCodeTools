@@ -12,6 +12,11 @@ pointer, when a later entry replaces it.
 aj: "QA passed: clear writing check". Its issues (#245-#250) stay `needs review` until aj closes them. Next, the
 new item visual resumes: its v2 redesign is waiting on aj's pick between the two readings of the box labels.
 
+The real page session, refused earlier while aj was away, was rerun with aj present. The session wrote
+`docs/plans/probe2.html` with a shell command, and its record shows both notes: "the page probe2.html has 1
+thing(s) to fix" and "this turn wrote the page probe2.html" (the editor reminder). Its reply: "the one note
+about it flags "about 43" as "a vague number or claim with no reason it can't be measured"".
+
 ---
 
 ## 2026-10-15 - Clear writing check built (2.65.0); handed to aj for QA
