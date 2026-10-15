@@ -2924,6 +2924,25 @@ _TOOL_INPUT_SUBAGENT_TYPE_RE = re.compile(r'"subagent_type"\s*:\s*"((?:[^"\\]|\\
 # A backgrounded call's hand-back prompt shape, probed live - doc-ref 8313 docs/6-decisions/Decisions.md.
 _PROMPT_VALUE_RE = re.compile(r'"prompt"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _TASK_NOTIFICATION_RE = re.compile(r"<task-notification>")
+# #253: prompts that reach UserPromptSubmit but are a helper's report or a system notice, not aj.
+_RELAYED_PROMPT_RE = re.compile(
+    r"<task-notification>|<system-reminder>|<agent-message\b|\[Subagent hand-?back\]"
+    r"|Another Claude session sent a message", re.IGNORECASE)
+
+
+def _is_relayed_prompt(text, payload=None):
+    """True when the prompt is a subagent hand-back, agent message or task/system notification, or
+    the payload carries a non-human `origin` (as _is_genuine_user_message honours)."""
+    if text and _RELAYED_PROMPT_RE.search(text):
+        return True
+    try:
+        data = json.loads(payload) if payload else None
+    except ValueError:
+        data = None
+    origin = data.get("origin") if isinstance(data, dict) else None
+    if isinstance(origin, dict):
+        origin = origin.get("kind") or origin.get("type")
+    return bool(origin) and str(origin).lower() not in ("human", "user")
 _TASK_ID_RE = re.compile(r"<task-id>([0-9A-Za-z]+)</task-id>")
 _TASK_STATUS_RE = re.compile(r"<status>([^<]*)</status>")
 
@@ -3884,7 +3903,7 @@ def _waiting_scope_note(payload):
     its waiting entries. Returns the text for Claude, or "". Never raises."""
     try:
         m = _PROMPT_VALUE_RE.search(payload or "")
-        if not m or _TASK_NOTIFICATION_RE.search(m.group(1)):
+        if not m or _is_relayed_prompt(m.group(1), payload):
             return ""
         data = json.loads(payload)
         session_id = str(data.get("session_id") or "") if isinstance(data, dict) else ""
@@ -5060,6 +5079,9 @@ def _loop_scope_note(payload):
         if not m:
             return ""
         text = json.loads('"%s"' % m.group(1))
+        if _is_relayed_prompt(text, payload):
+            return ("Design loop: this message is a helper's report or a notification, not aj, "
+                    "so it moved nothing.")
         top, git_dir = _issues_locate(_payload_cwd(payload))
         if not git_dir:
             return ""
