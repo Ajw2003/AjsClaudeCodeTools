@@ -231,13 +231,13 @@ const PAGE = {
   eyebrow: "What the design loop pull request changes · 36 files · 51 commits",
   replyPrefix: "Changes page",
   short: {
-    lead: "This pull request adds the design loop and its label check to the house-rules plugin. It moves the plugin from 2.62.0 (what main has now) to 2.64.1. It adds one rule, changes five hooks, adds a page template, about 43 tests, and the design pages behind it all. It removes two old rules, which were merged into the new one.",
+    lead: "This pull request adds the design loop and its label check to the house-rules plugin. It moves the plugin from 2.62.0 (what main has now) to 2.64.1. It adds one rule, changes five hooks, adds a page template, 43 new tests, and the design pages behind it all. It removes two old rules, which were merged into the new one.",
     hint: "Tap a group to see what it adds and what it needs from you.",
     key: [["Built and checked", "done"], ["You act on it", "you"]],
     items: [
       ["file", "Rule", "The show-don't-tell rule", "done", "A new rule, loaded every session in its own slot, replacing two older rules.", "Nothing from you."],
       ["lock", "Hooks", "Five hooks changed, one added", "done", "Approvals, the code lock, issue and label recording, the helper note, and the end-of-reply checks.", "Nothing from you."],
-      ["check", "Tests", "About 43 new checks", "done", "The test suite is at 658 checks, passing on GitHub and here.", "Nothing from you."],
+      ["check", "Tests", "43 new checks", "done", "The test suite goes from 616 checks to 659, all passing on GitHub and here.", "Nothing from you."],
       ["list", "Template", "The handover page template", "done", "The four-part page every proposal is built from; a New item opens to what sets it off, what it does and what you get.", "Nothing from you."],
       ["eye", "Docs", "Docs and design pages", "done", "A system doc for the loop, the state, today and decisions tiers, and 16 design pages.", "Nothing from you."],
       ["hand", "Merge", "QA, then merge", "you", "Version 2.64.1 reaches your machines once it's on main.", "QA the label check, then merge the pull request."]
@@ -262,7 +262,7 @@ const PAGE = {
     ["chg", "Unity tools rule", "Points at the new rule's name.", ["Under \"Build only what was asked\"", "Under \"The request is the scope\""], "rules/detail/unity-tools-first.md, one line."],
     ["chg", "The go-ahead guess", "Off while the loop is on.", ["A message that reads like a go-ahead starts the build", "Only \"Build plan approved\" starts it"], "With the loop off, the old guess comes back."],
     ["chg", "Issue recorder matcher", "Also watches the GitHub tool's issue writes.", ["Write, Edit, NotebookEdit, Bash", "Those, plus the GitHub tool's issue_write"], "hooks/hooks.json."],
-    ["chg", "Test suite", "verify.py, 289 lines added.", ["Checks before this work", "658 checks, all passing"], "40 design loop and label check cases, plus size and wording checks for the new rule."],
+    ["chg", "Test suite", "verify.py, 280 lines added, 13 removed.", ["616 checks on main", "659 checks, all passing"], "43 new: 41 design loop, label check and page template cases, and 2 that the new rule loads and stays under its size limit. One more existing check only changed its version number."],
     ["chg", "Plugin version", "plugin.json.", ["2.62.0", "2.64.1"], "2.63.0 was the design loop, 2.64.0 the label check, and 2.64.1 the New-item flow on these pages; all ship together."],
     ["chg", "Docs tiers", "Architecture, README, state, today, decisions.", null, "Each hook row names what it gained. The decisions log has every approval and the two real runs quoted."],
     ["chg", "Build only what was asked (detail)", "Deleted; merged into the new rule.", ["rules/detail/build-what-asked.md, 14 lines", "Removed"], "Its text now lives under \"The request is the scope\" in the show-don't-tell detail."],

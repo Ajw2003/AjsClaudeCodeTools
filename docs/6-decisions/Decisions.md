@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Correction: "about 43 tests" was a guess where a count was possible
+
+The changes page said "about 43 tests" and "658 checks"; aj: "That's not the kind of thing that is ambiguous."
+Counted by running `verify.py` on `origin/main` and on this branch, then comparing check names: main has 616 and
+the branch 659, so 43 new (41 design loop, label check and page template cases, and 2 for the new rule's loading
+and size). One more check exists on both and only changed its version number. `verify.py` gained 280 lines and
+lost 13. The page now gives these numbers. A count that can be run is run, not estimated.
+
+Side finding: on main, run from a long checkout path, "inject stays under the per-hook additionalContext limit"
+failed at 9723 characters against its 9700 margin. The injected text names the plugin path, so a longer path costs
+characters. It passes in the normal checkout. Left for the rule audit (#228).
+
+---
+
 ## 2026-10-14 - Design proposed: new item visual
 
 **Status.** Approved: "Design approved : New item visual: 1C". Option C: a New item opens to what sets it
