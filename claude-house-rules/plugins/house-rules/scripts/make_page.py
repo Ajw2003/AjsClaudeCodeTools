@@ -237,10 +237,82 @@ def style_css(style):
         css.append(".g.you span.c,.st.you .c{color:var(--you)}.g.done span.c{color:var(--ok)}"
                    ".g:not(.you):not(.done) span.c{color:var(--accent)}")
     out = "<style>\n" + "\n".join(css) + "\n</style>\n"
-    load = fonts.get("load")
+    families = [fonts[k] for k in ("display", "body", "label") if fonts.get(k)]
+    # shortcut: asks Google Fonts for 400 and 700, which a single-weight family lacks; set fonts.load then
+    load = fonts.get("load") or (families and "https://fonts.googleapis.com/css2?%s&display=swap" % "&".join(
+        "family=%s:wght@400;700" % f.replace(" ", "+") for f in dict.fromkeys(families)))
     if load:
         out = '<link rel="stylesheet" href="%s">\n' % load + out
     return out
+
+
+def run_git(project, *a):
+    try:
+        r = subprocess.run(["git", "-C", project] + list(a), capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError) as e:
+        die("git did not run in %s: %s" % (project, e))
+    if r.returncode:
+        die("git %s failed in %s: %s" % (" ".join(a), project, (r.stderr or r.stdout).strip()))
+    return r.stdout
+
+
+def apply_qa(page, project):
+    """QA mode: add the git-counted Files changed item and the Still unverified item."""
+    qa = page["qa"]
+    if not isinstance(qa, dict):
+        die("content 'qa' must be an object with feature, base, unverified and files")
+    for k in ("feature", "base"):
+        if not qa.get(k):
+            die("QA mode needs qa.%s in the content file; add it" % k)
+    unv = qa.get("unverified")
+    if not isinstance(unv, list) or not unv:
+        die("QA mode needs qa.unverified, a non-empty list of what is not yet proven; a QA page that "
+            "claims everything is proven is refused, so list what you did not check")
+    plan = qa.get("files") or {}
+    base = qa["base"]
+    rows, seen, tot_a, tot_r = [], set(), 0, 0
+    for line in run_git(project, "diff", "--numstat", base + "...HEAD").splitlines():
+        a, r, f = line.split("\t", 2)
+        a, r = (int(a), int(r)) if a != "-" else (0, 0)
+        tot_a, tot_r = tot_a + a, tot_r + r
+        seen.add(f)
+        est = plan.get(f)
+        part = ["Plan estimate: %s" % est[2], est[0], est[1]] if est else ["Not in the plan", 0, 0]
+        rows.append([f, a, r, [part]])
+    for f, est in plan.items():
+        if f not in seen:
+            rows.append([f, 0, 0, [["Planned but not changed: %s" % est[2], est[0], est[1]]]])
+    page.setdefault("changes", []).append(
+        ["chg", "Files changed, counted from git against %s" % base,
+         "%d files, +%d −%d" % (len(seen), tot_a, tot_r),
+         None, "The added and removed counts come from git (git diff --numstat %s...HEAD); the estimates "
+         "beside them come from the plan." % base, None, rows])
+    page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
+                            " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv), None, None])
+    page.setdefault("choices", [])  # a QA page usually has none, and the template maps over the list
+    page["replyPrefix"] = "QA passed: %s" % qa["feature"]
+    page["reply"] = ""
+
+
+def record_qa_page(project, out):
+    common = os.path.abspath(os.path.join(project, run_git(project, "rev-parse", "--git-common-dir").strip()))
+    stage = os.path.join(os.path.dirname(common), ".claude", "house-rules-loop.json")
+    if not os.path.isfile(stage):
+        print("make_page: QA page not recorded because no feature is in progress (no %s)" % stage)
+        return
+    try:
+        with open(stage, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("not a JSON object")
+    except (OSError, ValueError) as e:
+        print("make_page: QA page not recorded: %s is unreadable (%s); left untouched" % (stage, e))
+        return
+    data["qa_page"] = os.path.relpath(out, project).replace(os.sep, "/")
+    with open(stage, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    print("make_page: recorded qa_page %s in %s" % (data["qa_page"], stage))
 
 
 def build(args):
@@ -256,6 +328,8 @@ def build(args):
     page = load_json(args.content, "content")
     if not isinstance(page, dict):
         die("content %s must be a JSON object" % args.content)
+    if "qa" in page:
+        apply_qa(page, project)
     check_reserved(page, style)
     check_pictures(page, style)
     stem = os.path.basename(args.content)
@@ -278,6 +352,8 @@ def build(args):
     html = re.sub(r"<title>.*?</title>", lambda _: "<title>%s</title>" % esc, html, count=1, flags=re.S)
     if has_look(style):
         block = style_css(style)
+        if "fonts.googleapis.com" in block:  # the project's fonts replace the template's default ones
+            html = re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com/[^"]*">\n', "", html, count=1)
         i = html.index("<svg width=\"0\"") if "<svg width=\"0\"" in html else html.index("<script>")
         html = html[:i] + block + html[i:]
     html = "<!doctype html>\n<!-- house-rules make_page %s -->\n" % plugin_version() + html
@@ -285,6 +361,8 @@ def build(args):
         f.write(html)
     print("make_page: wrote %s (%d picture(s) copied)" % (out, npics))
     visual_check(out, style)
+    if "qa" in page:
+        record_qa_page(project, out)
 
 
 # ---- step 2: visual check -------------------------------------------------------------------

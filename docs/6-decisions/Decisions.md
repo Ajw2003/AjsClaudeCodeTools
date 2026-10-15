@@ -7,6 +7,34 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Build plan approved: Label setup
+
+**Context.** Build plan `docs/plans/label-setup-build-plan.html`, five sub-issues of #274 (The plugin
+creates the house labels a repo is missing), #275 to #279. aj replied "Build plan approved: Label setup
+build plan", with no answers to the page's four choices.
+
+**Decision.** With no answers given, the page's marked suggestions stand for the three choices that
+change nothing outside this repo:
+- **1A, where the code lives:** a new `scripts/labels.py`, shared by the hook and the command.
+- **2A, when the hook creates labels:** at all three moments: design approved, the issue note, and
+  before a label refusal.
+- **3A, the label record:** `_label_changes` also records the REST forms.
+
+Choice 4 (creating a private scratch repo, `Ajw2003/label-setup-scratch`, for the real "no labels
+yet" run) creates something on aj's account, so it waits for aj's own answer before #279 (Prove it on
+a real repo, bump the version and update the docs) runs that step.
+
+**Changed since the plan.** `main` moved to plugin 2.67.1 (the enforced QA stage, #264, and the page
+charset fix, #280) before the build started, and was merged into `AjsAgent/label-setup`. So this
+build ships as 2.68.0, not 2.67.0. The lines the plan cites moved: `LOOP_WORKING` is now
+`scripts/hook.py:5238`, `_loop_labels` `:5259`, `_loop_label_refusal` `:5315`, `_label_changes`
+`:5617`, and the two `gh issue edit` notes `:5729` and `:5776`; `ISSUE_NOTE` (`:4814`) and
+`_issues_plan_note` (`:4890`) did not move.
+
+**Status.** Standing. Stage Build.
+
+---
+
 ## 2026-10-15 - Design approved: Label setup (approved in Ajw2003/Unblocked, built here)
 
 **Context.** A new repo has none of the three house labels the issue workflow and the design loop
@@ -41,6 +69,54 @@ would go unrecorded. The build plan covers both.
 **Status.** Standing. Stage Plan. Build plan: `docs/plans/label-setup-build-plan.html`.
 
 ---
+
+## 2026-10-15 - QA passed: enforced QA stage
+
+**Context.** QA page `docs/plans/qa-stage-qa.html`, built by `make_page.py`'s new QA mode. All seven sub-issues of
+#264 (Enforce the QA stage), #265 to #271, are built as plugin 2.67.0. The real run is recorded in
+`docs/generated/2026-10-15-qa-stage-real-run.md`.
+
+**Decision.** aj answered "QA passed: enforced QA stage". There were two fixes beyond the plan, both found while
+testing: a QA page linked only in a retry reply is now recorded, and a QA page with no choices now renders. The
+label check's reply loop (#238) was left out of this build.
+
+**Status.** Standing. The issues keep `needs review` until aj closes them.
+
+## 2026-10-15 - Build plan approved: enforced QA stage
+
+**Context.** `docs/plans/qa-stage-plan.html`, seven sub-issues of #264 (Enforce the QA stage), #265 to #271.
+
+**Decision.** aj approved with "1A 2A":
+- **1A, where the stage lives:** a committed file on the branch, `.claude/house-rules-loop.json`, that only the
+  hook may change; Write or Edit of it is refused. Rejected: staying in `.git` (lost in every new cloud
+  container) and a GitHub label (the hook cannot read GitHub in a cloud session, where `gh` is not logged in).
+- **2A, who builds:** `@house-rules:builder` helpers, one step at a time, because five of the seven steps edit
+  `hook.py`.
+
+**Status.** Standing.
+
+## 2026-10-15 - Design approved: enforced QA stage
+
+**Context.** Issue #264 (Enforce the QA stage). Pull request #263 (Handover pages and checkpoints) was opened and
+every issue swapped to `needs review` with no QA page; aj had to ask for one. During that QA an Edit to
+`templates/handover-page.html` also went through, and the writing note made a whole reply post twice.
+
+**Decision.** aj approved `docs/plans/qa-stage-design.html` with "1A 2A 3A 4A":
+- **1A, when QA starts:** a pull request opening for the feature, or every issue swapped to `needs review`,
+  whichever comes first.
+- **2A, how the QA page is detected:** `make_page.py` records the built QA page in the stage file, and the reply
+  links it.
+- **3A, the file table's numbers:** the builder counts added and removed lines from git against the base branch;
+  the content file supplies only the plan's estimate and a note.
+- **4A, the duplicated reply:** the writing note and the checkpoint reason ask for the corrected sentences only.
+  Blocking was rejected because a Stop hook fires after aj has already seen the reply.
+
+Found after the design was published: the stage file (`.git/house-rules-loop.json`) does not survive a new cloud
+session. This session's fresh container had none, although the previous session moved through every stage. The
+build plan covers it. Also found: the approval parser took the feature name as "enforced", because
+"QA stage: 1A" looked like a pasted answer; the build plan covers that too.
+
+**Status.** Standing.
 
 ## 2026-10-15 - The end-of-reply check blocks once, from a checkpoint table
 

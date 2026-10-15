@@ -179,6 +179,10 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-15, branch `ccr-fd3ee01d-o448i8`: handover pages and checkpoints (#251) is built, 2.66.0, in aj's QA. Pull request #263. Every issue (#251 to #259, #261, #262) is `needs review`. `verify.py` 753 PASS and `tools/verify_tools.py` 47 PASS, each run twice. The guard fixes from `docs/guard-friction-audit-2026-10-15.md` are in. #259 (the PlunderSpell regeneration) runs in a new session after the merge.
 
+2026-10-15, branch `AjsAgent/vigilant-meitner-8pp618`: pull request #263 is merged. Enforcing the QA stage (#264) is built, all seven steps (#265 to #271, plugin 2.67.0), QA passed (aj, 2026-10-15); every issue stays `needs review` until aj closes it, and a pull request to main is the release. QA page: `docs/plans/qa-stage-qa.html`. The real run (`docs/generated/2026-10-15-qa-stage-real-run.md`) found two fixes, both merged (a QA page linked in a retry reply is recorded; a QA page with no choices renders), and one older loop in the label check, left for a follow-up. Design approved ("1A 2A 3A 4A", `docs/plans/qa-stage-design.html`), build plan `docs/plans/qa-stage-plan.html` approved ("1A 2A"). Stage file in a committed `.claude/house-rules-loop.json` (#265), QA leak was the 2.65.1 per-checkout file (#266), a pull request opening moves Build to QA (#267), `make_page.py` QA mode (#268), the `qa page` checkpoint (#269), corrected-lines-only notes (#270), rule text and docs (#271).
+
+2026-10-15, branch `AjsAgent/page-charset-fonts`, plugin 2.67.1: built pages carry `<meta charset="utf-8">`, and a style file's `fonts` (display, body, label) now become the page's Google Fonts link in place of the template's default one (`fonts.load` still overrides). Checked on PlunderSpell's fear-entities page served by `python -m http.server`: UTF-8, Eczar and Spectral loaded.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

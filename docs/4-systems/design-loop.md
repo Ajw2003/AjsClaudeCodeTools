@@ -12,12 +12,13 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 | Piece | Where | What it does |
 |---|---|---|
 | Rule | `showrule` (SessionStart), `rules/show-dont-tell.md` | Loads the rule every session in its own slot: `house-rules.md` had 47 characters of room left. |
-| Stage tracker | `.git/house-rules-loop.json` | Holds the feature, its stage (Design, Plan, Build, QA, Done), aj's approvals, the issues made during Plan, and a fingerprint of the decisions log. Never committed. Carries across sessions. |
+| Stage tracker | `.claude/house-rules-loop.json` in the main checkout (shared by every worktree) | Holds the feature, its stage (Design, Plan, Build, QA, Done), aj's approvals, the issues made during Plan, and a fingerprint of the decisions log. Committed with the branch, so a fresh clone or new cloud session keeps the stage. A legacy `.git/house-rules-loop.json` is still read when the new file is missing; the next write moves it. A Write, Edit, NotebookEdit or shell redirect to the file is refused in every stage: only aj's approval messages move the stage (`HOUSE_RULES_LOOP=off` turns the loop off). |
 | Approvals | `scope` (UserPromptSubmit), `_loop_scope_note` | Reads aj's message before the model does. "Design approved: <feature>" → Plan; "Build plan approved: <feature>" → Build; "QA passed: <feature>" → Done and "QA failed: <feature>" → Design, both only from QA; "skip design" → one code edit. A bare "approved" moves nothing and tells the model to ask which. |
 | Logged first | `_loop_unlogged` | An approval only counts when `docs/6-decisions/Decisions.md` exists and changed since the last approval (#230). |
 | Feature home | `_loop_record_issues`, `autosave` (PostToolUse) | Issues made during Plan, by `gh issue create` or the GitHub tool, are recorded; "Build plan approved" needs two labelled `AjsAgent created this` (#231). |
 | Issue labels | `_loop_labels`, `_loop_wrong` | An issue's label says whose move it is: `in progress` is mine, `needs review` is aj's. Read from GitHub every time (`gh api`, in parallel, 5-second limit); if that fails, from the changes `autosave` recorded (`_loop_record_labels`), and the note says why (#235, #236). Design `docs/plans/label-check.html`, plan `docs/plans/label-check-plan.html`. |
-| Label checks | `scope`, `commitgate`, `handover` | "Build plan approved" needs every issue `in progress`. Swapping every issue to `needs review` moves Build to QA and closes code. A QA answer counts only in QA. "QA failed" keeps the issues, and the redo's "Design approved" needs them back to `in progress`. In Build an edit is refused while any label is wrong. The end-of-reply check names wrong labels (#237, #238). |
+| Label checks | `scope`, `commitgate`, `handover` | "Build plan approved" needs every issue `in progress`. Swapping every issue to `needs review` moves Build to QA and closes code; so does a pull request opening during Build (#267). A QA answer counts only in QA. "QA failed" keeps the issues, and the redo's "Design approved" needs them back to `in progress`. In Build an edit is refused while any label is wrong. The end-of-reply check names wrong labels (#237, #238). |
+| QA start and page | `autosave`, `make_page.py` QA mode, `handover` (`qa page` row) | A pull request opening during Build moves the stage to QA (#267); the QA page is built by the page builder and its path stored as `qa_page` (#268); a reply in QA is sent back once until that page is linked (#269). See below. |
 | Code lock | `commitgate` (PreToolUse), `_loop_gate` | Refuses Write/Edit/NotebookEdit of source files outside Build. `docs/`, `.claude/` and `.md` files stay open. Holds helpers' edits too. |
 | Helpers | `subagentrules` (SubagentStart), `_loop_helper_note` | A helper starts knowing the feature, stage and issues, and that it only builds approved steps. The "reads like a go-ahead" guess is off while the loop is on (#232). |
 | Long replies | `handover` (Stop), `_long_reply_words` | A reply over 200 words (code blocks not counted) with no page or picture link gets a reminder (#226). |
@@ -25,6 +26,20 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 
 "I review" happens inside Build, because fixing what my own review finds is code. aj's review and
 test are one QA step with a pass/fail answer.
+
+### Enforced QA stage (built, #264)
+
+Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.html`, both approved 2026-10-15.
+
+- **QA starts** when a pull request is opened for the feature (`gh pr create` or the GitHub tool's
+  `create_pull_request`, seen by `autosave`, #267) or when every issue says `needs review`, whichever comes first.
+  Code is closed from that moment.
+- **The QA page** is built by `make_page.py build` in QA mode (`qa` block: feature, base, unverified, files). It
+  counts each file's added and removed lines from `git diff --numstat <base>...HEAD`, refuses an empty
+  unverified list, fixes the reply to "QA passed: <feature>" and records the path as `qa_page` in the stage file (#268).
+- **The checkpoint** is a sixth "reply ends" row, `qa page`: in QA a reply is sent back once until `qa_page` is
+  set and the page is linked (#269).
+- **The stage survives a new session**: the stage file is committed with the branch (#265).
 
 ## Invariants
 
