@@ -5464,9 +5464,28 @@ def _loop_label_refusal(said, want, wrong, note, top=None):
                                                           " " + made if made else ""))
 
 
+_LOOP_STAGE_ORDER = ((_LOOP_DESIGN_RE, 0), (_LOOP_PLAN_RE, 1), (_LOOP_QA_RE, 2))
+
+
 def _loop_apply(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
-    message approves nothing. Mutates state."""
+    message approves nothing. Mutates state.
+
+    #307: a message can hold more than one approval ("Design approved: X.  Build plan approved: X").
+    Each phrase is cut out up to where the next one starts, and the pieces are applied in stage order -
+    design, then build plan, then QA - so one refusal no longer hides the approvals beside it."""
+    found = sorted((m.start(), order) for rx, order in _LOOP_STAGE_ORDER for m in rx.finditer(text))
+    if len(found) < 2:
+        return _loop_apply_one(state, text, top)
+    pieces = [(order, text[start:found[i + 1][0] if i + 1 < len(found) else len(text)])
+              for i, (start, order) in enumerate(found)]
+    notes = [_loop_apply_one(state, piece, top) for _order, piece in sorted(pieces, key=lambda p: p[0])]
+    return " ".join(n for n in notes if n)
+
+
+def _loop_apply_one(state, text, top):
+    """Move the stage for one approval phrase (or none). Returns a note for the model, or "" when the
+    text approves nothing. Mutates state."""
     stage, feature = state["stage"], state.get("feature") or ""
     approval = None
     m = _LOOP_PLAN_RE.search(text)
@@ -5494,7 +5513,10 @@ def _loop_apply(state, text, top):
         m = _LOOP_DESIGN_RE.search(text)
         if m:
             name = _loop_name(m.group(1))
-            redo = state.get("redo") and name.lower() == feature.lower()
+            # #307: the redo is for the feature QA failed, even when the stored name went stale.
+            failed = [a.get("name") or "" for a in state.get("approvals", [])
+                      if isinstance(a, dict) and a.get("stage") == "QA failed"]
+            redo = state.get("redo") and name.lower() in {feature.lower(), (failed[-1] if failed else "").lower()}
             if redo:
                 labels, src = _loop_labels(state)
                 wrong = _loop_wrong(labels, LOOP_WORKING)

@@ -8853,6 +8853,65 @@ _loop_cases.append(("the rule names the template and its four parts",
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
+# --- #307: every approval in one message is read, in stage order -------------------------------
+# Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and
+# only the build plan was read; and a stale stored feature name stopped a redo after "QA failed" counting.
+_ma_dir = tempfile.mkdtemp(prefix="house-rules-multi-approval-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _ma_dir], check=True)
+_ma_labels = os.path.join(_FIXTURE_ROOT, "multi-approval-labels.json")
+_ma_env = dict(_loop_env, HOUSE_RULES_LOOP_LABELS_FILE=_ma_labels)
+
+
+def _ma_set(state, labels=None):
+    """A fresh stage file and decisions log (with an entry the last approval hasn't seen)."""
+    os.makedirs(os.path.join(_ma_dir, ".claude"), exist_ok=True)
+    with open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+        json.dump(dict({"skip": False, "approvals": [], "issues": []}, **state), f)
+    os.makedirs(os.path.join(_ma_dir, "docs", "6-decisions"), exist_ok=True)
+    with open(os.path.join(_ma_dir, "docs", "6-decisions", "Decisions.md"), "a", encoding="utf-8") as f:
+        f.write("an entry written at %r\n" % time.time())
+    with open(_ma_labels, "w", encoding="utf-8") as f:
+        json.dump(labels or {}, f)
+
+
+def _ma_say(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "multi", "cwd": _ma_dir, "prompt": prompt}
+    _, out, _ = run_hook("scope", json.dumps(p), env=_ma_env)
+    try:
+        note = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        note = ""
+    state = json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+    return note, state
+
+
+_ma_set({"feature": "Label setup", "stage": "design"})
+_n, _s = _ma_say("Design approved: importer.  Build plan approved: Importer")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "importer"
+                  and 'Design approved: importer' in _n and "Build plan approved: Importer" in _n) else "FAIL",
+       "design loop (#307): a design and a build-plan approval in one message - the design moves the stage, "
+       "and the build plan gets its own refusal")
+if _s["stage"] != "plan":
+    print("          stage %r, feature %r, note %r" % (_s["stage"], _s.get("feature"), _n[:300]))
+
+_ma_set({"feature": "Label setup", "stage": "design", "redo": True,
+         "approvals": [{"stage": "QA failed", "name": "Importer", "at": 1}],
+         "issues": [{"repo": "o/r", "number": 7, "labelled": True}]},
+        {"o/r#7": ["Feature", "AjsAgent created this", "in progress"]})
+_n, _s = _ma_say("Design approved: Importer")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "Importer"
+                  and [i.get("number") for i in _s.get("issues", [])] == [7]) else "FAIL",
+       "design loop (#307): after \"QA failed: Importer\", \"Design approved: Importer\" is the redo even "
+       "when the stored feature name is stale - its issues are kept")
+if _s.get("issues") != [{"repo": "o/r", "number": 7, "labelled": True}]:
+    print("          feature %r, issues %r, note %r" % (_s.get("feature"), _s.get("issues"), _n[:300]))
+
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("Design approved: blockers")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "blockers"
+                  and 'Design loop: aj wrote "Design approved: blockers". The stage is now Plan.' in _n)
+       else "FAIL", "design loop (#307): a single design approval behaves as before")
+
 # --- label setup: create only the missing house labels (#275) ---------------------------------
 import labels as _lb
 _lb_dir = tempfile.mkdtemp(prefix="house-rules-labels-", dir=_FIXTURE_ROOT)
