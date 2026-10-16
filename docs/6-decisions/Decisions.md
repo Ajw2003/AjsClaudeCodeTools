@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-16 - Plugin restructure: the build plan for the 2.68.1 patch
+
+**Context.** aj approved the restructure direction (entry below). The systems document is
+`docs/4-systems/plugin-restructure.md`. The parent issue is #306 (restructure into a shared core with
+project boundaries and six optional sub-plugins).
+
+**Decision.** The patch is built first, on an `AjsAgent/` branch, one `@house-rules:builder` helper at a
+time in a worktree, with `verify.py` run after each step. Each step reproduces its incident in `verify.py`
+before the fix. The order is:
+1. #307 (the design loop reads every approval in a message, and a design approval sets the feature name).
+2. #308 (the design loop records only issues created in its own repo).
+3. #309 (four checks report instead of blocking, and the page builder accepts any approval line).
+4. #310 (a blocked page stays owed across retries), after #309 because both change the page checkpoint.
+5. #311 (release the patch with its version, docs and QA page).
+
+One pull request into `main` says `Refs #303` and `Refs #306`. The `verify.py` baseline before the build is
+"RESULT: PASS - all 832 checks passed" (run on 2026-10-16). The grilling session on the 28 rule
+contradictions starts after the patch is merged, and the restructure's own steps become sub-issues of #306
+after it.
+
+**Status.** Standing.
+
 ## 2026-10-16 - Design approved: plugin restructure direction
 
 **Context.** A full audit of house-rules 2.68.0, asked for before restructuring the plugin so it
