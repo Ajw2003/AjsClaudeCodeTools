@@ -7,6 +7,121 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-15 - Guards audit: the build plan
+
+**Context.** aj approved the design ("Design approved: guards audit"). The systems document is
+`docs/4-systems/guards.md`.
+
+**Decision.** The build runs on `AjsAgent/issue-281-fix`, one `@house-rules:builder` helper at a time in a
+worktree, with `verify.py` run after each. The order is:
+1. #289 (Never-blocked list).
+2. #290 (Prompt timer: each prompt waits on its own, with no chain of refusals).
+3. #291 (Destructive actions are refused with the safe way named, and deletes are narrowed).
+4. #292 (Remove the background-work guard and the "Never hide work" rule).
+5. #293 (Enforced workflow checks name their exact fix when they refuse).
+6. #286 (Page copy box must hold the full reply the design gate accepts).
+7. #287 (Agent name, credit and branch prefix are configurable, not hard-coded to AJ).
+8. #288 (Page cards clip long words on a phone, and the visual check misses it).
+9. #282 to #284, the automatic-pages issues, from `docs/plans/page-must-be-automatic-build-plan.page.json`.
+   The stop limit for #283 is three blocks, then the helper reports.
+
+One pull request into `main` says `Refs #281` and `Refs #285`, and it comes with a QA page. The `verify.py`
+baseline before the build was "RESULT: PASS - all 785 checks passed".
+
+**Status.** Standing.
+
+## 2026-10-15 - Guards audit: the design aj approved
+
+**Context.** Issue #285 (Guards block only unrecoverable actions). The audit page is
+`docs/plans/guards-audit.html`, built from `docs/plans/guards-audit.page.json`. aj's test: a guard stops me only
+for data loss with no way back, or for a change to someone else's work.
+
+**Decision.** aj approved the audit's ten cards:
+- **Never blocked:** routine commits and pushes on an `AjsAgent/` or helper working-copy branch, publishing a
+  page built by `make_page.py`, and edits to files I created inside the folder I was given. Checked before every
+  guard, the page check and the prompt timer.
+- **Refuse, with the safe way named:** nine destructive actions (push or commit to `main`; commit, merge,
+  rebase, cherry-pick, revert, am or apply on a branch not confirmed mine; force-push or `--all`/`--mirror`;
+  branch deletes; `git clean`; `filter-branch`; reset, `checkout --` or restore over uncommitted work; stash
+  drop or clear; truncating a file). aj is asked only when no safe way exists and a source proving it is cited.
+- **Deletes narrowed:** refused only when recursive, or when the file has uncommitted changes or was never
+  committed; the refusal names `_to_delete/`.
+- **Dropped:** the background-work guard (nohup, trailing `&`, Start-Process, background jobs, tail or head on a
+  wait, process kills) and the "Never hide work" rule with its 5-minute stall-check reminder.
+- **Enforced with the fix named:** a page not built by `make_page.py`, a Claude credit or `claude/` branch on
+  GitHub, an issue missing sections, a third helper or a helper's own helper, and a whole-file overwrite of a
+  file I did not create.
+- **Prompt timer:** each prompt waits on its own; no chain of refusals after one unanswered prompt.
+- **Copy box (#286), agent name (#287), phone check (#288):** as on the page's cards.
+- **Kept:** the design-loop lock stays blocking (aj's pick, 15 October, 15:04).
+
+**Status.** Standing.
+
+---
+
+## 2026-10-15 - Build plan approved: Label setup
+
+**Context.** Build plan `docs/plans/label-setup-build-plan.html`, five sub-issues of #274 (The plugin
+creates the house labels a repo is missing), #275 to #279. aj replied "Build plan approved: Label setup
+build plan", with no answers to the page's four choices.
+
+**Decision.** With no answers given, the page's marked suggestions stand for the three choices that
+change nothing outside this repo:
+- **1A, where the code lives:** a new `scripts/labels.py`, shared by the hook and the command.
+- **2A, when the hook creates labels:** at all three moments: design approved, the issue note, and
+  before a label refusal.
+- **3A, the label record:** `_label_changes` also records the REST forms.
+
+Choice 4 (creating a private scratch repo, `Ajw2003/label-setup-scratch`, for the real "no labels
+yet" run) creates something on aj's account, so it waits for aj's own answer before #279 (Prove it on
+a real repo, bump the version and update the docs) runs that step.
+
+**Changed since the plan.** `main` moved to plugin 2.67.1 (the enforced QA stage, #264, and the page
+charset fix, #280) before the build started, and was merged into `AjsAgent/label-setup`. So this
+build ships as 2.68.0, not 2.67.0. The lines the plan cites moved: `LOOP_WORKING` is now
+`scripts/hook.py:5238`, `_loop_labels` `:5259`, `_loop_label_refusal` `:5315`, `_label_changes`
+`:5617`, and the two `gh issue edit` notes `:5729` and `:5776`; `ISSUE_NOTE` (`:4814`) and
+`_issues_plan_note` (`:4890`) did not move.
+
+**Status.** Standing. Stage Build.
+
+---
+
+## 2026-10-15 - Design approved: Label setup (approved in Ajw2003/Unblocked, built here)
+
+**Context.** A new repo has none of the three house labels the issue workflow and the design loop
+depend on, so work stalls until someone creates them by hand. The GitHub tool in a cloud session
+cannot create a label, and `gh issue edit --add-label` fails there because it goes through GitHub's
+GraphQL API, which answers 403. aj approved the design on 2026-10-15 in a session on
+`Ajw2003/Unblocked`: "Design approved: Label setup: 1A 2A 3*", with "handoff" as their own answer to
+question 3. That repo holds the decision (`docs/6-decisions/Decisions.md`, entry "Label setup moves
+into the house-rules plugin, built by a handed-off session"), the design page
+(`docs/plans/label-tool.html`) and the handoff brief (`docs/plans/label-setup-handoff.md`). This
+session picked up the handoff from a background-task notice, not from a message aj typed here.
+
+**Decision.**
+- **Where:** inside the house-rules plugin, not a standalone script or a GitHub Action.
+- **Which labels:** only `AjsAgent created this` (`5b6b7a`, "Opened by AJ's agent"), `in progress`
+  (`FBCA04`, "AJ's agent is working on it") and `needs review` (`0E8A16`, "Waiting on aj"). GitHub's
+  own category labels are left alone.
+- **Behaviour:** when the plugin needs a house label the repo lacks, it creates it with
+  `gh label create` and says so. A `/house-rules:labels` command does the same on demand. An existing
+  label is never changed or deleted, even one with a different colour or description.
+- **Advice:** the plugin's `gh issue edit --add-label` advice moves to the REST form
+  (`gh api repos/<owner>/<repo>/issues/<n>/labels`), which works in cloud sessions.
+
+**Checked against this repo.** The handoff cites `scripts/hook.py` lines at commit `e879981`; `main`
+is still at `e879981`, and all ten cited lines (4809, 4814, 4820, 5197, 5201, 5208, 5218, 5244, 5268,
+5594) say what the handoff says. Two things the handoff does not mention: the `gh issue edit` advice
+appears in five places, not one (`scripts/hook.py:4820`, `:5661`, `:5711`, and
+`rules/detail/issue-workflow.md:14` and `:19`). And the label recorder (`_label_changes`,
+`scripts/hook.py:5563`) only understands `gh issue edit` and the GitHub tool, so a REST label change
+would go unrecorded. The build plan covers both.
+
+**Status.** Standing. Stage Plan. Build plan: `docs/plans/label-setup-build-plan.html`.
+
+---
+
 ## 2026-10-15 - QA passed: enforced QA stage
 
 **Context.** QA page `docs/plans/qa-stage-qa.html`, built by `make_page.py`'s new QA mode. All seven sub-issues of

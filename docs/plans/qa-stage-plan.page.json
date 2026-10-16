@@ -1,8 +1,7 @@
 {
   "title": "Enforced QA Stage Plan",
   "eyebrow": "Build plan for approval, issue #264 (Enforce the QA stage) · nothing built yet",
-  "replyPrefix": "Build plan approved: enforced QA stage",
-  "reply": "",
+  "approval": "Build plan approved: enforced QA stage",
   "short": {
     "lead": "Seven steps, each its own sub-issue of issue #264 (Enforce the QA stage), built in this order. The first two make the lock that refuses code edits trustworthy before anything relies on it; the QA page and its checkpoint come next; the rule text and a real run come last. Line counts are my estimates; the QA page will show the real counts beside them.",
     "hint": "Tap a step to see what it changes and what it needs from you.",
@@ -53,7 +52,7 @@
     "next": "Code opens for these steps only. Each step goes to a builder helper in the order above, and verify.py runs after each one.",
     "todo": [
       "Pick your answers under Choices.",
-      "Tap <b>Copy my reply</b> and send it (sending it approves the plan), or tell me what to change."
+      "Tap <b>Copy my reply</b> and send it: \"Build plan approved: enforced QA stage\", or say what to change."
     ]
   }
 }

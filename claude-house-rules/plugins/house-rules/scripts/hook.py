@@ -48,6 +48,7 @@ import re
 import sys
 import tempfile
 import time
+import urllib.parse
 
 # The shared writing checker (#247), a sibling file. A missing or broken copy must not take every
 # hook down with it, so it is loaded here and each check that needs it reports when it is absent.
@@ -621,8 +622,8 @@ def event_inject():
 
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
-        "override default behaviour. A PreToolUse hook also prompts for destructive "
-        "commands and hidden processes, and refuses commit/push/merge on `main`. "
+        "override default behaviour. A PreToolUse hook also refuses destructive commands, "
+        "naming the safe way, and refuses commit/push/merge on `main`. "
         "That hook is a backstop, not "
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
@@ -1711,7 +1712,6 @@ def event_scope():
     waiting = ""
     try:
         payload = read_payload()
-        _record_last_seen(payload)
         waiting = _waiting_scope_note(payload)
         loop_note = _loop_scope_note(payload)
         if loop_note:
@@ -1763,25 +1763,9 @@ def event_scope():
 # characters \n or \t; _LINE_START accepts those as a word start, or `ls` + newline + `rm` slips by (#200).
 _LINE_START = r"\\[nrt]|"
 
-GUARD_R1 = [
-    (r"-WindowStyle\s+Hidden", "starts a hidden window you cannot watch"),
-    (r"Start-Process", "spawns a separate process with Start-Process"),
-    (r"Start-Job|\s-AsJob", "runs the work as a background job"),
-    (
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_.-])(nohup|setsid|disown)([^0-9A-Za-z_-]|$)",
-        "detaches the process from your terminal",
-    ),
-    (r'[^&]&\s*(\\?"|\\[nr])', "backgrounds the command with a trailing ampersand"),
-    # #85: a wait piped through tail/head shows nothing until it exits - a stuck wait and a
-    # working one look identical for its whole timeout.
-    (
-        # #261: the keyword and the tail/head must share one pipeline segment (no ; && || or
-        # newline between them); a while/until loop is one segment up to its `done`.
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_-])(?:(?:while|until)\s.*?\bdone\s*|"
-        r"(?:while|until|sleep|timeout|watch)\s(?:(?!\\[nrt]|;|&&|\|\|).)*?)\|(?!\|)\s*(tail|head)([^0-9A-Za-z_-]|$)",
-        "pipes a wait or loop through tail/head, which hides its output until it exits",
-    ),
-]
+# #292: the background-work patterns (hidden windows, Start-Process, background jobs, nohup/setsid/
+# disown, a trailing &, a wait piped through tail/head) and the process-kill pattern were removed:
+# none of them changes a branch or deletes saved work, so none of them stops the agent any more.
 
 # One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
 _WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
@@ -1855,7 +1839,6 @@ GUARD_R4 = [
     ),
     (r"Remove-Item", "deletes files (Remove-Item)"),
     (r"(del|erase)\s+/[fqs]|rmdir\s+/s", "deletes files (del /f or rmdir /s)"),
-    (r"Stop-Process|taskkill|pkill|kill\s+-9", "kills a running process"),
     (
         r"Clear-Content|truncate\s+-s",
         "truncates or overwrites file contents in place",
@@ -1872,10 +1855,37 @@ GUARD_R4 = [
 ]
 
 GUARD_BUCKETS = [
-    ("Never hide work: it stays visible, reachable and readable", GUARD_R1),
     ("Commit constantly on my own branches, never on theirs", GUARD_R3),
     ("Never take a destructive action without checking first", GUARD_R4),
 ]
+
+# #291: a destructive action is refused outright, and the refusal names the safe way to do the job.
+# aj is asked only when the command's description cites a source proving no safe way exists.
+_DELETE_REASONS = ("deletes one or more files", "deletes files (Remove-Item)", "deletes files (del /f or rmdir /s)")
+SAFE_WAYS = {
+    "rewrites remote history or pushes every branch (force push, --all, --mirror)":
+        "push a new branch instead: `git push -u origin AjsAgent/<topic>`",
+    "deletes a branch on the remote (push --delete)": "leave the branch for aj to delete",
+    "deletes a local branch even if its work is not merged (branch -D)": "leave the branch for aj to delete",
+    "discards work (reset)": "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
+    "deletes untracked files or rewrites all history (clean / filter-branch)":
+        "for clean, move the files into a `_to_delete/` folder; for filter-branch, rewrite on a copy branch "
+        "(`git branch <name>-copy`)",
+    "truncates or overwrites file contents in place": "write a new file beside it",
+    "throws away uncommitted edits to a file (git checkout -- / git restore)":
+        "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
+    "deletes stashed work permanently (git stash drop / clear)": "keep the stash",
+    "recursive": "move the folder into a `_to_delete/` folder instead",
+    "unsaved": "move the file into a `_to_delete/` folder instead",
+    "not mine": "make a new branch and commit there: `git switch -c AjsAgent/<topic>`",
+}
+_NO_SAFE_WAY_RE = re.compile(r"\bno safe way:\s*(\S.*)", re.IGNORECASE)
+GUARD_REFUSAL = (
+    "House rules: refused, because this could destroy data with no way back, or change work that may not "
+    "be yours:\n%s\nDo it the safe way named above. If no safe way exists, put `no safe way: <source>` in the "
+    "command's description, citing the source that proves it (for example the git manual page), and aj "
+    "will be asked instead."
+)
 
 # Reuses GUARD_R3's own commit pattern rather than a second copy - "is this a commit" and "is
 # this exempt from asking" are different questions, and the docs check needs the first one
@@ -2341,6 +2351,46 @@ def _only_git_statements(subject):
     return bool(stmts) and all(_ONLY_GIT_STMT_RE.match(x) for x in stmts)
 
 
+_NB_GIT_RE = re.compile(r"^\s*(cd\s+\S+\s*&&\s*)?" + _GIT + r"(commit|push)\b")
+_NB_BAD_RE = re.compile(r"(--force|--mirror|--all|--delete|--prune|(^|\s)-[A-Za-z]*[fd]\b|(^|\s):\S|(^|\s)\+\S)")
+
+
+def _never_blocked_git(subject, branch, where):
+    """Never-blocked list, case a: a routine git commit/push on the agent's own branch (an owned
+    prefix or a helper's worktree branch). Force, --all/--mirror, --delete and the default branch
+    are not routine, so they fall through to the normal guard. The design loop is not consulted here."""
+    if not branch or is_protected_branch(branch, where):
+        return False
+    if not branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+        return False
+    if not _only_git_statements(subject):
+        return False
+    stmts = [x for x in re.split(r"&&|\|\||;|\n", _decoded_command(subject)) if x.strip()]
+    for x in stmts:
+        if re.match(r"\s*cd\s", x):
+            continue
+        if not _NB_GIT_RE.match(x):
+            return False
+        if re.search(r"push\b", x) and _NB_BAD_RE.search(x.split("push", 1)[1]):
+            return False
+    return True
+
+
+def _never_blocked_own_file(file_path):
+    """Case c: a file the agent made itself. shortcut: no creation record exists in the hook, so
+    "untracked by git and inside the project root" stands in for it; upgrade by recording creates."""
+    try:
+        path = os.path.abspath(_guardwrite_resolve(file_path))
+        root = os.path.abspath(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        if os.path.commonpath([path, root]) != root:
+            return False
+        rc, _o, _e = _ag(os.path.dirname(path), ["ls-files", "--error-unmatch", path], check=False)
+        return rc != 0 and os.path.isfile(path)
+    except (OSError, ValueError) as exc:
+        sys.stderr.write("house-rules guardwrite: could not tell whether %s is untracked (%s); the normal check applies.\n" % (file_path, exc))
+        return False
+
+
 def event_guard():
     try:
         payload = read_payload()
@@ -2386,6 +2436,8 @@ def event_guard():
     exempted = []
     plain_hits = []  # branch writes asked only because the folder is unclear (#261)
     refused = []  # branch writes aimed at the default branch: refused, never asked (#197)
+    not_mine = []  # branch writes on a branch the guard can't confirm is the agent's: refused (#291)
+    delete_kind = None  # "recursive" or "unsaved" once a delete pattern matched (#291)
     saved_state = None  # (saved, note), computed at most once and only when a SAVED pattern matched
     saved_blocked = None
     for title, patterns in GUARD_BUCKETS:
@@ -2396,8 +2448,18 @@ def event_guard():
             marker = entry[2] if len(entry) > 2 else None
             if reason == "deletes one or more files" and _rm_only_in_scratchpad(subject, payload):
                 continue  # #261: every rm path is inside this session's scratchpad
+            if reason in _DELETE_REASONS:
+                delete_kind = delete_kind or _delete_refusal(subject, where)
+                if not delete_kind:
+                    exempted.append(reason)  # committed and unchanged, so git can bring it back (#291)
+                    continue
             if marker == BRANCH_WRITE and known:
-                (refused if protected else exempted).append(reason)
+                if protected:
+                    refused.append(reason)
+                elif branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+                    exempted.append(reason)
+                else:
+                    not_mine.append(reason)
                 continue
             if marker == BRANCH_WRITE:
                 plain_hits.append(reason)
@@ -2414,6 +2476,40 @@ def event_guard():
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": PROTECTED_DENY % (branch, "; ".join(refused))}})
         return 0
+
+    # #291: destructive actions are refused with the safe way named, unless the command cites a source
+    # proving no safe way exists; then aj is asked below, with the citation shown.
+    cited = _cites_no_safe_way(payload)
+    danger = []
+    for r in (x for rs in hits.values() for x in rs):
+        if r in plain_hits and elsewhere:
+            safe = ("run it as plain `git ...` from %s, with no cd, -C or variables, and it will be checked "
+                    "normally" % _payload_toplevel(payload))
+        elif r in plain_hits:
+            safe = SAFE_WAYS["not mine"]
+        elif r in _DELETE_REASONS:
+            safe = SAFE_WAYS[delete_kind or "unsaved"]
+        else:
+            safe = SAFE_WAYS.get(r, "do the job without this step")
+        danger.append("  - %s: %s" % (r, safe))
+    danger += ["  - %s on `%s`, which the guard can't confirm is mine: %s" % (r, branch, SAFE_WAYS["not mine"])
+               for r in not_mine]
+    if danger and not cited:
+        if elsewhere:
+            danger.append("  (This command names another repo, with --git-dir or a cd / -C I could not follow, so "
+                          "the branch I can see is not the one it acts on.)")
+        elif ownership_note and (plain_hits or not_mine):
+            danger.append("  (I could not read which branch this is on: %s.)" % ownership_note)
+        elif protected:
+            danger.append("  (`%s` is the default branch, which only changes through a pull request.)" % branch)
+        if saved_blocked:
+            danger.append("  (On `%s`, this runs unasked only when the work is saved elsewhere: %s.)"
+                          % (branch, saved_blocked))
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": GUARD_REFUSAL % "\n".join(danger)}})
+        return 0
+    for r in not_mine:
+        hits["Commit constantly on my own branches, never on theirs"].append(r)
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _staged_docs_status(subject, elsewhere, where) if is_commit else (None, None)
@@ -2455,6 +2551,14 @@ def event_guard():
             trace_noop(allow_trace)
         return 0
 
+    if known and not issue_hit and not outdated and _never_blocked_git(subject, branch, where):
+        # Never-blocked list: a routine commit/push on the agent's own branch is let through, silently.
+        out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
+        if docs_status == "needs-docs":
+            out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
+        emit(out)
+        return 0
+
     lines = ["Your house rules want you asked before this runs:"]
     if outdated:
         lines.append("")
@@ -2492,6 +2596,10 @@ def event_guard():
             % (branch, saved_blocked)
         )
 
+    if cited and danger:
+        lines.append("")
+        lines.append("  No safe way exists, the agent says, citing: %s" % cited)
+
     if issue_hit:
         lines.append("")
         lines.append("  Rule: Issue workflow (PRs link with Refs, the user closes issues)")
@@ -2521,10 +2629,7 @@ def event_guard():
     rewrite = None
     all_hits = [r for rs in hits.values() for r in rs]
     if all_hits and not outdated and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
-        pipe_reason = GUARD_R1[-1][1]
-        if all(r == pipe_reason for r in all_hits):
-            rewrite = "Write the output to a file instead of piping it through tail/head."
-        elif elsewhere and not protected and all(r in plain_hits for r in all_hits):
+        if elsewhere and not protected and all(r in plain_hits for r in all_hits):
             rewrite = ("Run it as plain `git ...` from %s, with no cd, -C or variables, and it will be "
                        "checked normally." % _payload_toplevel(payload))
     _ask_or_refuse(payload, reason_text, issue_hit[2] if issue_hit and issue_hit[2] else None, rewrite)
@@ -2550,6 +2655,60 @@ def _payload_toplevel(payload):
         sys.stderr.write("house-rules guard: could not read the repo top-level (%s: %s); naming the "
                          "working folder instead.\n" % (type(exc).__name__, exc))
     return cwd
+
+
+_DELETE_CMD_RE = re.compile(r"(^|[\s;&|(])(rm|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
+_RECURSIVE_DELETE_RE = re.compile(
+    r"(^|[\s;&|(])rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
+    r"|rmdir\s+/s|Remove-Item\b.*-Recurse|(del|erase)\s+(?:\S+\s+)*?/s(\s|$)", re.IGNORECASE)
+
+
+def _delete_refusal(subject, where):
+    """#291: "recursive" for a recursive delete, "unsaved" when any target has uncommitted changes, was
+    never committed, or can't be checked (a glob or variable), else None: every target is committed and
+    unchanged, so git can bring it back."""
+    import shlex
+    text = _decoded_command(subject)
+    if _RECURSIVE_DELETE_RE.search(text):
+        return "recursive"
+    base = where or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    for stmt in re.split(r"&&|\|\||;|\n|\|", text):
+        m = _DELETE_CMD_RE.search(stmt)
+        if not m:
+            continue
+        try:
+            words = shlex.split(stmt[m.end(2):])
+        except ValueError:
+            return "unsaved"
+        targets = [w for w in words if not w.startswith(("-", "/")) or os.path.isabs(w) and not re.match(r"^/[a-zA-Z]$", w)]
+        if not targets:
+            return "unsaved"
+        for t in targets:
+            if re.search(r"[*?\[\]$`~]", t):
+                return "unsaved"
+            path = t if os.path.isabs(t) else os.path.join(base, t)
+            folder = os.path.dirname(os.path.abspath(path))
+            try:
+                tracked, _o, _e = _ag(folder, ["ls-files", "--error-unmatch", "--", path], check=False)
+                changed, _o, _e = _ag(folder, ["diff", "--quiet", "HEAD", "--", path], check=False)
+            except RuntimeError:
+                return "unsaved"
+            if tracked != 0 or changed != 0:
+                return "unsaved"
+    return None
+
+
+def _cites_no_safe_way(payload):
+    """The source the agent cites for "no safe way exists", from the command's description, or None."""
+    try:
+        data = json.loads(payload)
+    except ValueError as exc:
+        sys.stderr.write("house-rules guard: could not read the command's description (%s), so no "
+                         "\"no safe way\" citation was found; the refusal stands.\n" % exc)
+        return None
+    ti = data.get("tool_input") if isinstance(data, dict) else None
+    m = _NO_SAFE_WAY_RE.search(str(ti.get("description") or "")) if isinstance(ti, dict) else None
+    return m.group(1).strip() if m else None
 
 
 def _rm_only_in_scratchpad(subject, payload):
@@ -2647,6 +2806,10 @@ def event_guardwrite():
         trace("guardwrite: no file_path field found - nothing was checked for this call.")
         return 0
 
+    if _never_blocked_own_file(file_path):
+        trace_noop("guardwrite: never-blocked list - %s is a file made here, untracked." % file_path)
+        return 0
+
     resolved = _guardwrite_resolve(file_path)
     try:
         exists = os.path.isfile(resolved)
@@ -2672,36 +2835,20 @@ def event_guardwrite():
 
     new_lines = _guardwrite_new_line_count(payload)
 
+    # #293: refused outright with the fix named, instead of asking. A file I created myself already
+    # went through above (never-blocked list, #289).
     lines = [
-        "Your house rules want you asked before this runs:",
-        "",
-        "  Rule: %s" % RULE_EDIT_IN_PLACE,
-        "    - This Write replaces the ENTIRE existing contents of `%s`." % file_path,
+        "House rules, %s: refused. This Write replaces the ENTIRE existing contents of `%s`, a file "
+        "I did not create." % (RULE_EDIT_IN_PLACE, file_path),
     ]
     if old_lines is not None and new_lines is not None:
-        lines.append(
-            "    - %d existing line(s) would be discarded and replaced with %d new line(s)."
-            % (old_lines, new_lines)
-        )
+        lines.append("%d existing line(s) would be discarded and replaced with %d new line(s)." % (old_lines, new_lines))
     lines.append(
-        "    - Editing in place (the Edit tool, or a targeted patch) changes only the lines "
-        "that need to change. Write throws away everything else in the file, whether or not "
-        "this call meant to touch it."
+        "Fix: edit it in place with the Edit tool, changing only the lines that need to change. A whole-file "
+        "rewrite needs aj's approval by name first, with what it discards and why an in-place edit will not do."
     )
-    lines.append("")
-    lines.append(
-        "Before approving, Claude should already have said, in chat, exactly what existing "
-        "content this discards and why an in-place edit will not do."
-    )
-    lines.append("")
-    _tl = _prompt_timeout_line()
-    if _tl:
-        lines.append(_tl)
-    lines.append(
-        "Approve to let it run, or reject and Claude will explain what it was about to do."
-    )
-    reason_text = "\n".join(lines)
-    _ask_or_refuse(payload, reason_text)
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                 "permissionDecisionReason": "\n".join(lines)}})
     return 0
 
 
@@ -4165,7 +4312,7 @@ def _prompt_refusal(minutes, path, summary):
     return (
         "Nobody answered this permission prompt for %s, so it was refused - not approved - and "
         "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this action, or a "
-        "variation of it, this session; it would only be refused again. Look for a route that needs no permission AND does "
+        "variation of it, this session; aj has not approved it. Look for a route that needs no permission AND does "
         "not have the same effect (for example: commit to an AjsAgent/ branch instead of aj's branch; "
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
@@ -4188,24 +4335,19 @@ def _prompt_timeout_line():
             "waiting-on-you list." % _prompt_minutes(secs))
 
 
-def _last_seen_path(session_id):
+def _asked_path(session_id):
     safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
-    return os.path.join(tempfile.gettempdir(), "house-rules-last-seen-%s" % safe)
+    return os.path.join(tempfile.gettempdir(), "house-rules-asked-%s" % safe)
 
 
-def _record_last_seen(payload):
-    """UserPromptSubmit: note when aj last wrote, for the away check in _ask_or_refuse (#198).
-    A background task notice is not aj. Never raises; a failure is said on stderr."""
+def _record_ask(session_id, key):
+    """A guard raised this prompt: note its key so prompttimer times it (#290). Never raises."""
     try:
-        m = _PROMPT_VALUE_RE.search(payload or "")
-        if not m or _TASK_NOTIFICATION_RE.search(m.group(1)):
-            return
-        data = json.loads(payload)
-        with open(_last_seen_path(str(data.get("session_id") or "")), "w", encoding="utf-8") as f:
-            f.write(str(time.time()))
-    except Exception as exc:
-        sys.stderr.write("house-rules scope: could not record when aj last wrote (%s: %s); the away "
-                         "check will ask as usual.\n" % (type(exc).__name__, exc))
+        with open(_asked_path(session_id), "a", encoding="utf-8") as f:
+            f.write(key + "\n")
+    except OSError as exc:
+        sys.stderr.write("house-rules guard: could not record this prompt for the timer (%s); "
+                         "it will get no timer.\n" % exc)
 
 
 UNATTENDED_REFUSAL = (
@@ -4216,9 +4358,9 @@ UNATTENDED_REFUSAL = (
 
 
 def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
-    """Emit the guard's ask - or, when nobody can answer it, a refusal (#198): inside a subagent
-    (the payload carries agent_id), or when aj has not written for the prompt timeout. Refusals go
-    on the waiting-on-you list. HOUSE_RULES_PROMPT_TIMEOUT=off turns both refusals off."""
+    """Emit the guard's ask - or, inside a subagent (the payload carries agent_id), a refusal
+    (#198): a helper cannot answer a prompt. Refusals go on the waiting-on-you list.
+    HOUSE_RULES_PROMPT_TIMEOUT=off turns the refusal off. An ask is recorded for prompttimer."""
     why = None
     secs, _ = _prompt_timeout_seconds()
     try:
@@ -4227,18 +4369,10 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
         data = {}
     data = data if isinstance(data, dict) else {}
     session_id = str(data.get("session_id") or "")
-    status = "refused"
     if secs is not None and data.get("agent_id"):
         why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
-    elif secs is not None:
-        try:
-            idle = time.time() - float(_read_text(_last_seen_path(session_id)).strip())
-        except (OSError, ValueError):
-            idle = None  # no record of aj writing: ask as usual
-        if idle is not None and idle > secs:
-            why = "aj has not written for %s" % _prompt_minutes(idle)
-            status = "timed-out"  # aj is away: prompttimer refuses later prompts at once too
     if not why:
+        _record_ask(session_id, _waiting_key(str(data.get("tool_name") or "?"), data.get("tool_input")))
         out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",
                "permissionDecisionReason": reason_text}
     elif rewrite:
@@ -4251,7 +4385,7 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
         tool, ti = str(data.get("tool_name") or "?"), data.get("tool_input")
         now = time.time()
         entry = {"session_id": session_id, "key": _waiting_key(tool, ti), "tool": tool,
-                 "summary": _waiting_summary(tool, ti), "started": now, "status": status, "timed_out_at": now}
+                 "summary": _waiting_summary(tool, ti), "started": now, "status": "refused", "timed_out_at": now}
         try:
             path, _ = _waiting_path(session_id)
             _waiting_update(path, lambda es: [e for e in es if not (e.get("session_id") == session_id
@@ -4303,7 +4437,26 @@ def event_prompttimer():
         sys.stderr.write("house-rules prompttimer: %s is a question for aj, not a permission prompt; "
                          "no timer, it waits for the answer.\n" % tool_name)
         return 0
+    try:
+        if isinstance(tool_input, dict):
+            if tool_name in ("Edit", "Write") and isinstance(tool_input.get("file_path"), str) \
+                    and _never_blocked_own_file(tool_input["file_path"]):
+                return 0
+            if tool_name == "Bash" and isinstance(tool_input.get("command"), str):
+                _m, _b, _n = branch_ownership(None)
+                if _never_blocked_git(tool_input["command"], _b, None):
+                    return 0
+    except Exception as exc:
+        sys.stderr.write("house-rules prompttimer: never-blocked check failed (%s); timer applies.\n" % exc)
     key = _waiting_key(tool_name, tool_input)
+    try:
+        asked = key in _read_text(_asked_path(session_id)).split()
+    except OSError:
+        asked = False
+    if not asked:
+        sys.stderr.write("house-rules prompttimer: no house-rules guard raised this prompt (%s); no timer, "
+                         "the dialog decides.\n" % tool_name)
+        return 0
     summary = _waiting_summary(tool_name, tool_input)
     path, in_repo = _waiting_path(session_id)
     if not in_repo:
@@ -4320,32 +4473,6 @@ def event_prompttimer():
         except Exception as exc:
             sys.stderr.write("house-rules prompttimer: could not write %s (%s: %s); the timer still "
                              "applies.\n" % (path, type(exc).__name__, exc))
-
-    try:
-        existing = _waiting_load(path)
-    except (ValueError, OSError) as exc:
-        sys.stderr.write("house-rules prompttimer: could not read %s (%s: %s); treating the list as "
-                         "empty.\n" % (path, type(exc).__name__, exc))
-        existing = []
-    if any(mine(e) and e.get("status") == "timed-out" for e in existing):
-        _prompt_deny(
-            "This exact action already timed out this session and is still waiting on aj, so it was "
-            "refused again without waiting. " + _prompt_refusal(_prompt_minutes(secs), path, summary))
-        return 0
-    away = [e for e in existing if e.get("session_id") == session_id and e.get("status") == "timed-out"]
-    if away:
-        # aj had the full wait on an earlier prompt and has not written since: they are away, and a
-        # new prompt would only cost another full wait before the same refusal (#152).
-        now = time.time()
-        update(lambda es: [e for e in es if not mine(e)] + [
-            {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,
-             "started": now, "status": "timed-out", "timed_out_at": now}])
-        _prompt_deny(
-            "Another permission prompt this session already went unanswered (%s, since %s) and aj has "
-            "not written since, so this one was refused at once instead of waiting again. "
-            % (away[0].get("summary", "?"), _waiting_clock(away[0].get("started")))
-            + _prompt_refusal(_prompt_minutes(secs), path, summary))
-        return 0
 
     started = time.time()
     entry = {"session_id": session_id, "key": key, "tool": tool_name, "summary": summary,
@@ -4602,7 +4729,6 @@ AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
 COMMITGATE_THRESHOLD = 3
 COMMITGATE_LIST_MAX = 8
 CHECKPOINT_MINUTES = 10
-STALLCHECK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stallcheck.py")
 AUTOSAVE_PUSH_INTERVAL = 60
 AUTOSAVE_PUSH_TIMEOUT = 6.0
 AUTOSAVE_GIT_TIMEOUT = 4.0
@@ -4817,8 +4943,8 @@ ISSUE_NOTE = (
     "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
     "non-programmer can follow. Every issue carries at least one category label and the label "
     "`AjsAgent created this`; if the repo lacks that label, create it first with `gh label "
-    "create`. Show the user the issue numbers. Mark a step `in progress` (`gh issue edit N "
-    "--add-label \"in progress\"`) when work on it starts and remove it when the issue closes. "
+    "create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels "
+    "-f \"labels[]=in progress\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
     "(docs/, .md files and .claude/ stay open). Do not close any issue yourself: closing always "
     "asks the user."
@@ -4914,6 +5040,8 @@ def _issues_plan_note(payload):
     except OSError as exc:
         return (" Issue workflow: this plan counts %d steps but the gate state could not be written "
                 "(%s), so edits are not blocked. Create the issues anyway." % (n, exc)) + ISSUE_NOTE.format(n=n)
+    # #276: no label setup here. This runs on a tool call, and tool calls never reach the network;
+    # the labels are created when aj's "Design approved" arrives, before any issue is made.
     return ISSUE_NOTE.format(n=n)
 
 
@@ -5312,9 +5440,28 @@ _LOOP_QA_NOTE = (" Every issue of the feature says `needs review`, so the stage 
                  "and aj answers \"QA passed: <feature>\" or \"QA failed: <feature>\" with the changes.")
 
 
-def _loop_label_refusal(said, want, wrong, note):
+def _house_labels_note(top):
+    """#276: create any house label this repo's GitHub copy is missing (scripts/labels.py), and say
+    what it created or could not. "" when the repo has every label or no GitHub remote. Never raises."""
+    try:
+        import labels as _labels  # scripts/labels.py, beside this file (sys.path is set above)
+        git_dir = _common_git_dir(top) if top else None
+        if not git_dir:
+            return ""
+        repo, _why = _labels.repo_from_git(git_dir)
+        if not repo:
+            return ""  # no GitHub remote: there is nowhere to create labels
+        return _labels.summary_note(_labels.ensure_labels(repo), repo)
+    except Exception as exc:
+        return ("house-rules: label setup hit an error (%s: %s), so missing house labels were not created."
+                % (type(exc).__name__, exc))
+
+
+def _loop_label_refusal(said, want, wrong, note, top=None):
+    made = _house_labels_note(top)
     return ('Design loop: aj wrote "%s", but these issues are not labelled `%s`: %s. Nothing moved. Fix the '
-            "labels, then ask aj to approve again.%s" % (said, want, "; ".join(wrong), " " + note if note else ""))
+            "labels, then ask aj to approve again.%s%s" % (said, want, "; ".join(wrong), " " + note if note else "",
+                                                          " " + made if made else ""))
 
 
 def _loop_apply(state, text, top):
@@ -5338,7 +5485,7 @@ def _loop_apply(state, text, top):
         labels, src = _loop_labels(state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
         if wrong:
-            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src)
+            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src, top)
         unlogged = _loop_unlogged(state, top, "Build plan approved", name)
         if unlogged:
             return unlogged
@@ -5352,7 +5499,7 @@ def _loop_apply(state, text, top):
                 labels, src = _loop_labels(state)
                 wrong = _loop_wrong(labels, LOOP_WORKING)
                 if wrong:
-                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src)
+                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src, top)
             unlogged = _loop_unlogged(state, top, "Design approved", name)
             if unlogged:
                 return unlogged
@@ -5394,7 +5541,8 @@ def _loop_apply(state, text, top):
             note += (" Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue "
                      "for the feature and a sub-issue per step, each naming dependencies, dependants and "
                      "done-criteria, labelled `%s` and `%s`." % (ISSUES_LABEL, LOOP_WORKING))
-            return note
+            made = _house_labels_note(top)  # #276: planning is when the labels are first needed
+            return note + (" " + made if made else "")
         if state["stage"] == "build":
             note += (" Code edits are open for the approved steps while every issue says `%s`. Hand each "
                      "approved step to @house-rules:builder (one per issue; at most two running) unless aj said "
@@ -5614,6 +5762,29 @@ def _gh_label_flags(cmd):
     return out
 
 
+_GH_API_LABELS_RE = re.compile(_GH_PREFIX + r"api\s+([^\n;&|]*?)\brepos/([\w.-]+/[\w.-]+)/issues/(\d+)/labels(?:/([^\s\"']+))?([^\n;&|]*)")
+_GH_API_METHOD_RE = re.compile(r"(?:-X|--method)(?:=|\s+)[\"']?(\w+)", re.I)
+_GH_API_LABEL_FIELD_RE = re.compile(r"(?:-f|-F|--raw-field|--field)(?:=|\s+)(?:\"labels\[\]=([^\"]*)\"|'labels\[\]=([^']*)'|labels\[\]=(\S+))")
+_GH_API_FAILED_RE = re.compile(r"\(HTTP [45]\d\d\)|^gh: |\"status\":\s*\"[45]\d\d\"", re.M)
+
+
+def _gh_api_label_change(cmd, text):
+    """#278: (repo, number, None, add, remove) for a succeeded `gh api repos/O/R/issues/N/labels` call (the REST
+    form that works in cloud sessions), else None. Repo and number come from the path, not the response."""
+    m = _GH_API_LABELS_RE.search(cmd)
+    if not m or _GH_API_FAILED_RE.search(text):
+        return None
+    pre, repo, number, name, post = m.groups()
+    method = (_GH_API_METHOD_RE.search(pre + " " + post) or [None, "POST" if "-f" in post or "-F" in post or "field" in post else "GET"])[1].upper()
+    if method == "DELETE" and name:
+        return (repo, int(number), None, [], [urllib.parse.unquote(name)])
+    if method == "POST" and not name:
+        adds = [(x or y or z).strip("\"'") for x, y, z in _GH_API_LABEL_FIELD_RE.findall(pre + " " + post)]
+        if adds:
+            return (repo, int(number), None, adds, [])
+    return None
+
+
 def _label_changes(data):
     """#236: [(repo, number, set_to or None, add, remove)] for a tool call that set issue labels and
     succeeded - the GitHub tool's issue_write, or `gh issue create` / `gh issue edit`."""
@@ -5637,6 +5808,9 @@ def _label_changes(data):
     if _GH_ISSUE_CREATE_RE.search(cmd):
         flags = _gh_label_flags(cmd)
         return [(repo, int(n), flags["add"], [], []) for repo, n in urls]
+    api = _gh_api_label_change(cmd, text)
+    if api:
+        return [api]
     m = _GH_ISSUE_EDIT_RE.search(cmd)
     if m:
         flags = _gh_label_flags(m.group(2))
@@ -5726,8 +5900,8 @@ def _issues_record(payload):
         if not labelled:
             notes.append("house-rules: issue #%s was created without the `%s` label, so it does not "
                          "count toward the issue gate and Focus Deck will ignore it. Add it with `gh "
-                         "issue edit %s --add-label \"%s\"` and create the next issues with it."
-                         % (found[0][1], ISSUES_LABEL, found[0][1], ISSUES_LABEL))
+                         "api repos/%s/issues/%s/labels -f \"labels[]=%s\"` and create the next issues with it."
+                         % (found[0][1], ISSUES_LABEL, found[0][0], found[0][1], ISSUES_LABEL))
         have = _labelled_count(state)
         if have >= ISSUES_NEEDED:
             state["needs_issues"] = False
@@ -5775,8 +5949,9 @@ PR_ASK_NOTE = (
 )
 CLOSE_ASK_NOTE = (
     "House rules, closing an issue always asks the user: the user must have tested the work first, "
-    "and this approval prompt is their go-ahead. On approval, also run `gh issue edit N "
-    "--add-label \"Claude completed this\" --remove-label \"in progress\"` and comment on the "
+    "and this approval prompt is their go-ahead. On approval, also add `Claude completed this` with `gh api "
+    "repos/<owner>/<repo>/issues/N/labels -f \"labels[]=Claude completed this\"`, remove `in progress` with "
+    "`gh api -X DELETE repos/<owner>/<repo>/issues/N/labels/in%20progress`, and comment on the "
     "issue with the merged PR link."
 )
 
@@ -6389,39 +6564,8 @@ def event_audit():
             return 0
 
         status = _field(_RESPONSE_STATUS_RE, payload)
-        if status == "async_launched" and _autosave_enabled():
-            watch_cmd = "python \"%s\" --watch --threshold 300" % STALLCHECK_PATH
-            scope_notes = []
-            for flag, label, value in (
-                ("--session", "session_id", _field(_SESSION_ID_RE, payload)),
-                ("--agent", "agentId", _field(_RESPONSE_AGENT_ID_RE, payload)),
-            ):
-                if re.fullmatch(r"[A-Za-z0-9_-]+", value or ""):
-                    watch_cmd += " %s %s" % (flag, value)
-                elif value:
-                    scope_notes.append("the %s in the payload is not shell-safe, so %s is omitted" % (label, flag))
-                else:
-                    scope_notes.append("the payload has no %s, so %s is omitted" % (label, flag))
-            scope_note = ""
-            if scope_notes:
-                scope_note = ("Note: " + "; ".join(scope_notes) + (
-                    "; with no --session the watch is unscoped and reports every session's subagents. "
-                    if "--session" not in watch_cmd else ". "))
-            # Nothing to audit yet. A killed background subagent runs no hooks of its own, so
-            # the parent's worktreesweep is what commits its work - and that only runs when the
-            # parent wakes. Ask for a check-in so it does.
-            emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": (
-                "house-rules: a subagent is running in the background, so it must be checked for stalls "
-                "every 5 minutes. Cheapest reliable way, no model call until something stalls: start "
-                "Monitor with the command `%s` (it prints only on a "
-                "STALLED or finished line), or run that command without --watch each time you wake. %s"
-                "A parent that wakes also lets worktreesweep commit a stalled subagent's work (every "
-                "%d min). On a STALLED line: find the agent's last tool call or blocking child process "
-                "(newest transcript record, process list), tell the user how long it has been stuck and what it is "
-                "blocked on, and ask before stopping a command that cannot finish. Do not assume it died or is "
-                "fine; no later STALLED line is not progress; SendMessage cannot reach an agent blocked inside a "
-                "tool call." % (watch_cmd, scope_note, CHECKPOINT_MINUTES))}})
-            return 0
+        # #292: a background subagent no longer gets the 5-minute stall-check reminder; its hand-back is
+        # still audited when it arrives (userpromptaudit).
         if status != "completed":
             # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing
             # to audit yet, not a failure to report - userpromptaudit picks up a backgrounded
@@ -7007,9 +7151,10 @@ def _plain_summary_problems(reply):
     return problems
 
 
-# #226: a reply over LONG_REPLY_WORDS words that links no page or picture gets a reminder to move
-# the detail onto a page and end on one question. Code blocks are not counted as words.
-LONG_REPLY_WORDS = 200
+# #226: a reply of LONG_REPLY_WORDS words or more that links no page or picture gets a reminder to
+# move the detail onto a page and end on one question. Code blocks are not counted as words.
+# #282: the threshold is 160 words or more (it was over 200).
+LONG_REPLY_WORDS = 160
 _PAGE_LINK_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(|\.html\b", re.IGNORECASE)
 _MD_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
 _WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'\u2019-]*")
@@ -7020,12 +7165,12 @@ def _long_reply_words(reply):
     if not reply or _PAGE_LINK_RE.search(reply):
         return 0
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply)))
-    return words if words > LONG_REPLY_WORDS else 0
+    return words if words >= LONG_REPLY_WORDS else 0
 
 
 def _long_reply_note(words):
     return (
-        "House rules, show don't tell: this reply is %d words and links no page or picture. Over %d words, "
+        "House rules, show don't tell: this reply is %d words and links no page or picture. At %d words or more, "
         "the detail belongs on a page: move it there, keep the reply to a plain summary, the link, and "
         "numbered steps for what aj needs to do, and end on one question or next step." % (words, LONG_REPLY_WORDS)
     )
@@ -7069,8 +7214,24 @@ def _pages_changed_this_turn(transcript_path, cwd):
         since = datetime.datetime.fromisoformat(str(stamp).replace("Z", "+00:00")).timestamp()
     except ValueError as exc:
         return [], "house-rules: could not read aj's message time (%s), so pages written by a shell command were not checked." % exc
-    return sorted(os.path.join(plans, n) for n in os.listdir(plans)
-                  if n.lower().endswith((".html", ".htm")) and os.path.getmtime(os.path.join(plans, n)) >= since), None
+    pages = [n for n in os.listdir(plans) if n.lower().endswith((".html", ".htm"))]
+    if _common_git_dir(top):
+        # #284: a clone, checkout or merge sets every file's time, so in a repository a page counts only
+        # when git shows it new, edited, or in a commit made since aj's message.
+        try:
+            _rc, status, _e = _ag(top, ["status", "--porcelain", "--untracked-files=all", "--", "docs/plans"])
+            rc, log, err = _ag(top, ["log", "--since=@%d" % int(since), "--no-merges", "--name-only",
+                                     "--format=", "--", "docs/plans"], check=False)
+            if rc != 0:
+                if "does not have any commits" not in err:  # a new repository has no log yet; status covers it
+                    raise RuntimeError("git log failed: %s" % (err or "exit %d" % rc))
+                log = ""
+        except RuntimeError as exc:
+            return [], "house-rules: git could not list this turn's pages (%s), so they were not checked." % exc
+        touched = {os.path.basename(line[3:].strip().strip('"')) for line in status.splitlines() if len(line) > 3}
+        touched |= {os.path.basename(line.strip()) for line in log.splitlines() if line.strip()}
+        return sorted(os.path.join(plans, n) for n in pages if n in touched), None
+    return sorted(os.path.join(plans, n) for n in pages if os.path.getmtime(os.path.join(plans, n)) >= since), None
 
 
 def _editor_owed(written, tool_uses, reply):
@@ -7083,7 +7244,7 @@ def _editor_owed(written, tool_uses, reply):
     if pages:
         return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
-    if words > LONG_REPLY_WORDS:
+    if words >= LONG_REPLY_WORDS:
         return "this reply is %d words" % words
     return ""
 
@@ -7198,7 +7359,7 @@ def _check_page(ctx):
         return ""
     if ctx.get("long_words") or _offers_choices(reply):
         return ("put the detail on a page: write a content.json, run `python3 %s build <content.json>` "
-                "and link the page it makes in the reply, or say \"no page\" in your next message to skip it"
+                "and link the page it makes in the reply"
                 % os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_page.py"))
     return ""
 
@@ -7367,7 +7528,7 @@ CHECKPOINTS = [
 
 CHECKPOINT_RULES = {
     "page built": "A handover page is built by make_page.py, never typed by hand.",
-    "page": "A reply that offers choices, lays out a plan, or runs over %d words links a page." % LONG_REPLY_WORDS,
+    "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
     "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
@@ -7389,9 +7550,43 @@ def _checkpoint_reason(missed):
         len(missed), "" if len(missed) == 1 else "s")]
     for name, fix in missed:
         lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
-    lines.append("Fix these and send only what changed, not the whole reply again. This blocks once; the retry only reports. "
-                 "HOUSE_RULES_LOOP=off turns it off.")
+    lines.append("Fix these and send only what changed, not the whole reply again. A missing page blocks every retry "
+                 "until the reply links one; the other checks block once. HOUSE_RULES_LOOP=off turns it off.")
     return "\n".join(lines)
+
+
+# #283: the page checkpoint keeps blocking on the retry until the reply links a page. aj's pick on the
+# automatic-pages build plan: after PAGE_BLOCK_LIMIT blocks in a row the reply goes through with a note,
+# so a broken page builder can't loop a session with nobody watching.
+PAGE_BLOCK_LIMIT = 3
+PAGE_BLOCKS_FILE = "page-blocks.json"
+
+
+def _page_blocks_path(cwd, session_id):
+    """In the common git directory, so worktrees share it; outside a repository, a session-keyed temp file."""
+    cd = _common_git_dir(cwd)
+    if cd:
+        return os.path.join(cd, "house-rules", PAGE_BLOCKS_FILE)
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-page-blocks-%s.json" % safe)
+
+
+def _page_blocks(path, session_id, mark, change=None):
+    """Page blocks in a row for this session since aj's message `mark` (a new message starts again at 0).
+    change "bump" adds one block, "clear" resets the count; either saves the file. Raises OSError or
+    ValueError when the file can't be read or written, and the caller reports it."""
+    data = json.loads(_read_text(path)) if os.path.isfile(path) else {}
+    if not isinstance(data, dict):
+        raise ValueError("%s is not a JSON object" % path)
+    entry = data.get(session_id) if isinstance(data.get(session_id), dict) else {}
+    count = entry.get("count", 0) if entry.get("mark") == mark else 0
+    if change:
+        count = count + 1 if change == "bump" else 0
+        data[session_id] = {"mark": mark, "count": count}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    return count
 
 
 def event_handover():
@@ -7553,7 +7748,32 @@ def event_handover():
     if writing_problem:
         trace_lines.append(writing_problem)
 
-    # #256: the checkpoint table. A miss blocks once; any error here fails open with a message.
+    # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
+    # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.
+    def _page_count(ctx, change=None):
+        mark = hashlib.sha1((ctx.get("user_text") or "").encode("utf-8")).hexdigest()[:16]
+        return _page_blocks(_page_blocks_path(_payload_cwd(payload), _field(_SESSION_ID_RE, payload) or ""),
+                            _field(_SESSION_ID_RE, payload) or "", mark, change)
+
+    if retry and _loop_enabled():
+        try:
+            pctx = {"reply": reply_text if vm is not None else "", "long_words": long_words,
+                    "user_text": _last_user_text(transcript_path) if transcript_path else ""}
+            fix = _check_page(pctx)
+            if not fix:
+                _page_count(pctx, "clear")
+            elif _page_count(pctx) < PAGE_BLOCK_LIMIT:
+                _page_count(pctx, "bump")
+                emit({"decision": "block", "reason": _checkpoint_reason([("page", fix)])})
+                return 0
+            else:
+                trace_lines.append(
+                    "house-rules: the page check blocked %d times in a row and this reply still links no page, "
+                    "so it went through without one. Say in the reply that no page could be made, and why."
+                    % PAGE_BLOCK_LIMIT)
+        except Exception as exc:
+            trace_lines.append("house-rules: the page checkpoint could not run on the retry (%s: %s), so this reply "
+                               "was not blocked." % (type(exc).__name__, exc))
     if not retry:
         try:
             ctx = {
@@ -7577,6 +7797,11 @@ def event_handover():
                 trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                    "so it is off for this reply." % (type(exc).__name__, exc))
             missed = _missed_checkpoints(ctx)
+            try:
+                _page_count(ctx, "bump" if any(name == "page" for name, _fix in missed) else "clear")
+            except (OSError, ValueError) as exc:
+                trace_lines.append("house-rules: the page block count could not be saved (%s: %s), so the retry "
+                                   "counts from zero." % (type(exc).__name__, exc))
             if missed:
                 emit({"decision": "block", "reason": _checkpoint_reason(missed)})
                 return 0

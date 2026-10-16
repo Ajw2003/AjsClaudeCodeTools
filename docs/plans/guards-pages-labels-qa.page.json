@@ -1,0 +1,48 @@
+{
+  "title": "Guards, Pages and Labels QA",
+  "eyebrow": "QA for issue #285 (Guards block only unrecoverable actions), #281 (Automatic pages) and #274 (Label setup) · plugin 2.68.0 · branch AjsAgent/friendly-davinci-r8qwdn",
+  "short": {
+    "lead": "Three branches of work are now one branch: the guards audit, the automatic-pages fixes and label setup. The page fixes went first. Fourteen of the fifteen approved steps are built and tested. The self-test passed all 832 checks twice, and the tools test passed all 47. One step is held back: the configurable agent name (#287), because its approved default would change your credit line in every project.",
+    "hint": "Tap a step to see what was built and how it was checked.",
+    "key": [["Built", "done"], ["You decide or test", "you"]],
+    "items": [
+      ["file", "Copy box", "The copied reply always opens the gate", "done", "Issue #286 (Page copy box must hold the full reply the design gate accepts). Every page's content file now carries an approval field, and the copy box holds that exact phrase followed by your picks. The page builder refuses a page whose copied text the gate would not accept. Its last to-do line is generated from the same phrase.", "Checked in real Chromium by verify.py, with and without choices."],
+      ["eye", "Phone check", "Cards never cut text off on a phone", "done", "Issue #288 (Page cards clip long words on a phone, and the visual check misses it). Card columns shrink and long words wrap. The visual check now opens every card and fails the build when any card's content is wider than the card. Building the audit page against the old CSS, with the plain HOUSE_RULES_AGENT_NAME, reports the clipped card \"Credit and branch names come from each user, not from AJ\". The new CSS builds clean.", "Checked by verify.py at 375 pixels wide, in light and dark."],
+      ["list", "160 words", "A page at 160 words or more", "done", "Issue #282 (Page threshold: 160 words or more, everywhere it is stated). The hook, the rule files, the editor helper's description and two system docs all say 160.", "Checked by verify.py: a 159-word reply needs no page, and a 160-word reply does."],
+      ["lock", "Keeps blocking", "No way past a missing page", "done", "Issue #283 (Page checkpoint: keep blocking until a page is linked; never offer \"no page\" to the agent). A reply with no page is blocked on every retry until it links one. After three blocks in a row it goes through, with a note saying no page could be made (your pick, A). Only your own \"no page\" skips it.", "Checked by verify.py: block, block, then through; a linked page resets the count."],
+      ["search", "Real pages", "Only pages I wrote count", "done", "Issue #284 (Page scans: count only pages the agent wrote or changed). In a git repository a page counts only when git shows it new, edited or committed since your message. Cloned and merged pages no longer trip the editor or wording checks.", "Checked by verify.py with a real git repo."],
+      ["stop", "Refuse", "Destructive actions refused, with the safe way named", "done", "Issue #291 (Destructive actions are refused with the safe way named, and deletes are narrowed). The nine kinds on the audit page are refused, each naming its safe way. A delete is refused only when it is recursive, or the file is unsaved. You are asked only when my command cites a source proving no safe way exists.", "Checked by verify.py and by a real run here: a recursive delete and a force-push were refused, a committed file's delete and a commit on this branch went through."],
+      ["swap", "Dropped", "The background-work guard is gone", "done", "Issue #292 (Remove the background-work guard and the \"Never hide work\" rule). nohup, a trailing &, Start-Process, tail or head on a wait, and process kills run without a prompt. The rule and its 5-minute stall-check reminder are gone. Its detail file waits in _to_delete/ for you to delete.", "Checked by verify.py and the real run."],
+      ["check", "Enforce", "Enforced checks name their fix", "done", "Issue #293 (Enforced workflow checks name their exact fix when they refuse). All five refusals name their fix. A whole-file Write over a file I did not create is now refused with \"edit it in place\", instead of asking.", "Checked by verify.py, one case per refusal."],
+      ["hammer", "Labels", "Missing house labels are created", "done", "Issues #276 (The hook creates missing house labels when it first needs them) and #277 (A /house-rules:labels command). The labels are created when your \"Design approved\" arrives and inside a label refusal. They are not created on a tool call, because no hook reaches the network on one. /house-rules:labels sets up this repo or one you name.", "Checked by verify.py with a stand-in, and by a real run on this repo: all three labels already there, exit 0."],
+      ["hand", "Your call", "The agent name waits for you", "you", "Issue #287 (Agent name, credit and branch prefix are configurable). The approved default is your git name, which would make the credit \"Ayden Wilkins's agent\" on every machine where HOUSE_RULES_AGENT_NAME is not set to AJ. Nothing in the setup scripts sets it today, so it is not built.", "Say whether to build it next, and how your machines should get the setting."]
+    ]
+  },
+  "changes": [
+    ["new", "A page with no choices no longer breaks", "Found while building the phone check.", null, "The template threw a script error on any page whose content file had no choices list. The old visual check printed that error but still passed. The page builder now supplies an empty list, and the visual check fails the build on any problem.", ["A page with no choices threw an error that nobody saw.", "The builder fills in an empty choices list.", "Every built page renders, and a broken one stops the build."], null],
+    ["new", "A long word in a page's lead no longer widens it", "Found while testing the phone check.", null, "A 40-character word in the lead paragraph made the whole page scroll sideways on a phone. All page text now breaks a word only when it cannot fit.", null, null],
+    ["keep", "Older pages are not rebuilt", "Only the pages this build touched are rebuilt.", null, "The guards audit and label setup pages were rebuilt with the new template. The other pages under docs/plans keep their old HTML until they are next rebuilt.", null, null]
+  ],
+  "qa": {
+    "feature": "guards audit",
+    "base": "origin/main",
+    "unverified": [
+      "This session runs the installed 2.67.1 hooks, so none of these changes act in a live session until the branch is merged and the plugin is updated",
+      "Label creation on a real repo that lacks the labels was not run; only the read path ran against GitHub, and creation ran against a stand-in file",
+      "The three-block page limit was tested only with replayed hook payloads",
+      "The \"no safe way\" citation reads the Bash call's description field; no live prompt has been raised through it yet",
+      "The agent name (#287) is not built"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "The guards audit, the automatic-pages fixes and label setup are built on one branch, and tested.",
+    "changing": "hook.py, make_page.py, labels.py, verify.py, the page template, the rules and their detail files, a new /house-rules:labels command, four system docs, the state doc and the plugin version (2.68.0).",
+    "blocking": "Your QA verdict, and your call on the agent name.",
+    "next": "On QA passed, the pull request into main can be merged. Your other projects then get this build through the plugin's update.",
+    "todo": [
+      "Read the steps and the findings.",
+      "Say whether to build the agent name next."
+    ]
+  }
+}

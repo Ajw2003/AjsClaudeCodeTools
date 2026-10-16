@@ -1,19 +1,28 @@
 # Never take a destructive action without checking first
 
 
-Before deleting, overwriting, or moving a file, killing a process, discarding changes,
-force-pushing, or anything else that cannot be trivially undone:
+An action that could lose data with no way back, or change work that may not be mine, is refused
+outright (#291). The refusal names the safe way to do the same job, and I do it that way:
 
-1. Say plainly what will be destroyed and what of it cannot be recovered.
-2. Run `git status` and check whether uncommitted work is at risk.
-3. Wait for them to agree. Not "it looks fine" — agree.
+| Refused | The safe way it names |
+|---|---|
+| Pushing or committing to `main` | open a pull request |
+| A commit, merge, rebase, cherry-pick, revert, `am` or `apply` on a branch not confirmed mine | `git switch -c AjsAgent/<topic>` and commit there |
+| A force-push, or `push --all` / `--mirror` | push a new branch |
+| Deleting a branch (`branch -D`, `push --delete`) | leave it for aj to delete |
+| `git clean` | move the files into a `_to_delete/` folder |
+| `filter-branch` | rewrite on a copy branch |
+| `reset`, `checkout --` or `restore` over uncommitted work | commit it on a new branch first |
+| `stash drop` / `stash clear` | keep the stash |
+| Truncating a file | write a new file beside it |
+| A recursive delete, or deleting a file with uncommitted changes or never committed | move it into `_to_delete/` |
 
-Ordinary edits to tracked, committed files are not this; git already holds them. This is about
-what is genuinely unrecoverable: untracked files, uncommitted changes, anything outside the repo,
-a running process. It applies to my own scratch output too — once a file I created is committed,
-it is their work, and removing it is their call.
+Deleting a committed, unchanged file goes through: git can bring it back. aj is asked only when no
+safe way exists, and only when I cite the source that proves it by putting `no safe way: <source>`
+(for example the git manual page) in the command's description. The prompt shows the citation.
 
-**Why:** uncommitted work has no undo. Clearing it with the user first costs one message.
+**Why:** aj, 2026-10-15 (#285): the guards caused more problems than they prevented. A prompt nobody
+answers stalls the work; a refusal that names the safe way lets me carry on without losing anything.
 
 ## The one case that needs no asking
 
@@ -26,18 +35,12 @@ A destructive step may run without asking only when **both** hold:
 Then `git reset`, `git checkout --` and `git restore` lose nothing that isn't on the remote, so
 the `guard` hook lets them through (issue #153). Merge, rebase, revert and cherry-pick are not
 destructive at all off the default branch (the old commits stay in the reflog and on the remote)
-and run unasked there (#197). Everything else still asks:
+and run unasked on a branch confirmed mine (#197, #291). Everything in the table above is refused
+on every branch: a force-push or `--all`/`--mirror` overwrites the remote, the "saved elsewhere"
+copy; a deleted branch's unmerged work may exist nowhere else; `git clean` can remove ignored files
+that exist nowhere else; stashes are never pushed; `filter-branch` rewrites every commit.
 
-- **force-push, `push --all` / `--mirror`:** they overwrite the remote, the "saved elsewhere" copy;
-- **deleting a branch** (`branch -D`, `push --delete`): its unmerged work may exist nowhere else;
-- **`git clean`:** can remove ignored files that exist nowhere else;
-- **`git stash drop` / `clear`:** stashes are never pushed;
-- **`rm` and other file deletion:** guard can't tell where the target is saved;
-- **`filter-branch`:** rewrites every commit.
-
-On the default branch every one of these asks, and a commit, push or merge there is refused.
-
-If either condition fails, the guard prompt says which one.
+If either condition fails, the refusal says which one.
 
 **Why:** aj asked for exactly this line: destructive actions are permitted only off `main`, and
 only if the work is already saved somewhere the action wouldn't affect. Asking costs a round trip;
@@ -45,11 +48,9 @@ when nothing can be lost, that round trip protects nothing.
 
 ## When nobody can answer
 
-A prompt that nobody can answer is refused at once instead of opened (#198):
-
-- **inside a subagent** (the hook input carries `agent_id`): a subagent cannot answer a prompt;
-- **when aj last wrote longer ago than the timeout** (5 minutes): the `scope` hook records each of
-  aj's messages, and `guard` and `guardwrite` refuse instead of asking once that is stale.
+A prompt inside a subagent (the hook input carries `agent_id`) is refused at once instead of
+opened, because a subagent cannot answer a prompt (#198). How long ago aj last wrote no longer
+matters (#290).
 
 Each refusal goes on the waiting-on-you list, like a timed-out prompt. `HOUSE_RULES_PROMPT_TIMEOUT=off`
 turns these refusals off with the timer.
@@ -59,9 +60,9 @@ turns these refusals off with the timer.
 The `prompttimer` hook refuses a permission prompt nobody has answered for 5 minutes
 (`HOUSE_RULES_PROMPT_TIMEOUT`, in seconds; `off` disables it). It never approves one. An unanswered
 prompt is a no, not a yes. The refused action goes on a waiting-on-you list, and aj sees it on
-their next message and at the next session start. Once one prompt has timed out, every later
-prompt in that session is refused at once until aj next writes: aj has already had the full wait.
-Questions and choices put to aj (`AskUserQuestion`, plan approval) never time out. When a refusal
+their next message and at the next session start. Each prompt waits on its own timer: an earlier
+unanswered prompt never causes a later one to be refused (#290). The timer applies only to the
+prompts the guards raise, never to anything else, such as publishing a page. Questions and choices put to aj (`AskUserQuestion`, plan approval) never time out. When a refusal
 happens:
 
 1. Don't retry the same action, or a variation of it, this session. It would only be refused again.
