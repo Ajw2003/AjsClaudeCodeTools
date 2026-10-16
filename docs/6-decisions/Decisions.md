@@ -7,6 +7,56 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-16 - Design approved: plugin restructure direction
+
+**Context.** A full audit of house-rules 2.68.0, asked for before restructuring the plugin so it
+works for anyone, not only aj's accounts. The findings are in `docs/audits/2026-10-16-plugin-audit/`
+(files 1 to 6, each finding cited with `file:line` on both sides), summarised in its `README.md`. The
+page aj approved is `docs/plans/2026-10-16-plugin-audit.html`, built from
+`docs/plans/2026-10-16-plugin-audit-revised.page.json`. It was revised for ten recent issues:
+#287 (Agent name, credit and branch prefix are configurable, not hard-coded to AJ), #296 (Design-loop
+approvals are dropped silently when the session folder isn't a git repo), #297 to #300 (After every pull
+request, a check makes sure it says how to test it and what's next), #301 (a session finishes its own
+task; other work becomes an issue in its own repo), #302 (proposal pages need before-and-after visuals
+for any visible change), #303 (the design loop is broken and blocks sessions; switch off the conflicting
+checks now) and #304 (a two-helper tool that cleans a session transcript, then files issues from it).
+
+**Decision.** aj approved the direction with three picks ("1A 2A 3A"):
+1. **Core identity: safe multi-project work.** aj's own goal, from #304: safe work on several projects
+   at once, each session in its own context, observations about other projects captured as issues in
+   those projects, and transcripts usable as evidence without leaking secrets. The default install is
+   a shared core with project boundaries, plus the Safe git and Session triage sub-plugins. Design loop,
+   Writing, Delegation and Docs are optional sub-plugins on the same core.
+2. **A 2.68.1 patch ships first, scoped to #303.** It fixes the two approval bugs (every approval phrase
+   in a message is read; a design approval always sets the feature name) and records only issues created
+   in the repo that owns the stage file. Four checks switch to report-only: the shell-write refusal while
+   code is locked, the re-creation (parity) check, the page checkpoint, and the bare-reference writing
+   check. The page builder accepts any approval line. The page-dodge fix (a shorter retry must not clear
+   the page checkpoint) rides in the same patch.
+3. **The after-pull-request checks (#297) are built inside the Design loop sub-plugin** during the
+   restructure, not on today's `hook.py`. Their agent-name step uses `userConfig`, not an environment
+   variable set by aj's setup scripts.
+
+The restructure also: moves identity into Claude Code's `userConfig` (defaulting to the git name, per
+#287); replaces the self-updater with marketplace `autoUpdate` and `/reload-plugins`; keeps plugin-wide
+state in `CLAUDE_PLUGIN_DATA`; replaces the issue workflow with #301's five-field template; replaces
+`verify.py` with module tests plus a few end-to-end runs per hook event; and loads each rule from one
+source file. The 28 rule contradictions are settled one by one in a grilling session before the
+restructure is built.
+
+**Alternatives rejected.** Guardrails only as the core identity (it leaves out the project boundaries
+#301, #296 and #303 ask for); one plugin split into internal modules (users still install all or
+nothing); switching the whole design loop off until the restructure (projects mid-feature lose their
+gate); fixing all eight #303 incidents properly now (the restructure rewrites the same code); building
+#297 now (built twice).
+
+**Supersedes.** The unapproved build plan `docs/plans/2026-10-16-version-notice-and-page-dodge-plan.html`
+(an account-wide git-ref marker for re-injecting rules after an update). It is dropped: another person's
+install has no shared place for the marker, and `/reload-plugins` covers each session. Its page-dodge
+half moves into the 2.68.1 patch.
+
+**Status.** Standing.
+
 ## 2026-10-15 - Guards audit: the build plan
 
 **Context.** aj approved the design ("Design approved: guards audit"). The systems document is
