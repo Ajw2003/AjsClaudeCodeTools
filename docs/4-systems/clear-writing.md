@@ -14,8 +14,8 @@ exact-input and ask-when-unclear lines, and the plain-docs writing limits.
 |---|---|---|
 | Rule | `showrule` (SessionStart), `rules/clear-writing.md` | Loads after Show, don't tell, in the same slot. The voice section is last, so `HOUSE_RULES_VOICE=off` cuts only it. |
 | Shared checker | `scripts/clarity.py` | Vague claims with no reason, bare references, repetition, jargon, long sentences, and the not-checked disclosure. One module for the hook and `plain_docs_check.py`; `python clarity.py [--page] < file` runs it by hand. |
-| Replies | `handover` (Stop), `_writing_findings`, `_writing_note` | One note listing every finding, with the not-checked and long-reply notes folded in. |
-| Pages | `artifact` (PostToolUse), `_page_writing_note` | A write to `docs/plans/*.html` runs the checker on what a reader sees: the visible text and a template page's PAGE strings. |
+| Replies | `handover` (Stop), `_writing_findings`, `_writing_note` | One note listing every finding, with the not-checked and long-reply notes folded in. Since 2.68.1 (#309) the kinds in `_WRITING_REPORT_ONLY` (bare references) are left out of the note and reported to aj in one line instead (`_writing_report_line`), because the bare-reference check misread "the option I suggested". |
+| Pages | `artifact` (PostToolUse), `_page_writing_note` | A write to `docs/plans/*.html` runs the checker on what a reader sees: the visible text and a template page's PAGE strings. The report-only kinds are skipped here too. |
 | Issues | `guard` (`gh issue create`), `guardgithub` (`issue_write` create) | Refused without "Depends on", "Depended on by" and "Done when". |
 | Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page or a long reply. The end-of-reply check reminds me when a page was written, or a reply ran to 160 words or more, and no editor ran. |
 

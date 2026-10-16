@@ -1,0 +1,34 @@
+{
+  "title": "Patch 2.68.1 Build Plan",
+  "eyebrow": "Build plan for the first step of the approved plugin restructure · nothing built yet",
+  "approval": "Build plan approved: plugin restructure 2.68.1 patch",
+  "short": {
+    "lead": "You approved the restructure direction, with the patch first. This plan builds the 2.68.1 patch in five steps. Each step is a smaller issue under the restructure's main issue, \"restructure into a shared core with project boundaries and six optional sub-plugins\" (#306). Each step first adds a test case to verify.py (the script that checks the hooks behave as documented). That test reproduces one of the failures reported in the issue \"the design loop is broken and blocks sessions\" (#303). Then the step fixes the failure. Nothing else in 2.68.0 changes.",
+    "hint": "Tap a step to see what it changes and what it needs from you.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["loop", "Approvals", "Every approval in a message is read", "", "The issue \"the design loop reads every approval in a message, and a design approval sets the feature name\" (#307). The approval parser (the code in hook.py:5467 that reads your approval phrases) stops at the first refusal. A design approval sent in the same message as a build-plan approval was therefore never read. It will now apply every approval in the order of the stages: design, then build plan, then QA. A design approval will also always set the feature name.", "Nothing from you."],
+      ["lock", "Own repo", "Only this repo's issues count", "", "The issue \"the design loop records only issues created in its own repo\" (#308). Issues opened in another repo were counted as this feature's, and that blocked a session seven times. An issue now counts only if it was created in the repo that owns the stage file (.claude/house-rules-loop.json, which records the feature's current stage). Any other issue gets a one-line note.", "Nothing from you."],
+      ["eye", "Report-only", "Four checks report instead of blocking", "", "The issue \"four checks report instead of blocking, and the page builder accepts any approval line\" (#309). These four checks will now print what they would have blocked, and let the reply or command go through. They are the shell-write refusal while code is locked, the re-creation check, the page checkpoint (the reminder to link a page after a long reply), and the bare-reference writing check (which flags a bare issue number or option letter). Separately, the page builder (make_page.py) will accept any approval line.", "Nothing from you."],
+      ["stop", "Page owed", "A page reminder survives a shorter retry", "", "The issue \"a blocked page stays owed across retries\" (#310). It is built after the step \"four checks report instead of blocking\" (#309), because both change the page checkpoint. Once a long reply is flagged, every reply to the same message of yours gets the reminder until one of those replies links a page.", "Nothing from you."],
+      ["flask", "Release", "Version 2.68.1, docs, pull request and QA page", "you", "The issue \"release the patch with its version, docs and QA page\" (#311). The full verify.py test suite has to pass twice in a row. The pull request has to say how to test the patch and what comes next. A QA page (a checklist page for you to test from) goes with it.", "You test it from the QA page and reply \"QA passed\" or \"QA failed\" with what to change."]
+    ]
+  },
+  "changes": [
+    ["keep", "Everything else in 2.68.0", "Including the guard work waiting for your testing.", null, "The issue \"Guards block only unrecoverable actions\" (#285) and its parts keep their behaviour. The restructure itself waits for the grilling session after this patch, the session where I question you on the design before building.", null, null],
+    ["chg", "Approval parser (scripts/hook.py, _loop_apply)", "Reads every approval in a message, in stage order.", ["Only the first approval phrase it finds is read, and a refusal ends the message.", "Each approval phrase is applied in turn: design, then build plan, then QA, and each refusal still names its reason."], "A design approval also replaces the stored feature name.", null, null],
+    ["chg", "Issue record (scripts/hook.py, _loop_record_issues)", "Counts only issues from the stage file's own repo.", ["Every issue the session creates is recorded, from any repo.", "Only issues in the repo that owns .claude/house-rules-loop.json are recorded; others get a note."], "This removes the loop of seven blocks that hit a session in your Unblocked repo.", null, null],
+    ["chg", "Four checks and the page builder", "Report instead of block; any approval line builds.", ["Today, four checks block: the shell-write refusal, the re-creation check, the page checkpoint and the bare-reference writing check. The page builder also refuses any approval line that isn't a design-loop phrase.", "After the patch, all four print what they would have blocked and let the reply or command through. The page builder builds a page for any approval line."], "Only the design-loop phrases still move a stage when you type them.", null, null],
+    ["chg", "Page checkpoint memory (the file that records which replies were flagged for needing a page)", "Remembers a flagged page for the rest of that message.", ["Each reply is measured on its own, so a 70-word retry cleared the flag on a 165-word reply.", "The page stays owed against your message, and the reminder repeats until a reply links one."], "A new message from you starts with nothing owed.", null, null]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "Build the 2.68.1 patch in five steps, each reproducing its incident in verify.py first, and release it with one pull request and a QA page.",
+    "changing": "Most of the change lands in scripts/hook.py: the approval parser, the issue record, three of the checks and the page checkpoint memory. The bare-reference check lives in clarity.py, and the approval line in make_page.py. The rest is verify.py, the plugin version, and the design-loop, clear-writing and state docs.",
+    "blocking": "Your approval of this build plan.",
+    "next": "After approval, one builder helper at a time builds the issues in order. It starts with \"the design loop reads every approval in a message, and a design approval sets the feature name\" (#307) and ends with \"release the patch with its version, docs and QA page\" (#311). Before any change, all 832 verify.py checks pass; that is the baseline.",
+    "todo": [
+      "Tap <b>Copy my reply</b> and send it to me, or tell me what to change."
+    ]
+  }
+}

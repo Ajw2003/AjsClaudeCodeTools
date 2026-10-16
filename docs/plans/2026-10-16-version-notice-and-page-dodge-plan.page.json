@@ -1,0 +1,40 @@
+{
+  "title": "Version Notice Build Plan",
+  "eyebrow": "Build plan for the approved design \"version notice and page dodge\" · nothing built yet",
+  "approval": "Build plan approved: version notice and page dodge",
+  "short": {
+    "lead": "You picked re-injecting the new rules for the version notice, with one condition: the re-inject happens once per update for your whole account, never a second time. You picked keeping the page owed across retries for the page check. Today the plugin keeps all of its state on one machine, in temp files and the repo's .git folder, so nothing can yet count once across your account. This plan adds a marker that every session can check, and it has three build steps. Each step becomes one GitHub issue.",
+    "hint": "Tap a step to see what it changes and what it needs from you.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["search", "Step 1", "Record the start version and detect the switch", "", "At session start, the plugin writes down which version it is running for this session. Later hooks compare their own folder's version with that record. When the two differ, the notice says plainly that the hooks are now on the new version and the rules text is still the old one. Before the fix, verify.py gets a test case that reproduces today's false claim that the session is \"still running\" the old version.", "Nothing from you."],
+      ["lock", "Step 2", "Claim the update once for the account, then re-inject", "", "When the version-switch check finds that the hooks' version has changed, the hook tries to create a marker named for the new version. Where that marker lives is your pick under Choices. Only the session that creates it re-injects the new rules text, and every later session finds the marker and skips the re-inject. If the marker can't be reached, the session skips the re-inject and the notice says why.", "Nothing from you."],
+      ["stop", "Step 3", "Keep the page owed across retries", "", "When a reply is blocked for a missing page, the block is recorded against your message, and every retry answering it needs a page link, however short it is. The limit of 3 blocks in a row stays. Before the fix, verify.py gets a test case that reproduces a 70-word retry getting through without a page link.", "Nothing from you."],
+      ["check", "Your verdict", "You approve the plan", "you", "Pick where the account marker lives (a git ref, a GitHub issue comment, or a file on each machine), then send the approval line.", "Send \"Build plan approved: version notice and page dodge\" and say which marker location you pick, or tell me what to change."]
+    ]
+  },
+  "changes": [
+    ["keep", "Session-start version check (scripts/hook.py, event_versioncheck)", "It still updates the plugin at session start.", null, "Only the notice it prints (_vc_restart_notice, line 1452) changes, in the step that records the start version.", null, null],
+    ["keep", "Rule injection (scripts/hook.py, event_inject and event_showrule)", "The re-inject reuses these two handlers' output instead of a second copy of the rules.", null, "That way, the re-injected text can't drift from what a new session loads.", null, null],
+    ["new", "Account marker (scripts/hook.py)", "One marker per plugin version, created at most once.", null, "Creating it either succeeds or fails, and it never overwrites an existing marker. So whether this update was already claimed is answered by one shared record, not guessed by each session.", null, null],
+    ["chg", "Re-inject size", "The re-inject carries all three rule files, not only house-rules.md.", ["The design page counted only rules/house-rules.md, at 8,667 characters.", "rules/house-rules.md, rules/show-dont-tell.md and rules/clear-writing.md together total 12,600 characters, measured with wc -c. That is the same text a new session loads."], "Leaving out the other two would load new hooks alongside old page and writing rules, which is the same kind of split this fixes.", null, null],
+    ["new", "Systems doc (docs/4-systems/plugin-distribution.md)", "A new section on which version a session runs after an update lands mid-session, and on the account marker.", null, "Each step also adds its own verify.py test cases and bumps the plugin version.", null, null]
+  ],
+  "choices": [
+    ["marker", "Where does the account-wide marker live?", [
+      ["A", "A git ref in Ajw2003/AjsClaudeCodeTools, refs/house-rules/reinjected/<version>", 1, "It needs no new setup: a dry-run push from this repo reported \"[new reference]\", meaning the push would have created the ref. A session that can't write to that repo skips the re-inject and says why, so the re-inject never happens twice."],
+      ["B", "A GitHub issue comment, written through the GitHub API", 0, "Readable on your phone, but every machine would need a GitHub token set up by hand."],
+      ["C", "A file on each machine, under ~/.claude", 0, "No network needed, but it counts per machine, and each new cloud container starts empty, so the re-inject could repeat."]
+    ], "Only the git ref keeps your \"never a second time\" condition without asking you to set anything up: the GitHub issue comment needs a token on every machine, and the per-machine file can repeat the re-inject."]
+  ],
+  "wrapup": {
+    "summary": "Three steps: record the session's start version and say honestly what changed, claim each update once for your account and re-inject the rules then, and keep a blocked page owed across retries.",
+    "changing": "scripts/hook.py, verify.py, docs/4-systems/plugin-distribution.md, the plugin version, and one sentence in rules/house-rules.md.",
+    "blocking": "Your approval and your pick for where the marker lives. After that, I'll create one parent issue and one issue per step (four in all), each with the labels \"AjsAgent created this\" and \"in progress\".",
+    "next": "One thing is unverified: a session working in a repo other than Ajw2003/AjsClaudeCodeTools may not be allowed to push the marker. In the account-claim step, I test the marker push from a second repo before I call that step done.",
+    "todo": [
+      "Pick where the marker lives under Choices.",
+      "Tap <b>Copy my reply</b> and send it to me, or tell me what to change."
+    ]
+  }
+}

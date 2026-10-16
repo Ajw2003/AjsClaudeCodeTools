@@ -1,6 +1,6 @@
 {
-  "feature": "guards audit",
-  "stage": "qa",
+  "feature": "plugin restructure direction 1A 2A 3A",
+  "stage": "build",
   "skip": false,
   "approvals": [
     {
@@ -12,34 +12,54 @@
       "stage": "Build plan approved",
       "name": "guard audit",
       "at": 1792100993
+    },
+    {
+      "stage": "Design approved",
+      "name": "version notice and page dodge 1* 2A",
+      "at": 1792169675
+    },
+    {
+      "stage": "Design approved",
+      "name": "plugin restructure direction 1A 2A 3A",
+      "at": 1792177494
+    },
+    {
+      "stage": "Build plan approved",
+      "name": "plugin restructure 2.68.1 patch",
+      "at": 1792177855
     }
   ],
-  "log_mark": "9622f3bb85cb77f28485b561547dc54767753a4d56c53b6615fa20959641a13e",
+  "log_mark": "d7dab8864db151a16228e875a1e9bb45037e858bfc203faf64479afa245889ed",
   "redo": false,
   "issues": [
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 289,
+      "number": 306,
       "labelled": true
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 290,
+      "number": 307,
       "labelled": true
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 291,
+      "number": 308,
       "labelled": true
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 292,
+      "number": 309,
       "labelled": true
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 293,
+      "number": 310,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 311,
       "labelled": true
     }
   ],
@@ -103,8 +123,37 @@
       "AjsAgent created this",
       "fix",
       "needs review"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#306": [
+      "enhancement",
+      "in progress",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#307": [
+      "bug",
+      "needs review",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#308": [
+      "bug",
+      "needs review",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#309": [
+      "bug",
+      "needs review",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#310": [
+      "bug",
+      "needs review",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#311": [
+      "enhancement",
+      "needs review",
+      "AjsAgent created this"
     ]
   },
-  "qa_page": "docs/plans/guards-pages-labels-qa.html",
-  "qa_page_linked": true
+  "qa_page": "docs/plans/2026-10-16-patch-2-68-1-qa.html"
 }

@@ -2912,7 +2912,7 @@ def _page_writing_note(file_path):
             html = f.read()
     except OSError as exc:
         return "house-rules: the page writing check could not read %s (%s)." % (file_path, exc)
-    found = clarity.findings(clarity.page_text(html), skip=("not-checked",))
+    found = clarity.findings(clarity.page_text(html), skip=("not-checked",) + _WRITING_REPORT_ONLY)
     if not found:
         return ""
     return ("House rules, write it so nothing is left to guess: the page %s has %d thing(s) to fix "
@@ -5464,9 +5464,28 @@ def _loop_label_refusal(said, want, wrong, note, top=None):
                                                           " " + made if made else ""))
 
 
+_LOOP_STAGE_ORDER = ((_LOOP_DESIGN_RE, 0), (_LOOP_PLAN_RE, 1), (_LOOP_QA_RE, 2))
+
+
 def _loop_apply(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
-    message approves nothing. Mutates state."""
+    message approves nothing. Mutates state.
+
+    #307: a message can hold more than one approval ("Design approved: X.  Build plan approved: X").
+    Each phrase is cut out up to where the next one starts, and the pieces are applied in stage order -
+    design, then build plan, then QA - so one refusal no longer hides the approvals beside it."""
+    found = sorted((m.start(), order) for rx, order in _LOOP_STAGE_ORDER for m in rx.finditer(text))
+    if len(found) < 2:
+        return _loop_apply_one(state, text, top)
+    pieces = [(order, text[start:found[i + 1][0] if i + 1 < len(found) else len(text)])
+              for i, (start, order) in enumerate(found)]
+    notes = [_loop_apply_one(state, piece, top) for _order, piece in sorted(pieces, key=lambda p: p[0])]
+    return " ".join(n for n in notes if n)
+
+
+def _loop_apply_one(state, text, top):
+    """Move the stage for one approval phrase (or none). Returns a note for the model, or "" when the
+    text approves nothing. Mutates state."""
     stage, feature = state["stage"], state.get("feature") or ""
     approval = None
     m = _LOOP_PLAN_RE.search(text)
@@ -5494,7 +5513,10 @@ def _loop_apply(state, text, top):
         m = _LOOP_DESIGN_RE.search(text)
         if m:
             name = _loop_name(m.group(1))
-            redo = state.get("redo") and name.lower() == feature.lower()
+            # #307: the redo is for the feature QA failed, even when the stored name went stale.
+            failed = [a.get("name") or "" for a in state.get("approvals", [])
+                      if isinstance(a, dict) and a.get("stage") == "QA failed"]
+            redo = state.get("redo") and name.lower() in {feature.lower(), (failed[-1] if failed else "").lower()}
             if redo:
                 labels, src = _loop_labels(state)
                 wrong = _loop_wrong(labels, LOOP_WORKING)
@@ -5681,10 +5703,14 @@ def _loop_gate(payload):
         _loop_write(git_dir, state)
         return None, None
     feature = state.get("feature") or ""
-    if script and script_unreadable and not script_paths:
-        return ("House rules, design loop: code is locked in the %s stage and I cannot read which file this "
-                "command writes, so make the change with the Edit or Write tool instead, which names the "
-                "file." % LOOP_STAGE_NAMES[state["stage"]]), None
+    if script:
+        # #309 (incident 4 of #303): a shell command is reported, never refused, until the restructure. The
+        # refusal stopped docs and .claude/ writes made from the shell, which are meant to stay open.
+        what = ("a file it can't name" if script_unreadable and not script_paths
+                else ", ".join(script_paths) or "a source file")
+        return None, ("house-rules design loop (report only, #309): code is locked in the %s stage, and this "
+                      "shell command writes %s. It was let through; the shell-write refusal is switched off "
+                      "until the restructure." % (LOOP_STAGE_NAMES[state["stage"]], what))
     return (
         "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
         "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
@@ -5734,8 +5760,28 @@ def _created_issue(data):
     return found, labelled, how
 
 
-def _loop_record_issues(git_dir, found, labelled):
-    """#231: issues made while a feature is in Plan count toward its build-plan approval."""
+_GITHUB_SLUG_RE = re.compile(r"github\.com[:/]+([^/\s]+/[^/\s]+?)(?:\.git)?/?\s*$", re.IGNORECASE)
+
+
+def _origin_slug(top):
+    """(slug, problem): the "owner/repo" of the checkout's GitHub origin remote, or "" when it has none,
+    and why it couldn't be read ("" when it could)."""
+    import subprocess
+    try:
+        url = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=top, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, timeout=3).stdout.decode("utf-8", "replace")
+    except (OSError, subprocess.SubprocessError) as exc:
+        return "", "house-rules: could not read this checkout's git remote (%s)" % exc
+    m = _GITHUB_SLUG_RE.search(url.strip())
+    return (m.group(1) if m else ""), ""
+
+
+def _loop_record_issues(git_dir, found, labelled, top=None):
+    """#231: issues made while a feature is in Plan count toward its build-plan approval.
+
+    #308: only issues made in the repo that owns the stage file count. In an Unblocked session, two issues
+    opened in another repo were counted as Unblocked's, and the label check then blocked the turn seven
+    times. A checkout with no GitHub origin can't say which repo it is, so its issues count as before."""
     if not _loop_enabled() or not found:
         return []
     state, problem = _loop_read(git_dir)
@@ -5743,10 +5789,17 @@ def _loop_record_issues(git_dir, found, labelled):
         return [problem]
     if state["stage"] != "plan":
         return []
+    own, slug_problem = _origin_slug(top) if top else ("", "")
+    own = own.lower()
+    notes = [slug_problem + ", so every new issue counts toward this feature."] if slug_problem else []
     for repo, number in found:
+        if own and str(repo).lower() != own:
+            notes.append("Design loop: issue %s#%s was made in another repo, so it doesn't count toward \"%s\" "
+                         "here (this checkout is %s)." % (repo, number, state.get("feature") or "this feature", own))
+            continue
         state.setdefault("issues", []).append({"repo": repo, "number": int(number), "labelled": labelled})
     _loop_write(git_dir, state)
-    return []
+    return notes
 
 
 _GH_ISSUE_EDIT_RE = re.compile(_GH_PREFIX + r"issue\s+edit\s+(\d+)\b([^\n;&|]*)")
@@ -5882,7 +5935,7 @@ def _issues_record(payload):
         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return []
-        loop_notes = _loop_record_issues(git_dir, found, labelled)
+        loop_notes = _loop_record_issues(git_dir, found, labelled, top)
         if not _issues_enabled():
             return loop_notes
         state, problem = _issues_read(git_dir)
@@ -7180,14 +7233,31 @@ def _clear_writing_enabled():
     return os.environ.get("HOUSE_RULES_CLEAR_WRITING", "on").strip().lower() not in _TOGGLE_OFF
 
 
+# #309 (incident 8 of #303): writing kinds that only report, to aj, until the restructure. The bare-reference
+# check read "the option I suggested" as a bare "option I" and asked for the reply to be resent, twice in a row.
+_WRITING_REPORT_ONLY = ("bare-ref",)
+
+
 def _writing_findings(text):
     """(findings, problem): the shared checker's findings on a reply, minus not-checked, which the
-    evidence rule reports on its own. [] when the check is off or the text is empty."""
+    evidence rule reports on its own, and minus the report-only kinds. [] when the check is off or the
+    text is empty."""
     if not text or not _clear_writing_enabled():
         return [], None
     if clarity is None:
         return [], CLARITY_ERROR
-    return clarity.findings(text, skip=("not-checked",)), None
+    return clarity.findings(text, skip=("not-checked",) + _WRITING_REPORT_ONLY), None
+
+
+def _writing_report_line(text):
+    """One line for aj naming the report-only findings in a reply (#309), or "" when there are none."""
+    if not text or not _clear_writing_enabled() or clarity is None:
+        return ""
+    found = [p for k, p, _why in clarity.findings(text) if k in _WRITING_REPORT_ONLY]
+    if not found:
+        return ""
+    return ("house-rules writing check (report only, #309): bare references in this reply - %s. Nothing was "
+            "asked of the agent." % ", ".join('"%s"' % p for p in found[:8]))
 
 
 # #249: a page or a long reply goes past the editor helper before aj reads it.
@@ -7287,13 +7357,12 @@ def _visual_check_enabled():
 
 
 def _parity_report_note(word):
+    # #309 (incident 5 of #303): report only until the restructure. The demand for an inventory and an
+    # issue per drop fired on a one-entry Decisions.md append, and three times on audit-notes turns.
     return (
-        "House rules, re-creating existing behaviour: this turn was a %s and wrote files, but "
-        "the reply names nothing kept or dropped. Before this turn ends, report against the "
-        "original: the keep/change/drop inventory with the original's file:line, every dropped "
-        "feature named plainly - not only the ones the new platform forced - and a GitHub issue "
-        "for each feature to be re-added later. If nothing was dropped, say so and say how you "
-        "compared old and new." % word.lower()
+        "House rules, re-creating existing behaviour (report only, #309): aj's message reads like a %s "
+        "and this turn wrote files, but the reply names nothing kept or dropped. Nothing is required "
+        "this turn; the note is kept as evidence for the restructure." % word.lower()
     )
 
 
@@ -7518,7 +7587,7 @@ def _check_qa_page(ctx):
 CHECKPOINTS = [
     ("page saved", "page built", _check_page_saved, "block"),
     ("page published", "page built", _check_page_saved, "block"),
-    ("reply ends", "page", _check_page, "block"),
+    ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
     ("reply ends", "evidence", _check_evidence, "block"),
     ("reply ends", "commit", _check_commit, "block"),
@@ -7747,6 +7816,9 @@ def event_handover():
     writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
     if writing_problem:
         trace_lines.append(writing_problem)
+    report_line = _writing_report_line(reply_text if vm is not None else "")
+    if report_line:
+        trace_lines.append(report_line)
 
     # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
     # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.
@@ -7755,25 +7827,30 @@ def event_handover():
         return _page_blocks(_page_blocks_path(_payload_cwd(payload), _field(_SESSION_ID_RE, payload) or ""),
                             _field(_SESSION_ID_RE, payload) or "", mark, change)
 
-    if retry and _loop_enabled():
+    # #309 (incident 6 of #303): the page row reports instead of blocking, on the first reply and the retry
+    # alike, until the restructure. It pushed another repo's work into a session as a proposal page.
+    page_note = ""
+    if _loop_enabled():
         try:
             pctx = {"reply": reply_text if vm is not None else "", "long_words": long_words,
                     "user_text": _last_user_text(transcript_path) if transcript_path else ""}
             fix = _check_page(pctx)
-            if not fix:
+            # #310: once a reply to aj's message is flagged, the page stays owed for every later reply to the
+            # same message until one links a page - a shorter retry no longer clears it. The page-blocks file
+            # keeps a count per message; above zero means owed.
+            if _page_escape(pctx) or _PAGE_LINK_RE.search(pctx["reply"]):
                 _page_count(pctx, "clear")
-            elif _page_count(pctx) < PAGE_BLOCK_LIMIT:
+            elif fix or _page_count(pctx) > 0:
+                owed = not fix
                 _page_count(pctx, "bump")
-                emit({"decision": "block", "reason": _checkpoint_reason([("page", fix)])})
-                return 0
-            else:
-                trace_lines.append(
-                    "house-rules: the page check blocked %d times in a row and this reply still links no page, "
-                    "so it went through without one. Say in the reply that no page could be made, and why."
-                    % PAGE_BLOCK_LIMIT)
+                page_note = ("House rules, page checkpoint (report only, #309): %s%s. Nothing is blocked; if this "
+                             "reply belongs to another repo's work, the issue for that repo is enough." % (
+                                 "an earlier reply to this message of aj's was flagged for a page and none is linked "
+                                 "yet (#310), so " if owed else "",
+                                 fix or _check_page(dict(pctx, long_words=LONG_REPLY_WORDS))))
         except Exception as exc:
-            trace_lines.append("house-rules: the page checkpoint could not run on the retry (%s: %s), so this reply "
-                               "was not blocked." % (type(exc).__name__, exc))
+            trace_lines.append("house-rules: the page checkpoint could not run (%s: %s), so this reply got no "
+                               "page reminder." % (type(exc).__name__, exc))
     if not retry:
         try:
             ctx = {
@@ -7797,11 +7874,6 @@ def event_handover():
                 trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                    "so it is off for this reply." % (type(exc).__name__, exc))
             missed = _missed_checkpoints(ctx)
-            try:
-                _page_count(ctx, "bump" if any(name == "page" for name, _fix in missed) else "clear")
-            except (OSError, ValueError) as exc:
-                trace_lines.append("house-rules: the page block count could not be saved (%s: %s), so the retry "
-                                   "counts from zero." % (type(exc).__name__, exc))
             if missed:
                 emit({"decision": "block", "reason": _checkpoint_reason(missed)})
                 return 0
@@ -7825,7 +7897,7 @@ def event_handover():
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed
-            and not shell_page_notes):
+            and not shell_page_notes and not page_note):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -7846,6 +7918,8 @@ def event_handover():
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
     parts.extend(shell_page_notes)
+    if page_note:
+        parts.append(page_note)
     if editor_owed:
         parts.append(EDITOR_NOTE % editor_owed)
     if parity_word:

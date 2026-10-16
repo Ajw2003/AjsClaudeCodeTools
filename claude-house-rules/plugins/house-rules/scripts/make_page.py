@@ -325,7 +325,13 @@ def check_approval(page):
     want = "QA passed: <feature>" if qa_page else "Design approved: <feature> or Build plan approved: <feature>"
     for text in (appr, appr + " 1A"):
         if not any(p.search(text) for p in pats):
-            die("approval %r would not open the design-loop gate (checked %r); write it as %s" % (appr, text, want))
+            if qa_page:
+                die("approval %r would not open the design-loop gate (checked %r); write it as %s" % (appr, text, want))
+            # #309 (incident 7 of #303): any approval line builds. A proposal for another repo's work must not
+            # carry a phrase that would move this repo's stage when aj sends it back.
+            print("make_page: note - approval %r is not a design-loop phrase, so sending it back moves no stage "
+                  "(the phrases are %s)." % (appr, want))
+            return
 
 
 def apply_approval_todo(page):

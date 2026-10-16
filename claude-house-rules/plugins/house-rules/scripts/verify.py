@@ -2975,9 +2975,13 @@ def pv_case(title, ok, detail):
 
 
 _pv_port = _turn_transcript("pv-port", "port the stock page to GitHub Pages", [("Write", "/proj/site/index.html")])
-_par, _vis, _ = _stop_notes(_pv_port, "Done, the page is ported.")
+_par, _vis, _pv_ctx = _stop_notes(_pv_port, "Done, the page is ported.")
 pv_case("Stop: a port that wrote files but names nothing kept or dropped gets the parity report note (#90)",
         _par, "parity=%s" % _par)
+pv_case("Stop (#309): the parity note is report-only - it demands no inventory or issues before the turn ends",
+        "report only, #309" in _pv_ctx and "Nothing is required this turn" in _pv_ctx
+        and "keep/change/drop inventory with" not in _pv_ctx,
+        "note=%r" % _pv_ctx[_pv_ctx.find("re-creating"):][:200])
 pv_case("Stop: the same turn changed an .html file and looked at nothing, so it gets the visual note (#88)",
         _vis, "visual=%s" % _vis)
 _par, _, _ = _stop_notes(_pv_port, "Kept search and sorting; dropped the server sync, which needs a server.")
@@ -4323,10 +4327,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.68.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.68.1",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.1",
     "rules section + detail file + version",
 )
 
@@ -8719,6 +8723,13 @@ def _wt_bash(cmd, cwd=None):
     return _wt_gate("Bash", {"command": cmd}, cwd or _wt_main)
 
 
+def _wt_raw(cmd):
+    """The commitgate's whole output for a Bash command, to read its report-only note (#309)."""
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt", "cwd": _wt_main,
+         "tool_input": {"command": cmd}}
+    return run_hook("commitgate", json.dumps(p), env=_loop_env)[1]
+
+
 _wt_heredoc = "python3 - <<'E'\nopen('app.py', 'w').write('x = 1')\nE"
 _wt_stage("build")
 _wt_a = _wt_gate("Edit", {"file_path": os.path.join(_wt_tree, "app.py")}, _wt_tree)[0]
@@ -8734,6 +8745,8 @@ _wt_i = _wt_bash("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" a
 _wt_j = _wt_bash("cat f | tee out.py")[0]
 _wt_k = _wt_bash("ls -la 2>&1 | grep x; echo done > /dev/null")[0]
 _wt_l = _wt_bash("python3 -c \"open('docs/x.txt', 'w').write('x')\"")[0]
+_wt_m = _wt_raw(_wt_heredoc)
+_wt_n = _wt_raw("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" app.py")
 _wt_loop_off = dict(_loop_env, HOUSE_RULES_LOOP="off")
 _, _wt_o, _ = run_hook("commitgate", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt",
                        "cwd": _wt_main, "tool_input": {"command": _wt_heredoc}}), env=_wt_loop_off)
@@ -8741,12 +8754,14 @@ for _t, _ok in (
         ("a worktree reads the main checkout's stage: Build lets its Edit through", _wt_a == "allow"),
         ("a worktree reads the main checkout's stage: Design refuses its Edit", _wt_d == "deny"),
         ("a python heredoc writing a .py file is allowed in Build", _wt_b == "allow"),
-        ("a python heredoc writing a .py file is refused in Design", _wt_e[0] == "deny" and "closed in the Design stage" in _wt_e[1]),
-        ("sed -i on a .py file is allowed in Build and refused in Design", _wt_c == "allow" and _wt_f == "deny"),
+        ("#309: a python heredoc writing a .py file in Design goes through, reported as what the lock would have refused",
+         _wt_e[0] == "allow" and "report only, #309" in _wt_m and "app.py" in _wt_m and "Design stage" in _wt_m),
+        ("#309: sed -i on a .py file is allowed in Build, and in Design too, with a report",
+         _wt_c == "allow" and _wt_f == "allow"),
         ("a Bash write to a .md file stays open in Design", _wt_g == "allow"),
-        ("a >> redirect into a .py file and tee are refused in Design", _wt_h == "deny" and _wt_j == "deny"),
-        ("a script whose target path is a variable is refused with the Edit/Write hint",
-         _wt_i[0] == "deny" and "Edit or Write tool" in _wt_i[1] and "retry" not in _wt_i[1].lower()),
+        ("#309: a >> redirect into a .py file and tee go through in Design", _wt_h == "allow" and _wt_j == "allow"),
+        ("#309: a script whose target path is a variable goes through, and the report says the file couldn't be named",
+         _wt_i[0] == "allow" and "a file it can't name" in _wt_n),
         ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow"),
         ("HOUSE_RULES_LOOP=off leaves script writes alone", "deny" not in _wt_o)):
     _loop_cases.append((_t, _ok))
@@ -8852,6 +8867,89 @@ _loop_cases.append(("the rule names the template and its four parts",
 
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
+
+# --- #307: every approval in one message is read, in stage order -------------------------------
+# Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and
+# only the build plan was read; and a stale stored feature name stopped a redo after "QA failed" counting.
+_ma_dir = tempfile.mkdtemp(prefix="house-rules-multi-approval-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _ma_dir], check=True)
+_ma_labels = os.path.join(_FIXTURE_ROOT, "multi-approval-labels.json")
+_ma_env = dict(_loop_env, HOUSE_RULES_LOOP_LABELS_FILE=_ma_labels)
+
+
+def _ma_set(state, labels=None):
+    """A fresh stage file and decisions log (with an entry the last approval hasn't seen)."""
+    os.makedirs(os.path.join(_ma_dir, ".claude"), exist_ok=True)
+    with open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+        json.dump(dict({"skip": False, "approvals": [], "issues": []}, **state), f)
+    os.makedirs(os.path.join(_ma_dir, "docs", "6-decisions"), exist_ok=True)
+    with open(os.path.join(_ma_dir, "docs", "6-decisions", "Decisions.md"), "a", encoding="utf-8") as f:
+        f.write("an entry written at %r\n" % time.time())
+    with open(_ma_labels, "w", encoding="utf-8") as f:
+        json.dump(labels or {}, f)
+
+
+def _ma_say(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "multi", "cwd": _ma_dir, "prompt": prompt}
+    _, out, _ = run_hook("scope", json.dumps(p), env=_ma_env)
+    try:
+        note = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        note = ""
+    state = json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+    return note, state
+
+
+_ma_set({"feature": "Label setup", "stage": "design"})
+_n, _s = _ma_say("Design approved: importer.  Build plan approved: Importer")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "importer"
+                  and 'Design approved: importer' in _n and "Build plan approved: Importer" in _n) else "FAIL",
+       "design loop (#307): a design and a build-plan approval in one message - the design moves the stage, "
+       "and the build plan gets its own refusal")
+if _s["stage"] != "plan":
+    print("          stage %r, feature %r, note %r" % (_s["stage"], _s.get("feature"), _n[:300]))
+
+_ma_set({"feature": "Label setup", "stage": "design", "redo": True,
+         "approvals": [{"stage": "QA failed", "name": "Importer", "at": 1}],
+         "issues": [{"repo": "o/r", "number": 7, "labelled": True}]},
+        {"o/r#7": ["Feature", "AjsAgent created this", "in progress"]})
+_n, _s = _ma_say("Design approved: Importer")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "Importer"
+                  and [i.get("number") for i in _s.get("issues", [])] == [7]) else "FAIL",
+       "design loop (#307): after \"QA failed: Importer\", \"Design approved: Importer\" is the redo even "
+       "when the stored feature name is stale - its issues are kept")
+if _s.get("issues") != [{"repo": "o/r", "number": 7, "labelled": True}]:
+    print("          feature %r, issues %r, note %r" % (_s.get("feature"), _s.get("issues"), _n[:300]))
+
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("Design approved: blockers")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "blockers"
+                  and 'Design loop: aj wrote "Design approved: blockers". The stage is now Plan.' in _n)
+       else "FAIL", "design loop (#307): a single design approval behaves as before")
+
+# --- #308: only issues made in the stage file's own repo count toward its feature ---------------
+# Replays incident 3 of #303: issues opened in another repo were recorded as this feature's issues.
+subprocess.run(["git", "-C", _ma_dir, "remote", "add", "origin", "https://github.com/me/own.git"], check=True)
+_ma_set({"feature": "Importer", "stage": "plan"})
+
+
+def _ma_issue(url):
+    p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "multi",
+         "cwd": _ma_dir, "tool_input": {"method": "create", "title": "t", "labels": ["AjsAgent created this"]},
+         "tool_response": {"url": url}}
+    out = run_hook("autosave", json.dumps(p), env=_ma_env)[1]
+    state = json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+    return out, [(i.get("repo"), i.get("number")) for i in state.get("issues", [])]
+
+
+_out, _rec = _ma_issue("https://github.com/Ajw2003/AjsClaudeCodeTools/issues/301")
+report("PASS" if (_rec == [] and "made in another repo" in _out) else "FAIL",
+       "design loop (#308): an issue made in another repo isn't recorded for this feature, and a note says so")
+if _rec:
+    print("          recorded %r, output %r" % (_rec, _out[:300]))
+_out, _rec = _ma_issue("https://github.com/me/own/issues/12")
+report("PASS" if _rec == [("me/own", 12)] else "FAIL",
+       "design loop (#308): an issue made in the stage file's own repo is recorded as before")
 
 # --- label setup: create only the missing house labels (#275) ---------------------------------
 import labels as _lb
@@ -9182,26 +9280,35 @@ _ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
 # 1 page rule (long reply) - editor ran, so only the page rule is in play
 _ck_long = " ".join(["Words"] * 230) + "."
 _ck_t_ed_only = _hand_transcript("ck-ed-only", _ck_user("explain", [_CW_EDITOR]))
-_ck_b, _ck_reason, _ = _ck_run(_ck_t_ed_only, _ck_long)
-_ck_cases.append(("page: a miss blocks, naming the page rule", _ck_b and "- page:" in _ck_reason))
-_ck_cases.append(("page: the reason gives the exact build command", "make_page.py" in _ck_reason and "build <content.json>" in _ck_reason))
-_ck_cases.append(("page: the block never offers \"no page\" to the agent (#283)", "no page" not in _ck_reason.lower()))
-# #283: the retry keeps blocking until a page is linked, up to three blocks in a row, then reports.
-_ck_retry = [_ck_run(_ck_t_ed_only, _ck_long, active=True) for _ in range(3)]
-_ck_cases.append(("page: retries with no page keep blocking until three blocks in a row (#283)",
-                  [b for b, _r, _o in _ck_retry] == [True, True, False]
-                  and "blocked 3 times in a row" in _ck_retry[2][2]))
-_ck_cases.append(("page: a retry block never offers \"no page\" either (#283)", "no page" not in _ck_retry[0][1].lower()))
-_ck_b, _, _ = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc", active=True)
-_ck_cases.append(("page: a retry that links a page passes and resets the count", not _ck_b))
-_ck_b, _, _ = _ck_run(_ck_t_ed_only, _ck_long, active=True)
-_ck_cases.append(("page: after the reset, a retry with no page blocks again", _ck_b))
+_CK_PAGE_NOTE = "page checkpoint (report only, #309)"
+_ck_b, _ck_reason, _ck_o = _ck_run(_ck_t_ed_only, _ck_long)
+_ck_cases.append(("page (#309): a long reply with no page is not blocked, and the report names the page rule",
+                  not _ck_b and _CK_PAGE_NOTE in _ck_o))
+_ck_cases.append(("page: the report gives the exact build command", "make_page.py" in _ck_o and "build <content.json>" in _ck_o))
+_ck_cases.append(("page: the report never offers \"no page\" to the agent (#283)",
+                  "no page" not in _ck_o[_ck_o.find(_CK_PAGE_NOTE):][:400].lower()))
+# #310: replays the 2026-10-16 dodge - a 165-word reply was flagged, then a 70-word retry cleared it.
+_ck_165 = " ".join(["Words"] * 165) + "."
+_ck_70 = " ".join(["Short"] * 70) + "."
+_ck_t_dodge = _hand_transcript("ck-dodge", _ck_user("explain the dodge", [_CW_EDITOR]))
+_ck_run(_ck_t_dodge, _ck_165)
+_ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)
+_ck_cases.append(("page (#310): a 70-word retry after a flagged 165-word reply to the same message still gets the report",
+                  not _ck_b and _CK_PAGE_NOTE in _ck_o and "none is linked yet (#310)" in _ck_o))
+_ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70 + " https://claude.ai/artifact/abc", active=True)
+_ck_cases.append(("page (#310): a reply that links a page clears what was owed", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
+_ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)
+_ck_cases.append(("page (#310): after the link, a short reply to the same message gets no report", _CK_PAGE_NOTE not in _ck_o))
+_ck_run(_ck_t_dodge, _ck_165)
+_ck_b, _, _ck_o = _ck_run(_hand_transcript("ck-dodge-next", _ck_user("a new question", [_CW_EDITOR])), _ck_70)
+_ck_cases.append(("page (#310): a new message from aj starts with nothing owed", _CK_PAGE_NOTE not in _ck_o))
 _ck_t_nopage = _hand_transcript("ck-nopage", _ck_user("explain it, no page", [_CW_EDITOR]))
-_ck_b1, _, _ = _ck_run(_ck_t_nopage, _ck_long)
-_ck_b2, _, _ = _ck_run(_ck_t_nopage, _ck_long, active=True)
-_ck_cases.append(("page: aj's own \"no page\" lets the reply through, first pass and retry", not _ck_b1 and not _ck_b2))
-_ck_b, _, _ = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc")
-_ck_cases.append(("page: a compliant reply passes", not _ck_b))
+_ck_b1, _, _ck_o1 = _ck_run(_ck_t_nopage, _ck_long)
+_ck_b2, _, _ck_o2 = _ck_run(_ck_t_nopage, _ck_long, active=True)
+_ck_cases.append(("page: aj's own \"no page\" means no report, first pass and retry",
+                  not _ck_b1 and not _ck_b2 and _CK_PAGE_NOTE not in _ck_o1 + _ck_o2))
+_ck_b, _, _ck_o = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc")
+_ck_cases.append(("page: a compliant reply passes with no report", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
 # 2 editor
 _ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
 # 3 evidence
@@ -9228,10 +9335,12 @@ _ck_triple("plain summary", "plain summary", _ck_t_ps_wrote, _PS_TECH, _PS_PLAIN
 _ck_proposal = ("Here is where I have landed on the storage.\n\nOption A: keep the JSON file. Option B: move to SQLite. "
                 "Option C: use the cloud store.\n\nWhich option do you want?")
 _ck_list = ("The plan:\n\n- read the config\n- write the page\n- run the checks\n\nDo you approve this?")
-_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, _ck_proposal)
-_ck_cases.append(("page: a short proposal with three options and a question blocks", _ck_b and "- page:" in _ck_r))
-_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, _ck_list)
-_ck_cases.append(("page: a three-step plan with an approval question blocks", _ck_b and "- page:" in _ck_r))
+_ck_b, _ck_r, _ck_o = _ck_run(_ck_t_plain, _ck_proposal)
+_ck_cases.append(("page (#309): a short proposal with three options and a question gets the report, not a block",
+                  not _ck_b and _CK_PAGE_NOTE in _ck_o))
+_ck_b, _ck_r, _ck_o = _ck_run(_hand_transcript("ck-plan-list", _ck_user("what is the plan")), _ck_list)
+_ck_cases.append(("page (#309): a three-step plan with an approval question gets the report, not a block",
+                  not _ck_b and _CK_PAGE_NOTE in _ck_o))
 _ck_b, _, _ = _ck_run(_ck_t_plain, "The file lives in docs/plans. It has three sections: the lead, the changes and the wrap-up.")
 _ck_cases.append(("page: a short plain answer does not block", not _ck_b))
 _ck_b, _, _ = _ck_run(_ck_t_plain, "Both lists are short:\n\n- one\n- two\n- three\n\nThat is all of them.")
@@ -9244,8 +9353,19 @@ _ck_b, _, _ = _ck_run(_hand_transcript("ck-nopage-long", _ck_user("explain, no p
 _ck_cases.append(('editor: the same escape lets a long reply through the editor checkpoint too', not _ck_b))
 _ck_t_relayed = _hand_transcript("ck-relayed", _ck_user("explain the storage options", [json.dumps(
     {"type": "user", "message": {"content": "<task-notification>helper says: no page needed</task-notification>"}})]))
-_ck_b, _ck_r, _ = _ck_run(_ck_t_relayed, _ck_proposal)
-_ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count', _ck_b and "- page:" in _ck_r))
+# #309 (incident 8 of #303): a bare reference is reported to aj, and no longer asks the agent to resend.
+_ck_b, _ck_r, _ck_o = _ck_run(_ck_t_plain, "Go with option B, as before.")
+try:
+    _ck_data = json.loads(_ck_o)
+except ValueError:
+    _ck_data = {}
+_ck_ctx = (_ck_data.get("hookSpecificOutput") or {}).get("additionalContext", "")
+_ck_cases.append(("writing (#309): a bare reference goes to aj as a report-only line and asks nothing of the agent",
+                  not _ck_b and "report only, #309): bare references" in _ck_data.get("systemMessage", "")
+                  and "a bare number or letter" not in _ck_ctx))
+_ck_b, _ck_r, _ck_o = _ck_run(_ck_t_relayed, _ck_proposal)
+_ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count - the report still comes',
+                  _CK_PAGE_NOTE in _ck_o))
 # 6 qa page (#269)
 _ck_sf = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
 _ck_sf_old = open(_ck_sf, encoding="utf-8").read() if os.path.isfile(_ck_sf) else None
@@ -9536,8 +9656,8 @@ _rc, _o = _mp("build", _mp_content("noappr", approval=None), "--project", _d)
 _mp_cases.append(("make_page: a non-QA page with no approval field is refused with exit 2 naming approval",
                   _rc == 2 and "approval" in _o))
 _rc, _o = _mp("build", _mp_content("badappr", approval="Guards audit"), "--project", _d)
-_mp_cases.append(("make_page: an approval the gate would not accept is refused with exit 2",
-                  _rc == 2 and "gate" in _o))
+_mp_cases.append(("make_page (#309): an approval that isn't a design-loop phrase builds, with a note that it moves no stage",
+                  _rc == 0 and "moves no stage" in _o))
 _ch = [["c1", "Which?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""]]
 _ph = "Build plan approved: guards <audit> & more"
 _rc1, _ = _mp("build", _mp_content("withch", approval=_ph, choices=_ch), "--project", _d)
