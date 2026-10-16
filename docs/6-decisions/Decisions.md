@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-16 - QA passed: plugin restructure 2.68.1 patch
+
+**Context.** The 2.68.1 patch (#307 to #311) was built on `ccr-7dcf4ee2-zp3mm8`, pull request #312 (house-rules
+2.68.1: unblock the design loop before the restructure), QA page `docs/plans/2026-10-16-patch-2-68-1-qa.html`.
+`verify.py` passed 839 checks twice, and two nested sessions with the patched plugin confirmed the double approval
+and the page report.
+
+**Decision.** aj passed QA ("QA passed: plugin restructure 2.68.1 patch"). The design loop refused to record it,
+because the parent issue #306 (restructure into a shared core with project boundaries and six optional
+sub-plugins) is rightly still `in progress`: the loop can't pass QA on one step of a larger feature. The patch
+issues keep `needs review` until aj closes them, and #306 is not relabelled to force the stage. How the loop
+should track a multi-step feature is added to the grilling session's list.
+
+**Status.** Standing.
+
 ## 2026-10-16 - Plugin restructure: the build plan for the 2.68.1 patch
 
 **Context.** aj approved the restructure direction (entry below). The systems document is
