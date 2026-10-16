@@ -127,15 +127,15 @@ Every one of these properties is tested by the suite below.
 
 ### What trips the guard
 
-Every match is refused, and the refusal names the safe way to do the job (#291). aj is asked only
-when the command's description says `no safe way: <source>`, citing the source that proves it.
-Background work, hidden windows, `nohup`, a trailing `&`, tail/head on a wait and process kills no
-longer trip anything (#292).
-
 | Rule | Patterns |
 |---|---|
 | Commit constantly on my own branches, never on theirs | `git push` and `git commit` (a plain push or commit runs unasked on an `AjsAgent/` (or `claude/`, `ccr-`, helper `worktree-agent-`) branch, judged where the command runs; extra prefixes via `HOUSE_RULES_OWNED_BRANCHES`; on any other branch it is refused, naming a new `AjsAgent/` branch); force push, `--all`/`--mirror` and branch deletes are refused on every branch; `reset` runs unasked only on my branch with a clean tree and every commit on a remote (#153); `clean`, `filter-branch` are refused; `merge`, `rebase`, `cherry-pick`, `revert`, `am`, `apply` run on my branch and are refused elsewhere |
 | Never take a destructive action without checking first | `rm`, `Remove-Item`, `del /f`, `rmdir /s` (refused when recursive, or when a target has uncommitted changes or was never committed; a committed, unchanged file is deleted unasked, since git can bring it back), `Clear-Content`, `truncate -s`, `git checkout --`/`git restore` (refused over uncommitted work; unasked on my branch with a clean tree and every commit pushed, #153), `git stash drop`/`clear` |
+
+Every match is refused, and the refusal names the safe way to do the job (#291). aj is asked only
+when the command's description says `no safe way: <source>`, citing the source that proves it.
+Background work, hidden windows, `nohup`, a trailing `&`, tail/head on a wait and process kills no
+longer trip anything (#292).
 
 `git status`, `git log`, `git diff`, `git show` and every ordinary command pass through
 silently — read-only inspection is explicitly fine under the rules. So do the navigational git

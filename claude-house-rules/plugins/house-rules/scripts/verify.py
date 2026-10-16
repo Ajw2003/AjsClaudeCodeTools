@@ -1240,15 +1240,16 @@ _gw_new = os.path.join(_gw_dir, "new-file.css")
 
 code, out, err = run_hook("guardwrite", guardwrite_payload(_gw_existing))
 if (
-    '"permissionDecision":"ask"' in out
+    '"permissionDecision":"deny"' in out
     and RULE_EDIT_IN_PLACE in out
     and os.path.basename(_gw_existing) in out
     and "2 existing line(s)" in out
+    and "edit it in place with the Edit tool" in out
 ):
-    report("PASS", "Write to a file that already exists asks before replacing it")
-    print("          names the file, cites the rule, and counts the discarded lines")
+    report("PASS", "Write over a file I did not create is refused, naming the fix: edit it in place (#293)")
+    print("          names the file, cites the rule, counts the discarded lines and gives the fix")
 else:
-    report("FAIL", "Write to a file that already exists asks before replacing it")
+    report("FAIL", "Write over a file I did not create is refused, naming the fix: edit it in place (#293)")
     print(f"          got: {out}")
 
 code, out, err = run_hook("guardwrite", guardwrite_payload(_gw_new))
@@ -6329,10 +6330,12 @@ _geoff = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="off")
 _g1, _g2 = run_hook("guard", _g_payload, env=_ge), run_hook("guardwrite", _gw_payload, env=_ge)
 _g3, _g4 = run_hook("guard", _g_payload, env=_geoff), run_hook("guardwrite", _gw_payload, env=_geoff)
 commit_case(
-    "guard and guardwrite: the prompt says 'If nobody answers within 5 minutes...' before the Approve line; off omits it",
-    all("If nobody answers within 5 minutes, this is " + _gline in x[1] for x in (_g1, _g2))
-    and all(x[1].index("If nobody answers") < x[1].index("Approve to let it run") for x in (_g1, _g2))
-    and all(_gline not in x[1] and "Approve to let it run" in x[1] for x in (_g3, _g4)),
+    # #293: guardwrite no longer asks (a whole-file Write is refused), so only guard's cited prompt carries the line.
+    "guard: the prompt says 'If nobody answers within 5 minutes...' before the Approve line; off omits it",
+    "If nobody answers within 5 minutes, this is " + _gline in _g1[1]
+    and _g1[1].index("If nobody answers") < _g1[1].index("Approve to let it run")
+    and _gline not in _g3[1] and "Approve to let it run" in _g3[1]
+    and '"permissionDecision":"deny"' in _g2[1] and _gline not in _g2[1],
     "guard %r | guardwrite %r | off %r" % (_g1[1][-250:], _g2[1][-250:], _g3[1][-150:]),
 )
 
@@ -9649,7 +9652,25 @@ _nb_old = os.path.join(_nb_r, "a.py")
 _, _o, _ = run_hook("guardwrite", guardwrite_payload(_nb_new), env=_project_env(_nb_r))
 _nb_cases.append(("Write over an untracked file made in the project goes through with no prompt", _o == ""))
 _, _o, _ = run_hook("guardwrite", guardwrite_payload(_nb_old), env=_project_env(_nb_r))
-_nb_cases.append(("Write over a tracked file still asks", '"permissionDecision":"ask"' in _o))
+_nb_cases.append(("Write over a tracked file is refused, naming the in-place fix (#293)",
+                  '"permissionDecision":"deny"' in _o and "edit it in place" in _o))
+# #293: each enforced workflow check refuses and names its exact fix (the page, credit-line and
+# helper-cap texts are checked where those checks are tested).
+_e293 = dict(os.environ, HOUSE_RULES_ATTRIBUTION="on", HOUSE_RULES_ISSUES="on", HOUSE_RULES_CLEAR_WRITING="on",
+             HOUSE_RULES_AGENTS="on")
+_, _o, _ = run_hook("guardgithub", json.dumps({"session_id": "v293", "tool_name": "mcp__github__create_branch",
+                                                "tool_input": {"branch": "claude/topic"}}), env=_e293)
+_nb_cases.append(("enforced: a claude/ branch on GitHub is refused, naming AjsAgent/<topic> (#293)",
+                  '"permissionDecision":"deny"' in _o and "AjsAgent/<topic>" in _o))
+_, _o, _ = run_hook("guardgithub", json.dumps({"session_id": "v293", "tool_name": "mcp__github__issue_write",
+                                                "tool_input": {"method": "create", "title": "t", "body": "Just a body."}}),
+                    env=_e293)
+_nb_cases.append(("enforced: an issue missing its sections is refused, naming each missing section (#293)",
+                  '"permissionDecision":"deny"' in _o and "Depends on" in _o and "Done when" in _o and "Add them" in _o))
+_, _o, _ = run_hook("agentcap", json.dumps({"session_id": "v293", "agent_id": "sub1", "tool_name": "Agent",
+                                             "tool_input": {"prompt": "x"}}), env=_e293)
+_nb_cases.append(("enforced: a helper starting its own helper is refused, naming the fix: report back (#293)",
+                  '"permissionDecision":"deny"' in _o and "Report back to the parent" in _o))
 _nb_pg = os.path.join(_nb_r, "built.html")
 with open(_nb_pg, "w", encoding="utf-8") as f:
     f.write("<!doctype html>\n<!-- house-rules make_page 9.9.9 -->\n<html></html>\n")

@@ -2835,36 +2835,20 @@ def event_guardwrite():
 
     new_lines = _guardwrite_new_line_count(payload)
 
+    # #293: refused outright with the fix named, instead of asking. A file I created myself already
+    # went through above (never-blocked list, #289).
     lines = [
-        "Your house rules want you asked before this runs:",
-        "",
-        "  Rule: %s" % RULE_EDIT_IN_PLACE,
-        "    - This Write replaces the ENTIRE existing contents of `%s`." % file_path,
+        "House rules, %s: refused. This Write replaces the ENTIRE existing contents of `%s`, a file "
+        "I did not create." % (RULE_EDIT_IN_PLACE, file_path),
     ]
     if old_lines is not None and new_lines is not None:
-        lines.append(
-            "    - %d existing line(s) would be discarded and replaced with %d new line(s)."
-            % (old_lines, new_lines)
-        )
+        lines.append("%d existing line(s) would be discarded and replaced with %d new line(s)." % (old_lines, new_lines))
     lines.append(
-        "    - Editing in place (the Edit tool, or a targeted patch) changes only the lines "
-        "that need to change. Write throws away everything else in the file, whether or not "
-        "this call meant to touch it."
+        "Fix: edit it in place with the Edit tool, changing only the lines that need to change. A whole-file "
+        "rewrite needs aj's approval by name first, with what it discards and why an in-place edit will not do."
     )
-    lines.append("")
-    lines.append(
-        "Before approving, Claude should already have said, in chat, exactly what existing "
-        "content this discards and why an in-place edit will not do."
-    )
-    lines.append("")
-    _tl = _prompt_timeout_line()
-    if _tl:
-        lines.append(_tl)
-    lines.append(
-        "Approve to let it run, or reject and Claude will explain what it was about to do."
-    )
-    reason_text = "\n".join(lines)
-    _ask_or_refuse(payload, reason_text)
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                 "permissionDecisionReason": "\n".join(lines)}})
     return 0
 
 
