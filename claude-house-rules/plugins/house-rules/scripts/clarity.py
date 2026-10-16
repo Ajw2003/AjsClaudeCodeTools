@@ -119,7 +119,8 @@ def vague_claims(text):
 # "#229" on its own, or "option B" / "choice 2" with no name after it. Allowed: "(#229)" after the
 # thing's name, "#229 (title)", "#229: title", "#229, #230 and #231" inside one parenthesis.
 _ISSUE_REF_RE = re.compile(r"(?<![\w/&])#(\d+)\b")
-_OPTION_REF_RE = re.compile(r"\b([Oo]ption|[Cc]hoice|[Ss]tep)\s+([A-Z]|\d+)\b")
+# #303: "I" is left out - in "the option I suggested" it is the pronoun, not a lettered option.
+_OPTION_REF_RE = re.compile(r"\b([Oo]ption|[Cc]hoice|[Ss]tep)\s+([A-HJ-Z]|\d+)\b")
 
 
 def _inside_parens(text, pos):

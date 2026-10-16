@@ -7,6 +7,36 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-16 - The design loop and the parity check are off by default until #303 is fixed
+
+**Context.** Issue #303 records eight incidents from an `Ajw2003/Unblocked` session in which the
+design loop's checks contradicted each other and blocked work. aj rated it the highest severity and
+asked for the conflicting checks to be switched off at once, in a patch release, so sessions can
+work. The same lock then refused this fix's own edits, because the hooks run from the installed
+plugin rather than the repo. aj chose to lift it for this session with `HOUSE_RULES_LOOP=off` in
+the untracked `.claude/settings.local.json`.
+
+**Decision.** Plugin 2.68.1 changes three things:
+- `_loop_enabled` and `_parity_enabled` in `scripts/hook.py` now default to off, and `=on` turns
+  each back on. The loop switch covers incidents 1 to 4 and 6: the approval parsing, the stage
+  tracker, the label check, the shell-write lock and the page checks. The parity switch covers
+  incident 5.
+- `check_approval` in `scripts/make_page.py` skips the gate-phrase check while the loop is off
+  (incident 7). The approval field must still be one line.
+- `_OPTION_REF_RE` in `scripts/clarity.py` no longer matches the letter I (incident 8). This is
+  a direct fix rather than a switch-off, because switching off clear writing would have dropped
+  every other writing check along with it.
+
+**Why.** Each check was already behind its own switch, so flipping the default is the smallest
+change that lets sessions work, and it is reversed by flipping the default back. `verify.py` still
+runs every loop and parity case with the check switched on, so neither mechanism goes untested
+while it is off.
+
+**Status.** Temporary. Each contradiction gets its own fix and `verify.py` case, then the checks come back on
+one at a time, as #303's done-criteria say.
+
+---
+
 ## 2026-10-15 - Guards audit: the build plan
 
 **Context.** aj approved the design ("Design approved: guards audit"). The systems document is

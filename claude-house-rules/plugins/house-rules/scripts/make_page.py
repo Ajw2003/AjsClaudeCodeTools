@@ -319,6 +319,8 @@ def check_approval(page):
             "\"Build plan approved: <feature>\" or \"Design approved: <feature>\" (a QA page gets \"QA passed: <feature>\")")
     if appr != appr.strip() or "\n" in appr:
         die("approval must be one line with no spaces at either end")
+    if os.environ.get("HOUSE_RULES_LOOP", "off").strip().lower() in ("off", "0", "false", "no"):
+        return  # #303: with the design loop off nothing reads the phrase, so any one line will do
     design, plan, qa = load_gate_patterns()
     qa_page = is_qa_approval(page)
     pats = [qa] if qa_page else [design, plan]
