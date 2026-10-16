@@ -110,28 +110,31 @@ def contradictions():
 
 def proposed():
     """One shared core, five sub-plugins on top, each optional."""
-    b = text(20, 32, "Proposed: a shared core and five optional sub-plugins", size=18, weight="bold")
-    b += box(250, 330, 600, 96, "ok")
-    b += text(550, 358, "house-rules core", size=16, anchor="middle", weight="bold")
-    b += text(550, 380, "hook runner, one config file (name, credit, labels, owner), one state store,",
+    b = text(20, 32, "Proposed: a shared core and six optional sub-plugins", size=18, weight="bold")
+    b += box(220, 320, 660, 112, "ok")
+    b += text(550, 346, "house-rules core", size=16, anchor="middle", weight="bold")
+    b += text(550, 368, "project boundaries: which repo each message belongs to, state kept per repo,",
               "mute", 12, "middle")
-    b += text(550, 398, "git and transcript helpers, rule loading from one source per rule", "mute", 12, "middle")
-    b += text(550, 416, "every failure says so", "mute", 12, "middle")
+    b += text(550, 386, "other repos' work becomes an issue there; one config (userConfig), one state store,",
+              "mute", 12, "middle")
+    b += text(550, 404, "git and transcript helpers, one source per rule; every failure says so", "mute", 12,
+              "middle")
     subs = [
-        ("Safe git", "guard, overwrite guard,\ncredit check, prompt timer"),
-        ("Design loop", "stages, approvals, issues,\npages, QA, end-of-reply checks"),
-        ("Writing", "one clarity checker,\neditor helper, plain docs"),
-        ("Delegation", "helpers, cap, audit,\nworktree autosave"),
+        ("Safe git", "guard, overwrite guard,\ncredit check,\nprompt timer"),
+        ("Design loop", "stages, approvals,\npages, QA, after-PR\nchecks, visuals"),
+        ("Session triage", "clean a transcript,\nthen file issues\nfrom it"),
+        ("Writing", "one clarity checker,\neditor helper,\nplain docs"),
+        ("Delegation", "helpers, cap,\naudit, worktree\nautosave"),
         ("Docs", "doc tiers, harvest,\ndoc-ref, archivist"),
     ]
     x = 20
     for name, what in subs:
-        b += box(x, 90, 200, 120, "cool")
-        b += text(x + 100, 120, name, size=15, anchor="middle", weight="bold")
+        b += box(x, 90, 166, 130, "cool")
+        b += text(x + 83, 118, name, size=15, anchor="middle", weight="bold")
         for i, line in enumerate(what.split("\n")):
-            b += text(x + 100, 146 + 18 * i, line, "mute", 12, "middle")
-        b += '<line x1="%d" y1="210" x2="%d" y2="330" class="line" stroke-width="1.5"/>' % (x + 100, 300 + (x - 20) // 2)
-        x += 216
+            b += text(x + 83, 144 + 18 * i, line, "mute", 12, "middle")
+        b += '<line x1="%d" y1="220" x2="%d" y2="320" class="line" stroke-width="1.5"/>' % (x + 83, 260 + (x - 20) * 580 // 900)
+        x += 178
     b += text(20, 70, "Each sub-plugin installs on its own and talks to the others only through the core.", "mute", 13)
     b += text(20, 460, "Goes: the self-updater, the hardcoded identity, the old step-card template, text-drift tests.",
               "mute", 13)

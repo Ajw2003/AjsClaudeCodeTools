@@ -12,6 +12,17 @@ so that the plugin can work for anyone, not only for aj's accounts. The raw find
 | [03-hook-first-half.md](03-hook-first-half.md) | `hook.py` lines 1-4200: inventory, logic against logic |
 | [04-hook-second-half.md](04-hook-second-half.md) | `hook.py` lines 4200-8365: inventory, logic against logic |
 | [05-tests-and-scripts.md](05-tests-and-scripts.md) | `verify.py`, `run.sh`, `clarity.py`, `make_page.py` and the other scripts |
+| [06-recent-issues.md](06-recent-issues.md) | Ten recent issues (#287, #296-#304) against these recommendations, and what they change |
+
+**Revised the same day for the recent issues.** Three recommendations below changed after reading
+them (details in file 6). A 2.68.1 patch for the issue "the design loop is broken and blocks
+sessions" (#303) ships before anything else. The core gains project boundaries, so it knows which
+repo each message belongs to, from the issues "a session finishes its own task" (#301) and
+"approvals are dropped silently when the session folder isn't a git repo" (#296). And a sixth
+sub-plugin, Session triage, cleans transcripts of secrets before they are shared, from the issue
+"a two-helper tool that cleans a session transcript, then files issues from it" (#304). The
+suggested core identity is now aj's own goal from that issue: safe work on several projects at
+once. The published page carries the revised version.
 
 The diagrams in `diagrams/` are drawn by `make_diagrams.py` from the counts below.
 

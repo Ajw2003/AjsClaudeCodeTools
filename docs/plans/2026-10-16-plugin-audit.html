@@ -268,10 +268,10 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "House Rules Plugin Audit",
-  "eyebrow": "Audit of house-rules 2.68.0 before a restructure · findings, diagrams and recommendations · nothing built yet",
+  "eyebrow": "Audit of house-rules 2.68.0 before a restructure, revised for ten recent issues · nothing built yet",
   "approval": "Design approved: plugin restructure direction",
   "short": {
-    "lead": "I read the whole plugin: its rules, docs, hook.py, the test suite and the smaller scripts. It works, and all 832 checks pass, but it no longer agrees with itself. Rules contradict rules in 28 places, docs contradict code in 20, and code contradicts its own logic in 15. It also can't work for anyone but you, because 62 lines in 15 shipped files hard-code your name, your repos or your labels. Most of this comes from one 8,365-line file doing every job, with each rule copied into several places. Claude Code now provides four features that the plugin built for itself, so the restructure can use those instead.",
+    "lead": "I read the whole plugin: its rules, docs, hook.py, the test suite and the smaller scripts. It works, and all 832 checks pass, but it no longer agrees with itself. Rules contradict rules in 28 places, docs contradict code in 20, and code contradicts its own logic in 15. It also can't work for anyone but you, because 62 lines in 15 shipped files have your name, your repos or your labels written directly into them. I then read the ten issues you opened recently, and they change three things: a patch must ship first, the core needs project boundaries, and the plugin gains a sixth part for cleaning transcripts.",
     "hint": "Tap a card to see the evidence behind it.",
     "key": [
       [
@@ -289,7 +289,7 @@ const PAGE = {
         "Today",
         "One file, 30 hook commands, state in five places",
         "",
-        "scripts/hook.py holds 8,365 lines and 284 functions. It answers 9 Claude Code events (moments such as session start or the end of a reply) through 30 entry points, meaning separate commands the events can trigger, and it has 35 on/off switches. State is spread over the temp folder, .git, the repo's .claude/ folder, ~/.claude and GitHub. verify.py is one 9,747-line script, and each of its checks launches hook.py as a separate program run.",
+        "scripts/hook.py, the script Claude Code runs at each event, holds 8,365 lines and 284 functions. It answers 9 Claude Code events (moments such as session start or the end of a reply). It does this through 30 entry points, meaning separate commands the events can trigger. It also has 35 on/off switches. State is spread over the temp folder, .git, the repo's .claude/ folder, ~/.claude and GitHub. verify.py is one 9,747-line script, and each of its checks starts hook.py again as its own separate run.",
         "Nothing from you.",
         {
           "src": "2026-10-16-plugin-audit-pics/today.svg",
@@ -311,53 +311,117 @@ const PAGE = {
         }
       ],
       [
+        "flask",
+        "Recent issues",
+        "Your issues confirm the audit and widen it",
+        "",
+        "The issue \"the design loop is broken and blocks sessions\" (#303) lists eight incidents from your Unblocked session, and each one matches an audit finding. The issue \"a two-helper tool that cleans a session transcript\" (#304) states the plugin's goal in your words: safe work on several projects at once, each session in its own context, with transcripts usable as evidence. The full mapping is in docs/audits/2026-10-16-plugin-audit/06-recent-issues.md.",
+        "Nothing from you."
+      ],
+      [
         "bulb",
         "Built-ins",
         "Claude Code now does four of these jobs",
         "",
-        "Plugin dependencies: one plugin can require another, so a sub-plugin can require a shared core. userConfig: a settings list each user fills in once, with their own name, credit line and labels. autoUpdate: a marketplace setting that fetches new plugin versions by itself, plus the /reload-plugins command to load them in a running session. And a data folder for each plugin, whose location is held in CLAUDE_PLUGIN_DATA. A guide helper checked all four against the official plugin docs today.",
+        "Plugin dependencies: one plugin can require another, so a sub-plugin can require a shared core. userConfig: a settings list each user fills in once, with their own name, credit line and labels. autoUpdate: a marketplace setting that fetches new plugin versions by itself, plus the /reload-plugins command to load them in a running session. The fourth is a data folder for each plugin, whose location is stored in a setting called CLAUDE_PLUGIN_DATA. A guide helper checked all four against the official plugin docs today.",
         "Nothing from you."
       ],
       [
         "check",
         "Your verdict",
-        "Approve the direction, then the grilling",
+        "Three picks, then the grilling",
         "you",
-        "Pick the core identity under Choices, which decides what the plugin installs by default. Approving starts the grilling session, where I ask you one question at a time to settle the 28 rule contradictions before anything is built.",
-        "Send the approval line with your pick for the core identity, or tell me what to change."
+        "Pick the core identity, how much the patch switches off, and when the after-pull-request checks get built. Approving ships the patch first, then starts the grilling session, where I ask you one question at a time to settle the 28 rule contradictions before the restructure is built.",
+        "Send the approval line with your three picks, or tell me what to change."
       ]
     ]
   },
   "changes": [
     [
       "new",
-      "A shared core plugin",
-      "Hook runner, one config, one state store, rules from one source each.",
+      "A patch release first (2.68.1)",
+      "Switches off the checks behind the eight incidents in the issue \"the design loop is broken and blocks sessions\" (#303).",
       null,
-      "Every sub-plugin lists the core as a dependency in its plugin.json, so installing any one of them installs the core too. Identity (name, credit line, labels, owner, branch prefix) comes from userConfig, the settings each user fills in, instead of being written into the code. Every failure says so, including a missing Python.",
+      "Approvals: the plugin reads every approval phrase in a message, and a design approval always sets the feature name. Issues are recorded only when they were created in the repo that owns the stage file (the file that records which design stage the feature is in). Four checks stop blocking and only report. The first refuses shell writes while code is locked. The second is the re-creation check, which demands a kept-and-dropped list whenever it thinks code is being rewritten. The third is the page checkpoint, the end-of-reply check that demands a page for long replies. The fourth is the writing check that flags a bare reference, such as an issue number with no title beside it. The page builder accepts any approval line. The fix approved earlier today, which stops a shorter retry from clearing the page checkpoint, is included in this patch because it changes the same check.",
       [
-        "Everything lives in one plugin, and your identity is written directly into the code in 62 lines.",
-        "A core that holds only what every part needs, configured per user.",
-        "Anyone can install it, and each user sets their own values once with /plugin configure."
+        "Sessions in other repos are stuck: seven blocks in a row in Unblocked, and approvals that never register.",
+        "The broken checks report instead of blocking, and the two approval bugs are fixed, each with a verify.py case.",
+        "Sessions can work again while the restructure is designed."
+      ],
+      null
+    ],
+    [
+      "new",
+      "A shared core with project boundaries",
+      "Works out which repo each message belongs to, and keeps each repo's state apart.",
+      null,
+      "The issue \"a session finishes its own task\" (#301) asks that work for another repo become an issue in that repo, and that the session then go back to its task. The issue \"approvals are dropped silently when the session folder isn't a git repo\" (#296) shows the plugin can't tell which repo a message is for. The core fixes both problems. It also holds three more things. The first is one config, meaning the settings each user fills in once (userConfig), defaulting to your git name, as the issue \"Agent name, credit and branch prefix are configurable\" (#287) proposes. The second is one place where state is stored. The third is one source file per rule.",
+      [
+        "Everything lives in one plugin, state is stored under the name of whichever folder the session opened in, and your identity is written into the code in 62 lines.",
+        "A core that knows which repo it is acting for and is configured per user.",
+        "Anyone can install it, and work for another project never leaks into the session you're in."
       ],
       null,
       {
-        "src": "2026-10-16-plugin-audit-pics/proposed.svg",
-        "alt": "Diagram: five optional sub-plugins (Safe git, Design loop, Writing, Delegation, Docs) sit on one shared core",
-        "caption": "Proposed structure"
+        "before": {
+          "src": "2026-10-16-plugin-audit-pics/today.svg",
+          "alt": "Today: thirty entry points in one hook.py file writing state to five places"
+        },
+        "after": {
+          "src": "2026-10-16-plugin-audit-pics/proposed.svg",
+          "alt": "Proposed: six optional sub-plugins on one shared core with project boundaries"
+        },
+        "caption": "Before and after: today's structure and the proposed one"
       }
     ],
     [
       "new",
-      "Five optional sub-plugins",
-      "Safe git, Design loop, Writing, Delegation and Docs, each installable on its own.",
+      "Six optional sub-plugins",
+      "Safe git, Design loop, Session triage, Writing, Delegation and Docs, each installable on its own.",
       null,
-      "Safe git: the destructive and branch guard, the overwrite guard, credit checks and the prompt timer. Design loop: stages, approvals, issues, pages, QA and the end-of-reply checks. Writing: one clarity checker, the editor helper and plain docs. Delegation: helper agents, the limit on how many run at once, audits and worktree autosave. Docs: the doc tiers, the long-comment harvest, doc-ref pointers and the archivist helper that moves long comments into docs.",
+      "Safe git: the destructive and branch guard, the overwrite guard, credit checks and the prompt timer. Design loop: stages, approvals, pages, QA, the after-pull-request checks and required before-and-after visuals. Session triage: the two helpers from the issue \"a two-helper tool that cleans a session transcript, then files issues from it\" (#304). Writing: one clarity checker, the editor helper and plain docs. Delegation: helper agents, the limit on how many run at once, audits, and autosave for worktrees (separate working copies of the repo that helpers use). Docs: the doc tiers (the six folders under docs/ that each hold one kind of document), the check that moves essay-length code comments into docs, the pointers those moves leave behind, and the archivist helper that does the moving.",
       [
-        "One plugin, all or nothing.",
+        "Everything is one plugin, so you install all of it or none of it.",
         "Each part installs on its own and registers its own end-of-reply checks.",
         "Someone who wants just the git protections installs nothing else."
       ],
+      null
+    ],
+    [
+      "new",
+      "Session triage",
+      "One helper cleans a transcript of secrets, a second files issues from it.",
+      null,
+      "It builds on the session ledger that exists today, the tool that saves a session's record as a file (tools/session_ledger.py and scripts/session_ledger_render.py). It writes those records into docs/sessions/ in this public repo, with no step that removes secrets from them. A scan of the two ledger files committed so far found no credential-shaped strings, but nothing stops the next one. The cleaning helper runs before any ledger is committed or published, and you confirm what it removes.",
+      [
+        "Transcripts can't be shared: the one from your Unblocked session stayed private because a scan found a credential-shaped string in it.",
+        "A cleaned transcript, checked by you, that another session can use as evidence.",
+        "An observation made in one project can be fixed later from another, with the evidence attached."
+      ],
+      null
+    ],
+    [
+      "chg",
+      "Replaced: the issue workflow",
+      "The five-field issue template from the issue \"a session finishes its own task\" (#301).",
+      [
+        "Plan-step counting, a per-feature issue record and label checks, which recorded another repo's issues as this feature's and blocked a session seven times.",
+        "Observation, severity, feature or fix or both, needs research, and up next or backlog. If your message leaves any of these out, I ask you to fill it in."
+      ],
+      "Whether a build plan still gets one parent issue with a child per step is a question for the grilling session.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Waiting for the restructure: the after-pull-request checks",
+      "The issue \"After every pull request, a check makes sure it says how to test it and what's next\" (#297) and its three parts.",
+      [
+        "Approved and planned on the branch AjsAgent/after-pr-answers, which stopped at the Plan stage two hours ago, with only documents written and no code.",
+        "Built inside the Design loop sub-plugin, so the new guard and checkpoint aren't added to hook.py and then moved again."
+      ],
+      "Its agent-name step uses the same userConfig setting as the core, instead of an environment variable set by your setup scripts.",
+      null,
       null
     ],
     [
@@ -368,17 +432,17 @@ const PAGE = {
         "Each rule exists as a summary and a detail file, plus copies in the output style, the agent files, the docs and the code's messages.",
         "One file per rule, from which the injected text and the docs are generated."
       ],
-      "The grilling session decides each contradiction first. Two examples: one rule allows deletes because git can restore them, and another refuses deletes for that same reason. One rule says to run test suites twice, and another says to run them exactly once.",
+      "The grilling session settles each contradiction before the rules are merged into one file each. Two examples: one rule allows deletes because git can restore them, and another refuses deletes for that same reason. One rule says to run test suites twice, and another says to run them exactly once.",
       null,
       null
     ],
     [
       "chg",
-      "End-of-reply checks (event_handover)",
-      "Every check judges the whole turn, meaning all replies since your last message.",
+      "End-of-reply checks and writing checks",
+      "Every check judges the whole turn, and one writing checker understands definitions and quotes.",
       [
-        "The card, plain-summary, writing, long-reply and choices checks read only the newest message.",
-        "Each check reads every reply since your last message, so a short retry can't clear a block."
+        "Five checks read only the newest message; two writing checkers disagree, and neither sees a defined or quoted term, so the word \"I\" and one technical word were flagged again and again.",
+        "Each check reads every reply since your last message, and a term defined in the same text, or quoted while reporting a flag, isn't flagged."
       ],
       "Two page-saved checklist entries that never run are removed (hook.py:7485, 7519-7520).",
       null,
@@ -386,70 +450,34 @@ const PAGE = {
     ],
     [
       "chg",
-      "Writing checks",
-      "One checker everywhere, aware of definitions and quotes.",
+      "Replaced: verify.py, and the version check",
+      "Small tests per module, and Claude Code's own autoUpdate.",
       [
-        "clarity.py and plain_docs_check.py treat text in backticks differently, and neither notices when a term is defined in the text or quoted.",
-        "One checker; a term defined in the same text, or quoted while reporting a flag, isn't flagged."
+        "One 9,747-line test script with 832 checks, 214 lines of which check that copies of text haven't drifted apart. Also a self-updater whose notice wrongly said the old version was still running.",
+        "Small tests for the logic in each module plus a few full runs per hook event; marketplace autoUpdate, with a notice that only says /reload-plugins loads a newer version."
       ],
-      "This is why one technical word was flagged three times in a row today, even after a reply explained it.",
+      "The test count becomes a result, not a goal. hook.py:1471-1633 goes.",
       null,
       null
     ],
     [
       "chg",
-      "Replaced: verify.py",
-      "Small tests for each module, plus a few full runs for each hook event.",
+      "Dropped: the account-wide marker and the old step-card template",
+      "Neither is built or kept.",
       [
-        "One 9,747-line script with 832 checks, every one launching hook.py as a separate program run, and 214 lines checking that copies of the same text have not drifted apart.",
-        "Small tests for the logic in each module, a few full runs per event, and no copy-matching tests once each rule has a single source."
+        "A git ref (a named marker stored inside your repo) that records each update once per account. Also templates/step-card.html, a second page template with the path C:\\Users\\aj typed directly into it.",
+        "Nothing replaces either: another person's install has no shared place for the marker, and every page comes from make_page.py."
       ],
-      "The test count becomes a result, not a goal.",
-      null,
-      null
-    ],
-    [
-      "chg",
-      "Replaced: version check and self-update",
-      "Marketplace autoUpdate and /reload-plugins.",
-      [
-        "The event_versioncheck function fetches the latest version from GitHub, runs claude plugin update, and prints a notice, which today wrongly said the old version was still running.",
-        "Claude Code's own autoUpdate setting, which updates the plugin by itself. The notice only says that a newer version is installed and that /reload-plugins loads it."
-      ],
-      "hook.py:1471-1633 goes.",
-      null,
-      null
-    ],
-    [
-      "chg",
-      "Dropped: account-wide re-inject marker",
-      "The build plan from earlier today stops here, and this marker is not built.",
-      [
-        "A git ref (a named pointer inside your repo) recording, once per account, that the new rules were loaded again after an update.",
-        "Nothing replaces it. Another person's install has no shared place to keep it, and /reload-plugins already handles each session."
-      ],
-      "The fix to the version notice becomes part of the shared core instead.",
-      null,
-      null
-    ],
-    [
-      "chg",
-      "Dropped: the old step-card template",
-      "templates/step-card.html.",
-      [
-        "A second page template, with a hard-coded C:\\Users\\aj path in it.",
-        "Only make_page.py and handover-page.html."
-      ],
-      "It contradicts the rule that every page comes from the page builder.",
+      "The fix to the version notice becomes part of the shared core.",
       null,
       null
     ],
     [
       "keep",
       "Guards, prompt timer, page builder, harvest, helpers, profile, standards",
-      "They work; each moves into its sub-plugin.",
+      "They work; each moves into its sub-plugin, keeping what 2.68.0 built for your testing.",
       null,
-      "Four small fixes ride along with the restructure. The destructive and branch guard refuses a tool call that arrives with no tool input, instead of letting it through. The overwrite guard's docstring is corrected to say it refuses, which is what it does. The builder helper (agents/builder.md) is changed to run the full test suites twice, as rules/detail/green-suite.md says, instead of once. The archivist helper gets a line listing the tools it may use.",
+      "The guard work waiting for you to test it is the issue \"Guards block only unrecoverable actions\" (#285) and its parts. It keeps its behaviour. Four small fixes ride along with the restructure. The destructive and branch guard refuses a tool call that arrives with no tool input, instead of letting it through. The overwrite guard's description inside its code (its docstring) is corrected to say it refuses, which is what it does. The builder helper (agents/builder.md) is changed to run the full test suites twice, as rules/detail/green-suite.md says, instead of once. The archivist helper gets a line listing the tools it may use.",
       null,
       null
     ]
@@ -461,15 +489,15 @@ const PAGE = {
       [
         [
           "A",
-          "Guardrails: the core plus Safe git, with the other four optional",
+          "Safe multi-project work: the core with project boundaries, plus Safe git and Session triage",
           1,
-          "The guards protect any user's work on day one, and they need the least configuration."
+          "Your own goal, stated in the issue about cleaning session transcripts."
         ],
         [
           "B",
-          "A design-first workflow: the core plus Design loop as the default",
+          "Guardrails only: the core plus Safe git",
           0,
-          "The most distinctive part, but it changes how every session runs, and a new user may not want that."
+          "Smaller, but it leaves out the project boundaries your recent issues ask for."
         ],
         [
           "C",
@@ -478,16 +506,60 @@ const PAGE = {
           "Smallest move, but users still get everything or nothing."
         ]
       ],
-      "My recommendation is Guardrails, the core plus Safe git: every user benefits from it without changing how they work."
+      "My recommendation is safe multi-project work, because it is the goal you wrote down yourself."
+    ],
+    [
+      "patch",
+      "How much does the 2.68.1 patch switch off?",
+      [
+        [
+          "A",
+          "Fix the two approval bugs and the cross-repo issue record; switch the other five checks to report-only",
+          1,
+          "Sessions work again, and every check still says what it would have blocked."
+        ],
+        [
+          "B",
+          "Switch the whole design loop off by default until the restructure",
+          0,
+          "Simplest, but projects mid-feature lose their stage gate."
+        ],
+        [
+          "C",
+          "Fix all eight incidents properly now",
+          0,
+          "Takes longer, and the restructure rewrites the same code."
+        ]
+      ],
+      "Report-only keeps the evidence flowing for the grilling session without blocking anyone."
+    ],
+    [
+      "afterpr",
+      "When are the after-pull-request checks built?",
+      [
+        [
+          "A",
+          "Inside the Design loop sub-plugin, during the restructure",
+          1,
+          "Built once, in their final home."
+        ],
+        [
+          "B",
+          "Now, on today's hook.py, from the existing plan",
+          0,
+          "Available sooner, but moved again weeks later."
+        ]
+      ],
+      "Building them twice costs more than waiting for the restructure."
     ]
   ],
   "wrapup": {
-    "summary": "Split the plugin into a shared core and five optional sub-plugins, move identity into per-user settings, use Claude Code's built-ins for updates, state and dependencies, and settle the 28 rule contradictions before building.",
-    "changing": "Nothing yet. This page proposes a direction. The full findings, each with file:line on both sides, are in docs/audits/2026-10-16-plugin-audit/.",
-    "blocking": "Your pick for the core identity (Guardrails, a design-first workflow, or one plugin split into modules), and your approval of the direction.",
-    "next": "The grilling session: one question at a time on the core identity, the 28 rule contradictions, which rules become settings, how the design loop moves between stages by itself, and whether worktree autosave should keep force-pushing its snapshots. One thing is unverified: this session's hooks ran the new plugin version without /reload-plugins, which the docs say should not happen. It needs a test on your desktop.",
+    "summary": "Ship a patch so sessions can work, then split the plugin into a shared core with project boundaries and six optional sub-plugins, with identity in per-user settings and Claude Code's built-ins for updates, state and dependencies.",
+    "changing": "Nothing yet. This page proposes a direction. The findings are in docs/audits/2026-10-16-plugin-audit/, and the issue mapping is in 06-recent-issues.md there.",
+    "blocking": "Your three picks (the core identity, the patch's scope, and when the after-pull-request checks are built) and your approval of the direction.",
+    "next": "After your approval, the 2.68.1 patch is built first, with a verify.py case for each incident it fixes. Then the grilling session: the 28 rule contradictions, which rules become settings, the build-plan issue structure, and the force-pushes (uploads that overwrite earlier history) that worktree autosave makes. One thing is unverified: this session's hooks ran the new plugin version without /reload-plugins, which the docs say should not happen. It needs a test on your desktop.",
     "todo": [
-      "Pick the core identity under Choices.",
+      "Pick your three answers under Choices.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: plugin restructure direction\", or say what to change."
     ]
   }
