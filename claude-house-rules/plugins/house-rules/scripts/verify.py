@@ -8912,6 +8912,30 @@ report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "blockers"
                   and 'Design loop: aj wrote "Design approved: blockers". The stage is now Plan.' in _n)
        else "FAIL", "design loop (#307): a single design approval behaves as before")
 
+# --- #308: only issues made in the stage file's own repo count toward its feature ---------------
+# Replays incident 3 of #303: issues opened in another repo were recorded as this feature's issues.
+subprocess.run(["git", "-C", _ma_dir, "remote", "add", "origin", "https://github.com/me/own.git"], check=True)
+_ma_set({"feature": "Importer", "stage": "plan"})
+
+
+def _ma_issue(url):
+    p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "multi",
+         "cwd": _ma_dir, "tool_input": {"method": "create", "title": "t", "labels": ["AjsAgent created this"]},
+         "tool_response": {"url": url}}
+    out = run_hook("autosave", json.dumps(p), env=_ma_env)[1]
+    state = json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+    return out, [(i.get("repo"), i.get("number")) for i in state.get("issues", [])]
+
+
+_out, _rec = _ma_issue("https://github.com/Ajw2003/AjsClaudeCodeTools/issues/301")
+report("PASS" if (_rec == [] and "made in another repo" in _out) else "FAIL",
+       "design loop (#308): an issue made in another repo isn't recorded for this feature, and a note says so")
+if _rec:
+    print("          recorded %r, output %r" % (_rec, _out[:300]))
+_out, _rec = _ma_issue("https://github.com/me/own/issues/12")
+report("PASS" if _rec == [("me/own", 12)] else "FAIL",
+       "design loop (#308): an issue made in the stage file's own repo is recorded as before")
+
 # --- label setup: create only the missing house labels (#275) ---------------------------------
 import labels as _lb
 _lb_dir = tempfile.mkdtemp(prefix="house-rules-labels-", dir=_FIXTURE_ROOT)

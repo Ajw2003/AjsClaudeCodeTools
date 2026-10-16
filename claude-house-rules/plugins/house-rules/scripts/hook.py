@@ -5756,8 +5756,28 @@ def _created_issue(data):
     return found, labelled, how
 
 
-def _loop_record_issues(git_dir, found, labelled):
-    """#231: issues made while a feature is in Plan count toward its build-plan approval."""
+_GITHUB_SLUG_RE = re.compile(r"github\.com[:/]+([^/\s]+/[^/\s]+?)(?:\.git)?/?\s*$", re.IGNORECASE)
+
+
+def _origin_slug(top):
+    """(slug, problem): the "owner/repo" of the checkout's GitHub origin remote, or "" when it has none,
+    and why it couldn't be read ("" when it could)."""
+    import subprocess
+    try:
+        url = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=top, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, timeout=3).stdout.decode("utf-8", "replace")
+    except (OSError, subprocess.SubprocessError) as exc:
+        return "", "house-rules: could not read this checkout's git remote (%s)" % exc
+    m = _GITHUB_SLUG_RE.search(url.strip())
+    return (m.group(1) if m else ""), ""
+
+
+def _loop_record_issues(git_dir, found, labelled, top=None):
+    """#231: issues made while a feature is in Plan count toward its build-plan approval.
+
+    #308: only issues made in the repo that owns the stage file count. In an Unblocked session, two issues
+    opened in another repo were counted as Unblocked's, and the label check then blocked the turn seven
+    times. A checkout with no GitHub origin can't say which repo it is, so its issues count as before."""
     if not _loop_enabled() or not found:
         return []
     state, problem = _loop_read(git_dir)
@@ -5765,10 +5785,17 @@ def _loop_record_issues(git_dir, found, labelled):
         return [problem]
     if state["stage"] != "plan":
         return []
+    own, slug_problem = _origin_slug(top) if top else ("", "")
+    own = own.lower()
+    notes = [slug_problem + ", so every new issue counts toward this feature."] if slug_problem else []
     for repo, number in found:
+        if own and str(repo).lower() != own:
+            notes.append("Design loop: issue %s#%s was made in another repo, so it doesn't count toward \"%s\" "
+                         "here (this checkout is %s)." % (repo, number, state.get("feature") or "this feature", own))
+            continue
         state.setdefault("issues", []).append({"repo": repo, "number": int(number), "labelled": labelled})
     _loop_write(git_dir, state)
-    return []
+    return notes
 
 
 _GH_ISSUE_EDIT_RE = re.compile(_GH_PREFIX + r"issue\s+edit\s+(\d+)\b([^\n;&|]*)")
@@ -5904,7 +5931,7 @@ def _issues_record(payload):
         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return []
-        loop_notes = _loop_record_issues(git_dir, found, labelled)
+        loop_notes = _loop_record_issues(git_dir, found, labelled, top)
         if not _issues_enabled():
             return loop_notes
         state, problem = _issues_read(git_dir)
