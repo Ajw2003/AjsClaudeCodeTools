@@ -1,9 +1,9 @@
 {
   "title": "Test It, Then What's Next",
-  "eyebrow": "After pull request #295 (Guards, pages and labels, plugin 2.68.0) · merged 16 October · how to test it in a new session, and every open item",
+  "eyebrow": "After the pull request \"Guards that only stop unrecoverable actions, automatic pages, and label setup\" (plugin 2.68.0) · merged 16 October · how to test it in a new session, and every open item",
   "approval": "Design approved: after-PR answers",
   "short": {
-    "lead": "Pull request #295 is merged, so a new session installs plugin 2.68.0 from GitHub. I proved that here: a clean install into an empty home folder gave 2.68.0, and its built-in self-test (verify.py, which checks that the hooks behave as the docs say) passed 821 of 832 checks. The other 11 were skipped because they need this repository's docs, which an installed copy does not include. The ten steps below test each fix in a new session. Steps 1 and 2 I ran here with the same commands. Steps 3 to 10 can only be checked in a live session, so they are UNTESTED until you run them. Send each prompt exactly as written inside its quotes.",
+    "lead": "That pull request is merged, so a new session installs plugin 2.68.0 from GitHub. I proved that here: a clean install into an empty home folder gave 2.68.0, and its built-in self-test (verify.py, which checks that the hooks behave as the docs say) passed 821 of 832 checks. The other 11 were skipped because they need this repository's docs, which an installed copy does not include. The ten steps below test each fix in a new session. Steps 1 and 2 I ran here with the same commands. Steps 3 to 10 can only be checked in a live session, so they are UNTESTED until you run them. Send each prompt exactly as written inside its quotes.",
     "hint": "Tap a step for the exact prompt to send and what proves it worked.",
     "key": [["I ran this here", "done"], ["You run it in the new session", "you"]],
     "items": [
@@ -46,10 +46,10 @@
      "Send \"QA passed: guards audit\" if every step passes. If any fails, send \"QA failed: guards audit\" with the step number. This is the one to do first.", null, null],
     ["keep", "Next 2: close the tested issues", "Waits on your QA verdict.", null,
      "These 17 issues are labelled needs review and stay open until you close them. I never close one. Automatic pages: the parent issue #281 (\"Page after a long reply must be automatic\") and its three children. Guards: the parent issue #285 (\"Guards block only unrecoverable actions\") and seven of its eight children. Label setup: the parent issue #274 (\"The plugin creates the house labels a repo is missing\") and its four children. The one child left out on purpose is the agent name, because it is not built.", null, null],
-    ["keep", "Next 3: the agent name, #287", "Waits on the second choice below, on the agent name.", null,
-     "Issue #287 (Agent name, credit and branch prefix are configurable, not hard-coded to AJ) is the one approved step not built. Its approved default is your git name, which would make the credit \"Ayden Wilkins's agent\" on any machine that does not set HOUSE_RULES_AGENT_NAME=AJ.", null, null],
-    ["keep", "Next 4: the label check that repeats, #273", "Open, not started. Needs a design first.", null,
-     "Issue #273 (The end-of-reply label check repeats without limit when labels can't be fixed). In the real run for the enforced QA stage on 15 October, it fired on 12 replies in a row. The issue says a design proposal comes first, because \"once\" can mean once per turn or once per wrong label. I suggest it as the next build after #287.", null, null],
+    ["keep", "Next 3: the agent name", "Waits on the second choice below, on the agent name.", null,
+     "The issue \"Agent name, credit and branch prefix are configurable, not hard-coded to AJ\" is the one approved step not built. Its approved default is your git name, which would make the credit \"Ayden Wilkins's agent\" on any machine that does not set HOUSE_RULES_AGENT_NAME=AJ.", null, null],
+    ["keep", "Next 4: the label check that repeats", "Open, not started. Needs a design first.", null,
+     "The issue \"The end-of-reply label check repeats without limit when labels can't be fixed\". In the real run for the enforced QA stage on 15 October, it fired on 12 replies in a row. The issue says a design proposal comes first, because \"once\" can mean once per turn or once per wrong label. I suggest it as the next build after the agent name.", null, null],
     ["keep", "Next 5: cleanup", "Small, and some of it needs you.", null,
      "1. Delete _to_delete/no-hidden-work.md (the retired rule's file); that is yours to do. 2. The 8 waiting-on-you entries from 23:00 last night are all refusals from the old prompt timer, and none of them needs doing now. I can clear the list. 3. Two helper worktrees from last night are left under .claude/worktrees. I can remove them once you agree.", null, null],
     ["keep", "Next 6: an older open pull request", "Untouched by this build.", null,
@@ -60,14 +60,14 @@
       ["A", "A check enforces it", 1, "The QA page builder refuses a QA page with no test steps or no what's-next list, and the end-of-reply check blocks a reply that reports a merged pull request without them. This is a code change, so it goes through the design loop."],
       ["B", "Rule text only", 0, "The rule is loaded every session, but nothing checks it. It is already written and costs nothing more."]
     ], "Rules a model must remember to follow have been skipped before; a check at a fixed point does not depend on memory."],
-    ["c2", "What should happen with the agent name, #287?", [
+    ["c2", "What should happen with the agent name?", [
       ["A", "Build it; your setup scripts set the name to AJ", 1, "tools/bootstrap.ps1, tools/bootstrap.sh and tools/update.bat set HOUSE_RULES_AGENT_NAME=AJ on each machine they run on, so your credit stays \"AJ's agent\". Other users get their own git name."],
       ["B", "Build it with AJ as the plugin's default", 0, "Nothing to set, but every other user is credited as \"AJ's agent\" until they set the name themselves."],
       ["C", "Drop it for now", 0, "Everything stays hard-coded to AJ."]
     ], "The credit line is on every commit and pull request, so a wrong default is visible everywhere."]
   ],
   "wrapup": {
-    "summary": "How to prove pull request #295 in a new session, every open item it leaves, and a new rule that asks both questions after every pull request.",
+    "summary": "How to prove the merged pull request in a new session, every open item it leaves, and a new rule that asks both questions after every pull request.",
     "changing": "rules/house-rules.md and a new rules/detail/after-pr.md, on branch AjsAgent/after-pr-answers. Nothing else changes until you pick.",
     "blocking": "Your results from steps 3 to 10, and your two picks.",
     "next": "I build what you pick, then answer both questions again after that pull request.",

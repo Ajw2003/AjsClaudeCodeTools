@@ -268,10 +268,10 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Test It, Then What's Next",
-  "eyebrow": "After pull request #295 (Guards, pages and labels, plugin 2.68.0) · merged 16 October · how to test it in a new session, and every open item",
+  "eyebrow": "After the pull request \"Guards that only stop unrecoverable actions, automatic pages, and label setup\" (plugin 2.68.0) · merged 16 October · how to test it in a new session, and every open item",
   "approval": "Design approved: after-PR answers",
   "short": {
-    "lead": "Pull request #295 is merged, so a new session installs plugin 2.68.0 from GitHub. I proved that here: a clean install into an empty home folder gave 2.68.0, and its built-in self-test (verify.py, which checks that the hooks behave as the docs say) passed 821 of 832 checks. The other 11 were skipped because they need this repository's docs, which an installed copy does not include. The ten steps below test each fix in a new session. Steps 1 and 2 I ran here with the same commands. Steps 3 to 10 can only be checked in a live session, so they are UNTESTED until you run them. Send each prompt exactly as written inside its quotes.",
+    "lead": "That pull request is merged, so a new session installs plugin 2.68.0 from GitHub. I proved that here: a clean install into an empty home folder gave 2.68.0, and its built-in self-test (verify.py, which checks that the hooks behave as the docs say) passed 821 of 832 checks. The other 11 were skipped because they need this repository's docs, which an installed copy does not include. The ten steps below test each fix in a new session. Steps 1 and 2 I ran here with the same commands. Steps 3 to 10 can only be checked in a live session, so they are UNTESTED until you run them. Send each prompt exactly as written inside its quotes.",
     "hint": "Tap a step for the exact prompt to send and what proves it worked.",
     "key": [
       [
@@ -396,19 +396,19 @@ const PAGE = {
     ],
     [
       "keep",
-      "Next 3: the agent name, #287",
+      "Next 3: the agent name",
       "Waits on the second choice below, on the agent name.",
       null,
-      "Issue #287 (Agent name, credit and branch prefix are configurable, not hard-coded to AJ) is the one approved step not built. Its approved default is your git name, which would make the credit \"Ayden Wilkins's agent\" on any machine that does not set HOUSE_RULES_AGENT_NAME=AJ.",
+      "The issue \"Agent name, credit and branch prefix are configurable, not hard-coded to AJ\" is the one approved step not built. Its approved default is your git name, which would make the credit \"Ayden Wilkins's agent\" on any machine that does not set HOUSE_RULES_AGENT_NAME=AJ.",
       null,
       null
     ],
     [
       "keep",
-      "Next 4: the label check that repeats, #273",
+      "Next 4: the label check that repeats",
       "Open, not started. Needs a design first.",
       null,
-      "Issue #273 (The end-of-reply label check repeats without limit when labels can't be fixed). In the real run for the enforced QA stage on 15 October, it fired on 12 replies in a row. The issue says a design proposal comes first, because \"once\" can mean once per turn or once per wrong label. I suggest it as the next build after #287.",
+      "The issue \"The end-of-reply label check repeats without limit when labels can't be fixed\". In the real run for the enforced QA stage on 15 October, it fired on 12 replies in a row. The issue says a design proposal comes first, because \"once\" can mean once per turn or once per wrong label. I suggest it as the next build after the agent name.",
       null,
       null
     ],
@@ -453,7 +453,7 @@ const PAGE = {
     ],
     [
       "c2",
-      "What should happen with the agent name, #287?",
+      "What should happen with the agent name?",
       [
         [
           "A",
@@ -478,7 +478,7 @@ const PAGE = {
     ]
   ],
   "wrapup": {
-    "summary": "How to prove pull request #295 in a new session, every open item it leaves, and a new rule that asks both questions after every pull request.",
+    "summary": "How to prove the merged pull request in a new session, every open item it leaves, and a new rule that asks both questions after every pull request.",
     "changing": "rules/house-rules.md and a new rules/detail/after-pr.md, on branch AjsAgent/after-pr-answers. Nothing else changes until you pick.",
     "blocking": "Your results from steps 3 to 10, and your two picks.",
     "next": "I build what you pick, then answer both questions again after that pull request.",
