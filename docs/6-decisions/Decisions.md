@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-16 - After every pull request: how to test it, and what's next
+
+**Context.** Pull request #295 (guards, pages and labels, plugin 2.68.0) merged. aj asked how to test
+the fixes verifiably in a new session and what comes next, and said that both questions should be
+asked and answered in detail after every pull request from now on.
+
+**Decision.** A new rule in `rules/house-rules.md`, "After every pull request: how to test it, and
+what's next", with its detail in `rules/detail/after-pr.md`. Every pull request body, its QA page and
+the reply reporting it opened or merged answer both questions. Step 1 is always the installed version.
+Each step names the exact prompt and what proves a pass or a fail. Whether a check enforces it is
+choice 1 on `docs/plans/after-pr-295-test-and-next.html`, which waits on aj.
+
+**Status.** Standing.
+
+---
+
 ## 2026-10-15 - Guards audit: the build plan
 
 **Context.** aj approved the design ("Design approved: guards audit"). The systems document is

@@ -1,0 +1,76 @@
+{
+  "title": "Test It, Then What's Next",
+  "eyebrow": "After pull request #295 (Guards, pages and labels, plugin 2.68.0) · merged 16 October · how to test it in a new session, and every open item",
+  "approval": "Design approved: after-PR answers",
+  "short": {
+    "lead": "Pull request #295 is merged, so a new session installs plugin 2.68.0 from GitHub. I proved that here: a clean install into an empty home folder gave 2.68.0, and its built-in self-test (verify.py, which checks that the hooks behave as the docs say) passed 821 of 832 checks. The other 11 were skipped because they need this repository's docs, which an installed copy does not include. The ten steps below test each fix in a new session. Steps 1 and 2 I ran here with the same commands. Steps 3 to 10 can only be checked in a live session, so they are UNTESTED until you run them. Send each prompt exactly as written inside its quotes.",
+    "hint": "Tap a step for the exact prompt to send and what proves it worked.",
+    "key": [["I ran this here", "done"], ["You run it in the new session", "you"]],
+    "items": [
+      ["search", "Version", "Step 1: the new session has 2.68.0", "done",
+       "Start a new session on AjsClaudeCodeTools and send: \"Run ls ~/.claude/plugins/cache/aj-house-rules/house-rules/ and tell me exactly what it prints.\"",
+       "Pass: it prints 2.68.0 (my clean install printed exactly that). Fail: it prints only 2.67.1, so the session still has the old plugin. Send \"Run claude plugin update house-rules@aj-house-rules\", then start another session before going on."],
+      ["check", "Self-test", "Step 2: the installed copy tests itself", "done",
+       "Send: \"Run python3 ~/.claude/plugins/cache/aj-house-rules/house-rules/2.68.0/scripts/verify.py and quote its RESULT line.\"",
+       "Pass: \"RESULT: PASS - 821 of 832 checks passed, 11 skipped.\" (my run of the same installed copy). Fail: any line starting \"RESULT: FAIL\"."],
+      ["loop", "Background", "Step 3: background work runs (#292, \"Remove the background-work guard\")", "you",
+       "Send: \"Run nohup sleep 2 > /dev/null 2>&1 & and then run sleep 3 | tail -1.\"",
+       "Pass: both run with no permission prompt and no refusal. Fail: a permission prompt or refusal that quotes the old rule name \"Never hide work\"."],
+      ["file", "Safe delete", "Step 4: a committed file can be deleted (#291, \"Destructive actions are refused with the safe way named\")", "you",
+       "Send: \"Make a branch AjsAgent/guard-test, create guard-test.txt, commit it, then run rm guard-test.txt.\"",
+       "Pass: the rm runs with no prompt, because git can bring the file back. Fail: a prompt, or a refusal telling you to move the file into a _to_delete/ folder (the holding folder the guard names instead of deleting)."],
+      ["stop", "Refuse", "Step 5: a whole-folder delete is refused (same issue, #291)", "you",
+       "Send: \"Run rm -rf docs.\"",
+       "Pass: refused because it deletes a whole folder at once, and the message says \"move the folder into a `_to_delete/` folder instead\". The docs folder is still there. Fail: it asks you, or it deletes."],
+      ["lock", "Force push", "Step 6: a force-push is refused (same issue, #291)", "you",
+       "Send: \"Run git push --force.\"",
+       "Pass: refused, and the message says \"push a new branch instead\". Fail: it asks you, or it pushes."],
+      ["list", "Long reply", "Step 7: an answer of 160 words or more comes with a page (#282 \"Page threshold: 160 words or more\" and #283 \"Page checkpoint: keep blocking until a page is linked\")", "you",
+       "Send: \"Explain in about 250 words how the design loop moves from Design to Build.\"",
+       "Pass: the reply links a page built by make_page.py, with no need to ask for one. If the first reply has no page, the session shows a feedback line starting \"- page:\" and then builds one. Fail: a long reply ends with no page link."],
+      ["eye", "Phone", "Step 8: no card cuts text off (#288, \"Page cards clip long words on a phone\")", "you",
+       "Open the page from step 7 on your phone and tap every card.",
+       "Pass: every card's text wraps inside the card. Fail: any word is cut off at a card's edge."],
+      ["hand", "Copy box", "Step 9: the copied reply starts with the approval line (#286, \"Page copy box must hold the full reply\")", "you",
+       "On the same page, tap Copy my reply and paste it into a note.",
+       "Pass: the pasted text starts with \"Design approved: \" or \"Build plan approved: \". Fail: it starts with anything else."],
+      ["hammer", "Labels", "Step 10: labels on demand (#277, \"A /house-rules:labels command\")", "you",
+       "Type the command /house-rules:labels and send it.",
+       "Pass: three lines saying \"already there\" for AjsAgent created this, in progress and needs review, and exit 0 (my run on this repo printed exactly that). Fail: any FAILED line."]
+    ]
+  },
+  "changes": [
+    ["new", "New standing rule: after every pull request", "How to test it and what's next, answered every time.", null,
+     "Added to rules/house-rules.md as \"After every pull request: how to test it, and what's next\", with its detail in rules/detail/after-pr.md. Every pull request body, its QA page, and the reply reporting it opened or merged must carry both answers. Step 1 is always the installed version. Each step names the exact prompt and what proves a pass or a fail. Choice 1 below decides whether a check enforces it.", null, null],
+    ["keep", "Next 1: your QA verdict", "Waits on you running steps 3 to 10 (I already ran 1 and 2).", null,
+     "Send \"QA passed: guards audit\" if every step passes. If any fails, send \"QA failed: guards audit\" with the step number. This is the one to do first.", null, null],
+    ["keep", "Next 2: close the tested issues", "Waits on your QA verdict.", null,
+     "These 17 issues are labelled needs review and stay open until you close them. I never close one. Automatic pages: #281 (the parent) and #282 to #284. Guards: #285 (the parent), #286, and #288 to #293. Label setup: #274 (the parent) and #275 to #278. #287 is left out on purpose, because it is not built.", null, null],
+    ["keep", "Next 3: the agent name, #287", "Waits on choice 2 below.", null,
+     "Issue #287 (Agent name, credit and branch prefix are configurable, not hard-coded to AJ) is the one approved step not built. Its approved default is your git name, which would make the credit \"Ayden Wilkins's agent\" on any machine that does not set HOUSE_RULES_AGENT_NAME=AJ.", null, null],
+    ["keep", "Next 4: the label check that repeats, #273", "Open, not started. Needs a design first.", null,
+     "Issue #273 (The end-of-reply label check repeats without limit when labels can't be fixed). In the real run for the enforced QA stage on 15 October, it fired on 12 replies in a row. The issue says a design proposal comes first, because \"once\" can mean once per turn or once per wrong label. I suggest it as the next build after #287.", null, null],
+    ["keep", "Next 5: cleanup", "Small, and some of it needs you.", null,
+     "1. Delete _to_delete/no-hidden-work.md (the retired rule's file); that is yours to do. 2. The 8 waiting-on-you entries from 23:00 last night are all refusals from the old prompt timer, and none of them needs doing now. I can clear the list. 3. Two helper worktrees from last night are left under .claude/worktrees. I can remove them once you agree.", null, null],
+    ["keep", "Next 6: an older open pull request", "Untouched by this build.", null,
+     "Pull request #166 (art-pipeline: a plugin for making game art by code) has been open since 8 October. It needs your review or a decision to close it.", null, null]
+  ],
+  "choices": [
+    ["c1", "How should the new after-pull-request rule be enforced?", [
+      ["A", "A check enforces it", 1, "The QA page builder refuses a QA page with no test steps or no what's-next list, and the end-of-reply check blocks a reply that reports a merged pull request without them. This is a code change, so it goes through the design loop."],
+      ["B", "Rule text only", 0, "The rule is loaded every session, but nothing checks it. It is already written and costs nothing more."]
+    ], "Rules a model must remember to follow have been skipped before; a check at a fixed point does not depend on memory."],
+    ["c2", "What should happen with the agent name, #287?", [
+      ["A", "Build it; your setup scripts set the name to AJ", 1, "tools/bootstrap.ps1, tools/bootstrap.sh and tools/update.bat set HOUSE_RULES_AGENT_NAME=AJ on each machine they run on, so your credit stays \"AJ's agent\". Other users get their own git name."],
+      ["B", "Build it with AJ as the plugin's default", 0, "Nothing to set, but every other user is credited as \"AJ's agent\" until they set the name themselves."],
+      ["C", "Drop it for now", 0, "Everything stays hard-coded to AJ."]
+    ], "The credit line is on every commit and pull request, so a wrong default is visible everywhere."]
+  ],
+  "wrapup": {
+    "summary": "How to prove pull request #295 in a new session, every open item it leaves, and a new rule that asks both questions after every pull request.",
+    "changing": "rules/house-rules.md and a new rules/detail/after-pr.md, on branch AjsAgent/after-pr-answers. Nothing else changes until you pick.",
+    "blocking": "Your results from steps 3 to 10, and your two picks.",
+    "next": "I build what you pick, then answer both questions again after that pull request.",
+    "todo": ["Run steps 1 to 10 in a new session (1 and 2 first, to confirm the new session matches mine) and note any step that fails.", "Pick your answers in the Choices section."]
+  }
+}

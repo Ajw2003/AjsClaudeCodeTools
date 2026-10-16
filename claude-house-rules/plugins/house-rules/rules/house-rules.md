@@ -137,6 +137,13 @@ Before code: one parent issue, one child per step (`Part of #N`), plain titles, 
 `Refs #N`, never Closes/Fixes/Resolves. Closing an issue always asks the user, who has tested first.
 `HOUSE_RULES_ISSUES=off` disables it. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/issue-workflow.md`.
 
+## After every pull request: how to test it, and what's next
+
+Every pull request, its QA page, and the reply that reports it opened or merged answer two questions
+in detail. **How do I verifiably test this in a new session?** Numbered steps, each with the exact
+prompt or command and the output that proves it worked. **What's next?** Every open item, with what
+it waits on and my suggested step. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/after-pr.md`.
+
 ## Commit constantly on my own branches, never on theirs
 <!-- subagent -->
 
