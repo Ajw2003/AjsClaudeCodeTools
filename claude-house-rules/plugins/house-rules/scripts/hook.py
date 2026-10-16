@@ -5238,8 +5238,9 @@ _LOOP_SKIP_RE = re.compile(r"\bskip\s+design\b", re.IGNORECASE)
 _LOOP_BARE_RE = re.compile(r"\b(approved|qa\s+passed|qa\s+failed)\b", re.IGNORECASE)
 
 
+# #303: off by default until its contradictions are fixed; HOUSE_RULES_LOOP=on turns it back on.
 def _loop_enabled():
-    return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
+    return os.environ.get("HOUSE_RULES_LOOP", "off").strip().lower() not in _TOGGLE_OFF
 
 
 def _loop_dir(git_dir):
@@ -7278,8 +7279,9 @@ def _plain_summary_note(problems):
     )
 
 
+# #303: off by default - it fired on a one-entry docs append; HOUSE_RULES_PARITY=on turns it back on.
 def _parity_enabled():
-    return os.environ.get("HOUSE_RULES_PARITY", "on").strip().lower() not in _TOGGLE_OFF
+    return os.environ.get("HOUSE_RULES_PARITY", "off").strip().lower() not in _TOGGLE_OFF
 
 
 def _visual_check_enabled():

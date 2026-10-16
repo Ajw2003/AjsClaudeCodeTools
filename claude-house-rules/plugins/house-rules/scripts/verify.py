@@ -189,6 +189,8 @@ _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
 # The design-loop lock (#225) refuses code edits outside Build in any repo, which would turn every
 # fixture edit below into a refusal. It is off for the suite and switched on by its own cases.
 os.environ["HOUSE_RULES_LOOP"] = "off"
+# #303: the parity check is off by default for now; the suite keeps it on so its cases still run.
+os.environ["HOUSE_RULES_PARITY"] = "on"
 # Simulated spawns in this file must never leave records in the real repository's agent list.
 os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
@@ -2984,6 +2986,30 @@ _par, _, _ = _stop_notes(_pv_port, "Kept search and sorting; dropped the server 
 pv_case("Stop: a port whose reply names what was kept and dropped gets no parity note", not _par, "parity=%s" % _par)
 _par, _, _ = _stop_notes(_pv_port, "Done.", HOUSE_RULES_PARITY="off")
 pv_case("Stop: HOUSE_RULES_PARITY=off switches the parity check off", not _par, "parity=%s" % _par)
+_unset = lambda *names: {k: v for k, v in os.environ.items() if k not in names}
+_saved_env = dict(os.environ)
+os.environ.clear()
+os.environ.update(_unset("HOUSE_RULES_PARITY"))
+_par, _, _ = _stop_notes(_pv_port, "Done.")
+os.environ.clear()
+os.environ.update(_saved_env)
+pv_case("Stop: #303 - with HOUSE_RULES_PARITY unset, the parity check is off by default", not _par, "parity=%s" % _par)
+import importlib.util as _hk303_util
+_hk303_spec = _hk303_util.spec_from_file_location("hook_for_303", HOOK)
+_hk303 = _hk303_util.module_from_spec(_hk303_spec)
+_hk303_spec.loader.exec_module(_hk303)
+_saved_env = dict(os.environ)
+os.environ.clear()
+os.environ.update(_unset("HOUSE_RULES_LOOP", "HOUSE_RULES_PARITY"))
+_loop303, _par303 = _hk303._loop_enabled(), _hk303._parity_enabled()
+os.environ["HOUSE_RULES_LOOP"] = "on"
+os.environ["HOUSE_RULES_PARITY"] = "on"
+_loop303_on, _par303_on = _hk303._loop_enabled(), _hk303._parity_enabled()
+os.environ.clear()
+os.environ.update(_saved_env)
+pv_case("#303: the design loop and the parity check are off when unset, and =on turns each back on",
+        not _loop303 and not _par303 and _loop303_on and _par303_on,
+        "unset: loop=%s parity=%s; =on: loop=%s parity=%s" % (_loop303, _par303, _loop303_on, _par303_on))
 _pv_edit = _turn_transcript("pv-edit", "replace the colour in the header", [("Edit", "/proj/src/app.py")])
 _par, _vis, _ = _stop_notes(_pv_edit, "Changed the colour.")
 pv_case("Stop: an everyday 'replace' edit to a non-visual file trips neither check", not _par and not _vis,
@@ -4323,10 +4349,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.68.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.68.1",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.1",
     "rules section + detail file + version",
 )
 
@@ -9002,6 +9028,8 @@ _cw_cases.append(('bare-ref: a quoted example ("see #229" alone) and a step card
 _cw_cases.append(('bare-ref: "option D showed the text" is flagged; "option D: delete the cache" is not',
                   _cw.bare_references("On that look, option D showed the trimmed text.")
                   and not _cw.bare_references("Pick option D: delete the cache.")))
+_cw_cases.append(('bare-ref: #303 - "the option I suggested" and "the choice I made" are the pronoun, not flagged',
+                  not _cw.bare_references("I went with the option I suggested, and the choice I made holds.")))
 _cw_cases.append(("repeat: three sentences opening \"Nothing\" in a row, and a repeated four-word phrase, are flagged",
                   _cw.repetition("Nothing changed. Nothing else has changed. Nothing new.")
                   and _cw.repetition("The check on the count passed. The check on the newest commit is running.")))
@@ -9310,8 +9338,9 @@ _mp_tmp = tempfile.mkdtemp(prefix="mp-")
 _mp_cases = []
 
 
-def _mp(*args):
-    r = subprocess.run([sys.executable, MAKE_PAGE] + list(args), capture_output=True, text=True, timeout=300)
+def _mp(*args, env=None):
+    r = subprocess.run([sys.executable, MAKE_PAGE] + list(args), capture_output=True, text=True, timeout=300,
+                       env=env)
     return r.returncode, r.stdout + r.stderr
 
 
@@ -9535,9 +9564,14 @@ _d = _mp_proj("appr", {"use": "defaults"})
 _rc, _o = _mp("build", _mp_content("noappr", approval=None), "--project", _d)
 _mp_cases.append(("make_page: a non-QA page with no approval field is refused with exit 2 naming approval",
                   _rc == 2 and "approval" in _o))
-_rc, _o = _mp("build", _mp_content("badappr", approval="Guards audit"), "--project", _d)
-_mp_cases.append(("make_page: an approval the gate would not accept is refused with exit 2",
+_rc, _o = _mp("build", _mp_content("badappr", approval="Guards audit"), "--project", _d,
+              env=dict(os.environ, HOUSE_RULES_LOOP="on"))
+_mp_cases.append(("make_page: with the loop on, an approval the gate would not accept is refused with exit 2",
                   _rc == 2 and "gate" in _o))
+_mp_off_env = {k: v for k, v in os.environ.items() if k != "HOUSE_RULES_LOOP"}
+_rc, _o = _mp("build", _mp_content("anyappr", approval="Guards audit"), "--project", _d, env=_mp_off_env)
+_mp_cases.append(("make_page: #303 - with the loop off by default, any one-line approval is accepted",
+                  _rc == 0))
 _ch = [["c1", "Which?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""]]
 _ph = "Build plan approved: guards <audit> & more"
 _rc1, _ = _mp("build", _mp_content("withch", approval=_ph, choices=_ch), "--project", _d)
