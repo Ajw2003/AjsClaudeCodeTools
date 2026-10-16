@@ -21,15 +21,15 @@
   ],
   "choices": [
     ["version", "How should the version notice be fixed?", [
-      ["A", "Detect the switch, and re-inject the new rules text once it happens", 1, "The whole session then runs one version: the hooks, and the rules I follow. It costs the 8,667 characters of rules/house-rules.md in 2.68.0, paid once."],
+      ["A", "Detect the switch, and re-inject the new rules text once it happens", 1, "The whole session then runs one version, for both the hooks and the rules I follow. Re-injecting costs 8,667 characters, the size of rules/house-rules.md in version 2.68.0, and is paid once."],
       ["B", "Detect the switch and say so, but leave the old rules text loaded", 0, "Honest about the split, but the rules I follow and the hooks that enforce them can still disagree, as the nohup check did today."],
       ["C", "Only reword the notice to say the hooks may already be new", 0, "Smallest change, but it still guesses instead of checking."]
-    ], "Re-injecting the new rules removes the old-rules, new-hooks split that confused me today, instead of only describing it."],
+    ], "Re-injecting the new rules removes the split that confused me today, where I followed the old rules while the new hooks were running. The other two options only describe that split."],
     ["page", "How should the page dodge be closed?", [
       ["A", "The page stays owed across retries until one links a page", 1, "It uses the page-blocks file the checkpoint already keeps."],
       ["B", "Count the words of every reply in the turn together", 0, "Also closes the gap, but a turn with many short replies would owe a page it doesn't need."],
       ["C", "Only change the block's wording", 0, "That relies on me obeying a line I already ignored once."]
-    ], "Keeping the page owed across retries holds it for the long reply you actually saw, even when a later retry is short."]
+    ], "Keeping the page required across retries means the 165-word reply you actually saw still gets its page, even when a later retry is only 70 words."]
   ],
   "wrapup": {
     "summary": "Make the version notice report what is really running, and keep a page owed once the page check has blocked a reply.",
