@@ -3,7 +3,7 @@
   "eyebrow": "Build plan for approval · \"After every pull request, a check makes sure it says how to test it and what's next\" · nothing built yet",
   "approval": "Build plan approved: after-PR answers",
   "short": {
-    "lead": "Four steps, built by me one at a time on the branch AjsAgent/after-pr-answers, then one pull request that answers its own two questions. One finding changes the agent name plan. In this cloud session git's name is \"Claude\" and the account name is \"aydenjwilkins\", and cloud sessions never run your setup scripts. The approved default would credit \"Claude's agent\" here, so the choice below settles cloud sessions.",
+    "lead": "Four steps, built by me one at a time on the branch AjsAgent/after-pr-answers, then one pull request that answers its own two questions. One finding affects the agent name step (step 4). In this cloud session git's name is \"Claude\" and the account name is \"aydenjwilkins\", and cloud sessions never run your setup scripts. Without a fix, commits made in cloud sessions would be credited to \"aydenjwilkins's agent\". The choice below decides what name cloud sessions use.",
     "hint": "Tap a step for what it changes and how it is checked.",
     "key": [["I build it", ""], ["You decide or test", "you"]],
     "items": [
@@ -14,10 +14,10 @@
        "make_page.py's QA mode needs a qa.test list (each step: the exact prompt and what proves it) and a qa.next list (each item: what it waits on). It refuses the build without them, naming the field. The issue is \"A QA page must carry its test steps and what's next\".",
        "Checked by self-test cases for each missing list and for a page with both."],
       ["stop", "Reply", "Step 3: the reply reporting a pull request answers both", "",
-       "A new end-of-reply checkpoint. When the turn opened a pull request, or the reply says one merged, the reply must link a page or contain both answers, or it is blocked once with the fix. The issue is \"A reply reporting a pull request answers how to test it and what's next\".",
+       "A new check that runs at the end of each reply. If I opened a pull request while answering your message, or the reply says one was merged, the reply must either link a page or give both answers (how to test it, and what's next). If it does neither, the reply is blocked once, with the fix named. The issue is \"A reply reporting a pull request answers how to test it and what's next\".",
        "Checked by four self-test cases, including that a turn with no pull request is untouched."],
       ["swap", "Your name", "Step 4: the agent name is configurable", "",
-       "One function gives the name to every credit line, branch prefix and identity notice. HOUSE_RULES_AGENT_NAME wins, then the git name (with a trailing \"'s agent\" and the container's \"Claude\" ignored), then the account name before the @. tools/install.py, which the setup scripts run, writes HOUSE_RULES_AGENT_NAME=AJ on your machines. The issue is \"Agent name, credit and branch prefix are configurable, not hard-coded to AJ\".",
+       "One function gives the name to every credit line, branch prefix and identity notice. HOUSE_RULES_AGENT_NAME wins, then the git name (ignoring a trailing \"'s agent\", and ignoring the name \"Claude\" that cloud sessions set), then the account name before the @. tools/install.py, which the setup scripts run, writes HOUSE_RULES_AGENT_NAME=AJ on your machines. The issue is \"Agent name, credit and branch prefix are configurable, not hard-coded to AJ\".",
        "Checked by self-test cases for each source and for the order between them."],
       ["hand", "Test", "You test the pull request", "you",
        "One pull request, version 2.69.0, whose own body is the first one checked by step 1.",
@@ -25,10 +25,10 @@
     ]
   },
   "changes": [
-    ["new", "Pull request body check", "Refuses a body missing either answer, naming it.", null, "Applies to both ways I open a pull request.", null, null],
+    ["new", "Pull request body check", "Refuses a body missing either answer, naming it.", null, "Applies to both ways I open a pull request: the GitHub tool and gh pr create.", null, null],
     ["new", "QA page fields", "qa.test and qa.next are required.", null, "Every QA page then shows the test steps and what's next.", null, null],
-    ["new", "The \"after pr\" checkpoint", "Blocks once, like the other end-of-reply checks.", null, "The section names come from one place in hook.py.", null, null],
-    ["chg", "Agent name", "From hard-coded \"AJ\" to one configurable name.", ["\"AJ's agent\" and AjsAgent/ for everyone", "Each user's own name, with yours kept as AJ"], "The 19 lines in hook.py that hard-code \"AJ's agent\" or AjsAgent/ read the one function instead.", null, null]
+    ["new", "The \"after pr\" checkpoint", "Blocks once, like the other end-of-reply checks.", null, "The two heading names are defined once in hook.py, so all three checks use the same ones.", null, null],
+    ["chg", "Agent name", "From hard-coded \"AJ\" to one configurable name.", ["\"AJ's agent\" and AjsAgent/ for everyone", "Each user's own name, with yours kept as AJ"], "The 19 lines in hook.py that hard-code \"AJ's agent\" or AjsAgent/ will call the new name function instead.", null, null]
   ],
   "choices": [
     ["cloud", "In a cloud session, where git's name is \"Claude\" and no setup script runs, where should the name AJ come from?", [

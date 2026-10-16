@@ -23,7 +23,7 @@ itself is in `rules/house-rules.md`, with its detail in `rules/detail/after-pr.m
 ## Traps already found
 
 - A cloud container's git name is `Claude`, and cloud sessions never run the setup scripts (checked
-  2026-10-16: `git config --global user.name` printed `Claude`). The git-name default would credit
-  "Claude's agent" there. The build plan's choice on cloud sessions settles it.
+  2026-10-16: `git config --global user.name` printed `Claude`, and the account name before the `@`
+  is `aydenjwilkins`). With "Claude" ignored, the default would credit "aydenjwilkins's agent" there. The build plan's choice on cloud sessions settles it.
 - Once the identity fix has run, the git name is `AJ's agent`, so the name must drop a trailing
   "'s agent" before it is used.
