@@ -33,3 +33,4 @@ works, invariants, and traps that have already cost time.
   Code actually does; a verify-suite defect changes only what anyone can *prove* about that,
   which is a materially different failure and reads better as its own document than as a second
   half of the first.
+- [after-pr.md](after-pr.md): the checks that make every pull request say how to test it and what is next, and the configurable agent name.
