@@ -5040,6 +5040,8 @@ def _issues_plan_note(payload):
     except OSError as exc:
         return (" Issue workflow: this plan counts %d steps but the gate state could not be written "
                 "(%s), so edits are not blocked. Create the issues anyway." % (n, exc)) + ISSUE_NOTE.format(n=n)
+    # #276: no label setup here. This runs on a tool call, and tool calls never reach the network;
+    # the labels are created when aj's "Design approved" arrives, before any issue is made.
     return ISSUE_NOTE.format(n=n)
 
 
@@ -5438,9 +5440,28 @@ _LOOP_QA_NOTE = (" Every issue of the feature says `needs review`, so the stage 
                  "and aj answers \"QA passed: <feature>\" or \"QA failed: <feature>\" with the changes.")
 
 
-def _loop_label_refusal(said, want, wrong, note):
+def _house_labels_note(top):
+    """#276: create any house label this repo's GitHub copy is missing (scripts/labels.py), and say
+    what it created or could not. "" when the repo has every label or no GitHub remote. Never raises."""
+    try:
+        import labels as _labels  # scripts/labels.py, beside this file (sys.path is set above)
+        git_dir = _common_git_dir(top) if top else None
+        if not git_dir:
+            return ""
+        repo, _why = _labels.repo_from_git(git_dir)
+        if not repo:
+            return ""  # no GitHub remote: there is nowhere to create labels
+        return _labels.summary_note(_labels.ensure_labels(repo), repo)
+    except Exception as exc:
+        return ("house-rules: label setup hit an error (%s: %s), so missing house labels were not created."
+                % (type(exc).__name__, exc))
+
+
+def _loop_label_refusal(said, want, wrong, note, top=None):
+    made = _house_labels_note(top)
     return ('Design loop: aj wrote "%s", but these issues are not labelled `%s`: %s. Nothing moved. Fix the '
-            "labels, then ask aj to approve again.%s" % (said, want, "; ".join(wrong), " " + note if note else ""))
+            "labels, then ask aj to approve again.%s%s" % (said, want, "; ".join(wrong), " " + note if note else "",
+                                                          " " + made if made else ""))
 
 
 def _loop_apply(state, text, top):
@@ -5464,7 +5485,7 @@ def _loop_apply(state, text, top):
         labels, src = _loop_labels(state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
         if wrong:
-            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src)
+            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src, top)
         unlogged = _loop_unlogged(state, top, "Build plan approved", name)
         if unlogged:
             return unlogged
@@ -5478,7 +5499,7 @@ def _loop_apply(state, text, top):
                 labels, src = _loop_labels(state)
                 wrong = _loop_wrong(labels, LOOP_WORKING)
                 if wrong:
-                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src)
+                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src, top)
             unlogged = _loop_unlogged(state, top, "Design approved", name)
             if unlogged:
                 return unlogged
@@ -5520,7 +5541,8 @@ def _loop_apply(state, text, top):
             note += (" Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue "
                      "for the feature and a sub-issue per step, each naming dependencies, dependants and "
                      "done-criteria, labelled `%s` and `%s`." % (ISSUES_LABEL, LOOP_WORKING))
-            return note
+            made = _house_labels_note(top)  # #276: planning is when the labels are first needed
+            return note + (" " + made if made else "")
         if state["stage"] == "build":
             note += (" Code edits are open for the approved steps while every issue says `%s`. Hand each "
                      "approved step to @house-rules:builder (one per issue; at most two running) unless aj said "

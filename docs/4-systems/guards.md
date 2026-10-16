@@ -2,9 +2,9 @@
 
 **Owns:** deciding which actions the `house-rules` hooks let through, refuse, or ask aj about. The
 dispatch itself is described in [hook-engine.md](hook-engine.md); this document owns the policy the
-guards apply. Status: planned under issue #285 (Guards block only unrecoverable actions). The build
-is split across child issues #289 to #293 and #286 to #288. Until it merges, the behaviour described
-in `hook-engine.md` is what runs.
+guards apply. Status: built in plugin 2.68.0 under issue #285 (Guards block only unrecoverable
+actions): child issues #289 to #293, #286 and #288. #287 (configurable agent name) is not built yet,
+so the credit line and branch prefix are still "AJ's agent" and `AjsAgent/`.
 
 ## The test
 

@@ -132,3 +132,66 @@ def summary_note(result, repo="this repo"):
             _names([f[0] for f in result["failed"]]), repo,
             "; ".join("%s: %s" % (f[0], f[1]) for f in result["failed"])))
     return "house-rules: " + ", and ".join(parts) + "." if parts else ""
+
+
+def _git_dir_of(start):
+    """The common git directory above `start` (a worktree's .git file is followed), or None."""
+    d = os.path.abspath(start)
+    while True:
+        dot = os.path.join(d, ".git")
+        if os.path.isdir(dot):
+            return dot
+        if os.path.isfile(dot):
+            with open(dot, "r", encoding="utf-8") as f:
+                line = f.read().strip()
+            if line.startswith("gitdir:"):
+                gd = os.path.normpath(os.path.join(d, line[len("gitdir:"):].strip()))
+                common = os.path.join(gd, "commondir")
+                if os.path.isfile(common):
+                    with open(common, "r", encoding="utf-8") as f:
+                        return os.path.normpath(os.path.join(gd, f.read().strip()))
+                return gd
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def main(argv):
+    """`labels.py [owner/repo]` (#277): set up the house labels on the named repo, or on this folder's
+    GitHub remote. Prints what it created, what was already there and what failed. Exit 0 when every
+    house label is now present, 1 when some could not be created, 2 when the repo could not be checked."""
+    if len(argv) > 1:
+        print("usage: labels.py [owner/repo]")
+        return 2
+    if argv:
+        repo = argv[0]
+        if not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
+            print("labels: %r is not an owner/repo name, such as Ajw2003/AjsClaudeCodeTools" % repo)
+            return 2
+    else:
+        git_dir = _git_dir_of(os.getcwd())
+        if not git_dir:
+            print("labels: this folder is not inside a git repository; name the repo, such as labels.py owner/repo")
+            return 2
+        repo, why = repo_from_git(git_dir)
+        if not repo:
+            print("labels: could not tell this folder's GitHub repo (%s); name it, such as labels.py owner/repo" % why)
+            return 2
+    result = ensure_labels(repo)
+    if result["error"]:
+        print("labels: could not check %s's labels: %s" % (repo, result["error"]))
+        return 2
+    print("labels on %s:" % repo)
+    for name in result["created"]:
+        print("  created         %s" % name)
+    for name in result["present"]:
+        print("  already there   %s" % name)
+    for name, why in result["failed"]:
+        print("  FAILED          %s (%s)" % (name, why))
+    return 1 if result["failed"] else 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main(sys.argv[1:]))

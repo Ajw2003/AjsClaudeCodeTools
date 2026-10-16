@@ -4323,10 +4323,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.67.1",
+    "issues: the rules section and its detail file exist, and the plugin is 2.68.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.67.1",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.0",
     "rules section + detail file + version",
 )
 
@@ -8928,6 +8928,47 @@ _lb_cases.append(("repo_from_git gives None and a note for a non-GitHub URL", _l
 _lb_src = open(os.path.join(HERE, "labels.py"), encoding="utf-8").read()
 _lb_cases.append(("labels.py has no --force, -X DELETE, PATCH or label edit",
                   not any(w in _lb_src for w in ("--" + "force", "-X " + "DELETE", "PA" + "TCH", "label " + "edit"))))
+
+# #277: the command's script, run as /house-rules:labels runs it.
+def _lb_cli(*args, cwd=None):
+    with open(_lb_file, "w", encoding="utf-8") as f:
+        json.dump({_lb_repo: ["bug", "needs review"]}, f)
+    p = subprocess.run([sys.executable, os.path.join(HERE, "labels.py")] + list(args), capture_output=True, text=True,
+                       cwd=cwd or _lb_dir, env=dict(os.environ, **{_lb.REPO_LABELS_FILE_ENV: _lb_file}))
+    return p.returncode, p.stdout
+
+
+_c, _o = _lb_cli(_lb_repo)
+_lb_cases.append(("labels.py owner/repo creates the two missing labels, lists the one already there, exit 0 (#277)",
+                  _c == 0 and "created         AjsAgent created this" in _o and "created         in progress" in _o
+                  and "already there   needs review" in _o))
+_c, _o = _lb_cli("not a repo")
+_lb_cases.append(("labels.py with a bad repo name exits 2 and says what a name looks like (#277)",
+                  _c == 2 and "owner/repo" in _o))
+_lb_git = os.path.join(_lb_dir, "clone")
+os.makedirs(_lb_git, exist_ok=True)
+subprocess.run(["git", "init", "-q", _lb_git], check=True)
+subprocess.run(["git", "-C", _lb_git, "remote", "add", "origin", "https://github.com/%s.git" % _lb_repo], check=True)
+_c, _o = _lb_cli(cwd=_lb_git)
+_lb_cases.append(("labels.py with no argument works on the folder's GitHub remote (#277)",
+                  _c == 0 and ("labels on %s:" % _lb_repo) in _o and "created" in _o))
+# #276: the hook creates the missing labels when they are first needed, and its note names them.
+import importlib.util as _lb_util
+_lb_hook_spec = _lb_util.spec_from_file_location("hook_for_labels", HOOK)
+_lb_hook = _lb_util.module_from_spec(_lb_hook_spec)
+_lb_hook_spec.loader.exec_module(_lb_hook)
+with open(_lb_file, "w", encoding="utf-8") as f:
+    json.dump({_lb_repo: ["bug"]}, f)
+os.environ[_lb.REPO_LABELS_FILE_ENV] = _lb_file
+try:
+    _lb_note = _lb_hook._house_labels_note(_lb_git)
+    _lb_again = _lb_hook._house_labels_note(_lb_git)
+    _lb_none = _lb_hook._house_labels_note(_lb_empty)
+finally:
+    del os.environ[_lb.REPO_LABELS_FILE_ENV]
+_lb_cases.append(("the hook's label note names the labels it created, then says nothing once they exist (#276)",
+                  "created the missing labels" in _lb_note and "`in progress`" in _lb_note and _lb_again == ""
+                  and _lb_none == ""))
 
 for _t, _ok in _lb_cases:
     report("PASS" if _ok else "FAIL", "label setup: " + _t)
