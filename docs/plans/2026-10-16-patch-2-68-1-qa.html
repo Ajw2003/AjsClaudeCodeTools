@@ -271,7 +271,7 @@ const PAGE = {
   "eyebrow": "QA for house-rules 2.68.1, the first step of the plugin restructure · ready for your test",
   "approval": "QA passed: plugin restructure 2.68.1 patch",
   "short": {
-    "lead": "All five steps of the 2.68.1 patch are built and committed on the branch ccr-7dcf4ee2-zp3mm8. Each step first added a test to verify.py (the repo's self-check script) that reproduces its incident from the issue \"the design loop is broken and blocks sessions\" (#303), then fixed it. The full verify.py suite passed twice in a row with 839 checks, up from 832, and tools/verify_tools.py passed its 47 checks. Nothing in this session ran the new hooks (the small scripts that run at set moments in a session) for real. This session runs the installed 2.68.0 plugin until the patch is merged and updated.",
+    "lead": "All five steps of the 2.68.1 patch are built and committed on the branch ccr-7dcf4ee2-zp3mm8. Each step first added a test to verify.py (the repo's self-check script) that reproduces its incident from the issue \"the design loop is broken and blocks sessions\" (#303), then fixed it. The full verify.py suite passed twice in a row with 839 checks, up from 832, and tools/verify_tools.py passed its 47 checks. I also ran two real nested Claude Code sessions here with the patched plugin loaded and the installed 2.68.0 copy switched off. In the first, one message holding both approvals moved the stage to Plan, with the feature named \"test feature\". In the second, a 307-word reply got the page report instead of a page block. The editor and evidence checks, which this patch doesn't change, still asked for their fixes. Your test confirms the same on your own machine after the update.",
     "hint": "Tap a step to see what was built and how it was checked.",
     "key": [
       [
@@ -319,10 +319,10 @@ const PAGE = {
       [
         "flask",
         "Your test",
-        "Test it in a new session",
+        "Five steps on your desktop, about ten minutes",
         "you",
-        "The issue \"release the patch with its version, docs and QA page\" (#311), commit fa7ff2a. Merge the pull request, run tools\\update.bat on your desktop (or claude plugin update house-rules@aj-house-rules), then start a new session in a repo that uses the design loop.",
-        "Send one message holding a design approval and a build-plan approval, and check the stage moves to Plan. Then reply \"QA passed\" or \"QA failed\" with what to change."
+        "The issue \"release the patch with its version, docs and QA page\" (#311), commit fa7ff2a. Every command below runs in Windows PowerShell, opened from the Start menu; none needs a particular folder. Step 1: on GitHub, open the pull request \"house-rules 2.68.1: unblock the design loop before the restructure\" (#312) and press Merge pull request. Step 2: run claude plugin marketplace update aj-house-rules, then claude plugin update house-rules@aj-house-rules, then claude plugin list. Pass: the list shows house-rules at version 2.68.1. Step 3: make a throwaway test repo with New-Item -ItemType Directory -Force \"$HOME\\hr-test\\docs\\6-decisions\" | Out-Null; git init -q \"$HOME\\hr-test\"; Set-Content \"$HOME\\hr-test\\docs\\6-decisions\\Decisions.md\" \"# Decisions\", then start Claude there with Set-Location \"$HOME\\hr-test\"; claude. Step 4: in that session, type exactly: Design approved: test feature.  Build plan approved: test feature. Then exit Claude and run Get-Content \"$HOME\\hr-test\\.claude\\house-rules-loop.json\". Pass: the text contains \"stage\": \"plan\" and \"feature\": \"test feature\". Fail: \"stage\": \"design\", or no file. Step 5: start claude in the same folder again and type: Explain in about 250 words how git branches work. Pass: no message says \"reply is not done yet\" with a line starting \"- page:\". Messages naming the editor or evidence checks are expected and don't count.",
+        "Reply \"QA passed: plugin restructure 2.68.1 patch\", or \"QA failed\" with the step number that failed and what you saw."
       ]
     ]
   },
@@ -366,7 +366,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "33 files, +3684 −191",
+      "35 files, +4699 −191",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -650,6 +650,30 @@ const PAGE = {
         [
           "docs/plans/2026-10-16-patch-2-68-1-build-plan.page.json",
           34,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-16-patch-2-68-1-qa.html",
+          964,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-16-patch-2-68-1-qa.page.json",
+          51,
           0,
           [
             [
