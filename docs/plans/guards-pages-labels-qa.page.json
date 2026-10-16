@@ -29,7 +29,7 @@
     "unverified": [
       "This session runs the installed 2.67.1 hooks, so none of these changes act in a live session until the branch is merged and the plugin is updated",
       "Label creation on a real repo that lacks the labels was not run; only the read path ran against GitHub, and creation ran against a stand-in file",
-      "The three-block page limit was tested with replayed hook payloads, not in a live session",
+      "The three-block page limit was tested only with replayed hook payloads",
       "The \"no safe way\" citation reads the Bash call's description field; no live prompt has been raised through it yet",
       "The agent name (#287) is not built"
     ],

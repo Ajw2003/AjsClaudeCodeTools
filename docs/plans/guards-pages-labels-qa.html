@@ -400,14 +400,14 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "38 files, +3476 −428",
+      "40 files, +4460 −428",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          89,
+          1,
           0,
           [
             [
@@ -754,6 +754,30 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/guards-pages-labels-qa.html",
+          1024,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/guards-pages-labels-qa.page.json",
+          48,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/handover-pages-qa.page.json",
           2,
           3,
@@ -868,7 +892,7 @@ const PAGE = {
       "Still unverified",
       "5 things not yet proven",
       null,
-      "This session runs the installed 2.67.1 hooks, so none of these changes act in a live session until the branch is merged and the plugin is updated. Label creation on a real repo that lacks the labels was not run; only the read path ran against GitHub, and creation ran against a stand-in file. The three-block page limit was tested with replayed hook payloads, not in a live session. The \"no safe way\" citation reads the Bash call's description field; no live prompt has been raised through it yet. The agent name (#287) is not built.",
+      "This session runs the installed 2.67.1 hooks, so none of these changes act in a live session until the branch is merged and the plugin is updated. Label creation on a real repo that lacks the labels was not run; only the read path ran against GitHub, and creation ran against a stand-in file. The three-block page limit was tested only with replayed hook payloads. The \"no safe way\" citation reads the Bash call's description field; no live prompt has been raised through it yet. The agent name (#287) is not built.",
       null,
       null
     ]
@@ -879,7 +903,7 @@ const PAGE = {
     "unverified": [
       "This session runs the installed 2.67.1 hooks, so none of these changes act in a live session until the branch is merged and the plugin is updated",
       "Label creation on a real repo that lacks the labels was not run; only the read path ran against GitHub, and creation ran against a stand-in file",
-      "The three-block page limit was tested with replayed hook payloads, not in a live session",
+      "The three-block page limit was tested only with replayed hook payloads",
       "The \"no safe way\" citation reads the Bash call's description field; no live prompt has been raised through it yet",
       "The agent name (#287) is not built"
     ],
