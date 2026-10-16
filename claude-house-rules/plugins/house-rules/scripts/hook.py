@@ -2912,7 +2912,7 @@ def _page_writing_note(file_path):
             html = f.read()
     except OSError as exc:
         return "house-rules: the page writing check could not read %s (%s)." % (file_path, exc)
-    found = clarity.findings(clarity.page_text(html), skip=("not-checked",))
+    found = clarity.findings(clarity.page_text(html), skip=("not-checked",) + _WRITING_REPORT_ONLY)
     if not found:
         return ""
     return ("House rules, write it so nothing is left to guess: the page %s has %d thing(s) to fix "
@@ -5703,10 +5703,14 @@ def _loop_gate(payload):
         _loop_write(git_dir, state)
         return None, None
     feature = state.get("feature") or ""
-    if script and script_unreadable and not script_paths:
-        return ("House rules, design loop: code is locked in the %s stage and I cannot read which file this "
-                "command writes, so make the change with the Edit or Write tool instead, which names the "
-                "file." % LOOP_STAGE_NAMES[state["stage"]]), None
+    if script:
+        # #309 (incident 4 of #303): a shell command is reported, never refused, until the restructure. The
+        # refusal stopped docs and .claude/ writes made from the shell, which are meant to stay open.
+        what = ("a file it can't name" if script_unreadable and not script_paths
+                else ", ".join(script_paths) or "a source file")
+        return None, ("house-rules design loop (report only, #309): code is locked in the %s stage, and this "
+                      "shell command writes %s. It was let through; the shell-write refusal is switched off "
+                      "until the restructure." % (LOOP_STAGE_NAMES[state["stage"]], what))
     return (
         "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
         "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
@@ -7229,14 +7233,31 @@ def _clear_writing_enabled():
     return os.environ.get("HOUSE_RULES_CLEAR_WRITING", "on").strip().lower() not in _TOGGLE_OFF
 
 
+# #309 (incident 8 of #303): writing kinds that only report, to aj, until the restructure. The bare-reference
+# check read "the option I suggested" as a bare "option I" and asked for the reply to be resent, twice in a row.
+_WRITING_REPORT_ONLY = ("bare-ref",)
+
+
 def _writing_findings(text):
     """(findings, problem): the shared checker's findings on a reply, minus not-checked, which the
-    evidence rule reports on its own. [] when the check is off or the text is empty."""
+    evidence rule reports on its own, and minus the report-only kinds. [] when the check is off or the
+    text is empty."""
     if not text or not _clear_writing_enabled():
         return [], None
     if clarity is None:
         return [], CLARITY_ERROR
-    return clarity.findings(text, skip=("not-checked",)), None
+    return clarity.findings(text, skip=("not-checked",) + _WRITING_REPORT_ONLY), None
+
+
+def _writing_report_line(text):
+    """One line for aj naming the report-only findings in a reply (#309), or "" when there are none."""
+    if not text or not _clear_writing_enabled() or clarity is None:
+        return ""
+    found = [p for k, p, _why in clarity.findings(text) if k in _WRITING_REPORT_ONLY]
+    if not found:
+        return ""
+    return ("house-rules writing check (report only, #309): bare references in this reply - %s. Nothing was "
+            "asked of the agent." % ", ".join('"%s"' % p for p in found[:8]))
 
 
 # #249: a page or a long reply goes past the editor helper before aj reads it.
@@ -7336,13 +7357,12 @@ def _visual_check_enabled():
 
 
 def _parity_report_note(word):
+    # #309 (incident 5 of #303): report only until the restructure. The demand for an inventory and an
+    # issue per drop fired on a one-entry Decisions.md append, and three times on audit-notes turns.
     return (
-        "House rules, re-creating existing behaviour: this turn was a %s and wrote files, but "
-        "the reply names nothing kept or dropped. Before this turn ends, report against the "
-        "original: the keep/change/drop inventory with the original's file:line, every dropped "
-        "feature named plainly - not only the ones the new platform forced - and a GitHub issue "
-        "for each feature to be re-added later. If nothing was dropped, say so and say how you "
-        "compared old and new." % word.lower()
+        "House rules, re-creating existing behaviour (report only, #309): aj's message reads like a %s "
+        "and this turn wrote files, but the reply names nothing kept or dropped. Nothing is required "
+        "this turn; the note is kept as evidence for the restructure." % word.lower()
     )
 
 
@@ -7567,7 +7587,7 @@ def _check_qa_page(ctx):
 CHECKPOINTS = [
     ("page saved", "page built", _check_page_saved, "block"),
     ("page published", "page built", _check_page_saved, "block"),
-    ("reply ends", "page", _check_page, "block"),
+    ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
     ("reply ends", "evidence", _check_evidence, "block"),
     ("reply ends", "commit", _check_commit, "block"),
@@ -7796,6 +7816,9 @@ def event_handover():
     writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
     if writing_problem:
         trace_lines.append(writing_problem)
+    report_line = _writing_report_line(reply_text if vm is not None else "")
+    if report_line:
+        trace_lines.append(report_line)
 
     # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
     # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.
@@ -7804,25 +7827,30 @@ def event_handover():
         return _page_blocks(_page_blocks_path(_payload_cwd(payload), _field(_SESSION_ID_RE, payload) or ""),
                             _field(_SESSION_ID_RE, payload) or "", mark, change)
 
-    if retry and _loop_enabled():
+    # #309 (incident 6 of #303): the page row reports instead of blocking, on the first reply and the retry
+    # alike, until the restructure. It pushed another repo's work into a session as a proposal page.
+    page_note = ""
+    if _loop_enabled():
         try:
             pctx = {"reply": reply_text if vm is not None else "", "long_words": long_words,
                     "user_text": _last_user_text(transcript_path) if transcript_path else ""}
             fix = _check_page(pctx)
-            if not fix:
+            # #310: once a reply to aj's message is flagged, the page stays owed for every later reply to the
+            # same message until one links a page - a shorter retry no longer clears it. The page-blocks file
+            # keeps a count per message; above zero means owed.
+            if _page_escape(pctx) or _PAGE_LINK_RE.search(pctx["reply"]):
                 _page_count(pctx, "clear")
-            elif _page_count(pctx) < PAGE_BLOCK_LIMIT:
+            elif fix or _page_count(pctx) > 0:
+                owed = not fix
                 _page_count(pctx, "bump")
-                emit({"decision": "block", "reason": _checkpoint_reason([("page", fix)])})
-                return 0
-            else:
-                trace_lines.append(
-                    "house-rules: the page check blocked %d times in a row and this reply still links no page, "
-                    "so it went through without one. Say in the reply that no page could be made, and why."
-                    % PAGE_BLOCK_LIMIT)
+                page_note = ("House rules, page checkpoint (report only, #309): %s%s. Nothing is blocked; if this "
+                             "reply belongs to another repo's work, the issue for that repo is enough." % (
+                                 "an earlier reply to this message of aj's was flagged for a page and none is linked "
+                                 "yet (#310), so " if owed else "",
+                                 fix or _check_page(dict(pctx, long_words=LONG_REPLY_WORDS))))
         except Exception as exc:
-            trace_lines.append("house-rules: the page checkpoint could not run on the retry (%s: %s), so this reply "
-                               "was not blocked." % (type(exc).__name__, exc))
+            trace_lines.append("house-rules: the page checkpoint could not run (%s: %s), so this reply got no "
+                               "page reminder." % (type(exc).__name__, exc))
     if not retry:
         try:
             ctx = {
@@ -7846,11 +7874,6 @@ def event_handover():
                 trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                    "so it is off for this reply." % (type(exc).__name__, exc))
             missed = _missed_checkpoints(ctx)
-            try:
-                _page_count(ctx, "bump" if any(name == "page" for name, _fix in missed) else "clear")
-            except (OSError, ValueError) as exc:
-                trace_lines.append("house-rules: the page block count could not be saved (%s: %s), so the retry "
-                                   "counts from zero." % (type(exc).__name__, exc))
             if missed:
                 emit({"decision": "block", "reason": _checkpoint_reason(missed)})
                 return 0
@@ -7874,7 +7897,7 @@ def event_handover():
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed
-            and not shell_page_notes):
+            and not shell_page_notes and not page_note):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -7895,6 +7918,8 @@ def event_handover():
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
     parts.extend(shell_page_notes)
+    if page_note:
+        parts.append(page_note)
     if editor_owed:
         parts.append(EDITOR_NOTE % editor_owed)
     if parity_word:
