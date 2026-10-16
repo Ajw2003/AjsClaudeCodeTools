@@ -1,0 +1,51 @@
+{
+  "title": "Patch 2.68.1 QA",
+  "eyebrow": "QA for house-rules 2.68.1, the first step of the plugin restructure · ready for your test",
+  "approval": "QA passed: plugin restructure 2.68.1 patch",
+  "short": {
+    "lead": "All five steps of the 2.68.1 patch are built and committed on the branch ccr-7dcf4ee2-zp3mm8. Each step first added a test to verify.py (the repo's self-check script) that reproduces its incident from the issue \"the design loop is broken and blocks sessions\" (#303), then fixed it. The full verify.py suite passed twice in a row with 839 checks, up from 832, and tools/verify_tools.py passed its 47 checks. Nothing in this session ran the new hooks (the small scripts that run at set moments in a session) for real. This session runs the installed 2.68.0 plugin until the patch is merged and updated.",
+    "hint": "Tap a step to see what was built and how it was checked.",
+    "key": [["Built", "done"], ["You act on it", "you"]],
+    "items": [
+      ["loop", "Approvals", "Every approval in a message is read", "done", "The issue \"the design loop reads every approval in a message, and a design approval sets the feature name\" (#307), commit 2e9c71b. Your message \"Design approved: importer.  Build plan approved: Importer\" now moves the stage to Plan, and the build plan is refused with its own reason. After \"QA failed: Importer\", \"Design approved: Importer\" counts as the redo even when the saved feature name is out of date. Both cases failed on the old code first.", "Nothing from you."],
+      ["lock", "Own repo", "Only this repo's issues count", "done", "The issue \"the design loop records only issues created in its own repo\" (#308), commit dea8e47. An issue made in another repo gets a note and isn't recorded; one made in the checkout's own GitHub repo is recorded as before. Both cases failed on the old code first, checked by reversing the patch and running the suite.", "Nothing from you."],
+      ["eye", "Report-only", "Four checks report instead of blocking", "done", "The issue \"four checks report instead of blocking, and the page builder accepts any approval line\" (#309), commit 9868f29. Writes made through the command line while code is locked now go through with a report. The re-creation note asks for nothing. The page checkpoint reports instead of blocking. Bare references (an issue number or option letter with nothing naming what it points at) go to you in a one-line report. make_page.py builds any approval line, with a note that the line moves no stage. Eleven existing cases that expected a block were updated to expect the report.", "Nothing from you."],
+      ["stop", "Page owed", "A page reminder survives a shorter retry", "done", "The issue \"a blocked page stays owed across retries\" (#310), commit 9868f29. The way a flagged reply slipped past the reminder today is replayed: a 70-word retry after a flagged 165-word reply still gets the report, a linked page clears it, and a new message from you starts with nothing owed.", "Nothing from you."],
+      ["flask", "Your test", "Test it in a new session", "you", "The issue \"release the patch with its version, docs and QA page\" (#311), commit fa7ff2a. Merge the pull request, run tools\\update.bat on your desktop (or claude plugin update house-rules@aj-house-rules), then start a new session in a repo that uses the design loop.", "Send one message holding a design approval and a build-plan approval, and check the stage moves to Plan. Then reply \"QA passed\" or \"QA failed\" with what to change."]
+    ]
+  },
+  "changes": [
+    ["chg", "Approval reader and redo match (scripts/hook.py)", "Every approval phrase is applied in stage order.", ["One phrase read, and a refusal ended the message.", "Design, then build plan, then QA, each with its own note."], "A new function, _loop_apply, splits the message into approval phrases. The old code now lives in _loop_apply_one, which handles one phrase.", null, null],
+    ["chg", "Issue record (scripts/hook.py)", "Each issue's repo is compared with the checkout's GitHub origin (the GitHub address this local copy came from).", ["Any issue counted.", "Only the checkout's own repo counts; others get a note."], "A checkout with no GitHub origin counts every issue, as before, because nothing names its repo.", null, null],
+    ["chg", "Report-only checks (scripts/hook.py, scripts/make_page.py)", "Four checks and the approval line.", ["They blocked or demanded a resend.", "They report what they would have blocked."], "In the checkpoint table, the page row is now marked as report-only. The writing check keeps its other kinds of finding.", null, null]
+  ],
+  "qa": {
+    "feature": "plugin restructure 2.68.1 patch",
+    "base": "origin/main",
+    "unverified": [
+      "No real session has run the 2.68.1 hooks: this session runs the installed 2.68.0 plugin, so every check above comes from verify.py's replays of hook calls, not a live session",
+      "The cross-repo issue check was replayed against a test fixture (a made-up repo) whose origin is github.com/me/own. A real session with two repos attached was not tried. That is the case in the issue \"Design-loop approvals are dropped silently when the session folder isn't a git repo\" (#296)",
+      "A checkout with no GitHub origin still counts every issue, so a session working outside a GitHub clone could still mix repos",
+      "The file counts below are taken from git after the build; no separate estimate was made beforehand"
+    ],
+    "files": {
+      "claude-house-rules/plugins/house-rules/scripts/hook.py": [112, 38, "the approval parser (#307), the issue record (#308), three report-only checks (#309) and the page memory (#310)"],
+      "claude-house-rules/plugins/house-rules/scripts/verify.py": [155, 35, "the new cases for every step, and the updated cases that expected a block"],
+      "claude-house-rules/plugins/house-rules/scripts/make_page.py": [7, 1, "any approval line builds (#309)"],
+      "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json": [1, 1, "version 2.68.1 (#311)"],
+      "docs/4-systems/design-loop.md": [4, 4, "approvals, the issue record, the code lock and long replies"],
+      "docs/4-systems/clear-writing.md": [2, 2, "the report-only writing kinds"],
+      "docs/3-state/ProjectState.md": [2, 0, "the 2.68.1 entry"]
+    }
+  },
+  "wrapup": {
+    "summary": "The 2.68.1 patch is built: approvals in one message are all read, other repos' issues don't count, four checks report instead of blocking, and a flagged page stays owed.",
+    "changing": "Files changed: scripts/hook.py, scripts/make_page.py, verify.py, the plugin version, and the design-loop, clear-writing and state docs.",
+    "blocking": "Your test in a new session after the merge and update.",
+    "next": "After QA passes, we hold the grilling session, where I question you on the design before building, on the 28 rule contradictions. Then come the restructure's own steps, tracked as sub-issues (smaller issues linked under a parent) of the issue \"restructure into a shared core with project boundaries and six optional sub-plugins\" (#306).",
+    "todo": [
+      "Merge the pull request, update the plugin, and run the test in a new session.",
+      "Tap <b>Copy my reply</b> and send it to me, or tell me what to change."
+    ]
+  }
+}
