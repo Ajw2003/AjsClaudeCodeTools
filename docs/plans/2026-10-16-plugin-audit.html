@@ -449,7 +449,7 @@ const PAGE = {
       "Guards, prompt timer, page builder, harvest, helpers, profile, standards",
       "They work; each moves into its sub-plugin.",
       null,
-      "Four small fixes ride along. The guard refuses a tool call that reaches it with no details. The overwrite guard's docstring matches its behaviour. The builder helper (agents/builder.md) states the same number of test runs as the rules. The archivist helper gets a line listing the tools it may use.",
+      "Four small fixes ride along with the restructure. The destructive and branch guard refuses a tool call that arrives with no tool input, instead of letting it through. The overwrite guard's docstring is corrected to say it refuses, which is what it does. The builder helper (agents/builder.md) is changed to run the full test suites twice, as rules/detail/green-suite.md says, instead of once. The archivist helper gets a line listing the tools it may use.",
       null,
       null
     ]
