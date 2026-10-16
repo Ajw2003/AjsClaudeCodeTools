@@ -388,7 +388,7 @@ const PAGE = {
   "choices": [],
   "wrapup": {
     "summary": "Build the 2.68.1 patch in five steps, each reproducing its incident in verify.py first, and release it with one pull request and a QA page.",
-    "changing": "Several areas change. scripts/hook.py gets the approval parser, the issue record, three checks and the page checkpoint memory. scripts/clarity.py gets the bare-reference check. scripts/make_page.py gets the approval line. The rest is verify.py, the plugin version, and the design-loop, clear-writing and state docs.",
+    "changing": "Most of the change lands in scripts/hook.py: the approval parser, the issue record, three of the checks and the page checkpoint memory. The bare-reference check lives in clarity.py, and the approval line in make_page.py. The rest is verify.py, the plugin version, and the design-loop, clear-writing and state docs.",
     "blocking": "Your approval of this build plan.",
     "next": "After approval, one builder helper at a time builds the issues in order. It starts with \"the design loop reads every approval in a message, and a design approval sets the feature name\" (#307) and ends with \"release the patch with its version, docs and QA page\" (#311). Before any change, all 832 verify.py checks pass; that is the baseline.",
     "todo": [
