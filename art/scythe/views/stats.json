@@ -1,0 +1,23 @@
+{
+ "model": "scythe.glb",
+ "triangles": 5372,
+ "bbox_m": [
+  0.639,
+  0.078,
+  1.805
+ ],
+ "height_m": 1.805,
+ "mesh_count": 1,
+ "bones": {
+  "count": 0,
+  "names": []
+ },
+ "materials": [
+  "BladeSteel",
+  "HeadIron",
+  "RopeWood",
+  "SkullBone",
+  "SocketDark"
+ ],
+ "forward": "-Y"
+}

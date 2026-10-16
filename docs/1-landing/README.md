@@ -15,7 +15,8 @@ holds the scripts that get all three onto a machine and prove they still work on
 | [`claude-house-rules/`](../../claude-house-rules) | The `house-rules` plugin — hooks, rules, agents, output style |
 | [`claude-prompt-workshop/`](../../claude-prompt-workshop) | The `prompt-workshop` plugin — v0.1 |
 | [`claude-agent-router/`](../../claude-agent-router) | The `agent-router` plugin — v0.1 |
-| [`.claude-plugin/marketplace.json`](../../.claude-plugin/marketplace.json) | Declares all three plugins to `claude plugin marketplace add` |
+| [`claude-art-pipeline/`](../../claude-art-pipeline) | The `art-pipeline` plugin — v0.1, a Stop-hook model-review gate |
+| [`.claude-plugin/marketplace.json`](../../.claude-plugin/marketplace.json) | Declares all four plugins to `claude plugin marketplace add` |
 | [`tools/`](../../tools) | Install, upgrade, verify, and measure scripts — not shipped to installed copies |
 | [`CLAUDE.md`](../../CLAUDE.md) | Session-loaded guidance for working *in* this repo — commands, editing rules |
 
