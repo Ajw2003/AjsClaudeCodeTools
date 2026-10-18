@@ -191,6 +191,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-17, branch `AjsAgent/issue-315-attribution-routes`, plugin 2.68.3: #315 (attribution guard gaps, #316 to #319) is built and waiting for aj's QA.
 
+2026-10-18, branch `AjsAgent/issue-329-page-links`, plugin 2.68.4: #329 (a page link in a reply must open, #330 to #332) is built and waiting for aj's QA. The page checkpoint counts an .html link only when it resolves inside the session's folder, and `make_page.py` warns when it writes a page outside the folder it runs in. `verify.py` still fails the 4 checks that already failed on `main` in a separate working folder (95, 97, 751, and the pagecheck case); no new failures.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
