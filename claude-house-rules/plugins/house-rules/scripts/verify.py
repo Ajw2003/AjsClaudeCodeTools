@@ -9382,6 +9382,20 @@ _ck_cases.append(("page (#309): a long reply with no page is not blocked, and th
 _ck_cases.append(("page: the report gives the exact build command", "make_page.py" in _ck_o and "build <content.json>" in _ck_o))
 _ck_cases.append(("page: the report never offers \"no page\" to the agent (#283)",
                   "no page" not in _ck_o[_ck_o.find(_CK_PAGE_NOTE):][:400].lower()))
+# #323: the first stop continues the turn (additionalContext); the retry reports to aj only (systemMessage).
+_ck_t_323 = _hand_transcript("ck-323", _ck_user("explain 323", [_CW_EDITOR]))
+_, _ck_o1, _ = run_hook("handover", stop_payload(last_assistant_message=_ck_long, cwd=_loop_dir,
+                        transcript_path=_ck_t_323), env=_CK_ENV)
+_, _ck_o2, _ = run_hook("handover", stop_payload(last_assistant_message=_ck_long, cwd=_loop_dir,
+                        stop_hook_active=True, transcript_path=_ck_t_323), env=_CK_ENV)
+try:
+    _ck_j1, _ck_j2 = json.loads(_ck_o1), json.loads(_ck_o2)
+except ValueError:
+    _ck_j1, _ck_j2 = {}, {}
+_ck_cases.append(("#323: the first stop gives additionalContext",
+                  "additionalContext" in _ck_j1.get("hookSpecificOutput", {})))
+_ck_cases.append(("#323: the retry gives no additionalContext, only a systemMessage with the note",
+                  "hookSpecificOutput" not in _ck_j2 and _CK_PAGE_NOTE in _ck_j2.get("systemMessage", "")))
 # #310: replays the 2026-10-16 dodge - a 165-word reply was flagged, then a 70-word retry cleared it.
 _ck_165 = " ".join(["Words"] * 165) + "."
 _ck_70 = " ".join(["Short"] * 70) + "."

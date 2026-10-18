@@ -8020,6 +8020,10 @@ def event_handover():
         parts.append(issue_line)
     if label_line:
         parts.append(label_line)
+    if retry:
+        # #322/#323: the retry reports to aj only; additionalContext would wake the model and loop.
+        emit({"systemMessage": " ".join(trace_lines + parts)})
+        return 0
     out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}
     if trace_lines:
         out["systemMessage"] = " ".join(trace_lines)
