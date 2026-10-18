@@ -23,7 +23,7 @@
         "Agent",
         "45 ready for an agent",
         "",
-        "The first one up is #315 \"the attribution guard misses gh api and curl\". The page planned 47; the other 2 were the duplicates that closed.",
+        "The one I would start on first is #315 \"the attribution guard misses gh api and curl\". The approved page planned 47 for agents; the other 2 were the duplicates that closed.",
         "Nothing from you."
       ],
       [
@@ -55,7 +55,7 @@
         "Kept",
         "11 kept open as won't fix",
         "",
-        "The old issue-workflow issues stay open until #301 \"other work becomes an issue in its own repo\" replaces them.",
+        "The old issue-workflow issues stay open, labelled won't fix, until #301 \"other work becomes an issue in its own repo\" replaces them.",
         "Nothing from you."
       ]
     ]
@@ -67,7 +67,7 @@
       "#153 \"destructive git steps run unasked only on a claude/ branch\" kept its Feature label.",
       [
         "The approved page put it in a bug row.",
-        "It kept its existing Feature label, so no label was removed from it."
+        "It kept the Feature label it already had, and I removed no label from it."
       ],
       "Every other issue matches the table in docs/plans/2026-10-17-triage-core-restructure.md."
     ]
