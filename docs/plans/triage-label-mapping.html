@@ -344,7 +344,7 @@ const PAGE = {
         "No mapping exists. Triage stops and asks you to run the setup skill.",
         "A short table maps each of the seven triage roles to one repo label, and names \"in progress\" and \"needs review\" as off-limits to triage."
       ],
-      "One new label, \"needs triage\", is created on GitHub. No existing label is renamed or removed, and no issue is relabelled until you ask for a triage pass."
+      "Four new labels are created on GitHub: needs-triage, needs-info, ready-for-agent and ready-for-human. wontfix already existed. No existing label is renamed or removed, and no issue is relabelled until you ask for a triage pass."
     ]
   ],
   "choices": [
@@ -373,7 +373,7 @@ const PAGE = {
       [
         [
           "A",
-          "The mapping on this page: one new label plus four unused existing ones",
+          "The mapping on this page: one new label plus four existing ones the hooks ignore",
           1,
           "Nothing collides with the design-loop labels."
         ],
@@ -389,9 +389,9 @@ const PAGE = {
   ],
   "wrapup": {
     "summary": "A mapping from the triage skill's seven roles to labels in this repo, keeping clear of the two labels the house-rules hooks depend on.",
-    "changing": "One new mapping file and one new GitHub label, \"needs triage\".",
+    "changing": "One new mapping file and four new GitHub labels, one for each triage state that had no label.",
     "blocking": "Your answers to the two choices.",
-    "next": "I write the mapping file, create the label, then list the issues that need triage.",
+    "next": "I write the mapping file, create the four labels, then list the issues that need triage.",
     "todo": [
       "Pick your answers under Choices.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: triage label mapping\", or say what to change."
