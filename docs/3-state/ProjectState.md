@@ -187,6 +187,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-16, branch `ccr-7dcf4ee2-zp3mm8`, plugin 2.68.1: the first step of the plugin restructure (#306), scoped to the issue "the design loop is broken and blocks sessions" (#303). Built: every approval in a message is read, in stage order (#307); only issues made in the checkout's own GitHub repo count toward its feature (#308); the shell-write refusal while code is locked, the re-creation check, the page checkpoint and the bare-reference writing check report instead of blocking, and `make_page.py` builds any approval line (#309); a flagged page stays owed across shorter retries (#310). `verify.py` 839 PASS, run twice. QA passed (aj, 2026-10-16); pull request #312 waits to be merged. The audit behind it is `docs/audits/2026-10-16-plugin-audit/`; the restructure's design is `docs/4-systems/plugin-restructure.md`. Next: the grilling session on the 28 rule contradictions.
 
+2026-10-17, branch `AjsAgent/reference-page`, plugin 2.68.2: aj's reference page is saved at `docs/plans/reference/learning-tools-plugin.html`, with its content file, its eight pictures and a README saying what makes it the reference. No hook or rule changes; the version moves only because `check_plugin_version_bump.py` counts every `docs/` change. Making pictures mandatory on every page is issue #313 (priority: high, up next). `verify.py` 839 PASS.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
