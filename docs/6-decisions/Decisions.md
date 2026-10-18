@@ -7,6 +7,27 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - Docs context layer: aj's answers on the first proposal
+
+**Context.** The restructure (#306, restructure into a shared core with project boundaries and six
+optional sub-plugins) has stopped after the 2.68.1 patch: QA passed, the grilling session on the 28
+rule contradictions has not started, and no build sub-issues exist. aj asked to fold the job of
+trailhq/Trail-Code (a code map plus saved decisions, so a session reads a map instead of searching
+code) into the docs. Proposal page: `docs/plans/2026-10-18-docs-context-layer.html`.
+
+**Decision.** aj's reply was "Docs context layer answers: 1* 2* 3A".
+- When (3A): the docs context layer joins #306. It is settled in the grilling session and built
+  inside the Docs part, which becomes installed by default.
+- Code map (1, aj's own answer): build our own map, not Trail-Code's. It must map Python, web
+  projects and C#, because those are what aj builds; no use case allows dropping one.
+- Keeping docs current (2, aj's own answer): investigate an alternative to "the end-of-reply check
+  names each doc owed an update". Docs are a source of truth, so they cannot be optional and cannot
+  fall behind, and the mechanism that keeps them current must never loop.
+
+Rejected: installing Trail-Code, whole or map-only, and a Python-only map.
+
+**Status.** Standing. Follow-up page for choices 1 and 2: `docs/plans/2026-10-18-docs-map-and-freshness.html`.
+
 ## 2026-10-16 - QA passed: plugin restructure 2.68.1 patch
 
 **Context.** The 2.68.1 patch (#307 to #311) was built on `ccr-7dcf4ee2-zp3mm8`, pull request #312 (house-rules

@@ -1,0 +1,52 @@
+{
+  "title": "Docs Context Layer",
+  "eyebrow": "Proposal · where the restructure stands, and folding Trail-Code's job into the docs",
+  "approval": "Design approved: docs context layer",
+  "replyPrefix": "Docs context layer answers",
+  "reply": "",
+  "short": {
+    "lead": "The restructure (issue #306, \"restructure into a shared core with project boundaries and six optional sub-plugins\") has finished only its first step. The 2.68.1 patch passed your QA on 2026-10-16, but its five issues (#307 to #311) are still open, waiting for you to close them. The next step, a grilling session on the 28 places where the rules contradict each other, has not started, and no build sub-issues exist yet. Since then the work has gone to side fixes: the credit check (#315, merged) and six new loop issues (#322 to #327). The restructure is paused, so this is the right moment to change course. Trail-Code (trailhq/Trail-Code, MIT licence, runs locally) does what our docs were meant to do: it lets a session read a map instead of searching code. This page proposes making the Docs part of the restructure a default instead of an option. Every doc would name what it depends on and what depends on it, and those names would be kept current automatically.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      ["What exists today", ""],
+      ["Needs your decision", "you"]
+    ],
+    "items": [
+      ["file", "Have", "The six-tier docs", "", "Every repo already has landing, roadmap, state, systems, today and decisions folders, and the docstiers hook checks that they exist. The tier-4 system docs say what each system owns and what it does not own, and cite code to file:line. These are close to Trail-Code's map, but they write the dependencies as prose, not as a list a tool can read.", "Reused as the base."],
+      ["check", "Have", "doc-ref pointers and the archivist", "", "The archivist moves long code comments into the system docs and leaves a doc-ref pointer behind. docref.py checks that each pointer still resolves. This link runs one way, from code to doc. Nothing yet links a doc back to the files it describes, so nothing can tell when a doc has gone stale.", "Reused; the reverse link is new."],
+      ["lock", "Have", "The decisions log", "", "docs/6-decisions/Decisions.md records what was decided, what was ruled out and why. That is Trail-Code's \"decisions\" learnings under another name. Trail-Code adds one thing we lack: before a commit, it checks the change against past decisions and quotes the one it contradicts.", "Reused; the pre-commit check is new."],
+      ["search", "Missing", "A code map and a lookup-first habit", "you", "Nothing tells a session to read the docs before searching code, and there is no who-calls-what map. Trail-Code builds one with tree-sitter (a parser library). It runs on this machine, with no model and no network, and its hooks put the matching files and functions into each prompt. Its README claims 46% fewer tool calls across 162 runs. I have not run it, so that figure is theirs, not measured here.", "Your answer under Choices."],
+      ["hand", "Missing", "Docs that update themselves", "you", "Today a doc changes only when a session remembers. Nothing notices that a file a doc describes was edited, and nothing lists which docs need updating after a change.", "Your answer under Choices."]
+    ]
+  },
+  "changes": [
+    ["chg", "The restructure plan (issue #306)", "Docs moves from an optional part to the core, and gains the context layer.", ["Docs is one of the four sub-plugins installed only on request, holding the doc tiers, the long-comment harvest, doc-ref pointers and the archivist.", "Docs is installed by default. It adds a dependency header on every doc, a staleness check, a lookup-first prompt hook and a decisions check before commits."], "The grilling session on the 28 rule contradictions still comes first, as #306 says. This change is added to its list so it is settled in the same pass."],
+    ["new", "A dependency header on every doc", "Each doc opens with the same four lines: what it covers, what it depends on, what depends on it, and when it was last checked against the code.", null, "The covers line names the source files and functions. The depends-on and depended-on-by lines name other docs and systems. The project-docs skill's templates gain the header, and docstiers refuses a tier-4 doc without one. With a fixed shape, a person or an agent always knows which line to read."],
+    ["new", "A staleness check after every change", "When a turn edits a file that a doc's covers line names, the end-of-reply check names that doc as owed an update.", null, "It compares each edited path against every doc's covers line. A doc owed an update is listed once per turn, with the depended-on-by list so the knock-on docs are named too. It reports and does not block, like the existing end-of-reply check for uncommitted files."],
+    ["new", "A lookup-first prompt hook", "Each prompt gets a short list of the docs whose covers line matches the files or systems it mentions.", null, "The list is drawn from the dependency headers, so it adds a few hundred characters to the prompt, where a code search would cost far more. With the code map from the first choice, it can also name functions and their callers."],
+    ["new", "A decisions check before commit", "Before a commit, the change is compared against decisions that name the same files, and a contradiction is quoted.", null, "Decisions.md entries gain a touches line naming files. The guard hook that already runs on git commit adds the comparison. A clash asks for a reason in the commit message; it does not refuse the commit."]
+  ],
+  "choices": [
+    ["map", "Where should the who-calls-what code map come from?", [
+      ["A", "Install Trail-Code for its code map only, and keep our own docs as the record of decisions", 1, "Local open-source code does the parsing in 23 languages, Python included. We write only the dependency headers and the hooks. Costs: it needs Node (already installed here) and it adds its own hooks to .claude. Its anonymous usage ping must be turned off by setting DO_NOT_TRACK=1."],
+      ["B", "Install all of Trail-Code, learnings included, and retire the decisions log", 0, "Least to build. Two problems: its learnings live in .trail/, a second place beside our six tiers, and its team features are marked \"soon\"."],
+      ["C", "Build our own map in Python with the standard ast module, no Trail-Code", 0, "No new dependency. It only maps Python files, so Unity C# and web projects get no map, and it rebuilds what Trail-Code already does."]
+    ], "The house rule \"Open source first\" puts local open-source tools at the top, which favours A or B. Any choice still gets a trial on this repo, measuring tool calls with and without it, before it ships."],
+    ["auto", "How should docs be kept current?", [
+      ["A", "The end-of-reply check names each doc owed an update, and the session writes it", 1, "The session already holds the change in context, so the update is cheap. It reports and does not block."],
+      ["B", "The same check, but it blocks the reply until the doc is updated", 0, "Docs never fall behind. It adds another blocking check, and blocking checks caused the loops in issues #303 and #322."],
+      ["C", "A helper agent updates the docs in the background after each change", 0, "Nothing for the session to do. It costs a helper run per change and would have to stay within the two-helper limit."]
+    ], "In all three, the dependency headers are what tells the check which docs a change touches."],
+    ["when", "When should this be built?", [
+      ["A", "Add it to #306 and settle it in the grilling session, then build it inside the Docs part of the restructure", 1, "One build, in the new structure. Nothing is built twice, and nothing is added to today's 8,365-line hook.py before it is split."],
+      ["B", "Build the dependency headers and the staleness check now, in today's plugin, before the restructure", 0, "You get the benefit sooner. The code moves again when the restructure splits hook.py."]
+    ], "Either way, the five 2.68.1 issues (#307 to #311) should close first, since their QA has passed."]
+  ],
+  "wrapup": {
+    "summary": "The restructure stopped after the 2.68.1 patch. This proposes making the Docs part a default context layer, using Trail-Code's ideas and possibly its code map.",
+    "changing": "Nothing yet. If approved: the plan in #306, the project-docs templates, and four new checks in the Docs part.",
+    "blocking": "Your answers to the three choices, and whether to close issues #307 to #311 (the five 2.68.1 issues).",
+    "next": "I update #306 and its systems doc, open one issue for each of the four additions, and trial Trail-Code's map on this repo if you pick A for the code map.",
+    "todo": ["Pick your answers under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}
