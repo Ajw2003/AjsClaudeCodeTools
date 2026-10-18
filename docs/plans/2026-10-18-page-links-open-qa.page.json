@@ -1,0 +1,104 @@
+{
+  "title": "Page Links QA",
+  "eyebrow": "QA · pull request #333, which fixes #329: a page link in a reply must open",
+  "short": {
+    "lead": "The fix is built and open as pull request #333. A reply now counts as linking a page only when the link opens inside the session's folder, and the page builder warns when it writes a page outside that folder. I ran the real end-of-reply hook and the real page builder on both cases, and each behaved as designed. The test suite has no new failures. Only you can test one thing: a real session working in a separate folder.",
+    "hint": "Tap a row to see what was checked and how.",
+    "key": [
+      [
+        "Checked by me",
+        ""
+      ],
+      [
+        "Your test",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Hook",
+        "The real hook flags an outside link",
+        "",
+        "I gave the fix branch's Stop hook a reply linking ../Other/docs/plans/x.html, and it printed: \"../Other/docs/plans/x.html is outside this session's folder ..., so the app cannot open it: copy it into .../docs/plans/ and link the copy\". Given a reply linking docs/plans/x.html, it printed no page note.",
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Builder",
+        "The real builder warns",
+        "",
+        "Running make_page.py build with --out pointing outside this folder printed: \"... is outside C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools; a link to it will not open in the app (#329).\" A normal build prints no warning (checked by case 834 in verify.py).",
+        "Nothing from you."
+      ],
+      [
+        "search",
+        "Tests",
+        "9 new cases pass; no new failures",
+        "",
+        "I ran verify.py twice from the branch's folder, and it printed: \"RESULT: FAIL - 4 of 856 checks failed\" both times. These 4 failing checks (numbers 95, 97, 751 and 835) already failed on main, run from a separate folder, before the change. tools/verify_tools.py printed: \"RESULT: PASS - all 47 checks passed\".",
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Your test",
+        "A worktree session hands you a page that opens",
+        "you",
+        "After merging and updating the plugin, ask a session to work in a sibling git worktree and show you a page. The page should open from its link with its content drawn, or the reply should carry the outside-folder note instead of a dead link.",
+        "Run it once and tell me what you saw."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "The link test (#330)",
+      "One function decides whether a reply links a page.",
+      [
+        "Any text containing \".html\" counted as a page link, and the QA check matched on the file name alone.",
+        "An .html link counts only when it resolves inside the session folder. In [x.html](../elsewhere/x.html), the visible text x.html no longer makes it count; only the target ../elsewhere/x.html is checked."
+      ],
+      "In hook.py: the functions _reply_links_page, _html_paths and _outside_page_links, which four callers use."
+    ],
+    [
+      "chg",
+      "The page builder (#331)",
+      "Warns when a page lands outside the folder it runs in.",
+      [
+        "It printed nothing.",
+        "One printed line naming the page, the folder and where to copy it."
+      ],
+      "In make_page.py, right after the line that prints \"wrote\"."
+    ],
+    [
+      "chg",
+      "Docs and version (#332)",
+      "The section in the systems doc is now marked built and cites line numbers.",
+      [
+        "The \"A page link must open\" section said planned.",
+        "It now says the section was built in version 2.68.4, cites each function, and lists the 9 test cases."
+      ],
+      "docs/4-systems/handover-pages.md, docs/3-state/ProjectState.md, plugin.json."
+    ]
+  ],
+  "qa": {
+    "feature": "page links open",
+    "base": "origin/main",
+    "unverified": [
+      "No real session in a sibling worktree has run with the fixed plugin yet; I ran the hook directly with a sample payload.",
+      "I did not re-run the 4 checks that fail from a separate working folder in the main folder. The pull request's CI run will show whether they pass there.",
+      "A bare path with a space in it is cut at the space, so it may be judged against the wrong folder. Markdown links with %20 and file:/// links are decoded first. No case tests a path with a space."
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "A page link now counts only when it opens, and the builder warns when it writes a page outside the session's folder. Pull request #333 waits for your QA.",
+    "changing": "Files changed: hook.py, make_page.py, verify.py, the handover pages systems doc, the state doc and the plugin version.",
+    "blocking": "Your QA of pull request #333.",
+    "next": "On your go-ahead I merge #333 into main. On a fail I fix it on the same branch.",
+    "todo": [
+      "Run the worktree-session test in the \"Your test\" row and tell me what you saw.",
+      "Send your verdict."
+    ]
+  }
+}
