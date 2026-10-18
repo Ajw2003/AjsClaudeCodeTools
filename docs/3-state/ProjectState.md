@@ -189,6 +189,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-17, branch `AjsAgent/reference-page`, plugin 2.68.2: aj's reference page is saved at `docs/plans/reference/learning-tools-plugin.html`, with its content file, its eight pictures and a README saying what makes it the reference. No hook or rule changes; the version moves only because `check_plugin_version_bump.py` counts every `docs/` change. Making pictures mandatory on every page is issue #313 (priority: high, up next). `verify.py` 839 PASS.
 
+2026-10-17, branch `AjsAgent/issue-315-attribution-routes`, plugin 2.68.3: #315 (attribution guard gaps, #316 to #319) is built and waiting for aj's QA.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

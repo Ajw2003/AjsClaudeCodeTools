@@ -141,7 +141,7 @@ Before code: one parent issue, one child per step (`Part of #N`), plain titles, 
 <!-- subagent -->
 
 Read-only inspection is always fine. **Off `main`**: commit, push, merge freely. **`main`**: only
-by pull request; the guard refuses. On aj's branch, branch off first; never delete one unasked. Commit scoped to changed paths, never finish what they started, say what/where. Credit "aj's agent", never Claude. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
+by pull request; the guard refuses. On aj's branch, branch off first; never delete one unasked. Commit scoped to changed paths, never finish what they started, say what/where. Credit "aj's agent", never Claude, on every route (commit, gh, api, curl); the body is read back, and the cloud "with Claude" badge and footer are reported, not promised away. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
 
 ## Never take a destructive action without checking first
 <!-- subagent -->

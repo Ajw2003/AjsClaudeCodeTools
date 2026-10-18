@@ -85,3 +85,10 @@ The GitHub tools are checked too: pull request, issue, comment and commit text t
 branch". Prompting on every non-`AjsAgent/` branch stalled every subagent, whose worktree branch is
 `worktree-agent-<id>`, on every commit (#134, #136). aj asked for the line drawn at `main` instead.
 Plan: `docs/plans/2026-10-09-stop-permission-stalls.md`.
+
+**Update 2026-10-17 (#315 to #319):** the credit check covers every route an agent writes to
+GitHub: `git commit`, `gh pr` and `gh issue`, `gh api` writes, and `curl` to the GitHub API. After
+a write, the `creditcheck` hook reads the pull request or issue body back and says whether a credit
+footer is on it. The "with Claude" badge (the GitHub App's token) and the platform's creation
+footer cannot be removed from a cloud session, so the reply reports them instead of promising to
+remove them. Design: `docs/4-systems/guards.md`, "Credit on GitHub".

@@ -3222,6 +3222,56 @@ commit_case(
     "hooks.json PostToolUse entry",
 )
 
+# -- #318: creditcheck reads the body back after a pull request / issue write (fetch stubbed) --------
+import importlib.util as _cc_util
+import io as _cc_io
+_cc_spec = _cc_util.spec_from_file_location("hook_creditcheck", HOOK)
+_cc_mod = _cc_util.module_from_spec(_cc_spec)
+_cc_spec.loader.exec_module(_cc_mod)
+
+
+def _creditcheck(cmd, stdout, fetch, off=False):
+    _cc_mod._read_back_body = fetch
+    _saved = (sys.stdin, sys.stdout, os.environ.get("HOUSE_RULES_ATTRIBUTION"))
+    sys.stdin = type("S", (), {"buffer": _cc_io.BytesIO(json.dumps(
+        {"tool_name": "Bash", "tool_input": {"command": cmd}, "tool_response": {"stdout": stdout}}).encode())})()
+    sys.stdout = _cc_io.StringIO()
+    if off:
+        os.environ["HOUSE_RULES_ATTRIBUTION"] = "off"
+    try:
+        _cc_mod.event_creditcheck()
+        return sys.stdout.getvalue()
+    finally:
+        sys.stdin, sys.stdout = _saved[0], _saved[1]
+        os.environ.pop("HOUSE_RULES_ATTRIBUTION", None)
+        if _saved[2] is not None:
+            os.environ["HOUSE_RULES_ATTRIBUTION"] = _saved[2]
+
+
+_cc_cmd = 'gh pr create --title T --body "Refs #1"'
+_cc_url = "https://github.com/o/r/pull/7"
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nGenerated with [Claude Code](https://claude.ai/code)", None))
+commit_case("creditcheck: a body with a Claude credit gets the warning",
+            "added a Claude credit to " + _cc_url in out and "say so in your reply" in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nOpened by AJ's agent", None))
+commit_case("creditcheck: a clean body gets the clean line",
+            "read back " + _cc_url + "; no Claude credit on it." in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: (None, "gh timed out after 10 seconds"))
+commit_case("creditcheck: a failed fetch says it could not read back",
+            "could not read back " + _cc_url in out and "unknown" in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, "nothing useful\n", lambda p: ("", None))
+commit_case("creditcheck: no address in the output says it could not read back",
+            "could not read back" in out and "unknown" in out, "stdout: %r" % out[:200])
+out = _creditcheck("ls", "a b\n", lambda p: ("", None))
+commit_case("creditcheck: a non-matching command prints nothing", out.strip() == "", "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("", None), off=True)
+commit_case("creditcheck: HOUSE_RULES_ATTRIBUTION=off prints nothing", out.strip() == "", "stdout: %r" % out[:200])
+commit_case(
+    "creditcheck is wired to PostToolUse Bash with a 15 second timeout in hooks.json",
+    bool(re.search(r'"matcher": "Bash",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" creditcheck",\s*"timeout": 15', hooks_json_text)),
+    "hooks.json PostToolUse entry",
+)
+
 # audit: a subagent's uncommitted files are named, because the parent owns that commit.
 _r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
 _sub = _hand_transcript("subagent-wrote", [
@@ -4035,6 +4085,51 @@ commit_case(
     _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
     "out %r | off %r" % (_oc1[:90], _off[:80]),
 )
+# -- #316: the credit check also covers gh api and curl writes to GitHub ---------------------------------
+_a316_bad = "Co-Authored-By: Claude <noreply@anthropic.com>"
+_a316_dir = tempfile.mkdtemp()
+_a316_bf = os.path.join(_a316_dir, "bad.txt").replace("\\", "/")
+_a316_cf = os.path.join(_a316_dir, "clean.txt").replace("\\", "/")
+_a316_bj = os.path.join(_a316_dir, "bad.json").replace("\\", "/")
+_a316_cj = os.path.join(_a316_dir, "clean.json").replace("\\", "/")
+for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "Opened by AJ's agent"),
+               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "Opened by AJ's agent"}))):
+    with open(_p, "w", encoding="utf-8") as _f:
+        _f.write(_t)
+_a316_routes = lambda b, fb, fj: [
+    "gh api repos/o/r/pulls -f title=t -f body=\"%s\"" % b,
+    "gh api repos/o/r/issues -f title=t -f body=\"%s\"" % b,
+    "gh api -X PATCH repos/o/r/issues/5 -f body=\"%s\"" % b,
+    "gh api repos/o/r/issues/5/comments -F body=@%s" % fb,
+    "gh api repos/o/r/pulls --input %s" % fj,
+    "curl -X POST https://api.github.com/repos/o/r/pulls -d '{\"body\":\"%s\"}'" % b,
+]
+_a316_missed = [c for c in _a316_routes(_a316_bad, _a316_bf, _a316_bj) if _iss_decision(_iss_guard(c)) != "deny"]
+_a316_false = [c for c in _a316_routes("Opened by AJ's agent", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
+_a316_get = _iss_guard("gh api repos/o/r/pulls/5")
+commit_case(
+    "attribution: gh api and curl writes crediting Claude are refused on every route; clean bodies and a plain GET pass",
+    not _a316_missed and not _a316_false and _iss_decision(_a316_get) != "deny",
+    "allowed %r | wrongly refused %r | get %r" % (_a316_missed, _a316_false, _a316_get[:80]),
+)
+# -- #317: the footer GitHub appends is recognised ------------------------------------------------------
+_a317_foot = "Summary\n\n_Generated by [Claude Code](https://claude" + ".ai/code)_\n"
+_a317_tf = os.path.join(_a316_dir, "foot.txt").replace("\\", "/")
+_a317_jf = os.path.join(_a316_dir, "foot.json").replace("\\", "/")
+_a317_pf = os.path.join(_a316_dir, "prose.txt").replace("\\", "/")
+for _p, _t in ((_a317_tf, _a317_foot), (_a317_jf, json.dumps({"body": _a317_foot})),
+               (_a317_pf, "Refs #5\n\nThis was reviewed with Claude in mind")):
+    with open(_p, "w", encoding="utf-8") as _f:
+        _f.write(_t)
+_a317_pr = _iss_guard("gh pr create --title t --body-file %s" % _a317_tf)
+_a317_api = _iss_guard("gh api repos/o/r/pulls --input %s" % _a317_jf)
+_a317_prose = _iss_guard("gh pr create --title t --body-file %s" % _a317_pf)
+commit_case(
+    "attribution: the platform-appended footer is refused via gh pr create and gh api --input; prose mentioning Claude passes",
+    _iss_decision(_a317_pr) == "deny" and _iss_decision(_a317_api) == "deny" and _iss_decision(_a317_prose) != "deny",
+    "pr %r | api %r | prose %r" % (_a317_pr[:80], _a317_api[:80], _a317_prose[:200]),
+)
+
 # -- #178: the same credit check on GitHub MCP writes ---------------------------------------------------
 def _gg(tool, env_extra=None, **tool_input):
     e = dict(os.environ)
@@ -4321,16 +4416,16 @@ _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
-    not any("issue" in c for c in _tool_cmds) and _count_entries == 11 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 12 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
     "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
 )
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.68.2",
+    "issues: the rules section and its detail file exist, and the plugin is 2.68.3",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.2",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.3",
     "rules section + detail file + version",
 )
 
