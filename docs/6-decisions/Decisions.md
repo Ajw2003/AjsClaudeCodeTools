@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - Design approved: page links open
+
+**Context.** Issue #329 (a page link in a reply must open: a page outside the session folder is sent
+as a file, not linked), a sub-issue of #281. On 2026-10-18 a page in a sibling git worktree was linked
+and did nothing, then opened in the browser pane as a static snapshot with scripts off and showed an
+empty card. The page checkpoint counts any ".html" in a reply as a link (`_PAGE_LINK_RE`,
+`hook.py:7299` on `main`). Design page: `docs/plans/2026-10-18-page-links-open.html`.
+
+**Decision.** aj approved ("Design approved: page links open"):
+- One function, `_reply_links_page(reply, cwd)`, replaces the bare pattern for the page checkpoint,
+  the long-reply note, the owed-page counter and the QA link check. An artifact link or a picture
+  counts; an .html link counts only when it resolves inside the session's folder; a bare file name
+  still counts.
+- The checkpoint's note names the outside path and says to copy it into the session folder.
+- `make_page.py build` prints a warning when it writes outside the folder it runs in.
+- `verify.py` gains five cases for the function and one for the warning.
+
+Dropped from the issue's first draft: counting a page sent with SendUserFile as linked, because a sent
+file outside the folder also opened as a blank snapshot.
+
+**Status.** Standing.
+
 ## 2026-10-15 - Guards audit: the build plan
 
 **Context.** aj approved the design ("Design approved: guards audit"). The systems document is
