@@ -6037,9 +6037,14 @@ _ATTRIBUTION_TEXT_RES = [
     re.compile(r"claude\.ai/code/", re.IGNORECASE),
 ]
 _ATTRIBUTION_CMD_RE = re.compile(
-    r"(?:" + _GIT + r"commit([^0-9A-Za-z-]|$))|(?:" + _GH_PREFIX + r"(?:pr|issue)\s+(?:create|edit|comment)\b)",
+    r"(?:" + _GIT + r"commit([^0-9A-Za-z-]|$))|(?:" + _GH_PREFIX + r"(?:pr|issue)\s+(?:create|edit|comment)\b)"
+    r"|(?:" + _GH_PREFIX + r"api\b[^\n]*?repos/[\w.-]+/[\w.-]+/(?:pulls|issues)\b)"
+    r"|(?:(?:^|[;&|(\n`]|\$\()\s*curl\b[^\n]*api\.github\.com)",
     re.IGNORECASE,
 )
+# #316: a `gh api` call writes when it has a method flag or any field/input flag; a plain GET does not.
+_GH_API_WRITE_RE = re.compile(r"(?<![\w-])(?:-X\s*(?:POST|PATCH|PUT)|--method\b|-f\b|-F\b|--field\b|--raw-field\b|--input\b)", re.IGNORECASE)
+_GH_API_FILE_RE = re.compile(r"(?:(?<![\w-])-F|--field)(?:=|\s+)body=@(\"[^\"]+\"|'[^']+'|\S+)|--input(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
 ATTRIBUTION_DENY = (
     "House rules, credit aj's agent: this %s credits Claude (`%s`). Credit \"aj's agent\" instead, "
     "with no email and no Claude branding: commits end with `Committed by AJ's agent`, pull requests "
@@ -6055,7 +6060,20 @@ def _attribution_guard(subject, payload):
     if not _ATTRIBUTION_CMD_RE.search(cmd):
         return None
     text = cmd
-    fm = _PR_BODY_FILE_RE.search(cmd)
+    if re.search(_GH_PREFIX + r"api\b", cmd, re.IGNORECASE):
+        if not _GH_API_WRITE_RE.search(cmd):
+            return None
+        for am in _GH_API_FILE_RE.finditer(cmd):
+            name = (am.group(1) or am.group(2)).strip("\"'")
+            path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    text = text + "\n" + f.read()
+            except OSError:
+                trace("attribution: could not read the gh api body file %s; its text was NOT checked for Claude credit." % name)
+        fm = None
+    else:
+        fm = _PR_BODY_FILE_RE.search(cmd)
     if fm and fm.group(1).strip("\"'") != "-":
         name = fm.group(1).strip("\"'")
         path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)

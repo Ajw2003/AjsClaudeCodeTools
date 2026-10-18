@@ -4035,6 +4035,34 @@ commit_case(
     _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
     "out %r | off %r" % (_oc1[:90], _off[:80]),
 )
+# -- #316: the credit check also covers gh api and curl writes to GitHub ---------------------------------
+_a316_bad = "Co-Authored-By: Claude <noreply@anthropic.com>"
+_a316_dir = tempfile.mkdtemp()
+_a316_bf = os.path.join(_a316_dir, "bad.txt").replace("\\", "/")
+_a316_cf = os.path.join(_a316_dir, "clean.txt").replace("\\", "/")
+_a316_bj = os.path.join(_a316_dir, "bad.json").replace("\\", "/")
+_a316_cj = os.path.join(_a316_dir, "clean.json").replace("\\", "/")
+for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "Opened by AJ's agent"),
+               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "Opened by AJ's agent"}))):
+    with open(_p, "w", encoding="utf-8") as _f:
+        _f.write(_t)
+_a316_routes = lambda b, fb, fj: [
+    "gh api repos/o/r/pulls -f title=t -f body=\"%s\"" % b,
+    "gh api repos/o/r/issues -f title=t -f body=\"%s\"" % b,
+    "gh api -X PATCH repos/o/r/issues/5 -f body=\"%s\"" % b,
+    "gh api repos/o/r/issues/5/comments -F body=@%s" % fb,
+    "gh api repos/o/r/pulls --input %s" % fj,
+    "curl -X POST https://api.github.com/repos/o/r/pulls -d '{\"body\":\"%s\"}'" % b,
+]
+_a316_missed = [c for c in _a316_routes(_a316_bad, _a316_bf, _a316_bj) if _iss_decision(_iss_guard(c)) != "deny"]
+_a316_false = [c for c in _a316_routes("Opened by AJ's agent", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
+_a316_get = _iss_guard("gh api repos/o/r/pulls/5")
+commit_case(
+    "attribution: gh api and curl writes crediting Claude are refused on every route; clean bodies and a plain GET pass",
+    not _a316_missed and not _a316_false and _iss_decision(_a316_get) != "deny",
+    "allowed %r | wrongly refused %r | get %r" % (_a316_missed, _a316_false, _a316_get[:80]),
+)
+
 # -- #178: the same credit check on GitHub MCP writes ---------------------------------------------------
 def _gg(tool, env_extra=None, **tool_input):
     e = dict(os.environ)
