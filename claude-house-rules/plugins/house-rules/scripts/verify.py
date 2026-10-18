@@ -9833,6 +9833,15 @@ else:
                         capture_output=True, text=True, timeout=300)
     _mp_cases.append(("make_page: the same page with the old 1fr CSS is reported as a clipped card and fails the check",
                       'clipped card' in _r.stdout and _r.returncode == 2))
+_d_out = _mp_proj("outside", _PS_STYLE)
+_d_cwd = os.path.join(_mp_tmp, "cwdfolder")
+os.makedirs(_d_cwd, exist_ok=True)
+_r_out = subprocess.run([sys.executable, MAKE_PAGE, "build", _c1, "--project", _d_out], cwd=_d_cwd, capture_output=True, text=True, timeout=300)
+_r_in = subprocess.run([sys.executable, MAKE_PAGE, "build", _c1, "--project", _d_out], cwd=_d_out, capture_output=True, text=True, timeout=300)
+_mp_cases.append(("make_page (#331): a page written outside the folder it runs in prints the 'is outside' line",
+                  _r_out.returncode == 0 and "is outside" in _r_out.stdout))
+_mp_cases.append(("make_page (#331): a page written inside the folder it runs in prints no 'is outside' line",
+                  _r_in.returncode == 0 and "is outside" not in _r_in.stdout))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
