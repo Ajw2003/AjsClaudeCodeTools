@@ -1,0 +1,35 @@
+{
+  "title": "Page Links Open",
+  "eyebrow": "Fix proposal · #329, a page link in a reply must open",
+  "approval": "Design approved: page links open",
+  "replyPrefix": "Page links open answers",
+  "reply": "",
+  "short": {
+    "lead": "Today the page checkpoint counts any reply that contains \".html\" as linking a page. It never checks whether the app can open that file. The app opens files only inside the session's folder. A file outside it either does nothing when clicked, or opens in the browser pane as a snapshot with scripts off, and a make_page.py page then shows an empty card. Both outcomes happened today with the docs map page. The fix makes the checkpoint check the path.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      ["What exists today", ""],
+      ["Changes", "you"]
+    ],
+    "items": [
+      ["search", "Today", "One pattern decides \"linked\"", "", "_PAGE_LINK_RE in hook.py (line 7299 on main) matches a claude.ai artifact link, a markdown picture, or the text \".html\" anywhere in the reply. Three places use it: the long-reply note, the page checkpoint and the owed-page counter. The QA page link check in _record_qa_link matches the page's file name alone, so a link to a copy in another folder also counts.", "Reused: every caller moves to one new function."],
+      ["file", "Today", "make_page.py writes into the current folder", "", "By default it writes to docs/plans/ under the folder it runs in (make_page.py line 401 on main), so a page built normally is inside the session's folder. A page lands outside only when --project or --out points elsewhere, or when the page is moved by hand, which is what happened with the docs map page today.", "Gains a one-line warning."],
+      ["hand", "Change", "A link counts only if it opens", "you", "A new function, _reply_links_page, replaces the bare pattern. An artifact link or a picture still counts. An .html link counts only when its path, resolved against the session's folder, is inside that folder. A reply whose only .html links point outside does not count, and the note says to copy the page into the session folder.", "Your approval."]
+    ]
+  },
+  "changes": [
+    ["new", "_reply_links_page(reply, cwd) in hook.py", "One function that says whether a reply links a page aj can open.", null, "It finds each .html path in markdown links, file:/// links and bare paths, resolves relative ones against cwd, and accepts the reply if any one resolves inside cwd. A bare file name with no folder, such as \"page.html\" in a sentence, still counts, as it does today, so ordinary replies are not newly flagged."],
+    ["chg", "The page checkpoint, the long-reply note, the owed-page counter and the QA link check", "All four call the new function instead of the pattern.", ["Any \".html\" in the reply counts; the QA check matches the file name alone.", "Only a link that resolves inside the session's folder counts."], "This fixes the cause once, in the place every caller already routes through."],
+    ["chg", "The checkpoint's note", "Names the outside path and the fix.", ["\"put the detail on a page ... and link the page it makes\"", "\"<path> is outside this session's folder <cwd>, so the app cannot open it: copy it into <cwd>/docs/plans/ and link the copy\""], "Report only, like the rest of the page checkpoint since #309."],
+    ["chg", "make_page.py build", "Prints a warning when the page it writes is outside the folder it runs in.", ["Silent.", "\"make_page: <out> is outside <cwd>; a link to it will not open in the app. Copy it into <cwd>/docs/plans/ before linking.\""], "One print. The build itself is unchanged."],
+    ["new", "verify.py cases", "Five cases for _reply_links_page and one for the make_page.py warning.", null, "A link inside the folder counts; a ../sibling link does not; a file:/// link outside does not; an artifact link counts; a bare file name counts. The warning case builds into a temporary folder outside the current one and checks the printed line."]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "The page checkpoint stops counting links the app cannot open, and the page builder warns when it writes outside the session's folder.",
+    "changing": "hook.py (one new function, four callers), make_page.py (one warning), verify.py (six cases), the hook-engine doc and the version.",
+    "blocking": "Your approval of this design.",
+    "next": "A builder helper makes the change on a new branch off main, verify.py runs twice, and you get a QA page that opens.",
+    "todo": ["Reply \"Design approved: page links open\", or tell me what to change."]
+  }
+}
