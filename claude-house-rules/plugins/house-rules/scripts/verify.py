@@ -3222,6 +3222,56 @@ commit_case(
     "hooks.json PostToolUse entry",
 )
 
+# -- #318: creditcheck reads the body back after a pull request / issue write (fetch stubbed) --------
+import importlib.util as _cc_util
+import io as _cc_io
+_cc_spec = _cc_util.spec_from_file_location("hook_creditcheck", HOOK)
+_cc_mod = _cc_util.module_from_spec(_cc_spec)
+_cc_spec.loader.exec_module(_cc_mod)
+
+
+def _creditcheck(cmd, stdout, fetch, off=False):
+    _cc_mod._read_back_body = fetch
+    _saved = (sys.stdin, sys.stdout, os.environ.get("HOUSE_RULES_ATTRIBUTION"))
+    sys.stdin = type("S", (), {"buffer": _cc_io.BytesIO(json.dumps(
+        {"tool_name": "Bash", "tool_input": {"command": cmd}, "tool_response": {"stdout": stdout}}).encode())})()
+    sys.stdout = _cc_io.StringIO()
+    if off:
+        os.environ["HOUSE_RULES_ATTRIBUTION"] = "off"
+    try:
+        _cc_mod.event_creditcheck()
+        return sys.stdout.getvalue()
+    finally:
+        sys.stdin, sys.stdout = _saved[0], _saved[1]
+        os.environ.pop("HOUSE_RULES_ATTRIBUTION", None)
+        if _saved[2] is not None:
+            os.environ["HOUSE_RULES_ATTRIBUTION"] = _saved[2]
+
+
+_cc_cmd = 'gh pr create --title T --body "Refs #1"'
+_cc_url = "https://github.com/o/r/pull/7"
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nGenerated with [Claude Code](https://claude.ai/code)", None))
+commit_case("creditcheck: a body with a Claude credit gets the warning",
+            "added a Claude credit to " + _cc_url in out and "say so in your reply" in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nOpened by AJ's agent", None))
+commit_case("creditcheck: a clean body gets the clean line",
+            "read back " + _cc_url + "; no Claude credit on it." in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: (None, "gh timed out after 10 seconds"))
+commit_case("creditcheck: a failed fetch says it could not read back",
+            "could not read back " + _cc_url in out and "unknown" in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, "nothing useful\n", lambda p: ("", None))
+commit_case("creditcheck: no address in the output says it could not read back",
+            "could not read back" in out and "unknown" in out, "stdout: %r" % out[:200])
+out = _creditcheck("ls", "a b\n", lambda p: ("", None))
+commit_case("creditcheck: a non-matching command prints nothing", out.strip() == "", "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("", None), off=True)
+commit_case("creditcheck: HOUSE_RULES_ATTRIBUTION=off prints nothing", out.strip() == "", "stdout: %r" % out[:200])
+commit_case(
+    "creditcheck is wired to PostToolUse Bash with a 15 second timeout in hooks.json",
+    bool(re.search(r'"matcher": "Bash",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" creditcheck",\s*"timeout": 15', hooks_json_text)),
+    "hooks.json PostToolUse entry",
+)
+
 # audit: a subagent's uncommitted files are named, because the parent owns that commit.
 _r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
 _sub = _hand_transcript("subagent-wrote", [
@@ -4366,7 +4416,7 @@ _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
-    not any("issue" in c for c in _tool_cmds) and _count_entries == 11 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 12 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
     "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
 )
 _rules_text = read(RULES_FILE)

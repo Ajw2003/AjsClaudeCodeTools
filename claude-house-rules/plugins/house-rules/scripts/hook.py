@@ -6092,6 +6092,74 @@ def _attribution_guard(subject, payload):
     return None
 
 
+# #318: PostToolUse on Bash. GitHub itself can add a Claude credit after a send (cloud sessions), so
+# after a pull request / issue / comment write the body is read back once and checked.
+_CREDIT_COMMENT_API_RE = re.compile(r"repos/([\w.-]+/[\w.-]+)/issues/comments/(\d+)")
+_CREDIT_ITEM_URL_RE = re.compile(r"https://github\.com/([\w.-]+/[\w.-]+)/(?:pull|issues)/(\d+)(?:#issuecomment-(\d+))?")
+
+
+def _read_back_body(path):
+    """(body, problem): the body of a GitHub issue, pull request or comment via `gh api`. verify.py stubs this."""
+    import subprocess
+    try:
+        r = subprocess.run(["gh", "api", path, "-q", ".body"], capture_output=True, timeout=10)
+    except FileNotFoundError:
+        return None, "gh is not installed"
+    except subprocess.TimeoutExpired:
+        return None, "gh timed out after 10 seconds"
+    if r.returncode != 0:
+        return None, "gh exited %d: %s" % (r.returncode, r.stderr.decode("utf-8", "replace").strip()[:100])
+    return r.stdout.decode("utf-8", "replace"), None
+
+
+def event_creditcheck():
+    try:
+        if not _attribution_enabled():
+            return 0
+        raw = read_payload()
+        data = json.loads(raw) if raw else None
+        ti = data.get("tool_input") if isinstance(data, dict) else None
+        cmd = str(ti.get("command") or "") if isinstance(ti, dict) else ""
+        if not cmd or _GIT_COMMIT_RE.search(cmd) or not _ATTRIBUTION_CMD_RE.search(cmd):
+            return 0
+        if re.search(_GH_PREFIX + r"api\b", cmd, re.IGNORECASE) and not _GH_API_WRITE_RE.search(cmd):
+            return 0
+        resp = data.get("tool_response")
+        out = resp.get("stdout") if isinstance(resp, dict) else resp
+        out = out if isinstance(out, str) else json.dumps(out)
+        path = url = None
+        m = _CREDIT_COMMENT_API_RE.search(out)
+        if m:
+            path, url = m.group(0), "https://github.com/" + m.group(1) + "/issues/comments/" + m.group(2)
+        else:
+            m = _CREDIT_ITEM_URL_RE.search(out)
+            if m:
+                url = m.group(0)
+                path = ("repos/%s/issues/comments/%s" % (m.group(1), m.group(3)) if m.group(3)
+                        else "repos/%s/issues/%s" % (m.group(1), m.group(2)))
+        if not path:
+            problem, what = "no pull request, issue or comment address in the command's output", "what was sent"
+        else:
+            body, problem = _read_back_body(path)
+            what = url
+        if problem:
+            text = ("House rules, credit check: could not read back %s (%s), so whether GitHub added a Claude "
+                    "credit is unknown; say so in your reply." % (what, problem))
+        else:
+            hit = next((m.group(0) for m in (rx.search(body) for rx in _ATTRIBUTION_TEXT_RES) if m), None)
+            if hit:
+                text = ("House rules, credit check: GitHub added a Claude credit to %s after it was sent (`%s`). "
+                        "It can't be removed from a cloud session; say so in your reply instead of saying the "
+                        "credit is clean." % (url, hit.strip()[:60]))
+            else:
+                text = "House rules, credit check: read back %s; no Claude credit on it." % url
+        emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": text}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules: the credit check hit an error (%s: %s); the body was NOT read back."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
 # Issue #178: the same credit check for writes made through the GitHub MCP tools, which never
 # pass through `guard`. Only title/body/message and branch/head are read, never file content.
 _GITHUB_COMMIT_TOOLS = ("push_files", "create_or_update_file")
@@ -8391,6 +8459,7 @@ EVENTS = {
     "guardgithub": event_guardgithub,
     "artifact": event_artifact,
     "branchnudge": event_branchnudge,
+    "creditcheck": event_creditcheck,
     "runnable": event_runnable,
     "delegate": event_delegate,
     "announce": event_announce,
