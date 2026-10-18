@@ -57,3 +57,23 @@ when that folder differs from the running one, is newer by version and has the r
 `<plugin>` pointing at that folder, and says in one line which version it loaded and why. If the JSON is missing or
 unreadable, or the newer folder lacks the files, it loads its own rules and says why in one line. Checked by the
 "newest installed rules" cases in `scripts/verify.py`.
+
+## A page link must open
+
+Planned 2026-10-18 (issue #329, a sub-issue of #281). Design page: `docs/plans/2026-10-18-page-links-open.html`.
+Decisions: `docs/6-decisions/Decisions.md`, "2026-10-18 - Design approved: page links open".
+
+The Claude desktop app opens files only inside the session's folder. Outside it, a link does nothing, or the browser
+pane shows the file as a snapshot with scripts off, and a `make_page.py` page then shows an empty card. Until this fix,
+any ".html" in a reply counted as a page link (`_PAGE_LINK_RE`, `hook.py:7299`), and the QA link check matched the
+page's file name alone (`_record_qa_link`, `hook.py:7648`).
+
+| Piece | Where | What it does |
+|---|---|---|
+| Link test | `_reply_links_page(reply, cwd)` in `hook.py` | True for an artifact link or a picture. An .html path in a markdown link, a `file:///` link or a bare path counts only when it resolves inside `cwd`. A bare file name with no folder still counts. |
+| Callers | `_long_reply_words`, `_check_page`, the owed-page counter in the Stop handler, `_record_qa_link` | All four call the link test, with `cwd` from the hook payload. |
+| Note | `_check_page` | Names the outside path and says to copy it into `<cwd>/docs/plans/` and link the copy. Report only, like the rest of the page checkpoint since #309. |
+| Builder warning | `make_page.py build` | Prints one line when the page it writes is outside the folder it runs in. The build is unchanged. |
+| Tests | `scripts/verify.py` | Five link-test cases (inside, `../` sibling, `file:///` outside, artifact, bare name) and one warning case. |
+
+Depends on: the hook payload's `cwd` field. Depended on by: the page checkpoint, the long-reply note and the QA stage.
