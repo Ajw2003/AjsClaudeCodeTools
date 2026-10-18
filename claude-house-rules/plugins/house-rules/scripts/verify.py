@@ -9404,6 +9404,24 @@ _ck_cases.append(("page: aj's own \"no page\" means no report, first pass and re
                   not _ck_b1 and not _ck_b2 and _CK_PAGE_NOTE not in _ck_o1 + _ck_o2))
 _ck_b, _, _ck_o = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc")
 _ck_cases.append(("page: a compliant reply passes with no report", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
+# #330: a page link counts only when it opens inside the session folder
+_pl_cwd = tempfile.mkdtemp(prefix="pl-cwd-")
+_pl_out = "file:///" + os.path.join(os.path.dirname(_pl_cwd), "elsewhere", "x.html").replace("\\", "/")
+_ck_cases.append(("page links (#330): a markdown link to a page inside cwd counts",
+                  _cc_mod._reply_links_page("See [p](docs/plans/x.html)", _pl_cwd)))
+_ck_cases.append(("page links (#330): a ../Sibling/docs/plans/x.html link does not count",
+                  not _cc_mod._reply_links_page("See [p](../Sibling/docs/plans/x.html)", _pl_cwd)))
+_ck_cases.append(("page links (#330): a file:/// link outside cwd does not count",
+                  not _cc_mod._reply_links_page("See " + _pl_out, _pl_cwd)))
+_ck_cases.append(("page links (#330): a claude.ai artifact link counts",
+                  _cc_mod._reply_links_page("See https://claude.ai/artifact/abc", _pl_cwd)))
+_ck_cases.append(("page links (#330): a bare page.html counts",
+                  _cc_mod._reply_links_page("See page.html", _pl_cwd)))
+_ck_cases.append(("page links (#330): [x.html](../Sibling/x.html) does not count on its link text",
+                  not _cc_mod._reply_links_page("See [x.html](../Sibling/docs/plans/x.html)", _pl_cwd)))
+_ck_cases.append(("page links (#330): the outside-folder note names the path",
+                  "../Sibling/docs/plans/x.html is outside" in _cc_mod._check_page(
+                      {"reply": "See [x.html](../Sibling/docs/plans/x.html)", "cwd": _pl_cwd, "long_words": 200})))
 # 2 editor
 _ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
 # 3 evidence
