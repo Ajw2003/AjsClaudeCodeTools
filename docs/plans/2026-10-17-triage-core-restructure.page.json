@@ -1,0 +1,160 @@
+{
+  "title": "Core Triage",
+  "eyebrow": "Triage · house-rules core and the restructure into sub-plugins",
+  "approval": "Design approved: core triage",
+  "replyPrefix": "Core triage answers",
+  "reply": "",
+  "short": {
+    "lead": "I sorted the 147 open issues that belong to the house-rules core or to the restructure into a core plus six sub-plugins (issue #306). Each one has a recommended category and triage state, and a target part taken from the restructure's systems document. The other 22 open issues are art pipeline, eldritch goose, Unity or Focus Deck work and were left out. Nothing has been labelled or closed yet. The full table, with what I checked in the code for each row, is docs/plans/2026-10-17-triage-core-restructure.md.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      [
+        "Recommendation",
+        ""
+      ],
+      [
+        "Needs your decision",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Agent",
+        "47 ready for an agent",
+        "",
+        "Clear specs with no open question, such as the attribution gaps in #315 \"the attribution guard misses gh api and curl\" and #191 \"pull requests from a cloud session still credit Claude\". Most are built inside their sub-plugin during the restructure, not in today's hook.py.",
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Human",
+        "74 ready for you",
+        "you",
+        "36 are built and labelled needs review, waiting for your testing. 19 more are probably fixed by that work, such as the prompt-timer issues that #290 \"each prompt waits on its own\" rebuilt; your testing settles them. The other 19 need a judgment call or another repo, such as #181 \"report old claude/ branches across aj's repos\".",
+        "Test or decide, at your own pace."
+      ],
+      [
+        "lock",
+        "Won't fix",
+        "23 to close",
+        "you",
+        "5 are the first rebuild plan (#208 to #212), which #306 replaced. 7 are already built or no longer apply, such as #178 \"the attribution guard also checks GitHub tool calls\", built at hook.py:6050. 11 are the old issue workflow, which #301 \"other work becomes an issue in its own repo\" replaces.",
+        "Your answer under Choices."
+      ],
+      [
+        "search",
+        "Info",
+        "3 need more information",
+        "you",
+        "#45 \"the vocabulary has nowhere to live\", #140 \"a handoff document at 95% usage\" and #150 \"follow a builder's progress from the phone\" each leave an open question.",
+        "Your answer under Choices."
+      ],
+      [
+        "file",
+        "Pairs",
+        "2 likely duplicate pairs",
+        "",
+        "#215 and #229 describe the same verify.py temp-file failure. #193 and #260 both ask for permission prompts in plain words. One of each pair should close.",
+        "Closing #229 and #193 is part of the first choice under Choices."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Labels on 147 open issues",
+      "Each gets one category label (bug or Feature) and one triage state label.",
+      [
+        "No triage labels. Many issues carry several category labels and no state.",
+        "One category and one state each, as the table recommends. The existing labels \"in progress\" and \"needs review\" are left as they are."
+      ],
+      "Applied with the GitHub command-line tool (gh), one issue at a time, after your approval."
+    ],
+    [
+      "chg",
+      "Triage notes on #45, #140 and #150",
+      "A comment on each saying what is settled and the specific question still open.",
+      [
+        "No triage comment.",
+        "A comment that opens with a note saying an AI did the triage, then states the open question."
+      ],
+      "Only if you answer A to the choice about posting triage notes."
+    ]
+  ],
+  "choices": [
+    [
+      "close",
+      "Which of the 23 won't-fix issues should I close?",
+      [
+        [
+          "A",
+          "Close the 12 that are replaced or already built; keep the 11 issue-workflow ones open until #301 is built",
+          1,
+          "Nothing closes that still describes live behaviour."
+        ],
+        [
+          "B",
+          "Close all 23 now",
+          0,
+          "The old issue workflow issues close before their replacement exists."
+        ],
+        [
+          "C",
+          "Close none; only label them wontfix",
+          0,
+          "You close them yourself after a look."
+        ]
+      ],
+      "Each close gets a comment naming the issue or code that replaces it. It also closes #229 as a duplicate of #215, and #193 as a duplicate of #260."
+    ],
+    [
+      "labels",
+      "Should I apply the category and state labels to all 147 issues?",
+      [
+        [
+          "A",
+          "Yes, all 147",
+          1,
+          "The next triage starts from a clean board."
+        ],
+        [
+          "B",
+          "Only the 47 ready for an agent and the 3 that need information",
+          0,
+          "Fewer label changes; the 97 other issues keep their current labels."
+        ]
+      ],
+      "Labels only. No issue body or title changes."
+    ],
+    [
+      "info",
+      "Should I post triage notes on the 3 issues that need information?",
+      [
+        [
+          "A",
+          "Yes, with the specific question for each",
+          1,
+          "You answer in the issue when you get to it."
+        ],
+        [
+          "B",
+          "No, ask me here instead",
+          0,
+          "I ask the three questions in this chat."
+        ]
+      ],
+      "The notes follow the triage skill's needs-info template."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A recommended category and state for each of the 147 open issues in the house-rules core and the restructure, with 23 to close.",
+    "changing": "Labels on GitHub issues, closing comments, and triage notes. No code.",
+    "blocking": "Your answers to the three choices.",
+    "next": "I apply the labels, close what you approved with a comment each, and post the triage notes.",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
+  }
+}
