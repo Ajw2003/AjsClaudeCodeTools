@@ -9016,6 +9016,23 @@ report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "Importer"
 if _s.get("issues") != [{"repo": "o/r", "number": 7, "labelled": True}]:
     print("          feature %r, issues %r, note %r" % (_s.get("feature"), _s.get("issues"), _n[:300]))
 
+# #327: an unchanged decisions log no longer refuses; the approval counts and the note asks for the entry.
+_ma_set({"feature": "demo", "stage": "plan",
+         "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2, 3)]},
+        {"o/r#%d" % n: ["Feature", "AjsAgent created this", "in progress"] for n in (1, 2, 3)})
+_ma_log = os.path.join(_ma_dir, "docs", "6-decisions", "Decisions.md")
+_ma_st = os.path.join(_ma_dir, ".claude", "house-rules-loop.json")
+_ma_d = json.load(open(_ma_st, encoding="utf-8"))
+_ma_d["log_mark"] = hashlib.sha256(open(_ma_log, "rb").read()).hexdigest()
+json.dump(_ma_d, open(_ma_st, "w", encoding="utf-8"))
+_n, _s = _ma_say("Build plan approved: demo")
+report("PASS" if (_s["stage"] == "build" and "docs/6-decisions/Decisions.md" in _n and "nothing moved" not in _n
+                  and _s.get("log_mark") == _ma_d["log_mark"] and "log_ask" not in _s) else "FAIL",
+       "design loop (#327): \"Build plan approved: <feature>\" with an unchanged decisions log moves Plan to Build "
+       "on the first message, the note names docs/6-decisions/Decisions.md, and the log mark is kept")
+if _s["stage"] != "build":
+    print("          stage %r, note %r" % (_s["stage"], _n[:300]))
+
 _ma_set({"feature": "", "stage": "design"})
 _n, _s = _ma_say("Design approved: blockers")
 report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "blockers"

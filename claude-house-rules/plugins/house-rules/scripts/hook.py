@@ -5338,9 +5338,11 @@ def _loop_unlogged(state, top, label, name):
                 "moved. Create it, log this stage's decisions, then ask aj to approve again."
                 % (label, name, LOOP_LOG.replace(os.sep, "/")))
     if mark == state.get("log_mark"):
-        return ('Design loop: aj wrote "%s: %s", but nothing has been added to the decisions log (%s) since '
-                "the last approval, so nothing moved. Log this stage's decisions and changes first, then ask "
-                "aj to approve again." % (label, name, LOOP_LOG.replace(os.sep, "/")))
+        # #327: the model can only log the entry after the approval, so refusing made aj type it twice.
+        # The approval counts; the note asks for the entry. log_mark stays, so the next approval still
+        # detects whether this one got logged.
+        state["log_ask"] = True
+        return ""
     state["log_mark"] = mark
     return ""
 
@@ -5559,6 +5561,9 @@ def _loop_apply_one(state, text, top):
             {"stage": approval[0], "name": approval[1], "at": int(time.time())})
         note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
             approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        if state.pop("log_ask", False):  # #327
+            note += (" The decisions log (%s) has nothing new since the last approval: add this stage's "
+                     "entry to it before the turn ends." % LOOP_LOG.replace(os.sep, "/"))
         if state["stage"] == "plan":
             note += (" Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue "
                      "for the feature and a sub-issue per step, each naming dependencies, dependants and "
