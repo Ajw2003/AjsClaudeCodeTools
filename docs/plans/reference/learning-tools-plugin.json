@@ -1,0 +1,421 @@
+{
+  "title": "AjsLearningTools Plugin",
+  "eyebrow": "Plan for approval · nothing built yet",
+  "approval": "Design approved: learning tools plugin",
+  "short": {
+    "lead": "A new repo, AjsLearningTools, holds one Claude Code plugin with a lesson skill. You give it a link or the next topic in a course. It writes a plain lesson, has a separate agent check it against the source, fixes what fails, and builds the lesson page. The two sections you called mature are saved as fixed templates, and the other sections stay marked as drafts.",
+    "hint": "Tap an item to see what it creates and what it needs from you.",
+    "key": [
+      [
+        "I work on it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Repo",
+        "A new repo, AjsLearningTools",
+        "",
+        "A repo under your GitHub account, laid out like claude-art-pipeline: a marketplace file at the root and the plugin in plugins/learning-tools.",
+        "Nothing from you. I create it once you approve.",
+        {
+          "src": "learning-tools-plugin-pics/repo.svg",
+          "alt": "Folder tree of the AjsLearningTools repo",
+          "caption": "What is in the new repo."
+        }
+      ],
+      [
+        "bulb",
+        "Skill",
+        "The lesson skill",
+        "",
+        "One skill that runs the whole pilot pipeline: fetch the source, write the lesson, check it, fix it, build the page, and save it.",
+        "Nothing from you.",
+        {
+          "src": "learning-tools-plugin-pics/steps.svg",
+          "alt": "Five steps from getting the source to showing the page, with a loop from checking back to writing",
+          "caption": "What /learn next does, step by step."
+        }
+      ],
+      [
+        "lock",
+        "Templates",
+        "Mature sections frozen",
+        "",
+        "The gist, written to the baseline rules (plain language for anyone, with no background assumed), and the New words first format become stable templates. The other six parts of a lesson are marked as drafts.",
+        "Nothing from you.",
+        {
+          "src": "learning-tools-plugin-pics/templates.svg",
+          "alt": "A lesson outline with the gist and New words first marked stable and the other six parts marked draft",
+          "caption": "Which parts of a lesson are frozen."
+        }
+      ],
+      [
+        "hand",
+        "Install",
+        "You install it",
+        "you",
+        "The plugin installs from the repo's main branch, and it updates whenever the main branch changes.",
+        "You type two commands in Claude Code. I run them in my sandbox first and give you the exact commands I tested.",
+        {
+          "src": "learning-tools-plugin-pics/install.svg",
+          "alt": "Two install commands lead to the plugin being ready in every session; changes merged to main flow in on update",
+          "caption": "Install once, then it updates from main."
+        }
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "Marketplace and plugin",
+      "The install point, kept in sync with the main branch.",
+      null,
+      "The root holds .claude-plugin/marketplace.json, listing one plugin, learning-tools. The plugin folder has its own plugin.json, the skill, the scripts and the templates.",
+      [
+        "The pipeline lives in a pilot folder in this session only.",
+        "An installable plugin in its own repo.",
+        "You can learn with it from any Claude Code session."
+      ],
+      [
+        [
+          ".claude-plugin/marketplace.json",
+          15,
+          0,
+          [
+            [
+              "Lists the learning-tools plugin",
+              15,
+              0
+            ]
+          ]
+        ],
+        [
+          "plugins/learning-tools/.claude-plugin/plugin.json",
+          10,
+          0,
+          [
+            [
+              "Plugin name, version, description",
+              10,
+              0
+            ]
+          ]
+        ]
+      ],
+      {
+        "src": "learning-tools-plugin-pics/repo.svg",
+        "alt": "Folder tree of the AjsLearningTools repo",
+        "caption": "What is in the new repo."
+      }
+    ],
+    [
+      "new",
+      "The lesson skill (SKILL.md)",
+      "Runs the pipeline in fixed steps.",
+      null,
+      "The skill has five steps, plus a loop that fixes and rechecks any claim that fails. First, it gets the source page. Second, it writes the lesson from the baseline rules. Third, a separate agent checks each claim in the lesson against the source. If a claim fails, it is rewritten and checked again. Fourth, it builds the page and checks sentence length, filler words and picture safety. Fifth, it saves the lesson and shows you the page. It never asks you to read the source yourself.",
+      [
+        "The steps exist as a prompt file I follow by hand.",
+        "A skill Claude follows the same way every time.",
+        "Each lesson takes one command instead of a long conversation."
+      ],
+      [
+        [
+          "plugins/learning-tools/skills/learn/SKILL.md",
+          120,
+          0,
+          [
+            [
+              "The five steps, the fix-and-recheck loop, and their rules",
+              120,
+              0
+            ]
+          ]
+        ]
+      ],
+      {
+        "src": "learning-tools-plugin-pics/steps.svg",
+        "alt": "Five steps from getting the source to showing the page, with a loop from checking back to writing",
+        "caption": "What /learn next does, step by step."
+      }
+    ],
+    [
+      "new",
+      "Lesson builder",
+      "The page builder from the pilot, moved in.",
+      null,
+      "build_page.py and page_template.html move from the pilot unchanged. The builder already checks sentence length, filler words and unsafe pictures. The template already has the reader settings and picture styles that follow the light or dark theme.",
+      [
+        "Two files in the pilot folder.",
+        "The same files inside the plugin, plus one small test.",
+        "Every lesson gets the same checks and the same look."
+      ],
+      [
+        [
+          "plugins/learning-tools/scripts/build_page.py",
+          230,
+          0,
+          [
+            [
+              "Builds and checks a lesson page",
+              230,
+              0
+            ]
+          ]
+        ],
+        [
+          "plugins/learning-tools/scripts/page_template.html",
+          230,
+          0,
+          [
+            [
+              "The reader page",
+              230,
+              0
+            ]
+          ]
+        ],
+        [
+          "plugins/learning-tools/scripts/test_build_page.py",
+          40,
+          0,
+          [
+            [
+              "Checks that bad lessons are refused",
+              40,
+              0
+            ]
+          ]
+        ]
+      ],
+      {
+        "src": "learning-tools-plugin-pics/lesson-checks.png",
+        "alt": "The top of lesson 1, showing the source-check results box",
+        "caption": "The builder's checks, shown at the top of every lesson."
+      }
+    ],
+    [
+      "new",
+      "Templates: stable and draft",
+      "Your two mature sections are frozen.",
+      null,
+      "templates/stable/ holds the two parts you called mature: the gist, written to the baseline rules (plain language for anyone, with no background assumed), and the New words first format, including the Other meanings part. Lesson 1's System and Component entries serve as the reference example. templates/draft/ holds the other six parts: Why you care, Think of it like this, The core idea, Picture it, Where it is used, and Check yourself. The skill follows stable templates exactly and treats drafts as its current best guess.",
+      [
+        "One prompt file where finished and unfinished rules sit side by side.",
+        "Stable rules in one folder and draft rules in another.",
+        "Fixing a draft section can never change a section you have already approved."
+      ],
+      [
+        [
+          "plugins/learning-tools/templates/stable/",
+          90,
+          0,
+          [
+            [
+              "Baseline rules",
+              50,
+              0
+            ],
+            [
+              "New words first format",
+              40,
+              0
+            ]
+          ]
+        ],
+        [
+          "plugins/learning-tools/templates/draft/",
+          110,
+          0,
+          [
+            [
+              "Why you care, comparison, pictures, quiz",
+              110,
+              0
+            ]
+          ]
+        ]
+      ],
+      {
+        "src": "learning-tools-plugin-pics/templates.svg",
+        "alt": "A lesson outline with the gist and New words first marked stable and the other six parts marked draft",
+        "caption": "Which parts of a lesson are frozen."
+      }
+    ],
+    [
+      "new",
+      "Example lesson",
+      "Lesson 1, as the reference output.",
+      null,
+      "The lesson file lesson-baseline.json and its built page go in examples/. The lesson is written in our own words and links to the source. The source check found no copied text. Fetched source text is never committed to the repo.",
+      [
+        "Lesson 1 lives in the pilot folder.",
+        "A reference example in the repo.",
+        "The skill can compare its new lessons against a known-good one."
+      ],
+      [
+        [
+          "plugins/learning-tools/examples/lesson-01-baseline.json",
+          120,
+          0,
+          [
+            [
+              "Lesson 1 data",
+              120,
+              0
+            ]
+          ]
+        ]
+      ],
+      {
+        "src": "learning-tools-plugin-pics/lesson-picture.png",
+        "alt": "Lesson 1's Why you care picture: a tangled shop beside a planned one",
+        "caption": "Lesson 1, the reference example, with one of its pictures."
+      }
+    ],
+    [
+      "new",
+      "Course progress",
+      "So you can ask for the next lesson each day.",
+      null,
+      "A course file lists the topics in the tutorial's order and marks the ones you have done. Asking for the next lesson picks the first topic not yet marked done. The file is saved in your project folder, next to your lessons.",
+      [
+        "You name each topic yourself.",
+        "The skill knows where you are in the course.",
+        "Daily learning is one short request."
+      ],
+      null,
+      {
+        "src": "learning-tools-plugin-pics/course.svg",
+        "alt": "A course list with Basics done and the next module marked as the next lesson",
+        "caption": "How /learn next knows where you are."
+      }
+    ],
+    [
+      "new",
+      "Repo docs",
+      "The six-tier docs your house rules require.",
+      null,
+      "docs/ gets the landing, roadmap, state, systems, today and decisions tiers. The roadmap describes the next stage: an open-source app that can work with any AI model, starting with Claude.",
+      [
+        "No docs.",
+        "Docs in tiers, with the roadmap written down.",
+        "A future session can pick up where this one stopped."
+      ],
+      [
+        [
+          "docs/",
+          150,
+          0,
+          [
+            [
+              "Six documentation tiers",
+              150,
+              0
+            ]
+          ]
+        ]
+      ],
+      {
+        "src": "learning-tools-plugin-pics/docs.svg",
+        "alt": "Six documentation tiers from landing to decisions, with the roadmap highlighted",
+        "caption": "The repo's six documentation tiers."
+      }
+    ]
+  ],
+  "choices": [
+    [
+      "visibility",
+      "Should the repo be public or private?",
+      [
+        [
+          "A",
+          "Public",
+          1,
+          "Matches your other plugin repos, installs without signing in, and is ready for open source later."
+        ],
+        [
+          "B",
+          "Private",
+          0,
+          "Only you can see it; installing needs GitHub sign-in on each machine."
+        ]
+      ],
+      "Your other plugin repos are public, and the open-source app comes next anyway."
+    ],
+    [
+      "command",
+      "What should you type to start a lesson?",
+      [
+        [
+          "A",
+          "/learn",
+          1,
+          "For example: /learn next, or /learn followed by a link."
+        ],
+        [
+          "B",
+          "/lesson",
+          0,
+          "For example: /lesson next."
+        ]
+      ],
+      "Short, and it names the action you are taking (learning) rather than the thing you get (a lesson)."
+    ],
+    [
+      "where",
+      "Where should lessons and course progress be saved?",
+      [
+        [
+          "A",
+          "A lessons folder in the project you run it from",
+          1,
+          "Each course can live in its own folder or repo, and it syncs the same way that folder does."
+        ],
+        [
+          "B",
+          "One fixed folder in your home folder",
+          0,
+          "Every course is in one place on each machine, but nothing syncs between machines."
+        ]
+      ],
+      "Keeps your lessons wherever you already work, and works the same on every machine."
+    ],
+    [
+      "course",
+      "Should the first version track a course in order?",
+      [
+        [
+          "A",
+          "Yes, include course progress",
+          1,
+          "/learn next works from day one, starting with the first topic of the System Design tutorial."
+        ],
+        [
+          "B",
+          "Not yet: single lessons only",
+          0,
+          "A smaller first version; you name each topic yourself."
+        ]
+      ],
+      "You said you want to learn every day, and \"next\" saves you from finding the topic each time."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A public plugin repo, AjsLearningTools, with a lesson skill that runs the whole pilot pipeline, the two mature sections frozen as templates, and the rest marked as drafts.",
+    "changing": "A new repo is created under Ajw2003. No existing repo changes.",
+    "blocking": "Your approval, and your answers to the four questions in the Choices section.",
+    "next": "I create the repo, open one issue for each step, as your house rules require, and build on a branch. Then I install the plugin in my sandbox, run a real lesson through it, and merge to main by pull request. You get a QA page with the two tested install commands.",
+    "todo": [
+      "Pick your answers in the Choices section.",
+      "Tap <b>Copy my reply</b>.",
+      "Send it with \"Design approved: learning tools plugin\", or tell me what to change."
+    ]
+  }
+}
