@@ -79,7 +79,7 @@ labels only.
 | #178 the attribution guard also checks GitHub tool calls | Feature | wontfix (already implemented) | `_attribution_guard` checks GitHub MCP tool writes; its comment cites "Issue #178" | Checked: `hook.py:6050-6101` |
 | #285, #289, #290, #291, #292, #293 the guard rebuild (built in 2.68.0) | bug | ready-for-human | Built, waits for aj's QA | Checked: labels |
 | #134, #192, #197, #203 commits on the agent's own branch prompt | bug | ready-for-human | Probably fixed by #289's never-blocked list. aj's QA of #289 settles it, then these close | Not checked |
-| #153, #198, #200 destructive actions and second-line commands | bug | ready-for-human | Probably fixed by #291. Close after aj's QA of #291 | Not checked |
+| #153, #198, #200 destructive actions and second-line commands | Feature/bug | ready-for-human | Probably fixed by #291. Close after aj's QA of #291 | Not checked |
 | #136, #173, #196 unanswered prompts block work | bug | ready-for-human | Probably fixed by #285, #290 and #292. Close after QA | Not checked |
 | #142, #144, #145, #146, #147, #149, #151, #152, #159 the prompt timer | Feature/bug | ready-for-human | #290 rebuilt the prompt timer. Close each one that #290's QA covers | Not checked |
 | #174 credit "aj's agent" and AjsAgent/ branches everywhere, with #175, #176, #177, #179 | Feature | ready-for-human | Partly live: this session's commits already say "Committed by AJ's agent". Becomes a setting under #287. aj decides which are done | Checked: this session's commits |

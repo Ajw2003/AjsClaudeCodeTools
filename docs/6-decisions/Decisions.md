@@ -2276,3 +2276,22 @@ like "correct" would fire on ordinary replies. `success claim` stays in the rule
 insufficient.
 
 **Status.** Standing.
+
+## 2026-10-17 — Triage of the house-rules core and restructure issues
+
+**Context.** aj asked for the open issues about the plugin's core and the restructure into a core
+plus six sub-plugins (#306) to be triaged with the `triage` skill. The label mapping is
+`docs/agents/triage-labels.md`; the per-issue table is
+`docs/plans/2026-10-17-triage-core-restructure.md`.
+
+**Decision.** aj approved the triage page ("Design approved: core triage") with three answers:
+every one of the 147 in-scope issues gets one category label (`bug` or `Feature`) and one triage
+state label; the 12 issues the restructure replaced or the code already covers are closed with a
+comment naming what replaces them, plus #229 (duplicate of #215) and #193 (duplicate of #260); the
+11 old issue-workflow issues stay open, labelled `wontfix`, until #301 is built; #45, #140 and #150
+get triage notes asking their open question.
+
+**Why.** The first rebuild plan (#208 to #212) and the restructure (#306) described the same work
+twice, and 36 issues waiting for aj's testing were mixed in with unstarted work.
+
+**Status.** Standing.
