@@ -361,163 +361,18 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "12 files, +284 −7",
+      "0 files, +0 −0",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
-      [
-        [
-          "claude-house-rules/README.md",
-          1,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json",
-          1,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/hooks/hooks.json",
-          10,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/detail/commit-branches.md",
-          7,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/house-rules.md",
-          1,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/hook.py",
-          91,
-          2,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/verify.py",
-          98,
-          3,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/3-state/ProjectState.md",
-          2,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/4-systems/guards.md",
-          24,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/6-decisions/Decisions.md",
-          17,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/architecture.md",
-          1,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/attribution-guard-gaps-build-plan.page.json",
-          31,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ]
-      ]
+      []
     ],
     [
       "keep",
       "Still unverified",
       "3 things not yet proven",
       null,
-      "The read-back has not run inside a real cloud session, only against live GitHub from this machine. The read-back assumes the Bash tool's output field is named stdout in a real hook payload; the tests and my run used that name. With gh api -f body=@file, gh sends the literal text rather than the file, so the check reads the command text there; only -F and --input read a file.",
+      "The read-back has not run inside a real cloud session, only against live GitHub from this machine. The read-back finds the new item's web address in the text the command prints. It expects Claude Code to report that text under a particular field name. The tests and my run used that name, but a real cloud session hasn't confirmed it. With gh api -f body=@file, gh sends the text \"@file\" as the body instead of the file's contents, so the check reads the command text itself. Only -F and --input read the file.",
       null,
       null
     ]
@@ -527,8 +382,8 @@ const PAGE = {
     "base": "origin/main",
     "unverified": [
       "The read-back has not run inside a real cloud session, only against live GitHub from this machine",
-      "The read-back assumes the Bash tool's output field is named stdout in a real hook payload; the tests and my run used that name",
-      "With gh api -f body=@file, gh sends the literal text rather than the file, so the check reads the command text there; only -F and --input read a file"
+      "The read-back finds the new item's web address in the text the command prints. It expects Claude Code to report that text under a particular field name. The tests and my run used that name, but a real cloud session hasn't confirmed it.",
+      "With gh api -f body=@file, gh sends the text \"@file\" as the body instead of the file's contents, so the check reads the command text itself. Only -F and --input read the file."
     ],
     "files": {}
   },

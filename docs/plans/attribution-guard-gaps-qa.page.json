@@ -23,8 +23,8 @@
     "base": "origin/main",
     "unverified": [
       "The read-back has not run inside a real cloud session, only against live GitHub from this machine",
-      "The read-back assumes the Bash tool's output field is named stdout in a real hook payload; the tests and my run used that name",
-      "With gh api -f body=@file, gh sends the literal text rather than the file, so the check reads the command text there; only -F and --input read a file"
+      "The read-back finds the new item's web address in the text the command prints. It expects Claude Code to report that text under a particular field name. The tests and my run used that name, but a real cloud session hasn't confirmed it.",
+      "With gh api -f body=@file, gh sends the text \"@file\" as the body instead of the file's contents, so the check reads the command text itself. Only -F and --input read the file."
     ],
     "files": {}
   },
