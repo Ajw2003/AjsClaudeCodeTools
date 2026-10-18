@@ -1,0 +1,86 @@
+{
+  "title": "Core Triage Results",
+  "eyebrow": "Done · triage of the house-rules core and restructure issues",
+  "approval": "Design approved: core triage",
+  "replyPrefix": "Core triage results",
+  "reply": "",
+  "short": {
+    "lead": "Your approved triage is applied on GitHub, and I re-counted every label there to check it. All 147 issues have one category label and one state label. 14 are closed with a comment naming what replaces them, and 133 stay open. Three issues have questions waiting for you.",
+    "hint": "Tap a row to see the issues in it.",
+    "key": [
+      [
+        "Done",
+        ""
+      ],
+      [
+        "Waiting on you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Agent",
+        "45 ready for an agent",
+        "",
+        "The first one up is #315 \"the attribution guard misses gh api and curl\". The page planned 47; the other 2 were the duplicates that closed.",
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Testing",
+        "74 ready for you",
+        "you",
+        "36 are built and wait for your testing. 19 are probably fixed by that work. 19 need a judgment call, such as #181 \"report old claude/ branches across aj's repos\".",
+        "Test or decide, at your own pace."
+      ],
+      [
+        "search",
+        "Questions",
+        "3 questions in the issues",
+        "you",
+        "#45 asks where the vocabulary should live. #140 asks what \"95% usage\" means for the handoff document. #150 asks how you want to follow a builder from your phone.",
+        "Answer in each issue."
+      ],
+      [
+        "lock",
+        "Closed",
+        "14 closed",
+        "",
+        "The first rebuild plan (#208 to #212), seven issues already built or no longer relevant, and two duplicates: #229 of #215, and #193 of #260.",
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Kept",
+        "11 kept open as won't fix",
+        "",
+        "The old issue-workflow issues stay open until #301 \"other work becomes an issue in its own repo\" replaces them.",
+        "Nothing from you."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "One difference from the approved page",
+      "#153 \"destructive git steps run unasked only on a claude/ branch\" kept its Feature label.",
+      [
+        "The approved page put it in a bug row.",
+        "It kept its existing Feature label, so no label was removed from it."
+      ],
+      "Every other issue matches the table in docs/plans/2026-10-17-triage-core-restructure.md."
+    ]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "The core triage is live on GitHub and logged in docs/6-decisions/Decisions.md.",
+    "changing": "Nothing more until you pick the next step.",
+    "blocking": "Nothing. The three questions in the issues can wait.",
+    "next": "I start on #315 \"the attribution guard misses gh api and curl\" if you say go.",
+    "todo": [
+      "Answer the questions in #45, #140 and #150 when you have time.",
+      "Say go to start on #315, or name a different issue."
+    ]
+  }
+}
