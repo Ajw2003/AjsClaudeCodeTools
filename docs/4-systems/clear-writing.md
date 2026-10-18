@@ -22,10 +22,10 @@ exact-input and ask-when-unclear lines, and the plain-docs writing limits.
 `HOUSE_RULES_CLEAR_WRITING=off` turns off the page check, the issue check and the
 editor reminder. The not-checked disclosure stays on: it belongs to Evidence before claims.
 
-## Planned: stop the end-of-reply loop (#322)
+## Stop the end-of-reply loop (#322)
 
-Design approved 2026-10-18 ("Design approved: #322 writing check loop"). Not built yet; this section
-moves into "How it works" once it ships.
+Design approved 2026-10-18 ("Design approved: #322 writing check loop"). Built in plugin 2.68.4
+(#323 to #326, plus #327 for the design loop); waiting for aj's QA.
 
 **Why.** A Stop hook's `additionalContext` continues the turn, and `handover` emits it on the retry
 (`stop_hook_active` true) as well as the first stop. Every report-only note (the page checkpoint, the

@@ -191,6 +191,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-17, branch `AjsAgent/issue-315-attribution-routes`, plugin 2.68.3: #315 (attribution guard gaps, #316 to #319) is built and waiting for aj's QA.
 
+2026-10-18, branch `AjsAgent/nifty-newton-x2jaaj`, plugin 2.68.4: #322 (the end-of-reply checks looped on retries) is built and waiting for aj's QA. The Stop retry now only reports to aj and never continues the turn (#323); the writing check no longer runs on chat replies, only on pages and new issues (#324); the editor checkpoint is pages-only unless `HOUSE_RULES_EDITOR=on` (#325); the page checkpoint's note is said once per message of aj's (#326); and an approval counts the first time, with the decisions-log entry asked for afterwards (#327). The cloud QA run of #315 passed: the credit read-back reported the footer GitHub added to test issue #321.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
