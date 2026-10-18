@@ -9285,9 +9285,20 @@ _cw_cases.append(("editor: writing a page under docs/plans with no editor run ge
                   "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
 _cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
                   "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
-_cw_cases.append(("editor: a reply of 160 words or more with no editor run gets the reminder; a short one does not",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ". https://claude.ai/artifact/abc")
-                  and "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, "Done.")))
+def _cw_editor_on(transcript, text):
+    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir, stop_hook_active=True,
+                                             transcript_path=transcript), env=dict(_loop_env, HOUSE_RULES_EDITOR="on"))[1]
+
+
+_cw_200 = " ".join(["Words"] * 200) + ". https://claude.ai/artifact/abc"
+# #325: with HOUSE_RULES_EDITOR=on a reply of 160 words or more with no editor run gets the reminder; a short one does not.
+_cw_cases.append(("editor: with HOUSE_RULES_EDITOR=on, a reply of 160 words or more with no editor run gets the reminder; a short one does not",
+                  "no @house-rules:editor helper ran" in _cw_editor_on(_cw_t_none, _cw_200)
+                  and "no @house-rules:editor helper ran" not in _cw_editor_on(_cw_t_none, "Done.")))
+_cw_cases.append(("editor (#325): a 200-word reply with no page and no editor run gets no editor reminder by default",
+                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, _cw_200)))
+_cw_cases.append(("editor (#325): a turn that wrote a docs/plans page still owes the editor by default",
+                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
 
 # A page written by a shell command never passes the Write hook (found in the real run, #250).
 with open(os.path.join(_cw_pages, "shellpage.html"), "w", encoding="utf-8") as _f:

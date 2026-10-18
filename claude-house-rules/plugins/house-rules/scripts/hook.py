@@ -7326,12 +7326,13 @@ def _clear_writing_enabled():
 _WRITING_REPORT_ONLY = ("bare-ref",)
 
 
-# #249: a page or a long reply goes past the editor helper before aj reads it.
+# #249: a page goes past the editor helper before aj reads it; a long reply does too only with
+# HOUSE_RULES_EDITOR=on (#325: a long chat reply forcing a subagent run cost too many tokens).
 EDITOR_NOTE = (
     "House rules, write it so nothing is left to guess: %s, and no @house-rules:editor helper ran this "
     "turn. Hand the text (or the page's path) to @house-rules:editor (Agent tool, subagent_type "
     "house-rules:editor), apply its rewrites, then send the result. HOUSE_RULES_CLEAR_WRITING=off "
-    "turns this off."
+    "turns this off; only pages are checked unless HOUSE_RULES_EDITOR=on adds long replies."
 )
 
 
@@ -7370,6 +7371,11 @@ def _pages_changed_this_turn(transcript_path, cwd):
     return sorted(os.path.join(plans, n) for n in pages if os.path.getmtime(os.path.join(plans, n)) >= since), None
 
 
+def _editor_enabled():
+    # #325: off unless set to something that is not an "off" value, i.e. "on".
+    return os.environ.get("HOUSE_RULES_EDITOR", "off").strip().lower() not in _TOGGLE_OFF
+
+
 def _editor_owed(written, tool_uses, reply):
     """What makes the editor helper owed this turn ("" when nothing does, or when it ran)."""
     for block in tool_uses:
@@ -7379,6 +7385,8 @@ def _editor_owed(written, tool_uses, reply):
     pages = [os.path.basename(p) for p in written if _PLANS_PAGE_RE.search(str(p).replace("\\", "/"))]
     if pages:
         return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
+    if not _editor_enabled():  # #325: the long-reply trigger needs HOUSE_RULES_EDITOR=on
+        return ""
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
     if words >= LONG_REPLY_WORDS:
         return "this reply is %d words" % words
@@ -7664,7 +7672,7 @@ CHECKPOINTS = [
 CHECKPOINT_RULES = {
     "page built": "A handover page is built by make_page.py, never typed by hand.",
     "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
-    "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
+    "editor": "A page goes past @house-rules:editor before aj reads it; a long reply too when HOUSE_RULES_EDITOR=on.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",

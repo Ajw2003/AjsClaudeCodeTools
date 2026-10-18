@@ -17,7 +17,7 @@ exact-input and ask-when-unclear lines, and the plain-docs writing limits.
 | Replies | `handover` (Stop), `_writing_note` | Chat replies are no longer checked for writing (since #324); the old reply note and the bare-reference report line are gone. Only the not-checked and long-reply notes still go through `_writing_note`. |
 | Pages | `artifact` (PostToolUse), `_page_writing_note` | A write to `docs/plans/*.html` runs the checker on what a reader sees: the visible text and a template page's PAGE strings. The report-only kinds are skipped here too. |
 | Issues | `guard` (`gh issue create`), `guardgithub` (`issue_write` create) | Refused without "Depends on", "Depended on by" and "Done when". |
-| Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page or a long reply. The end-of-reply check reminds me when a page was written, or a reply ran to 160 words or more, and no editor ran. |
+| Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page or a long reply. The end-of-reply check reminds me when a page was written and no editor ran. A reply of 160 words or more counts too only with `HOUSE_RULES_EDITOR=on` (default off, #325). |
 
 `HOUSE_RULES_CLEAR_WRITING=off` turns off the page check, the issue check and the
 editor reminder. The not-checked disclosure stays on: it belongs to Evidence before claims.
