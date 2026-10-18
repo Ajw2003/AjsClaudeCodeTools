@@ -9399,16 +9399,21 @@ except ValueError:
     _ck_j1, _ck_j2 = {}, {}
 _ck_cases.append(("#323: the first stop gives additionalContext",
                   "additionalContext" in _ck_j1.get("hookSpecificOutput", {})))
-_ck_cases.append(("#323: the retry gives no additionalContext, only a systemMessage with the note",
-                  "hookSpecificOutput" not in _ck_j2 and _CK_PAGE_NOTE in _ck_j2.get("systemMessage", "")))
+_ck_cases.append(("#323: the retry gives no additionalContext (the page note is said once per message, #326, so the first stop carries it)",
+                  "hookSpecificOutput" not in _ck_j2 and _CK_PAGE_NOTE in _ck_j1.get("hookSpecificOutput", {}).get("additionalContext", "")))
 # #310: replays the 2026-10-16 dodge - a 165-word reply was flagged, then a 70-word retry cleared it.
 _ck_165 = " ".join(["Words"] * 165) + "."
 _ck_70 = " ".join(["Short"] * 70) + "."
 _ck_t_dodge = _hand_transcript("ck-dodge", _ck_user("explain the dodge", [_CW_EDITOR]))
 _ck_run(_ck_t_dodge, _ck_165)
 _ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)
-_ck_cases.append(("page (#310): a 70-word retry after a flagged 165-word reply to the same message still gets the report",
-                  not _ck_b and _CK_PAGE_NOTE in _ck_o and "none is linked yet (#310)" in _ck_o))
+_ck_cases.append(("page (#310/#326): a 70-word retry after a flagged 165-word reply to the same message gets no repeat of the note (said once per message)",
+                  not _ck_b and _CK_PAGE_NOTE not in _ck_o and "none is linked yet" not in _ck_o))
+_ck_t_once = _hand_transcript("ck-once", _ck_user("explain once", [_CW_EDITOR]))
+_, _, _ck_o1 = _ck_run(_ck_t_once, _ck_165)
+_, _, _ck_o2 = _ck_run(_ck_t_once, _ck_165)
+_ck_cases.append(("page (#326): two long replies to one message of aj's with no page link give the note on the first only",
+                  _CK_PAGE_NOTE in _ck_o1 and _CK_PAGE_NOTE not in _ck_o2))
 _ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70 + " https://claude.ai/artifact/abc", active=True)
 _ck_cases.append(("page (#310): a reply that links a page clears what was owed", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
 _ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)

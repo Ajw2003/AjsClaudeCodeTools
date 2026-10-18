@@ -7912,13 +7912,13 @@ def event_handover():
             if _page_escape(pctx) or _PAGE_LINK_RE.search(pctx["reply"]):
                 _page_count(pctx, "clear")
             elif fix or _page_count(pctx) > 0:
-                owed = not fix
+                # #326: the note is said once per message of aj's, on the first flag (count 0). The bump still
+                # records that a page is owed; later replies to the same message, flagged or owed, stay quiet.
+                first = _page_count(pctx) == 0
                 _page_count(pctx, "bump")
-                page_note = ("House rules, page checkpoint (report only, #309): %s%s. Nothing is blocked; if this "
-                             "reply belongs to another repo's work, the issue for that repo is enough." % (
-                                 "an earlier reply to this message of aj's was flagged for a page and none is linked "
-                                 "yet (#310), so " if owed else "",
-                                 fix or _check_page(dict(pctx, long_words=LONG_REPLY_WORDS))))
+                if first:
+                    page_note = ("House rules, page checkpoint (report only, #309): %s. Nothing is blocked; if this "
+                                 "reply belongs to another repo's work, the issue for that repo is enough." % fix)
         except Exception as exc:
             trace_lines.append("house-rules: the page checkpoint could not run (%s: %s), so this reply got no "
                                "page reminder." % (type(exc).__name__, exc))

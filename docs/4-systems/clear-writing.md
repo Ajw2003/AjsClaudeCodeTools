@@ -42,7 +42,7 @@ and the editor checkpoint added a whole subagent run for one 386-word chat reply
    not-checked disclosure stays, because it belongs to Evidence before claims.
 3. **The editor checkpoint is pages-only by default.** `_editor_owed` asks for the editor only when a
    page under `docs/plans/` was written. `HOUSE_RULES_EDITOR=on` brings back the 160-word reply trigger.
-4. **The page checkpoint is said once.** The #310 "still owed" note is delivered once per message of
+4. **The page checkpoint is said once (#326).** The #310 "still owed" note is delivered once per message of
    aj's, not after every later reply to it. The page-blocks count still records that a page is owed.
 
 Each step adds its own `verify.py` case. Step 1's case proves that two Stop runs about the same reply
