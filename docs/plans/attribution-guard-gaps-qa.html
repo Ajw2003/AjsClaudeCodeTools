@@ -370,9 +370,9 @@ const PAGE = {
     [
       "keep",
       "Still unverified",
-      "3 things not yet proven",
+      "2 things not yet proven",
       null,
-      "The read-back has not run inside a real cloud session, only against live GitHub from this machine. The read-back finds the new item's web address in the text the command prints. It expects Claude Code to report that text under a particular field name. The tests and my run used that name, but a real cloud session hasn't confirmed it. With gh api -f body=@file, gh sends the text \"@file\" as the body instead of the file's contents, so the check reads the command text itself. Only -F and --input read the file.",
+      "The read-back has not run inside a real cloud session, only against live GitHub from this machine. With gh api -f body=@file, gh sends the text \"@file\" as the body instead of the file's contents, so the check reads the command text itself. Only -F and --input read the file.",
       null,
       null
     ]
@@ -382,7 +382,6 @@ const PAGE = {
     "base": "origin/main",
     "unverified": [
       "The read-back has not run inside a real cloud session, only against live GitHub from this machine",
-      "The read-back finds the new item's web address in the text the command prints. It expects Claude Code to report that text under a particular field name. The tests and my run used that name, but a real cloud session hasn't confirmed it.",
       "With gh api -f body=@file, gh sends the text \"@file\" as the body instead of the file's contents, so the check reads the command text itself. Only -F and --input read the file."
     ],
     "files": {}
