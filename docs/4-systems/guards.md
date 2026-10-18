@@ -34,8 +34,9 @@ approved".
 
 ## Credit on GitHub: every write route, and a read-back (#315)
 
-Status: design approved 2026-10-17 ("Design approved: attribution guard gaps",
-`docs/plans/attribution-guard-gaps.html` on `AjsAgent/issue-281-fix`), not built yet.
+Status: built in plugin 2.68.3 (#316 to #319; design approved 2026-10-17, `docs/plans/attribution-guard-gaps.html`
+on `AjsAgent/issue-281-fix`). The read-back is the `creditcheck` handler `event_creditcheck` in `hook.py`,
+which fetches the body through `_read_back_body`.
 
 The credit check (`_attribution_guard` in `hook.py`) only looked at `git commit`, `gh pr` and
 `gh issue`. A run on 2026-10-17 against `main` let through five `gh api` routes, `curl` to the
