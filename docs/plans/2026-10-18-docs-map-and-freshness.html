@@ -270,7 +270,7 @@ const PAGE = {
   "replyPrefix": "Docs map and freshness answers",
   "reply": "",
   "short": {
-    "lead": "You chose to build our own code map covering Python, web projects and C#, and asked for a way to keep docs current that can neither fall behind nor loop. Your answers are recorded in the decisions log, and the course change is added to #306 (\"restructure into a shared core with project boundaries and six optional sub-plugins\"). This page answers both questions. The loops in #303 and #322 had one cause: a check that blocks the end of a reply makes the session try again, and the retry can trip the same check. The design below never blocks the end of a reply. It writes the parts of a doc that a tool can generate, marks the hand-written parts as stale inside the doc itself, and refuses a commit that saves changed code while a doc covering it is stale.",
+    "lead": "You chose to build our own code map covering Python, web projects and C#, and asked for a way to keep docs current that can neither fall behind nor loop. Your answers are recorded in the decisions log, and the course change is added to #306 (\"restructure into a shared core with project boundaries and six optional sub-plugins\"). This page answers both questions. The loops in #303 and #322 had one cause: a check that stops a reply from finishing makes the session try again, and the retry can trip the same check. The design below never holds a reply back. It writes the parts of a doc that a tool can generate, marks the hand-written parts as stale inside the doc itself, and refuses a commit that saves changed code while a doc covering it is stale.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       [
@@ -304,7 +304,7 @@ const PAGE = {
         "Ready here",
         "Parsers on this machine",
         "",
-        "Measured on this machine today: Python 3.13 (its built-in ast module parses Python), Node with npm (the TypeScript compiler is version 7.0.2 on npm), and the .NET SDKs 8, 9 and 10 (Roslyn, the C# compiler, ships with them). tree-sitter 0.26.0 and tree-sitter-language-pack 1.22.1 are on PyPI. I have not installed or tried either of those two packages.",
+        "Measured on this machine today: Python 3.13, whose built-in ast module parses Python, and Node with npm, where the TypeScript compiler is version 7.0.2. The .NET SDKs 8, 9 and 10 are installed, and Roslyn, the C# compiler, ships with them. tree-sitter 0.26.0 and tree-sitter-language-pack 1.22.1 are on PyPI. I have not installed or tried either of those two packages.",
         "Informs your parser answer under Choices."
       ],
       [
@@ -312,7 +312,7 @@ const PAGE = {
         "Decide",
         "Which parser builds the map",
         "you",
-        "One parser library for all three languages, or each language's own compiler. The trade-off is one code path for all three languages against the most accurate call edges.",
+        "One parser library for all three languages, or each language's own compiler. The trade-off is one shared code path against the most accurate call edges.",
         "Your answer under Choices: which parser should build the code map."
       ],
       [
@@ -414,7 +414,7 @@ const PAGE = {
           "Commits are never held up by prose. Stale explanations can sit in history, marked as stale, which your earlier answer ruled out for a source of truth."
         ]
       ],
-      "In every option the end-of-turn hook only writes; it never blocks the end of a reply."
+      "In every option the end-of-turn hook only writes files and never stops a reply."
     ]
   ],
   "wrapup": {
