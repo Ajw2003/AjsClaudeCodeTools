@@ -7,6 +7,26 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - #322 writing check loop: design and build plan
+
+**Context.** During the cloud QA test for #315 (credit read-back), the end-of-reply checks looped: each
+report-only note went back to the model as Stop `additionalContext`, which continues the turn, and
+`event_handover` emits it on the retry (`stop_hook_active` true) as well. Replies of one line kept setting off
+the page checkpoint until Claude Code's cap of 9 consecutive blocks ended the turn. The editor checkpoint
+also forced a whole subagent run for one 386-word chat reply. aj opened #322 for it ("fix the writing check
+asap as it is bleeding tokens on retries, and toggle the editor off by default").
+
+**Decision.** Design approved as "Design approved: #322 writing check loop". The build plan is four
+sub-issues, each with its own `verify.py` case: the retry only reports to aj (#323), the writing check
+leaves chat replies alone and stays on pages and new issues (#324), the editor checkpoint is pages-only
+unless `HOUSE_RULES_EDITOR=on` (#325), and the page checkpoint's still-owed note is said once per message
+of aj's (#326). The plan is in `docs/4-systems/clear-writing.md`, "Planned: stop the end-of-reply loop".
+
+**Rejected.** Keeping `HOUSE_RULES_CLEAR_WRITING=off` as the fix: it also turns off the page and issue
+checks, and setting it mid-session did not reach hooks already running.
+
+**Status.** Standing.
+
 ## 2026-10-16 - QA passed: plugin restructure 2.68.1 patch
 
 **Context.** The 2.68.1 patch (#307 to #311) was built on `ccr-7dcf4ee2-zp3mm8`, pull request #312 (house-rules
