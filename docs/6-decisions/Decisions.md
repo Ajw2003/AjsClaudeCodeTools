@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - Page links open: the build plan
+
+**Context.** The design for #329 (a page link in a reply must open) was approved (entry below). Build
+plan page: `docs/plans/2026-10-18-page-links-open-plan.html`. Systems doc section: "A page link must
+open" in `docs/4-systems/handover-pages.md`.
+
+**Decision.** Three sub-issues of #329, built on `AjsAgent/issue-329-page-links` cut from `main`, one
+`@house-rules:builder` helper at a time, `verify.py` after each: #330 (count a page link only when it
+resolves inside the session folder), #331 (make_page.py warns when it writes a page outside the folder
+it runs in), #332 (docs, version and QA page). Baseline on that branch before any change: "RESULT:
+FAIL - 4 of 847 checks failed" (checks 95, 97, 751, 826), already failing on `main`; the build adds no
+new failures.
+
+**Status.** Standing once aj replies "Build plan approved: page links open".
+
 ## 2026-10-18 - Design approved: page links open
 
 **Context.** Issue #329 (a page link in a reply must open: a page outside the session folder is sent
