@@ -7326,28 +7326,6 @@ def _clear_writing_enabled():
 _WRITING_REPORT_ONLY = ("bare-ref",)
 
 
-def _writing_findings(text):
-    """(findings, problem): the shared checker's findings on a reply, minus not-checked, which the
-    evidence rule reports on its own, and minus the report-only kinds. [] when the check is off or the
-    text is empty."""
-    if not text or not _clear_writing_enabled():
-        return [], None
-    if clarity is None:
-        return [], CLARITY_ERROR
-    return clarity.findings(text, skip=("not-checked",) + _WRITING_REPORT_ONLY), None
-
-
-def _writing_report_line(text):
-    """One line for aj naming the report-only findings in a reply (#309), or "" when there are none."""
-    if not text or not _clear_writing_enabled() or clarity is None:
-        return ""
-    found = [p for k, p, _why in clarity.findings(text) if k in _WRITING_REPORT_ONLY]
-    if not found:
-        return ""
-    return ("house-rules writing check (report only, #309): bare references in this reply - %s. Nothing was "
-            "asked of the agent." % ", ".join('"%s"' % p for p in found[:8]))
-
-
 # #249: a page or a long reply goes past the editor helper before aj reads it.
 EDITOR_NOTE = (
     "House rules, write it so nothing is left to guess: %s, and no @house-rules:editor helper ran this "
@@ -7901,12 +7879,9 @@ def event_handover():
         )
 
     long_words = _long_reply_words(reply_text) if (vm is not None and _loop_enabled()) else 0
-    writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
-    if writing_problem:
-        trace_lines.append(writing_problem)
-    report_line = _writing_report_line(reply_text if vm is not None else "")
-    if report_line:
-        trace_lines.append(report_line)
+    # #324: the writing check no longer runs on chat replies (pages and new issues keep it), so no findings
+    # and no report line here; the not-checked disclosure still goes through _writing_note.
+    writing = []
 
     # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
     # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.

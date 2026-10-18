@@ -157,8 +157,7 @@ The plain-docs skill writes plain copies of the docs; on top of this rule they h
 ## How it is checked
 
 - **The shared checker** (`scripts/clarity.py`) flags vague claims with no reason, bare references,
-  repeated phrases, jargon and overlong sentences. The end-of-reply check runs it on every reply and
-  gives one note; a write to `docs/plans/*.html` runs it on the page's text; `plain_docs_check.py`
+  repeated phrases, jargon and overlong sentences. The end-of-reply check no longer runs it on chat replies (#324); a write to `docs/plans/*.html` runs it on the page's text; `plain_docs_check.py`
   uses its word list and sentence check.
 - **Issues** missing "Depends on", "Depended on by" or "Done when" are refused when created.
 - **The editor helper** (`@house-rules:editor`, Sonnet) reads a page or a long reply and returns

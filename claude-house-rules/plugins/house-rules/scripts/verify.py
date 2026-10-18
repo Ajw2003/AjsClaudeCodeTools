@@ -9215,19 +9215,13 @@ def _cw_stop(text, env=None):
     return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=env or _loop_env)[1]
 
 
-_cw_cases.append(("reply: a vague number and a bare reference get one writing note naming both",
-                  "write it so nothing is left to guess" in _cw_stop("The suite adds about 43 tests; see #229.")
-                  and "#229" in _cw_stop("The suite adds about 43 tests; see #229.")
-                  and "about 43" in _cw_stop("The suite adds about 43 tests; see #229.")))
+_cw_cases.append(("reply (#324): a vague number and a bare reference get no writing note",
+                  "write it so nothing is left to guess" not in _cw_stop("The suite adds about 43 tests; see #229.")))
+_cw_cases.append(("reply (#324): a bare reference and a vague number get no writing note and no report line",
+                  "write it so nothing is left to guess" not in _cw_stop("Go with option B; it adds about 43 tests; see #229.")
+                  and "writing check (report only" not in _cw_stop("Go with option B; it adds about 43 tests; see #229.")))
 _cw_cases.append(("reply: a clean reply gets no writing note",
                   "write it so nothing is left to guess" not in _cw_stop("The suite adds 43 tests: 616 on main, 659 here.")))
-_cw_cases.append(("reply: HOUSE_RULES_CLEAR_WRITING=off turns the note off",
-                  "write it so nothing is left to guess" not in _cw_stop(
-                      "The suite adds about 43 tests.", env=dict(_loop_env, HOUSE_RULES_CLEAR_WRITING="off"))))
-
-_cw_note = _cw_stop("The suite adds about 43 tests; see #229.")
-_cw_cases.append(("reply: the writing note asks for only the corrected sentences",
-                  "only the corrected sentences" in _cw_note and "send the reply again" not in _cw_note))
 
 # The page check: a write to docs/plans/*.html.
 _cw_pages = os.path.join(_loop_dir, "docs", "plans")
@@ -9469,8 +9463,8 @@ try:
 except ValueError:
     _ck_data = {}
 _ck_ctx = (_ck_data.get("hookSpecificOutput") or {}).get("additionalContext", "")
-_ck_cases.append(("writing (#309): a bare reference goes to aj as a report-only line and asks nothing of the agent",
-                  not _ck_b and "report only, #309): bare references" in _ck_data.get("systemMessage", "")
+_ck_cases.append(("writing (#324): a bare reference in a reply gets no report line and asks nothing of the agent",
+                  not _ck_b and "bare references" not in _ck_data.get("systemMessage", "")
                   and "a bare number or letter" not in _ck_ctx))
 _ck_b, _ck_r, _ck_o = _ck_run(_ck_t_relayed, _ck_proposal)
 _ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count - the report still comes',
