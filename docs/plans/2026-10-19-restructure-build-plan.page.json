@@ -1,0 +1,210 @@
+{
+  "title": "Restructure Build Plan",
+  "eyebrow": "Build plan · #306 house-rules restructure into a shared core and six parts · from plugin 2.68.5",
+  "approval": "Build plan approved: plugin restructure",
+  "replyPrefix": "Build plan approved: plugin restructure",
+  "reply": "",
+  "short": {
+    "lead": "This is the build plan for the whole restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins). It folds in every decision so far: the audit direction of 2026-10-16, your answers on the docs context layer, your five grilling rounds (the numbered question sets you answered), and your answers on the summary template. The work is 10 steps, each its own GitHub issue under #306, all on the branch AjsAgent/issue-281-fix as you asked. The 2.68.1 patch that came first (issues #307 to #311) passed your QA on 2026-10-16 and is not part of this plan. Two questions at the bottom decide the order of the work and how often it ships.",
+    "hint": "Tap a step to see what it creates or changes and what it needs.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "Needs you first",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 1",
+        "The summary template and the define-before-use rule",
+        "",
+        "The four steps already planned on docs/plans/2026-10-19-summary-template-plan.html, now one step of this plan. First, the writing rule's \"Explicit context\" and \"Named references\" lines become one \"Define before use\" line. Second, scripts/clarity.py flags \"question N\" and \"answer N\" when nothing says what was asked. Third, the page template gets a \"Decided by\" box (one line per decision) and a before-and-after strip on summary pages. Fourth, a starter file, templates/decision-summary.page.json, holds the shape.",
+        "Nothing from you. It goes first so every later plan and summary page uses the new template."
+      ],
+      [
+        "list",
+        "Step 2",
+        "Move today's code into the core and six parts, changing nothing",
+        "",
+        "hook.py (8,588 lines) splits into one module per part: core, safe git, session triage, design loop, writing, delegation and docs. The 32 hook entries in hooks/hooks.json and the run.sh shim stay as they are, and every verify.py check passes unchanged, which proves nothing moved in behaviour. The scout (the helper agent that listed every handler) placed each one in a part. Four handlers span parts, so each is split into pieces that go to different parts. The end-of-reply handler (hook.py:6845-8089) keeps its dispatcher in the core and moves each check to its part. The issue workflow (hook.py:4925-5223) goes to the design loop, the prompt-audit handler (hook.py:6772) goes to delegation, and the version check (hook.py:1161-1635) stays in the core until step 10 removes it.",
+        "Nothing from you. Done when verify.py passes with no check changed and the inventory is written into docs/4-systems/plugin-restructure.md."
+      ],
+      [
+        "lock",
+        "Step 3",
+        "Settings and identity",
+        "",
+        "A settings script, scripts/settings.py, stores each setting. Cloud sessions read environment variables first, such as HOUSE_RULES_AGENT_NAME=ajw2003sAgent (round 4, question 2, where cloud sessions keep settings: environment variables). Until every setting has a value, the agent can't use any tool except that script (round 3, question 2, what waits: everything; round 4, question 1, how the answer is saved: one allowed command). At session start the agent asks you in the chat, suggesting your GitHub login plus \"sAgent\" as the name (round 2, question 1; round 3, question 1). The 265 identity strings in 16 shipped files, such as \"AjsAgent\" and \"AJ's agent\", read the agent name, credit line and branch prefix from settings instead.",
+        "Nothing from you to build it. After it ships, each machine and cloud environment asks for your settings once."
+      ],
+      [
+        "stop",
+        "Step 4",
+        "Safe git follows the grilling answers",
+        "",
+        "Deleting a file git can restore is allowed on the agent's own branch and refused on anyone else's, with the reason (round 1, question 1, deletes). A branch is the agent's own when its name starts with the agent prefix or an extra prefix from the settings, which for you would be AjsAgent/ and claude/ (round 2, questions 5 and 6). Commits carry the agent name as author with your email, and \"Committed by ajw2003sAgent\" as the credit line (round 2, questions 2 and 3). A snapshot branch from autosave is deleted once its helper's work is merged (round 2, question 7).",
+        "Nothing from you. Depends on step 3, because the agent name comes from settings."
+      ],
+      [
+        "eye",
+        "Step 5",
+        "Design loop and pages",
+        "",
+        "Every feature that reaches a build plan gets issues. A feature that is one step of a bigger feature links to its parent through GitHub's sub-issue link, and it passes QA on its own (round 1, questions 8 and 9; round 2, question 8). An approval counts before its decisions-log entry exists (round 1, question 10). In cloud sessions every page is published privately to claude.ai and the reply links it (round 5, question 1, how a cloud page is made readable). Local sessions publish only when asked (round 1, question 7).",
+        "Nothing from you. Depends on step 2."
+      ],
+      [
+        "check",
+        "Step 6",
+        "Writing, evidence and rewrite rules",
+        "",
+        "The agent never decides on its own to skip a check. If a check takes over 10 minutes, costs money, or needs a machine or account the agent can't reach, the agent names it and asks you plainly whether to skip it (round 2, question 12, your own wording). A wholesale rewrite, meaning more than half of a file's lines replaced in one change or the whole file written over, needs your approval by name, and the overwrite guard counts it (round 2, question 11). An obvious bug outside the request becomes an issue, not an unasked fix (round 1, question 6).",
+        "Nothing from you. Depends on step 2."
+      ],
+      [
+        "hammer",
+        "Step 7",
+        "Helper agents",
+        "",
+        "Test suites run twice, by helpers too (round 1, question 3). A helper with a question only you can answer stops and reports it to the parent session (round 1, question 4). A helper's report quotes the real RESULT line and every failure line (round 1, question 5). Worktree autosave (the automatic save of a helper's working folder) pushes without force to a fresh snapshot branch. The sweep (the cleanup after a helper finishes) commits that helper's leftover changes only inside its own worktree (round 1, questions 12 and 13).",
+        "Nothing from you. Depends on steps 2 and 4."
+      ],
+      [
+        "search",
+        "Step 8",
+        "The docs context layer",
+        "",
+        "This part is installed by default (docs context layer answers, 2026-10-18, answer 3A). It builds a code map with tree-sitter (a code parser) for Python, JavaScript, TypeScript, HTML, CSS and C#, plus a Roslyn pass (the C# compiler's analyser) that resolves C# references (tree-sitter trial answers 1B and 2A). The install step downloads the six grammars and fails loudly if it can't. Generated facts refresh at the end of every turn without blocking; a hand-written section whose code changed gets a stale stamp, and the guard refuses a commit that leaves a stamped doc behind. The archivist (the docs-keeping helper) moves long code comments into the docs at the end of each turn, and opens an issue instead on someone else's branch. In a repo you don't own, the docs stay out of git (round 1, question 14; round 2, questions 9 and 10).",
+        "You: the Roslyn refresh time and the grammar download on an offline machine get measured before this step's build plan, as the tree-sitter trial answers asked, so that plan can say how long a refresh takes and what happens offline."
+      ],
+      [
+        "hand",
+        "Step 9",
+        "Session triage",
+        "you",
+        "Two helpers, described in #304 (a two-helper tool that cleans a session transcript, then files issues from it): one flags secrets in a session transcript for you to confirm and remove, and the other files issues from the cleaned transcript, each in the repo the observation belongs to. This part has no design yet, so it starts with a design page of its own.",
+        "You: approve that design page before this step is built."
+      ],
+      [
+        "swap",
+        "Step 10",
+        "Split into installable plugins and release",
+        "",
+        "Each part becomes its own plugin in the marketplace, and each optional part lists the core in its plugin.json dependencies, so installing it installs the core. Core, safe git, session triage and docs install by default; design loop, writing and delegation are optional. Updates come from the marketplace's autoUpdate setting (it updates installed plugins on its own), so the self-updater (hook.py:1161-1635) is dropped. tools/clean_install_test.py proves a fresh install from GitHub works, and a QA page lists what to test.",
+        "You: test the fresh install and answer \"QA passed: plugin restructure\" or \"QA failed: plugin restructure\"."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "keep",
+      "Every hook event and every check",
+      "The 32 hook entries, the run.sh shim and every verify.py check stay.",
+      null,
+      "Step 2 is a pure move, so verify.py (10,061 lines) proves the behaviour is unchanged before any decision is applied. Later steps change checks only where a decision says so, each with a new verify.py case.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "hook.py",
+      "One 8,588-line file becomes seven modules, one per part.",
+      [
+        "One file answers every hook event",
+        "Each part owns its handlers"
+      ],
+      "A part can then be installed or left out on its own, which today's single file can't allow.",
+      [
+        "One file, 8,588 lines",
+        "A core plus six part modules, dispatched by the same run.sh",
+        "A session in a repo that doesn't want the design loop can leave it out"
+      ],
+      null
+    ],
+    [
+      "chg",
+      "Identity strings",
+      "265 strings in 16 files become settings.",
+      [
+        "\"AjsAgent\" and \"AJ's agent\" written into the code",
+        "The agent name, credit line and branch prefix come from settings"
+      ],
+      "Round 1, question 16: identity becomes settings, so work is never credited to Claude and never carries your name on someone else's work.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "Docs context layer and session triage",
+      "Two parts that don't exist in today's code.",
+      null,
+      "The docs context layer (step 8) and session triage (step 9) are new code, not moved code.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "Dropped: the self-updater",
+      "versioncheck's update code (hook.py:1161-1635) is removed in step 10.",
+      null,
+      "The marketplace's autoUpdate replaces it. On 2026-10-19 the updater looked for a marketplace named aj-house-rules, which cloud sessions don't have, even though the synced 2.68.5 was already loaded.",
+      null,
+      null
+    ]
+  ],
+  "choices": [
+    [
+      "q1",
+      "1. In what order is the work done?",
+      [
+        [
+          "A",
+          "Move first: step 2 splits hook.py with no behaviour change, then steps 3 to 9 apply your decisions part by part",
+          1,
+          "Each decision then lands in the module that owns it, and verify.py proves the move on its own before anything changes."
+        ],
+        [
+          "B",
+          "Decisions first: apply steps 3 to 9 inside today's hook.py, then split it at the end",
+          0,
+          "Your decisions take effect sooner, but every change lands in the 8,588-line file and then has to be moved again at the end."
+        ]
+      ],
+      "In both, step 1, the summary template, goes first."
+    ],
+    [
+      "q2",
+      "2. How often does it ship to main?",
+      [
+        [
+          "A",
+          "After each step: a pull request from AjsAgent/issue-281-fix to main and a version bump, each with its own QA page",
+          1,
+          "Small, reversible changes you test one at a time, and the branch stays the one thread you asked for."
+        ],
+        [
+          "B",
+          "Once, at the end, as house-rules 3.0.0",
+          0,
+          "One QA session, but every change waits until the last step and is tested all at once."
+        ]
+      ],
+      "In both, every step's issue says what it depends on, what depends on it and when it's done."
+    ]
+  ],
+  "wrapup": {
+    "summary": "The build plan for the #306 restructure: 10 steps from plugin 2.68.5, folding in every decision so far.",
+    "changing": "No files change until you approve. The plan is recorded in the decisions log, docs/6-decisions/Decisions.md.",
+    "blocking": "Your approval, and your answers to question 1 (the order of the work) and question 2 (how often it ships).",
+    "next": "Once you approve, I open one issue per step under #306 and build step 1 with a helper agent.",
+    "todo": [
+      "Type your approval in the chat. It starts with \"Build plan approved: plugin restructure\" and ends with your answers, for example \"Build plan approved: plugin restructure 1A 2A\" (question 1, option A; question 2, option A).",
+      "Send the message."
+    ]
+  }
+}

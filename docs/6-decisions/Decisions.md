@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - The restructure stays one thread, and its build plan covers everything
+
+**Context.** The summary template's build plan (`docs/plans/2026-10-19-summary-template-plan.html`)
+asked which branch to build on. aj's reply was "Build plan approved: summary template 1*".
+
+**Decision.** aj's own answer to question 1 (which branch): no separate branch. Fix the conflicts, merge
+the work including the grilling, and write one new build plan covering all of it, because this is still
+the full restructure (#306) and that is the thread that stays. Done on `AjsAgent/issue-281-fix`:
+`AjsAgent/docs-context-layer` (main plus grilling rounds 1 and 2) was merged in, then the #322 loop fix
+from pull request #328, then `main`, and pull request #337 put house-rules 2.68.5 on `main` at aj's
+request. The summary template becomes step 1 of the new plan,
+`docs/plans/2026-10-19-restructure-build-plan.html`: 10 steps under #306.
+
+**Status.** Standing once aj approves the restructure build plan.
+
 ## 2026-10-19 - Summary template: aj's answers on the proposal
 
 **Context.** The proposal page `docs/plans/2026-10-19-summary-template.html` asked how the grilling
