@@ -47,7 +47,7 @@
         "Scope",
         "Issues, features and stages",
         "done",
-        "An obvious bug outside the request is not fixed unasked; it becomes an issue named in the reply (round 1, answer 6). Every feature that reaches a build plan gets GitHub issues (round 1, answer 8). A feature that is one step of a bigger one passes QA on its own, and its parent closes with the last child (round 1, answer 9). The parent is found through GitHub's sub-issue link (round 2, answer 8). An approval is accepted before its decisions-log entry exists, and the entry is required before the next stage (round 1, answer 10). The design loop's stage moves through pull requests and labels stay as written rules, and trying to edit code never moves a stage (round 1, answer 11).",
+        "An obvious bug outside the request is not fixed unasked; it becomes an issue named in the reply (round 1, answer 6). Every feature that reaches a build plan gets GitHub issues (round 1, answer 8). A feature that is one step of a bigger one passes QA on its own, and its parent closes with the last child (round 1, answer 9). The parent is found through GitHub's sub-issue link (round 2, answer 8). An approval is accepted before its decisions-log entry exists, and the work can't move on until that entry is written (round 1, answer 10). The design loop's stage moves through pull requests and labels stay as written rules, and trying to edit code never moves a stage (round 1, answer 11).",
         "Round 1 answers 6, 8, 9, 10 and 11; round 2 answer 8."
       ],
       [
