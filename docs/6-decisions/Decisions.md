@@ -7,6 +7,33 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - A plugin update never stops a session's work
+
+**Context.** An overnight FocusDesk run in a cloud session stalled for hours on a permission prompt.
+The plugin there is synced from aj's claude.ai account into `~/.claude/plugins/synced/`, with no
+marketplace and no `installed_plugins.json`. When GitHub's version moved ahead of the synced copy,
+`versioncheck` ran `claude plugin marketplace update aj-house-rules`, which failed with "Marketplace
+'aj-house-rules' not found" (reproduced by running the hook with GitHub's version set ahead). The
+banner then told Claude to stop and run the update before other work, and the marker it wrote put a
+`guard` permission prompt on the first shell command. Nobody was awake to answer it.
+
+**Decision.** aj: "a permission prompt for an update should never have stalled an over night task".
+1. A copy synced from the claude.ai account is never asked to update: no command runs, and Claude
+   tells the user in one sentence which version runs and that claude.ai delivers the newer one.
+2. When the automatic update fails anywhere else, the banner tells Claude to carry on and list the
+   update under "Waiting on you" as an `UNTESTED:` step card, never to stop, wait, or run it itself.
+3. `versioncheck` no longer writes the session marker, and `guard` no longer prompts for it.
+
+**Rejected.** An allowlist entry for the two update commands in the project's
+`.claude/settings.json`: the commands cannot succeed in a cloud session at all, and `guard`'s own
+"ask" prompts regardless of the allowlist.
+
+**Supersedes.** The "already answered" paragraph of `rules/detail/handover-command.md` and the
+marker design described in `docs/architecture.md` (2026-09-26 entry on running the update itself
+stands; only what happens after a failure changed).
+
+**Status.** Standing.
+
 ## 2026-10-19 - Summary template: aj's answers on the proposal
 
 **Context.** The proposal page `docs/plans/2026-10-19-summary-template.html` asked how the grilling
