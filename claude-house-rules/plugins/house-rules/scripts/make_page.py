@@ -5,7 +5,7 @@
     make_page.py style --quick
     make_page.py style --draft [--from <tokens.json>] [--project <root>]
 
-Content JSON has the same keys as the template's PAGE block (title, eyebrow, replyPrefix, reply,
+Content JSON has the same keys as the template's PAGE block (title, eyebrow, approval,
 short, changes, choices, wrapup). A Changes item may carry `{"visual": true}` as a trailing object
 element (any position after the detail); it marks a visual change. The template ignores it. In a
 project whose style file says `"pictures": "required"`, such an item must also carry a picture
@@ -290,8 +290,66 @@ def apply_qa(page, project):
     page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
                             " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv), None, None])
     page.setdefault("choices", [])  # a QA page usually has none, and the template maps over the list
-    page["replyPrefix"] = "QA passed: %s" % qa["feature"]
-    page["reply"] = ""
+    page["approval"] = "QA passed: %s" % qa["feature"]
+    page.pop("replyPrefix", None)
+    page.pop("reply", None)
+
+
+def load_gate_patterns():
+    """The design-loop gate's own regexes, loaded from hook.py beside this script, not copied.
+    hook.py only runs main() under __main__, so importing it by path has no side effects
+    (verify.py loads it the same way)."""
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hook.py")
+    spec = importlib.util.spec_from_file_location("hook_for_make_page", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod._LOOP_DESIGN_RE, mod._LOOP_PLAN_RE, mod._LOOP_QA_RE
+
+
+def is_qa_approval(page):
+    return "qa" in page or str(page.get("approval", "")).startswith("QA passed")
+
+
+def check_approval(page):
+    """The copy box holds the approval phrase (plus picks); it must be text the gate accepts."""
+    appr = page.get("approval")
+    if not isinstance(appr, str) or not appr.strip():
+        die("content needs an 'approval' field: the exact phrase the design-loop gate accepts, such as "
+            "\"Build plan approved: <feature>\" or \"Design approved: <feature>\" (a QA page gets \"QA passed: <feature>\")")
+    if appr != appr.strip() or "\n" in appr:
+        die("approval must be one line with no spaces at either end")
+    design, plan, qa = load_gate_patterns()
+    qa_page = is_qa_approval(page)
+    pats = [qa] if qa_page else [design, plan]
+    want = "QA passed: <feature>" if qa_page else "Design approved: <feature> or Build plan approved: <feature>"
+    for text in (appr, appr + " 1A"):
+        if not any(p.search(text) for p in pats):
+            if qa_page:
+                die("approval %r would not open the design-loop gate (checked %r); write it as %s" % (appr, text, want))
+            # #309 (incident 7 of #303): any approval line builds. A proposal for another repo's work must not
+            # carry a phrase that would move this repo's stage when aj sends it back.
+            print("make_page: note - approval %r is not a design-loop phrase, so sending it back moves no stage "
+                  "(the phrases are %s)." % (appr, want))
+            return
+
+
+def apply_approval_todo(page):
+    """Make the wrap-up's last to-do line say the phrase the copy box holds."""
+    import html
+    appr = html.escape(page["approval"], quote=False)
+    if is_qa_approval(page):
+        feature = appr.split(":", 1)[1].strip()
+        line = ('Tap <b>Copy my reply</b> and send it: "%s", or send "QA failed: %s" with what to change.'
+                % (appr, feature))
+    else:
+        line = 'Tap <b>Copy my reply</b> and send it: "%s", or say what to change.' % appr
+    wrap = page.setdefault("wrapup", {})
+    todo = wrap.get("todo")
+    if not isinstance(todo, list) or not todo:
+        wrap["todo"] = [line]
+    else:
+        todo[-1] = line
 
 
 def record_qa_page(project, out):
@@ -330,6 +388,9 @@ def build(args):
         die("content %s must be a JSON object" % args.content)
     if "qa" in page:
         apply_qa(page, project)
+    check_approval(page)
+    apply_approval_todo(page)
+    page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one
     check_reserved(page, style)
     check_pictures(page, style)
     stem = os.path.basename(args.content)
@@ -380,11 +441,35 @@ const { chromium } = require('playwright');
     const w = await p.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
     console.log(`visual check ${t}: page errors ${errs.length}, overflow ${w[0] > w[1] ? 'YES ' + w[0] + '>' + w[1] : 'none'}`);
     errs.forEach(e => console.log('  error: ' + e));
-    if (errs.length || w[0] > w[1]) bad = 1;
+    const clipped = await p.evaluate(process.argv[4]);
+    clipped.forEach(c => console.log(`visual check ${t}: clipped card "${c}"`));
+    if (errs.length || w[0] > w[1] || clipped.length) bad = 1;
   }
   await b.close(); process.exit(bad);
 })().catch(e => { console.log('LAUNCHFAIL ' + e.message.split('\n')[0]); process.exit(9); });
 """
+
+# Shared by both checks: shows every part, opens every card and shows each short item in turn
+# (they render one at a time into #sd), then names each card with content wider than the card (#288).
+CLIP_JS = r"""() => {
+  const out = new Set();
+  const scan = card => {
+    if (!card || !card.getClientRects().length) return;
+    const title = ((card.querySelector('h3,b,summary') || card).textContent || '').trim().split('\n')[0].trim().slice(0, 60);
+    const cr = card.getBoundingClientRect();
+    for (const el of [card, ...card.querySelectorAll('*')]) {
+      const r = el.getBoundingClientRect();
+      const wider = el.clientWidth > 0 && el.scrollWidth - el.clientWidth > 1;
+      if (wider || (r.width > 0 && r.right > cr.right + 1)) { out.add(title); return; }
+    }
+  };
+  document.querySelectorAll('[data-part]').forEach(p => p.hidden = false);
+  document.querySelectorAll('details').forEach(d => d.open = true);
+  if (typeof showItem === 'function' && typeof PAGE !== 'undefined')
+    PAGE.short.items.forEach((_, n) => { showItem(n); scan(document.getElementById('sd')); });
+  document.querySelectorAll('details.ci, .opt, .wu').forEach(scan);
+  return [...out];
+}"""
 
 PY_CHECK = r"""
 import sys, json
@@ -404,7 +489,9 @@ with sync_playwright() as pw:
         w = p.evaluate("[document.documentElement.scrollWidth, window.innerWidth]")
         print("visual check %s: page errors %d, overflow %s" % (t, len(errs), ("YES %d>%d" % (w[0], w[1])) if w[0] > w[1] else "none"))
         for e in errs: print("  error: " + e)
-        if errs or w[0] > w[1]: bad = 1
+        clipped = p.evaluate(sys.argv[3])
+        for c in clipped: print('visual check %s: clipped card "%s"' % (t, c))
+        if errs or w[0] > w[1] or clipped: bad = 1
     b.close()
 sys.exit(bad)
 """
@@ -418,7 +505,7 @@ def visual_check(out, style):
     try:
         import importlib.util
         if importlib.util.find_spec("playwright"):
-            runs.append(("python playwright", [sys.executable, "-c", PY_CHECK, out, arg]))
+            runs.append(("python playwright", [sys.executable, "-c", PY_CHECK, out, arg, "(%s)()" % CLIP_JS]))
         else:
             reasons.append("python playwright is not installed")
     except (ImportError, ValueError) as e:
@@ -437,7 +524,7 @@ def visual_check(out, style):
                 fd, js = tempfile.mkstemp(suffix=".js")
                 with os.fdopen(fd, "w") as f:
                     f.write(NODE_JS)
-                runs.append(("node playwright", [node, js, out, arg]))
+                runs.append(("node playwright", [node, js, out, arg, "(%s)()" % CLIP_JS]))
             else:
                 reasons.append("node has no playwright module")
     for label, cmd in runs:
@@ -452,6 +539,7 @@ def visual_check(out, style):
         print(r.stdout.rstrip())
         if r.returncode:
             print("make_page: visual check found problems (see above); the page was still written")
+            sys.exit(2)
         return
     print("visual check did not run: " + "; ".join(reasons))
 

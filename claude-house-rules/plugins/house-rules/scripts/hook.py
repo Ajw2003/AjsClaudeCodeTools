@@ -48,6 +48,7 @@ import re
 import sys
 import tempfile
 import time
+import urllib.parse
 
 # The shared writing checker (#247), a sibling file. A missing or broken copy must not take every
 # hook down with it, so it is loaded here and each check that needs it reports when it is absent.
@@ -621,8 +622,8 @@ def event_inject():
 
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
-        "override default behaviour. A PreToolUse hook also prompts for destructive "
-        "commands and hidden processes, and refuses commit/push/merge on `main`. "
+        "override default behaviour. A PreToolUse hook also refuses destructive commands, "
+        "naming the safe way, and refuses commit/push/merge on `main`. "
         "That hook is a backstop, not "
         "permission to skip asking first. Machine profile: injected separately.\n\n"
     )
@@ -1762,25 +1763,9 @@ def event_scope():
 # characters \n or \t; _LINE_START accepts those as a word start, or `ls` + newline + `rm` slips by (#200).
 _LINE_START = r"\\[nrt]|"
 
-GUARD_R1 = [
-    (r"-WindowStyle\s+Hidden", "starts a hidden window you cannot watch"),
-    (r"Start-Process", "spawns a separate process with Start-Process"),
-    (r"Start-Job|\s-AsJob", "runs the work as a background job"),
-    (
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_.-])(nohup|setsid|disown)([^0-9A-Za-z_-]|$)",
-        "detaches the process from your terminal",
-    ),
-    (r'[^&]&\s*(\\?"|\\[nr])', "backgrounds the command with a trailing ampersand"),
-    # #85: a wait piped through tail/head shows nothing until it exits - a stuck wait and a
-    # working one look identical for its whole timeout.
-    (
-        # #261: the keyword and the tail/head must share one pipeline segment (no ; && || or
-        # newline between them); a while/until loop is one segment up to its `done`.
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_-])(?:(?:while|until)\s.*?\bdone\s*|"
-        r"(?:while|until|sleep|timeout|watch)\s(?:(?!\\[nrt]|;|&&|\|\|).)*?)\|(?!\|)\s*(tail|head)([^0-9A-Za-z_-]|$)",
-        "pipes a wait or loop through tail/head, which hides its output until it exits",
-    ),
-]
+# #292: the background-work patterns (hidden windows, Start-Process, background jobs, nohup/setsid/
+# disown, a trailing &, a wait piped through tail/head) and the process-kill pattern were removed:
+# none of them changes a branch or deletes saved work, so none of them stops the agent any more.
 
 # One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
 _WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
@@ -1854,7 +1839,6 @@ GUARD_R4 = [
     ),
     (r"Remove-Item", "deletes files (Remove-Item)"),
     (r"(del|erase)\s+/[fqs]|rmdir\s+/s", "deletes files (del /f or rmdir /s)"),
-    (r"Stop-Process|taskkill|pkill|kill\s+-9", "kills a running process"),
     (
         r"Clear-Content|truncate\s+-s",
         "truncates or overwrites file contents in place",
@@ -1871,10 +1855,37 @@ GUARD_R4 = [
 ]
 
 GUARD_BUCKETS = [
-    ("Never hide work: it stays visible, reachable and readable", GUARD_R1),
     ("Commit constantly on my own branches, never on theirs", GUARD_R3),
     ("Never take a destructive action without checking first", GUARD_R4),
 ]
+
+# #291: a destructive action is refused outright, and the refusal names the safe way to do the job.
+# aj is asked only when the command's description cites a source proving no safe way exists.
+_DELETE_REASONS = ("deletes one or more files", "deletes files (Remove-Item)", "deletes files (del /f or rmdir /s)")
+SAFE_WAYS = {
+    "rewrites remote history or pushes every branch (force push, --all, --mirror)":
+        "push a new branch instead: `git push -u origin AjsAgent/<topic>`",
+    "deletes a branch on the remote (push --delete)": "leave the branch for aj to delete",
+    "deletes a local branch even if its work is not merged (branch -D)": "leave the branch for aj to delete",
+    "discards work (reset)": "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
+    "deletes untracked files or rewrites all history (clean / filter-branch)":
+        "for clean, move the files into a `_to_delete/` folder; for filter-branch, rewrite on a copy branch "
+        "(`git branch <name>-copy`)",
+    "truncates or overwrites file contents in place": "write a new file beside it",
+    "throws away uncommitted edits to a file (git checkout -- / git restore)":
+        "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
+    "deletes stashed work permanently (git stash drop / clear)": "keep the stash",
+    "recursive": "move the folder into a `_to_delete/` folder instead",
+    "unsaved": "move the file into a `_to_delete/` folder instead",
+    "not mine": "make a new branch and commit there: `git switch -c AjsAgent/<topic>`",
+}
+_NO_SAFE_WAY_RE = re.compile(r"\bno safe way:\s*(\S.*)", re.IGNORECASE)
+GUARD_REFUSAL = (
+    "House rules: refused, because this could destroy data with no way back, or change work that may not "
+    "be yours:\n%s\nDo it the safe way named above. If no safe way exists, put `no safe way: <source>` in the "
+    "command's description, citing the source that proves it (for example the git manual page), and aj "
+    "will be asked instead."
+)
 
 # Reuses GUARD_R3's own commit pattern rather than a second copy - "is this a commit" and "is
 # this exempt from asking" are different questions, and the docs check needs the first one
@@ -2425,6 +2436,8 @@ def event_guard():
     exempted = []
     plain_hits = []  # branch writes asked only because the folder is unclear (#261)
     refused = []  # branch writes aimed at the default branch: refused, never asked (#197)
+    not_mine = []  # branch writes on a branch the guard can't confirm is the agent's: refused (#291)
+    delete_kind = None  # "recursive" or "unsaved" once a delete pattern matched (#291)
     saved_state = None  # (saved, note), computed at most once and only when a SAVED pattern matched
     saved_blocked = None
     for title, patterns in GUARD_BUCKETS:
@@ -2435,8 +2448,18 @@ def event_guard():
             marker = entry[2] if len(entry) > 2 else None
             if reason == "deletes one or more files" and _rm_only_in_scratchpad(subject, payload):
                 continue  # #261: every rm path is inside this session's scratchpad
+            if reason in _DELETE_REASONS:
+                delete_kind = delete_kind or _delete_refusal(subject, where)
+                if not delete_kind:
+                    exempted.append(reason)  # committed and unchanged, so git can bring it back (#291)
+                    continue
             if marker == BRANCH_WRITE and known:
-                (refused if protected else exempted).append(reason)
+                if protected:
+                    refused.append(reason)
+                elif branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+                    exempted.append(reason)
+                else:
+                    not_mine.append(reason)
                 continue
             if marker == BRANCH_WRITE:
                 plain_hits.append(reason)
@@ -2453,6 +2476,40 @@ def event_guard():
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": PROTECTED_DENY % (branch, "; ".join(refused))}})
         return 0
+
+    # #291: destructive actions are refused with the safe way named, unless the command cites a source
+    # proving no safe way exists; then aj is asked below, with the citation shown.
+    cited = _cites_no_safe_way(payload)
+    danger = []
+    for r in (x for rs in hits.values() for x in rs):
+        if r in plain_hits and elsewhere:
+            safe = ("run it as plain `git ...` from %s, with no cd, -C or variables, and it will be checked "
+                    "normally" % _payload_toplevel(payload))
+        elif r in plain_hits:
+            safe = SAFE_WAYS["not mine"]
+        elif r in _DELETE_REASONS:
+            safe = SAFE_WAYS[delete_kind or "unsaved"]
+        else:
+            safe = SAFE_WAYS.get(r, "do the job without this step")
+        danger.append("  - %s: %s" % (r, safe))
+    danger += ["  - %s on `%s`, which the guard can't confirm is mine: %s" % (r, branch, SAFE_WAYS["not mine"])
+               for r in not_mine]
+    if danger and not cited:
+        if elsewhere:
+            danger.append("  (This command names another repo, with --git-dir or a cd / -C I could not follow, so "
+                          "the branch I can see is not the one it acts on.)")
+        elif ownership_note and (plain_hits or not_mine):
+            danger.append("  (I could not read which branch this is on: %s.)" % ownership_note)
+        elif protected:
+            danger.append("  (`%s` is the default branch, which only changes through a pull request.)" % branch)
+        if saved_blocked:
+            danger.append("  (On `%s`, this runs unasked only when the work is saved elsewhere: %s.)"
+                          % (branch, saved_blocked))
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": GUARD_REFUSAL % "\n".join(danger)}})
+        return 0
+    for r in not_mine:
+        hits["Commit constantly on my own branches, never on theirs"].append(r)
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _staged_docs_status(subject, elsewhere, where) if is_commit else (None, None)
@@ -2539,6 +2596,10 @@ def event_guard():
             % (branch, saved_blocked)
         )
 
+    if cited and danger:
+        lines.append("")
+        lines.append("  No safe way exists, the agent says, citing: %s" % cited)
+
     if issue_hit:
         lines.append("")
         lines.append("  Rule: Issue workflow (PRs link with Refs, the user closes issues)")
@@ -2568,10 +2629,7 @@ def event_guard():
     rewrite = None
     all_hits = [r for rs in hits.values() for r in rs]
     if all_hits and not outdated and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
-        pipe_reason = GUARD_R1[-1][1]
-        if all(r == pipe_reason for r in all_hits):
-            rewrite = "Write the output to a file instead of piping it through tail/head."
-        elif elsewhere and not protected and all(r in plain_hits for r in all_hits):
+        if elsewhere and not protected and all(r in plain_hits for r in all_hits):
             rewrite = ("Run it as plain `git ...` from %s, with no cd, -C or variables, and it will be "
                        "checked normally." % _payload_toplevel(payload))
     _ask_or_refuse(payload, reason_text, issue_hit[2] if issue_hit and issue_hit[2] else None, rewrite)
@@ -2597,6 +2655,60 @@ def _payload_toplevel(payload):
         sys.stderr.write("house-rules guard: could not read the repo top-level (%s: %s); naming the "
                          "working folder instead.\n" % (type(exc).__name__, exc))
     return cwd
+
+
+_DELETE_CMD_RE = re.compile(r"(^|[\s;&|(])(rm|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
+_RECURSIVE_DELETE_RE = re.compile(
+    r"(^|[\s;&|(])rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
+    r"|rmdir\s+/s|Remove-Item\b.*-Recurse|(del|erase)\s+(?:\S+\s+)*?/s(\s|$)", re.IGNORECASE)
+
+
+def _delete_refusal(subject, where):
+    """#291: "recursive" for a recursive delete, "unsaved" when any target has uncommitted changes, was
+    never committed, or can't be checked (a glob or variable), else None: every target is committed and
+    unchanged, so git can bring it back."""
+    import shlex
+    text = _decoded_command(subject)
+    if _RECURSIVE_DELETE_RE.search(text):
+        return "recursive"
+    base = where or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    for stmt in re.split(r"&&|\|\||;|\n|\|", text):
+        m = _DELETE_CMD_RE.search(stmt)
+        if not m:
+            continue
+        try:
+            words = shlex.split(stmt[m.end(2):])
+        except ValueError:
+            return "unsaved"
+        targets = [w for w in words if not w.startswith(("-", "/")) or os.path.isabs(w) and not re.match(r"^/[a-zA-Z]$", w)]
+        if not targets:
+            return "unsaved"
+        for t in targets:
+            if re.search(r"[*?\[\]$`~]", t):
+                return "unsaved"
+            path = t if os.path.isabs(t) else os.path.join(base, t)
+            folder = os.path.dirname(os.path.abspath(path))
+            try:
+                tracked, _o, _e = _ag(folder, ["ls-files", "--error-unmatch", "--", path], check=False)
+                changed, _o, _e = _ag(folder, ["diff", "--quiet", "HEAD", "--", path], check=False)
+            except RuntimeError:
+                return "unsaved"
+            if tracked != 0 or changed != 0:
+                return "unsaved"
+    return None
+
+
+def _cites_no_safe_way(payload):
+    """The source the agent cites for "no safe way exists", from the command's description, or None."""
+    try:
+        data = json.loads(payload)
+    except ValueError as exc:
+        sys.stderr.write("house-rules guard: could not read the command's description (%s), so no "
+                         "\"no safe way\" citation was found; the refusal stands.\n" % exc)
+        return None
+    ti = data.get("tool_input") if isinstance(data, dict) else None
+    m = _NO_SAFE_WAY_RE.search(str(ti.get("description") or "")) if isinstance(ti, dict) else None
+    return m.group(1).strip() if m else None
 
 
 def _rm_only_in_scratchpad(subject, payload):
@@ -2723,36 +2835,20 @@ def event_guardwrite():
 
     new_lines = _guardwrite_new_line_count(payload)
 
+    # #293: refused outright with the fix named, instead of asking. A file I created myself already
+    # went through above (never-blocked list, #289).
     lines = [
-        "Your house rules want you asked before this runs:",
-        "",
-        "  Rule: %s" % RULE_EDIT_IN_PLACE,
-        "    - This Write replaces the ENTIRE existing contents of `%s`." % file_path,
+        "House rules, %s: refused. This Write replaces the ENTIRE existing contents of `%s`, a file "
+        "I did not create." % (RULE_EDIT_IN_PLACE, file_path),
     ]
     if old_lines is not None and new_lines is not None:
-        lines.append(
-            "    - %d existing line(s) would be discarded and replaced with %d new line(s)."
-            % (old_lines, new_lines)
-        )
+        lines.append("%d existing line(s) would be discarded and replaced with %d new line(s)." % (old_lines, new_lines))
     lines.append(
-        "    - Editing in place (the Edit tool, or a targeted patch) changes only the lines "
-        "that need to change. Write throws away everything else in the file, whether or not "
-        "this call meant to touch it."
+        "Fix: edit it in place with the Edit tool, changing only the lines that need to change. A whole-file "
+        "rewrite needs aj's approval by name first, with what it discards and why an in-place edit will not do."
     )
-    lines.append("")
-    lines.append(
-        "Before approving, Claude should already have said, in chat, exactly what existing "
-        "content this discards and why an in-place edit will not do."
-    )
-    lines.append("")
-    _tl = _prompt_timeout_line()
-    if _tl:
-        lines.append(_tl)
-    lines.append(
-        "Approve to let it run, or reject and Claude will explain what it was about to do."
-    )
-    reason_text = "\n".join(lines)
-    _ask_or_refuse(payload, reason_text)
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                 "permissionDecisionReason": "\n".join(lines)}})
     return 0
 
 
@@ -2816,7 +2912,7 @@ def _page_writing_note(file_path):
             html = f.read()
     except OSError as exc:
         return "house-rules: the page writing check could not read %s (%s)." % (file_path, exc)
-    found = clarity.findings(clarity.page_text(html), skip=("not-checked",))
+    found = clarity.findings(clarity.page_text(html), skip=("not-checked",) + _WRITING_REPORT_ONLY)
     if not found:
         return ""
     return ("House rules, write it so nothing is left to guess: the page %s has %d thing(s) to fix "
@@ -4633,7 +4729,6 @@ AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
 COMMITGATE_THRESHOLD = 3
 COMMITGATE_LIST_MAX = 8
 CHECKPOINT_MINUTES = 10
-STALLCHECK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stallcheck.py")
 AUTOSAVE_PUSH_INTERVAL = 60
 AUTOSAVE_PUSH_TIMEOUT = 6.0
 AUTOSAVE_GIT_TIMEOUT = 4.0
@@ -4848,8 +4943,8 @@ ISSUE_NOTE = (
     "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
     "non-programmer can follow. Every issue carries at least one category label and the label "
     "`AjsAgent created this`; if the repo lacks that label, create it first with `gh label "
-    "create`. Show the user the issue numbers. Mark a step `in progress` (`gh issue edit N "
-    "--add-label \"in progress\"`) when work on it starts and remove it when the issue closes. "
+    "create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels "
+    "-f \"labels[]=in progress\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
     "(docs/, .md files and .claude/ stay open). Do not close any issue yourself: closing always "
     "asks the user."
@@ -4945,6 +5040,8 @@ def _issues_plan_note(payload):
     except OSError as exc:
         return (" Issue workflow: this plan counts %d steps but the gate state could not be written "
                 "(%s), so edits are not blocked. Create the issues anyway." % (n, exc)) + ISSUE_NOTE.format(n=n)
+    # #276: no label setup here. This runs on a tool call, and tool calls never reach the network;
+    # the labels are created when aj's "Design approved" arrives, before any issue is made.
     return ISSUE_NOTE.format(n=n)
 
 
@@ -5343,14 +5440,52 @@ _LOOP_QA_NOTE = (" Every issue of the feature says `needs review`, so the stage 
                  "and aj answers \"QA passed: <feature>\" or \"QA failed: <feature>\" with the changes.")
 
 
-def _loop_label_refusal(said, want, wrong, note):
+def _house_labels_note(top):
+    """#276: create any house label this repo's GitHub copy is missing (scripts/labels.py), and say
+    what it created or could not. "" when the repo has every label or no GitHub remote. Never raises."""
+    try:
+        import labels as _labels  # scripts/labels.py, beside this file (sys.path is set above)
+        git_dir = _common_git_dir(top) if top else None
+        if not git_dir:
+            return ""
+        repo, _why = _labels.repo_from_git(git_dir)
+        if not repo:
+            return ""  # no GitHub remote: there is nowhere to create labels
+        return _labels.summary_note(_labels.ensure_labels(repo), repo)
+    except Exception as exc:
+        return ("house-rules: label setup hit an error (%s: %s), so missing house labels were not created."
+                % (type(exc).__name__, exc))
+
+
+def _loop_label_refusal(said, want, wrong, note, top=None):
+    made = _house_labels_note(top)
     return ('Design loop: aj wrote "%s", but these issues are not labelled `%s`: %s. Nothing moved. Fix the '
-            "labels, then ask aj to approve again.%s" % (said, want, "; ".join(wrong), " " + note if note else ""))
+            "labels, then ask aj to approve again.%s%s" % (said, want, "; ".join(wrong), " " + note if note else "",
+                                                          " " + made if made else ""))
+
+
+_LOOP_STAGE_ORDER = ((_LOOP_DESIGN_RE, 0), (_LOOP_PLAN_RE, 1), (_LOOP_QA_RE, 2))
 
 
 def _loop_apply(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
-    message approves nothing. Mutates state."""
+    message approves nothing. Mutates state.
+
+    #307: a message can hold more than one approval ("Design approved: X.  Build plan approved: X").
+    Each phrase is cut out up to where the next one starts, and the pieces are applied in stage order -
+    design, then build plan, then QA - so one refusal no longer hides the approvals beside it."""
+    found = sorted((m.start(), order) for rx, order in _LOOP_STAGE_ORDER for m in rx.finditer(text))
+    if len(found) < 2:
+        return _loop_apply_one(state, text, top)
+    pieces = [(order, text[start:found[i + 1][0] if i + 1 < len(found) else len(text)])
+              for i, (start, order) in enumerate(found)]
+    notes = [_loop_apply_one(state, piece, top) for _order, piece in sorted(pieces, key=lambda p: p[0])]
+    return " ".join(n for n in notes if n)
+
+
+def _loop_apply_one(state, text, top):
+    """Move the stage for one approval phrase (or none). Returns a note for the model, or "" when the
+    text approves nothing. Mutates state."""
     stage, feature = state["stage"], state.get("feature") or ""
     approval = None
     m = _LOOP_PLAN_RE.search(text)
@@ -5369,7 +5504,7 @@ def _loop_apply(state, text, top):
         labels, src = _loop_labels(state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
         if wrong:
-            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src)
+            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src, top)
         unlogged = _loop_unlogged(state, top, "Build plan approved", name)
         if unlogged:
             return unlogged
@@ -5378,12 +5513,15 @@ def _loop_apply(state, text, top):
         m = _LOOP_DESIGN_RE.search(text)
         if m:
             name = _loop_name(m.group(1))
-            redo = state.get("redo") and name.lower() == feature.lower()
+            # #307: the redo is for the feature QA failed, even when the stored name went stale.
+            failed = [a.get("name") or "" for a in state.get("approvals", [])
+                      if isinstance(a, dict) and a.get("stage") == "QA failed"]
+            redo = state.get("redo") and name.lower() in {feature.lower(), (failed[-1] if failed else "").lower()}
             if redo:
                 labels, src = _loop_labels(state)
                 wrong = _loop_wrong(labels, LOOP_WORKING)
                 if wrong:
-                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src)
+                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src, top)
             unlogged = _loop_unlogged(state, top, "Design approved", name)
             if unlogged:
                 return unlogged
@@ -5425,7 +5563,8 @@ def _loop_apply(state, text, top):
             note += (" Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue "
                      "for the feature and a sub-issue per step, each naming dependencies, dependants and "
                      "done-criteria, labelled `%s` and `%s`." % (ISSUES_LABEL, LOOP_WORKING))
-            return note
+            made = _house_labels_note(top)  # #276: planning is when the labels are first needed
+            return note + (" " + made if made else "")
         if state["stage"] == "build":
             note += (" Code edits are open for the approved steps while every issue says `%s`. Hand each "
                      "approved step to @house-rules:builder (one per issue; at most two running) unless aj said "
@@ -5564,10 +5703,14 @@ def _loop_gate(payload):
         _loop_write(git_dir, state)
         return None, None
     feature = state.get("feature") or ""
-    if script and script_unreadable and not script_paths:
-        return ("House rules, design loop: code is locked in the %s stage and I cannot read which file this "
-                "command writes, so make the change with the Edit or Write tool instead, which names the "
-                "file." % LOOP_STAGE_NAMES[state["stage"]]), None
+    if script:
+        # #309 (incident 4 of #303): a shell command is reported, never refused, until the restructure. The
+        # refusal stopped docs and .claude/ writes made from the shell, which are meant to stay open.
+        what = ("a file it can't name" if script_unreadable and not script_paths
+                else ", ".join(script_paths) or "a source file")
+        return None, ("house-rules design loop (report only, #309): code is locked in the %s stage, and this "
+                      "shell command writes %s. It was let through; the shell-write refusal is switched off "
+                      "until the restructure." % (LOOP_STAGE_NAMES[state["stage"]], what))
     return (
         "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
         "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
@@ -5617,8 +5760,28 @@ def _created_issue(data):
     return found, labelled, how
 
 
-def _loop_record_issues(git_dir, found, labelled):
-    """#231: issues made while a feature is in Plan count toward its build-plan approval."""
+_GITHUB_SLUG_RE = re.compile(r"github\.com[:/]+([^/\s]+/[^/\s]+?)(?:\.git)?/?\s*$", re.IGNORECASE)
+
+
+def _origin_slug(top):
+    """(slug, problem): the "owner/repo" of the checkout's GitHub origin remote, or "" when it has none,
+    and why it couldn't be read ("" when it could)."""
+    import subprocess
+    try:
+        url = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=top, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, timeout=3).stdout.decode("utf-8", "replace")
+    except (OSError, subprocess.SubprocessError) as exc:
+        return "", "house-rules: could not read this checkout's git remote (%s)" % exc
+    m = _GITHUB_SLUG_RE.search(url.strip())
+    return (m.group(1) if m else ""), ""
+
+
+def _loop_record_issues(git_dir, found, labelled, top=None):
+    """#231: issues made while a feature is in Plan count toward its build-plan approval.
+
+    #308: only issues made in the repo that owns the stage file count. In an Unblocked session, two issues
+    opened in another repo were counted as Unblocked's, and the label check then blocked the turn seven
+    times. A checkout with no GitHub origin can't say which repo it is, so its issues count as before."""
     if not _loop_enabled() or not found:
         return []
     state, problem = _loop_read(git_dir)
@@ -5626,10 +5789,17 @@ def _loop_record_issues(git_dir, found, labelled):
         return [problem]
     if state["stage"] != "plan":
         return []
+    own, slug_problem = _origin_slug(top) if top else ("", "")
+    own = own.lower()
+    notes = [slug_problem + ", so every new issue counts toward this feature."] if slug_problem else []
     for repo, number in found:
+        if own and str(repo).lower() != own:
+            notes.append("Design loop: issue %s#%s was made in another repo, so it doesn't count toward \"%s\" "
+                         "here (this checkout is %s)." % (repo, number, state.get("feature") or "this feature", own))
+            continue
         state.setdefault("issues", []).append({"repo": repo, "number": int(number), "labelled": labelled})
     _loop_write(git_dir, state)
-    return []
+    return notes
 
 
 _GH_ISSUE_EDIT_RE = re.compile(_GH_PREFIX + r"issue\s+edit\s+(\d+)\b([^\n;&|]*)")
@@ -5643,6 +5813,29 @@ def _gh_label_flags(cmd):
         names = [v.strip() for v in value.strip("\"'").split(",") if v.strip()]
         out["remove" if long_flag == "remove-label" else "add"].extend(names)
     return out
+
+
+_GH_API_LABELS_RE = re.compile(_GH_PREFIX + r"api\s+([^\n;&|]*?)\brepos/([\w.-]+/[\w.-]+)/issues/(\d+)/labels(?:/([^\s\"']+))?([^\n;&|]*)")
+_GH_API_METHOD_RE = re.compile(r"(?:-X|--method)(?:=|\s+)[\"']?(\w+)", re.I)
+_GH_API_LABEL_FIELD_RE = re.compile(r"(?:-f|-F|--raw-field|--field)(?:=|\s+)(?:\"labels\[\]=([^\"]*)\"|'labels\[\]=([^']*)'|labels\[\]=(\S+))")
+_GH_API_FAILED_RE = re.compile(r"\(HTTP [45]\d\d\)|^gh: |\"status\":\s*\"[45]\d\d\"", re.M)
+
+
+def _gh_api_label_change(cmd, text):
+    """#278: (repo, number, None, add, remove) for a succeeded `gh api repos/O/R/issues/N/labels` call (the REST
+    form that works in cloud sessions), else None. Repo and number come from the path, not the response."""
+    m = _GH_API_LABELS_RE.search(cmd)
+    if not m or _GH_API_FAILED_RE.search(text):
+        return None
+    pre, repo, number, name, post = m.groups()
+    method = (_GH_API_METHOD_RE.search(pre + " " + post) or [None, "POST" if "-f" in post or "-F" in post or "field" in post else "GET"])[1].upper()
+    if method == "DELETE" and name:
+        return (repo, int(number), None, [], [urllib.parse.unquote(name)])
+    if method == "POST" and not name:
+        adds = [(x or y or z).strip("\"'") for x, y, z in _GH_API_LABEL_FIELD_RE.findall(pre + " " + post)]
+        if adds:
+            return (repo, int(number), None, adds, [])
+    return None
 
 
 def _label_changes(data):
@@ -5668,6 +5861,9 @@ def _label_changes(data):
     if _GH_ISSUE_CREATE_RE.search(cmd):
         flags = _gh_label_flags(cmd)
         return [(repo, int(n), flags["add"], [], []) for repo, n in urls]
+    api = _gh_api_label_change(cmd, text)
+    if api:
+        return [api]
     m = _GH_ISSUE_EDIT_RE.search(cmd)
     if m:
         flags = _gh_label_flags(m.group(2))
@@ -5739,7 +5935,7 @@ def _issues_record(payload):
         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return []
-        loop_notes = _loop_record_issues(git_dir, found, labelled)
+        loop_notes = _loop_record_issues(git_dir, found, labelled, top)
         if not _issues_enabled():
             return loop_notes
         state, problem = _issues_read(git_dir)
@@ -5757,8 +5953,8 @@ def _issues_record(payload):
         if not labelled:
             notes.append("house-rules: issue #%s was created without the `%s` label, so it does not "
                          "count toward the issue gate and Focus Deck will ignore it. Add it with `gh "
-                         "issue edit %s --add-label \"%s\"` and create the next issues with it."
-                         % (found[0][1], ISSUES_LABEL, found[0][1], ISSUES_LABEL))
+                         "api repos/%s/issues/%s/labels -f \"labels[]=%s\"` and create the next issues with it."
+                         % (found[0][1], ISSUES_LABEL, found[0][0], found[0][1], ISSUES_LABEL))
         have = _labelled_count(state)
         if have >= ISSUES_NEEDED:
             state["needs_issues"] = False
@@ -5806,8 +6002,9 @@ PR_ASK_NOTE = (
 )
 CLOSE_ASK_NOTE = (
     "House rules, closing an issue always asks the user: the user must have tested the work first, "
-    "and this approval prompt is their go-ahead. On approval, also run `gh issue edit N "
-    "--add-label \"Claude completed this\" --remove-label \"in progress\"` and comment on the "
+    "and this approval prompt is their go-ahead. On approval, also add `Claude completed this` with `gh api "
+    "repos/<owner>/<repo>/issues/N/labels -f \"labels[]=Claude completed this\"`, remove `in progress` with "
+    "`gh api -X DELETE repos/<owner>/<repo>/issues/N/labels/in%20progress`, and comment on the "
     "issue with the merged PR link."
 )
 
@@ -5838,11 +6035,18 @@ _ATTRIBUTION_TEXT_RES = [
     re.compile(r"claude\.com/claude-code", re.IGNORECASE),
     re.compile(r"claude-session\s*:", re.IGNORECASE),
     re.compile(r"claude\.ai/code/", re.IGNORECASE),
+    re.compile(r"generated by[\[_* ]*claude code", re.IGNORECASE),
+    re.compile(r"claude\.ai/code(?![\w/])", re.IGNORECASE),
 ]
 _ATTRIBUTION_CMD_RE = re.compile(
-    r"(?:" + _GIT + r"commit([^0-9A-Za-z-]|$))|(?:" + _GH_PREFIX + r"(?:pr|issue)\s+(?:create|edit|comment)\b)",
+    r"(?:" + _GIT + r"commit([^0-9A-Za-z-]|$))|(?:" + _GH_PREFIX + r"(?:pr|issue)\s+(?:create|edit|comment)\b)"
+    r"|(?:" + _GH_PREFIX + r"api\b[^\n]*?repos/[\w.-]+/[\w.-]+/(?:pulls|issues)\b)"
+    r"|(?:(?:^|[;&|(\n`]|\$\()\s*curl\b[^\n]*api\.github\.com)",
     re.IGNORECASE,
 )
+# #316: a `gh api` call writes when it has a method flag or any field/input flag; a plain GET does not.
+_GH_API_WRITE_RE = re.compile(r"(?<![\w-])(?:-X\s*(?:POST|PATCH|PUT)|--method\b|-f\b|-F\b|--field\b|--raw-field\b|--input\b)", re.IGNORECASE)
+_GH_API_FILE_RE = re.compile(r"(?:(?<![\w-])-F|--field)(?:=|\s+)body=@(\"[^\"]+\"|'[^']+'|\S+)|--input(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
 ATTRIBUTION_DENY = (
     "House rules, credit aj's agent: this %s credits Claude (`%s`). Credit \"aj's agent\" instead, "
     "with no email and no Claude branding: commits end with `Committed by AJ's agent`, pull requests "
@@ -5858,7 +6062,20 @@ def _attribution_guard(subject, payload):
     if not _ATTRIBUTION_CMD_RE.search(cmd):
         return None
     text = cmd
-    fm = _PR_BODY_FILE_RE.search(cmd)
+    if re.search(_GH_PREFIX + r"api\b", cmd, re.IGNORECASE):
+        if not _GH_API_WRITE_RE.search(cmd):
+            return None
+        for am in _GH_API_FILE_RE.finditer(cmd):
+            name = (am.group(1) or am.group(2)).strip("\"'")
+            path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    text = text + "\n" + f.read()
+            except OSError:
+                trace("attribution: could not read the gh api body file %s; its text was NOT checked for Claude credit." % name)
+        fm = None
+    else:
+        fm = _PR_BODY_FILE_RE.search(cmd)
     if fm and fm.group(1).strip("\"'") != "-":
         name = fm.group(1).strip("\"'")
         path = name if os.path.isabs(name) else os.path.join(_payload_cwd(payload), name)
@@ -5873,6 +6090,74 @@ def _attribution_guard(subject, payload):
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
             return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)
     return None
+
+
+# #318: PostToolUse on Bash. GitHub itself can add a Claude credit after a send (cloud sessions), so
+# after a pull request / issue / comment write the body is read back once and checked.
+_CREDIT_COMMENT_API_RE = re.compile(r"repos/([\w.-]+/[\w.-]+)/issues/comments/(\d+)")
+_CREDIT_ITEM_URL_RE = re.compile(r"https://github\.com/([\w.-]+/[\w.-]+)/(?:pull|issues)/(\d+)(?:#issuecomment-(\d+))?")
+
+
+def _read_back_body(path):
+    """(body, problem): the body of a GitHub issue, pull request or comment via `gh api`. verify.py stubs this."""
+    import subprocess
+    try:
+        r = subprocess.run(["gh", "api", path, "-q", ".body"], capture_output=True, timeout=10)
+    except FileNotFoundError:
+        return None, "gh is not installed"
+    except subprocess.TimeoutExpired:
+        return None, "gh timed out after 10 seconds"
+    if r.returncode != 0:
+        return None, "gh exited %d: %s" % (r.returncode, r.stderr.decode("utf-8", "replace").strip()[:100])
+    return r.stdout.decode("utf-8", "replace"), None
+
+
+def event_creditcheck():
+    try:
+        if not _attribution_enabled():
+            return 0
+        raw = read_payload()
+        data = json.loads(raw) if raw else None
+        ti = data.get("tool_input") if isinstance(data, dict) else None
+        cmd = str(ti.get("command") or "") if isinstance(ti, dict) else ""
+        if not cmd or _GIT_COMMIT_RE.search(cmd) or not _ATTRIBUTION_CMD_RE.search(cmd):
+            return 0
+        if re.search(_GH_PREFIX + r"api\b", cmd, re.IGNORECASE) and not _GH_API_WRITE_RE.search(cmd):
+            return 0
+        resp = data.get("tool_response")
+        out = resp.get("stdout") if isinstance(resp, dict) else resp
+        out = out if isinstance(out, str) else json.dumps(out)
+        path = url = None
+        m = _CREDIT_COMMENT_API_RE.search(out)
+        if m:
+            path, url = m.group(0), "https://github.com/" + m.group(1) + "/issues/comments/" + m.group(2)
+        else:
+            m = _CREDIT_ITEM_URL_RE.search(out)
+            if m:
+                url = m.group(0)
+                path = ("repos/%s/issues/comments/%s" % (m.group(1), m.group(3)) if m.group(3)
+                        else "repos/%s/issues/%s" % (m.group(1), m.group(2)))
+        if not path:
+            problem, what = "no pull request, issue or comment address in the command's output", "what was sent"
+        else:
+            body, problem = _read_back_body(path)
+            what = url
+        if problem:
+            text = ("House rules, credit check: could not read back %s (%s), so whether GitHub added a Claude "
+                    "credit is unknown; say so in your reply." % (what, problem))
+        else:
+            hit = next((m.group(0) for m in (rx.search(body) for rx in _ATTRIBUTION_TEXT_RES) if m), None)
+            if hit:
+                text = ("House rules, credit check: GitHub added a Claude credit to %s after it was sent (`%s`). "
+                        "It can't be removed from a cloud session; say so in your reply instead of saying the "
+                        "credit is clean." % (url, hit.strip()[:60]))
+            else:
+                text = "House rules, credit check: read back %s; no Claude credit on it." % url
+        emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": text}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules: the credit check hit an error (%s: %s); the body was NOT read back."
+                               % (type(exc).__name__, exc)})
+    return 0
 
 
 # Issue #178: the same credit check for writes made through the GitHub MCP tools, which never
@@ -6420,39 +6705,8 @@ def event_audit():
             return 0
 
         status = _field(_RESPONSE_STATUS_RE, payload)
-        if status == "async_launched" and _autosave_enabled():
-            watch_cmd = "python \"%s\" --watch --threshold 300" % STALLCHECK_PATH
-            scope_notes = []
-            for flag, label, value in (
-                ("--session", "session_id", _field(_SESSION_ID_RE, payload)),
-                ("--agent", "agentId", _field(_RESPONSE_AGENT_ID_RE, payload)),
-            ):
-                if re.fullmatch(r"[A-Za-z0-9_-]+", value or ""):
-                    watch_cmd += " %s %s" % (flag, value)
-                elif value:
-                    scope_notes.append("the %s in the payload is not shell-safe, so %s is omitted" % (label, flag))
-                else:
-                    scope_notes.append("the payload has no %s, so %s is omitted" % (label, flag))
-            scope_note = ""
-            if scope_notes:
-                scope_note = ("Note: " + "; ".join(scope_notes) + (
-                    "; with no --session the watch is unscoped and reports every session's subagents. "
-                    if "--session" not in watch_cmd else ". "))
-            # Nothing to audit yet. A killed background subagent runs no hooks of its own, so
-            # the parent's worktreesweep is what commits its work - and that only runs when the
-            # parent wakes. Ask for a check-in so it does.
-            emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": (
-                "house-rules: a subagent is running in the background, so it must be checked for stalls "
-                "every 5 minutes. Cheapest reliable way, no model call until something stalls: start "
-                "Monitor with the command `%s` (it prints only on a "
-                "STALLED or finished line), or run that command without --watch each time you wake. %s"
-                "A parent that wakes also lets worktreesweep commit a stalled subagent's work (every "
-                "%d min). On a STALLED line: find the agent's last tool call or blocking child process "
-                "(newest transcript record, process list), tell the user how long it has been stuck and what it is "
-                "blocked on, and ask before stopping a command that cannot finish. Do not assume it died or is "
-                "fine; no later STALLED line is not progress; SendMessage cannot reach an agent blocked inside a "
-                "tool call." % (watch_cmd, scope_note, CHECKPOINT_MINUTES))}})
-            return 0
+        # #292: a background subagent no longer gets the 5-minute stall-check reminder; its hand-back is
+        # still audited when it arrives (userpromptaudit).
         if status != "completed":
             # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing
             # to audit yet, not a failure to report - userpromptaudit picks up a backgrounded
@@ -7038,9 +7292,10 @@ def _plain_summary_problems(reply):
     return problems
 
 
-# #226: a reply over LONG_REPLY_WORDS words that links no page or picture gets a reminder to move
-# the detail onto a page and end on one question. Code blocks are not counted as words.
-LONG_REPLY_WORDS = 200
+# #226: a reply of LONG_REPLY_WORDS words or more that links no page or picture gets a reminder to
+# move the detail onto a page and end on one question. Code blocks are not counted as words.
+# #282: the threshold is 160 words or more (it was over 200).
+LONG_REPLY_WORDS = 160
 _PAGE_LINK_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(|\.html\b", re.IGNORECASE)
 _MD_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
 _WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'\u2019-]*")
@@ -7051,12 +7306,12 @@ def _long_reply_words(reply):
     if not reply or _PAGE_LINK_RE.search(reply):
         return 0
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply)))
-    return words if words > LONG_REPLY_WORDS else 0
+    return words if words >= LONG_REPLY_WORDS else 0
 
 
 def _long_reply_note(words):
     return (
-        "House rules, show don't tell: this reply is %d words and links no page or picture. Over %d words, "
+        "House rules, show don't tell: this reply is %d words and links no page or picture. At %d words or more, "
         "the detail belongs on a page: move it there, keep the reply to a plain summary, the link, and "
         "numbered steps for what aj needs to do, and end on one question or next step." % (words, LONG_REPLY_WORDS)
     )
@@ -7066,14 +7321,31 @@ def _clear_writing_enabled():
     return os.environ.get("HOUSE_RULES_CLEAR_WRITING", "on").strip().lower() not in _TOGGLE_OFF
 
 
+# #309 (incident 8 of #303): writing kinds that only report, to aj, until the restructure. The bare-reference
+# check read "the option I suggested" as a bare "option I" and asked for the reply to be resent, twice in a row.
+_WRITING_REPORT_ONLY = ("bare-ref",)
+
+
 def _writing_findings(text):
     """(findings, problem): the shared checker's findings on a reply, minus not-checked, which the
-    evidence rule reports on its own. [] when the check is off or the text is empty."""
+    evidence rule reports on its own, and minus the report-only kinds. [] when the check is off or the
+    text is empty."""
     if not text or not _clear_writing_enabled():
         return [], None
     if clarity is None:
         return [], CLARITY_ERROR
-    return clarity.findings(text, skip=("not-checked",)), None
+    return clarity.findings(text, skip=("not-checked",) + _WRITING_REPORT_ONLY), None
+
+
+def _writing_report_line(text):
+    """One line for aj naming the report-only findings in a reply (#309), or "" when there are none."""
+    if not text or not _clear_writing_enabled() or clarity is None:
+        return ""
+    found = [p for k, p, _why in clarity.findings(text) if k in _WRITING_REPORT_ONLY]
+    if not found:
+        return ""
+    return ("house-rules writing check (report only, #309): bare references in this reply - %s. Nothing was "
+            "asked of the agent." % ", ".join('"%s"' % p for p in found[:8]))
 
 
 # #249: a page or a long reply goes past the editor helper before aj reads it.
@@ -7100,8 +7372,24 @@ def _pages_changed_this_turn(transcript_path, cwd):
         since = datetime.datetime.fromisoformat(str(stamp).replace("Z", "+00:00")).timestamp()
     except ValueError as exc:
         return [], "house-rules: could not read aj's message time (%s), so pages written by a shell command were not checked." % exc
-    return sorted(os.path.join(plans, n) for n in os.listdir(plans)
-                  if n.lower().endswith((".html", ".htm")) and os.path.getmtime(os.path.join(plans, n)) >= since), None
+    pages = [n for n in os.listdir(plans) if n.lower().endswith((".html", ".htm"))]
+    if _common_git_dir(top):
+        # #284: a clone, checkout or merge sets every file's time, so in a repository a page counts only
+        # when git shows it new, edited, or in a commit made since aj's message.
+        try:
+            _rc, status, _e = _ag(top, ["status", "--porcelain", "--untracked-files=all", "--", "docs/plans"])
+            rc, log, err = _ag(top, ["log", "--since=@%d" % int(since), "--no-merges", "--name-only",
+                                     "--format=", "--", "docs/plans"], check=False)
+            if rc != 0:
+                if "does not have any commits" not in err:  # a new repository has no log yet; status covers it
+                    raise RuntimeError("git log failed: %s" % (err or "exit %d" % rc))
+                log = ""
+        except RuntimeError as exc:
+            return [], "house-rules: git could not list this turn's pages (%s), so they were not checked." % exc
+        touched = {os.path.basename(line[3:].strip().strip('"')) for line in status.splitlines() if len(line) > 3}
+        touched |= {os.path.basename(line.strip()) for line in log.splitlines() if line.strip()}
+        return sorted(os.path.join(plans, n) for n in pages if n in touched), None
+    return sorted(os.path.join(plans, n) for n in pages if os.path.getmtime(os.path.join(plans, n)) >= since), None
 
 
 def _editor_owed(written, tool_uses, reply):
@@ -7114,7 +7402,7 @@ def _editor_owed(written, tool_uses, reply):
     if pages:
         return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
-    if words > LONG_REPLY_WORDS:
+    if words >= LONG_REPLY_WORDS:
         return "this reply is %d words" % words
     return ""
 
@@ -7157,13 +7445,12 @@ def _visual_check_enabled():
 
 
 def _parity_report_note(word):
+    # #309 (incident 5 of #303): report only until the restructure. The demand for an inventory and an
+    # issue per drop fired on a one-entry Decisions.md append, and three times on audit-notes turns.
     return (
-        "House rules, re-creating existing behaviour: this turn was a %s and wrote files, but "
-        "the reply names nothing kept or dropped. Before this turn ends, report against the "
-        "original: the keep/change/drop inventory with the original's file:line, every dropped "
-        "feature named plainly - not only the ones the new platform forced - and a GitHub issue "
-        "for each feature to be re-added later. If nothing was dropped, say so and say how you "
-        "compared old and new." % word.lower()
+        "House rules, re-creating existing behaviour (report only, #309): aj's message reads like a %s "
+        "and this turn wrote files, but the reply names nothing kept or dropped. Nothing is required "
+        "this turn; the note is kept as evidence for the restructure." % word.lower()
     )
 
 
@@ -7229,7 +7516,7 @@ def _check_page(ctx):
         return ""
     if ctx.get("long_words") or _offers_choices(reply):
         return ("put the detail on a page: write a content.json, run `python3 %s build <content.json>` "
-                "and link the page it makes in the reply, or say \"no page\" in your next message to skip it"
+                "and link the page it makes in the reply"
                 % os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_page.py"))
     return ""
 
@@ -7388,7 +7675,7 @@ def _check_qa_page(ctx):
 CHECKPOINTS = [
     ("page saved", "page built", _check_page_saved, "block"),
     ("page published", "page built", _check_page_saved, "block"),
-    ("reply ends", "page", _check_page, "block"),
+    ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
     ("reply ends", "evidence", _check_evidence, "block"),
     ("reply ends", "commit", _check_commit, "block"),
@@ -7398,7 +7685,7 @@ CHECKPOINTS = [
 
 CHECKPOINT_RULES = {
     "page built": "A handover page is built by make_page.py, never typed by hand.",
-    "page": "A reply that offers choices, lays out a plan, or runs over %d words links a page." % LONG_REPLY_WORDS,
+    "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
     "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
@@ -7420,9 +7707,43 @@ def _checkpoint_reason(missed):
         len(missed), "" if len(missed) == 1 else "s")]
     for name, fix in missed:
         lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
-    lines.append("Fix these and send only what changed, not the whole reply again. This blocks once; the retry only reports. "
-                 "HOUSE_RULES_LOOP=off turns it off.")
+    lines.append("Fix these and send only what changed, not the whole reply again. A missing page blocks every retry "
+                 "until the reply links one; the other checks block once. HOUSE_RULES_LOOP=off turns it off.")
     return "\n".join(lines)
+
+
+# #283: the page checkpoint keeps blocking on the retry until the reply links a page. aj's pick on the
+# automatic-pages build plan: after PAGE_BLOCK_LIMIT blocks in a row the reply goes through with a note,
+# so a broken page builder can't loop a session with nobody watching.
+PAGE_BLOCK_LIMIT = 3
+PAGE_BLOCKS_FILE = "page-blocks.json"
+
+
+def _page_blocks_path(cwd, session_id):
+    """In the common git directory, so worktrees share it; outside a repository, a session-keyed temp file."""
+    cd = _common_git_dir(cwd)
+    if cd:
+        return os.path.join(cd, "house-rules", PAGE_BLOCKS_FILE)
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-page-blocks-%s.json" % safe)
+
+
+def _page_blocks(path, session_id, mark, change=None):
+    """Page blocks in a row for this session since aj's message `mark` (a new message starts again at 0).
+    change "bump" adds one block, "clear" resets the count; either saves the file. Raises OSError or
+    ValueError when the file can't be read or written, and the caller reports it."""
+    data = json.loads(_read_text(path)) if os.path.isfile(path) else {}
+    if not isinstance(data, dict):
+        raise ValueError("%s is not a JSON object" % path)
+    entry = data.get(session_id) if isinstance(data.get(session_id), dict) else {}
+    count = entry.get("count", 0) if entry.get("mark") == mark else 0
+    if change:
+        count = count + 1 if change == "bump" else 0
+        data[session_id] = {"mark": mark, "count": count}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    return count
 
 
 def event_handover():
@@ -7583,8 +7904,41 @@ def event_handover():
     writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
     if writing_problem:
         trace_lines.append(writing_problem)
+    report_line = _writing_report_line(reply_text if vm is not None else "")
+    if report_line:
+        trace_lines.append(report_line)
 
-    # #256: the checkpoint table. A miss blocks once; any error here fails open with a message.
+    # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
+    # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.
+    def _page_count(ctx, change=None):
+        mark = hashlib.sha1((ctx.get("user_text") or "").encode("utf-8")).hexdigest()[:16]
+        return _page_blocks(_page_blocks_path(_payload_cwd(payload), _field(_SESSION_ID_RE, payload) or ""),
+                            _field(_SESSION_ID_RE, payload) or "", mark, change)
+
+    # #309 (incident 6 of #303): the page row reports instead of blocking, on the first reply and the retry
+    # alike, until the restructure. It pushed another repo's work into a session as a proposal page.
+    page_note = ""
+    if _loop_enabled():
+        try:
+            pctx = {"reply": reply_text if vm is not None else "", "long_words": long_words,
+                    "user_text": _last_user_text(transcript_path) if transcript_path else ""}
+            fix = _check_page(pctx)
+            # #310: once a reply to aj's message is flagged, the page stays owed for every later reply to the
+            # same message until one links a page - a shorter retry no longer clears it. The page-blocks file
+            # keeps a count per message; above zero means owed.
+            if _page_escape(pctx) or _PAGE_LINK_RE.search(pctx["reply"]):
+                _page_count(pctx, "clear")
+            elif fix or _page_count(pctx) > 0:
+                owed = not fix
+                _page_count(pctx, "bump")
+                page_note = ("House rules, page checkpoint (report only, #309): %s%s. Nothing is blocked; if this "
+                             "reply belongs to another repo's work, the issue for that repo is enough." % (
+                                 "an earlier reply to this message of aj's was flagged for a page and none is linked "
+                                 "yet (#310), so " if owed else "",
+                                 fix or _check_page(dict(pctx, long_words=LONG_REPLY_WORDS))))
+        except Exception as exc:
+            trace_lines.append("house-rules: the page checkpoint could not run (%s: %s), so this reply got no "
+                               "page reminder." % (type(exc).__name__, exc))
     if not retry:
         try:
             ctx = {
@@ -7631,7 +7985,7 @@ def event_handover():
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed
-            and not shell_page_notes):
+            and not shell_page_notes and not page_note):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -7652,6 +8006,8 @@ def event_handover():
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
     parts.extend(shell_page_notes)
+    if page_note:
+        parts.append(page_note)
     if editor_owed:
         parts.append(EDITOR_NOTE % editor_owed)
     if parity_word:
@@ -8103,6 +8459,7 @@ EVENTS = {
     "guardgithub": event_guardgithub,
     "artifact": event_artifact,
     "branchnudge": event_branchnudge,
+    "creditcheck": event_creditcheck,
     "runnable": event_runnable,
     "delegate": event_delegate,
     "announce": event_announce,

@@ -14,11 +14,12 @@ asked, and routine judgement calls go to the user the same way unless they have 
 Build every page with `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py build <content.json>`; it
 overrides the claude.ai publish tool's own page design. A project's look comes from
 `docs/page-style.json` (no file: offer aj "create one" or "use the defaults"); one colour means you
-act in each project. A missing page, editor pass, evidence, commit or plain summary blocks the reply
-once; "no page" in aj's message lets one reply through.
+act in each project. A missing editor pass, evidence, commit or plain summary blocks the reply
+once. A missing page keeps blocking until the reply links one, up to three blocks in a row; only
+"no page" in aj's own message lets a reply through without one.
 
 A simple question gets a short answer. Each reply ends with one question or one next step; a
-reply over 200 words with no page is sent back once (see above).
+reply of 160 words or more needs a page (see above).
 
 Ideas come before code. Every session starts locked: a hook refuses source edits until the user
 types "approved" naming what was approved ("Idea A approved", "approved 1A 2C"). A bare

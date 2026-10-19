@@ -53,8 +53,8 @@ check visible.
 
 A simple question gets a short, direct answer. Reasoning at length, options nobody asked for, or
 restating the question — none of it scales down for an easy problem just because more is
-possible. Each reply ends with one question or one next step. A reply over 200 words with no page
-or picture gets a reminder from the end-of-reply check; the detail belongs on a page.
+possible. Each reply ends with one question or one next step. A reply of 160 words or more with no
+page or picture is blocked by the end-of-reply check; the detail belongs on a page.
 
 **Why:** over-explaining costs the same attention a real decision needs, and a wall of text makes
 the next step harder to find instead of easier.
@@ -117,8 +117,13 @@ one" or "use the defaults" (the quick choice writes a one-line file saying to us
 whose own palette uses orange; now one colour means you act in each project (aj, 2026-10-15).
 
 Checkpoints: at reply end one table runs the page, editor, evidence, commit and plain-summary rules.
-A miss blocks the reply once with the exact fix; on the retry it only reports. "no page" in aj's own
-message lets one reply through; `HOUSE_RULES_LOOP=off` turns them all off. A page that was saved or
+A miss blocks the reply once with the exact fix; on the retry it only reports. The page rule is the
+exception: it blocks every retry until the reply links a page, and after three blocks in a row it lets
+the reply through with a note that no page could be made. Only "no page" in aj's own message skips it;
+the block never offers that phrase to me. `HOUSE_RULES_LOOP=off` turns them all off.
+
+**Why:** a page that the agent could skip by replying "no page" was skipped (aj, 2026-10-15, #281); the
+three-block limit stops a broken page builder from looping a session with nobody watching. A page that was saved or
 published without the builder mark is refused.
 
 **Why:** a rule the model must remember to follow was skipped; a check at a fixed point doesn't depend

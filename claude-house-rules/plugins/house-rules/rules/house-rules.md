@@ -125,12 +125,6 @@ meets the standards first. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/delegate-exec
 
 Plans, reports, scripts, findings: real files under `docs/`, never chat-only or scratchpad. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/artifact-location.md`.
 
-## Never hide work: it stays visible, reachable and readable
-
-The user can always see, reach and audit what runs, on mobile too: no hidden windows, `nohup`, or
-work only I can read. Background jobs use a followable tool and get a `stallcheck.py` every 5
-minutes. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/no-hidden-work.md`.
-
 ## Never name a local path in an issue or a pull request
 
 Issue/PR text never carries a local path — repo-relative paths, other repos as `owner/repo`
@@ -147,14 +141,15 @@ Before code: one parent issue, one child per step (`Part of #N`), plain titles, 
 <!-- subagent -->
 
 Read-only inspection is always fine. **Off `main`**: commit, push, merge freely. **`main`**: only
-by pull request; the guard refuses. On aj's branch, branch off first; never delete one unasked. Commit scoped to changed paths, never finish what they started, say what/where. Credit "aj's agent", never Claude. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
+by pull request; the guard refuses. On aj's branch, branch off first; never delete one unasked. Commit scoped to changed paths, never finish what they started, say what/where. Credit "aj's agent", never Claude, on every route (commit, gh, api, curl); the body is read back, and the cloud "with Claude" badge and footer are reported, not promised away. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
 
 ## Never take a destructive action without checking first
 <!-- subagent -->
 
-Unasked only off `main` with a clean tree and every commit pushed. Else, before
-deleting, overwriting, moving, killing, discarding, force-pushing: say what's lost, run `git status`, wait for agreement. Unanswered 5 min = no: route around it, never to
-the same effect. Subagent or aj away: refused, not asked. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
+An action that could lose data with no way back is refused, and the refusal names the safe way: a
+pull request, a new `AjsAgent/` branch, a `_to_delete/` folder, a copy branch. Do it that way. A
+delete goes through only for a committed, unchanged file. aj is asked only when no safe way exists
+and I cite the source proving it. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/destructive-action.md`.
 
 ## Edit in place; a full rewrite is a delete, not an edit
 <!-- subagent -->

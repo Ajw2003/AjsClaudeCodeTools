@@ -211,6 +211,7 @@ def _repo_on(name, head_line):
 REPO_THEIRS = _repo_on("theirs", "ref: refs/heads/main\n")
 REPO_MINE = _repo_on("mine", "ref: refs/heads/claude/some-topic\n")
 REPO_DETACHED = _repo_on("detached", "9f1c0de0000000000000000000000000000000ab\n")
+REPO_THEIRS_FEATURE = _repo_on("theirs-feature", "ref: refs/heads/feature/theirs\n")
 REPO_NONE = os.path.join(_FIXTURE_ROOT, "not-a-repo")
 os.makedirs(REPO_NONE)
 
@@ -336,7 +337,7 @@ _sdt_missing = [p for p in (
     "Every page is a proposal",
     "what the change merges, cuts or reuses",
     "one marked as my suggestion",
-    "over 200 words with no page",
+    "160 words or more needs a page",
     "A bare\n\"approved\" does not count",
     "rules/detail/show-dont-tell.md",
 ) if p not in (_ctx or "")]
@@ -491,69 +492,46 @@ GUARD_CASES = [
     ("pass", None, "git switch main"),
     ("pass", None, "git branch -d old-feature"),
     ("pass", None, "git tag v1.2.0"),
-    ("ask", "Commit constantly on my own branches, never on theirs", "git reset --hard origin/main"),
-    (
-        "ask",
-        "Never hide work: it stays visible, reachable and readable",
-        'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"',
-    ),
-    (
-        "ask",
-        "Never hide work: it stays visible, reachable and readable",
-        "npm run dev > dev.log 2>&1 &",
-    ),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "nohup ./long-task.sh"),
-    # #85: a wait piped through tail/head shows nothing until it exits.
-    (
-        "ask",
-        "Never hide work: it stays visible, reachable and readable",
-        "until grep -q done status.txt; do sleep 5; done | tail -5",
-    ),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "timeout 600 ./run_tests.sh | head -40"),
+    # #291: each destructive step is refused, and the refusal names the safe way (the cited text).
+    ("deny", "commit the work on a new branch first", "git reset --hard origin/main"),
+    # #292: background and hidden work, and a wait piped through tail/head, run without a prompt.
+    ("pass", None, 'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"'),
+    ("pass", None, "npm run dev > dev.log 2>&1 &"),
+    ("pass", None, "nohup ./long-task.sh"),
+    ("pass", None, "until grep -q done status.txt; do sleep 5; done | tail -5"),
+    ("pass", None, "timeout 600 ./run_tests.sh | head -40"),
     ("pass", None, "git log | head -5"),
     ("pass", None, "cat build.log | tail -50"),
     ("pass", None, "python sleepy.py | tail"),
-    (
-        "ask",
-        "Never hide work: it stays visible, reachable and readable",
-        "Start-Job -ScriptBlock { ./build.ps1 }",
-    ),
-    ("ask", "Never take a destructive action without checking first", "rm -rf node_modules"),
-    (
-        "ask",
-        "Never take a destructive action without checking first",
-        "rm styles.css",
-    ),
-    (
-        "ask",
-        "Never take a destructive action without checking first",
-        "Remove-Item -Recurse -Force ./dist",
-    ),
-    ("ask", "Never take a destructive action without checking first", "taskkill /IM node.exe /F"),
-    (
-        "ask",
-        "Never take a destructive action without checking first",
-        "git checkout -- src/app.js",
-    ),
-    ("ask", "Never take a destructive action without checking first", "git restore src/app.js"),
-    ("ask", "Never take a destructive action without checking first", "git stash drop"),
-    ("ask", "Never take a destructive action without checking first", "git stash clear"),
+    ("pass", None, "Start-Job -ScriptBlock { ./build.ps1 }"),
+    ("deny", "move the folder into a `_to_delete/` folder", "rm -rf node_modules"),
+    ("deny", "move the file into a `_to_delete/` folder", "rm styles.css"),  # never committed
+    ("deny", "move the folder into a `_to_delete/` folder", "Remove-Item -Recurse -Force ./dist"),
+    ("pass", None, "taskkill /IM node.exe /F"),
+    ("pass", None, "kill 1234"),
+    ("deny", "commit the work on a new branch first", "git checkout -- src/app.js"),
+    ("deny", "commit the work on a new branch first", "git restore src/app.js"),
+    ("deny", "keep the stash", "git stash drop"),
+    ("deny", "keep the stash", "git stash clear"),
+    ("deny", "for clean, move the files into a `_to_delete/` folder", "git clean -fdx"),
+    ("deny", "rewrite on a copy branch", "git filter-branch --tree-filter x HEAD"),
+    ("deny", "write a new file beside it", "truncate -s 0 app.log"),
     ("deny", "is the default branch", 'echo "starting" && git commit -m "wip"'),
     # #200: a new line or tab before the word used to hide it, since the subject is JSON-encoded.
-    ("ask", "Never take a destructive action without checking first", "ls\nrm -rf build"),
-    ("ask", "Never take a destructive action without checking first", "ls\trm -rf build"),
-    ("ask", "Never take a destructive action without checking first", "ls &&\nrm -rf build"),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "ls\nnohup ./long-task.sh"),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "ls\nsetsid ./long-task.sh"),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "sleep 99 &\nls"),
-    ("ask", "Never hide work: it stays visible, reachable and readable", "ls\nsleep 5 | tail -1"),
+    ("deny", "_to_delete/", "ls\nrm -rf build"),
+    ("deny", "_to_delete/", "ls\trm -rf build"),
+    ("deny", "_to_delete/", "ls &&\nrm -rf build"),
+    ("pass", None, "ls\nnohup ./long-task.sh"),
+    ("pass", None, "ls\nsetsid ./long-task.sh"),
+    ("pass", None, "sleep 99 &\nls"),
+    ("pass", None, "ls\nsleep 5 | tail -1"),
     ("pass", None, "ls -la\necho done"),
     ("pass", None, "make 2>&1\nls"),
     # #189: a quoted -c value with a space in it used to end git's option run early, so no
     # rule keyed on the subcommand ever matched.
     ("deny", "is the default branch", 'git -c user.name="aj\'s agent" commit -m "wip"'),
-    ("ask", "Commit constantly on my own branches, never on theirs", "git -c 'core.pager=less -R' reset --hard"),
-    ("ask", "Never take a destructive action without checking first", 'git -c "user.name=aj s agent" stash drop'),
+    ("deny", "commit the work on a new branch first", "git -c 'core.pager=less -R' reset --hard"),
+    ("deny", "keep the stash", 'git -c "user.name=aj s agent" stash drop'),
 ]
 
 for expect, rule, cmd in GUARD_CASES:
@@ -588,29 +566,31 @@ BRANCH_CASES = [
     (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git -c user.name=x commit -m y"),
     # Force-pushing rewrites history that was already safe, so it is not a checkpoint and the
-    # exemption does not reach it - on any branch.
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push --force-with-lease"),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push -f origin HEAD"),
-    # Discarding unsaved work still asks; replaying commits loses nothing (old ones stay in the reflog).
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git reset --hard origin/main"),
+    # exemption does not reach it - on any branch. #291: refused, naming the safe way.
+    (REPO_MINE, "claude/some-topic", "deny", "push a new branch instead", "git push --force-with-lease"),
+    (REPO_MINE, "claude/some-topic", "deny", "push a new branch instead", "git push -f origin HEAD"),
+    # Discarding unsaved work is refused; replaying commits loses nothing (old ones stay in the reflog).
+    (REPO_MINE, "claude/some-topic", "deny", "commit the work on a new branch first", "git reset --hard origin/main"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git rebase -i HEAD~3"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git merge main"),
     (REPO_MINE, "claude/some-topic", "pass", None, "git cherry-pick abc123"),
-    # Deleting a branch, here or on the remote, still asks.
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git branch -D old"),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git push origin --delete old"),
+    # Deleting a branch, here or on the remote, is refused: aj deletes branches.
+    (REPO_MINE, "claude/some-topic", "deny", "leave the branch for aj to delete", "git branch -D old"),
+    (REPO_MINE, "claude/some-topic", "deny", "leave the branch for aj to delete", "git push origin --delete old"),
     # A push whose destination is the default branch is refused from any branch.
     (REPO_MINE, "claude/some-topic", "deny", DEFAULT, "git push origin HEAD:main"),
-    # A command naming another repo is not talking about the branch we just read.
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, 'git -C /other/repo commit -m "x"'),
-    (REPO_MINE, "claude/some-topic", "ask", RULE_COMMIT, "git --git-dir=/other/.git push"),
+    # A command naming another repo is not talking about the branch we just read: refused, with the rewrite.
+    (REPO_MINE, "claude/some-topic", "deny", "run it as plain `git ...`", 'git -C /other/repo commit -m "x"'),
+    (REPO_MINE, "claude/some-topic", "deny", "run it as plain `git ...`", "git --git-dir=/other/.git push"),
     # Ownership buys nothing outside the commit rule.
-    (REPO_MINE, "claude/some-topic", "ask", RULE_DESTRUCTIVE, "rm -rf build"),
-    # The default branch refuses; a branch I could not read still prompts.
+    (REPO_MINE, "claude/some-topic", "deny", "_to_delete/", "rm -rf build"),
+    # The default branch refuses; so does a branch I could not read (#291).
     (REPO_THEIRS, "main", "deny", DEFAULT, 'git commit -m "wip"'),
     (REPO_THEIRS, "main", "deny", DEFAULT, "git push origin main"),
-    (REPO_DETACHED, "a detached HEAD", "ask", RULE_COMMIT, 'git commit -m "wip"'),
-    (REPO_NONE, "a directory that is not a repo", "ask", RULE_COMMIT, 'git commit -m "wip"'),
+    (REPO_DETACHED, "a detached HEAD", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
+    (REPO_NONE, "a directory that is not a repo", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
+    # #291: a commit on a branch the guard can't confirm is mine is refused, naming a new branch.
+    (REPO_THEIRS_FEATURE, "feature/theirs", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
 ]
 
 for project_dir, label, expect, rule, cmd in BRANCH_CASES:
@@ -679,7 +659,8 @@ _sv_git("push", "-q", "-u", "origin", "claude/saved-topic")
 
 def _sv_guard(cmd):
     code, out, err = run_hook("guard", payload_for(cmd), env=verbose_env(env_in(_sv_repo)))
-    return ("ask" if '"permissionDecision":"ask"' in out else "pass"), out
+    m = re.search(r'"permissionDecision":"(ask|deny)"', out)
+    return (m.group(1) if m else "pass"), out
 
 
 def _sv_case(title, ok, detail):  # commit_case is defined further down this file
@@ -697,15 +678,28 @@ _sv_case(
     not _sv_fail, "; ".join(_sv_fail) or "3 commands passed, each trace names the saved-elsewhere check",
 )
 _sv_fail = []
-for _cmd in ("git push --force-with-lease", "git clean -fdx", "git stash drop", "git branch -D other", "rm f.txt"):
-    if _sv_guard(_cmd)[0] != "ask":
+for _cmd in ("git push --force-with-lease", "git clean -fdx", "git stash drop", "git branch -D other", "rm -r sub"):
+    if _sv_guard(_cmd)[0] != "deny":
         _sv_fail.append(_cmd)
 _sv_case(
-    "guard: even with the work saved, force-push, clean, stash drop, branch -D and rm still ask",
-    not _sv_fail, "did not ask: %s" % ", ".join(_sv_fail) if _sv_fail else "all 5 asked",
+    "guard: even with the work saved, force-push, clean, stash drop, branch -D and a recursive rm are refused (#291)",
+    not _sv_fail, "not refused: %s" % ", ".join(_sv_fail) if _sv_fail else "all 5 refused",
 )
+# #291: deletes are narrowed. A committed, unchanged file goes through; an edited or a never-committed one is refused.
+_sv_del_clean = _sv_guard("rm f.txt")
+with open(os.path.join(_sv_repo, "new.txt"), "w") as _f:
+    _f.write("never committed\n")
+_sv_del_new = _sv_guard("rm new.txt")
+os.remove(os.path.join(_sv_repo, "new.txt"))
 with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
     _f.write("uncommitted\n")
+_sv_del_dirty = _sv_guard("rm f.txt")
+_sv_case(
+    "guard: deleting a committed, unchanged file goes through; an edited or never-committed file is refused, naming _to_delete/ (#291)",
+    _sv_del_clean[0] == "pass" and _sv_del_new[0] == "deny" and _sv_del_dirty[0] == "deny"
+    and "_to_delete/" in _sv_del_new[1] and "_to_delete/" in _sv_del_dirty[1],
+    "clean %s | new %s | dirty %s" % (_sv_del_clean[0], _sv_del_new[0], _sv_del_dirty[0]),
+)
 _sv_dirty = _sv_guard("git reset --hard HEAD")
 _sv_git("checkout", "--", "f.txt")
 with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
@@ -713,9 +707,9 @@ with open(os.path.join(_sv_repo, "f.txt"), "a") as _f:
 _sv_git("commit", "-q", "-am", "two")
 _sv_unpushed = _sv_guard("git reset --hard HEAD~1")
 _sv_case(
-    "guard: an uncommitted change or an unpushed commit makes reset ask, and the prompt says which",
-    _sv_dirty[0] == "ask" and "1 uncommitted or untracked file would be lost" in _sv_dirty[1]
-    and _sv_unpushed[0] == "ask" and "1 commit on this branch is not on any remote" in _sv_unpushed[1],
+    "guard: an uncommitted change or an unpushed commit makes reset refused, and the refusal says which",
+    _sv_dirty[0] == "deny" and "1 uncommitted or untracked file would be lost" in _sv_dirty[1]
+    and _sv_unpushed[0] == "deny" and "1 commit on this branch is not on any remote" in _sv_unpushed[1],
     "dirty %r | unpushed %r" % (_sv_dirty[1][-160:], _sv_unpushed[1][-160:]),
 )
 _sv_git("push", "-q")
@@ -723,8 +717,8 @@ _sv_git("switch", "-q", "-c", "main")
 _sv_git("push", "-q", "-u", "origin", "main")
 _sv_theirs = _sv_guard("git reset --hard HEAD")
 _sv_case(
-    "guard: on the default branch, reset asks even with a clean tree and everything pushed",
-    _sv_theirs[0] == "ask" and "`main` is the default branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
+    "guard: on the default branch, reset is refused even with a clean tree and everything pushed",
+    _sv_theirs[0] == "deny" and "`main` is the default branch" in _sv_theirs[1], "out %r" % (_sv_theirs[1][-160:],),
 )
 
 # The exemption is a silent success path, and guard's silent paths trace by contract.
@@ -797,13 +791,15 @@ if shutil.which("git"):
     _own_res["-C wt"] = _own_ask("git -C %s commit -m x" % _own_wt, _own_main, _own_main)
     # #203: "cd" inside a commit message is not a directory change.
     _own_res["cd in message"] = _own_ask('git commit -m "fix cd handling"', _own_main, _own_wt)
-    _own_want = {"wt commit": "allow", "wt push": "allow", "wt force push": "ask", "wt merge": "allow",
-                 "no cwd": "deny", "cd into wt": "allow", "two cds": "ask", "ccr": "allow",
-                 "foo off": "allow", "foo on": "allow", "-C wt": "allow",
+    # #291: a force push, a folder the guard can't follow (two cds) and a branch not confirmed mine
+    # (foo/x without HOUSE_RULES_OWNED_BRANCHES) are refused, not asked.
+    _own_want = {"wt commit": "allow", "wt push": "allow", "wt force push": "deny", "wt merge": "allow",
+                 "no cwd": "deny", "cd into wt": "allow", "two cds": "deny", "ccr": "allow",
+                 "foo off": "deny", "foo on": "allow", "-C wt": "allow",
                  "cd in message": "allow"}
     if _own_res == _own_want:
         report("PASS", "guard judges the branch by the payload cwd, a leading cd and git -C")
-        print("          worktree commit/push/merge allowed, force push asks, main refused, two cds ask")
+        print("          worktree commit/push/merge allowed; force push, main, two cds and a branch not mine refused")
     else:
         report("FAIL", "guard judges the branch by the payload cwd, a leading cd and git -C")
         print(f"          got: {_own_res}")
@@ -820,8 +816,9 @@ subprocess.run(["git", "init", "-q", "-b", "AjsAgent/ua", _ua_dir], check=True)
 
 
 def _ua_guard(session, extra=None, env_extra=None, tool="Bash", tool_input=None):
+    # #291: a destructive step is asked about only when it cites a source proving no safe way exists.
     pl = {"session_id": session, "cwd": _ua_dir, "tool_name": tool,
-          "tool_input": tool_input or {"command": "rm -rf build"}}
+          "tool_input": tool_input or {"command": "rm -rf build", "description": "no safe way: the rm manual page"}}
     pl.update(extra or {})
     e = env_in(_ua_dir)
     e.pop("HOUSE_RULES_PROMPT_TIMEOUT", None)
@@ -889,26 +886,26 @@ for _n, _cmd in (
     _d, _r = _fr(_cmd)
     if _d == "deny" and "Do not retry" in _r:
         _fr_fail.append("%s: refused with Do not retry" % _n)
-    elif _n == "7b" and not (_d == "deny" and "Write the output to a file instead of piping it through tail/head" in _r):
-        _fr_fail.append("7b: %s %r" % (_d, _r[-120:]))
-    elif _n == "9" and not (_d == "deny" and ("Run it as plain `git ...` from %s, with no cd, -C or variables, "
-                                              "and it will be checked normally." % _fr_top) in _r):
+    elif _n == "9" and not (_d == "deny" and ("run it as plain `git ...` from %s, with no cd, -C or variables, "
+                                              "and it will be checked normally" % _fr_top) in _r):
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
-    elif _n not in ("7b", "9") and _d == "deny":
+    elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
-for _cmd in ("rm -rf /home/user/x", "kill -9 1", "git push origin main",
-             "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
+for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)
-    if _d != "deny" or (_cmd.startswith(("rm -rf /home", "kill", "git push")) and "Do not retry" not in _r):
+    if _d != "deny" or (_cmd.startswith("rm -rf /home") and "_to_delete/" not in _r) \
+            or (_cmd.startswith("git push") and "Do not retry" not in _r):
         _fr_fail.append("still-refused %r: %s" % (_cmd, _d))
+if _fr("kill -9 1")[0] == "deny":  # #292: killing a process no longer stops the agent
+    _fr_fail.append("kill -9 1 was refused")
 _d, _r = _fr("S=%s/old-plugin; rm -rf $S" % _fr_scratch)
 if _d == "deny":
     _fr_fail.append("rm via a same-command assignment inside the scratchpad was refused %r" % _r[-120:])
 _d, _r = _fr("S=/home/user/x; rm -rf $S")
-if _d != "deny" or "Do not retry" not in _r:
+if _d != "deny" or "_to_delete/" not in _r:
     _fr_fail.append("rm via an assignment outside the scratchpad: %s %r" % (_d, _r[-120:]))
-_sv_case("guard: audit entries 1, 2, 3, 5, 7, 8, 9 no longer dead-end routine work; deletes, kills and a push to main still refuse",
-         not _fr_fail, "; ".join(_fr_fail) or "routine ones pass or get the rewrite text, the rest say Do not retry")
+_sv_case("guard: audit entries 1, 2, 3, 5, 7, 8, 9 no longer dead-end routine work; deletes and a push to main still refuse",
+         not _fr_fail, "; ".join(_fr_fail) or "routine ones pass or get the rewrite text; deletes name _to_delete/")
 
 _ua_seen("verify-ua-away", 600)
 _ua_seen("verify-ua-here", 30)
@@ -1047,11 +1044,12 @@ if shutil.which("git"):
         payload_for('git -C /some/other/repo commit -m "wip"'),
         env=env_in(DOCSGUARD_CLAUDE_SOURCE_ONLY),
     )
-    if '"permissionDecision":"ask"' in out and "could not tell" in out.lower() and "another repo" in out:
-        report("PASS", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
+    # #291: refused with the rewrite named, before the docs check reads any other repo's staged files.
+    if '"permissionDecision":"deny"' in out and "another repo" in out and "run it as plain `git ...`" in out:
+        report("PASS", "a -C/--git-dir commit is refused naming the rewrite, not answered with another repo's files")
         print(f"          {out[:250]}")
     else:
-        report("FAIL", "a -C/--git-dir commit says the docs check could not tell, not another repo's answer")
+        report("FAIL", "a -C/--git-dir commit is refused naming the rewrite, not answered with another repo's files")
         print(f"          out {out[:250]!r}")
 
     # --- what a commit will ACTUALLY include, not just what is already staged -----------------
@@ -1242,15 +1240,16 @@ _gw_new = os.path.join(_gw_dir, "new-file.css")
 
 code, out, err = run_hook("guardwrite", guardwrite_payload(_gw_existing))
 if (
-    '"permissionDecision":"ask"' in out
+    '"permissionDecision":"deny"' in out
     and RULE_EDIT_IN_PLACE in out
     and os.path.basename(_gw_existing) in out
     and "2 existing line(s)" in out
+    and "edit it in place with the Edit tool" in out
 ):
-    report("PASS", "Write to a file that already exists asks before replacing it")
-    print("          names the file, cites the rule, and counts the discarded lines")
+    report("PASS", "Write over a file I did not create is refused, naming the fix: edit it in place (#293)")
+    print("          names the file, cites the rule, counts the discarded lines and gives the fix")
 else:
-    report("FAIL", "Write to a file that already exists asks before replacing it")
+    report("FAIL", "Write over a file I did not create is refused, naming the fix: edit it in place (#293)")
     print(f"          got: {out}")
 
 code, out, err = run_hook("guardwrite", guardwrite_payload(_gw_new))
@@ -1312,13 +1311,14 @@ for h in [
     "Deliver a whole workflow, not a starting point",
     "Never hand over a command I have not run",
     "Every artifact lives in the project directory",
-    "Never hide work: it stays visible, reachable and readable",
     "Commit constantly on my own branches, never on theirs",
     "Never take a destructive action without checking first",
     "Edit in place; a full rewrite is a delete, not an edit",
 ]:
     if h not in out:
         missing.append(h)
+if "Never hide work" in out:  # #292: the rule was removed
+    missing.append("the removed 'Never hide work' rule is still injected")
 if not missing:
     report("PASS", "SessionStart injects every rule heading into context")
     print(f"          {len(out)} characters injected")
@@ -2373,8 +2373,8 @@ for event, payload, _, why in trace_cases:
 code, out, err = run_hook(
     "guard", json.dumps({"tool_input": {"command": "rm -rf build"}}), env=off
 )
-if '"permissionDecision":"ask"' not in out:
-    quiet_failures.append("HOUSE_RULES_TRACE=off also silenced guard's prompt, which it must not")
+if '"permissionDecision":"deny"' not in out:  # #291: rm -rf is refused, naming the safe way
+    quiet_failures.append("HOUSE_RULES_TRACE=off also silenced guard's refusal, which it must not")
 code, out, err = run_hook(
     "harvest",
     json.dumps({"tool_name": "Write", "tool_input": {"file_path": "/p/a.cs", "content": ESSAY_CS}}),
@@ -2975,9 +2975,13 @@ def pv_case(title, ok, detail):
 
 
 _pv_port = _turn_transcript("pv-port", "port the stock page to GitHub Pages", [("Write", "/proj/site/index.html")])
-_par, _vis, _ = _stop_notes(_pv_port, "Done, the page is ported.")
+_par, _vis, _pv_ctx = _stop_notes(_pv_port, "Done, the page is ported.")
 pv_case("Stop: a port that wrote files but names nothing kept or dropped gets the parity report note (#90)",
         _par, "parity=%s" % _par)
+pv_case("Stop (#309): the parity note is report-only - it demands no inventory or issues before the turn ends",
+        "report only, #309" in _pv_ctx and "Nothing is required this turn" in _pv_ctx
+        and "keep/change/drop inventory with" not in _pv_ctx,
+        "note=%r" % _pv_ctx[_pv_ctx.find("re-creating"):][:200])
 pv_case("Stop: the same turn changed an .html file and looked at nothing, so it gets the visual note (#88)",
         _vis, "visual=%s" % _vis)
 _par, _, _ = _stop_notes(_pv_port, "Kept search and sorting; dropped the server sync, which needs a server.")
@@ -3016,9 +3020,9 @@ pv_case("delegate: a port plan that carries its inventory does not", "carries no
 
 # --- plain summary first (#98) ------------------------------------------------------------
 _PS_PLAIN = ("The commit hooks are done and pushed. Claude now gets reminded to save its work, and "
-             "nothing is waiting on you.\n\n" + "More detail follows here. " * 40)
+             "nothing is waiting on you.\n\n" + "More detail follows here. " * 30)  # under 160 words, so the page rule (#282) stays out of it
 _PS_TECH = ("`hook.py`: added `_dirty_paths`, `_uncommitted_among`, `branch_ownership` and "
-            "`event_branchnudge`.\n\n" + "More detail follows here. " * 40)
+            "`event_branchnudge`.\n\n" + "More detail follows here. " * 30)
 _PS_WIDE = _PS_PLAIN + "\n\n| a | b | c | d |\n|---|---|---|---|\n| 1 | 2 | 3 | 4 |\n"
 _ps_wrote = _turn_transcript("ps-wrote", "add the commit hooks", [("Edit", "/proj/src/app.py")])
 _ps_read = _turn_transcript("ps-read", "what does this do?", [("Bash", "cat app.py")])
@@ -3215,6 +3219,56 @@ commit_case(
 commit_case(
     "branchnudge is wired to PostToolUse Write|Edit in hooks.json",
     bool(re.search(r'"matcher": "Write\|Edit",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" branchnudge"', hooks_json_text)),
+    "hooks.json PostToolUse entry",
+)
+
+# -- #318: creditcheck reads the body back after a pull request / issue write (fetch stubbed) --------
+import importlib.util as _cc_util
+import io as _cc_io
+_cc_spec = _cc_util.spec_from_file_location("hook_creditcheck", HOOK)
+_cc_mod = _cc_util.module_from_spec(_cc_spec)
+_cc_spec.loader.exec_module(_cc_mod)
+
+
+def _creditcheck(cmd, stdout, fetch, off=False):
+    _cc_mod._read_back_body = fetch
+    _saved = (sys.stdin, sys.stdout, os.environ.get("HOUSE_RULES_ATTRIBUTION"))
+    sys.stdin = type("S", (), {"buffer": _cc_io.BytesIO(json.dumps(
+        {"tool_name": "Bash", "tool_input": {"command": cmd}, "tool_response": {"stdout": stdout}}).encode())})()
+    sys.stdout = _cc_io.StringIO()
+    if off:
+        os.environ["HOUSE_RULES_ATTRIBUTION"] = "off"
+    try:
+        _cc_mod.event_creditcheck()
+        return sys.stdout.getvalue()
+    finally:
+        sys.stdin, sys.stdout = _saved[0], _saved[1]
+        os.environ.pop("HOUSE_RULES_ATTRIBUTION", None)
+        if _saved[2] is not None:
+            os.environ["HOUSE_RULES_ATTRIBUTION"] = _saved[2]
+
+
+_cc_cmd = 'gh pr create --title T --body "Refs #1"'
+_cc_url = "https://github.com/o/r/pull/7"
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nGenerated with [Claude Code](https://claude.ai/code)", None))
+commit_case("creditcheck: a body with a Claude credit gets the warning",
+            "added a Claude credit to " + _cc_url in out and "say so in your reply" in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nOpened by AJ's agent", None))
+commit_case("creditcheck: a clean body gets the clean line",
+            "read back " + _cc_url + "; no Claude credit on it." in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: (None, "gh timed out after 10 seconds"))
+commit_case("creditcheck: a failed fetch says it could not read back",
+            "could not read back " + _cc_url in out and "unknown" in out, "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, "nothing useful\n", lambda p: ("", None))
+commit_case("creditcheck: no address in the output says it could not read back",
+            "could not read back" in out and "unknown" in out, "stdout: %r" % out[:200])
+out = _creditcheck("ls", "a b\n", lambda p: ("", None))
+commit_case("creditcheck: a non-matching command prints nothing", out.strip() == "", "stdout: %r" % out[:200])
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("", None), off=True)
+commit_case("creditcheck: HOUSE_RULES_ATTRIBUTION=off prints nothing", out.strip() == "", "stdout: %r" % out[:200])
+commit_case(
+    "creditcheck is wired to PostToolUse Bash with a 15 second timeout in hooks.json",
+    bool(re.search(r'"matcher": "Bash",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" creditcheck",\s*"timeout": 15', hooks_json_text)),
     "hooks.json PostToolUse entry",
 )
 
@@ -4031,6 +4085,51 @@ commit_case(
     _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
     "out %r | off %r" % (_oc1[:90], _off[:80]),
 )
+# -- #316: the credit check also covers gh api and curl writes to GitHub ---------------------------------
+_a316_bad = "Co-Authored-By: Claude <noreply@anthropic.com>"
+_a316_dir = tempfile.mkdtemp()
+_a316_bf = os.path.join(_a316_dir, "bad.txt").replace("\\", "/")
+_a316_cf = os.path.join(_a316_dir, "clean.txt").replace("\\", "/")
+_a316_bj = os.path.join(_a316_dir, "bad.json").replace("\\", "/")
+_a316_cj = os.path.join(_a316_dir, "clean.json").replace("\\", "/")
+for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "Opened by AJ's agent"),
+               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "Opened by AJ's agent"}))):
+    with open(_p, "w", encoding="utf-8") as _f:
+        _f.write(_t)
+_a316_routes = lambda b, fb, fj: [
+    "gh api repos/o/r/pulls -f title=t -f body=\"%s\"" % b,
+    "gh api repos/o/r/issues -f title=t -f body=\"%s\"" % b,
+    "gh api -X PATCH repos/o/r/issues/5 -f body=\"%s\"" % b,
+    "gh api repos/o/r/issues/5/comments -F body=@%s" % fb,
+    "gh api repos/o/r/pulls --input %s" % fj,
+    "curl -X POST https://api.github.com/repos/o/r/pulls -d '{\"body\":\"%s\"}'" % b,
+]
+_a316_missed = [c for c in _a316_routes(_a316_bad, _a316_bf, _a316_bj) if _iss_decision(_iss_guard(c)) != "deny"]
+_a316_false = [c for c in _a316_routes("Opened by AJ's agent", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
+_a316_get = _iss_guard("gh api repos/o/r/pulls/5")
+commit_case(
+    "attribution: gh api and curl writes crediting Claude are refused on every route; clean bodies and a plain GET pass",
+    not _a316_missed and not _a316_false and _iss_decision(_a316_get) != "deny",
+    "allowed %r | wrongly refused %r | get %r" % (_a316_missed, _a316_false, _a316_get[:80]),
+)
+# -- #317: the footer GitHub appends is recognised ------------------------------------------------------
+_a317_foot = "Summary\n\n_Generated by [Claude Code](https://claude" + ".ai/code)_\n"
+_a317_tf = os.path.join(_a316_dir, "foot.txt").replace("\\", "/")
+_a317_jf = os.path.join(_a316_dir, "foot.json").replace("\\", "/")
+_a317_pf = os.path.join(_a316_dir, "prose.txt").replace("\\", "/")
+for _p, _t in ((_a317_tf, _a317_foot), (_a317_jf, json.dumps({"body": _a317_foot})),
+               (_a317_pf, "Refs #5\n\nThis was reviewed with Claude in mind")):
+    with open(_p, "w", encoding="utf-8") as _f:
+        _f.write(_t)
+_a317_pr = _iss_guard("gh pr create --title t --body-file %s" % _a317_tf)
+_a317_api = _iss_guard("gh api repos/o/r/pulls --input %s" % _a317_jf)
+_a317_prose = _iss_guard("gh pr create --title t --body-file %s" % _a317_pf)
+commit_case(
+    "attribution: the platform-appended footer is refused via gh pr create and gh api --input; prose mentioning Claude passes",
+    _iss_decision(_a317_pr) == "deny" and _iss_decision(_a317_api) == "deny" and _iss_decision(_a317_prose) != "deny",
+    "pr %r | api %r | prose %r" % (_a317_pr[:80], _a317_api[:80], _a317_prose[:200]),
+)
+
 # -- #178: the same credit check on GitHub MCP writes ---------------------------------------------------
 def _gg(tool, env_extra=None, **tool_input):
     e = dict(os.environ)
@@ -4201,8 +4300,8 @@ for _c in ("gh issue comment 5 --body hi", 'gh issue create --title t --body b',
 commit_case("close: comment, create, label edits, reads and a commit message mentioning it are not affected", not _bad, "affected: %r" % _bad)
 _ocm = _iss_guard("rm old.txt && gh issue close 5")
 commit_case(
-    "close: a chained command asks once with both reasons in the prompt",
-    _iss_decision(_ocm) == "ask" and "closing an issue" in _iss_reason(_ocm) and "deletes one or more files" in _iss_reason(_ocm),
+    "close: a chained command whose delete is unsafe is refused as a whole, naming the safe way (#291)",
+    _iss_decision(_ocm) == "deny" and "deletes one or more files" in _iss_reason(_ocm) and "_to_delete/" in _iss_reason(_ocm),
     "out %r" % _ocm[:120],
 )
 
@@ -4317,16 +4416,16 @@ _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
-    not any("issue" in c for c in _tool_cmds) and _count_entries == 11 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 12 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
     "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
 )
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.67.1",
+    "issues: the rules section and its detail file exist, and the plugin is 2.68.3",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.67.1",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.3",
     "rules section + detail file + version",
 )
 
@@ -6316,7 +6415,8 @@ commit_case(
 
 # guard: the timeout line, omitted when off
 _g_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Bash",
-                         "tool_input": {"command": "rm -rf /tmp/pt-victim"}, "cwd": _pt_repo})
+                         "tool_input": {"command": "rm -rf /tmp/pt-victim", "description": "no safe way: rm(1)"},
+                         "cwd": _pt_repo})
 _gw_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Write",
                           "tool_input": {"file_path": os.path.join(_pt_repo, "existing.txt"), "content": "x\n"},
                           "cwd": _pt_repo})
@@ -6329,10 +6429,12 @@ _geoff = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="off")
 _g1, _g2 = run_hook("guard", _g_payload, env=_ge), run_hook("guardwrite", _gw_payload, env=_ge)
 _g3, _g4 = run_hook("guard", _g_payload, env=_geoff), run_hook("guardwrite", _gw_payload, env=_geoff)
 commit_case(
-    "guard and guardwrite: the prompt says 'If nobody answers within 5 minutes...' before the Approve line; off omits it",
-    all("If nobody answers within 5 minutes, this is " + _gline in x[1] for x in (_g1, _g2))
-    and all(x[1].index("If nobody answers") < x[1].index("Approve to let it run") for x in (_g1, _g2))
-    and all(_gline not in x[1] and "Approve to let it run" in x[1] for x in (_g3, _g4)),
+    # #293: guardwrite no longer asks (a whole-file Write is refused), so only guard's cited prompt carries the line.
+    "guard: the prompt says 'If nobody answers within 5 minutes...' before the Approve line; off omits it",
+    "If nobody answers within 5 minutes, this is " + _gline in _g1[1]
+    and _g1[1].index("If nobody answers") < _g1[1].index("Approve to let it run")
+    and _gline not in _g3[1] and "Approve to let it run" in _g3[1]
+    and '"permissionDecision":"deny"' in _g2[1] and _gline not in _g2[1],
     "guard %r | guardwrite %r | off %r" % (_g1[1][-250:], _g2[1][-250:], _g3[1][-150:]),
 )
 
@@ -6374,8 +6476,8 @@ commit_case(
     "elapsed %.2fs" % _a3[3],
 )
 # (a) a second guard prompt after a timeout is ASKED by the guard normally, not refused
-_a5 = _ua_guard("verify-290-a", tool_input={"command": "rm -rf build"})
-_a5b = _ua_guard("verify-290-a", tool_input={"command": "rm -rf other-build"})
+_a5 = _ua_guard("verify-290-a", tool_input={"command": "rm -rf build", "description": "no safe way: rm(1)"})
+_a5b = _ua_guard("verify-290-a", tool_input={"command": "rm -rf other-build", "description": "no safe way: rm(1)"})
 commit_case(
     "guard (#290): after a prompt timed out, a second guard prompt is asked normally",
     _ua_dec(_a5) == "ask" and _ua_dec(_a5b) == "ask", "first %s second %s" % (_ua_dec(_a5), _ua_dec(_a5b)),
@@ -6560,13 +6662,13 @@ _async_payload = post_agent_payload(
 )
 code, out, err = run_hook("audit", _async_payload)
 code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
-if (code == 0 and "checked for stalls every 5 minutes" in out and "stallcheck.py" in out and "AUDIT" not in out
-        and code_off == 0 and not out_off.strip()
-        and "--session sess1 --agent audit1" in out):
-    report("PASS", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
-    print("          nothing to audit yet; the check-in nudge appears, and not with HOUSE_RULES_AUTOSAVE=off")
+# #292: the 5-minute stall-check reminder is gone, so a backgrounded call's launch gets neither an audit
+# nor a reminder; its hand-back is audited when it arrives.
+if code == 0 and not out.strip() and code_off == 0 and not out_off.strip():
+    report("PASS", "audit gives no audit and no stall-check reminder on a backgrounded call's async_launched PostToolUse (#292)")
+    print("          nothing to audit yet, and no reminder, with autosave on or off")
 else:
-    report("FAIL", "audit asks for a check-in, not an audit, on a backgrounded call's async_launched PostToolUse")
+    report("FAIL", "audit gives no audit and no stall-check reminder on a backgrounded call's async_launched PostToolUse (#292)")
     print(f"          exit {code}, out {out[:150]!r}; autosave off: exit {code_off}, out {out_off[:80]!r}")
 
 
@@ -6653,10 +6755,6 @@ _cap_case("stallcheck: a --session matching nothing exits 2 and names the sessio
 _c, _o = _sc_run()
 _cap_case("stallcheck: no-flag mode says it is watching all sessions",
           "watching ALL sessions" in _o and "aaa" in _o and "bbb" in _o, "exit %d out %r" % (_c, _o[:200]))
-_ctx_bad = run_hook("audit", post_agent_payload(
-    session_id="bad;id", tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}))[1]
-_cap_case("audit: an unsafe session_id is omitted from the suggested command and the watch is called unscoped",
-          "--threshold 300 --agent audit1`" in _ctx_bad and "bad;id" not in _ctx_bad and "unscoped" in _ctx_bad, "out %r" % _ctx_bad[:300])
 
 audq = []
 code, out, err = run_hook("audit", "")
@@ -8591,6 +8689,28 @@ _o += _loop_post("Bash", {"command": 'gh issue edit 102 --add-label "needs revie
 _loop_cases.append(("label check: label changes from the GitHub tool and from gh are recorded",
                     _loop_state().get("labels", {}).get("o/r#101") == ["Feature", "needs review"]
                     and _loop_state().get("labels", {}).get("o/r#102") == ["Feature", "AjsAgent created this", "needs review"]))
+_o = _loop_post("Bash", {"command": 'gh api repos/o/r/issues/201/labels -f "labels[]=in progress"'}, [{"name": "in progress"}])
+_o += _loop_post("Bash", {"command": "gh api -X POST repos/o/r/issues/202/labels -f 'labels[]=needs review' -f labels[]=bug"}, [{"name": "bug"}])
+_loop_cases.append(("#278: a REST label add (gh api .../issues/N/labels) is recorded against the issue in the path",
+                    _loop_state().get("labels", {}).get("o/r#201") == ["in progress"]
+                    and _loop_state().get("labels", {}).get("o/r#202") == ["needs review", "bug"]))
+_o = _loop_post("Bash", {"command": "gh api -X DELETE repos/o/r/issues/201/labels/in%20progress"}, "")
+_loop_cases.append(("#278: a REST label remove with %20 is recorded as removing `in progress`",
+                    _loop_state().get("labels", {}).get("o/r#201") == []))
+_loop_post("Bash", {"command": "gh api --method DELETE repos/o/r/issues/202/labels/bug"}, "")
+_loop_cases.append(("#278: the --method DELETE form is recorded too",
+                    _loop_state().get("labels", {}).get("o/r#202") == ["needs review"]))
+_loop_post("Bash", {"command": "gh api repos/o/r/labels"}, [{"name": "bug"}])
+_loop_post("Bash", {"command": 'gh api repos/o/r/issues/203/labels -f "labels[]=bug"'}, "gh: Resource not accessible (HTTP 403)")
+_loop_cases.append(("#278: a repo label list, or a failed call, records nothing",
+                    "o/r#203" not in _loop_state().get("labels", {})
+                    and not any(k.endswith("/r") or k == "o/r" for k in _loop_state().get("labels", {}))))
+_hook_src = open(os.path.join(HERE, "hook.py"), encoding="utf-8").read()
+_wf_src = open(os.path.join(HERE, "..", "rules", "detail", "issue-workflow.md"), encoding="utf-8").read()
+_created_note = _hook_src.split("was created without the", 1)[1][:400]
+_loop_cases.append(("#278: none of the five label-advice places still says --add-label",
+                    not any("--add-label" in _t for _t in (_ig_mod.ISSUE_NOTE, _ig_mod.CLOSE_ASK_NOTE, _created_note, _wf_src))
+                    and "labels[]=" in _created_note and "labels[]=" in _ig_mod.ISSUE_NOTE))
 _loop_cases.append(("label check: when the GitHub read fails, it says so and uses the record",
                     "GitHub read failed" in _loop_stop() and _loop_stage() == "build"))
 _o = _loop_post("mcp__github__issue_write", {"method": "update", "owner": "o", "repo": "r", "issue_number": 103,
@@ -8698,6 +8818,13 @@ def _wt_bash(cmd, cwd=None):
     return _wt_gate("Bash", {"command": cmd}, cwd or _wt_main)
 
 
+def _wt_raw(cmd):
+    """The commitgate's whole output for a Bash command, to read its report-only note (#309)."""
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt", "cwd": _wt_main,
+         "tool_input": {"command": cmd}}
+    return run_hook("commitgate", json.dumps(p), env=_loop_env)[1]
+
+
 _wt_heredoc = "python3 - <<'E'\nopen('app.py', 'w').write('x = 1')\nE"
 _wt_stage("build")
 _wt_a = _wt_gate("Edit", {"file_path": os.path.join(_wt_tree, "app.py")}, _wt_tree)[0]
@@ -8713,6 +8840,8 @@ _wt_i = _wt_bash("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" a
 _wt_j = _wt_bash("cat f | tee out.py")[0]
 _wt_k = _wt_bash("ls -la 2>&1 | grep x; echo done > /dev/null")[0]
 _wt_l = _wt_bash("python3 -c \"open('docs/x.txt', 'w').write('x')\"")[0]
+_wt_m = _wt_raw(_wt_heredoc)
+_wt_n = _wt_raw("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" app.py")
 _wt_loop_off = dict(_loop_env, HOUSE_RULES_LOOP="off")
 _, _wt_o, _ = run_hook("commitgate", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt",
                        "cwd": _wt_main, "tool_input": {"command": _wt_heredoc}}), env=_wt_loop_off)
@@ -8720,12 +8849,14 @@ for _t, _ok in (
         ("a worktree reads the main checkout's stage: Build lets its Edit through", _wt_a == "allow"),
         ("a worktree reads the main checkout's stage: Design refuses its Edit", _wt_d == "deny"),
         ("a python heredoc writing a .py file is allowed in Build", _wt_b == "allow"),
-        ("a python heredoc writing a .py file is refused in Design", _wt_e[0] == "deny" and "closed in the Design stage" in _wt_e[1]),
-        ("sed -i on a .py file is allowed in Build and refused in Design", _wt_c == "allow" and _wt_f == "deny"),
+        ("#309: a python heredoc writing a .py file in Design goes through, reported as what the lock would have refused",
+         _wt_e[0] == "allow" and "report only, #309" in _wt_m and "app.py" in _wt_m and "Design stage" in _wt_m),
+        ("#309: sed -i on a .py file is allowed in Build, and in Design too, with a report",
+         _wt_c == "allow" and _wt_f == "allow"),
         ("a Bash write to a .md file stays open in Design", _wt_g == "allow"),
-        ("a >> redirect into a .py file and tee are refused in Design", _wt_h == "deny" and _wt_j == "deny"),
-        ("a script whose target path is a variable is refused with the Edit/Write hint",
-         _wt_i[0] == "deny" and "Edit or Write tool" in _wt_i[1] and "retry" not in _wt_i[1].lower()),
+        ("#309: a >> redirect into a .py file and tee go through in Design", _wt_h == "allow" and _wt_j == "allow"),
+        ("#309: a script whose target path is a variable goes through, and the report says the file couldn't be named",
+         _wt_i[0] == "allow" and "a file it can't name" in _wt_n),
         ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow"),
         ("HOUSE_RULES_LOOP=off leaves script writes alone", "deny" not in _wt_o)):
     _loop_cases.append((_t, _ok))
@@ -8793,12 +8924,15 @@ _loop_cases.append(('#266: "Build plan approved: enforced QA stage: 1A 2A" names
                     and _ig_mod._loop_name("blockers v2 Build plan: 1A 2A") == "blockers v2"))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):
-    # The retry (#256): the first pass of a missed page rule blocks; the note is what the retry reports.
+    # Held for a page: since #283 the retry keeps blocking on the page rule (up to the limit), and past
+    # the limit it reports the long-reply note. Either one means the reply was held for a page.
     _, out, _ = run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir,
-                                                  stop_hook_active=True), env=_loop_env)
-    return "show don't tell: this reply is" in out
+                                                  stop_hook_active=True, session_id="verify-long"), env=_loop_env)
+    return "show don't tell: this reply is" in out or "- page:" in out
 
 
+_loop_cases.append(("a 160-word reply with no page link is held for a page (#282)", _long_reply(" ".join(["word"] * 160))))
+_loop_cases.append(("a 159-word reply is not (#282)", not _long_reply(" ".join(["word"] * 159))))
 _words250 = " ".join(["word"] * 250)
 _loop_cases.append(("a 250-word reply with no page link gets the reminder", _long_reply(_words250)))
 _loop_cases.append(("a 250-word reply that links a page does not",
@@ -8828,6 +8962,209 @@ _loop_cases.append(("the rule names the template and its four parts",
 
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
+
+# --- #307: every approval in one message is read, in stage order -------------------------------
+# Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and
+# only the build plan was read; and a stale stored feature name stopped a redo after "QA failed" counting.
+_ma_dir = tempfile.mkdtemp(prefix="house-rules-multi-approval-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _ma_dir], check=True)
+_ma_labels = os.path.join(_FIXTURE_ROOT, "multi-approval-labels.json")
+_ma_env = dict(_loop_env, HOUSE_RULES_LOOP_LABELS_FILE=_ma_labels)
+
+
+def _ma_set(state, labels=None):
+    """A fresh stage file and decisions log (with an entry the last approval hasn't seen)."""
+    os.makedirs(os.path.join(_ma_dir, ".claude"), exist_ok=True)
+    with open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+        json.dump(dict({"skip": False, "approvals": [], "issues": []}, **state), f)
+    os.makedirs(os.path.join(_ma_dir, "docs", "6-decisions"), exist_ok=True)
+    with open(os.path.join(_ma_dir, "docs", "6-decisions", "Decisions.md"), "a", encoding="utf-8") as f:
+        f.write("an entry written at %r\n" % time.time())
+    with open(_ma_labels, "w", encoding="utf-8") as f:
+        json.dump(labels or {}, f)
+
+
+def _ma_say(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "multi", "cwd": _ma_dir, "prompt": prompt}
+    _, out, _ = run_hook("scope", json.dumps(p), env=_ma_env)
+    try:
+        note = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        note = ""
+    state = json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+    return note, state
+
+
+_ma_set({"feature": "Label setup", "stage": "design"})
+_n, _s = _ma_say("Design approved: importer.  Build plan approved: Importer")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "importer"
+                  and 'Design approved: importer' in _n and "Build plan approved: Importer" in _n) else "FAIL",
+       "design loop (#307): a design and a build-plan approval in one message - the design moves the stage, "
+       "and the build plan gets its own refusal")
+if _s["stage"] != "plan":
+    print("          stage %r, feature %r, note %r" % (_s["stage"], _s.get("feature"), _n[:300]))
+
+_ma_set({"feature": "Label setup", "stage": "design", "redo": True,
+         "approvals": [{"stage": "QA failed", "name": "Importer", "at": 1}],
+         "issues": [{"repo": "o/r", "number": 7, "labelled": True}]},
+        {"o/r#7": ["Feature", "AjsAgent created this", "in progress"]})
+_n, _s = _ma_say("Design approved: Importer")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "Importer"
+                  and [i.get("number") for i in _s.get("issues", [])] == [7]) else "FAIL",
+       "design loop (#307): after \"QA failed: Importer\", \"Design approved: Importer\" is the redo even "
+       "when the stored feature name is stale - its issues are kept")
+if _s.get("issues") != [{"repo": "o/r", "number": 7, "labelled": True}]:
+    print("          feature %r, issues %r, note %r" % (_s.get("feature"), _s.get("issues"), _n[:300]))
+
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("Design approved: blockers")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "blockers"
+                  and 'Design loop: aj wrote "Design approved: blockers". The stage is now Plan.' in _n)
+       else "FAIL", "design loop (#307): a single design approval behaves as before")
+
+# --- #308: only issues made in the stage file's own repo count toward its feature ---------------
+# Replays incident 3 of #303: issues opened in another repo were recorded as this feature's issues.
+subprocess.run(["git", "-C", _ma_dir, "remote", "add", "origin", "https://github.com/me/own.git"], check=True)
+_ma_set({"feature": "Importer", "stage": "plan"})
+
+
+def _ma_issue(url):
+    p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "multi",
+         "cwd": _ma_dir, "tool_input": {"method": "create", "title": "t", "labels": ["AjsAgent created this"]},
+         "tool_response": {"url": url}}
+    out = run_hook("autosave", json.dumps(p), env=_ma_env)[1]
+    state = json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+    return out, [(i.get("repo"), i.get("number")) for i in state.get("issues", [])]
+
+
+_out, _rec = _ma_issue("https://github.com/Ajw2003/AjsClaudeCodeTools/issues/301")
+report("PASS" if (_rec == [] and "made in another repo" in _out) else "FAIL",
+       "design loop (#308): an issue made in another repo isn't recorded for this feature, and a note says so")
+if _rec:
+    print("          recorded %r, output %r" % (_rec, _out[:300]))
+_out, _rec = _ma_issue("https://github.com/me/own/issues/12")
+report("PASS" if _rec == [("me/own", 12)] else "FAIL",
+       "design loop (#308): an issue made in the stage file's own repo is recorded as before")
+
+# --- label setup: create only the missing house labels (#275) ---------------------------------
+import labels as _lb
+_lb_dir = tempfile.mkdtemp(prefix="house-rules-labels-", dir=_FIXTURE_ROOT)
+_lb_file = os.path.join(_lb_dir, "labels.json")
+_lb_repo = "owner/repo"
+_lb_house = [l[0] for l in _lb.HOUSE_LABELS]
+_lb_cases = []
+
+
+def _lb_run(initial):
+    """Run ensure_labels against the stand-in file; (result, file contents after)."""
+    if initial is not None:
+        with open(_lb_file, "w", encoding="utf-8") as f:
+            f.write(initial)
+    elif os.path.exists(_lb_file):
+        os.remove(_lb_file)
+    os.environ[_lb.REPO_LABELS_FILE_ENV] = _lb_file
+    try:
+        res = _lb.ensure_labels(_lb_repo)
+    finally:
+        del os.environ[_lb.REPO_LABELS_FILE_ENV]
+    after = open(_lb_file, encoding="utf-8").read() if os.path.exists(_lb_file) else None
+    return res, after
+
+
+_r, _a = _lb_run("{}")
+_lb_cases.append(("all three missing: all three created and written to the file",
+                  _r["created"] == _lb_house and not _r["present"] and json.loads(_a)[_lb_repo] == _lb_house))
+_r, _a = _lb_run(json.dumps({_lb_repo: ["bug", "in progress", "needs review"]}))
+_lb_cases.append(("one missing: only it is created", _r["created"] == ["AjsAgent created this"]
+                  and sorted(_r["present"]) == ["in progress", "needs review"]))
+_lb_all = json.dumps({_lb_repo: ["bug"] + _lb_house}, indent=3)
+_r, _a = _lb_run(_lb_all)
+_lb_cases.append(("all present: nothing created and the file is unchanged byte for byte",
+                  not _r["created"] and not _r["failed"] and not _r["error"] and _a == _lb_all
+                  and _lb.summary_note(_r, _lb_repo) == ""))
+_r, _a = _lb_run(json.dumps({_lb_repo: ["In Progress", "needs review", "AjsAgent created this"]}))
+_lb_cases.append(("a label in a different case counts as present, not created",
+                  not _r["created"] and "in progress" in _r["present"]))
+_r, _a = _lb_run(None)
+_lb_cases.append(("stand-in file missing: error set, nothing raised, the note names the failure",
+                  bool(_r["error"]) and not _r["created"] and _r["error"] in _lb.summary_note(_r, _lb_repo)
+                  and "could not check" in _lb.summary_note(_r, _lb_repo)))
+_lb_empty = tempfile.mkdtemp(prefix="house-rules-nogh-", dir=_FIXTURE_ROOT)
+_lb_env = {k: v for k, v in os.environ.items() if k != _lb.REPO_LABELS_FILE_ENV}
+_lb_env["PATH"] = _lb_empty
+_lb_p = subprocess.run([sys.executable, "-c",
+                        "import sys,json; sys.path.insert(0, %r); import labels; "
+                        "print(json.dumps(labels.ensure_labels('owner/repo')))" % HERE],
+                       capture_output=True, text=True, env=_lb_env)
+try:
+    _lb_gh = json.loads(_lb_p.stdout)["error"]
+except (ValueError, KeyError):
+    _lb_gh = ""
+_lb_cases.append(("no stand-in and gh not on PATH: error says gh is not installed", "gh is not installed" in _lb_gh))
+_lb_cfg = os.path.join(_lb_dir, "gitdir")
+os.makedirs(_lb_cfg, exist_ok=True)
+
+
+def _lb_repo_for(url):
+    with open(os.path.join(_lb_cfg, "config"), "w", encoding="utf-8") as f:
+        f.write('[remote "origin"]\n\turl = %s\n' % url)
+    return _lb.repo_from_git(_lb_cfg)
+
+
+_lb_cases.append(("repo_from_git reads https, ssh and cloud-proxy URLs",
+                  _lb_repo_for("https://github.com/o/r.git")[0] == "o/r"
+                  and _lb_repo_for("https://github.com/o/r")[0] == "o/r"
+                  and _lb_repo_for("git@github.com:o/r.git")[0] == "o/r"
+                  and _lb_repo_for("http://local_proxy@127.0.0.1:1234/git/o/r")[0] == "o/r"))
+_lb_nr = _lb_repo_for("https://gitlab.com/o/r.git")
+_lb_cases.append(("repo_from_git gives None and a note for a non-GitHub URL", _lb_nr[0] is None and bool(_lb_nr[1])))
+_lb_src = open(os.path.join(HERE, "labels.py"), encoding="utf-8").read()
+_lb_cases.append(("labels.py has no --force, -X DELETE, PATCH or label edit",
+                  not any(w in _lb_src for w in ("--" + "force", "-X " + "DELETE", "PA" + "TCH", "label " + "edit"))))
+
+# #277: the command's script, run as /house-rules:labels runs it.
+def _lb_cli(*args, cwd=None):
+    with open(_lb_file, "w", encoding="utf-8") as f:
+        json.dump({_lb_repo: ["bug", "needs review"]}, f)
+    p = subprocess.run([sys.executable, os.path.join(HERE, "labels.py")] + list(args), capture_output=True, text=True,
+                       cwd=cwd or _lb_dir, env=dict(os.environ, **{_lb.REPO_LABELS_FILE_ENV: _lb_file}))
+    return p.returncode, p.stdout
+
+
+_c, _o = _lb_cli(_lb_repo)
+_lb_cases.append(("labels.py owner/repo creates the two missing labels, lists the one already there, exit 0 (#277)",
+                  _c == 0 and "created         AjsAgent created this" in _o and "created         in progress" in _o
+                  and "already there   needs review" in _o))
+_c, _o = _lb_cli("not a repo")
+_lb_cases.append(("labels.py with a bad repo name exits 2 and says what a name looks like (#277)",
+                  _c == 2 and "owner/repo" in _o))
+_lb_git = os.path.join(_lb_dir, "clone")
+os.makedirs(_lb_git, exist_ok=True)
+subprocess.run(["git", "init", "-q", _lb_git], check=True)
+subprocess.run(["git", "-C", _lb_git, "remote", "add", "origin", "https://github.com/%s.git" % _lb_repo], check=True)
+_c, _o = _lb_cli(cwd=_lb_git)
+_lb_cases.append(("labels.py with no argument works on the folder's GitHub remote (#277)",
+                  _c == 0 and ("labels on %s:" % _lb_repo) in _o and "created" in _o))
+# #276: the hook creates the missing labels when they are first needed, and its note names them.
+import importlib.util as _lb_util
+_lb_hook_spec = _lb_util.spec_from_file_location("hook_for_labels", HOOK)
+_lb_hook = _lb_util.module_from_spec(_lb_hook_spec)
+_lb_hook_spec.loader.exec_module(_lb_hook)
+with open(_lb_file, "w", encoding="utf-8") as f:
+    json.dump({_lb_repo: ["bug"]}, f)
+os.environ[_lb.REPO_LABELS_FILE_ENV] = _lb_file
+try:
+    _lb_note = _lb_hook._house_labels_note(_lb_git)
+    _lb_again = _lb_hook._house_labels_note(_lb_git)
+    _lb_none = _lb_hook._house_labels_note(_lb_empty)
+finally:
+    del os.environ[_lb.REPO_LABELS_FILE_ENV]
+_lb_cases.append(("the hook's label note names the labels it created, then says nothing once they exist (#276)",
+                  "created the missing labels" in _lb_note and "`in progress`" in _lb_note and _lb_again == ""
+                  and _lb_none == ""))
+
+for _t, _ok in _lb_cases:
+    report("PASS" if _ok else "FAIL", "label setup: " + _t)
 
 # --- the clear writing check: the shared checker and where it runs (#247, #248) -----------------
 import clarity as _cw
@@ -8954,8 +9291,8 @@ _cw_cases.append(("editor: writing a page under docs/plans with no editor run ge
                   "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
 _cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
                   "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
-_cw_cases.append(("editor: a reply over 200 words with no editor run gets the reminder; a short one does not",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ".")
+_cw_cases.append(("editor: a reply of 160 words or more with no editor run gets the reminder; a short one does not",
+                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ". https://claude.ai/artifact/abc")
                   and "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, "Done.")))
 
 # A page written by a shell command never passes the Write hook (found in the real run, #250).
@@ -8969,6 +9306,35 @@ _cw_t_shell = _hand_transcript("cw-shell", [
 _cw_shell_out = _cw_editor(_cw_t_shell)
 _cw_cases.append(("page: a page written by a shell command is checked at the end of the reply, editor reminder too",
                   "the page shellpage.html" in _cw_shell_out and "no @house-rules:editor helper ran" in _cw_shell_out))
+
+# #284: in a git repository a page counts as written only when git shows it new, edited, or committed
+# since aj's message; a cloned page has a fresh file time but an old commit, so it does not count.
+import importlib.util as _pc_util
+_pc_spec = _pc_util.spec_from_file_location("hook_for_page_scan", HOOK)
+_pc_hook = _pc_util.module_from_spec(_pc_spec)
+_pc_spec.loader.exec_module(_pc_hook)
+_pc_repo = tempfile.mkdtemp(prefix="hr-pagescan-")
+os.makedirs(os.path.join(_pc_repo, "docs", "plans"))
+for _n in ("cloned.html", "edited.html"):
+    with open(os.path.join(_pc_repo, "docs", "plans", _n), "w", encoding="utf-8") as _f:
+        _f.write("<p>old</p>\n")
+_pc_genv = dict(os.environ, GIT_AUTHOR_DATE="2000-01-01T00:00:00Z", GIT_COMMITTER_DATE="2000-01-01T00:00:00Z")
+for _a in (["init", "-q"], ["add", "."], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "old pages"]):
+    subprocess.run(["git"] + _a, cwd=_pc_repo, env=_pc_genv, capture_output=True)
+_pc_stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 60))
+for _n in ("cloned.html", "edited.html"):
+    os.utime(os.path.join(_pc_repo, "docs", "plans", _n), None)  # a clone or checkout sets a fresh file time
+with open(os.path.join(_pc_repo, "docs", "plans", "edited.html"), "a", encoding="utf-8") as _f:
+    _f.write("<p>new line</p>\n")
+with open(os.path.join(_pc_repo, "docs", "plans", "new.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>new</p>\n")
+_pc_t = _hand_transcript("pagescan", [json.dumps({"type": "user", "origin": {"kind": "human"}, "timestamp": _pc_stamp,
+                                                   "message": {"content": "make the page"}})])
+_pc_pages, _pc_problem = _pc_hook._pages_changed_this_turn(_pc_t, _pc_repo)
+_pc_names = sorted(os.path.basename(p) for p in _pc_pages)
+_cw_cases.append(("page scan: a cloned page with a fresh file time is not counted; edited and new pages are (#284)",
+                  _pc_problem is None and _pc_names == ["edited.html", "new.html"]))
+shutil.rmtree(_pc_repo, True)
 
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)
@@ -9009,9 +9375,35 @@ _ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
 # 1 page rule (long reply) - editor ran, so only the page rule is in play
 _ck_long = " ".join(["Words"] * 230) + "."
 _ck_t_ed_only = _hand_transcript("ck-ed-only", _ck_user("explain", [_CW_EDITOR]))
-_ck_triple("page", "page", _ck_t_ed_only, _ck_long, _ck_long + " https://claude.ai/artifact/abc")
-_, _ck_reason, _ = _ck_run(_ck_t_ed_only, _ck_long)
-_ck_cases.append(("page: the reason gives the exact build command", "make_page.py" in _ck_reason and "build <content.json>" in _ck_reason))
+_CK_PAGE_NOTE = "page checkpoint (report only, #309)"
+_ck_b, _ck_reason, _ck_o = _ck_run(_ck_t_ed_only, _ck_long)
+_ck_cases.append(("page (#309): a long reply with no page is not blocked, and the report names the page rule",
+                  not _ck_b and _CK_PAGE_NOTE in _ck_o))
+_ck_cases.append(("page: the report gives the exact build command", "make_page.py" in _ck_o and "build <content.json>" in _ck_o))
+_ck_cases.append(("page: the report never offers \"no page\" to the agent (#283)",
+                  "no page" not in _ck_o[_ck_o.find(_CK_PAGE_NOTE):][:400].lower()))
+# #310: replays the 2026-10-16 dodge - a 165-word reply was flagged, then a 70-word retry cleared it.
+_ck_165 = " ".join(["Words"] * 165) + "."
+_ck_70 = " ".join(["Short"] * 70) + "."
+_ck_t_dodge = _hand_transcript("ck-dodge", _ck_user("explain the dodge", [_CW_EDITOR]))
+_ck_run(_ck_t_dodge, _ck_165)
+_ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)
+_ck_cases.append(("page (#310): a 70-word retry after a flagged 165-word reply to the same message still gets the report",
+                  not _ck_b and _CK_PAGE_NOTE in _ck_o and "none is linked yet (#310)" in _ck_o))
+_ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70 + " https://claude.ai/artifact/abc", active=True)
+_ck_cases.append(("page (#310): a reply that links a page clears what was owed", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
+_ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)
+_ck_cases.append(("page (#310): after the link, a short reply to the same message gets no report", _CK_PAGE_NOTE not in _ck_o))
+_ck_run(_ck_t_dodge, _ck_165)
+_ck_b, _, _ck_o = _ck_run(_hand_transcript("ck-dodge-next", _ck_user("a new question", [_CW_EDITOR])), _ck_70)
+_ck_cases.append(("page (#310): a new message from aj starts with nothing owed", _CK_PAGE_NOTE not in _ck_o))
+_ck_t_nopage = _hand_transcript("ck-nopage", _ck_user("explain it, no page", [_CW_EDITOR]))
+_ck_b1, _, _ck_o1 = _ck_run(_ck_t_nopage, _ck_long)
+_ck_b2, _, _ck_o2 = _ck_run(_ck_t_nopage, _ck_long, active=True)
+_ck_cases.append(("page: aj's own \"no page\" means no report, first pass and retry",
+                  not _ck_b1 and not _ck_b2 and _CK_PAGE_NOTE not in _ck_o1 + _ck_o2))
+_ck_b, _, _ck_o = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc")
+_ck_cases.append(("page: a compliant reply passes with no report", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
 # 2 editor
 _ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
 # 3 evidence
@@ -9038,10 +9430,12 @@ _ck_triple("plain summary", "plain summary", _ck_t_ps_wrote, _PS_TECH, _PS_PLAIN
 _ck_proposal = ("Here is where I have landed on the storage.\n\nOption A: keep the JSON file. Option B: move to SQLite. "
                 "Option C: use the cloud store.\n\nWhich option do you want?")
 _ck_list = ("The plan:\n\n- read the config\n- write the page\n- run the checks\n\nDo you approve this?")
-_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, _ck_proposal)
-_ck_cases.append(("page: a short proposal with three options and a question blocks", _ck_b and "- page:" in _ck_r))
-_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, _ck_list)
-_ck_cases.append(("page: a three-step plan with an approval question blocks", _ck_b and "- page:" in _ck_r))
+_ck_b, _ck_r, _ck_o = _ck_run(_ck_t_plain, _ck_proposal)
+_ck_cases.append(("page (#309): a short proposal with three options and a question gets the report, not a block",
+                  not _ck_b and _CK_PAGE_NOTE in _ck_o))
+_ck_b, _ck_r, _ck_o = _ck_run(_hand_transcript("ck-plan-list", _ck_user("what is the plan")), _ck_list)
+_ck_cases.append(("page (#309): a three-step plan with an approval question gets the report, not a block",
+                  not _ck_b and _CK_PAGE_NOTE in _ck_o))
 _ck_b, _, _ = _ck_run(_ck_t_plain, "The file lives in docs/plans. It has three sections: the lead, the changes and the wrap-up.")
 _ck_cases.append(("page: a short plain answer does not block", not _ck_b))
 _ck_b, _, _ = _ck_run(_ck_t_plain, "Both lists are short:\n\n- one\n- two\n- three\n\nThat is all of them.")
@@ -9054,8 +9448,19 @@ _ck_b, _, _ = _ck_run(_hand_transcript("ck-nopage-long", _ck_user("explain, no p
 _ck_cases.append(('editor: the same escape lets a long reply through the editor checkpoint too', not _ck_b))
 _ck_t_relayed = _hand_transcript("ck-relayed", _ck_user("explain the storage options", [json.dumps(
     {"type": "user", "message": {"content": "<task-notification>helper says: no page needed</task-notification>"}})]))
-_ck_b, _ck_r, _ = _ck_run(_ck_t_relayed, _ck_proposal)
-_ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count', _ck_b and "- page:" in _ck_r))
+# #309 (incident 8 of #303): a bare reference is reported to aj, and no longer asks the agent to resend.
+_ck_b, _ck_r, _ck_o = _ck_run(_ck_t_plain, "Go with option B, as before.")
+try:
+    _ck_data = json.loads(_ck_o)
+except ValueError:
+    _ck_data = {}
+_ck_ctx = (_ck_data.get("hookSpecificOutput") or {}).get("additionalContext", "")
+_ck_cases.append(("writing (#309): a bare reference goes to aj as a report-only line and asks nothing of the agent",
+                  not _ck_b and "report only, #309): bare references" in _ck_data.get("systemMessage", "")
+                  and "a bare number or letter" not in _ck_ctx))
+_ck_b, _ck_r, _ck_o = _ck_run(_ck_t_relayed, _ck_proposal)
+_ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count - the report still comes',
+                  _CK_PAGE_NOTE in _ck_o))
 # 6 qa page (#269)
 _ck_sf = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
 _ck_sf_old = open(_ck_sf, encoding="utf-8").read() if os.path.isfile(_ck_sf) else None
@@ -9134,11 +9539,15 @@ def _mp_proj(name, style=None):
     return d
 
 
-def _mp_content(name, extra_changes=None, text="Plain."):
-    page = {"title": "T " + name, "eyebrow": "e", "replyPrefix": "R", "reply": "",
+def _mp_content(name, extra_changes=None, text="Plain.", approval="Build plan approved: demo thing", choices=None):
+    page = {"title": "T " + name, "eyebrow": "e", "approval": approval,
             "short": {"lead": text, "hint": "h", "key": [["We", ""]], "items": [["bulb", "Idea", "The idea", "", "c", "r"]]},
             "changes": [["new", "A thing", "One line.", None, "Detail.", None, None]] + (extra_changes or []),
             "wrapup": {"summary": "s", "changing": "c", "blocking": "b", "next": "n", "todo": ["t"]}}
+    if approval is None:
+        del page["approval"]
+    if choices is not None:
+        page["choices"] = choices
     path = os.path.join(_mp_tmp, name + ".page.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(page, f)
@@ -9317,8 +9726,8 @@ _mp_cases.append(("make_page: QA mode marks an unplanned file 'Not in the plan' 
                   _rows.get("extra.py", [0] * 4)[3] == [["Not in the plan", 0, 0]]
                   and _rows.get("untouched.py", [0] * 4)[3] == [["Planned but not changed: tidy", 3, 1]]
                   and _rows.get("planned.py", [0] * 4)[3] == [["Plan estimate: grow", 5, 0]]))
-_mp_cases.append(("make_page: QA mode sets replyPrefix, empties reply and adds the Still unverified item",
-                  _pg["replyPrefix"] == "QA passed: demo feature" and _pg["reply"] == ""
+_mp_cases.append(("make_page: QA mode sets approval to the QA passed phrase and adds the Still unverified item",
+                  _pg.get("approval") == "QA passed: demo feature" and "replyPrefix" not in _pg
                   and any(c[0] == "keep" and c[1] == "Still unverified" and c[2] == "1 things not yet proven" for c in _pg["changes"])))
 _rc, _o = _mp("build", _mp_qa_content("qa2", dict(_qa, unverified=[])), "--project", _d)
 _mp_cases.append(("make_page: QA mode with an empty unverified list is refused with exit 2",
@@ -9332,6 +9741,80 @@ with open(_stage, encoding="utf-8") as _f:
 _mp_cases.append(("make_page: QA mode writes qa_page into an existing stage file and keeps its other keys",
                   _rc == 0 and _sd == {"feature": "demo", "stage": "Build", "qa_page": "docs/plans/qa3.html"}))
 
+# The copy box must hold the exact phrase the design-loop gate accepts (#286).
+_hk_spec = _ig_util.spec_from_file_location("hook_for_approval", HOOK)
+_hk = _ig_util.module_from_spec(_hk_spec)
+_hk_spec.loader.exec_module(_hk)
+_gate = lambda t: bool(_hk._LOOP_DESIGN_RE.search(t) or _hk._LOOP_PLAN_RE.search(t))
+_d = _mp_proj("appr", {"use": "defaults"})
+_rc, _o = _mp("build", _mp_content("noappr", approval=None), "--project", _d)
+_mp_cases.append(("make_page: a non-QA page with no approval field is refused with exit 2 naming approval",
+                  _rc == 2 and "approval" in _o))
+_rc, _o = _mp("build", _mp_content("badappr", approval="Guards audit"), "--project", _d)
+_mp_cases.append(("make_page (#309): an approval that isn't a design-loop phrase builds, with a note that it moves no stage",
+                  _rc == 0 and "moves no stage" in _o))
+_ch = [["c1", "Which?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""]]
+_ph = "Build plan approved: guards <audit> & more"
+_rc1, _ = _mp("build", _mp_content("withch", approval=_ph, choices=_ch), "--project", _d)
+_rc2, _ = _mp("build", _mp_content("noch", approval=_ph, choices=[]), "--project", _d)
+_pw = {n: _mp_page_of(os.path.join(_d, "docs", "plans", n + ".html")) for n in ("withch", "noch")} if _rc1 == _rc2 == 0 else {}
+_mp_cases.append(("make_page: the last to-do line carries the approval phrase, HTML-escaped",
+                  bool(_pw) and all(pg["wrapup"]["todo"][-1] == 'Tap <b>Copy my reply</b> and send it: "Build plan approved: guards &lt;audit&gt; &amp; more", or say what to change.'
+                                    for pg in _pw.values())))
+_NODE = shutil.which("node") or "/opt/node22/bin/node"
+_PWMOD = "/opt/node22/lib/node_modules"
+_JS = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const out={};
+for(const f of process.argv.slice(2)){const p=await b.newPage();await p.goto('file://'+f);
+await p.evaluate(()=>{for(const n of new Set([...document.querySelectorAll('input[type=radio]')].map(r=>r.name))){const r=document.querySelector('input[name='+n+']');r.checked=true;r.dispatchEvent(new Event('input',{bubbles:true}));r.dispatchEvent(new Event('change',{bubbles:true}));}});
+out[f]=await p.evaluate(()=>document.getElementById('out').textContent);}
+console.log(JSON.stringify(out));await b.close();})();""")
+if not (_pw and os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, "playwright"))):
+    report("SKIP", "make_page: the copied text of a built page matches the gate (no node or node playwright here)")
+else:
+    _jsf = os.path.join(_mp_tmp, "copy.js")
+    with open(_jsf, "w", encoding="utf-8") as _f:
+        _f.write(_JS)
+    _pgs = [os.path.join(_d, "docs", "plans", n + ".html") for n in ("withch", "noch")]
+    _r = subprocess.run([_NODE, _jsf] + _pgs, capture_output=True, text=True, timeout=180,
+                        env=dict(os.environ, NODE_PATH=_PWMOD, PLAYWRIGHT_BROWSERS_PATH=os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")))
+    try:
+        _cp = json.loads(_r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        _cp = None
+    if _cp is None:
+        report("SKIP", "make_page: the copied text of a built page matches the gate (browser did not run: %s)" % (_r.stderr.strip()[-200:] or "no output"))
+    else:
+        _w, _n = _cp[_pgs[0]], _cp[_pgs[1]]
+        _mp_cases.append(("make_page: the copied text, with choices (approval then picks) and without (approval alone), matches the gate",
+                          _w == _ph + " 1A" and _n == _ph and _gate(_w) and _gate(_n)))
+
+# a 40-character unbroken word in card text must not clip on a phone (#288); the old 1fr CSS must be caught
+_LONGW = "HOUSE_RULES_AGENT_NAME_WITH_A_VERY_LONG_TAIL_X"
+_lw = _mp_content("longword")
+with open(_lw, encoding="utf-8") as _f:
+    _lwp = json.load(_f)
+_lwp["short"]["items"] = [["bulb", "Your name", "The idea", "", _LONGW, _LONGW]]
+_lwp["changes"] = [["new", "A thing", "One line.", ["old " + _LONGW, _LONGW], "Detail " + _LONGW, None, None]]
+with open(_lw, "w", encoding="utf-8") as _f:
+    json.dump(_lwp, _f)
+_d = _mp_proj("longword")
+_mp("style", "--quick", "--project", _d)
+_rc, _o = _mp("build", _lw, "--project", _d)
+if "visual check did not run" in _o or "visual check" not in _o:
+    report("SKIP", "make_page: a 40-character unbroken word does not clip a card (no usable Chromium/playwright: %s)" % _o.strip()[-200:])
+else:
+    _mp_cases.append(("make_page: a 40-character unbroken word in card text builds with no clipped card",
+                      _rc == 0 and "clipped card" not in _o and "overflow none" in _o))
+    _hp = os.path.join(_d, "docs", "plans", "longword.html")
+    _old = re.sub(r"@media \(max-width:479px\)[^\n]*\n", "", open(_hp, encoding="utf-8").read()
+                  .replace("minmax(0,1fr)", "1fr").replace("overflow-wrap:anywhere", "overflow-wrap:normal"))
+    _hp2 = os.path.join(_d, "docs", "plans", "oldcss.html")
+    with open(_hp2, "w", encoding="utf-8") as _f:
+        _f.write(_old)
+    _r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, %r); import make_page; make_page.visual_check(sys.argv[1], {})" % HERE, _hp2],
+                        capture_output=True, text=True, timeout=300)
+    _mp_cases.append(("make_page: the same page with the old 1fr CSS is reported as a clipped card and fails the check",
+                      'clipped card' in _r.stdout and _r.returncode == 2))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
@@ -9425,7 +9908,25 @@ _nb_old = os.path.join(_nb_r, "a.py")
 _, _o, _ = run_hook("guardwrite", guardwrite_payload(_nb_new), env=_project_env(_nb_r))
 _nb_cases.append(("Write over an untracked file made in the project goes through with no prompt", _o == ""))
 _, _o, _ = run_hook("guardwrite", guardwrite_payload(_nb_old), env=_project_env(_nb_r))
-_nb_cases.append(("Write over a tracked file still asks", '"permissionDecision":"ask"' in _o))
+_nb_cases.append(("Write over a tracked file is refused, naming the in-place fix (#293)",
+                  '"permissionDecision":"deny"' in _o and "edit it in place" in _o))
+# #293: each enforced workflow check refuses and names its exact fix (the page, credit-line and
+# helper-cap texts are checked where those checks are tested).
+_e293 = dict(os.environ, HOUSE_RULES_ATTRIBUTION="on", HOUSE_RULES_ISSUES="on", HOUSE_RULES_CLEAR_WRITING="on",
+             HOUSE_RULES_AGENTS="on")
+_, _o, _ = run_hook("guardgithub", json.dumps({"session_id": "v293", "tool_name": "mcp__github__create_branch",
+                                                "tool_input": {"branch": "claude/topic"}}), env=_e293)
+_nb_cases.append(("enforced: a claude/ branch on GitHub is refused, naming AjsAgent/<topic> (#293)",
+                  '"permissionDecision":"deny"' in _o and "AjsAgent/<topic>" in _o))
+_, _o, _ = run_hook("guardgithub", json.dumps({"session_id": "v293", "tool_name": "mcp__github__issue_write",
+                                                "tool_input": {"method": "create", "title": "t", "body": "Just a body."}}),
+                    env=_e293)
+_nb_cases.append(("enforced: an issue missing its sections is refused, naming each missing section (#293)",
+                  '"permissionDecision":"deny"' in _o and "Depends on" in _o and "Done when" in _o and "Add them" in _o))
+_, _o, _ = run_hook("agentcap", json.dumps({"session_id": "v293", "agent_id": "sub1", "tool_name": "Agent",
+                                             "tool_input": {"prompt": "x"}}), env=_e293)
+_nb_cases.append(("enforced: a helper starting its own helper is refused, naming the fix: report back (#293)",
+                  '"permissionDecision":"deny"' in _o and "Report back to the parent" in _o))
 _nb_pg = os.path.join(_nb_r, "built.html")
 with open(_nb_pg, "w", encoding="utf-8") as f:
     f.write("<!doctype html>\n<!-- house-rules make_page 9.9.9 -->\n<html></html>\n")

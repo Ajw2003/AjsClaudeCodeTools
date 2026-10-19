@@ -1,7 +1,7 @@
 {
   "title": "Automatic Pages Build Plan",
   "eyebrow": "Build plan for approval · the automatic-pages issue in AjsClaudeCodeTools · nothing built yet",
-  "replyPrefix": "Automatic pages build plan",
+  "approval": "Build plan approved: automatic pages",
   "short": {
     "lead": "I will make three small fixes one at a time, using builder helpers, then open one pull request for you to test. The design is what you approved on the issue page; this page adds how each fix works and one safety choice.",
     "hint": "Tap a step for what it changes and how it is checked.",
@@ -37,6 +37,6 @@
     "changing": "hook.py, verify.py, the show-don't-tell and clear-writing rule files, the editor helper's description, and three system docs.",
     "blocking": "Your approval of this plan and your answer on the safety limit.",
     "next": "Builder helpers make the three fixes one at a time, then I open one pull request for you to test.",
-    "todo": ["Pick your answer in the Choices section.", "Tap <b>Copy my reply</b>.", "Send it with \"Build plan approved: automatic pages\", or say what to change."]
+    "todo": ["Pick your answer in the Choices section.", "Tap <b>Copy my reply</b>.", "Tap <b>Copy my reply</b> and send it: \"Build plan approved: automatic pages\", or say what to change."]
   }
 }

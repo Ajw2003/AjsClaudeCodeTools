@@ -1,8 +1,7 @@
 {
   "title": "Enforced QA Stage",
   "eyebrow": "Design for approval, issue #264 (Enforce the QA stage) · nothing built yet",
-  "replyPrefix": "Design approved: enforced QA stage",
-  "reply": "",
+  "approval": "Design approved: enforced QA stage",
   "short": {
     "lead": "The QA stage already exists, but nothing makes me show you the build. When I opened pull request #263 (Handover pages and checkpoints), I swapped every issue to needs review without making a QA page, so you had to ask me for one. This design makes the QA page a checkpoint, and the page builder counts each file's added and removed lines from git so the numbers are never guessed. It also fixes two problems found during that QA: an edit that got through while QA was open, and a duplicated reply.",
     "hint": "Tap a step to see what it creates and what it needs from you.",
@@ -50,7 +49,7 @@
     "next": "A build plan page with one issue for each step, starting with the reproduction of the code-lock failure. Two things are unverified so far. First, why the edit went through during QA. Second, whether the stage file survives a cloud container being replaced, because if it doesn't, the feature would lose its stage in the middle of QA.",
     "todo": [
       "Pick your answers under Choices.",
-      "Tap <b>Copy my reply</b> and send it (sending it approves the design), or tell me what to change."
+      "Tap <b>Copy my reply</b> and send it: \"Design approved: enforced QA stage\", or say what to change."
     ]
   }
 }

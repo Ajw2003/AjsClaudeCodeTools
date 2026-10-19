@@ -1,8 +1,7 @@
 {
   "title": "PlunderSpell Test Method",
   "eyebrow": "Choice for the last build step · built with the page builder",
-  "replyPrefix": "Test method",
-  "reply": "",
+  "approval": "Design approved: plunderspell test method",
   "short": {
     "lead": "The last build step has a fresh PlunderSpell session rebuild the Wick and Ophan page using only the new tools built in this feature. You chose to run it before merging, from this branch. A brand-new cloud session can't do that, though: it installs house-rules from main when it starts, and a plugin installed partway through a session only loads in the next one. This page asks how you want the test run instead.",
     "hint": "Tap a step to see what it creates and what it needs from you.",
@@ -28,6 +27,6 @@
     "changing": "Only the order of the last steps: guard fixes, then the pull request and merge, then the test, if you pick B.",
     "blocking": "Your pick of the method.",
     "next": "If you pick B, I send the guard audit page next. If you pick A, I start the session in this sandbox.",
-    "todo": ["Pick a method under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+    "todo": ["Pick a method under Choices.", "Tap <b>Copy my reply</b> and send it: \"Design approved: plunderspell test method\", or say what to change."]
   }
 }

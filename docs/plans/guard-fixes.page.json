@@ -1,8 +1,7 @@
 {
   "title": "Guard Fixes",
   "eyebrow": "Proposal before the pull request · part of handover pages and checkpoints",
-  "replyPrefix": "Guard fixes answers",
-  "reply": "",
+  "approval": "Design approved: guard fixes",
   "short": {
     "lead": "Nine times today a guard stopped work you had already signed off, and four of those stalled the build until you came back. The audit (docs/guard-friction-audit-2026-10-15.md) traces them to four causes. The guard can't follow a folder set in a variable, or a cd followed by a semicolon. A refusal it can't ask about says \"do not retry\" even when a plainly written retry would pass. Deleting in the session's own scratch folder counts as destructive. And a helper working in its own worktree (a separate checkout of the repo) sees the wrong design-loop stage. This page fixes each cause, and tests every one of today's nine refusals so none can come back.",
     "hint": "Tap a step to see what it creates and what it needs from you.",
@@ -38,6 +37,6 @@
     "changing": "The guard's folder following, its refusal text, the wait-pipe and delete rules, where the design loop keeps its stage, and a code lock on script writes.",
     "blocking": "Your answers to the four choices.",
     "next": "I add these as sub-issues under the handover pages build, build them, then open the pull request for you to test.",
-    "todo": ["Pick your answers under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+    "todo": ["Pick your answers under Choices.", "Tap <b>Copy my reply</b> and send it: \"Design approved: guard fixes\", or say what to change."]
   }
 }

@@ -160,6 +160,228 @@ file outside the folder also opened as a blank snapshot.
 
 **Status.** Standing.
 
+## 2026-10-18 - Grilling round 2: aj's answers
+
+**Context.** Round 2 of the #306 grilling session asked the 13 questions opened by round 1. Page:
+`docs/plans/2026-10-18-grilling-round-2.html`.
+
+**Decision.** aj's reply was "Grilling round 2 answers: 1A 2A 3A 4A 5A 6A 7A 8A 9A 10A 11A 12* 13B".
+1. The agent's name is the GitHub login, lowercased, plus "sAgent": "ajw2003sAgent" for aj.
+2. The agent's name is the commit author's name, with the user's own email, and appears in the credit
+   line.
+3. The credit line reads "Committed by ajw2003sAgent" on commits and "Opened by ajw2003sAgent" on pull
+   requests and issues.
+4. Agent branches are named `ajw2003sAgent/<topic>`.
+5. A branch is the agent's own when its name starts with the agent prefix or with an extra prefix listed
+   in the settings.
+6. `AjsAgent/` and `claude/` go into aj's settings as extra agent prefixes; nothing is renamed.
+7. A snapshot branch is deleted once its helper's work is merged.
+8. A feature finds its parent feature through GitHub's sub-issue link.
+9. On someone else's branch the archivist opens an issue instead of moving a comment.
+10. In a repo aj doesn't own, the six-tier docs stay local and out of git unless the owner asks.
+11. A wholesale rewrite is replacing more than half of a file's lines in one change, or writing the whole
+    file over; it needs aj's approval by name.
+12. (aj's own answer) A check is never skipped by the agent. When a check meets the bar (over 10
+    minutes, costs money, or needs a machine or account the agent can't reach), the agent names it and
+    asks aj plainly whether to skip it. Skipping a test or hiding a failure is always the user's
+    override, never the norm, because a failing or slow test can reveal architecture that needs to
+    change.
+13. Every setting blocks until it is set; none runs on an assumed default.
+
+**Status.** Standing. Answers 1 and 13 meet: how a derived name and "blocks until set" work together is
+asked in round 3.
+
+## 2026-10-18 - Grilling round 1: aj's answers
+
+**Context.** The #306 grilling session settles the 28 rule contradictions and the open questions from
+the 2026-10-16 audit (`docs/audits/2026-10-16-plugin-audit/01-rules-vs-rules.md`). Round 1 page:
+`docs/plans/2026-10-18-grilling-round-1.html`, 17 questions.
+
+**Decision.** aj's reply was "Grilling round 1 answers: 1* 2A 3A 4A 5A 6A 7A 8A 9A 10A 11A 12A 13A 14A
+15A 16* 17A".
+1. Deletes (aj's own answer): deleting a file git can bring back is always allowed on a branch the agent
+   owns. On someone else's branch it is refused, and the refusal says plainly why.
+2. Risky git commands are refused with the safe way named; aj is asked only when no safe way exists.
+3. Test suites run twice everywhere, helpers included.
+4. A helper with a question only aj can answer stops and reports it to the parent session, which asks.
+5. A helper's report always quotes the real RESULT line and every failure line; no line cap.
+6. An obvious bug outside the request is not fixed unasked: it becomes an issue, named in the reply.
+7. Pages are built locally for every plan and long reply; publishing to claude.ai happens only when
+   asked.
+8. Every feature that reaches a build plan gets GitHub issues.
+9. A feature that is one step of a bigger one passes QA on its own; the parent issue tracks its
+   children and closes with the last one.
+10. An approval is accepted before its decisions-log entry exists; the entry is required before the
+    next stage (#327).
+11. The design loop keeps its pull-request and label stage moves, written down as rules; an edit
+    attempt never moves a stage.
+12. Worktree autosave uses the same credit rule as every commit and pushes without force, to a fresh
+    snapshot branch name each time.
+13. The worktree sweep commits a finished helper's leftovers only in that helper's own worktree, as a
+    stated exception to "never sweep unrelated files".
+14. The archivist moves a long code comment into the docs at turn end and leaves a doc-ref pointer.
+15. Unity batch mode checks a compile only when no Unity CLI or editor plugin can.
+16. (aj's own answer) Identity and taste become settings (agent name, credit line, branch prefix,
+    labels, voice, page threshold); safety and evidence rules stay blocks. Each setting carries a
+    default or blocks until it is set. "Claude" must never be the default credit, and neither may aj's
+    name on another person's work: the agent commits under the user's own name with "sAgent" added,
+    which for aj is "ajw2003sAgent".
+17. The sixteen mechanical fixes are accepted as listed on the page.
+
+**Status.** Standing. Round 2 asks what these answers leave open.
+
+## 2026-10-18 - Tree-sitter trial: aj's answers
+
+**Context.** The trial in `docs/trials/2026-10-18-tree-sitter/` ran tree-sitter-language-pack 1.22.1 on
+PlunderSpell's 544 C# scripts, this repo and focus-deck-app. All three took 1.0 s; 66 of 66
+hand-counted definitions were found, and every hand-counted reference after two query fixes. Two
+limits were put to aj on `docs/plans/2026-10-18-tree-sitter-trial.html`: in PlunderSpell 25% of
+references match more than one definition by name, and the package downloads its grammars (12 MB on
+Windows) on first use from an address it does not print.
+
+**Decision.** aj's reply was "Tree-sitter trial answers: 1B 2A".
+- Names (1B): C# gets a second pass with Roslyn, the C# compiler, to resolve which definition a
+  reference reaches. This brings back the dotnet runtime for C# projects; the refresh time is not
+  measured yet and gets measured before the build.
+- Grammars (2A): the install step downloads the six grammars up front, says so, and fails loudly if
+  the download fails. Finding the download address and testing an offline machine come first.
+
+Rejected: marking ambiguous lines without resolving them, and shipping the grammar files inside the
+plugin.
+
+**Status.** Standing. Settled with the rest of #306 in the grilling session.
+
+## 2026-10-18 - Docs map and freshness: aj's answers
+
+**Context.** The follow-up page `docs/plans/2026-10-18-docs-map-and-freshness.html` asked which parser
+builds the code map and how the commit gate treats a hand-written section whose code changed (entry
+below for the first proposal).
+
+**Decision.** aj's reply was "Docs map and freshness answers: 1A 2A".
+- Parser (1A): tree-sitter, through the tree-sitter-language-pack Python package, for Python, JS, TS,
+  HTML, CSS and C#. One code path in Python. It starts with a trial on this repo and one Unity project,
+  counting the functions found against a hand count of three files per language.
+- Freshness (2A): generated facts (covers, depends-on, depended-on-by) are rewritten at the end of
+  every turn by a hook that never blocks; a hand-written section whose code changed gets a stale stamp;
+  the guard refuses a commit with code changes while a doc covering that code is stamped and not in the
+  same commit. Known weakness: touching a section clears its stamp without a real update; the reviewer
+  helper and aj's QA catch that, not a check.
+- Unity prefabs and scenes stay out of this revision; aj wants them tracked later by another route,
+  issue #334 (map Unity prefabs and scenes in a later revision).
+
+Rejected: each language's own compiler (three runtimes), pattern matching for C# and web files (guessed
+call edges), docs holding only generated facts, and a gate that lets stale prose into history.
+
+**Status.** Standing. Settled with the rest of #306 in the grilling session, then built in the Docs part.
+
+## 2026-10-18 - Docs context layer: aj's answers on the first proposal
+
+**Context.** The restructure (#306, restructure into a shared core with project boundaries and six
+optional sub-plugins) has stopped after the 2.68.1 patch: QA passed, the grilling session on the 28
+rule contradictions has not started, and no build sub-issues exist. aj asked to fold the job of
+trailhq/Trail-Code (a code map plus saved decisions, so a session reads a map instead of searching
+code) into the docs. Proposal page: `docs/plans/2026-10-18-docs-context-layer.html`.
+
+**Decision.** aj's reply was "Docs context layer answers: 1* 2* 3A".
+- When (3A): the docs context layer joins #306. It is settled in the grilling session and built
+  inside the Docs part, which becomes installed by default.
+- Code map (1, aj's own answer): build our own map, not Trail-Code's. It must map Python, web
+  projects and C#, because those are what aj builds; no use case allows dropping one.
+- Keeping docs current (2, aj's own answer): investigate an alternative to "the end-of-reply check
+  names each doc owed an update". Docs are a source of truth, so they cannot be optional and cannot
+  fall behind, and the mechanism that keeps them current must never loop.
+
+Rejected: installing Trail-Code, whole or map-only, and a Python-only map.
+
+**Status.** Standing. Follow-up page for choices 1 and 2: `docs/plans/2026-10-18-docs-map-and-freshness.html`.
+
+## 2026-10-16 - QA passed: plugin restructure 2.68.1 patch
+
+**Context.** The 2.68.1 patch (#307 to #311) was built on `ccr-7dcf4ee2-zp3mm8`, pull request #312 (house-rules
+2.68.1: unblock the design loop before the restructure), QA page `docs/plans/2026-10-16-patch-2-68-1-qa.html`.
+`verify.py` passed 839 checks twice, and two nested sessions with the patched plugin confirmed the double approval
+and the page report.
+
+**Decision.** aj passed QA ("QA passed: plugin restructure 2.68.1 patch"). The design loop refused to record it,
+because the parent issue #306 (restructure into a shared core with project boundaries and six optional
+sub-plugins) is rightly still `in progress`: the loop can't pass QA on one step of a larger feature. The patch
+issues keep `needs review` until aj closes them, and #306 is not relabelled to force the stage. How the loop
+should track a multi-step feature is added to the grilling session's list.
+
+**Status.** Standing.
+
+## 2026-10-16 - Plugin restructure: the build plan for the 2.68.1 patch
+
+**Context.** aj approved the restructure direction (entry below). The systems document is
+`docs/4-systems/plugin-restructure.md`. The parent issue is #306 (restructure into a shared core with
+project boundaries and six optional sub-plugins).
+
+**Decision.** The patch is built first, on an `AjsAgent/` branch, one `@house-rules:builder` helper at a
+time in a worktree, with `verify.py` run after each step. Each step reproduces its incident in `verify.py`
+before the fix. The order is:
+1. #307 (the design loop reads every approval in a message, and a design approval sets the feature name).
+2. #308 (the design loop records only issues created in its own repo).
+3. #309 (four checks report instead of blocking, and the page builder accepts any approval line).
+4. #310 (a blocked page stays owed across retries), after #309 because both change the page checkpoint.
+5. #311 (release the patch with its version, docs and QA page).
+
+One pull request into `main` says `Refs #303` and `Refs #306`. The `verify.py` baseline before the build is
+"RESULT: PASS - all 832 checks passed" (run on 2026-10-16). The grilling session on the 28 rule
+contradictions starts after the patch is merged, and the restructure's own steps become sub-issues of #306
+after it.
+
+**Status.** Standing.
+
+## 2026-10-16 - Design approved: plugin restructure direction
+
+**Context.** A full audit of house-rules 2.68.0, asked for before restructuring the plugin so it
+works for anyone, not only aj's accounts. The findings are in `docs/audits/2026-10-16-plugin-audit/`
+(files 1 to 6, each finding cited with `file:line` on both sides), summarised in its `README.md`. The
+page aj approved is `docs/plans/2026-10-16-plugin-audit.html`, built from
+`docs/plans/2026-10-16-plugin-audit-revised.page.json`. It was revised for ten recent issues:
+#287 (Agent name, credit and branch prefix are configurable, not hard-coded to AJ), #296 (Design-loop
+approvals are dropped silently when the session folder isn't a git repo), #297 to #300 (After every pull
+request, a check makes sure it says how to test it and what's next), #301 (a session finishes its own
+task; other work becomes an issue in its own repo), #302 (proposal pages need before-and-after visuals
+for any visible change), #303 (the design loop is broken and blocks sessions; switch off the conflicting
+checks now) and #304 (a two-helper tool that cleans a session transcript, then files issues from it).
+
+**Decision.** aj approved the direction with three picks ("1A 2A 3A"):
+1. **Core identity: safe multi-project work.** aj's own goal, from #304: safe work on several projects
+   at once, each session in its own context, observations about other projects captured as issues in
+   those projects, and transcripts usable as evidence without leaking secrets. The default install is
+   a shared core with project boundaries, plus the Safe git and Session triage sub-plugins. Design loop,
+   Writing, Delegation and Docs are optional sub-plugins on the same core.
+2. **A 2.68.1 patch ships first, scoped to #303.** It fixes the two approval bugs (every approval phrase
+   in a message is read; a design approval always sets the feature name) and records only issues created
+   in the repo that owns the stage file. Four checks switch to report-only: the shell-write refusal while
+   code is locked, the re-creation (parity) check, the page checkpoint, and the bare-reference writing
+   check. The page builder accepts any approval line. The page-dodge fix (a shorter retry must not clear
+   the page checkpoint) rides in the same patch.
+3. **The after-pull-request checks (#297) are built inside the Design loop sub-plugin** during the
+   restructure, not on today's `hook.py`. Their agent-name step uses `userConfig`, not an environment
+   variable set by aj's setup scripts.
+
+The restructure also: moves identity into Claude Code's `userConfig` (defaulting to the git name, per
+#287); replaces the self-updater with marketplace `autoUpdate` and `/reload-plugins`; keeps plugin-wide
+state in `CLAUDE_PLUGIN_DATA`; replaces the issue workflow with #301's five-field template; replaces
+`verify.py` with module tests plus a few end-to-end runs per hook event; and loads each rule from one
+source file. The 28 rule contradictions are settled one by one in a grilling session before the
+restructure is built.
+
+**Alternatives rejected.** Guardrails only as the core identity (it leaves out the project boundaries
+#301, #296 and #303 ask for); one plugin split into internal modules (users still install all or
+nothing); switching the whole design loop off until the restructure (projects mid-feature lose their
+gate); fixing all eight #303 incidents properly now (the restructure rewrites the same code); building
+#297 now (built twice).
+
+**Supersedes.** The unapproved build plan `docs/plans/2026-10-16-version-notice-and-page-dodge-plan.html`
+(an account-wide git-ref marker for re-injecting rules after an update). It is dropped: another person's
+install has no shared place for the marker, and `/reload-plugins` covers each session. Its page-dodge
+half moves into the 2.68.1 patch.
+
+**Status.** Standing.
+
 ## 2026-10-15 - Guards audit: the build plan
 
 **Context.** aj approved the design ("Design approved: guards audit"). The systems document is
@@ -209,6 +431,71 @@ for data loss with no way back, or for a change to someone else's work.
 - **Kept:** the design-loop lock stays blocking (aj's pick, 15 October, 15:04).
 
 **Status.** Standing.
+
+---
+
+## 2026-10-15 - Build plan approved: Label setup
+
+**Context.** Build plan `docs/plans/label-setup-build-plan.html`, five sub-issues of #274 (The plugin
+creates the house labels a repo is missing), #275 to #279. aj replied "Build plan approved: Label setup
+build plan", with no answers to the page's four choices.
+
+**Decision.** With no answers given, the page's marked suggestions stand for the three choices that
+change nothing outside this repo:
+- **1A, where the code lives:** a new `scripts/labels.py`, shared by the hook and the command.
+- **2A, when the hook creates labels:** at all three moments: design approved, the issue note, and
+  before a label refusal.
+- **3A, the label record:** `_label_changes` also records the REST forms.
+
+Choice 4 (creating a private scratch repo, `Ajw2003/label-setup-scratch`, for the real "no labels
+yet" run) creates something on aj's account, so it waits for aj's own answer before #279 (Prove it on
+a real repo, bump the version and update the docs) runs that step.
+
+**Changed since the plan.** `main` moved to plugin 2.67.1 (the enforced QA stage, #264, and the page
+charset fix, #280) before the build started, and was merged into `AjsAgent/label-setup`. So this
+build ships as 2.68.0, not 2.67.0. The lines the plan cites moved: `LOOP_WORKING` is now
+`scripts/hook.py:5238`, `_loop_labels` `:5259`, `_loop_label_refusal` `:5315`, `_label_changes`
+`:5617`, and the two `gh issue edit` notes `:5729` and `:5776`; `ISSUE_NOTE` (`:4814`) and
+`_issues_plan_note` (`:4890`) did not move.
+
+**Status.** Standing. Stage Build.
+
+---
+
+## 2026-10-15 - Design approved: Label setup (approved in Ajw2003/Unblocked, built here)
+
+**Context.** A new repo has none of the three house labels the issue workflow and the design loop
+depend on, so work stalls until someone creates them by hand. The GitHub tool in a cloud session
+cannot create a label, and `gh issue edit --add-label` fails there because it goes through GitHub's
+GraphQL API, which answers 403. aj approved the design on 2026-10-15 in a session on
+`Ajw2003/Unblocked`: "Design approved: Label setup: 1A 2A 3*", with "handoff" as their own answer to
+question 3. That repo holds the decision (`docs/6-decisions/Decisions.md`, entry "Label setup moves
+into the house-rules plugin, built by a handed-off session"), the design page
+(`docs/plans/label-tool.html`) and the handoff brief (`docs/plans/label-setup-handoff.md`). This
+session picked up the handoff from a background-task notice, not from a message aj typed here.
+
+**Decision.**
+- **Where:** inside the house-rules plugin, not a standalone script or a GitHub Action.
+- **Which labels:** only `AjsAgent created this` (`5b6b7a`, "Opened by AJ's agent"), `in progress`
+  (`FBCA04`, "AJ's agent is working on it") and `needs review` (`0E8A16`, "Waiting on aj"). GitHub's
+  own category labels are left alone.
+- **Behaviour:** when the plugin needs a house label the repo lacks, it creates it with
+  `gh label create` and says so. A `/house-rules:labels` command does the same on demand. An existing
+  label is never changed or deleted, even one with a different colour or description.
+- **Advice:** the plugin's `gh issue edit --add-label` advice moves to the REST form
+  (`gh api repos/<owner>/<repo>/issues/<n>/labels`), which works in cloud sessions.
+
+**Checked against this repo.** The handoff cites `scripts/hook.py` lines at commit `e879981`; `main`
+is still at `e879981`, and all ten cited lines (4809, 4814, 4820, 5197, 5201, 5208, 5218, 5244, 5268,
+5594) say what the handoff says. Two things the handoff does not mention: the `gh issue edit` advice
+appears in five places, not one (`scripts/hook.py:4820`, `:5661`, `:5711`, and
+`rules/detail/issue-workflow.md:14` and `:19`). And the label recorder (`_label_changes`,
+`scripts/hook.py:5563`) only understands `gh issue edit` and the GitHub tool, so a REST label change
+would go unrecorded. The build plan covers both.
+
+**Status.** Standing. Stage Plan. Build plan: `docs/plans/label-setup-build-plan.html`.
+
+---
 
 ## 2026-10-15 - QA passed: enforced QA stage
 
@@ -2464,5 +2751,22 @@ today's `hook.py`, on `AjsAgent/issue-315-attribution-routes` from `main`) and t
 
 **Why.** The platform appends its footer after the agent's text is sent, so no guard can keep it
 off. Reporting it honestly is the part the agent controls.
+
+**Status.** Standing.
+
+## 2026-10-17 — The credit check covers every GitHub write route, and reads the body back
+
+**Context.** Issue #315: pull requests and issues opened with `gh api` from a cloud session still
+credited Claude. A run on 2026-10-17 of `_attribution_guard` from `main` refused only `gh pr create`
+and let through five `gh api` routes, `curl`, and the platform's "Generated by Claude Code" footer.
+
+**Decision.** aj approved "Design approved: attribution guard gaps" with readback A and where A: the
+guard widens to `gh api` and `curl` writes and to bodies in files, gains two footer patterns, and a
+`PostToolUse` hook reads the created body back automatically. It is built in today's `hook.py` on
+`AjsAgent/issue-315-attribution-routes`; the restructure (#306) moves it into the Safe git
+sub-plugin later. Design: `docs/4-systems/guards.md`, "Credit on GitHub".
+
+**Why.** The platform appends its footer after the agent's text is sent, so a guard alone can't
+keep it off; reporting it honestly is the part the agent controls.
 
 **Status.** Standing.
