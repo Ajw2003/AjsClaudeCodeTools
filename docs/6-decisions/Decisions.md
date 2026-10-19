@@ -7,6 +7,29 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - Grilling summary confirmed, and the summary shape becomes a template
+
+**Context.** The summary page `docs/plans/2026-10-19-grilling-summary.html` gathered every answer from
+the five rounds of the #306 grilling session into ten topics and asked aj to confirm them.
+
+**Decision.** aj's reply was "Grilling summary: 1A": the summary matches what aj decided, and the build
+plan for the restructure comes next. aj also gave feedback on the page itself:
+1. The topic rows, each opening a "Creates or changes" box, did everything aj wanted. Each named which
+   answers led to the change and said plainly what the change creates or changes, and aj rated
+   readability and fit 9 out of 10. aj wants that shape kept as a template for every future grilling
+   session, restructure and brainstorm.
+2. The page is still visually dense and has no pictures.
+3. The "Requires" box (`templates/handover-page.html:357` in the plugin) is too rigid: it is worded for
+   what a step still needs, so on a summary it held past answers as bare references ("Round 1 answers
+   1 and 2") without saying, in short or in full, what each question asked or what each answer chose.
+4. (aj's new rule) Specificity is required everywhere, for people and AI alike: name what a phrase means
+   before using it, so context never has to be inferred. When that genuinely can't be done, say plainly
+   why.
+
+**Status.** Standing. How the template is kept, where the rule goes and how the density is fixed are
+asked on `docs/plans/2026-10-19-summary-template.html`. The restructure's build plan follows those
+answers, so it is built from the new template.
+
 ## 2026-10-19 - Grilling round 5: aj's answer
 
 **Context.** Round 5 of the #306 grilling session asked how a cloud session makes a page readable,
