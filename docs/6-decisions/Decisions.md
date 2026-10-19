@@ -7,6 +7,29 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - Docs map and freshness: aj's answers
+
+**Context.** The follow-up page `docs/plans/2026-10-18-docs-map-and-freshness.html` asked which parser
+builds the code map and how the commit gate treats a hand-written section whose code changed (entry
+below for the first proposal).
+
+**Decision.** aj's reply was "Docs map and freshness answers: 1A 2A".
+- Parser (1A): tree-sitter, through the tree-sitter-language-pack Python package, for Python, JS, TS,
+  HTML, CSS and C#. One code path in Python. It starts with a trial on this repo and one Unity project,
+  counting the functions found against a hand count of three files per language.
+- Freshness (2A): generated facts (covers, depends-on, depended-on-by) are rewritten at the end of
+  every turn by a hook that never blocks; a hand-written section whose code changed gets a stale stamp;
+  the guard refuses a commit with code changes while a doc covering that code is stamped and not in the
+  same commit. Known weakness: touching a section clears its stamp without a real update; the reviewer
+  helper and aj's QA catch that, not a check.
+- Unity prefabs and scenes stay out of this revision; aj wants them tracked later by another route,
+  issue #334 (map Unity prefabs and scenes in a later revision).
+
+Rejected: each language's own compiler (three runtimes), pattern matching for C# and web files (guessed
+call edges), docs holding only generated facts, and a gate that lets stale prose into history.
+
+**Status.** Standing. Settled with the rest of #306 in the grilling session, then built in the Docs part.
+
 ## 2026-10-18 - Docs context layer: aj's answers on the first proposal
 
 **Context.** The restructure (#306, restructure into a shared core with project boundaries and six
