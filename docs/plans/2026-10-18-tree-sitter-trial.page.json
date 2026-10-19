@@ -101,7 +101,7 @@
           "B",
           "Ship the grammar files inside the plugin",
           0,
-          "No download at all. Adds about 12 MB per platform to the plugin, and every grammar update means a plugin release."
+          "No download at all. Adds 12 MB to the plugin on Windows, measured; other platforms not measured, and every grammar update means a plugin release."
         ]
       ],
       "Either way, finding the download address and testing an offline machine comes first."
