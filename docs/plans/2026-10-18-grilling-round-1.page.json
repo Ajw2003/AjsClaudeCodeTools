@@ -1,0 +1,411 @@
+{
+  "title": "Grilling Round 1",
+  "eyebrow": "Grilling · #306 restructure, round 1 of the rule contradictions",
+  "approval": "Grilling round 1 answers",
+  "replyPrefix": "Grilling round 1 answers",
+  "reply": "",
+  "short": {
+    "lead": "This is the grilling session #306 asks for before the restructure is built. The 2026-10-16 audit (docs/audits/2026-10-16-plugin-audit/01-rules-vs-rules.md) found 28 places where two rules say opposite things, 5 stale references, and 6 open questions about how the plugin behaves. Three things are already settled, so I won't ask about them again: the plugin's core identity (safe multi-project work), the docs context layer, and its parser. Round 1 asks the 17 questions that don't depend on another answer, and I've marked my suggestion on each. Later rounds follow from your answers. The Copy my reply button is broken in the app's browser pane (#335), so type your answers in the chat, such as \"Grilling round 1 answers: 1A 2A 3B\".",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      [
+        "Settled already",
+        ""
+      ],
+      [
+        "Asked in this round",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Settled",
+        "Core identity and the docs context layer",
+        "",
+        "Safe multi-project work as the core (approved 2026-10-16). The Docs part is installed by default. It comes with generated doc facts, stale stamps, a commit gate, a tree-sitter map, and a Roslyn pass for C# (answered 2026-10-18).",
+        "Not asked again."
+      ],
+      [
+        "lock",
+        "Safety",
+        "Questions 1 to 5",
+        "you",
+        "Deletes, asking versus refusing, test runs, and what a helper agent does when it is stuck and when it reports back.",
+        "Your answers."
+      ],
+      [
+        "hand",
+        "Scope and pages",
+        "Questions 6 to 10",
+        "you",
+        "Unasked fixes, pages, issues, multi-step features, and the approval you currently have to send twice.",
+        "Your answers."
+      ],
+      [
+        "search",
+        "Automatic behaviour",
+        "Questions 11 to 16",
+        "you",
+        "Stage moves the code makes on its own, autosave, the worktree sweep, comment harvest, Unity batch mode, and which rules become settings.",
+        "Your answers."
+      ],
+      [
+        "file",
+        "Mechanical",
+        "Question 17",
+        "you",
+        "Sixteen fixes where one side is plainly out of date. One answer accepts or reviews them all.",
+        "Your answer."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. Deleting a file that is committed and unchanged: allowed, or asked?",
+      [
+        [
+          "A",
+          "Allowed: git can bring it back, so it is not a loss",
+          1,
+          "Today's guard behaviour. edit-place.md and coding-philosophy.md are rewritten to match."
+        ],
+        [
+          "B",
+          "Asked every time",
+          0,
+          "Safer against a delete nobody meant, but adds a prompt for routine cleanup."
+        ],
+        [
+          "C",
+          "Moved to _to_delete/ instead of deleted",
+          0,
+          "Nothing is lost even uncommitted, but the folder needs emptying by hand."
+        ]
+      ],
+      "Sides: destructive-action.md:20-21 allows it; edit-place.md:8-9 and coding-philosophy.md:58 say to ask."
+    ],
+    [
+      "q2",
+      "2. Force-push, deleting a branch, git clean, or committing on a branch that isn't the agent's: refuse with the safe way named, or ask you?",
+      [
+        [
+          "A",
+          "Refuse and name the safe way; ask only when no safe way exists",
+          1,
+          "Today's guard. Your hands stay for decisions; the agent takes the safe route itself."
+        ],
+        [
+          "B",
+          "Ask you each time",
+          0,
+          "You see every risky command, at the cost of more prompts, including the 5-minute prompt timeouts seen today."
+        ]
+      ],
+      "Sides: commit-branches.md:23-24 says these still ask you; destructive-action.md:7-18 refuses them."
+    ],
+    [
+      "q3",
+      "3. How many times does a test suite run before a success claim?",
+      [
+        [
+          "A",
+          "Twice everywhere, helpers included",
+          1,
+          "A second run catches state the first one left behind. Costs one extra run per build step."
+        ],
+        [
+          "B",
+          "Helpers run it once; the parent runs it twice before the hand-over",
+          0,
+          "Faster helper steps, and the double run still happens before you see it."
+        ]
+      ],
+      "Sides: green-suite.md:16-17 says twice; agents/builder.md:13 says exactly once."
+    ],
+    [
+      "q4",
+      "4. A helper agent hits a question only you can answer. What does it do?",
+      [
+        [
+          "A",
+          "Stop and report the question back to the parent session, which asks you",
+          1,
+          "Matches what the harness allows: a helper cannot show you a prompt."
+        ],
+        [
+          "B",
+          "Pick the safest option, carry on, and list the choice in its report",
+          0,
+          "No stall, but a decision gets made without you."
+        ]
+      ],
+      "Sides: agents/builder.md:11 says stop and ask; destructive-action.md:51-52 says a helper cannot answer a prompt."
+    ],
+    [
+      "q5",
+      "5. How much does a helper's report quote?",
+      [
+        [
+          "A",
+          "Always the real RESULT line and every failure line; no line cap",
+          1,
+          "The evidence-before-claims rule holds for helpers too. Their reports get a little longer."
+        ],
+        [
+          "B",
+          "Keep the 6-line cap, but the RESULT line is always one of them",
+          0,
+          "Short reports; the detail stays in the helper's transcript."
+        ]
+      ],
+      "Sides: agents/builder.md:17 caps at 6 lines and quotes only failures; evidence-before-claims.md:21 requires real output."
+    ],
+    [
+      "q6",
+      "6. The agent spots an obvious bug in a file it is already editing. Fix it unasked?",
+      [
+        [
+          "A",
+          "No: open an issue and mention it in the reply",
+          1,
+          "The request stays the scope, as the show-don't-tell rule says."
+        ],
+        [
+          "B",
+          "Yes, if it is in the same file and named in the reply",
+          0,
+          "Small fixes land sooner, but the diff grows beyond what was approved."
+        ]
+      ],
+      "Sides: coding-philosophy.md:60 allows it; show-dont-tell.md:9-10 says the request is the scope."
+    ],
+    [
+      "q7",
+      "7. Pages: build one locally for every plan and long reply, and publish to claude.ai only when you ask?",
+      [
+        [
+          "A",
+          "Yes: local pages always, claude.ai publishing only on request",
+          1,
+          "Both rules hold; \"never publish unasked\" means claude.ai, not a local file."
+        ],
+        [
+          "B",
+          "Publish every page to claude.ai as well",
+          0,
+          "Pages open on your phone, but every plan goes to a hosted URL."
+        ]
+      ],
+      "Sides: handover-command.md:162-163 says never publish unasked; show-dont-tell.md:18-19 requires a page."
+    ],
+    [
+      "q8",
+      "8. When does a feature need GitHub issues?",
+      [
+        [
+          "A",
+          "Every feature that reaches a build plan, as the design loop requires today",
+          1,
+          "One rule. A one-step fix still gets one issue."
+        ],
+        [
+          "B",
+          "Only plans over three steps",
+          0,
+          "Fewer issues for small fixes; the design loop's check has to change to match."
+        ]
+      ],
+      "Sides: issue-workflow.md:5 says over three steps; show-dont-tell.md:90-92 requires two issues before any build plan approval."
+    ],
+    [
+      "q9",
+      "9. A feature that is one step of a bigger one, like the 2.68.1 patch under #306: can it pass QA while the parent is still in progress?",
+      [
+        [
+          "A",
+          "Yes: QA passes per feature, and the parent issue only tracks its children",
+          1,
+          "The 2.68.1 QA pass would have been recorded. The parent closes when its last child feature closes."
+        ],
+        [
+          "B",
+          "No: QA happens once, on the parent",
+          0,
+          "Simple, but a long parent holds every step's QA hostage."
+        ]
+      ],
+      "From the 2026-10-16 decisions-log entry \"QA passed: plugin restructure 2.68.1 patch\"."
+    ],
+    [
+      "q10",
+      "10. Your approval message arrives before its decisions-log entry exists. Accept it?",
+      [
+        [
+          "A",
+          "Accept it, then require the entry before the next stage",
+          1,
+          "You no longer send the same approval twice. This is issue #327."
+        ],
+        [
+          "B",
+          "Keep refusing until the entry exists",
+          0,
+          "The log can never lag, at the cost of a second approval message."
+        ]
+      ],
+      "This happened four times in this session."
+    ],
+    [
+      "q11",
+      "11. The design loop moves a feature to a new stage by itself when a pull request opens, when labels change, and on an edit attempt. Keep those moves?",
+      [
+        [
+          "A",
+          "Keep the pull-request and label moves, written down as rules; drop the edit-attempt move",
+          1,
+          "The moves that mark real progress stay and get documented; an edit attempt never moves a stage."
+        ],
+        [
+          "B",
+          "Drop them all: only your approval messages move a stage",
+          0,
+          "Fully predictable, but you have to type each stage change."
+        ]
+      ],
+      "Sides: hook.py:5226 says only you move the stage; hook.py:5857, 5425-5430 and 5670-5671 move it."
+    ],
+    [
+      "q12",
+      "12. Worktree autosave commits a helper's work with a \"Co-Authored-By: Claude\" line and force-pushes it to a snapshot branch. What changes?",
+      [
+        [
+          "A",
+          "Same credit rule as every commit, and push without force to a fresh branch name each time",
+          1,
+          "No Claude credit, and nothing is overwritten on GitHub. More snapshot branches pile up."
+        ],
+        [
+          "B",
+          "Same credit rule, keep the force-push to one snapshot branch",
+          0,
+          "One branch per helper, but each push overwrites the last."
+        ],
+        [
+          "C",
+          "Drop autosave pushes; commit locally only",
+          0,
+          "Nothing on GitHub until the parent pushes; a lost machine loses the work."
+        ]
+      ],
+      "Sides: hook.py:4896-4915 writes the credit; the guard refuses it everywhere else."
+    ],
+    [
+      "q13",
+      "13. The worktree sweep commits whatever a finished helper left behind. Allowed?",
+      [
+        [
+          "A",
+          "Yes, but only in that helper's own worktree, and the rule says so",
+          1,
+          "Work is never lost, and the \"never sweep unrelated files\" rule gets a stated exception."
+        ],
+        [
+          "B",
+          "No: report the leftovers and let the parent decide",
+          0,
+          "No surprise commits, but leftovers can sit until someone notices."
+        ]
+      ],
+      "Sides: commit-branches.md:46-47; delegate-execution.md:83-84."
+    ],
+    [
+      "q14",
+      "14. The agent finds a long code comment. Should it be moved to the docs automatically before the turn ends?",
+      [
+        [
+          "A",
+          "Yes: the archivist moves it at turn end and leaves a doc-ref pointer",
+          1,
+          "Fits the docs context layer: the docs stay the source of truth."
+        ],
+        [
+          "B",
+          "Report only; move when asked",
+          0,
+          "No unasked edits, but essays stay in code."
+        ]
+      ],
+      "Sides: long-form-reasoning.md:9 says move before turn end; commands/harvest-scan.md:33-34 says don't port automatically."
+    ],
+    [
+      "q15",
+      "15. When should the agent use Unity batch mode to check that C# compiles?",
+      [
+        [
+          "A",
+          "Only when no Unity CLI or editor plugin can do the check",
+          1,
+          "Batch mode is slow and locks the project; so csharp-unity-detail.md's rule wins."
+        ],
+        [
+          "B",
+          "Whenever it is reachable",
+          0,
+          "Always a real compile, at the cost of a locked editor."
+        ]
+      ],
+      "Sides: shim-compiles.md:13-15; csharp-unity-detail.md:70-71."
+    ],
+    [
+      "q16",
+      "16. Which rules become settings anyone can change, instead of hard blocks?",
+      [
+        [
+          "A",
+          "Identity and taste become settings: agent name, credit line, branch prefix, labels, voice, page threshold. Safety and evidence rules stay blocks",
+          1,
+          "Matches #287. Someone else can install it without your name in every commit."
+        ],
+        [
+          "B",
+          "Everything outside the safe-git guard becomes a setting",
+          0,
+          "Most flexible, but evidence and writing rules can be switched off."
+        ]
+      ],
+      "From the audit's list of what the grilling session settles."
+    ],
+    [
+      "q17",
+      "17. Sixteen mechanical fixes where one side is plainly out of date. Accept them all?",
+      [
+        [
+          "A",
+          "Accept all sixteen as listed in the detail",
+          1,
+          "Eleven fixes, plus the 5 stale references. Plans keep dated names, and the project-docs skill is updated to match. Decisions.md is newest-at-top everywhere. Labels are three, and \"Claude completed this\" is dropped. Pages go in docs/plans/. The six handover items live only in house-rules.md. The card template lives only in the output style. The step-card template is dropped. The archivist gets a tools line. The reviewer's description is removed from the \"use proactively\" tier list. doctor.md stops saying hooks fail silently. The delegation rule says which hooks keep state."
+        ],
+        [
+          "B",
+          "Show me each one first",
+          0,
+          "Round 2 lists them one by one."
+        ]
+      ],
+      "Each fix cites both sides in 01-rules-vs-rules.md."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Round 1 of the #306 grilling session: 17 questions, each with a suggested answer.",
+    "changing": "Nothing yet. Your answers are logged in the decisions log and on #306, and they shape round 2.",
+    "blocking": "Your answers to round 1.",
+    "next": "I log your answers, then ask you the round 2 questions, which depend on these answers.",
+    "todo": [
+      "Type your answers in the chat, such as \"Grilling round 1 answers: 1A 2A 3B ...\".",
+      "Send them."
+    ]
+  }
+}
