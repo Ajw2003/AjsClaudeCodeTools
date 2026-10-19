@@ -1,0 +1,98 @@
+{
+  "title": "Grilling Round 3",
+  "eyebrow": "Grilling · #306 restructure, round 3",
+  "approval": "Grilling round 3 answers",
+  "replyPrefix": "Grilling round 3 answers",
+  "reply": "",
+  "short": {
+    "lead": "Round 2 is logged. Two of its answers meet: the agent's name is worked out from your GitHub login (round 2, answer 1), but no setting may run on an assumed value (round 2, answer 13). So the plugin has to ask for every setting, and these 2 questions decide how. Claude Code's docs say a plugin can mark a setting as required, and the /plugin dialog then asks for it. That dialog is documented for the terminal and VS Code, but not for the Code tab of the desktop app, where you work. The docs also don't say what a hook sees when nobody has set a setting. If these 2 answers open nothing new, the grilling session is done.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      [
+        "Checked in the docs",
+        ""
+      ],
+      [
+        "Asked in this round",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Docs",
+        "Required settings exist",
+        "",
+        "plugin.json's userConfig accepts required: true with no default, and the /plugin dialog won't accept an empty value. Hooks read each value as CLAUDE_PLUGIN_OPTION_<KEY>. Source: code.claude.com/docs/en/plugins/manifest-reference.",
+        "Nothing from you."
+      ],
+      [
+        "search",
+        "Docs gap",
+        "Not documented for the Code tab",
+        "",
+        "The docs list three places where settings can be entered: the terminal's /plugin command, VS Code, and the shell's --config flag. The desktop app's docs page never mentions the dialog. The docs also don't say what a hook sees for a setting nobody set.",
+        "Question 1 below works around this gap."
+      ],
+      [
+        "hand",
+        "Decide",
+        "How settings are asked for, and what waits meanwhile",
+        "you",
+        "The 2 questions below.",
+        "Your answers."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. How does a new install ask for its settings?",
+      [
+        [
+          "A",
+          "At session start the plugin asks in the chat and suggests the worked-out value (such as ajw2003sAgent). It saves your answer in its own settings file. A value set through /plugin configure is used too.",
+          1,
+          "Works in the Code tab, where the /plugin dialog isn't documented. Nothing is assumed: the suggestion is used only once you confirm it."
+        ],
+        [
+          "B",
+          "Only through Claude Code's /plugin dialog, with every setting marked required",
+          0,
+          "This is the built-in way, but to fill it in from the Code tab you'd need to open a terminal session."
+        ]
+      ],
+      "Either way, each setting is asked for once per machine and kept across plugin updates."
+    ],
+    [
+      "q2",
+      "2. Until the settings are set, what waits?",
+      [
+        [
+          "A",
+          "Only actions that need them: commits, pushes, branches, pull requests and issues. Reading, editing and tests still work",
+          1,
+          "The session can start on the task while you answer, and nothing goes out under a wrong name."
+        ],
+        [
+          "B",
+          "Everything: the plugin refuses every tool until the settings are set",
+          0,
+          "You can't miss it, but even reading a file has to wait for your answer."
+        ]
+      ],
+      "In both, the refusal names the missing setting and how to set it."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Round 3 of the #306 grilling session: how settings are asked for, and what waits until they are set.",
+    "changing": "Nothing yet. Your answers are logged in the decisions log and on #306.",
+    "blocking": "Your answers to round 3.",
+    "next": "If nothing new opens, I will write one summary page of every answer from the three rounds for you to confirm. After that I will write the build plan for the restructure.",
+    "todo": [
+      "Type your answers in the chat, such as \"Grilling round 3 answers: 1A 2A\".",
+      "Send them."
+    ]
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "title": "Tree-sitter Trial",
+  "eyebrow": "Trial results · the code map for the docs context layer (#306)",
+  "approval": "Design approved: tree-sitter trial",
+  "replyPrefix": "Tree-sitter trial answers",
+  "reply": "",
+  "short": {
+    "lead": "I ran tree-sitter on three of your projects: PlunderSpell's own 544 C# scripts, this repo's Python and pages, and focus-deck-app's JavaScript, HTML and CSS. All three projects together took 1.0 second. Every definition I counted by hand was found, 66 of 66. References needed two query fixes, one for C# and one for HTML. After those, every hand-counted reference was found. Two limits remain, and each needs your decision. The full write-up is in docs/trials/2026-10-18-tree-sitter/README.md on the branch AjsAgent/docs-context-layer.",
+    "hint": "Tap a row to see what was measured.",
+    "key": [
+      [
+        "Measured",
+        ""
+      ],
+      [
+        "Needs your decision",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Speed",
+        "1.0 second for all three projects",
+        "",
+        "Parse and query time: 0.53 s for 544 C# files, 0.18 s for 26 Python files, 0.09 s for 55 pages, 0.02 s for 14 JavaScript files. Parsing a single file takes 0.12 s, including Python's start-up time. Both full runs gave identical counts.",
+        "Nothing from you."
+      ],
+      [
+        "search",
+        "Accuracy",
+        "66 of 66 definitions by hand",
+        "",
+        "Three files per language, read and counted by hand. C# references were 14 of 21 at first: null-safe calls such as previous?.Exit() and event subscriptions such as onChanged += OnReplicated were missed. One query line fixed each, and the recount was 21 of 21. The HTML query also missed the page's script tag at first; one fix covered that.",
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Limit",
+        "Names alone can't say which Update a call reaches",
+        "you",
+        "tree-sitter reads syntax, not types. In PlunderSpell, 25% of references match more than one definition, such as Update in 55 classes and Awake in 54. Another 48% are Unity or .NET calls with no definition in the project. A dependency line built from names alone could point at the wrong class.",
+        "Your answer under Choices."
+      ],
+      [
+        "lock",
+        "Limit",
+        "Grammars download on first use",
+        "you",
+        "The package ships without grammars. It downloaded 7 of them, 12 MB, the first time each language was used. It never printed the address it downloaded from, and the address is not in its files. A new machine needs the network once, or the install has to fetch them up front.",
+        "Your answer under Choices."
+      ],
+      [
+        "file",
+        "Gap",
+        "Not measured",
+        "",
+        "TypeScript, because no project here uses it. The third Python file. CSS beyond its first 45 lines. macOS and Linux. JavaScript inside a page's own script tag is skipped; the house-rules pages are built that way, so the build should read those script tags as JavaScript.",
+        "Listed in the write-up."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "names",
+      "How should a dependency line handle a name that several classes define?",
+      [
+        [
+          "A",
+          "List every match and mark the line as ambiguous",
+          1,
+          "Nothing is guessed. A doc says \"calls Update (55 definitions)\", and the session checks the code only for that line. Works the same in every language."
+        ],
+        [
+          "B",
+          "Add a C#-only pass with Roslyn, the C# compiler, to resolve types",
+          0,
+          "Exact links in C#, the language with the most ambiguity. It brings back the dotnet runtime that the parser choice avoided. It would also make C# refreshes slower, but I haven't timed that."
+        ],
+        [
+          "C",
+          "Use A now, and open an issue to try Roslyn later if ambiguous lines get in the way",
+          0,
+          "A ships first, and the Roslyn idea is kept with evidence of how often it matters."
+        ]
+      ],
+      "In every option, references with no definition in the project, such as Unity and .NET calls, are left out of the dependency lines."
+    ],
+    [
+      "grammars",
+      "How should a machine get the grammars?",
+      [
+        [
+          "A",
+          "The install step downloads the six grammars up front and says so",
+          1,
+          "One network fetch at install, never in the middle of a session. The install fails loudly if the download fails."
+        ],
+        [
+          "B",
+          "Ship the grammar files inside the plugin",
+          0,
+          "No download at all. Adds 12 MB to the plugin on Windows, measured; other platforms not measured, and every grammar update means a plugin release."
+        ]
+      ],
+      "Either way, finding the download address and testing an offline machine comes first."
+    ]
+  ],
+  "wrapup": {
+    "summary": "tree-sitter is fast. It found every hand-counted definition and, after two query fixes, every hand-counted reference. Name ambiguity and the grammar download need your call.",
+    "changing": "Nothing in the plugin. The trial script, its output and the write-up are on the branch AjsAgent/docs-context-layer.",
+    "blocking": "Your answers to the two choices.",
+    "next": "Your answers join the list on issue #306 for the grilling session, and I log them in the decisions log.",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Send your reply."
+    ]
+  }
+}

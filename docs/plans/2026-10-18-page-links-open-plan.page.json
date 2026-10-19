@@ -1,0 +1,32 @@
+{
+  "title": "Page Links Plan",
+  "eyebrow": "Build plan · #329, a page link in a reply must open",
+  "approval": "Build plan approved: page links open",
+  "replyPrefix": "Page links plan answers",
+  "reply": "",
+  "short": {
+    "lead": "The design you approved is split into three sub-issues of #329. They are built on the branch AjsAgent/issue-329-page-links, which is cut from main and has its own working folder. One builder helper takes one sub-issue at a time and runs verify.py after each one. The QA page is copied into this session's folder so that it opens.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      ["Step", ""],
+      ["Needs you", "you"]
+    ],
+    "items": [
+      ["search", "Step 1", "#330: count a link only if it opens", "", "Adds _reply_links_page to hook.py and moves its four callers onto it: _long_reply_words, _check_page, the owed-page counter and _record_qa_link. Also adds five verify.py cases.", "A builder helper does it."],
+      ["file", "Step 2", "#331: the make_page.py warning", "", "make_page.py prints one line when a page is written outside the folder it runs in, and this step adds one verify.py case. It does not depend on step 1 and touches different files, but it runs after step 1 so that only one helper works at a time.", "A builder helper does it."],
+      ["check", "Step 3", "#332: docs, version and QA page", "", "Moves the systems-doc section \"A page link must open\" from planned to built, with real line numbers. Then it bumps the house-rules version, runs verify.py twice and builds the QA page.", "I do it."],
+      ["hand", "QA", "Your testing", "you", "The pull request into main says Refs #329 and never Closes #329. You test from the QA page.", "Your QA."]
+    ]
+  },
+  "changes": [
+    ["chg", "verify.py baseline on the fix branch", "Measured today: 4 of 847 checks fail on main before any change is made.", ["\"RESULT: FAIL - 4 of 847 checks failed\": checks 95 and 97 (guard branch rules), 751 (clear writing on a page) and 826 (pagecheck on a hand-written page).", "After the change, the same 4 checks fail and no new ones do. Each new case passes."], "The 4 failures are on main already and look tied to running in a separate working folder. They are out of scope here. If they still fail when run from the main folder, they get their own issue."]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "Three steps on a branch off main, with one helper at a time and verify.py run after each step, then a QA page that opens.",
+    "changing": "hook.py, make_page.py, verify.py, docs/4-systems/handover-pages.md and the version.",
+    "blocking": "Your approval of this build plan.",
+    "next": "The builder helper starts on #330.",
+    "todo": ["Reply \"Build plan approved: page links open\", or tell me what to change."]
+  }
+}

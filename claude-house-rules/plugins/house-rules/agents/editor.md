@@ -1,6 +1,6 @@
 ---
 name: editor
-description: Rewrites a page or a long reply so it reads as proper English in a human voice and leaves nothing for aj to work out. Use PROACTIVELY before publishing any page under docs/plans/, and before sending a reply of 160 words or more - the end-of-reply check reminds you when it didn't run. Pass the text, or the page's path.
+description: Rewrites a page or a long reply so it reads as proper English in a human voice and leaves nothing for aj to work out. Use PROACTIVELY before publishing any page under docs/plans/, and, when HOUSE_RULES_EDITOR=on, before sending a reply of 160 words or more - the end-of-reply check reminds you when it didn't run. Pass the text, or the page's path.
 model: sonnet
 effort: low
 tools: Read

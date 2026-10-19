@@ -1,0 +1,40 @@
+{
+  "title": "Writing Check Loop QA",
+  "eyebrow": "QA · #322: the end-of-reply checks looped on retries and burned tokens",
+  "short": {
+    "lead": "The fix is built on branch AjsAgent/nifty-newton-x2jaaj as house-rules 2.68.4. A retry of the end-of-reply check now only reports to you and can no longer make me reply again, so the loop you saw cannot start. The writing check skips chat replies, the editor runs only for pages, the page reminder is said once per message, and one approval is enough. verify.py passes all 853 checks, twice. One thing only you can test: a real session running 2.68.4.",
+    "hint": "Tap a row to see what was checked and how.",
+    "key": [["Checked by me", ""], ["Your test", "you"]],
+    "items": [
+      ["loop", "Retry", "A retry never continues the turn", "", "New verify.py cases run the Stop hook twice on the same reply. The first stop gives me the note; the retry gives none and shows it to you instead.", "Nothing from you."],
+      ["file", "Replies", "Chat replies get no writing note", "", "A reply with a bare reference and a vague number gets no writing note and no report line. A page under docs/plans with the same text is still flagged.", "Nothing from you."],
+      ["check", "Editor", "The editor runs only for pages", "", "A 200-word reply with no page owes no editor run. With HOUSE_RULES_EDITOR=on it does. A turn that writes a docs/plans page still owes one.", "Nothing from you."],
+      ["check", "Approvals", "One approval moves the stage", "", "Build plan approved with an unchanged decisions log moves Plan to Build on the first message, and the note asks for the log entry.", "Nothing from you."],
+      ["file", "Suites", "No failures", "", "verify.py: all 853 checks pass, run twice. tools/verify_tools.py: all 47 pass. docref.py check reports 38 problems, the same 38 as before this build.", "Nothing from you."],
+      ["hand", "Your test", "Use a session running 2.68.4", "you", "Hooks load when a session starts, so this session still runs the old code. Start a new session from this branch, or from main after a merge, and send a few short messages. The page and writing reminders should appear at most once, and no reply should loop.", "Run it, then pass or fail QA."]
+    ]
+  },
+  "changes": [
+    ["chg", "Retry reports only (#323)", "On the retry, notes go to you as a system message.", ["Notes went back to me as context on every retry, so each one woke me again.", "The retry emits no context for me; you still see every note."], "hook.py: event_handover."],
+    ["chg", "Replies not checked (#324)", "The writing check runs on pages and new issues only.", ["Every chat reply was checked and could be sent back.", "Chat replies are skipped; pages, issues and the not-checked disclosure stay."], "hook.py: _writing_findings and _writing_report_line removed."],
+    ["chg", "Editor pages-only (#325)", "A long reply no longer forces an editor run.", ["160 words or more forced an editor subagent run.", "Only a docs/plans page does, unless HOUSE_RULES_EDITOR=on."], "hook.py: _editor_enabled and _editor_owed; editor.md."],
+    ["chg", "Page note once (#326)", "The page reminder is said once per message of yours.", ["Repeated after every later reply to the same message.", "Said on the first flag only; a later page link still clears it."], "hook.py: the page checkpoint in event_handover."],
+    ["chg", "One approval (#327)", "An approval counts the first time.", ["Refused until the decisions log changed, so you typed it twice.", "Accepted, with the log entry asked for in the same note."], "hook.py: _loop_unlogged and _loop_apply; design-loop.md."]
+  ],
+  "qa": {
+    "feature": "#322 writing check loop",
+    "base": "origin/main",
+    "unverified": [
+      "No live session has run 2.68.4 yet, because hooks load at session start; the checks above drove hook.py directly",
+      "HOUSE_RULES_CLEAR_WRITING=off is still set in this cloud container's settings; it goes away with the container"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "The end-of-reply loop fix is built as house-rules 2.68.4 and waits for your QA.",
+    "changing": "hook.py, verify.py, editor.md, the clear-writing and design-loop docs, ProjectState.md and the version.",
+    "blocking": "Your QA of #322.",
+    "next": "On a pass I open a pull request into main. On a fail I fix it on this branch.",
+    "todo": ["Run the test in the Your test row.", "Reply \"QA passed: #322 writing check loop\", or say what failed."]
+  }
+}

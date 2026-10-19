@@ -1,0 +1,89 @@
+{
+  "title": "Grilling Round 5",
+  "eyebrow": "Grilling · #306 restructure, round 5",
+  "approval": "Grilling round 5 answers",
+  "replyPrefix": "Grilling round 5 answers",
+  "reply": "",
+  "short": {
+    "lead": "Round 4 is logged: while settings are unset, one settings command is allowed and every other tool is refused (answer 1A), and cloud sessions read settings from environment variables (answer 2A). Your note raised one new question. In a cloud session, tapping a page's HTML file in the Claude app shows its raw code, so you can read a page only after downloading it. You said to publish to claude.ai only when it is needed. If your answer raises no new question, the grilling session is done.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      [
+        "Settled in round 4",
+        ""
+      ],
+      [
+        "Checked on this machine",
+        ""
+      ],
+      [
+        "Asked in this round",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Settled",
+        "Round 4",
+        "",
+        "Round 4, answer 1A: the plugin's own settings script is the one command allowed while settings are unset. Round 4, answer 2A: cloud sessions read settings from environment variables first and the settings file second.",
+        "Not asked again."
+      ],
+      [
+        "search",
+        "Checked",
+        "The plugin can tell it is in a cloud session",
+        "",
+        "hook.py already reads the environment variable CLAUDE_CODE_REMOTE (hook.py:349 and hook.py:718), and it is set in this cloud session. No issue on GitHub covers viewing a page in a cloud session, and the page rule in rules/detail/show-dont-tell.md doesn't mention it. The \"page links open\" feature from 2026-10-18 checks only that a page link points inside the session's folder, not how the page displays.",
+        "The question below builds on this."
+      ],
+      [
+        "hand",
+        "Decide",
+        "How a cloud session makes a page readable",
+        "you",
+        "The question below.",
+        "Your answer to question 1."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. In a cloud session, how does a reply make its page readable?",
+      [
+        [
+          "A",
+          "The reply says plainly, next to the page link: \"Download this page and open it in your browser. Tapping it here shows its raw code.\" The end-of-reply check adds this line, and only in cloud sessions.",
+          1,
+          "Nothing is published, and the instruction is always there when it's needed. Local sessions, where the page opens in the app, stay unchanged."
+        ],
+        [
+          "B",
+          "As A, plus a Markdown copy of the page sent alongside the page link, so the main points can be read without downloading",
+          0,
+          "Quicker to read on a phone, but every page then has two copies that can drift apart. I have not yet checked whether the Claude app shows a Markdown file formatted or as raw text."
+        ],
+        [
+          "C",
+          "In cloud sessions only, publish every page privately to claude.ai and link that",
+          0,
+          "Opens with one tap, but it publishes every page, which you said you want to avoid unless needed."
+        ]
+      ],
+      "In every option the page file is still written under docs/plans/ and committed to git."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Round 5 of the #306 grilling session: how a cloud session makes a page readable without publishing it.",
+    "changing": "No files change until you answer. Your round 4 answers are logged in the decisions log and on #306.",
+    "blocking": "Your answer to round 5.",
+    "next": "If your answer raises no new question, I will write one summary page of every answer from all five rounds for you to confirm. After you confirm, I will write the build plan for the restructure.",
+    "todo": [
+      "Type your answer in the chat, for example \"Grilling round 5 answers: 1A\".",
+      "Send the message."
+    ]
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "title": "Docs Map And Freshness",
+  "eyebrow": "Proposal · the follow-up to the docs context layer: our own code map, and docs that cannot fall behind",
+  "approval": "Design approved: docs map and freshness",
+  "replyPrefix": "Docs map and freshness answers",
+  "reply": "",
+  "short": {
+    "lead": "You chose to build our own code map covering Python, web projects and C#, and asked for a way to keep docs current that can neither fall behind nor loop. Your answers are recorded in the decisions log, and the course change is added to #306 (\"restructure into a shared core with project boundaries and six optional sub-plugins\"). This page answers both questions. The loops in #303 and #322 had one cause: a check that stops a reply from finishing makes the session try again, and the retry can trip the same check. The design below never holds a reply back. It writes the parts of a doc that a tool can generate, marks the hand-written parts as stale inside the doc itself, and refuses a commit that saves changed code while a doc covering it is stale.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      [
+        "What exists today",
+        ""
+      ],
+      [
+        "Needs your decision",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Reuse",
+        "docs/generated/",
+        "",
+        "The tier rules already set aside docs/generated/ for tool-written output that is regenerated, never hand-edited. The code map lives there, so no new folder or convention is needed.",
+        "Reused as the map's home."
+      ],
+      [
+        "check",
+        "Reuse",
+        "The guard hook on git commit",
+        "",
+        "The guard hook already reads every git commit before it runs. The freshness gate is one more check inside it. A refused command ends that tool call; it does not reopen the reply, so it cannot start the retry loop that end-of-reply blocks did.",
+        "Reused as the enforcement point."
+      ],
+      [
+        "search",
+        "Ready here",
+        "Parsers on this machine",
+        "",
+        "Measured on this machine today: Python 3.13, whose built-in ast module parses Python, and Node with npm, where the TypeScript compiler is version 7.0.2. The .NET SDKs 8, 9 and 10 are installed, and Roslyn, the C# compiler, ships with them. tree-sitter 0.26.0 and tree-sitter-language-pack 1.22.1 are on PyPI. I have not installed or tried either of those two packages.",
+        "Informs your parser answer under Choices."
+      ],
+      [
+        "hand",
+        "Decide",
+        "Which parser builds the map",
+        "you",
+        "One parser library for all three languages, or each language's own compiler. The trade-off is one shared code path against the most accurate call edges.",
+        "Your answer under Choices: which parser should build the code map."
+      ],
+      [
+        "lock",
+        "Decide",
+        "How prose stays honest",
+        "you",
+        "Generated facts can always be rewritten, but hand-written explanations need a person or an agent. The choice is how hard the commit gate holds them to the code.",
+        "Your answer under Choices: how the commit gate treats a hand-written section whose code changed."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "The code map",
+      "A file in docs/generated/code-map/ listing every file, function, class and method, with who calls what, for Python, JavaScript, TypeScript, HTML, CSS and C#.",
+      null,
+      "It is rebuilt only for files whose content changed since the last build, found by comparing file hashes, so a refresh after a small edit touches only that file. The prompt hook and the dependency headers read from it. Unity projects are covered through their C# scripts; scenes and prefabs are not code and stay out."
+    ],
+    [
+      "new",
+      "Generated doc facts",
+      "A tool writes the covers, depends-on and depended-on-by lines of every doc, between two marker comments, at the end of every turn.",
+      null,
+      "A person or agent writes only the list of files and functions a doc covers. The depends-on and depended-on-by lines are worked out from the code map: if a function this doc covers calls one another doc covers, the second doc is a dependency. The end-of-turn hook rewrites the lines and never blocks, so the generated facts cannot be behind once a turn ends."
+    ],
+    [
+      "new",
+      "A stale stamp inside the doc",
+      "Each hand-written section stores a fingerprint of the code it covers. When the code changes, the end-of-turn hook writes a visible line into that section, \"stale since <file> changed\", naming the file.",
+      null,
+      "The doc then never reads as current when it isn't, even before anyone fixes it. Updating the section and its fingerprint clears the stamp. The prompt hook shows the stamp beside the doc, so a session knows to check only the code that section covers."
+    ],
+    [
+      "new",
+      "The freshness gate on commit",
+      "The guard hook refuses a git commit that includes code changes while a doc covering that code carries a stale stamp and is not in the same commit.",
+      null,
+      "The refusal names each doc and section, and the one change that clears it. The same files always give the same answer, and each fix removes one stamp, so a session cannot loop on it. No stale doc reaches the repo's history."
+    ],
+    [
+      "chg",
+      "The project-docs skill and the docstiers hook",
+      "Every doc template gains the header block; docstiers refuses a tier-4 doc without one.",
+      [
+        "Tier-4 docs describe dependencies in prose under \"What it owns\".",
+        "Tier-4 docs open with the generated header block, then the prose."
+      ],
+      "Existing docs get a header in one pass, written by the archivist helper and checked by docstiers."
+    ]
+  ],
+  "choices": [
+    [
+      "parser",
+      "Which parser should build the code map?",
+      [
+        [
+          "A",
+          "tree-sitter, through the tree-sitter-language-pack Python package, for all languages",
+          1,
+          "One code path in Python, the language hooks already run in. One parser covers Python, JS, TS, HTML, CSS and C#, and adding a language later is one grammar. It adds a pip dependency of compiled wheels; whether those wheels install on Windows, macOS and Linux is the first thing to trial."
+        ],
+        [
+          "B",
+          "Each language's own compiler: Python's ast, the TypeScript compiler through Node, and Roslyn through dotnet",
+          0,
+          "The most accurate call edges, since each compiler resolves types. It needs three runtimes and three code paths, and every C# refresh starts a dotnet process, which I have not timed."
+        ],
+        [
+          "C",
+          "Python's ast for Python, and pattern matching for C# and web files",
+          0,
+          "No new dependency. Call edges in C#, JS and TS are guesses from names, so a rename or an overload can produce a wrong depended-on-by line, which a source of truth cannot have."
+        ]
+      ],
+      "Any choice starts with a trial on this repo and one Unity project, counting the functions found against a hand count of three files per language."
+    ],
+    [
+      "prose",
+      "How should the commit gate treat a hand-written section whose code changed?",
+      [
+        [
+          "A",
+          "Refuse the commit until the section is updated and its stamp cleared",
+          1,
+          "Nothing stale reaches history. The weakness: a session could clear a stamp by touching the section without really updating it. The reviewer helper and your QA can catch that; no automatic check can."
+        ],
+        [
+          "B",
+          "Keep only generated facts in system docs, and move all explanations into dated decisions-log entries",
+          0,
+          "Nothing can fall behind, because a dated entry describes the past and is never stale. The cost: a doc no longer explains how the system works now, only how it was decided."
+        ],
+        [
+          "C",
+          "Refuse the commit only when a generated fact is wrong; let prose carry its stale stamp",
+          0,
+          "Commits are never held up by prose. Stale explanations can sit in history, marked as stale, which your earlier answer ruled out for a source of truth."
+        ]
+      ],
+      "In every option the end-of-turn hook only writes files and never stops a reply."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Our own code map for Python, web and C#, and docs that are generated where possible, stamped stale where not, and held to the code at every commit.",
+    "changing": "Nothing yet. Your answers become part of #306 and are settled in the grilling session with the other restructure questions.",
+    "blocking": "Your answers to the two choices.",
+    "next": "I record your answers in #306 and the decisions log, then trial the chosen parser on this repo and one Unity project before any build.",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
+  }
+}

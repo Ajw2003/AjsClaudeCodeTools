@@ -157,12 +157,12 @@ The plain-docs skill writes plain copies of the docs; on top of this rule they h
 ## How it is checked
 
 - **The shared checker** (`scripts/clarity.py`) flags vague claims with no reason, bare references,
-  repeated phrases, jargon and overlong sentences. The end-of-reply check runs it on every reply and
-  gives one note; a write to `docs/plans/*.html` runs it on the page's text; `plain_docs_check.py`
+  repeated phrases, jargon and overlong sentences. The end-of-reply check no longer runs it on chat replies (#324); a write to `docs/plans/*.html` runs it on the page's text; `plain_docs_check.py`
   uses its word list and sentence check.
 - **Issues** missing "Depends on", "Depended on by" or "Done when" are refused when created.
 - **The editor helper** (`@house-rules:editor`, Sonnet) reads a page or a long reply and returns
   rewrites for anything that does not read as proper English. The end-of-reply check reminds me
-  when a turn wrote a page, or a reply ran to 160 words or more, and no editor helper ran.
+  when a turn wrote a page and no editor helper ran. A reply of 160 words or more counts too only
+  with `HOUSE_RULES_EDITOR=on` (default off, #325).
 - A pattern cannot judge grammar or tone, which is why the editor exists; it cannot judge whether a
   request is clear either, which is why the design loop's code lock stays the real check on that.

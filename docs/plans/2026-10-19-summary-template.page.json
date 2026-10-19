@@ -1,0 +1,136 @@
+{
+  "title": "Summary Page Template",
+  "eyebrow": "Proposal · the summary page shape as a template, and the define-before-use rule",
+  "approval": "Summary template answers",
+  "replyPrefix": "Summary template answers",
+  "reply": "",
+  "short": {
+    "lead": "You confirmed the grilling summary page (docs/plans/2026-10-19-grilling-summary.html), and the build plan comes next for the restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins). First, you asked for three things. Keep that page's topic rows as a template for every future grilling session, restructure and brainstorm. Fix the \"Requires\" box, which held past answers as bare references such as \"Round 1 answers 1 and 2\". And make one rule apply everywhere: name what a phrase means before using it, or say plainly why you can't. These 4 questions decide how. Once you answer, I will write a plan for the template and the rule change for you to approve, then the restructure's build plan from the new template.",
+    "hint": "Tap a row to see what exists today and what this would change.",
+    "key": [
+      [
+        "Exists today",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Exists",
+        "The page template already has the two boxes",
+        "",
+        "Every page built by the page-building script, make_page.py, uses the plugin's template, templates/handover-page.html. Each topic row opens two boxes: \"Creates or changes\" and \"Requires\" (handover-page.html:356-357). The \"Requires\" box is worded for what a step still needs from you, so on a summary of past answers it reads wrong. The template also has a three-part strip, \"What exists today → What this creates → How it impacts you\" (handover-page.html:367), used today only in the \"What this creates or changes\" section.",
+        "Questions 1, 2 and 4 below reuse these two boxes and the strip instead of building new ones."
+      ],
+      [
+        "search",
+        "Exists",
+        "The writing rule already covers part of this",
+        "",
+        "The \"Write it so nothing is left to guess\" rule (rules/clear-writing.md) already has two bullets on this. \"Explicit context\" at line 9 says to name the what, where and which. \"Named references\" at line 12 says never to write \"#2\" or \"option B\" alone. Its checker, scripts/clarity.py, flags a bare issue number or option letter (clarity.py:135). It does not flag \"round 1, answer 7\" or \"question 2\" with nothing naming what was asked, and no bullet says to define a term before its first use.",
+        "Question 3 below decides where your rule goes."
+      ],
+      [
+        "hand",
+        "Decide",
+        "Template, answer wording, rule and how crowded pages are",
+        "you",
+        "The 4 questions below.",
+        "Your answers to questions 1 to 4."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. Where is the summary page shape kept as a template?",
+      [
+        [
+          "A",
+          "In the plugin, as a starter file for a page's content, templates/decision-summary.page.json. Every grilling, restructure or brainstorm summary starts from it, and on that kind of page the second box is labelled \"Decided by\" instead of \"Requires\". Plan pages keep \"Requires\".",
+          1,
+          "It follows you into every project, because the plugin is installed everywhere, and \"Requires\" keeps its meaning on plan pages."
+        ],
+        [
+          "B",
+          "In this repo only, as an example page under docs/plans/ that I copy by hand each time",
+          0,
+          "Nothing in the plugin changes, but other projects don't get the template, and copying by hand drifts."
+        ]
+      ],
+      "In both, the existing page template, templates/handover-page.html, stays the one that draws every page."
+    ],
+    [
+      "q2",
+      "2. How does the \"Decided by\" box name each answer?",
+      [
+        [
+          "A",
+          "The round, the question in short form and the answer chosen, in words. For example: \"Round 2, question 1, where the agent's name comes from: the GitHub login plus sAgent, which is ajw2003sAgent for you.\"",
+          1,
+          "Readable on its own, with nothing to look up, and still short enough for a phone."
+        ],
+        [
+          "B",
+          "The question and the answer word for word as they appeared on the round's page",
+          0,
+          "Nothing is paraphrased, but long questions make the box several times longer."
+        ]
+      ],
+      "In both, a bare reference such as \"round 1, answer 7\" never appears on its own."
+    ],
+    [
+      "q3",
+      "3. Where does your define-before-use rule go?",
+      [
+        [
+          "A",
+          "Into the existing \"Write it so nothing is left to guess\" rule. The \"Explicit context\" and \"Named references\" bullets merge into one bullet: name what a phrase means before its first use, so nothing is inferred, and when that genuinely can't be done, say plainly why. The checker, scripts/clarity.py, also flags \"answer N\", \"question N\" and \"round N\" when nothing names what was asked.",
+          1,
+          "Said once, in the rule that already covers replies, pages and issues, and enforced by a checker that already runs on all three."
+        ],
+        [
+          "B",
+          "As a new rule of its own in rules/house-rules.md, next to the existing writing rule",
+          0,
+          "It is easier to spot, but two rules then cover the same ground and can drift apart."
+        ]
+      ],
+      "In both, the rule applies to everything a person or an AI reads: replies, pages, issues, plans and helper prompts."
+    ],
+    [
+      "q4",
+      "4. How does a summary page get less dense?",
+      [
+        [
+          "A",
+          "Each topic's \"Creates or changes\" text becomes short lines of one decision each, and each topic gets the template's existing strip: \"What exists today → What this creates → How it impacts you\"",
+          1,
+          "It reuses a part the template already draws, and it gives every topic a picture of before and after with no new drawing code."
+        ],
+        [
+          "B",
+          "As A, plus a small diagram per topic drawn for that topic",
+          0,
+          "More visual, but every diagram has to be drawn by hand and checked in light and dark mode, on every page."
+        ]
+      ],
+      "In both, your define-before-use rule from question 3 still applies to every line."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A proposal for keeping the grilling summary page's shape as a template, wording each answer in full, adding your define-before-use rule and making summary pages less dense.",
+    "changing": "No files change until you answer. Your confirmation of the grilling summary and your feedback on it are recorded in the decisions log, docs/6-decisions/Decisions.md.",
+    "blocking": "Your answers to questions 1 to 4.",
+    "next": "Once you answer, I will build the template and the rule change as a plan for you to approve, then write the restructure's build plan using the new template.",
+    "todo": [
+      "Type your answers in the chat, for example \"Summary template answers: 1A 2A 3A 4A\".",
+      "Send the message."
+    ]
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "title": "Triage Label Mapping",
+  "eyebrow": "Proposal · which labels the triage skill uses in this repo",
+  "replyPrefix": "Triage mapping answers",
+  "reply": "",
+  "short": {
+    "lead": "The triage skill sorts issues with two kinds of label: a category (bug or enhancement) and a state (needs triage, needs info, ready for agent, ready for human, won't fix). This repo already has 35 labels, but two of the ones you suggested have a job already. \"In progress\" and \"needs review\" drive the house-rules design loop: \"in progress\" means I am building an issue, and \"needs review\" means it is waiting for your testing. Reusing them for triage would make the hooks read an untriaged issue as one in QA. So this mapping uses labels that nothing else depends on, and adds one new label only where none fits.",
+    "hint": "Tap a row to see which label it uses and why.",
+    "key": [
+      [
+        "Existing label, reused",
+        ""
+      ],
+      [
+        "New label",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "Triage",
+        "needs-triage → a new label, \"needs triage\"",
+        "you",
+        "No existing label means \"not looked at yet\". Three open issues carry no labels at all today; they would get this one.",
+        "Approve creating one label."
+      ],
+      [
+        "hand",
+        "Info",
+        "needs-info → \"question\"",
+        "",
+        "\"question\" is GitHub's default label for an issue waiting on more information. No open issue uses it today.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Agent",
+        "ready-for-agent → \"up next\"",
+        "",
+        "\"up next\" reads as \"pick this up next\" and is used by one open issue. The house rules give it no meaning, so the hooks ignore it.",
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Human",
+        "ready-for-human → \"help wanted\"",
+        "",
+        "GitHub's default label for work a person has to take on. No open issue uses it today.",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Won't fix",
+        "wontfix → \"wontfix\"",
+        "",
+        "Same name, same meaning. No change.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Category",
+        "bug → \"bug\", enhancement → your choice below",
+        "",
+        "\"bug\" is on 49 open issues. For enhancement, \"Feature\" is on 72 open issues and \"enhancement\" on 20, so the choice below decides which one triage reads.",
+        "Your answer under Choices."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Triage label mapping (new file: docs/agents/triage-labels.md)",
+      "Records which repo label stands for each triage role, so every future triage reads it instead of asking.",
+      [
+        "No mapping exists. Triage stops and asks you to run the setup skill.",
+        "A short table maps each of the seven triage roles to one repo label, and names \"in progress\" and \"needs review\" as off-limits to triage."
+      ],
+      "Four new labels are created on GitHub: needs-triage, needs-info, ready-for-agent and ready-for-human. wontfix already existed. No existing label is renamed or removed, and no issue is relabelled until you ask for a triage pass."
+    ]
+  ],
+  "choices": [
+    [
+      "category",
+      "Which label should triage treat as the enhancement category?",
+      [
+        [
+          "A",
+          "\"Feature\"",
+          1,
+          "Matches the 72 open issues that already carry it."
+        ],
+        [
+          "B",
+          "\"enhancement\"",
+          0,
+          "Matches the triage skill's own name, but covers only 20 open issues."
+        ]
+      ],
+      "Triage reads exactly one label per category, so issues with the other label would show up as uncategorised."
+    ],
+    [
+      "state",
+      "Which labels should the five triage states use?",
+      [
+        [
+          "A",
+          "The mapping on this page: one new label plus four existing ones the hooks ignore",
+          1,
+          "Nothing collides with the design-loop labels."
+        ],
+        [
+          "B",
+          "Five new labels named after the triage states",
+          0,
+          "Clearest names, but five more labels on a repo that already has 35."
+        ]
+      ],
+      "Both keep \"in progress\" and \"needs review\" out of triage."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A mapping from the triage skill's seven roles to labels in this repo, keeping clear of the two labels the house-rules hooks depend on.",
+    "changing": "One new mapping file and four new GitHub labels, one for each triage state that had no label.",
+    "blocking": "Your answers to the two choices.",
+    "next": "I write the mapping file, create the four labels, then list the issues that need triage.",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
+  },
+  "approval": "Design approved: triage label mapping"
+}

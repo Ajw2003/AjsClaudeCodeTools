@@ -1,0 +1,34 @@
+### run 1
+== this-repo (C:/Users/aj/Desktop/ClaudeDev/AjsClaudeCodeTools-329)
+  html       files   55  defs   1704  refs     60  parse+query 0.09s  files with parse errors 1
+  python     files   26  defs    704  refs  11470  parse+query 0.18s  files with parse errors 0
+  references by name: 3033 resolve to exactly one definition (26%), 1183 to several (10%), 7314 to none in this corpus (63%)
+  most-shared definition names: #out x50, #copy x50, #i-lock x48, #i-eye x48, #i-flask x48, #i-check x48, #i-hand x48, #i-file x48
+== PlunderSpell (C:/Users/aj/Desktop/GameDev/PlunderSpell/Assets/_Project/Scripts)
+  csharp     files  544  defs   5334  refs  18157  parse+query 0.54s  files with parse errors 0
+  references by name: 4902 resolve to exactly one definition (27%), 4607 to several (25%), 8648 to none in this corpus (48%)
+  most-shared definition names: TearDown x72, Update x55, Awake x54, SetUp x47, OnDisable x41, OnEnable x32, Enter x26, TakeDamage x23
+== focus-deck (C:/Users/aj/Desktop/focus-deck-app)
+  css        files    1  defs    142  refs      0  parse+query 0.00s  files with parse errors 0
+  html       files    3  defs     17  refs     11  parse+query 0.00s  files with parse errors 0
+  javascript files   14  defs    112  refs    920  parse+query 0.02s  files with parse errors 0
+  python     files    1  defs      1  refs     17  parse+query 0.00s  files with parse errors 0
+  references by name: 330 resolve to exactly one definition (35%), 0 to several (0%), 618 to none in this corpus (65%)
+  most-shared definition names: #capture-input x2, * x2, .topbar x2, .energy-grid x2, make_icon x1, #capture-form x1, #app x1, #json-in x1
+### run 2
+== this-repo (C:/Users/aj/Desktop/ClaudeDev/AjsClaudeCodeTools-329)
+  html       files   55  defs   1704  refs     60  parse+query 0.09s  files with parse errors 1
+  python     files   26  defs    704  refs  11470  parse+query 0.18s  files with parse errors 0
+  references by name: 3033 resolve to exactly one definition (26%), 1183 to several (10%), 7314 to none in this corpus (63%)
+  most-shared definition names: #out x50, #copy x50, #i-lock x48, #i-eye x48, #i-flask x48, #i-check x48, #i-hand x48, #i-file x48
+== PlunderSpell (C:/Users/aj/Desktop/GameDev/PlunderSpell/Assets/_Project/Scripts)
+  csharp     files  544  defs   5334  refs  18157  parse+query 0.53s  files with parse errors 0
+  references by name: 4902 resolve to exactly one definition (27%), 4607 to several (25%), 8648 to none in this corpus (48%)
+  most-shared definition names: TearDown x72, Update x55, Awake x54, SetUp x47, OnDisable x41, OnEnable x32, Enter x26, TakeDamage x23
+== focus-deck (C:/Users/aj/Desktop/focus-deck-app)
+  css        files    1  defs    142  refs      0  parse+query 0.00s  files with parse errors 0
+  html       files    3  defs     17  refs     11  parse+query 0.00s  files with parse errors 0
+  javascript files   14  defs    112  refs    920  parse+query 0.02s  files with parse errors 0
+  python     files    1  defs      1  refs     17  parse+query 0.00s  files with parse errors 0
+  references by name: 330 resolve to exactly one definition (35%), 0 to several (0%), 618 to none in this corpus (65%)
+  most-shared definition names: #capture-input x2, * x2, .topbar x2, .energy-grid x2, make_icon x1, #capture-form x1, #app x1, #json-in x1

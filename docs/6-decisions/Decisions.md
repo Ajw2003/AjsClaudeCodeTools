@@ -7,6 +7,314 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - Summary template: aj's answers on the proposal
+
+**Context.** The proposal page `docs/plans/2026-10-19-summary-template.html` asked how the grilling
+summary page's shape is kept as a template, how each answer is named, where aj's define-before-use rule
+goes and how summary pages get less crowded.
+
+**Decision.** aj's reply was "Summary template answers 1A 2A 3A 4A".
+1. The shape is kept in the plugin as a starter file, `templates/decision-summary.page.json`. Every
+   grilling, restructure or brainstorm summary starts from it, and on that kind of page the second box
+   reads "Decided by" instead of "Requires". Plan pages keep "Requires".
+2. A "Decided by" box names each answer with its round, the question in short form and the answer
+   chosen, in words.
+3. The rule joins the existing "Write it so nothing is left to guess" rule: its "Explicit context" and
+   "Named references" lines merge into one "Define before use" line, and `scripts/clarity.py` flags a
+   question or answer reference that names nothing.
+4. Each topic's "Creates or changes" text becomes short lines of one decision each, and each topic gets
+   the template's existing before-and-after strip.
+
+**Status.** Standing. The build plan is `docs/plans/2026-10-19-summary-template-plan.html`.
+
+## 2026-10-19 - Grilling summary confirmed, and the summary shape becomes a template
+
+**Context.** The summary page `docs/plans/2026-10-19-grilling-summary.html` gathered every answer from
+the five rounds of the #306 grilling session into ten topics and asked aj to confirm them.
+
+**Decision.** aj's reply was "Grilling summary: 1A": the summary matches what aj decided, and the build
+plan for the restructure comes next. aj also gave feedback on the page itself:
+1. The topic rows, each opening a "Creates or changes" box, did everything aj wanted. Each named which
+   answers led to the change and said plainly what the change creates or changes, and aj rated
+   readability and fit 9 out of 10. aj wants that shape kept as a template for every future grilling
+   session, restructure and brainstorm.
+2. The page is still visually dense and has no pictures.
+3. The "Requires" box (`templates/handover-page.html:357` in the plugin) is too rigid: it is worded for
+   what a step still needs, so on a summary it held past answers as bare references ("Round 1 answers
+   1 and 2") without saying, in short or in full, what each question asked or what each answer chose.
+4. (aj's new rule) Specificity is required everywhere, for people and AI alike: name what a phrase means
+   before using it, so context never has to be inferred. When that genuinely can't be done, say plainly
+   why.
+
+**Status.** Standing. How the template is kept, where the rule goes and how the density is fixed are
+asked on `docs/plans/2026-10-19-summary-template.html`. The restructure's build plan follows those
+answers, so it is built from the new template.
+
+## 2026-10-19 - Grilling round 5: aj's answer
+
+**Context.** Round 5 of the #306 grilling session asked how a cloud session makes a page readable,
+since tapping a page's HTML file in the Claude app shows its raw code. Page:
+`docs/plans/2026-10-19-grilling-round-5.html`.
+
+**Decision.** aj's reply was "Grilling round 5 answers 1C". In cloud sessions only (the plugin tells
+them apart by `CLAUDE_CODE_REMOTE`, `hook.py:349`), every page is published privately to claude.ai and
+the reply links that. The page file is still written under `docs/plans/` and committed. Local sessions
+keep round 1 answer 7: pages are built locally and published only when asked. This narrows round 1
+answer 7, logged on `AjsAgent/docs-context-layer`, for cloud sessions.
+
+**Status.** Standing. No new question opened, so the grilling session is done. The summary of all five
+rounds is `docs/plans/2026-10-19-grilling-summary.html`, for aj to confirm.
+
+## 2026-10-19 - Grilling round 4: aj's answers
+
+**Context.** Round 4 of the #306 grilling session asked how a settings answer gets saved while every
+tool is refused, and where cloud sessions keep settings. Page:
+`docs/plans/2026-10-19-grilling-round-4.html`.
+
+**Decision.** aj's reply was "Grilling round 4 answers 1A 2A", with a note.
+1. While settings are unset, the guard lets exactly one command through: the plugin's own settings
+   script (for example `python <plugin>/scripts/settings.py set agent_name ajw2003sAgent`). Every other
+   tool stays refused.
+2. Cloud sessions read settings from environment variables set once in the cloud environment's
+   settings, for example `HOUSE_RULES_AGENT_NAME=ajw2003sAgent`. The plugin reads these first and its
+   settings file second; the chat question appears only when neither has a value.
+3. (aj's note) In a cloud session, tapping a page's HTML file in the Claude app shows its raw code. aj
+   could read the round 4 page only because they already knew to download it. A cloud session needs
+   either a way to view the page or a reply that says plainly the page must be downloaded. Publishing
+   to claude.ai stays the exception, used only when needed (round 1 answer 7).
+
+**Status.** Standing. Note 3 is asked as one question in round 5,
+`docs/plans/2026-10-19-grilling-round-5.html`.
+
+## 2026-10-19 - Grilling round 3: aj's answers
+
+**Context.** Round 3 of the #306 grilling session asked how a new install asks for its settings and
+what waits until they are set, because round 2 answers 1 (a worked-out agent name) and 13 (no setting
+runs on an assumed value) meet. Page: `docs/plans/2026-10-18-grilling-round-3.html`. The round 1 and
+round 2 entries sit in this log on the branch `AjsAgent/docs-context-layer`.
+
+**Decision.** aj's reply was "Grilling round 3 answers: 1A 2B".
+1. At session start the plugin asks for each unset setting in the chat and suggests the worked-out value
+   (such as "ajw2003sAgent"). The suggestion is used only once aj confirms it. The answer is saved in the
+   plugin's own settings file, and a value set through `/plugin configure` is used too.
+2. Until the settings are set, the plugin refuses every tool, not only commits, pushes, branches, pull
+   requests and issues. The refusal names the missing setting and how to set it.
+
+**Status.** Standing. The two answers meet: saving the answer is itself a tool call that answer 2
+refuses. Cloud sessions also start in a fresh container, so a setting saved once per machine may not
+last. Both are asked in round 4, `docs/plans/2026-10-19-grilling-round-4.html`.
+
+## 2026-10-18 - QA passed: page links open
+
+**Context.** #329 (a page link in a reply must open) was built in steps #330 to #332 on
+`AjsAgent/issue-329-page-links`, pull request #333 (house-rules 2.68.4: a page link in a reply must
+open). QA page: `docs/plans/2026-10-18-page-links-open-qa.html`. `verify.py`, run twice from the
+branch's folder, gave "RESULT: FAIL - 4 of 856 checks failed": the 9 new cases pass, and the 4 failures
+(95, 97, 751, 835) already failed on `main` from a separate working folder. `tools/verify_tools.py`
+gave "RESULT: PASS - all 47 checks passed". The real Stop hook printed the outside-folder note for
+`../Other/docs/plans/x.html` and no page note for `docs/plans/x.html`; `make_page.py build --out` to an
+outside folder printed the warning.
+
+**Decision.** aj passed QA ("QA passed: page links open"). Pull request #333 merges into `main`. The
+issues stay open until aj closes them.
+
+Still unverified, as the QA page lists: a real session in a sibling worktree running the fixed plugin,
+the 4 baseline checks run from the main folder, and a bare path with a space in it.
+
+**Status.** Standing.
+
+## 2026-10-18 - Page links open: the build plan
+
+**Context.** The design for #329 (a page link in a reply must open) was approved (entry below). Build
+plan page: `docs/plans/2026-10-18-page-links-open-plan.html`. Systems doc section: "A page link must
+open" in `docs/4-systems/handover-pages.md`.
+
+**Decision.** Three sub-issues of #329, built on `AjsAgent/issue-329-page-links` cut from `main`, one
+`@house-rules:builder` helper at a time, `verify.py` after each: #330 (count a page link only when it
+resolves inside the session folder), #331 (make_page.py warns when it writes a page outside the folder
+it runs in), #332 (docs, version and QA page). Baseline on that branch before any change: "RESULT:
+FAIL - 4 of 847 checks failed" (checks 95, 97, 751, 826), already failing on `main`; the build adds no
+new failures.
+
+**Status.** Standing once aj replies "Build plan approved: page links open".
+
+## 2026-10-18 - Design approved: page links open
+
+**Context.** Issue #329 (a page link in a reply must open: a page outside the session folder is sent
+as a file, not linked), a sub-issue of #281. On 2026-10-18 a page in a sibling git worktree was linked
+and did nothing, then opened in the browser pane as a static snapshot with scripts off and showed an
+empty card. The page checkpoint counts any ".html" in a reply as a link (`_PAGE_LINK_RE`,
+`hook.py:7299` on `main`). Design page: `docs/plans/2026-10-18-page-links-open.html`.
+
+**Decision.** aj approved ("Design approved: page links open"):
+- One function, `_reply_links_page(reply, cwd)`, replaces the bare pattern for the page checkpoint,
+  the long-reply note, the owed-page counter and the QA link check. An artifact link or a picture
+  counts; an .html link counts only when it resolves inside the session's folder; a bare file name
+  still counts.
+- The checkpoint's note names the outside path and says to copy it into the session folder.
+- `make_page.py build` prints a warning when it writes outside the folder it runs in.
+- `verify.py` gains five cases for the function and one for the warning.
+
+Dropped from the issue's first draft: counting a page sent with SendUserFile as linked, because a sent
+file outside the folder also opened as a blank snapshot.
+
+**Status.** Standing.
+
+## 2026-10-18 - Grilling round 2: aj's answers
+
+**Context.** Round 2 of the #306 grilling session asked the 13 questions opened by round 1. Page:
+`docs/plans/2026-10-18-grilling-round-2.html`.
+
+**Decision.** aj's reply was "Grilling round 2 answers: 1A 2A 3A 4A 5A 6A 7A 8A 9A 10A 11A 12* 13B".
+1. The agent's name is the GitHub login, lowercased, plus "sAgent": "ajw2003sAgent" for aj.
+2. The agent's name is the commit author's name, with the user's own email, and appears in the credit
+   line.
+3. The credit line reads "Committed by ajw2003sAgent" on commits and "Opened by ajw2003sAgent" on pull
+   requests and issues.
+4. Agent branches are named `ajw2003sAgent/<topic>`.
+5. A branch is the agent's own when its name starts with the agent prefix or with an extra prefix listed
+   in the settings.
+6. `AjsAgent/` and `claude/` go into aj's settings as extra agent prefixes; nothing is renamed.
+7. A snapshot branch is deleted once its helper's work is merged.
+8. A feature finds its parent feature through GitHub's sub-issue link.
+9. On someone else's branch the archivist opens an issue instead of moving a comment.
+10. In a repo aj doesn't own, the six-tier docs stay local and out of git unless the owner asks.
+11. A wholesale rewrite is replacing more than half of a file's lines in one change, or writing the whole
+    file over; it needs aj's approval by name.
+12. (aj's own answer) A check is never skipped by the agent. When a check meets the bar (over 10
+    minutes, costs money, or needs a machine or account the agent can't reach), the agent names it and
+    asks aj plainly whether to skip it. Skipping a test or hiding a failure is always the user's
+    override, never the norm, because a failing or slow test can reveal architecture that needs to
+    change.
+13. Every setting blocks until it is set; none runs on an assumed default.
+
+**Status.** Standing. Answers 1 and 13 meet: how a derived name and "blocks until set" work together is
+asked in round 3.
+
+## 2026-10-18 - Grilling round 1: aj's answers
+
+**Context.** The #306 grilling session settles the 28 rule contradictions and the open questions from
+the 2026-10-16 audit (`docs/audits/2026-10-16-plugin-audit/01-rules-vs-rules.md`). Round 1 page:
+`docs/plans/2026-10-18-grilling-round-1.html`, 17 questions.
+
+**Decision.** aj's reply was "Grilling round 1 answers: 1* 2A 3A 4A 5A 6A 7A 8A 9A 10A 11A 12A 13A 14A
+15A 16* 17A".
+1. Deletes (aj's own answer): deleting a file git can bring back is always allowed on a branch the agent
+   owns. On someone else's branch it is refused, and the refusal says plainly why.
+2. Risky git commands are refused with the safe way named; aj is asked only when no safe way exists.
+3. Test suites run twice everywhere, helpers included.
+4. A helper with a question only aj can answer stops and reports it to the parent session, which asks.
+5. A helper's report always quotes the real RESULT line and every failure line; no line cap.
+6. An obvious bug outside the request is not fixed unasked: it becomes an issue, named in the reply.
+7. Pages are built locally for every plan and long reply; publishing to claude.ai happens only when
+   asked.
+8. Every feature that reaches a build plan gets GitHub issues.
+9. A feature that is one step of a bigger one passes QA on its own; the parent issue tracks its
+   children and closes with the last one.
+10. An approval is accepted before its decisions-log entry exists; the entry is required before the
+    next stage (#327).
+11. The design loop keeps its pull-request and label stage moves, written down as rules; an edit
+    attempt never moves a stage.
+12. Worktree autosave uses the same credit rule as every commit and pushes without force, to a fresh
+    snapshot branch name each time.
+13. The worktree sweep commits a finished helper's leftovers only in that helper's own worktree, as a
+    stated exception to "never sweep unrelated files".
+14. The archivist moves a long code comment into the docs at turn end and leaves a doc-ref pointer.
+15. Unity batch mode checks a compile only when no Unity CLI or editor plugin can.
+16. (aj's own answer) Identity and taste become settings (agent name, credit line, branch prefix,
+    labels, voice, page threshold); safety and evidence rules stay blocks. Each setting carries a
+    default or blocks until it is set. "Claude" must never be the default credit, and neither may aj's
+    name on another person's work: the agent commits under the user's own name with "sAgent" added,
+    which for aj is "ajw2003sAgent".
+17. The sixteen mechanical fixes are accepted as listed on the page.
+
+**Status.** Standing. Round 2 asks what these answers leave open.
+
+## 2026-10-18 - Tree-sitter trial: aj's answers
+
+**Context.** The trial in `docs/trials/2026-10-18-tree-sitter/` ran tree-sitter-language-pack 1.22.1 on
+PlunderSpell's 544 C# scripts, this repo and focus-deck-app. All three took 1.0 s; 66 of 66
+hand-counted definitions were found, and every hand-counted reference after two query fixes. Two
+limits were put to aj on `docs/plans/2026-10-18-tree-sitter-trial.html`: in PlunderSpell 25% of
+references match more than one definition by name, and the package downloads its grammars (12 MB on
+Windows) on first use from an address it does not print.
+
+**Decision.** aj's reply was "Tree-sitter trial answers: 1B 2A".
+- Names (1B): C# gets a second pass with Roslyn, the C# compiler, to resolve which definition a
+  reference reaches. This brings back the dotnet runtime for C# projects; the refresh time is not
+  measured yet and gets measured before the build.
+- Grammars (2A): the install step downloads the six grammars up front, says so, and fails loudly if
+  the download fails. Finding the download address and testing an offline machine come first.
+
+Rejected: marking ambiguous lines without resolving them, and shipping the grammar files inside the
+plugin.
+
+**Status.** Standing. Settled with the rest of #306 in the grilling session.
+
+## 2026-10-18 - Docs map and freshness: aj's answers
+
+**Context.** The follow-up page `docs/plans/2026-10-18-docs-map-and-freshness.html` asked which parser
+builds the code map and how the commit gate treats a hand-written section whose code changed (entry
+below for the first proposal).
+
+**Decision.** aj's reply was "Docs map and freshness answers: 1A 2A".
+- Parser (1A): tree-sitter, through the tree-sitter-language-pack Python package, for Python, JS, TS,
+  HTML, CSS and C#. One code path in Python. It starts with a trial on this repo and one Unity project,
+  counting the functions found against a hand count of three files per language.
+- Freshness (2A): generated facts (covers, depends-on, depended-on-by) are rewritten at the end of
+  every turn by a hook that never blocks; a hand-written section whose code changed gets a stale stamp;
+  the guard refuses a commit with code changes while a doc covering that code is stamped and not in the
+  same commit. Known weakness: touching a section clears its stamp without a real update; the reviewer
+  helper and aj's QA catch that, not a check.
+- Unity prefabs and scenes stay out of this revision; aj wants them tracked later by another route,
+  issue #334 (map Unity prefabs and scenes in a later revision).
+
+Rejected: each language's own compiler (three runtimes), pattern matching for C# and web files (guessed
+call edges), docs holding only generated facts, and a gate that lets stale prose into history.
+
+**Status.** Standing. Settled with the rest of #306 in the grilling session, then built in the Docs part.
+
+## 2026-10-18 - Docs context layer: aj's answers on the first proposal
+
+**Context.** The restructure (#306, restructure into a shared core with project boundaries and six
+optional sub-plugins) has stopped after the 2.68.1 patch: QA passed, the grilling session on the 28
+rule contradictions has not started, and no build sub-issues exist. aj asked to fold the job of
+trailhq/Trail-Code (a code map plus saved decisions, so a session reads a map instead of searching
+code) into the docs. Proposal page: `docs/plans/2026-10-18-docs-context-layer.html`.
+
+**Decision.** aj's reply was "Docs context layer answers: 1* 2* 3A".
+- When (3A): the docs context layer joins #306. It is settled in the grilling session and built
+  inside the Docs part, which becomes installed by default.
+- Code map (1, aj's own answer): build our own map, not Trail-Code's. It must map Python, web
+  projects and C#, because those are what aj builds; no use case allows dropping one.
+- Keeping docs current (2, aj's own answer): investigate an alternative to "the end-of-reply check
+  names each doc owed an update". Docs are a source of truth, so they cannot be optional and cannot
+  fall behind, and the mechanism that keeps them current must never loop.
+
+Rejected: installing Trail-Code, whole or map-only, and a Python-only map.
+
+**Status.** Standing. Follow-up page for choices 1 and 2: `docs/plans/2026-10-18-docs-map-and-freshness.html`.
+
+## 2026-10-18 - #322 writing check loop: design and build plan
+
+**Context.** During the cloud QA test for #315 (credit read-back), the end-of-reply checks looped: each
+report-only note went back to the model as Stop `additionalContext`, which continues the turn, and
+`event_handover` emits it on the retry (`stop_hook_active` true) as well. Replies of one line kept setting off
+the page checkpoint until Claude Code's cap of 9 consecutive blocks ended the turn. The editor checkpoint
+also forced a whole subagent run for one 386-word chat reply. aj opened #322 for it ("fix the writing check
+asap as it is bleeding tokens on retries, and toggle the editor off by default").
+
+**Decision.** Design approved as "Design approved: #322 writing check loop". The build plan is four
+sub-issues, each with its own `verify.py` case: the retry only reports to aj (#323), the writing check
+leaves chat replies alone and stays on pages and new issues (#324), the editor checkpoint is pages-only
+unless `HOUSE_RULES_EDITOR=on` (#325), and the page checkpoint's still-owed note is said once per message
+of aj's (#326). The plan is in `docs/4-systems/clear-writing.md`, "Planned: stop the end-of-reply loop".
+
+**Rejected.** Keeping `HOUSE_RULES_CLEAR_WRITING=off` as the fix: it also turns off the page and issue
+checks, and setting it mid-session did not reach hooks already running.
+
+**Status.** Standing.
+
 ## 2026-10-16 - QA passed: plugin restructure 2.68.1 patch
 
 **Context.** The 2.68.1 patch (#307 to #311) was built on `ccr-7dcf4ee2-zp3mm8`, pull request #312 (house-rules
@@ -2426,6 +2734,43 @@ like "correct" would fire on ordinary replies. `success claim` stays in the rule
 **Why.** The distinction the issue draws is between a statement about a thing and a test of it;
 "a tool call" drew the line in the wrong place. Enforcement can follow if the text alone proves
 insufficient.
+
+**Status.** Standing.
+
+## 2026-10-17 — Triage of the house-rules core and restructure issues
+
+**Context.** aj asked for the open issues about the plugin's core and the restructure into a core
+plus six sub-plugins (#306) to be triaged with the `triage` skill. The label mapping is
+`docs/agents/triage-labels.md`; the per-issue table is
+`docs/plans/2026-10-17-triage-core-restructure.md`.
+
+**Decision.** aj approved the triage page ("Design approved: core triage") with three answers:
+every one of the 147 in-scope issues gets one category label (`bug` or `Feature`) and one triage
+state label; the 12 issues the restructure replaced or the code already covers are closed with a
+comment naming what replaces them, plus #229 (duplicate of #215) and #193 (duplicate of #260); the
+11 old issue-workflow issues stay open, labelled `wontfix`, until #301 is built; #45, #140 and #150
+get triage notes asking their open question.
+
+**Why.** The first rebuild plan (#208 to #212) and the restructure (#306) described the same work
+twice, and 36 issues waiting for aj's testing were mixed in with unstarted work.
+
+**Status.** Standing.
+
+## 2026-10-17 — Attribution guard gaps: design and build plan (#315)
+
+**Context.** A run of `_attribution_guard` from `main` refused only `gh pr create`. It let through
+five `gh api` write routes, `curl` to the GitHub API, and the platform's "Generated by Claude Code"
+footer. Proposal: `docs/plans/attribution-guard-gaps.html`.
+
+**Decision.** aj approved the design (readback A: a hook reads the body back automatically; where A:
+today's `hook.py`, on `AjsAgent/issue-315-attribution-routes` from `main`) and the build plan
+(`docs/plans/attribution-guard-gaps-build-plan.html`). There are four sub-issues, built in order:
+#316 (check gh api and curl writes and bodies in files), #317 (recognise the appended footer),
+#318 (read the body back after opening), #319 (rule text, docs and version). The design is in
+`docs/4-systems/guards.md`, "Credit on GitHub", on that branch.
+
+**Why.** The platform appends its footer after the agent's text is sent, so no guard can keep it
+off. Reporting it honestly is the part the agent controls.
 
 **Status.** Standing.
 
