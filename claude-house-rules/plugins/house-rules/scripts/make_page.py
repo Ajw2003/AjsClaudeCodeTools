@@ -386,6 +386,8 @@ def build(args):
     page = load_json(args.content, "content")
     if not isinstance(page, dict):
         die("content %s must be a JSON object" % args.content)
+    if "kind" in page and page["kind"] != "summary":
+        die("content 'kind' is %r; the only allowed value is \"summary\" (or leave 'kind' out)" % (page["kind"],))
     if "qa" in page:
         apply_qa(page, project)
     check_approval(page)

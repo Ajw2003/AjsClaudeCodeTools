@@ -154,3 +154,7 @@ This rule is injected by its own SessionStart handler (`showrule`), not inside
 `rules/house-rules.md`: that file was 47 characters from its injection margin when the rule was
 approved, and the coding-standards slot can itself near its limit in a Unity-plus-Node project.
 The same split was made for the machine profile in 2.17.1.
+
+Every grilling, restructure or brainstorm summary page starts from
+`templates/decision-summary.page.json`, and names each answer in words in its "Decided by" box
+("Round N, question N, what was asked: what was chosen").

@@ -9922,6 +9922,33 @@ _mp_cases.append(("make_page (#331): a page written outside the folder it runs i
                   _r_out.returncode == 0 and "is outside" in _r_out.stdout))
 _mp_cases.append(("make_page (#331): a page written inside the folder it runs in prints no 'is outside' line",
                   _r_in.returncode == 0 and "is outside" not in _r_in.stdout))
+# ---- summary pages (#339 part B) ----
+_ds_start = os.path.join(HERE, "..", "templates", "decision-summary.page.json")
+_ds_d = _mp_proj("dsum")
+_mp("style", "--quick", "--project", _ds_d)
+_rc, _o_ds = _mp("build", _ds_start, "--project", _ds_d)
+_ds_h = open(os.path.join(_ds_d, "docs", "plans", "decision-summary.html"), encoding="utf-8").read() if _rc == 0 else ""
+print("make_page build of the starter:\n" + _o_ds)
+_mp_cases.append(("summary (#339): the starter builds and its row detail says 'Decided by', not 'Requires'",
+                  _rc == 0 and "Decided by" in _ds_h and 'PAGE.kind === "summary"' in _ds_h and '"kind": "summary"' in _ds_h))
+_mp_cases.append(("summary (#339): the starter builds clean in the phone-width visual check",
+                  _rc == 0 and "visual check" in _o_ds and "visual check did not run" not in _o_ds and "clipped card" not in _o_ds))
+_ds_bad = json.load(open(_ds_start, encoding="utf-8"))
+_ds_bad["kind"] = "plan"
+_ds_bp = os.path.join(_mp_tmp, "badkind.page.json")
+json.dump(_ds_bad, open(_ds_bp, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _ds_bp, "--project", _ds_d)
+_mp_cases.append(("summary (#339): 'kind': 'plan' makes make_page exit non-zero and names 'summary'", _rc != 0 and "summary" in _o))
+_dp = _mp_page_of(os.path.join(_ds_d, "docs", "plans", "decision-summary.html"))
+_ds_items = _dp["short"]["items"] if _dp else []
+_mp_cases.append(("summary (#339): a list in creates is kept as a list and the template renders list items (<li>)",
+                  isinstance(_ds_items[0][4], list) and "<ul class=\"cl\">" in _ds_h and "<li>${esc(x)}</li>" in _ds_h))
+_mp_cases.append(("summary (#339): a row with a 3-string strip is kept and rendered with the flow strip",
+                  len(_ds_items[0]) > 6 and len(_ds_items[0][6]) == 3 and "${strip ? flow(strip)" in _ds_h))
+_rc, _o = _mp("build", _c1, "--project", _ds_d)
+_nk_h = open(os.path.join(_ds_d, "docs", "plans", "basic.html"), encoding="utf-8").read() if _rc == 0 else ""
+_mp_cases.append(("summary (#339): a content file with no kind has no kind in its PAGE and still carries the Requires label",
+                  _rc == 0 and '"kind"' not in _nk_h.split("const PAGE", 1)[1].split("\n};", 1)[0] and 'ic("hand") + "Requires"' in _nk_h))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
