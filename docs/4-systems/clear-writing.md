@@ -24,8 +24,9 @@ editor reminder. The not-checked disclosure stays on: it belongs to Evidence bef
 
 ## Stop the end-of-reply loop (#322)
 
-Design approved 2026-10-18 ("Design approved: #322 writing check loop"). Built in plugin 2.68.4
-(#323 to #326, plus #327 for the design loop); waiting for aj's QA.
+Design approved 2026-10-18 ("Design approved: #322 writing check loop"). Built on
+`AjsAgent/nifty-newton-x2jaaj` (#323 to #326, plus #327 for the design loop) and shipped in plugin
+2.68.5, because `main` had already used 2.68.4 for the page-link fix (#329).
 
 **Why.** A Stop hook's `additionalContext` continues the turn, and `handover` emits it on the retry
 (`stop_hook_active` true) as well as the first stop. Every report-only note (the page checkpoint, the
@@ -47,6 +48,12 @@ and the editor checkpoint added a whole subagent run for one 386-word chat reply
 
 Each step adds its own `verify.py` case. Step 1's case proves that two Stop runs about the same reply
 give no second `additionalContext`.
+
+**A merge in progress (2.68.5).** `_pages_changed_this_turn` counts a page when `git status` lists it.
+During an uncommitted merge, status lists every page the other branch brought in, so on 2026-10-19
+eight merged pages re-fired the page check and the editor note after every reply until the merge was
+committed. A page still identical to `MERGE_HEAD`'s copy now does not count; one edited during the
+merge still does. `verify.py` builds a real merge to prove both.
 
 ## Invariants
 

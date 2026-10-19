@@ -4422,10 +4422,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.68.4",
+    "issues: the rules section and its detail file exist, and the plugin is 2.68.5",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.4",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.5",
     "rules section + detail file + version",
 )
 
@@ -9357,6 +9357,37 @@ _pc_names = sorted(os.path.basename(p) for p in _pc_pages)
 _cw_cases.append(("page scan: a cloned page with a fresh file time is not counted; edited and new pages are (#284)",
                   _pc_problem is None and _pc_names == ["edited.html", "new.html"]))
 shutil.rmtree(_pc_repo, True)
+
+# During an uncommitted merge, a page the other branch brought in unchanged is not this turn's work;
+# a page edited during the merge still is. Before this, every merged page re-fired the page and editor
+# notes on every reply until the merge was committed.
+_pm_repo = tempfile.mkdtemp(prefix="hr-pagemerge-")
+os.makedirs(os.path.join(_pm_repo, "docs", "plans"))
+_pm_git = lambda *a: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=_pm_repo,
+                                    env=_pc_genv, capture_output=True)
+_pm_git("init", "-q", "-b", "base")
+with open(os.path.join(_pm_repo, "docs", "plans", "base.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>base</p>\n")
+_pm_git("add", ".")
+_pm_git("commit", "-qm", "base")
+_pm_git("checkout", "-q", "-b", "other")
+for _n in ("merged.html", "touched.html"):
+    with open(os.path.join(_pm_repo, "docs", "plans", _n), "w", encoding="utf-8") as _f:
+        _f.write("<p>from the other branch</p>\n")
+_pm_git("add", ".")
+_pm_git("commit", "-qm", "other pages")
+_pm_git("checkout", "-q", "base")
+with open(os.path.join(_pm_repo, "docs", "plans", "base.html"), "a", encoding="utf-8") as _f:
+    _f.write("<p>base moves on</p>\n")
+_pm_git("commit", "-qam", "base moves on")
+_pm_git("merge", "--no-ff", "--no-commit", "other")
+with open(os.path.join(_pm_repo, "docs", "plans", "touched.html"), "a", encoding="utf-8") as _f:
+    _f.write("<p>edited during the merge</p>\n")
+_pm_pages, _pm_problem = _pc_hook._pages_changed_this_turn(_pc_t, _pm_repo)
+_pm_names = sorted(os.path.basename(p) for p in _pm_pages)
+_cw_cases.append(("page scan: during a merge, a page brought in unchanged is not counted; one edited during it is",
+                  _pm_problem is None and _pm_names == ["touched.html"]))
+shutil.rmtree(_pm_repo, True)
 
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)

@@ -7371,6 +7371,15 @@ def _pages_changed_this_turn(transcript_path, cwd):
         except RuntimeError as exc:
             return [], "house-rules: git could not list this turn's pages (%s), so they were not checked." % exc
         touched = {os.path.basename(line[3:].strip().strip('"')) for line in status.splitlines() if len(line) > 3}
+        try:
+            # During an uncommitted merge, status lists every page the other branch brought in. A page
+            # still identical to MERGE_HEAD's copy came from the merge, not this turn, so it does not count.
+            if _ag(top, ["rev-parse", "-q", "--verify", "MERGE_HEAD"], check=False)[0] == 0:
+                _rc, differ, _e = _ag(top, ["diff", "--name-only", "MERGE_HEAD", "--", "docs/plans"])
+                differ = {os.path.basename(line.strip()) for line in differ.splitlines() if line.strip()}
+                touched = {n for n in touched if n in differ}
+        except RuntimeError as exc:
+            return [], "house-rules: git could not compare pages with the merge (%s), so they were not checked." % exc
         touched |= {os.path.basename(line.strip()) for line in log.splitlines() if line.strip()}
         return sorted(os.path.join(plans, n) for n in pages if n in touched), None
     return sorted(os.path.join(plans, n) for n in pages if os.path.getmtime(os.path.join(plans, n)) >= since), None
