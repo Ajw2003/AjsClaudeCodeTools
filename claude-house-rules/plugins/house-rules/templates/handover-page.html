@@ -60,7 +60,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .crb.you .crh{color:var(--you)}
 .crh .ico{width:16px;height:16px}
-.crb p{font-size:.9rem}
+.crb p,.crb li{font-size:.9rem}
+.crb ul.cl{margin:0;padding-left:1.1em;display:grid;gap:4px}
 .g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
 .g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
 .g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
@@ -176,7 +177,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .cmp{display:grid;gap:6px;min-width:0}
 .cmp-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 body{overflow-wrap:anywhere}
-.crb p,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
+.crb p,.crb li,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
 @media (max-width:479px){.cr{grid-template-columns:minmax(0,1fr)}}
 .cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
 .cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
@@ -346,15 +347,19 @@ const PARTS = [["short", "In short"], ["changes", "Changes"], ["choices", "Choic
   .filter(([id]) => id === "short" || id === "wrapup" || (PAGE[id] && PAGE[id].length));
 document.querySelectorAll("[data-part]").forEach(p => { if (!PARTS.some(([id]) => id === p.dataset.part)) p.remove(); });
 
+const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+const lst = v => Array.isArray(v) ? `<ul class="cl">${v.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p>${esc(v)}</p>`;
 const glance = document.getElementById("glance"), sd = document.getElementById("sd");
 glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
   `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
 function showItem(n) {
   glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
   const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
-  const needsYou = !/^Nothing/.test(requires);
-  sd.innerHTML = `<h3>${esc(t)}</h3><div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span><p>${esc(creates)}</p></div>
-    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${ic("hand")}Requires</span><p>${esc(requires)}</p></div></div>${picHtml(pic)}`;
+  const row = PAGE.short.items[n], summary = PAGE.kind === "summary";
+  const strip = Array.isArray(row[6]) && row[6].length === 3 && row[6].every(x => typeof x === "string") ? row[6] : null;
+  const needsYou = !summary && !/^Nothing/.test(Array.isArray(requires) ? requires.join(" ") : requires);
+  sd.innerHTML = `<h3>${esc(t)}</h3>${strip ? flow(strip) : ""}<div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span>${lst(creates)}</div>
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${summary ? ic("check") + "Decided by" : ic("hand") + "Requires"}</span>${lst(requires)}</div></div>${picHtml(pic)}`;
 }
 glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
 if (PAGE.short.items.length) showItem(0);
@@ -364,7 +369,6 @@ if (document.getElementById("cc")) {
   document.getElementById("cc-count").textContent =
     `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
   // A New item's picture (#241): what sets it off -> what it does -> what you get.
-  const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
   // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
   const lineCounts = (a, r) => `+${a} \u2212${r}`;
   const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
