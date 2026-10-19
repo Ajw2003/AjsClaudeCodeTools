@@ -5,7 +5,7 @@
   "replyPrefix": "Grilling round 4 answers",
   "reply": "",
   "short": {
-    "lead": "Round 3 is logged. In round 3 you chose two things. The plugin asks for its settings in the chat (answer 1A). Every tool is refused until the settings are set (answer 2B). Those two answers collide. Saving your answer means writing a file, and writing a file is a tool call, which 2B refuses. There is a second gap in cloud sessions like this one. The plugin's data folder in this container was created at 06:01 today, the minute the container started. So a setting saved \"once per machine\" is probably gone by the next cloud session. These 2 questions close both gaps. If they open nothing new, the grilling session is done.",
+    "lead": "Round 3 is logged. In round 3 you chose two things. The plugin asks for its settings in the chat (answer 1A). Every tool is refused until the settings are set (answer 2B). Those two answers collide. Saving your answer means writing a file, and writing a file is a tool call, which 2B refuses. There is a second gap in cloud sessions like this one. The plugin's data folder in this container was created at 06:01 today, the minute the container started. So a setting saved \"once per machine\" may be gone by the next cloud session. I can't test that from inside one session, because the next container doesn't exist yet. These 2 questions close both gaps. If they open nothing new, the grilling session is done.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       [
