@@ -7,6 +7,25 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - QA passed: page links open
+
+**Context.** #329 (a page link in a reply must open) was built in steps #330 to #332 on
+`AjsAgent/issue-329-page-links`, pull request #333 (house-rules 2.68.4: a page link in a reply must
+open). QA page: `docs/plans/2026-10-18-page-links-open-qa.html`. `verify.py`, run twice from the
+branch's folder, gave "RESULT: FAIL - 4 of 856 checks failed": the 9 new cases pass, and the 4 failures
+(95, 97, 751, 835) already failed on `main` from a separate working folder. `tools/verify_tools.py`
+gave "RESULT: PASS - all 47 checks passed". The real Stop hook printed the outside-folder note for
+`../Other/docs/plans/x.html` and no page note for `docs/plans/x.html`; `make_page.py build --out` to an
+outside folder printed the warning.
+
+**Decision.** aj passed QA ("QA passed: page links open"). Pull request #333 merges into `main`. The
+issues stay open until aj closes them.
+
+Still unverified, as the QA page lists: a real session in a sibling worktree running the fixed plugin,
+the 4 baseline checks run from the main folder, and a bare path with a space in it.
+
+**Status.** Standing.
+
 ## 2026-10-18 - Page links open: the build plan
 
 **Context.** The design for #329 (a page link in a reply must open) was approved (entry below). Build
