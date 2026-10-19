@@ -355,7 +355,7 @@ else:
 # --- the clear-writing rule loads in the same slot, once (#246) -------------------------------
 _cw_missing = [p for p in (
     "## Write it so nothing is left to guess",
-    "Proper sentences", "Said once", "Explicit context", "Measured, not guessed", "Named references",
+    "Proper sentences", "Said once", "Define before use", "Measured, not guessed",
     "Exact inputs", "Done-criteria", "Ask when unclear", "Plain words", "### The voice",
     "rules/detail/clear-writing.md",
 ) if p not in (_ctx or "")]
@@ -1936,7 +1936,7 @@ if "### The voice" in off_out:
     voice_problems.append("HOUSE_RULES_VOICE=off did not remove the voice section")
 for kept in [
     "Write it so nothing is left to guess",
-    "Named references",
+    "Define before use",
     "Show, don't tell; the user designs",
 ]:
     if kept not in off_out:
@@ -9209,6 +9209,14 @@ _cw_cases.append(('bare-ref: "see #229." alone is flagged; with its title, or a 
 _cw_cases.append(('bare-ref: a quoted example ("see #229" alone) and a step card ("Step 1 of 3") pass',
                   not _cw.bare_references('Including "see #229" alone as a test.')
                   and not _cw.bare_references("### Step 1 of 3 — open the folder")))
+_cw_cases.append(('bare-ref (#339): "see round 1, answer 7." and "as answer 2 said." are flagged',
+                  _cw_has(_cw.bare_references, "Then see round 1, answer 7.", "answer 7")
+                  and _cw_has(_cw.bare_references, "That is as answer 2 said.", "answer 2")))
+_cw_cases.append(('bare-ref (#339): a round and question with a description, "question 3 (title)", and quotes pass',
+                  not _cw.bare_references("Round 2, question 1, where the agent's name comes from: the GitHub login plus sAgent.")
+                  and not _cw.bare_references("See question 3 (where the rule goes).")
+                  and not _cw.bare_references('Including "see answer 7" alone as a test.')
+                  and not _cw.bare_references("See #229 (the stale temp file flake).")))
 _cw_cases.append(('bare-ref: "option D showed the text" is flagged; "option D: delete the cache" is not',
                   _cw.bare_references("On that look, option D showed the trimmed text.")
                   and not _cw.bare_references("Pick option D: delete the cache.")))
