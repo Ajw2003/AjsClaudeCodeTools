@@ -7,6 +7,27 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - Tree-sitter trial: aj's answers
+
+**Context.** The trial in `docs/trials/2026-10-18-tree-sitter/` ran tree-sitter-language-pack 1.22.1 on
+PlunderSpell's 544 C# scripts, this repo and focus-deck-app. All three took 1.0 s; 66 of 66
+hand-counted definitions were found, and every hand-counted reference after two query fixes. Two
+limits were put to aj on `docs/plans/2026-10-18-tree-sitter-trial.html`: in PlunderSpell 25% of
+references match more than one definition by name, and the package downloads its grammars (12 MB on
+Windows) on first use from an address it does not print.
+
+**Decision.** aj's reply was "Tree-sitter trial answers: 1B 2A".
+- Names (1B): C# gets a second pass with Roslyn, the C# compiler, to resolve which definition a
+  reference reaches. This brings back the dotnet runtime for C# projects; the refresh time is not
+  measured yet and gets measured before the build.
+- Grammars (2A): the install step downloads the six grammars up front, says so, and fails loudly if
+  the download fails. Finding the download address and testing an offline machine come first.
+
+Rejected: marking ambiguous lines without resolving them, and shipping the grammar files inside the
+plugin.
+
+**Status.** Standing. Settled with the rest of #306 in the grilling session.
+
 ## 2026-10-18 - Docs map and freshness: aj's answers
 
 **Context.** The follow-up page `docs/plans/2026-10-18-docs-map-and-freshness.html` asked which parser
