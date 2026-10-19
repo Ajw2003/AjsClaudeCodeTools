@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - Build plan approved: plugin restructure
+
+**Context.** The 10-step build plan for #306, `docs/plans/2026-10-19-restructure-build-plan.html`.
+
+**Decision.** aj's reply was "Build plan approved: plugin restructure 1A 2A".
+1. Order of work: move first. Step 2 splits `hook.py` into the core and six part modules with no
+   behaviour change, then steps 3 to 9 apply the decisions part by part. Step 1, the summary template,
+   goes before both.
+2. Shipping: after each step, a pull request from `AjsAgent/issue-281-fix` to `main` and a version bump,
+   each with its own QA page.
+
+The steps are sub-issues of #306: step 1 #339, step 2 #340, step 3 #341, step 4 #349, step 5 #343, step 6
+#344, step 7 #345, step 8 #346, step 9 #347 (needs a design page first), step 10 #348.
+
+**Status.** Standing.
+
 ## 2026-10-19 - The restructure stays one thread, and its build plan covers everything
 
 **Context.** The summary template's build plan (`docs/plans/2026-10-19-summary-template-plan.html`)
