@@ -1,0 +1,102 @@
+{
+  "title": "Grilling Round 4",
+  "eyebrow": "Grilling · #306 restructure, round 4",
+  "approval": "Grilling round 4 answers",
+  "replyPrefix": "Grilling round 4 answers",
+  "reply": "",
+  "short": {
+    "lead": "Round 3 is logged. You chose that the plugin asks for its settings in the chat (answer 1A) and that every tool is refused until they are set (answer 2B). Those two answers meet at one point: saving your answer means writing a file, and writing a file is a tool call that 2B refuses. A second gap shows up in cloud sessions like this one. The plugin's data folder in this container was created at 06:01 today, the minute the container started, so a setting saved \"once per machine\" is probably gone by the next cloud session. These 2 questions close both gaps. If they open nothing new, the grilling session is done.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      [
+        "Settled in round 3",
+        ""
+      ],
+      [
+        "Checked on this machine",
+        ""
+      ],
+      [
+        "Asked in this round",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Settled",
+        "Round 3",
+        "",
+        "1A: at session start the plugin asks in the chat, suggests the worked-out name (ajw2003sAgent) and saves your answer in its own settings file; a value set through /plugin configure is used too. 2B: every tool is refused until the settings are set, and the refusal names the missing setting.",
+        "Not asked again."
+      ],
+      [
+        "search",
+        "Checked",
+        "Settings already come from environment variables",
+        "",
+        "hook.py already reads identity switches from environment variables, for example HOUSE_RULES_OWNED_BRANCHES at hook.py:2034 and HOUSE_RULES_ATTRIBUTION at hook.py:5828. A cloud environment's own settings can set environment variables for every session. The plugin data folder /root/.claude/plugins/data/house-rules-synced here was created at container start; whether anything in it survives to the next cloud session is not documented, and I can't test it from inside one session.",
+        "Question 2 builds on this."
+      ],
+      [
+        "hand",
+        "Decide",
+        "How the answer gets saved, and where cloud sessions keep it",
+        "you",
+        "The 2 questions below.",
+        "Your answers."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. While every tool is refused, how does your answer get saved?",
+      [
+        [
+          "A",
+          "The guard lets exactly one command through: the plugin's own settings script, such as \"python <plugin>/scripts/settings.py set agent_name ajw2003sAgent\". Every other tool stays refused",
+          1,
+          "The agent saves what you confirmed, and the exception is one named script that a check can match exactly."
+        ],
+        [
+          "B",
+          "No tool at all: a hook reads your chat reply in a fixed form, such as \"Settings: agent name ajw2003sAgent\", and saves it itself",
+          0,
+          "No exception to the refusal, but you have to type the exact form, and a typo means asking again."
+        ]
+      ],
+      "Either way the refusal message names the missing setting and the exact thing to type or confirm."
+    ],
+    [
+      "q2",
+      "2. Where do cloud sessions keep the settings, since each one starts in a fresh container?",
+      [
+        [
+          "A",
+          "In environment variables you set once in the cloud environment's settings, such as HOUSE_RULES_AGENT_NAME=ajw2003sAgent. The plugin reads them before its settings file, and the chat question only appears when neither has a value",
+          1,
+          "Set once per cloud environment, and it follows the pattern hook.py already uses for its other switches."
+        ],
+        [
+          "B",
+          "Ask in the chat at the start of every cloud session",
+          0,
+          "Nothing to set up, but every cloud session starts with the same question and refuses every tool until you answer it."
+        ]
+      ],
+      "On your own computer the settings file keeps the answer either way; this question is only about cloud sessions."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Round 4 of the #306 grilling session: how your settings answer gets saved while every tool is refused, and where cloud sessions keep it.",
+    "changing": "Nothing yet. Your round 3 answers are logged in the decisions log and on #306.",
+    "blocking": "Your answers to round 4.",
+    "next": "If nothing new opens, I will write one summary page of every answer from the four rounds for you to confirm. After that I will write the build plan for the restructure.",
+    "todo": [
+      "Type your answers in the chat, such as \"Grilling round 4 answers: 1A 2A\".",
+      "Send them."
+    ]
+  }
+}

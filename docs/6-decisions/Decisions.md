@@ -7,6 +7,24 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - Grilling round 3: aj's answers
+
+**Context.** Round 3 of the #306 grilling session asked how a new install asks for its settings and
+what waits until they are set, because round 2 answers 1 (a worked-out agent name) and 13 (no setting
+runs on an assumed value) meet. Page: `docs/plans/2026-10-18-grilling-round-3.html`. The round 1 and
+round 2 entries sit in this log on the branch `AjsAgent/docs-context-layer`.
+
+**Decision.** aj's reply was "Grilling round 3 answers: 1A 2B".
+1. At session start the plugin asks for each unset setting in the chat and suggests the worked-out value
+   (such as "ajw2003sAgent"). The suggestion is used only once aj confirms it. The answer is saved in the
+   plugin's own settings file, and a value set through `/plugin configure` is used too.
+2. Until the settings are set, the plugin refuses every tool, not only commits, pushes, branches, pull
+   requests and issues. The refusal names the missing setting and how to set it.
+
+**Status.** Standing. The two answers meet: saving the answer is itself a tool call that answer 2
+refuses. Cloud sessions also start in a fresh container, so a setting saved once per machine may not
+last. Both are asked in round 4, `docs/plans/2026-10-19-grilling-round-4.html`.
+
 ## 2026-10-18 - QA passed: page links open
 
 **Context.** #329 (a page link in a reply must open) was built in steps #330 to #332 on
