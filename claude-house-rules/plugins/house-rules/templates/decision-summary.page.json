@@ -2,7 +2,7 @@
   "kind": "summary",
   "title": "<topic> decisions",
   "eyebrow": "Summary of the <grilling | restructure | brainstorm>",
-  "approval": "Build plan approved: <topic>",
+  "approval": "<topic> summary",
   "short": {
     "lead": "<One plain sentence: what was decided about <topic>.>",
     "hint": "Tap a topic to see what it creates and which answers decided it.",

@@ -58,6 +58,17 @@ when that folder differs from the running one, is newer by version and has the r
 unreadable, or the newer folder lacks the files, it loads its own rules and says why in one line. Checked by the
 "newest installed rules" cases in `scripts/verify.py`.
 
+## Summary pages (2.69.0, #339)
+
+A content file with `"kind": "summary"` builds a summary page: a grilling, restructure or brainstorm
+summary. Every such page starts from `templates/decision-summary.page.json`
+(`rules/detail/show-dont-tell.md`). On a summary page each row's second box reads "Decided by", never
+orange, and names each answer as "Round N, question N, <what was asked>: <what was chosen>". Plan pages
+keep "Requires". On any page a row's creates or requires can be a list, drawn one line per entry, and a
+row can carry the before-and-after strip ("What exists today → What this creates → How it impacts you"),
+which stacks into one column below 480 pixels. `make_page.py` stops with an error for any other `kind`.
+Decided in aj's summary template answers, 2026-10-19 (`docs/6-decisions/Decisions.md`).
+
 ## A page link must open
 
 Built 2026-10-18 in 2.68.4 (issue #329, a sub-issue of #281; steps #330 to #332), waiting on aj's QA. Design page: `docs/plans/2026-10-18-page-links-open.html`.
