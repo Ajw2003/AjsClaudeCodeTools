@@ -4422,10 +4422,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.68.3",
+    "issues: the rules section and its detail file exist, and the plugin is 2.68.4",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.3",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.4",
     "rules section + detail file + version",
 )
 
@@ -9016,6 +9016,23 @@ report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "Importer"
 if _s.get("issues") != [{"repo": "o/r", "number": 7, "labelled": True}]:
     print("          feature %r, issues %r, note %r" % (_s.get("feature"), _s.get("issues"), _n[:300]))
 
+# #327: an unchanged decisions log no longer refuses; the approval counts and the note asks for the entry.
+_ma_set({"feature": "demo", "stage": "plan",
+         "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2, 3)]},
+        {"o/r#%d" % n: ["Feature", "AjsAgent created this", "in progress"] for n in (1, 2, 3)})
+_ma_log = os.path.join(_ma_dir, "docs", "6-decisions", "Decisions.md")
+_ma_st = os.path.join(_ma_dir, ".claude", "house-rules-loop.json")
+_ma_d = json.load(open(_ma_st, encoding="utf-8"))
+_ma_d["log_mark"] = hashlib.sha256(open(_ma_log, "rb").read()).hexdigest()
+json.dump(_ma_d, open(_ma_st, "w", encoding="utf-8"))
+_n, _s = _ma_say("Build plan approved: demo")
+report("PASS" if (_s["stage"] == "build" and "docs/6-decisions/Decisions.md" in _n and "nothing moved" not in _n
+                  and _s.get("log_mark") == _ma_d["log_mark"] and "log_ask" not in _s) else "FAIL",
+       "design loop (#327): \"Build plan approved: <feature>\" with an unchanged decisions log moves Plan to Build "
+       "on the first message, the note names docs/6-decisions/Decisions.md, and the log mark is kept")
+if _s["stage"] != "build":
+    print("          stage %r, note %r" % (_s["stage"], _n[:300]))
+
 _ma_set({"feature": "", "stage": "design"})
 _n, _s = _ma_say("Design approved: blockers")
 report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "blockers"
@@ -9215,19 +9232,13 @@ def _cw_stop(text, env=None):
     return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=env or _loop_env)[1]
 
 
-_cw_cases.append(("reply: a vague number and a bare reference get one writing note naming both",
-                  "write it so nothing is left to guess" in _cw_stop("The suite adds about 43 tests; see #229.")
-                  and "#229" in _cw_stop("The suite adds about 43 tests; see #229.")
-                  and "about 43" in _cw_stop("The suite adds about 43 tests; see #229.")))
+_cw_cases.append(("reply (#324): a vague number and a bare reference get no writing note",
+                  "write it so nothing is left to guess" not in _cw_stop("The suite adds about 43 tests; see #229.")))
+_cw_cases.append(("reply (#324): a bare reference and a vague number get no writing note and no report line",
+                  "write it so nothing is left to guess" not in _cw_stop("Go with option B; it adds about 43 tests; see #229.")
+                  and "writing check (report only" not in _cw_stop("Go with option B; it adds about 43 tests; see #229.")))
 _cw_cases.append(("reply: a clean reply gets no writing note",
                   "write it so nothing is left to guess" not in _cw_stop("The suite adds 43 tests: 616 on main, 659 here.")))
-_cw_cases.append(("reply: HOUSE_RULES_CLEAR_WRITING=off turns the note off",
-                  "write it so nothing is left to guess" not in _cw_stop(
-                      "The suite adds about 43 tests.", env=dict(_loop_env, HOUSE_RULES_CLEAR_WRITING="off"))))
-
-_cw_note = _cw_stop("The suite adds about 43 tests; see #229.")
-_cw_cases.append(("reply: the writing note asks for only the corrected sentences",
-                  "only the corrected sentences" in _cw_note and "send the reply again" not in _cw_note))
 
 # The page check: a write to docs/plans/*.html.
 _cw_pages = os.path.join(_loop_dir, "docs", "plans")
@@ -9291,9 +9302,20 @@ _cw_cases.append(("editor: writing a page under docs/plans with no editor run ge
                   "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
 _cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
                   "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
-_cw_cases.append(("editor: a reply of 160 words or more with no editor run gets the reminder; a short one does not",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_none, " ".join(["Words"] * 210) + ". https://claude.ai/artifact/abc")
-                  and "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, "Done.")))
+def _cw_editor_on(transcript, text):
+    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir, stop_hook_active=True,
+                                             transcript_path=transcript), env=dict(_loop_env, HOUSE_RULES_EDITOR="on"))[1]
+
+
+_cw_200 = " ".join(["Words"] * 200) + ". https://claude.ai/artifact/abc"
+# #325: with HOUSE_RULES_EDITOR=on a reply of 160 words or more with no editor run gets the reminder; a short one does not.
+_cw_cases.append(("editor: with HOUSE_RULES_EDITOR=on, a reply of 160 words or more with no editor run gets the reminder; a short one does not",
+                  "no @house-rules:editor helper ran" in _cw_editor_on(_cw_t_none, _cw_200)
+                  and "no @house-rules:editor helper ran" not in _cw_editor_on(_cw_t_none, "Done.")))
+_cw_cases.append(("editor (#325): a 200-word reply with no page and no editor run gets no editor reminder by default",
+                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, _cw_200)))
+_cw_cases.append(("editor (#325): a turn that wrote a docs/plans page still owes the editor by default",
+                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
 
 # A page written by a shell command never passes the Write hook (found in the real run, #250).
 with open(os.path.join(_cw_pages, "shellpage.html"), "w", encoding="utf-8") as _f:
@@ -9382,14 +9404,33 @@ _ck_cases.append(("page (#309): a long reply with no page is not blocked, and th
 _ck_cases.append(("page: the report gives the exact build command", "make_page.py" in _ck_o and "build <content.json>" in _ck_o))
 _ck_cases.append(("page: the report never offers \"no page\" to the agent (#283)",
                   "no page" not in _ck_o[_ck_o.find(_CK_PAGE_NOTE):][:400].lower()))
+# #323: the first stop continues the turn (additionalContext); the retry reports to aj only (systemMessage).
+_ck_t_323 = _hand_transcript("ck-323", _ck_user("explain 323", [_CW_EDITOR]))
+_, _ck_o1, _ = run_hook("handover", stop_payload(last_assistant_message=_ck_long, cwd=_loop_dir,
+                        transcript_path=_ck_t_323), env=_CK_ENV)
+_, _ck_o2, _ = run_hook("handover", stop_payload(last_assistant_message=_ck_long, cwd=_loop_dir,
+                        stop_hook_active=True, transcript_path=_ck_t_323), env=_CK_ENV)
+try:
+    _ck_j1, _ck_j2 = json.loads(_ck_o1), json.loads(_ck_o2)
+except ValueError:
+    _ck_j1, _ck_j2 = {}, {}
+_ck_cases.append(("#323: the first stop gives additionalContext",
+                  "additionalContext" in _ck_j1.get("hookSpecificOutput", {})))
+_ck_cases.append(("#323: the retry gives no additionalContext (the page note is said once per message, #326, so the first stop carries it)",
+                  "hookSpecificOutput" not in _ck_j2 and _CK_PAGE_NOTE in _ck_j1.get("hookSpecificOutput", {}).get("additionalContext", "")))
 # #310: replays the 2026-10-16 dodge - a 165-word reply was flagged, then a 70-word retry cleared it.
 _ck_165 = " ".join(["Words"] * 165) + "."
 _ck_70 = " ".join(["Short"] * 70) + "."
 _ck_t_dodge = _hand_transcript("ck-dodge", _ck_user("explain the dodge", [_CW_EDITOR]))
 _ck_run(_ck_t_dodge, _ck_165)
 _ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)
-_ck_cases.append(("page (#310): a 70-word retry after a flagged 165-word reply to the same message still gets the report",
-                  not _ck_b and _CK_PAGE_NOTE in _ck_o and "none is linked yet (#310)" in _ck_o))
+_ck_cases.append(("page (#310/#326): a 70-word retry after a flagged 165-word reply to the same message gets no repeat of the note (said once per message)",
+                  not _ck_b and _CK_PAGE_NOTE not in _ck_o and "none is linked yet" not in _ck_o))
+_ck_t_once = _hand_transcript("ck-once", _ck_user("explain once", [_CW_EDITOR]))
+_, _, _ck_o1 = _ck_run(_ck_t_once, _ck_165)
+_, _, _ck_o2 = _ck_run(_ck_t_once, _ck_165)
+_ck_cases.append(("page (#326): two long replies to one message of aj's with no page link give the note on the first only",
+                  _CK_PAGE_NOTE in _ck_o1 and _CK_PAGE_NOTE not in _ck_o2))
 _ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70 + " https://claude.ai/artifact/abc", active=True)
 _ck_cases.append(("page (#310): a reply that links a page clears what was owed", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
 _ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)
@@ -9455,8 +9496,8 @@ try:
 except ValueError:
     _ck_data = {}
 _ck_ctx = (_ck_data.get("hookSpecificOutput") or {}).get("additionalContext", "")
-_ck_cases.append(("writing (#309): a bare reference goes to aj as a report-only line and asks nothing of the agent",
-                  not _ck_b and "report only, #309): bare references" in _ck_data.get("systemMessage", "")
+_ck_cases.append(("writing (#324): a bare reference in a reply gets no report line and asks nothing of the agent",
+                  not _ck_b and "bare references" not in _ck_data.get("systemMessage", "")
                   and "a bare number or letter" not in _ck_ctx))
 _ck_b, _ck_r, _ck_o = _ck_run(_ck_t_relayed, _ck_proposal)
 _ck_cases.append(('page: "no page" quoted inside a helper hand-back does not count - the report still comes',

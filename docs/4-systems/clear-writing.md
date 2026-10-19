@@ -14,13 +14,39 @@ exact-input and ask-when-unclear lines, and the plain-docs writing limits.
 |---|---|---|
 | Rule | `showrule` (SessionStart), `rules/clear-writing.md` | Loads after Show, don't tell, in the same slot. The voice section is last, so `HOUSE_RULES_VOICE=off` cuts only it. |
 | Shared checker | `scripts/clarity.py` | Vague claims with no reason, bare references, repetition, jargon, long sentences, and the not-checked disclosure. One module for the hook and `plain_docs_check.py`; `python clarity.py [--page] < file` runs it by hand. |
-| Replies | `handover` (Stop), `_writing_findings`, `_writing_note` | One note listing every finding, with the not-checked and long-reply notes folded in. Since 2.68.1 (#309) the kinds in `_WRITING_REPORT_ONLY` (bare references) are left out of the note and reported to aj in one line instead (`_writing_report_line`), because the bare-reference check misread "the option I suggested". |
+| Replies | `handover` (Stop), `_writing_note` | Chat replies are no longer checked for writing (since #324); the old reply note and the bare-reference report line are gone. Only the not-checked and long-reply notes still go through `_writing_note`. |
 | Pages | `artifact` (PostToolUse), `_page_writing_note` | A write to `docs/plans/*.html` runs the checker on what a reader sees: the visible text and a template page's PAGE strings. The report-only kinds are skipped here too. |
 | Issues | `guard` (`gh issue create`), `guardgithub` (`issue_write` create) | Refused without "Depends on", "Depended on by" and "Done when". |
-| Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page or a long reply. The end-of-reply check reminds me when a page was written, or a reply ran to 160 words or more, and no editor ran. |
+| Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page or a long reply. The end-of-reply check reminds me when a page was written and no editor ran. A reply of 160 words or more counts too only with `HOUSE_RULES_EDITOR=on` (default off, #325). |
 
-`HOUSE_RULES_CLEAR_WRITING=off` turns off the reply note, the page check, the issue check and the
+`HOUSE_RULES_CLEAR_WRITING=off` turns off the page check, the issue check and the
 editor reminder. The not-checked disclosure stays on: it belongs to Evidence before claims.
+
+## Stop the end-of-reply loop (#322)
+
+Design approved 2026-10-18 ("Design approved: #322 writing check loop"). Built in plugin 2.68.4
+(#323 to #326, plus #327 for the design loop); waiting for aj's QA.
+
+**Why.** A Stop hook's `additionalContext` continues the turn, and `handover` emits it on the retry
+(`stop_hook_active` true) as well as the first stop. Every report-only note (the page checkpoint, the
+label line, the long-reply note) therefore woke the model for another reply, which tripped the same note
+again. On 2026-10-18 a cloud session ran until Claude Code's own cap of 9 consecutive blocks ended it,
+and the editor checkpoint added a whole subagent run for one 386-word chat reply.
+
+**The four steps, one sub-issue each:**
+
+1. **The retry only reports to aj.** When `stop_hook_active` is true, `event_handover` puts every note
+   in `systemMessage` and emits no `additionalContext`, so a retry can never continue the turn.
+2. **The writing check leaves chat replies alone.** `_writing_findings` and `_writing_report_line` stop
+   running on replies. The page check (`_page_writing_note`) and the issue check stay on, and the
+   not-checked disclosure stays, because it belongs to Evidence before claims.
+3. **The editor checkpoint is pages-only by default.** `_editor_owed` asks for the editor only when a
+   page under `docs/plans/` was written. `HOUSE_RULES_EDITOR=on` brings back the 160-word reply trigger.
+4. **The page checkpoint is said once (#326).** The #310 "still owed" note is delivered once per message of
+   aj's, not after every later reply to it. The page-blocks count still records that a page is owed.
+
+Each step adds its own `verify.py` case. Step 1's case proves that two Stop runs about the same reply
+give no second `additionalContext`.
 
 ## Invariants
 

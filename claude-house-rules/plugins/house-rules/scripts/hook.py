@@ -5338,9 +5338,11 @@ def _loop_unlogged(state, top, label, name):
                 "moved. Create it, log this stage's decisions, then ask aj to approve again."
                 % (label, name, LOOP_LOG.replace(os.sep, "/")))
     if mark == state.get("log_mark"):
-        return ('Design loop: aj wrote "%s: %s", but nothing has been added to the decisions log (%s) since '
-                "the last approval, so nothing moved. Log this stage's decisions and changes first, then ask "
-                "aj to approve again." % (label, name, LOOP_LOG.replace(os.sep, "/")))
+        # #327: the model can only log the entry after the approval, so refusing made aj type it twice.
+        # The approval counts; the note asks for the entry. log_mark stays, so the next approval still
+        # detects whether this one got logged.
+        state["log_ask"] = True
+        return ""
     state["log_mark"] = mark
     return ""
 
@@ -5559,6 +5561,9 @@ def _loop_apply_one(state, text, top):
             {"stage": approval[0], "name": approval[1], "at": int(time.time())})
         note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
             approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        if state.pop("log_ask", False):  # #327
+            note += (" The decisions log (%s) has nothing new since the last approval: add this stage's "
+                     "entry to it before the turn ends." % LOOP_LOG.replace(os.sep, "/"))
         if state["stage"] == "plan":
             note += (" Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue "
                      "for the feature and a sub-issue per step, each naming dependencies, dependants and "
@@ -7326,34 +7331,13 @@ def _clear_writing_enabled():
 _WRITING_REPORT_ONLY = ("bare-ref",)
 
 
-def _writing_findings(text):
-    """(findings, problem): the shared checker's findings on a reply, minus not-checked, which the
-    evidence rule reports on its own, and minus the report-only kinds. [] when the check is off or the
-    text is empty."""
-    if not text or not _clear_writing_enabled():
-        return [], None
-    if clarity is None:
-        return [], CLARITY_ERROR
-    return clarity.findings(text, skip=("not-checked",) + _WRITING_REPORT_ONLY), None
-
-
-def _writing_report_line(text):
-    """One line for aj naming the report-only findings in a reply (#309), or "" when there are none."""
-    if not text or not _clear_writing_enabled() or clarity is None:
-        return ""
-    found = [p for k, p, _why in clarity.findings(text) if k in _WRITING_REPORT_ONLY]
-    if not found:
-        return ""
-    return ("house-rules writing check (report only, #309): bare references in this reply - %s. Nothing was "
-            "asked of the agent." % ", ".join('"%s"' % p for p in found[:8]))
-
-
-# #249: a page or a long reply goes past the editor helper before aj reads it.
+# #249: a page goes past the editor helper before aj reads it; a long reply does too only with
+# HOUSE_RULES_EDITOR=on (#325: a long chat reply forcing a subagent run cost too many tokens).
 EDITOR_NOTE = (
     "House rules, write it so nothing is left to guess: %s, and no @house-rules:editor helper ran this "
     "turn. Hand the text (or the page's path) to @house-rules:editor (Agent tool, subagent_type "
     "house-rules:editor), apply its rewrites, then send the result. HOUSE_RULES_CLEAR_WRITING=off "
-    "turns this off."
+    "turns this off; only pages are checked unless HOUSE_RULES_EDITOR=on adds long replies."
 )
 
 
@@ -7392,6 +7376,11 @@ def _pages_changed_this_turn(transcript_path, cwd):
     return sorted(os.path.join(plans, n) for n in pages if os.path.getmtime(os.path.join(plans, n)) >= since), None
 
 
+def _editor_enabled():
+    # #325: off unless set to something that is not an "off" value, i.e. "on".
+    return os.environ.get("HOUSE_RULES_EDITOR", "off").strip().lower() not in _TOGGLE_OFF
+
+
 def _editor_owed(written, tool_uses, reply):
     """What makes the editor helper owed this turn ("" when nothing does, or when it ran)."""
     for block in tool_uses:
@@ -7401,6 +7390,8 @@ def _editor_owed(written, tool_uses, reply):
     pages = [os.path.basename(p) for p in written if _PLANS_PAGE_RE.search(str(p).replace("\\", "/"))]
     if pages:
         return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
+    if not _editor_enabled():  # #325: the long-reply trigger needs HOUSE_RULES_EDITOR=on
+        return ""
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
     if words >= LONG_REPLY_WORDS:
         return "this reply is %d words" % words
@@ -7686,7 +7677,7 @@ CHECKPOINTS = [
 CHECKPOINT_RULES = {
     "page built": "A handover page is built by make_page.py, never typed by hand.",
     "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
-    "editor": "A page or a long reply goes past @house-rules:editor before aj reads it.",
+    "editor": "A page goes past @house-rules:editor before aj reads it; a long reply too when HOUSE_RULES_EDITOR=on.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
@@ -7901,12 +7892,9 @@ def event_handover():
         )
 
     long_words = _long_reply_words(reply_text) if (vm is not None and _loop_enabled()) else 0
-    writing, writing_problem = _writing_findings(reply_text if vm is not None else "")
-    if writing_problem:
-        trace_lines.append(writing_problem)
-    report_line = _writing_report_line(reply_text if vm is not None else "")
-    if report_line:
-        trace_lines.append(report_line)
+    # #324: the writing check no longer runs on chat replies (pages and new issues keep it), so no findings
+    # and no report line here; the not-checked disclosure still goes through _writing_note.
+    writing = []
 
     # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
     # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.
@@ -7929,13 +7917,13 @@ def event_handover():
             if _page_escape(pctx) or _PAGE_LINK_RE.search(pctx["reply"]):
                 _page_count(pctx, "clear")
             elif fix or _page_count(pctx) > 0:
-                owed = not fix
+                # #326: the note is said once per message of aj's, on the first flag (count 0). The bump still
+                # records that a page is owed; later replies to the same message, flagged or owed, stay quiet.
+                first = _page_count(pctx) == 0
                 _page_count(pctx, "bump")
-                page_note = ("House rules, page checkpoint (report only, #309): %s%s. Nothing is blocked; if this "
-                             "reply belongs to another repo's work, the issue for that repo is enough." % (
-                                 "an earlier reply to this message of aj's was flagged for a page and none is linked "
-                                 "yet (#310), so " if owed else "",
-                                 fix or _check_page(dict(pctx, long_words=LONG_REPLY_WORDS))))
+                if first:
+                    page_note = ("House rules, page checkpoint (report only, #309): %s. Nothing is blocked; if this "
+                                 "reply belongs to another repo's work, the issue for that repo is enough." % fix)
         except Exception as exc:
             trace_lines.append("house-rules: the page checkpoint could not run (%s: %s), so this reply got no "
                                "page reminder." % (type(exc).__name__, exc))
@@ -8020,6 +8008,10 @@ def event_handover():
         parts.append(issue_line)
     if label_line:
         parts.append(label_line)
+    if retry:
+        # #322/#323: the retry reports to aj only; additionalContext would wake the model and loop.
+        emit({"systemMessage": " ".join(trace_lines + parts)})
+        return 0
     out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "\n\n".join(parts)}}
     if trace_lines:
         out["systemMessage"] = " ".join(trace_lines)
