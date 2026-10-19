@@ -1,0 +1,33 @@
+{
+  "title": "Attribution Guard Build Plan",
+  "eyebrow": "Build plan · #350 attribution guard on GitHub",
+  "approval": "Build plan approved: attribution guard",
+  "replyPrefix": "Attribution guard build plan",
+  "reply": "",
+  "short": {
+    "lead": "The design you approved is split into five sub-issues of #350, built in order on the branch AjsAgent/attribution-guard, which starts from main. A builder helper does each step, one at a time, and each step ends with its tests passing. The design is written up in docs/4-systems/attribution-guard.md, and your answers are logged in Decisions.md. Nothing touches a repo other than AjsClaudeCodeTools and focus-deck-app until you approve the rollout list.",
+    "hint": "Tap a step to see what it builds and when it is done.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["file", "Step 1", "#351: one shared file for the Claude-credit patterns", "", "The eight patterns and the author rule move out of hook.py into rules/attribution-patterns.json. The hook reads that file, and a missing or broken file refuses the write instead of letting it through.", "Nothing from you."],
+      ["search", "Step 2", "#352: the shared GitHub workflow", "", "Three jobs in AjsClaudeCodeTools: check every pull request, remove the footer from descriptions and comments, and audit every push to a default branch, opening an issue if anything gets through. Tested on this repo with a Claude-credited test pull request.", "Nothing from you."],
+      ["lock", "Step 3", "#353: the merge gate in the hook", "", "A merge through the GitHub tools or gh pr merge is refused unless the check passed on the pull request's latest commit, and the merge message is checked too. If the result cannot be read, the merge is refused with the reason, never asked.", "Nothing from you."],
+      ["hammer", "Step 4", "#354: the install script", "", "tools/attribution_guard_install.py adds the caller workflow to all 71 repos you own and the ruleset to the 54 public ones. A dry run lists every change first. Merge settings are left alone.", "Nothing from you."],
+      ["check", "Step 5", "#355: prove it on focus-deck-app, then roll out", "you", "The script runs on focus-deck-app only. A Claude-credited test pull request must be refused by the check, the ruleset and the merge gate, and a clean one must pass; the test pull request is closed unmerged. Then I show you the dry-run list for the other 70 repos.", "Approve the rollout list."],
+      ["hand", "QA", "You test it", "you", "I open the pull request with a QA page. You try to merge the test pull request on focus-deck-app and see it refused.", "Test, then pass or fail it."]
+    ]
+  },
+  "changes": [
+    ["chg", "hook.py, hooks.json and verify.py", "The shared pattern file and the merge gate.", ["Patterns live in hook.py; merges are not checked.", "Patterns live in one file both guards read; a merge is refused until the check passes."], "Steps 1 and 3."],
+    ["new", "Shared workflow and install script", "New files in AjsClaudeCodeTools, with tests in tools/verify_tools.py.", ["Nothing on GitHub checks attribution.", "Every repo you own calls one shared check."], "Steps 2 and 4."],
+    ["chg", "Your 71 repos", "One small workflow file each, and a ruleset on the 54 public ones.", ["No check, nothing required.", "The check runs on every pull request and push."], "Step 5, only after you approve the list. History and merge settings are untouched."]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "Five sub-issues of #350, built in order by a builder helper, each ending with its tests passing.",
+    "changing": "The hook, a new shared workflow and install script, then one workflow file per repo and a ruleset on the public ones.",
+    "blocking": "Your build plan approval.",
+    "next": "I build #351 first, then #352 to #354, then the focus-deck-app test and the rollout list.",
+    "todo": ["Approve the build plan, or tell me what to change."]
+  }
+}
