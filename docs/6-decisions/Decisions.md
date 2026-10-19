@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - Grilling round 5: aj's answer
+
+**Context.** Round 5 of the #306 grilling session asked how a cloud session makes a page readable,
+since tapping a page's HTML file in the Claude app shows its raw code. Page:
+`docs/plans/2026-10-19-grilling-round-5.html`.
+
+**Decision.** aj's reply was "Grilling round 5 answers 1C". In cloud sessions only (the plugin tells
+them apart by `CLAUDE_CODE_REMOTE`, `hook.py:349`), every page is published privately to claude.ai and
+the reply links that. The page file is still written under `docs/plans/` and committed. Local sessions
+keep round 1 answer 7: pages are built locally and published only when asked. This narrows round 1
+answer 7, logged on `AjsAgent/docs-context-layer`, for cloud sessions.
+
+**Status.** Standing. No new question opened, so the grilling session is done. The summary of all five
+rounds is `docs/plans/2026-10-19-grilling-summary.html`, for aj to confirm.
+
 ## 2026-10-19 - Grilling round 4: aj's answers
 
 **Context.** Round 4 of the #306 grilling session asked how a settings answer gets saved while every
