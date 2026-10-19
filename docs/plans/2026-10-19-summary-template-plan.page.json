@@ -1,0 +1,134 @@
+{
+  "title": "Summary Template Plan",
+  "eyebrow": "Build plan · the summary page template and the define-before-use rule · house-rules 2.68.4 to 2.69.0",
+  "approval": "Build plan approved: summary template",
+  "replyPrefix": "Build plan approved: summary template",
+  "reply": "",
+  "short": {
+    "lead": "This is the build plan for your four answers on the summary template proposal (docs/plans/2026-10-19-summary-template.html). Those answers were: the template lives in the plugin; each answer is named in words; your define-before-use rule joins the existing writing rule; and summary pages get short lines and a before-and-after strip. The work is 4 steps, each its own GitHub issue under one parent issue, built one at a time by a helper agent. Everything below starts from main, where the plugin is version 2.68.4. Question 1 at the bottom of this page, \"Which branch does the work happen on?\", needs your answer before I start.",
+    "hint": "Tap a step to see what it creates or changes and what it needs from you.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 1",
+        "The rule wording",
+        "",
+        "In rules/clear-writing.md, the \"Explicit context\" and \"Named references\" lines merge into one line, \"Define before use\": name what a phrase means before its first use, so nothing is inferred, and when that genuinely can't be done, say plainly why. The detail file, rules/detail/clear-writing.md, gets examples, including a reference like \"round 1, answer 7\" rewritten as what that answer actually decided. verify.py lists the rule's line names at verify.py:358 and verify.py:1939, so both lists are updated in the same change.",
+        "Nothing from you. Done when verify.py passes with the new line names."
+      ],
+      [
+        "search",
+        "Step 2",
+        "The checker learns round, question and answer references",
+        "",
+        "scripts/clarity.py, the writing checker that runs on replies, pages and new issues, already flags a bare issue number or option letter (clarity.py:135). It also starts flagging \"question N\" and \"answer N\", alone or after \"round N\", when the words that follow do not say what the question was or what the answer decided. This passes, because it says what was asked and answered: \"Round 2, question 1, where the agent's name comes from: the GitHub login plus sAgent\". This is flagged, because it says neither: \"see round 1, answer 7\". verify.py gets one passing and one flagged case for each.",
+        "Nothing from you. Done when the new verify.py cases pass and no existing case breaks."
+      ],
+      [
+        "swap",
+        "Step 3",
+        "The template, the page builder and the starter file",
+        "",
+        "templates/handover-page.html gains three optional features, so every existing page builds unchanged. A page whose content file contains \"kind\": \"summary\" labels the second box in each row \"Decided by\" instead of \"Requires\". A row's \"Creates or changes\" text can be a list, drawn as one short line per decision. A row can carry the existing before-and-after strip (\"What exists today → What this creates → How it impacts you\", handover-page.html:367), which today only the changes section draws. scripts/make_page.py stops with an error if \"kind\" is anything other than \"summary\". A new starter file, templates/decision-summary.page.json, holds the shape, and rules/detail/show-dont-tell.md says every grilling, restructure or brainstorm summary starts from it.",
+        "Nothing from you. Done when verify.py builds a summary page in Chromium at phone width, light and dark, with no clipped text."
+      ],
+      [
+        "check",
+        "Step 4",
+        "Docs, version and QA page",
+        "",
+        "docs/4-systems/handover-pages.md gets a section on summary pages. The plugin version goes from 2.68.4 to 2.69.0. The real test: the grilling summary page (docs/plans/2026-10-19-grilling-summary.html) is rebuilt from the starter file, with every \"Decided by\" box naming the round, the question and the answer in words. A QA page (the page you review at the end) lists what was built, how each part was checked, and what stays unverified.",
+        "You open the rebuilt grilling summary page, check it, and reply with \"QA passed: summary template\" or \"QA failed: summary template\"."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "keep",
+      "Every existing page",
+      "Existing content files build exactly as they do today.",
+      null,
+      "Each row stays a list of six items in this order: icon, short label, title, kind, creates, requires, and every addition in step 3 is optional. A page with no \"kind\" keeps the \"Requires\" box, and a string in \"creates\" stays a paragraph.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "The second box on a summary row",
+      "\"Requires\" becomes \"Decided by\" on summary pages only.",
+      [
+        "Requires: Round 1 answers 1 and 2 (the bare references this change removes)",
+        "Decided by: Round 1, question 1, deletes: allowed on the agent's own branch"
+      ],
+      "The box was worded for what a step still needs from you, so on a summary of past answers it read wrong and held bare references.",
+      [
+        "Every row's second box says \"Requires\"",
+        "Summary pages say \"Decided by\" and name each answer in words",
+        "You read what was decided without opening another page"
+      ],
+      null
+    ],
+    [
+      "chg",
+      "The writing rule's two reference lines",
+      "\"Explicit context\" and \"Named references\" become one line, \"Define before use\".",
+      [
+        "Two lines that overlap",
+        "One line, said once"
+      ],
+      "Your rule covers both, so keeping both lines would say the same thing twice, which the rule's own \"Said once\" line forbids.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "templates/decision-summary.page.json",
+      "A starter file for every grilling, restructure or brainstorm summary.",
+      null,
+      "It holds the shape you rated 9 out of 10 in your reply on the grilling summary: one row per topic, short lines of what each decision creates or changes, the before-and-after strip, and a \"Decided by\" box naming each answer in words.",
+      null,
+      null
+    ]
+  ],
+  "choices": [
+    [
+      "q1",
+      "1. Which branch does the work happen on?",
+      [
+        [
+          "A",
+          "A new branch, AjsAgent/summary-template, cut from main. This session may push only to AjsAgent/issue-281-fix, so choosing A also gives me permission to push the new branch.",
+          1,
+          "The pull request holds only this work. AjsAgent/issue-281-fix is 73 commits behind main, and merging main into it conflicts in 5 files, all of them documentation files or the stage file (the file that records which stage a feature is in)."
+        ],
+        [
+          "B",
+          "AjsAgent/issue-281-fix, after merging main into it and resolving the 5 conflicts",
+          0,
+          "No new branch, but its pull request would also include the grilling pages and every other change already on that branch."
+        ]
+      ],
+      "In both, the grilling pages and decisions-log entries already on AjsAgent/issue-281-fix stay where they are."
+    ]
+  ],
+  "wrapup": {
+    "summary": "The build plan for the summary page template and the define-before-use rule: 4 steps, from house-rules 2.68.4 to 2.69.0.",
+    "changing": "No files change until you approve. Your four answers on the proposal are recorded in the decisions log, docs/6-decisions/Decisions.md.",
+    "blocking": "Your approval of this plan and your answer to the branch question.",
+    "next": "Once you approve, I open the parent issue and one issue per step, then build step 1 with a helper agent. After the summary template is built, I write the restructure's build plan from the new template.",
+    "todo": [
+      "Type your approval in the chat. It starts with \"Build plan approved: summary template\" and ends with your branch choice, for example \"Build plan approved: summary template 1A\" (question 1, option A).",
+      "Send the message."
+    ]
+  }
+}

@@ -7,6 +7,26 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - Summary template: aj's answers on the proposal
+
+**Context.** The proposal page `docs/plans/2026-10-19-summary-template.html` asked how the grilling
+summary page's shape is kept as a template, how each answer is named, where aj's define-before-use rule
+goes and how summary pages get less crowded.
+
+**Decision.** aj's reply was "Summary template answers 1A 2A 3A 4A".
+1. The shape is kept in the plugin as a starter file, `templates/decision-summary.page.json`. Every
+   grilling, restructure or brainstorm summary starts from it, and on that kind of page the second box
+   reads "Decided by" instead of "Requires". Plan pages keep "Requires".
+2. A "Decided by" box names each answer with its round, the question in short form and the answer
+   chosen, in words.
+3. The rule joins the existing "Write it so nothing is left to guess" rule: its "Explicit context" and
+   "Named references" lines merge into one "Define before use" line, and `scripts/clarity.py` flags a
+   question or answer reference that names nothing.
+4. Each topic's "Creates or changes" text becomes short lines of one decision each, and each topic gets
+   the template's existing before-and-after strip.
+
+**Status.** Standing. The build plan is `docs/plans/2026-10-19-summary-template-plan.html`.
+
 ## 2026-10-19 - Grilling summary confirmed, and the summary shape becomes a template
 
 **Context.** The summary page `docs/plans/2026-10-19-grilling-summary.html` gathered every answer from
