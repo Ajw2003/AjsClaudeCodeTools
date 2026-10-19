@@ -7,6 +7,45 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - Grilling round 1: aj's answers
+
+**Context.** The #306 grilling session settles the 28 rule contradictions and the open questions from
+the 2026-10-16 audit (`docs/audits/2026-10-16-plugin-audit/01-rules-vs-rules.md`). Round 1 page:
+`docs/plans/2026-10-18-grilling-round-1.html`, 17 questions.
+
+**Decision.** aj's reply was "Grilling round 1 answers: 1* 2A 3A 4A 5A 6A 7A 8A 9A 10A 11A 12A 13A 14A
+15A 16* 17A".
+1. Deletes (aj's own answer): deleting a file git can bring back is always allowed on a branch the agent
+   owns. On someone else's branch it is refused, and the refusal says plainly why.
+2. Risky git commands are refused with the safe way named; aj is asked only when no safe way exists.
+3. Test suites run twice everywhere, helpers included.
+4. A helper with a question only aj can answer stops and reports it to the parent session, which asks.
+5. A helper's report always quotes the real RESULT line and every failure line; no line cap.
+6. An obvious bug outside the request is not fixed unasked: it becomes an issue, named in the reply.
+7. Pages are built locally for every plan and long reply; publishing to claude.ai happens only when
+   asked.
+8. Every feature that reaches a build plan gets GitHub issues.
+9. A feature that is one step of a bigger one passes QA on its own; the parent issue tracks its
+   children and closes with the last one.
+10. An approval is accepted before its decisions-log entry exists; the entry is required before the
+    next stage (#327).
+11. The design loop keeps its pull-request and label stage moves, written down as rules; an edit
+    attempt never moves a stage.
+12. Worktree autosave uses the same credit rule as every commit and pushes without force, to a fresh
+    snapshot branch name each time.
+13. The worktree sweep commits a finished helper's leftovers only in that helper's own worktree, as a
+    stated exception to "never sweep unrelated files".
+14. The archivist moves a long code comment into the docs at turn end and leaves a doc-ref pointer.
+15. Unity batch mode checks a compile only when no Unity CLI or editor plugin can.
+16. (aj's own answer) Identity and taste become settings (agent name, credit line, branch prefix,
+    labels, voice, page threshold); safety and evidence rules stay blocks. Each setting carries a
+    default or blocks until it is set. "Claude" must never be the default credit, and neither may aj's
+    name on another person's work: the agent commits under the user's own name with "sAgent" added,
+    which for aj is "ajw2003sAgent".
+17. The sixteen mechanical fixes are accepted as listed on the page.
+
+**Status.** Standing. Round 2 asks what these answers leave open.
+
 ## 2026-10-18 - Tree-sitter trial: aj's answers
 
 **Context.** The trial in `docs/trials/2026-10-18-tree-sitter/` ran tree-sitter-language-pack 1.22.1 on
