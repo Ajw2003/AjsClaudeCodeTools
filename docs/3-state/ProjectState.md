@@ -197,6 +197,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-19, branch `AjsAgent/issue-281-fix`, plugin 2.68.5: the #322 loop fix (pull request #328, branch `AjsAgent/nifty-newton-x2jaaj`) is merged with `main` and the #306 grilling work, plus one more cause of the loop: during an uncommitted merge, every page the other branch brought in counted as written this turn. A page still identical to the merged branch's copy no longer counts. aj asked for this on `main` straight away.
 
+2026-10-19, branch `claude/project-thread-rbmzaf`, plugin 2.69.0: a plugin update never stops a session's work. A copy synced from the claude.ai account (cloud sessions) is never asked to update, a failed update elsewhere is listed under "Waiting on you" while work carries on, and `guard` no longer prompts for the plugin's version (Decisions.md, 2026-10-19). Waiting for aj's review.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
