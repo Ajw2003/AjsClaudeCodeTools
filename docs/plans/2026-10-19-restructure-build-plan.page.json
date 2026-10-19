@@ -5,7 +5,7 @@
   "replyPrefix": "Build plan approved: plugin restructure",
   "reply": "",
   "short": {
-    "lead": "This is the build plan for the whole restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins). It folds in every decision so far: the audit direction of 2026-10-16, your answers on the docs context layer, your five grilling rounds (the numbered question sets you answered), and your answers on the summary template. The work is 10 steps, each its own GitHub issue under #306, all on the branch AjsAgent/issue-281-fix as you asked. The 2.68.1 patch that came first (issues #307 to #311) passed your QA on 2026-10-16 and is not part of this plan. Two questions at the bottom decide the order of the work and how often it ships.",
+    "lead": "This is the build plan for the whole restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins). It folds in every decision so far: the audit direction of 2026-10-16, your answers on the docs context layer, your five grilling rounds (the numbered question sets you answered), and what you chose on the summary template. The work is 10 steps, each its own GitHub issue under #306, all on the branch AjsAgent/issue-281-fix as you asked. The 2.68.1 patch that came first (issues #307 to #311) passed your QA on 2026-10-16 and is not part of this plan. Two questions at the bottom decide the order of the work and how often it ships.",
     "hint": "Tap a step to see what it creates or changes and what it needs.",
     "key": [
       [
@@ -31,7 +31,7 @@
         "Step 2",
         "Move today's code into the core and six parts, changing nothing",
         "",
-        "hook.py (8,588 lines) splits into one module per part: core, safe git, session triage, design loop, writing, delegation and docs. The 32 hook entries in hooks/hooks.json and the run.sh shim stay as they are, and every verify.py check passes unchanged, which proves nothing moved in behaviour. The scout (the helper agent that listed every handler) placed each one in a part. Four handlers span parts, so each is split into pieces that go to different parts. The end-of-reply handler (hook.py:6845-8089) keeps its dispatcher in the core and moves each check to its part. The issue workflow (hook.py:4925-5223) goes to the design loop, the prompt-audit handler (hook.py:6772) goes to delegation, and the version check (hook.py:1161-1635) stays in the core until step 10 removes it.",
+        "hook.py (8,588 lines) splits into one module per part: core, safe git, session triage, design loop, writing, delegation and docs. The 32 hook entries in hooks/hooks.json and run.sh, the small script that starts hook.py, stay as they are, and every verify.py check passes unchanged, which proves nothing moved in behaviour. The scout, a read-only helper agent, listed every handler (a piece of code that answers one hook event) and placed each one in a part. Four handlers span parts, so each is split into pieces that go to different parts. The end-of-reply handler (hook.py:6845-8089) keeps its dispatcher in the core and moves each check to its part. The issue workflow (hook.py:4925-5223) goes to the design loop, the prompt-audit handler (hook.py:6772) goes to delegation, and the version check (hook.py:1161-1635) stays in the core until step 10 removes it.",
         "Nothing from you. Done when verify.py passes with no check changed and the inventory is written into docs/4-systems/plugin-restructure.md."
       ],
       [
@@ -63,7 +63,7 @@
         "Step 6",
         "Writing, evidence and rewrite rules",
         "",
-        "The agent never decides on its own to skip a check. If a check takes over 10 minutes, costs money, or needs a machine or account the agent can't reach, the agent names it and asks you plainly whether to skip it (round 2, question 12, your own wording). A wholesale rewrite, meaning more than half of a file's lines replaced in one change or the whole file written over, needs your approval by name, and the overwrite guard counts it (round 2, question 11). An obvious bug outside the request becomes an issue, not an unasked fix (round 1, question 6).",
+        "The agent never decides on its own to skip a check. If a check takes over 10 minutes, costs money, or needs a machine or account the agent can't reach, the agent names it and asks you plainly whether to skip it. That is your own wording from round 2, question 12. A wholesale rewrite, meaning more than half of a file's lines replaced in one change or the whole file written over, needs your approval by name, and the overwrite guard counts it (round 2, question 11). An obvious bug outside the request becomes an issue, not an unasked fix (round 1, question 6).",
         "Nothing from you. Depends on step 2."
       ],
       [
@@ -79,7 +79,7 @@
         "Step 8",
         "The docs context layer",
         "",
-        "This part is installed by default (docs context layer answers, 2026-10-18, answer 3A). It builds a code map with tree-sitter (a code parser) for Python, JavaScript, TypeScript, HTML, CSS and C#, plus a Roslyn pass (the C# compiler's analyser) that resolves C# references (tree-sitter trial answers 1B and 2A). The install step downloads the six grammars and fails loudly if it can't. Generated facts refresh at the end of every turn without blocking; a hand-written section whose code changed gets a stale stamp, and the guard refuses a commit that leaves a stamped doc behind. The archivist (the docs-keeping helper) moves long code comments into the docs at the end of each turn, and opens an issue instead on someone else's branch. In a repo you don't own, the docs stay out of git (round 1, question 14; round 2, questions 9 and 10).",
+        "This part is installed by default (docs context layer answers, 2026-10-18, answer 3A). It builds a code map with tree-sitter (a code parser) for Python, JavaScript, TypeScript, HTML, CSS and C#, plus a Roslyn pass (the C# compiler's analyser) that resolves C# references (tree-sitter trial answers 1B and 2A). The install step downloads the six grammars and fails loudly if it can't. Generated facts refresh at the end of every turn without blocking; a hand-written section whose code changed gets a stale stamp, and the guard refuses a commit that leaves a stamped doc behind. The archivist (the docs-keeping helper) moves long code comments into the docs when each turn ends, and opens an issue instead on someone else's branch. In a repo you don't own, the docs stay out of git (round 1, question 14; round 2, questions 9 and 10).",
         "You: the Roslyn refresh time and the grammar download on an offline machine get measured before this step's build plan, as the tree-sitter trial answers asked, so that plan can say how long a refresh takes and what happens offline."
       ],
       [
@@ -87,7 +87,7 @@
         "Step 9",
         "Session triage",
         "you",
-        "Two helpers, described in #304 (a two-helper tool that cleans a session transcript, then files issues from it): one flags secrets in a session transcript for you to confirm and remove, and the other files issues from the cleaned transcript, each in the repo the observation belongs to. This part has no design yet, so it starts with a design page of its own.",
+        "Two helpers, described in #304 (a two-helper tool that cleans a session transcript, then files issues from it). One flags secrets in a session transcript for you to confirm and remove. The other files issues from the cleaned transcript, each in the repo the observation belongs to. This part has no design yet, so it starts with a design page of its own.",
         "You: approve that design page before this step is built."
       ],
       [
@@ -104,7 +104,7 @@
     [
       "keep",
       "Every hook event and every check",
-      "The 32 hook entries, the run.sh shim and every verify.py check stay.",
+      "The 32 hook entries, the run.sh start-up script and every verify.py check stay.",
       null,
       "Step 2 is a pure move, so verify.py (10,061 lines) proves the behaviour is unchanged before any decision is applied. Later steps change checks only where a decision says so, each with a new verify.py case.",
       null,
@@ -116,7 +116,7 @@
       "One 8,588-line file becomes seven modules, one per part.",
       [
         "One file answers every hook event",
-        "Each part owns its handlers"
+        "Each part owns the code for its own hook events"
       ],
       "A part can then be installed or left out on its own, which today's single file can't allow.",
       [
