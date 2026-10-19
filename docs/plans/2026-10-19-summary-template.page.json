@@ -31,7 +31,7 @@
         "Exists",
         "The writing rule already covers part of this",
         "",
-        "The \"Write it so nothing is left to guess\" rule (rules/clear-writing.md) already has two bullets on this: \"Explicit context\" (name the what, where and which) at line 9, and \"Named references\" (never \"#2\" or \"option B\" alone) at line 12. Its checker, scripts/clarity.py, flags a bare issue number or option letter (clarity.py:135). It does not flag \"round 1, answer 7\" or \"question 2\" with nothing naming what was asked, and no bullet says to define a term before its first use.",
+        "The \"Write it so nothing is left to guess\" rule (rules/clear-writing.md) already has two bullets on this. \"Explicit context\" at line 9 says to name the what, where and which. \"Named references\" at line 12 says never to write \"#2\" or \"option B\" alone. Its checker, scripts/clarity.py, flags a bare issue number or option letter (clarity.py:135). It does not flag \"round 1, answer 7\" or \"question 2\" with nothing naming what was asked, and no bullet says to define a term before its first use.",
         "Question 3 below decides where your rule goes."
       ],
       [
