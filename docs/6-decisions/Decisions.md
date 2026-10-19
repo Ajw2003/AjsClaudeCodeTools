@@ -7,6 +7,37 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-18 - Grilling round 2: aj's answers
+
+**Context.** Round 2 of the #306 grilling session asked the 13 questions opened by round 1. Page:
+`docs/plans/2026-10-18-grilling-round-2.html`.
+
+**Decision.** aj's reply was "Grilling round 2 answers: 1A 2A 3A 4A 5A 6A 7A 8A 9A 10A 11A 12* 13B".
+1. The agent's name is the GitHub login, lowercased, plus "sAgent": "ajw2003sAgent" for aj.
+2. The agent's name is the commit author's name, with the user's own email, and appears in the credit
+   line.
+3. The credit line reads "Committed by ajw2003sAgent" on commits and "Opened by ajw2003sAgent" on pull
+   requests and issues.
+4. Agent branches are named `ajw2003sAgent/<topic>`.
+5. A branch is the agent's own when its name starts with the agent prefix or with an extra prefix listed
+   in the settings.
+6. `AjsAgent/` and `claude/` go into aj's settings as extra agent prefixes; nothing is renamed.
+7. A snapshot branch is deleted once its helper's work is merged.
+8. A feature finds its parent feature through GitHub's sub-issue link.
+9. On someone else's branch the archivist opens an issue instead of moving a comment.
+10. In a repo aj doesn't own, the six-tier docs stay local and out of git unless the owner asks.
+11. A wholesale rewrite is replacing more than half of a file's lines in one change, or writing the whole
+    file over; it needs aj's approval by name.
+12. (aj's own answer) A check is never skipped by the agent. When a check meets the bar (over 10
+    minutes, costs money, or needs a machine or account the agent can't reach), the agent names it and
+    asks aj plainly whether to skip it. Skipping a test or hiding a failure is always the user's
+    override, never the norm, because a failing or slow test can reveal architecture that needs to
+    change.
+13. Every setting blocks until it is set; none runs on an assumed default.
+
+**Status.** Standing. Answers 1 and 13 meet: how a derived name and "blocks until set" work together is
+asked in round 3.
+
 ## 2026-10-18 - Grilling round 1: aj's answers
 
 **Context.** The #306 grilling session settles the 28 rule contradictions and the open questions from
