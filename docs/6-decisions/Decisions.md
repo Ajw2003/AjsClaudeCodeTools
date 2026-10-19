@@ -7,6 +7,27 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - Grilling round 4: aj's answers
+
+**Context.** Round 4 of the #306 grilling session asked how a settings answer gets saved while every
+tool is refused, and where cloud sessions keep settings. Page:
+`docs/plans/2026-10-19-grilling-round-4.html`.
+
+**Decision.** aj's reply was "Grilling round 4 answers 1A 2A", with a note.
+1. While settings are unset, the guard lets exactly one command through: the plugin's own settings
+   script (for example `python <plugin>/scripts/settings.py set agent_name ajw2003sAgent`). Every other
+   tool stays refused.
+2. Cloud sessions read settings from environment variables set once in the cloud environment's
+   settings, for example `HOUSE_RULES_AGENT_NAME=ajw2003sAgent`. The plugin reads these first and its
+   settings file second; the chat question appears only when neither has a value.
+3. (aj's note) In a cloud session, tapping a page's HTML file in the Claude app shows its raw code. aj
+   could read the round 4 page only because they already knew to download it. A cloud session needs
+   either a way to view the page or a reply that says plainly the page must be downloaded. Publishing
+   to claude.ai stays the exception, used only when needed (round 1 answer 7).
+
+**Status.** Standing. Note 3 is asked as one question in round 5,
+`docs/plans/2026-10-19-grilling-round-5.html`.
+
 ## 2026-10-19 - Grilling round 3: aj's answers
 
 **Context.** Round 3 of the #306 grilling session asked how a new install asks for its settings and
