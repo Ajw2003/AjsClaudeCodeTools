@@ -9476,6 +9476,24 @@ _ck_cases.append(("page: aj's own \"no page\" means no report, first pass and re
                   not _ck_b1 and not _ck_b2 and _CK_PAGE_NOTE not in _ck_o1 + _ck_o2))
 _ck_b, _, _ck_o = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc")
 _ck_cases.append(("page: a compliant reply passes with no report", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
+# #330: a page link counts only when it opens inside the session folder
+_pl_cwd = tempfile.mkdtemp(prefix="pl-cwd-")
+_pl_out = "file:///" + os.path.join(os.path.dirname(_pl_cwd), "elsewhere", "x.html").replace("\\", "/")
+_ck_cases.append(("page links (#330): a markdown link to a page inside cwd counts",
+                  _cc_mod._reply_links_page("See [p](docs/plans/x.html)", _pl_cwd)))
+_ck_cases.append(("page links (#330): a ../Sibling/docs/plans/x.html link does not count",
+                  not _cc_mod._reply_links_page("See [p](../Sibling/docs/plans/x.html)", _pl_cwd)))
+_ck_cases.append(("page links (#330): a file:/// link outside cwd does not count",
+                  not _cc_mod._reply_links_page("See " + _pl_out, _pl_cwd)))
+_ck_cases.append(("page links (#330): a claude.ai artifact link counts",
+                  _cc_mod._reply_links_page("See https://claude.ai/artifact/abc", _pl_cwd)))
+_ck_cases.append(("page links (#330): a bare page.html counts",
+                  _cc_mod._reply_links_page("See page.html", _pl_cwd)))
+_ck_cases.append(("page links (#330): [x.html](../Sibling/x.html) does not count on its link text",
+                  not _cc_mod._reply_links_page("See [x.html](../Sibling/docs/plans/x.html)", _pl_cwd)))
+_ck_cases.append(("page links (#330): the outside-folder note names the path",
+                  "../Sibling/docs/plans/x.html is outside" in _cc_mod._check_page(
+                      {"reply": "See [x.html](../Sibling/docs/plans/x.html)", "cwd": _pl_cwd, "long_words": 200})))
 # 2 editor
 _ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
 # 3 evidence
@@ -9887,6 +9905,15 @@ else:
                         capture_output=True, text=True, timeout=300)
     _mp_cases.append(("make_page: the same page with the old 1fr CSS is reported as a clipped card and fails the check",
                       'clipped card' in _r.stdout and _r.returncode == 2))
+_d_out = _mp_proj("outside", _PS_STYLE)
+_d_cwd = os.path.join(_mp_tmp, "cwdfolder")
+os.makedirs(_d_cwd, exist_ok=True)
+_r_out = subprocess.run([sys.executable, MAKE_PAGE, "build", _c1, "--project", _d_out], cwd=_d_cwd, capture_output=True, text=True, timeout=300)
+_r_in = subprocess.run([sys.executable, MAKE_PAGE, "build", _c1, "--project", _d_out], cwd=_d_out, capture_output=True, text=True, timeout=300)
+_mp_cases.append(("make_page (#331): a page written outside the folder it runs in prints the 'is outside' line",
+                  _r_out.returncode == 0 and "is outside" in _r_out.stdout))
+_mp_cases.append(("make_page (#331): a page written inside the folder it runs in prints no 'is outside' line",
+                  _r_in.returncode == 0 and "is outside" not in _r_in.stdout))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

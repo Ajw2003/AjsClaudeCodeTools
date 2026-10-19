@@ -421,6 +421,11 @@ def build(args):
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
     print("make_page: wrote %s (%d picture(s) copied)" % (out, npics))
+    here = os.path.normcase(os.path.abspath(os.getcwd()))
+    o = os.path.normcase(out)
+    if o != here and not o.startswith(here + os.sep):
+        print("make_page: %s is outside %s; a link to it will not open in the app (#329). Copy it into %s before linking."
+              % (out, os.getcwd(), os.path.join(os.getcwd(), "docs", "plans")))
     visual_check(out, style)
     if "qa" in page:
         record_qa_page(project, out)

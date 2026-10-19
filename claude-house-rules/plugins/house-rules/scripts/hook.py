@@ -7303,12 +7303,60 @@ def _plain_summary_problems(reply):
 LONG_REPLY_WORDS = 160
 _PAGE_LINK_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(|\.html\b", re.IGNORECASE)
 _MD_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
+_PAGE_ART_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(", re.IGNORECASE)
+_HTML_PATH_RE = re.compile(r"""(?:file:///)?[^\s()<>\[\]"'`]+?\.html?""", re.IGNORECASE)
+
+
+def _html_paths(reply, cwd):
+    """#329: every .html/.htm path in the reply as (path as written, absolute normcased path or None
+    for a bare file name with no folder)."""
+    out = []
+    for m in _HTML_PATH_RE.finditer(reply):
+        raw = m.group(0)
+        p = urllib.parse.unquote(raw[8:]) if raw.lower().startswith("file:///") else raw
+        if raw.lower().startswith("file:///"):
+            p = p if re.match(r"[A-Za-z]:", p) else "/" + p
+        if "/" not in p and "\\" not in p:
+            out.append((p, None))
+            continue
+        out.append((p, os.path.normcase(os.path.abspath(os.path.join(cwd, p)))))
+    return out
+
+
+def _inside(path, cwd):
+    c = os.path.normcase(os.path.abspath(cwd))
+    return path == c or path.startswith(c + os.sep)
+
+
+def _reply_links_page(reply, cwd):
+    """#329: True when the reply links a page the app can open: an artifact link, a picture, or an
+    .html path inside the session folder cwd. A bare .html file name counts only when the reply has no
+    .html path at all, so the text of [x.html](../elsewhere/x.html) can't pass for the link. Empty cwd:
+    any .html counts."""
+    if not reply:
+        return False
+    if _PAGE_ART_RE.search(reply):
+        return True
+    if not cwd:
+        return bool(_PAGE_LINK_RE.search(reply))
+    found = _html_paths(reply, cwd)
+    paths = [a for _, a in found if a is not None]
+    if paths:
+        return any(_inside(a, cwd) for a in paths)
+    return bool(found)
+
+
+def _outside_page_links(reply, cwd):
+    """#329: the .html paths in the reply that sit outside the session folder cwd."""
+    if not cwd:
+        return []
+    return [p for p, a in _html_paths(reply, cwd) if a is not None and not _inside(a, cwd)]
 _WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'\u2019-]*")
 
 
-def _long_reply_words(reply):
+def _long_reply_words(reply, cwd=""):
     """The word count when the reply is too long and links no page or picture, else 0."""
-    if not reply or _PAGE_LINK_RE.search(reply):
+    if not reply or _reply_links_page(reply, cwd):
         return 0
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply)))
     return words if words >= LONG_REPLY_WORDS else 0
@@ -7512,8 +7560,13 @@ def _check_page(ctx):
     if _page_escape(ctx):
         return ""
     reply = ctx.get("reply") or ""
-    if _PAGE_LINK_RE.search(reply):
+    cwd = ctx.get("cwd") or ""
+    if _reply_links_page(reply, cwd):
         return ""
+    out = _outside_page_links(reply, cwd)
+    if out:
+        return ("%s is outside this session's folder %s, so the app cannot open it: copy it into "
+                "%s/docs/plans/ and link the copy" % (out[0], cwd, cwd))
     if ctx.get("long_words") or _offers_choices(reply):
         return ("put the detail on a page: write a content.json, run `python3 %s build <content.json>` "
                 "and link the page it makes in the reply"
@@ -7648,7 +7701,11 @@ _QA_ARTIFACT_RE = re.compile(r"https://claude\.ai/artifact/\S+|claude\.ai/code/a
 def _record_qa_link(ctx):
     """True (and qa_page_linked recorded) when the reply links the QA page. Also used on a retry."""
     page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
-    if not (page and (page in reply or os.path.basename(page) in reply or _QA_ARTIFACT_RE.search(reply))):
+    cwd = ctx.get("cwd") or ""
+    in_reply = page in reply or os.path.basename(page) in reply
+    if page and cwd and in_reply:  # #329: the page counts only when its path opens inside the folder
+        in_reply = _inside(os.path.normcase(os.path.abspath(os.path.join(cwd, page))), cwd)
+    if not (page and (in_reply or _QA_ARTIFACT_RE.search(reply))):
         return False
     state, problem = _loop_read(ctx["qa_git_dir"])
     if problem:
@@ -7900,7 +7957,7 @@ def event_handover():
             "(%s)." % commit_could_not_tell
         )
 
-    long_words = _long_reply_words(reply_text) if (vm is not None and _loop_enabled()) else 0
+    long_words = _long_reply_words(reply_text, _payload_cwd(payload)) if (vm is not None and _loop_enabled()) else 0
     # #324: the writing check no longer runs on chat replies (pages and new issues keep it), so no findings
     # and no report line here; the not-checked disclosure still goes through _writing_note.
     writing = []
@@ -7918,12 +7975,13 @@ def event_handover():
     if _loop_enabled():
         try:
             pctx = {"reply": reply_text if vm is not None else "", "long_words": long_words,
+                    "cwd": _payload_cwd(payload),
                     "user_text": _last_user_text(transcript_path) if transcript_path else ""}
             fix = _check_page(pctx)
             # #310: once a reply to aj's message is flagged, the page stays owed for every later reply to the
             # same message until one links a page - a shorter retry no longer clears it. The page-blocks file
             # keeps a count per message; above zero means owed.
-            if _page_escape(pctx) or _PAGE_LINK_RE.search(pctx["reply"]):
+            if _page_escape(pctx) or _reply_links_page(pctx["reply"], pctx["cwd"]):
                 _page_count(pctx, "clear")
             elif fix or _page_count(pctx) > 0:
                 # #326: the note is said once per message of aj's, on the first flag (count 0). The bump still
@@ -7944,7 +8002,7 @@ def event_handover():
                 "editor_owed": editor_owed,
                 "needs_evidence": needs_evidence,
                 "uncommitted": uncommitted,
-                "plain_problems": plain_problems,
+                "plain_problems": plain_problems, "cwd": _payload_cwd(payload),
                 "user_text": _last_user_text(transcript_path) if transcript_path else "",
             }
             try:
@@ -7975,7 +8033,8 @@ def event_handover():
                     raise OSError(_pr)
                 if _st.get("stage") == "qa" and _st.get("qa_page") and not _st.get("qa_page_linked"):
                     _record_qa_link({"reply": reply_text if vm is not None else "",
-                                     "qa_page": _st.get("qa_page"), "qa_git_dir": _gd})
+                                     "qa_page": _st.get("qa_page"), "qa_git_dir": _gd,
+                                     "cwd": _payload_cwd(payload)})
         except Exception as exc:
             trace_lines.append("house-rules: the QA page link could not be recorded on the retry (%s: %s)."
                                % (type(exc).__name__, exc))
