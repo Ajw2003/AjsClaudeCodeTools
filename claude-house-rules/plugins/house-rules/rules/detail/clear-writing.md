@@ -25,11 +25,16 @@ earlier message.
 **Why:** a run of near-identical status replies ("Nothing else has changed. Still waiting on…")
 hides the one line that matters in the noise around it.
 
-## Explicit context, nothing to work out
+## Define before use, nothing to work out
 
-Name the what, the where and the which, every time: which page, which file, which choice, which
-issue. "Waiting on your picks" leaves the reader to recall what picks and where; "Waiting on your
-two picks on the redesign page: the wording, and the file detail" does not.
+Name what a phrase means before its first use, every time: which page, which file, which choice,
+which issue. "Waiting on your picks" leaves the reader to recall what picks and where; "Waiting on
+your two picks on the redesign page: the wording, and the file detail" does not.
+
+A round or question number carries what was asked and what was chosen. "See round 1, answer 7" makes
+the reader go and look it up; "round 1, question 7, where pages are built: on your machine,
+published only when asked" does not. Where a phrase genuinely can't be defined first, say plainly
+why.
 
 ## Measured, not guessed
 
