@@ -23,7 +23,7 @@
         "Step 1",
         "The rule wording",
         "",
-        "In rules/clear-writing.md, the \"Explicit context\" and \"Named references\" lines merge into one line, \"Define before use\": name what a phrase means before its first use, so nothing is inferred, and when that genuinely can't be done, say plainly why. The detail file, rules/detail/clear-writing.md, gets examples, including a reference like \"round 1, answer 7\" rewritten as what that answer actually decided. verify.py lists the rule's line names at verify.py:358 and verify.py:1939, so both lists are updated in the same change.",
+        "In rules/clear-writing.md, the \"Explicit context\" and \"Named references\" lines merge into one line, \"Define before use\". It says to name what a phrase means before its first use, so nothing is inferred, and to say plainly why when that genuinely can't be done. The detail file, rules/detail/clear-writing.md, gets examples, including a reference like \"round 1, answer 7\" rewritten as what that answer actually decided. verify.py lists the rule's line names at verify.py:358 and verify.py:1939, so both lists are updated in the same change.",
         "Nothing from you. Done when verify.py passes with the new line names."
       ],
       [
@@ -95,7 +95,7 @@
       "templates/decision-summary.page.json",
       "A starter file for every grilling, restructure or brainstorm summary.",
       null,
-      "It holds the shape you rated 9 out of 10 in your reply on the grilling summary: one row per topic, short lines of what each decision creates or changes, the before-and-after strip, and a \"Decided by\" box naming each answer in words.",
+      "It holds the shape you rated 9 out of 10 in your reply on the grilling summary. Each topic gets one row, with short lines of what each decision creates or changes, the before-and-after strip, and a \"Decided by\" box naming each answer in words.",
       null,
       null
     ]
