@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-19 - Attribution guard: aj's answers on the first proposal
+
+**Context.** The proposal page `docs/plans/2026-10-19-attribution-guard.html` asked which repos get
+a GitHub-side attribution guard, which plan the account is on, and whether merges become squash-only.
+
+**Decision.** aj's reply was "Design not approved attribution guard 1B 2* 3*".
+1. All 71 repos aj owns, forks included.
+2. The account is on GitHub Free, and private repos must still be covered "from our side": "No
+   Claude attribution ever on all of my repos".
+3. No squash: "Squash re writes history and isn't safe no using squash to cover up history that
+   shows where the attribution guard failed, this is a bandaid not a real fix". Merges stay merge
+   commits, and failures stay visible in history.
+
+**Status.** Standing. The page was revised (round 2) around a merge gate in the hook.
+
 ## 2026-10-19 - Summary template: aj's answers on the proposal
 
 **Context.** The proposal page `docs/plans/2026-10-19-summary-template.html` asked how the grilling
