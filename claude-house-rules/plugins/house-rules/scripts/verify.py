@@ -4283,24 +4283,29 @@ commit_case(
 _occ = _iss_guard("gh issue close 5")
 _issues_outputs.append(("issue close", _occ))
 commit_case(
-    "close: `gh issue close` asks, says the user must have tested, and tells Claude the label follow-up",
-    _iss_decision(_occ) == "ask" and "tested" in _iss_reason(_occ) and "Claude completed this" in _iss_reason(_occ)
-    and "Claude completed this" in json.loads(_occ)["hookSpecificOutput"].get("additionalContext", ""),
+    "close: `gh issue close` with nothing recorded is refused (#363), naming what is missing",
+    _iss_decision(_occ) == "deny" and "refused to close #5" in _iss_reason(_occ) and "no QA pass is recorded" in _iss_reason(_occ),
     "out %r" % _occ[:160],
 )
 _bad = []
 for _c in ("gh issue close 5 --comment done", "gh issue edit 5 --state closed", "cd x && gh issue close 5",
            "gh api -X PATCH repos/o/r/issues/5 -f state=closed", "gh api repos/o/r/issues/5 --method PATCH -f state=closed"):
-    if _iss_decision(_iss_guard(_c)) != "ask":
+    if _iss_decision(_iss_guard(_c)) != "deny":
         _bad.append(_c)
-commit_case("close: edit --state closed, a chained close and gh api PATCH to closed also ask", not _bad, "not asked: %r" % _bad)
+commit_case("close: edit --state closed, a chained close and gh api PATCH to closed are also refused (#363)", not _bad, "not refused: %r" % _bad)
 _bad = []
 for _c in ("gh issue comment 5 --body hi", 'gh issue create --title t --body b', "gh issue edit 5 --add-label bug",
            "gh api repos/o/r/issues/5", 'git commit -m "gh issue close 5 is gated"'):
-    if _iss_decision(_iss_guard(_c)) == "ask" and "closing an issue" in _iss_reason(_iss_guard(_c)):
+    if _iss_decision(_iss_guard(_c)) in ("ask", "deny") and "close guard" in _iss_reason(_iss_guard(_c)):
         _bad.append(_c)
 commit_case("close: comment, create, label edits, reads and a commit message mentioning it are not affected", not _bad, "affected: %r" % _bad)
+os.makedirs(os.path.join(_dp, ".claude"), exist_ok=True)  # #363: an allowed close, so the delete check is what speaks
+with open(os.path.join(_dp, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as _f:
+    json.dump({"skip": False, "approvals": [], "stage": "done", "closable": [
+        {"feature": "f", "issues": [{"repo": "", "number": 5}], "qa_at": 1, "qa": "QA passed: f",
+         "merged_pr": {"repo": "o/r", "number": 2, "at": 1}}]}, _f)
 _ocm = _iss_guard("rm old.txt && gh issue close 5")
+os.remove(os.path.join(_dp, ".claude", "house-rules-loop.json"))
 commit_case(
     "close: a chained command whose delete is unsafe is refused as a whole, naming the safe way (#291)",
     _iss_decision(_ocm) == "deny" and "deletes one or more files" in _iss_reason(_ocm) and "_to_delete/" in _iss_reason(_ocm),
@@ -9047,6 +9052,89 @@ _cl_cases.append(("HOUSE_RULES_LOOP=off stamps nothing and says so",
                   _cl_state()["closable"][0]["merged_pr"] is None and "HOUSE_RULES_LOOP=off" in _o))
 for _t, _ok in _cl_cases:
     report("PASS" if _ok else "FAIL", "closable record: " + _t)
+
+# --- #363: the close guard - an issue closes only on recorded QA + merge evidence or an approved list ---
+def _cg_gh(cmd, env=None):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "cg", "cwd": _cl_dir,
+         "tool_input": {"command": cmd}}
+    return run_hook("guard", json.dumps(p), env=env or _iss_env())[1]
+
+
+def _cg_mcp(ti, env=None):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "mcp__github__issue_write", "session_id": "cg",
+         "cwd": _cl_dir, "tool_input": ti}
+    return run_hook("guardgithub", json.dumps(p), env=env or _iss_env())[1]
+
+
+def _cg_ctx(o):
+    try:
+        return json.loads(o)["hookSpecificOutput"].get("additionalContext", "")
+    except Exception:
+        return ""
+
+
+_cg_mrg = {"repo": "o/r", "number": 20, "at": 1}
+_cg_ready = {"feature": "f", "issues": [{"repo": "o/r", "number": 7}], "qa_at": 1, "qa": "QA passed: f", "merged_pr": _cg_mrg}
+_cg_nomerge = dict(_cg_ready, merged_pr=None)
+_cg_cases = []
+_cg_mc = {"method": "update", "owner": "o", "repo": "r", "issue_number": 7, "state": "closed", "state_reason": "completed"}
+_cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[dict(i) for i in _cg_ready["issues"]])]})
+_o = _cg_gh("gh issue close 7 -R o/r")
+_cg_cases.append(("gh close with a QA pass and a merge is allowed, with the comment/label instruction",
+                  _iss_decision(_o) == "allow" and "QA passed: f" in _cg_ctx(_o) and "o/r#20" in _cg_ctx(_o)
+                  and "AjsAgent completed this" in _cg_ctx(_o) and "in%20progress" in _cg_ctx(_o)))
+_cg_cases.append(("an allowed close drops the issue and its now-empty closable entry", not _cl_state().get("closable")))
+_cl_set({"stage": "done", "closable": [dict(_cg_nomerge)]})
+_o = _cg_gh("gh issue close 7 -R o/r")
+_cg_cases.append(("gh close with a QA pass but no merge is refused, naming the missing merge",
+                  _iss_decision(_o) == "deny" and "passed QA but no merged pull request is recorded since" in _iss_reason(_o)
+                  and bool(_cl_state().get("closable"))))
+_cl_set({"stage": "done"})
+_o = _cg_gh("gh issue close 7")
+_cg_cases.append(("gh close with nothing recorded is refused, naming the missing QA pass",
+                  _iss_decision(_o) == "deny" and "no QA pass is recorded for a feature that holds #7" in _iss_reason(_o)))
+_cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[{"repo": "o/r", "number": 7}, {"repo": "o/r", "number": 8}])]})
+_o = _cg_mcp(_cg_mc)
+_cg_cases.append(("MCP issue_write close with a QA pass and a merge is allowed; the entry keeps the other issue",
+                  _iss_decision(_o) == "allow" and "AjsAgent completed this" in _cg_ctx(_o)
+                  and [i["number"] for i in _cl_state()["closable"][0]["issues"]] == [8]))
+_cl_set({"stage": "done", "closable": [dict(_cg_nomerge)]})
+_o = _cg_mcp(_cg_mc)
+_cg_cases.append(("MCP issue_write close with a QA pass but no merge is refused", _iss_decision(_o) == "deny" and "no merged pull request" in _iss_reason(_o)))
+_cl_set({"stage": "done"})
+_o = _cg_mcp(_cg_mc)
+_cg_cases.append(("MCP issue_write close with nothing recorded is refused", _iss_decision(_o) == "deny" and "no QA pass is recorded" in _iss_reason(_o)))
+_cg_cases.append(("MCP issue_write that is not a close is not checked",
+                  _iss_decision(_cg_mcp({"method": "update", "owner": "o", "repo": "r", "issue_number": 7, "state": "open"})) is None))
+_o = _cg_mcp(dict(_cg_mc, state_reason="not_planned"))
+_cg_cases.append(("a not-planned MCP close without a sweep entry is refused",
+                  _iss_decision(_o) == "deny" and "a not-planned close needs an approved sweep or a named list" in _iss_reason(_o)))
+_cl_set({"stage": "done", "closable": [dict(_cg_ready)]})
+_o = _cg_gh("gh issue close 7 -R o/r --reason 'not planned'")
+_cg_cases.append(("a not-planned gh close is refused even for a QA-and-merge issue", _iss_decision(_o) == "deny" and "not-planned" in _iss_reason(_o)))
+_cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "not_planned", "replaced_by": 306}]})
+_o = _cg_gh("gh issue close 9 -R o/r --reason 'not planned'")
+_cg_cases.append(("a not-planned gh close is allowed with a matching sweep entry, which is then removed",
+                  _iss_decision(_o) == "allow" and "#306" in _cg_ctx(_o) and not _cl_state().get("sweep")))
+_cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "not_planned", "replaced_by": 306}]})
+_o = _cg_gh("gh issue close 9 -R o/r")
+_cg_cases.append(("a completed close is refused when the sweep entry says not_planned", _iss_decision(_o) == "deny"))
+_cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "completed", "replaced_by": None}]})
+_o = _cg_mcp(dict(_cg_mc, issue_number=9, state_reason=None))
+_cg_cases.append(("an MCP close with no reason is allowed for a sweep completed entry", _iss_decision(_o) == "allow" and not _cl_state().get("sweep")))
+_cl_set({"stage": "done", "closable": [dict(_cg_ready)]})
+_o1 = _cg_gh("gh issue close --comment done")
+_o2 = _cg_mcp({"method": "update", "owner": "o", "repo": "r", "state": "closed"})
+_cg_cases.append(("a close with no issue number is refused, saying so, on both routes",
+                  all(_iss_decision(x) == "deny" and "could not tell which issue" in _iss_reason(x) for x in (_o1, _o2))
+                  and bool(_cl_state().get("closable"))))
+_cl_set({"stage": "done"})
+_o = _cg_gh("gh issue close 7", env=_iss_env(HOUSE_RULES_ISSUES="off"))
+_cg_cases.append(("HOUSE_RULES_ISSUES=off keeps its old behaviour: the close guard does not run on either route",
+                  "close guard" not in _o and "refused" not in _o
+                  and _cg_mcp(_cg_mc, env=_iss_env(HOUSE_RULES_ISSUES="off")).find("close guard") < 0))
+for _t, _ok in _cg_cases:
+    report("PASS" if _ok else "FAIL", "close guard: " + _t)
 
 # --- #307: every approval in one message is read, in stage order -------------------------------
 # Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and

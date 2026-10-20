@@ -2419,6 +2419,10 @@ def event_guard():
                                      "permissionDecisionReason": issue_hit[1]}})
         return 0
 
+    allow_ctx = None  # #363: an allowed close carries its follow-up instruction
+    if issue_hit and issue_hit[0] == "allow":
+        allow_ctx, issue_hit = issue_hit[2], None
+
     where, moved_unclear = _command_dir(payload)
     _mine, branch, ownership_note = branch_ownership(where)
     # --git-dir / --work-tree, or a cd / -C that could not be followed, acts on a repo other than
@@ -2533,12 +2537,15 @@ def event_guard():
         # either (#197) - only when every statement is git or cd, so the approval never carries an
         # unrelated command along. docs/plans/2026-10-09-stop-permission-stalls.md
         approve = bool(exempted) and _only_git_statements(subject)
-        if docs_status == "needs-docs" or approve:
+        if docs_status == "needs-docs" or approve or allow_ctx:
             # PreToolUse's additionalContext reaches the model on an "allow" decision (probed
             # live, doc-ref 8713 docs/6-decisions/Decisions.md).
             out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
             if docs_status == "needs-docs":
                 out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
+            if allow_ctx:
+                _ac = out["hookSpecificOutput"].get("additionalContext")
+                out["hookSpecificOutput"]["additionalContext"] = (_ac + " " if _ac else "") + allow_ctx
             if docs_status == "unknown" and trace_enabled():
                 out["systemMessage"] = "%s - docs check could not tell: %s." % (allow_trace, docs_detail)
             elif trace_verbose():
@@ -6015,8 +6022,8 @@ PR_ASK_NOTE = (
 )
 CLOSE_ASK_NOTE = (
     "House rules, closing an issue always asks the user: the user must have tested the work first, "
-    "and this approval prompt is their go-ahead. On approval, also add `Claude completed this` with `gh api "
-    "repos/<owner>/<repo>/issues/N/labels -f \"labels[]=Claude completed this\"`, remove `in progress` with "
+    "and this approval prompt is their go-ahead. On approval, also add `AjsAgent completed this` with `gh api "
+    "repos/<owner>/<repo>/issues/N/labels -f \"labels[]=AjsAgent completed this\"`, remove `in progress` with "
     "`gh api -X DELETE repos/<owner>/<repo>/issues/N/labels/in%20progress`, and comment on the "
     "issue with the merged PR link."
 )
@@ -6208,6 +6215,23 @@ def event_guardgithub():
                 emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                       "permissionDecisionReason": ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing)}})
                 return 0
+    # #363: a close through the GitHub tool goes through the same close guard as gh.
+    if (_GITHUB_ISSUE_WRITE_RE.match(str(payload.get("tool_name") or "")) and _issues_enabled()
+            and str(ti.get("method", "")).lower() == "update" and str(ti.get("state", "")).lower() == "closed"):
+        num = ti.get("issue_number")
+        try:
+            num = int(num)
+        except (TypeError, ValueError):
+            num = None
+        repo = "%s/%s" % (ti.get("owner"), ti.get("repo")) if ti.get("owner") and ti.get("repo") else ""
+        ok, text, ctx = _close_decide(repo, num, str(ti.get("state_reason") or "").lower(), _payload_cwd(raw))
+        if ok:
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                                         "additionalContext": ctx}})
+        else:
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                         "permissionDecisionReason": text}})
+        return 0
     if not _attribution_enabled():
         trace_noop("guardgithub: HOUSE_RULES_ATTRIBUTION=off - nothing was checked.")
         return 0
@@ -6340,6 +6364,137 @@ def _author_guard(subject, payload):
             % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
 
 
+# --- #363: the close guard. A close goes through only on recorded evidence or an approved list. ---
+CLOSE_COMMENT_NOTE = (
+    "House rules, this close is allowed: %s. Before or right after it, comment on issue #%d with that "
+    "evidence (the QA message and the merged pull request link, or the sweep approval and the replacing "
+    "issue), add the label `AjsAgent completed this` (`gh api repos/%s/issues/%d/labels -f "
+    "\"labels[]=AjsAgent completed this\"`) and remove `in progress` (`gh api -X DELETE "
+    "repos/%s/issues/%d/labels/in%%20progress`)."
+)
+
+
+def _close_repo_match(a, b):
+    return not a or not b or a.lower() == b.lower()
+
+
+def _close_check(repo, number, reason, state):
+    """(allowed, reason_text) for closing issue `number` of `repo` with state reason `reason`
+    ("completed", "not_planned" or "" for none), from the design-loop `state` (#363)."""
+    reason = (reason or "completed").strip().lower().replace(" ", "_")
+    if not isinstance(state, dict):
+        state = {}
+    sweep = [x for x in (state.get("sweep") or []) if isinstance(x, dict) and x.get("number") == number
+             and _close_repo_match(repo, x.get("repo", ""))]
+    for x in sweep:
+        if x.get("action") == reason:
+            if reason == "not_planned" and x.get("replaced_by"):
+                return True, "#%d is on the approved sweep list as not planned, replaced by #%s" % (number, x["replaced_by"])
+            return True, "#%d is on the approved sweep list as %s" % (number, reason.replace("_", " "))
+    holders = []
+    for e in state.get("closable") or []:
+        if isinstance(e, dict) and any(isinstance(i, dict) and i.get("number") == number
+                                       and _close_repo_match(repo, i.get("repo", "")) for i in e.get("issues") or []):
+            holders.append(e)
+    ready = [e for e in holders if e.get("merged_pr")]
+    if ready and reason == "completed":
+        e = ready[0]
+        pr = e["merged_pr"]
+        return True, "%s, and pull request %s#%s was merged since" % (
+            e.get("qa") or "QA passed", pr.get("repo") or repo or "?", pr.get("number"))
+    if reason != "completed":
+        return False, ("a not-planned close needs an approved sweep or a named list, and #%d is not on one "
+                       "with the action not_planned" % number)
+    if holders:
+        return False, "#%d's feature passed QA but no merged pull request is recorded since" % number
+    if sweep:
+        return False, "#%d is on the approved sweep list with a different action than completed" % number
+    return False, ("no QA pass is recorded for a feature that holds #%d, and it is on no approved sweep or "
+                   "named list" % number)
+
+
+def _close_forget(git_dir, repo, number):
+    """Take `number` out of its closable entry (the entry goes once empty) and out of sweep."""
+    state, problem = _loop_read(git_dir)
+    if problem or not isinstance(state, dict):
+        return
+    hit = lambda i: isinstance(i, dict) and i.get("number") == number and _close_repo_match(repo, i.get("repo", ""))
+    changed = False
+    if isinstance(state.get("closable"), list):
+        keep = []
+        for e in state["closable"]:
+            if isinstance(e, dict) and any(hit(i) for i in e.get("issues") or []):
+                e["issues"] = [i for i in e["issues"] if not hit(i)]
+                changed = True
+                if not e["issues"]:
+                    continue
+            keep.append(e)
+        state["closable"] = keep
+    if isinstance(state.get("sweep"), list):
+        n = len(state["sweep"])
+        state["sweep"] = [x for x in state["sweep"] if not hit(x)]
+        changed = changed or len(state["sweep"]) != n
+    if changed:
+        _loop_write(git_dir, state)
+
+
+def _close_decide(repo, number, reason, cwd):
+    """(allowed, text, context). Reads the stage file; when allowed, takes the issue out of it
+    (in this PreToolUse step, before the close has run)."""
+    if number is None:
+        return False, ("House rules, close guard: I could not tell which issue this close is for (no issue "
+                       "number found), so it is refused. Name the issue number."), None
+    _, git_dir = _issues_locate(cwd)
+    if not git_dir:
+        return False, ("House rules, close guard: could not find the project's stage file from %s, so the "
+                       "close of #%d is refused." % (cwd, number)), None
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return False, "%s The close of #%d is refused." % (problem, number), None
+    ok, why = _close_check(repo, number, reason, state)
+    if not ok:
+        return False, "House rules, close guard: refused to close #%d: %s." % (number, why), None
+    _close_forget(git_dir, repo, number)
+    slug = repo or "<owner>/<repo>"
+    return True, why, CLOSE_COMMENT_NOTE % (why, number, slug, number, slug, number)
+
+
+def _close_gh_parse(cmd):
+    """(repo, number, reason) from a gh close command; number None when it cannot be read."""
+    repo = ""
+    m = re.search(r"(?:-R|--repo)[ =]+[\"']?([\w.-]+/[\w.-]+)", cmd)
+    if m:
+        repo = m.group(1)
+    um = _ISSUE_URL_RE.search(cmd)
+    number = None
+    if um:
+        repo, number = um.group(1), int(um.group(2))
+    else:
+        am = re.search(r"issues/(\d+)", cmd)
+        if am:
+            number = int(am.group(1))
+            rm = re.search(r"repos/([\w.-]+/[\w.-]+)/issues", cmd)
+            if rm:
+                repo = rm.group(1)
+        else:
+            im = re.search(r"issue\s+(?:close|edit)\s+(?:(?:-R|--repo)[ =]+\S+\s+)?#?(\d+)(?![\w/-])", cmd)
+            if im:
+                number = int(im.group(1))
+    reason = ""
+    rm = re.search(r"(?:--reason|-r)[ =]+[\"']?(not[ _]planned|completed|duplicate)", cmd, re.IGNORECASE)
+    if not rm:
+        rm = re.search(r"state_reason[=\s:\"']+(not[ _]planned|completed|duplicate)", cmd, re.IGNORECASE)
+    if rm:
+        reason = rm.group(1).lower().replace(" ", "_")
+    return repo, number, reason
+
+
+def _close_gh_decision(cmd, payload):
+    repo, number, reason = _close_gh_parse(cmd)
+    ok, text, ctx = _close_decide(repo, number, reason, _payload_cwd(payload))
+    return ("allow", text, ctx) if ok else ("deny", text, None)
+
+
 def _issues_guard(subject, payload):
     """None when the issue rules have nothing to say about this command, else
     (kind, reason, context) with kind "deny" or "ask"."""
@@ -6392,7 +6547,7 @@ def _issues_guard(subject, payload):
         if missing:
             return ("deny", ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing), None)
     if any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
-        return ("ask", CLOSE_ASK_NOTE, CLOSE_ASK_NOTE)
+        return _close_gh_decision(cmd, payload)
     return None
 
 
