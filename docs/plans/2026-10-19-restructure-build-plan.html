@@ -1,0 +1,602 @@
+<!doctype html>
+<!-- house-rules make_page 2.68.5 -->
+<meta charset="utf-8">
+<title>Restructure Build Plan</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#566174; --line:#d5dbe6;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --you:#b35f00; --you-soft:#fdeed9;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.55 var(--body)}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:1.9rem;font-weight:800}
+h2{font-size:1.45rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.ico{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* stepper */
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stepper button{border:0;background:none;display:grid;justify-items:center;gap:4px;padding:4px 0;font-size:.72rem;color:var(--muted)}
+.stepper .bar{width:100%;height:6px;border-radius:3px;background:var(--line)}
+.stepper button.done .bar{background:var(--accent)}
+.stepper button[aria-current="step"]{color:var(--fg);font-weight:700}
+.stepper button[aria-current="step"] .bar{background:var(--accent)}
+
+.panel{display:grid;gap:18px}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.lead{font-size:1.1rem}
+
+/* at-a-glance strip */
+.glance{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.g{display:grid;justify-items:center;gap:4px;width:56px;text-align:center;font-size:.72rem;color:var(--muted)}
+.g span.c{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
+.arrow{color:var(--muted);font-size:1.1rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
+.glance .lk .ico{width:14px;height:14px}
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
+.g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.sd h3{display:flex;gap:8px;align-items:center}
+.sd .back{padding-left:0}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.key i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent)}
+.key i.y{border-radius:4px;background:var(--you-soft);border-color:var(--you)}
+
+/* stage list */
+.stages{display:grid;gap:8px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.st > summary{list-style:none;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;cursor:pointer;min-height:48px}
+.st > summary::-webkit-details-marker{display:none}
+.st .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.st.you .c{border-radius:11px;background:var(--you-soft);color:var(--you)}
+.st.you{border-color:var(--you)}
+.st .nm b{display:block}
+.st .nm small{color:var(--muted);font-size:.85rem}
+.more{font-size:.78rem;color:var(--accent);font-weight:700;white-space:nowrap}
+details[open] > summary .more::after{content:" ▲"} details:not([open]) > summary .more::after{content:" ▼"}
+.detail{padding:0 14px 14px 68px;display:grid;gap:8px;font-size:.92rem}
+@media (max-width:420px){.detail{padding-left:14px}}
+.row{display:grid;grid-template-columns:72px 1fr;gap:8px}
+.row > span:first-child{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.back{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--you);padding-left:12px}
+
+/* created / changed */
+.cc{display:grid;gap:8px}
+.ci{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.ci > summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;cursor:pointer;min-height:48px}
+.ci > summary::-webkit-details-marker{display:none}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ci b{display:block}
+.ci small{color:var(--muted);font-size:.86rem}
+.ci .detail{padding:0 14px 14px 14px}
+.fromto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:.88rem}
+.fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
+.fromto span.to{background:var(--accent-soft)}
+.flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch;font-size:.84rem}
+.flow > span{border-radius:8px;padding:8px;background:var(--bg);display:grid;gap:2px;align-content:start;min-width:0}
+.flow > span.mid{background:var(--accent-soft)}
+.flow > i{align-self:center;color:var(--muted);font-style:normal}
+.flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.files{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.files h4{margin:0;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.frow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;align-items:baseline}
+.frow code{font-size:.82rem;word-break:break-all}
+.files .n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.parts{margin:0 0 4px;padding-left:18px;display:grid;gap:4px;font-size:.86rem}
+.parts li span:first-child{margin-right:8px}
+
+/* choices */
+.q{display:grid;gap:8px}
+.q h3{display:flex;gap:10px;align-items:flex-start}
+.qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input[type=radio]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.opt small{display:block;color:var(--muted);font-size:.86rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+.rec{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.rec .ico{width:12px;height:12px}
+.why{font-size:.88rem}
+.why summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:32px}
+.why p{margin-top:6px;color:var(--muted)}
+
+/* wrap-up */
+.wrapup{display:grid;gap:10px}
+.wu{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.wu .c{width:40px;height:40px;border-radius:10px;display:grid;place-items:center}
+.wu h3{margin-bottom:2px}
+.wu p,.wu li{font-size:.94rem}
+.wu ol{margin:4px 0 0;padding-left:20px;display:grid;gap:4px}
+.wu.do{border:2px solid var(--you)}
+.reply{display:grid;gap:8px}
+.reply pre{white-space:pre-wrap;margin:0;background:var(--card);border:1px dashed var(--accent);border-radius:10px;padding:12px;font-size:.92rem}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:12px;padding:14px 18px;font-weight:800;min-height:48px}
+.secondary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:700;min-height:48px}
+.nav{display:flex;justify-content:space-between;gap:10px}
+.nav .primary{margin-left:auto}
+.status{font-size:.88rem;color:var(--muted)}
+.missing{color:var(--gap);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.panel{animation:in .2s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+<style>
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.g.done span.c{background:var(--ok-soft);color:var(--ok)}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+/* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+.pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+.pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+.pic img,.cmp img{display:block;max-width:100%;height:auto;background:var(--bg)}
+.pic,.pic button{width:100%;box-sizing:border-box}
+/* A tall screenshot shrunk to fit a short box is a sliver: fill the width and show its top instead. */
+.pic button img{width:100%;max-height:280px;object-fit:cover;object-position:top;border-radius:6px}
+.pic figcaption,.cmp figcaption{font-size:.86rem;color:var(--muted)}
+.pic,.cmp{margin:0}
+.cmp{display:grid;gap:6px;min-width:0}
+.cmp-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+body{overflow-wrap:anywhere}
+.crb p,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
+@media (max-width:479px){.cr{grid-template-columns:minmax(0,1fr)}}
+.cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
+.cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cmp-slide{display:none;gap:6px;min-width:0}
+.cmp-frame{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.cmp-frame img{width:100%}
+.cmp-frame img + img{position:absolute;inset:0;height:100%;object-fit:fill;clip-path:inset(0 0 0 var(--pos,50%))}
+.cmp-slide input[type=range]{width:100%;accent-color:var(--accent);min-height:44px;margin:0}
+@media (max-width:639px){.cmp-side{display:none}.cmp-slide{display:grid}}
+dialog.lightbox{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:12px;width:min(96vw,960px);max-height:94vh;box-sizing:border-box;overflow:auto}
+dialog.lightbox::backdrop{background:rgba(0,0,0,.6)}
+dialog.lightbox img{display:block;width:100%;height:auto}
+dialog.lightbox p{margin-top:8px;font-size:.9rem}
+dialog.lightbox button{margin-top:10px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L3 15l3 3 8-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+</defs></svg>
+
+<!--
+  Handover page template (house-rules, issue #233). The approved format: four parts in this order -
+  In short, Changes, Choices, Wrap-up - and a part is left out only when it would be empty.
+  Copy this file, edit PAGE below, and nothing else. Every part keeps four rules:
+  detail only on tap; names, never bare numbers; one colour, one meaning (orange = the user acts,
+  green = done, nothing else orange); I check it first (phone width, light and dark, every tap,
+  a bare-number search). Rule: rules/detail/show-dont-tell.md.
+-->
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="eyebrow" id="eyebrow"></span>
+    <h1 id="title"></h1>
+  </header>
+  <nav class="stepper" aria-label="Steps" id="stepper"></nav>
+  <section class="panel" data-part="short" aria-labelledby="h-short">
+    <h2 id="h-short" tabindex="-1">In short</h2>
+    <div class="card">
+      <p class="lead" id="lead"></p>
+      <div class="key" id="key"></div>
+      <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
+      <p class="muted" style="font-size:.85rem" id="hint"></p>
+      <div class="sd" id="sd" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="panel" data-part="changes" aria-labelledby="h-changes" hidden>
+    <h2 id="h-changes" tabindex="-1">What this creates or changes</h2>
+    <p class="muted" id="cc-count"></p>
+    <div class="cc" id="cc"></div>
+  </section>
+  <section class="panel" data-part="choices" aria-labelledby="h-choices" hidden>
+    <h2 id="h-choices" tabindex="-1">Your choices</h2>
+    <p class="muted">My suggestion is marked, nothing is picked for you, and each has room for your own answer.</p>
+    <div id="qs" style="display:grid;gap:22px"></div>
+  </section>
+  <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
+    <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
+    <div class="wrapup" id="wrapup"></div>
+    <div class="reply">
+      <pre id="out" aria-live="polite"></pre>
+      <p class="status" id="miss"></p>
+      <button class="primary" id="copy" type="button">Copy my reply</button>
+      <p class="status" id="st"></p>
+    </div>
+  </section>
+  <div class="nav">
+    <button class="secondary" id="prev" type="button">‹ Back</button>
+    <button class="primary" id="next" type="button">Next ›</button>
+  </div>
+</div>
+
+<script>
+// ---- PAGE: the only part you edit. Example content shows every field. ----------------------
+// Tiny inline SVGs so the template stays one file; real pages use a data: URI or a path next to the page.
+const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
+const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
+const PAGE = {
+  "title": "Restructure Build Plan",
+  "eyebrow": "Build plan · #306 house-rules restructure into a shared core and six parts · from plugin 2.68.5",
+  "approval": "Build plan approved: plugin restructure",
+  "replyPrefix": "Build plan approved: plugin restructure",
+  "reply": "",
+  "short": {
+    "lead": "This is the build plan for the whole restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins). It folds in every decision so far: the audit direction of 2026-10-16, your answers on the docs context layer, your five grilling rounds (the numbered question sets you answered), and what you chose on the summary template. The work is 10 steps, each its own GitHub issue under #306, all on the branch AjsAgent/issue-281-fix as you asked. The 2.68.1 patch that came first (issues #307 to #311) passed your QA on 2026-10-16 and is not part of this plan. Two questions at the bottom decide the order of the work and how often it ships.",
+    "hint": "Tap a step to see what it creates or changes and what it needs.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "Needs you first",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 1",
+        "The summary template and the define-before-use rule",
+        "",
+        "The four steps already planned on docs/plans/2026-10-19-summary-template-plan.html, now one step of this plan. First, the writing rule's \"Explicit context\" and \"Named references\" lines become one \"Define before use\" line. Second, scripts/clarity.py flags \"question N\" and \"answer N\" when nothing says what was asked. Third, the page template gets a \"Decided by\" box (one line per decision) and a before-and-after strip on summary pages. Fourth, a starter file, templates/decision-summary.page.json, holds the shape.",
+        "Nothing from you. It goes first so every later plan and summary page uses the new template."
+      ],
+      [
+        "list",
+        "Step 2",
+        "Move today's code into the core and six parts, changing nothing",
+        "",
+        "hook.py (8,588 lines) splits into one module per part: core, safe git, session triage, design loop, writing, delegation and docs. The 32 hook entries in hooks/hooks.json and run.sh, the small script that starts hook.py, stay as they are, and every verify.py check passes unchanged, which proves nothing moved in behaviour. The scout, a read-only helper agent, listed every handler (a piece of code that answers one hook event) and placed each one in a part. Four handlers span parts, so each is split into pieces that go to different parts. The end-of-reply handler (hook.py:6845-8089) keeps its dispatcher in the core and moves each check to its part. The issue workflow (hook.py:4925-5223) goes to the design loop, the prompt-audit handler (hook.py:6772) goes to delegation, and the version check (hook.py:1161-1635) stays in the core until step 10 removes it.",
+        "Nothing from you. Done when verify.py passes with no check changed and the inventory is written into docs/4-systems/plugin-restructure.md."
+      ],
+      [
+        "lock",
+        "Step 3",
+        "Settings and identity",
+        "",
+        "A settings script, scripts/settings.py, stores each setting. Cloud sessions read environment variables first, such as HOUSE_RULES_AGENT_NAME=ajw2003sAgent (round 4, question 2, where cloud sessions keep settings: environment variables). Until every setting has a value, the agent can't use any tool except that script (round 3, question 2, what waits: everything; round 4, question 1, how the answer is saved: one allowed command). At session start the agent asks you in the chat, suggesting your GitHub login plus \"sAgent\" as the name (round 2, question 1; round 3, question 1). The 265 identity strings in 16 shipped files, such as \"AjsAgent\" and \"AJ's agent\", read the agent name, credit line and branch prefix from settings instead.",
+        "Nothing from you to build it. After it ships, each machine and cloud environment asks for your settings once."
+      ],
+      [
+        "stop",
+        "Step 4",
+        "Safe git follows the grilling answers",
+        "",
+        "Deleting a file git can restore is allowed on the agent's own branch and refused on anyone else's, with the reason (round 1, question 1, deletes). A branch is the agent's own when its name starts with the agent prefix or an extra prefix from the settings, which for you would be AjsAgent/ and claude/ (round 2, questions 5 and 6). Commits carry the agent name as author with your email, and \"Committed by ajw2003sAgent\" as the credit line (round 2, questions 2 and 3). A snapshot branch from autosave is deleted once its helper's work is merged (round 2, question 7).",
+        "Nothing from you. Depends on step 3, because the agent name comes from settings."
+      ],
+      [
+        "eye",
+        "Step 5",
+        "Design loop and pages",
+        "",
+        "Every feature that reaches a build plan gets issues. A feature that is one step of a bigger feature links to its parent through GitHub's sub-issue link, and it passes QA on its own (round 1, questions 8 and 9; round 2, question 8). An approval counts before its decisions-log entry exists (round 1, question 10). In cloud sessions every page is published privately to claude.ai and the reply links it (round 5, question 1, how a cloud page is made readable). Local sessions publish only when asked (round 1, question 7).",
+        "Nothing from you. Depends on step 2."
+      ],
+      [
+        "check",
+        "Step 6",
+        "Writing, evidence and rewrite rules",
+        "",
+        "The agent never decides on its own to skip a check. If a check takes over 10 minutes, costs money, or needs a machine or account the agent can't reach, the agent names it and asks you plainly whether to skip it. That is your own wording from round 2, question 12. A wholesale rewrite, meaning more than half of a file's lines replaced in one change or the whole file written over, needs your approval by name, and the overwrite guard counts it (round 2, question 11). An obvious bug outside the request becomes an issue, not an unasked fix (round 1, question 6).",
+        "Nothing from you. Depends on step 2."
+      ],
+      [
+        "hammer",
+        "Step 7",
+        "Helper agents",
+        "",
+        "Test suites run twice, by helpers too (round 1, question 3). A helper with a question only you can answer stops and reports it to the parent session (round 1, question 4). A helper's report quotes the real RESULT line and every failure line (round 1, question 5). Worktree autosave (the automatic save of a helper's working folder) pushes without force to a fresh snapshot branch. The sweep (the cleanup after a helper finishes) commits that helper's leftover changes only inside its own worktree (round 1, questions 12 and 13).",
+        "Nothing from you. Depends on steps 2 and 4."
+      ],
+      [
+        "search",
+        "Step 8",
+        "The docs context layer",
+        "",
+        "This part is installed by default (docs context layer answers, 2026-10-18, answer 3A). It builds a code map with tree-sitter (a code parser) for Python, JavaScript, TypeScript, HTML, CSS and C#, plus a Roslyn pass (the C# compiler's analyser) that resolves C# references (tree-sitter trial answers 1B and 2A). The install step downloads the six grammars and fails loudly if it can't. Generated facts refresh at the end of every turn without blocking; a hand-written section whose code changed gets a stale stamp, and the guard refuses a commit that leaves a stamped doc behind. The archivist (the docs-keeping helper) moves long code comments into the docs when each turn ends, and opens an issue instead on someone else's branch. In a repo you don't own, the docs stay out of git (round 1, question 14; round 2, questions 9 and 10).",
+        "You: the Roslyn refresh time and the grammar download on an offline machine get measured before this step's build plan, as the tree-sitter trial answers asked, so that plan can say how long a refresh takes and what happens offline."
+      ],
+      [
+        "hand",
+        "Step 9",
+        "Session triage",
+        "you",
+        "Two helpers, described in #304 (a two-helper tool that cleans a session transcript, then files issues from it). One flags secrets in a session transcript for you to confirm and remove. The other files issues from the cleaned transcript, each in the repo the observation belongs to. This part has no design yet, so it starts with a design page of its own.",
+        "You: approve that design page before this step is built."
+      ],
+      [
+        "swap",
+        "Step 10",
+        "Split into installable plugins and release",
+        "",
+        "Each part becomes its own plugin in the marketplace, and each optional part lists the core in its plugin.json dependencies, so installing it installs the core. Core, safe git, session triage and docs install by default; design loop, writing and delegation are optional. Updates come from the marketplace's autoUpdate setting (it updates installed plugins on its own), so the self-updater (hook.py:1161-1635) is dropped. tools/clean_install_test.py proves a fresh install from GitHub works, and a QA page lists what to test.",
+        "You: test the fresh install and answer \"QA passed: plugin restructure\" or \"QA failed: plugin restructure\"."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "keep",
+      "Every hook event and every check",
+      "The 32 hook entries, the run.sh start-up script and every verify.py check stay.",
+      null,
+      "Step 2 is a pure move, so verify.py (10,061 lines) proves the behaviour is unchanged before any decision is applied. Later steps change checks only where a decision says so, each with a new verify.py case.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "hook.py",
+      "One 8,588-line file becomes seven modules, one per part.",
+      [
+        "One file answers every hook event",
+        "Each part owns the code for its own hook events"
+      ],
+      "A part can then be installed or left out on its own, which today's single file can't allow.",
+      [
+        "One file, 8,588 lines",
+        "A core plus six part modules, dispatched by the same run.sh",
+        "A session in a repo that doesn't want the design loop can leave it out"
+      ],
+      null
+    ],
+    [
+      "chg",
+      "Identity strings",
+      "265 strings in 16 files become settings.",
+      [
+        "\"AjsAgent\" and \"AJ's agent\" written into the code",
+        "The agent name, credit line and branch prefix come from settings"
+      ],
+      "Round 1, question 16: identity becomes settings, so work is never credited to Claude and never carries your name on someone else's work.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "Docs context layer and session triage",
+      "Two parts that don't exist in today's code.",
+      null,
+      "The docs context layer (step 8) and session triage (step 9) are new code, not moved code.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "Dropped: the self-updater",
+      "versioncheck's update code (hook.py:1161-1635) is removed in step 10.",
+      null,
+      "The marketplace's autoUpdate replaces it. On 2026-10-19 the updater looked for a marketplace named aj-house-rules, which cloud sessions don't have, even though the synced 2.68.5 was already loaded.",
+      null,
+      null
+    ]
+  ],
+  "choices": [
+    [
+      "q1",
+      "1. In what order is the work done?",
+      [
+        [
+          "A",
+          "Move first: step 2 splits hook.py with no behaviour change, then steps 3 to 9 apply your decisions part by part",
+          1,
+          "Each decision then lands in the module that owns it, and verify.py proves the move on its own before anything changes."
+        ],
+        [
+          "B",
+          "Decisions first: apply steps 3 to 9 inside today's hook.py, then split it at the end",
+          0,
+          "Your decisions take effect sooner, but every change lands in the 8,588-line file and then has to be moved again at the end."
+        ]
+      ],
+      "In both, step 1, the summary template, goes first."
+    ],
+    [
+      "q2",
+      "2. How often does it ship to main?",
+      [
+        [
+          "A",
+          "After each step: a pull request from AjsAgent/issue-281-fix to main and a version bump, each with its own QA page",
+          1,
+          "Small, reversible changes you test one at a time, and the branch stays the one thread you asked for."
+        ],
+        [
+          "B",
+          "Once, at the end, as house-rules 3.0.0",
+          0,
+          "One QA session, but every change waits until the last step and is tested all at once."
+        ]
+      ],
+      "In both, every step's issue says what it depends on, what depends on it and when it's done."
+    ]
+  ],
+  "wrapup": {
+    "summary": "The build plan for the #306 restructure: 10 steps from plugin 2.68.5, folding in every decision so far.",
+    "changing": "No files change until you approve. The plan is recorded in the decisions log, docs/6-decisions/Decisions.md.",
+    "blocking": "Your approval, and your answers to question 1 (the order of the work) and question 2 (how often it ships).",
+    "next": "Once you approve, I open one issue per step under #306 and build step 1 with a helper agent.",
+    "todo": [
+      "Type your approval in the chat. It starts with \"Build plan approved: plugin restructure\" and ends with your answers, for example \"Build plan approved: plugin restructure 1A 2A\" (question 1, option A; question 2, option A).",
+      "Tap <b>Copy my reply<\/b> and send it: \"Build plan approved: plugin restructure\", or say what to change."
+    ]
+  }
+};
+// ---- End of PAGE. Nothing below needs editing. ----------------------------------------------
+
+const ic = id => `<svg class="ico"><use href="#i-${id}"/></svg>`;
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// A picture is found by shape (src or before), not position, because flow and files before it are optional.
+const picOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && (x.src || x.before));
+let picN = 0; const PICS = [];
+const picHtml = p => {
+  if (!p) return "";
+  if (p.before && p.after) {
+    const id = "cmp" + (picN++), cap = p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : "";
+    const im = x => `<img src="${esc(x.src)}" alt="${esc(x.alt || p.caption || "")}">`;
+    return `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
+      <div class="cmp-slide"><div class="cmp-frame">${im(p.before)}${im(p.after)}</div><label for="${id}">Reveal after over before: drag to compare</label><input type="range" id="${id}" min="0" max="100" value="50" aria-label="Compare before and after: ${esc(p.caption || "")}"></div>${cap}</figure>`;
+  }
+  const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+  return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+};
+document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+let boxFrom = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-pic]");
+  if (b) { const p = PICS[+b.dataset.pic]; boxFrom = b; box.querySelector("img").src = p.src; box.querySelector("img").alt = p.alt; box.querySelector("p").textContent = p.caption; box.showModal(); return; }
+  if (e.target === box || e.target.closest("dialog.lightbox")) box.close();  // tap anywhere on it closes; Escape does too
+});
+box.addEventListener("close", () => { if (boxFrom) boxFrom.focus(); boxFrom = null; });
+document.title = PAGE.title;
+document.getElementById("title").textContent = PAGE.title;
+document.getElementById("eyebrow").textContent = PAGE.eyebrow;
+document.getElementById("lead").textContent = PAGE.short.lead;
+document.getElementById("hint").textContent = PAGE.short.hint;
+document.getElementById("key").innerHTML = PAGE.short.key.map(([l, k]) =>
+  `<span><i class="${k === "you" ? "y" : ""}"${k === "done" ? ' style="background:var(--ok-soft);border-color:var(--ok)"' : ""}></i>${esc(l)}</span>`).join("");
+
+// A part is left out only when it would be empty.
+const PARTS = [["short", "In short"], ["changes", "Changes"], ["choices", "Choices"], ["wrapup", "Wrap-up"]]
+  .filter(([id]) => id === "short" || id === "wrapup" || (PAGE[id] && PAGE[id].length));
+document.querySelectorAll("[data-part]").forEach(p => { if (!PARTS.some(([id]) => id === p.dataset.part)) p.remove(); });
+
+const glance = document.getElementById("glance"), sd = document.getElementById("sd");
+glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
+  `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
+function showItem(n) {
+  glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
+  const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
+  const needsYou = !/^Nothing/.test(requires);
+  sd.innerHTML = `<h3>${esc(t)}</h3><div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span><p>${esc(creates)}</p></div>
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${ic("hand")}Requires</span><p>${esc(requires)}</p></div></div>${picHtml(pic)}`;
+}
+glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
+if (PAGE.short.items.length) showItem(0);
+
+if (document.getElementById("cc")) {
+  const counts = { new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
+  document.getElementById("cc-count").textContent =
+    `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
+  // A New item's picture (#241): what sets it off -> what it does -> what you get.
+  const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+  // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
+  const lineCounts = (a, r) => `+${a} \u2212${r}`;
+  const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+    fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+      (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
+}
+
+if (document.getElementById("qs")) {
+  document.getElementById("qs").innerHTML = PAGE.choices.map(([id, q, opts, why], n) =>
+    `<fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n + 1}</span>${esc(q)}</h3></legend>
+     ${opts.map(o => { const [v, l, rec, d] = o; return `<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${esc(l)}</b>${rec ? '<span class="rec">' + ic("check") + 'Suggested</span>' : ""}${d ? `<small>${esc(d)}</small>` : ""}</span></label>${picHtml(picOf(o, 4))}`; }).join("")}
+     <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to: ${esc(q)}" placeholder="Type your idea here"></span></label>
+     ${why ? `<details class="why"><summary>Why I suggest this</summary><p>${esc(why)}</p></details>` : ""}</fieldset>`).join("");
+}
+
+const W = PAGE.wrapup;
+document.getElementById("wrapup").innerHTML = [
+  ["file", "Summary", W.summary, "accent"], ["swap", "What's changing", W.changing, "accent"],
+  ["stop", "What's blocking", W.blocking, "gap"], ["next", "What's next", W.next, "ok"]
+].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("") +
+  `<div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)">${ic("hand")}</span><div><h3>What you need to do</h3><ol>${W.todo.map(x => `<li>${x}</li>`).join("")}</ol></div></div>`;
+
+const out = document.getElementById("out"), miss = document.getElementById("miss");
+function reply() {
+  const picks = PAGE.choices.map(([id], i) => {
+    const c = document.querySelector(`input[name=${id}]:checked`);
+    if (c && c.value === "own") { const t = document.querySelector(`.owntext[data-for=${id}]`).value.trim(); return [i + 1, t ? "own" : null, t]; }
+    return [i + 1, c && c.value];
+  });
+  const A = PAGE.approval || PAGE.replyPrefix;  // replyPrefix: only for pages built before approval existed
+  out.textContent = picks.length
+    ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
+      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
+    : A;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
+  const m = picks.filter(([, v]) => !v).map(([n]) => n);
+  miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
+  const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
+}
+document.addEventListener("change", reply);
+document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
+document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
+  navigator.clipboard.writeText(out.textContent).then(() => st.textContent = "Copied. Paste it into the chat.")
+  .catch(() => { const r = document.createRange(); r.selectNodeContents(out); getSelection().removeAllRanges(); getSelection().addRange(r); st.textContent = "Couldn't copy automatically. The reply is selected; copy it by hand."; }); };
+
+let cur = 1;
+const stepper = document.getElementById("stepper");
+stepper.style.gridTemplateColumns = `repeat(${PARTS.length},1fr)`;
+stepper.innerHTML = PARTS.map(([, s], i) => `<button type="button" data-go="${i + 1}"><span class="bar"></span>${s}</button>`).join("");
+function go(n, focus = true) {
+  cur = Math.min(PARTS.length, Math.max(1, n));
+  const id = PARTS[cur - 1][0];
+  document.querySelectorAll("[data-part]").forEach(p => p.hidden = p.dataset.part !== id);
+  stepper.querySelectorAll("button").forEach((b, i) => { b.classList.toggle("done", i + 1 < cur); if (i + 1 === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  document.getElementById("prev").hidden = cur === 1;
+  const nx = document.getElementById("next"); nx.hidden = cur === PARTS.length; nx.textContent = cur === PARTS.length - 1 ? "Wrap-up ›" : "Next ›";
+  if (focus) { document.getElementById("h-" + id).focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+}
+stepper.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(+b.dataset.go); });
+document.getElementById("prev").onclick = () => go(cur - 1);
+document.getElementById("next").onclick = () => go(cur + 1);
+go(1, false); reply();
+</script>

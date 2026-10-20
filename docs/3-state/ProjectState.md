@@ -197,6 +197,10 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-19, branch `AjsAgent/issue-281-fix`, plugin 2.68.5: the #322 loop fix (pull request #328, branch `AjsAgent/nifty-newton-x2jaaj`) is merged with `main` and the #306 grilling work, plus one more cause of the loop: during an uncommitted merge, every page the other branch brought in counted as written this turn. A page still identical to the merged branch's copy no longer counts. aj asked for this on `main` straight away.
 
+2026-10-19, branch `AjsAgent/issue-281-fix`, plugin 2.68.5: aj approved the 10-step build plan for the #306 restructure (`docs/plans/2026-10-19-restructure-build-plan.html`), move first and ship after each step. Steps are #339, #340, #341, #349 and #343 to #348; step 1 (#339, the summary template) is in progress.
+
+2026-10-19, branch `AjsAgent/issue-281-fix`, plugin 2.69.0: restructure step 1 (#339) passed aj's QA on 2026-10-20 and ships to `main` by pull request. The writing rule keeps its "Explicit context" and "Named references" lines and adds a "Define before use" line beside them (aj's QA failure, 2026-10-20), the checker flags a round or question reference that names nothing, and summary pages have a "Decided by" box, one line per decision and a before-and-after strip, from the starter file `templates/decision-summary.page.json`. The grilling summary page is rebuilt from it.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

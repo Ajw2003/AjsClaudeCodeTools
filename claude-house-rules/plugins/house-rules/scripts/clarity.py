@@ -121,6 +121,9 @@ def vague_claims(text):
 _ISSUE_REF_RE = re.compile(r"(?<![\w/&])#(\d+)\b")
 _OPTION_REF_RE = re.compile(r"\b([Oo]ption|[Cc]hoice|[Ss]tep)\s+([A-Z]|\d+)\b")
 
+# "question 7" / "answer 1A", alone or after "round 1,", with no words saying what was asked.
+_ROUND_REF_RE = re.compile(r"\b([Qq]uestion|[Aa]nswer)\s+(\d+[A-Z]?)\b")
+
 
 def _inside_parens(text, pos):
     return text.rfind("(", 0, pos) > text.rfind(")", 0, pos)
@@ -150,6 +153,15 @@ def bare_references(text):
         after = text[m.end():m.end() + 3]
         if after.startswith((":", " (", " ·", " -", " —", "**:", " of")) or _inside_parens(text, m.start()):
             continue
+        if _is_quoted(text, m.start()) or _inside_quotes(text, m.start()):
+            continue
+        found.append(m.group(0))
+    for m in _ROUND_REF_RE.finditer(text):
+        rest = text[m.end():m.end() + 14]
+        if rest.startswith((":", " (", " -", " —")) or _inside_parens(text, m.start()):
+            continue
+        if re.match(r", (?!(?:question|answer|round)\b)\w", rest, re.I):
+            continue  # a description follows: "question 1, where the name comes from"
         if _is_quoted(text, m.start()) or _inside_quotes(text, m.start()):
             continue
         found.append(m.group(0))

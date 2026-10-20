@@ -31,6 +31,14 @@ Name the what, the where and the which, every time: which page, which file, whic
 issue. "Waiting on your picks" leaves the reader to recall what picks and where; "Waiting on your
 two picks on the redesign page: the wording, and the file detail" does not.
 
+## Define before use
+
+Explicit context and named references stay; this adds to them. Name what a phrase means before its
+first use, so the reader never has to infer it. A round or question number carries what was asked and what was chosen. "See round 1, answer 7" makes
+the reader go and look it up; "round 1, question 7, where pages are built: on your machine,
+published only when asked" does not. Where a phrase genuinely can't be defined first, say plainly
+why.
+
 ## Measured, not guessed
 
 A number that can be counted is counted, and the count is quoted. "About 43 tests" was written

@@ -1,0 +1,84 @@
+{
+  "title": "Restructure Step 1 QA",
+  "eyebrow": "QA · #339 restructure step 1: the summary page template and the define-before-use rule · house-rules 2.69.0",
+  "short": {
+    "lead": "Step 1 of the restructure is built on the branch AjsAgent/issue-281-fix as house-rules 2.69.0. The restructure is issue #306, \"house-rules: restructure into a shared core with project boundaries and six optional sub-plugins\". Your first QA failed because \"Explicit context\" and \"Named references\" had been merged into \"Define before use\". Your writing rule now keeps both lines and adds \"Define before use\" as a third, separate line. The writing checker (clarity.py) flags a reference like \"question 3\" or \"answer 2\" when nothing after it says what was asked. Summary pages now have a \"Decided by\" box, one line per decision, and a before-and-after strip: three boxes reading \"What exists today\", \"What this creates\" and \"How it impacts you\". The real test is the grilling summary page, which I rebuilt from the new starter file (a ready-made content file that every summary page starts from). Open it and tap through its ten topics. verify.py, the script that checks the hooks do what the docs say, passed on two runs, each with 871 checks.",
+    "hint": "Tap a row to see what was built and how it was checked.",
+    "key": [
+      [
+        "Built and checked",
+        "done"
+      ],
+      [
+        "Your test",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Rule",
+        "\"Define before use\" added beside the two lines it was wrongly merged into",
+        "done",
+        "Your first QA failed because \"Explicit context\" and \"Named references\" had been merged into \"Define before use\". Both lines are back in rules/clear-writing.md word for word, in their original places, and \"Define before use\" is a third line between them: name what a phrase means before its first use, and a round or question number carries what was asked and what was chosen. rules/detail/clear-writing.md has the original \"Explicit context\" section back, plus a \"Define before use\" section with a worked example.",
+        "Nothing from you. Checked by verify.py, which now checks that all three line names reach the session."
+      ],
+      [
+        "search",
+        "Checker",
+        "Bare round and question references are flagged",
+        "done",
+        "scripts/clarity.py flags \"question N\" and \"answer N\" when nothing after them says what was asked. Run on real phrases, \"see round 1, answer 7.\" and \"as answer 2 said.\" are flagged. These pass: \"Round 2, question 1, where the agent's name comes from: the GitHub login plus sAgent\", \"question 3 (where the rule goes)\" and an approval such as \"approve 1A 2A\".",
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "Pages",
+        "Summary pages: Decided by, one line per decision, a strip",
+        "done",
+        "A content file with \"kind\": \"summary\" labels each row's second box \"Decided by\" and never colours it orange. A row's text can be a list. A row can also carry the before-and-after strip, which shows three columns and stacks into one column below 480 pixels. I added the stacking after a screenshot of the rebuilt page at phone width showed three columns leaving about nine words a column. Every existing page builds unchanged, and make_page.py stops with an error for any other kind.",
+        "Nothing from you. Checked by 6 new verify.py cases and by screenshots at 400 pixels wide, in light and dark mode.",
+        {
+          "before": {
+            "src": "qa-339/before-phone-light.png",
+            "alt": "The old grilling summary at phone width: one long paragraph and an orange Requires box of bare references"
+          },
+          "after": {
+            "src": "qa-339/after-phone-light.png",
+            "alt": "The rebuilt grilling summary at phone width: a stacked strip, one line per decision, and a Decided by box naming each answer in words"
+          },
+          "caption": "The grilling summary's first topic at 400 pixels, before and after."
+        }
+      ],
+      [
+        "hand",
+        "Your test",
+        "Read the rebuilt grilling summary on your phone",
+        "you",
+        "The page is docs/plans/2026-10-19-grilling-summary.html, also published privately at https://claude.ai/artifact/7mYSYu4NMgXvnEVcGw4Taa. Tap each of the ten topics: every \"Decided by\" line should say the round, what the question asked and what you chose, with nothing to look up.",
+        "Reply \"QA passed: restructure step 1\", or \"QA failed: restructure step 1\" and say what reads wrong."
+      ]
+    ]
+  },
+  "changes": [],
+  "qa": {
+    "feature": "restructure step 1",
+    "base": "origin/main",
+    "unverified": [
+      "No Claude Code session has run house-rules 2.69.0 yet. The checks ran hook.py, clarity.py and make_page.py directly from the branch instead",
+      "The diff against main also counts this branch's plan and grilling pages, not only step 1's files",
+      "Older pages under docs/plans keep their old HTML until they are rebuilt"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "QA for restructure step 1 (#339): the summary page template and the define-before-use rule, house-rules 2.69.0.",
+    "changing": "Once you pass QA, a pull request takes 2.69.0 to main, and step 2 (#340, move today's hook.py into the core and six part modules) starts.",
+    "blocking": "Your QA answer.",
+    "next": "Your QA answer.",
+    "todo": [
+      "Open the grilling summary page and tap through its ten topics.",
+      "Reply \"QA passed: restructure step 1\" or \"QA failed: restructure step 1\"."
+    ]
+  }
+}

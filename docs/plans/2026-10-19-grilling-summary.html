@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- house-rules make_page 2.68.4 -->
+<!-- house-rules make_page 2.68.5 -->
 <meta charset="utf-8">
 <title>Grilling Summary</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -62,7 +62,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .crb.you .crh{color:var(--you)}
 .crh .ico{width:16px;height:16px}
-.crb p{font-size:.9rem}
+.crb p,.crb li{font-size:.9rem}
+.crb ul.cl{margin:0;padding-left:1.1em;display:grid;gap:4px}
 .g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
 .g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
 .g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
@@ -110,6 +111,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .flow > span.mid{background:var(--accent-soft)}
 .flow > i{align-self:center;color:var(--muted);font-style:normal}
 .flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+@media (max-width:479px){.flow{grid-template-columns:minmax(0,1fr)}.flow > i{justify-self:center;transform:rotate(90deg)}}
 .files{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
 .files h4{margin:0;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .frow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;align-items:baseline}
@@ -178,7 +180,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .cmp{display:grid;gap:6px;min-width:0}
 .cmp-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 body{overflow-wrap:anywhere}
-.crb p,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
+.crb p,.crb li,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
 @media (max-width:479px){.cr{grid-template-columns:minmax(0,1fr)}}
 .cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
 .cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
@@ -273,16 +275,12 @@ const PAGE = {
   "replyPrefix": "Grilling summary",
   "reply": "",
   "short": {
-    "lead": "The grilling session for the #306 restructure is done: round 5 raised no new question. This page gathers every answer from the five rounds into ten topics, so you can confirm them in one place. Each topic names the round and answer each decision comes from. The full wording of each round is in the decisions log (docs/6-decisions/Decisions.md): rounds 1 and 2 on the branch AjsAgent/docs-context-layer, rounds 3 to 5 on AjsAgent/issue-281-fix. Once you confirm, I will write the build plan for the restructure from these answers.",
-    "hint": "Tap a topic to see every answer it holds.",
+    "lead": "The grilling session for #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins) is done. This page gathers every answer from the five rounds into ten topics. Each topic lists what it creates or changes, one line per decision, and a \"Decided by\" box names each answer: the round, what the question asked, and what you chose. You confirmed this summary on 2026-10-19.",
+    "hint": "Tap a topic to see what it creates or changes and which answers decided it.",
     "key": [
       [
         "Decided",
         "done"
-      ],
-      [
-        "You confirm",
-        "you"
       ]
     ],
     "items": [
@@ -291,115 +289,204 @@ const PAGE = {
         "Safety",
         "Deletes and risky git commands",
         "done",
-        "Deleting a file that git can restore is always allowed on a branch the agent owns. On anyone else's branch it is refused, and the refusal gives the reason (round 1, answer 1). Risky git commands are refused with the safe way named, and you are asked only when no safe way exists (round 1, answer 2). A branch is the agent's own when its name starts with the agent prefix or an extra prefix in the settings (round 2, answer 5). A snapshot branch (the autosave copy of a helper's worktree) is deleted once that helper's work is merged (round 2, answer 7).",
-        "Round 1 answers 1 and 2; round 2 answers 5 and 7."
+        [
+          "Deleting a file git can restore is allowed on the agent's own branch.",
+          "On anyone else's branch the delete is refused, and the refusal says why.",
+          "Risky git commands are refused with the safe way named; you are asked only when no safe way exists.",
+          "A branch is the agent's own when its name starts with the agent prefix or an extra prefix from the settings.",
+          "A snapshot branch is deleted once its helper's work is merged."
+        ],
+        [
+          "Round 1, question 1, deleting a committed, unchanged file: allowed on the agent's own branch, refused on anyone else's (your own answer).",
+          "Round 1, question 2, force-push, branch deletes and commits on a branch that isn't the agent's: refused with the safe way named.",
+          "Round 2, question 5, what makes a branch the agent's own: its name starts with the agent prefix or an extra prefix in the settings.",
+          "Round 2, question 7, who clears snapshot branches: each is deleted once its helper's work is merged."
+        ],
+        [
+          "Deletes and risky commands are asked about or refused case by case",
+          "One rule: the agent's own branch is free, anyone else's is protected",
+          "You are asked only when no safe way exists"
+        ]
       ],
       [
         "check",
         "Evidence",
         "Tests and checks",
         "done",
-        "Test suites are run twice, by the main session and by helper agents alike (round 1, answer 3). The agent never skips a check itself. When a check takes over 10 minutes, costs money, or needs a machine or account the agent can't reach, the agent names the check and asks you plainly. Skipping a test or hiding a failure is only ever your decision (round 2, answer 12, your own wording). The agent uses Unity batch mode to check that a project compiles only when no Unity command-line tool or editor plugin can (round 1, answer 15).",
-        "Round 1 answers 3 and 15; round 2 answer 12."
+        [
+          "Test suites run twice, helpers included.",
+          "The agent never skips a check on its own; a slow, paid or unreachable check is named and you are asked.",
+          "Skipping a test or hiding a failure is only ever your decision.",
+          "Unity batch mode checks a compile only when no Unity command-line tool or editor plugin can."
+        ],
+        [
+          "Round 1, question 3, how many times a suite runs before a success claim: twice, everywhere.",
+          "Round 2, question 12, when a check may be skipped for cost: never by the agent; over 10 minutes, paid or unreachable means it asks you (your own answer).",
+          "Round 1, question 15, when to use Unity batch mode: only when no Unity command-line tool or editor plugin can check the compile."
+        ]
       ],
       [
         "hammer",
         "Helpers",
         "How helper agents work",
         "done",
-        "A helper with a question only you can answer stops and reports it to the parent session, which asks you (round 1, answer 4). A helper's report quotes the real RESULT line and every failure line, with no line limit (round 1, answer 5). Worktree autosave credits its commits the same way as every other commit, and pushes to a new snapshot branch each time without force-pushing (round 1, answer 12). The worktree sweep commits a finished helper's uncommitted leftovers, and only inside that helper's own worktree (round 1, answer 13).",
-        "Round 1 answers 4, 5, 12 and 13."
+        [
+          "A helper with a question only you can answer stops and reports it to the parent session.",
+          "A helper's report quotes the real RESULT line and every failure line.",
+          "Worktree autosave credits its commits like every other commit and pushes without force to a new snapshot branch.",
+          "The sweep commits a finished helper's leftovers only inside its own worktree."
+        ],
+        [
+          "Round 1, question 4, a helper with a question only you can answer: it stops and the parent session asks you.",
+          "Round 1, question 5, how much a helper's report quotes: the real RESULT line and every failure line, no limit.",
+          "Round 1, question 12, how autosave commits and pushes: the same credit rule as every commit, no force-push, a fresh snapshot branch each time.",
+          "Round 1, question 13, whether the sweep may commit a helper's leftovers: yes, only in that helper's own worktree."
+        ]
       ],
       [
         "list",
         "Scope",
         "Issues, features and stages",
         "done",
-        "An obvious bug outside the request is not fixed unasked; it becomes an issue named in the reply (round 1, answer 6). Every feature that reaches a build plan gets GitHub issues (round 1, answer 8). A feature that is one step of a bigger one passes QA on its own, and its parent closes with the last child (round 1, answer 9). The parent is found through GitHub's sub-issue link (round 2, answer 8). An approval is accepted before its decisions-log entry exists, and the work can't move on until that entry is written (round 1, answer 10). The design loop's stage moves through pull requests and labels stay as written rules, and trying to edit code never moves a stage (round 1, answer 11).",
-        "Round 1 answers 6, 8, 9, 10 and 11; round 2 answer 8."
+        [
+          "An obvious bug outside the request becomes an issue, named in the reply.",
+          "Every feature that reaches a build plan gets GitHub issues.",
+          "A feature that is one step of a bigger one passes QA on its own; the parent closes with its last child.",
+          "The parent is found through GitHub's sub-issue link.",
+          "An approval counts before its decisions-log entry exists; the entry is needed before the next stage.",
+          "Stage moves on pull requests and labels are written rules; an edit attempt never moves a stage."
+        ],
+        [
+          "Round 1, question 6, an obvious bug in a file being edited: not fixed unasked; it becomes an issue.",
+          "Round 1, question 8, when a feature needs GitHub issues: whenever it reaches a build plan.",
+          "Round 1, question 9, whether a step of a bigger feature can pass QA on its own: yes.",
+          "Round 2, question 8, how a feature knows its parent: GitHub's sub-issue link.",
+          "Round 1, question 10, an approval that arrives before its log entry: accepted; the entry is required before the next stage.",
+          "Round 1, question 11, the design loop's automatic stage moves: kept as written rules, and an edit attempt never moves a stage."
+        ]
       ],
       [
         "eye",
         "Pages",
         "Where pages are built and how you read them",
         "done",
-        "In local sessions, pages are built on your machine for every plan and long reply, and published to claude.ai only when you ask (round 1, answer 7). In cloud sessions, where tapping a page's HTML file shows raw code instead of the rendered page, every page is published privately to claude.ai and the reply links it. The page file is still written under docs/plans/ and committed to git (round 5, answer 1C).",
-        "Round 1 answer 7; round 5 answer 1C."
+        [
+          "Local sessions build every page on your machine and publish to claude.ai only when you ask.",
+          "Cloud sessions publish every page privately to claude.ai and link it, because tapping an HTML file there shows raw code.",
+          "The page file is always written under docs/plans/ and committed."
+        ],
+        [
+          "Round 1, question 7, where pages are built: locally for every plan and long reply, published only when asked.",
+          "Round 5, question 1, how a cloud session makes a page readable: publish it privately to claude.ai and link that."
+        ],
+        [
+          "Pages are local files only",
+          "Local files, plus a private claude.ai link in cloud sessions",
+          "A page opens with one tap on your phone"
+        ]
       ],
       [
         "hand",
         "Identity",
         "The agent's name, credit and branches",
         "done",
-        "Identity and taste become settings that you choose. Safety and evidence rules stay fixed, enforced as refusals. \"Claude\" is never the default credit, and neither is your name on someone else's work (round 1, answer 16, your own wording). The agent's name is the GitHub login, lowercased, plus \"sAgent\": ajw2003sAgent for you (round 2, answer 1). That name is the commit author's name, with your own email address (round 2, answer 2). The credit line reads \"Committed by ajw2003sAgent\" on commits and \"Opened by ajw2003sAgent\" on pull requests and issues (round 2, answer 3). Agent branches are named ajw2003sAgent/<topic> (round 2, answer 4). AjsAgent/ and claude/ stay in your settings as extra agent prefixes, and nothing is renamed (round 2, answer 6).",
-        "Round 1 answer 16; round 2 answers 1 to 4 and 6."
+        [
+          "Identity and taste become settings; safety and evidence rules stay fixed.",
+          "\"Claude\" is never the default credit, and your name never goes on someone else's work.",
+          "The agent's name is your GitHub login, lowercased, plus \"sAgent\": ajw2003sAgent.",
+          "It is the commit author's name, with your own email.",
+          "Credit lines read \"Committed by ajw2003sAgent\" and \"Opened by ajw2003sAgent\".",
+          "Branches are named ajw2003sAgent/<topic>; AjsAgent/ and claude/ stay as extra agent prefixes, and nothing is renamed."
+        ],
+        [
+          "Round 1, question 16, which rules become settings: identity and taste, never Claude as credit (your own answer).",
+          "Round 2, question 1, where the agent's name comes from: the GitHub login plus sAgent.",
+          "Round 2, question 2, where the name appears on a commit: as the author's name, with your email.",
+          "Round 2, question 3, what the credit line says: Committed by, or Opened by, ajw2003sAgent.",
+          "Round 2, question 4, the branch prefix: the agent name.",
+          "Round 2, question 6, the 21 AjsAgent/ and 60 claude/ branches: both prefixes stay as extra agent prefixes."
+        ],
+        [
+          "\"AjsAgent\" and \"AJ's agent\" are written into the code",
+          "The name, credit line and prefix come from settings",
+          "Anyone can install the plugin under their own name"
+        ]
       ],
       [
         "lock",
         "Settings",
         "How settings are asked for and kept",
         "done",
-        "Every setting must be set before work can start; none falls back to an assumed default (round 2, answer 13). At session start the plugin asks for each unset setting in the chat and suggests the worked-out value, which is used only once you confirm it. A value you set through the /plugin configure command is accepted too (round 3, answer 1A). Until the settings are set, every tool is refused, and the refusal names the missing setting (round 3, answer 2B). The one command allowed meanwhile is the plugin's own settings script (round 4, answer 1A). Cloud sessions read settings from environment variables set once in the cloud environment's settings, then from the settings file (round 4, answer 2A).",
-        "Round 2 answer 13; round 3 answers 1A and 2B; round 4 answers 1A and 2A."
+        [
+          "Every setting must be set before work starts; none falls back to an assumed default.",
+          "At session start the plugin asks in the chat and suggests the worked-out value, used only once you confirm it.",
+          "A value set through /plugin configure is accepted too.",
+          "Until settings are set every tool is refused except the plugin's own settings script.",
+          "Cloud sessions read environment variables first, then the settings file."
+        ],
+        [
+          "Round 2, question 13, what defaults the other settings carry: none; every setting blocks until set.",
+          "Round 3, question 1, how a new install asks for settings: in the chat at session start, suggesting the worked-out value.",
+          "Round 3, question 2, what waits until settings are set: everything.",
+          "Round 4, question 1, how your answer is saved while tools are refused: one allowed command, the settings script.",
+          "Round 4, question 2, where cloud sessions keep settings: environment variables set once in the cloud environment."
+        ]
       ],
       [
         "file",
         "Docs",
         "Documentation and the archivist",
         "done",
-        "The archivist moves a long code comment into the docs at turn end and leaves a doc-ref pointer, a one-line marker naming where the text went (round 1, answer 14). On someone else's branch it opens an issue instead of moving the comment (round 2, answer 9). In a repo you don't own, the six-tier docs under docs/ stay on your machine and out of git, unless the owner asks for them (round 2, answer 10).",
-        "Round 1 answer 14; round 2 answers 9 and 10."
+        [
+          "The archivist moves a long code comment into the docs when the turn ends and leaves a doc-ref pointer.",
+          "On someone else's branch it opens an issue instead of moving the comment.",
+          "In a repo you don't own, the six-tier docs stay on your machine and out of git unless the owner asks."
+        ],
+        [
+          "Round 1, question 14, whether a long comment moves to the docs automatically: yes, at turn end.",
+          "Round 2, question 9, a long comment on someone else's branch: the archivist opens an issue instead.",
+          "Round 2, question 10, docs in a repo you don't own: they stay local unless the owner asks."
+        ]
       ],
       [
         "search",
         "Definitions",
         "What counts as a wholesale rewrite",
         "done",
-        "A wholesale rewrite is replacing more than half of a file's lines in one change, or writing the whole file over, and it needs your approval by name (round 2, answer 11).",
-        "Round 2 answer 11."
+        [
+          "Replacing more than half of a file's lines in one change, or writing the whole file over, is a wholesale rewrite.",
+          "It needs your approval by name."
+        ],
+        [
+          "Round 2, question 11, what counts as a wholesale rewrite: over half a file's lines in one change, or the whole file written over."
+        ]
       ],
       [
         "swap",
         "Fixes",
         "The sixteen mechanical fixes",
         "done",
-        "You accepted the sixteen mechanical fixes exactly as listed on the round 1 page (docs/plans/2026-10-18-grilling-round-1.html) (round 1, answer 17).",
-        "Round 1 answer 17."
+        [
+          "The sixteen fixes listed on docs/plans/2026-10-18-grilling-round-1.html are accepted as listed."
+        ],
+        [
+          "Round 1, question 17, sixteen fixes where one side is plainly out of date: all accepted."
+        ]
       ]
     ]
   },
   "changes": [],
-  "choices": [
-    [
-      "q1",
-      "1. Does this summary match what you decided?",
-      [
-        [
-          "A",
-          "Yes: write the build plan for the restructure from these answers",
-          1,
-          "The build plan comes next as its own page, for you to approve before any code changes."
-        ],
-        [
-          "B",
-          "No: something here is wrong or missing, and I will say what",
-          0,
-          "I correct the decisions log and this page first, then ask again."
-        ]
-      ],
-      "Nothing is built until you approve the build plan."
-    ]
-  ],
+  "choices": [],
   "wrapup": {
     "summary": "Every answer from the five rounds of the #306 grilling session, grouped into ten topics, for you to confirm.",
-    "changing": "No files change until you answer. Your round 5 answer is already recorded in the decisions log and on issue #306.",
-    "blocking": "Your confirmation of this summary.",
-    "next": "If you confirm, I will write the build plan for the restructure as a page for you to approve.",
+    "changing": "Nothing: you confirmed this summary on 2026-10-19 (\"Grilling summary: 1A\"). This copy is rebuilt from the new summary starter file as the test of #339.",
+    "blocking": "Nothing is blocking.",
+    "next": "Your QA of #339 (Restructure step 1: the summary page template and the define-before-use rule).",
     "todo": [
-      "Type your answer in the chat, for example \"Grilling summary: 1A\".",
       "Tap <b>Copy my reply<\/b> and send it: \"Grilling summary\", or say what to change."
     ]
-  }
+  },
+  "kind": "summary"
 };
 // ---- End of PAGE. Nothing below needs editing. ----------------------------------------------
 
@@ -442,15 +529,19 @@ const PARTS = [["short", "In short"], ["changes", "Changes"], ["choices", "Choic
   .filter(([id]) => id === "short" || id === "wrapup" || (PAGE[id] && PAGE[id].length));
 document.querySelectorAll("[data-part]").forEach(p => { if (!PARTS.some(([id]) => id === p.dataset.part)) p.remove(); });
 
+const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+const lst = v => Array.isArray(v) ? `<ul class="cl">${v.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p>${esc(v)}</p>`;
 const glance = document.getElementById("glance"), sd = document.getElementById("sd");
 glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
   `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
 function showItem(n) {
   glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
   const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
-  const needsYou = !/^Nothing/.test(requires);
-  sd.innerHTML = `<h3>${esc(t)}</h3><div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span><p>${esc(creates)}</p></div>
-    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${ic("hand")}Requires</span><p>${esc(requires)}</p></div></div>${picHtml(pic)}`;
+  const row = PAGE.short.items[n], summary = PAGE.kind === "summary";
+  const strip = Array.isArray(row[6]) && row[6].length === 3 && row[6].every(x => typeof x === "string") ? row[6] : null;
+  const needsYou = !summary && !/^Nothing/.test(Array.isArray(requires) ? requires.join(" ") : requires);
+  sd.innerHTML = `<h3>${esc(t)}</h3>${strip ? flow(strip) : ""}<div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span>${lst(creates)}</div>
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${summary ? ic("check") + "Decided by" : ic("hand") + "Requires"}</span>${lst(requires)}</div></div>${picHtml(pic)}`;
 }
 glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
 if (PAGE.short.items.length) showItem(0);
@@ -460,7 +551,6 @@ if (document.getElementById("cc")) {
   document.getElementById("cc-count").textContent =
     `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
   // A New item's picture (#241): what sets it off -> what it does -> what you get.
-  const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
   // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
   const lineCounts = (a, r) => `+${a} \u2212${r}`;
   const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +

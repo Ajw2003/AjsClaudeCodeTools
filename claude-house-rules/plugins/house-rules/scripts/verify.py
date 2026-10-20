@@ -355,8 +355,8 @@ else:
 # --- the clear-writing rule loads in the same slot, once (#246) -------------------------------
 _cw_missing = [p for p in (
     "## Write it so nothing is left to guess",
-    "Proper sentences", "Said once", "Explicit context", "Measured, not guessed", "Named references",
-    "Exact inputs", "Done-criteria", "Ask when unclear", "Plain words", "### The voice",
+    "Proper sentences", "Said once", "Explicit context", "Define before use", "Measured, not guessed",
+    "Named references", "Exact inputs", "Done-criteria", "Ask when unclear", "Plain words", "### The voice",
     "rules/detail/clear-writing.md",
 ) if p not in (_ctx or "")]
 if _ctx.count("## Write it so nothing is left to guess") > 1:
@@ -1936,6 +1936,8 @@ if "### The voice" in off_out:
     voice_problems.append("HOUSE_RULES_VOICE=off did not remove the voice section")
 for kept in [
     "Write it so nothing is left to guess",
+    "Explicit context",
+    "Define before use",
     "Named references",
     "Show, don't tell; the user designs",
 ]:
@@ -4422,10 +4424,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.68.5",
+    "issues: the rules section and its detail file exist, and the plugin is 2.69.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.68.5",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.69.0",
     "rules section + detail file + version",
 )
 
@@ -9209,6 +9211,14 @@ _cw_cases.append(('bare-ref: "see #229." alone is flagged; with its title, or a 
 _cw_cases.append(('bare-ref: a quoted example ("see #229" alone) and a step card ("Step 1 of 3") pass',
                   not _cw.bare_references('Including "see #229" alone as a test.')
                   and not _cw.bare_references("### Step 1 of 3 — open the folder")))
+_cw_cases.append(('bare-ref (#339): "see round 1, answer 7." and "as answer 2 said." are flagged',
+                  _cw_has(_cw.bare_references, "Then see round 1, answer 7.", "answer 7")
+                  and _cw_has(_cw.bare_references, "That is as answer 2 said.", "answer 2")))
+_cw_cases.append(('bare-ref (#339): a round and question with a description, "question 3 (title)", and quotes pass',
+                  not _cw.bare_references("Round 2, question 1, where the agent's name comes from: the GitHub login plus sAgent.")
+                  and not _cw.bare_references("See question 3 (where the rule goes).")
+                  and not _cw.bare_references('Including "see answer 7" alone as a test.')
+                  and not _cw.bare_references("See #229 (the stale temp file flake).")))
 _cw_cases.append(('bare-ref: "option D showed the text" is flagged; "option D: delete the cache" is not',
                   _cw.bare_references("On that look, option D showed the trimmed text.")
                   and not _cw.bare_references("Pick option D: delete the cache.")))
@@ -9914,6 +9924,38 @@ _mp_cases.append(("make_page (#331): a page written outside the folder it runs i
                   _r_out.returncode == 0 and "is outside" in _r_out.stdout))
 _mp_cases.append(("make_page (#331): a page written inside the folder it runs in prints no 'is outside' line",
                   _r_in.returncode == 0 and "is outside" not in _r_in.stdout))
+# ---- summary pages (#339 part B) ----
+_ds_start = os.path.join(HERE, "..", "templates", "decision-summary.page.json")
+_ds_d = _mp_proj("dsum")
+_mp("style", "--quick", "--project", _ds_d)
+_rc, _o_ds = _mp("build", _ds_start, "--project", _ds_d)
+_ds_h = open(os.path.join(_ds_d, "docs", "plans", "decision-summary.html"), encoding="utf-8").read() if _rc == 0 else ""
+print("make_page build of the starter:\n" + _o_ds)
+_mp_cases.append(("summary (#339): the starter builds and its row detail says 'Decided by', not 'Requires'",
+                  _rc == 0 and "Decided by" in _ds_h and 'PAGE.kind === "summary"' in _ds_h and '"kind": "summary"' in _ds_h))
+if "visual check did not run" in _o_ds:
+    # Same as the other visual cases: a machine with no browser (the CI runner) skips, naming why.
+    report("SKIP", "summary (#339): the starter builds clean in the phone-width visual check (%s)"
+           % _o_ds.split("visual check did not run:", 1)[1].strip()[:200])
+else:
+    _mp_cases.append(("summary (#339): the starter builds clean in the phone-width visual check",
+                      _rc == 0 and "visual check" in _o_ds and "clipped card" not in _o_ds))
+_ds_bad = json.load(open(_ds_start, encoding="utf-8"))
+_ds_bad["kind"] = "plan"
+_ds_bp = os.path.join(_mp_tmp, "badkind.page.json")
+json.dump(_ds_bad, open(_ds_bp, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _ds_bp, "--project", _ds_d)
+_mp_cases.append(("summary (#339): 'kind': 'plan' makes make_page exit non-zero and names 'summary'", _rc != 0 and "summary" in _o))
+_dp = _mp_page_of(os.path.join(_ds_d, "docs", "plans", "decision-summary.html"))
+_ds_items = _dp["short"]["items"] if _dp else []
+_mp_cases.append(("summary (#339): a list in creates is kept as a list and the template renders list items (<li>)",
+                  isinstance(_ds_items[0][4], list) and "<ul class=\"cl\">" in _ds_h and "<li>${esc(x)}</li>" in _ds_h))
+_mp_cases.append(("summary (#339): a row with a 3-string strip is kept and rendered with the flow strip",
+                  len(_ds_items[0]) > 6 and len(_ds_items[0][6]) == 3 and "${strip ? flow(strip)" in _ds_h))
+_rc, _o = _mp("build", _c1, "--project", _ds_d)
+_nk_h = open(os.path.join(_ds_d, "docs", "plans", "basic.html"), encoding="utf-8").read() if _rc == 0 else ""
+_mp_cases.append(("summary (#339): a content file with no kind has no kind in its PAGE and still carries the Requires label",
+                  _rc == 0 and '"kind"' not in _nk_h.split("const PAGE", 1)[1].split("\n};", 1)[0] and 'ic("hand") + "Requires"' in _nk_h))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

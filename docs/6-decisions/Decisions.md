@@ -7,6 +7,63 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-20 - QA passed: restructure step 1
+
+**Context.** QA page `docs/plans/2026-10-19-restructure-step-1-qa.html` for #339 (Restructure step 1: the
+summary page template and the define-before-use rule), after the fix logged below.
+
+**Decision.** aj's reply was "QA passed: restructure step 1". House-rules 2.69.0 ships to `main` by pull
+request, per the approved build plan's answer 2A (ship after each step). #339 stays open until aj closes
+it.
+
+**Status.** Standing.
+
+## 2026-10-20 - QA failed: restructure step 1
+
+**Context.** QA page `docs/plans/2026-10-19-restructure-step-1-qa.html` for #339 (Restructure step 1: the
+summary page template and the define-before-use rule).
+
+**Decision.** aj's reply was "QA failed": the define-before-use rule was meant to sit alongside the
+"Explicit context" and "Named references" lines, not replace them. aj is autistic and has ADHD, and needs
+explicit context and named references always, with a phrase also named before its first use. Fixed:
+`rules/clear-writing.md` and `rules/detail/clear-writing.md` restore both lines word for word in their
+original places and add "Define before use" as a third line; `verify.py` checks all three names reach
+the session. The summary template answers' item 3 ("the two lines merge into one") is corrected by this
+entry.
+
+**Status.** Standing. The step goes back to aj for QA.
+
+## 2026-10-19 - Build plan approved: plugin restructure
+
+**Context.** The 10-step build plan for #306, `docs/plans/2026-10-19-restructure-build-plan.html`.
+
+**Decision.** aj's reply was "Build plan approved: plugin restructure 1A 2A".
+1. Order of work: move first. Step 2 splits `hook.py` into the core and six part modules with no
+   behaviour change, then steps 3 to 9 apply the decisions part by part. Step 1, the summary template,
+   goes before both.
+2. Shipping: after each step, a pull request from `AjsAgent/issue-281-fix` to `main` and a version bump,
+   each with its own QA page.
+
+The steps are sub-issues of #306: step 1 #339, step 2 #340, step 3 #341, step 4 #349, step 5 #343, step 6
+#344, step 7 #345, step 8 #346, step 9 #347 (needs a design page first), step 10 #348.
+
+**Status.** Standing.
+
+## 2026-10-19 - The restructure stays one thread, and its build plan covers everything
+
+**Context.** The summary template's build plan (`docs/plans/2026-10-19-summary-template-plan.html`)
+asked which branch to build on. aj's reply was "Build plan approved: summary template 1*".
+
+**Decision.** aj's own answer to question 1 (which branch): no separate branch. Fix the conflicts, merge
+the work including the grilling, and write one new build plan covering all of it, because this is still
+the full restructure (#306) and that is the thread that stays. Done on `AjsAgent/issue-281-fix`:
+`AjsAgent/docs-context-layer` (main plus grilling rounds 1 and 2) was merged in, then the #322 loop fix
+from pull request #328, then `main`, and pull request #337 put house-rules 2.68.5 on `main` at aj's
+request. The summary template becomes step 1 of the new plan,
+`docs/plans/2026-10-19-restructure-build-plan.html`: 10 steps under #306.
+
+**Status.** Standing once aj approves the restructure build plan.
+
 ## 2026-10-19 - Summary template: aj's answers on the proposal
 
 **Context.** The proposal page `docs/plans/2026-10-19-summary-template.html` asked how the grilling

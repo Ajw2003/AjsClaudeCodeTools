@@ -1,0 +1,70 @@
+{
+  "kind": "summary",
+  "title": "<topic> decisions",
+  "eyebrow": "Summary of the <grilling | restructure | brainstorm>",
+  "approval": "<topic> summary",
+  "short": {
+    "lead": "<One plain sentence: what was decided about <topic>.>",
+    "hint": "Tap a topic to see what it creates and which answers decided it.",
+    "key": [
+      [
+        "We",
+        "what the agent did"
+      ]
+    ],
+    "items": [
+      [
+        "bulb",
+        "Topic one",
+        "<topic one>",
+        "",
+        [
+          "<what this creates, line 1>",
+          "<what this creates, line 2>"
+        ],
+        [
+          "Round 1, question 1, <what was asked>: <what was chosen>",
+          "Round 1, question 2, <what was asked>: <what was chosen>"
+        ],
+        [
+          "<what exists today>",
+          "<what this creates>",
+          "<how it impacts you>"
+        ]
+      ],
+      [
+        "bulb",
+        "Topic two",
+        "<topic two>",
+        "",
+        [
+          "<what this creates, line 1>",
+          "<what this creates, line 2>"
+        ],
+        [
+          "Round 2, question 1, <what was asked>: <what was chosen>"
+        ]
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "<change>",
+      "<one line>",
+      null,
+      "<detail>",
+      null,
+      null
+    ]
+  ],
+  "wrapup": {
+    "summary": "<summary>",
+    "changing": "<what changes>",
+    "blocking": "Nothing is blocking.",
+    "next": "<next step>",
+    "todo": [
+      "<to-do>"
+    ]
+  }
+}
