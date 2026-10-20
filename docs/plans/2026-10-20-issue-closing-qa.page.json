@@ -2,7 +2,7 @@
   "title": "Issue Closing QA",
   "eyebrow": "QA · #361 issue closing: the agent closes issues itself, under a guard · house-rules 2.70.0",
   "short": {
-    "lead": "Issue closing (#361) is built on the branch AjsAgent/issue-281-fix as house-rules 2.70.0. The agent now closes an issue itself, but only with evidence on record: your QA pass and a merge to main, or a list you approved. The guard, the check that runs before any command that closes an issue, refuses every other close and names what is missing. verify.py, the script that checks the hooks do what the docs say, passed on two runs, each with 913 checks. A live run on this repo refused a close of #307 on both routes.",
+    "lead": "Issue closing (#361) is built on the branch AjsAgent/issue-281-fix as house-rules 2.70.0. The agent now closes an issue itself, but only with evidence on record: your QA pass and a merge to main, or a list you approved. The guard is a check that runs before any command that closes an issue. It refuses every other close and says what evidence is missing. verify.py, the script that checks the hooks do what the docs say, passed on two runs, each with 913 checks. A live run on this repo refused a close of #307 by both routes: a gh command (GitHub's command-line tool) and the GitHub tool this session uses.",
     "hint": "Tap a row to see what was built and how it was checked.",
     "key": [
       [
@@ -22,8 +22,8 @@
         "done",
         [
           "When you pass QA on a feature, its issues are saved in a list called closable, in the design loop's stage file, .claude/house-rules-loop.json.",
-          "That list is kept when you approve the next design, which used to erase the recorded issues.",
-          "A merge marks every waiting entry with its pull request number, but only on proof: the GitHub tool's merged result, an exit code of 0, or gh's own \"merged pull request\" line. An auto-merge that hasn't happened yet marks nothing."
+          "That list now survives when you approve the next design. Before this change, approving the next design erased the recorded issues.",
+          "When a pull request merges, every entry waiting in the closable list is marked with that pull request's number. This happens only with proof of the merge: the GitHub tool reporting it merged, gh exiting with code 0 (success), or gh printing its \"merged pull request\" line. An auto-merge that has not happened yet marks nothing."
         ],
         "Nothing from you. Checked by 10 verify.py cases."
       ],
@@ -34,11 +34,11 @@
         "done",
         [
           "A close goes through only with a QA pass and a merge on record, or with your approval on a list.",
-          "Every other close is refused, naming what is missing, on both routes: gh commands and the GitHub tool this session uses, which was not checked before.",
+          "Every other close is refused, and the refusal names what is missing. This covers both routes: gh commands, and the GitHub tool this session uses. The guard did not check the GitHub tool before this change.",
           "The evidence is removed only after proof that the close succeeded, so a failed close can be retried.",
           "\"Claude completed this\" became \"AjsAgent completed this\"."
         ],
-        "Nothing from you. Checked by 21 verify.py cases and a live run on this repo."
+        "Nothing from you. Checked by 22 verify.py cases and a live run on this repo."
       ],
       [
         "search",
@@ -46,7 +46,7 @@
         "Sweep approvals and named lists (#364)",
         "done",
         [
-          "A sweep page lists issues with their evidence and a suggested action, and records the proposed closes.",
+          "A sweep is a review of open issues for closing. The sweep page lists each issue with its evidence and a suggested action, and records the closes it proposes.",
           "Your reply \"Sweep approved: issues\" approves them; adding \"keep #N\" leaves #N open.",
           "Your message \"Close as not planned: #N replaced by #M\" approves a not-planned close for the issues you name.",
           "These phrases count only from you, never from a helper agent or a notification."
