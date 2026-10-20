@@ -177,7 +177,7 @@
         ]
       },
       {
-        "matcher": "Bash|mcp__(github|GitHub)__merge_pull_request",
+        "matcher": "Bash|mcp__(github|GitHub)__(merge_pull_request|issue_write)",
         "hooks": [
           {
             "type": "command",
