@@ -272,7 +272,7 @@ const PAGE = {
   "title": "Restructure Step 1 QA",
   "eyebrow": "QA · #339 restructure step 1: the summary page template and the define-before-use rule · house-rules 2.69.0",
   "short": {
-    "lead": "Step 1 of the restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins) is built on the branch AjsAgent/issue-281-fix as house-rules 2.69.0. Your writing rule keeps \"Explicit context\" and \"Named references\" and adds a \"Define before use\" line beside them, fixed after your first QA failed. The writing checker (clarity.py) flags a reference like \"question 3\" or \"answer 2\" when nothing after it says what was asked. Summary pages have a \"Decided by\" box, one line per decision and a before-and-after strip. The real test is the grilling summary page, rebuilt from the new starter file (a ready-made content file every summary page starts from): open it and tap through its ten topics. verify.py, the script that checks the hooks do what the docs say, passed twice with 871 checks.",
+    "lead": "Step 1 of the restructure is built on the branch AjsAgent/issue-281-fix as house-rules 2.69.0. The restructure is issue #306, \"house-rules: restructure into a shared core with project boundaries and six optional sub-plugins\". Your first QA failed because \"Explicit context\" and \"Named references\" had been merged into \"Define before use\". Your writing rule now keeps both lines and adds \"Define before use\" as a third, separate line. The writing checker (clarity.py) flags a reference like \"question 3\" or \"answer 2\" when nothing after it says what was asked. Summary pages now have a \"Decided by\" box, one line per decision, and a before-and-after strip: three boxes reading \"What exists today\", \"What this creates\" and \"How it impacts you\". The real test is the grilling summary page, which I rebuilt from the new starter file (a ready-made content file that every summary page starts from). Open it and tap through its ten topics. verify.py, the script that checks the hooks do what the docs say, passed on two runs, each with 871 checks.",
     "hint": "Tap a row to see what was built and how it was checked.",
     "key": [
       [
@@ -334,7 +334,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "24 files, +2212 −129",
+      "24 files, +2228 −122",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -366,7 +366,7 @@ const PAGE = {
         [
           "claude-house-rules/plugins/house-rules/rules/clear-writing.md",
           3,
-          3,
+          0,
           [
             [
               "Not in the plan",
@@ -377,8 +377,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/rules/detail/clear-writing.md",
-          9,
-          4,
+          8,
+          0,
           [
             [
               "Not in the plan",
@@ -425,7 +425,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/verify.py",
-          39,
+          41,
           4,
           [
             [
@@ -485,7 +485,7 @@ const PAGE = {
         ],
         [
           "docs/6-decisions/Decisions.md",
-          31,
+          46,
           0,
           [
             [
