@@ -6439,8 +6439,8 @@ def _close_forget(git_dir, repo, number):
 
 
 def _close_decide(repo, number, reason, cwd):
-    """(allowed, text, context). Reads the stage file; when allowed, takes the issue out of it
-    (in this PreToolUse step, before the close has run)."""
+    """(allowed, text, context). Reads the stage file and changes nothing; the evidence is
+    removed after a successful close, in event_closablemerge."""
     if number is None:
         return False, ("House rules, close guard: I could not tell which issue this close is for (no issue "
                        "number found), so it is refused. Name the issue number."), None
@@ -6454,7 +6454,6 @@ def _close_decide(repo, number, reason, cwd):
     ok, why = _close_check(repo, number, reason, state)
     if not ok:
         return False, "House rules, close guard: refused to close #%d: %s." % (number, why), None
-    _close_forget(git_dir, repo, number)
     slug = repo or "<owner>/<repo>"
     return True, why, CLOSE_COMMENT_NOTE % (why, number, slug, number, slug, number)
 
@@ -8714,6 +8713,53 @@ def _closable_merge_of(data):
     return None
 
 
+def _closed_issue_of(data):
+    """(repo, number) of a close this PostToolUse payload proves succeeded, else None (#363)."""
+    tool = data.get("tool_name") or ""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    resp = data.get("tool_response")
+    if isinstance(resp, str):
+        try:
+            resp = json.loads(resp)
+        except ValueError:
+            resp = {"raw": resp}  # not JSON: kept as text, which proves nothing for the tool route
+    if _GITHUB_ISSUE_WRITE_RE.match(tool):
+        if str(ti.get("method", "")).lower() != "update" or str(ti.get("state", "")).lower() != "closed":
+            return None
+        try:
+            num = int(ti.get("issue_number"))
+        except (TypeError, ValueError):
+            num = None  # no usable issue number: nothing to remove
+        if num is None:
+            return None
+        text = json.dumps(resp) if resp is not None else ""
+        if isinstance(resp, dict) and (resp.get("error") or resp.get("isError")):
+            return None
+        ok = (isinstance(resp, dict) and (str(resp.get("state", "")).lower() == "closed" or resp.get("url")))
+        if not ok and not re.search(r'"state"\s*:\s*"closed"', text, re.IGNORECASE):
+            return None
+        return ("%s/%s" % (ti.get("owner"), ti.get("repo")) if ti.get("owner") and ti.get("repo") else ""), num
+    if tool in _SHELL_TOOLS and isinstance(ti.get("command"), str):
+        cmd = ti["command"]
+        if not any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
+            return None
+        repo, num, _ = _close_gh_parse(cmd)
+        if num is None:
+            return None
+        code, out = None, ""
+        if isinstance(resp, dict):
+            code = resp.get("exit_code", resp.get("exitCode", resp.get("returncode")))
+            if code is None and resp.get("interrupted"):
+                code = 1
+            out = "%s\n%s" % (resp.get("stdout") or "", resp.get("stderr") or "")
+        if code is None and not re.search(r"(closed issue|\"state\"\s*:\s*\"closed\")", out, re.IGNORECASE):
+            return None
+        if code not in (None, 0):
+            return None
+        return repo, num
+    return None
+
+
 def event_closablemerge():
     try:
         if not _loop_enabled():
@@ -8724,6 +8770,13 @@ def event_closablemerge():
             return 0
         data = json.loads(payload)
         if not isinstance(data, dict):
+            return 0
+        closed = _closed_issue_of(data)
+        if closed:  # #363: the evidence goes only once the close is proven to have worked
+            _, git_dir = _issues_locate(_payload_cwd(payload))
+            if git_dir:
+                _close_forget(git_dir, closed[0], closed[1])
+                trace("house-rules plugin: close of %s#%d succeeded, its closable/sweep record was removed." % closed)
             return 0
         merged = _closable_merge_of(data)
         if not merged:

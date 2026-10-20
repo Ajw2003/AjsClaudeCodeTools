@@ -9083,7 +9083,17 @@ _o = _cg_gh("gh issue close 7 -R o/r")
 _cg_cases.append(("gh close with a QA pass and a merge is allowed, with the comment/label instruction",
                   _iss_decision(_o) == "allow" and "QA passed: f" in _cg_ctx(_o) and "o/r#20" in _cg_ctx(_o)
                   and "AjsAgent completed this" in _cg_ctx(_o) and "in%20progress" in _cg_ctx(_o)))
-_cg_cases.append(("an allowed close drops the issue and its now-empty closable entry", not _cl_state().get("closable")))
+_cg_cases.append(("an allowed close removes nothing in PreToolUse", bool(_cl_state().get("closable"))))
+def _cg_post(tool, ti, resp):
+    p = {"hook_event_name": "PostToolUse", "tool_name": tool, "session_id": "cg", "cwd": _cl_dir,
+         "tool_input": ti, "tool_response": resp}
+    return run_hook("closablemerge", json.dumps(p), env=_cl_env)[1]
+_cg_post("Bash", {"command": "gh issue close 7 -R o/r"}, {"stdout": "", "stderr": "boom", "exit_code": 1})
+_cg_o = _cg_gh("gh issue close 7 -R o/r")
+_cg_cases.append(("a failed gh close keeps the evidence and a retry is still allowed",
+                  bool(_cl_state().get("closable")) and _iss_decision(_cg_o) == "allow"))
+_cg_post("Bash", {"command": "gh issue close 7 -R o/r"}, {"stdout": "", "stderr": "", "exit_code": 0})
+_cg_cases.append(("a successful gh close removes the issue and its now-empty closable entry", not _cl_state().get("closable")))
 _cl_set({"stage": "done", "closable": [dict(_cg_nomerge)]})
 _o = _cg_gh("gh issue close 7 -R o/r")
 _cg_cases.append(("gh close with a QA pass but no merge is refused, naming the missing merge",
@@ -9095,9 +9105,13 @@ _cg_cases.append(("gh close with nothing recorded is refused, naming the missing
                   _iss_decision(_o) == "deny" and "no QA pass is recorded for a feature that holds #7" in _iss_reason(_o)))
 _cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[{"repo": "o/r", "number": 7}, {"repo": "o/r", "number": 8}])]})
 _o = _cg_mcp(_cg_mc)
-_cg_cases.append(("MCP issue_write close with a QA pass and a merge is allowed; the entry keeps the other issue",
-                  _iss_decision(_o) == "allow" and "AjsAgent completed this" in _cg_ctx(_o)
-                  and [i["number"] for i in _cl_state()["closable"][0]["issues"]] == [8]))
+_cg_cases.append(("MCP issue_write close with a QA pass and a merge is allowed",
+                  _iss_decision(_o) == "allow" and "AjsAgent completed this" in _cg_ctx(_o)))
+_cg_post("mcp__github__issue_write", _cg_mc, {"error": "forbidden"})
+_cg_cases.append(("a failed MCP close keeps the evidence", len(_cl_state()["closable"][0]["issues"]) == 2))
+_cg_post("mcp__github__issue_write", _cg_mc, {"state": "closed", "url": "https://github.com/o/r/issues/7"})
+_cg_cases.append(("a successful MCP close removes that issue; the entry keeps the other one",
+                  [i["number"] for i in _cl_state()["closable"][0]["issues"]] == [8]))
 _cl_set({"stage": "done", "closable": [dict(_cg_nomerge)]})
 _o = _cg_mcp(_cg_mc)
 _cg_cases.append(("MCP issue_write close with a QA pass but no merge is refused", _iss_decision(_o) == "deny" and "no merged pull request" in _iss_reason(_o)))
@@ -9115,13 +9129,18 @@ _cg_cases.append(("a not-planned gh close is refused even for a QA-and-merge iss
 _cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "not_planned", "replaced_by": 306}]})
 _o = _cg_gh("gh issue close 9 -R o/r --reason 'not planned'")
 _cg_cases.append(("a not-planned gh close is allowed with a matching sweep entry, which is then removed",
-                  _iss_decision(_o) == "allow" and "#306" in _cg_ctx(_o) and not _cl_state().get("sweep")))
+                  _iss_decision(_o) == "allow" and "#306" in _cg_ctx(_o) and bool(_cl_state().get("sweep"))))
+_cg_post("Bash", {"command": "gh issue close 9 -R o/r --reason 'not planned'"}, {"stdout": "Closed issue #9", "stderr": ""})
+_cg_cases.append(("a close with no exit code is proven by gh's success line, which removes the sweep entry",
+                  not _cl_state().get("sweep")))
 _cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "not_planned", "replaced_by": 306}]})
 _o = _cg_gh("gh issue close 9 -R o/r")
 _cg_cases.append(("a completed close is refused when the sweep entry says not_planned", _iss_decision(_o) == "deny"))
 _cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "completed", "replaced_by": None}]})
 _o = _cg_mcp(dict(_cg_mc, issue_number=9, state_reason=None))
-_cg_cases.append(("an MCP close with no reason is allowed for a sweep completed entry", _iss_decision(_o) == "allow" and not _cl_state().get("sweep")))
+_cg_cases.append(("an MCP close with no reason is allowed for a sweep completed entry", _iss_decision(_o) == "allow" and bool(_cl_state().get("sweep"))))
+_cg_post("Bash", {"command": "gh issue close 9 -R o/r"}, {"stdout": "", "stderr": ""})
+_cg_cases.append(("with no exit code and no success line, nothing is removed", bool(_cl_state().get("sweep"))))
 _cl_set({"stage": "done", "closable": [dict(_cg_ready)]})
 _o1 = _cg_gh("gh issue close --comment done")
 _o2 = _cg_mcp({"method": "update", "owner": "o", "repo": "r", "state": "closed"})
