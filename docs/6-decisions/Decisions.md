@@ -26,7 +26,7 @@ Systems doc `docs/4-systems/issue-closing.md`; parent issue #361 with steps #362
 `docs/plans/2026-10-20-issue-closing-plan.html`. It ships as 2.70.0, so #340 (Restructure step 2) moves
 to 2.71.0.
 
-**Status.** Standing.
+**Status.** Standing. aj approved the build plan on 2026-10-20 ("Build plan approved: issue closing").
 
 ## 2026-10-20 - Design approved: restructure step 2 core links, and issue closing comes first
 
