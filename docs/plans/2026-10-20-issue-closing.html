@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Design approved: issue closing",
   "reply": "",
   "short": {
-    "lead": "Finished issues stay open. Today's rule says the agent must always ask you before closing an issue, and in practice it never closes one. There are 124 open issues labelled \"AjsAgent created this\" in this repo, and many carry \"needs review\" long after their work passed your QA. This proposal makes closing a controlled step the agent does itself, under a guard that checks the evidence first. Three questions below decide: (1) when the agent may close an issue, (2) what happens to the 124 issues already open, and (3) whether it may close an issue as \"not planned\" (a duplicate, or replaced by other work). Step 2 of the restructure (#340, splitting hook.py into a core module and six part modules) waits until this is built, as you asked.",
+    "lead": "Finished issues stay open. Today's rule says the agent must always ask you before closing an issue, and in practice it never closes one. There are 124 open issues labelled \"AjsAgent created this\" in this repo, and many carry \"needs review\" long after their work passed your QA. This proposal makes closing a controlled step the agent does itself, under a guard that checks the evidence first. Three questions below decide: (1) when the agent may close an issue, (2) what happens to the 124 issues already open, and (3) whether it can mark an issue \"not planned\" (a duplicate, or replaced by other work). Step 2 of the restructure (#340, splitting hook.py into a core module and six part modules) waits until this is built, as you asked.",
     "hint": "Tap a row to see what exists today and what would change.",
     "key": [
       [
@@ -306,7 +306,7 @@ const PAGE = {
         "The guard catches every way of closing",
         "",
         [
-          "In hook.py:5732, the guard (the code that checks commands before they run) recognises three ways of closing an issue with gh, the GitHub command-line tool: gh issue close, gh issue edit --state closed, and a gh api call that sets an issue's state to closed. It turns each one into a prompt asking you.",
+          "The guard is the code that checks commands before they run. In hook.py:5732 it recognises three ways of closing an issue with gh, the GitHub command-line tool: gh issue close, gh issue edit --state closed, and a gh api call that sets an issue's state to closed. It turns each one into a prompt asking you.",
           "The design loop (the Design, Plan, Build, QA and Done stages each feature goes through) already records each feature's issues and your \"QA passed: <feature>\" message. That message is the evidence a safe close needs."
         ],
         "Nothing from you."
