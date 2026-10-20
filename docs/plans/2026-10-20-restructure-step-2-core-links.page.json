@@ -1,0 +1,92 @@
+{
+  "title": "Core and Part Links",
+  "eyebrow": "Design question · #357 step 2a: three core hook functions call code that belongs to other parts",
+  "approval": "Design approved: restructure step 2 core links",
+  "replyPrefix": "Design approved: restructure step 2 core links",
+  "reply": "",
+  "short": {
+    "lead": "The builder for step 2a (#357, the house_rules package and the core module) stopped before changing any code, as it was told to. A hook function is the function that answers one kind of hook event. The step 2 inventory (the list in docs/4-systems/plugin-restructure.md of where each block of hook.py goes) puts three hook functions in the core, the module every install gets. Each of the three calls code that belongs to a part, one of the six feature groups such as the design loop or safe git. Your design for step 2 says the core never imports from a part, so one question decides how these links work. The answer also decides whether a part can be left out in step 10 (#348).",
+    "hint": "Tap a row to see what the builder found.",
+    "key": [
+      [
+        "Found",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "Found",
+        "Three core hook functions reach into other parts",
+        "",
+        [
+          "scope, which runs on every message you send, adds the design loop's stage note (_loop_scope_note, hook.py:5598) and the prompt timer's waiting note (_waiting_scope_note, hook.py:4209).",
+          "inject, which runs at session start, adds the safe git branch and identity notes (_agent_branch_block, hook.py:2193; _agent_identity_block, hook.py:2232).",
+          "promptran, which runs after a tool call, updates the prompt timer's waiting record through four functions (_waiting_path, _waiting_key, _waiting_update and _waiting_clock, hook.py:4104-4300) that belong to safe git."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Found",
+        "Two small things the builder will fix as part of the move",
+        "",
+        [
+          "Three places (hook.py:512, 691 and 868) find files by starting from the folder that holds them. Once that code moves one folder down, into scripts/house_rules/, those three must name the scripts folder directly. Otherwise they would look in the wrong folder.",
+          "Some fixed values (constants) sit just outside the line ranges of the code that uses them, such as runnable's five at hook.py:3054-3084. The builder moves each one together with the code that uses it."
+        ],
+        "Nothing from you; these keep behaviour the same."
+      ],
+      [
+        "hand",
+        "Decide",
+        "How the core gets each part's notes",
+        "you",
+        "Question 1 below.",
+        "Your answer to question 1."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. How does a core hook function get a part's contribution?",
+      [
+        [
+          "A",
+          "The core keeps one list for each of the three hooks (session start, every message, after a tool call). When a part is loaded, it adds its own function to the matching list. The core runs whatever is on the list. A part that isn't installed adds nothing.",
+          1,
+          "This is what makes leaving a part out work in step 10, and the core never imports a part. Each list is written down in docs/4-systems/plugin-restructure.md."
+        ],
+        [
+          "B",
+          "Move the eight called functions (the four named in the first row and the prompt timer's four waiting-record functions), and the code they depend on, into the core",
+          0,
+          "Simplest to build now, but design-loop and safe git code then lives in the core, and step 10 has to move it out again."
+        ],
+        [
+          "C",
+          "Split scope, inject and promptran inside hook.py. Each one becomes a core piece and one piece per part, and hook.py calls them in turn. The end-of-reply hook function is already split this way.",
+          0,
+          "No lists to learn, but hook.py has to name every part, so leaving one out in step 10 means editing hook.py."
+        ]
+      ],
+      "In every option the behaviour stays exactly the same and every check must pass."
+    ]
+  ],
+  "wrapup": {
+    "summary": "One design question for step 2a (#357): how the core's session-start, every-message and after-tool hook functions get the notes that belong to other parts.",
+    "changing": "No code has changed. The builder's draft is on the branch AjsAgent/issue-357 and is not being used.",
+    "blocking": "Your answer to question 1 (how a core hook function gets a part's contribution).",
+    "next": "Once you answer, the builder restarts step 2a with your answer written into its instructions.",
+    "todo": [
+      "Type your answer in the chat, for example \"Design approved: restructure step 2 core links 1A\" (question 1, option A).",
+      "Send the message."
+    ]
+  }
+}
