@@ -9933,8 +9933,13 @@ _ds_h = open(os.path.join(_ds_d, "docs", "plans", "decision-summary.html"), enco
 print("make_page build of the starter:\n" + _o_ds)
 _mp_cases.append(("summary (#339): the starter builds and its row detail says 'Decided by', not 'Requires'",
                   _rc == 0 and "Decided by" in _ds_h and 'PAGE.kind === "summary"' in _ds_h and '"kind": "summary"' in _ds_h))
-_mp_cases.append(("summary (#339): the starter builds clean in the phone-width visual check",
-                  _rc == 0 and "visual check" in _o_ds and "visual check did not run" not in _o_ds and "clipped card" not in _o_ds))
+if "visual check did not run" in _o_ds:
+    # Same as the other visual cases: a machine with no browser (the CI runner) skips, naming why.
+    report("SKIP", "summary (#339): the starter builds clean in the phone-width visual check (%s)"
+           % _o_ds.split("visual check did not run:", 1)[1].strip()[:200])
+else:
+    _mp_cases.append(("summary (#339): the starter builds clean in the phone-width visual check",
+                      _rc == 0 and "visual check" in _o_ds and "clipped card" not in _o_ds))
 _ds_bad = json.load(open(_ds_start, encoding="utf-8"))
 _ds_bad["kind"] = "plan"
 _ds_bp = os.path.join(_mp_tmp, "badkind.page.json")
