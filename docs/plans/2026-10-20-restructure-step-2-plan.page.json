@@ -1,0 +1,112 @@
+{
+  "title": "Step 2 Build Plan",
+  "eyebrow": "Build plan · #340 restructure step 2: split hook.py into a core module and six part modules · house-rules 2.69.0 to 2.70.0",
+  "approval": "Build plan approved: restructure step 2",
+  "replyPrefix": "Build plan approved: restructure step 2",
+  "reply": "",
+  "short": {
+    "lead": "This is the build plan for step 2 of the restructure, issue #340 (Restructure step 2: move today's hook.py into the core and six part modules, changing nothing). On the design page docs/plans/2026-10-20-restructure-step-2-split.html, question 1 asked how hook.py should split. You chose answer A: real modules now, meaning separate Python files, not just labelled sections. The inventory of every block of hook.py and where it goes is in docs/4-systems/plugin-restructure.md, under \"Step 2: how hook.py splits\". Nothing is dropped in this step. The work is 4 sub-issues under #340. Each is built by one helper agent, one at a time. Each agent works in its own worktree, which is a separate checked-out copy of the repo on its own branch, so its changes stay apart from the main copy until they are merged.",
+    "hint": "Tap a step to see what it creates or changes and what it needs.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 2a",
+        "The house_rules package and the core module (#357)",
+        "",
+        [
+          "A package (a folder of Python modules) named scripts/house_rules/, placed beside hook.py. It holds seven modules: core, safe git, session triage, design loop, writing, delegation and docs.",
+          "The core module gets the shared helper functions (hook.py:1-141). It also gets nine hook functions, each the function that responds to one kind of hook event: inject, showrule, profile, standards, versioncheck, scope, artifact, runnable and promptran.",
+          "hook.py keeps main(), the function that receives each hook event and picks the hook function for it. It imports the moved hook functions, so run.sh and the 32 entries in hooks/hooks.json don't change.",
+          "A part module imports only from the core, never from another part."
+        ],
+        "Nothing from you. Done when verify.py passes twice."
+      ],
+      [
+        "lock",
+        "Step 2b",
+        "The safe git and docs modules (#358)",
+        "",
+        [
+          "Safe git gets guard, guardwrite, branchnudge, prompttimer, the attribution and credit checks, guardgithub and the commit-obligation helpers.",
+          "Docs gets docstiers, harvest, the staged-docs check from guard and parity's check.",
+          "One test, at verify.py:3236, temporarily replaces a function with a stand-in. It replaces _read_back_body, and after this step it does so on the safe git module instead of on hook.py."
+        ],
+        "Nothing from you. Depends on step 2a. Done when verify.py passes twice."
+      ],
+      [
+        "hammer",
+        "Step 2c",
+        "The delegation, design loop and writing modules (#359)",
+        "",
+        [
+          "Delegation gets the helper-agent hook functions: delegate, subagentrules, announce, verdict, agentcap, subagentcommit, autosave, commitgate, worktreesweep, audit and userpromptaudit.",
+          "Design loop gets the issue workflow, stages and labels, issuelist, the author and issues guards, the end-of-reply checkpoints and pagecheck.",
+          "Writing gets the plain-summary, long-reply, visual and editor helpers and the page writing note.",
+          "The end-of-reply hook function stays in hook.py as a dispatcher, meaning it only decides which checks to run and calls each part module's check. Separately, the session triage module is created empty, because its content arrives in step 9 (#347)."
+        ],
+        "Nothing from you. Depends on step 2a. Done when verify.py passes twice and hook.py holds only main() and the end-of-reply dispatcher."
+      ],
+      [
+        "check",
+        "Step 2d",
+        "Changed test lines, version, docs and QA (#360)",
+        "",
+        [
+          "Every changed line in verify.py is listed with its reason. Only tests that load or replace a name inside hook.py change.",
+          "The plugin goes from 2.69.0 to 2.70.0.",
+          "docs/architecture.md and the systems doc name the module that owns each hook function.",
+          "A QA page, then a pull request to main once you pass it."
+        ],
+        "You: read the QA page and answer \"QA passed: restructure step 2\" or \"QA failed: restructure step 2\"."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "keep",
+      "Every hook and every behaviour",
+      "The 32 hook entries, run.sh and every check stay.",
+      null,
+      "211 of verify.py's tests run hook.py through run.sh, and none of them change. 6 other tests load hook.py directly. Those 6 change only in where they look up a name.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "hook.py",
+      "8,588 lines become a short dispatcher plus seven modules.",
+      [
+        "One file answers every hook event",
+        "hook.py dispatches; each part's module holds its own hook functions"
+      ],
+      "The inventory in docs/4-systems/plugin-restructure.md lists every block's line range and its new module.",
+      [
+        "One 8,588-line file",
+        "A core and six part modules in scripts/house_rules/",
+        "Each part can be left out on its own by step 10 (#348)"
+      ],
+      null
+    ]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "The build plan for restructure step 2 (#340): split hook.py into a core and six part modules in 4 sub-issues, #357 to #360.",
+    "changing": "No code changes until you approve. The design answer and this plan are in the decisions log, docs/6-decisions/Decisions.md.",
+    "blocking": "Your approval of this plan.",
+    "next": "Once you approve, a helper agent builds step 2a (#357) in its own worktree, and I check its work before step 2b.",
+    "todo": [
+      "Type \"Build plan approved: restructure step 2\" in the chat.",
+      "Send the message."
+    ]
+  }
+}

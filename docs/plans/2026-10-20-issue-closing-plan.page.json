@@ -1,0 +1,110 @@
+{
+  "title": "Issue Closing Build Plan",
+  "eyebrow": "Build plan · #361 issue closing: the agent closes issues itself, under a guard · house-rules 2.69.0 to 2.70.0",
+  "approval": "Build plan approved: issue closing",
+  "replyPrefix": "Build plan approved: issue closing",
+  "reply": "",
+  "short": {
+    "lead": "This is the build plan for issue closing, issue #361. On the proposal page docs/plans/2026-10-20-issue-closing.html you chose three options. 1A: close an issue only after your QA pass and a merge to main. 2A: clear the 124 open issues through one sweep page, a page that lists issues for you to approve closing in one go. 3A: close an issue as not planned only through a sweep or a list of issues you name. The mechanism is written up in docs/4-systems/issue-closing.md. The work is 4 sub-issues, #362 to #365, each built by one helper agent at a time. Step 2 of the restructure (#340) is paused until this ships, and then continues as house-rules 2.71.0 instead of 2.70.0.",
+    "hint": "Tap a step to see what it creates or changes and what it needs.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 1",
+        "The closable record (#362)",
+        "",
+        [
+          "When you pass QA on a feature, the plugin's hook script saves that feature's issues in a new list called \"closable\". The list sits in the stage file, the file that records which stage the design loop is in.",
+          "The \"closable\" list is kept when you approve the next design. Today that approval erases the recorded issues (hook.py:5533).",
+          "When a pull request merges into main, every saved entry that has a QA pass but no merge recorded yet is marked with that pull request's number."
+        ],
+        "Nothing from you. Done when verify.py (the script that checks the hooks do what the docs say) passes twice, with one test case for each of the three behaviours above."
+      ],
+      [
+        "lock",
+        "Step 2",
+        "The close guard (#363)",
+        "",
+        [
+          "The guard is the check that runs before any command that closes an issue. It lets a close through only when the issue has both a QA pass and a merge on record, or is on a list you approved.",
+          "Any other close is refused, and the refusal names what is missing.",
+          "Closes through the GitHub tool this session uses are checked too; today only gh commands are.",
+          "An allowed close comments with its evidence, swaps \"in progress\" for \"AjsAgent completed this\", and drops \"Claude completed this\"."
+        ],
+        "Nothing from you. Depends on step 1."
+      ],
+      [
+        "search",
+        "Step 3",
+        "Sweep approvals and named lists (#364)",
+        "",
+        [
+          "Your reply \"Sweep approved: issues\" records the sweep page's approved closes.",
+          "Your message \"Close as not planned: #N replaced by #M\" (where #N is an issue to close and #M is the issue that replaces it) records a not-planned close for the issues you name, and no others.",
+          "The sweep page only ever lists issues the agent opened."
+        ],
+        "Nothing from you. Depends on step 2."
+      ],
+      [
+        "check",
+        "Step 4",
+        "Rule text, docs, version and QA (#365)",
+        "",
+        [
+          "Rule 6 of rules/detail/issue-workflow.md and the short rule in rules/house-rules.md change to the new rule.",
+          "The plugin goes from 2.69.0 to 2.70.0.",
+          "A QA page, then a pull request to main once you pass it."
+        ],
+        "You: answer \"QA passed: issue closing\" or \"QA failed: issue closing\". After it ships, the sweep page for the 124 open issues comes to you."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Rule 6: closing an issue",
+      "From \"always asks you\" to \"closes itself once the evidence is on record\".",
+      [
+        "Every close asks you, so nothing closes",
+        "Closes after your QA pass and a merge, or your approved list"
+      ],
+      "The guard checks the evidence from the local stage file, so it makes no network call on a tool call.",
+      [
+        "124 open issues, many finished",
+        "Finished issues close with their evidence in a comment",
+        "Your issue list shows only work that is still open"
+      ],
+      null
+    ],
+    [
+      "keep",
+      "Everything else in the issue workflow",
+      "Issues before code, Refs in pull requests, and labels stay as they are.",
+      null,
+      "A pull request still never says Closes, Fixes or Resolves, because GitHub would close the issue at merge, before your QA.",
+      null,
+      null
+    ]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "The build plan for issue closing (#361): 4 sub-issues, #362 to #365, house-rules 2.69.0 to 2.70.0.",
+    "changing": "No code changes until you approve. Your design answers are in the decisions log, docs/6-decisions/Decisions.md.",
+    "blocking": "Your approval of this plan.",
+    "next": "Once you approve, a helper agent builds step 1 (#362) in its own worktree, and I check its work before step 2.",
+    "todo": [
+      "Type \"Build plan approved: issue closing\" in the chat.",
+      "Send the message."
+    ]
+  }
+}

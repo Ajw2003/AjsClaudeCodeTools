@@ -1,0 +1,78 @@
+{
+  "title": "How hook.py Splits",
+  "eyebrow": "Design question · issue #340, restructure step 2: split hook.py, today one big Python file, into a core plus six part files",
+  "approval": "Design approved: restructure step 2",
+  "replyPrefix": "Design approved: restructure step 2",
+  "reply": "",
+  "short": {
+    "lead": "Step 1 of the restructure shipped: pull request #356 is merged and main carries house-rules 2.69.0. Step 2 is #340 (Restructure step 2: move today's hook.py into the core and six part modules, changing nothing). Its done-when condition says every check in verify.py (the script that tests the hooks) must pass with verify.py unchanged. I checked how verify.py reaches into hook.py. One test cannot pass unchanged if the parts become real modules (separate Python files that each keep their own names). One question decides which of the two gives way: the unchanged verify.py, or real modules.",
+    "hint": "Tap a row to see what was checked.",
+    "key": [
+      [
+        "Checked",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "Checked",
+        "How verify.py uses hook.py today",
+        "",
+        [
+          "211 tests run hook.py through run.sh, the small script that starts it, so they don't care which file the code lives in.",
+          "6 tests load hook.py into the test itself and call 9 of its internal names directly, such as _pages_changed_this_turn.",
+          "1 test swaps out a function inside the loaded hook.py: at verify.py:3236 it replaces _read_back_body with a fake version the test supplies, then runs the credit check. The credit check must call the fake version."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Decide",
+        "One shared set of names (a namespace), or separate real modules",
+        "you",
+        [
+          "If each part becomes its own module, the credit check's code moves into the safe git part. The test's swap of _read_back_body on hook.py would then no longer reach it, because the check would look the name up in the safe git module instead.",
+          "Step 10 makes each part its own installable plugin, so the parts must be real modules by then."
+        ],
+        "Your answer to question 1 below."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. How does step 2 split hook.py?",
+      [
+        [
+          "A",
+          "Real modules now: each part is its own Python module, and hook.py only dispatches. verify.py changes only where a test replaces a function, so it replaces it on the module that owns it, starting with verify.py:3236. Every such change is listed in the pull request.",
+          1,
+          "The parts are independent from step 2 on, which step 10 needs anyway, so nothing is moved twice. The proof is slightly weaker: a handful of test lines change, each one listed."
+        ],
+        [
+          "B",
+          "Shared namespace for now: each part is its own file, but hook.py loads them all into one shared pool of names (a namespace), so they behave as the single file does today. verify.py stays byte-for-byte unchanged. Step 10 later turns the files into real modules.",
+          0,
+          "The cleanest proof that nothing moved, but the parts can still reach each other's code freely until step 10, and that step has to untangle them."
+        ]
+      ],
+      "In both, the 32 hook entries in hooks/hooks.json and run.sh stay as they are, and every check must pass."
+    ]
+  ],
+  "wrapup": {
+    "summary": "One design question for restructure step 2 (#340): split hook.py into real modules now, or into files that share one namespace until step 10.",
+    "changing": "Nothing changes until you answer. Step 1 is on main as house-rules 2.69.0.",
+    "blocking": "Your answer to question 1 (how hook.py splits).",
+    "next": "Once you answer, a builder helper does the split in its own worktree, and I check it before the step's QA page.",
+    "todo": [
+      "Type your answer in the chat, for example \"Design approved: restructure step 2 1A\" (question 1, option A).",
+      "Send the message."
+    ]
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "title": "Closing Issues Safely",
+  "eyebrow": "Proposal · the agent closes GitHub issues as a controlled step of the workflow",
+  "approval": "Design approved: issue closing",
+  "replyPrefix": "Design approved: issue closing",
+  "reply": "",
+  "short": {
+    "lead": "Finished issues stay open. Today's rule says the agent must always ask you before closing an issue, and in practice it never closes one. There are 124 open issues labelled \"AjsAgent created this\" in this repo, and many carry \"needs review\" long after their work passed your QA. This proposal makes closing a controlled step the agent does itself, under a guard that checks the evidence first. Three questions below decide: (1) when the agent may close an issue, (2) what happens to the 124 issues already open, and (3) whether it can mark an issue \"not planned\" (a duplicate, or replaced by other work). Step 2 of the restructure (#340, splitting hook.py into a core module and six part modules) waits until this is built, as you asked.",
+    "hint": "Tap a row to see what exists today and what would change.",
+    "key": [
+      [
+        "Exists today",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Rule",
+        "Closing an issue always asks",
+        "",
+        [
+          "rules/detail/issue-workflow.md, rule 6: closing an issue always asks, and the approval prompt is your go-ahead.",
+          "On a close, the agent adds the label \"Claude completed this\", removes \"in progress\" and comments with the merged pull request's link.",
+          "That label conflicts with your answer in round 1 of the design questions (question 16, which rules become settings), where you said Claude is never the credit."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Guard",
+        "The guard catches every way of closing",
+        "",
+        [
+          "The guard is the code that checks commands before they run. In hook.py:5732 it recognises three ways of closing an issue with gh, the GitHub command-line tool: gh issue close, gh issue edit --state closed, and a gh api call that sets an issue's state to closed. It turns each one into a prompt asking you.",
+          "The design loop (the Design, Plan, Build, QA and Done stages each feature goes through) already records each feature's issues and your \"QA passed: <feature>\" message. That message is the evidence a safe close needs."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "search",
+        "Backlog",
+        "124 open issues, many already finished",
+        "",
+        [
+          "Some passed your QA and are merged. Two examples: the 2.68.1 patch that unblocked the design loop (issues #307 to #311, QA passed 2026-10-16), and the fix that stopped the end-of-reply checks looping (issues #322 to #327, on main since pull request #337).",
+          "Some are built and still wait for your QA, and some were never started, or were replaced by the restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins)."
+        ],
+        "Question 2 below decides what happens to them."
+      ],
+      [
+        "hand",
+        "Decide",
+        "When the agent closes, the backlog, and not-planned closes",
+        "you",
+        "The 3 questions below.",
+        "Your answers to questions 1, 2 and 3."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. When may the agent close an issue?",
+      [
+        [
+          "A",
+          "After both: your \"QA passed: <feature>\" message for the feature the issue belongs to, and that feature's pull request merged to main. The agent then closes the feature's issues itself, each with a comment naming your QA message and the merged pull request. The guard lets a close through only when both are recorded for that issue, and refuses any other close, naming what is missing.",
+          1,
+          "Nothing closes before you have tested it and it is on main, and you never have to close anything by hand."
+        ],
+        [
+          "B",
+          "On your \"QA passed: <feature>\" message alone, before the pull request merges",
+          0,
+          "Closes sooner, but an issue can show closed while its fix is still only on a branch."
+        ],
+        [
+          "C",
+          "Only when you name the issues in the chat, for example \"Close: #307 #308\"",
+          0,
+          "You see every close, but you are back to doing the bookkeeping."
+        ]
+      ],
+      "In every option the close comment names the evidence. The \"Claude completed this\" label is also replaced by \"<agent name> completed this\", with the name taken from the settings built in #341 (Restructure step 3: settings and identity)."
+    ],
+    [
+      "q2",
+      "2. What happens to the 124 issues already open?",
+      [
+        [
+          "A",
+          "One sweep page lists every open agent-created issue, grouped as: QA passed and merged; built and waiting for your QA; never started; replaced by #306. Each row shows its evidence and a suggested action (close as completed, close as not planned, or keep). You approve the page, and the agent closes exactly the issues you approved.",
+          1,
+          "The backlog is cleared once, with evidence you can check, and nothing closes that you didn't approve."
+        ],
+        [
+          "B",
+          "Leave them as they are; the new rule applies only from now on",
+          0,
+          "No sweep to review, but the 124 stay in limbo."
+        ]
+      ],
+      "In both, issues opened by people other than the agent are never touched."
+    ],
+    [
+      "q3",
+      "3. May the agent close an issue as not planned (a duplicate, or replaced by other work)?",
+      [
+        [
+          "A",
+          "Only through an approved sweep page or your named list, and the close comment names the issue that replaces it",
+          1,
+          "Superseded issues get cleaned up, and every one is traceable to what replaced it."
+        ],
+        [
+          "B",
+          "Never: only you close an issue as not planned",
+          0,
+          "Nothing is dropped without you, but superseded issues stay open until you close them."
+        ]
+      ],
+      "In both, a not-planned close never happens automatically from a QA pass."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A proposal to make closing GitHub issues a controlled step the agent does itself, with a guard that checks your QA pass and the merge first.",
+    "changing": "Nothing changes until you answer. Your answer on step 2's core links was option A: each part adds its function to a list kept in the core. That answer is recorded and waits until issue closing is built.",
+    "blocking": "Your answers to question 1 (when the agent closes), question 2 (the 124 open issues) and question 3 (closing as not planned).",
+    "next": "Once you answer, I write the build plan for issue closing, and step 2 of the restructure resumes after it ships.",
+    "todo": [
+      "Type your answers in the chat, for example \"Design approved: issue closing 1A 2A 3A\" (each number is a question, each letter the option).",
+      "Send the message."
+    ]
+  }
+}

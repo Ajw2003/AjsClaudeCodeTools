@@ -177,6 +177,16 @@
         ]
       },
       {
+        "matcher": "Bash|mcp__(github|GitHub)__(merge_pull_request|issue_write)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" closablemerge",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "Write",
         "hooks": [
           {

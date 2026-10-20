@@ -4283,24 +4283,29 @@ commit_case(
 _occ = _iss_guard("gh issue close 5")
 _issues_outputs.append(("issue close", _occ))
 commit_case(
-    "close: `gh issue close` asks, says the user must have tested, and tells Claude the label follow-up",
-    _iss_decision(_occ) == "ask" and "tested" in _iss_reason(_occ) and "Claude completed this" in _iss_reason(_occ)
-    and "Claude completed this" in json.loads(_occ)["hookSpecificOutput"].get("additionalContext", ""),
+    "close: `gh issue close` with nothing recorded is refused (#363), naming what is missing",
+    _iss_decision(_occ) == "deny" and "refused to close #5" in _iss_reason(_occ) and "no QA pass is recorded" in _iss_reason(_occ),
     "out %r" % _occ[:160],
 )
 _bad = []
 for _c in ("gh issue close 5 --comment done", "gh issue edit 5 --state closed", "cd x && gh issue close 5",
            "gh api -X PATCH repos/o/r/issues/5 -f state=closed", "gh api repos/o/r/issues/5 --method PATCH -f state=closed"):
-    if _iss_decision(_iss_guard(_c)) != "ask":
+    if _iss_decision(_iss_guard(_c)) != "deny":
         _bad.append(_c)
-commit_case("close: edit --state closed, a chained close and gh api PATCH to closed also ask", not _bad, "not asked: %r" % _bad)
+commit_case("close: edit --state closed, a chained close and gh api PATCH to closed are also refused (#363)", not _bad, "not refused: %r" % _bad)
 _bad = []
 for _c in ("gh issue comment 5 --body hi", 'gh issue create --title t --body b', "gh issue edit 5 --add-label bug",
            "gh api repos/o/r/issues/5", 'git commit -m "gh issue close 5 is gated"'):
-    if _iss_decision(_iss_guard(_c)) == "ask" and "closing an issue" in _iss_reason(_iss_guard(_c)):
+    if _iss_decision(_iss_guard(_c)) in ("ask", "deny") and "close guard" in _iss_reason(_iss_guard(_c)):
         _bad.append(_c)
 commit_case("close: comment, create, label edits, reads and a commit message mentioning it are not affected", not _bad, "affected: %r" % _bad)
+os.makedirs(os.path.join(_dp, ".claude"), exist_ok=True)  # #363: an allowed close, so the delete check is what speaks
+with open(os.path.join(_dp, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as _f:
+    json.dump({"skip": False, "approvals": [], "stage": "done", "closable": [
+        {"feature": "f", "issues": [{"repo": "", "number": 5}], "qa_at": 1, "qa": "QA passed: f",
+         "merged_pr": {"repo": "o/r", "number": 2, "at": 1}}]}, _f)
 _ocm = _iss_guard("rm old.txt && gh issue close 5")
+os.remove(os.path.join(_dp, ".claude", "house-rules-loop.json"))
 commit_case(
     "close: a chained command whose delete is unsafe is refused as a whole, naming the safe way (#291)",
     _iss_decision(_ocm) == "deny" and "deletes one or more files" in _iss_reason(_ocm) and "_to_delete/" in _iss_reason(_ocm),
@@ -4410,10 +4415,11 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count;
 # so is guardgithub (#178), which runs only on a GitHub MCP write; and pagecheck (#257), which
-# exits at once unless the call is an .html page Write or an Artifact call.
+# exits at once unless the call is an .html page Write or an Artifact call; and closablemerge (#362), which
+# exits at once unless the call is a merge.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -4424,10 +4430,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.69.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.70.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.69.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.70.0",
     "rules section + detail file + version",
 )
 
@@ -8710,8 +8716,8 @@ _loop_cases.append(("#278: a repo label list, or a failed call, records nothing"
 _hook_src = open(os.path.join(HERE, "hook.py"), encoding="utf-8").read()
 _wf_src = open(os.path.join(HERE, "..", "rules", "detail", "issue-workflow.md"), encoding="utf-8").read()
 _created_note = _hook_src.split("was created without the", 1)[1][:400]
-_loop_cases.append(("#278: none of the five label-advice places still says --add-label",
-                    not any("--add-label" in _t for _t in (_ig_mod.ISSUE_NOTE, _ig_mod.CLOSE_ASK_NOTE, _created_note, _wf_src))
+_loop_cases.append(("#278: none of the label-advice places still says --add-label",
+                    not any("--add-label" in _t for _t in (_ig_mod.ISSUE_NOTE, _created_note, _wf_src))
                     and "labels[]=" in _created_note and "labels[]=" in _ig_mod.ISSUE_NOTE))
 _loop_cases.append(("label check: when the GitHub read fails, it says so and uses the record",
                     "GitHub read failed" in _loop_stop() and _loop_stage() == "build"))
@@ -8964,6 +8970,290 @@ _loop_cases.append(("the rule names the template and its four parts",
 
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
+
+# --- #362: the closable record - a QA pass saves the feature's issues, a merge stamps them ------
+_cl_dir = tempfile.mkdtemp(prefix="house-rules-closable-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _cl_dir], check=True)
+_cl_file = os.path.join(_cl_dir, ".claude", "house-rules-loop.json")
+_cl_env = dict(_loop_env, HOUSE_RULES_LOOP="on")
+
+
+def _cl_set(state):
+    os.makedirs(os.path.join(_cl_dir, ".claude"), exist_ok=True)
+    with open(_cl_file, "w", encoding="utf-8") as f:
+        json.dump(dict({"skip": False, "approvals": [], "issues": []}, **state), f)
+    os.makedirs(os.path.join(_cl_dir, "docs", "6-decisions"), exist_ok=True)
+    with open(os.path.join(_cl_dir, "docs", "6-decisions", "Decisions.md"), "a", encoding="utf-8") as f:
+        f.write("an entry written at %r\n" % time.time())
+
+
+def _cl_state():
+    try:
+        return json.load(open(_cl_file, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _cl_say(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "cl", "cwd": _cl_dir, "prompt": prompt}
+    run_hook("scope", json.dumps(p), env=_cl_env)
+
+
+def _cl_merge(tool, tool_input, response, env=None):
+    p = {"hook_event_name": "PostToolUse", "tool_name": tool, "session_id": "cl", "cwd": _cl_dir,
+         "tool_input": tool_input, "tool_response": response}
+    return run_hook("closablemerge", json.dumps(p), env=env or _cl_env)[1]
+
+
+_cl_issues = [{"repo": "o/r", "number": 7, "labelled": True}, {"repo": "o/r", "number": 8, "labelled": True}]
+_cl_open = {"feature": "f", "issues": [], "qa_at": 1, "qa": "QA passed: f", "merged_pr": None}
+_cl_cases = []
+_cl_set({"feature": "alpha", "stage": "qa", "issues": _cl_issues})
+_cl_say("QA failed: alpha")
+_cl_cases.append(("a QA failure creates no closable entry", not _cl_state().get("closable")))
+_cl_set({"feature": "alpha", "stage": "qa", "issues": _cl_issues})
+_cl_say("QA passed: alpha")
+_c = _cl_state().get("closable") or [{}]
+_cl_cases.append(("a QA pass saves a closable entry holding the feature's issues",
+                  len(_c) == 1 and _c[0].get("feature") == "alpha" and _c[0].get("qa") == "QA passed: alpha"
+                  and _c[0].get("issues") == [{"repo": "o/r", "number": 7}, {"repo": "o/r", "number": 8}]
+                  and _c[0].get("merged_pr") is None and isinstance(_c[0].get("qa_at"), int)))
+_cl_say("Design approved: beta")
+_cl_cases.append(("the closable entry survives a following Design approved for another feature",
+                  _cl_state().get("stage") == "plan" and _cl_state().get("issues") == []
+                  and len(_cl_state().get("closable") or []) == 1))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 12}, {"merged": False})
+_cl_merge("Bash", {"command": "gh pr merge 13 --squash"}, {"stdout": "", "stderr": "boom", "exit_code": 1})
+_cl_cases.append(("a merge with merged false, or a failing gh pr merge, stamps nothing",
+                  _cl_state()["closable"][0]["merged_pr"] is None))
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 12}, {"merged": True})
+_m = _cl_state()["closable"][0]["merged_pr"] or {}
+_cl_cases.append(("an MCP merge payload with merged true stamps an unstamped entry",
+                  _m.get("repo") == "o/r" and _m.get("number") == 12 and isinstance(_m.get("at"), int)))
+_cl_merge("Bash", {"command": "gh pr merge 99 --squash"}, {"stdout": "", "exit_code": 0})
+_cl_cases.append(("an already-stamped entry is not restamped", _cl_state()["closable"][0]["merged_pr"]["number"] == 12))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("Bash", {"command": "gh pr merge 14 --squash"}, {"stdout": "", "exit_code": 0})
+_cl_cases.append(("a gh pr merge Bash payload stamps an unstamped entry",
+                  (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 14))
+# The real Bash result may carry no exit code: then only gh's own success line counts as a merge.
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("Bash", {"command": "gh pr merge 16 --squash"}, {"stdout": "", "stderr": ""})
+_cl_merge("Bash", {"command": "gh pr merge 16 --auto"}, {"stdout": "", "stderr": "! Pull request #16 will be automatically merged"})
+_cl_cases.append(("with no exit code, a gh pr merge with no success line, or an auto-merge, stamps nothing",
+                  _cl_state()["closable"][0]["merged_pr"] is None))
+_cl_merge("Bash", {"command": "gh pr merge 16 --squash"}, {"stdout": "", "stderr": "✓ Squashed and merged pull request #16 (title)"})
+_cl_cases.append(("with no exit code, gh's success line stamps the entry",
+                  (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 16))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_o = _cl_merge("Bash", {"command": "gh pr merge 15"}, {"exit_code": 0}, env=dict(_cl_env, HOUSE_RULES_LOOP="off"))
+_cl_cases.append(("HOUSE_RULES_LOOP=off stamps nothing and says so",
+                  _cl_state()["closable"][0]["merged_pr"] is None and "HOUSE_RULES_LOOP=off" in _o))
+for _t, _ok in _cl_cases:
+    report("PASS" if _ok else "FAIL", "closable record: " + _t)
+
+# --- #363: the close guard - an issue closes only on recorded QA + merge evidence or an approved list ---
+def _cg_gh(cmd, env=None):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "cg", "cwd": _cl_dir,
+         "tool_input": {"command": cmd}}
+    return run_hook("guard", json.dumps(p), env=env or _iss_env())[1]
+
+
+def _cg_mcp(ti, env=None):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "mcp__github__issue_write", "session_id": "cg",
+         "cwd": _cl_dir, "tool_input": ti}
+    return run_hook("guardgithub", json.dumps(p), env=env or _iss_env())[1]
+
+
+def _cg_ctx(o):
+    try:
+        return json.loads(o)["hookSpecificOutput"].get("additionalContext", "")
+    except Exception:
+        return ""
+
+
+_cg_mrg = {"repo": "o/r", "number": 20, "at": 1}
+_cg_ready = {"feature": "f", "issues": [{"repo": "o/r", "number": 7}], "qa_at": 1, "qa": "QA passed: f", "merged_pr": _cg_mrg}
+_cg_nomerge = dict(_cg_ready, merged_pr=None)
+_cg_cases = []
+_cg_mc = {"method": "update", "owner": "o", "repo": "r", "issue_number": 7, "state": "closed", "state_reason": "completed"}
+_cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[dict(i) for i in _cg_ready["issues"]])]})
+_o = _cg_gh("gh issue close 7 -R o/r")
+_cg_cases.append(("gh close with a QA pass and a merge is allowed, with the comment/label instruction",
+                  _iss_decision(_o) == "allow" and "QA passed: f" in _cg_ctx(_o) and "o/r#20" in _cg_ctx(_o)
+                  and "AjsAgent completed this" in _cg_ctx(_o) and "in%20progress" in _cg_ctx(_o)))
+_cg_cases.append(("an allowed close removes nothing in PreToolUse", bool(_cl_state().get("closable"))))
+def _cg_post(tool, ti, resp):
+    p = {"hook_event_name": "PostToolUse", "tool_name": tool, "session_id": "cg", "cwd": _cl_dir,
+         "tool_input": ti, "tool_response": resp}
+    return run_hook("closablemerge", json.dumps(p), env=_cl_env)[1]
+_cg_post("Bash", {"command": "gh issue close 7 -R o/r"}, {"stdout": "", "stderr": "boom", "exit_code": 1})
+_cg_o = _cg_gh("gh issue close 7 -R o/r")
+_cg_cases.append(("a failed gh close keeps the evidence and a retry is still allowed",
+                  bool(_cl_state().get("closable")) and _iss_decision(_cg_o) == "allow"))
+_cg_post("Bash", {"command": "gh issue close 7 -R o/r"}, {"stdout": "", "stderr": "", "exit_code": 0})
+_cg_cases.append(("a successful gh close removes the issue and its now-empty closable entry", not _cl_state().get("closable")))
+_cl_set({"stage": "done", "closable": [dict(_cg_nomerge)]})
+_o = _cg_gh("gh issue close 7 -R o/r")
+_cg_cases.append(("gh close with a QA pass but no merge is refused, naming the missing merge",
+                  _iss_decision(_o) == "deny" and "passed QA but no merged pull request is recorded since" in _iss_reason(_o)
+                  and bool(_cl_state().get("closable"))))
+_cl_set({"stage": "done"})
+_o = _cg_gh("gh issue close 7")
+_cg_cases.append(("gh close with nothing recorded is refused, naming the missing QA pass",
+                  _iss_decision(_o) == "deny" and "no QA pass is recorded for a feature that holds #7" in _iss_reason(_o)))
+_cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[{"repo": "o/r", "number": 7}, {"repo": "o/r", "number": 8}])]})
+_o = _cg_mcp(_cg_mc)
+_cg_cases.append(("MCP issue_write close with a QA pass and a merge is allowed",
+                  _iss_decision(_o) == "allow" and "AjsAgent completed this" in _cg_ctx(_o)))
+_cg_post("mcp__github__issue_write", _cg_mc, {"error": "forbidden"})
+_cg_cases.append(("a failed MCP close keeps the evidence", len(_cl_state()["closable"][0]["issues"]) == 2))
+_cg_post("mcp__github__issue_write", _cg_mc, {"state": "closed", "url": "https://github.com/o/r/issues/7"})
+_cg_cases.append(("a successful MCP close removes that issue; the entry keeps the other one",
+                  [i["number"] for i in _cl_state()["closable"][0]["issues"]] == [8]))
+_cl_set({"stage": "done", "closable": [dict(_cg_nomerge)]})
+_o = _cg_mcp(_cg_mc)
+_cg_cases.append(("MCP issue_write close with a QA pass but no merge is refused", _iss_decision(_o) == "deny" and "no merged pull request" in _iss_reason(_o)))
+_cl_set({"stage": "done"})
+_o = _cg_mcp(_cg_mc)
+_cg_cases.append(("MCP issue_write close with nothing recorded is refused", _iss_decision(_o) == "deny" and "no QA pass is recorded" in _iss_reason(_o)))
+_cg_cases.append(("MCP issue_write that is not a close is not checked",
+                  _iss_decision(_cg_mcp({"method": "update", "owner": "o", "repo": "r", "issue_number": 7, "state": "open"})) is None))
+_o = _cg_mcp(dict(_cg_mc, state_reason="not_planned"))
+_cg_cases.append(("a not-planned MCP close without a sweep entry is refused",
+                  _iss_decision(_o) == "deny" and "a not-planned close needs an approved sweep or a named list" in _iss_reason(_o)))
+_cl_set({"stage": "done", "closable": [dict(_cg_ready)]})
+_o = _cg_gh("gh issue close 7 -R o/r --reason 'not planned'")
+_cg_cases.append(("a not-planned gh close is refused even for a QA-and-merge issue", _iss_decision(_o) == "deny" and "not-planned" in _iss_reason(_o)))
+_cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "not_planned", "replaced_by": 306}]})
+_o = _cg_gh("gh issue close 9 -R o/r --reason 'not planned'")
+_cg_cases.append(("a not-planned gh close is allowed with a matching sweep entry, which is then removed",
+                  _iss_decision(_o) == "allow" and "#306" in _cg_ctx(_o) and bool(_cl_state().get("sweep"))))
+_cg_post("Bash", {"command": "gh issue close 9 -R o/r --reason 'not planned'"}, {"stdout": "Closed issue #9", "stderr": ""})
+_cg_cases.append(("a close with no exit code is proven by gh's success line, which removes the sweep entry",
+                  not _cl_state().get("sweep")))
+_cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "not_planned", "replaced_by": 306}]})
+_o = _cg_gh("gh issue close 9 -R o/r")
+_cg_cases.append(("a completed close is refused when the sweep entry says not_planned", _iss_decision(_o) == "deny"))
+_cl_set({"stage": "done", "sweep": [{"repo": "o/r", "number": 9, "action": "completed", "replaced_by": None}]})
+_o = _cg_mcp(dict(_cg_mc, issue_number=9, state_reason=None))
+_cg_cases.append(("an MCP close with no reason is allowed for a sweep completed entry", _iss_decision(_o) == "allow" and bool(_cl_state().get("sweep"))))
+_cg_post("Bash", {"command": "gh issue close 9 -R o/r"}, {"stdout": "", "stderr": ""})
+_cg_cases.append(("with no exit code and no success line, nothing is removed", bool(_cl_state().get("sweep"))))
+_cl_set({"stage": "done", "closable": [dict(_cg_ready)]})
+_o1 = _cg_gh("gh issue close --comment done")
+_o2 = _cg_mcp({"method": "update", "owner": "o", "repo": "r", "state": "closed"})
+_cg_cases.append(("a close with no issue number is refused, saying so, on both routes",
+                  all(_iss_decision(x) == "deny" and "could not tell which issue" in _iss_reason(x) for x in (_o1, _o2))
+                  and bool(_cl_state().get("closable"))))
+_cl_set({"stage": "done"})
+_o = _cg_gh("gh issue close 7", env=_iss_env(HOUSE_RULES_ISSUES="off"))
+_cg_cases.append(("HOUSE_RULES_ISSUES=off keeps its old behaviour: the close guard does not run on either route",
+                  "close guard" not in _o and "refused" not in _o
+                  and _cg_mcp(_cg_mc, env=_iss_env(HOUSE_RULES_ISSUES="off")).find("close guard") < 0))
+for _t, _ok in _cg_cases:
+    report("PASS" if _ok else "FAIL", "close guard: " + _t)
+
+# --- #364: sweep approvals and named not-planned lists feed the close guard ---------------------
+_sw_cases = []
+_sw_mp = os.path.join(HERE, "make_page.py")
+os.makedirs(os.path.join(_cl_dir, "docs"), exist_ok=True)
+with open(os.path.join(_cl_dir, "docs", "page-style.json"), "w", encoding="utf-8") as _f:
+    json.dump({"use": "defaults"}, _f)
+
+
+def _sw_say(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "sw", "cwd": _cl_dir, "prompt": prompt}
+    return run_hook("scope", json.dumps(p), env=_cl_env)[1]
+
+
+def _sw_build(name, rows):
+    page = {"title": "Sweep " + name, "eyebrow": "e", "approval": "x",
+            "short": {"lead": "Plain.", "hint": "h", "key": [["We", ""]], "items": [["bulb", "Idea", "The idea", "", "c", "r"]]},
+            "changes": [["new", "A thing", "One line.", None, "Detail.", None, None]],
+            "wrapup": {"summary": "s", "changing": "c", "blocking": "b", "next": "n", "todo": ["t"]},
+            "sweep": rows}
+    path = os.path.join(_cl_dir, name + ".page.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(page, f)
+    r = subprocess.run([sys.executable, _sw_mp, "build", path, "--project", _cl_dir], capture_output=True,
+                       text=True, timeout=300)
+    return r.returncode, r.stdout + r.stderr
+
+
+def _sw_row(n, action, by=None):
+    return {"repo": "o/r", "number": n, "title": "Issue %d" % n, "action": action, "replaced_by": by,
+            "evidence": "Evidence for %d." % n}
+
+
+_sw_rows = [_sw_row(301, "completed"), _sw_row(302, "not_planned", 306), _sw_row(303, "keep"), _sw_row(304, "completed")]
+_cl_set({"stage": "done"})
+_rc, _o = _sw_build("sw1", _sw_rows)
+_sw_pg = None
+try:
+    _m = re.search(r"^const PAGE = (\{.*?^\});$", open(os.path.join(_cl_dir, "docs", "plans", "sw1.html"), encoding="utf-8").read(),
+                   re.S | re.M)
+    _sw_pg = json.loads(_m.group(1))
+except (OSError, AttributeError, ValueError):
+    _sw_pg = {}
+_sw_cases.append(("a sweep page builds, shows each row's evidence, and records sweep_proposed without the keep row",
+                  _rc == 0 and _sw_pg.get("approval") == "Sweep approved: issues"
+                  and sum("Evidence for" in str(c) for c in _sw_pg.get("changes", [])) == 4
+                  and [x["number"] for x in _cl_state().get("sweep_proposed", [])] == [301, 302, 304]
+                  and _cl_state()["sweep_proposed"][1] == {"repo": "o/r", "number": 302, "action": "not_planned", "replaced_by": 306}))
+_rc, _o = _sw_build("sw2", [_sw_row(5, "not_planned")])
+_sw_cases.append(("make_page refuses a not_planned sweep row with no replaced_by",
+                  _rc == 2 and "needs replaced_by" in _o))
+_rc, _o = _sw_build("sw3", [_sw_row(5, "maybe")])
+_sw_cases.append(("make_page refuses a sweep action that is not completed, not_planned or keep",
+                  _rc == 2 and "action must be completed, not_planned or keep" in _o))
+_cl_set({"stage": "done", "sweep_proposed": [{"repo": "o/r", "number": 301, "action": "completed", "replaced_by": None},
+                                            {"repo": "o/r", "number": 302, "action": "not_planned", "replaced_by": 306}]})
+_sw_n = _sw_say("Sweep approved: issues")
+_sw_cases.append(("Sweep approved: issues moves the proposed rows into sweep and clears sweep_proposed",
+                  [x["number"] for x in _cl_state().get("sweep", [])] == [301, 302] and "sweep_proposed" not in _cl_state()
+                  and "Recorded 2 sweep row(s) for the close guard." in _sw_n))
+_o1 = _cg_gh("gh issue close 301 -R o/r")
+_o2 = _cg_gh("gh issue close 302 -R o/r --reason \"not planned\" --comment \"replaced by #306\"")
+_o3 = _cg_gh("gh issue close 302 -R o/r")
+_o4 = _cg_gh("gh issue close 999 -R o/r")
+_sw_cases.append(("the guard allows the approved closes with the matching action and refuses a wrong action",
+                  _iss_decision(_o1) == "allow" and _iss_decision(_o2) == "allow" and _iss_decision(_o3) == "deny"))
+_sw_cases.append(("an issue on neither list is still refused", _iss_decision(_o4) == "deny"))
+_cl_set({"stage": "done", "sweep_proposed": [{"repo": "o/r", "number": 301, "action": "completed", "replaced_by": None},
+                                            {"repo": "o/r", "number": 302, "action": "completed", "replaced_by": None},
+                                            {"repo": "o/r", "number": 303, "action": "completed", "replaced_by": None}]})
+_sw_n = _sw_say("Sweep approved: issues keep #301 #302")
+_sw_cases.append(("Sweep approved: issues keep #N leaves #N out of sweep and says so",
+                  [x["number"] for x in _cl_state().get("sweep", [])] == [303]
+                  and "kept open at aj's word: #301, #302" in _sw_n
+                  and _iss_decision(_cg_gh("gh issue close 301 -R o/r")) == "deny"
+                  and _iss_decision(_cg_gh("gh issue close 303 -R o/r")) == "allow"))
+_cl_set({"stage": "done"})
+_sw_n = _sw_say("Sweep approved: issues")
+_sw_cases.append(("Sweep approved: issues with no proposed rows says there is nothing to approve and moves nothing",
+                  "nothing to approve and nothing moved" in _sw_n and not _cl_state().get("sweep")))
+_cl_set({"stage": "done"})
+_sw_n = _sw_say("Close as not planned: #5 replaced by #9, #6 replaced by #9")
+_sw_cases.append(("Close as not planned records one not_planned entry per pair, and the guard allows a not-planned close",
+                  [(x["number"], x["action"], x["replaced_by"]) for x in _cl_state().get("sweep", [])]
+                  == [(5, "not_planned", 9), (6, "not_planned", 9)]
+                  and "Recorded 2 not-planned close(s) for the close guard: #5 replaced by #9, #6 replaced by #9." in _sw_n
+                  and _iss_decision(_cg_gh("gh issue close 5 -R o/r --reason \"not planned\"")) == "allow"
+                  and _iss_decision(_cg_gh("gh issue close 7 -R o/r --reason \"not planned\"")) == "deny"))
+_cl_set({"stage": "done"})
+_sw_say("Close as not planned: o/r#5 replaced by o/r#9 and #6 replaced by #9")
+_sw_cases.append(("Close as not planned takes an optional owner/repo and the word and between pairs",
+                  [(x["repo"], x["number"]) for x in _cl_state().get("sweep", [])] == [("o/r", 5), ("", 6)]))
+_cl_set({"stage": "done", "sweep_proposed": [{"repo": "o/r", "number": 301, "action": "completed", "replaced_by": None}]})
+_sw_n1 = _sw_say("[Subagent hand-back] The builder finished. Sweep approved: issues. Close as not planned: #5 replaced by #9")
+_sw_n2 = _sw_say("<task-notification>Sweep approved: issues</task-notification>")
+_sw_cases.append(("the approval phrases do nothing when they come from a helper or notification rather than aj",
+                  not _cl_state().get("sweep") and len(_cl_state().get("sweep_proposed", [])) == 1
+                  and "helper's report" in _sw_n1 and "helper's report" in _sw_n2))
+for _t, _ok in _sw_cases:
+    report("PASS" if _ok else "FAIL", "sweep approvals: " + _t)
 
 # --- #307: every approval in one message is read, in stage order -------------------------------
 # Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and

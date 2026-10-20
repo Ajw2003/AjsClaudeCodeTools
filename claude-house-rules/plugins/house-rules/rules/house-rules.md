@@ -134,7 +134,8 @@ Issue/PR text never carries a local path — repo-relative paths, other repos as
 
 Before code: one parent issue, one child per step (`Part of #N`), plain titles, each labelled
 `AjsAgent created this` plus a category; a hook blocks source edits until they exist. PR bodies say
-`Refs #N`, never Closes/Fixes/Resolves. Closing an issue always asks the user, who has tested first.
+`Refs #N`, never Closes/Fixes/Resolves. I close an issue only after the user's QA pass and a merge, or
+on a list they approved; a guard checks the evidence.
 `HOUSE_RULES_ISSUES=off` disables it. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/issue-workflow.md`.
 
 ## Commit constantly on my own branches, never on theirs
