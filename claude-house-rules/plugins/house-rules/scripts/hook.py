@@ -8536,11 +8536,17 @@ def _closable_merge_of(data):
         m = _GH_PR_MERGE_RE.search(ti["command"])
         if not m:
             return None
-        code = None
+        code, out = None, ""
         if isinstance(resp, dict):
             code = resp.get("exit_code", resp.get("exitCode", resp.get("returncode")))
             if code is None and resp.get("interrupted"):
                 code = 1
+            out = "%s\n%s" % (resp.get("stdout") or "", resp.get("stderr") or "")
+        # Stamp only on proof: exit code 0, or, where no code is reported, gh's own success line
+        # ("Merged pull request", "Squashed and merged pull request", "Rebased and merged pull request").
+        # "will be automatically merged" is not a merge yet.
+        if code is None and not re.search(r"merged pull request", out, re.IGNORECASE):
+            return None
         if code not in (None, 0):
             return None
         num = re.search(r"(?<![\w-])(\d+)(?![\w-])", m.group(1))

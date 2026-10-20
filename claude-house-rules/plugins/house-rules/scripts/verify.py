@@ -9032,6 +9032,15 @@ _cl_set({"stage": "done", "closable": [dict(_cl_open)]})
 _cl_merge("Bash", {"command": "gh pr merge 14 --squash"}, {"stdout": "", "exit_code": 0})
 _cl_cases.append(("a gh pr merge Bash payload stamps an unstamped entry",
                   (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 14))
+# The real Bash result may carry no exit code: then only gh's own success line counts as a merge.
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("Bash", {"command": "gh pr merge 16 --squash"}, {"stdout": "", "stderr": ""})
+_cl_merge("Bash", {"command": "gh pr merge 16 --auto"}, {"stdout": "", "stderr": "! Pull request #16 will be automatically merged"})
+_cl_cases.append(("with no exit code, a gh pr merge with no success line, or an auto-merge, stamps nothing",
+                  _cl_state()["closable"][0]["merged_pr"] is None))
+_cl_merge("Bash", {"command": "gh pr merge 16 --squash"}, {"stdout": "", "stderr": "✓ Squashed and merged pull request #16 (title)"})
+_cl_cases.append(("with no exit code, gh's success line stamps the entry",
+                  (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 16))
 _cl_set({"stage": "done", "closable": [dict(_cl_open)]})
 _o = _cl_merge("Bash", {"command": "gh pr merge 15"}, {"exit_code": 0}, env=dict(_cl_env, HOUSE_RULES_LOOP="off"))
 _cl_cases.append(("HOUSE_RULES_LOOP=off stamps nothing and says so",
