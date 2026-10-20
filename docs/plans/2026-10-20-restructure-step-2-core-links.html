@@ -294,7 +294,7 @@ const PAGE = {
         "Three core hook functions reach into other parts",
         "",
         [
-          "scope, which runs on every message you send, adds the design loop's stage note (_loop_scope_note, hook.py:5598) and the prompt timer's waiting note (_waiting_scope_note, hook.py:4209).",
+          "scope, which runs on every message you send, adds the design loop's stage note (_loop_scope_note, hook.py:5598) and the prompt timer's waiting note, from the function at line 4209 (_waiting_scope_note).",
           "inject, which runs at session start, adds the safe git branch and identity notes (_agent_branch_block, hook.py:2193; _agent_identity_block, hook.py:2232).",
           "promptran, which runs after a tool call, updates the prompt timer's waiting record through four functions (_waiting_path, _waiting_key, _waiting_update and _waiting_clock, hook.py:4104-4300) that belong to safe git."
         ],
