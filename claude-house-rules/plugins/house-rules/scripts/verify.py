@@ -355,8 +355,8 @@ else:
 # --- the clear-writing rule loads in the same slot, once (#246) -------------------------------
 _cw_missing = [p for p in (
     "## Write it so nothing is left to guess",
-    "Proper sentences", "Said once", "Define before use", "Measured, not guessed",
-    "Exact inputs", "Done-criteria", "Ask when unclear", "Plain words", "### The voice",
+    "Proper sentences", "Said once", "Explicit context", "Define before use", "Measured, not guessed",
+    "Named references", "Exact inputs", "Done-criteria", "Ask when unclear", "Plain words", "### The voice",
     "rules/detail/clear-writing.md",
 ) if p not in (_ctx or "")]
 if _ctx.count("## Write it so nothing is left to guess") > 1:
@@ -1936,7 +1936,9 @@ if "### The voice" in off_out:
     voice_problems.append("HOUSE_RULES_VOICE=off did not remove the voice section")
 for kept in [
     "Write it so nothing is left to guess",
+    "Explicit context",
     "Define before use",
+    "Named references",
     "Show, don't tell; the user designs",
 ]:
     if kept not in off_out:

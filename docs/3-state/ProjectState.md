@@ -199,7 +199,7 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-19, branch `AjsAgent/issue-281-fix`, plugin 2.68.5: aj approved the 10-step build plan for the #306 restructure (`docs/plans/2026-10-19-restructure-build-plan.html`), move first and ship after each step. Steps are #339, #340, #341, #349 and #343 to #348; step 1 (#339, the summary template) is in progress.
 
-2026-10-19, branch `AjsAgent/issue-281-fix`, plugin 2.69.0: restructure step 1 (#339) is built and waiting for aj's QA. The writing rule's two reference lines are one "Define before use" line, the checker flags a round or question reference that names nothing, and summary pages have a "Decided by" box, one line per decision and a before-and-after strip, from the starter file `templates/decision-summary.page.json`. The grilling summary page is rebuilt from it.
+2026-10-19, branch `AjsAgent/issue-281-fix`, plugin 2.69.0: restructure step 1 (#339) is built and waiting for aj's QA. The writing rule keeps its "Explicit context" and "Named references" lines and adds a "Define before use" line beside them (aj's QA failure, 2026-10-20), the checker flags a round or question reference that names nothing, and summary pages have a "Decided by" box, one line per decision and a before-and-after strip, from the starter file `templates/decision-summary.page.json`. The grilling summary page is rebuilt from it.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 

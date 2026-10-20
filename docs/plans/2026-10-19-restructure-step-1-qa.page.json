@@ -2,7 +2,7 @@
   "title": "Restructure Step 1 QA",
   "eyebrow": "QA · #339 restructure step 1: the summary page template and the define-before-use rule · house-rules 2.69.0",
   "short": {
-    "lead": "Step 1 of the restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins) is built on the branch AjsAgent/issue-281-fix as house-rules 2.69.0. Your writing rule now has one \"Define before use\" line. The writing checker (clarity.py) flags a reference like \"question 3\" or \"answer 2\" when nothing after it says what was asked. Summary pages have a \"Decided by\" box, one line per decision and a before-and-after strip. The real test is the grilling summary page, rebuilt from the new starter file (a ready-made content file every summary page starts from): open it and tap through its ten topics. verify.py, the script that checks the hooks do what the docs say, passed twice with 871 checks.",
+    "lead": "Step 1 of the restructure in #306 (house-rules: restructure into a shared core with project boundaries and six optional sub-plugins) is built on the branch AjsAgent/issue-281-fix as house-rules 2.69.0. Your writing rule keeps \"Explicit context\" and \"Named references\" and adds a \"Define before use\" line beside them, fixed after your first QA failed. The writing checker (clarity.py) flags a reference like \"question 3\" or \"answer 2\" when nothing after it says what was asked. Summary pages have a \"Decided by\" box, one line per decision and a before-and-after strip. The real test is the grilling summary page, rebuilt from the new starter file (a ready-made content file every summary page starts from): open it and tap through its ten topics. verify.py, the script that checks the hooks do what the docs say, passed twice with 871 checks.",
     "hint": "Tap a row to see what was built and how it was checked.",
     "key": [
       [
@@ -18,10 +18,10 @@
       [
         "file",
         "Rule",
-        "One \"Define before use\" line",
+        "\"Define before use\" added beside the two lines it was wrongly merged into",
         "done",
-        "In rules/clear-writing.md, \"Explicit context\" and \"Named references\" became one line: name what a phrase means before its first use, so the reader infers nothing. An issue number comes with its title. A round or question number comes with what was asked and what was chosen. When that can't be done, the text says plainly why. rules/detail/clear-writing.md has a worked example.",
-        "Nothing from you. Checked by verify.py, which holds two lists of the rule's line names. Both now say \"Define before use\"."
+        "Your first QA failed because \"Explicit context\" and \"Named references\" had been merged into \"Define before use\". Both lines are back in rules/clear-writing.md word for word, in their original places, and \"Define before use\" is a third line between them: name what a phrase means before its first use, and a round or question number carries what was asked and what was chosen. rules/detail/clear-writing.md has the original \"Explicit context\" section back, plus a \"Define before use\" section with a worked example.",
+        "Nothing from you. Checked by verify.py, which now checks that all three line names reach the session."
       ],
       [
         "search",

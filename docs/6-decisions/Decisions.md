@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-20 - QA failed: restructure step 1
+
+**Context.** QA page `docs/plans/2026-10-19-restructure-step-1-qa.html` for #339 (Restructure step 1: the
+summary page template and the define-before-use rule).
+
+**Decision.** aj's reply was "QA failed": the define-before-use rule was meant to sit alongside the
+"Explicit context" and "Named references" lines, not replace them. aj is autistic and has ADHD, and needs
+explicit context and named references always, with a phrase also named before its first use. Fixed:
+`rules/clear-writing.md` and `rules/detail/clear-writing.md` restore both lines word for word in their
+original places and add "Define before use" as a third line; `verify.py` checks all three names reach
+the session. The summary template answers' item 3 ("the two lines merge into one") is corrected by this
+entry.
+
+**Status.** Standing. The step goes back to aj for QA.
+
 ## 2026-10-19 - Build plan approved: plugin restructure
 
 **Context.** The 10-step build plan for #306, `docs/plans/2026-10-19-restructure-build-plan.html`.
