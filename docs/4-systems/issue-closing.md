@@ -15,9 +15,9 @@ How the agent closes GitHub issues itself, under a guard that checks the evidenc
 
 ## How it works
 
-**What exists today.** Rule 6 says closing always asks aj, and `hook.py:5732` turns three `gh`
+**What existed before 2.70.0.** Rule 6 said closing always asked aj, and the guard turned three `gh`
 closing commands into a prompt. A close through the GitHub MCP tool (`issue_write` with `state:
-closed`) is not checked at all. The design loop records the current feature's issues in
+closed`) was not checked at all. The design loop records the current feature's issues in
 `state["issues"]` and aj's approvals in `state["approvals"]`, but a new "Design approved" clears
 `state["issues"]` (`hook.py:5533`), so nothing about a finished feature survives the next one.
 
@@ -34,8 +34,12 @@ the feature that holds N, no merged pull request since that pass, or N not recor
 feature. The `gh` routes and the MCP route are both checked. The allowed close carries an
 instruction for the agent: comment on the issue with the QA message and the merged pull request's
 link, add the label "AjsAgent completed this" (its name comes from the settings once #341, Restructure
-step 3: settings and identity, ships) and remove "in progress". A closed issue is removed from its
-entry, and an empty entry is dropped.
+step 3: settings and identity, ships) and remove "in progress". The guard itself removes nothing.
+After the close, the `closablemerge` hook (`PostToolUse`) removes the issue from its entry, or from
+`sweep`, only on proof the close succeeded: the GitHub tool's result with no error, or for `gh` an
+exit code of 0 or gh's own "Closed issue" line. A close that fails keeps its evidence, so a retry is
+still allowed. An empty entry is dropped. An approval that names no repo matches this project's own
+repo, because the stage file belongs to one repo.
 
 **The sweep (question 2, answer A; question 3, answer A).** The sweep page lists every open issue
 labelled "AjsAgent created this", grouped as: QA passed and merged, built and waiting for aj's QA,

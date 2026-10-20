@@ -4931,7 +4931,7 @@ def _head_age_seconds(top):
 
 # ---------------------------------------------------------------------------------------
 # Issue workflow (2.49.0): plans over three steps become issues, source edits wait for them,
-# PRs link with Refs and never close, and closing an issue always asks. The hooks FORCE Claude
+# PRs link with Refs and never close, and an issue closes only on recorded evidence (#361). The hooks FORCE Claude
 # to do these things; none of them runs `gh issue create` or `gh issue close` itself. No new
 # hook process on Write/Edit/Bash: delegate writes the state, the Bash PostToolUse entry that
 # autosave uses records creations, commitgate gates, handover nags, guard checks the gh commands.
@@ -6071,13 +6071,6 @@ PR_ASK_NOTE = (
     "House rules, pull requests link issues without closing them: say `Refs #N` (or `Part of #N`, "
     "or a line `No-issue: <reason>`) in the body, and never a closing word, because GitHub would "
     "close the issue at merge, before the user has tested."
-)
-CLOSE_ASK_NOTE = (
-    "House rules, closing an issue always asks the user: the user must have tested the work first, "
-    "and this approval prompt is their go-ahead. On approval, also add `AjsAgent completed this` with `gh api "
-    "repos/<owner>/<repo>/issues/N/labels -f \"labels[]=AjsAgent completed this\"`, remove `in progress` with "
-    "`gh api -X DELETE repos/<owner>/<repo>/issues/N/labels/in%20progress`, and comment on the "
-    "issue with the merged PR link."
 )
 
 

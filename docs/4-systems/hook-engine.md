@@ -77,7 +77,7 @@ written). `_autosave_target` reads `.git/HEAD` through `_git_dir()` first, so `a
 `commitgate` spawn no git process unless the branch is `worktree-agent-*`.
 
 **Issue workflow (2.49.0, issues #108-#110).** Plans over three steps become issues before code, pull
-requests link with `Refs` and never close, and closing an issue always asks. The hooks force Claude to
+requests link with `Refs` and never close, and an issue closes only on recorded evidence (2.70.0, `docs/4-systems/issue-closing.md`). The hooks force Claude to
 do these; none runs `gh issue create` or `gh issue close`. No new hook process on Write, Edit or Bash:
 `delegate` counts the plan's steps (numbered lines, `- [ ]`, `### Step`/`### Change`) and, over 3,
 writes `house-rules-issues.json` into the git directory (`_git_dir()`, so a linked worktree or a

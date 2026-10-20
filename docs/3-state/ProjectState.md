@@ -201,6 +201,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-19, branch `AjsAgent/issue-281-fix`, plugin 2.69.0: restructure step 1 (#339) passed aj's QA on 2026-10-20 and is on `main` as house-rules 2.69.0 (pull request #356). Step 2 (#340) waits on aj's answer on `docs/plans/2026-10-20-restructure-step-2-split.html`: real modules now, or one shared namespace until step 10. The writing rule keeps its "Explicit context" and "Named references" lines and adds a "Define before use" line beside them (aj's QA failure, 2026-10-20), the checker flags a round or question reference that names nothing, and summary pages have a "Decided by" box, one line per decision and a before-and-after strip, from the starter file `templates/decision-summary.page.json`. The grilling summary page is rebuilt from it.
 
+2026-10-20, branch `AjsAgent/issue-281-fix`, plugin 2.70.0: issue closing (#361, steps #362 to #365) is built and waiting for aj's QA. A QA pass saves a feature's issues and a merge marks them; the close guard lets an issue close only with both on record, or on an approved sweep or named list, on both the gh and GitHub tool routes. Restructure step 2 (#340) resumes after this ships, as 2.71.0.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

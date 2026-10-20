@@ -4430,10 +4430,10 @@ commit_case(
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.69.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.70.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.69.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.70.0",
     "rules section + detail file + version",
 )
 
@@ -8716,8 +8716,8 @@ _loop_cases.append(("#278: a repo label list, or a failed call, records nothing"
 _hook_src = open(os.path.join(HERE, "hook.py"), encoding="utf-8").read()
 _wf_src = open(os.path.join(HERE, "..", "rules", "detail", "issue-workflow.md"), encoding="utf-8").read()
 _created_note = _hook_src.split("was created without the", 1)[1][:400]
-_loop_cases.append(("#278: none of the five label-advice places still says --add-label",
-                    not any("--add-label" in _t for _t in (_ig_mod.ISSUE_NOTE, _ig_mod.CLOSE_ASK_NOTE, _created_note, _wf_src))
+_loop_cases.append(("#278: none of the label-advice places still says --add-label",
+                    not any("--add-label" in _t for _t in (_ig_mod.ISSUE_NOTE, _created_note, _wf_src))
                     and "labels[]=" in _created_note and "labels[]=" in _ig_mod.ISSUE_NOTE))
 _loop_cases.append(("label check: when the GitHub read fails, it says so and uses the record",
                     "GitHub read failed" in _loop_stop() and _loop_stage() == "build"))
