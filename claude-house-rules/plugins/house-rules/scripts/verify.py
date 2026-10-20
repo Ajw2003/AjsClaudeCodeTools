@@ -9155,6 +9155,106 @@ _cg_cases.append(("HOUSE_RULES_ISSUES=off keeps its old behaviour: the close gua
 for _t, _ok in _cg_cases:
     report("PASS" if _ok else "FAIL", "close guard: " + _t)
 
+# --- #364: sweep approvals and named not-planned lists feed the close guard ---------------------
+_sw_cases = []
+_sw_mp = os.path.join(HERE, "make_page.py")
+os.makedirs(os.path.join(_cl_dir, "docs"), exist_ok=True)
+with open(os.path.join(_cl_dir, "docs", "page-style.json"), "w", encoding="utf-8") as _f:
+    json.dump({"use": "defaults"}, _f)
+
+
+def _sw_say(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "sw", "cwd": _cl_dir, "prompt": prompt}
+    return run_hook("scope", json.dumps(p), env=_cl_env)[1]
+
+
+def _sw_build(name, rows):
+    page = {"title": "Sweep " + name, "eyebrow": "e", "approval": "x",
+            "short": {"lead": "Plain.", "hint": "h", "key": [["We", ""]], "items": [["bulb", "Idea", "The idea", "", "c", "r"]]},
+            "changes": [["new", "A thing", "One line.", None, "Detail.", None, None]],
+            "wrapup": {"summary": "s", "changing": "c", "blocking": "b", "next": "n", "todo": ["t"]},
+            "sweep": rows}
+    path = os.path.join(_cl_dir, name + ".page.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(page, f)
+    r = subprocess.run([sys.executable, _sw_mp, "build", path, "--project", _cl_dir], capture_output=True,
+                       text=True, timeout=300)
+    return r.returncode, r.stdout + r.stderr
+
+
+def _sw_row(n, action, by=None):
+    return {"repo": "o/r", "number": n, "title": "Issue %d" % n, "action": action, "replaced_by": by,
+            "evidence": "Evidence for %d." % n}
+
+
+_sw_rows = [_sw_row(301, "completed"), _sw_row(302, "not_planned", 306), _sw_row(303, "keep"), _sw_row(304, "completed")]
+_cl_set({"stage": "done"})
+_rc, _o = _sw_build("sw1", _sw_rows)
+_sw_pg = None
+try:
+    _m = re.search(r"^const PAGE = (\{.*?^\});$", open(os.path.join(_cl_dir, "docs", "plans", "sw1.html"), encoding="utf-8").read(),
+                   re.S | re.M)
+    _sw_pg = json.loads(_m.group(1))
+except (OSError, AttributeError, ValueError):
+    _sw_pg = {}
+_sw_cases.append(("a sweep page builds, shows each row's evidence, and records sweep_proposed without the keep row",
+                  _rc == 0 and _sw_pg.get("approval") == "Sweep approved: issues"
+                  and sum("Evidence for" in str(c) for c in _sw_pg.get("changes", [])) == 4
+                  and [x["number"] for x in _cl_state().get("sweep_proposed", [])] == [301, 302, 304]
+                  and _cl_state()["sweep_proposed"][1] == {"repo": "o/r", "number": 302, "action": "not_planned", "replaced_by": 306}))
+_rc, _o = _sw_build("sw2", [_sw_row(5, "not_planned")])
+_sw_cases.append(("make_page refuses a not_planned sweep row with no replaced_by",
+                  _rc == 2 and "needs replaced_by" in _o))
+_rc, _o = _sw_build("sw3", [_sw_row(5, "maybe")])
+_sw_cases.append(("make_page refuses a sweep action that is not completed, not_planned or keep",
+                  _rc == 2 and "action must be completed, not_planned or keep" in _o))
+_cl_set({"stage": "done", "sweep_proposed": [{"repo": "o/r", "number": 301, "action": "completed", "replaced_by": None},
+                                            {"repo": "o/r", "number": 302, "action": "not_planned", "replaced_by": 306}]})
+_sw_n = _sw_say("Sweep approved: issues")
+_sw_cases.append(("Sweep approved: issues moves the proposed rows into sweep and clears sweep_proposed",
+                  [x["number"] for x in _cl_state().get("sweep", [])] == [301, 302] and "sweep_proposed" not in _cl_state()
+                  and "Recorded 2 sweep row(s) for the close guard." in _sw_n))
+_o1 = _cg_gh("gh issue close 301 -R o/r")
+_o2 = _cg_gh("gh issue close 302 -R o/r --reason \"not planned\" --comment \"replaced by #306\"")
+_o3 = _cg_gh("gh issue close 302 -R o/r")
+_o4 = _cg_gh("gh issue close 999 -R o/r")
+_sw_cases.append(("the guard allows the approved closes with the matching action and refuses a wrong action",
+                  _iss_decision(_o1) == "allow" and _iss_decision(_o2) == "allow" and _iss_decision(_o3) == "deny"))
+_sw_cases.append(("an issue on neither list is still refused", _iss_decision(_o4) == "deny"))
+_cl_set({"stage": "done", "sweep_proposed": [{"repo": "o/r", "number": 301, "action": "completed", "replaced_by": None},
+                                            {"repo": "o/r", "number": 302, "action": "completed", "replaced_by": None},
+                                            {"repo": "o/r", "number": 303, "action": "completed", "replaced_by": None}]})
+_sw_n = _sw_say("Sweep approved: issues keep #301 #302")
+_sw_cases.append(("Sweep approved: issues keep #N leaves #N out of sweep and says so",
+                  [x["number"] for x in _cl_state().get("sweep", [])] == [303]
+                  and "kept open at aj's word: #301, #302" in _sw_n
+                  and _iss_decision(_cg_gh("gh issue close 301 -R o/r")) == "deny"
+                  and _iss_decision(_cg_gh("gh issue close 303 -R o/r")) == "allow"))
+_cl_set({"stage": "done"})
+_sw_n = _sw_say("Sweep approved: issues")
+_sw_cases.append(("Sweep approved: issues with no proposed rows says there is nothing to approve and moves nothing",
+                  "nothing to approve and nothing moved" in _sw_n and not _cl_state().get("sweep")))
+_cl_set({"stage": "done"})
+_sw_n = _sw_say("Close as not planned: #5 replaced by #9, #6 replaced by #9")
+_sw_cases.append(("Close as not planned records one not_planned entry per pair, and the guard allows a not-planned close",
+                  [(x["number"], x["action"], x["replaced_by"]) for x in _cl_state().get("sweep", [])]
+                  == [(5, "not_planned", 9), (6, "not_planned", 9)]
+                  and "Recorded 2 not-planned close(s) for the close guard: #5 replaced by #9, #6 replaced by #9." in _sw_n
+                  and _iss_decision(_cg_gh("gh issue close 5 -R o/r --reason \"not planned\"")) == "allow"
+                  and _iss_decision(_cg_gh("gh issue close 7 -R o/r --reason \"not planned\"")) == "deny"))
+_cl_set({"stage": "done"})
+_sw_say("Close as not planned: o/r#5 replaced by o/r#9 and #6 replaced by #9")
+_sw_cases.append(("Close as not planned takes an optional owner/repo and the word and between pairs",
+                  [(x["repo"], x["number"]) for x in _cl_state().get("sweep", [])] == [("o/r", 5), ("", 6)]))
+_cl_set({"stage": "done", "sweep_proposed": [{"repo": "o/r", "number": 301, "action": "completed", "replaced_by": None}]})
+_sw_n1 = _sw_say("[Subagent hand-back] The builder finished. Sweep approved: issues. Close as not planned: #5 replaced by #9")
+_sw_n2 = _sw_say("<task-notification>Sweep approved: issues</task-notification>")
+_sw_cases.append(("the approval phrases do nothing when they come from a helper or notification rather than aj",
+                  not _cl_state().get("sweep") and len(_cl_state().get("sweep_proposed", [])) == 1
+                  and "helper's report" in _sw_n1 and "helper's report" in _sw_n2))
+for _t, _ok in _sw_cases:
+    report("PASS" if _ok else "FAIL", "sweep approvals: " + _t)
+
 # --- #307: every approval in one message is read, in stage order -------------------------------
 # Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and
 # only the build plan was read; and a stale stored feature name stopped a redo after "QA failed" counting.

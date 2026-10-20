@@ -5476,7 +5476,59 @@ def _loop_label_refusal(said, want, wrong, note, top=None):
 _LOOP_STAGE_ORDER = ((_LOOP_DESIGN_RE, 0), (_LOOP_PLAN_RE, 1), (_LOOP_QA_RE, 2))
 
 
+_LOOP_SWEEP_RE = re.compile(r"\bsweep\s+approved\s*:\s*issues\b([^\n]*)", re.IGNORECASE)
+_LOOP_NOTPLANNED_RE = re.compile(r"\bclose\s+as\s+not\s+planned\s*:[ \t]*([^\n]*)", re.IGNORECASE)
+_LOOP_NP_PAIR_RE = re.compile(r"(?:([\w.-]+/[\w.-]+))?#(\d+)\s+replaced\s+by\s+(?:[\w.-]+/[\w.-]+)?#(\d+)",
+                              re.IGNORECASE)
+
+
+def _loop_sweep_apply(state, text):
+    """#364: aj's sweep approvals. "Sweep approved: issues [keep #N ...]" moves sweep_proposed into sweep;
+    "Close as not planned: #N replaced by #M[, ...]" appends not_planned entries. Returns notes ("" if none)."""
+    notes = []
+    m = _LOOP_SWEEP_RE.search(text)
+    if m:
+        proposed = [x for x in (state.get("sweep_proposed") or []) if isinstance(x, dict)]
+        if not proposed:
+            notes.append('Design loop: aj wrote "Sweep approved: issues", but no sweep page has recorded '
+                         "proposed rows, so there is nothing to approve and nothing moved.")
+        else:
+            k = re.search(r"\bkeep\b(.*)", m.group(1), re.IGNORECASE)
+            kept = {int(n) for n in re.findall(r"#(\d+)", k.group(1))} if k else set()
+            moved = [x for x in proposed if x.get("number") not in kept]
+            left_out = [x for x in proposed if x.get("number") in kept]
+            if not isinstance(state.get("sweep"), list):
+                state["sweep"] = []
+            state["sweep"].extend(moved)
+            state.pop("sweep_proposed", None)
+            notes.append('Design loop: aj wrote "Sweep approved: issues". Recorded %d sweep row(s) for the close '
+                         "guard%s." % (len(moved), ("; kept open at aj's word: " + ", ".join(
+                             "#%s" % x.get("number") for x in left_out)) if left_out else ""))
+    m = _LOOP_NOTPLANNED_RE.search(text)
+    if m:
+        pairs = _LOOP_NP_PAIR_RE.findall(m.group(1))
+        if not pairs:
+            notes.append('Design loop: aj wrote "Close as not planned:", but no "#N replaced by #M" pair '
+                         "was found, so nothing was recorded.")
+        else:
+            if not isinstance(state.get("sweep"), list):
+                state["sweep"] = []
+            for repo, n, by in pairs:
+                state["sweep"].append({"repo": repo, "number": int(n), "action": "not_planned",
+                                       "replaced_by": int(by)})
+            notes.append('Design loop: aj wrote "Close as not planned:". Recorded %d not-planned close(s) for the '
+                         "close guard: %s." % (len(pairs), ", ".join("#%s replaced by #%s" % (n, b)
+                                                                      for _r, n, b in pairs)))
+    return " ".join(notes)
+
+
 def _loop_apply(state, text, top):
+    sweep_note = _loop_sweep_apply(state, text)
+    note = _loop_apply_stage(state, text, top)
+    return " ".join(n for n in (sweep_note, note) if n)
+
+
+def _loop_apply_stage(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
     message approves nothing. Mutates state.
 
