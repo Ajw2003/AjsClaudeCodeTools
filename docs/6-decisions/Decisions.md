@@ -7,6 +7,17 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-20 - QA passed: restructure step 1
+
+**Context.** QA page `docs/plans/2026-10-19-restructure-step-1-qa.html` for #339 (Restructure step 1: the
+summary page template and the define-before-use rule), after the fix logged below.
+
+**Decision.** aj's reply was "QA passed: restructure step 1". House-rules 2.69.0 ships to `main` by pull
+request, per the approved build plan's answer 2A (ship after each step). #339 stays open until aj closes
+it.
+
+**Status.** Standing.
+
 ## 2026-10-20 - QA failed: restructure step 1
 
 **Context.** QA page `docs/plans/2026-10-19-restructure-step-1-qa.html` for #339 (Restructure step 1: the
