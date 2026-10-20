@@ -73,3 +73,61 @@ cleared it. The patch records the page as owed against aj's message (the page-bl
 ## Not changed by the patch
 Everything else in 2.68.0, including the guard work from the issue "Guards block only unrecoverable
 actions" (#285), which is waiting for aj's QA.
+
+## Step 2: how hook.py splits (#340)
+
+Design approved 2026-10-20 ("Design approved: restructure step 2 1A"): real modules now. Each part
+becomes its own Python module in a package beside `hook.py`, `scripts/house_rules/`; `hook.py` keeps
+only the `main()` dispatcher that `run.sh` calls, so the 32 entries in `hooks/hooks.json` and `run.sh`
+do not change. A part module imports from the core and never from another part. Where a check in one
+part needs another part's code, the dispatcher in `hook.py` calls both.
+
+**Inventory.** Every block of `hook.py` (8,588 lines, 31 `event_*` handlers) and where it goes. Every
+block is kept and moved; nothing is dropped in step 2. "Split" marks a block whose pieces go to
+different parts.
+
+| Lines | Block | Goes to | Note |
+|---|---|---|---|
+| 1-141 | shared helpers, payload reading, `emit` | core | |
+| 142-643 | `inject` (rules at session start) | core | |
+| 644-680 | `showrule` | core | |
+| 681-772 | `profile` (machine profile) | core | |
+| 773-998 | `standards` | core | |
+| 999-1160 | `docstiers` | docs | |
+| 1161-1635 | `versioncheck` and the self-updater | core | kept until step 10 (#348) removes it |
+| 1636-1755 | `scope` | core | split: its delegation clause goes to delegation |
+| 1756-2760 | `guard` (destructive and branch guard) | safe git | split: `_staged_docs_status` (1948-2042) to docs, `work_saved_elsewhere` (2250) to core |
+| 2761-2854 | `guardwrite` (overwrite guard) | safe git | |
+| 2855-2974 | `artifact` | core | split: the page writing note goes to writing |
+| 2975-3091 | `branchnudge` | safe git | |
+| 3092-3145 | `runnable` | core | |
+| 3146-3339 | `delegate`, announce helpers, `subagentrules` | delegation | |
+| 3340-3935 | `announce`, `verdict` and the audit report | delegation | |
+| 3936-4067 | `agentcap` | delegation | |
+| 4068-4533 | `prompttimer` | safe git | |
+| 4534-4578 | `promptran` | core | |
+| 4579-4924 | `subagentcommit`, autosave and worktree helpers | delegation | |
+| 4925-5223 | issue workflow | design loop | |
+| 5224-6028 | design loop: stages, labels, approvals | design loop | |
+| 6029-6176 | attribution and `creditcheck` | safe git | |
+| 6177-6454 | `guardgithub` | safe git | split: `_author_guard` and `_issues_guard` (6317-6390) to design loop |
+| 6455-6489 | `issuelist` | design loop | |
+| 6490-6639 | `autosave`, `commitgate` | delegation | |
+| 6640-6692 | `worktreesweep` | delegation | |
+| 6693-6844 | `audit`, `userpromptaudit` | delegation | |
+| 6845-7118 | `handover` (end-of-reply) | core dispatcher | split: each check moves to its part |
+| 7119-7229 | commit-obligation helpers | safe git | |
+| 7230-7528 | parity, visual, plain-summary, long-reply and editor helpers | writing | parity's check goes to docs |
+| 7529-7601 | end-of-reply checkpoints | design loop | |
+| 7602-7805 | `pagecheck` | design loop | |
+| 7806-8089 | end-of-reply dispatcher | core dispatcher | |
+| 8090-8542 | `harvest` | docs | |
+| 8543-8588 | `main` | `hook.py` | stays as the only code in `hook.py` |
+
+Session triage has no code in `hook.py` today; its module is created empty and filled in step 9 (#347).
+
+**What changes in `verify.py`.** 211 of its tests run `hook.py` through `run.sh` and are unaffected.
+Six load `hook.py` in-process and call nine internal names; each is pointed at the module that owns
+the name. One test (`verify.py:3236`) replaces `_read_back_body` before running the credit check; it
+replaces it on the safe git module instead. Every changed test line is listed in the step's pull
+request.

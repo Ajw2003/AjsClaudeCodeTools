@@ -7,6 +7,23 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-20 - Design approved: restructure step 2
+
+**Context.** Design page `docs/plans/2026-10-20-restructure-step-2-split.html` for #340 (Restructure step
+2: move today's hook.py into the core and six part modules, changing nothing). One test
+(`verify.py:3236`) replaces a function inside the loaded `hook.py`, so "verify.py unchanged" and "real
+modules" could not both hold.
+
+**Decision.** aj's reply was "Design approved: restructure step 2 1A". Question 1, how hook.py splits:
+real modules now, each part its own Python module in `scripts/house_rules/`, with `verify.py` changing
+only where a test loads or replaces a name, every changed line listed in the pull request. The inventory
+is in `docs/4-systems/plugin-restructure.md`, "Step 2: how hook.py splits". Sub-issues: #357 (step 2a,
+the package and core module), #358 (step 2b, safe git and docs), #359 (step 2c, delegation, design loop
+and writing), #360 (step 2d, changed test lines, version, docs and QA). Build plan:
+`docs/plans/2026-10-20-restructure-step-2-plan.html`.
+
+**Status.** Standing.
+
 ## 2026-10-20 - QA passed: restructure step 1
 
 **Context.** QA page `docs/plans/2026-10-19-restructure-step-1-qa.html` for #339 (Restructure step 1: the
