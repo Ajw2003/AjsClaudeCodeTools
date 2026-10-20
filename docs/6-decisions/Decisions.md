@@ -7,6 +7,17 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-20 - QA passed: issue closing
+
+**Context.** QA page `docs/plans/2026-10-20-issue-closing-qa.html` for #361 (Issue closing: the agent
+closes issues itself, under a guard that checks QA and the merge), steps #362 to #365.
+
+**Decision.** aj's reply was "QA passed: issue closing". House-rules 2.70.0 ships to `main` by pull
+request. This session ran 2.69.0 when the pass arrived, so no closable record was saved for #361 to
+#365; they go on the sweep page as QA passed and merged, for aj to approve there.
+
+**Status.** Standing.
+
 ## 2026-10-20 - Design approved: issue closing
 
 **Context.** Proposal `docs/plans/2026-10-20-issue-closing.html`. Rule 6 of
