@@ -7,6 +7,27 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-20 - Design approved: issue closing
+
+**Context.** Proposal `docs/plans/2026-10-20-issue-closing.html`. Rule 6 of
+`rules/detail/issue-workflow.md` says closing always asks aj, so the agent never closes an issue, and
+124 open issues carry "AjsAgent created this".
+
+**Decision.** aj's reply was "Design approved: issue closing 1A 2A 3A".
+1. Question 1, when the agent may close an issue: only after aj's "QA passed: <feature>" for its feature
+   and a merge to the default branch; the guard checks both and refuses any other close, naming what is
+   missing.
+2. Question 2, the 124 open issues: one sweep page with evidence and a suggested action per issue; the
+   agent closes exactly what aj approves.
+3. Question 3, closing as not planned: only through an approved sweep page or a list aj names, with the
+   replacing issue named in the close comment.
+
+Systems doc `docs/4-systems/issue-closing.md`; parent issue #361 with steps #362 to #365; build plan
+`docs/plans/2026-10-20-issue-closing-plan.html`. It ships as 2.70.0, so #340 (Restructure step 2) moves
+to 2.71.0.
+
+**Status.** Standing.
+
 ## 2026-10-20 - Design approved: restructure step 2 core links, and issue closing comes first
 
 **Context.** The builder for #357 (Step 2a: the house_rules package and the core module) stopped before
