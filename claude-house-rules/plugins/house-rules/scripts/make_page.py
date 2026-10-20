@@ -295,6 +295,39 @@ def apply_qa(page, project):
     page.pop("reply", None)
 
 
+def apply_sweep(page):
+    """Sweep mode (#364): each row becomes a Changes item showing its evidence and suggested action."""
+    rows = page["sweep"]
+    if not isinstance(rows, list) or not rows:
+        die("content 'sweep' must be a non-empty list of {repo, number, title, action, replaced_by, evidence}")
+    for i, r in enumerate(rows):
+        if not isinstance(r, dict):
+            die("sweep row %d is not an object" % i)
+        for k in ("repo", "number", "title", "evidence"):
+            if not r.get(k):
+                die("sweep row %d needs %s" % (i, k))
+        if not isinstance(r["number"], int):
+            die("sweep row %d: number must be an integer" % i)
+        if r.get("action") not in ("completed", "not_planned", "keep"):
+            die("sweep row %d (#%s): action must be completed, not_planned or keep, not %r"
+                % (i, r["number"], r.get("action")))
+        if r["action"] == "not_planned" and not isinstance(r.get("replaced_by"), int):
+            die("sweep row %d (#%s): a not_planned row needs replaced_by, the number of the issue that replaces it"
+                % (i, r["number"]))
+    for r in rows:
+        act = r["action"]
+        label = {"completed": "Close as completed",
+                 "not_planned": "Close as not planned, replaced by #%s" % r.get("replaced_by"),
+                 "keep": "Keep open"}[act]
+        page.setdefault("changes", []).append(
+            ["keep" if act == "keep" else "chg", "%s#%d %s" % (r["repo"], r["number"], r["title"]), label,
+             None, "Evidence: %s" % r["evidence"], None, None])
+    page.setdefault("choices", [])
+    page["approval"] = "Sweep approved: issues"
+    page.pop("replyPrefix", None)
+    page.pop("reply", None)
+
+
 def load_gate_patterns():
     """The design-loop gate's own regexes, loaded from hook.py beside this script, not copied.
     hook.py only runs main() under __main__, so importing it by path has no side effects
@@ -352,11 +385,17 @@ def apply_approval_todo(page):
         todo[-1] = line
 
 
-def record_qa_page(project, out):
+def record_sweep(project, page):
+    rows = [{"repo": r["repo"], "number": r["number"], "action": r["action"], "replaced_by": r.get("replaced_by")}
+            for r in page["sweep"] if r["action"] != "keep"]
+    record_qa_page(project, None, key="sweep_proposed", value=rows, what="sweep rows")
+
+
+def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
     common = os.path.abspath(os.path.join(project, run_git(project, "rev-parse", "--git-common-dir").strip()))
     stage = os.path.join(os.path.dirname(common), ".claude", "house-rules-loop.json")
     if not os.path.isfile(stage):
-        print("make_page: QA page not recorded because no feature is in progress (no %s)" % stage)
+        print("make_page: %s not recorded because no feature is in progress (no %s)" % (what, stage))
         return
     try:
         with open(stage, encoding="utf-8") as f:
@@ -364,13 +403,13 @@ def record_qa_page(project, out):
         if not isinstance(data, dict):
             raise ValueError("not a JSON object")
     except (OSError, ValueError) as e:
-        print("make_page: QA page not recorded: %s is unreadable (%s); left untouched" % (stage, e))
+        print("make_page: %s not recorded: %s is unreadable (%s); left untouched" % (what, stage, e))
         return
-    data["qa_page"] = os.path.relpath(out, project).replace(os.sep, "/")
+    data[key] = value if value is not None else os.path.relpath(out, project).replace(os.sep, "/")
     with open(stage, "w", encoding="utf-8", newline="\n") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write("\n")
-    print("make_page: recorded qa_page %s in %s" % (data["qa_page"], stage))
+    print("make_page: recorded %s %s in %s" % (key, data[key], stage))
 
 
 def build(args):
@@ -390,6 +429,8 @@ def build(args):
         die("content 'kind' is %r; the only allowed value is \"summary\" (or leave 'kind' out)" % (page["kind"],))
     if "qa" in page:
         apply_qa(page, project)
+    if "sweep" in page:
+        apply_sweep(page)
     check_approval(page)
     apply_approval_todo(page)
     page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one
@@ -431,6 +472,8 @@ def build(args):
     visual_check(out, style)
     if "qa" in page:
         record_qa_page(project, out)
+    if "sweep" in page:
+        record_sweep(project, page)
 
 
 # ---- step 2: visual check -------------------------------------------------------------------
