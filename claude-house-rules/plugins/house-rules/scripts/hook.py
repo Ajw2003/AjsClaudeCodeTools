@@ -5552,6 +5552,14 @@ def _loop_apply_one(state, text, top):
                 if unlogged:
                     return unlogged
                 state["stage"] = "done" if verdict == "passed" else "design"
+                if verdict == "passed":  # #362: the closable record; "Design approved" never touches it
+                    if not isinstance(state.get("closable"), list):
+                        state["closable"] = []
+                    state["closable"].append({
+                        "feature": name,
+                        "issues": [{"repo": i["repo"], "number": i["number"]} for i in state.get("issues", [])
+                                   if isinstance(i, dict) and i.get("repo") and "number" in i],
+                        "qa_at": int(time.time()), "qa": "QA passed: " + name, "merged_pr": None})
                 state["redo"] = verdict == "failed"
                 if state["redo"]:
                     state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: the redo gets a new page
@@ -8505,6 +8513,81 @@ def event_harvest():
     return 0
 
 
+# closablemerge - PostToolUse on Bash|merge_pull_request (#362). A merged pull request stamps every
+# closable entry (state["closable"], saved by a QA pass) that has no merge yet. Never raises.
+_GH_PR_MERGE_RE = re.compile(r"(?:^|[;&|(\s])gh\s+pr\s+merge\b([^;&|\n]*)")
+
+
+def _closable_merge_of(data):
+    """(repo, number) of a merge this payload reports, else None."""
+    tool = data.get("tool_name") or ""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    resp = data.get("tool_response")
+    if isinstance(resp, str):
+        try:
+            resp = json.loads(resp)
+        except ValueError:
+            resp = None
+    if tool.lower().startswith("mcp__github__") and tool.endswith("merge_pull_request"):
+        if isinstance(resp, dict) and resp.get("merged") is True and ti.get("pullNumber") is not None:
+            return "%s/%s" % (ti.get("owner"), ti.get("repo")), int(ti["pullNumber"])
+        return None
+    if tool in _SHELL_TOOLS and isinstance(ti.get("command"), str):
+        m = _GH_PR_MERGE_RE.search(ti["command"])
+        if not m:
+            return None
+        code = None
+        if isinstance(resp, dict):
+            code = resp.get("exit_code", resp.get("exitCode", resp.get("returncode")))
+            if code is None and resp.get("interrupted"):
+                code = 1
+        if code not in (None, 0):
+            return None
+        num = re.search(r"(?<![\w-])(\d+)(?![\w-])", m.group(1))
+        url = re.search(r"github\.com/([^/\s]+/[^/\s]+)/pull/(\d+)", m.group(1))
+        repo = re.search(r"(?:-R|--repo)[ =]+(\S+)", m.group(1))
+        if url:
+            return url.group(1), int(url.group(2))
+        if num:
+            return (repo.group(1) if repo else ""), int(num.group(1))
+    return None
+
+
+def event_closablemerge():
+    try:
+        if not _loop_enabled():
+            trace("house-rules plugin: closable-merge stamping is off (HOUSE_RULES_LOOP=off), so it did nothing.")
+            return 0
+        payload = read_payload()
+        if not payload:
+            return 0
+        data = json.loads(payload)
+        if not isinstance(data, dict):
+            return 0
+        merged = _closable_merge_of(data)
+        if not merged:
+            return 0
+        _, git_dir = _issues_locate(_payload_cwd(payload))
+        if not git_dir:
+            return 0
+        state, problem = _loop_read(git_dir)
+        if problem:
+            emit({"systemMessage": problem})
+            return 0
+        open_ = [e for e in state.get("closable", []) if isinstance(e, dict) and e.get("merged_pr") is None]
+        if not open_:
+            return 0
+        repo, number = merged
+        for e in open_:
+            e["merged_pr"] = {"repo": repo, "number": number, "at": int(time.time())}
+        _loop_write(git_dir, state)
+        trace("house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(open_)))
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: the closable-merge check hit an error (%s: %s) and "
+                               "stamped nothing for this call." % (type(exc).__name__, exc)})
+    return 0
+
+
 EVENTS = {
     "inject": event_inject,
     "showrule": event_showrule,
@@ -8537,6 +8620,7 @@ EVENTS = {
     "handover": event_handover,
     "harvest": event_harvest,
     "pagecheck": event_pagecheck,
+    "closablemerge": event_closablemerge,
 }
 
 

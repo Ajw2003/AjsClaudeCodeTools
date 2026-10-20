@@ -4410,10 +4410,11 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count;
 # so is guardgithub (#178), which runs only on a GitHub MCP write; and pagecheck (#257), which
-# exits at once unless the call is an .html page Write or an Artifact call.
+# exits at once unless the call is an .html page Write or an Artifact call; and closablemerge (#362), which
+# exits at once unless the call is a merge.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -8964,6 +8965,79 @@ _loop_cases.append(("the rule names the template and its four parts",
 
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
+
+# --- #362: the closable record - a QA pass saves the feature's issues, a merge stamps them ------
+_cl_dir = tempfile.mkdtemp(prefix="house-rules-closable-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _cl_dir], check=True)
+_cl_file = os.path.join(_cl_dir, ".claude", "house-rules-loop.json")
+_cl_env = dict(_loop_env, HOUSE_RULES_LOOP="on")
+
+
+def _cl_set(state):
+    os.makedirs(os.path.join(_cl_dir, ".claude"), exist_ok=True)
+    with open(_cl_file, "w", encoding="utf-8") as f:
+        json.dump(dict({"skip": False, "approvals": [], "issues": []}, **state), f)
+    os.makedirs(os.path.join(_cl_dir, "docs", "6-decisions"), exist_ok=True)
+    with open(os.path.join(_cl_dir, "docs", "6-decisions", "Decisions.md"), "a", encoding="utf-8") as f:
+        f.write("an entry written at %r\n" % time.time())
+
+
+def _cl_state():
+    try:
+        return json.load(open(_cl_file, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _cl_say(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "cl", "cwd": _cl_dir, "prompt": prompt}
+    run_hook("scope", json.dumps(p), env=_cl_env)
+
+
+def _cl_merge(tool, tool_input, response, env=None):
+    p = {"hook_event_name": "PostToolUse", "tool_name": tool, "session_id": "cl", "cwd": _cl_dir,
+         "tool_input": tool_input, "tool_response": response}
+    return run_hook("closablemerge", json.dumps(p), env=env or _cl_env)[1]
+
+
+_cl_issues = [{"repo": "o/r", "number": 7, "labelled": True}, {"repo": "o/r", "number": 8, "labelled": True}]
+_cl_open = {"feature": "f", "issues": [], "qa_at": 1, "qa": "QA passed: f", "merged_pr": None}
+_cl_cases = []
+_cl_set({"feature": "alpha", "stage": "qa", "issues": _cl_issues})
+_cl_say("QA failed: alpha")
+_cl_cases.append(("a QA failure creates no closable entry", not _cl_state().get("closable")))
+_cl_set({"feature": "alpha", "stage": "qa", "issues": _cl_issues})
+_cl_say("QA passed: alpha")
+_c = _cl_state().get("closable") or [{}]
+_cl_cases.append(("a QA pass saves a closable entry holding the feature's issues",
+                  len(_c) == 1 and _c[0].get("feature") == "alpha" and _c[0].get("qa") == "QA passed: alpha"
+                  and _c[0].get("issues") == [{"repo": "o/r", "number": 7}, {"repo": "o/r", "number": 8}]
+                  and _c[0].get("merged_pr") is None and isinstance(_c[0].get("qa_at"), int)))
+_cl_say("Design approved: beta")
+_cl_cases.append(("the closable entry survives a following Design approved for another feature",
+                  _cl_state().get("stage") == "plan" and _cl_state().get("issues") == []
+                  and len(_cl_state().get("closable") or []) == 1))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 12}, {"merged": False})
+_cl_merge("Bash", {"command": "gh pr merge 13 --squash"}, {"stdout": "", "stderr": "boom", "exit_code": 1})
+_cl_cases.append(("a merge with merged false, or a failing gh pr merge, stamps nothing",
+                  _cl_state()["closable"][0]["merged_pr"] is None))
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 12}, {"merged": True})
+_m = _cl_state()["closable"][0]["merged_pr"] or {}
+_cl_cases.append(("an MCP merge payload with merged true stamps an unstamped entry",
+                  _m.get("repo") == "o/r" and _m.get("number") == 12 and isinstance(_m.get("at"), int)))
+_cl_merge("Bash", {"command": "gh pr merge 99 --squash"}, {"stdout": "", "exit_code": 0})
+_cl_cases.append(("an already-stamped entry is not restamped", _cl_state()["closable"][0]["merged_pr"]["number"] == 12))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("Bash", {"command": "gh pr merge 14 --squash"}, {"stdout": "", "exit_code": 0})
+_cl_cases.append(("a gh pr merge Bash payload stamps an unstamped entry",
+                  (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 14))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_o = _cl_merge("Bash", {"command": "gh pr merge 15"}, {"exit_code": 0}, env=dict(_cl_env, HOUSE_RULES_LOOP="off"))
+_cl_cases.append(("HOUSE_RULES_LOOP=off stamps nothing and says so",
+                  _cl_state()["closable"][0]["merged_pr"] is None and "HOUSE_RULES_LOOP=off" in _o))
+for _t, _ok in _cl_cases:
+    report("PASS" if _ok else "FAIL", "closable record: " + _t)
 
 # --- #307: every approval in one message is read, in stage order -------------------------------
 # Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and
