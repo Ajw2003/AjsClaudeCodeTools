@@ -22,7 +22,8 @@ the package and core module), #358 (step 2b, safe git and docs), #359 (step 2c, 
 and writing), #360 (step 2d, changed test lines, version, docs and QA). Build plan:
 `docs/plans/2026-10-20-restructure-step-2-plan.html`.
 
-**Status.** Standing.
+**Status.** Standing. aj approved the build plan on 2026-10-20 ("Build plan approved: restructure step
+2"); #357 to #360 are built one at a time by builder helpers.
 
 ## 2026-10-20 - QA passed: restructure step 1
 
