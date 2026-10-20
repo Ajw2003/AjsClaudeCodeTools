@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-20 - Design approved: restructure step 2 core links, and issue closing comes first
+
+**Context.** The builder for #357 (Step 2a: the house_rules package and the core module) stopped before
+changing code: `scope`, `inject` and `promptran`, which the inventory puts in the core, call code from
+the design loop and safe git parts. Design page: `docs/plans/2026-10-20-restructure-step-2-core-links.html`.
+
+**Decision.** aj's reply was "Design approved: restructure step 2 core links 1A". The core keeps one list
+for each of the three hooks (session start, every message, after a tool call); each part adds its own
+function to the matching list when it is loaded, and a part that isn't installed adds nothing. In the
+same message aj asked that, before step 2 moves on, closing GitHub issues becomes a safe, controlled part
+of the workflow, because issues are left in limbo when the agent can't close them. Proposal:
+`docs/plans/2026-10-20-issue-closing.html`.
+
+**Status.** Standing. Step 2 resumes after issue closing ships.
+
 ## 2026-10-20 - Design approved: restructure step 2
 
 **Context.** Design page `docs/plans/2026-10-20-restructure-step-2-split.html` for #340 (Restructure step
