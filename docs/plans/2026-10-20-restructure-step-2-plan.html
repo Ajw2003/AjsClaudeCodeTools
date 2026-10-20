@@ -270,7 +270,7 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Step 2 Build Plan",
-  "eyebrow": "Build plan · #340 restructure step 2: split hook.py (the one big file that answers every hook event) into a core module and six part modules (a module is a separate Python file) · house-rules 2.69.0 to 2.70.0",
+  "eyebrow": "Build plan · #340 restructure step 2: split hook.py into a core module and six part modules · house-rules 2.69.0 to 2.70.0",
   "approval": "Build plan approved: restructure step 2",
   "replyPrefix": "Build plan approved: restructure step 2",
   "reply": "",
@@ -295,8 +295,8 @@ const PAGE = {
         "",
         [
           "A package (a folder of Python modules) named scripts/house_rules/, placed beside hook.py. It holds seven modules: core, safe git, session triage, design loop, writing, delegation and docs.",
-          "The core module gets the shared helper functions (hook.py:1-141). It also gets nine handlers, where a handler is the function that responds to one kind of hook event: inject, showrule, profile, standards, versioncheck, scope, artifact, runnable and promptran.",
-          "hook.py keeps main(), the function that receives each hook event and picks a handler. It imports the moved handlers, so run.sh and the 32 entries in hooks/hooks.json don't change.",
+          "The core module gets the shared helper functions (hook.py:1-141). It also gets nine hook functions, each the function that responds to one kind of hook event: inject, showrule, profile, standards, versioncheck, scope, artifact, runnable and promptran.",
+          "hook.py keeps main(), the function that receives each hook event and picks the hook function for it. It imports the moved hook functions, so run.sh and the 32 entries in hooks/hooks.json don't change.",
           "A part module imports only from the core, never from another part."
         ],
         "Nothing from you. Done when verify.py passes twice."
@@ -319,10 +319,10 @@ const PAGE = {
         "The delegation, design loop and writing modules (#359)",
         "",
         [
-          "Delegation gets the helper-agent handlers: delegate, subagentrules, announce, verdict, agentcap, subagentcommit, autosave, commitgate, worktreesweep, audit and userpromptaudit.",
+          "Delegation gets the helper-agent hook functions: delegate, subagentrules, announce, verdict, agentcap, subagentcommit, autosave, commitgate, worktreesweep, audit and userpromptaudit.",
           "Design loop gets the issue workflow, stages and labels, issuelist, the author and issues guards, the end-of-reply checkpoints and pagecheck.",
           "Writing gets the plain-summary, long-reply, visual and editor helpers and the page writing note.",
-          "The end-of-reply handler stays in hook.py as a dispatcher, meaning it only decides which checks to run and calls each part module's check. Separately, the session triage module is created empty, because its content arrives in step 9 (#347)."
+          "The end-of-reply hook function stays in hook.py as a dispatcher, meaning it only decides which checks to run and calls each part module's check. Separately, the session triage module is created empty, because its content arrives in step 9 (#347)."
         ],
         "Nothing from you. Depends on step 2a. Done when verify.py passes twice and hook.py holds only main() and the end-of-reply dispatcher."
       ],
@@ -334,7 +334,7 @@ const PAGE = {
         [
           "Every changed line in verify.py is listed with its reason. Only tests that load or replace a name inside hook.py change.",
           "The plugin goes from 2.69.0 to 2.70.0.",
-          "docs/architecture.md and the systems doc name the module that owns each handler.",
+          "docs/architecture.md and the systems doc name the module that owns each hook function.",
           "A QA page, then a pull request to main once you pass it."
         ],
         "You: read the QA page and answer \"QA passed: restructure step 2\" or \"QA failed: restructure step 2\"."
@@ -357,7 +357,7 @@ const PAGE = {
       "8,588 lines become a short dispatcher plus seven modules.",
       [
         "One file answers every hook event",
-        "hook.py dispatches; each part's module holds its own handlers"
+        "hook.py dispatches; each part's module holds its own hook functions"
       ],
       "The inventory in docs/4-systems/plugin-restructure.md lists every block's line range and its new module.",
       [
