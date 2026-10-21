@@ -24,7 +24,9 @@ to #250, #225 to #227 and #230 to #233. The close guard allowed every one live, 
 it in a text block. The merge-stamping check of #362 reads results the same way. Both fail safe (nothing is
 removed or stamped without proof), but closed issues stay on the list until fixed.
 
-**Status.** Standing.
+**Status.** Standing. aj decided on 2026-10-21 not to patch this separately: "verify.py is too slow to be
+making more patches unless absolutely necessary until we have reworked it and the plugin core". It is #367
+under #306, built after step 2 (#340).
 
 ## 2026-10-20 - QA passed: issue closing
 
