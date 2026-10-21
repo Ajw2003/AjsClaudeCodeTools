@@ -243,9 +243,12 @@ def main():
         print("   no transcripts found - skipping")
     else:
         sys.path.insert(0, os.path.join(plugin_dir, "scripts"))
-        import hook as hook_module
+        try:
+            from house_rules import core as scope_module  # 2.71.0 and later
+        except ImportError:
+            import hook as scope_module  # before the house_rules package existed
 
-        pattern = hook_module._SCOPE_COMMAND_HINT_RE
+        pattern = scope_module._SCOPE_COMMAND_HINT_RE
         long_count = sum(1 for p in prompts if pattern.search(p))
         total = len(prompts)
         short_count = total - long_count

@@ -344,7 +344,9 @@ lines point at the module that owns the name: `hook.delegation._audit_report`,
 `make_page.py` loads the stage patterns from `hook.py` by path, so it now reads them from
 `design_loop` (a sweep page build and the QA page tests failed until it did).
 
-**Found, not fixed (outside this step).** `harvest_scan.py` (broken since 2b) and `tools/measure_footprint.py`
-(since 2a) read underscore names off the `hook` module (`hook._HARVEST_EXT_RE`, `hook._SCOPE_COMMAND_HINT_RE`),
-and a star import does not carry underscore names, so both raise `AttributeError` today. No check in
-`verify.py` runs either one. They need their own issue.
+**Found and fixed after the merge.** `harvest_scan.py` (broken since 2b) and `tools/measure_footprint.py`
+(broken since 2a) read underscore names off the `hook` module (`hook._HARVEST_EXT_RE`,
+`hook._SCOPE_COMMAND_HINT_RE`), and a star import does not carry underscore names. `harvest_scan.py` now
+imports `house_rules.docs`; `measure_footprint.py` imports `house_rules.core`, or `hook` for an installed
+plugin older than the package. Both ran clean on 2026-10-21. No check in `verify.py` runs either script;
+the verify rework (#368) is where a check for them belongs.

@@ -6,7 +6,7 @@ Write/Edit) - by design, so it never nags about an essay that predates the sessi
 also exactly why it cannot answer "does this project already have any" - nothing ever hands it
 a file that was not just touched. This script is the manual, project-wide answer: point it at a
 directory and it walks every source file, running the same detection code the hook uses
-(`hook._harvest_blocks`), so the two can never disagree about what counts as an essay.
+(`house_rules/docs.py`, `_harvest_blocks`), so the two can never disagree about what counts as an essay.
 
 Usage:
     python "${CLAUDE_PLUGIN_ROOT}/scripts/harvest_scan.py" [path] [--min-chars N] [--verbose]
@@ -25,7 +25,7 @@ import sys
 import time as _time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import hook  # noqa: E402 - path must be set up before this import
+from house_rules import docs  # noqa: E402 - path must be set up before this import
 
 # Generated/vendored/dependency trees a source-extension glob would otherwise walk into.
 # Unity-specific (Library, Temp, Obj, Logs) sits next to the general-purpose ones because this
@@ -40,7 +40,7 @@ def _iter_source_files(root):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS and not d.startswith(".")]
         for name in filenames:
-            if hook._HARVEST_EXT_RE.search(name):
+            if docs._HARVEST_EXT_RE.search(name):
                 yield os.path.join(dirpath, name)
 
 
@@ -61,8 +61,8 @@ def main(argv):
     problems = []
     min_chars = args.min_chars
     if min_chars is None:
-        min_chars = hook._harvest_threshold(
-            "HOUSE_RULES_HARVEST_MIN_CHARS", hook.HARVEST_MIN_CHARS, problems
+        min_chars = docs._harvest_threshold(
+            "HOUSE_RULES_HARVEST_MIN_CHARS", docs.HARVEST_MIN_CHARS, problems
         )
     for p in problems:
         print("harvest_scan: %s - using the default" % p, file=sys.stderr)
@@ -80,14 +80,14 @@ def main(argv):
             continue
 
         rel = os.path.relpath(path, root)
-        deadline = _time.time() + hook.HARVEST_BUDGET_SECONDS
-        blocks, misses, timed_out = hook._harvest_blocks(
+        deadline = _time.time() + docs.HARVEST_BUDGET_SECONDS
+        blocks, misses, timed_out = docs._harvest_blocks(
             text, min_chars, deadline, args.verbose, full_file=True
         )
         if timed_out:
             print(
                 "%s: scan abandoned past its %gs budget (%d bytes)"
-                % (rel, hook.HARVEST_BUDGET_SECONDS, len(text))
+                % (rel, docs.HARVEST_BUDGET_SECONDS, len(text))
             )
             continue
         if blocks:
