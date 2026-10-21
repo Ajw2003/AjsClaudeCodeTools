@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - QA passed: restructure step 2
+
+**Context.** QA page `docs/plans/2026-10-21-restructure-step-2-qa.html` for restructure step 2 (#340, steps
+#357 to #360): `hook.py` split into `scripts/house_rules/` (the core and six part modules), house-rules 2.71.0.
+
+**Decision.** aj's reply was "QA passed: restructure step 2". 2.71.0 ships to `main` by pull request.
+
+**Found.** The design loop did not record this pass. aj's "Build plan approved: verify rework" had already
+replaced the stage file's issue list with #368 to #371, so the hook looked for the verify rework's issues
+and found them still in progress. Step 2's issues therefore have no `closable` entry. They close through a
+sweep page instead, citing this entry and the merged pull request as the evidence. Approving a second
+feature's build plan while the first is still being built loses the first feature's issue list; that is
+noted on #367 (the proof-check bug), whose fix is folded into the restructure.
+
+**Status.** Standing.
+
 ## 2026-10-21 - Build plan approved: verify rework
 
 **Context.** Build plan page `docs/plans/2026-10-21-verify-rework-plan.html`, for parent issue #368

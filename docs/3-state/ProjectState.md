@@ -213,6 +213,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-21, branch `AjsAgent/issue-281-fix`, plugin 2.71.0: step 2d (#360) is built, and restructure step 2 (#340) waits on aj's QA on `docs/plans/2026-10-21-restructure-step-2-qa.html`. `docs/architecture.md` maps all 32 handlers to their modules. Timings: a full `verify.py` run took 134 and 132 seconds (197 before step 2); one hook call takes 0.08 seconds (0.17 before).
 
+2026-10-21: aj passed QA on restructure step 2 ("QA passed: restructure step 2"); 2.71.0 goes to `main` by pull request. The loop did not record the pass (its issue list had moved to the verify rework), so step 2's issues close through a sweep. The verify rework (#368) is next.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
