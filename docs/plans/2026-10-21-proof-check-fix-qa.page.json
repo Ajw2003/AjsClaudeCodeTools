@@ -1,0 +1,87 @@
+{
+  "title": "Proof Check Fix QA",
+  "eyebrow": "QA · #367 the close and merge proof checks read the GitHub tool's replies · house-rules 2.73.0",
+  "short": {
+    "lead": "The proof check fix (#367) is built on the branch AjsAgent/issue-281-fix as house-rules 2.73.0. The close guard is the check that lets me close an issue only with your QA pass and a merge on record. Two bugs stopped it working through the GitHub tool, and both are fixed. verify.py, the script that checks the hooks do what the docs say, passed all 925 checks in 40 seconds.",
+    "hint": "Tap a row to see what was built and how it was checked.",
+    "key": [
+      [
+        "Built and checked",
+        "done"
+      ],
+      [
+        "Your test",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 1 · #374",
+        "Both proof checks read the GitHub tool's wrapped replies",
+        "done",
+        [
+          "The GitHub tool returns every reply as a list holding one text block. A new helper in scripts/house_rules/design_loop.py takes out the object inside before the merge check and the close check read it. An error reply stays plain text, so it still proves nothing.",
+          "6 new checks use the exact replies recorded in this session: a merge, a close, and an error.",
+          "With the fix switched off in a scratch copy, 3 of the new checks failed; with it on, all pass. So the checks really catch this bug."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 2 · #375",
+        "Each feature keeps its own issue list (your answer 1A to question 1, two features in progress at once)",
+        "done",
+        [
+          "When you approve a new design while another feature is still being built or waiting on QA, the older feature's issues are now kept under its name instead of being thrown away.",
+          "\"QA passed: <that feature's name>\" then records that feature's issues for closing, and the newer feature carries on where it was. \"QA failed\" keeps the older feature so it can be fixed and passed later.",
+          "6 new checks replay what happened today: a build plan for a second feature approved before the first feature's QA pass. With the fix switched off in a scratch copy, 5 of them failed."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Step 3 · #376",
+        "Version and docs",
+        "done",
+        [
+          "The plugin is 2.73.0. docs/4-systems/issue-closing.md describes both fixes.",
+          "Checks run: the full verify.py passed all 925 checks; the design loop section of verify.py passed 293 checks on three runs of that section alone, two by the helper agent and one by me; tools/verify_tools.py passed 47."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Your test",
+        "Pass or fail QA, and the closes follow",
+        "you",
+        [
+          "The real test is live. Once you pass QA and the pull request merges, that merge should be recorded for the verify rework feature. The close guard should then let me close that feature's issues, #368 to #371. I will report what it does.",
+          "After that, a sweep page lists #340 and #357 to #360 (restructure step 2, the split of hook.py into modules) for your approval, as your answer 2A to question 2 (how restructure step 2's issues close) chose.",
+          "Then you can approve the next part of the plugin restructure, steps 3 to 7, with \"Design approved: restructure steps 3 to 7\"."
+        ],
+        "Reply \"QA passed: proof check fix\", or \"QA failed: proof check fix\" and say what is wrong."
+      ]
+    ]
+  },
+  "changes": [],
+  "qa": {
+    "feature": "proof check fix",
+    "base": "origin/main",
+    "unverified": [
+      "The live close after the merge has not happened yet; this session loaded a plugin version older than 2.73.0, so only a session that loads 2.73.0 runs the new code on a real merge",
+      "The list of differences between this branch and main (the diff) also counts this branch's plan pages, not only this feature's files"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "QA for the proof check fix (#367): both proof checks read the GitHub tool's wrapped replies, and each feature keeps its own issue list, house-rules 2.73.0.",
+    "changing": "Once you pass QA, a pull request takes 2.73.0 to the main branch.",
+    "blocking": "Your QA answer.",
+    "next": "Your QA answer.",
+    "todo": [
+      "Read this page.",
+      "Reply \"QA passed: proof check fix\" or \"QA failed: proof check fix\"."
+    ]
+  }
+}
