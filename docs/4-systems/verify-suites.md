@@ -137,3 +137,19 @@ several minutes in a cloud session, and the run-twice rule doubles it.
 - Question 2, answer A: in a session, the parts a change touched run twice and everything else once; CI
   runs the full suite. This replaces "twice, everywhere" from grilling round 1, question 3, and the "Twice"
   line in `rules/detail/green-suite.md` and `rules/house-rules.md` changes with it.
+
+**Measured after step 2 (2026-10-21, house-rules 2.71.0, #360).** Same machine and method as the
+baseline, `python3 claude-house-rules/plugins/house-rules/scripts/verify.py` from the repo root:
+
+| Run | Result | Exit | Seconds |
+|---|---|---|---|
+| 1 | `RESULT: PASS - all 913 checks passed.` | 0 | 134.3 |
+| 2 | `RESULT: PASS - all 913 checks passed.` | 0 | 132.6 |
+
+The baseline was 197 seconds per run before step 2, so a run is about 63 seconds (32 percent) shorter;
+the forecast above was 75 seconds. `python3 tools/verify_tools.py` passed twice (`all 47 checks passed`,
+exit 0) in 0.66 and 0.68 seconds. Starting `hook.py` through `run.sh` (`echo '{}' | bash .../run.sh
+scope`, 20 calls in 1.59 seconds) averages 0.0795 seconds per call, against 0.172 seconds before. The
+cached `.pyc` files of the part modules are where the saving comes from. The remaining time is mostly the
+898 process starts and the page builds, which is what the per-part test files and the parallel runner
+(question 1, answer A) address.

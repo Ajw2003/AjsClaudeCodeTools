@@ -82,11 +82,11 @@ only the `main()` dispatcher that `run.sh` calls, so the 32 entries in `hooks/ho
 do not change. A part module imports from the core and never from another part. Where a check in one
 part needs another part's code, the dispatcher in `hook.py` calls both.
 
-**Inventory.** Every block of `hook.py` (8,588 lines, 31 `event_*` handlers) and where it goes. Every
+**Inventory.** Every block of `hook.py` (8,588 lines, 31 `event_*` handlers) and where it goes. The line numbers in the table are **line numbers as of 2.70.0, before the split**; `hook.py` is 332 lines now ("Step 2 result" at the foot of this section shows where every block ended up). Every
 block is kept and moved; nothing is dropped in step 2. "Split" marks a block whose pieces go to
 different parts.
 
-| Lines | Block | Goes to | Note |
+| Lines (as of 2.70.0, before the split) | Block | Goes to | Note |
 |---|---|---|---|
 | 1-141 | shared helpers, payload reading, `emit` | core | |
 | 142-643 | `inject` (rules at session start) | core | |
@@ -350,3 +350,99 @@ lines point at the module that owns the name: `hook.delegation._audit_report`,
 imports `house_rules.docs`; `measure_footprint.py` imports `house_rules.core`, or `hook` for an installed
 plugin older than the package. Both ran clean on 2026-10-21. No check in `verify.py` runs either script;
 the verify rework (#368) is where a check for them belongs.
+
+### Step 2 result (#340, house-rules 2.71.0)
+
+Steps 2a to 2c (#357, #358, #359) are merged on `AjsAgent/issue-281-fix`; 2d (#360) is the docs and the
+version. `hooks.json` and `run.sh` never changed, and no handler's behaviour changed.
+
+**Final line counts** (`wc -l`, 2026-10-21):
+
+| File | Lines |
+|---|---|
+| `scripts/hook.py` | 332 |
+| `scripts/house_rules/core.py` | 3,000 |
+| `scripts/house_rules/delegation.py` | 1,656 |
+| `scripts/house_rules/design_loop.py` | 2,151 |
+| `scripts/house_rules/safe_git.py` | 1,648 |
+| `scripts/house_rules/docs.py` | 717 |
+| `scripts/house_rules/writing.py` | 340 |
+| `scripts/house_rules/session_triage.py` | 1 (empty until step 9, #347) |
+| `scripts/house_rules/__init__.py` | 1 |
+| `scripts/verify.py` | 10,407 |
+
+`hook.py` plus the package is 9,846 lines against 8,931 before step 2a; the difference is the module
+docstrings, the imports, the link lists and the `handover_*` functions. The handler for each event is
+listed in `docs/architecture.md`, "Which module owns each handler".
+
+**Every link list in `core.py`** (ten; each has a `register_*` function, and registering the same function
+name again replaces the earlier entry). Registrations from `grep -n 'core.register_'` over `hook.py` and the
+package:
+
+| List | Registrants |
+|---|---|
+| `SESSION_START_HOOKS` | `_strip_subagent_markers` for `inject` (`delegation.py`); `_agent_branch_block` and `_agent_identity_block` for `profile` (`safe_git.py`) |
+| `PROMPT_HOOKS` | `_scope_waiting_link` (`safe_git.py`), `_scope_loop_link` (`design_loop.py`), `_scope_delegate_link` (`delegation.py`), `_scope_parity_link` (`hook.py`, registered last so the clauses keep their old order) |
+| `POST_TOOL_HOOKS` | `_page_writing_note` for `artifact` (`writing.py`); `_promptran_waiting_link` for `promptran` (`safe_git.py`) |
+| `GUARD_ISSUE_HOOKS` | `_author_guard`, `_issues_guard` (`design_loop.py`); `event_guard` loops over them |
+| `GITHUB_WRITE_HOOKS` | `_guardgithub_issue_checks` (`design_loop.py`); `event_guardgithub` loops over it |
+| `DOCS_STATUS_HOOKS` | `_staged_docs_status` (`docs.py`); `event_guard` asks the first entry |
+| `DELEGATE_NOTE_HOOKS` | `_issues_plan_note` (`design_loop.py`); `event_delegate` loops |
+| `SUBAGENT_NOTE_HOOKS` | `_loop_helper_note` (`design_loop.py`); `event_subagentrules` loops |
+| `TOOL_RECORD_HOOKS` | `_post_tool_records` (`design_loop.py`); `event_autosave` loops |
+| `EDIT_GATE_HOOKS` | `_edit_gates` (`design_loop.py`); `event_commitgate` loops, first |
+
+**Every `verify.py` line changed across 2a to 2c**, from the diff of `verify.py` between `887183b` (before
+2a) and `ba75a62` (after 2c); 913 checks before and after, none removed or skipped. Line numbers are those
+at `ba75a62`. Where two steps touched one line, it is listed under the step that first changed it.
+
+Step 2a (#357, commit `a396c6c`):
+
+| Line | Change | Why |
+|---|---|---|
+| 49-50 | new `CORE` path | source-reading checks need to read `core.py` |
+| 1397-1403 | inject fail-loud test patches `core._read_text` | the function moved; a patch on `hook` would no longer reach it |
+| 2581 | silent-`except` scan reads `HOOK` and `CORE` | the rule is enforced over every file that holds handler code |
+| 2635, 2643 | one-shot `emit` test also patches `core.emit` | `core` holds its own `emit` name |
+| 4636 | deliverable-state check reads `HOOK` and `CORE` | same reason as the `except` scan |
+| 5838-5839 | declared-model slice ends at `def event_announce(` | `_plugin_version` left `hook.py`, so the old end marker is gone |
+| 7005-7006 | `_nr_make` copies `house_rules/` beside `hook.py` | the copied plugin root must import the package |
+
+Step 2b (#358, commit `aa46dc1`):
+
+| Line | Change | Why |
+|---|---|---|
+| 51-53 | new `SAFE_GIT` and `DOCS` paths | source-reading checks need those files |
+| 1161 | `branch_ownership` source read from `SAFE_GIT` | the function moved there |
+| 1180, 1295 | guard and guardwrite crash tests patch `hook.safe_git.read_payload` | both handlers moved there |
+| 1994 | guard bucket titles read from `SAFE_GIT` | the bucket list moved there |
+| 2448 | harvest budget test patches `hook.docs.HARVEST_BUDGET_SECONDS` | harvest moved to `docs.py` |
+| 2581 | silent-`except` scan reads four files | two more files hold handler code |
+| 2643 | one-shot `emit` test patches `hook.docs.emit` and `hook.safe_git.emit` | each part holds its own `emit` name |
+| 3248 | credit check test replaces `_cc_mod.safe_git._read_back_body` | `event_creditcheck` moved there |
+| 4636 | deliverable-state check reads four files | same as the `except` scan |
+| 6295-6296 | prompttimer block read from `SAFE_GIT`, ending at `# End of the prompttimer block` | the old end marker, `# subagentcommit`, stayed behind; a marker comment was added after `event_prompttimer` |
+
+Step 2c (#359, commits `4558e83` and `86039ae`):
+
+| Line | Change | Why |
+|---|---|---|
+| 54-57 | new `DELEGATION`, `DESIGN_LOOP`, `WRITING` paths | source-reading checks need those files |
+| 2581 | silent-`except` scan reads all seven files | the rule must cover every file that holds handler code |
+| 2644 | one-shot `emit` test also patches `hook.delegation.emit`, `hook.design_loop.emit`, `hook.writing.emit` | each part holds its own `emit` name |
+| 3295 | `hook.delegation._audit_report` | the audit report moved to delegation |
+| 4391 | `_ig_mod.design_loop._open_issues_text` | the function moved to the design loop |
+| 4636 | deliverable-state check reads all seven files | same as the `except` scan |
+| 5838-5839 | declared-model check reads `DELEGATION`; `86039ae` restored one space in the slice line | `_declared` and `event_announce` moved there |
+| 8730 | label-advice source read from `DESIGN_LOOP` | the issue workflow moved there |
+| 8758-8761 | `_ig_mod.core._is_relayed_prompt` (four uses) | the helper is in core |
+| 8781, 8945-8946 | `design_loop._loop_name` (three lines) | the helper moved to the design loop |
+| 9480-9482 | `_lb_hook.design_loop._house_labels_note` (three uses) | the helper moved to the design loop |
+| 9669, 9700 | `writing._pages_changed_this_turn` (two uses) | the helper moved to writing |
+| 9797-9809 | `_cc_mod.core._reply_links_page` (six uses), `_cc_mod.design_loop._check_page` | the helpers sit in core and the design loop |
+| 10152 | `_hk.design_loop._LOOP_DESIGN_RE`, `_LOOP_PLAN_RE` | the stage patterns moved to the design loop |
+
+2.71.0 changed two more lines, 4445 and 4448 (the plugin version the issues check expects).
+
+**Timing.** The after-step-2 `verify.py` and hook-start timings are in `docs/4-systems/verify-suites.md`,
+"Planned: the verify.py rework".
