@@ -660,3 +660,32 @@ a second part needs goes in `common.py`; a helper used by one part stays in that
 on state an earlier check leaves must sit in the same file, after it. Run the part alone first
 (`python3 .../checks/<part>.py`), then `verify.py`. `python tools/check_verify_inventory.py --run` proves the table
 above still matches the files.
+
+## Measured after the rework (#371)
+
+Measured 2026-10-21 on this machine (4 cores, Linux), wall clock around `verify.py`, after 2.72.0.
+Every run reported 913 checks.
+
+| Run | Wall clock |
+|---|---|
+| Before restructure step 2 (2026-10-21) | 197 s |
+| After step 2, before the split (about) | 130 s |
+| Full `verify.py`, run 1 (parallel) | 40.7 s |
+| Full `verify.py`, run 2 (parallel) | 39.5 s |
+| `verify.py --serial` | 132.5 s |
+| `verify.py --changed`, writing.py touched, run 1 | 1.8 s |
+| `verify.py --changed`, writing.py touched, run 2 | 1.5 s |
+
+- **The rule being timed (2A):** a session runs the touched parts twice and everything else once; CI
+  runs the full suite. For a writing-only change that is about 3.3 s for both touched runs, against
+  about 80 s for two full runs.
+- **Touched-parts run:** a comment-only line appended to `scripts/checks/writing.py`, uncommitted.
+  `--changed` chose only `writing` (11 checks, 1.4 to 1.7 s inside the part) and ran nothing else.
+  The edit was then removed by copying the original back.
+- **Caveat on `--changed`:** it diffs against the merge base with `origin/main`. On a branch that
+  already differs from `origin/main` in every part (this one, until #370 merges), `--changed`
+  selects all seven parts and takes the full-run time (39.5 s was measured). The 1.8 s figure was
+  taken in a scratch clone whose `origin/main` was set to this branch's head, so only the
+  uncommitted edit counted. On a branch cut from an up-to-date `main` the two are the same.
+- **Speed-up:** parallel full run is about 5x faster than 197 s and about 3.3x faster than 130 s;
+  serial (132.5 s) matches the 130 s step-2 figure, so the split costs nothing when run in series.
