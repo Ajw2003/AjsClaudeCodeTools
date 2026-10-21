@@ -7,6 +7,17 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - QA passed: verify rework
+
+**Context.** QA page `docs/plans/2026-10-21-verify-rework-qa.html` for the verify.py rework (#368, steps #369 to
+#371), house-rules 2.72.0: one test file per part under `scripts/checks/`, run in parallel by `verify.py`,
+and the run-twice rule narrowed to the touched parts.
+
+**Decision.** aj's reply was "QA passed: verify rework". 2.72.0 ships to `main` by pull request. This time
+the design loop recorded the pass, so #368 to #371 close under the guard once the pull request merges.
+
+**Status.** Standing.
+
 ## 2026-10-21 - QA passed: restructure step 2
 
 **Context.** QA page `docs/plans/2026-10-21-restructure-step-2-qa.html` for restructure step 2 (#340, steps
