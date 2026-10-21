@@ -215,6 +215,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-21: aj passed QA on restructure step 2 ("QA passed: restructure step 2"); 2.71.0 goes to `main` by pull request. The loop did not record the pass (its issue list had moved to the verify rework), so step 2's issues close through a sweep. The verify rework (#368) is next.
 
+2026-10-21: house-rules 2.71.0 is on `main` (pull request #372, merged after its `verify` check passed). The verify rework (#368) starts at step 1 (#369).
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
