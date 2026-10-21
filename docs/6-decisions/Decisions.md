@@ -7,6 +7,25 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - Design approved: verify rework
+
+**Context.** aj: verify.py takes multiple minutes in a cloud session and running it twice makes it worse;
+the approved restructure plan has no step that makes it faster. Proposal
+`docs/plans/2026-10-21-verify-rework.html`; one timed run took 197 seconds, 154.2 of them starting
+`hook.py` 898 times.
+
+**Decision.** aj's reply was "Design approved: verify rework 1A 2A".
+1. Question 1, how verify.py gets faster: split it into one test file per part with a runner that runs
+   the parts at the same time and can run only the touched parts; CI runs every part; no check is deleted.
+2. Question 2, how often a session runs the tests: the touched parts twice, everything else once; CI runs
+   the full suite. This supersedes grilling round 1, question 3 ("Test suites run twice everywhere").
+
+The rework is a new step of the restructure (#306), after step 2 (#340), and folds in #204 (Every hook
+call recompiles all of hook.py). Systems doc: `docs/4-systems/verify-suites.md`, "Planned: the verify.py
+rework".
+
+**Status.** Standing.
+
 ## 2026-10-21 - Sweep approved: issues, and 26 issues closed
 
 **Context.** Sweep page `docs/plans/2026-10-21-issue-sweep.html`, built from
@@ -371,7 +390,8 @@ the 2026-10-16 audit (`docs/audits/2026-10-16-plugin-audit/01-rules-vs-rules.md`
     which for aj is "ajw2003sAgent".
 17. The sixteen mechanical fixes are accepted as listed on the page.
 
-**Status.** Standing. Round 2 asks what these answers leave open.
+**Status.** Standing, except answer 3, superseded by "2026-10-21 - Design approved: verify rework" (the touched
+parts run twice, everything else once). Round 2 asks what these answers leave open.
 
 ## 2026-10-18 - Tree-sitter trial: aj's answers
 

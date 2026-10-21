@@ -115,3 +115,25 @@ file there is still a real failure.
   *not* used. The check was flagging the sentence explaining the invariant as a violation of it.
   It now matches call syntax only. Lesson: grepping prose for the absence of an idea is not the
   same as checking for the idea's absence in code.
+
+## Planned: the verify.py rework (restructure, after step 2)
+
+Design approved 2026-10-21 ("Design approved: verify rework 1A 2A"); proposal
+`docs/plans/2026-10-21-verify-rework.html`.
+
+**Why.** One run on 2026-10-21 took 197 seconds for 913 checks. 154.2 of them went on starting
+`hook.py` as a fresh process 898 times (0.172 seconds each), and 0.084 seconds of each start is Python
+recompiling the 8,588-line script (issue #204). Page builds took 28.6 seconds. aj: verify.py takes
+several minutes in a cloud session, and the run-twice rule doubles it.
+
+**What changes.**
+- Step 2 of the restructure (#340) turns `hook.py` into a dispatcher that imports the part modules, so
+  Python caches their compiled form; that is expected to remove 75 of the 197 seconds, measured after
+  step 2 lands.
+- Question 1, answer A: `verify.py` splits into one test file per part (core, safe git, session triage,
+  design loop, writing, delegation, docs) plus a runner script. In a session the runner runs the parts at
+  the same time on the machine's cores and can run only the parts a change touched. CI runs every part on
+  every pull request. No existing check is deleted.
+- Question 2, answer A: in a session, the parts a change touched run twice and everything else once; CI
+  runs the full suite. This replaces "twice, everywhere" from grilling round 1, question 3, and the "Twice"
+  line in `rules/detail/green-suite.md` and `rules/house-rules.md` changes with it.
