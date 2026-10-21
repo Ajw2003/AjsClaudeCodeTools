@@ -1,0 +1,130 @@
+{
+  "title": "Faster verify.py",
+  "eyebrow": "Proposal · a verify.py rework step for the #306 restructure",
+  "approval": "Design approved: verify rework",
+  "replyPrefix": "Design approved: verify rework",
+  "reply": "",
+  "short": {
+    "lead": "verify.py is the script that checks the plugin's hooks do what the docs say. You said it takes several minutes in a cloud session. Our rules make a session run it twice before claiming success, which doubles the wait. I timed one run here: 197 seconds for 913 checks. The approved restructure plan (#306) has no step that makes it faster. Step 2 only requires verify.py to keep passing. Step 10 only says each plugin passes its own tests. This page proposes adding a rework step for verify.py to the plan. It asks you two questions: how verify.py gets faster, and how often a session runs it.",
+    "hint": "Tap a row to see what was measured.",
+    "key": [
+      [
+        "Measured",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "Measured",
+        "Where the 197 seconds go",
+        "",
+        [
+          "154 seconds (78%): verify.py starts hook.py (the script that runs the plugin's hooks) as a fresh Python process 898 times, about 0.17 seconds each.",
+          "29 seconds: 30 page builds with make_page.py (the script that builds pages like this one), including its browser check.",
+          "Under 14 seconds: everything else, such as git commands and the docs checkers.",
+          "Measured on 2026-10-21 by timing every process one verify.py run started on this branch."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Cause",
+        "Most of each hook.py start is recompiling it",
+        "",
+        [
+          "Three timings: starting Python takes 0.017 seconds, one whole hook.py run takes 0.147 seconds, and compiling hook.py alone takes 0.101 seconds.",
+          "Python recompiles a script it runs directly every time, but caches the compiled form of a module it imports.",
+          "That is the existing issue #204 (Every hook call recompiles all of hook.py, about half its run time)."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Already planned",
+        "Step 2 removes most of the compile cost",
+        "",
+        [
+          "Step 2 (#340) turns hook.py into a short dispatcher, a small script that only passes each call to the right part. Each part becomes a module that hook.py imports, so Python caches its compiled form.",
+          "Estimated saving: about 0.08 seconds on each of 898 starts, roughly 75 of the 197 seconds. It's an estimate because step 2 isn't built yet."
+        ],
+        "Nothing from you. The rework step measures this again after step 2 instead of trusting the estimate."
+      ],
+      [
+        "hand",
+        "Decide",
+        "How verify.py gets faster, and how often it runs",
+        "you",
+        "The 2 questions below.",
+        "Your answers to questions 1 and 2."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. Beyond step 2's saving, how does verify.py get faster?",
+      [
+        [
+          "A",
+          "Split verify.py by part, with one test file per part (core, safe git, design loop and so on) and a small runner script that runs them. In a session the runner runs the parts at the same time on the machine's cores. It can also run only the parts a change touched. CI, the check GitHub runs on every pull request, always runs every part.",
+          1,
+          "Each part's tests travel with that part's plugin in step 10 anyway. Running only what changed makes a typical session check a fraction of the full run; the exact saving is measured after the split."
+        ],
+        [
+          "B",
+          "As A, and also move most hook tests from starting hook.py as a process to calling its code directly inside the test, keeping a smaller set of whole-process tests",
+          0,
+          "The biggest saving, since a direct call takes milliseconds, but fewer tests run the hooks the way Claude Code really starts them."
+        ],
+        [
+          "C",
+          "Only run verify.py's existing tests in parallel, without splitting the file",
+          0,
+          "Least work, but the tests don't follow the parts into their plugins in step 10."
+        ]
+      ],
+      "In every option, every existing check is kept; nothing is deleted to save time."
+    ],
+    [
+      "q2",
+      "2. How often does a session run the tests?",
+      [
+        [
+          "A",
+          "In a session, run the parts a change touched twice and everything else once; CI runs the full suite on every pull request",
+          1,
+          "The second run still catches a flaky test where the change is, without doubling the whole suite."
+        ],
+        [
+          "B",
+          "Run the full suite once in a session, and let CI's run be the second",
+          0,
+          "Halves the session's test time, but a flaky test is only caught after the push."
+        ],
+        [
+          "C",
+          "Keep today's rule: the full suite twice in every session",
+          0,
+          "No change to the rule; the saving comes only from question 1."
+        ]
+      ],
+      "Your grilling answer in round 1, question 3 (how many times a suite runs before a success claim: twice, everywhere) changes under A or B, and the decisions log records the change."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A proposal to add a verify.py rework step to the restructure: one timed run took 197 seconds, 78% of it starting hook.py 898 times.",
+    "changing": "Nothing changes until you answer. The measurements are the ones shown on this page, from one timed run on 2026-10-21.",
+    "blocking": "Your answers to question 1 (how verify.py gets faster) and question 2 (how often it runs).",
+    "next": "Once you answer, I add the rework as a step after step 2 (#340) in the restructure plan, with its own issue, and fold in #204 (the recompile cost).",
+    "todo": [
+      "Type your answers in the chat, for example \"Design approved: verify rework 1A 2A\" (question 1, option A; question 2, option A).",
+      "Send the message."
+    ]
+  }
+}
