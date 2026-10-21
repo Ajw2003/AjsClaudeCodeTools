@@ -75,5 +75,7 @@ Approved 2026-10-21 ("Design approved: proof check fix 1A 2A"). Two gaps, both f
   plan approved for a second feature before the first passed QA made the first feature's "QA passed" record
   nothing. Issues are kept per feature name instead, and an older stage file is converted on first read.
 
+Built: #374 (wrapped replies), branch `AjsAgent/issue-374-unwrap`; a helper `_unwrap_tool_response` now runs first in both proof checks.
+
 Step 2's issues (#340, #357 to #360) close through the next sweep page (answer 2A).
 

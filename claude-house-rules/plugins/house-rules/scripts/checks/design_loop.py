@@ -1047,6 +1047,18 @@ _cl_set({"stage": "done", "closable": [dict(_cl_open)]})
 _o = _cl_merge("Bash", {"command": "gh pr merge 15"}, {"exit_code": 0}, env=dict(_cl_env, HOUSE_RULES_LOOP="off"))
 _cl_cases.append(("HOUSE_RULES_LOOP=off stamps nothing and says so",
                   _cl_state()["closable"][0]["merged_pr"] is None and "HOUSE_RULES_LOOP=off" in _o))
+# #374: the real GitHub tool replies are a list holding one text block (recorded 2026-10-21).
+_w_merge = [{"type": "text", "text": "{\"sha\":\"ed36dc31e8907157117de6a72f48db31de606601\",\"merged\":true,\"message\":\"Pull Request successfully merged\"}"}]
+_w_nomerge = [{"type": "text", "text": "{\"sha\":\"ed36dc31e8907157117de6a72f48db31de606601\",\"merged\":false,\"message\":\"Pull Request not mergeable\"}"}]
+_w_ti = {"owner": "Ajw2003", "repo": "AjsClaudeCodeTools", "pullNumber": 373}
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("mcp__github__merge_pull_request", _w_ti, _w_nomerge)
+_cl_cases.append(("a wrapped GitHub tool merge reply with merged false stamps nothing",
+                  _cl_state()["closable"][0]["merged_pr"] is None))
+_cl_merge("mcp__github__merge_pull_request", _w_ti, _w_merge)
+_m = _cl_state()["closable"][0]["merged_pr"] or {}
+_cl_cases.append(("a wrapped GitHub tool merge reply stamps a waiting closable entry",
+                  _m.get("repo") == "Ajw2003/AjsClaudeCodeTools" and _m.get("number") == 373))
 for _t, _ok in _cl_cases:
     report("PASS" if _ok else "FAIL", "closable record: " + _t)
 
@@ -1149,6 +1161,24 @@ _o = _cg_gh("gh issue close 7", env=_iss_env(HOUSE_RULES_ISSUES="off"))
 _cg_cases.append(("HOUSE_RULES_ISSUES=off keeps its old behaviour: the close guard does not run on either route",
                   "close guard" not in _o and "refused" not in _o
                   and _cg_mcp(_cg_mc, env=_iss_env(HOUSE_RULES_ISSUES="off")).find("close guard") < 0))
+# #374: wrapped replies from the GitHub tool (recorded 2026-10-21).
+_w_close = [{"type": "text", "text": "{\"id\":\"5952121313\",\"url\":\"https://github.com/Ajw2003/AjsClaudeCodeTools/issues/371\"}"}]
+_w_err = "Error: failed to create issue: Something went wrong while executing your query"
+_w_mc = {"method": "update", "owner": "Ajw2003", "repo": "AjsClaudeCodeTools", "issue_number": 371, "state": "closed", "state_reason": "completed"}
+_w_row = {"repo": "Ajw2003/AjsClaudeCodeTools", "number": 371, "action": "completed", "replaced_by": None}
+_cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[{"repo": "Ajw2003/AjsClaudeCodeTools", "number": 371}, {"repo": "o/r", "number": 8}])]})
+_cg_post("mcp__github__issue_write", _w_mc, _w_err)
+_cg_cases.append(("an error string reply for a close removes nothing from the closable entry",
+                  len(_cl_state()["closable"][0]["issues"]) == 2))
+_cg_post("mcp__github__issue_write", _w_mc, _w_close)
+_cg_cases.append(("a wrapped GitHub tool close reply removes the issue from its closable entry",
+                  [i["number"] for i in _cl_state()["closable"][0]["issues"]] == [8]))
+_cl_set({"stage": "done", "sweep": [dict(_w_row), dict(_w_row, number=372)]})
+_cg_post("mcp__github__issue_write", _w_mc, _w_err)
+_cg_cases.append(("an error string reply for a close removes nothing from the sweep list", len(_cl_state()["sweep"]) == 2))
+_cg_post("mcp__github__issue_write", _w_mc, _w_close)
+_cg_cases.append(("a wrapped GitHub tool close reply removes the issue from the sweep list",
+                  [r["number"] for r in _cl_state()["sweep"]] == [372]))
 for _t, _ok in _cg_cases:
     report("PASS" if _ok else "FAIL", "close guard: " + _t)
 

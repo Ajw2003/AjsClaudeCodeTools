@@ -1874,11 +1874,25 @@ def _page_blocks(path, session_id, mark, change=None):
 _GH_PR_MERGE_RE = re.compile(r"(?:^|[;&|(\s])gh\s+pr\s+merge\b([^;&|\n]*)")
 
 
+def _unwrap_tool_response(resp):
+    """#374: the GitHub tool returns a list of text blocks, [{"type": "text", "text": "<json>"}]. Join the
+    texts and parse them: the object when it is a dict, else the joined text. Anything else is returned as is."""
+    if isinstance(resp, list) and resp and all(isinstance(i, dict) and i.get("type") == "text" for i in resp):
+        text = "".join(str(i.get("text", "")) for i in resp)
+        parsed = text  # not JSON (an error message): kept as the joined text, which proves nothing
+        try:
+            parsed = json.loads(text)
+        except ValueError:
+            parsed = text
+        return parsed if isinstance(parsed, dict) else text
+    return resp
+
+
 def _closable_merge_of(data):
     """(repo, number) of a merge this payload reports, else None."""
     tool = data.get("tool_name") or ""
     ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
-    resp = data.get("tool_response")
+    resp = _unwrap_tool_response(data.get("tool_response"))
     if isinstance(resp, str):
         try:
             resp = json.loads(resp)
@@ -1919,7 +1933,7 @@ def _closed_issue_of(data):
     """(repo, number) of a close this PostToolUse payload proves succeeded, else None (#363)."""
     tool = data.get("tool_name") or ""
     ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
-    resp = data.get("tool_response")
+    resp = _unwrap_tool_response(data.get("tool_response"))
     if isinstance(resp, str):
         try:
             resp = json.loads(resp)
