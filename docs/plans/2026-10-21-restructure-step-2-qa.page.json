@@ -1,0 +1,102 @@
+{
+  "title": "Restructure Step 2 QA",
+  "eyebrow": "QA · #340 restructure step 2: hook.py split into the core and six part modules · house-rules 2.71.0",
+  "short": {
+    "lead": "Restructure step 2 (#340) is built on the branch AjsAgent/issue-281-fix as house-rules 2.71.0. hook.py is the script that runs every hook of the plugin. It was one file of 8,931 lines and is now 332 lines. Everything else moved into a folder of modules, scripts/house_rules/: a core module, which every install gets, and one module for each part (safe git, design loop, writing, delegation, docs, and session triage, which stays empty until restructure step 9). Nothing was meant to change in what the hooks do. verify.py, the script that checks the hooks do what the docs say, still runs all 913 checks and passes them. It now takes about 132 seconds a run instead of 197.",
+    "hint": "Tap a row to see what was built and how it was checked.",
+    "key": [
+      [
+        "Built and checked",
+        "done"
+      ],
+      [
+        "Your test",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 2a",
+        "The house_rules folder and the core module (#357)",
+        "done",
+        [
+          "The core module, house_rules/core.py, now holds the handlers every install needs: the rules loaded at session start, the machine profile, the coding standards, the version check, and the reminders on every message.",
+          "Your answer on how the core connects to the parts (\"Design approved: restructure step 2 core links 1A\") is built as lists kept in the core. When a part loads, it adds its own function to a list, and the core runs whatever is on the list. The core never loads a part, so a part that isn't installed simply adds nothing.",
+          "Checked by 913 verify.py checks on two runs, and once more by me after merging it into AjsAgent/issue-281-fix."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Step 2b",
+        "The safe git and docs modules (#358)",
+        "done",
+        [
+          "safe_git.py holds the destructive-action guard, the overwrite guard, the credit check and the GitHub guards. docs.py holds the docs-tier check and the comment harvest.",
+          "Before and after the move, 8 refusals were run through the real hook launcher, run.sh, and their text was compared. Among them were a force push, a hard reset, and a commit crediting Claude. The text matched exactly, character for character.",
+          "I ran a hard reset through the guard myself after merging it into AjsAgent/issue-281-fix. It was still refused, with the same safe alternative named."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "swap",
+        "Step 2c",
+        "The delegation, design loop and writing modules (#359)",
+        "done",
+        [
+          "delegation.py holds the helper-agent hooks, design_loop.py holds the stages, approvals, issue checks and the close guard, and writing.py holds the end-of-reply writing checks.",
+          "The end-of-reply check stays in hook.py and calls each part's check in the same order as before.",
+          "18 hook calls ran before and after the move, and their output matched exactly, character for character. They covered the end-of-reply check, the page check, the issue list, an issue close with no evidence, and the helper-agent reports.",
+          "Two scripts outside the hooks broke during the move: harvest_scan.py (the project-wide comment scan) and tools/measure_footprint.py (the token-cost measurement). Both are fixed and ran cleanly. No verify.py check runs them yet; the verify rework (#368) is where one belongs."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Step 2d",
+        "Version, docs and timings (#360)",
+        "done",
+        [
+          "The plugin is 2.71.0. docs/architecture.md has a table of all 32 hook handlers and the module that owns each one.",
+          "docs/4-systems/plugin-restructure.md lists every verify.py line that changed and why, step by step.",
+          "Timings on this machine: a full verify.py run took 134 and 132 seconds, against 197 before step 2. One hook call takes 0.08 seconds, against 0.17 seconds, because Python now keeps the compiled modules instead of recompiling hook.py on every call (issue #204, every hook call recompiles all of hook.py)."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Your test",
+        "Use a session on 2.71.0, then pass or fail QA",
+        "you",
+        [
+          "There is nothing new to look at: the test is that everything behaves exactly as it did on 2.70.0.",
+          "Once you pass QA, a pull request takes 2.71.0 to the main branch. Your next cloud session then loads it, and any hook that broke shows up as an internal-error notice naming the hook.",
+          "After that, the verify rework (#368) starts, then #367 (the proof-check bug), then restructure step 3 (#341)."
+        ],
+        "Reply \"QA passed: restructure step 2\", or \"QA failed: restructure step 2\" and say what is wrong."
+      ]
+    ]
+  },
+  "changes": [],
+  "qa": {
+    "feature": "restructure step 2",
+    "base": "origin/main",
+    "unverified": [
+      "No Claude Code session has run house-rules 2.71.0 yet; the checks ran the branch's scripts directly and drove the hooks by hand through run.sh",
+      "clean_install_test.py, which installs the published plugin on a fresh machine, was not run, because 2.71.0 is not published until the pull request merges",
+      "The list of differences between this branch and main (the diff) also counts this branch's plan pages, not only this step's files"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "QA for restructure step 2 (#340): hook.py split into the core and six part modules with no change in behaviour, house-rules 2.71.0.",
+    "changing": "Once you pass QA, a pull request takes 2.71.0 to main, and the verify rework (#368) starts.",
+    "blocking": "Your QA answer.",
+    "next": "Your QA answer.",
+    "todo": [
+      "Read this page.",
+      "Reply \"QA passed: restructure step 2\" or \"QA failed: restructure step 2\"."
+    ]
+  }
+}
