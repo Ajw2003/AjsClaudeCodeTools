@@ -2,7 +2,7 @@
   "title": "Restructure Step 2 QA",
   "eyebrow": "QA · #340 restructure step 2: hook.py split into the core and six part modules · house-rules 2.71.0",
   "short": {
-    "lead": "Restructure step 2 (#340) is built on the branch AjsAgent/issue-281-fix as house-rules 2.71.0. hook.py is the script that runs every hook of the plugin. It was one file of 8,931 lines and is now 332 lines. Everything else moved into a folder of modules, scripts/house_rules/: a core module, which every install gets, and one module for each part (safe git, design loop, writing, delegation, docs, and session triage, which stays empty until restructure step 9). Nothing was meant to change in what the hooks do. verify.py, the script that checks the hooks do what the docs say, still runs all 913 checks and passes them. It now takes about 132 seconds a run instead of 197.",
+    "lead": "Restructure step 2 (#340) is built on the branch AjsAgent/issue-281-fix as house-rules 2.71.0. hook.py is the script that runs every hook of the plugin. It was one file of 8,931 lines and is now 332 lines. Everything else moved into a folder of modules, scripts/house_rules/. The core module is the one every install gets. Each part has its own module: safe git, design loop, writing, delegation, docs, and session triage, which stays empty until restructure step 9. Nothing was meant to change in what the hooks do. verify.py, the script that checks the hooks do what the docs say, still runs all 913 checks and passes them. Its two runs after the split took 134 and 132 seconds, against 197 before.",
     "hint": "Tap a row to see what was built and how it was checked.",
     "key": [
       [
