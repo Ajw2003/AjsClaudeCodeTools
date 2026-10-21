@@ -59,7 +59,9 @@
         "Read the rule change, then pass or fail QA",
         "you",
         [
-          "Read the \"A green test suite is not proof it works\" section in claude-house-rules/plugins/house-rules/rules/house-rules.md. Say whether it matches your answer 2A: only the parts a change touched run twice in a session, and GitHub's check runs everything.",
+          "The rule in rules/house-rules.md used to say: \"Run it: realistic scale, twice, as what ships, against the mechanism.\"",
+          "It now says: \"Run it: realistic scale, the parts I touched twice (the rest once; CI runs it all), as what ships, against the mechanism.\" CI is the check GitHub runs on every pull request.",
+          "Say whether that matches your answer 2A.",
           "Once you pass QA, a pull request takes 2.72.0 to the main branch. After that, the next work is #367 (the proof-check bug), and then #341 (restructure step 3, settings and identity)."
         ],
         "Reply \"QA passed: verify rework\", or \"QA failed: verify rework\" and say what is wrong."
