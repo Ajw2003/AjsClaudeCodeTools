@@ -18,23 +18,40 @@ from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _COMMAND_VALUE_RE,
+    _GH_PREFIX,
     _GIT,
     _GIT_COMMIT_RE,
     _PROMPT_VALUE_RE,
+    _PR_BODY_FILE_RE,
     _STATEMENT_SPLIT_RE,
     _TOGGLE_OFF,
+    _TRANSCRIPT_RE,
     _ag,
+    _apply_assigns,
+    _attribution_enabled,
+    _branch_advice,
+    _command_dir,
+    _commit_check_enabled,
     _common_git_dir,
+    _decoded_command,
+    _dirty_paths,
     _extract_file_path,
     _field,
+    _git_author_ident,
     _git_dir,
+    _is_claude_identity,
     _is_relayed_prompt,
     _parse_status_porcelain,
     _payload_cwd,
     _read_and_clear_outdated_marker,
     _read_text,
     _time,
+    _uncommitted_among,
     _vc_session_id,
+    _waiting_load,
+    _waiting_path,
+    _waiting_update,
+    _written_since_last_user_message,
 )
 
 
@@ -175,23 +192,14 @@ DOCS_COMMIT_REMINDER = (
     "message why none needed updating."
 )
 
-OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-")  # claude/ = cloud app branches, old branches; ccr- = cloud sessions
 
 
-def owned_branch_prefixes():
-    """The defaults plus HOUSE_RULES_OWNED_BRANCHES (comma-separated extras, never replacing)."""
-    extra = tuple(p.strip() for p in os.environ.get("HOUSE_RULES_OWNED_BRANCHES", "").split(",") if p.strip())
-    return OWNED_BRANCH_PREFIXES + extra
 
 # A command that names its own repo, git dir or work tree is not talking about the checkout
 # this hook can see, so the branch read below would be the wrong branch to judge it by. Broad
 # on purpose — `grep -C 3` in the same command line costs an extra keypress, and that is the
 # direction guard is allowed to be wrong in.
 _OTHER_REPO_RE = re.compile(r"(^|\s)(--git-dir|--work-tree)")
-# Any -C at all, broad on purpose (`grep -C 3` included); only the `git -C <dir>` form below is
-# resolved to a directory, and a -C it does not explain leaves where the command runs unclear.
-_ANY_C_FLAG_RE = re.compile(r"(^|\s)-C(\s|=)")
-_GIT_C_DIR_RE = re.compile(r"""\bgit\s+-C\s*(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))""")
 
 
 PROTECTED_BRANCHES = ("main", "master")
@@ -244,68 +252,10 @@ def branch_ownership(start=None):
     return branch.startswith(owned_branch_prefixes()), branch, None
 
 
-_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*(?:&&|;)""")
-# A statement-leading NAME=value, NAME="value" or NAME='value' followed by ; or && (#261).
-_ASSIGN_RE = re.compile(r"""(?:^|(?<=[;&\n]))\s*([A-Za-z_]\w*)=(?:"([^"$`\\\n]*)"|'([^'\n]*)'|([^\s;&|"'$`\\()<>*?]*))[ \t]*(?:&&|;)""")
-# cd/pushd only where a command can start, so `git commit -m "fix cd handling"` keeps the
-# exemption (#203); shell keywords count, so `if t; then cd x; fi` is still seen.
-_ANY_CD_RE = re.compile(r"(?:^|[;&|({!\n]|\b(?:if|elif|while|until|then|do|else|time|exec)\b)\s*(?:cd|pushd)(?=\s|$)")
 
 
-def _apply_assigns(cmd):
-    """#261/#262: drop simple same-command NAME=value assignments and expand $NAME / ${NAME}
-    from them; a name that was not assigned stays as written."""
-    assigns = {}
-    for am in _ASSIGN_RE.finditer(cmd):
-        assigns[am.group(1)] = am.group(2) if am.group(2) is not None else (am.group(3) if am.group(3) is not None else am.group(4))
-    if assigns:
-        cmd = _ASSIGN_RE.sub("", cmd)
-        cmd = re.sub(r"\$\{(\w+)\}|\$(\w+)", lambda mm: assigns.get(mm.group(1) or mm.group(2), mm.group(0)), cmd)
-    return cmd
 
 
-def _command_dir(payload):
-    """(dir, moved_unclear): where a guarded Bash command runs. The payload's `cwd`, else
-    CLAUDE_PROJECT_DIR, else getcwd(); a lone leading `cd <dir> &&`, or `git -C <dir>` naming one
-    directory, moves it to <dir>. Any other -C, any other
-    cd/pushd, or a leading one that does not resolve to a directory, sets moved_unclear and the
-    caller withholds the exemption. doc-ref d2a4 docs/4-systems/hook-engine.md (Traps).
-    """
-    try:
-        data = json.loads(payload)
-    except ValueError:
-        data = None
-    cwd = data.get("cwd") if isinstance(data, dict) else None
-    base = cwd if isinstance(cwd, str) and cwd else (os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
-    try:
-        cmd = data["tool_input"]["command"]
-    except (TypeError, KeyError):
-        m = _COMMAND_VALUE_RE.search(payload)
-        try:
-            cmd = json.loads('"%s"' % m.group(1)) if m else ""
-        except ValueError:
-            cmd = ""
-    if not isinstance(cmd, str):
-        return base, False
-    # #261: simple NAME=value / NAME="value" assignments earlier in the command expand into a
-    # cd or -C target; a target that still holds a $ afterwards stays unclear.
-    cmd = _apply_assigns(cmd)
-    c_flags = _ANY_C_FLAG_RE.findall(cmd)
-    if c_flags:
-        # `git -C <dir>` (#192): judged by <dir> when every -C names the same one and nothing cds.
-        dirs = set(m.group(1) or m.group(2) or m.group(3) for m in _GIT_C_DIR_RE.finditer(cmd))
-        if _ANY_CD_RE.search(cmd) or len(dirs) != 1 or len(_GIT_C_DIR_RE.findall(cmd)) != len(c_flags):
-            return base, True
-        target = os.path.abspath(os.path.join(base, dirs.pop()))
-        return (target, False) if os.path.isdir(target) else (base, True)
-    if not _ANY_CD_RE.search(cmd):
-        return base, False
-    m = _LEADING_CD_RE.match(cmd)
-    if m and len(_ANY_CD_RE.findall(cmd)) == 1:
-        target = os.path.abspath(os.path.join(base, m.group(1) or m.group(2) or m.group(3)))
-        if os.path.isdir(target):
-            return target, False
-    return base, True
 
 
 def _agent_branch_enabled():
@@ -1038,7 +988,6 @@ def event_branchnudge():
 # ever refuses: an unanswered prompt is a no, and the only other outcome is saying nothing, which
 # leaves the dialog in charge. The refusal goes into the waiting-on-you list, which issue #145 shows.
 PROMPT_TIMEOUT_DEFAULT = 300.0
-WAITING_FILE = "waiting-on-you.json"
 # Questions and choices put to aj, not permission to act: refusing one would throw the question
 # away, not route around a blocked action, so they wait for aj however long that takes (#151).
 PROMPT_TIMER_EXEMPT_TOOLS = ("AskUserQuestion", "ExitPlanMode")
@@ -1068,98 +1017,14 @@ def _prompt_timeout_seconds():
     )
 
 
-def _waiting_path(session_id=""):
-    """The waiting-on-you list: in the common git directory, so worktrees share it. Outside a
-    repository it is a session-keyed file in the temp directory, like versioncheck's marker.
-    Returns (path, in_repo)."""
-    cd = _common_git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
-    if cd:
-        return os.path.join(cd, "house-rules", WAITING_FILE), True
-    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
-    return os.path.join(tempfile.gettempdir(), "house-rules-waiting-%s.json" % safe), False
 
 
-def _waiting_load(path):
-    """The entries; ValueError/OSError when the file exists but cannot be read as a list."""
-    if not os.path.isfile(path):
-        return []
-    data = json.loads(_read_text(path))
-    if not isinstance(data, list) or not all(isinstance(e, dict) for e in data):
-        raise ValueError("unexpected shape, wanted a JSON list of objects")
-    return data
 
 
-def _waiting_save(path, entries):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(entries, f, indent=1)
-    os.replace(tmp, path)
 
 
-WAITING_LOCK_WAIT = 3.0
-WAITING_LOCK_STALE = 15.0
 
 
-def _waiting_update(path, fn, who="prompttimer"):
-    """Load, apply fn, save - under a lock file (path + '.lock', O_CREAT|O_EXCL) so two hooks
-    cannot overwrite each other's entry. fn returns the new list, or None to leave the file as
-    it is. Waits up to 3 s for the lock; a lock older than 15 s is stale and is removed (said on
-    stderr). If the lock cannot be taken it says so and updates unlocked: never hangs, never
-    crashes on the lock. A corrupt list is reported and started again; save errors raise."""
-    lock = path + ".lock"
-    held = False
-    try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        deadline = time.time() + WAITING_LOCK_WAIT
-        while True:
-            try:
-                os.close(os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
-                held = True
-                break
-            except FileExistsError:
-                try:
-                    age = time.time() - os.path.getmtime(lock)
-                except OSError:
-                    continue  # it vanished between the two calls: take it
-                if age > WAITING_LOCK_STALE:
-                    try:
-                        os.remove(lock)
-                        sys.stderr.write("house-rules %s: removed a stale lock %s (%d s old).\n"
-                                         % (who, lock, age))
-                    except OSError as exc:
-                        sys.stderr.write("house-rules %s: could not remove the stale lock %s (%s).\n"
-                                         % (who, lock, exc))
-                        time.sleep(0.05)
-                    if time.time() >= deadline:
-                        break
-                    continue
-                if time.time() >= deadline:
-                    break
-                time.sleep(0.05)
-        if not held:
-            sys.stderr.write("house-rules %s: could not take the lock %s within %g s; updating %s "
-                             "without it, so a simultaneous update may be lost.\n"
-                             % (who, lock, WAITING_LOCK_WAIT, path))
-    except Exception as exc:
-        sys.stderr.write("house-rules %s: could not take the lock %s (%s: %s); updating %s without it.\n"
-                         % (who, lock, type(exc).__name__, exc, path))
-    try:
-        try:
-            entries = _waiting_load(path)
-        except (ValueError, OSError) as exc:
-            sys.stderr.write("house-rules %s: could not read %s (%s: %s); starting that list again.\n"
-                             % (who, path, type(exc).__name__, exc))
-            entries = []
-        new = fn(entries)
-        if new is not None:
-            _waiting_save(path, new)
-    finally:
-        if held:
-            try:
-                os.remove(lock)
-            except OSError as exc:
-                sys.stderr.write("house-rules %s: could not remove the lock %s (%s).\n" % (who, lock, exc))
 
 
 def _waiting_clock(ts):
@@ -1218,40 +1083,6 @@ def _waiting_scope_note(payload):
         return ""
 
 
-def _waiting_session_note(payload):
-    """SessionStart: entries left by OTHER sessions, newest first, max 10; shown ones and any
-    older than 7 days are dropped. Returns the text, or "". Never raises."""
-    try:
-        try:
-            data = json.loads(payload) if payload else {}
-        except ValueError:
-            data = {}
-        session_id = str(data.get("session_id") or "") if isinstance(data, dict) else ""
-        path, _ = _waiting_path(session_id)
-        if not os.path.isfile(path):
-            return ""
-        shown = []
-
-        def fn(entries):
-            others = [e for e in entries if e.get("session_id") != session_id and e.get("status") != "ran"]
-            others.sort(key=lambda e: e.get("started") or 0, reverse=True)
-            shown.extend(others[:10])
-            gone = set(id(e) for e in shown)
-            cutoff = time.time() - 7 * 86400
-            keep = [e for e in entries if id(e) not in gone and e.get("status") != "ran"
-                    and (e.get("started") or 0) >= cutoff]
-            return keep if len(keep) != len(entries) else None
-        _waiting_update(path, fn, "issuelist")
-        if not shown:
-            return ""
-        return "Left waiting on you by an earlier session:\n" + "\n".join(
-            "- %s %s: %s (%s)" % (time.strftime("%Y-%m-%d %H:%M", time.localtime(e.get("started") or 0)),
-                                  e.get("tool", "?"), e.get("summary", "?"), e.get("status", "?"))
-            for e in shown)
-    except Exception as exc:
-        sys.stderr.write("house-rules issuelist: could not read the waiting-on-you list (%s: %s).\n"
-                         % (type(exc).__name__, exc))
-        return ""
 
 
 def _waiting_clear_session(entries, session_id, status=None):
@@ -1499,26 +1330,12 @@ def event_prompttimer():
 # End of the prompttimer block (verify.py slices the source between its first comment and this line).
 
 
-_GH_PREFIX = r"(?:^|[;&|(\n`]|\$\()\s*gh\s+"
 
 
-_PR_BODY_FILE_RE = re.compile(r"(?:--body-file|(?<![\w-])-F)(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
 
 
-def _decoded_command(subject):
-    m = _COMMAND_VALUE_RE.search(subject)
-    if not m:
-        return subject
-    text = m.group(1)
-    try:
-        text = json.loads('"%s"' % text)
-    except ValueError:
-        text = m.group(1)  # undecodable escapes: match against the raw slice
-    return text
 
 
-def _attribution_enabled():
-    return os.environ.get("HOUSE_RULES_ATTRIBUTION", "on").strip().lower() not in _TOGGLE_OFF
 
 
 # Credit goes to "aj's agent", with no email and no Claude branding (issue #133). The Claude Code
@@ -1724,78 +1541,18 @@ def event_guardgithub():
     return 0
 
 
-# The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
-# noreply@anthropic.com, which signs every commit as Claude whatever the message says.
-AGENT_IDENTITY_FIX = (
-    "git config user.name \"AJ's agent\" && "
-    "git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
-)
-_ARG = r"(\"[^\"]*\"|'[^']*'|\S+)"
-_AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
 
 
-def _c_option_re(key):
-    """-c key=value, also with the whole pair quoted (-c "user.name=aj's agent", #189)."""
-    return re.compile(
-        r"(?:^|\s)-c\s*(?:\"" + key + r"=([^\"]*)\"|'" + key + r"=([^']*)'|" + key + r"=" + _ARG + r")",
-        re.IGNORECASE,
-    )
 
 
-_C_NAME_RE = _c_option_re(r"user\.name")
-_C_EMAIL_RE = _c_option_re(r"user\.email")
-_ENV_NAME_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_NAME=" + _ARG)
-_ENV_EMAIL_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_EMAIL=" + _ARG)
 
 
-def _unquote(s):
-    return s.strip().strip("\"'").strip()
 
 
-def _is_claude_identity(name, email):
-    return (name or "").strip().lower() == "claude" or (email or "").strip().lower().endswith("anthropic.com")
 
 
-def _git_author_ident(cwd):
-    """(name, email) from `git var GIT_AUTHOR_IDENT` in cwd, or None when it cannot be read."""
-    import subprocess
-    try:
-        p = subprocess.run(["git", "var", "GIT_AUTHOR_IDENT"], cwd=cwd, capture_output=True,
-                           text=True, timeout=5)
-    except Exception: return None  # git missing or timed out: identity unreadable, callers stay silent
-    if p.returncode != 0:
-        return None
-    m = re.match(r"\s*(.*?)\s*<([^>]*)>", p.stdout)
-    return (m.group(1), m.group(2)) if m else None
 
 
-def _effective_author(cmd, cwd):
-    """(name, email) the commit would carry; either may be None, whole result None when unreadable."""
-    name = email = None
-    m = _AUTHOR_FLAG_RE.search(cmd)
-    if m:
-        a = _unquote(m.group(1))
-        am = re.match(r"(.*?)\s*<([^>]*)>\s*$", a)
-        if am:
-            name, email = am.group(1).strip(), am.group(2).strip()
-        else:
-            name = a
-        return name, email
-    for rx, which in ((_C_NAME_RE, 0), (_C_EMAIL_RE, 1), (_ENV_NAME_RE, 0), (_ENV_EMAIL_RE, 1)):
-        m = rx.search(cmd)
-        if m:
-            # lastindex: _C_*_RE capture in whichever quoting branch matched.
-            if which == 0 and name is None:
-                name = _unquote(m.group(m.lastindex))
-            elif which == 1 and email is None:
-                email = _unquote(m.group(m.lastindex))
-    if name is None or email is None:
-        ident = _git_author_ident(cwd)
-        if ident is None:
-            return (name, email) if (name or email) else None
-        name = ident[0] if name is None else name
-        email = ident[1] if email is None else email
-    return name, email
 
 
 # ---------------------------------------------------------------------------------------
@@ -1804,75 +1561,14 @@ def _effective_author(cmd, cwd):
 # the Stop, branchnudge and audit checks share: which of these files are still uncommitted?
 # ---------------------------------------------------------------------------------------
 
-COMMIT_CHECK_TIMEOUT = 2.0
 
 
-def _commit_check_enabled():
-    return os.environ.get("HOUSE_RULES_COMMIT_CHECK", "on").strip().lower() not in _TOGGLE_OFF
 
 
-def _dirty_paths(root):
-    """(repo top level, [repo-relative dirty paths]) for the repo containing `root`.
-
-    Raises on no git, not a repo, or the time budget running out - every caller turns that
-    into a "could not tell" line, never a guess.
-    """
-    import subprocess
-    import time as _t
-
-    deadline = _t.time() + COMMIT_CHECK_TIMEOUT
-
-    def run_git(args):
-        remaining = deadline - _t.time()
-        if remaining <= 0:
-            raise RuntimeError("the commit check's time budget ran out")
-        proc = subprocess.run(
-            ["git"] + args, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=remaining
-        )
-        if proc.returncode != 0:
-            raise RuntimeError("git %s exited %d" % (" ".join(args), proc.returncode))
-        return [p for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
-
-    top = run_git(["rev-parse", "--show-toplevel"])[0].strip()
-    return top, [p for p, _tracked in _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))]
 
 
-def _uncommitted_among(paths, root, status=None):
-    """The subset of `paths` (absolute, or relative to `root`) that git reports as changed or
-    untracked. A path outside the repo is never in the subset: it is not this repo's to commit.
-    `status` is a (top, dirty) pair from _dirty_paths, when the caller already has one."""
-    top, dirty = status if status is not None else _dirty_paths(root)
-    dirty_set = set(os.path.normcase(os.path.normpath(p)) for p in dirty)
-    found = []
-    for p in paths:
-        absolute = p if os.path.isabs(p) else os.path.join(root, p)
-        rel = os.path.relpath(os.path.realpath(absolute), os.path.realpath(top))
-        if rel.startswith(".."):
-            continue
-        if os.path.normcase(os.path.normpath(rel)) in dirty_set:
-            found.append(rel.replace(os.sep, "/"))
-    return found
 
 
-def _branch_advice(is_mine, branch, note):
-    """What to do about uncommitted work, given whose branch the checkout is on."""
-    if is_mine:
-        return (
-            "You are on your own branch `%s`: commit them now, scoped to those paths "
-            "(`git commit -- <paths>`), and say what you committed and where." % branch
-        )
-    if branch:
-        return (
-            "The checkout is on `%s`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened "
-            "for this session's work, commit there, scoped to those paths. If it is the user's, "
-            "branch off first (`git switch -c AjsAgent/<topic>` carries the changes with it), "
-            "then commit, scoped to those paths. Either way, say what you committed and where."
-            % branch
-        )
-    return (
-        "No branch could be read (%s), so branch off first (`git switch -c AjsAgent/<topic>`), "
-        "then commit, scoped to those paths, and say what you committed and where." % note
-    )
 
 
 def _commit_note(uncommitted):
@@ -1886,3 +1582,67 @@ def _commit_note(uncommitted):
 
 core.register_session_start("profile", _agent_branch_block)
 core.register_session_start("profile", _agent_identity_block)
+
+
+def _scope_waiting_link(payload, field):
+    return "", _waiting_scope_note(payload)
+
+
+def _promptran_waiting_link(data):
+    """promptran: the waiting-on-you update; returns the report text, or "" for none."""
+    session_id = str(data.get("session_id") or "")
+    path, _ = _waiting_path(session_id)
+    if not os.path.isfile(path):
+        return ""
+    key = _waiting_key(data["tool_name"], data.get("tool_input"))
+    late = []
+
+    def fn(entries):
+        out, changed = [], False
+        for e in entries:
+            if e.get("session_id") == session_id and e.get("key") == key:
+                status = e.get("status")
+                if status == "waiting":
+                    e, changed = dict(e, status="ran"), True
+                elif status in ("timed-out", "reported"):
+                    if status == "timed-out":
+                        late.append(e)
+                    changed = True
+                    continue
+            out.append(e)
+        return out if changed else None
+    _waiting_update(path, fn, "promptran")
+    if late:
+        text = ("house-rules: '%s' ran although its permission prompt was refused as unanswered "
+                "at %s; something approved it afterwards (possibly a late answer on the old dialog). "
+                "Removed it from the waiting-on-you list."
+                % (late[0].get("summary", "?"), _waiting_clock(late[0].get("timed_out_at"))))
+        return text
+    return ""
+
+
+# The commit check of the end-of-reply dispatcher (event_handover in hook.py), moved out of it verbatim (#359).
+def handover_commit_check(payload):
+    """(uncommitted files, could-not-tell text or None). The commit check is independent of the evidence
+    check: a turn that wrote files and left them uncommitted gets told at the end of that turn, whatever the
+    reply says. Its "could not tell" is its own line - it must never be mistaken for the evidence check's."""
+    uncommitted = []
+    commit_could_not_tell = None
+    if _commit_check_enabled():
+        transcript_path = _field(_TRANSCRIPT_RE, payload)
+        if transcript_path:
+            written, detail = _written_since_last_user_message(transcript_path)
+            if written:
+                try:
+                    uncommitted = _uncommitted_among(
+                        written, os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+                    )
+                except Exception as exc:
+                    commit_could_not_tell = "%s: %s" % (type(exc).__name__, exc)
+            elif written is None:
+                commit_could_not_tell = detail
+    return uncommitted, commit_could_not_tell
+
+
+core.register_prompt(_scope_waiting_link)
+core.register_post_tool("promptran", _promptran_waiting_link)

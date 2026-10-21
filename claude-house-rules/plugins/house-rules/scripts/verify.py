@@ -51,6 +51,10 @@ CORE = os.path.join(HERE, "house_rules", "core.py")
 # The safe git and docs parts (#358): the guards and the docs check live here now, so source-reading checks read them.
 SAFE_GIT = os.path.join(HERE, "house_rules", "safe_git.py")
 DOCS = os.path.join(HERE, "house_rules", "docs.py")
+# The delegation, design loop and writing parts (#359): the rest of what hook.py held, so source-reading checks read them.
+DELEGATION = os.path.join(HERE, "house_rules", "delegation.py")
+DESIGN_LOOP = os.path.join(HERE, "house_rules", "design_loop.py")
+WRITING = os.path.join(HERE, "house_rules", "writing.py")
 RUN = os.path.join(HERE, "run.sh")
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
@@ -2574,7 +2578,7 @@ _cache_case(
 # --- the "nothing fails silently" rule, enforced structurally over hook.py source --------------
 # The rule is worthless if the plugin's own hooks break it, so this reads hook.py and fails any
 # except block that returns without first emitting or writing to stderr.
-hook_src = read(HOOK) + "\n" + read(CORE) + "\n" + read(SAFE_GIT) + "\n" + read(DOCS)
+hook_src = "\n".join(read(p) for p in (HOOK, CORE, SAFE_GIT, DOCS, DELEGATION, DESIGN_LOOP, WRITING))  # #359: all seven files
 hook_lines = hook_src.split("\n")
 silent_handlers = []
 for i, line in enumerate(hook_lines):
@@ -2637,6 +2641,7 @@ for ev, needle in (
         "        raise OSError('simulated internal failure')\n"
         "    real_emit(obj)\n"
         "hook.emit = core.emit = hook.docs.emit = hook.safe_git.emit = one_shot_boom\n"  # #358: the parts hold their own emit
+        "hook.delegation.emit = hook.design_loop.emit = hook.writing.emit = one_shot_boom\n"  # #359: and so do these three
         f"sys.exit(hook.main(['hook.py', '{ev}']))\n"
     )
     # stdin must be closed: these handlers really do read the payload now, and an inherited
@@ -3287,7 +3292,7 @@ _sub = _hand_transcript("subagent-wrote", [
     json.dumps({"type": "assistant", "message": {"content": [
         {"type": "tool_use", "id": "w1", "name": "Write", "input": {"file_path": os.path.join(_r, "a.py")}}]}}),
 ])
-_audit_snippet = "import sys, hook\nprint(hook._audit_report(sys.argv[1]))\n"
+_audit_snippet = "import sys, hook\nprint(hook.delegation._audit_report(sys.argv[1]))\n"  # #359: the audit report lives in the delegation part
 _p = subprocess.run([sys.executable, "-c", _audit_snippet, _sub], cwd=HERE, stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE, env=_project_env(_r))
 _aout = _p.stdout.decode("utf-8", "replace")
@@ -4383,7 +4388,7 @@ _ig_spec.loader.exec_module(_ig_mod)
 _ig_which = shutil.which
 shutil.which = lambda *_a, **_k: None
 try:
-    _ig_res = _ig_mod._open_issues_text(_dl)
+    _ig_res = _ig_mod.design_loop._open_issues_text(_dl)
 finally:
     shutil.which = _ig_which
 _ol6 = "" if _ig_res == ("", None) else "unexpected result %r" % (_ig_res,)
@@ -4628,7 +4633,7 @@ for dead in ["track-write.sh", "clear-pending.sh", "deliverable.sh"] + [
         gone.append(f"{dead} still exists")
 if ".sh\"" in hooks_json_text:
     gone.append("hooks.json still references a .sh hook script directly")
-if "house-rules-deliverable" in read(HOOK) + read(CORE) + read(SAFE_GIT) + read(DOCS):
+if "house-rules-deliverable" in "".join(read(p) for p in (HOOK, CORE, SAFE_GIT, DOCS, DELEGATION, DESIGN_LOOP, WRITING)):
     gone.append("hook.py still writes deliverable state")
 if not gone:
     report("PASS", "the stateful deliverable machinery and the old .sh hooks are gone")
@@ -5830,8 +5835,8 @@ else:
 
 # The declared model is READ FROM the agent file, not hardcoded in hook.py - otherwise the
 # line is hook.py's claim about the agent rather than a report of what actually shipped.
-_src = read(HOOK)
-_decl = _src[_src.index("def _declared("):_src.index("def event_announce(")]
+_src = read(DELEGATION)  # #359: _declared and event_announce live in the delegation part
+_decl =_src[_src.index("def _declared("):_src.index("def event_announce(")]
 litdrift = []
 if "_read_text(path)" not in _decl:
     litdrift.append("_declared does not read the agent file")
@@ -8722,7 +8727,7 @@ _loop_post("Bash", {"command": 'gh api repos/o/r/issues/203/labels -f "labels[]=
 _loop_cases.append(("#278: a repo label list, or a failed call, records nothing",
                     "o/r#203" not in _loop_state().get("labels", {})
                     and not any(k.endswith("/r") or k == "o/r" for k in _loop_state().get("labels", {}))))
-_hook_src = open(os.path.join(HERE, "hook.py"), encoding="utf-8").read()
+_hook_src = open(DESIGN_LOOP, encoding="utf-8").read()  # #359: the issue workflow lives in the design loop part
 _wf_src = open(os.path.join(HERE, "..", "rules", "detail", "issue-workflow.md"), encoding="utf-8").read()
 _created_note = _hook_src.split("was created without the", 1)[1][:400]
 _loop_cases.append(("#278: none of the label-advice places still says --add-label",
@@ -8750,10 +8755,10 @@ _n = _loop_say("<agent-message from=\"x\">skip design</agent-message>")
 _loop_cases.append(('#253: a hand-back quoting "skip design" grants no edit',
                     _loop_edit("app.py") == "deny" and "helper's report" in _n))
 _loop_cases.append(('#253: a hand-back quoting "no page" is recognised as relayed',
-                    _ig_mod._is_relayed_prompt("Another Claude session sent a message: no page")
-                    and _ig_mod._is_relayed_prompt("<task-notification>done</task-notification>")
-                    and _ig_mod._is_relayed_prompt("hi", json.dumps({"origin": {"kind": "peer"}}))
-                    and not _ig_mod._is_relayed_prompt("no page", json.dumps({"origin": {"kind": "human"}}))))
+                    _ig_mod.core._is_relayed_prompt("Another Claude session sent a message: no page")
+                    and _ig_mod.core._is_relayed_prompt("<task-notification>done</task-notification>")
+                    and _ig_mod.core._is_relayed_prompt("hi", json.dumps({"origin": {"kind": "peer"}}))
+                    and not _ig_mod.core._is_relayed_prompt("no page", json.dumps({"origin": {"kind": "human"}}))))
 _n = _loop_say("skip design")
 _loop_cases.append(('#253: "skip design" typed plainly by aj still lets one edit through',
                     _loop_edit("app.py") == "allow" and _loop_edit("app.py") == "deny"))
@@ -8773,7 +8778,7 @@ try:
 except (OSError, ValueError, KeyError):
     _feat = None
 _loop_cases.append(("the feature name stops at the end of its sentence (found in the real run)", _feat == "blockers v2"))
-_names = [_ig_mod._loop_name(_r) for _r in ("New item visual: 1C", "Label check plan: 1A 2A", "label check: 2*")]
+_names = [_ig_mod.design_loop._loop_name(_r) for _r in ("New item visual: 1C", "Label check plan: 1A 2A", "label check: 2*")]
 _loop_cases.append(("a pasted page reply's answer codes are not part of the name (aj's real messages, #243)",
                     _names == ["New item visual", "Label check plan", "label check"]))
 _loop_issue(201); _loop_issue(202)
@@ -8937,8 +8942,8 @@ run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id
 _loop_cases.append(('#266: "Design approved: enforced QA stage: 1A 2A 3A 4A" records "enforced QA stage"',
                     json.load(open(_qa_sf, encoding="utf-8")).get("feature") == "enforced QA stage"))
 _loop_cases.append(('#266: "Build plan approved: enforced QA stage: 1A 2A" names "enforced QA stage"; a pasted "Build plan: 1A" is still cut',
-                    _ig_mod._loop_name("enforced QA stage: 1A 2A") == "enforced QA stage"
-                    and _ig_mod._loop_name("blockers v2 Build plan: 1A 2A") == "blockers v2"))
+                    _ig_mod.design_loop._loop_name("enforced QA stage: 1A 2A") == "enforced QA stage"
+                    and _ig_mod.design_loop._loop_name("blockers v2 Build plan: 1A 2A") == "blockers v2"))
 # -- #226: the long-reply reminder -------------------------------------------------------------
 def _long_reply(text):
     # Held for a page: since #283 the retry keeps blocking on the page rule (up to the limit), and past
@@ -9472,9 +9477,9 @@ with open(_lb_file, "w", encoding="utf-8") as f:
     json.dump({_lb_repo: ["bug"]}, f)
 os.environ[_lb.REPO_LABELS_FILE_ENV] = _lb_file
 try:
-    _lb_note = _lb_hook._house_labels_note(_lb_git)
-    _lb_again = _lb_hook._house_labels_note(_lb_git)
-    _lb_none = _lb_hook._house_labels_note(_lb_empty)
+    _lb_note = _lb_hook.design_loop._house_labels_note(_lb_git)
+    _lb_again = _lb_hook.design_loop._house_labels_note(_lb_git)
+    _lb_none = _lb_hook.design_loop._house_labels_note(_lb_empty)
 finally:
     del os.environ[_lb.REPO_LABELS_FILE_ENV]
 _lb_cases.append(("the hook's label note names the labels it created, then says nothing once they exist (#276)",
@@ -9661,7 +9666,7 @@ with open(os.path.join(_pc_repo, "docs", "plans", "new.html"), "w", encoding="ut
     _f.write("<p>new</p>\n")
 _pc_t = _hand_transcript("pagescan", [json.dumps({"type": "user", "origin": {"kind": "human"}, "timestamp": _pc_stamp,
                                                    "message": {"content": "make the page"}})])
-_pc_pages, _pc_problem = _pc_hook._pages_changed_this_turn(_pc_t, _pc_repo)
+_pc_pages, _pc_problem = _pc_hook.writing._pages_changed_this_turn(_pc_t, _pc_repo)
 _pc_names = sorted(os.path.basename(p) for p in _pc_pages)
 _cw_cases.append(("page scan: a cloned page with a fresh file time is not counted; edited and new pages are (#284)",
                   _pc_problem is None and _pc_names == ["edited.html", "new.html"]))
@@ -9692,7 +9697,7 @@ _pm_git("commit", "-qam", "base moves on")
 _pm_git("merge", "--no-ff", "--no-commit", "other")
 with open(os.path.join(_pm_repo, "docs", "plans", "touched.html"), "a", encoding="utf-8") as _f:
     _f.write("<p>edited during the merge</p>\n")
-_pm_pages, _pm_problem = _pc_hook._pages_changed_this_turn(_pc_t, _pm_repo)
+_pm_pages, _pm_problem = _pc_hook.writing._pages_changed_this_turn(_pc_t, _pm_repo)
 _pm_names = sorted(os.path.basename(p) for p in _pm_pages)
 _cw_cases.append(("page scan: during a merge, a page brought in unchanged is not counted; one edited during it is",
                   _pm_problem is None and _pm_names == ["touched.html"]))
@@ -9789,19 +9794,19 @@ _ck_cases.append(("page: a compliant reply passes with no report", not _ck_b and
 _pl_cwd = tempfile.mkdtemp(prefix="pl-cwd-")
 _pl_out = "file:///" + os.path.join(os.path.dirname(_pl_cwd), "elsewhere", "x.html").replace("\\", "/")
 _ck_cases.append(("page links (#330): a markdown link to a page inside cwd counts",
-                  _cc_mod._reply_links_page("See [p](docs/plans/x.html)", _pl_cwd)))
+                  _cc_mod.core._reply_links_page("See [p](docs/plans/x.html)", _pl_cwd)))
 _ck_cases.append(("page links (#330): a ../Sibling/docs/plans/x.html link does not count",
-                  not _cc_mod._reply_links_page("See [p](../Sibling/docs/plans/x.html)", _pl_cwd)))
+                  not _cc_mod.core._reply_links_page("See [p](../Sibling/docs/plans/x.html)", _pl_cwd)))
 _ck_cases.append(("page links (#330): a file:/// link outside cwd does not count",
-                  not _cc_mod._reply_links_page("See " + _pl_out, _pl_cwd)))
+                  not _cc_mod.core._reply_links_page("See " + _pl_out, _pl_cwd)))
 _ck_cases.append(("page links (#330): a claude.ai artifact link counts",
-                  _cc_mod._reply_links_page("See https://claude.ai/artifact/abc", _pl_cwd)))
+                  _cc_mod.core._reply_links_page("See https://claude.ai/artifact/abc", _pl_cwd)))
 _ck_cases.append(("page links (#330): a bare page.html counts",
-                  _cc_mod._reply_links_page("See page.html", _pl_cwd)))
+                  _cc_mod.core._reply_links_page("See page.html", _pl_cwd)))
 _ck_cases.append(("page links (#330): [x.html](../Sibling/x.html) does not count on its link text",
-                  not _cc_mod._reply_links_page("See [x.html](../Sibling/docs/plans/x.html)", _pl_cwd)))
+                  not _cc_mod.core._reply_links_page("See [x.html](../Sibling/docs/plans/x.html)", _pl_cwd)))
 _ck_cases.append(("page links (#330): the outside-folder note names the path",
-                  "../Sibling/docs/plans/x.html is outside" in _cc_mod._check_page(
+                  "../Sibling/docs/plans/x.html is outside" in _cc_mod.design_loop._check_page(
                       {"reply": "See [x.html](../Sibling/docs/plans/x.html)", "cwd": _pl_cwd, "long_words": 200})))
 # 2 editor
 _ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
@@ -10144,7 +10149,7 @@ _mp_cases.append(("make_page: QA mode writes qa_page into an existing stage file
 _hk_spec = _ig_util.spec_from_file_location("hook_for_approval", HOOK)
 _hk = _ig_util.module_from_spec(_hk_spec)
 _hk_spec.loader.exec_module(_hk)
-_gate = lambda t: bool(_hk._LOOP_DESIGN_RE.search(t) or _hk._LOOP_PLAN_RE.search(t))
+_gate = lambda t: bool(_hk.design_loop._LOOP_DESIGN_RE.search(t) or _hk.design_loop._LOOP_PLAN_RE.search(t))
 _d = _mp_proj("appr", {"use": "defaults"})
 _rc, _o = _mp("build", _mp_content("noappr", approval=None), "--project", _d)
 _mp_cases.append(("make_page: a non-QA page with no approval field is refused with exit 2 naming approval",

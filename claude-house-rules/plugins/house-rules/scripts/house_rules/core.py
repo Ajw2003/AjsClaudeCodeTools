@@ -2055,3 +2055,946 @@ def register_github_write(fn):
 def register_docs_status(fn):
     _register(DOCS_STATUS_HOOKS, fn)
     return fn
+
+
+# ---------------------------------------------------------------------------------------
+# Moved here in step 2c (#359): helpers that more than one part, or a part and the end-of-reply
+# dispatcher in hook.py, use. The first group came out of the safe git part, the second out of hook.py.
+# ---------------------------------------------------------------------------------------
+
+OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-")  # claude/ = cloud app branches, old branches; ccr- = cloud sessions
+
+
+def owned_branch_prefixes():
+    """The defaults plus HOUSE_RULES_OWNED_BRANCHES (comma-separated extras, never replacing)."""
+    extra = tuple(p.strip() for p in os.environ.get("HOUSE_RULES_OWNED_BRANCHES", "").split(",") if p.strip())
+    return OWNED_BRANCH_PREFIXES + extra
+
+
+# Any -C at all, broad on purpose (`grep -C 3` included); only the `git -C <dir>` form below is
+# resolved to a directory, and a -C it does not explain leaves where the command runs unclear.
+_ANY_C_FLAG_RE = re.compile(r"(^|\s)-C(\s|=)")
+
+
+_GIT_C_DIR_RE = re.compile(r"""\bgit\s+-C\s*(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))""")
+
+
+_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*(?:&&|;)""")
+
+
+# A statement-leading NAME=value, NAME="value" or NAME='value' followed by ; or && (#261).
+_ASSIGN_RE = re.compile(r"""(?:^|(?<=[;&\n]))\s*([A-Za-z_]\w*)=(?:"([^"$`\\\n]*)"|'([^'\n]*)'|([^\s;&|"'$`\\()<>*?]*))[ \t]*(?:&&|;)""")
+
+
+# cd/pushd only where a command can start, so `git commit -m "fix cd handling"` keeps the
+# exemption (#203); shell keywords count, so `if t; then cd x; fi` is still seen.
+_ANY_CD_RE = re.compile(r"(?:^|[;&|({!\n]|\b(?:if|elif|while|until|then|do|else|time|exec)\b)\s*(?:cd|pushd)(?=\s|$)")
+
+
+def _apply_assigns(cmd):
+    """#261/#262: drop simple same-command NAME=value assignments and expand $NAME / ${NAME}
+    from them; a name that was not assigned stays as written."""
+    assigns = {}
+    for am in _ASSIGN_RE.finditer(cmd):
+        assigns[am.group(1)] = am.group(2) if am.group(2) is not None else (am.group(3) if am.group(3) is not None else am.group(4))
+    if assigns:
+        cmd = _ASSIGN_RE.sub("", cmd)
+        cmd = re.sub(r"\$\{(\w+)\}|\$(\w+)", lambda mm: assigns.get(mm.group(1) or mm.group(2), mm.group(0)), cmd)
+    return cmd
+
+
+def _command_dir(payload):
+    """(dir, moved_unclear): where a guarded Bash command runs. The payload's `cwd`, else
+    CLAUDE_PROJECT_DIR, else getcwd(); a lone leading `cd <dir> &&`, or `git -C <dir>` naming one
+    directory, moves it to <dir>. Any other -C, any other
+    cd/pushd, or a leading one that does not resolve to a directory, sets moved_unclear and the
+    caller withholds the exemption. doc-ref d2a4 docs/4-systems/hook-engine.md (Traps).
+    """
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = None
+    cwd = data.get("cwd") if isinstance(data, dict) else None
+    base = cwd if isinstance(cwd, str) and cwd else (os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    try:
+        cmd = data["tool_input"]["command"]
+    except (TypeError, KeyError):
+        m = _COMMAND_VALUE_RE.search(payload)
+        try:
+            cmd = json.loads('"%s"' % m.group(1)) if m else ""
+        except ValueError:
+            cmd = ""
+    if not isinstance(cmd, str):
+        return base, False
+    # #261: simple NAME=value / NAME="value" assignments earlier in the command expand into a
+    # cd or -C target; a target that still holds a $ afterwards stays unclear.
+    cmd = _apply_assigns(cmd)
+    c_flags = _ANY_C_FLAG_RE.findall(cmd)
+    if c_flags:
+        # `git -C <dir>` (#192): judged by <dir> when every -C names the same one and nothing cds.
+        dirs = set(m.group(1) or m.group(2) or m.group(3) for m in _GIT_C_DIR_RE.finditer(cmd))
+        if _ANY_CD_RE.search(cmd) or len(dirs) != 1 or len(_GIT_C_DIR_RE.findall(cmd)) != len(c_flags):
+            return base, True
+        target = os.path.abspath(os.path.join(base, dirs.pop()))
+        return (target, False) if os.path.isdir(target) else (base, True)
+    if not _ANY_CD_RE.search(cmd):
+        return base, False
+    m = _LEADING_CD_RE.match(cmd)
+    if m and len(_ANY_CD_RE.findall(cmd)) == 1:
+        target = os.path.abspath(os.path.join(base, m.group(1) or m.group(2) or m.group(3)))
+        if os.path.isdir(target):
+            return target, False
+    return base, True
+
+
+WAITING_FILE = "waiting-on-you.json"
+
+
+def _waiting_path(session_id=""):
+    """The waiting-on-you list: in the common git directory, so worktrees share it. Outside a
+    repository it is a session-keyed file in the temp directory, like versioncheck's marker.
+    Returns (path, in_repo)."""
+    cd = _common_git_dir(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    if cd:
+        return os.path.join(cd, "house-rules", WAITING_FILE), True
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-waiting-%s.json" % safe), False
+
+
+def _waiting_load(path):
+    """The entries; ValueError/OSError when the file exists but cannot be read as a list."""
+    if not os.path.isfile(path):
+        return []
+    data = json.loads(_read_text(path))
+    if not isinstance(data, list) or not all(isinstance(e, dict) for e in data):
+        raise ValueError("unexpected shape, wanted a JSON list of objects")
+    return data
+
+
+def _waiting_save(path, entries):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(entries, f, indent=1)
+    os.replace(tmp, path)
+
+
+WAITING_LOCK_WAIT = 3.0
+
+
+WAITING_LOCK_STALE = 15.0
+
+
+def _waiting_update(path, fn, who="prompttimer"):
+    """Load, apply fn, save - under a lock file (path + '.lock', O_CREAT|O_EXCL) so two hooks
+    cannot overwrite each other's entry. fn returns the new list, or None to leave the file as
+    it is. Waits up to 3 s for the lock; a lock older than 15 s is stale and is removed (said on
+    stderr). If the lock cannot be taken it says so and updates unlocked: never hangs, never
+    crashes on the lock. A corrupt list is reported and started again; save errors raise."""
+    lock = path + ".lock"
+    held = False
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        deadline = time.time() + WAITING_LOCK_WAIT
+        while True:
+            try:
+                os.close(os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+                held = True
+                break
+            except FileExistsError:
+                try:
+                    age = time.time() - os.path.getmtime(lock)
+                except OSError:
+                    continue  # it vanished between the two calls: take it
+                if age > WAITING_LOCK_STALE:
+                    try:
+                        os.remove(lock)
+                        sys.stderr.write("house-rules %s: removed a stale lock %s (%d s old).\n"
+                                         % (who, lock, age))
+                    except OSError as exc:
+                        sys.stderr.write("house-rules %s: could not remove the stale lock %s (%s).\n"
+                                         % (who, lock, exc))
+                        time.sleep(0.05)
+                    if time.time() >= deadline:
+                        break
+                    continue
+                if time.time() >= deadline:
+                    break
+                time.sleep(0.05)
+        if not held:
+            sys.stderr.write("house-rules %s: could not take the lock %s within %g s; updating %s "
+                             "without it, so a simultaneous update may be lost.\n"
+                             % (who, lock, WAITING_LOCK_WAIT, path))
+    except Exception as exc:
+        sys.stderr.write("house-rules %s: could not take the lock %s (%s: %s); updating %s without it.\n"
+                         % (who, lock, type(exc).__name__, exc, path))
+    try:
+        try:
+            entries = _waiting_load(path)
+        except (ValueError, OSError) as exc:
+            sys.stderr.write("house-rules %s: could not read %s (%s: %s); starting that list again.\n"
+                             % (who, path, type(exc).__name__, exc))
+            entries = []
+        new = fn(entries)
+        if new is not None:
+            _waiting_save(path, new)
+    finally:
+        if held:
+            try:
+                os.remove(lock)
+            except OSError as exc:
+                sys.stderr.write("house-rules %s: could not remove the lock %s (%s).\n" % (who, lock, exc))
+
+
+def _waiting_session_note(payload):
+    """SessionStart: entries left by OTHER sessions, newest first, max 10; shown ones and any
+    older than 7 days are dropped. Returns the text, or "". Never raises."""
+    try:
+        try:
+            data = json.loads(payload) if payload else {}
+        except ValueError:
+            data = {}
+        session_id = str(data.get("session_id") or "") if isinstance(data, dict) else ""
+        path, _ = _waiting_path(session_id)
+        if not os.path.isfile(path):
+            return ""
+        shown = []
+
+        def fn(entries):
+            others = [e for e in entries if e.get("session_id") != session_id and e.get("status") != "ran"]
+            others.sort(key=lambda e: e.get("started") or 0, reverse=True)
+            shown.extend(others[:10])
+            gone = set(id(e) for e in shown)
+            cutoff = time.time() - 7 * 86400
+            keep = [e for e in entries if id(e) not in gone and e.get("status") != "ran"
+                    and (e.get("started") or 0) >= cutoff]
+            return keep if len(keep) != len(entries) else None
+        _waiting_update(path, fn, "issuelist")
+        if not shown:
+            return ""
+        return "Left waiting on you by an earlier session:\n" + "\n".join(
+            "- %s %s: %s (%s)" % (time.strftime("%Y-%m-%d %H:%M", time.localtime(e.get("started") or 0)),
+                                  e.get("tool", "?"), e.get("summary", "?"), e.get("status", "?"))
+            for e in shown)
+    except Exception as exc:
+        sys.stderr.write("house-rules issuelist: could not read the waiting-on-you list (%s: %s).\n"
+                         % (type(exc).__name__, exc))
+        return ""
+
+
+_GH_PREFIX = r"(?:^|[;&|(\n`]|\$\()\s*gh\s+"
+
+
+_PR_BODY_FILE_RE = re.compile(r"(?:--body-file|(?<![\w-])-F)(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
+
+
+def _decoded_command(subject):
+    m = _COMMAND_VALUE_RE.search(subject)
+    if not m:
+        return subject
+    text = m.group(1)
+    try:
+        text = json.loads('"%s"' % text)
+    except ValueError:
+        text = m.group(1)  # undecodable escapes: match against the raw slice
+    return text
+
+
+def _attribution_enabled():
+    return os.environ.get("HOUSE_RULES_ATTRIBUTION", "on").strip().lower() not in _TOGGLE_OFF
+
+
+# The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
+# noreply@anthropic.com, which signs every commit as Claude whatever the message says.
+AGENT_IDENTITY_FIX = (
+    "git config user.name \"AJ's agent\" && "
+    "git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
+)
+
+
+_ARG = r"(\"[^\"]*\"|'[^']*'|\S+)"
+
+
+_AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
+
+
+def _c_option_re(key):
+    """-c key=value, also with the whole pair quoted (-c "user.name=aj's agent", #189)."""
+    return re.compile(
+        r"(?:^|\s)-c\s*(?:\"" + key + r"=([^\"]*)\"|'" + key + r"=([^']*)'|" + key + r"=" + _ARG + r")",
+        re.IGNORECASE,
+    )
+
+
+_C_NAME_RE = _c_option_re(r"user\.name")
+
+
+_C_EMAIL_RE = _c_option_re(r"user\.email")
+
+
+_ENV_NAME_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_NAME=" + _ARG)
+
+
+_ENV_EMAIL_RE = re.compile(r"(?:^|[\s;&|])GIT_AUTHOR_EMAIL=" + _ARG)
+
+
+def _unquote(s):
+    return s.strip().strip("\"'").strip()
+
+
+def _is_claude_identity(name, email):
+    return (name or "").strip().lower() == "claude" or (email or "").strip().lower().endswith("anthropic.com")
+
+
+def _git_author_ident(cwd):
+    """(name, email) from `git var GIT_AUTHOR_IDENT` in cwd, or None when it cannot be read."""
+    import subprocess
+    try:
+        p = subprocess.run(["git", "var", "GIT_AUTHOR_IDENT"], cwd=cwd, capture_output=True,
+                           text=True, timeout=5)
+    except Exception: return None  # git missing or timed out: identity unreadable, callers stay silent
+    if p.returncode != 0:
+        return None
+    m = re.match(r"\s*(.*?)\s*<([^>]*)>", p.stdout)
+    return (m.group(1), m.group(2)) if m else None
+
+
+def _effective_author(cmd, cwd):
+    """(name, email) the commit would carry; either may be None, whole result None when unreadable."""
+    name = email = None
+    m = _AUTHOR_FLAG_RE.search(cmd)
+    if m:
+        a = _unquote(m.group(1))
+        am = re.match(r"(.*?)\s*<([^>]*)>\s*$", a)
+        if am:
+            name, email = am.group(1).strip(), am.group(2).strip()
+        else:
+            name = a
+        return name, email
+    for rx, which in ((_C_NAME_RE, 0), (_C_EMAIL_RE, 1), (_ENV_NAME_RE, 0), (_ENV_EMAIL_RE, 1)):
+        m = rx.search(cmd)
+        if m:
+            # lastindex: _C_*_RE capture in whichever quoting branch matched.
+            if which == 0 and name is None:
+                name = _unquote(m.group(m.lastindex))
+            elif which == 1 and email is None:
+                email = _unquote(m.group(m.lastindex))
+    if name is None or email is None:
+        ident = _git_author_ident(cwd)
+        if ident is None:
+            return (name, email) if (name or email) else None
+        name = ident[0] if name is None else name
+        email = ident[1] if email is None else email
+    return name, email
+
+
+COMMIT_CHECK_TIMEOUT = 2.0
+
+
+def _commit_check_enabled():
+    return os.environ.get("HOUSE_RULES_COMMIT_CHECK", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _dirty_paths(root):
+    """(repo top level, [repo-relative dirty paths]) for the repo containing `root`.
+
+    Raises on no git, not a repo, or the time budget running out - every caller turns that
+    into a "could not tell" line, never a guess.
+    """
+    import subprocess
+    import time as _t
+
+    deadline = _t.time() + COMMIT_CHECK_TIMEOUT
+
+    def run_git(args):
+        remaining = deadline - _t.time()
+        if remaining <= 0:
+            raise RuntimeError("the commit check's time budget ran out")
+        proc = subprocess.run(
+            ["git"] + args, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=remaining
+        )
+        if proc.returncode != 0:
+            raise RuntimeError("git %s exited %d" % (" ".join(args), proc.returncode))
+        return [p for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
+
+    top = run_git(["rev-parse", "--show-toplevel"])[0].strip()
+    return top, [p for p, _tracked in _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))]
+
+
+def _uncommitted_among(paths, root, status=None):
+    """The subset of `paths` (absolute, or relative to `root`) that git reports as changed or
+    untracked. A path outside the repo is never in the subset: it is not this repo's to commit.
+    `status` is a (top, dirty) pair from _dirty_paths, when the caller already has one."""
+    top, dirty = status if status is not None else _dirty_paths(root)
+    dirty_set = set(os.path.normcase(os.path.normpath(p)) for p in dirty)
+    found = []
+    for p in paths:
+        absolute = p if os.path.isabs(p) else os.path.join(root, p)
+        rel = os.path.relpath(os.path.realpath(absolute), os.path.realpath(top))
+        if rel.startswith(".."):
+            continue
+        if os.path.normcase(os.path.normpath(rel)) in dirty_set:
+            found.append(rel.replace(os.sep, "/"))
+    return found
+
+
+def _branch_advice(is_mine, branch, note):
+    """What to do about uncommitted work, given whose branch the checkout is on."""
+    if is_mine:
+        return (
+            "You are on your own branch `%s`: commit them now, scoped to those paths "
+            "(`git commit -- <paths>`), and say what you committed and where." % branch
+        )
+    if branch:
+        return (
+            "The checkout is on `%s`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened "
+            "for this session's work, commit there, scoped to those paths. If it is the user's, "
+            "branch off first (`git switch -c AjsAgent/<topic>` carries the changes with it), "
+            "then commit, scoped to those paths. Either way, say what you committed and where."
+            % branch
+        )
+    return (
+        "No branch could be read (%s), so branch off first (`git switch -c AjsAgent/<topic>`), "
+        "then commit, scoped to those paths, and say what you committed and where." % note
+    )
+
+
+_PLAN_VALUE_RE = re.compile(r'"plan"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+_SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+_TRANSCRIPT_RE = re.compile(r'"transcript_path"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+_AUDIT_COMMAND_TOOLS = ("Bash", "PowerShell")
+
+
+_AUDIT_WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
+
+
+_GATED_TOOLS = {"Write", "Edit", "NotebookEdit"}
+
+
+def _issues_enabled():
+    return os.environ.get("HOUSE_RULES_ISSUES", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _issues_locate(start):
+    """(checkout top, resolved git directory) for `start`, or (None, None) outside a repo."""
+    d = os.path.abspath(start)
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d, _git_dir(d)
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None, None
+        d = parent
+
+
+def _loop_enabled():
+    return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
+
+
+# ---------------------------------------------------------------------------------------
+# handover — Stop. Fails OPEN, loud: never wedge the turn.
+# ---------------------------------------------------------------------------------------
+
+HANDOVER_NOTE = (
+    "House rules, command handover - check before this turn ends. For every shell command "
+    "in this reply, all six must be present: (1) how they get there - the folder as an "
+    "absolute path plus the explicit action that opens a prompt in it (navigate to <path> "
+    "and open a terminal or PowerShell there), not the working directory named as an aside "
+    "on the command; (2) the shell it runs in, named in the prose AND correct as the fence "
+    "label - the fence label tells the reader which shell the syntax is for; the command must "
+    "not depend on where the prompt is, because the Run button executes in the session's "
+    "working directory, not the folder the step names; (3) the exact command, "
+    "copy-pasteable, no placeholders, and it runs from anywhere - never a bare command "
+    "that assumes the reader is already in the right folder; (4) what the user will see when it works; (5) "
+    "UNTESTED: as the first line of the step, above the fence and never inside it, if you "
+    "did not run that exact command, in that shell, against those exact paths - running "
+    "something similar is not running it; "
+    "(6) one numbered step per action whenever the handover is more than a single command - "
+    "each step a short bold title, one thing to do, and its own fenced block, never a stack "
+    "of commands in one fence. All six go in the step-card format: a --- rule opening and "
+    "closing the card, ### Step 1 of N - title as each step's heading, the folder and shell "
+    "in prose, one fenced block per step labelled with the shell, and You should see: for the "
+    "expected output. If the reply already satisfies all six, stop immediately and "
+    "add nothing - do not restate it, do not re-run anything, do not mention this check. If "
+    "something is missing, reprint the corrected step in full card shape, introduced by "
+    "Replacing step N: - one step, not the whole handover, so the reader ends on something "
+    "followable rather than a note about what was wrong above it. Never repeat the whole "
+    "answer. If the reply is already correct, end the turn with no commentary at all: a "
+    "sentence saying it already carries the six fields, or already complies, is itself the "
+    "failure this is guarding against - the user did not ask about the check and should "
+    "never learn it ran. A card never announces its own compliance."
+)
+
+
+# Same shape as _COMMAND_FIELD_RE: match the raw JSON slice, escapes included, and search inside
+# it. Backticks are not escaped in JSON, so a fenced block survives verbatim in the payload.
+_LAST_MESSAGE_FIELD_RE = re.compile(r'"last_assistant_message"\s*:\s*"(?:[^"\\]|\\.)*"')
+
+
+_LAST_MESSAGE_VALUE_RE = re.compile(r'"last_assistant_message"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+# The three marks a card cannot be missing: the rule that opens and closes it, the step heading,
+# and the expected-output line. A reply carrying all three is already in the shape this check
+# exists to produce, so the check has nothing to add - see _reply_needs_card_check.
+_CARD_MARKERS = ("---", "###", "You should see:")
+
+
+# Only a SHELL-labelled fence hands over a command - a fence in another language, or with no
+# label at all, is not the thing this check exists to correct. doc-ref 6534 docs/6-decisions/Decisions.md
+_SHELL_FENCE_LANGS = ("bash", "sh", "zsh", "shell", "console", "powershell", "pwsh", "ps1", "cmd", "bat", "fish")
+
+
+_SHELL_FENCE_RE = re.compile(r"```\s*(%s)\b" % "|".join(_SHELL_FENCE_LANGS), re.IGNORECASE)
+
+
+def _reply_is_already_a_card(reply):
+    return all(mark in reply for mark in _CARD_MARKERS)
+
+
+def _reply_needs_card_check(payload):
+    """Three tiers, the same ladder guard uses on its own input.
+
+    Why not firing on a compliant reply is the point, and the cost that trades away:
+    docs/architecture.md, "handover is the one deliberate exception". A reply with no
+    last_assistant_message at all (an older CLI) still needs the check - a version gap must
+    not silently disable it.
+    """
+    m = _LAST_MESSAGE_FIELD_RE.search(payload)
+    if m is None:
+        return True
+    reply = m.group(0)
+    return bool(_SHELL_FENCE_RE.search(reply)) and not _reply_is_already_a_card(reply)
+
+
+# --- evidence check: independent of the fence gate above ---------------------------------------
+# Word-boundary catches these forms; it naturally MISSES "untested"/"unverified" ("un" + word has
+# no boundary between them, so \btested\b never matches inside "untested") without extra logic.
+_CLAIM_WORD_RE = re.compile(
+    r"\b(works|working|fixed|passes|passing|passed|verified|tested|confirmed|succeeded)\b",
+    re.IGNORECASE,
+)
+
+
+# Explicit negation forms word-boundary alone cannot catch: "not tested", "haven't verified".
+_NEGATION_RE = re.compile(
+    r"\b(not|never|no longer|hasn't|haven't|didn't|isn't|wasn't|won't|can't|cannot|couldn't)\b",
+    re.IGNORECASE,
+)
+
+
+# A reply that quotes real output does not need the reminder - a fenced block (any language),
+# or a line shaped like real captured output: this repo's own RESULT: PASS/FAIL convention, an
+# exit code, or a test runner's "N passed" summary line. Deliberately NOT the bare word "passed"
+# on its own - that would treat the prose claim "the tests passed" as its own evidence.
+_EVIDENCE_QUOTE_RE = re.compile(
+    r"(?m)```|RESULT:\s*(PASS|FAIL)|\bexit\s+0\b|^\s*\d+\s+passed\b", re.IGNORECASE
+)
+
+
+def _claim_words(text):
+    """Claim words found in text, each checked against the ~25 chars right before it for a
+    negation cue - a window, not a full-sentence parse, same posture as every other regex here."""
+    found = []
+    for m in _CLAIM_WORD_RE.finditer(text or ""):
+        window = text[max(0, m.start() - 25) : m.start()]
+        if _NEGATION_RE.search(window):
+            continue
+        found.append(m.group(1).lower())
+    return found
+
+
+# #92: "it can't be done" is a claim of fact too, and the one most often made from memory. Only
+# phrasings that assert impossibility or absence - a bare "can't" is everywhere in ordinary prose.
+_IMPOSSIBLE_RE = re.compile(
+    r"\b(can(?:'|no)t be done|can not be done|(?:is|isn't|is not|not) (?:possible|supported)|"
+    r"impossible|no way to|does(?:n't| not) (?:support|exist)|"
+    r"there(?:'s| is) no (?:way|option|setting|flag|api|command))\b",
+    re.IGNORECASE,
+)
+
+
+# "is possible" / "is supported" are matched above only to be dropped here: the negative forms
+# are the claim this catches.
+_POSITIVE_FORM_RE = re.compile(r"^is (possible|supported)$", re.IGNORECASE)
+
+
+_QUOTE_CHARS = "\"'`\u201c\u2018"
+
+
+def _is_quoted(text, start):
+    """A phrase opening right after a quote mark is being talked about, not asserted."""
+    return start > 0 and text[start - 1] in _QUOTE_CHARS
+
+
+def _impossibility_claims(text):
+    found = []
+    for m in _IMPOSSIBLE_RE.finditer(text or ""):
+        if _is_quoted(text, m.start()):
+            continue
+        phrase = m.group(1).lower()
+        if _POSITIVE_FORM_RE.match(phrase):
+            continue
+        found.append(phrase)
+    return found
+
+
+# #89: a disclosure that something was not checked. Since #247 the detector lives in the shared
+# writing checker (scripts/clarity.py), which also tells a list label ("Not checked:") from a
+# disclosure.
+def _unreasoned_not_checked(text):
+    return clarity.unreasoned_not_checked(text) if clarity else []
+
+
+def _is_genuine_user_message(record):
+    """A real human turn - not a tool_result carrier, not Stop hook feedback, not a background
+    task's <task-notification> hand-back, and (when the field is present) not attributed to a
+    non-human origin. "Genuine user message" definition: doc-ref 25b2 docs/6-decisions/Decisions.md
+    """
+    if not isinstance(record, dict) or record.get("type") != "user":
+        return False
+    msg = record.get("message")
+    if not isinstance(msg, dict):
+        return False
+    content = msg.get("content")
+    if isinstance(content, list):
+        if content and all(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
+            return False
+        text = " ".join(
+            b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"
+        )
+    elif isinstance(content, str):
+        text = content
+    else:
+        return False
+    if re.match(r"^\s*Stop hook feedback", text or "", re.IGNORECASE):
+        return False
+    if "<task-notification>" in (text or ""):
+        return False
+    origin = record.get("origin")
+    if isinstance(origin, dict) and origin.get("kind") not in (None, "human"):
+        return False
+    return True
+
+
+_TURN_CACHE = {}
+
+
+def _records_since_last_user_message(transcript_path):
+    """(records after the last genuine user message, None) or (None, detail) when that cannot
+    be told - an unreadable transcript, or no genuine user message in it at all."""
+    records, _user, detail = _load_turn(transcript_path)
+    return records, detail
+
+
+def _last_user_text(transcript_path):
+    """The text of the last genuine user message, or "" when there is none to read."""
+    _records, user, _detail = _load_turn(transcript_path)
+    if not user:
+        return ""
+    content = (user.get("message") or {}).get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text")
+    return ""
+
+
+def _load_turn(transcript_path):
+    """(records after the last genuine user message, that message, None), or (None, None,
+    detail). Read once per process: the Stop checks each need it, and a long session's
+    transcript is megabytes."""
+    if transcript_path not in _TURN_CACHE:
+        _TURN_CACHE[transcript_path] = _read_turn(transcript_path)
+    return _TURN_CACHE[transcript_path]
+
+
+def _read_turn(transcript_path):
+    try:
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            raw_lines = f.readlines()
+    except OSError as exc:
+        return None, None, "could not read the transcript (%s)" % type(exc).__name__
+
+    records = []
+    for line in raw_lines:
+        line = line.strip()
+        if not line:
+            records.append(None)
+            continue
+        try:
+            records.append(json.loads(line))
+        except Exception:
+            records.append(None)
+
+    last_user_idx = None
+    for i, rec in enumerate(records):
+        if rec is not None and _is_genuine_user_message(rec):
+            last_user_idx = i
+    if last_user_idx is None:
+        return None, None, "no genuine user message found in the transcript"
+    return records[last_user_idx + 1 :], records[last_user_idx], None
+
+
+def _turn_tool_uses(records):
+    """Every tool_use block the assistant made in `records`, in order."""
+    for rec in records:
+        if not isinstance(rec, dict) or rec.get("type") != "assistant":
+            continue
+        content = (rec.get("message") or {}).get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    yield block
+
+
+def _tool_use_since_last_user_message(transcript_path):
+    """(True/False/None, detail). None means could not tell - an unreadable transcript, or no
+    genuine user message found in it at all."""
+    records, detail = _records_since_last_user_message(transcript_path)
+    if records is None:
+        return None, detail
+    for _block in _turn_tool_uses(records):
+        return True, None
+    return False, None
+
+
+def _written_since_last_user_message(transcript_path):
+    """(file paths Write/Edit/NotebookEdit touched this turn, None) or (None, detail)."""
+    records, detail = _records_since_last_user_message(transcript_path)
+    if records is None:
+        return None, detail
+    paths = []
+    for block in _turn_tool_uses(records):
+        if block.get("name") not in _AUDIT_WRITE_TOOLS:
+            continue
+        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+        fp = inp.get("file_path") or inp.get("notebook_path")
+        if fp and fp not in paths:
+            paths.append(fp)
+    return paths, None
+
+
+def _evidence_note(claim_words, impossible_words=()):
+    kinds = []
+    if claim_words:
+        kinds.append("claims success (%s)" % ", ".join(sorted(set(claim_words))))
+    if impossible_words:
+        kinds.append("says something cannot be done or does not exist (%s)"
+                     % ", ".join(sorted(set(impossible_words))))
+    return (
+        "House rules, evidence before claims: this reply %s, but no tool ran since your last "
+        "real message and the reply does not quote any command output. Before this turn ends, "
+        "either run the check and quote its real output, or restate the claim as untested and "
+        "say why. Reasoning, docs and memory are not a check." % " and ".join(kinds)
+    )
+
+
+def _not_checked_note(phrases):
+    return (
+        "House rules, evidence before claims: this reply says something was not checked (%s) "
+        "without saying why it could not be. Checking is the default, not an offer. If the check "
+        "can run here and is not prohibitively expensive, run it now and report its real "
+        "result; leave it unchecked only when it cannot run, and say in the same sentence what "
+        "stops it." % ", ".join(sorted(set(phrases)))
+    )
+
+
+# --- parity (#90/#87) and visual (#88/#96) checks --------------------------------------------
+# Wording that re-creates existing behaviour rather than editing it. "replace" and "move to" are
+# left out on purpose: they are everyday edit words, and a false positive at Stop costs a whole
+# continuation.
+_PARITY_RE = re.compile(
+    r"\b(port(?:ing|ed)?|rewrit\w*|rebuild\w*|re-?do|from scratch|restructur\w*|"
+    r"split (?:\w+ ){0,2}into|merg\w* (?:\w+ ){0,2}into|reorgani[sz]\w*|consolidat\w*|"
+    r"migrat\w*|rework\w*|v2)\b",
+    re.IGNORECASE,
+)
+
+
+# A reply or plan that already accounts for what was kept and dropped.
+_PARITY_ACCOUNTED_RE = re.compile(
+    r"parity|\bkeep\b.{0,400}\bdrop|\bkept\b.{0,400}\bdropped|nothing (?:was )?dropped|"
+    r"no (?:features? |behaviou?rs? )?(?:were |was )?(?:dropped|lost|removed)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+SCOPE_PARITY_CLAUSE = (
+    "\n- This reads like re-creating existing behaviour (a port, rewrite, restructure or "
+    "migration). Inventory what the original does from its code first - keep/change/drop, "
+    "shown before building - verify against the original, and name every drop."
+)
+
+
+# #226: a reply of LONG_REPLY_WORDS words or more that links no page or picture gets a reminder to
+# move the detail onto a page and end on one question. Code blocks are not counted as words.
+# #282: the threshold is 160 words or more (it was over 200).
+LONG_REPLY_WORDS = 160
+
+
+_PAGE_LINK_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(|\.html\b", re.IGNORECASE)
+
+
+_MD_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
+
+
+_PAGE_ART_RE = re.compile(r"claude\.ai/(?:code/)?artifact/|!\[[^\]]*\]\(", re.IGNORECASE)
+
+
+_HTML_PATH_RE = re.compile(r"""(?:file:///)?[^\s()<>\[\]"'`]+?\.html?""", re.IGNORECASE)
+
+
+def _html_paths(reply, cwd):
+    """#329: every .html/.htm path in the reply as (path as written, absolute normcased path or None
+    for a bare file name with no folder)."""
+    out = []
+    for m in _HTML_PATH_RE.finditer(reply):
+        raw = m.group(0)
+        p = urllib.parse.unquote(raw[8:]) if raw.lower().startswith("file:///") else raw
+        if raw.lower().startswith("file:///"):
+            p = p if re.match(r"[A-Za-z]:", p) else "/" + p
+        if "/" not in p and "\\" not in p:
+            out.append((p, None))
+            continue
+        out.append((p, os.path.normcase(os.path.abspath(os.path.join(cwd, p)))))
+    return out
+
+
+def _inside(path, cwd):
+    c = os.path.normcase(os.path.abspath(cwd))
+    return path == c or path.startswith(c + os.sep)
+
+
+def _reply_links_page(reply, cwd):
+    """#329: True when the reply links a page the app can open: an artifact link, a picture, or an
+    .html path inside the session folder cwd. A bare .html file name counts only when the reply has no
+    .html path at all, so the text of [x.html](../elsewhere/x.html) can't pass for the link. Empty cwd:
+    any .html counts."""
+    if not reply:
+        return False
+    if _PAGE_ART_RE.search(reply):
+        return True
+    if not cwd:
+        return bool(_PAGE_LINK_RE.search(reply))
+    found = _html_paths(reply, cwd)
+    paths = [a for _, a in found if a is not None]
+    if paths:
+        return any(_inside(a, cwd) for a in paths)
+    return bool(found)
+
+
+def _outside_page_links(reply, cwd):
+    """#329: the .html paths in the reply that sit outside the session folder cwd."""
+    if not cwd:
+        return []
+    return [p for p, a in _html_paths(reply, cwd) if a is not None and not _inside(a, cwd)]
+
+
+def _clear_writing_enabled():
+    return os.environ.get("HOUSE_RULES_CLEAR_WRITING", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _parity_enabled():
+    return os.environ.get("HOUSE_RULES_PARITY", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _parity_report_note(word):
+    # #309 (incident 5 of #303): report only until the restructure. The demand for an inventory and an
+    # issue per drop fired on a one-entry Decisions.md append, and three times on audit-notes turns.
+    return (
+        "House rules, re-creating existing behaviour (report only, #309): aj's message reads like a %s "
+        "and this turn wrote files, but the reply names nothing kept or dropped. Nothing is required "
+        "this turn; the note is kept as evidence for the restructure." % word.lower()
+    )
+
+
+# The shared writing checker (#247), a sibling file of hook.py (moved from hook.py in step 2c: the writing part, the
+# design loop part and the end-of-reply dispatcher all use it). A missing or broken copy must not take every hook
+# down with it, so it is loaded here and each check that needs it reports when it is absent.
+sys.path.insert(0, SCRIPTS_DIR)
+try:
+    import clarity
+    CLARITY_ERROR = None
+except ImportError as _clarity_exc:
+    clarity = None
+    CLARITY_ERROR = "house-rules: the writing checker (scripts/clarity.py) could not load (%s)." % _clarity_exc
+
+
+# ---------------------------------------------------------------------------------------
+# The step 2c link lists (#359). Same shape as the lists above. The delegation part calls the design
+# loop part at four places, and neither may import the other, so the design loop registers on these.
+#   DELEGATE_NOTE_HOOKS  fn(payload) -> str      event_delegate appends each answer to the plan reminder
+#   SUBAGENT_NOTE_HOOKS  fn(payload) -> str      event_subagentrules joins each answer onto the subagent core
+#   TOOL_RECORD_HOOKS    fn(payload) -> [notes]  event_autosave adds each list to its notes, in order
+#   EDIT_GATE_HOOKS      fn(payload) -> bool     event_commitgate asks each first; True = it answered
+# ---------------------------------------------------------------------------------------
+
+DELEGATE_NOTE_HOOKS = []
+SUBAGENT_NOTE_HOOKS = []
+TOOL_RECORD_HOOKS = []
+EDIT_GATE_HOOKS = []
+
+
+def register_delegate_note(fn):
+    _register(DELEGATE_NOTE_HOOKS, fn)
+    return fn
+
+
+def register_subagent_note(fn):
+    _register(SUBAGENT_NOTE_HOOKS, fn)
+    return fn
+
+
+def register_tool_record(fn):
+    _register(TOOL_RECORD_HOOKS, fn)
+    return fn
+
+
+def register_edit_gate(fn):
+    _register(EDIT_GATE_HOOKS, fn)
+    return fn
+
+
+# ---------------------------------------------------------------------------------------
+# The evidence check of the end-of-reply dispatcher (event_handover in hook.py), moved out of it verbatim.
+# ---------------------------------------------------------------------------------------
+
+def handover_evidence_check(payload):
+    """(reply text or None when the payload carries none, needs_evidence, evidence_words, impossible_words,
+    not_checked, could_not_tell). The evidence check is independent of the fence gate: a reply can claim
+    success with no fence in it at all."""
+    needs_evidence = False
+    evidence_words = []
+    impossible_words = []
+    not_checked = []
+    could_not_tell = None
+    reply_text = None
+    vm = _LAST_MESSAGE_VALUE_RE.search(payload)
+    if vm is not None:
+        try:
+            reply_text = json.loads('"%s"' % vm.group(1))
+        except ValueError:
+            reply_text = vm.group(1)
+        claims = _claim_words(reply_text)
+        impossible = _impossibility_claims(reply_text)
+        not_checked = _unreasoned_not_checked(reply_text)
+        if (claims or impossible) and not _EVIDENCE_QUOTE_RE.search(reply_text):
+            transcript_path = _field(_TRANSCRIPT_RE, payload)
+            if not transcript_path:
+                could_not_tell = "the Stop payload carried no transcript_path"
+            else:
+                has_tool, detail = _tool_use_since_last_user_message(transcript_path)
+                if has_tool is None:
+                    could_not_tell = detail
+                elif has_tool is False:
+                    needs_evidence = True
+                    evidence_words = claims
+                    impossible_words = impossible
+    return reply_text, needs_evidence, evidence_words, impossible_words, not_checked, could_not_tell
