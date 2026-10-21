@@ -5,7 +5,7 @@
   "replyPrefix": "Build plan approved: proof check fix",
   "reply": "",
   "short": {
-    "lead": "This is the build plan for the proof check fix (#367). On the proposal page you chose 1A: the design loop keeps one issue list per feature, under the feature's name. You also chose 2A: restructure step 2's issues (#340 and #357 to #360) close through the next sweep page. The work is 3 sub-issues of #367. One helper agent builds each one, one at a time, and one QA page covers all three.",
+    "lead": "This is the build plan for the proof check fix (#367). On the proposal page you chose 1A: the design loop keeps one issue list per feature, under the feature's name. You also chose 2A: restructure step 2's issues (#340 and #357 to #360) close through the next sweep page. The work is 3 sub-issues of #367: #374, #375 and #376. One helper agent builds each one, one at a time, and one QA page covers all three.",
     "hint": "Tap a step to see what it creates or changes and what it needs.",
     "key": [
       [
@@ -21,7 +21,7 @@
       [
         "file",
         "Step 1",
-        "Unwrap the GitHub tool's replies before both proof checks",
+        "Unwrap the GitHub tool's replies before both proof checks (#374)",
         "",
         [
           "One helper function in scripts/house_rules/design_loop.py takes a reply wrapped in a text block and returns the plain object inside it.",
@@ -33,7 +33,7 @@
       [
         "list",
         "Step 2",
-        "One issue list per feature (your answer 1A)",
+        "One issue list per feature, your answer 1A (#375)",
         "",
         [
           "The stage file, .claude/house-rules-loop.json, keeps each feature's issues under the feature's name instead of in one shared list.",
@@ -45,7 +45,7 @@
       [
         "check",
         "Step 3",
-        "Version, docs, QA page, then the closes",
+        "Version, docs, QA page, then the closes (#376)",
         "",
         [
           "Plugin version 2.73.0, and docs/4-systems/issue-closing.md describes both changes.",
@@ -70,7 +70,7 @@
   ],
   "choices": [],
   "wrapup": {
-    "summary": "The build plan for the proof check fix (#367): 3 sub-issues, one QA page, then the stranded issues close.",
+    "summary": "The build plan for the proof check fix (#367): 3 sub-issues (#374 to #376), one QA page, then the stranded issues close.",
     "changing": "No code changes until you approve. Your design answers are in the decisions log, docs/6-decisions/Decisions.md.",
     "blocking": "Your approval of this plan.",
     "next": "Once you approve, step 1 starts. After the fix ships, restructure steps 3 to 7 follow as one feature.",

@@ -61,3 +61,19 @@ the sweep. A not-planned close never comes from a QA pass.
 ## Traps that have already cost time
 
 - A new design approval clears `state["issues"]`; the closable record exists because of it.
+
+## Planned: the proof check fix (#367)
+
+Approved 2026-10-21 ("Design approved: proof check fix 1A 2A"). Two gaps, both found live:
+
+- **Wrapped replies (#374).** The GitHub tool returns every result as a list holding one text block,
+  `[{"type": "text", "text": "{\"merged\": true, ...}"}]`, recorded on all 74 successful merge and issue-update
+  calls in the 2026-10-21 session transcript. `_closable_merge_of` and `_closed_issue_of`
+  (`scripts/house_rules/design_loop.py`) read the reply as a plain object, so neither ever found its proof. A
+  helper unwraps the text block first; an error reply stays text and proves nothing.
+- **One issue list per feature (#375).** `state["issues"]` holds only the current feature's issues, so a build
+  plan approved for a second feature before the first passed QA made the first feature's "QA passed" record
+  nothing. Issues are kept per feature name instead, and an older stage file is converted on first read.
+
+Step 2's issues (#340, #357 to #360) close through the next sweep page (answer 2A).
+

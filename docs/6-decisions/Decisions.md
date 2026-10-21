@@ -7,6 +7,17 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - Design approved: proof check fix
+
+**Context.** Proposal `docs/plans/2026-10-21-proof-check-fix.html` for #367.
+
+**Decision.** aj's reply was "Design approved: proof check fix 1A 2A" (the answers are recorded in "Proof check fix
+answers, and restructure steps 3 to 7 become one feature" below). Sub-issues: #374 (unwrap the GitHub tool's
+replies), #375 (one issue list per feature), #376 (version, docs, QA page, then the closes). Systems doc:
+`docs/4-systems/issue-closing.md`, "Planned: the proof check fix (#367)".
+
+**Status.** Standing.
+
 ## 2026-10-21 - Proof check fix answers, and restructure steps 3 to 7 become one feature
 
 **Context.** Proposal `docs/plans/2026-10-21-proof-check-fix.html` for #367 (the close and merge proof checks
