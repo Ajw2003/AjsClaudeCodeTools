@@ -24,7 +24,7 @@
         "Where the 197 seconds go",
         "",
         [
-          "154 seconds (78%): verify.py starts hook.py (the script that runs the plugin's hooks) as a fresh Python process 898 times, about 0.17 seconds each.",
+          "154 seconds (78%): verify.py starts hook.py (the script that runs the plugin's hooks) as a fresh Python process 898 times, 0.172 seconds each on average (154.2 seconds over 898 starts).",
           "29 seconds: 30 page builds with make_page.py (the script that builds pages like this one), including its browser check.",
           "Under 14 seconds: everything else, such as git commands and the docs checkers.",
           "Measured on 2026-10-21 by timing every process one verify.py run started on this branch."
@@ -50,7 +50,7 @@
         "",
         [
           "Step 2 (#340) turns hook.py into a short dispatcher, a small script that only passes each call to the right part. Each part becomes a module that hook.py imports, so Python caches its compiled form.",
-          "Estimated saving: about 0.08 seconds on each of 898 starts, roughly 75 of the 197 seconds. It's an estimate because step 2 isn't built yet."
+          "Estimated saving: 75 of the 197 seconds, which is 0.084 seconds of compiling (0.101 minus 0.017) on each of 898 starts. It is an estimate because step 2 isn't built yet, so it can't be measured until then."
         ],
         "Nothing from you. The rework step measures this again after step 2 instead of trusting the estimate."
       ],
