@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - Build plan approved: proof check fix
+
+**Context.** Build plan `docs/plans/2026-10-21-proof-check-fix-plan.html` for #367.
+
+**Decision.** aj's reply was "Build plan approved: proof check fix". #374, #375 and #376 are built in that order,
+one helper agent each, with one QA page; the plugin becomes 2.73.0.
+
+**Status.** Standing.
+
 ## 2026-10-21 - Design approved: proof check fix
 
 **Context.** Proposal `docs/plans/2026-10-21-proof-check-fix.html` for #367.
