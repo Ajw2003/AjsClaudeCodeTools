@@ -207,6 +207,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-21, branch `AjsAgent/issue-281-fix`: step 2a (#357) is built. `scripts/house_rules/core.py` (1,853 lines) holds the core handlers and three hook lists that parts register on; `hook.py` went from 8,931 to 7,248 lines. `verify.py` 913 PASS, run twice by the builder and once more after the merge (185 seconds). Next is step 2b (#358).
 
+2026-10-21, branch `AjsAgent/issue-281-fix`: step 2b (#358) is built. `house_rules/safe_git.py` (1,888 lines) and `house_rules/docs.py` (717 lines) hold their parts; shared helpers moved into core (2,057 lines); `hook.py` is down to 4,633 lines. The guard's refusals through `run.sh` are byte-identical to before. `verify.py` 913 PASS, run twice by the builder and once more after the merge (162 seconds). Next is step 2c (#359).
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
