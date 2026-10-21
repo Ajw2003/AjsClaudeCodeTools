@@ -1,0 +1,90 @@
+{
+  "title": "Verify Rework QA",
+  "eyebrow": "QA · #368 the verify.py rework: one test file per part, run in parallel · house-rules 2.72.0",
+  "short": {
+    "lead": "The verify.py rework (#368) is built on the branch AjsAgent/issue-281-fix as house-rules 2.72.0. verify.py is the script that checks the plugin's hooks do what the docs say. Its 913 checks now live in one test file per part of the plugin, and verify.py runs those files at the same time. A full run took 197 seconds before restructure step 2 (the split of hook.py into modules, #340). It now takes 39 to 41 seconds. The proposal's question 2 asked how often a session runs the tests, and you answered 2A. So in a session, only the parts a change touched now run twice, and GitHub's check still runs everything.",
+    "hint": "Tap a row to see what was built and how it was checked.",
+    "key": [
+      [
+        "Built and checked",
+        "done"
+      ],
+      [
+        "Your test",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "Step 1",
+        "Which part every check belongs to (#369)",
+        "done",
+        [
+          "Each of the 913 checks is listed with the part of the plugin it tests, in docs/4-systems/verify-suites.md.",
+          "A new script, tools/check_verify_inventory.py, proves every check is listed exactly once and matches a real run.",
+          "The slowest parts are safe git (31.7 seconds), the design loop (28.5 seconds) and page builds (27.5 seconds). Parts run at the same time, so a full run can't be faster than the slowest part, 31.7 seconds."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "swap",
+        "Step 2",
+        "One test file per part, and a parallel runner (#370)",
+        "done",
+        [
+          "The checks moved into scripts/checks/, one file per part: core, safe git, design loop, writing, delegation, docs and page builds. The setup code that all the files share is in checks/common.py.",
+          "verify.py is now the runner. With no options it runs every part at the same time. --parts runs the parts you name, --changed runs only the parts a change touched, and --serial runs the parts one after another.",
+          "GitHub's check runs the same verify.py command, so it still runs all 913 checks.",
+          "No check was deleted. I compared the list of all 913 check titles from my last run before the split with my run after it, and they match exactly.",
+          "Two groups of checks moved to a different part. Each group depends on files that an earlier check leaves behind, so the group has to run in one file. The moves were 2 checks from the design loop to safe git, and 30 checks from writing to the design loop. So a change to the writing code also runs the design loop's tests."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Step 3",
+        "The run-twice rule and the timings (#371)",
+        "done",
+        [
+          "rules/house-rules.md now says to run \"the parts I touched twice (the rest once; CI runs it all)\", where CI means the check GitHub runs on every pull request. rules/detail/green-suite.md gives the reason and the exact command: verify.py --changed, twice.",
+          "Timings on this machine: a full run took 40.7 and 39.5 seconds, and a serial run took 132.5. In a copy of this repo, a comment-only change to the docs tests made --changed run only the docs part: 125 checks in 8.1 seconds.",
+          "One limit: --changed compares against main. On a branch that already differs from main in every part, it runs everything, which is safe but no faster. Once this merges, a fresh branch gets the short runs."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Your test",
+        "Read the rule change, then pass or fail QA",
+        "you",
+        [
+          "Read the \"A green test suite is not proof it works\" section in claude-house-rules/plugins/house-rules/rules/house-rules.md and say whether it matches your answer 2A (only the parts a change touched run twice in a session; GitHub's check runs everything).",
+          "Once you pass QA, a pull request takes 2.72.0 to the main branch. After that, the next work is #367 (the proof-check bug), and then #341 (restructure step 3, settings and identity)."
+        ],
+        "Reply \"QA passed: verify rework\", or \"QA failed: verify rework\" and say what is wrong."
+      ]
+    ]
+  },
+  "changes": [],
+  "qa": {
+    "feature": "verify rework",
+    "base": "origin/main",
+    "unverified": [
+      "No Claude Code session has run house-rules 2.72.0 yet; the checks ran the branch's scripts directly",
+      "The parallel run was measured on one 4-core machine; GitHub's runner has a different number of cores, so its time will differ",
+      "The list of differences between this branch and main (the diff) also counts this branch's plan pages, not only this feature's files"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "QA for the verify.py rework (#368): one test file per part, run in parallel, and the touched parts run twice, house-rules 2.72.0.",
+    "changing": "Once you pass QA, a pull request takes 2.72.0 to the main branch, and #367 (the proof-check bug) starts.",
+    "blocking": "Your QA answer.",
+    "next": "Your QA answer.",
+    "todo": [
+      "Read the rule section named in the last row.",
+      "Reply \"QA passed: verify rework\" or \"QA failed: verify rework\"."
+    ]
+  }
+}

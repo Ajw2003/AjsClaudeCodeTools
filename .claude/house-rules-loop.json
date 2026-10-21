@@ -1,6 +1,6 @@
 {
   "feature": "verify rework 1A 2A",
-  "stage": "build",
+  "stage": "qa",
   "skip": false,
   "approvals": [
     {
@@ -379,22 +379,22 @@
     "Ajw2003/AjsClaudeCodeTools#368": [
       "AjsAgent created this",
       "Feature",
-      "in progress"
+      "needs review"
     ],
     "Ajw2003/AjsClaudeCodeTools#369": [
       "AjsAgent created this",
       "Feature",
-      "in progress"
+      "needs review"
     ],
     "Ajw2003/AjsClaudeCodeTools#370": [
       "AjsAgent created this",
       "Feature",
-      "in progress"
+      "needs review"
     ],
     "Ajw2003/AjsClaudeCodeTools#371": [
       "AjsAgent created this",
       "Feature",
-      "in progress"
+      "needs review"
     ]
   },
   "sweep": [
@@ -555,5 +555,5 @@
       "replaced_by": null
     }
   ],
-  "qa_page": "docs/plans/2026-10-21-restructure-step-2-qa.html"
+  "qa_page": "docs/plans/2026-10-21-verify-rework-qa.html"
 }
