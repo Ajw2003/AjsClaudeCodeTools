@@ -7,6 +7,25 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - Sweep approved: issues, and 26 issues closed
+
+**Context.** Sweep page `docs/plans/2026-10-21-issue-sweep.html`, built from
+`docs/plans/2026-10-21-issue-sweep-evidence.json`: 129 open issues labelled "AjsAgent created this", 32
+proposed to close as completed, none as not planned, 97 kept.
+
+**Decision.** aj's reply was "Sweep approved: issues keep #224 #307 #308 #309 #310 #311". The hook recorded
+26 approved closes. Each was closed through the GitHub tool with a comment quoting its evidence and the
+label "AjsAgent completed this" (created for this): #361 to #365, #339, #329 to #332, #265, #261, #262, #245
+to #250, #225 to #227 and #230 to #233. The close guard allowed every one live, the first run of house-rules
+2.70.0. 103 issues stay open.
+
+**Found in the live run.** The after-close step did not remove the closed issues from the stage file's
+`sweep` list: its proof check reads the GitHub tool's result as plain data, and the tool most likely wraps
+it in a text block. The merge-stamping check of #362 reads results the same way. Both fail safe (nothing is
+removed or stamped without proof), but closed issues stay on the list until fixed.
+
+**Status.** Standing.
+
 ## 2026-10-20 - QA passed: issue closing
 
 **Context.** QA page `docs/plans/2026-10-20-issue-closing-qa.html` for #361 (Issue closing: the agent
