@@ -197,6 +197,13 @@ Built from `grep -n '^def event_'` over `hook.py` and `house_rules/*.py` on 2026
   rule with a shell signature, add both a `guard` pattern and a `verify.py` case in the same
   change — untested rule text has no effect. It computes its own check count at runtime; don't
   write that number down anywhere, it will drift.
+  Since #370/#371 it is a runner over one test file per part (`scripts/checks/`): parts run in
+  parallel by default; `--parts a,b` runs the named parts, `--changed` runs only the parts a change
+  touched (diff against the merge base with origin/main plus uncommitted files), `--serial` runs
+  them one after another. **The run-twice rule (2A, Decisions.md "2026-10-21 - Design approved:
+  verify rework"):** in a session the parts a change touched run twice (`verify.py --changed`,
+  twice) and everything else runs once; CI runs the full `verify.py` on every pull request. It
+  supersedes "test suites run twice everywhere". Detail: `docs/4-systems/verify-suites.md`.
 
 ## Why a shim in front of the Python file, rather than calling `hook.py` directly
 

@@ -602,7 +602,7 @@ RESTATEMENTS = [
         "the runnable note (runnable handler, scripts)",
         lambda: run_hook("runnable", json.dumps({"tool_input": {"file_path": r"C:\proj\deploy.sh"}}))[1],
         [
-            "whole workflow", "starting point", "hand over a command", "run it twice",
+            "whole workflow", "starting point", "hand over a command", "touched twice",
             "realistic", "not proof it works",
         ],
         False,

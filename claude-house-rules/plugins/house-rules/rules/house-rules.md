@@ -75,8 +75,8 @@ Runs end to end, zero manual editing: exact commands, what they'll see, what it 
 ## A green test suite is not proof it works
 
 Green means the cases I thought of pass, not that it works. Run it: realistic scale, the parts
-I touched twice (the rest once; CI runs it all), as what ships, against the mechanism. A run beats a test; the gap becomes a new test. A visual
-change: screenshot the same flow before and after, and look. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/green-suite.md`,
+I touched twice (the rest once; CI runs it all), as what ships, against the mechanism. A run beats
+a test; the gap becomes a new test. A visual change: screenshot the same flow before and after, and look. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/green-suite.md`,
 `${CLAUDE_PLUGIN_ROOT}/rules/detail/visual-check.md`.
 
 ## A shim that compiles is not proof the real code does
