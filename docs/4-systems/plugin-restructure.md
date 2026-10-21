@@ -179,3 +179,70 @@ newest-rules tests now copies `house_rules/` as well. `_read_back_body` stays in
 patch at the credit check still takes effect (that test passes). `hooks.json` and `run.sh` are
 unchanged. `core.py` compiles to a cached `.pyc` after the first run (`python -X importtime`:
 14 ms the first time, 2.3 ms after).
+
+### Step 2b: the safe git and docs modules (#358)
+
+`hook.py` went from 7,248 to 4,633 lines; `house_rules/safe_git.py` has 1,888 lines and
+`house_rules/docs.py` 717 (`core.py` grew from 1,853 to 2,057). Everything moved verbatim except
+the three call sites listed under "Links" below. `hooks.json` and `run.sh` are unchanged, and the
+`guard` refusal texts are byte-identical before and after (`git push --force`, a delete, a
+Claude credit in a commit message, `reset --hard`, an empty payload, `guardgithub`, `guardwrite`).
+
+**Moved into `safe_git.py`.** The guard block (patterns, `branch_ownership`, `_command_dir`,
+`_never_blocked_*`, the delete and scratchpad checks, `event_guard`); `event_guardwrite`;
+`event_branchnudge`; `event_prompttimer` with the whole waiting-on-you list (`_waiting_*`);
+attribution (`_attribution_guard`, `_ATTRIBUTION_*`, `_read_back_body`, `event_creditcheck`);
+`event_guardgithub` with `BRANCH_DENY`; the commit identity helpers (`_effective_author`,
+`_is_claude_identity`, `AGENT_IDENTITY_FIX`); the commit-obligation helpers (`_dirty_paths`,
+`_uncommitted_among`, `_branch_advice`, `_commit_note`); and `_agent_branch_block` and
+`_agent_identity_block`, which register themselves on the core's session-start list at the foot of
+the file, so the registration moved with them. `_GH_PREFIX` and `_PR_BODY_FILE_RE` moved too,
+because the attribution check uses them; `hook.py` imports them back.
+
+**Moved into `docs.py`.** `event_docstiers` with its tier lists, `_staged_docs_status` with its
+`git add` patterns, and `event_harvest` with all its helpers. It registers `_staged_docs_status`
+on a core list at the foot of the file.
+
+**Moved into `core.py`** because two parts, or a part and the code still in `hook.py`, both read
+them and a part may not import another part: `_WORD`, `_GIT`, `_GIT_COMMIT_RE`,
+`_STATEMENT_SPLIT_RE`, `_COMMAND_VALUE_RE`, `_unquote_git_path`, `_parse_status_porcelain`,
+`_git_dir`, `_common_git_dir`, `_ag` (with `AUTOSAVE_GIT_TIMEOUT` and `AUTOSAVE_BRANCH_PREFIX`),
+`_field`, `_payload_cwd`, `_TOGGLE_OFF`, `_PROMPT_VALUE_RE` and `_is_relayed_prompt`. The step 2a
+builder's inventory had no row for them; each is a single helper, not a block.
+
+**Links.** Three more lists in `core.py`, the same shape as the 2a lists (a register function each,
+same-name registration replaces, so `verify.py` loading `hook.py` many times is safe):
+
+| List | Register | Who loops | What is registered today |
+|---|---|---|---|
+| `GUARD_ISSUE_HOOKS` | `register_guard_issue(fn)` | `event_guard`, after its own attribution check, first answer wins | `_author_guard`, `_issues_guard` (in `hook.py`) |
+| `GITHUB_WRITE_HOOKS` | `register_github_write(fn)` | `event_guardgithub`, before its credit check | `_guardgithub_issue_checks` (in `hook.py`) |
+| `DOCS_STATUS_HOOKS` | `register_docs_status(fn)` | `event_guard`, once per commit | `_staged_docs_status` (from `docs.py`) |
+
+Three call sites changed: the `issue_hit = ... or _author_guard(...) or _issues_guard(...)` line in
+`event_guard` became a loop over `GUARD_ISSUE_HOOKS`; the `_staged_docs_status(...)` call became
+`_docs_status(...)`, which asks the first `DOCS_STATUS_HOOKS` entry (and says "the docs part is not
+loaded" if none is registered); and the two checks at the top of `event_guardgithub` (the issue
+sections check, #248, and the close guard, #363) moved into `_guardgithub_issue_checks` in
+`hook.py`, which returns `True` where the old code did `return 0`. Order is unchanged.
+
+**Left in `hook.py` for step 2c, and why.** `_author_guard` and `_issues_guard` and the close guard
+(`_close_decide`, `_close_check`, `_close_forget`, `_close_gh_*`) with `event_closablemerge`: design
+loop code, reached through the links above. The `_PR_BODY_FLAG_RE`, `_PR_LINK_RE`, `_PR_CLOSING_RE`
+and `PR_ASK_NOTE` patterns: only `_issues_guard` uses them. `SCOPE_PARITY_CLAUSE`, `_PARITY_RE`,
+`_parity_enabled` and the parity part of `event_handover`: the parity check is not a function of its
+own, it is a few lines inside `event_handover` that also feed the visual check, and the same
+patterns are read by `event_delegate` (delegation) and by `scope`; moving them to `docs.py` would
+make delegation import the docs part. It waits for the end-of-reply split in 2c. The delegation,
+writing and design-loop blocks, `handover` and `pagecheck`.
+
+**`verify.py`.** 913 checks before and after, none removed or skipped. The source-reading checks
+for `branch_ownership`, the guard bucket titles and the prompttimer block read `safe_git.py`; the
+silent-`except` scan and the deliverable-state check read all four files; the prompttimer slice now
+ends at a marker comment, `# End of the prompttimer block`, added after `event_prompttimer`. Five
+in-process lines point at the module that owns the name: `_cc_mod.safe_git._read_back_body` (the
+credit check test), `hook.safe_git.read_payload` (the guard and guardwrite crash tests),
+`hook.docs.HARVEST_BUDGET_SECONDS` (the harvest budget test), and `emit` patched on `hook.docs` and
+`hook.safe_git` beside `hook` and `core` (the one-shot failure test). The credit check patch was
+broken on purpose once (patching `hook` instead): checks 296 and 297 failed, so the patch does take
+effect where it is now.

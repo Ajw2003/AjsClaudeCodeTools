@@ -48,6 +48,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 HOOK = os.path.join(HERE, "hook.py")
 # The core module (#357): hook.py imports it, so source-reading checks read both.
 CORE = os.path.join(HERE, "house_rules", "core.py")
+# The safe git and docs parts (#358): the guards and the docs check live here now, so source-reading checks read them.
+SAFE_GIT = os.path.join(HERE, "house_rules", "safe_git.py")
+DOCS = os.path.join(HERE, "house_rules", "docs.py")
 RUN = os.path.join(HERE, "run.sh")
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
@@ -1151,7 +1154,7 @@ print()
 
 # The branch is read from a file, never by running git. A subprocess here would sit on the
 # critical path of every shell command, in the one handler that blocks when it fails.
-_hook_src = read(HOOK)
+_hook_src = read(SAFE_GIT)  # branch_ownership moved to the safe git part (#358)
 _own = _hook_src[_hook_src.index("def branch_ownership") :]
 _own = _own[: _own.index("\ndef ", 1)]
 # Call syntax only, not prose. Why the docstring names rev-parse: docs/architecture.md, "Why `.git/HEAD` and not `git rev-parse --abbrev-ref HEAD`".
@@ -1170,7 +1173,7 @@ crash_snippet = (
     "import sys, hook\n"
     "def boom():\n"
     "    raise OSError('simulated stdin failure')\n"
-    "hook.read_payload = boom\n"
+    "hook.safe_git.read_payload = boom\n"  # #358: event_guard lives in the safe git part now
     "sys.exit(hook.main(['hook.py', 'guard']))\n"
 )
 proc = subprocess.run(
@@ -1285,7 +1288,7 @@ crash_snippet_gw = (
     "import sys, hook\n"
     "def boom():\n"
     "    raise OSError('simulated stdin failure')\n"
-    "hook.read_payload = boom\n"
+    "hook.safe_git.read_payload = boom\n"  # #358: event_guardwrite lives in the safe git part now
     "sys.exit(hook.main(['hook.py', 'guardwrite']))\n"
 )
 proc = subprocess.run(
@@ -1984,7 +1987,7 @@ else:
 # "Never commit without asking" to "Never commit to `main` without asking" would have left the
 # permission prompt naming a rule the user could not find - a silent drift in the one place the
 # plugin speaks directly to them.
-bucket_titles = re.findall(r'^\s*\("([^"]+)", GUARD_R\d+\),', read(HOOK), re.MULTILINE)
+bucket_titles = re.findall(r'^\s*\("([^"]+)", GUARD_R\d+\),', read(SAFE_GIT), re.MULTILINE)
 headings = [ln.lstrip("# ").strip() for ln in rules_text.split("\n") if ln.startswith("## ")]
 orphans = [t for t in bucket_titles if t not in headings]
 if bucket_titles and not orphans:
@@ -2438,7 +2441,7 @@ else:
 # --- and when the scan genuinely does run long, it says so by name ----------------------------
 budget_snippet = (
     "import sys, hook\n"
-    "hook.HARVEST_BUDGET_SECONDS = -1.0\n"
+    "hook.docs.HARVEST_BUDGET_SECONDS = -1.0\n"  # #358: harvest lives in the docs part now
     "sys.exit(hook.main(['hook.py', 'harvest']))\n"
 )
 proc = subprocess.run(
@@ -2571,7 +2574,7 @@ _cache_case(
 # --- the "nothing fails silently" rule, enforced structurally over hook.py source --------------
 # The rule is worthless if the plugin's own hooks break it, so this reads hook.py and fails any
 # except block that returns without first emitting or writing to stderr.
-hook_src = read(HOOK) + "\n" + read(CORE)
+hook_src = read(HOOK) + "\n" + read(CORE) + "\n" + read(SAFE_GIT) + "\n" + read(DOCS)
 hook_lines = hook_src.split("\n")
 silent_handlers = []
 for i, line in enumerate(hook_lines):
@@ -2633,7 +2636,7 @@ for ev, needle in (
         "        state['first'] = False\n"
         "        raise OSError('simulated internal failure')\n"
         "    real_emit(obj)\n"
-        "hook.emit = core.emit = one_shot_boom\n"
+        "hook.emit = core.emit = hook.docs.emit = hook.safe_git.emit = one_shot_boom\n"  # #358: the parts hold their own emit
         f"sys.exit(hook.main(['hook.py', '{ev}']))\n"
     )
     # stdin must be closed: these handlers really do read the payload now, and an inherited
@@ -3237,7 +3240,7 @@ _cc_spec.loader.exec_module(_cc_mod)
 
 
 def _creditcheck(cmd, stdout, fetch, off=False):
-    _cc_mod._read_back_body = fetch
+    _cc_mod.safe_git._read_back_body = fetch  # #358: event_creditcheck lives in house_rules/safe_git.py now
     _saved = (sys.stdin, sys.stdout, os.environ.get("HOUSE_RULES_ATTRIBUTION"))
     sys.stdin = type("S", (), {"buffer": _cc_io.BytesIO(json.dumps(
         {"tool_name": "Bash", "tool_input": {"command": cmd}, "tool_response": {"stdout": stdout}}).encode())})()
@@ -4625,7 +4628,7 @@ for dead in ["track-write.sh", "clear-pending.sh", "deliverable.sh"] + [
         gone.append(f"{dead} still exists")
 if ".sh\"" in hooks_json_text:
     gone.append("hooks.json still references a .sh hook script directly")
-if "house-rules-deliverable" in read(HOOK) + read(CORE):
+if "house-rules-deliverable" in read(HOOK) + read(CORE) + read(SAFE_GIT) + read(DOCS):
     gone.append("hook.py still writes deliverable state")
 if not gone:
     report("PASS", "the stateful deliverable machinery and the old .sh hooks are gone")
@@ -6284,8 +6287,8 @@ commit_case(
     and _p5b[0] == 0 and _p5b[1] == "" and "could not read" in _p5b[2],
     "stderr %r / %r" % (_p5[2][:100], _p5b[2][:100]),
 )
-_pt_src = read(HOOK)
-_pt_block = _pt_src[_pt_src.index("# prompttimer - PermissionRequest"):_pt_src.index("# subagentcommit")]
+_pt_src = read(SAFE_GIT)  # prompttimer moved to the safe git part (#358); its block now ends at a marker line
+_pt_block = _pt_src[_pt_src.index("# prompttimer - PermissionRequest"):_pt_src.index("# End of the prompttimer block")]
 commit_case(
     "prompttimer: the handler source has no route to an allow decision",
     "allow" not in _pt_block.lower() and 'behavior": "deny"' in _pt_block,

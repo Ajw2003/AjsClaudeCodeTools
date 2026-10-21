@@ -1802,6 +1802,186 @@ def event_promptran():
 
 
 # ---------------------------------------------------------------------------------------
+# Shared by more than one part (#358, step 2b). A part may not import another part, so what the
+# safe git part and the docs part (or the code still in hook.py) both read lives here, moved
+# verbatim from hook.py.
+# ---------------------------------------------------------------------------------------
+
+# One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
+_WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
+# `git` plus any run of global options before the subcommand.
+# Why the alternation's first branch exists: docs/architecture.md, "The pre-existing hole this exposed".
+_GIT = (
+    r"git\s+((?:-[cC]|--git-dir|--work-tree|--namespace|--exec-path|--super-prefix)"
+    r"[=\s]\s*" + _WORD + r"\s+|-" + _WORD + r"\s+)*"
+)
+
+
+# Reuses GUARD_R3's own commit pattern rather than a second copy - "is this a commit" and "is
+# this exempt from asking" are different questions, and the docs check needs the first one
+# independent of the second (a commit on my own branch is exempt from asking but still needs
+# the docs reminder).
+_GIT_COMMIT_RE = re.compile(_GIT + r"commit([^0-9A-Za-z-]|$)", re.IGNORECASE)
+
+
+_STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
+
+
+def _unquote_git_path(path):
+    """git quotes a path in porcelain output (surrounding double quotes, C-style backslash
+    escapes) whenever it contains a space or other "unusual" byte - core.quotePath's default.
+    A plain path is returned unchanged. A quoted path that fails to parse is a recovered case,
+    not a silent bail: the still-quoted string is kept and used as-is (it simply will not
+    prefix-match a literal `git add` argument), same posture as a decode that falls back
+    rather than giving up."""
+    unquoted = path
+    if len(path) >= 2 and path[0] == '"' and path[-1] == '"':
+        try:
+            unquoted = json.loads(path)
+        except ValueError as exc:
+            sys.stderr.write(
+                "house-rules: could not unquote git status path %r (%s); using it as-is.\n"
+                % (path, exc)
+            )
+    return unquoted
+
+
+def _parse_status_porcelain(lines):
+    """[(path, tracked)] from `git status --porcelain -uall` output. Best-effort on a rename
+    line ("R  old -> new"): keeps the new path, which is what a fresh `git add` would stage."""
+    out = []
+    for line in lines:
+        if len(line) < 4:
+            continue
+        code, path = line[:2], line[3:]
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        out.append((_unquote_git_path(path.strip()), code != "??"))
+    return out
+
+
+
+def _git_dir(start):
+    """Walk up from `start` looking for `.git`, returning the resolved git directory."""
+    d = os.path.abspath(start)
+    while True:
+        candidate = os.path.join(d, ".git")
+        if os.path.isdir(candidate):
+            return candidate
+        if os.path.isfile(candidate):
+            # A worktree or submodule: `.git` is a file holding `gitdir: <path>`.
+            for line in _read_text(candidate).splitlines():
+                if line.startswith("gitdir:"):
+                    p = line.split(":", 1)[1].strip()
+                    return os.path.abspath(p if os.path.isabs(p) else os.path.join(d, p))
+            return None
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+_COMMAND_VALUE_RE = re.compile(r'"command"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+# A backgrounded call's hand-back prompt shape, probed live - doc-ref 8313 docs/6-decisions/Decisions.md.
+_PROMPT_VALUE_RE = re.compile(r'"prompt"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+# #253: prompts that reach UserPromptSubmit but are a helper's report or a system notice, not aj.
+_RELAYED_PROMPT_RE = re.compile(
+    r"<task-notification>|<system-reminder>|<agent-message\b|\[Subagent hand-?back\]"
+    r"|Another Claude session sent a message", re.IGNORECASE)
+
+
+def _is_relayed_prompt(text, payload=None):
+    """True when the prompt is a subagent hand-back, agent message or task/system notification, or
+    the payload carries a non-human `origin` (as _is_genuine_user_message honours)."""
+    if text and _RELAYED_PROMPT_RE.search(text):
+        return True
+    try:
+        data = json.loads(payload) if payload else None
+    except ValueError:
+        data = None
+    origin = data.get("origin") if isinstance(data, dict) else None
+    if isinstance(origin, dict):
+        origin = origin.get("kind") or origin.get("type")
+    return bool(origin) and str(origin).lower() not in ("human", "user")
+
+
+def _field(pattern, payload, problems=None):
+    """The extracted value, or "" for a field that is simply absent.
+
+    A field that is not there is an ordinary answer, not a failure - the callers below
+    report it as "not in payload". An actual failure while extracting is different, and is
+    recorded for the caller to report rather than collapsing into the same empty string:
+    see "nothing fails silently" in the module docstring.
+    """
+    value = ""
+    try:
+        m = pattern.search(payload or "")
+        if m:
+            value = m.group(1).replace('\\"', '"').replace("\\\\", "\\").strip()
+    except Exception as exc:
+        if problems is not None:
+            problems.append("could not extract a payload field (%s)" % type(exc).__name__)
+    return value
+
+
+def _common_git_dir(start):
+    gd = _git_dir(start)
+    if not gd:
+        return None
+    cd = os.path.join(gd, "commondir")
+    if os.path.isfile(cd):
+        rel = _read_text(cd).strip()
+        if rel:
+            return os.path.abspath(rel if os.path.isabs(rel) else os.path.join(gd, rel))
+    return gd
+
+
+AUTOSAVE_BRANCH_PREFIX = "worktree-agent-"
+
+
+AUTOSAVE_GIT_TIMEOUT = 4.0
+
+
+def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True):
+    """Run git in `top`; (returncode, stdout, stderr). Raises RuntimeError on failure when
+    `check`, and on a timeout always - every caller turns that into a systemMessage."""
+    import subprocess
+
+    e = dict(os.environ)
+    e["GIT_TERMINAL_PROMPT"] = "0"
+    if env:
+        e.update(env)
+    try:
+        proc = subprocess.run(
+            ["git"] + args, cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=timeout, env=e,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("git %s timed out after %ss" % (args[0], timeout))
+    out = proc.stdout.decode("utf-8", "replace")
+    err = proc.stderr.decode("utf-8", "replace").strip()
+    if check and proc.returncode != 0:
+        raise RuntimeError("git %s failed: %s" % (" ".join(args[:2]), err or "exit %d" % proc.returncode))
+    return proc.returncode, out, err
+
+
+def _payload_cwd(payload):
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = None
+    cwd = data.get("cwd") if isinstance(data, dict) else None
+    return cwd or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+
+
+_TOGGLE_OFF = {"off", "0", "false", "no"}
+
+
+# ---------------------------------------------------------------------------------------
 # The core links (#357). The core never imports hook.py or a part module, so where one of its
 # handlers needs code that belongs to another part, that code registers itself here and the
 # handler loops over the list. Three lists, one register function each:
@@ -1811,11 +1991,20 @@ def event_promptran():
 #                        the reminder, note after it (a later hook's note goes in front)
 #   POST_TOOL_HOOKS      (consumer, fn): artifact asks fn(file_path) -> note text, promptran
 #                        asks fn(data) -> report text; each handler runs only its own consumer's
+# Step 2b adds three more, read by the safe git part (#358):
+#   GUARD_ISSUE_HOOKS    fn(subject, payload) -> None or (kind, reason, context); guard asks each,
+#                        in order, after its own attribution check, and takes the first answer
+#   GITHUB_WRITE_HOOKS   fn(payload, raw) -> True when it handled the call (and emitted);
+#                        guardgithub asks each before its own credit check
+#   DOCS_STATUS_HOOKS    fn(subject, elsewhere, root) -> (status, detail); guard asks the first
 # ---------------------------------------------------------------------------------------
 
 SESSION_START_HOOKS = []
 PROMPT_HOOKS = []
 POST_TOOL_HOOKS = []
+GUARD_ISSUE_HOOKS = []
+GITHUB_WRITE_HOOKS = []
+DOCS_STATUS_HOOKS = []
 
 
 def _register(hooks, entry):
@@ -1851,3 +2040,18 @@ def _session_start_hooks(consumer):
 
 def _post_tool_hooks(consumer):
     return [fn for name, fn in POST_TOOL_HOOKS if name == consumer]
+
+
+def register_guard_issue(fn):
+    _register(GUARD_ISSUE_HOOKS, fn)
+    return fn
+
+
+def register_github_write(fn):
+    _register(GITHUB_WRITE_HOOKS, fn)
+    return fn
+
+
+def register_docs_status(fn):
+    _register(DOCS_STATUS_HOOKS, fn)
+    return fn
