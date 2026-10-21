@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Build plan approved: proof check fix",
   "reply": "",
   "short": {
-    "lead": "This is the build plan for the proof check fix (#367). On the proposal page you chose 1A: the design loop keeps one issue list per feature, under the feature's name. You also chose 2A: restructure step 2's issues (#340 and #357 to #360) close through the next sweep page. The work is 3 sub-issues of #367: #374, #375 and #376. One helper agent builds each one, one at a time, and one QA page covers all three.",
+    "lead": "This is the build plan for the proof check fix (#367). On the proposal page you chose 1A: the design loop keeps one issue list per feature, under the feature's name. You also chose 2A: the issues from the restructure's step 2 (#340 and #357 to #360) close through the next sweep page, the page that lists issues with the evidence for closing them. The work is 3 sub-issues of #367: #374, #375 and #376. One helper agent builds each one, one at a time, and one QA page covers all three.",
     "hint": "Tap a step to see what it creates or changes and what it needs.",
     "key": [
       [
@@ -320,7 +320,7 @@ const PAGE = {
         [
           "Plugin version 2.73.0, and docs/4-systems/issue-closing.md describes both changes.",
           "A QA page shows the recorded replies and the checks that use them.",
-          "After you pass QA and the pull request merges, that merge is recorded for the verify rework's entry, and I close #368 to #371 under the guard.",
+          "After you pass QA and the pull request merges, that merge is recorded against the verify rework's entry in the closable record (the list of features whose issues may close). Then the close guard, the check that refuses a close without proof, lets me close #368 to #371.",
           "Then the next sweep page lists #340 and #357 to #360 with your logged QA pass and pull request #372 as evidence (your answer 2A), and drops the 26 sweep rows whose issues are already closed."
         ],
         "You: answer \"QA passed: proof check fix\" or \"QA failed: proof check fix\", then approve the sweep page."
@@ -340,7 +340,7 @@ const PAGE = {
   ],
   "choices": [],
   "wrapup": {
-    "summary": "The build plan for the proof check fix (#367): 3 sub-issues (#374 to #376), one QA page, then the stranded issues close.",
+    "summary": "The build plan for the proof check fix (#367): 3 sub-issues (#374 to #376), one QA page, then #368 to #371 and #340 and #357 to #360 close.",
     "changing": "No code changes until you approve. Your design answers are in the decisions log, docs/6-decisions/Decisions.md.",
     "blocking": "Your approval of this plan.",
     "next": "Once you approve, step 1 starts. After the fix ships, restructure steps 3 to 7 follow as one feature.",
