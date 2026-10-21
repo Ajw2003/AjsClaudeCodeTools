@@ -12,8 +12,12 @@ meet:
 - **At realistic scale.** The fixture is a toy; the input is not. A comment scanner passed every
   check against 15-line fixtures and took 22 seconds on a 5 MB file — past the 10-second limit
   that would have killed it, silently, on the first real file it met.
-- **Twice.** One clean run is not proof, so I run it twice: the second run meets the state the
-  first one left behind. An install test passed on a clean machine and failed on the very next
+- **Twice, where I changed things.** One clean run is not proof, so the parts a change touched run
+  twice and everything else runs once; CI runs the full suite. The second run meets the state the
+  first one left behind, and catches a flaky test where the change is without doubling the whole
+  suite. In another project "parts" means the suite's own split, or the whole suite if it has none.
+  Here: `python3 claude-house-rules/plugins/house-rules/scripts/verify.py --changed` twice in a
+  session, and the full `verify.py` in CI. An install test passed on a clean machine and failed on the very next
   run, because the first run created the config file the second one tripped over. One run only
   ever tests the empty case.
 - **As the thing that ships.** The installed copy, the fresh clone, the published artifact — not
