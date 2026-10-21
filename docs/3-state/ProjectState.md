@@ -205,6 +205,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-21, branch `AjsAgent/issue-281-fix`, plugin 2.70.0: aj approved the verify.py rework (#368, steps #369 to #371): per-part test files with a parallel runner, and in a session the touched parts run twice and the rest once. It is built after restructure step 2 (#340), which resumes now at step 2a (#357).
 
+2026-10-21, branch `AjsAgent/issue-281-fix`: step 2a (#357) is built. `scripts/house_rules/core.py` (1,853 lines) holds the core handlers and three hook lists that parts register on; `hook.py` went from 8,931 to 7,248 lines. `verify.py` 913 PASS, run twice by the builder and once more after the merge (185 seconds). Next is step 2b (#358).
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
