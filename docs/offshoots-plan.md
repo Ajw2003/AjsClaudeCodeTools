@@ -119,6 +119,33 @@ that `route`'s suggestions read that declaration live rather than restating it),
 that opens with the same correction made above. Real, runnable v0.1 — not stub code — but see
 "Open questions" for what a suggestion-only mechanism still can't guarantee.
 
+## Offshoot 3: `art-pipeline`
+
+Issue #164 (child of #161). Why an offshoot: the art workflow (concept, model, rig, animation)
+is unrelated to house-rules' rules and needs a Stop-hook gate that house-rules should not carry;
+it reuses the shim-plus-one-Python-file shape.
+
+**Gate design.** `start` records HEAD in a per-session ledger under the git dir (never
+committed); `seen` logs every image Claude `Read`s; `gate` (Stop) takes models changed since
+the start sha plus `git status -uall`, and requires for each a `*.review.json` record whose sheet
+exists, is not older than the model, and was opened this session, with `seen` >= 40 chars.
+`pass` and `waived` (announced) release; `fail` and a missing record block. Shared logic lives in
+`artlib.py`, used by `hook.py` and the `review.py` CLI.
+
+**Decisions.** Gate fails open but loud (a broken gate must not trap the session); the 3rd
+identical block releases with an `UNREVIEWED` systemMessage; mtime ordering stands in for "the
+sheet shows the current model"; globs default to `*.fbx *.glb *.gltf *.blend *.obj`, overridable
+by `.art-pipeline.json`; `review.py status` picks the newest ledger as "this session".
+
+**Doc-drift check.** `.art-pipeline.json` may set `doc_check` (shell command, repo root, 60 s) and
+`doc_check_paths` (default `docs/**`, `**/*.json`), so docs describing art cannot silently drift
+from the data. It runs at Stop only if a model or matching path changed; non-zero blocks with the
+output tail, timeout fails open loudly, and it counts in the same loop guard as `doc_check`.
+
+**Open questions.** The gate proves a sheet was opened, not that the reviewer looked at it
+honestly or compared it to the concept; a record's `seen` text is self-reported. A model edited
+without changing its mtime ordering is not detected. Per-model concept linkage is not checked.
+
 ## Open questions (not resolved by this shell)
 
 - **`prompt-workshop`'s heuristic needs real tuning data.** The verify suite's 8 cases are

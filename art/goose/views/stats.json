@@ -1,0 +1,19 @@
+{
+ "model": "goose.glb",
+ "triangles": 272380,
+ "bbox_m": [
+  8.495,
+  4.674,
+  6.746
+ ],
+ "height_m": 6.746,
+ "mesh_count": 1,
+ "bones": {
+  "count": 0,
+  "names": []
+ },
+ "materials": [
+  "goose"
+ ],
+ "forward": "-Y"
+}

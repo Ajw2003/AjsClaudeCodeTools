@@ -1,0 +1,429 @@
+{
+  "slug": "eldritch_goose",
+  "name": "The Honking Deep (eldritch goose boss)",
+  "kind": "creature",
+  "tier": "hero",
+  "concept": "art/goose/concept.png",
+  "height_m": 6.75,
+  "scale_note": "Boss scale against the 1.80 m reference human: about 6.7 m to the twig tips of the main head's dead maple crown (crown of the head about 5.15 m, held high like a standing goose's), 8.5 m across from finger-claw to finger-claw. Faces -Y, +Z up, origin on the ground between the feet. All design numbers below are metres in that frame.",
+  "triangle_budget": 300000,
+  "budget_note": "Hero asset: every tooth, rib, hackle and feather is real geometry; surface detail (barbs, hide, bark, grime, blood, the brand) is baked texture.",
+  "materials": [
+    {
+      "name": "PlumageBrown",
+      "hex": "#3F3832",
+      "metallic": 0.0,
+      "roughness": 0.8,
+      "notes": "soot-matted back and wing coverts"
+    },
+    {
+      "name": "PlumageEdge",
+      "hex": "#5E554B",
+      "metallic": 0.0,
+      "roughness": 0.8,
+      "notes": "ashen feather-edge bars on the flanks"
+    },
+    {
+      "name": "BreastPale",
+      "hex": "#665C4F",
+      "metallic": 0.0,
+      "roughness": 0.8,
+      "notes": "grimy breast"
+    },
+    {
+      "name": "ChinWhite",
+      "hex": "#857A66",
+      "metallic": 0.0,
+      "roughness": 0.7,
+      "notes": "dirty-bone chinstrap, belly and undertail"
+    },
+    {
+      "name": "GooseBlack",
+      "hex": "#121110",
+      "metallic": 0.0,
+      "roughness": 0.85,
+      "notes": "necks, heads, beaks, tail"
+    },
+    {
+      "name": "PrimaryDark",
+      "hex": "#211D1A",
+      "metallic": 0.0,
+      "roughness": 0.7,
+      "notes": "ragged primary flight feathers"
+    },
+    {
+      "name": "LegDark",
+      "hex": "#1E1A17",
+      "metallic": 0.0,
+      "roughness": 0.65,
+      "notes": "legs, toes and webs"
+    },
+    {
+      "name": "MawRed",
+      "hex": "#5A1714",
+      "metallic": 0.0,
+      "roughness": 0.35,
+      "notes": "dried blood: the heads' mouths and tongues, the soaked breast feathers"
+    },
+    {
+      "name": "ToothBone",
+      "hex": "#9E9275",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "notes": "yellowed bone: teeth, spines, ribs, claws, finger bones"
+    },
+    {
+      "name": "EyeDark",
+      "hex": "#0B0A08",
+      "metallic": 0.0,
+      "roughness": 0.12,
+      "notes": "one small wet sunken eye a side per head, no glow"
+    },
+    {
+      "name": "DeadBark",
+      "hex": "#2B2621",
+      "metallic": 0.0,
+      "roughness": 0.92,
+      "notes": "the dead maple crown on every head"
+    },
+    {
+      "name": "BrandScar",
+      "hex": "#2E110D",
+      "metallic": 0.0,
+      "roughness": 0.8,
+      "notes": "the maple leaf burnt into the breast"
+    }
+  ],
+  "design": {
+    "body_rings": {
+      "note": "[y, z_centre, half_width, half_height] from breast to tail tip; side profile traced off a photo of a standing Canada goose (body length scaled to 3.3 m): the body tilts down from chest to tail and the belly is deepest just behind the legs",
+      "rings": [
+        [
+          -1.48,
+          2.45,
+          0.3,
+          0.25
+        ],
+        [
+          -1.37,
+          2.38,
+          0.55,
+          0.55
+        ],
+        [
+          -1.06,
+          2.2,
+          0.74,
+          0.68
+        ],
+        [
+          -0.62,
+          1.99,
+          0.85,
+          0.72
+        ],
+        [
+          -0.18,
+          1.87,
+          0.88,
+          0.73
+        ],
+        [
+          0.26,
+          1.78,
+          0.84,
+          0.68
+        ],
+        [
+          0.7,
+          1.69,
+          0.72,
+          0.55
+        ],
+        [
+          1.14,
+          1.63,
+          0.5,
+          0.35
+        ],
+        [
+          1.49,
+          1.54,
+          0.28,
+          0.18
+        ],
+        [
+          1.8,
+          1.32,
+          0.08,
+          0.05
+        ]
+      ]
+    },
+    "main_neck": {
+      "path": [
+        [
+          0,
+          -0.95,
+          2.3
+        ],
+        [
+          0,
+          -1.12,
+          2.85
+        ],
+        [
+          0,
+          -1.24,
+          3.45
+        ],
+        [
+          0,
+          -1.3,
+          4.05
+        ],
+        [
+          0,
+          -1.33,
+          4.6
+        ],
+        [
+          0,
+          -1.4,
+          4.95
+        ]
+      ],
+      "radii": [
+        0.5,
+        0.4,
+        0.28,
+        0.21,
+        0.175,
+        0.165
+      ]
+    },
+    "side_neck": {
+      "note": "the +X neck; the -X one is its mirror",
+      "path": [
+        [
+          0.4,
+          -1.0,
+          2.45
+        ],
+        [
+          0.72,
+          -1.12,
+          2.95
+        ],
+        [
+          0.98,
+          -1.26,
+          3.45
+        ],
+        [
+          1.12,
+          -1.38,
+          3.85
+        ],
+        [
+          1.15,
+          -1.45,
+          4.05
+        ]
+      ],
+      "radii": [
+        0.26,
+        0.21,
+        0.17,
+        0.14,
+        0.13
+      ]
+    },
+    "main_head": {
+      "base": [
+        0,
+        -1.4,
+        4.95
+      ],
+      "dir": [
+        0,
+        -1,
+        -0.05
+      ],
+      "scale": 1.0,
+      "jaw_open_deg": 42,
+      "tongue": true
+    },
+    "side_head": {
+      "base": [
+        1.15,
+        -1.45,
+        4.05
+      ],
+      "dir": [
+        0.4,
+        -1,
+        -0.05
+      ],
+      "scale": 0.74,
+      "jaw_open_deg": 58,
+      "tongue": true
+    },
+    "wing": {
+      "note": "the +X wing, raised in a threat display; the -X one is its mirror",
+      "shoulder": [
+        0.7,
+        -0.55,
+        2.55
+      ],
+      "elbow": [
+        1.55,
+        -0.4,
+        3.25
+      ],
+      "wrist": [
+        2.55,
+        -0.62,
+        3.7
+      ],
+      "tip": [
+        3.4,
+        -0.35,
+        3.25
+      ],
+      "radii": [
+        0.17,
+        0.12,
+        0.09,
+        0.04
+      ],
+      "primaries": 10,
+      "secondaries": 12,
+      "tertials": 5,
+      "primary_length": [
+        1.45,
+        1.05
+      ],
+      "secondary_length": [
+        1.0,
+        0.88
+      ],
+      "finger_bones": 2,
+      "finger_bone_length": 1.25
+    },
+    "legs": {
+      "hip": [
+        0.4,
+        -0.15,
+        1.55
+      ],
+      "knee": [
+        0.5,
+        -0.25,
+        0.95
+      ],
+      "ankle": [
+        0.52,
+        -0.31,
+        0.45
+      ],
+      "foot": [
+        0.52,
+        -0.37,
+        0.11
+      ],
+      "radii": [
+        0.17,
+        0.11,
+        0.075,
+        0.065
+      ],
+      "toe_length": 0.48,
+      "toe_spread_deg": 32
+    },
+    "tail": {
+      "root": [
+        0,
+        1.42,
+        1.72
+      ],
+      "feathers": 9,
+      "length": 0.9,
+      "spread_deg": 80,
+      "rise": 0.05
+    },
+    "eye_seed": 7,
+    "maple": {
+      "seed": 21,
+      "back_leaves": 16,
+      "neck_leaves": 4,
+      "wing_leaves": 4,
+      "brand": {
+        "centre": [
+          0,
+          -1.67,
+          1.92
+        ],
+        "facing": [
+          0,
+          -1,
+          0
+        ],
+        "size": 1.1,
+        "depth": 0.5
+      },
+      "soaked_feathers": {
+        "rows_y": [
+          -1.05,
+          -0.95,
+          -0.85
+        ],
+        "per_row": 15,
+        "spread_deg": 110,
+        "length": [
+          0.4,
+          0.85
+        ],
+        "width": 0.12
+      }
+    }
+  },
+  "build": [
+    "Body: lofted ellipse rings, about 3.3 m long, 1.76 m wide, 1.46 m deep, lowest point 1.10 m just behind the legs; the body tilts down from chest to tail like a standing goose's; soot-brown back, ashen bars on the flanks, grimy breast (straight seam at y = -0.42 m), dirty-bone belly and undertail; five bare ribs break through each flank.",
+    "Necks: one main neck rising straight out of the chest to 4.95 m, head held high and level like a standing goose's, radius 0.50 m where it rises out of the chest, tapering to 0.165 m; two side necks rising upright to +/-1.15 m and 4.05 m, radius 0.26 to 0.13 m. All black, a ridge of 13 bone spines down the back of the main neck.",
+    "Heads: goose heads crowned with dead bare maple branches (two gnarled limbs 0.85 m long, spread sideways like antlers and forking three times, a few rotting leaves still hanging), the white chinstrap, one small sunken dark eye a side, beaks gaping (42 deg main, 58 deg side) with rows of teeth on both mandibles and a spiked tongue. Side heads at 0.74 scale.",
+    "Wings: raised and spread, 8.5 m across including the bare finger bones, arm 0.17 m to 0.04 m thick; 10 badly ragged primaries 1.45 to 1.05 m, 12 secondaries, 5 tertials, two covert rows; two finger bones 1.25 m long with claws break out past the primaries.",
+    "Legs: black, hip 1.55 m to ankle; three webbed toes 0.48 m long spread 32 deg, bone claws, a small back toe.",
+    "Tail: nine ragged black feathers 0.9 m long in a cupped fan over 80 deg, outer feathers banked and drooping so the fan reads from the side.",
+    "Spines: a bone ridge along the back and down the main neck.",
+    "Dead maple: no leaves left anywhere, only bare dead branches; a maple leaf about 0.7 m across branded into the centre of the breast, painted into the texture as a charred scar with an ember-red raised rim; below it three rows of thin ragged breast feathers (15, 16, 17) 0.4 to 0.85 m long hanging down like a matted bib, splayed unevenly and soaked in dried blood from halfway or higher."
+  ],
+  "style": "Canadian Bloodborne-style beast horror: a goose gone feral in a dead maple wood. Soot, ash, grimy bone, dried blood; starved and ragged; no emissive materials.",
+  "texture": {
+    "pixels": 4096,
+    "bake_samples": 4,
+    "grime_dark": 0.75,
+    "blood_hex": "#3A0C0A",
+    "blood_roughness": 0.35,
+    "brand_char_hex": "#3A0F0C",
+    "brand_rim_hex": "#6B1E16",
+    "brand_roughness": 0.55,
+    "bump_strength": 0.5,
+    "blood_drip_reach": 0.45,
+    "mud_hex": "#2B2117",
+    "mud_low": 0.25,
+    "mud_high": 1.25,
+    "ao_samples": 32,
+    "occlusion_strength": 0.55,
+    "albedo_gain": {
+      "note": "multipliers on each palette colour in the bake only, so the lit render reads at the concept sheet's flat tones (measured: breast rendered 0.67x, wings 0.8x, black 1.8x the concept)",
+      "BreastPale": 1.5,
+      "ChinWhite": 1.4,
+      "PlumageEdge": 1.3,
+      "PlumageBrown": 1.25,
+      "PrimaryDark": 1.2,
+      "ToothBone": 1.15,
+      "GooseBlack": 0.55
+    }
+  }
+}
