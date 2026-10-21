@@ -1,0 +1,82 @@
+{
+  "title": "Proof Check Fix Plan",
+  "eyebrow": "Build plan · #367 the close and merge proof checks read the GitHub tool's replies",
+  "approval": "Build plan approved: proof check fix",
+  "replyPrefix": "Build plan approved: proof check fix",
+  "reply": "",
+  "short": {
+    "lead": "This is the build plan for the proof check fix (#367). On the proposal page you chose 1A: the design loop keeps one issue list per feature, under the feature's name. You also chose 2A: restructure step 2's issues (#340 and #357 to #360) close through the next sweep page. The work is 3 sub-issues of #367. One helper agent builds each one, one at a time, and one QA page covers all three.",
+    "hint": "Tap a step to see what it creates or changes and what it needs.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 1",
+        "Unwrap the GitHub tool's replies before both proof checks",
+        "",
+        [
+          "One helper function in scripts/house_rules/design_loop.py takes a reply wrapped in a text block and returns the plain object inside it.",
+          "The merge check (_closable_merge_of) and the close check (_closed_issue_of) call it before reading the reply. Error replies are left as plain text, so they still prove nothing.",
+          "New checks in scripts/checks/design_loop.py use the exact merge and close replies recorded in this session's transcript."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 2",
+        "One issue list per feature (your answer 1A)",
+        "",
+        [
+          "The stage file, .claude/house-rules-loop.json, keeps each feature's issues under the feature's name instead of in one shared list.",
+          "\"QA passed: <feature name>\" looks up the issues of the feature it names, even when another feature's build plan was approved in between.",
+          "The stage file in use today is converted when the hook first reads it, so nothing recorded is lost."
+        ],
+        "Nothing from you. Depends on step 1."
+      ],
+      [
+        "check",
+        "Step 3",
+        "Version, docs, QA page, then the closes",
+        "",
+        [
+          "Plugin version 2.73.0, and docs/4-systems/issue-closing.md describes both changes.",
+          "A QA page shows the recorded replies and the checks that use them.",
+          "After you pass QA and the pull request merges, that merge is recorded for the verify rework's entry, and I close #368 to #371 under the guard.",
+          "Then the next sweep page lists #340 and #357 to #360 with your logged QA pass and pull request #372 as evidence (your answer 2A), and drops the 26 sweep rows whose issues are already closed."
+        ],
+        "You: answer \"QA passed: proof check fix\" or \"QA failed: proof check fix\", then approve the sweep page."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "keep",
+      "Both proof checks still refuse without proof",
+      "An error reply, a reply with no merge or no URL, and a gh command with a failing exit code still prove nothing.",
+      null,
+      "The existing proof-check cases in scripts/checks/design_loop.py stay and must still pass.",
+      null,
+      null
+    ]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "The build plan for the proof check fix (#367): 3 sub-issues, one QA page, then the stranded issues close.",
+    "changing": "No code changes until you approve. Your design answers are in the decisions log, docs/6-decisions/Decisions.md.",
+    "blocking": "Your approval of this plan.",
+    "next": "Once you approve, step 1 starts. After the fix ships, restructure steps 3 to 7 follow as one feature.",
+    "todo": [
+      "Type \"Build plan approved: proof check fix\" in the chat.",
+      "Send the message."
+    ]
+  }
+}
