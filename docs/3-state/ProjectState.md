@@ -217,6 +217,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-21: house-rules 2.71.0 is on `main` (pull request #372, merged after its `verify` check passed). The verify rework (#368) starts at step 1 (#369).
 
+2026-10-21: verify rework step 1 (#369) is built. `docs/4-systems/verify-suites.md`, "Which part every check belongs to (#369)", places all 913 checks in a part, with per-part seconds (the longest are safe git 31.7, design loop 28.5 and page builds 27.5 of a 127-second run). `tools/check_verify_inventory.py` proves every check is listed exactly once. Next is step 2 (#370), the per-part files and the parallel runner.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
