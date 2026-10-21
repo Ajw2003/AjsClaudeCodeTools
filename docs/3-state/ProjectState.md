@@ -215,6 +215,16 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-21: aj passed QA on restructure step 2 ("QA passed: restructure step 2"); 2.71.0 goes to `main` by pull request. The loop did not record the pass (its issue list had moved to the verify rework), so step 2's issues close through a sweep. The verify rework (#368) is next.
 
+2026-10-21: house-rules 2.71.0 is on `main` (pull request #372, merged after its `verify` check passed). The verify rework (#368) starts at step 1 (#369).
+
+2026-10-21: verify rework step 1 (#369) is built. `docs/4-systems/verify-suites.md`, "Which part every check belongs to (#369)", places all 913 checks in a part, with per-part seconds (the longest are safe git 31.7, design loop 28.5 and page builds 27.5 of a 127-second run). `tools/check_verify_inventory.py` proves every check is listed exactly once. Next is step 2 (#370), the per-part files and the parallel runner.
+
+2026-10-21, plugin 2.72.0: the verify rework (#368) is built and waits on aj's QA on `docs/plans/2026-10-21-verify-rework-qa.html`. verify.py runs one test file per part (`scripts/checks/`) in parallel: a full run takes 39 to 41 seconds (197 before restructure step 2), and `--changed` runs only the touched parts (the docs part alone: 125 checks in 8.1 seconds). The run-twice rule now says the touched parts run twice and the rest once; CI runs everything.
+
+2026-10-21: aj passed QA on the verify rework ("QA passed: verify rework"); 2.72.0 goes to `main` by pull request. Next is #367 (the proof-check bug), then restructure step 3 (#341).
+
+2026-10-21: verify rework step 2 (#370) is built on branch `AjsAgent/issue-370-split`, not yet merged or QA'd. `verify.py` is now a runner (`--parts`, `--changed`, `--serial`) over one test file per part in `scripts/checks/`; a full run is 913 checks in 34.5 and 36.0 seconds (4 cores), `--serial` 132.1, `--parts design_loop` 29.9; the sorted list of check titles is identical to the single-file run's. 32 checks sit in a different part than the #369 list gave them, to keep order-dependent groups whole. A pull request for it needs a plugin version bump first (the version-bump check fails without one) and the hard-coded `2.71.0` in `checks/design_loop.py` changed with it. Details: `docs/4-systems/verify-suites.md`, "The split layout (#370)". Next is step 3 (#371), the run-twice rule text.
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this
