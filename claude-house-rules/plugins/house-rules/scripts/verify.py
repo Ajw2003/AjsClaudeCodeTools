@@ -5836,7 +5836,7 @@ else:
 # The declared model is READ FROM the agent file, not hardcoded in hook.py - otherwise the
 # line is hook.py's claim about the agent rather than a report of what actually shipped.
 _src = read(DELEGATION)  # #359: _declared and event_announce live in the delegation part
-_decl =_src[_src.index("def _declared("):_src.index("def event_announce(")]
+_decl = _src[_src.index("def _declared("):_src.index("def event_announce(")]
 litdrift = []
 if "_read_text(path)" not in _decl:
     litdrift.append("_declared does not read the agent file")
