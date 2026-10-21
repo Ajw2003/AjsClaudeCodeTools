@@ -131,3 +131,51 @@ Six load `hook.py` in-process and call nine internal names; each is pointed at t
 the name. One test (`verify.py:3236`) replaces `_read_back_body` before running the credit check; it
 replaces it on the safe git module instead. Every changed test line is listed in the step's pull
 request.
+
+### Step 2a: the package and the core (#357)
+
+Built on the 2026-10-20 core-links decision (answer 1A). `scripts/house_rules/` now exists with
+`__init__.py` and seven modules; only `core.py` has code (1,853 lines; `hook.py` went from 8,931 to
+7,248). The six part modules (`safe_git`, `session_triage`, `design_loop`, `writing`,
+`delegation`, `docs`) hold a one-line docstring each, and `session_triage` stays empty until step 9
+(#347).
+
+**Moved verbatim into `core.py`.** The shared helpers, payload reading and `emit`; the trace
+helpers; `inject`, `showrule`, `profile` (with the hardware probes) and `standards`;
+`versioncheck` and the self-updater; `scope`; `artifact` (with the file-path helpers `branchnudge`
+also uses); `runnable`; `promptran`; and `work_saved_elsewhere`. Constants moved with the function
+that uses them (the runnable notes, the scope reminders). `_plugin_version` also moved, because
+`_rules_root` needs it and `core.py` may not import a part; it was an announce helper in the
+inventory. Every path that was computed from `hook.py`'s `__file__` now uses one `SCRIPTS_DIR`
+(the `scripts/` folder), so each resolved path is unchanged.
+
+**The three core links.** `core.py` never imports `hook.py` or a part. It keeps three lists with a
+register function each, and the handlers loop over them; the code still in `hook.py` registers
+itself at import (the "core links" block just above `EVENTS`):
+
+| List | Register | Who loops | What is registered today |
+|---|---|---|---|
+| `SESSION_START_HOOKS` | `register_session_start(consumer, fn)` | `inject` (strip subagent markers), `profile` (remote branch and git-identity notes) | `_strip_subagent_markers`, `_agent_branch_block`, `_agent_identity_block` |
+| `PROMPT_HOOKS` | `register_prompt(fn)` | `scope`, on every message | the waiting-on-you note, the design loop note, the delegation clause, the parity clause |
+| `POST_TOOL_HOOKS` | `register_post_tool(consumer, fn)` | `artifact` (page writing note), `promptran` (waiting-on-you update) | `_page_writing_note`, `_promptran_waiting_link` |
+
+Two lists carry a consumer name because two core handlers read each of them. Registering the same
+function name again replaces the earlier entry, because `verify.py` loads `hook.py` several times
+in one process. A prompt link returns `(clause, note)`; a later link's note goes in front, which
+keeps the old order (loop note, then waiting note).
+
+**Left in `hook.py` for now, and why.** The scope delegation clause and its go-ahead pattern
+(`SCOPE_DELEGATE_CLAUSE`) and the artifact page writing note (`_page_writing_note`,
+`_PLANS_PAGE_RE`) need the delegation and writing parts, which do not exist yet; they sit in the
+core-links block and move in those parts' steps. `_agent_branch_block` and `_agent_identity_block`
+stay in the guard block (safe git). `SUBAGENT_SECTION_MARKER` stays with the delegation code.
+
+**`verify.py`.** Five changes, no check removed or skipped (913 checks before and after): the
+source-reading checks for silent `except` blocks and for deliverable state read `core.py` beside
+`hook.py`; the inject fail-loud test patches `core._read_text` (the patch on `hook` would no longer
+reach it); the one-shot `emit` failure test patches `core.emit` too; the declared-model check ends
+its slice at `event_announce` since `_plugin_version` left; and the copied plugin root used by the
+newest-rules tests now copies `house_rules/` as well. `_read_back_body` stays in `hook.py`, and its
+patch at the credit check still takes effect (that test passes). `hooks.json` and `run.sh` are
+unchanged. `core.py` compiles to a cached `.pyc` after the first run (`python -X importtime`:
+14 ms the first time, 2.3 ms after).

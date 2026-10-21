@@ -46,6 +46,8 @@ atexit.register(shutil.rmtree, _RUN_TMP, True)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOOK = os.path.join(HERE, "hook.py")
+# The core module (#357): hook.py imports it, so source-reading checks read both.
+CORE = os.path.join(HERE, "house_rules", "core.py")
 RUN = os.path.join(HERE, "run.sh")
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
@@ -1385,12 +1387,13 @@ else:
 # --- inject fail-loud: an internal error must still say something ---------------------------
 crash_snippet2 = (
     "import sys, hook\n"
-    "orig = hook._read_text\n"
+    "import house_rules.core as core\n"
+    "orig = core._read_text\n"
     "def boom(path):\n"
     "    if 'house-rules.md' in path:\n"
     "        raise OSError('simulated read failure')\n"
     "    return orig(path)\n"
-    "hook._read_text = boom\n"
+    "core._read_text = boom\n"
     "sys.exit(hook.main(['hook.py', 'inject']))\n"
 )
 proc = subprocess.run(
@@ -2568,7 +2571,7 @@ _cache_case(
 # --- the "nothing fails silently" rule, enforced structurally over hook.py source --------------
 # The rule is worthless if the plugin's own hooks break it, so this reads hook.py and fails any
 # except block that returns without first emitting or writing to stderr.
-hook_src = read(HOOK)
+hook_src = read(HOOK) + "\n" + read(CORE)
 hook_lines = hook_src.split("\n")
 silent_handlers = []
 for i, line in enumerate(hook_lines):
@@ -2622,6 +2625,7 @@ for ev, needle in (
 ):
     snippet = (
         "import sys, hook\n"
+        "import house_rules.core as core\n"
         "real_emit = hook.emit\n"
         "state = {'first': True}\n"
         "def one_shot_boom(obj):\n"
@@ -2629,7 +2633,7 @@ for ev, needle in (
         "        state['first'] = False\n"
         "        raise OSError('simulated internal failure')\n"
         "    real_emit(obj)\n"
-        "hook.emit = one_shot_boom\n"
+        "hook.emit = core.emit = one_shot_boom\n"
         f"sys.exit(hook.main(['hook.py', '{ev}']))\n"
     )
     # stdin must be closed: these handlers really do read the payload now, and an inherited
@@ -4621,7 +4625,7 @@ for dead in ["track-write.sh", "clear-pending.sh", "deliverable.sh"] + [
         gone.append(f"{dead} still exists")
 if ".sh\"" in hooks_json_text:
     gone.append("hooks.json still references a .sh hook script directly")
-if "house-rules-deliverable" in read(HOOK):
+if "house-rules-deliverable" in read(HOOK) + read(CORE):
     gone.append("hook.py still writes deliverable state")
 if not gone:
     report("PASS", "the stateful deliverable machinery and the old .sh hooks are gone")
@@ -5824,7 +5828,7 @@ else:
 # The declared model is READ FROM the agent file, not hardcoded in hook.py - otherwise the
 # line is hook.py's claim about the agent rather than a report of what actually shipped.
 _src = read(HOOK)
-_decl = _src[_src.index("def _declared("):_src.index("def _plugin_version(")]
+_decl = _src[_src.index("def _declared("):_src.index("def event_announce(")]
 litdrift = []
 if "_read_text(path)" not in _decl:
     litdrift.append("_declared does not read the agent file")
@@ -6990,6 +6994,8 @@ def _nr_make(name, version, tag, with_showrule):
     os.makedirs(os.path.join(root, "rules"))
     os.makedirs(os.path.join(root, ".claude-plugin"))
     shutil.copy(HOOK, os.path.join(root, "scripts", "hook.py"))
+    shutil.copytree(os.path.join(HERE, "house_rules"), os.path.join(root, "scripts", "house_rules"),
+                    ignore=shutil.ignore_patterns("__pycache__"))
     with open(os.path.join(root, ".claude-plugin", "plugin.json"), "w", encoding="utf-8") as f:
         json.dump({"name": "house-rules", "version": version}, f)
     with open(os.path.join(root, "rules", "house-rules.md"), "w", encoding="utf-8") as f:
