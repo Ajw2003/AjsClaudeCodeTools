@@ -607,5 +607,6 @@
       "merged_pr": null
     }
   ],
-  "qa_page": "docs/plans/2026-10-21-proof-check-fix-qa.html"
+  "qa_page": "docs/plans/2026-10-21-proof-check-fix-qa.html",
+  "qa_page_linked": true
 }

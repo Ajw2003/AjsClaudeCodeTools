@@ -46,7 +46,7 @@
         "done",
         [
           "The plugin is 2.73.0. docs/4-systems/issue-closing.md describes both fixes.",
-          "Checks run: the full verify.py passed all 925 checks; the design loop section of verify.py passed 293 checks on three runs of that section alone, two by the helper agent and one by me; tools/verify_tools.py passed 47."
+          "The full verify.py passed all 925 checks. The design loop section of verify.py passed 293 checks on three runs of that section alone, two by the helper agent and one by me. tools/verify_tools.py passed 47."
         ],
         "Nothing from you."
       ],
