@@ -7,6 +7,25 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - Proof check fix answers, and restructure steps 3 to 7 become one feature
+
+**Context.** Proposal `docs/plans/2026-10-21-proof-check-fix.html` for #367 (the close and merge proof checks
+don't read the GitHub tool's wrapped results). aj also asked for more progress on the restructure: "once it
+merges start the rest of the rework and do as much as you can based off what we've already decided".
+
+**Decision.** aj's answers, given in the question box (the design loop moves only on typed approvals, so aj
+also types "Design approved: proof check fix 1A 2A"):
+1. Proof check fix, question 1 (two features in progress at once): 1A, one issue list per feature, kept
+   under the feature's name.
+2. Proof check fix, question 2 (how #340 and #357 to #360 close): 2A, through the next sweep page, citing the
+   logged QA pass and pull request #372.
+3. Restructure steps 3 to 7 (#341 settings and identity, #349 safe git, #343 design loop and pages, #344
+   writing and evidence, #345 helper agents), all decided by the grilling, run as one feature with one design
+   page, one build plan page and one QA page at the end; the five steps ship to `main` together after that
+   QA. This supersedes "ship after each step" for these five steps only.
+
+**Status.** Standing.
+
 ## 2026-10-21 - QA passed: verify rework
 
 **Context.** QA page `docs/plans/2026-10-21-verify-rework-qa.html` for the verify.py rework (#368, steps #369 to
