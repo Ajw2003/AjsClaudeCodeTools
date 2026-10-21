@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
-"""check_verify_inventory.py - proves the check inventory in docs/4-systems/verify-suites.md adds up (#369).
+"""check_verify_inventory.py - proves the check inventory in docs/4-systems/verify-suites.md adds up (#369, #370).
 
     python tools/check_verify_inventory.py                      # structure only; says so
     python tools/check_verify_inventory.py --output run.txt     # also compare against a saved verify.py run
-    python tools/check_verify_inventory.py --run                # run verify.py once (about 2 minutes) and compare
+    python tools/check_verify_inventory.py --run                # run verify.py once (about 40 seconds) and compare
 
-What it proves, from the doc section "Which part every check belongs to (#369)":
+What it proves, from the doc section "Which part every check belongs to (#369)" (numbered as the single
+10,407-line verify.py printed them, before the split) and the section "The split layout (#370)":
   1. the grouped list covers check numbers 1..N once each: no gap, no overlap, no number past N;
   2. N equals the total in the summary table, and each part's count in the summary table equals the
      sum of that part's rows in the grouped list;
   3. the multi-part count stated in the doc equals the rows that name an "Also touches" part;
-  4. with a verify.py run (--output or --run): the run printed exactly N numbered result lines, its
-     RESULT line says "all N checks passed", and every row's "First check as printed" is a prefix of
-     what the run printed for that row's first check number (so the numbers match the real run).
+  3b. the per-part counts in "Checks per part after the split" equal the inventory's counts adjusted by
+     the rows of "Checks placed differently from the inventory", each moved range really belongs to the
+     part it is moved from, and every part has a file under checks/;
+  4. with a verify.py run (--output or --run): the numbers in the old inventory no longer apply (each part
+     numbers its own checks from 1), so the run is compared per part instead: each part's section printed
+     the number of results the split table says, numbered 1..n, the run printed N results in all with a
+     RESULT line "all N checks passed", and every inventory row's "First check as printed" is a prefix of a
+     check printed by the part the table puts that row in.
 Stdlib only. Exit 0 = everything held, 1 = something did not, 2 = the doc section could not be read.
 """
 
@@ -26,6 +32,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 DOC = os.path.join(ROOT, "docs", "4-systems", "verify-suites.md")
 VERIFY = os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scripts", "verify.py")
+CHECKS = os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scripts", "checks")
 HEADING = "## Which part every check belongs to (#369)"
 
 problems = []
@@ -54,6 +61,14 @@ def section(text, heading, level):
             break
         out.append(ln)
     return out
+
+
+def norm(name):
+    """A part as the inventory spells it ('safe git', 'tools/make_page') to its file name ('safe_git', 'make_page')."""
+    n = name.replace("`", "").replace("*", "").strip().lower()
+    if n.startswith("tools/"):
+        n = n[len("tools/"):]
+    return n.replace(" ", "_")
 
 
 def cells(row):
@@ -155,10 +170,73 @@ def main():
     else:
         ok("multi-part count %d matches the list" % multi)
 
-    # 4. compare with a real run
+    # 3b. the split (#370): each part's count after the move equals the inventory's count adjusted by the moves
+    part_of = {}
+    for lo, hi, part, _also, _first in rows:
+        for n in range(lo, hi + 1):
+            part_of[n] = norm(part)
+    n_before_split = len(problems)
+    inv = {norm(k): v for k, v in parts.items() if v}     # session triage has 0 checks and no file
+    expected = dict(inv)
+    moves = []
+    split_per = section(text, "### Checks per part after the split", 3)
+    split_moves = section(text, "### Checks placed differently from the inventory", 3)
+    if not split_per or split_moves is None:
+        fail("the doc has no 'Checks per part after the split' and 'Checks placed differently from the inventory' tables")
+        split_per = split_per or []
+        split_moves = split_moves or []
+    for ln in split_moves:
+        if not ln.startswith("| ") or ln.startswith("| Checks") or ln.startswith("|---"):
+            continue
+        c = cells(ln)
+        mm = re.match(r"^(\d+)(?:-(\d+))?$", c[0])
+        if not mm:
+            fail("a moves-table row has an unreadable check range: %r" % c[0])
+            continue
+        lo = int(mm.group(1)); hi = int(mm.group(2) or mm.group(1))
+        src, dst, cnt = norm(c[1]), norm(c[2]), int(c[3])
+        if cnt != hi - lo + 1:
+            fail("moves row %s says %d checks but the range holds %d" % (c[0], cnt, hi - lo + 1))
+        wrong = sorted({part_of.get(n) for n in range(lo, hi + 1)} - {src})
+        if wrong:
+            fail("moves row %s: the inventory puts some of those checks in %s, not only in %s" % (c[0], wrong, src))
+        expected[src] = expected.get(src, 0) - cnt
+        expected[dst] = expected.get(dst, 0) + cnt
+        moves.append((lo, hi, dst))
+    after = {}
+    for ln in split_per:
+        if not ln.startswith("| ") or ln.startswith("| Part") or ln.startswith("|---"):
+            continue
+        c = cells(ln)
+        name = norm(c[0].replace("*", "").replace("`", ""))
+        if name == "total":
+            after["total"] = int(c[1].replace("*", ""))
+        else:
+            after[name] = int(c[1].replace("*", ""))
+    if not after:
+        fail("the 'Checks per part after the split' table has no rows")
+    else:
+        for name, n in expected.items():
+            if after.get(name) != n:
+                fail("part %s: inventory %d adjusted by the moves gives %d, the split table says %s"
+                     % (name, inv.get(name, 0), n, after.get(name)))
+        for name in after:
+            if name != "total" and name not in expected:
+                fail("part %s is in the split table but not in the inventory" % name)
+        if after.get("total") != sum(v for k, v in after.items() if k != "total"):
+            fail("the split table's rows add to %d but its Total says %s" % (sum(v for k, v in after.items() if k != "total"), after.get("total")))
+        elif after.get("total") != listed:
+            fail("the split table's total is %s, the inventory's is %d" % (after.get("total"), listed))
+        if len(problems) == n_before_split:
+            ok("split table = inventory counts adjusted by %d move(s): %s" % (len(moves), ", ".join("%s %d" % (k, v) for k, v in after.items() if k != "total")))
+    for name in after:
+        if name != "total" and not os.path.isfile(os.path.join(CHECKS, name + ".py")):
+            fail("checks/%s.py does not exist" % name)
+
+    # 4. compare with a real run: per-part counts against what each part file printed
     out_text = None
     if args.run:
-        print("running verify.py once (about 2 minutes)...")
+        print("running verify.py once (about 40 seconds)...")
         p = subprocess.run([sys.executable, VERIFY], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=900)
         out_text = p.stdout.decode("utf-8", "replace")
     elif args.output:
@@ -167,29 +245,52 @@ def main():
         print("NOT COMPARED to a live run (pass --output FILE or --run); the checks above are structural only.")
     else:
         printed = {}
+        cur = None
         for ln in out_text.split("\n"):
+            pm = re.match(r"^PART (\w+) - ", ln)
+            if pm:
+                cur = pm.group(1)
+                printed[cur] = []
+                continue
             mm = re.match(r"^\s*(\d+)\. (PASS|FAIL|SKIP)  (.*)$", ln)
-            if mm:
-                printed[int(mm.group(1))] = mm.group(3)
-        if sorted(printed) != list(range(1, len(printed) + 1)):
-            fail("the run's numbered result lines are not 1..%d" % len(printed))
-        if len(printed) != listed:
-            fail("the run printed %d numbered results, the list holds %d" % (len(printed), listed))
+            if mm and cur:
+                printed[cur].append((int(mm.group(1)), mm.group(3)))
+        if not printed:
+            fail("the run printed no 'PART <name> - ...' sections; is this the runner's output?")
+        for name, n in after.items():
+            if name == "total":
+                continue
+            got = printed.get(name)
+            if got is None:
+                fail("the run has no section for part %s" % name)
+                continue
+            if [g[0] for g in got] != list(range(1, len(got) + 1)):
+                fail("part %s: its numbered results are not 1..%d" % (name, len(got)))
+            if len(got) != n:
+                fail("part %s printed %d numbered results, the split table says %d" % (name, len(got), n))
+            else:
+                ok("part %s printed %d numbered results = the table" % (name, n))
+        grand = sum(len(v) for v in printed.values())
+        if grand != listed:
+            fail("the run printed %d numbered results in all, the inventory holds %d" % (grand, listed))
+        final = re.findall(r"^RESULT: PASS - all (\d+) checks passed", out_text, re.M)    # each part prints one; the last is the runner's
+        if not final or int(final[-1]) != listed:
+            fail("the run's last RESULT line does not say 'all %d checks passed'" % listed)
         else:
-            ok("the run printed %d numbered results = the list" % listed)
-        rm = re.search(r"RESULT: PASS - all (\d+) checks passed", out_text)
-        if not rm or int(rm.group(1)) != listed:
-            fail("the run's RESULT line does not say 'all %d checks passed'" % listed)
-        else:
-            ok("RESULT line says all %s checks passed" % rm.group(1))
+            ok("the runner's RESULT line says all %s checks passed" % final[-1])
+        # every inventory row's first check was printed by the part the row belongs to (after the moves)
         bad = 0
-        for lo, hi, _p, _a, first in rows:
-            got = printed.get(lo, "").replace("|", "/")
-            if not got.startswith(first):
+        for lo, hi, part, _a, first in rows:
+            dest = norm(part)
+            for mlo, mhi, mdst in moves:
+                if mlo <= lo and hi <= mhi:
+                    dest = mdst
+            titles = [t.replace("|", "/") for _n, t in printed.get(dest, [])]
+            if not any(t.startswith(first) for t in titles):
                 bad += 1
-                fail("row %d-%d: first check should read %r, the run printed %r" % (lo, hi, first, got[:50]))
+                fail("row %d-%d: no check in part %s starts with %r" % (lo, hi, dest, first))
         if not bad:
-            ok("all %d rows start at the check the run printed under that number" % len(rows))
+            ok("all %d rows' first checks were printed by the part the table puts them in" % len(rows))
 
     print()
     if problems:

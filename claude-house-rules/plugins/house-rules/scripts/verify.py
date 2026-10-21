@@ -134,12 +134,14 @@ _PLUGIN_DIRS = {  # plugin subfolder or file -> parts
 
 def parts_for(path):
     """(parts, reason) for one changed path. Unsure means every part."""
-    every = (list(PARTS), "not one a single part owns, so every part")
+    every = (list(PARTS), "no single part is known to own it, so every part")
     if path.startswith(PLUGIN_REL):
         rel = path[len(PLUGIN_REL):]
         m = re.match(r"^scripts/house_rules/(\w+)\.py$", rel)
         if m:
             name = m.group(1)
+            if name == "writing":
+                return ["writing", "design_loop"], "house_rules/writing.py is the writing part, and the clear-writing cases live in checks/design_loop.py"
             if name in PARTS and name != "core":
                 return [name], "house_rules/%s.py is the %s part" % (name, name)
             return every[0], "house_rules/%s.py is imported by every part" % name

@@ -8,7 +8,7 @@ suites, one per plugin, same shape:
 
 | Suite | Lines | Checks (last run 2026-09-24) |
 |---|---|---|
-| [`house-rules/scripts/verify.py`](../../claude-house-rules/plugins/house-rules/scripts/verify.py) | 5300+ | 365 PASS |
+| [`house-rules/scripts/verify.py`](../../claude-house-rules/plugins/house-rules/scripts/verify.py) (the runner, 338 lines) and [`checks/`](../../claude-house-rules/plugins/house-rules/scripts/checks) (7 part files plus `common.py`, 10,738 lines) | 11,076 | 913 PASS (2026-10-21, #370) |
 | [`agent-router/scripts/verify.py`](../../claude-agent-router/plugins/agent-router/scripts/verify.py) | 245 | 41 PASS |
 | [`prompt-workshop/scripts/verify.py`](../../claude-prompt-workshop/plugins/prompt-workshop/scripts/verify.py) | 228 | 22 PASS |
 
@@ -100,9 +100,10 @@ file there is still a real failure.
   repo exploration in the same turn (2026-09-17). The two checks are kept separate rather than
   merged, because a banner that names the right command but drops the handling instructions (or
   the reverse) should fail exactly one of them, not neither.
-- **There is no way to run one check or one category.** Editing a single `guard` pattern means
-  re-running all 203 `house-rules` checks and reading the output to find the ~28 that were
-  actually relevant. Nothing prevents this today; it's a known friction, not a bug.
+- **There is still no way to run one check, only one part.** Since #370 `verify.py --parts safe_git`
+  or `--changed` runs one part (11 to 281 checks), not one check; see "The split layout (#370)"
+  below. Editing a single `guard` pattern still re-runs the 186 safe-git checks to find the ~28
+  that were relevant.
 - **A suite testing branch-dependent behavior must not inherit the developer's actual branch.**
   `house-rules`' guard/branch-ownership cases use hand-written fixture `.git/HEAD` files under
   throwaway directories rather than reading whatever branch the suite happens to run from — the
@@ -505,6 +506,157 @@ the docref and plain_docs_check case helpers were not read case by case, so that
 `python tools/check_verify_inventory.py --run` runs `verify.py` once and checks: the grouped list covers
 checks 1 to 913 once each with no gap or overlap; the list total equals the summary total (913); each part's
 count in the summary equals the sum of its rows; the multi-part count stated above equals the rows with an
-"Also touches" part; the run printed 913 numbered results and `all 913 checks passed`; and every row's
-"First check as printed" is a prefix of what the run printed under that row's first number. Without `--run` or
-`--output FILE` it checks the structure only and says it did not compare with a run.
+"Also touches" part. Everything above this paragraph is numbered as the single-file `verify.py` printed it
+before #370, so those numbers describe that run and no longer match any current output. Since #370 the tool
+also checks the split tables below (per-part counts after the moves, each part file present) and compares
+the run per part: each part's section printed the number of results the split table says, 913 in all with
+`all 913 checks passed`, and every row's "First check as printed" is a prefix of a check printed by the part
+the table puts that row in. Without `--run` or `--output FILE` it checks the structure only and says it did
+not compare with a run.
+
+## The split layout (#370)
+
+Step 2 of the verify.py rework (#368). Built 2026-10-21 on house-rules 2.71.0, branch
+`AjsAgent/issue-370-split` off `AjsAgent/issue-281-fix` at ee77a81, on a 4-core machine. Design approved as
+"verify rework 1A 2A". No check was deleted, merged or reworded: a full run prints exactly the 913 titles the
+single-file run printed (the sorted list of titles is identical, no title differs even in a number).
+
+### Layout
+
+`claude-house-rules/plugins/house-rules/scripts/` holds:
+
+| File | What it is |
+|---|---|
+| `verify.py` | the runner (below). Same name and same last line as before, so CI and CLAUDE.md are unchanged. |
+| `checks/common.py` | the setup the parts share: `report`, `STEP`, `FAILURES`, `SKIPPED`, `finish()`, the path constants, `run_hook` and `run_shell`, the temp-repo helpers, the stub `gh` (`_iss_*`), the payload builders (`stop_payload`, `payload_for`, `guardwrite_payload`), the case helpers (`commit_case`, `pv_case`, `hand_case`'s transcript builders) and the fixtures more than one part reads. Defines `__all__` as every name it holds, underscore names included. |
+| `checks/core.py`, `safe_git.py`, `design_loop.py`, `writing.py`, `delegation.py`, `docs.py`, `make_page.py` | one part each. Each starts with `from common import *`, runs on its own, numbers its checks from 1, ends with `finish()` and prints its own `RESULT:` line. |
+
+Session triage has no checks yet (`house_rules/session_triage.py` is empty until #347), so it has no file.
+
+**Isolation.** Each part is its own process. `common.py` names the temp folder after the part
+(`house-rules-verify-<part>-...`) and points `TMPDIR` at it before any hook starts, and the fixture folder, the
+stub `gh` folder and every repo the checks make sit inside it, so parts running at the same time share no
+session name, scratchpad path, stage file, waiting-on-you list or git config.
+
+**What was done to the code.** Every check was moved as written. The only edits:
+- `common.py`: `HERE` is one folder up (`scripts/`, not `checks/`) and is put on `sys.path` so `import clarity`,
+  `labels` and `make_page` still resolve; the temp folder carries the part's name; the banner prints moved to the runner.
+- Six loops that reported checks of several parts were cut into one copy per part, body unchanged: the size
+  loop (`_size_cases[:4]` core, `[4:]` docs), both `trace_cases` loops (`[:1]` guard in safe git, `[1:]` in core),
+  the internal-crash loop (three copies with the events each part owns), the `RESTATEMENTS` loop (four copies,
+  each selecting its rows by index) and the never-blocked list (reported in three groups, with `_nb_cases = []`
+  between them).
+- `docs.py`: the live `docref check` exclude list gains `scripts/checks/*.py`, because the part files hold the same
+  deliberately well-formed example pointers `verify.py` did.
+- Nothing else; `__file__` in the "no live file names the retired executor agent" check now names its own part file.
+
+### The runner
+
+`python claude-house-rules/plugins/house-rules/scripts/verify.py [options]`
+
+| Option | What it does |
+|---|---|
+| none | runs every part at the same time, in subprocesses, as many at once as the machine has cores (slowest parts started first) |
+| `--parts core,safe_git` | runs only the named parts; an unknown name exits 2 and lists the parts |
+| `--changed` | runs only the parts a change touched (mapping below); cannot be combined with `--parts` |
+| `--serial` | one part after another, in the fixed order, for debugging |
+| `--timeout N` | seconds before a part counts as hung (default 900) |
+
+It prints which parts it ran and why (the option, or each changed file with the part it mapped to), then each
+part's output whole, in the fixed order core, safe_git, design_loop, writing, delegation, docs, make_page (never
+interleaved), then a table of checks, result and seconds per part, then the last line
+`RESULT: PASS - all N checks passed. The hooks are behaving as written.` with N the total. Exit 0 only if every
+part passed. A part that exits without its `RESULT:` line, exits with a code that disagrees with it, cannot start
+or times out counts as failed, and the runner names it. If no changed file maps to a part it prints
+`RESULT: PASS - 0 checks run` and says so, rather than a silent pass.
+
+### `--changed`
+
+It diffs the working tree against `git merge-base origin/main HEAD` (so committed work on the branch, staged and
+unstaged edits all count) and adds untracked files. If git or `origin/main` is unavailable it says so and runs every
+part. Each changed file maps like this (under `claude-house-rules/plugins/house-rules/` unless stated); a file the
+table does not know inside the plugin means every part:
+
+| Changed file | Parts that run |
+|---|---|
+| `scripts/house_rules/<part>.py` for safe_git, design_loop, delegation, docs | that part |
+| `scripts/house_rules/writing.py` | writing and design_loop (the clear-writing cases live in `checks/design_loop.py`, see below) |
+| `scripts/house_rules/core.py`, `__init__.py`, `session_triage.py` | every part |
+| `scripts/checks/<part>.py` for safe_git, design_loop, writing, delegation, docs, make_page | that part |
+| `scripts/checks/core.py`, `scripts/checks/common.py` | every part |
+| `scripts/hook.py`, `run.sh`, `verify.py`, `hooks/hooks.json` | every part |
+| `scripts/clarity.py` | writing and design_loop (the clear-writing cases live in `checks/design_loop.py`, see below) |
+| `scripts/make_page.py` | make_page |
+| `scripts/docref.py`, `plain_docs_check.py`, `harvest_scan.py` | docs |
+| `scripts/stallcheck.py` | delegation |
+| `scripts/labels.py` | design_loop |
+| `templates/step-card.html` | core and make_page |
+| `templates/handover-page.html` | design_loop and make_page |
+| `templates/decision-summary.page.json`, any other template | make_page (other templates: core, design_loop and make_page) |
+| `agents/archivist.md` | delegation and docs; other `agents/*` : delegation |
+| `skills/project-docs/*` | core and docs; `skills/plain-docs/*`: docs |
+| `output-styles/*` | core |
+| `commands/docref.md`, `harvest-scan.md`, `plain-docs.md` | docs; `labels.md`: design_loop; `doctor.md`: core |
+| `.claude-plugin/*` (plugin.json) | core, design_loop and make_page |
+| `rules/**` and anything else in the plugin | every part |
+| `docs/architecture.md`, `CLAUDE.md` | core, design_loop, docs, delegation |
+| `docs/claude-ai-instructions.md`, `docs/desktop-verification.md`, `.claude-plugin/marketplace.json` (repo root) | core, docs, delegation |
+| `docs/example-environment.md`, `claude-house-rules/README.md` | core, safe_git, docs, delegation |
+| any other file outside the plugin (other docs, `tools/`, `.github/`) | docs and delegation, the two parts that scan the whole repo (docref and plain_docs_check; the retired-agent scan) |
+
+Two things in the table go further than "a change to a part's file runs that part". `clarity.py` and
+`house_rules/writing.py` also run design_loop, because 30 of the clear-writing checks live there (below). And a
+change outside the plugin still runs docs and delegation, because those two scan every file in the repo.
+
+### Checks per part after the split
+
+Run alone, one part at a time, then added up (913). Counts are what each part file prints; seconds are one parallel
+full run (wall-clock 34.5 s, second run 35.9 s).
+
+| Part | Checks | Seconds (full run 1 / 2) | Lines | The #369 summary said |
+|---|---|---|---|---|
+| core | 181 | 15.8 / 16.2 | 2,489 | 181 |
+| safe_git | 186 | 31.2 / 32.4 | 1,706 | 184 |
+| design_loop | 281 | 27.3 / 28.8 | 1,981 | 253 |
+| writing | 11 | 1.4 / 1.3 | 76 | 41 |
+| delegation | 99 | 13.7 / 14.5 | 1,486 | 99 |
+| docs | 125 | 7.1 / 7.2 | 1,805 | 125 |
+| make_page | 30 | 29.0 / 30.6 | 365 | 30 |
+| **Total** | **913** | | | 913 |
+
+### Checks placed differently from the inventory
+
+Two groups depend on state left earlier in one run and cross a part boundary in the #369 inventory. The design says
+an order-dependent group stays whole in one file, so each moved to the part that owns the state:
+
+| Checks (old numbers) | From | To | Count | Why |
+|---|---|---|---|---|
+| 505-506 | design_loop | safe_git | 2 | `issuelist` shows and drops other sessions' waiting entries from the same `_pt_state` file that 501-504 and 507 write and read; the group "501-507" runs on one waiting-on-you state file |
+| 779-808 | writing | design_loop | 30 | the clear-writing cases (779-808) and the checkpoint table (809-861) run in the same `_loop_dir` project folder with the same `_loop_env`, and the checkpoint rows read pages and transcripts the writing cases leave under `docs/plans/`. Both halves stay together, in order, in `checks/design_loop.py` after the 643-717 chain |
+
+Everything else is in the part the inventory gave it (multi-part checks stay with the part that owns the code they
+mainly exercise, as counted in the #369 summary). Because the clear-writing cases moved, a change to `clarity.py` or
+`house_rules/writing.py` runs design_loop as well as writing (the design said `clarity.py` maps to writing alone;
+that would have left the 30 moved cases unrun).
+
+### Measured times (2026-10-21, 4 cores, same machine and method as the earlier runs)
+
+| Run | Result | Seconds |
+|---|---|---|
+| Full parallel, run 1 | `RESULT: PASS - all 913 checks passed.` | 34.5 |
+| Full parallel, run 2 | `RESULT: PASS - all 913 checks passed.` | 36.0 |
+| `--serial` | `RESULT: PASS - all 913 checks passed.` | 132.1 |
+| `--parts design_loop` | `RESULT: PASS - all 281 checks passed.` | 29.9 |
+
+Before the rework a run took 197 seconds, and 130-134 after restructure step 2. A parallel run is about 35 seconds,
+which is the slowest part (safe_git, 31-32 s) plus start-up: the floor the #369 inventory predicted (about 32 s).
+`--serial` matches the old single-process time because the checks are unchanged. The remaining time inside safe_git
+(prompttimer waits) and make_page (process starts per page build) is what a later step would cut.
+
+### Adding or changing a check
+
+Put it in the part file for the code it exercises, with `report(...)` / `commit_case(...)` as before. Anything
+a second part needs goes in `common.py`; a helper used by one part stays in that part's file. A check that depends
+on state an earlier check leaves must sit in the same file, after it. Run the part alone first
+(`python3 .../checks/<part>.py`), then `verify.py`. `python tools/check_verify_inventory.py --run` proves the table
+above still matches the files.
