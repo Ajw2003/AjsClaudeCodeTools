@@ -329,7 +329,7 @@ const PAGE = {
         "Read the rule change, then pass or fail QA",
         "you",
         [
-          "Read the \"A green test suite is not proof it works\" section in claude-house-rules/plugins/house-rules/rules/house-rules.md and say whether it matches your answer 2A (only the parts a change touched run twice in a session; GitHub's check runs everything).",
+          "Read the \"A green test suite is not proof it works\" section in claude-house-rules/plugins/house-rules/rules/house-rules.md. Say whether it matches your answer 2A: only the parts a change touched run twice in a session, and GitHub's check runs everything.",
           "Once you pass QA, a pull request takes 2.72.0 to the main branch. After that, the next work is #367 (the proof-check bug), and then #341 (restructure step 3, settings and identity)."
         ],
         "Reply \"QA passed: verify rework\", or \"QA failed: verify rework\" and say what is wrong."
@@ -340,11 +340,23 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "17 files, +11911 −10382",
+      "20 files, +12722 −10388",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
+        [
+          ".claude/house-rules-loop.json",
+          6,
+          6,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
         [
           "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json",
           1,
@@ -503,7 +515,7 @@ const PAGE = {
         ],
         [
           "docs/3-state/ProjectState.md",
-          6,
+          8,
           0,
           [
             [
@@ -528,6 +540,30 @@ const PAGE = {
         [
           "docs/architecture.md",
           7,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-21-verify-rework-qa.html",
+          713,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-21-verify-rework-qa.page.json",
+          90,
           0,
           [
             [

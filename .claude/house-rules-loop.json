@@ -555,5 +555,6 @@
       "replaced_by": null
     }
   ],
-  "qa_page": "docs/plans/2026-10-21-verify-rework-qa.html"
+  "qa_page": "docs/plans/2026-10-21-verify-rework-qa.html",
+  "qa_page_linked": true
 }
