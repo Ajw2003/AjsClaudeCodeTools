@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Design approved: proof check fix",
   "reply": "",
   "short": {
-    "lead": "Issue closing (house-rules 2.70.0) lets me close an issue only with proof on record: your QA pass, then a merged pull request. Two checks record that proof. The merge check records a merged pull request in the closable record, which is the list of features whose issues may close. The close check removes an issue from that record after that issue has been closed successfully. Neither has ever worked through the GitHub tool that this session uses. So today the close guard, the check that blocks a close without proof, refused to close #371, even though pull request #373 had merged. This page proposes the fix (#367) and asks you two questions.",
+    "lead": "Issue closing (house-rules 2.70.0) lets me close an issue only with proof on record: your QA pass, then a merged pull request. Two checks record that proof. The merge check writes that merge into the closable record, which is the list of features whose issues may close. The close check removes an issue from that record after that issue has been closed successfully. Neither has ever worked through the GitHub tool that this session uses. So today the close guard, the check that blocks a close without proof, refused to close #371, even though pull request #373 had merged. This page proposes the fix (#367) and asks you two questions.",
     "hint": "Tap a row to see what was found.",
     "key": [
       [
