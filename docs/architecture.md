@@ -33,8 +33,8 @@ subagents, and its size is paid on every such spawn. Measurement:
 Defined in [claude-house-rules/plugins/house-rules/hooks/hooks.json](../claude-house-rules/plugins/house-rules/hooks/hooks.json),
 every hook command is `sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" <event>`. `run.sh` resolves a
 working Python interpreter and execs
-[scripts/hook.py](../claude-house-rules/plugins/house-rules/scripts/hook.py) with that event name;
-every handler lives in that one file. Why a shim rather than calling `hook.py` directly, and how
+[scripts/hook.py](../claude-house-rules/plugins/house-rules/scripts/hook.py) with that event name.
+Since 2.71.0 `hook.py` is only the dispatcher: each handler lives in the module under `scripts/house_rules/` named in the table "Which module owns each handler" below (docs/4-systems/plugin-restructure.md has the split). Why a shim rather than calling `hook.py` directly, and how
 `run.sh` probes for a working interpreter: see the section right below this one.
 
 | Hook event | `run.sh` arg | Fires on | Effect |
@@ -77,6 +77,47 @@ missing from this table, or listed here but not registered, fails the suite. Why
 the primary mechanism for the model split (and why `opusplan` alone is not enough): see the
 section right below.
 
+### Which module owns each handler
+
+Built from `grep -n '^def event_'` over `hook.py` and `house_rules/*.py` on 2026-10-21 (2.71.0, line numbers as of that commit). 32 handlers: `hook.py` holds one, the dispatcher `event_handover`; `main()` and the `EVENTS` table also stay there.
+
+| Handler | Module | Line |
+|---|---|---|
+| `event_handover` | `hook.py` | 96 |
+| `event_inject` | `house_rules/core.py` | 548 |
+| `event_showrule` | `house_rules/core.py` | 620 |
+| `event_profile` | `house_rules/core.py` | 655 |
+| `event_standards` | `house_rules/core.py` | 833 |
+| `event_versioncheck` | `house_rules/core.py` | 1276 |
+| `event_scope` | `house_rules/core.py` | 1489 |
+| `event_artifact` | `house_rules/core.py` | 1623 |
+| `event_runnable` | `house_rules/core.py` | 1713 |
+| `event_promptran` | `house_rules/core.py` | 1781 |
+| `event_delegate` | `house_rules/delegation.py` | 82 |
+| `event_subagentrules` | `house_rules/delegation.py` | 237 |
+| `event_announce` | `house_rules/delegation.py` | 346 |
+| `event_verdict` | `house_rules/delegation.py` | 668 |
+| `event_agentcap` | `house_rules/delegation.py` | 888 |
+| `event_subagentcommit` | `house_rules/delegation.py` | 995 |
+| `event_autosave` | `house_rules/delegation.py` | 1272 |
+| `event_commitgate` | `house_rules/delegation.py` | 1319 |
+| `event_worktreesweep` | `house_rules/delegation.py` | 1409 |
+| `event_audit` | `house_rules/delegation.py` | 1465 |
+| `event_userpromptaudit` | `house_rules/delegation.py` | 1544 |
+| `event_issuelist` | `house_rules/design_loop.py` | 1545 |
+| `event_pagecheck` | `house_rules/design_loop.py` | 1704 |
+| `event_closablemerge` | `house_rules/design_loop.py` | 1965 |
+| `event_docstiers` | `house_rules/docs.py` | 94 |
+| `event_harvest` | `house_rules/docs.py` | 577 |
+| `event_guard` | `house_rules/safe_git.py` | 437 |
+| `event_guardwrite` | `house_rules/safe_git.py` | 841 |
+| `event_branchnudge` | `house_rules/safe_git.py` | 920 |
+| `event_prompttimer` | `house_rules/safe_git.py` | 1208 |
+| `event_creditcheck` | `house_rules/safe_git.py` | 1428 |
+| `event_guardgithub` | `house_rules/safe_git.py` | 1485 |
+
+`writing.py` and `session_triage.py` own no handler: `writing.py` holds the helpers the end-of-reply checks call and registers `_page_writing_note` on a core list, and `session_triage.py` is empty until step 9 (#347). Why the split and what each link list does: docs/4-systems/plugin-restructure.md.
+
 ## Design constraints that shape `hook.py` and `run.sh`
 
 - **`hook.py` is stdlib-only Python.** No third-party imports, no pip install, nothing beyond
@@ -100,7 +141,7 @@ section right below.
     every path meaning *I could not tell* (empty payload, unparseable JSON, missing field,
     scan budget exceeded, any internal error) says so via `systemMessage`. Silence from one of
     these means it looked and there was nothing to do — nothing else.
-- **Nothing fails silently**, and `verify.py` enforces it over `hook.py`'s own source: no
+- **Nothing fails silently**, and `verify.py` enforces it over the source of `hook.py` and the six part modules in `scripts/house_rules/`: no
   `except` block may return or pass without emitting, writing to stderr, or recording the
   problem for its caller to report. An `except` that *recovers* — assigns a fallback and
   carries on — is not the defect. `main()`'s last-resort net speaks for **every** event, not
@@ -468,7 +509,7 @@ only reason it is worth having. Before it:
   *"an empty payload is nothing to check, not a failed check"*. It now asserts the opposite, and
   the check says so at the call site.
 
-`verify.py` enforces the rule structurally rather than by memory: it reads `hook.py` and fails
+`verify.py` enforces the rule structurally rather than by memory: it reads `hook.py` and the seven files in `scripts/house_rules/` and fails
 any `except` block whose body returns or passes without emitting, writing to stderr, or
 recording the problem for its caller to report. An `except` that *recovers* — assigns a
 fallback and carries on — is not the defect and is not flagged; the defect is giving up quietly.
@@ -527,7 +568,7 @@ nothing to do", and five to seven of these lines per Write/Edit were transcript 
 `SessionStart` entry from `inject` since 2.17.1, so a large recorded profile can never push the
 rules core over the per-hook limit) reads it; if it's missing (a fresh clone, always), `profile`
 falls back to live runtime
-detection (`hook.py`'s `_detect_environment`: OS, Python, and whether `git`/`sh`/`bash`/`pwsh`/
+detection (`house_rules/core.py`'s `_detect_environment`: OS, Python, and whether `git`/`sh`/`bash`/`pwsh`/
 `powershell`/`node`/`npm` are on PATH) rather than a static "go find out" message or a Windows-11
 default. A hand-written `rules/environment.md` still wins when present — runtime detection
 cannot know RAM, GPU, or CRLF config, only a human recording it can. A worked example, including
@@ -542,8 +583,8 @@ the `sh`/`bash`-not-on-PATH trap discovered on this machine, is preserved at
   another entry in this same list, not a new marketplace file.
 - **`claude-house-rules/plugins/house-rules/`** is the plugin itself — everything under it is what
   gets published and installed on another machine. Treat its `rules/house-rules.md` as the only
-  real copy of that text; everything else referencing the rules (`CLAUDE.md`, `hook.py`'s
-  hardcoded reminder strings) is a pointer or a restatement, checked for drift by `verify.py`.
+  real copy of that text; everything else referencing the rules (`CLAUDE.md`, the hardcoded
+  reminder strings in `hook.py` and `house_rules/`) is a pointer or a restatement, checked for drift by `verify.py`.
 - **`claude-house-rules/plugins/house-rules/output-styles/`** and **`templates/`** hold the
   forced `handover-cards` output style and `step-card.html`, the page form of the step card.
   `step-card.html` is self-contained by rule — no external script, stylesheet, font or fetch —

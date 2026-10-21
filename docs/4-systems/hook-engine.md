@@ -32,7 +32,7 @@ anything. Trusting PATH membership would silently disable every hook the same wa
 [`scripts/hook.py`](../../claude-house-rules/plugins/house-rules/scripts/hook.py) with the event
 name as `argv[1]`; the payload always arrives on stdin
 (`hook.py:1-6`). `main()` looks the event up in the `EVENTS` dispatch table
-(`hook.py:2034-2046`) and calls the matching handler:
+(`hook.py:251-284`) and calls the matching handler. Since 2.71.0 (#340, step 2) `hook.py` holds only that table, `main()` and `event_handover`; each handler below lives in a module under `scripts/house_rules/`, and the table in `docs/architecture.md` ("Which module owns each handler") lists which:
 
 | Event | Handler | Fires on |
 |---|---|---|
@@ -189,20 +189,20 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
 
 - **`hook.py` is stdlib-only Python** (`hook.py:8-10`) — no third-party imports, nothing beyond
   CPython 3.8+. `run.sh` is the one POSIX-sh dependency in the whole plugin.
-- **Every handler's failure mode is fixed and deliberate** (`hook.py:16-34`, the module
+- **Every handler's failure mode is fixed and deliberate** (`hook.py:23-37`, the module
   docstring): `guard` fails **closed** — an unreadable payload or internal error writes to
-  stderr and returns `2`, blocking the command (`event_guard`, `hook.py:793-803`); `inject` fails
+  stderr and returns `2`, blocking the command (`event_guard`, `house_rules/safe_git.py:437-447`); `inject` fails
   **loud, not closed** — a missing rules file still emits a `systemMessage`; `scope` **cannot
   fail** — it never reads a file or raises, because a non-zero exit on `UserPromptSubmit` erases
   the user's prompt; `artifact`/`runnable`/`delegate`/`harvest` never obstruct but never go quiet
   — every failure emits a `systemMessage` and exits 0; `handover`, `announce`, `verdict` fail
   **open and loud** — a `decision: "block"` from any of them would stop a turn or a subagent from
   ever finishing.
-- **Nothing fails silently.** `verify.py` enforces this structurally over `hook.py`'s own source:
+- **Nothing fails silently.** `verify.py` enforces this structurally over the source of `hook.py` and the six part modules it imports:
   no `except` block may return or `pass` without emitting, writing to stderr, or recording the
   problem for its caller. An `except` that *recovers* — assigns a fallback and continues — is not
   the defect; the defect is giving up without saying so. `main()`'s last-resort net
-  (`hook.py:2049-2085`) catches anything a handler itself missed and speaks for every event.
+  (`main()`, `hook.py:287-329`) catches anything a handler itself missed and speaks for every event.
 - **`guard` reads the branch from `.git/HEAD`, never from `git rev-parse`.** `guard` runs on
   every `Bash`/`PowerShell` call and is the one handler that fails closed, so a subprocess on
   that path is a subprocess that can wedge the user's shell for as long as it hangs (a stale
@@ -220,13 +220,13 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   slice.** `_guard_subject` deliberately returns the raw slice with escapes intact, because
   matching against escapes intact is what keeps the patterns honest. Printing that raw slice to
   the user would show `"command": "git status"` rather than `git status`, so `_trace_subject`
-  (`hook.py:1006-1014`) decodes a copy for the one-line trace only; the match itself never sees
+  (`house_rules/safe_git.py:333-345`) decodes a copy for the one-line trace only; the match itself never sees
   the decoded form.
   <!-- ref:361f -->
 - **`standards` detects a Unity project opened at its `Assets/` folder, not just at its root.**
   Opening a Unity project directly at `Assets/` is a normal workflow, but `_standards_scan_dirs`
   never sees the sibling `ProjectSettings/`/`*.csproj` markers one level up. `_unity_markers_in_
-  parent` (`hook.py:340-349`) checks narrowly — the directory must be named exactly `Assets` and
+  parent` (`house_rules/core.py:801-822`) checks narrowly — the directory must be named exactly `Assets` and
   its parent must carry a real Unity marker (`ProjectSettings/ProjectVersion.txt`, or another
   Unity-marker file) — so a coincidentally-named `Assets/` folder in a non-Unity repo doesn't
   false-positive. When it matches, detection re-scans from that real project root instead of
@@ -245,7 +245,7 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   size check is what would say so.
   <!-- ref:23c3 -->
 - **`profile`'s runtime-detected fallback records hardware and the Claude plan, with a time
-  budget, and never leaves a field blank.** `_detect_hardware` in `hook.py` probes CPU (model and
+  budget, and never leaves a field blank.** `_detect_hardware` in `house_rules/core.py` probes CPU (model and
   logical cores), RAM (`/proc/meminfo`, `sysctl hw.memsize`, or `GlobalMemoryStatusEx`), GPU
   (`nvidia-smi`, else `system_profiler` on macOS or a CIM query on Windows, where an exact 4 GB
   reading is marked "may be higher"), free disk on the project drive, and the plan from
@@ -273,7 +273,7 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   safe, because nobody reviews the diff line by line before an unattended write ships — which is
   the exact failure this hook exists to catch: a scheduled, unattended task once rewrote a CSS file
   wholesale instead of touching the one rule that needed to change, and the regression sat
-  unnoticed until someone found it later. `event_guardwrite` (`hook.py`, after `event_guard`) always
+  unnoticed until someone found it later. `event_guardwrite` (`house_rules/safe_git.py`, after `event_guard`) always
   asks in this case; it cannot know *why* a rewrite is happening, only *that* one is about to, so
   the reason it names is what will be discarded, and the "why" is left to whatever Claude has
   already said in chat, per the rule in `rules/house-rules.md`.

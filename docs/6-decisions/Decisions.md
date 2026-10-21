@@ -7,6 +7,75 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - QA passed: restructure step 2
+
+**Context.** QA page `docs/plans/2026-10-21-restructure-step-2-qa.html` for restructure step 2 (#340, steps
+#357 to #360): `hook.py` split into `scripts/house_rules/` (the core and six part modules), house-rules 2.71.0.
+
+**Decision.** aj's reply was "QA passed: restructure step 2". 2.71.0 ships to `main` by pull request.
+
+**Found.** The design loop did not record this pass. aj's "Build plan approved: verify rework" had already
+replaced the stage file's issue list with #368 to #371, so the hook looked for the verify rework's issues
+and found them still in progress. Step 2's issues therefore have no `closable` entry. They close through a
+sweep page instead, citing this entry and the merged pull request as the evidence. Approving a second
+feature's build plan while the first is still being built loses the first feature's issue list; that is
+noted on #367 (the proof-check bug), whose fix is folded into the restructure.
+
+**Status.** Standing.
+
+## 2026-10-21 - Build plan approved: verify rework
+
+**Context.** Build plan page `docs/plans/2026-10-21-verify-rework-plan.html`, for parent issue #368
+(Rework verify.py into per-part test files with a parallel runner).
+
+**Decision.** aj's reply was "Build plan approved: verify rework". The plan has 3 sub-issues, built one at a
+time by a helper agent after restructure step 2 (#340): #369 lists which part every check belongs to,
+#370 moves the checks into per-part test files with a parallel runner, and #371 changes the run-twice
+rule, times the result against the 197-second baseline and hands over a QA page. Step 2 resumes first, at
+step 2a (#357), using the core links answer from "2026-10-20 - Design approved: restructure step 2 core links".
+
+**Status.** Standing.
+
+## 2026-10-21 - Design approved: verify rework
+
+**Context.** aj: verify.py takes multiple minutes in a cloud session and running it twice makes it worse;
+the approved restructure plan has no step that makes it faster. Proposal
+`docs/plans/2026-10-21-verify-rework.html`; one timed run took 197 seconds, 154.2 of them starting
+`hook.py` 898 times.
+
+**Decision.** aj's reply was "Design approved: verify rework 1A 2A".
+1. Question 1, how verify.py gets faster: split it into one test file per part with a runner that runs
+   the parts at the same time and can run only the touched parts; CI runs every part; no check is deleted.
+2. Question 2, how often a session runs the tests: the touched parts twice, everything else once; CI runs
+   the full suite. This supersedes grilling round 1, question 3 ("Test suites run twice everywhere").
+
+The rework is a new step of the restructure (#306), after step 2 (#340), and folds in #204 (Every hook
+call recompiles all of hook.py). Systems doc: `docs/4-systems/verify-suites.md`, "Planned: the verify.py
+rework".
+
+**Status.** Standing.
+
+## 2026-10-21 - Sweep approved: issues, and 26 issues closed
+
+**Context.** Sweep page `docs/plans/2026-10-21-issue-sweep.html`, built from
+`docs/plans/2026-10-21-issue-sweep-evidence.json`: 129 open issues labelled "AjsAgent created this", 32
+proposed to close as completed, none as not planned, 97 kept.
+
+**Decision.** aj's reply was "Sweep approved: issues keep #224 #307 #308 #309 #310 #311". The hook recorded
+26 approved closes. Each was closed through the GitHub tool with a comment quoting its evidence and the
+label "AjsAgent completed this" (created for this): #361 to #365, #339, #329 to #332, #265, #261, #262, #245
+to #250, #225 to #227 and #230 to #233. The close guard allowed every one live, the first run of house-rules
+2.70.0. 103 issues stay open.
+
+**Found in the live run.** The after-close step did not remove the closed issues from the stage file's
+`sweep` list: its proof check reads the GitHub tool's result as plain data, and the tool most likely wraps
+it in a text block. The merge-stamping check of #362 reads results the same way. Both fail safe (nothing is
+removed or stamped without proof), but closed issues stay on the list until fixed.
+
+**Status.** Standing. aj decided on 2026-10-21 not to patch this separately: "verify.py is too slow to be
+making more patches unless absolutely necessary until we have reworked it and the plugin core". It is #367
+under #306, built after step 2 (#340).
+
 ## 2026-10-20 - QA passed: issue closing
 
 **Context.** QA page `docs/plans/2026-10-20-issue-closing-qa.html` for #361 (Issue closing: the agent
@@ -350,7 +419,8 @@ the 2026-10-16 audit (`docs/audits/2026-10-16-plugin-audit/01-rules-vs-rules.md`
     which for aj is "ajw2003sAgent".
 17. The sixteen mechanical fixes are accepted as listed on the page.
 
-**Status.** Standing. Round 2 asks what these answers leave open.
+**Status.** Standing, except answer 3, superseded by "2026-10-21 - Design approved: verify rework" (the touched
+parts run twice, everything else once). Round 2 asks what these answers leave open.
 
 ## 2026-10-18 - Tree-sitter trial: aj's answers
 

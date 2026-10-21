@@ -1,0 +1,94 @@
+{
+  "title": "Verify Rework Plan",
+  "eyebrow": "Build plan · #368 rework verify.py into per-part test files with a parallel runner",
+  "approval": "Build plan approved: verify rework",
+  "replyPrefix": "Build plan approved: verify rework",
+  "reply": "",
+  "short": {
+    "lead": "This is the build plan for reworking verify.py (issue #368). It is a new step of the restructure (#306). On the proposal page you chose option 1A: split verify.py into one test file per part, with a runner that runs the parts at the same time. You also chose option 2A: during a session, the parts a change touched run twice and every other part runs once. The tests are split along the same parts as hook.py. So this rework comes after step 2 (#340), which is paused at its first part, step 2a (#357). The work is 3 sub-issues, #369 to #371. One helper agent builds each one, one at a time.",
+    "hint": "Tap a step to see what it creates or changes and what it needs.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "list",
+        "Order",
+        "What happens first",
+        "",
+        [
+          "Step 2 (#340) resumes at step 2a (#357), using the answer you gave on core links: each part adds its function to a list kept in the core module, the module every install gets.",
+          "Steps 2b to 2d (#358 to #360) follow, and step 2 ships with its own QA page.",
+          "After step 2 comes this rework (#368). After that comes #367, the proof-check bug, and then restructure step 3 (#341)."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "search",
+        "Step 1",
+        "List which part every check belongs to (#369)",
+        "",
+        [
+          "Each of the 913 checks in verify.py is listed with its line range, what it tests, and which part it belongs to.",
+          "Checks that test two parts, and shared test setup, are listed separately.",
+          "The list goes into docs/4-systems/verify-suites.md; nothing moves yet."
+        ],
+        "Nothing from you. Done when every check is listed exactly once and the counts add up."
+      ],
+      [
+        "swap",
+        "Step 2",
+        "Per-part test files and a parallel runner (#370)",
+        "",
+        [
+          "Each check moves into its part's test file; shared test setup goes into one helper module.",
+          "A runner script runs all parts at the same time by default, or only the parts a change touched.",
+          "verify.py stays as the command that runs everything, so GitHub's check and the commands in CLAUDE.md keep working.",
+          "No check is deleted: the full run must report the same number of checks."
+        ],
+        "Nothing from you. Depends on step 1."
+      ],
+      [
+        "check",
+        "Step 3",
+        "The run-twice rule, docs, timing and QA (#371)",
+        "",
+        [
+          "The rule about running tests twice changes to: parts the change touched run twice, every other part runs once, and GitHub's check runs everything.",
+          "A full run and a touched-parts run are each timed and compared with the 197 seconds one full run took on 2026-10-21.",
+          "A QA page shows the before and after times."
+        ],
+        "You: answer \"QA passed: verify rework\" or \"QA failed: verify rework\"."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "keep",
+      "Every existing check",
+      "All 913 checks stay; only where they live and how they are run changes.",
+      null,
+      "The full run's check count must match the count before the split, so a check that goes missing fails the step.",
+      null,
+      null
+    ]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "The build plan for the verify.py rework (#368): 3 sub-issues, #369 to #371, built after restructure step 2.",
+    "changing": "No code changes until you approve. The design decision is in the decisions log, docs/6-decisions/Decisions.md.",
+    "blocking": "Your approval of this plan.",
+    "next": "Once you approve, step 2a (#357) resumes with your core links answer, and this rework follows step 2.",
+    "todo": [
+      "Type \"Build plan approved: verify rework\" in the chat.",
+      "Send the message."
+    ]
+  }
+}

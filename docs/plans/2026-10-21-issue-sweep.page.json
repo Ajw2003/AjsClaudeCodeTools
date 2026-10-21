@@ -1,0 +1,1089 @@
+{
+  "title": "Issue Sweep",
+  "eyebrow": "Sweep · the 129 open issues labelled AjsAgent created this · issue closing, house-rules 2.70.0",
+  "short": {
+    "lead": "This is the one-time sweep of the open issues I created. You chose this format on the issue closing proposal: its question 2 was about the open issues, and you answered A, one sweep page. There are 129. 32 are suggested to close as completed: each has two things, both quoted in its row: a \"QA passed\" entry (your sign-off that the work was tested) in the decisions log, and a merge into the main branch. I suggest closing none of them as not planned. An issue would only go in that group if a decisions-log entry (docs/6-decisions/Decisions.md) or an issue comment named what replaces it, and none does. The other 97 stay open, each with the reason. Nothing closes until you approve this page.",
+    "hint": "Tap a row to see an issue's evidence and its suggested action.",
+    "key": [
+      [
+        "Close as completed",
+        ""
+      ],
+      [
+        "Keep open",
+        "done"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "How",
+        "How each row was decided",
+        "",
+        [
+          "Close as completed only with both halves quoted: your \"QA passed\" entry in docs/6-decisions/Decisions.md for the issue's feature, and the merge that put it on main.",
+          "Keep open whenever either half is missing, including work that is merged but never passed your QA, such as the end-of-reply loop fix (#322 to #327, merged in pull request #337).",
+          "The full evidence for all 129 issues is in docs/plans/2026-10-21-issue-sweep-evidence.json."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Check",
+        "Three rows worth a look",
+        "you",
+        [
+          "#224 (Write the show-don't-tell rule into the house rules) is marked completed as a sub-issue of the design loop (#223), whose QA passed on 2026-10-14; it isn't one of that build's seven steps.",
+          "#307 to #311, which made up the house-rules 2.68.1 patch (a small fix release), are marked completed. You passed QA on 2026-10-16, but the design loop (the staged plan-and-build process) refused to record that pass at the time.",
+          "#303 (the design loop is broken and blocks sessions), the patch's parent, stays open: the QA entry names only #307 to #311."
+        ],
+        "Add \"keep #N\" to your approval for any you want left open."
+      ]
+    ]
+  },
+  "changes": [],
+  "sweep": [
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 365,
+      "title": "Issue closing step 4: rule text, docs, version and QA page",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-20 - QA passed: issue closing\" covers \"#361 ... steps #362 to #365\". Merged by pull request #366 (merge commit eba4410 on origin/main, \"Merge pull request #366: house-rules 2.70.0, the agent closes issues on recorded evidence\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 364,
+      "title": "Issue closing step 3: sweep approvals and named not-planned lists",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-20 - QA passed: issue closing\" covers \"#361 ... steps #362 to #365\". Merged by pull request #366 (merge commit eba4410 on origin/main, \"Merge pull request #366: house-rules 2.70.0, the agent closes issues on recorded evidence\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 363,
+      "title": "Issue closing step 2: the close guard",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-20 - QA passed: issue closing\" covers \"#361 ... steps #362 to #365\". Merged by pull request #366 (merge commit eba4410 on origin/main, \"Merge pull request #366: house-rules 2.70.0, the agent closes issues on recorded evidence\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 362,
+      "title": "Issue closing step 1: the closable record (QA pass and merge evidence)",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-20 - QA passed: issue closing\" covers \"#361 ... steps #362 to #365\". Merged by pull request #366 (merge commit eba4410 on origin/main, \"Merge pull request #366: house-rules 2.70.0, the agent closes issues on recorded evidence\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 361,
+      "title": "Issue closing: the agent closes issues itself, under a guard that checks QA and the merge",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-20 - QA passed: issue closing\" covers \"#361 ... steps #362 to #365\". Merged by pull request #366 (merge commit eba4410 on origin/main, \"Merge pull request #366: house-rules 2.70.0, the agent closes issues on recorded evidence\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 360,
+      "title": "Step 2d: verify.py's changed lines, version, docs and QA page",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step 2 sub-issue, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 359,
+      "title": "Step 2c: the delegation, design loop and writing modules, and the end-of-reply split",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step 2 sub-issue, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 358,
+      "title": "Step 2b: the safe git and docs modules",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step 2 sub-issue, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 357,
+      "title": "Step 2a: the house_rules package and the core module",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step 2 sub-issue, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 355,
+      "title": "Attribution guard: prove it on focus-deck-app, then roll it out",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Current attribution-guard work, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 354,
+      "title": "Attribution guard: an install script for every repo aj owns",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Current attribution-guard work, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 353,
+      "title": "Attribution guard: the hook refuses a merge until the GitHub check has passed",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Current attribution-guard work, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 352,
+      "title": "Attribution guard: a shared GitHub workflow that checks pull requests, removes the footer and audits pushes",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Current attribution-guard work, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 351,
+      "title": "Attribution guard: move the Claude-credit patterns into one shared file",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Current attribution-guard work, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 350,
+      "title": "Attribution guard on GitHub: no Claude credit can reach any repo aj owns",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Current attribution-guard work, in progress; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 349,
+      "title": "Restructure step 4: safe git follows the grilling answers",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 348,
+      "title": "Restructure step 10: split into installable plugins and release",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 347,
+      "title": "Restructure step 9: session triage, designed first",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 346,
+      "title": "Restructure step 8: the docs context layer",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 345,
+      "title": "Restructure step 7: helper agents follow the grilling answers",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 344,
+      "title": "Restructure step 6: writing, evidence and rewrite rules follow the grilling answers",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 343,
+      "title": "Restructure step 5: design loop and pages follow the grilling answers",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 341,
+      "title": "Restructure step 3: settings and identity",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 340,
+      "title": "Restructure step 2: move today's hook.py into the core and six part modules, changing nothing",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure step not built yet; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 339,
+      "title": "Restructure step 1: the summary page template and the define-before-use rule",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-20 - QA passed: restructure step 1\" names \"#339 (Restructure step 1 ...)\". Merged by pull request #356 (merge commit 25044ae on origin/main; commits e47ebdf and 9c36600 say \"Refs #339\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 335,
+      "title": "Page builder: the Copy my reply button does nothing in the app's browser pane",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 334,
+      "title": "Docs context layer: map Unity prefabs and scenes in a later revision",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 332,
+      "title": "Page links open: docs, version and QA page",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-18 - QA passed: page links open\" names \"#329 ... built in steps #330 to #332 ... pull request #333\". Pull request #333 is merged (merge commit 973c527 on origin/main, \"Merge pull request #333 from Ajw2003/AjsAgent/issue-329-page-links\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 331,
+      "title": "Page links open: make_page.py warns when it writes a page outside the folder it runs in",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-18 - QA passed: page links open\" names \"#329 ... built in steps #330 to #332 ... pull request #333\". Pull request #333 is merged (merge commit 973c527 on origin/main, \"Merge pull request #333 from Ajw2003/AjsAgent/issue-329-page-links\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 330,
+      "title": "Page links open: count a page link only when it resolves inside the session folder",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-18 - QA passed: page links open\" names \"#329 ... built in steps #330 to #332 ... pull request #333\". Pull request #333 is merged (merge commit 973c527 on origin/main, \"Merge pull request #333 from Ajw2003/AjsAgent/issue-329-page-links\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 329,
+      "title": "A page link in a reply must open: a page outside the session folder is sent as a file, not linked",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-18 - QA passed: page links open\" names \"#329 ... built in steps #330 to #332 ... pull request #333\". Pull request #333 is merged (merge commit 973c527 on origin/main, \"Merge pull request #333 from Ajw2003/AjsAgent/issue-329-page-links\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 327,
+      "title": "Accept an approval the first time, and ask for the decisions-log entry afterwards",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #337 (merge eeec706), but no \"QA passed\" entry for the #322 loop fix in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 326,
+      "title": "Say the page checkpoint's still-owed note once per message of aj's",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #337 (merge eeec706), but no \"QA passed\" entry for the #322 loop fix in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 325,
+      "title": "Ask for the editor helper only on pages unless HOUSE_RULES_EDITOR=on",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #337 (merge eeec706), but no \"QA passed\" entry for the #322 loop fix in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 324,
+      "title": "Stop running the writing check on chat replies, keeping it on pages and new issues",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #337 (merge eeec706), but no \"QA passed\" entry for the #322 loop fix in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 323,
+      "title": "Make the end-of-reply retry report to aj only, so it can never continue the turn",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #337 (merge eeec706), but no \"QA passed\" entry for the #322 loop fix in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 322,
+      "title": "Stop the writing check and editor checkpoint from looping on retries, and turn the editor checkpoint off by default",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #337 (merge eeec706), but no \"QA passed\" entry for the #322 loop fix in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 319,
+      "title": "Attribution guard: rule text, docs and version",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #320 (merge 4532edc), but no \"QA passed\" entry in Decisions.md (the #315 comment is the agent's own test, not aj's QA); needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 318,
+      "title": "Attribution guard: read the body back after opening a pull request or issue",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #320 (merge 4532edc), but no \"QA passed\" entry in Decisions.md (the #315 comment is the agent's own test, not aj's QA); needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 317,
+      "title": "Attribution guard: recognise the footer GitHub appends",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #320 (merge 4532edc), but no \"QA passed\" entry in Decisions.md (the #315 comment is the agent's own test, not aj's QA); needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 316,
+      "title": "Attribution guard: check gh api and curl writes to GitHub, and bodies in files",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #320 (merge 4532edc), but no \"QA passed\" entry in Decisions.md (the #315 comment is the agent's own test, not aj's QA); needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 315,
+      "title": "The attribution guard still lets Claude credit through: it misses gh api and curl, and the footer returns after an edit",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Merged to main by pull request #320 (merge 4532edc), but no \"QA passed\" entry in Decisions.md (the #315 comment is the agent's own test, not aj's QA); needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 313,
+      "title": "Make pictures mandatory on every page, using the saved reference page",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 311,
+      "title": "house-rules 2.68.1: release the patch with its version, docs and QA page",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" names \"The 2.68.1 patch (#307 to #311) ... pull request #312\". Pull request #312 is merged (merge commit 9519999 on origin/main); the entry notes the design loop refused to record the pass because parent #306 is still in progress."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 310,
+      "title": "house-rules 2.68.1: a blocked page stays owed across retries",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" names \"The 2.68.1 patch (#307 to #311) ... pull request #312\". Pull request #312 is merged (merge commit 9519999 on origin/main); the entry notes the design loop refused to record the pass because parent #306 is still in progress."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 309,
+      "title": "house-rules 2.68.1: four checks report instead of blocking, and the page builder accepts any approval line",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" names \"The 2.68.1 patch (#307 to #311) ... pull request #312\". Pull request #312 is merged (merge commit 9519999 on origin/main); the entry notes the design loop refused to record the pass because parent #306 is still in progress."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 308,
+      "title": "house-rules 2.68.1: the design loop records only issues created in its own repo",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" names \"The 2.68.1 patch (#307 to #311) ... pull request #312\". Pull request #312 is merged (merge commit 9519999 on origin/main); the entry notes the design loop refused to record the pass because parent #306 is still in progress."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 307,
+      "title": "house-rules 2.68.1: the design loop reads every approval in a message, and a design approval sets the feature name",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" names \"The 2.68.1 patch (#307 to #311) ... pull request #312\". Pull request #312 is merged (merge commit 9519999 on origin/main); the entry notes the design loop refused to record the pass because parent #306 is still in progress."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 306,
+      "title": "house-rules: restructure into a shared core with project boundaries and six optional sub-plugins",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Restructure parent, in progress (step 2 under way)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 304,
+      "title": "house-rules: a two-helper tool that cleans a session transcript, then files issues from it",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 303,
+      "title": "house-rules: the design loop is broken and blocks sessions; switch off the conflicting checks now",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Parent of the 2.68.1 patch; the QA pass names only #307 to #311, not #303, and #303 covers more than the patch. Unsure, kept."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 302,
+      "title": "house-rules: proposal pages need before-and-after visuals for any visible change",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 301,
+      "title": "house-rules: a session finishes its own task; other work becomes an issue in its own repo",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 300,
+      "title": "A reply reporting a pull request answers how to test it and what's next",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "After-pull-request checks, to be built inside the Design loop sub-plugin during the restructure; not built, no QA pass."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 299,
+      "title": "A QA page must carry its test steps and what's next",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "After-pull-request checks, to be built inside the Design loop sub-plugin during the restructure; not built, no QA pass."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 298,
+      "title": "A pull request body must say how to test it and what's next",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "After-pull-request checks, to be built inside the Design loop sub-plugin during the restructure; not built, no QA pass."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 297,
+      "title": "After every pull request, a check makes sure it says how to test it and what's next",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "After-pull-request checks, to be built inside the Design loop sub-plugin during the restructure; not built, no QA pass."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 296,
+      "title": "Design-loop approvals are dropped silently when the session folder isn't a git repo",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 293,
+      "title": "Enforced workflow checks name their exact fix when they refuse",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 292,
+      "title": "Remove the background-work guard and the \"Never hide work\" rule",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 291,
+      "title": "Destructive actions are refused with the safe way named, and deletes are narrowed",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 290,
+      "title": "Prompt timer: each prompt waits on its own, with no chain of refusals",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 289,
+      "title": "Never-blocked list: agent-branch commits, make_page.py publishes and my own files always go through",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 288,
+      "title": "Page cards clip long words on a phone, and the visual check misses it",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 287,
+      "title": "Agent name, credit and branch prefix are configurable, not hard-coded to AJ",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Configurable agent name; folded into #297 and the restructure settings step, not built; no QA pass logged."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 286,
+      "title": "Page copy box must hold the full reply the design gate accepts",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 285,
+      "title": "Guards block only unrecoverable actions; drop the background-work prompt and pages must never be silently blocked",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 284,
+      "title": "Page scans: count only pages the agent wrote or changed, not cloned or checked-out ones",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 283,
+      "title": "Page checkpoint: keep blocking until a page is linked; never offer \"no page\" to the agent",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 282,
+      "title": "Page threshold: 160 words or more, everywhere it is stated",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 281,
+      "title": "Page after a long reply must be automatic, not skippable; lower the threshold to 160 words",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guards audit / automatic pages work merged via pull request #295 (merge 32ac2c3), but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 278,
+      "title": "Label advice uses the form that works in cloud sessions",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Label setup merged to main via pull request #295 (merge 32ac2c3), but Decisions.md has only \"Build plan approved: Label setup\", no QA pass; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 277,
+      "title": "A /house-rules:labels command that sets up a repo's labels on demand",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Label setup merged to main via pull request #295 (merge 32ac2c3), but Decisions.md has only \"Build plan approved: Label setup\", no QA pass; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 276,
+      "title": "The hook creates missing house labels when it first needs them",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Label setup merged to main via pull request #295 (merge 32ac2c3), but Decisions.md has only \"Build plan approved: Label setup\", no QA pass; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 275,
+      "title": "A label setup script that creates only the missing house labels",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Label setup merged to main via pull request #295 (merge 32ac2c3), but Decisions.md has only \"Build plan approved: Label setup\", no QA pass; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 274,
+      "title": "The plugin creates the house labels a repo is missing",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Label setup merged to main via pull request #295 (merge 32ac2c3), but Decisions.md has only \"Build plan approved: Label setup\", no QA pass; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 273,
+      "title": "The end-of-reply label check repeats without limit when labels can't be fixed",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 265,
+      "title": "QA stage: the stage survives a new cloud session",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: enforced QA stage\" names \"#264 (Enforce the QA stage), #265 to #271\". Pull request #272 (body: \"Refs #265\") is merged (merge commit 3e668c2 on origin/main)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 262,
+      "title": "Handover pages: one design-loop stage per repo, and the code lock covers script writes",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: handover pages and checkpoints\" names \"Pull request #263\". Pull request #263 (body lists \"Guards (#261, #262)\") is merged (merge commit e879981 on origin/main), and commit f15fbd8 \"(Refs #262, #261)\" is on origin/main."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 261,
+      "title": "Handover pages: the guard follows where a command runs and never dead-ends routine work",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: handover pages and checkpoints\" names \"Pull request #263\". Pull request #263 (body lists \"Guards (#261, #262)\") is merged (merge commit e879981 on origin/main), and commit f15fbd8 \"(Refs #262, #261)\" is on origin/main."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 250,
+      "title": "Clear writing check: docs, version 2.65.0, and a real run",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: clear writing check\" says \"Its issues (#245-#250) stay needs review until aj closes them\". Merged by pull request #234 from AjsAgent/agent-communication-patterns-xo0l8x (merge commit 5e0b51b on origin/main; commits 594b1f4, 8e9ece1, fa41e33 say \"Refs #249/#250/#245\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 249,
+      "title": "Clear writing check: the editor helper, and the check that it ran",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: clear writing check\" says \"Its issues (#245-#250) stay needs review until aj closes them\". Merged by pull request #234 from AjsAgent/agent-communication-patterns-xo0l8x (merge commit 5e0b51b on origin/main; commits 594b1f4, 8e9ece1, fa41e33 say \"Refs #249/#250/#245\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 248,
+      "title": "Clear writing check: run the checker on replies, pages and issues",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: clear writing check\" says \"Its issues (#245-#250) stay needs review until aj closes them\". Merged by pull request #234 from AjsAgent/agent-communication-patterns-xo0l8x (merge commit 5e0b51b on origin/main; commits 594b1f4, 8e9ece1, fa41e33 say \"Refs #249/#250/#245\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 247,
+      "title": "Clear writing check: the shared checker for vague claims, bare references, repetition, jargon and long sentences",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: clear writing check\" says \"Its issues (#245-#250) stay needs review until aj closes them\". Merged by pull request #234 from AjsAgent/agent-communication-patterns-xo0l8x (merge commit 5e0b51b on origin/main; commits 594b1f4, 8e9ece1, fa41e33 say \"Refs #249/#250/#245\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 246,
+      "title": "Clear writing check: write the \"nothing left to guess\" rule and fold the old lines into it",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: clear writing check\" says \"Its issues (#245-#250) stay needs review until aj closes them\". Merged by pull request #234 from AjsAgent/agent-communication-patterns-xo0l8x (merge commit 5e0b51b on origin/main; commits 594b1f4, 8e9ece1, fa41e33 say \"Refs #249/#250/#245\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 245,
+      "title": "Clear writing check: one rule and one checker so nothing I write is left to guess",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-15 - QA passed: clear writing check\" says \"Its issues (#245-#250) stay needs review until aj closes them\". Merged by pull request #234 from AjsAgent/agent-communication-patterns-xo0l8x (merge commit 5e0b51b on origin/main; commits 594b1f4, 8e9ece1, fa41e33 say \"Refs #249/#250/#245\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 244,
+      "title": "Automatic change log: every turn that changes files says what it created, changed or removed",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 243,
+      "title": "New item visual: a pasted reply no longer becomes part of a feature's name",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "New item visual v2 built and \"handed to aj for QA\" (Decisions.md 2026-10-15), but no \"QA passed\" entry; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 242,
+      "title": "New item visual: rebuild the changes page with the new boxes and real file counts for every item",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "New item visual v2 built and \"handed to aj for QA\" (Decisions.md 2026-10-15), but no \"QA passed\" entry; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 241,
+      "title": "New item visual: the template draws New items' three labelled boxes and every item's file list",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "New item visual v2 built and \"handed to aj for QA\" (Decisions.md 2026-10-15), but no \"QA passed\" entry; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 240,
+      "title": "New item visual: New items on handover pages open to a three-box flow",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "New item visual v2 built and \"handed to aj for QA\" (Decisions.md 2026-10-15), but no \"QA passed\" entry; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 233,
+      "title": "Handover page template, and the format written into the rule",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-14 - QA passed: design loop (#223)\" passes the feature whose seven build steps are \"#225, #230, #231, #232, #226, #233, #227\" and releases it \"by a pull request from AjsAgent/agent-communication-patterns-xo0l8x to main\". That branch merged as pull request #234 (merge commit 5e0b51b on origin/main)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 232,
+      "title": "Helpers build only approved steps; the go-ahead guess goes",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-14 - QA passed: design loop (#223)\" passes the feature whose seven build steps are \"#225, #230, #231, #232, #226, #233, #227\" and releases it \"by a pull request from AjsAgent/agent-communication-patterns-xo0l8x to main\". That branch merged as pull request #234 (merge commit 5e0b51b on origin/main)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 231,
+      "title": "A home for each feature: systems doc plus an issue with tracked steps",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-14 - QA passed: design loop (#223)\" passes the feature whose seven build steps are \"#225, #230, #231, #232, #226, #233, #227\" and releases it \"by a pull request from AjsAgent/agent-communication-patterns-xo0l8x to main\". That branch merged as pull request #234 (merge commit 5e0b51b on origin/main)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 230,
+      "title": "An approval only counts once the stage is logged",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-14 - QA passed: design loop (#223)\" passes the feature whose seven build steps are \"#225, #230, #231, #232, #226, #233, #227\" and releases it \"by a pull request from AjsAgent/agent-communication-patterns-xo0l8x to main\". That branch merged as pull request #234 (merge commit 5e0b51b on origin/main)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 228,
+      "title": "Audit every house rule for a check that enforces it; a rule with no check is not written",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 227,
+      "title": "Prove the loop works and update the docs",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-14 - QA passed: design loop (#223)\" passes the feature whose seven build steps are \"#225, #230, #231, #232, #226, #233, #227\" and releases it \"by a pull request from AjsAgent/agent-communication-patterns-xo0l8x to main\". That branch merged as pull request #234 (merge commit 5e0b51b on origin/main)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 226,
+      "title": "Long-reply reminder: over 200 words with no page",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-14 - QA passed: design loop (#223)\" passes the feature whose seven build steps are \"#225, #230, #231, #232, #226, #233, #227\" and releases it \"by a pull request from AjsAgent/agent-communication-patterns-xo0l8x to main\". That branch merged as pull request #234 (merge commit 5e0b51b on origin/main)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 225,
+      "title": "Stage tracker, approvals, and the code lock",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-14 - QA passed: design loop (#223)\" passes the feature whose seven build steps are \"#225, #230, #231, #232, #226, #233, #227\" and releases it \"by a pull request from AjsAgent/agent-communication-patterns-xo0l8x to main\". That branch merged as pull request #234 (merge commit 5e0b51b on origin/main)."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 224,
+      "title": "Write the show-don't-tell rule into the house rules",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Sub-issue of #223; Decisions.md \"2026-10-14 - QA passed: design loop (#223)\" passes its parent, and the entry \"Show, don't tell ... (#223, #224)\" says \"Built in #224: rules/show-dont-tell.md\". Branch AjsAgent/agent-communication-patterns-xo0l8x merged as pull request #234 (merge commit 5e0b51b); rules/show-dont-tell.md is on origin/main."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 222,
+      "title": "The orchestrator's briefs name the event, never prescribe polling",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 221,
+      "title": "Builder and reviewer agents check the project's architecture first",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 220,
+      "title": "A hook stops new per-frame methods without a stated reason",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 219,
+      "title": "Unity standards say Update is for per-frame work only",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 218,
+      "title": "Agents stop putting polling and change-detection in Unity Update",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 215,
+      "title": "verify.py fails 31 guard checks when the previous local run was more than 5 minutes ago",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 206,
+      "title": "Two copies of \"which folder does this command run in\" can drift apart",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 205,
+      "title": "With no Python, the GitHub-credit check and the issue gate let everything through silently",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 204,
+      "title": "Every hook call recompiles all of hook.py, about half its run time",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 203,
+      "title": "Any \"cd\" in a command, even in a commit message, makes commits on the agent's branch prompt",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 202,
+      "title": "docref check always fails here because it reads verify.py's own test pointers",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 201,
+      "title": "The two-subagent limit loses track of agents started at the same time",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 200,
+      "title": "The guard lets rm, nohup and background jobs through when they're on a second line",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 199,
+      "title": "Rule text, docs and version for the new branch rule",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 198,
+      "title": "Destructive actions are refused instead of asked when nobody can answer",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 197,
+      "title": "Commits and pushes run unasked on every branch except main, and are refused on main",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 196,
+      "title": "Permission prompts stop stalling the main thread and subagents",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 194,
+      "title": "Steps for aj that aren't shell commands skip the step-card check",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 192,
+      "title": "Commits on an AjsAgent/ branch still prompt when the repo isn't the session's main folder",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 191,
+      "title": "Pull requests opened from a cloud session still credit Claude, after the agent wrote the right credit",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 189,
+      "title": "The attribution guard misses commits that set the author with a quoted -c value",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Guard fixes partly merged (pull requests #207, #214) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 182,
+      "title": "Rename old claude/ branches, edit old footers and rename the label, across aj's repos",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Attribution/branch-credit work, partly merged (e.g. pull request #188) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 181,
+      "title": "Report every old claude/ branch, Claude footer and old label across aj's repos, changing nothing",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Attribution/branch-credit work, partly merged (e.g. pull request #188) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 180,
+      "title": "Focus Deck treats AjsAgent created this as its reserved label",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Not started or no evidence of a QA pass; no evidence found for completion."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 179,
+      "title": "Cloud sessions get the attribution setting, and every cloud environment installs the plugin",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Attribution/branch-credit work, partly merged (e.g. pull request #188) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 177,
+      "title": "Commits are authored by AJ's agent, never Claude",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Attribution/branch-credit work, partly merged (e.g. pull request #188) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 176,
+      "title": "Cloud sessions switch from the app's claude/ branch to AjsAgent/ at session start",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Attribution/branch-credit work, partly merged (e.g. pull request #188) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 175,
+      "title": "Plugin treats AjsAgent/ as the agent's own branch and uses the AjsAgent created this label",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Attribution/branch-credit work, partly merged (e.g. pull request #188) but no \"QA passed\" entry in Decisions.md; needs review."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 174,
+      "title": "Credit \"aj's agent\" and use AjsAgent/ branches in every repo, going forward and for old branches",
+      "action": "keep",
+      "replaced_by": null,
+      "evidence": "Attribution/branch-credit work, partly merged (e.g. pull request #188) but no \"QA passed\" entry in Decisions.md; needs review."
+    }
+  ],
+  "wrapup": {
+    "summary": "The one-time sweep of 129 open agent-created issues: 32 to close as completed, 97 to keep open.",
+    "changing": "Nothing closes until you approve. After your approval I close exactly the approved issues, each with a comment quoting its evidence.",
+    "blocking": "Your approval. It has to be typed in a new session, not this one.",
+    "next": "Open a new session, which loads house-rules 2.70.0, and type the approval phrase from the to-do list below. Then I close the approved issues.",
+    "todo": [
+      "Open a new session. Only house-rules 2.70.0 (the plugin version that understands a sweep approval) can act on your approval, and this session is still running 2.69.0.",
+      "Type \"Sweep approved: issues\" in the chat, adding \"keep #N\" for any issue you want left open, for example \"Sweep approved: issues keep #224\"."
+    ]
+  }
+}

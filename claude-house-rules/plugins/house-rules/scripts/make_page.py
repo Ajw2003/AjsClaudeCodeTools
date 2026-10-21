@@ -337,7 +337,8 @@ def load_gate_patterns():
     spec = importlib.util.spec_from_file_location("hook_for_make_page", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod._LOOP_DESIGN_RE, mod._LOOP_PLAN_RE, mod._LOOP_QA_RE
+    dl = mod.design_loop  # #359: the stage regexes live in the design loop part now
+    return dl._LOOP_DESIGN_RE, dl._LOOP_PLAN_RE, dl._LOOP_QA_RE
 
 
 def is_qa_approval(page):
