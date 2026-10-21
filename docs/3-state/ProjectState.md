@@ -203,6 +203,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-20, branch `AjsAgent/issue-281-fix`, plugin 2.70.0: issue closing (#361, steps #362 to #365) is on `main` as 2.70.0 (pull request #366). The first sweep closed 26 issues on 2026-10-21; 103 agent-created issues stay open. The after-close and merge proof checks don't yet read the GitHub tool's wrapped results. A QA pass saves a feature's issues and a merge marks them; the close guard lets an issue close only with both on record, or on an approved sweep or named list, on both the gh and GitHub tool routes. Restructure step 2 (#340) resumes after this ships, as 2.71.0.
 
+2026-10-21, branch `AjsAgent/issue-281-fix`, plugin 2.70.0: aj approved the verify.py rework (#368, steps #369 to #371): per-part test files with a parallel runner, and in a session the touched parts run twice and the rest once. It is built after restructure step 2 (#340), which resumes now at step 2a (#357).
+
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
 
 The plugin-side mechanism (skill, routing, drift checks) has been verified since before this

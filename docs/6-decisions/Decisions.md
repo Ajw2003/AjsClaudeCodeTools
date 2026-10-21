@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-21 - Build plan approved: verify rework
+
+**Context.** Build plan page `docs/plans/2026-10-21-verify-rework-plan.html`, for parent issue #368
+(Rework verify.py into per-part test files with a parallel runner).
+
+**Decision.** aj's reply was "Build plan approved: verify rework". The plan has 3 sub-issues, built one at a
+time by a helper agent after restructure step 2 (#340): #369 lists which part every check belongs to,
+#370 moves the checks into per-part test files with a parallel runner, and #371 changes the run-twice
+rule, times the result against the 197-second baseline and hands over a QA page. Step 2 resumes first, at
+step 2a (#357), using the core links answer from "2026-10-20 - Design approved: restructure step 2 core links".
+
+**Status.** Standing.
+
 ## 2026-10-21 - Design approved: verify rework
 
 **Context.** aj: verify.py takes multiple minutes in a cloud session and running it twice makes it worse;
