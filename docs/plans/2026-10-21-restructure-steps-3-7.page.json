@@ -1,0 +1,99 @@
+{
+  "title": "Restructure Steps 3 to 7",
+  "eyebrow": "Design · #306 restructure steps 3 to 7, built as one feature with one QA page",
+  "approval": "Design approved: restructure steps 3 to 7",
+  "replyPrefix": "Design approved: restructure steps 3 to 7",
+  "reply": "",
+  "short": {
+    "lead": "You chose to build restructure steps 3 to 7 as one feature, with one QA page at the end. You also chose to ship all five steps to main together after that page. Your grilling answers already decide what each step does, so this page asks no new questions. It shows, for each decided rule, what the plugin does today and what changes. A helper agent looked up today's code on 2026-10-21, and the file and line references below come from that lookup. Nothing is dropped. Each rule below is either already met and stays, or changes as the grilling decided.",
+    "hint": "Tap a step to see what exists today and what changes.",
+    "key": [
+      [
+        "Already met",
+        "done"
+      ],
+      [
+        "Changes",
+        ""
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Step 3 · #341",
+        "Settings and identity",
+        "",
+        [
+          "Today there is no settings file. The hook code names 37 different environment variables whose names start with HOUSE_RULES_, each read on its own, such as HOUSE_RULES_OWNED_BRANCHES (scripts/house_rules/core.py:2071). Nothing blocks any tool while settings are unset.",
+          "Change: a settings script, scripts/settings.py, stores the agent name, credit line and branch prefix. Cloud sessions read environment variables first, such as HOUSE_RULES_AGENT_NAME (grilling round 4, question 2).",
+          "Change: until every setting has a value, every tool is refused except the settings script (round 3, question 2; round 4, question 1). At session start the agent asks you for the values, and suggests your GitHub login plus \"sAgent\" as the agent name (round 2, question 1).",
+          "Change: the identity strings such as \"AjsAgent\" and \"AJ's agent\" read from settings. The helper's lookup counted 144 of them in 17 files today. The plan's count on 2026-10-19 was 265 in 16 files, taken before restructure step 2 moved the code."
+        ],
+        "Done when the checks cover four cases: an unset setting, the one allowed command, the environment variable being read first, and no identity string left in shipped code outside the defaults file."
+      ],
+      [
+        "lock",
+        "Step 4 · #349",
+        "Safe git rules follow the grilling answers",
+        "",
+        [
+          "Already met: the agent's own branches are AjsAgent/, claude/ and ccr-, plus extras from HOUSE_RULES_OWNED_BRANCHES (core.py:2066). This moves into settings.",
+          "Change: deleting a committed, unchanged file is allowed today on any branch (safe_git.py:499). It becomes allowed only on the agent's own branches, and is refused, with the reason given, on anyone else's (round 1, question 1).",
+          "Change: commit author and credit line come from settings, with your own email (round 2, questions 2 and 3). The automatic work-in-progress commits still carry a Claude credit line today (delegation.py:1243). That credit line is removed.",
+          "Change: an autosave snapshot branch (a temporary branch that saves a helper's work in progress) is deleted today only when its helper finishes cleanly (delegation.py:1372). It will be deleted once the helper's work is merged (round 2, question 7)."
+        ],
+        "Done when the checks include a file delete being refused on someone else's branch."
+      ],
+      [
+        "list",
+        "Step 5 · #343",
+        "Design loop and pages",
+        "",
+        [
+          "Already met: a feature's issues need a parent issue and sub-issues before its build plan counts (design_loop.py:74).",
+          "Change: a feature that is one step of a bigger feature links to its parent feature through GitHub's sub-issue link, and passes QA on its own (round 1, questions 8 and 9; round 2, question 8).",
+          "Already met: since #327 an approval counts at once even before its decisions-log entry exists, and the hook asks for the entry (design_loop.py:480). Change: a check proves the entry is then required before the next stage counts (round 1, question 10).",
+          "Change: in a cloud session (detected by the environment variable CLAUDE_CODE_REMOTE, core.py:314), every page is published privately to claude.ai and the reply links to it. Local sessions, on your own machine, publish only when asked (round 5, question 1; round 1, question 7)."
+        ],
+        "Done when the checks include a cloud session's page being published privately to claude.ai."
+      ],
+      [
+        "search",
+        "Step 6 · #344",
+        "Writing, evidence and rewrite rules",
+        "",
+        [
+          "Change: nothing today stops the agent from skipping a check on its own. Any check that takes over 10 minutes, costs money, or needs a machine or account the agent can't reach must be named, and the agent must ask you plainly whether to skip it (round 2, question 12, your own wording).",
+          "Change: the overwrite guard today checks only whole-file writes (hooks/hooks.json:86). It will also treat an edit that replaces more than half of a file's lines as a rewrite, which needs your approval by name (round 2, question 11).",
+          "Change: the rule \"an obvious bug outside the request becomes an issue\" is only written in the coding rules today. It will become a rule that the end-of-reply check looks for (round 1, question 6)."
+        ],
+        "Done when the checks include an edit that replaces 51% of a file's lines being refused."
+      ],
+      [
+        "swap",
+        "Step 7 · #345",
+        "Helper agents",
+        "",
+        [
+          "Already met: the run-twice rule for helpers. Your answer 2A on the verify rework (#368 to #371) replaced \"test suites run twice, by helpers too\" (round 1, question 3), and rules/detail/green-suite.md:15 already says so.",
+          "Change: a helper with a question only you can answer stops and reports it to the parent session, the main conversation that started the helper, which then asks you (round 1, question 4). agents/builder.md:11 covers stopping in general, but not this case.",
+          "Change: a helper's report quotes the real RESULT line and every failure line, with no line limit (round 1, question 5). agents/builder.md:17 caps it at six lines today.",
+          "Change: autosave force-pushes its snapshot today (delegation.py:1201). It will push without force to a fresh snapshot branch. The cleanup after a helper finishes already commits leftovers only inside the helper's own folder (delegation.py:1221), and that stays (round 1, questions 12 and 13)."
+        ],
+        "Done when the checks cover each of the three Change rules above."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [],
+  "wrapup": {
+    "summary": "The design for restructure steps 3 to 7: what each decided rule does today and what changes, built as one feature with one QA page.",
+    "changing": "Nothing changes until you approve. Building starts after the fix for the proof checks (#367) ships.",
+    "blocking": "Your approval of this design.",
+    "next": "Once you approve, I write the build plan with one sub-issue per step, and you approve it with \"Build plan approved: restructure steps 3 to 7\".",
+    "todo": [
+      "Type \"Design approved: restructure steps 3 to 7\" in the chat.",
+      "Send the message."
+    ]
+  }
+}

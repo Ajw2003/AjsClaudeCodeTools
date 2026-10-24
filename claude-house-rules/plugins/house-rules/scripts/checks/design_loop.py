@@ -467,10 +467,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.72.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.73.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.72.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.73.0",
     "rules section + detail file + version",
 )
 
@@ -1047,6 +1047,18 @@ _cl_set({"stage": "done", "closable": [dict(_cl_open)]})
 _o = _cl_merge("Bash", {"command": "gh pr merge 15"}, {"exit_code": 0}, env=dict(_cl_env, HOUSE_RULES_LOOP="off"))
 _cl_cases.append(("HOUSE_RULES_LOOP=off stamps nothing and says so",
                   _cl_state()["closable"][0]["merged_pr"] is None and "HOUSE_RULES_LOOP=off" in _o))
+# #374: the real GitHub tool replies are a list holding one text block (recorded 2026-10-21).
+_w_merge = [{"type": "text", "text": "{\"sha\":\"ed36dc31e8907157117de6a72f48db31de606601\",\"merged\":true,\"message\":\"Pull Request successfully merged\"}"}]
+_w_nomerge = [{"type": "text", "text": "{\"sha\":\"ed36dc31e8907157117de6a72f48db31de606601\",\"merged\":false,\"message\":\"Pull Request not mergeable\"}"}]
+_w_ti = {"owner": "Ajw2003", "repo": "AjsClaudeCodeTools", "pullNumber": 373}
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("mcp__github__merge_pull_request", _w_ti, _w_nomerge)
+_cl_cases.append(("a wrapped GitHub tool merge reply with merged false stamps nothing",
+                  _cl_state()["closable"][0]["merged_pr"] is None))
+_cl_merge("mcp__github__merge_pull_request", _w_ti, _w_merge)
+_m = _cl_state()["closable"][0]["merged_pr"] or {}
+_cl_cases.append(("a wrapped GitHub tool merge reply stamps a waiting closable entry",
+                  _m.get("repo") == "Ajw2003/AjsClaudeCodeTools" and _m.get("number") == 373))
 for _t, _ok in _cl_cases:
     report("PASS" if _ok else "FAIL", "closable record: " + _t)
 
@@ -1149,6 +1161,24 @@ _o = _cg_gh("gh issue close 7", env=_iss_env(HOUSE_RULES_ISSUES="off"))
 _cg_cases.append(("HOUSE_RULES_ISSUES=off keeps its old behaviour: the close guard does not run on either route",
                   "close guard" not in _o and "refused" not in _o
                   and _cg_mcp(_cg_mc, env=_iss_env(HOUSE_RULES_ISSUES="off")).find("close guard") < 0))
+# #374: wrapped replies from the GitHub tool (recorded 2026-10-21).
+_w_close = [{"type": "text", "text": "{\"id\":\"5952121313\",\"url\":\"https://github.com/Ajw2003/AjsClaudeCodeTools/issues/371\"}"}]
+_w_err = "Error: failed to create issue: Something went wrong while executing your query"
+_w_mc = {"method": "update", "owner": "Ajw2003", "repo": "AjsClaudeCodeTools", "issue_number": 371, "state": "closed", "state_reason": "completed"}
+_w_row = {"repo": "Ajw2003/AjsClaudeCodeTools", "number": 371, "action": "completed", "replaced_by": None}
+_cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[{"repo": "Ajw2003/AjsClaudeCodeTools", "number": 371}, {"repo": "o/r", "number": 8}])]})
+_cg_post("mcp__github__issue_write", _w_mc, _w_err)
+_cg_cases.append(("an error string reply for a close removes nothing from the closable entry",
+                  len(_cl_state()["closable"][0]["issues"]) == 2))
+_cg_post("mcp__github__issue_write", _w_mc, _w_close)
+_cg_cases.append(("a wrapped GitHub tool close reply removes the issue from its closable entry",
+                  [i["number"] for i in _cl_state()["closable"][0]["issues"]] == [8]))
+_cl_set({"stage": "done", "sweep": [dict(_w_row), dict(_w_row, number=372)]})
+_cg_post("mcp__github__issue_write", _w_mc, _w_err)
+_cg_cases.append(("an error string reply for a close removes nothing from the sweep list", len(_cl_state()["sweep"]) == 2))
+_cg_post("mcp__github__issue_write", _w_mc, _w_close)
+_cg_cases.append(("a wrapped GitHub tool close reply removes the issue from the sweep list",
+                  [r["number"] for r in _cl_state()["sweep"]] == [372]))
 for _t, _ok in _cg_cases:
     report("PASS" if _ok else "FAIL", "close guard: " + _t)
 
@@ -1976,6 +2006,94 @@ _nb_cases.append(("publishing a make_page.py page goes through with no prompt or
                            env=dict(_project_env(_nb_r), HOUSE_RULES_LOOP="on"))[1] == ""))
 for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
+
+
+# --- #375: one issue list per feature - a second design approval keeps the first feature's issues ----
+def _pf_issue(number):
+    p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "cl",
+         "cwd": _cl_dir, "tool_input": {"method": "create", "title": "t", "labels": ["Feature", "AjsAgent created this"]},
+         "tool_response": {"url": "https://github.com/o/r/issues/%d" % number}}
+    run_hook("autosave", json.dumps(p), env=_cl_env)
+
+
+def _pf_note(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "cl", "cwd": _cl_dir, "prompt": prompt}
+    try:
+        return json.loads(run_hook("scope", json.dumps(p), env=_cl_env)[1])["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _pf_log():
+    with open(os.path.join(_cl_dir, "docs", "6-decisions", "Decisions.md"), "a", encoding="utf-8") as f:
+        f.write("an entry written at %r\n" % time.time())
+
+
+def _pf_two_features():
+    """The 2026-10-21 sequence, through real payloads: A to build with 2 issues, then B to build."""
+    _cl_set({"stage": "design"})
+    _pf_log(); _pf_note("Design approved: alpha")
+    _pf_issue(701); _pf_issue(702)
+    _loop_gh("in progress", 701, 702)
+    _pf_log(); _pf_note("Build plan approved: alpha")
+    _pf_log(); _pf_note("Design approved: beta")
+    _pf_issue(711); _pf_issue(712)
+    _loop_gh("in progress", 711, 712)
+    _pf_log(); _pf_note("Build plan approved: beta")
+    _loop_gh("needs review", 701, 702)
+
+
+def _pf_nums(issues):
+    return sorted(i.get("number") for i in issues)
+
+
+_pf_cases = []
+_pf_two_features()
+_st = _cl_state()
+_pf_cases.append(("a design approval during build keeps the old feature's issues under its name, and the new one builds with its own",
+                  _st.get("stage") == "build" and _st.get("feature") == "beta" and _pf_nums(_st.get("issues", [])) == [711, 712]
+                  and _pf_nums((_st.get("features") or {}).get("alpha", {}).get("issues", [])) == [701, 702]
+                  and (_st.get("features") or {}).get("alpha", {}).get("stage") == "build"))
+_n = _pf_note("QA passed: alpha")
+_st = _cl_state()
+_c = _st.get("closable") or [{}]
+_pf_cases.append(("QA passed for the older feature records its issues as closable, drops it from the map, leaves the current feature in build",
+                  len(_c) == 1 and _c[0].get("feature") == "alpha" and _pf_nums(_c[0].get("issues", [])) == [701, 702]
+                  and "alpha" not in (_st.get("features") or {}) and _st.get("stage") == "build"
+                  and _st.get("feature") == "beta" and _pf_nums(_st.get("issues", [])) == [711, 712]
+                  and "moved, not the current one" in _n and '"beta" is unchanged' in _n))
+_pf_two_features()
+_loop_gh("in progress", 702)
+_n = _pf_note("QA passed: alpha")
+_st = _cl_state()
+_pf_cases.append(("QA passed for a stored feature with an issue still in progress is refused, naming it, and nothing moves",
+                  "#702" in _n and "Nothing moved" in _n and not _st.get("closable")
+                  and "alpha" in (_st.get("features") or {}) and _st.get("stage") == "build"))
+_cl_set({"feature": "alpha", "stage": "qa", "issues": _cl_issues})
+_st = _cl_state(); _st.pop("features", None)
+with open(_cl_file, "w", encoding="utf-8") as f:
+    json.dump(_st, f)
+_loop_gh("needs review", 7, 8)
+_pf_note("QA passed: alpha")
+_st = _cl_state()
+_pf_cases.append(("a stage file with no features key loads and the current feature's QA pass works as before",
+                  _st.get("stage") == "done" and len(_st.get("closable") or []) == 1 and "features" not in _st))
+_pf_two_features()
+_n = _pf_note("QA failed: alpha")
+_st = _cl_state()
+_a = (_st.get("features") or {}).get("alpha", {})
+_pf_cases.append(("QA failed for a stored feature keeps it in the map back in build marked redo, and the current feature is unchanged",
+                  _a.get("stage") == "build" and _a.get("redo") is True and _pf_nums(_a.get("issues", [])) == [701, 702]
+                  and not _st.get("closable") and _st.get("stage") == "build" and _st.get("feature") == "beta"
+                  and "stays in the kept features" in _n))
+_pf_note("QA passed: alpha")
+_st = _cl_state()
+_pf_cases.append(("a stored feature that failed QA can pass a later QA once its issues say needs review",
+                  len(_st.get("closable") or []) == 1 and "alpha" not in (_st.get("features") or {})
+                  and _st.get("stage") == "build"))
+for _t, _ok in _pf_cases:
+    report("PASS" if _ok else "FAIL", "per-feature issues: " + _t)
+
 
 
 finish()

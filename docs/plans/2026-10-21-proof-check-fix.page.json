@@ -1,0 +1,125 @@
+{
+  "title": "Proof Check Fix",
+  "eyebrow": "Proposal · #367 the close and merge proof checks don't read the GitHub tool's results",
+  "approval": "Design approved: proof check fix",
+  "replyPrefix": "Design approved: proof check fix",
+  "reply": "",
+  "short": {
+    "lead": "Issue closing (house-rules 2.70.0) lets me close an issue only with proof on record: your QA pass, then a merged pull request. Two checks record that proof. The merge check writes that merge into the closable record, which is the list of features whose issues may close. The close check removes an issue from that record after that issue has been closed successfully. Neither has ever worked through the GitHub tool that this session uses. So today the close guard, the check that blocks a close without proof, refused to close #371, even though pull request #373 had merged. This page proposes the fix (#367) and asks you two questions.",
+    "hint": "Tap a row to see what was found.",
+    "key": [
+      [
+        "Found",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "Found",
+        "The GitHub tool wraps every result",
+        "",
+        [
+          "This session's transcript records 5 merges and 69 issue updates through the GitHub tool that succeeded. All 74 came back wrapped inside a list holding one text block, for example: [{\"type\": \"text\", \"text\": \"{\\\"merged\\\": true, ...}\"}].",
+          "Both checks in scripts/house_rules/design_loop.py (_closable_merge_of for merges, _closed_issue_of for closes) read the GitHub tool's reply as a plain object (a set of named fields). A list holding a text block has no \"merged\" or \"url\" field, so neither check finds its proof.",
+          "Both fail in the safe direction: nothing is recorded or removed without proof. That is why the close guard refused to close #371 instead of letting it through."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Found",
+        "A second gap: a new build plan replaces the issue list",
+        "",
+        [
+          "The stage file, .claude/house-rules-loop.json, records which stage the design loop is in. It keeps one list of issues, which is the issues of the feature being built.",
+          "You sent \"Build plan approved: verify rework\" while restructure step 2 was still being built, so the stage file's issue list was replaced by #368 to #371.",
+          "Your \"QA passed: restructure step 2\" then looked up the wrong issues (#368 to #371) and recorded nothing. So #340 and #357 to #360 have no entry in the closable record."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Fix",
+        "Unwrap the text block before both checks",
+        "",
+        [
+          "One small helper function in design_loop.py takes a reply wrapped in a text block and returns the plain object inside it. Both checks call that helper before they read the reply.",
+          "Error replies are left as plain text, so they still prove nothing.",
+          "New checks in scripts/checks/design_loop.py use the exact result recorded in this session, not a made-up one.",
+          "When this fix's own pull request merges, that merge is recorded against the verify rework's entry in the closable record, and then #368 to #371 can close."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Decide",
+        "The issue-list gap, and the issues it left behind",
+        "you",
+        "Question 1 (two features in progress at once) and question 2 (how #340 and #357 to #360 close), both below.",
+        "Your answers to questions 1 and 2."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "q1",
+      "1. How should the design loop handle two features in progress at once?",
+      [
+        [
+          "A",
+          "Keep one issue list per feature, stored under the feature's name, so a message like \"QA passed: restructure step 2\" always finds the issues of the feature it names",
+          1,
+          "Matches how you work: the restructure's steps overlap, and a QA pass can come after the next build plan is approved."
+        ],
+        [
+          "B",
+          "Refuse a new build plan while another feature is still being built, and say which feature must finish first",
+          0,
+          "This is the simplest code, but it would have blocked the verify rework build plan until restructure step 2 passed QA."
+        ],
+        [
+          "C",
+          "Leave it as it is, and each time features overlap, close the stranded issues through a sweep page (a page where you approve closing a batch of issues)",
+          0,
+          "No code change, but every overlap costs you one extra sweep approval."
+        ]
+      ],
+      "Under every option, the fix described above (unwrapping the text block before both checks) ships."
+    ],
+    [
+      "q2",
+      "2. How do #340 and #357 to #360 (restructure step 2) close?",
+      [
+        [
+          "A",
+          "I put them on the next sweep page. It cites your QA pass, as logged in the decisions log entry \"2026-10-21 - QA passed: restructure step 2\", and the merged pull request #372. You then approve the sweep.",
+          1,
+          "Uses the sweep route that already exists, so the close guard still checks for your approval."
+        ],
+        [
+          "B",
+          "You close them yourself on GitHub",
+          0,
+          "No page is needed, but it is manual work for you."
+        ]
+      ],
+      "The 26 rows still in the stage file's sweep list, left over from the first sweep on 2026-10-21, are issues that are already closed. The fix removes them on the next sweep."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A fix for #367: the close and merge proof checks unwrap the GitHub tool's replies that arrive wrapped in a text block, plus two questions about features that overlap.",
+    "changing": "Nothing changes until you answer. The reply shape the fix handles is the one recorded in this session's transcript on 2026-10-21.",
+    "blocking": "Your answers to question 1 (two features at once) and question 2 (how step 2's issues close).",
+    "next": "Once you answer, I write the build plan as sub-issues (smaller issues linked under a parent issue) of #367.",
+    "todo": [
+      "Type your answers in the chat, for example \"Design approved: proof check fix 1A 2A\".",
+      "Send the message."
+    ]
+  }
+}

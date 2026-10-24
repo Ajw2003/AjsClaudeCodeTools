@@ -530,11 +530,12 @@ def _loop_gh_labels(repo, number):
     return json.loads(proc.stdout)
 
 
-def _loop_labels(state):
-    """({key: [labels] or None}, note) for the feature's issues. The note is "" when GitHub answered,
-    else it says the labels came from the record and why."""
+def _loop_labels(state, issues=None):
+    """({key: [labels] or None}, note) for the feature's issues (or, #375, the given list: a stored
+    feature's). The note is "" when GitHub answered, else it says the labels came from the record and why."""
     import subprocess
-    issues = [i for i in state.get("issues", []) if isinstance(i, dict) and i.get("repo") and "number" in i]
+    issues = [i for i in (state.get("issues", []) if issues is None else issues)
+              if isinstance(i, dict) and i.get("repo") and "number" in i]
     if not issues:
         return {}, ""
     keys = [_loop_key(i["repo"], i["number"]) for i in issues]
@@ -690,6 +691,67 @@ def _loop_apply_stage(state, text, top):
     return " ".join(n for n in notes if n)
 
 
+def _loop_keep_feature(state, feature, stage):
+    """#375: a new design approval replaces `feature`. If it is in build or QA and has recorded issues,
+    keep them under state["features"][name.lower()] so its own "QA passed" still has them. A feature in
+    design, plan or done, or one with no issues, has nothing to keep."""
+    issues = [dict(i) for i in state.get("issues", []) if isinstance(i, dict)]
+    if feature and stage in ("build", "qa") and issues:
+        if not isinstance(state.get("features"), dict):
+            state["features"] = {}
+        state["features"][feature.lower()] = {"name": feature, "issues": issues, "stage": stage}
+
+
+def _loop_stored(state, name):
+    """The stored feature (#375) a QA message names, or None when it names the current feature,
+    nothing stored, or the stage file has no "features" key (an older file)."""
+    stash = state.get("features")
+    if not isinstance(stash, dict) or name.lower() == (state.get("feature") or "").lower():
+        return None
+    entry = stash.get(name.lower())
+    return entry if isinstance(entry, dict) else None
+
+
+def _loop_stored_qa(state, entry, verdict, name, top):
+    """#375: "QA passed/failed: X" for a feature kept in state["features"]. Uses that feature's own issues
+    for the `needs review` check, never touches the current feature's stage or issues. Pass: the entry
+    goes to `closable` and out of the map. Fail: it stays, stage "build" with redo true, so a later QA
+    message works again once its issues are back to `needs review`."""
+    issues = [i for i in entry.get("issues", []) if isinstance(i, dict)]
+    labels, src = _loop_labels(state, issues)
+    wrong = _loop_wrong(labels, LOOP_REVIEW)
+    if wrong or not labels:
+        return ('Design loop: aj wrote "QA %s: %s", but that feature is still being built beside the current '
+                "one, and QA needs every one of its issues to say `needs review`; these don't: %s. Nothing "
+                "moved. Swap their labels when its build is ready for aj, then ask again.%s"
+                % (verdict, name, "; ".join(wrong) or "no issues are recorded", " " + src if src else ""))
+    unlogged = _loop_unlogged(state, top, "QA " + verdict, name)
+    if unlogged:
+        return unlogged
+    key = (entry.get("name") or name).lower()
+    if verdict == "passed":
+        if not isinstance(state.get("closable"), list):
+            state["closable"] = []
+        state["closable"].append({
+            "feature": name,
+            "issues": [{"repo": i["repo"], "number": i["number"]} for i in issues
+                       if i.get("repo") and "number" in i],
+            "qa_at": int(time.time()), "qa": "QA passed: " + name, "merged_pr": None})
+        state["features"].pop(key, None)
+        if not state["features"]:
+            state.pop("features")
+        tail = (" It is recorded as closable and removed from the kept features. The issues keep `%s` until "
+                "aj closes them; never close one." % LOOP_REVIEW)
+    else:
+        entry["stage"], entry["redo"] = "build", True
+        tail = (" It stays in the kept features, back in build: move its issues back to `%s`, fix the changes "
+                "aj listed, then swap them to `%s` again for a new QA message." % (LOOP_WORKING, LOOP_REVIEW))
+    state.setdefault("approvals", []).append({"stage": "QA " + verdict, "name": name, "at": int(time.time())})
+    return ('Design loop: aj wrote "QA %s: %s". That feature moved, not the current one.%s The current feature '
+            '"%s" is unchanged: stage %s.' % (verdict, name, tail, state.get("feature") or "(none)",
+                                              LOOP_STAGE_NAMES[state["stage"]]))
+
+
 def _loop_apply_one(state, text, top):
     """Move the stage for one approval phrase (or none). Returns a note for the model, or "" when the
     text approves nothing. Mutates state."""
@@ -735,12 +797,16 @@ def _loop_apply_one(state, text, top):
             state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
             state["redo"] = False
             if not redo:
+                _loop_keep_feature(state, feature, stage)  # #375: a feature in build or QA keeps its issues
                 state["issues"] = []
                 state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: not the next feature's
         else:
             m = _LOOP_QA_RE.search(text)
             if m:
                 verdict, name = m.group(1).lower(), _loop_name(m.group(2))
+                stored = _loop_stored(state, name)
+                if stored is not None:
+                    return _loop_stored_qa(state, stored, verdict, name, top)
                 if stage == "build":
                     labels, src = _loop_labels(state)
                     if not _loop_to_qa(state, labels):
@@ -1874,11 +1940,25 @@ def _page_blocks(path, session_id, mark, change=None):
 _GH_PR_MERGE_RE = re.compile(r"(?:^|[;&|(\s])gh\s+pr\s+merge\b([^;&|\n]*)")
 
 
+def _unwrap_tool_response(resp):
+    """#374: the GitHub tool returns a list of text blocks, [{"type": "text", "text": "<json>"}]. Join the
+    texts and parse them: the object when it is a dict, else the joined text. Anything else is returned as is."""
+    if isinstance(resp, list) and resp and all(isinstance(i, dict) and i.get("type") == "text" for i in resp):
+        text = "".join(str(i.get("text", "")) for i in resp)
+        parsed = text  # not JSON (an error message): kept as the joined text, which proves nothing
+        try:
+            parsed = json.loads(text)
+        except ValueError:
+            parsed = text
+        return parsed if isinstance(parsed, dict) else text
+    return resp
+
+
 def _closable_merge_of(data):
     """(repo, number) of a merge this payload reports, else None."""
     tool = data.get("tool_name") or ""
     ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
-    resp = data.get("tool_response")
+    resp = _unwrap_tool_response(data.get("tool_response"))
     if isinstance(resp, str):
         try:
             resp = json.loads(resp)
@@ -1919,7 +1999,7 @@ def _closed_issue_of(data):
     """(repo, number) of a close this PostToolUse payload proves succeeded, else None (#363)."""
     tool = data.get("tool_name") or ""
     ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
-    resp = data.get("tool_response")
+    resp = _unwrap_tool_response(data.get("tool_response"))
     if isinstance(resp, str):
         try:
             resp = json.loads(resp)

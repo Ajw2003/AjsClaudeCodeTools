@@ -61,3 +61,31 @@ the sweep. A not-planned close never comes from a QA pass.
 ## Traps that have already cost time
 
 - A new design approval clears `state["issues"]`; the closable record exists because of it.
+
+## Planned: the proof check fix (#367)
+
+Approved 2026-10-21 ("Design approved: proof check fix 1A 2A"). Two gaps, both found live:
+
+- **Wrapped replies (#374).** The GitHub tool returns every result as a list holding one text block,
+  `[{"type": "text", "text": "{\"merged\": true, ...}"}]`, recorded on all 74 successful merge and issue-update
+  calls in the 2026-10-21 session transcript. `_closable_merge_of` and `_closed_issue_of`
+  (`scripts/house_rules/design_loop.py`) read the reply as a plain object, so neither ever found its proof. A
+  helper unwraps the text block first; an error reply stays text and proves nothing.
+- **One issue list per feature (#375).** `state["issues"]` holds only the current feature's issues, so a build
+  plan approved for a second feature before the first passed QA made the first feature's "QA passed" record
+  nothing. Issues are kept per feature name instead, and an older stage file is converted on first read.
+
+Built: #374 (wrapped replies), branch `AjsAgent/issue-374-unwrap`; a helper `_unwrap_tool_response` now runs first in both proof checks.
+
+Built: #375 (one issue list per feature), branch `AjsAgent/issue-375-features`. `state["issues"]` is still the current
+feature's list. When a new "Design approved" replaces a feature whose stage is build or qa and that has recorded issues,
+`_loop_keep_feature` copies them to `state["features"][<name lowercased>] = {"name", "issues", "stage"}`; a feature in
+design, plan or done, or with no issues, has nothing to keep. "QA passed: X" or "QA failed: X" naming a kept feature
+other than the current one (`_loop_stored_qa`) checks that feature's own issues for `needs review`, never changes the
+current feature's stage or issues, and says so in the hook's note. A pass appends the `closable` entry as the current
+path does and removes the feature from the map; a failure leaves it there, stage "build" with `redo` true, so a later QA
+message works once its issues are back to `needs review`. A stage file with no `features` key reads as an empty map, so
+no conversion is needed. Checks: "per-feature issues" in `scripts/checks/design_loop.py`.
+
+Step 2's issues (#340, #357 to #360) close through the next sweep page (answer 2A).
+
