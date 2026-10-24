@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-24 - Design approved: restructure steps 3 to 7
+
+**Context.** Design page `docs/plans/2026-10-21-restructure-steps-3-7.html`: for each rule the grilling decided in
+steps 3 to 7, what the code does today (checked by a lookup helper on 2026-10-21) and what changes. Nothing is
+dropped.
+
+**Decision.** aj's reply was "Design approved: restructure steps 3 to 7". The feature is held by two new issues,
+#381 (the feature) and #382 (version 2.74.0, docs, QA page and release), because the design loop counts only
+issues created after a design approval; the existing step issues #341, #349, #343, #344 and #345 are built in that
+order and close by sweep after the release.
+
+**Status.** Standing.
+
 ## 2026-10-24 - Sweep approved: restructure step 2's issues, and 5 issues closed
 
 **Context.** Sweep page `docs/plans/2026-10-24-step-2-sweep.html`, the route aj chose in answer 2A ("Proof check fix

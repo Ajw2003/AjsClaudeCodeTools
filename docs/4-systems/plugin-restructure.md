@@ -446,3 +446,12 @@ Step 2c (#359, commits `4558e83` and `86039ae`):
 
 **Timing.** The after-step-2 `verify.py` and hook-start timings are in `docs/4-systems/verify-suites.md`,
 "Planned: the verify.py rework".
+
+## Steps 3 to 7: one feature (#381)
+
+Design approved 2026-10-24 ("Design approved: restructure steps 3 to 7"); design page
+`docs/plans/2026-10-21-restructure-steps-3-7.html`, build plan `docs/plans/2026-10-24-restructure-steps-3-7-plan.html`.
+Built in order: step 3 #341 (settings and identity), step 4 #349 (safe git), step 5 #343 (design loop and pages),
+step 6 #344 (writing, evidence and rewrite rules), step 7 #345 (helper agents). One QA page and one release,
+#382, version 2.74.0. Steps 4 and 7 read the agent name and branch prefix from step 3's settings.
+

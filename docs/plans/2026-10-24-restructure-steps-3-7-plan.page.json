@@ -5,7 +5,7 @@
   "replyPrefix": "Build plan approved: restructure steps 3 to 7",
   "reply": "",
   "short": {
-    "lead": "This is the build plan for restructure steps 3 to 7, which you chose to build as one feature with one QA page at the end. What each step changes is on the design page, docs/plans/2026-10-21-restructure-steps-3-7.html. A helper agent builds each step, one at a time, in the order below. Each step merges into the branch AjsAgent/issue-281-fix once verify.py passes, and the five steps ship to the main branch together after your QA pass.",
+    "lead": "This is the build plan for restructure steps 3 to 7, which you chose to build as one feature with one QA (quality check) page at the end. What each step changes is on the design page, docs/plans/2026-10-21-restructure-steps-3-7.html. A helper agent builds each step, one at a time, in the order below. Each step merges into the branch AjsAgent/issue-281-fix once verify.py (the script that checks the hooks match what the docs claim) passes. The five steps then ship to the main branch together after your QA pass.",
     "hint": "Tap a step to see what it builds and what it waits on.",
     "key": [
       [
@@ -24,8 +24,8 @@
         "How the issues are tracked",
         "",
         [
-          "The five step issues already exist: #341, #349, #343, #344 and #345. The design loop only counts issues created after a design approval, so two new issues hold this feature: a parent issue for steps 3 to 7, and one for the QA page and release.",
-          "The five existing step issues close through a sweep page after the merge, citing your QA pass, as restructure step 2's issues do."
+          "The five step issues already exist: #341, #349, #343, #344 and #345. The design loop only counts issues created after a design approval, so two new issues hold this feature: #381 for steps 3 to 7 as a whole, and #382 for the QA page and release.",
+          "The five existing step issues close through a sweep page (a page listing issues with the evidence for closing them) after the merge, citing your QA pass, as restructure step 2's issues do."
         ],
         "Nothing from you."
       ],
@@ -36,7 +36,7 @@
         "",
         [
           "Built first, because steps 4 and 7 read the agent name and branch prefix from settings.",
-          "The settings script, the refusal until settings are set, the session-start question, and the identity strings read from settings."
+          "The settings script, the refusal until settings are set, the session-start question that asks you for the agent name, and the identity strings read from settings."
         ],
         "Nothing from you."
       ],
@@ -83,10 +83,10 @@
       [
         "check",
         "QA",
-        "One QA page for all five steps",
+        "One QA page for all five steps (#382)",
         "you",
         [
-          "Version 2.74.0, the docs for each part, and one QA page showing each step's checks."
+          "House-rules version 2.74.0, the docs for each part, and one QA page showing each step's checks."
         ],
         "You: answer \"QA passed: restructure steps 3 to 7\" or \"QA failed: restructure steps 3 to 7\"."
       ]
