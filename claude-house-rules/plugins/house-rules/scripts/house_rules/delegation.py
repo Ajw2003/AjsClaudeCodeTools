@@ -175,6 +175,11 @@ SUBAGENT_CORE_CHAR_LIMIT = 4_500
 SUBAGENT_MANDATE = (
     "\nYour final report must list every command you ran and its result verbatim, every file "
     "you wrote or edited, and anything you could not do.\n"
+    "Checks: while working run only the parts your change touched; at the end run the touched parts "
+    "twice and everything else once. Quote every RESULT line and every FAIL line verbatim, with no "
+    "line limit.\n"
+    "A question only the user can answer: stop, and put it in your final report under its own heading "
+    "(QUESTION FOR AJ) for the parent session to ask. Do not guess.\n"
 )
 
 
@@ -1079,6 +1084,25 @@ def event_subagentcommit():
 
 AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
 
+# #345 (round 1 answers 12 and 13): the local snapshot ref keeps its one name (AUTOSAVE_REF_PREFIX +
+# branch); each push to origin goes to a fresh name, "<local ref>-s<UTC stamp>-<sha7>", without --force,
+# so a push never rewrites history on origin. Cleanup and the merged sweep delete every such name.
+AUTOSAVE_SNAP_RE = r"-s\d{8}T\d{6}Z-[0-9a-f]{7}$"
+
+
+def _autosave_fresh_ref(ref, sha, now):
+    import time as _t
+
+    return "%s-s%s-%s" % (ref, _t.strftime("%Y%m%dT%H%M%SZ", _t.gmtime(now)), sha[:7])
+
+
+def _autosave_origin_refs(top, ref):
+    """Every ref on origin that is a snapshot of `ref`: the legacy fixed name and each fresh one.
+    Raises RuntimeError when origin cannot be listed."""
+    out = _ag(top, ["ls-remote", "origin", ref, ref + "-s*"], timeout=AUTOSAVE_PUSH_TIMEOUT)[1]
+    names = [l.split()[1] for l in out.splitlines() if len(l.split()) == 2]
+    return [n for n in names if n == ref or (n.startswith(ref) and re.search(AUTOSAVE_SNAP_RE, n[len(ref):]))]
+
 
 COMMITGATE_THRESHOLD = 3
 
@@ -1197,8 +1221,9 @@ def _autosave_push(top, branch, sha, now, force=False):
     # Stamped before the attempt, so an unreachable origin costs one timeout a minute, not one
     # per edit.
     _autosave_write(stamp, "%s %s" % (now, prev[1] if len(prev) == 2 else "-"))
+    fresh = _autosave_fresh_ref(ref, sha, now)
     try:
-        _ag(top, ["push", "--force", "--quiet", "origin", "%s:%s" % (ref, ref)], timeout=AUTOSAVE_PUSH_TIMEOUT)
+        _ag(top, ["push", "--quiet", "origin", "%s:%s" % (sha, fresh)], timeout=AUTOSAVE_PUSH_TIMEOUT)
     except RuntimeError as exc:
         return "house-rules autosave: could not push %s to origin (%s). It is saved locally only." % (ref, exc)
     _autosave_write(stamp, "%s %s" % (now, sha))
@@ -1388,7 +1413,9 @@ def _autosave_cleanup(top):
     if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
         return None
     try:
-        _ag(top, ["push", "--quiet", "origin", ":" + ref], timeout=AUTOSAVE_PUSH_TIMEOUT)
+        gone = _autosave_origin_refs(top, ref)
+        if gone:
+            _ag(top, ["push", "--quiet", "origin"] + [":" + g for g in gone], timeout=AUTOSAVE_PUSH_TIMEOUT)
     except RuntimeError as exc:
         return "house-rules autosave: could not delete %s on origin (%s); delete it by hand." % (ref, exc)
     return None
@@ -1435,12 +1462,14 @@ def _autosave_merged_sweep(root):
             _ag(root, ["update-ref", "-d", ref])
             on_origin = ""
             if _ag(root, ["remote", "get-url", "origin"], check=False)[0] == 0:
-                rc2, listed, e2 = _ag(root, ["ls-remote", "--exit-code", "origin", ref], check=False, timeout=AUTOSAVE_PUSH_TIMEOUT)
-                if rc2 == 0 and listed.strip():
-                    _ag(root, ["push", "--quiet", "origin", ":" + ref], timeout=AUTOSAVE_PUSH_TIMEOUT)
+                try:
+                    gone = _autosave_origin_refs(root, ref)
+                except RuntimeError as e2:
+                    gone = []
+                    problems.append("could not check origin for %s (%s); delete it there by hand if it exists" % (ref, str(e2).strip() or "ls-remote failed"))
+                if gone:
+                    _ag(root, ["push", "--quiet", "origin"] + [":" + g for g in gone], timeout=AUTOSAVE_PUSH_TIMEOUT)
                     on_origin = " and on origin"
-                elif rc2 != 2:
-                    problems.append("could not check origin for %s (%s); delete it there by hand if it exists" % (ref, e2.strip() or "ls-remote failed"))
             dropped.append("%s (work is in %s)%s" % (ref, homes[0].split("/", 2)[-1], on_origin))
         except RuntimeError as exc:
             problems.append("could not drop %s (%s)" % (ref, exc))
