@@ -26,6 +26,9 @@
 #   - guard (PreToolUse)      -> fails CLOSED: 3 lines on stderr, exit 2. Blocks the command.
 #   - guardwrite (PreToolUse) -> fails CLOSED, same as guard: 3 lines on stderr, exit 2.
 #                              Blocks the Write rather than letting an overwrite through unchecked.
+#   - settingsgate (PreToolUse) -> fails CLOSED, same as guard: 3 lines on stderr, exit 2. It is the hook
+#                              that refuses every tool while a setting is unset, so a silent no-op here would
+#                              let unchecked calls through (#349).
 #   - inject (SessionStart)   -> fails LOUD, not closed: a systemMessage JSON on stdout, exit 0.
 #   - standards (SessionStart)-> fails LOUD, not closed, same as inject: a systemMessage JSON
 #                              on stdout, exit 0. Never blocks - there is nothing to block.
@@ -114,6 +117,12 @@ if [ -z "$PY" ]; then
     guardwrite)
       echo "house-rules guardwrite: no working Python interpreter found on PATH." >&2
       echo "Blocking this write rather than letting an unchecked overwrite through." >&2
+      echo "Run /house-rules:doctor, or set HOUSE_RULES_PYTHON to a working interpreter." >&2
+      exit 2
+      ;;
+    settingsgate)
+      echo "house-rules settingsgate: no working Python interpreter found on PATH." >&2
+      echo "Blocking this tool call rather than letting it through with the settings unchecked." >&2
       echo "Run /house-rules:doctor, or set HOUSE_RULES_PYTHON to a working interpreter." >&2
       exit 2
       ;;

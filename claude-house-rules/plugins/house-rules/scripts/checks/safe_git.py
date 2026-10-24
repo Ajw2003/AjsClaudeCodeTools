@@ -1703,4 +1703,141 @@ for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
 
 
+# --- #349 (step 4 of #381): deletes follow whose branch it is, the credit line is derived, snapshots go once merged ---
+def _349_git(d, *a, check=True):
+    return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", d] + list(a),
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=check)
+
+
+def _349_repo(name, branch):
+    d = os.path.join(_FIXTURE_ROOT, name)
+    os.makedirs(d)
+    _349_git(d, "init", "-q", "-b", "main")
+    with open(os.path.join(d, "keep.txt"), "w") as f:
+        f.write("committed\n")
+    _349_git(d, "add", "keep.txt")
+    _349_git(d, "commit", "-q", "-m", "init")
+    _349_git(d, "switch", "-q", "-c", branch)
+    return d
+
+
+def _349_rm(d):
+    env = env_in(d)
+    env["HOUSE_RULES_OWNED_BRANCHES"] = ""
+    pl = {"session_id": "v349", "cwd": d, "tool_name": "Bash", "tool_input": {"command": "rm keep.txt"}}
+    out = run_hook("guard", json.dumps(pl), env=env)[1]
+    m = re.search(r'"permissionDecision":"(\w+)"', out)
+    return (m.group(1) if m else "pass"), out
+
+
+_349_mine, _349_theirs = _349_repo("d349-mine", TEST_AGENT_PREFIX + "del"), _349_repo("d349-theirs", "someoneelse/del")
+_349_a, _349_b = _349_rm(_349_mine), _349_rm(_349_theirs)
+commit_case(
+    "deletes (#349): a committed, unchanged file is deleted without a prompt on the agent's own branch",
+    _349_a[0] == "pass", "decision %s | out %r" % (_349_a[0], _349_a[1][:160]),
+)
+commit_case(
+    "deletes (#349): the same delete on someone else's branch is refused, naming the branch and the safe way",
+    _349_b[0] == "deny" and "someoneelse/del" in _349_b[1] and "not a branch of the agent's own" in _349_b[1]
+    and "_to_delete/" in _349_b[1],
+    "decision %s | out %r" % (_349_b[0], _349_b[1][-300:]),
+)
+
+# (c) the automatic work-in-progress commit message
+from house_rules import delegation as _349_deleg  # noqa: E402
+_349_msg = _349_deleg._wip_message("wip: x", "session_abc123")
+commit_case(
+    "wip commit (#349): the message carries the derived credit line and no Claude line",
+    _349_msg.endswith("\n\n" + TEST_COMMIT_CREDIT) and not re.search(r"claude|anthropic|co-authored", _349_msg, re.IGNORECASE),
+    "message %r" % _349_msg,
+)
+
+# (d) the attribution check accepts the derived credit line and refuses a Claude co-author
+_349_ok = _iss_guard("git commit -m \"fix: x\n\n" + TEST_COMMIT_CREDIT + "\"")
+_349_pr = _iss_guard("gh pr create --title T --body \"Refs #5\n\n" + TEST_PR_CREDIT + "\"")
+_349_bad = _iss_guard("git commit -m \"fix: x\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"")
+commit_case(
+    "credit check (#349): 'Committed by " + TEST_AGENT_NAME + "' and 'Opened by " + TEST_AGENT_NAME + "' pass; a Claude co-author is refused",
+    "credits Claude" not in _iss_reason(_349_ok) and "credits Claude" not in _iss_reason(_349_pr)  # other guards may still speak
+    and _iss_decision(_349_bad) == "deny" and "credits Claude" in _iss_reason(_349_bad)
+    and TEST_COMMIT_CREDIT in _iss_reason(_349_bad) and TEST_PR_CREDIT in _iss_reason(_349_bad),
+    "ok %r | pr %r | bad %r" % (_349_ok[:80], _349_pr[:80], _iss_reason(_349_bad)[:160]),
+)
+
+# (e) a snapshot ref goes, locally and on origin, once its helper's branch is merged; an unmerged one stays
+_349_root = os.path.join(_FIXTURE_ROOT, "snap349")
+_349_remote, _349_work = os.path.join(_349_root, "remote.git"), os.path.join(_349_root, "work")
+os.makedirs(_349_work)
+_349_git(_349_root, "init", "-q", "--bare", _349_remote)
+_349_git(_349_work, "init", "-q", "-b", "main")
+with open(os.path.join(_349_work, "a.txt"), "w") as f:
+    f.write("base\n")
+_349_git(_349_work, "add", "a.txt")
+_349_git(_349_work, "commit", "-q", "-m", "base")
+_349_git(_349_work, "remote", "add", "origin", _349_remote)
+_349_git(_349_work, "push", "-q", "-u", "origin", "main")
+
+
+def _349_snapshot(branch, extra_file=None):
+    """Make branch with one commit, then a snapshot ref on top of it (with an unsaved file when extra_file), pushed."""
+    _349_git(_349_work, "switch", "-q", "-c", branch, "main")
+    with open(os.path.join(_349_work, branch + ".txt"), "w") as f:
+        f.write("work\n")
+    _349_git(_349_work, "add", "-A")
+    _349_git(_349_work, "commit", "-q", "-m", "helper work")
+    idx = os.path.join(_349_work, ".git", "snap-index")
+    env = dict(os.environ, GIT_INDEX_FILE=idx)
+    subprocess.run(["git", "-C", _349_work, "read-tree", "HEAD"], check=True, env=env)
+    if extra_file:
+        with open(os.path.join(_349_work, extra_file), "w") as f:
+            f.write("unsaved\n")
+    subprocess.run(["git", "-C", _349_work, "add", "-A"], check=True, env=env)
+    tree = subprocess.run(["git", "-C", _349_work, "write-tree"], check=True, env=env, stdout=subprocess.PIPE).stdout.decode().strip()
+    os.remove(idx)
+    if extra_file:
+        os.remove(os.path.join(_349_work, extra_file))
+    sha = _349_git(_349_work, "commit-tree", tree, "-p", "HEAD", "-m", "snap").stdout.decode().strip()
+    ref = "refs/house-rules/autosave/" + branch
+    _349_git(_349_work, "update-ref", ref, sha)
+    _349_git(_349_work, "push", "-q", "origin", ref + ":" + ref)
+    _349_git(_349_work, "switch", "-q", "main")
+    return ref
+
+
+def _349_has(ref, remote=False):
+    d = _349_remote if remote else _349_work
+    return _349_git(d, "rev-parse", "--verify", "-q", ref, check=False).returncode == 0
+
+
+_349_merged = _349_snapshot("worktree-agent-merged349")
+_349_open = _349_snapshot("worktree-agent-open349")
+_349_unsaved = _349_snapshot("worktree-agent-unsaved349", extra_file="unsaved.txt")
+_349_git(_349_work, "merge", "-q", "--no-ff", "-m", "merge helper", "worktree-agent-merged349")
+_349_git(_349_work, "merge", "-q", "--no-ff", "-m", "merge helper", "worktree-agent-unsaved349")
+_349_swp = run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "hi", "session_id": "v349",
+                    "cwd": _349_work}), env=env_in(_349_work))
+commit_case(
+    "snapshot (#349): the snapshot ref is deleted locally and on origin once its helper's branch is merged",
+    not _349_has(_349_merged) and not _349_has(_349_merged, True) and "dropped the snapshot" in _349_swp[1],
+    "local %s, origin %s | out %r | err %r" % (_349_has(_349_merged), _349_has(_349_merged, True), _349_swp[1][:200], _349_swp[2][:200]),
+)
+commit_case(
+    "snapshot (#349): a snapshot whose branch is unmerged, or that holds unsaved work, is kept",
+    _349_has(_349_open) and _349_has(_349_open, True) and _349_has(_349_unsaved) and _349_has(_349_unsaved, True),
+    "open %s/%s, unsaved %s/%s" % (_349_has(_349_open), _349_has(_349_open, True), _349_has(_349_unsaved), _349_has(_349_unsaved, True)),
+)
+
+# (f) run.sh settingsgate with no interpreter fails closed, like guard
+_349_env = dict(os.environ)
+_349_env.pop("HOUSE_RULES_PYTHON", None)
+_349_env["PATH"] = ""
+_349_sg = run_shell([RUN, "settingsgate"], payload="{}", env=_349_env)
+_349_gd = run_shell([RUN, "guard"], payload="{}", env=_349_env)
+commit_case(
+    "run.sh settingsgate with no working interpreter fails closed (exit 2, a stderr message), as guard does (#349)",
+    _349_sg[0] == 2 and "settingsgate" in _349_sg[2] and "Blocking" in _349_sg[2] and _349_gd[0] == 2,
+    "settingsgate exit %s stderr %r | guard exit %s" % (_349_sg[0], _349_sg[2][:160], _349_gd[0]),
+)
+
+
 finish()
