@@ -257,6 +257,7 @@ EVENTS = {
     "docstiers": event_docstiers,
     "versioncheck": event_versioncheck,
     "scope": event_scope,
+    "settingsgate": event_settingsgate,
     "guard": event_guard,
     "guardwrite": event_guardwrite,
     "guardgithub": event_guardgithub,

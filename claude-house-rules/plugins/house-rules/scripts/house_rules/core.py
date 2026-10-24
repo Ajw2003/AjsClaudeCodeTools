@@ -20,6 +20,8 @@ import tempfile
 import time
 import urllib.parse
 
+from house_rules import settings  # the settings and the one place identity strings live (#341)
+
 # This file is one folder deeper than hook.py, so every path hook.py computed from its own
 # __file__ is computed from this instead: the scripts/ folder that holds hook.py and house_rules/.
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -652,6 +654,28 @@ def event_showrule():
 # ---------------------------------------------------------------------------------------
 
 
+def settings_refusal(raw):
+    """The refusal text when a setting is unset (and the call is not the settings script), else None (#341)."""
+    try:
+        data = json.loads(raw) if raw else {}
+    except ValueError:
+        data = {}  # unreadable payload: it cannot be the settings command, so an unset setting refuses it
+    return settings.refusal(data if isinstance(data, dict) else {})
+
+
+def event_settingsgate():
+    """PreToolUse on every tool: refuse while a setting is unset, except the settings script itself (#341)."""
+    try:
+        raw = read_payload()
+    except Exception:
+        raw = ""
+    reason = settings_refusal(raw)
+    if reason:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": reason}})
+    return 0
+
+
 def event_profile():
     here = SCRIPTS_DIR
     envfile = os.environ.get("HOUSE_RULES_ENV_FILE") or os.path.join(
@@ -679,6 +703,8 @@ def event_profile():
     )
 
     preflight = _preflight_warnings()
+    # #341: an unset setting adds a note asking the model to ask the user in the chat. "" when all are set.
+    preflight += settings.session_note()
 
     handover_block = ""
     if os.environ.get("CLAUDE_CODE_REMOTE"):
@@ -970,10 +996,7 @@ def event_standards():
 
 # A fork of this repo under a different owner should point this at its own copy - hence the
 # env override rather than only a hardcoded constant.
-_GITHUB_PLUGIN_JSON_URL = (
-    "https://raw.githubusercontent.com/Ajw2003/AjsClaudeCodeTools/main/"
-    "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json"
-)
+_GITHUB_PLUGIN_JSON_URL = settings.PLUGIN_JSON_URL
 _GITHUB_FETCH_TIMEOUT = 4.0
 
 # Relative to a marketplace clone's root (~/.claude/plugins/marketplaces/<name>/...) - matches
@@ -1808,7 +1831,7 @@ def event_promptran():
 # verbatim from hook.py.
 # ---------------------------------------------------------------------------------------
 
-# One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
+# One shell word: quoted runs may hold spaces, so -c user.name="a name with spaces" is one word (#189).
 _WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
 # `git` plus any run of global options before the subcommand.
 # Why the alternation's first branch exists: docs/architecture.md, "The pre-existing hole this exposed".
@@ -2063,13 +2086,10 @@ def register_docs_status(fn):
 # dispatcher in hook.py, use. The first group came out of the safe git part, the second out of hook.py.
 # ---------------------------------------------------------------------------------------
 
-OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-")  # claude/ = cloud app branches, old branches; ccr- = cloud sessions
-
-
 def owned_branch_prefixes():
-    """The defaults plus HOUSE_RULES_OWNED_BRANCHES (comma-separated extras, never replacing)."""
-    extra = tuple(p.strip() for p in os.environ.get("HOUSE_RULES_OWNED_BRANCHES", "").split(",") if p.strip())
-    return OWNED_BRANCH_PREFIXES + extra
+    """Branches that count as the agent's own (#341): the agent's prefix "<agent_name>/", the settings'
+    extra_owned_prefixes (HOUSE_RULES_OWNED_BRANCHES, then the settings file), and cloud-session ccr-."""
+    return settings.owned_prefixes()
 
 
 # Any -C at all, broad on purpose (`grep -C 3` included); only the `git -C <dir>` form below is
@@ -2307,10 +2327,9 @@ def _attribution_enabled():
 
 # The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
 # noreply@anthropic.com, which signs every commit as Claude whatever the message says.
-AGENT_IDENTITY_FIX = (
-    "git config user.name \"AJ's agent\" && "
-    "git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
-)
+def agent_identity_fix(cwd=None):
+    """The command that signs this repo's commits as the agent: user.name = agent_name, user.email = the user's own."""
+    return settings.identity_fix(cwd)
 
 
 _ARG = r"(\"[^\"]*\"|'[^']*'|\S+)"
@@ -2320,7 +2339,7 @@ _AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
 
 
 def _c_option_re(key):
-    """-c key=value, also with the whole pair quoted (-c "user.name=aj's agent", #189)."""
+    """-c key=value, also with the whole pair quoted (-c "user.name=a name", #189)."""
     return re.compile(
         r"(?:^|\s)-c\s*(?:\"" + key + r"=([^\"]*)\"|'" + key + r"=([^']*)'|" + key + r"=" + _ARG + r")",
         re.IGNORECASE,
@@ -2448,15 +2467,15 @@ def _branch_advice(is_mine, branch, note):
         )
     if branch:
         return (
-            "The checkout is on `%s`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened "
+            "The checkout is on `%s`, which is not one of your own branches (%s). If that branch was opened "
             "for this session's work, commit there, scoped to those paths. If it is the user's, "
-            "branch off first (`git switch -c AjsAgent/<topic>` carries the changes with it), "
+            "branch off first (`git switch -c %s<topic>` carries the changes with it), "
             "then commit, scoped to those paths. Either way, say what you committed and where."
-            % branch
+            % (branch, ", ".join(owned_branch_prefixes()), settings.fill("@PREFIX@"))
         )
     return (
-        "No branch could be read (%s), so branch off first (`git switch -c AjsAgent/<topic>`), "
-        "then commit, scoped to those paths, and say what you committed and where." % note
+        "No branch could be read (%s), so branch off first (`git switch -c %s<topic>`), "
+        "then commit, scoped to those paths, and say what you committed and where." % (note, settings.fill("@PREFIX@"))
     )
 
 

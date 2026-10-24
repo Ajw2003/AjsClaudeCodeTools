@@ -62,10 +62,10 @@ from house_rules.core import (  # noqa: F401
 ISSUES_FILE = "house-rules-issues.json"
 
 
-ISSUES_LABEL = "AjsAgent created this"
+ISSUES_LABEL = settings.ISSUES_LABEL  # the GitHub label keeps its literal name; see settings.py
 
 
-ISSUES_LABEL_OLD = "Claude created this"  # still counts: plans already in flight
+ISSUES_LABEL_OLD = settings.ISSUES_LABEL_OLD  # still counts: plans already in flight
 
 
 ISSUES_STEP_THRESHOLD = 3
@@ -79,7 +79,7 @@ ISSUE_NOTE = (
     "written create one parent issue for the plan and one child issue per step with `gh issue "
     "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
     "non-programmer can follow. Every issue carries at least one category label and the label "
-    "`AjsAgent created this`; if the repo lacks that label, create it first with `gh label "
+    "`" + ISSUES_LABEL + "`; if the repo lacks that label, create it first with `gh label "
     "create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels "
     "-f \"labels[]=in progress\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
@@ -1317,10 +1317,10 @@ def _author_guard(subject, payload):
     except Exception: return None  # unreadable identity: let the commit through, as for an unreadable body file
     if who is None or not _is_claude_identity(*who):
         return None
-    return ("deny", "House rules, credit aj's agent: this commit would be authored as `%s <%s>`, "
+    return ("deny", "House rules, credit " + (settings.agent_name() or "the agent") + ": this commit would be authored as `%s <%s>`, "
             "which signs it as Claude. Set the agent's identity in this repo and retry: `%s`. "
             "HOUSE_RULES_ATTRIBUTION=off disables this check."
-            % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
+            % (who[0] or "?", who[1] or "?", agent_identity_fix(_command_dir(payload)[0])), None)
 
 
 def _guardgithub_issue_checks(payload, raw):
@@ -1362,8 +1362,8 @@ def _guardgithub_issue_checks(payload, raw):
 CLOSE_COMMENT_NOTE = (
     "House rules, this close is allowed: %s. Before or right after it, comment on issue #%d with that "
     "evidence (the QA message and the merged pull request link, or the sweep approval and the replacing "
-    "issue), add the label `AjsAgent completed this` (`gh api repos/%s/issues/%d/labels -f "
-    "\"labels[]=AjsAgent completed this\"`) and remove `in progress` (`gh api -X DELETE "
+    "issue), add the label `" + settings.COMPLETED_LABEL + "` (`gh api repos/%s/issues/%d/labels -f "
+    "\"labels[]=" + settings.COMPLETED_LABEL + "\"`) and remove `in progress` (`gh api -X DELETE "
     "repos/%s/issues/%d/labels/in%%20progress`)."
 )
 
