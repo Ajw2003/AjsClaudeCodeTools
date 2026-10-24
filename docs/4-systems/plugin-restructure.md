@@ -527,3 +527,16 @@ quotes aj's rule. *Unasked fixes:* a note, not a block, when the reply says "whi
 fixed/patched/cleaned up" or "unrelated fix/change" and names no `#number`. Both live in
 `house_rules/writing.py` (`skipped_check_reasons`, `unasked_fix_phrases`); a scan of 2,425 string fixtures in
 `checks/` found no false positive. Checks are prefixed "(#344)" in `checks/safe_git.py` and `checks/writing.py`.
+
+**Built: step 7 (#345).** *Helper instructions follow the grilling answers (round 1, answers 4, 5, 12, 13).*
+`agents/builder.md`, `agents/reviewer.md` and the subagent rules text that `event_subagentrules` injects
+(`SUBAGENT_MANDATE`) now say what `rules/detail/green-suite.md` says: while working run the parts the change
+touched (`verify.py --changed` here), at the end the touched parts twice and everything else once. A question
+only aj can answer stops the helper and goes in its final report under a `QUESTION FOR AJ` heading, for the
+parent to ask. The builder's 6-line report cap no longer covers RESULT and FAIL lines: every one is quoted
+verbatim. The parent-side audit (`_audit_report`) never checked report length, so it needed no change.
+*Autosave:* the local snapshot ref keeps its one name, `refs/house-rules/autosave/<branch>`. Each push to
+origin now goes to a fresh ref, `refs/house-rules/autosave/<branch>-s<UTC YYYYMMDDTHHMMSSZ>-<sha7>`, with no
+`--force`. `_autosave_cleanup` and `_autosave_merged_sweep` list origin with `ls-remote` (the legacy fixed name
+plus every `-s...` name) and delete all of them in one push. The worktree sweep is unchanged and a check now
+proves it commits only inside the helper's own worktree. Checks are titled "(#345)" in `checks/delegation.py`.
