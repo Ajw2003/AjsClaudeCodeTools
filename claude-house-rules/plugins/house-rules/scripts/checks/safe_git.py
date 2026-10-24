@@ -825,6 +825,46 @@ else:
     report("FAIL", "guardwrite with no file_path field does not ask")
     print(f"          exit code {code}, got: {out}")
 
+
+# --- #344: an Edit that replaces more than half a file's lines is a wholesale rewrite --------------------------
+_ge_file = os.path.join(_gw_dir, "tracked-hundred.txt")
+with open(_ge_file, "w", encoding="utf-8") as f:
+    f.write("".join("line %03d\n" % i for i in range(100)))
+subprocess.run(["git", "init", "-q", _gw_dir], check=False)
+subprocess.run(["git", "-C", _gw_dir, "add", "tracked-hundred.txt"], check=False)  # tracked, so not an own untracked file
+
+
+def _ge_payload(n, tool="Edit", replace_all=False, old=None):
+    old_s = old if old is not None else "".join("line %03d\n" % i for i in range(n))
+    return json.dumps({"session_id": "verify", "tool_name": tool, "tool_input": {
+        "file_path": _ge_file, "old_string": old_s, "new_string": "x\n", "replace_all": replace_all}})
+
+
+_ge_env = dict(os.environ, CLAUDE_PROJECT_DIR=_gw_dir)
+code, out, err = run_hook("guardwrite", _ge_payload(51), env=_ge_env)
+if '"permissionDecision":"deny"' in out and "51 of the 100 lines" in out and "approval by name" in out:
+    report("PASS", "an Edit replacing 51 of a file's 100 lines is refused like a whole-file Write (#344)")
+else:
+    report("FAIL", "an Edit replacing 51 of a file's 100 lines is refused like a whole-file Write (#344)")
+    print(f"          got: {out} {err}")
+code, out, err = run_hook("guardwrite", _ge_payload(49), env=_ge_env)
+if '"permissionDecision"' not in out and code == 0:
+    report("PASS", "an Edit replacing 49 of a file's 100 lines passes (#344)")
+else:
+    report("FAIL", "an Edit replacing 49 of a file's 100 lines passes (#344)")
+    print(f"          got: {out} {err}")
+code, out, err = run_hook("guardwrite", _ge_payload(50), env=_ge_env)
+if '"permissionDecision"' not in out:
+    report("PASS", "an Edit replacing exactly half (50 of 100 lines) passes: the bar is more than half (#344)")
+else:
+    report("FAIL", "an Edit replacing exactly half (50 of 100 lines) passes: the bar is more than half (#344)")
+code, out, err = run_hook("guardwrite", _ge_payload(0, replace_all=True, old="line 0"), env=_ge_env)
+if '"permissionDecision":"deny"' in out:
+    report("PASS", "a replace_all Edit counts old_string's line count times its occurrences (#344)")
+else:
+    report("FAIL", "a replace_all Edit counts old_string's line count times its occurrences (#344)")
+    print(f"          got: {out} {err}")
+
 # fail-closed: an internal error in guardwrite must BLOCK, not shrug - same contract as guard,
 # since this is also a PreToolUse hook that can stop a tool call from running.
 crash_snippet_gw = (

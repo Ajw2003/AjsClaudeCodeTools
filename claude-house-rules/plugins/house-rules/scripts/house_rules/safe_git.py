@@ -858,6 +858,28 @@ def _guardwrite_new_line_count(payload):
     return len(text.splitlines())
 
 
+def _edit_replaced_lines(tool_input, resolved):
+    """Lines an Edit/MultiEdit replaces in one call: old_string's line count, times its occurrences
+    for replace_all; summed over a MultiEdit's edits. None when it cannot be told."""
+    edits = tool_input.get("edits") if isinstance(tool_input.get("edits"), list) else [tool_input]
+    try:
+        text = _read_text(resolved)
+    except OSError as exc:
+        sys.stderr.write("house-rules guardwrite: could not read %s (%s) to count the lines this edit "
+                         "replaces; the wholesale-rewrite check did not run.\n" % (resolved, exc))
+        return None
+    total = 0
+    for e in edits:
+        old = e.get("old_string") if isinstance(e, dict) else None
+        if not isinstance(old, str) or not old:
+            continue
+        n = max(1, len(old.splitlines()))
+        if e.get("replace_all"):
+            n *= max(1, text.count(old))
+        total += n
+    return total
+
+
 def event_guardwrite():
     try:
         payload = read_payload()
@@ -903,6 +925,27 @@ def event_guardwrite():
             "house-rules guardwrite: %s exists but could not be read (%s) to count its "
             "existing lines; asking anyway, with that count left out.\n" % (resolved, exc)
         )
+
+    try:
+        pl = json.loads(payload)
+    except ValueError:
+        pl = {}
+    tool = pl.get("tool_name") if isinstance(pl, dict) else None
+    if tool in ("Edit", "MultiEdit"):
+        # #344: a wholesale rewrite by Edit is more than half the file's lines replaced in one call.
+        # Same refusal and same approval mechanism as a whole-file Write; no docs/ or .md exemption
+        # exists on the Write guard, so none here (only the untracked-own-file shortcut above).
+        replaced = _edit_replaced_lines(pl.get("tool_input") or {}, resolved)
+        if replaced is None or not old_lines or replaced * 2 <= old_lines:
+            return 0
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+              "permissionDecisionReason": (
+                  "House rules, %s: refused. This %s replaces %d of the %d lines of `%s` (more than half), a "
+                  "wholesale rewrite of a file I did not create.\n"
+                  "Fix: split it into smaller edits that each change only the lines that need to change. A "
+                  "wholesale rewrite needs aj's approval by name first, with what it discards and why an "
+                  "in-place edit will not do." % (RULE_EDIT_IN_PLACE, tool, replaced, old_lines, file_path))}})
+        return 0
 
     new_lines = _guardwrite_new_line_count(payload)
 

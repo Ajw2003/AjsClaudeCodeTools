@@ -512,3 +512,18 @@ write between its two approvals. *Cloud pages:* in a session with `CLAUDE_CODE_R
 check also needs a `https://claude.ai/artifact/...` or `https://claude.ai/code/artifact/...` link; a local `.html`
 alone is blocked with a message naming the Artifact tool's publish step. A local session is unchanged. The page
 builder is untouched. Checks are in `checks/design_loop.py`, prefixed "restructure step 5 (#343)".
+
+**Built: step 6 (#344).** *Wholesale rewrite by Edit:* the `guardwrite` hook (matcher now `Write|Edit|MultiEdit`)
+also refuses an Edit or MultiEdit that replaces more than half the file's lines in one call. Replaced lines are
+old_string's line count (at least 1), times its occurrences for `replace_all`, summed over a MultiEdit's edits;
+refused when `replaced * 2 > file lines` (51 of 100 refused, 50 and 49 pass). The refusal and the approval
+mechanism are the Write guard's: a deny naming the rule, with "needs aj's approval by name". The exemption is the
+Write guard's own and nothing more: a file I made myself (untracked, inside the project) is never refused. There
+is no `docs/` or `.md` exemption on the Write guard, so none was added. *Skipping a check:* the end-of-reply
+check now adds a note (same single emission, so it reports and lets the reply stand on the retry, like the other
+reply notes) when a sentence says a check was skipped or not run and gives time, cost or an unreachable
+machine or account as the reason, and the reply asks aj no question about skipping or running it. The note
+quotes aj's rule. *Unasked fixes:* a note, not a block, when the reply says "while I was there/at it", "I also
+fixed/patched/cleaned up" or "unrelated fix/change" and names no `#number`. Both live in
+`house_rules/writing.py` (`skipped_check_reasons`, `unasked_fix_phrases`); a scan of 2,425 string fixtures in
+`checks/` found no false positive. Checks are prefixed "(#344)" in `checks/safe_git.py` and `checks/writing.py`.

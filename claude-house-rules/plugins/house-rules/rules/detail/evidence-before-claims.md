@@ -44,3 +44,5 @@ the evidence reminder, and a "not checked" with no reason beside it gets told to
 
 **Why:** a claim nobody checked is indistinguishable, on the page, from one that was verified —
 until it is wrong, and by then the reader has already acted on it.
+
+Skipping a check for time, cost or an unreachable machine or account is aj's call (#344): a reply that says it skipped one without asking aj whether to skip gets a note quoting that rule. A reply saying it also fixed something outside the request, with no issue number, gets a note.

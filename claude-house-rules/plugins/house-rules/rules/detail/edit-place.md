@@ -27,3 +27,5 @@ after the fact, that the loss had been avoidable.
 A new file taking over an old one's job is the same loss in a different shape: git shows a delete
 and an add, not an edit, and nothing here engages. That case — port, rebuild, restructure,
 migration — is covered by `parity-inventory.md`.
+
+The guard also covers Edit and MultiEdit (#344): one call replacing more than half a file's lines is refused as a wholesale rewrite, same approval by name.
