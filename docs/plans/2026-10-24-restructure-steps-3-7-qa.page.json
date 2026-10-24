@@ -97,7 +97,7 @@
     "feature": "restructure steps 3 to 7",
     "base": "origin/main",
     "unverified": [
-      "No Claude Code session has run 2.74.0 yet; every check drove the hooks with recorded payloads, and the settings gate was run end to end only in a scratch home folder",
+      "No Claude Code session has run 2.74.0 yet; every check drove the hooks with recorded payloads, and the refusal until settings are set was run end to end only in a scratch home folder",
       "The menu wording in docs/cloud-session-setup.md comes from Claude Code's environment help, not from checking each app",
       "The new Edit guard and the settings gate for tools other than Bash are proven only with simulated payloads, not a live Edit or Read"
     ],
