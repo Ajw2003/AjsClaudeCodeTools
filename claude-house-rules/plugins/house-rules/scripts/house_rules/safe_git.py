@@ -173,6 +173,8 @@ SAFE_WAYS = {
     "deletes stashed work permanently (git stash drop / clear)": "keep the stash",
     "recursive": "move the folder into a `_to_delete/` folder instead",
     "unsaved": "move the file into a `_to_delete/` folder instead",
+    "theirs": "move the file into a `_to_delete/` folder instead, or make the delete on your own branch "
+              "(`git switch -c @PREFIX@<topic>`)",
     "not mine": "make a new branch and commit there: `git switch -c @PREFIX@<topic>`",
 }
 _NO_SAFE_WAY_RE = re.compile(r"\bno safe way:\s*(\S.*)", re.IGNORECASE)
@@ -509,8 +511,12 @@ def event_guard():
             if reason in _DELETE_REASONS:
                 delete_kind = delete_kind or _delete_refusal(subject, where)
                 if not delete_kind:
-                    exempted.append(reason)  # committed and unchanged, so git can bring it back (#291)
-                    continue
+                    # Committed and unchanged, so git can bring it back (#291). Allowed on the agent's own
+                    # branch only (#349, round 1 answer 1); anywhere else it is refused, naming whose branch.
+                    if known and branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+                        exempted.append(reason)
+                        continue
+                    delete_kind = "theirs"
             if marker == BRANCH_WRITE and known:
                 if protected:
                     refused.append(reason)
@@ -547,6 +553,10 @@ def event_guard():
             safe = SAFE_WAYS["not mine"]
         elif r in _DELETE_REASONS:
             safe = SAFE_WAYS[delete_kind or "unsaved"]
+            if delete_kind == "theirs":
+                safe = ("this is %s, not a branch of the agent's own, so even a file git can restore is not "
+                        "deleted here: %s" % ("`%s`" % branch if branch else "a checkout whose branch can't be read",
+                                              safe))
         else:
             safe = SAFE_WAYS.get(r, "do the job without this step")
         danger.append("  - %s: %s" % (r, settings.fill(safe)))

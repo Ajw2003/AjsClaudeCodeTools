@@ -10,7 +10,7 @@ import os
 import re
 import time
 
-from house_rules import core
+from house_rules import core, settings
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _AUDIT_COMMAND_TOOLS,
@@ -1240,10 +1240,9 @@ def _autosave_snapshot(top, branch, force_push=False):
 
 
 def _wip_message(subject, session_id=""):
-    msg = subject + "\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
-    if re.match(r"^session_[A-Za-z0-9]+$", session_id or ""):
-        msg += "\nClaude-Session: https://claude.ai/code/%s" % session_id
-    return msg
+    """The automatic commit's message: the subject and the derived credit line, no Claude line (#349).
+    session_id is kept so the callers do not change; it is no longer written into the message."""
+    return subject + "\n\n" + settings.commit_credit()
 
 
 def _wip_commit(top, subject, session_id=""):
@@ -1254,11 +1253,10 @@ def _wip_commit(top, subject, session_id=""):
     if not files:
         return None, []
     _ag(top, ["add", "-A"])
-    ident = []
-    if _ag(top, ["config", "user.name"], check=False)[0] != 0:
-        ident += ["-c", "user.name=house-rules"]
-    if _ag(top, ["config", "user.email"], check=False)[0] != 0:
-        ident += ["-c", "user.email=house-rules@localhost"]
+    # Author name is the agent's name, email the user's own git email (#349); house-rules@localhost only when
+    # git has no usable email, so the commit still happens.
+    ident = ["-c", "user.name=%s" % (settings.agent_name() or "house-rules"),
+             "-c", "user.email=%s" % (settings.git_email(top) or "house-rules@localhost")]
     _ag(top, ident + ["commit", "--no-verify", "-q", "-m", _wip_message(subject, session_id)])
     return _ag(top, ["rev-parse", "--short", "HEAD"])[1].strip(), files
 
@@ -1406,6 +1404,49 @@ def _newest_mtime(top, files):
     return newest
 
 
+def _autosave_merged_sweep(root):
+    """#349 (round 2 answer 7): delete an autosave snapshot, locally and on origin, once its helper's work is merged.
+    (dropped, problems), both lists of text.
+
+    The merge signal is what git can prove, not a recorded event: the snapshot holds nothing beyond the commit it
+    sits on (its tree equals its parent's tree), and that parent is contained in some branch that is not a helper
+    branch (a local branch or an origin one). Then every byte the snapshot holds is already on a real branch, so
+    deleting it loses nothing. A snapshot with uncommitted work in it (a live or killed helper) never matches."""
+    dropped, problems = [], []
+    rc, out, err = _ag(root, ["for-each-ref", "--format=%(refname) %(objectname)", AUTOSAVE_REF_PREFIX], check=False)
+    if rc != 0:
+        return dropped, ["could not list the autosave snapshots (%s)" % (err.strip() or "git failed")]
+    for line in out.splitlines():
+        ref, _sp, sha = line.partition(" ")
+        branch = ref[len(AUTOSAVE_REF_PREFIX):]
+        try:
+            rc1, parent, _e = _ag(root, ["rev-parse", "--verify", "-q", sha + "^"], check=False)
+            if rc1 != 0:
+                continue  # a snapshot always has a parent; one that does not is not ours to judge
+            parent = parent.strip()
+            if _ag(root, ["rev-parse", sha + "^{tree}"])[1].strip() != _ag(root, ["rev-parse", parent + "^{tree}"])[1].strip():
+                continue  # the snapshot holds work no commit has: not merged
+            homes = [r for r in _ag(root, ["for-each-ref", "--format=%(refname)", "--contains", parent,
+                                           "refs/heads", "refs/remotes"])[1].split()
+                     if r != "refs/heads/" + branch and not r.endswith("/" + branch) and not r.endswith("/HEAD")
+                     and not r.startswith(("refs/heads/" + AUTOSAVE_BRANCH_PREFIX, "refs/remotes/origin/" + AUTOSAVE_BRANCH_PREFIX))]
+            if not homes:
+                continue
+            _ag(root, ["update-ref", "-d", ref])
+            on_origin = ""
+            if _ag(root, ["remote", "get-url", "origin"], check=False)[0] == 0:
+                rc2, listed, e2 = _ag(root, ["ls-remote", "--exit-code", "origin", ref], check=False, timeout=AUTOSAVE_PUSH_TIMEOUT)
+                if rc2 == 0 and listed.strip():
+                    _ag(root, ["push", "--quiet", "origin", ":" + ref], timeout=AUTOSAVE_PUSH_TIMEOUT)
+                    on_origin = " and on origin"
+                elif rc2 != 2:
+                    problems.append("could not check origin for %s (%s); delete it there by hand if it exists" % (ref, e2.strip() or "ls-remote failed"))
+            dropped.append("%s (work is in %s)%s" % (ref, homes[0].split("/", 2)[-1], on_origin))
+        except RuntimeError as exc:
+            problems.append("could not drop %s (%s)" % (ref, exc))
+    return dropped, problems
+
+
 def event_worktreesweep():
     """UserPromptSubmit on the parent (prompts, task notifications, scheduled check-ins): commit
     any subagent worktree left with uncommitted work untouched for CHECKPOINT_MINUTES - the case a
@@ -1432,6 +1473,8 @@ def event_worktreesweep():
                 worktrees.append((path, line[len("branch refs/heads/"):]))
         sid = data.get("session_id", "") if isinstance(data, dict) else ""
         swept, problems = [], []
+        dropped, drop_problems = _autosave_merged_sweep(root)
+        problems += drop_problems
         now = _t.time()
         for top, branch in worktrees[:SWEEP_MAX_WORKTREES]:
             try:
@@ -1444,9 +1487,11 @@ def event_worktreesweep():
                              % (top, branch, len(done), sha, _shown(done), " | " + note if note else ""))
             except Exception as exc:
                 problems.append("%s (%s): %s" % (top, branch, exc))
-        if not swept and not problems:
+        if not swept and not problems and not dropped:
             return 0
         lines = []
+        if dropped:
+            lines.append("house-rules worktreesweep: dropped the snapshot of merged helper work: %s." % "; ".join(dropped))
         if swept:
             lines.append("house-rules worktreesweep: subagent work sat uncommitted for %d+ min, so the "
                          "hook committed it: %s." % (CHECKPOINT_MINUTES, "; ".join(swept)))

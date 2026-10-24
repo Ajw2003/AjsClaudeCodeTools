@@ -479,3 +479,22 @@ renaming would orphan every issue that has one; the default repo owner and the p
 text in `rules/` and the docs still name "aj's agent" and `AjsAgent/`; they are prose, not code, and are not
 part of this step. The checks run with `HOUSE_RULES_AGENT_NAME=testsAgent` (set in `checks/common.py`) and assert
 values derived from it.
+
+**Built: step 4 (#349).** *Deletes:* a delete of a committed, unchanged file (git can restore it) is allowed
+only on a branch that is the agent's own (own prefix, the extras, `ccr-`, helper `worktree-agent-` branches). On
+any other branch, `main` included, it is refused naming the branch, with the words "not a branch of the agent's
+own", and the safe way (`_to_delete/` or a new branch under the agent prefix). Uncommitted, changed, never-committed,
+glob and recursive deletes are refused as before, and the scratchpad exemption is unchanged. *Identity:* the
+automatic work-in-progress commits (`_wip_message`, `_wip_commit` in `delegation.py`) now end with the derived
+`Committed by <agent_name>` line, carry no Claude `Co-Authored-By` or `Claude-Session` line, and are authored as
+`<agent_name>` with the user's own git email (`house-rules@localhost` only when git has none). The attribution
+and credit checks needed no new code: they refuse Claude's lines and accept anything else, so they already accept
+exactly the derived `Committed by` and `Opened by` lines; a new check pins that. *Snapshot branches:* the
+`worktreesweep` hook (every prompt) now also deletes an autosave snapshot, locally and on origin, once its
+helper's work is merged. There is no recorded merge event to trust, so the signal is what git can prove: the
+snapshot holds nothing a commit lacks (its tree equals its parent's) and that parent is contained in a branch that
+is not a helper branch. A snapshot with unsaved work, or whose commits sit only on helper branches, is kept. It
+cannot tell "merged" from "never started" (a helper with no commits also matches), which loses nothing because
+the snapshot then holds nothing. The autosave push still uses `--force`; that is step 7 (#345). *`run.sh`:* with no
+working Python the `settingsgate` event now fails closed (3 lines on stderr, exit 2), as `guard` does, instead of
+doing nothing. Seven checks were added to `checks/safe_git.py` (all prefixed `#349`).
