@@ -2,7 +2,7 @@
 
 From house-rules 2.74.0, every tool is refused until the plugin knows the agent's name. Cloud sessions
 start fresh each time, so the name is set once per cloud environment, as environment variables. Repeat
-these steps once for each account and each cloud environment.
+these steps once in each Claude account's cloud environments.
 
 ## The two values
 
@@ -27,12 +27,21 @@ these steps once for each account and each cloud environment.
 5. To check, start a new session and ask the agent to run
    `python3 <plugin>/scripts/settings.py show`. It should list both values as coming from the environment.
 
-## Copy for each account
+## Repeating it across Claude accounts
 
-| Account | HOUSE_RULES_AGENT_NAME | HOUSE_RULES_OWNED_BRANCHES |
+The values come from the GitHub account the agent works as, not from the Claude account. So every Claude
+account that works on Ajw2003's repos pastes the same two lines, unchanged:
+
+```
+HOUSE_RULES_AGENT_NAME=ajw2003sAgent
+HOUSE_RULES_OWNED_BRANCHES=AjsAgent/,claude/
+```
+
+Each Claude account has its own cloud environments, so repeat steps 1 to 4 in each one. A tick list:
+
+| Claude account | Environment | Done |
 |---|---|---|
-| Ajw2003 | `ajw2003sAgent` | `AjsAgent/,claude/` |
-| (next account) | `<login in lowercase>sAgent` | leave empty, or that account's old prefixes |
+| | | |
 
 Not yet tested: step 5's command exists only once step 3 of the restructure (#341) ships in 2.74.0, and
 the menu wording in steps 2 and 3 is taken from Claude Code's own environment help on 2026-10-24, not
