@@ -102,6 +102,8 @@ _SK_NORMAL = [
     "I ran the tests. All 12 passed. I fixed the bug you asked about.",
     "I skipped nothing; every check ran in 40 seconds.",
     "Not run: the Unity editor is not installed here.",
+    # A real reply from 2026-10-24 that describes the rule rather than skipping anything:
+    "It also adds a reply check: skipping a long or paid check needs your answer first.",
 ]
 pv_case("Stop: normal replies trigger neither the skip note nor the unasked-fix note (#344)",
         not any(_sk(r, "never decides on its own") or _sk(r, "outside the request") for r in _SK_NORMAL), "")

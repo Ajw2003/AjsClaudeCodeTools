@@ -349,6 +349,9 @@ _SKIP_REASON_RE = re.compile(
     r"\d+ ?(?:min|minutes|hours?) (?:to run|long)|long[- ]running|slow|costs? (?:money|\$|real)|costly|expensive|"
     r"paid|billing|no access|(?:can't|cannot|can not|couldn't) (?:reach|access|log in)|unreachable|"
     r"another machine|other machine|your machine|different machine|account|credentials|time)\b", re.IGNORECASE)
+# The skip must be the agent's own: a sentence that only describes the rule ("skipping a long check needs your
+# answer") is not a skipped check. Found on 2026-10-24 by running this check over 262 real replies.
+_SKIP_OWN_RE = re.compile(r"(?:\b(?:I|I've|I'm|I'd|I'll|we|we've)\b|^\W*not (?:re)?run\b)", re.IGNORECASE)
 _SKIP_QUESTION_RE = re.compile(
     r"\b(?:skip|run (?:it|that|them|this)|want me to|should I|shall I|ok(?:ay)? (?:to|if)|is that ok(?:ay)?|"
     r"do you want|would you like)\b", re.IGNORECASE)
@@ -376,7 +379,7 @@ def skipped_check_reasons(reply):
         if clarity._is_quoted(text, m.start()):
             continue
         sentence = clarity._sentence_around(text, m.start(), m.end())
-        if _SKIP_REASON_RE.search(sentence):
+        if _SKIP_REASON_RE.search(sentence) and _SKIP_OWN_RE.search(sentence):
             found.append(" ".join(sentence.split())[:120])
     if found and _reply_asks_to_skip(text):
         return []
