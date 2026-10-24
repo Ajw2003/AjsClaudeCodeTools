@@ -7,6 +7,21 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-24 - Sweep approved: restructure step 2's issues, and 5 issues closed
+
+**Context.** Sweep page `docs/plans/2026-10-24-step-2-sweep.html`, the route aj chose in answer 2A ("Proof check fix
+answers"), for #340 and #357 to #360, whose QA pass the design loop did not record.
+
+**Decision.** aj's reply was "Sweep approved: issues". The 5 issues were closed as completed, each with a comment
+quoting "2026-10-21 - QA passed: restructure step 2" and pull request #372, and labelled `AjsAgent completed this`.
+
+**Found.** After the closes, the 5 rows left the stage file's sweep list: the after-close check read the GitHub
+tool's wrapped reply, which it never did before #374. The 26 rows from the first sweep (2026-10-21) are still
+listed, because those issues were not closed again; the build plan said the next sweep would drop them, and no
+code does that yet, so they stay until a sweep page lists them or the stage file's sweep list is reset.
+
+**Status.** Standing.
+
 ## 2026-10-24 - QA passed: proof check fix
 
 **Context.** QA page `docs/plans/2026-10-21-proof-check-fix-qa.html` for #367 (#374 unwrap the GitHub tool's
