@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-24 - Build plan approved: restructure steps 3 to 7
+
+**Context.** Build plan `docs/plans/2026-10-24-restructure-steps-3-7-plan.html` for #381.
+
+**Decision.** aj's reply was "Build plan approved: restructure steps 3 to 7". Steps are built in order, one helper
+agent each: #341, #349, #343, #344, #345; then #382 (version 2.74.0, docs, one QA page, one release).
+
+**Status.** Standing.
+
 ## 2026-10-24 - Design approved: restructure steps 3 to 7
 
 **Context.** Design page `docs/plans/2026-10-21-restructure-steps-3-7.html`: for each rule the grilling decided in
