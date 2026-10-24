@@ -229,6 +229,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-24: aj passed QA on the proof check fix; 2.73.0 goes to `main` by pull request, and aj tests the live close in a new session (this one loaded 2.72.0). The next merge in a 2.73.0 session stamps the waiting closable entries for the verify rework (#368 to #371) and the proof check fix (#374 to #376).
 
+2026-10-24: house-rules 2.73.0 is on `main` (pull request #380). The merge ran under this session's 2.72.0 hook, which has no unwrap fix, so the closable entries are still unstamped; the first merge in a 2.73.0 session stamps them. The step 2 sweep page (`docs/plans/2026-10-24-step-2-sweep.html`) and the steps 3 to 7 design page wait on aj.
+
 2026-10-21: verify rework step 2 (#370) is built on branch `AjsAgent/issue-370-split`, not yet merged or QA'd. `verify.py` is now a runner (`--parts`, `--changed`, `--serial`) over one test file per part in `scripts/checks/`; a full run is 913 checks in 34.5 and 36.0 seconds (4 cores), `--serial` 132.1, `--parts design_loop` 29.9; the sorted list of check titles is identical to the single-file run's. 32 checks sit in a different part than the #369 list gave them, to keep order-dependent groups whole. A pull request for it needs a plugin version bump first (the version-bump check fails without one) and the hard-coded `2.71.0` in `checks/design_loop.py` changed with it. Details: `docs/4-systems/verify-suites.md`, "The split layout (#370)". Next is step 3 (#371), the run-twice rule text.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
