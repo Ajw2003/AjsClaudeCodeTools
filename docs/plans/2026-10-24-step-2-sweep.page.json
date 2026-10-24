@@ -1,0 +1,83 @@
+{
+  "title": "Step 2 Issue Sweep",
+  "eyebrow": "Sweep \u00b7 close restructure step 2's issues (#340, #357 to #360) on recorded evidence",
+  "short": {
+    "lead": "A sweep page lists issues to close, each with its evidence, for your approval. This one closes the 5 issues of restructure step 2 (#340 and #357 to #360), the split of hook.py into modules. You passed QA on step 2 and pull request #372 merged it to main, but the design loop did not record your pass. Your approval of the verify rework build plan had already replaced the design loop's issue list. On the proof check fix page you chose answer 2A for question 2, how these issues close: through a sweep page. The close guard, the check that refuses a close without proof, lets me close only the issues you approve here.",
+    "hint": "Each row shows the issue, the suggested action and its evidence.",
+    "key": [
+      [
+        "Close as completed",
+        ""
+      ],
+      [
+        "Keep open",
+        "done"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Sweep",
+        "5 issues to close as completed",
+        "",
+        [
+          "Each row below quotes the decisions-log entry with your QA pass and the merged pull request."
+        ],
+        "Your approval."
+      ]
+    ]
+  },
+  "changes": [],
+  "sweep": [
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 340,
+      "title": "Restructure step 2: move today's hook.py into the core and six part modules, changing nothing",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-21 - QA passed: restructure step 2\" records aj's reply \"QA passed: restructure step 2\" for #340 and steps #357 to #360. Merged by pull request #372 (merge commit e4a82e6 on origin/main, \"Merge pull request #372: house-rules 2.71.0, hook.py split into the core and six part modules\"). The design loop did not record this pass because the design loop's issue list had moved to the verify rework build plan; aj chose this sweep as the route (answer 2A, \"2026-10-21 - Proof check fix answers\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 357,
+      "title": "Step 2a: the house_rules package and the core module",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-21 - QA passed: restructure step 2\" records aj's reply \"QA passed: restructure step 2\" for #340 and steps #357 to #360. Merged by pull request #372 (merge commit e4a82e6 on origin/main, \"Merge pull request #372: house-rules 2.71.0, hook.py split into the core and six part modules\"). The design loop did not record this pass because the design loop's issue list had moved to the verify rework build plan; aj chose this sweep as the route (answer 2A, \"2026-10-21 - Proof check fix answers\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 358,
+      "title": "Step 2b: the safe git and docs modules",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-21 - QA passed: restructure step 2\" records aj's reply \"QA passed: restructure step 2\" for #340 and steps #357 to #360. Merged by pull request #372 (merge commit e4a82e6 on origin/main, \"Merge pull request #372: house-rules 2.71.0, hook.py split into the core and six part modules\"). The design loop did not record this pass because the design loop's issue list had moved to the verify rework build plan; aj chose this sweep as the route (answer 2A, \"2026-10-21 - Proof check fix answers\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 359,
+      "title": "Step 2c: the delegation, design loop and writing modules, and the end-of-reply split",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-21 - QA passed: restructure step 2\" records aj's reply \"QA passed: restructure step 2\" for #340 and steps #357 to #360. Merged by pull request #372 (merge commit e4a82e6 on origin/main, \"Merge pull request #372: house-rules 2.71.0, hook.py split into the core and six part modules\"). The design loop did not record this pass because the design loop's issue list had moved to the verify rework build plan; aj chose this sweep as the route (answer 2A, \"2026-10-21 - Proof check fix answers\")."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 360,
+      "title": "Step 2d: verify.py's changed lines, version, docs and QA page",
+      "action": "completed",
+      "replaced_by": null,
+      "evidence": "Decisions.md \"2026-10-21 - QA passed: restructure step 2\" records aj's reply \"QA passed: restructure step 2\" for #340 and steps #357 to #360. Merged by pull request #372 (merge commit e4a82e6 on origin/main, \"Merge pull request #372: house-rules 2.71.0, hook.py split into the core and six part modules\"). The design loop did not record this pass because the design loop's issue list had moved to the verify rework build plan; aj chose this sweep as the route (answer 2A, \"2026-10-21 - Proof check fix answers\")."
+    }
+  ],
+  "wrapup": {
+    "summary": "A sweep page closing restructure step 2's 5 issues (#340, #357 to #360) on aj's logged QA pass and pull request #372.",
+    "changing": "Nothing closes until you approve.",
+    "blocking": "Your sweep approval.",
+    "next": "Once you approve, I close the 5 issues, each with a comment quoting its evidence.",
+    "todo": [
+      "Type \"Sweep approved: issues\" in the chat, or add \"keep #N\" for any issue to leave open.",
+      "Send the message."
+    ]
+  }
+}
