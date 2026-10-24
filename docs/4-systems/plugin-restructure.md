@@ -498,3 +498,17 @@ cannot tell "merged" from "never started" (a helper with no commits also matches
 the snapshot then holds nothing. The autosave push still uses `--force`; that is step 7 (#345). *`run.sh`:* with no
 working Python the `settingsgate` event now fails closed (3 lines on stderr, exit 2), as `guard` does, instead of
 doing nothing. Seven checks were added to `checks/safe_git.py` (all prefixed `#349`).
+
+**Built: step 5 (#343).** *Sub-features:* when a `gh issue create` or the GitHub tool's `issue_write` create has
+the words "Part of" and an issue number in its body, the post-tool hook (`_sub_issue_note` in `design_loop.py`) adds a
+reminder to also link the new issue as a sub-issue of the parent with `mcp__github__sub_issue_write` or
+`gh api .../sub_issues`. It is a note, not a refusal, because the link can only be made after the create. A
+sub-feature's QA pass already records only its own issues (#375); a check now pins that. Nothing beyond the reminder
+was built for "finds its parent": the decisions say only that the link is GitHub's sub-issue link. *Decisions-log
+entry:* before, an unchanged log counted every time (#327), so an entry never written was never noticed. Now the first
+approval with no new entry still counts and sets `log_owed` in the stage file; the next approval with the log still
+unchanged is refused ("never written"), and a changed log clears `log_owed`. One older per-feature check needed a log
+write between its two approvals. *Cloud pages:* in a session with `CLAUDE_CODE_REMOTE` set, the end-of-reply page
+check also needs a `https://claude.ai/artifact/...` or `https://claude.ai/code/artifact/...` link; a local `.html`
+alone is blocked with a message naming the Artifact tool's publish step. A local session is unchanged. The page
+builder is untouched. Checks are in `checks/design_loop.py`, prefixed "restructure step 5 (#343)".
