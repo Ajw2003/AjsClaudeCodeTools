@@ -11,13 +11,13 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 
-HOUSE_LABELS = (
-    ("AjsAgent created this", "5b6b7a", "Opened by AJ's agent"),
-    ("in progress", "FBCA04", "AJ's agent is working on it"),
-    ("needs review", "0E8A16", "Waiting on aj"),
-)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from house_rules import settings  # noqa: E402
+
+HOUSE_LABELS = tuple(settings.HOUSE_LABELS)  # the names stay literal: existing labels carry them
 
 REPO_LABELS_FILE_ENV = "HOUSE_RULES_REPO_LABELS_FILE"
 GH_SECONDS = 5
@@ -167,7 +167,7 @@ def main(argv):
     if argv:
         repo = argv[0]
         if not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
-            print("labels: %r is not an owner/repo name, such as Ajw2003/AjsClaudeCodeTools" % repo)
+            print("labels: %r is not an owner/repo name, such as owner/repo" % repo)
             return 2
     else:
         git_dir = _git_dir_of(os.getcwd())

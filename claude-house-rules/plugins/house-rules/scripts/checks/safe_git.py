@@ -135,10 +135,10 @@ BRANCH_CASES = [
     # The default branch refuses; so does a branch I could not read (#291).
     (REPO_THEIRS, "main", "deny", DEFAULT, 'git commit -m "wip"'),
     (REPO_THEIRS, "main", "deny", DEFAULT, "git push origin main"),
-    (REPO_DETACHED, "a detached HEAD", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
-    (REPO_NONE, "a directory that is not a repo", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
+    (REPO_DETACHED, "a detached HEAD", "deny", "git switch -c " + TEST_AGENT_PREFIX + "<topic>", 'git commit -m "wip"'),
+    (REPO_NONE, "a directory that is not a repo", "deny", "git switch -c " + TEST_AGENT_PREFIX + "<topic>", 'git commit -m "wip"'),
     # #291: a commit on a branch the guard can't confirm is mine is refused, naming a new branch.
-    (REPO_THEIRS_FEATURE, "feature/theirs", "deny", "git switch -c AjsAgent/<topic>", 'git commit -m "wip"'),
+    (REPO_THEIRS_FEATURE, "feature/theirs", "deny", "git switch -c " + TEST_AGENT_PREFIX + "<topic>", 'git commit -m "wip"'),
 ]
 
 for project_dir, label, expect, rule, cmd in BRANCH_CASES:
@@ -293,7 +293,7 @@ else:
     print(f"          got: {out!r}")
 
 # Branch ownership follows where the command runs (payload cwd), not CLAUDE_PROJECT_DIR: a
-# subagent's linked worktree on its own AjsAgent/ branch while the main checkout is on main.
+# subagent's linked worktree on its own agent-prefix branch while the main checkout is on main.
 if shutil.which("git"):
     def _own_git(d, *a):
         subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", d] + list(a),
@@ -313,7 +313,7 @@ if shutil.which("git"):
         if cwd:
             pl["cwd"] = cwd
         env = env_in(project)
-        env.pop("HOUSE_RULES_OWNED_BRANCHES", None)
+        env["HOUSE_RULES_OWNED_BRANCHES"] = ""  # no extras (an empty value still counts as set, #341)
         env.update(extra)
         out = run_hook("guard", json.dumps(pl), env=env)[1]
         m = re.search(r'"permissionDecision":"(\w+)"', out)
@@ -321,7 +321,7 @@ if shutil.which("git"):
 
     _own_main = _own_branch_repo("own-main", "main")
     _own_wt = os.path.join(_FIXTURE_ROOT, "own-main-wt")
-    _own_git(_own_main, "worktree", "add", "-q", "-b", "AjsAgent/sub", _own_wt)
+    _own_git(_own_main, "worktree", "add", "-q", "-b", TEST_AGENT_PREFIX + "sub", _own_wt)
     _own_ccr = _own_branch_repo("own-ccr", "ccr-a03de58c-0j19tb")
     _own_foo = _own_branch_repo("own-foo", "foo/x")
     _own_res = {
@@ -945,8 +945,8 @@ _, out, _ = run_hook(
 )
 _ctx = _stop_context(out)
 commit_case(
-    "Stop: the same on the user's main says to branch off to AjsAgent/<topic> first",
-    "not an AjsAgent/ (or claude/) branch" in _ctx and "branch off first" in _ctx and "git switch -c AjsAgent/<topic>" in _ctx,
+    "Stop: the same on the user's main says to branch off to the agent's <prefix>/<topic> first",
+    "not one of your own branches" in _ctx and "branch off first" in _ctx and ("git switch -c " + TEST_AGENT_PREFIX + "<topic>") in _ctx,
     "context: %r" % _ctx[:160],
 )
 
@@ -1052,7 +1052,7 @@ _cc_url = "https://github.com/o/r/pull/7"
 out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nGenerated with [Claude Code](https://claude.ai/code)", None))
 commit_case("creditcheck: a body with a Claude credit gets the warning",
             "added a Claude credit to " + _cc_url in out and "say so in your reply" in out, "stdout: %r" % out[:200])
-out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nOpened by AJ's agent", None))
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\n" + TEST_PR_CREDIT + "", None))
 commit_case("creditcheck: a clean body gets the clean line",
             "read back " + _cc_url + "; no Claude credit on it." in out, "stdout: %r" % out[:200])
 out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: (None, "gh timed out after 10 seconds"))
@@ -1093,57 +1093,57 @@ def _ab_out(d, remote=True, **extra):
 
 
 _ab1 = _ab_out(_ab_repo("claude/foo"))
-_ab2 = _ab_out(_ab_repo("claude/foo", "AjsAgent/foo"))
-_ab3, _ab4 = _ab_out(_ab_repo("AjsAgent/foo")), _ab_out(_ab_repo("main"))
+_ab2 = _ab_out(_ab_repo("claude/foo", TEST_AGENT_PREFIX + "foo"))
+_ab3, _ab4 = _ab_out(_ab_repo(TEST_AGENT_PREFIX + "foo")), _ab_out(_ab_repo("main"))
 _ab5 = _ab_out(_ab_repo("claude/foo"), remote=False)
 _ab6 = _ab_out(_ab_repo("claude/foo"), HOUSE_RULES_AGENT_BRANCH="off")
 _ab7 = _ab_out(tempfile.mkdtemp(prefix="hr-ab-nogit-", dir=_FIXTURE_ROOT))
 commit_case(
-    "agent-branch: claude/foo is told to git switch -c AjsAgent/foo, with aj's standing permission",
-    "git switch -c AjsAgent/foo" in _ab1 and "git push -u origin AjsAgent/foo" in _ab1 and "standing permission" in _ab1,
+    "agent-branch: claude/foo is told to git switch -c <agent prefix>foo, with aj's standing permission",
+    ("git switch -c " + TEST_AGENT_PREFIX + "foo") in _ab1 and ("git push -u origin " + TEST_AGENT_PREFIX + "foo") in _ab1 and "standing permission" in _ab1,
     "out %r" % _ab1[-420:],
 )
 commit_case(
-    "agent-branch: an existing AjsAgent/foo gets git switch AjsAgent/foo, no -c",
-    "git switch AjsAgent/foo" in _ab2 and "switch -c" not in _ab2,
+    "agent-branch: an existing <agent prefix>foo gets git switch <agent prefix>foo, no -c",
+    ("git switch " + TEST_AGENT_PREFIX + "foo") in _ab2 and "switch -c" not in _ab2,
     "out %r" % _ab2[-200:],
 )
 commit_case(
-    "agent-branch: AjsAgent/foo, main, a local session, and the kill switch add no switch text",
+    "agent-branch: <agent prefix>foo, main, a local session, and the kill switch add no switch text",
     all("git switch" not in o for o in (_ab3, _ab4, _ab5, _ab6)),
     "hit idx %s" % [i for i, o in enumerate((_ab3, _ab4, _ab5, _ab6)) if "git switch" in o],
 )
 commit_case(
     "agent-branch: outside a git repo it does not crash and says the branch was not read",
-    "AjsAgent branch check: branch not read" in _ab7 and "git switch" not in _ab7,
+    "Agent branch check: branch not read" in _ab7 and "git switch" not in _ab7,
     "out %r" % _ab7[-200:],
 )
 
 # -- #133: credit aj's agent, never Claude -------------------------------------------------------------
 _att_trailer = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\nEOF\n)\""
 _att_gen = "git commit -m \"feat: x\n\nGenerated with [Claude Code](https://claude.com/claude-code)\""
-_att_ok = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCommitted by AJ's agent\nEOF\n)\""
+_att_ok = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\n" + TEST_COMMIT_CREDIT + "\nEOF\n)\""
 _att_word = "git commit -m \"docs: rename the Claude setting\""
 _oa1, _oa2, _oa3, _oa4 = _iss_guard(_att_trailer), _iss_guard(_att_gen), _iss_guard(_att_ok), _iss_guard(_att_word)
 commit_case(
     "attribution: a commit crediting Claude (co-author trailer or Generated-with line) is refused, naming the replacement",
     _iss_decision(_oa1) == "deny" and _iss_decision(_oa2) == "deny"
-    and "Committed by AJ's agent" in _iss_reason(_oa1) and "no email" in _iss_reason(_oa1),
+    and "" + TEST_COMMIT_CREDIT + "" in _iss_reason(_oa1) and "no email" in _iss_reason(_oa1),
     "out %r | %r" % (_oa1[:140], _oa2[:100]),
 )
-_ota3 = _iss_decision(_oa3) != "deny" or "credit aj's agent" not in _iss_reason(_oa3)
+_ota3 = _iss_decision(_oa3) != "deny" or "credit " + TEST_AGENT_NAME + "" not in _iss_reason(_oa3)
 commit_case(
-    "attribution: crediting aj's agent with no email passes, and a subject that merely mentions Claude passes",
-    "credit aj's agent" not in _oa3 and "credit aj's agent" not in _oa4,
+    "attribution: crediting " + TEST_AGENT_NAME + " with no email passes, and a subject that merely mentions Claude passes",
+    "credit " + TEST_AGENT_NAME + "" not in _oa3 and "credit " + TEST_AGENT_NAME + "" not in _oa4,
     "out %r | %r" % (_oa3[:100], _oa4[:100]),
 )
 _opr1 = _iss_guard('gh pr create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"')
 _opr2 = _iss_guard('gh pr create --title T --body "Refs #5\n\nOpened by AJ\'s agent"')
 _opr3 = _iss_guard('gh pr create --title T --body "Refs #5\n\nhttps://claude.ai/code/session_abc"')
 commit_case(
-    "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting aj's agent passes",
-    _iss_decision(_opr1) == "deny" and "credit aj's agent" in _iss_reason(_opr1)
-    and _iss_decision(_opr3) == "deny" and "credit aj's agent" not in _opr2 and _opr2.strip() == "",
+    "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting " + TEST_AGENT_NAME + " passes",
+    _iss_decision(_opr1) == "deny" and "credit " + TEST_AGENT_NAME + "" in _iss_reason(_opr1)
+    and _iss_decision(_opr3) == "deny" and "credit " + TEST_AGENT_NAME + "" not in _opr2 and _opr2.strip() == "",
     "out %r | %r | %r" % (_opr1[:90], _opr2[:60], _opr3[:90]),
 )
 # #189: every form from the issue's table, the quoted -c ones included, is refused.
@@ -1153,8 +1153,8 @@ _att_forms = [
     "git commit" + _att_body,
     "git -c user.name=x commit" + _att_body,
     "git -c user.name=aj -c user.email=a@b commit" + _att_heredoc,
-    "git -c user.name=\"aj's agent\" commit" + _att_body,
-    "git -c user.name=\"aj's agent\" -c user.email=a@b commit -q" + _att_heredoc,
+    "git -c user.name=\"" + TEST_AGENT_NAME + "\" commit" + _att_body,
+    "git -c user.name=\"" + TEST_AGENT_NAME + "\" -c user.email=a@b commit -q" + _att_heredoc,
     "git -c 'user.name=aj s agent' commit" + _att_body,
 ]
 _att_missed = [f for f in _att_forms if _iss_decision(_iss_guard(f)) != "deny"]
@@ -1167,7 +1167,7 @@ _oc1 = _iss_guard('gh issue comment 5 --body "Co-Authored-By: Claude <x>"')
 _off = _iss_guard(_att_trailer, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
     "attribution: an issue comment crediting Claude is refused, and HOUSE_RULES_ATTRIBUTION=off disables the check",
-    _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
+    _iss_decision(_oc1) == "deny" and "credit " + TEST_AGENT_NAME + "" not in _off,
     "out %r | off %r" % (_oc1[:90], _off[:80]),
 )
 # -- #316: the credit check also covers gh api and curl writes to GitHub ---------------------------------
@@ -1177,8 +1177,8 @@ _a316_bf = os.path.join(_a316_dir, "bad.txt").replace("\\", "/")
 _a316_cf = os.path.join(_a316_dir, "clean.txt").replace("\\", "/")
 _a316_bj = os.path.join(_a316_dir, "bad.json").replace("\\", "/")
 _a316_cj = os.path.join(_a316_dir, "clean.json").replace("\\", "/")
-for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "Opened by AJ's agent"),
-               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "Opened by AJ's agent"}))):
+for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "" + TEST_PR_CREDIT + ""),
+               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "" + TEST_PR_CREDIT + ""}))):
     with open(_p, "w", encoding="utf-8") as _f:
         _f.write(_t)
 _a316_routes = lambda b, fb, fj: [
@@ -1190,7 +1190,7 @@ _a316_routes = lambda b, fb, fj: [
     "curl -X POST https://api.github.com/repos/o/r/pulls -d '{\"body\":\"%s\"}'" % b,
 ]
 _a316_missed = [c for c in _a316_routes(_a316_bad, _a316_bf, _a316_bj) if _iss_decision(_iss_guard(c)) != "deny"]
-_a316_false = [c for c in _a316_routes("Opened by AJ's agent", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
+_a316_false = [c for c in _a316_routes("" + TEST_PR_CREDIT + "", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
 _a316_get = _iss_guard("gh api repos/o/r/pulls/5")
 commit_case(
     "attribution: gh api and curl writes crediting Claude are refused on every route; clean bodies and a plain GET pass",
@@ -1233,15 +1233,15 @@ def _ggd(out):
 
 _gh = "mcp__github__"
 _g1 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)")
-_g2 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nOpened by AJ's agent")
+_g2 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\n" + TEST_PR_CREDIT + "")
 commit_case(
-    "guardgithub: a pull request body crediting Claude is denied; crediting aj's agent is allowed",
+    "guardgithub: a pull request body crediting Claude is denied; crediting " + TEST_AGENT_NAME + " is allowed",
     _ggd(_g1) == "deny" and "pull request or issue text" in _g1 and _ggd(_g2) == "allow",
     "out %r | %r" % (_g1[:120], _g2[:80]),
 )
 _g3 = _gg(_gh + "issue_write", method="create", title="T", body="x\n\nCo-Authored-By: Claude <a@b>")
 _g4 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nClaude-Session: https://x", files=[{"path": "a", "content": "x"}])
-_g5 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nCommitted by AJ's agent",
+_g5 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\n" + TEST_COMMIT_CREDIT + "",
           files=[{"path": "a", "content": "Co-Authored-By: Claude <noreply@anthropic.com>"}])
 commit_case(
     "guardgithub: an issue trailer and a push_files commit message are denied; file content naming the patterns is not scanned",
@@ -1250,11 +1250,11 @@ commit_case(
 )
 _g6 = _gg(_gh + "create_branch", branch="claude/x")
 _g7 = _gg(_gh + "create_branch", branch="AjsAgent/x")
-_g8 = _gg(_gh + "create_pull_request", title="T", head="claude/x", body="Opened by AJ's agent")
-_g9 = _gg(_gh + "push_files", branch="claude/x", message="fix\n\nCommitted by AJ's agent", files=[])
+_g8 = _gg(_gh + "create_pull_request", title="T", head="claude/x", body="" + TEST_PR_CREDIT + "")
+_g9 = _gg(_gh + "push_files", branch="claude/x", message="fix\n\n" + TEST_COMMIT_CREDIT + "", files=[])
 commit_case(
     "guardgithub: a new claude/ branch (create_branch, PR head) is denied naming AjsAgent/; AjsAgent/ and a push to an existing claude/ branch are allowed",
-    _ggd(_g6) == "deny" and "AjsAgent/<topic>" in _g6 and _ggd(_g7) == "allow"
+    _ggd(_g6) == "deny" and "" + TEST_AGENT_PREFIX + "<topic>" in _g6 and _ggd(_g7) == "allow"
     and _ggd(_g8) == "deny" and _ggd(_g9) == "allow",
     "out %r | %r | %r | %r" % (_g6[:60], _g7[:40], _g8[:60], _g9[:40]),
 )
@@ -1266,7 +1266,7 @@ commit_case(
     _ggd(_g10) == "deny" and _ggd(_g11) == "deny" and _ggd(_g12) == "allow",
     "out %r | %r | off %r" % (_g10[:60], _g11[:60], _g12[:60]),
 )
-_g13 = _gg(_gh + "push_files", branch="main", message="fix\n\nCommitted by AJ's agent", files=[])
+_g13 = _gg(_gh + "push_files", branch="main", message="fix\n\n" + TEST_COMMIT_CREDIT + "", files=[])
 _g14 = _gg(_gh + "create_or_update_file", branch="master", message="fix", path="a", content="x")
 _g15 = _gg(_gh + "create_or_update_file", branch="AjsAgent/x", message="fix", path="a", content="x")
 commit_case(
@@ -1289,7 +1289,7 @@ commit_case(
 _opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
 commit_case(
     "attribution: the same refusal applies through the PowerShell tool",
-    _iss_decision(_opw) == "deny" and "credit aj's agent" in _iss_reason(_opw),
+    _iss_decision(_opw) == "deny" and "credit " + TEST_AGENT_NAME + "" in _iss_reason(_opw),
     "out %r" % _opw[:140],
 )
 
@@ -1692,8 +1692,8 @@ _nb_cases.append(("Write over a tracked file is refused, naming the in-place fix
                   '"permissionDecision":"deny"' in _o and "edit it in place" in _o))
 _, _o, _ = run_hook("guardgithub", json.dumps({"session_id": "v293", "tool_name": "mcp__github__create_branch",
                                                 "tool_input": {"branch": "claude/topic"}}), env=_e293)
-_nb_cases.append(("enforced: a claude/ branch on GitHub is refused, naming AjsAgent/<topic> (#293)",
-                  '"permissionDecision":"deny"' in _o and "AjsAgent/<topic>" in _o))
+_nb_cases.append(("enforced: a claude/ branch on GitHub is refused, naming " + TEST_AGENT_PREFIX + "<topic> (#293)",
+                  '"permissionDecision":"deny"' in _o and "" + TEST_AGENT_PREFIX + "<topic>" in _o))
 _, _o, _ = run_hook("guardgithub", json.dumps({"session_id": "v293", "tool_name": "mcp__github__issue_write",
                                                 "tool_input": {"method": "create", "title": "t", "body": "Just a body."}}),
                     env=_e293)

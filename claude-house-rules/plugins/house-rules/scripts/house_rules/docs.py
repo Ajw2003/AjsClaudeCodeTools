@@ -55,7 +55,7 @@ OLD_DOCS_TIER_FILES = [
     "docs/Decisions.md",
 ]
 OLD_DOCS_TIER4_DIR = "docs/systems"
-DEFAULT_GITHUB_OWNER = "Ajw2003"
+DEFAULT_GITHUB_OWNER = settings.DEFAULT_GITHUB_OWNER
 
 
 def _tier4_present(root, tier4_dir=DOCS_TIER4_DIR):

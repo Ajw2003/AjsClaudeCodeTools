@@ -455,3 +455,27 @@ Built in order: step 3 #341 (settings and identity), step 4 #349 (safe git), ste
 step 6 #344 (writing, evidence and rewrite rules), step 7 #345 (helper agents). One QA page and one release,
 #382, version 2.74.0. Steps 4 and 7 read the agent name and branch prefix from step 3's settings.
 
+
+**Built: step 3 (#341).** Two settings, `agent_name` and `extra_owned_prefixes`, live in a new leaf module,
+`scripts/house_rules/settings.py`, with a command-line front end, `scripts/settings.py` (`set`, `get`, `show`;
+it prints what it saved and where). *Settings file:* `<config dir>/house-rules/settings.json`, where the config
+dir is `$CLAUDE_CONFIG_DIR` or `~/.claude`, the same place `core.py` already reads per-user Claude state from, so
+it sits outside every repo and follows the machine (`HOUSE_RULES_SETTINGS_FILE` moves it; the checks use that).
+*Read order,* first value wins: the environment (`HOUSE_RULES_AGENT_NAME`, `HOUSE_RULES_OWNED_BRANCHES`), then the
+settings file, then `/plugin configure`, which is skipped because `plugin.json` has no `userConfig`. An empty
+`extra_owned_prefixes` counts as set; an empty `agent_name` does not. No setting has an assumed default. *The gate:*
+while a setting is unset the guard (for Bash) and a new no-matcher `settingsgate` hook (every other tool) refuse
+the call, naming each missing setting and its `settings.py set` command; the one thing let through is a lone
+`python <plugin>/scripts/settings.py set|get|show` (no `;`, `&`, `|`, `$`, backticks or redirects outside quotes,
+and only this plugin's own script). At session start, `profile` adds a note asking the model to ask the user, with
+the suggestion `<GitHub login lowercased>sAgent` from `gh api user`, else the git remote's owner, saying which.
+*Identity strings now from settings:* the credit lines (`Committed by <agent_name>`, `Opened by <agent_name>`),
+the agent branch prefix `<agent_name>/` (the cloud `claude/` move, the branch advice, the refusal texts), the
+owned-branch test (own prefix, the extras, and cloud-session `ccr-`), the commit author name, and the git
+identity fix text (its email is read from `git config user.email`, shown as `<your own git email>` when that is
+Claude's). *Left literal, in `settings.py` only:* the GitHub label names (`AjsAgent created this`,
+`AjsAgent completed this`, `Claude created this`) and their descriptions, because existing labels carry them and
+renaming would orphan every issue that has one; the default repo owner and the plugin.json address. The rules
+text in `rules/` and the docs still name "aj's agent" and `AjsAgent/`; they are prose, not code, and are not
+part of this step. The checks run with `HOUSE_RULES_AGENT_NAME=testsAgent` (set in `checks/common.py`) and assert
+values derived from it.

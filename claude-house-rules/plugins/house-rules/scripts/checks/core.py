@@ -1224,12 +1224,13 @@ _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # exits at once unless the call is a merge.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
+# 13 since settingsgate (#341): one process on every tool call, the cost of refusing every tool while a setting is unset.
 _non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
-    not any("issue" in c for c in _tool_cmds) and _count_entries == 12 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 13 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
     "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
 )
 
@@ -2484,6 +2485,172 @@ else:
 if os.path.isfile(vc_marker_path(case)):
     os.remove(vc_marker_path(case))
 shutil.rmtree(_vc_fake_dir, ignore_errors=True)
+
+
+# -- #341: settings and identity. Every setting blocks until it is set; identity strings come from settings. -----
+import importlib.util as _st_util
+_st_spec = _st_util.spec_from_file_location("hr_settings_mod", os.path.join(HERE, "house_rules", "settings.py"))
+_st = _st_util.module_from_spec(_st_spec)
+_st_spec.loader.exec_module(_st)
+_ST_SCRIPT = os.path.join(HERE, "settings.py")
+_ST_DIR = tempfile.mkdtemp(prefix="hr-settings-", dir=_FIXTURE_ROOT)
+
+
+def _st_env(file_name="settings.json", **extra):
+    """The suite's environment with both settings variables removed, so nothing is set unless a case sets it."""
+    e = dict(os.environ)
+    e.pop("HOUSE_RULES_AGENT_NAME", None)
+    e.pop("HOUSE_RULES_OWNED_BRANCHES", None)
+    e["HOUSE_RULES_SETTINGS_FILE"] = os.path.join(_ST_DIR, file_name)
+    e.update(extra)
+    return e
+
+
+def _st_call(event, tool, tool_input, env):
+    pl = json.dumps({"session_id": "verify", "tool_name": tool, "tool_input": tool_input})
+    return run_hook(event, pl, env=env)[1]
+
+
+def _st_cli(args, env):
+    p = subprocess.run([sys.executable, _ST_SCRIPT] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    return p.returncode, p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
+
+
+def _st_py(code, env):
+    return subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, %r); from house_rules import settings; %s" % (HERE, code)],
+                          stdout=subprocess.PIPE, env=env).stdout.decode().strip()
+
+
+# (a) an unset setting refuses a non-settings tool, naming the setting and the command
+_sa = [_st_call("guard", "Bash", {"command": "echo hi"}, _st_env("a.json")),
+       _st_call("settingsgate", "Write", {"file_path": "/x/a.txt", "content": "x"}, _st_env("a.json")),
+       _st_call("settingsgate", "mcp__github__issue_write", {"method": "create"}, _st_env("a.json")),
+       _st_call("settingsgate", "Read", {"file_path": "/x/a.txt"}, _st_env("a.json"))]
+commit_case(
+    "settings: an unset setting refuses a non-settings tool (Bash, Write, a GitHub tool, Read), naming the setting and the command (#341)",
+    all('"permissionDecision":"deny"' in o and "agent_name" in o and "extra_owned_prefixes" in o
+        and "settings.py set agent_name" in o and "settings.py set extra_owned_prefixes" in o for o in _sa),
+    "out %r" % [o[:90] for o in _sa],
+)
+_sa_set = _st_env("a.json", HOUSE_RULES_AGENT_NAME=TEST_AGENT_NAME, HOUSE_RULES_OWNED_BRANCHES="")
+commit_case(
+    "settings: with both settings set (an empty extra_owned_prefixes counts as set) the settings gate lets every tool through (#341)",
+    "settings not set" not in _st_call("guard", "Bash", {"command": "echo hi"}, _sa_set)
+    and _st_call("settingsgate", "Read", {"file_path": "/x"}, _sa_set) == "",
+    "set env: agent_name + empty extra_owned_prefixes",
+)
+
+# (b) the one allowed settings command passes the guard while unset; chained and look-alike commands do not
+_sb_ok = [_st_call("guard", "Bash", {"command": c}, _st_env("b.json")) for c in (
+    "python3 %s set agent_name %s" % (_ST_SCRIPT, TEST_AGENT_NAME),
+    "python3 \"%s\" set extra_owned_prefixes \"AjsAgent/,claude/\"" % _ST_SCRIPT,
+    "python3 %s set extra_owned_prefixes \"\"" % _ST_SCRIPT,
+    "python3 %s show" % _ST_SCRIPT)]
+_sb_ok += [_st_call("settingsgate", "Bash", {"command": "python3 %s get agent_name" % _ST_SCRIPT}, _st_env("b.json"))]
+_sb_bad = [_st_call("guard", "Bash", {"command": c}, _st_env("b.json")) for c in (
+    "python3 %s set agent_name x; echo hi" % _ST_SCRIPT,
+    "python3 %s set agent_name $(whoami)" % _ST_SCRIPT,
+    "python3 %s set agent_name x && echo hi" % _ST_SCRIPT,
+    "python3 /tmp/elsewhere/settings.py set agent_name x",
+    "python3 %s set agent_name x > /tmp/x" % _ST_SCRIPT)]
+commit_case(
+    "settings: the one settings command passes the guard and the settings gate while unset; chained, substituted and look-alike commands do not (#341)",
+    all("settings not set" not in o for o in _sb_ok) and all("settings not set" in o for o in _sb_bad),
+    "ok %r | bad %r" % ([o[:60] for o in _sb_ok], [o[:40] for o in _sb_bad]),
+)
+
+# (c) the environment variable is read before the settings file; the file is read when the variable is absent
+_sc_file = os.path.join(_ST_DIR, "c.json")
+_sc_env = _st_env("c.json")
+_sc_set = _st_cli(["set", "agent_name", "fileAgent"], _sc_env)
+_sc_get_file = _st_cli(["get", "agent_name"], _sc_env)
+_sc_get_env = _st_cli(["get", "agent_name"], dict(_sc_env, HOUSE_RULES_AGENT_NAME="envAgent"))
+_sc_none = _st_cli(["set", "extra_owned_prefixes", ""], _sc_env)
+_sc_show = _st_cli(["show"], _sc_env)
+_sc_bad = _st_cli(["set", "agent_name", "bad name/x"], _sc_env)
+_sc_missing_after = _st_py("print(settings.missing())", _sc_env)
+commit_case(
+    "settings: the environment variable is read before the settings file; set writes the file and says where; an empty extra_owned_prefixes counts as set (#341)",
+    _sc_set[0] == 0 and _sc_file in _sc_set[1] and _sc_get_file[1].strip() == "fileAgent"
+    and _sc_get_env[1].strip() == "envAgent" and _sc_none[0] == 0 and _sc_missing_after == "[]"
+    and "fileAgent" in _sc_show[1] and _sc_file in _sc_show[1] and _sc_bad[0] == 1 and "not saved" in _sc_bad[2],
+    "set %r | file %r | env %r | missing %r | bad %r" % (_sc_set[1][:80], _sc_get_file[1], _sc_get_env[1], _sc_missing_after, _sc_bad[2][:60]),
+)
+
+# the settings file sits outside the repo: under the Claude config dir, which follows the machine
+_sc_home = _st_env()
+_sc_home.pop("HOUSE_RULES_SETTINGS_FILE")
+_sc_home["CLAUDE_CONFIG_DIR"] = os.path.join(_ST_DIR, "cfg")
+_sc_loc = _st_py("print(settings.settings_path())", _sc_home)
+commit_case(
+    "settings: the settings file defaults to <config dir>/house-rules/settings.json, outside any repo (#341)",
+    _sc_loc == os.path.join(_ST_DIR, "cfg", "house-rules", "settings.json") and not _sc_loc.startswith(ROOT),
+    "path %r" % _sc_loc,
+)
+
+# the derived identity strings (this process has the suite's test settings)
+commit_case(
+    "settings: the credit lines, branch prefix and owned prefixes derive from agent_name and the extras (#341)",
+    _st.commit_credit() == "Committed by " + TEST_AGENT_NAME and _st.pr_credit() == "Opened by " + TEST_AGENT_NAME
+    and _st.agent_prefix() == TEST_AGENT_PREFIX
+    and _st.owned_prefixes() == (TEST_AGENT_PREFIX, "AjsAgent/", "claude/", "ccr-")
+    and _st.identity_fix().startswith("git config user.name \"%s\"" % TEST_AGENT_NAME),
+    "owned %r" % (_st.owned_prefixes(),),
+)
+
+# (d) no identity string is left in shipped code outside the defaults file
+_sd_rx = re.compile(r"AjsAgent|aj'?s agent|ajw2003", re.IGNORECASE)
+_sd_files = [os.path.join(HERE, n) for n in os.listdir(HERE) if n.endswith((".py", ".sh"))]
+_sd_files += [os.path.join(HERE, "house_rules", n) for n in os.listdir(os.path.join(HERE, "house_rules")) if n.endswith(".py")]
+_sd_files.append(HOOKS_JSON)
+_sd_defaults = os.path.join(HERE, "house_rules", "settings.py")
+_sd_hits = []
+for _f in _sd_files:
+    if _f == _sd_defaults:
+        continue
+    for _n, _line in enumerate(read(_f).splitlines(), 1):
+        if _sd_rx.search(_line):
+            _sd_hits.append("%s:%d" % (os.path.relpath(_f, HERE), _n))
+commit_case(
+    "settings: no identity string (AjsAgent, aj's agent, ajw2003) is left in the shipped scripts outside house_rules/settings.py (#341)",
+    bool(_sd_files) and not _sd_hits and _sd_rx.search(read(_sd_defaults)) is not None,
+    "scanned %d files (scripts/, scripts/house_rules/, hooks.json; not scripts/checks/); left: %s" % (len(_sd_files), _sd_hits[:8]),
+)
+
+# (e) the session-start note suggests <login lowercased>sAgent when unset, and is absent when set
+_se_bin = tempfile.mkdtemp(prefix="hr-gh-", dir=_FIXTURE_ROOT)
+_se_gh = os.path.join(_se_bin, "gh")
+with open(_se_gh, "w", encoding="utf-8") as _f:
+    _f.write("#!/bin/sh\nif [ \"$1\" = api ] && [ \"$2\" = user ]; then echo MixedCaseUser; exit 0; fi\nexit 1\n")
+os.chmod(_se_gh, 0o755)
+_se_path = _se_bin + os.pathsep + os.environ.get("PATH", "")
+_se_unset = run_hook("profile", "", env=_st_env("e.json", PATH=_se_path))[1]
+_se_set = run_hook("profile", "", env=_st_env("e.json", PATH=_se_path, HOUSE_RULES_AGENT_NAME=TEST_AGENT_NAME, HOUSE_RULES_OWNED_BRANCHES=""))[1]
+commit_case(
+    "settings: the session-start note suggests <GitHub login lowercased>sAgent, naming gh as the source, when unset; absent when set (#341)",
+    "mixedcaseusersAgent" in _se_unset and "gh api user" in _se_unset and "only once the user confirms" in _se_unset
+    and "settings are not set" in _se_unset and "settings are not set" not in _se_set and "mixedcaseusersAgent" not in _se_set,
+    "unset tail %r | set-has-note %s" % (_se_unset[-300:], "settings are not set" in _se_set),
+)
+_se_real = _st.subprocess.run
+
+
+def _se_fake(cmd, **kw):
+    if cmd[0] == "gh":
+        raise FileNotFoundError("gh")
+    return subprocess.CompletedProcess(cmd, 0, stdout="git@github.com:SomeOwner/repo.git\n", stderr="")
+
+
+_st.subprocess.run = _se_fake
+try:
+    _se_fb = _st.suggestion()
+finally:
+    _st.subprocess.run = _se_real
+commit_case(
+    "settings: when gh fails the suggestion falls back to the git remote's owner and says so (#341)",
+    _se_fb[0] == "someownersAgent" and "git remote" in _se_fb[1],
+    "suggestion %r" % (_se_fb,),
+)
 
 
 finish()
