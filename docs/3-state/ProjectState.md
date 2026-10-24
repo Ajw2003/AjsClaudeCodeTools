@@ -233,6 +233,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-24: aj approved the step 2 sweep; #340 and #357 to #360 are closed. Their 5 rows left the sweep list after the closes, so the after-close check now reads the GitHub tool's replies live. The merge stamp is not yet seen live. 26 old sweep rows from 2026-10-21 remain in the stage file.
 
+2026-10-24: restructure steps 3 to 7 (#381) are in Build. Step 3 (#341, settings and identity) is built: `scripts/settings.py` stores `agent_name` and `extra_owned_prefixes` (environment variables first, then `<config dir>/house-rules/settings.json`), and every tool is refused until both are set. `verify.py` 934 PASS. The three GitHub label names stay literal for now. Step 4 (#349, safe git) is being built. Cloud setup steps: `docs/cloud-session-setup.md`.
+
 2026-10-21: verify rework step 2 (#370) is built on branch `AjsAgent/issue-370-split`, not yet merged or QA'd. `verify.py` is now a runner (`--parts`, `--changed`, `--serial`) over one test file per part in `scripts/checks/`; a full run is 913 checks in 34.5 and 36.0 seconds (4 cores), `--serial` 132.1, `--parts design_loop` 29.9; the sorted list of check titles is identical to the single-file run's. 32 checks sit in a different part than the #369 list gave them, to keep order-dependent groups whole. A pull request for it needs a plugin version bump first (the version-bump check fails without one) and the hard-coded `2.71.0` in `checks/design_loop.py` changed with it. Details: `docs/4-systems/verify-suites.md`, "The split layout (#370)". Next is step 3 (#371), the run-twice rule text.
 
 ## 2. Six-tier docs convention — mechanism done, this repo's adoption just started
