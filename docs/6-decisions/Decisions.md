@@ -7,6 +7,17 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-24 - QA passed: proof check fix
+
+**Context.** QA page `docs/plans/2026-10-21-proof-check-fix-qa.html` for #367 (#374 unwrap the GitHub tool's
+replies, #375 one issue list per feature, #376 version 2.73.0).
+
+**Decision.** aj's reply was "QA passed: proof check fix merge and ill test in a new session, you keep working".
+2.73.0 ships to `main` by pull request; aj tests the live close in a new session, because this session loaded
+2.72.0, which does not have the fix. Work continues on restructure steps 3 to 7.
+
+**Status.** Standing.
+
 ## 2026-10-21 - Build plan approved: proof check fix
 
 **Context.** Build plan `docs/plans/2026-10-21-proof-check-fix-plan.html` for #367.
