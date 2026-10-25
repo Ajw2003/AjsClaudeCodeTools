@@ -14,18 +14,27 @@ these steps once in each Claude account's cloud environments.
 
 ## Steps (once per account and environment)
 
-1. In the Claude app, open a cloud session in that account.
-2. Open the cloud environment menu in the session's title bar, then choose **Edit**.
-3. In the environment variables box, paste these two lines, with the agent name changed for this account:
+These steps come from Claude Code's cloud environments page
+(https://code.claude.com/docs/en/cloud-environments.md, "Set environment variables"), checked 2026-10-25. The
+page gives them for the browser and the desktop app. The mobile app's page has no steps for environment
+variables, so on a phone, open claude.ai/code in the phone's web browser instead of the app.
+
+1. Go to claude.ai/code in a browser and start a new session.
+2. Under the message box, select the first control to open the environment selector.
+3. Under **Cloud**, find the environment, select its settings icon, then select **Environment variables**.
+4. Paste these two lines, one per line:
 
    ```
    HOUSE_RULES_AGENT_NAME=ajw2003sAgent
    HOUSE_RULES_OWNED_BRANCHES=AjsAgent/,claude/
    ```
 
-4. Save. The next new session picks the values up; a session that is already open does not.
-5. To check, start a new session and ask the agent to run
+5. Select **Save changes**. The next new session picks the values up; a session already open does not.
+6. To check, start a new session and ask the agent to run
    `python3 <plugin>/scripts/settings.py show`. It should list both values as coming from the environment.
+
+In a session that is already running, the same settings open from the caret after the session title, then
+**Edit cloud environment**.
 
 ## Repeating it across Claude accounts
 
@@ -37,12 +46,11 @@ HOUSE_RULES_AGENT_NAME=ajw2003sAgent
 HOUSE_RULES_OWNED_BRANCHES=AjsAgent/,claude/
 ```
 
-Each Claude account has its own cloud environments, so repeat steps 1 to 4 in each one. A tick list:
+Each Claude account has its own cloud environments, so repeat steps 1 to 5 in each one. A tick list:
 
 | Claude account | Environment | Done |
 |---|---|---|
 | | | |
 
-Not yet tested: step 5's command exists only once step 3 of the restructure (#341) ships in 2.74.0, and
-the menu wording in steps 2 and 3 is taken from Claude Code's own environment help on 2026-10-24, not
-checked in each app.
+Not yet tested: step 6's command exists only once 2.74.0 ships, and the docs don't say whether the Claude
+mobile app itself can edit environment variables, so that is not confirmed either way.
