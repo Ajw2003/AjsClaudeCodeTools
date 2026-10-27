@@ -225,7 +225,7 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-21: house-rules 2.72.0 is on `main` (pull request #373; GitHub's `verify` check took 49 seconds). The close guard refused to close #371, because the merge was not stamped on the closable record: the merge-proof check doesn't read the GitHub tool's result, which is #367. #368 to #371 close once #367 is fixed.
 
-2026-10-27, plugin 2.73.3: `docref.py check` passes on `main` again. Its own test file, `scripts/checks/docs.py`, opts out with a `docref: skip-file` line, and the check names every skipped file. Branch `AjsAgent/docref-skip-fixtures`; merges after pull request #402 (2.73.2).
+2026-10-27, plugin 2.73.3: `docref.py check` passes on `main` again. Its own test file, `scripts/checks/docs.py`, opts out with a `docref: skip-file` line, and the check names every skipped file. The same patch removes the three published page links on `main` (in `docs/plans/2026-10-19-restructure-step-1-qa.html`, its `.page.json` and `docs/plans/new-item-visual-qa.html`), replacing each with the repo path of the page it pointed at. Branch `AjsAgent/docref-skip-fixtures`; merges after pull request #402 (2.73.2).
 
 2026-10-27, plugin 2.73.1: the design-loop lock now finds the repo when aj's message arrives from the folder above it (a cloud session's folder of clones), and says so when it can't; before, both approvals for #389 (QA pages must prove each change with evidence for its type) were lost in silence. Branch `AjsAgent/loop-missed-approval`, pull request into `main`. #389's own build waits on this fix and aj resending its two approvals.
 
