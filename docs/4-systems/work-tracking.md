@@ -27,9 +27,10 @@ which the container sets to `1` in a project thread, and does nothing anywhere e
 
 A claude.ai session page lives at `https://claude.ai/code/session_<id>`. The ids the tools hand back
 start with `cse_` instead. Swapping the `cse_` prefix for `session_` gave a working link on two
-sessions: #383's Remote Control session (`cse_01PsKYQzaq5dxPrns28sUQMS`, opened by aj on 2026-10-26),
-and this feature's own design thread, whose `CLAUDE_CODE_REMOTE_SESSION_ID` is
-`cse_018ddrfbUqBBFUVGmxxEzptr` and whose commit trailer names `session_018ddrfbUqBBFUVGmxxEzptr`.
+sessions: #383's Remote Control session (opened by aj on 2026-10-26),
+and this feature's own design thread, whose `CLAUDE_CODE_REMOTE_SESSION_ID` and transcript page
+matched the same way. Session ids are not recorded here: aj's rule is that no session or artifact link
+reaches git (2026-10-27).
 The swap is observed, not documented, so every message that carries a link also carries the raw id.
 
 ## How it works

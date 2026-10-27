@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- house-rules make_page 2.73.0 -->
+<!-- house-rules make_page 2.73.2 -->
 <meta charset="utf-8">
 <title>Background Work Tracking</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Work tracking answers",
   "reply": "",
   "short": {
-    "lead": "When a project thread hands work to another session, you lose sight of it. Issue #383, \"Give aj the transcript link whenever a project thread hands work to a Remote Control session\", fixes one case of that. This proposal covers the whole goal: every thread shows you three layers, and none of them needs you to ask. The three layers are what the thread needs from you (its checklist and replies already show this), a link to each session doing the work, and the commands each of those sessions ran. Two things already exist. The subagent audit hook reads a helper's transcript, but only the agent sees the result. The opt-in subagent ledger (HOUSE_RULES_SUBAGENT_LEDGER=on) writes a helper's commands into docs/sessions/, but it is off by default and never reaches you. This proposal reuses both rather than building new ones. One thing is now checked: swapping a cse_ id for a session_ link has worked on two sessions. This thread's id is cse_018ddrfbUqBBFUVGmxxEzptr, and its transcript page is claude.ai/code/session_018ddrfbUqBBFUVGmxxEzptr.",
+    "lead": "When a project thread hands work to another session, you lose sight of it. Issue #383, \"Give aj the transcript link whenever a project thread hands work to a Remote Control session\", fixes one case of that. This proposal covers the whole goal: every thread shows you three layers, and none of them needs you to ask. The three layers are what the thread needs from you (its checklist and replies already show this), a link to each session doing the work, and the commands each of those sessions ran. Two things already exist. The subagent audit hook reads a helper's transcript, but only the agent sees the result. The opt-in subagent ledger (HOUSE_RULES_SUBAGENT_LEDGER=on) writes a helper's commands into docs/sessions/, but it is off by default and never reaches you. This proposal reuses both rather than building new ones. One thing is now checked: swapping a cse_ id for a session_ link has worked on two sessions. This thread's own id and transcript page matched the same way.",
     "hint": "Tap a row to see what each layer shows and where it comes from.",
     "key": [
       [

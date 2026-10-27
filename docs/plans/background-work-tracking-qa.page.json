@@ -20,7 +20,7 @@
         "Thread",
         "The thread's own transcript link (#400)",
         "",
-        "Five new verify.py cases pass. I also ran the session-start hook with this thread's real environment: it produced the link to session_018ddrfbUqBBFUVGmxxEzptr, which is this thread's transcript, with the raw id cse_018ddrfbUqBBFUVGmxxEzptr beside it.",
+        "Five new verify.py cases pass. I also ran the session-start hook with this thread's real environment: it produced the link to this thread's own transcript, with the raw id beside it.",
         "Nothing from you."
       ],
       [

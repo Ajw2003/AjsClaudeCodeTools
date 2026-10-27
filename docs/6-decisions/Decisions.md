@@ -46,7 +46,7 @@ trails) plus a Stop check for links owed. Rejected: 1B (#383 alone) and 1C (a li
 command, which would put a file write on the guard's per-command path). Choice 2A: the links are pinned
 at the top of the thread's checklist and posted once in the reply that starts the work. Rejected: 2B (a
 separate reply per link, one notification each). The `cse_` to `session_` link swap was seen working on
-two sessions (#383's and this thread's, `cse_018ddrfbUqBBFUVGmxxEzptr`).
+two sessions (#383's and this thread's; the id is redacted, per aj's 2026-10-27 rule that no session or artifact link reaches git).
 
 **Status.** Standing.
 
