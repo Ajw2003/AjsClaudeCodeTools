@@ -20,8 +20,7 @@ on 2026-10-27 as **"Design approved: changelog page rule 1A 2A 3A"**:
 
 ## Next steps, in order
 
-1. **Get the build plan approved.** Show aj `docs/plans/changelog-rule/build-plan.html` (published at
-   https://claude.ai/artifact/HkCZV8e1ZLofXrAqRTGbg4) and wait for "Build plan approved: changelog page rule".
+1. **Get the build plan approved.** Show aj `docs/plans/changelog-rule/build-plan.html` and wait for "Build plan approved: changelog page rule".
    This session's design-loop stage won't carry over, so if the hooks ask for it, aj has to repeat the design
    approval line above first.
 2. **#385, the template.** Add `templates/changelog.page.json` to the plugin. Copy it from PlunderSpell's
@@ -45,8 +44,7 @@ on 2026-10-27 as **"Design approved: changelog page rule 1A 2A 3A"**:
 
 - Issues: #384 (parent), with #385, #386, #387 and #388 as its sub-issues. All are labelled
   `AjsAgent created this` and `in progress`.
-- Design page: `docs/plans/changelog-rule/changelog-rule.html` (https://claude.ai/artifact/PUnxthJ9ViwaykT5UXxt1M).
+- Design page: `docs/plans/changelog-rule/changelog-rule.html`.
 - Build plan page: `docs/plans/changelog-rule/build-plan.html`.
 - Systems doc (planned mechanism): `docs/4-systems/changelog.md`.
-- The page it comes from: PlunderSpell's roadmap, `docs/roadmap-visual/roadmap.html`
-  (https://claude.ai/artifact/6LzKZXSuHpiVjtTnkA8E5s).
+- The page it comes from: PlunderSpell's roadmap, `docs/roadmap-visual/roadmap.html`.
