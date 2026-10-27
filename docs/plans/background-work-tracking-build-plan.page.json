@@ -3,7 +3,7 @@
   "eyebrow": "Build plan · design approved 2026-10-27 as \"background work tracking 1A 2A\"",
   "approval": "Build plan approved: background work tracking",
   "short": {
-    "lead": "You approved all three layers (choice 1A) with the links pinned in the checklist header (choice 2A). The work is filed as the parent issue \"Background work tracking: every layer of delegated work is one tap away\" (#396), with five steps under it. The Remote Control issue (#383) is the first step, rewritten to match the design. The build reuses two things the plugin already has: the audit hooks that find a helper's transcript, and the renderer behind the session ledger. One change from the proposal page: the helper work trail is written by the audit hooks, not by the hook that runs when a helper stops. That hook's output only reaches your screen, so it could never tell the thread where the file is. The systems doc, docs/4-systems/work-tracking.md, records the reason.",
+    "lead": "You approved all three layers (choice 1A) with the links pinned in the checklist header (choice 2A). The work is filed as the parent issue \"Background work tracking: every layer of delegated work is one tap away\" (#396), with five steps under it. The Remote Control issue (#383) is the first step, rewritten to match the design. The build reuses two things the plugin already has: the audit hooks, which find a helper's transcript, and the renderer behind the session ledger. One change from the proposal page: the helper work trail is written by the audit hooks, not by the hook that runs when a helper stops. That hook's output only reaches your screen, so it could never tell the thread where the file is. The systems doc, docs/4-systems/work-tracking.md, records the reason.",
     "hint": "Tap a step to see what it builds and how it is tested.",
     "key": [
       [
@@ -21,7 +21,7 @@
         "PC link",
         "#383: Remote Control transcript link",
         "",
-        "A new hook runs after start_remote_control. When the session started, it tells the thread to read the session id and to post and attach \"Transcript of the session on your PC\", with the raw id beside it. Three tests: started, asked, and outside a project thread.",
+        "A new hook runs after the start_remote_control tool. When the session has started, it tells the thread to read the session id, then post and attach a link titled \"Transcript of the session on your PC\", with the raw id beside it. Three tests: the session started, the start is still waiting for your approval, and a session outside a project thread.",
         "Nothing from you."
       ],
       [
@@ -29,7 +29,7 @@
         "Thread",
         "#400: the thread's own transcript link",
         "",
-        "The session-start hook builds the thread's link from CLAUDE_CODE_REMOTE_SESSION_ID and tells the thread to open every checklist header with it. Three tests: a good id, no project thread, and a malformed id.",
+        "The session-start hook builds the thread's link from CLAUDE_CODE_REMOTE_SESSION_ID and tells the thread to open every checklist header with it. Three tests: a valid id, no project thread, and a malformed id.",
         "Nothing from you."
       ],
       [
@@ -45,7 +45,7 @@
         "Check",
         "#398: the check for links owed",
         "",
-        "The end-of-turn hook blocks once when a link from steps 1 to 3 was never posted, and names it. Tests cover a missing link, a posted link, and the retry.",
+        "The end-of-turn hook blocks once when a link from the first three steps (the Remote Control transcript link, the thread's own transcript link and the helper work trails) was never posted, and names it. Tests cover a missing link, a posted link, and the retry.",
         "Nothing from you."
       ],
       [
@@ -61,8 +61,8 @@
         "Approve",
         "You approve this plan",
         "you",
-        "Your answer to the choice below. Once you send it, the Remote Control link is built first.",
-        "Reply \"Build plan approved: background work tracking\" with your choice letter, for example 1A."
+        "Your answer to the shipping choice below. Once you send it, the Remote Control transcript link (#383) is built first.",
+        "Reply \"Build plan approved: background work tracking\" with your answer to the shipping choice, for example 1A (choice 1, option A)."
       ]
     ]
   },
@@ -70,7 +70,7 @@
     [
       "new",
       "rclink hook (scripts/house_rules/delegation.py, hooks/hooks.json)",
-      "The Remote Control link. Runs after start_remote_control in a project thread.",
+      "The Remote Control transcript link. Runs after the start_remote_control tool in a project thread.",
       [
         "Nothing runs.",
         "The thread is told to post and attach the transcript link."
@@ -140,13 +140,13 @@
     ]
   ],
   "wrapup": {
-    "summary": "Five steps under the parent issue, built in order, each with its own tests, ending in one QA page.",
-    "changing": "One new hook and three changed hooks in the house-rules plugin, plus docs and version 2.74.0.",
+    "summary": "Five steps under the parent issue (#396, Background work tracking), built in order, each with its own tests.",
+    "changing": "One new hook (rclink) and three changed hooks (the session-start inject hook, the audit hooks, and the end-of-turn handover hook) in the house-rules plugin, plus docs and version 2.74.0.",
     "blocking": "Your answer to the shipping choice above.",
-    "next": "A helper agent builds the Remote Control link (#383) first on the claude/project-thread-42w8p3 branch, then the other four steps follow in order.",
+    "next": "Once you approve, a helper agent builds the Remote Control transcript link (#383) first on the claude/project-thread-42w8p3 branch. The other four steps (#400, #397, #398, #399) follow in order.",
     "todo": [
       "Pick your answer under Choices.",
-      "Tap <b>Copy my reply</b> and send it, or tell me what to change."
+      "Tap <b>Copy my reply</b> and send it, or tell me which part of the plan to change."
     ]
   }
 }
