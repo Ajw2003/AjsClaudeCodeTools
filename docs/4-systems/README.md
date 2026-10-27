@@ -14,6 +14,7 @@ works, invariants, and traps that have already cost time.
 | [label-setup.md](label-setup.md) | Making sure a repo has the three house labels before the plugin depends on them (planned) |
 | [clear-writing.md](clear-writing.md) | Making what aj reads proper, human and explicit: the rule, the shared checker, the issue check and the editor helper |
 | [plugin-restructure.md](plugin-restructure.md) | Reshaping house-rules into a shared core and six optional sub-plugins, and the 2.68.1 patch that ships first (planned) |
+| [usage-handoff.md](usage-handoff.md) | Keeping work saved and handed off on every reply, so a usage limit never strands it (planned) |
 | [offshoot-plugins.md](offshoot-plugins.md) | `prompt-workshop` and `agent-router` — the two v0.1 nudge plugins built on the same formula |
 
 ## Considered and deliberately left out

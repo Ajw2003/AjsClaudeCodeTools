@@ -1,0 +1,351 @@
+{
+ "title": "Usage Handoff Build Plan",
+ "eyebrow": "Build plan for the approved usage limit handoff · nothing built yet · line counts are estimates",
+ "approval": "Build plan approved: usage limit handoff",
+ "short": {
+  "lead": "You approved saving on every reply (1A), with me writing the handoff note (2A) and the note loading when a session opens on its branch (3A). This plan builds it in four steps, each its own issue under \"Keep work saved and handed off on every reply, so a usage limit never strands it\" (#406), which replaces #140. Step 3 fixes two bugs I found while planning, which affect every project thread like this one. Your standing rule says nothing reaches main with a known bug, so it is in this plan rather than left for later.",
+  "hint": "Tap a step to see what it changes and how it is proved.",
+  "key": [
+   [
+    "I build it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "hammer",
+    "Save check",
+    "Step 1 (#407): check that work is pushed and the handoff note is written",
+    "",
+    "The end-of-reply check already sends a reply back once when files written this turn are uncommitted. It gains three more checks, run only when the turn wrote files or made a commit. First, the branch is pushed. Second, the handoff note docs/5-today/handoff-<branch>.md is not older than the newest commit. Third, the note carries no published page link, session link or Claude credit. A git command that fails is reported as \"could not tell\", never as a pass.",
+    "Nothing for you to do."
+   ],
+   [
+    "next",
+    "Pickup",
+    "Step 2 (#408): the note loads at session start",
+    "",
+    "When a session opens on a branch that has a note, the note's text is added to the session's context, with a first line naming the file. A long note is cut at a fixed size, and the loaded text says that it was cut.",
+    "Nothing for you to do."
+   ],
+   [
+    "loop",
+    "Loop bugs",
+    "Step 3 (#409): two approval bugs in project threads",
+    "",
+    "In this thread, the stage file saved the feature as \"usage limit handoff 1A 2A 3A</message>\": the thread's message markup and your answer codes became part of the name. The second bug: your message \"Design approved: background work tracking 1*\" from another thread also moved this thread's stage, because it was passed to me as a quoted message. After the fix, quoted messages will not move the stage, and a feature name will end before any message markup or answer codes.",
+    "Nothing for you to do."
+   ],
+   [
+    "flask",
+    "Prove it",
+    "Step 4 (#410): tests, docs, version and a real run",
+    "",
+    "Each step first adds test cases to verify.py (the script that checks the hooks do what the docs claim). The cases reproduce the fault or show the new behaviour, and then the code follows. The real run happens in a cloud session: a turn that edits a file and stops before pushing must be sent back, and a later session on the branch must load the note. The version is set at merge time, expected to be 2.75.0.",
+    "Nothing for you to do."
+   ],
+   [
+    "check",
+    "Your verdict",
+    "Approve the plan",
+    "you",
+    "Approving moves the feature into Build, and I start on step 1.",
+    "Send \"Build plan approved: usage limit handoff\", or tell me what to change."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "Step 1 (#407): the save check",
+   "A new check, run at the end of each reply that wrote files. It checks that the branch is pushed and that the handoff note is current.",
+   null,
+   "It sits beside the existing commit check and reuses the way that check sends a reply back, so a reply is sent back at most once. It runs only when the turn wrote files or made a commit. Each check that fails adds one reason to the block. A git command that fails becomes a \"could not tell\" line and never counts as a pass. Setting HOUSE_RULES_HANDOFF=off turns the check off.",
+   [
+    "Today the end-of-reply check asks only whether the files written this turn are committed.",
+    "It also asks whether the branch is pushed, whether the handoff note is older than the newest commit, and whether the note carries a published page link, a session link or Claude credit.",
+    "After this, a usage limit can't strand work, because everything is pushed and the note says what comes next."
+   ],
+   [
+    [
+     "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
+     90,
+     0,
+     [
+      [
+       "New handover_save_check(): pushed check (the branch has an upstream and git rev-list @{u}..HEAD is empty)",
+       30,
+       0
+      ],
+      [
+       "Note-is-current check (git rev-list <note's last commit>..HEAD is empty, so one commit holding both work and note passes)",
+       25,
+       0
+      ],
+      [
+       "Note content check: no published page link, session link or Claude credit",
+       20,
+       0
+      ],
+      [
+       "\"Could not tell\" lines and the HOUSE_RULES_HANDOFF switch",
+       15,
+       0
+      ]
+     ]
+    ],
+    [
+     "claude-house-rules/plugins/house-rules/scripts/hook.py",
+     6,
+     2,
+     [
+      [
+       "event_handover calls the save check and passes its reasons on",
+       6,
+       2
+      ]
+     ]
+    ],
+    [
+     "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
+     12,
+     1,
+     [
+      [
+       "New \"handoff\" row in the CHECKPOINTS table, beside the commit row, with its reason text",
+       12,
+       1
+      ]
+     ]
+    ],
+    [
+     "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
+     160,
+     0,
+     [
+      [
+       "Nine cases, written before the code: unpushed branch, no upstream, stale note, note with a link, note with Claude credit, work and note in one commit passes, a turn that changed nothing is never checked, a failing git command says \"could not tell\", the switch turns it off",
+       160,
+       0
+      ]
+     ]
+    ]
+   ]
+  ],
+  [
+   "new",
+   "Step 2 (#408): the pickup",
+   "When a session opens on a branch that has a handoff note, the note is loaded into the session.",
+   null,
+   "The note's path is docs/5-today/handoff-<branch>.md, with each / in the branch name replaced by -. The loaded text starts with a line naming the file. A note over 4,000 characters is cut there, and the loaded text says it was cut and where to read the rest. A branch with no note adds nothing.",
+   [
+    "Today a new session doesn't know where the last one stopped until you tell it.",
+    "The note for the branch is loaded automatically at session start.",
+    "Picking up on another Claude account needs no instructions from you."
+   ],
+   [
+    [
+     "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
+     45,
+     0,
+     [
+      [
+       "New _handoff_pickup_block(), added to the existing session start blocks (the ones that report the branch and the git identity)",
+       45,
+       0
+      ]
+     ]
+    ],
+    [
+     "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
+     60,
+     0,
+     [
+      [
+       "Four cases: the note loads, no note stays silent, a long note is cut and says so, a branch with / finds its note",
+       60,
+       0
+      ]
+     ]
+    ]
+   ]
+  ],
+  [
+   "chg",
+   "Step 3 (#409): two approval bugs in project threads",
+   "Feature names stop before message markup and answer codes, and a message relayed from another thread no longer moves this thread's stage.",
+   [
+    "Saved as \"usage limit handoff 1A 2A 3A</message>\"",
+    "Saved as \"usage limit handoff\""
+   ],
+   "First bug: _loop_name keeps everything after the feature name, so the thread's message markup (</message>) and your answer codes (1A 2A 3A) became part of the name. Second bug: your message \"Design approved: background work tracking 1*\" in another thread reached this thread inside a relayed block (a quoted copy of that thread's message) and moved this thread's stage. After the fix, a relayed block from another thread is not read as an approval, while your own message in this thread still is.",
+   null,
+   [
+    [
+     "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
+     6,
+     2,
+     [
+      [
+       "_LOOP_NAME_END_RE and _loop_name end the name at < markup and at trailing answer codes such as 1A 2A 3A",
+       6,
+       2
+      ]
+     ]
+    ],
+    [
+     "claude-house-rules/plugins/house-rules/scripts/house_rules/core.py",
+     4,
+     1,
+     [
+      [
+       "_RELAYED_PROMPT_RE recognises a relayed block (a quoted message) from another thread",
+       4,
+       1
+      ]
+     ]
+    ],
+    [
+     "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
+     50,
+     0,
+     [
+      [
+       "Cases replaying both real messages from this thread, written before the fix, plus one proving your own approval in the thread still works",
+       50,
+       0
+      ]
+     ]
+    ]
+   ]
+  ],
+  [
+   "chg",
+   "Step 4 (#410): rule text, docs, version and a real run",
+   "The rule gains one sentence, the docs change from describing a plan to describing what was built, and the version goes up.",
+   [
+    "Plugin 2.73.1",
+    "Plugin 2.75.0, expected"
+   ],
+   "The version is set at merge time. 2.75.0 assumes that two other changes merge first: the background work tracking fix (2.73.2) and the restructure (2.74.0). The real run happens in a cloud session: a turn that edits a file and stops before pushing must be sent back, and a later session on the branch must load the note. Then the QA page is built and handed to you.",
+   null,
+   [
+    [
+     "claude-house-rules/plugins/house-rules/rules/house-rules.md",
+     2,
+     1,
+     [
+      [
+       "One sentence in \"Commit constantly on my own branches\": push and update the handoff note before the reply ends",
+       2,
+       1
+      ]
+     ]
+    ],
+    [
+     "claude-house-rules/plugins/house-rules/rules/detail/commit-branches.md",
+     15,
+     0,
+     [
+      [
+       "The note's five sections, its path, and what it must not carry",
+       15,
+       0
+      ]
+     ]
+    ],
+    [
+     "docs/4-systems/usage-handoff.md",
+     10,
+     5,
+     [
+      [
+       "From planned to built, with the real run's evidence",
+       10,
+       5
+      ]
+     ]
+    ],
+    [
+     "docs/architecture.md",
+     4,
+     2,
+     [
+      [
+       "The Stop row and the session start row name the new checks",
+       4,
+       2
+      ]
+     ]
+    ],
+    [
+     "docs/3-state/ProjectState.md and docs/5-today/Today.md",
+     6,
+     0,
+     [
+      [
+       "What shipped and what is still unverified",
+       6,
+       0
+      ]
+     ]
+    ],
+    [
+     "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json, .claude-plugin/marketplace.json, scripts/checks/design_loop.py",
+     3,
+     3,
+     [
+      [
+       "The version, in each place it is recorded",
+       3,
+       3
+      ]
+     ]
+    ],
+    [
+     "docs/plans/<date>-usage-limit-handoff-qa.html (new)",
+     0,
+     0,
+     [
+      [
+       "The QA page, built by make_page.py",
+       0,
+       0
+      ]
+     ]
+    ]
+   ]
+  ],
+  [
+   "keep",
+   "The existing commit check",
+   "handover_commit_check in safe_git.py is unchanged.",
+   null,
+   "It already finds the files this turn wrote and gives the branch advice. The new checks run after it and only add reasons.",
+   null,
+   null
+  ],
+  [
+   "keep",
+   "Not built",
+   "No usage-percentage trigger.",
+   null,
+   "No hook can read the usage percentage on the cloud or the phone, which is why you approved saving on every reply instead. The desktop status line and a real StopFailure at the limit stay unverified, and nothing relies on them.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "Four steps: the save check, the pickup, two approval bugs in project threads, then tests, docs, version and a real run.",
+  "changing": "Code: safe_git.py, hook.py, design_loop.py and core.py, all under claude-house-rules/plugins/house-rules/scripts/. Tests: scripts/checks/safe_git.py and scripts/checks/design_loop.py, which are separate files from the code files of the same name. Docs: house-rules.md, commit-branches.md, usage-handoff.md, architecture.md, ProjectState.md and Today.md. Version: plugin.json, marketplace.json and the version check in scripts/checks/design_loop.py.",
+  "blocking": "Your approval of this plan.",
+  "next": "After approval, I build step 1 first. Once all four steps pass verify.py twice and the real run is done, I hand it over for QA with a QA page. The desktop app can only be tested once it is connected to this thread. If it isn't connected, the QA page lists the desktop app as unverified.",
+  "todo": [
+   "Send \"Build plan approved: usage limit handoff\", or tell me what to change."
+  ]
+ }
+}
