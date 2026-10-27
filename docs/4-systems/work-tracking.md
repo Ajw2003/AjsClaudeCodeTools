@@ -52,20 +52,30 @@ be told the file's path from there.
 - The helper work trail adds one synthetic "Helper agent <type> (<id>) started" prompt before rendering
   (`_render_transcript` in `house_rules/delegation.py`). The shared renderer opens a turn only at a
   human prompt, and a helper transcript has none, so without it the trail listed no commands. The
-  opt-in SubagentStop ledger still renders without it, and so still comes out empty for a helper;
-  that is a pre-existing gap, left for its own issue.
+  opt-in SubagentStop ledger got the same start in #403 (see below).
 - A backgrounded helper's trail file is named with `background` as its type, because the hand-back
   notification carries no agent type.
 - `checks/common.py`'s `run_hook` defaults `HOUSE_RULES_WORKTRAIL_DIR` to a temporary folder, so a
   verify run inside a project thread never writes test trails into the real project folder.
 
-## Redo after QA (planned)
+## Gap fixes after the first QA
 
-aj failed the first QA on 2026-10-27 so that every known gap is closed before `main`: #403 fixes the
-opt-in helper ledger, junk in design-loop feature names and the update check in a synced cloud copy;
-#405 stops the plugin's own safety commits crediting Claude and makes the credit guard refuse claude.ai
-session, artifact and share links in commit messages, GitHub text and the lines a commit adds; #404 is
-the docs and a new QA page. Plan: `docs/plans/work-tracking-gap-fixes-plan.html`.
+aj failed the first QA on 2026-10-27 so that every known gap is closed before `main`, including gaps
+older than the pull request. Plan: `docs/plans/work-tracking-gap-fixes-plan.html`. Three more steps:
+
+- **#403, bugs.** The opt-in SubagentStop ledger now starts the helper's turn the way the work trail
+  does, so it lists the helper's commands (`_write_subagent_ledger`). The design loop cuts a feature
+  name at a pasted message tag and drops a trailing run of answer codes such as `1A 2A`, while a name
+  such as "3D printer" stays whole (`_loop_name`). The session-start update check recognises a plugin
+  copy synced from aj's account (a root under `plugins/synced/`) and says in one plain line that it
+  cannot be updated by command there, instead of an update banner whose commands fail.
+- **#405, credit.** The plugin's own safety commit (`_wip_message` in `house_rules/delegation.py`)
+  ends with "Committed by AJ's agent", with no co-author trailer and no session link. The credit guard
+  refuses claude.ai session, project, artifact and share links on every route; see
+  [guards.md](guards.md), "No claude.ai links in git (#405)". The three artifact links already in
+  `docs/plans/` were taken out of the files.
+- **#404, docs and QA.** These docs, and a new QA page covering all seven steps,
+  `docs/plans/work-tracking-gap-fixes-qa.html`.
 
 ## Invariants
 

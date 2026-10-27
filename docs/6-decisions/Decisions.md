@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-27 - Build plan approved: background work tracking (gap fixes)
+
+**Context.** Build plan `docs/plans/work-tracking-gap-fixes-plan.html` for the redo of #396, three steps:
+#403 (bug fixes), #405 (no Claude credit and no claude.ai links reach git), #404 (docs and a new QA page).
+
+**Decision.** aj's reply was "Build plan approved: background work tracking". The plan had no choices. The
+steps run in that order on pull request #402, the version stays 2.73.2 because nothing was released, and
+#402 merges before the restructure (2.74.0). Squash-merging #402 keeps the session ids in the branch's
+older commits out of `main`.
+
+**Status.** Standing.
+
 ## 2026-10-27 - Design approved: background work tracking (redo)
 
 **Context.** Gap fixes page `docs/plans/work-tracking-gap-fixes.html`, after the QA failure below.
