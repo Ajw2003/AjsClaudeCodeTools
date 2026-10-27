@@ -15,7 +15,7 @@ detail as "null". The builder's after-build visual check looks only for script e
 
 **Where it stands.** Issues are open: parent #419, steps #420 (no empty field on any page), #421
 (proposal page), #422 (build plan page), #423 (QA page) and #424 (tests, docs, version and a real
-run), all labelled `in progress`. No design page yet, and no code changed. This branch is cut from
+run), all labelled `in progress`. The design page is built (`docs/plans/2026-10-27-page-builder-owed-items.html`) and waits on aj's four choices and approval. No code changed. This branch is cut from
 `main` at 2.73.2.
 
 **Next step.** Write the design proposal page with `make_page.py build` and the approval phrase
