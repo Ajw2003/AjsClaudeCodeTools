@@ -2,7 +2,7 @@
  "title": "Steps 3 to 7 QA",
  "eyebrow": "QA · #381 restructure steps 3 to 7, built as one feature · house-rules 2.74.0",
  "short": {
-  "lead": "Restructure steps 3 to 7 (#381) are built on the branch AjsAgent/issue-281-fix as house-rules 2.74.0. Each step follows the grilling answers on the design page you approved. verify.py, the script that checks the hooks do what the docs say, passed all 1007 checks, run twice, after main (2.73.3, with pull requests #402 and #418) was merged in and pull request #338's update fix was folded in. One thing matters before you install it: from 2.74.0, every tool is refused until the agent's name is set. So set the two cloud environment variables first (HOUSE_RULES_AGENT_NAME and HOUSE_RULES_OWNED_BRANCHES), using the steps in docs/cloud-session-setup.md.",
+  "lead": "Restructure steps 3 to 7 (#381) are built on the branch AjsAgent/issue-281-fix as house-rules 2.74.0. Each step follows the grilling answers on the design page you approved. verify.py, the script that checks the hooks do what the docs say, ran twice and passed all 1007 checks, after main (version 2.73.3, which includes pull requests #402 and #418) was merged in and pull request #338's update fix was folded in. One thing matters before you install it: from 2.74.0, every tool is refused until the agent's name is set. So set the two cloud environment variables first (HOUSE_RULES_AGENT_NAME and HOUSE_RULES_OWNED_BRANCHES), using the steps in docs/cloud-session-setup.md.",
   "hint": "Tap a step to see what was built and how it was checked.",
   "key": [
    [
