@@ -158,6 +158,10 @@ if [ -z "$PY" ]; then
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. This subagent'"'"'s work was NOT audited. Run /house-rules:doctor."}'
       exit 0
       ;;
+    rclink)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. rclink did not run, so the Remote Control transcript link was NOT prompted. Run /house-rules:doctor."}'
+      exit 0
+      ;;
     *)
       exit 0
       ;;

@@ -1,0 +1,152 @@
+{
+  "title": "Work Tracking Gap Fixes",
+  "eyebrow": "Redo of background work tracking (parent issue #396): fix every known gap before it reaches main",
+  "approval": "Design approved: background work tracking",
+  "short": {
+    "lead": "You asked that nothing with a bug or a gap reaches main, including ones older than this pull request. While building I found five. The fixes go on the same pull request (#402, background work tracking), as house-rules 2.73.2. The design loop locks code while a feature is in QA, so it needs a QA failure and a fresh approval before I can edit. I have already moved the six issues back to in progress so that one reply from you covers all of it.",
+    "hint": "Tap a gap to see the fix.",
+    "key": [
+      [
+        "I fix it",
+        ""
+      ],
+      [
+        "Your call",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Ledger",
+        "The opt-in helper ledger writes an empty file",
+        "",
+        "With HOUSE_RULES_SUBAGENT_LEDGER=on, a finished helper's record in docs/sessions/ lists no commands. The record only starts a new turn when a person sends a message, and a helper never receives one. The fix makes it start a turn the same way the work trail already does. A new check proves a helper's commands appear.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Names",
+        "The design loop stores junk in feature names",
+        "",
+        "This thread's feature is stored as \"background work tracking 1A 2A</message>\": the app's message tag and the page's answer codes stay in the name. A later \"QA passed\" may then fail to find this feature, or find the wrong one. The fix ends a name at a tag and drops trailing answer codes like 1A 2A. New checks cover both, and a name such as \"3D printer\" stays whole.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Update",
+        "The update check asks for commands that cannot work in a cloud session",
+        "",
+        "In a claude.ai cloud session the plugin is synced from your account, not installed from the aj-house-rules marketplace. So every session starts with an out-of-date banner telling me to run two update commands, and the first one fails with \"Marketplace 'aj-house-rules' not found\". The fix spots a synced copy and says plainly that it cannot be updated by command here, instead of demanding the commands.",
+        "Nothing from you."
+      ],
+      [
+        "swap",
+        "Wip",
+        "The plugin's own safety commits credit Claude",
+        "",
+        "When a helper goes 10 minutes without committing, the plugin commits its work for it. That commit message ends with \"Co-Authored-By: Claude\" and a Claude-Session line, which your credit rule forbids. I found one on a helper's branch today (commit 5419ac9); none reached this pull request, because I squashed that branch. The fix ends those commits with \"Committed by AJ's agent\" instead, and a new check proves it.",
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Credit",
+        "The credit guard blocks the project thread link",
+        "you",
+        "The guard refuses any GitHub text containing the claude.ai/code/ address. That blocks the \"Requested by\" link to this project thread, which claude.ai asks every pull request to carry, so the work tracking pull request names the thread without linking it.",
+        "Your answer to the credit guard choice below."
+      ],
+      [
+        "lock",
+        "Approve",
+        "You approve the redo",
+        "you",
+        "One reply moves the loop from QA back to build for these fixes.",
+        "Copy the reply from the Wrap-up step."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Helper ledger (house_rules/delegation.py, _write_subagent_ledger)",
+      "Starts a turn the same way the work trail does, so a helper's commands appear.",
+      [
+        "An empty record, with 0 commands.",
+        "Every command the helper ran."
+      ],
+      "Only changes output when HOUSE_RULES_SUBAGENT_LEDGER=on."
+    ],
+    [
+      "chg",
+      "Feature names (house_rules/design_loop.py, _loop_name)",
+      "Ends a name at a message tag and drops trailing answer codes.",
+      [
+        "\"background work tracking 1A 2A</message>\"",
+        "\"background work tracking\""
+      ],
+      "Names already stored keep their old text until the next approval."
+    ],
+    [
+      "chg",
+      "Update check (house_rules/core.py, event_versioncheck)",
+      "Recognises a copy synced from the claude.ai account.",
+      [
+        "An out-of-date banner demanding commands that fail.",
+        "One line saying this copy is synced and cannot be updated by command here."
+      ],
+      "A marketplace install on your PC is checked exactly as before."
+    ],
+    [
+      "chg",
+      "Safety commits (house_rules/delegation.py, _wip_message)",
+      "Credits AJ's agent instead of Claude.",
+      [
+        "Co-Authored-By: Claude, plus a Claude-Session line.",
+        "Committed by AJ's agent."
+      ],
+      "Matches the line every other commit already uses."
+    ],
+    [
+      "chg",
+      "Credit guard (house_rules/safe_git.py), only if you allow thread links",
+      "Lets a link to a project thread or session through, and still refuses Claude credit lines.",
+      [
+        "Any claude.ai/code/ address is refused.",
+        "Links to a project thread, session or artifact pass; \"Generated with Claude Code\" footers and co-author lines are still refused."
+      ],
+      "Keeping every address refused leaves the guard as it is."
+    ]
+  ],
+  "choices": [
+    [
+      "credit",
+      "Should the credit guard let a link to a project thread through?",
+      [
+        [
+          "A",
+          "Yes: allow plain links to a project thread, session or artifact, and keep refusing credit lines and footers",
+          1,
+          "Pull requests can carry the thread link claude.ai asks for, and transcript links can go into issues."
+        ],
+        [
+          "B",
+          "No: keep refusing every claude.ai/code/ address",
+          0,
+          "No change, and pull requests keep naming the thread without a link."
+        ]
+      ],
+      "The guard exists to stop Claude taking credit, and a link to your own thread credits nobody."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Five gaps found while building background work tracking, four fixed for certain and one up to you, all on the work tracking pull request.",
+    "changing": "Four hook functions and their checks, plus the credit guard if you allow thread links, and the docs.",
+    "blocking": "Your one reply, given in the second to-do item below.",
+    "next": "I build the fixes with a helper, rerun every check, post an updated QA page and swap the issues back to needs review.",
+    "todo": [
+      "Pick your answer under Choices.",
+      "Send this reply, with your letter in place of 1A if you pick B: <b>QA failed: background work tracking. Design approved: background work tracking 1A. Build plan approved: background work tracking</b>"
+    ]
+  }
+}

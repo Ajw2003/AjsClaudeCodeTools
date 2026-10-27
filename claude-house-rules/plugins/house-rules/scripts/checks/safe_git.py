@@ -1179,7 +1179,7 @@ commit_case(
 )
 _opr1 = _iss_guard('gh pr create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"')
 _opr2 = _iss_guard('gh pr create --title T --body "Refs #5\n\nOpened by AJ\'s agent"')
-_opr3 = _iss_guard('gh pr create --title T --body "Refs #5\n\nhttps://claude.ai/code/session_abc"')
+_opr3 = _iss_guard('gh pr create --title T --body "Refs #5\n\nhttps://claude' + '.ai/code/session_abc"')
 commit_case(
     "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting " + TEST_AGENT_NAME + " passes",
     _iss_decision(_opr1) == "deny" and "credit " + TEST_AGENT_NAME + "" in _iss_reason(_opr1)
@@ -1314,6 +1314,20 @@ commit_case(
     _ggd(_g13) == "deny" and "is the default branch" in _g13 and _ggd(_g14) == "deny" and _ggd(_g15) == "allow",
     "out %r | %r | %r" % (_g13[:80], _g14[:60], _g15[:40]),
 )
+# -- #405: no claude.ai session, artifact or share link reaches git -------------------------------------
+# Every link here is built from parts, so this file never carries one and the guard passes its own commit.
+_l405_host = "https://claude" + ".ai/"
+_l405_art, _l405_share = _l405_host + "artifact/abc123XYZ", _l405_host + "share/1f2e-3d4c"
+_g405a = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\n" + _l405_art)
+_g405b = _gg(_gh + "push_files", branch="AjsAgent/x", message="docs: page\n\nCommitted by AJ's agent",
+             files=[{"path": "docs/a.md", "content": "x\nsee " + _l405_share + "\n"}])
+_g405c = _gg(_gh + "create_or_update_file", branch="AjsAgent/x", message="docs", path="b.md",
+             content="names claude" + ".ai/code in prose")
+commit_case(
+    "guardgithub: an artifact link in a PR body and a share link in a pushed file are denied; prose naming claude.ai/code is allowed",
+    _ggd(_g405a) == "deny" and _ggd(_g405b) == "deny" and "docs/a.md line 2" in _g405b and _ggd(_g405c) == "allow",
+    "pr %r | push %r | prose %r" % (_g405a[:80], _g405b[:160], _g405c[:80]),
+)
 _hj = json.load(open(os.path.join(HERE, "..", "hooks", "hooks.json"), encoding="utf-8"))
 _gm = [b["matcher"] for b in _hj["hooks"]["PreToolUse"]
        if any(h["command"].endswith(" guardgithub") for h in b["hooks"])]
@@ -1325,6 +1339,39 @@ commit_case(
     len(_gm) == 1 and all(re.fullmatch(_gm[0], p + n) for p in ("mcp__github__", "mcp__GitHub__") for n in _names)
     and not re.fullmatch(_gm[0], "mcp__github__issue_read") and not re.fullmatch(_gm[0], "mcp__GitHub__get_file_contents"),
     "matchers %r" % (_gm,),
+)
+# -- #405: no claude.ai session, artifact or share link reaches git (links defined above) ----------------
+_l405_msg = _iss_guard('git commit -m "docs: QA page\n\nSee %s"' % _l405_art)
+_l405_pr = _iss_guard('gh pr create --title T --body "Refs #5\n\n%s"' % _l405_share)
+_l405_d = _iss_repo()
+_as_git(_l405_d, "switch", "-q", "-c", "AjsAgent/links")  # off main, so only the link check can refuse
+_as_write(_l405_d, "page.html", "<p>one</p>\n<a href=\"%s\">QA</a>\n" % _l405_art)
+_as_git(_l405_d, "add", "page.html")
+_l405_staged = _iss_guard('git commit -m "docs: QA page"', _l405_d)
+_as_git(_l405_d, "reset", "-q")
+_l405_addcmd = _iss_guard('git add -A && git commit -m "docs: QA page"', _l405_d)
+_as_write(_l405_d, "page.html", "<p>one</p>\n<p>The doc names claude" + ".ai/code as prose.</p>\n")
+_as_git(_l405_d, "add", "page.html")
+_l405_clean = _iss_guard('git commit -m "docs: QA page"', _l405_d)
+_l405_off = _iss_guard('git commit -m "docs: QA page\n\n%s"' % _l405_art, HOUSE_RULES_ATTRIBUTION="off")
+commit_case(
+    "links: a commit message with an artifact link and a pull request body with a share link are refused",
+    _iss_decision(_l405_msg) == "deny" and ("credit " + TEST_AGENT_NAME) in _iss_reason(_l405_msg)
+    and _iss_decision(_l405_pr) == "deny",
+    "msg %r | pr %r" % (_l405_msg[:120], _l405_pr[:120]),
+)
+commit_case(
+    "links: a staged file line with an artifact link is refused, naming the file and line; so is one a git add in the same command would stage",
+    _iss_decision(_l405_staged) == "deny" and "page.html line 2" in _iss_reason(_l405_staged)
+    and "Take the link out" in _iss_reason(_l405_staged)
+    and _iss_decision(_l405_addcmd) == "deny" and "page.html line 2" in _iss_reason(_l405_addcmd),
+    "staged %r | add %r" % (_iss_reason(_l405_staged)[:160], _iss_reason(_l405_addcmd)[:160]),
+)
+commit_case(
+    "links: an unrelated commit (prose naming claude.ai/code, no link) passes, and HOUSE_RULES_ATTRIBUTION=off disables the check",
+    _iss_decision(_l405_clean) != "deny" and "no published links" not in _l405_clean
+    and "credit aj's agent" not in _l405_off and "no published links" not in _l405_off,
+    "clean %r | off %r" % (_l405_clean[:160], _l405_off[:120]),
 )
 _opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
 commit_case(
@@ -1779,7 +1826,7 @@ commit_case(
 
 # (c) the automatic work-in-progress commit message
 from house_rules import delegation as _349_deleg  # noqa: E402
-_349_msg = _349_deleg._wip_message("wip: x", "session_abc123")
+_349_msg = _349_deleg._wip_message("wip: x")
 commit_case(
     "wip commit (#349): the message carries the derived credit line and no Claude line",
     _349_msg.endswith("\n\n" + TEST_COMMIT_CREDIT) and not re.search(r"claude|anthropic|co-authored", _349_msg, re.IGNORECASE),

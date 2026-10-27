@@ -507,9 +507,20 @@ _LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+(?:Build|Design) plan:|\s+[A-Z
                                r"|\s+[-–—]\s|\s*:\s*\d+[A-Za-z*](?:\s|$)")
 
 
+# #403: a name also ends at the first `<` that starts a tag ("</message>" pasted from a reply), and
+# a trailing run of answer codes ("1A 2A", "1*") is cut. "3D printer" stays whole: a code is only a
+# space-separated trailing token shaped digit + letter/star.
+_LOOP_TAG_RE = re.compile(r"<[/A-Za-z!?]")
+_LOOP_TRAIL_CODES_RE = re.compile(r"(?:\s+\d+[A-Za-z*])+$")
+
+
 def _loop_name(raw):
-    m = _LOOP_NAME_END_RE.search(raw)
-    return (raw[:m.start()] if m else raw).strip() or raw.strip()
+    tag = _LOOP_TAG_RE.search(raw)
+    text = raw[:tag.start()] if tag else raw
+    m = _LOOP_NAME_END_RE.search(text)
+    cut = (text[:m.start()] if m else text).strip()
+    cut = _LOOP_TRAIL_CODES_RE.sub("", cut).strip()
+    return cut or raw.strip()
 
 
 # #235: an issue's label says whose move it is - `in progress` is mine, `needs review` is aj's - and
@@ -716,9 +727,15 @@ def _loop_stored(state, name):
     """The stored feature (#375) a QA message names, or None when it names the current feature,
     nothing stored, or the stage file has no "features" key (an older file)."""
     stash = state.get("features")
-    if not isinstance(stash, dict) or name.lower() == (state.get("feature") or "").lower():
+    # #403: stored names from before the cleanup may carry junk ("... 1*"), so compare them
+    # through _loop_name as well as raw.
+    if not isinstance(stash, dict) or name.lower() in {
+            (state.get("feature") or "").lower(), _loop_name(state.get("feature") or "").lower()}:
         return None
     entry = stash.get(name.lower())
+    if not isinstance(entry, dict):
+        entry = next((e for k, e in stash.items()
+                      if isinstance(e, dict) and _loop_name(str(k)).lower() == name.lower()), None)
     return entry if isinstance(entry, dict) else None
 
 
@@ -795,7 +812,9 @@ def _loop_apply_one(state, text, top):
             # #307: the redo is for the feature QA failed, even when the stored name went stale.
             failed = [a.get("name") or "" for a in state.get("approvals", [])
                       if isinstance(a, dict) and a.get("stage") == "QA failed"]
-            redo = state.get("redo") and name.lower() in {feature.lower(), (failed[-1] if failed else "").lower()}
+            redo = state.get("redo") and name.lower() in {feature.lower(), _loop_name(feature).lower(),
+                                                       (failed[-1] if failed else "").lower(),
+                                                       _loop_name(failed[-1] if failed else "").lower()}
             if redo:
                 labels, src = _loop_labels(state)
                 wrong = _loop_wrong(labels, LOOP_WORKING)

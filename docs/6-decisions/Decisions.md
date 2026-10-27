@@ -70,6 +70,88 @@ tool's wrapped reply, which it never did before #374. The 26 rows from the first
 listed, because those issues were not closed again; the build plan said the next sweep would drop them, and no
 code does that yet, so they stay until a sweep page lists them or the stage file's sweep list is reset.
 
+## 2026-10-27 - Triage answers: docref skips its own test fixtures
+
+**Context.** `docref.py check` had reported the same 38 problems on `main` since at least 2026-10-16. All 38 came
+from deliberately broken pointers inside the test file `scripts/checks/docs.py`, which the check scanned as real
+code, so it could never pass and a real broken pointer would have hidden among them. Found by the catch-up
+triage (`docs/plans/2026-10-27-catch-up-triage.html`, step 9).
+
+**Decision.** aj answered choice 9A, "fix it now as a small patch". A code file whose first 10 lines carry
+`docref: skip-file` is skipped, and `check` prints one line naming each skipped file, so the skip is never
+silent. `scripts/checks/docs.py` carries the marker. Rejected: a hard-coded path exclusion, because docref runs
+in every repo, not only this one. Ships as 2.73.3, after pull request #402 (2.73.2) and before the restructure
+(2.74.0).
+
+**Status.** Standing.
+
+## 2026-10-27 - Build plan approved: background work tracking (gap fixes)
+
+**Context.** Build plan `docs/plans/work-tracking-gap-fixes-plan.html` for the redo of #396, three steps:
+#403 (bug fixes), #405 (no Claude credit and no claude.ai links reach git), #404 (docs and a new QA page).
+
+**Decision.** aj's reply was "Build plan approved: background work tracking". The plan had no choices. The
+steps run in that order on pull request #402, the version stays 2.73.2 because nothing was released, and
+#402 merges before the restructure (2.74.0). Squash-merging #402 keeps the session ids in the branch's
+older commits out of `main`.
+
+**Status.** Standing.
+
+## 2026-10-27 - Design approved: background work tracking (redo)
+
+**Context.** Gap fixes page `docs/plans/work-tracking-gap-fixes.html`, after the QA failure below.
+
+**Decision.** aj's reply was "Design approved: background work tracking 1*", with their own answer to the
+credit guard choice: "publicly available links published should never reach git unless asked for
+explicitly. no claude credit anywhere and no links that can cause security issues ever". So option 1A
+(let thread links past the guard) and 1B (leave it as it is) are both rejected. The guard gets stricter
+instead: it also refuses claude.ai artifact and share links, and checks the lines a commit adds. Session
+ids already written into this feature's docs and into #383 were taken out the same day. Steps #403, #405
+and #404 carry the fixes.
+
+**Status.** Standing.
+
+## 2026-10-27 - QA failed: background work tracking
+
+**Context.** QA page `docs/plans/background-work-tracking-qa.html` for #396, pull request #402. aj asked that
+no bug or gap reaches `main`, including ones older than the pull request; the gap sweep page
+`docs/plans/work-tracking-gap-fixes.html` lists five.
+
+**Decision.** aj's reply was "QA failed: background work tracking". The redo fixes the helper ledger's empty
+render, junk in design-loop feature names, versioncheck's update demand in a synced cloud copy, and the
+Claude credit in the plugin's own safety commits, plus aj's choice on letting thread links past the credit
+guard. All on pull request #402, version 2.73.2.
+
+**Status.** Standing.
+
+## 2026-10-27 - Build plan approved: background work tracking
+
+**Context.** Build plan `docs/plans/background-work-tracking-build-plan.html` for #396 (Background work
+tracking: every layer of delegated work is one tap away), five steps: #383, #400, #397, #398, #399.
+
+**Decision.** aj's reply was "Build plan approved: background work tracking 1A except please make a
+smaller version number 2.73.0 - 2.73.5 instead of 2.74.0". Choice 1A: one pull request for all five
+steps, with one QA page. The version is 2.73.1, not 2.74.0, because the unmerged restructure branch
+(`AjsAgent/issue-281-fix`) already uses 2.74.0; no other remote branch used a 2.73 patch number on
+2026-10-27.
+
+**Status.** Standing.
+
+## 2026-10-27 - Design approved: background work tracking
+
+**Context.** Proposal page `docs/plans/background-work-tracking.html` for #383 (Give aj the transcript
+link whenever a project thread hands work to a Remote Control session) and aj's wider complaint that
+background work in project threads is hidden: every layer of delegated work must be easy to follow,
+automatically, without aj asking.
+
+**Decision.** aj's reply was "Design approved: background work tracking 1A 2A". Choice 1A: build all
+three layers now (the thread's own transcript link, Remote Control transcript links, helper work
+trails) plus a Stop check for links owed. Rejected: 1B (#383 alone) and 1C (a live log of every shell
+command, which would put a file write on the guard's per-command path). Choice 2A: the links are pinned
+at the top of the thread's checklist and posted once in the reply that starts the work. Rejected: 2B (a
+separate reply per link, one notification each). The `cse_` to `session_` link swap was seen working on
+two sessions (#383's and this thread's; the id is redacted, per aj's 2026-10-27 rule that no session or artifact link reaches git).
+
 **Status.** Standing.
 
 ## 2026-10-24 - QA passed: proof check fix

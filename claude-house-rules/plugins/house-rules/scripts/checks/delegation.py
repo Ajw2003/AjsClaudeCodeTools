@@ -360,6 +360,14 @@ commit_case(
     "old: %r, status %r; fresh: %r" % (_as_git(_dq, "log", "-1", "--format=%s"),
                                        _as_git(_dq, "status", "--porcelain"), _as_git(_dfresh, "log", "-1", "--format=%s")),
 )
+# #405: the commit the hook makes for a helper credits aj's agent, with no Claude trailer or session link.
+_wip_body = _as_git(_dq, "log", "-1", "--format=%B")
+_wip_credit = [w for w in ("Co-Authored-By", "anthropic", "Claude-Session", "claude" + ".ai") if w.lower() in _wip_body.lower()]
+commit_case(
+    "autosave: the hook's own commit ends with the derived credit line and carries no Claude credit",
+    _wip_body.strip().endswith(TEST_COMMIT_CREDIT) and not _wip_credit,
+    "body %r, credit found %r" % (_wip_body[-120:], _wip_credit),
+)
 
 _dg, _ = _as_repo("worktree-agent-gate")
 _as_write(_dg, "a.py")
@@ -1263,6 +1271,15 @@ else:
     report("FAIL", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
     print(f"          exit {code}, out {out[:200]!r}, dir listing {_written}")
 
+_ledger_files = [os.path.join(_ledger_dir, f) for f in _written if f.endswith(".md")]
+_ledger_text = open(_ledger_files[0], encoding="utf-8").read() if _ledger_files else ""
+if "false" in _ledger_text and "Bash" in _ledger_text:
+    report("PASS", "the subagent ledger lists the helper's Bash commands (heading opens its turn)")
+    print(f"          ledger {os.path.basename(_ledger_files[0])} names the Bash command")
+else:
+    report("FAIL", "the subagent ledger lists the helper's Bash commands (heading opens its turn)")
+    print(f"          ledger text {_ledger_text[:300]!r}")
+
 # A failure rendering the ledger (unreadable transcript) says so and never crashes verdict.
 _ledger_bad_root = tempfile.mkdtemp(prefix="house-rules-ledger-bad-")
 atexit.register(shutil.rmtree, _ledger_bad_root, True)
@@ -1433,6 +1450,82 @@ if ("    audit)" in read(RUN)):
 else:
     report("FAIL", "run.sh names audit in its no-interpreter fallback")
 
+# --- rclink: the Remote Control transcript link (#383) -------------------------------------
+def _rc_payload(result):
+    return json.dumps({"session_id": "verify", "tool_name": "mcp__hearthbot__start_remote_control",
+                       "tool_input": {}, "tool_response": [{"type": "text", "text": json.dumps({"result": result})}]})
+
+
+def _rc_env(**kw):
+    e = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "HOUSE_RULES_WORKTRACKING")}
+    e.update(kw)
+    return e
+
+
+def _rc_case(title, result, env, expect_fire):
+    code, out, err = run_hook("rclink", _rc_payload(result), env=env)
+    problems = []
+    if code != 0:
+        problems.append(f"exit {code}, must never be non-zero")
+    if expect_fire:
+        try:
+            ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        except Exception as exc:
+            problems.append(f"could not parse output: {exc}")
+            ctx = ""
+        for needle in ("remote_control_status", "Transcript of the session on your PC", 'kind "link"'):
+            if needle not in ctx:
+                problems.append(f"additionalContext is missing {needle!r}")
+    elif out.strip():
+        problems.append(f"expected no output, got {out[:120]!r}")
+    report("FAIL" if problems else "PASS", title)
+    for p in problems:
+        print(f"          {p}")
+
+
+_rc_case("rclink fires on a `started` Remote Control result and asks for the link to be posted and attached",
+         "started", _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1"), True)
+_rc_case("rclink fires on an `already_running` result", "already_running",
+         _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1"), True)
+_rc_case("rclink is silent on an `asked` result (nothing started yet)", "asked",
+         _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1"), False)
+_rc_case("rclink is silent outside a Projects session (CLAUDE_CODE_PROJECTS_SESSION unset)", "started",
+         _rc_env(), False)
+_rc_case("rclink is silent with HOUSE_RULES_WORKTRACKING=off", "started",
+         _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1", HOUSE_RULES_WORKTRACKING="off"), False)
+
+# --- thread link: the thread's own transcript link at session start (#400) ----------------
+def _tl_ctx(**kw):
+    e = {k: v for k, v in os.environ.items()
+         if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "HOUSE_RULES_WORKTRACKING")}
+    e.update(kw)
+    code, ctx, err = _additional_context("inject", "", env=e)
+    return ctx or ""
+
+
+def _tl_case(title, ctx, must, must_not=()):
+    problems = [f"missing {n!r}" for n in must if n not in ctx]
+    problems += [f"unexpected {n!r}" for n in must_not if n in ctx]
+    report("FAIL" if problems else "PASS", title)
+    for p in problems:
+        print(f"          {p}")
+
+
+_tl_case("inject carries the thread's transcript link in a project thread",
+         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"),
+         ("/code/session_TEST123", "Transcript of this thread's session", "cse_TEST123"))
+_tl_case("inject adds no transcript link outside a project thread",
+         _tl_ctx(CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"), (), ("/code/session_", "could not build"))
+_tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is malformed",
+         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="bogus"),
+         ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
+_tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is missing",
+         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1"),
+         ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
+_tl_case("inject adds no transcript link with HOUSE_RULES_WORKTRACKING=off",
+         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123",
+                 HOUSE_RULES_WORKTRACKING="off"), (), ("/code/session_", "could not build"))
+
 # --- userpromptaudit: the background half, UserPromptSubmit --------------------------------
 def _task_notification(task_id, status="completed"):
     return (
@@ -1470,6 +1563,71 @@ else:
     report("FAIL", "userpromptaudit hands the audit summary to the parent model on a background hand-back")
     for a in upa:
         print(f"          {a}")
+
+# --- work trail: a project thread keeps a helper's rendered transcript (#397) ---------------
+import tempfile as _wt_tf
+
+_WT_STRIP = ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "HOUSE_RULES_WORKTRAIL_DIR")
+
+
+def _wt_env(trail, projects="1"):
+    e = {k: v for k, v in os.environ.items() if k not in _WT_STRIP}
+    if projects:
+        e["CLAUDE_CODE_PROJECTS_SESSION"] = projects
+    if trail:
+        e["HOUSE_RULES_WORKTRAIL_DIR"] = trail
+    return e
+
+
+def _wt_ctx(event, payload, env):
+    code, out, err = run_hook(event, payload, env=env)
+    try:
+        return code, json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return code, ""
+
+
+def _wt_check(title, problems):
+    report("FAIL" if problems else "PASS", title)
+    for p in problems:
+        print(f"          {p}")
+
+
+for _wt_event, _wt_payload in (("audit", post_agent_payload()),
+                               ("userpromptaudit", userprompt_payload(_task_notification("audit1")))):
+    _wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
+    _wt_code, _wt_c = _wt_ctx(_wt_event, _wt_payload, _wt_env(_wt_dir))
+    _wt_files = [os.path.join(_wt_dir, n) for n in os.listdir(_wt_dir)]
+    _wt_p = []
+    if _wt_code != 0:
+        _wt_p.append(f"exit {_wt_code}")
+    if len(_wt_files) != 1:
+        _wt_p.append(f"expected one trail file, found {_wt_files}")
+    else:
+        if "pytest -q" not in open(_wt_files[0], encoding="utf-8").read():
+            _wt_p.append("trail file lacks the fixture command 'pytest -q'")
+        if "Work trail for this helper: " + _wt_files[0] not in _wt_c:
+            _wt_p.append("additionalContext does not name the trail path")
+        if "audit1" not in os.path.basename(_wt_files[0]):
+            _wt_p.append("file name lacks the agent id")
+    _wt_check(f"{_wt_event} in a project thread writes the work trail and names its path", _wt_p)
+
+_wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
+_wt_code, _wt_c = _wt_ctx("audit", post_agent_payload(), _wt_env(_wt_dir, projects=""))
+_wt_code0, _wt_c0 = _wt_ctx("audit", post_agent_payload(), _wt_env("", projects=""))
+_wt_p = []
+if os.listdir(_wt_dir):
+    _wt_p.append("a trail file was written outside a project thread")
+if _wt_c != _wt_c0 or "Work trail" in _wt_c or not _wt_c:
+    _wt_p.append("output differs outside a project thread")
+_wt_check("audit outside a project thread writes no work trail and is unchanged", _wt_p)
+
+_wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
+_wt_bad = os.path.join(_wt_dir, "afile")
+open(_wt_bad, "w").close()
+_wt_code, _wt_c = _wt_ctx("audit", post_agent_payload(), _wt_env(_wt_bad))
+_wt_p = [] if "could not write the work trail" in _wt_c and _wt_code == 0 else [f"got {_wt_c[-200:]!r}"]
+_wt_check("a work trail that cannot be written is named in additionalContext", _wt_p)
 
 # The ordinary case: a ordinary prompt must never be touched, and never even emit anything -
 # a non-zero exit or a wrong additionalContext here would corrupt or erase the user's prompt.
@@ -1535,6 +1693,71 @@ _nb_cases.append(("enforced: a helper starting its own helper is refused, naming
                   '"permissionDecision":"deny"' in _o and "Report back to the parent" in _o))
 for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
+
+
+# --- links owed: the end-of-turn check for a link that was never posted (#398) ---------------
+def _lo_transcript(name, injected, uses):
+    lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}})]
+    for text in injected:
+        lines.append(json.dumps({"type": "attachment", "attachment": {
+            "type": "hook_additional_context", "hookEvent": "PostToolUse", "content": text}}))
+    for i, (tool, inp) in enumerate(uses):
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "lo%d" % i, "name": tool, "input": inp}]}}))
+    return _hand_transcript(name, lines)
+
+
+def _lo_run(transcript, retry=False, **env_extra):
+    e = {k: v for k, v in os.environ.items() if k not in _WT_STRIP}
+    e["HOUSE_RULES_COMMIT_CHECK"] = "off"
+    e.update(env_extra)
+    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, stop_hook_active=retry,
+                                                  last_assistant_message="ok"), env=e)
+    try:
+        o = json.loads(out)
+    except Exception:
+        o = {}
+    return (o.get("hookSpecificOutput") or {}).get("additionalContext", ""), o.get("systemMessage", "")
+
+
+_LO_RC = "House rules, work tracking: Remote Control just started (or was already running) for this session."
+RCLINK_BASE = "https://claude.ai" + "/code/session_"
+_LO_PT = {"CLAUDE_CODE_PROJECTS_SESSION": "1"}
+_lo_a = _lo_transcript("lo-a", [_LO_RC], [("mcp__hearthbot__post_message", {"text": "hello"})])
+_lo_ctx, _lo_sys = _lo_run(_lo_a, **_LO_PT)
+_wt_check("links owed: a Remote Control note with no posted link is named at Stop",
+          [] if "links owed" in _lo_ctx and "Remote Control" in _lo_ctx else [f"got {_lo_ctx!r}"])
+_lo_b = _lo_transcript("lo-b", [_LO_RC], [("mcp__hearthbot__post_message",
+                       {"attached_outputs": [{"kind": "link", "url": RCLINK_BASE + "abc"}]})])
+_lo_ctx, _lo_sys = _lo_run(_lo_b, **_LO_PT)
+_wt_check("links owed: a posted /code/session_ link silences it",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+_lo_ctx, _lo_sys = _lo_run(_lo_a, retry=True, **_LO_PT)
+_wt_check("links owed: on the retry it reports in systemMessage only",
+          [] if "links owed" in _lo_sys and "links owed" not in _lo_ctx else [f"ctx {_lo_ctx!r} sys {_lo_sys!r}"])
+_lo_x = "/mnt/project-files/work-trail/2026-01-01-helper-x1.md"
+_lo_d = _lo_transcript("lo-d", ["Helper done. Work trail for this helper: %s. Attach it." % _lo_x],
+                       [("mcp__hearthbot__post_message", {"text": "hello"})])
+_lo_ctx, _lo_sys = _lo_run(_lo_d, **_LO_PT)
+_wt_check("links owed: a work trail never posted is named by path",
+          [] if "links owed" in _lo_ctx and _lo_x in _lo_ctx else [f"got {_lo_ctx!r}"])
+_lo_d2 = _lo_transcript("lo-d2", ["Work trail for this helper: %s. Attach it." % _lo_x],
+                        [("mcp__hearthbot__post_message", {"attached_outputs": [{"kind": "file", "path": _lo_x}]})])
+_lo_ctx, _lo_sys = _lo_run(_lo_d2, **_LO_PT)
+_wt_check("links owed: a posted work trail path silences it",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+_lo_e = _lo_transcript("lo-e", [], [("mcp__hearthbot__update_progress_checklist", {"text": "Plain header\n- [ ] x"})])
+_lo_ctx, _lo_sys = _lo_run(_lo_e, CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST1", **_LO_PT)
+_wt_check("links owed: a checklist header without the thread link is named",
+          [] if "links owed" in _lo_ctx and "checklist header" in _lo_ctx else [f"got {_lo_ctx!r}"])
+_lo_e2 = _lo_transcript("lo-e2", [], [("mcp__hearthbot__update_progress_checklist",
+                        {"text": "[Transcript](%sTEST1)\n- [ ] x" % RCLINK_BASE})])
+_lo_ctx, _lo_sys = _lo_run(_lo_e2, CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST1", **_LO_PT)
+_wt_check("links owed: a checklist header with the thread link is fine",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+_lo_ctx, _lo_sys = _lo_run(_lo_a)
+_wt_check("links owed: silent outside a project thread",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
 
 
 finish()

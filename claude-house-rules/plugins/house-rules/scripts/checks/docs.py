@@ -6,6 +6,8 @@ It prints its own numbered results and a RESULT line, and exits non-zero if any 
 every part at the same time; see docs/4-systems/verify-suites.md, "The split layout (#370)".
 
 STDLIB ONLY, like hook.py.
+
+docref: skip-file - this file's docref cases hold deliberately broken pointers, so docref.py check skips it.
 """
 
 import os
@@ -707,6 +709,21 @@ docref_case(
     {"docs/systems/physics.md": DR_DOC, "src/a.c": "int x;\n// doc-ref a3f9 docs/systems/physics.md\n"},
     ["check"], 0,
     expect_in=["1 ok, 0 stale, 0 dangling", "docref: OK"],
+)
+
+docref_case(
+    "docref check: a code file that opts out with 'docref: skip-file' is skipped and named, not scanned",
+    {"docs/a.md": DR_DOC, "src/fixtures.py": "# docref: skip-file\n# doc-ref beef docs/none.md\n",
+     "src/a.c": "// doc-ref a3f9 docs/a.md\n"},
+    ["check"], 0,
+    expect_in=["docref: skipped src/fixtures.py", "1 ok, 0 stale, 0 dangling", "docref: OK"],
+)
+
+docref_case(
+    "docref check: the opt-out only counts in a file's first lines, so a later mention changes nothing",
+    {"docs/a.md": DR_DOC, "src/a.c": "\n" * 12 + "// docref: skip-file\n// doc-ref beef docs/none.md\n"},
+    ["check"], 1,
+    expect_in=["DANGLING", "docref: PROBLEMS"],
 )
 
 docref_case(

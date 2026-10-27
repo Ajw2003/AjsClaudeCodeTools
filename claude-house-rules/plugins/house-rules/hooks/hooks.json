@@ -236,6 +236,16 @@
         ]
       },
       {
+        "matcher": "mcp__hearthbot__start_remote_control",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" rclink",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|NotebookEdit|Bash|mcp__(github|GitHub)__issue_write",
         "hooks": [
           {
