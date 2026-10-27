@@ -1086,8 +1086,9 @@ def _cap_env(**extra):
     return e
 
 
-def _cap_spawn(agent_id="", **extra):
-    pl = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {"prompt": "x"}}
+def _cap_spawn(agent_id="", tool_input=None, **extra):
+    pl = {"hook_event_name": "PreToolUse", "tool_name": "Agent",
+          "tool_input": tool_input or {"prompt": "x", "run_in_background": False}}
     if agent_id:
         pl["agent_id"] = agent_id
     return run_hook("agentcap", json.dumps(pl), env=_cap_env(**extra))
@@ -1162,6 +1163,27 @@ commit_case(
     "agentcap: a spawn made by a subagent (payload carries agent_id) is denied",
     _cap_denied(_c7[1]) and "sub9" in _c7[1], "out %r" % _c7[1][:160],
 )
+
+# No background helpers: a helper aj cannot watch is refused unless run_in_background is false.
+for _bg_input, _bg_why in (({"prompt": "x"}, "was left out"),
+                           ({"prompt": "x", "run_in_background": True}, "is true"),
+                           ({"prompt": "x", "run_in_background": False, "isolation": "remote"}, "remote")):
+    _bg = _cap_spawn(tool_input=_bg_input)
+    commit_case(
+        "agentcap: a background helper is refused (run_in_background %s)" % _bg_why
+        if _bg_why != "remote" else "agentcap: isolation remote is refused as a background helper",
+        _cap_denied(_bg[1]) and "no background helpers" in _bg[1] and _bg_why in _bg[1],
+        "out %r" % _bg[1][:200],
+    )
+_bg_open = _cap_spawn()
+_bg_on = _cap_spawn(tool_input={"prompt": "x"}, HOUSE_RULES_BACKGROUND_HELPERS="on")
+commit_case(
+    "agentcap: run_in_background false is allowed, and HOUSE_RULES_BACKGROUND_HELPERS=on allows a background helper",
+    not _cap_denied(_bg_open[1]) and not _cap_denied(_bg_on[1]),
+    "open %r; on %r" % (_bg_open[1][:120], _bg_on[1][:120]),
+)
+if os.path.exists(_cap_state):
+    os.remove(_cap_state)
 
 # --- verdict's audit summary: built from the transcript, not the subagent's own report --------
 code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="audit1"))
@@ -1550,8 +1572,13 @@ for _wt_event, _wt_payload in (("audit", post_agent_payload()),
     if len(_wt_files) != 1:
         _wt_p.append(f"expected one trail file, found {_wt_files}")
     else:
-        if "pytest -q" not in open(_wt_files[0], encoding="utf-8").read():
+        _wt_text = open(_wt_files[0], encoding="utf-8").read()
+        if "pytest -q" not in _wt_text:
             _wt_p.append("trail file lacks the fixture command 'pytest -q'")
+        # The raw readout, not a summary: a header saying so, and each tool call and result.
+        for _wt_want in ("# Raw transcript readout", "tool call: Bash", "tool result ("):
+            if _wt_want not in _wt_text:
+                _wt_p.append("trail file lacks %r" % _wt_want)
         if "Work trail for this helper: " + _wt_files[0] not in _wt_c:
             _wt_p.append("additionalContext does not name the trail path")
         if "audit1" not in os.path.basename(_wt_files[0]):
