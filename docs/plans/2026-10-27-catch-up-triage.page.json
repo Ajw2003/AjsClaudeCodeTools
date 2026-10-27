@@ -1,0 +1,462 @@
+{
+ "title": "Catch-up Triage",
+ "eyebrow": "Triage \u00b7 open issues and pull requests in Ajw2003/AjsClaudeCodeTools, 27 October 2026",
+ "short": {
+  "lead": "While you were away, most of the work landed. Of the 42 issues waiting on your review, 34 are already merged into main and running in every session, and only need closing. One feature is built and passing but not merged: restructure steps 3 to 7, which changes how every session starts. Two features are designed but not built: a changelog page in every repo and the attribution guard on GitHub. The steps below are in the order I suggest, and only step 3 carries real risk.",
+  "hint": "Tap a step to see what it does, its state and its risk.",
+  "key": [
+   [
+    "Done, no action",
+    "done"
+   ],
+   [
+    "Needs you",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "1 \u00b7 Tidy",
+    "41 issues are finished and only need closing",
+    "you",
+    [
+     "14 issues were tested by you and merged: the verify rework (#368 to #371), the proof check fix (#367, #374 to #376) and the 2.68.1 patch (#307 to #311). #303 (the emergency switch-off) was replaced by that patch.",
+     "27 more were merged between 14 and 19 October and have run in every session since, but no QA pass was ever logged for them: the new item visual (#240 to #243), house labels (#274 to #278), the guards audit (#286, #288 to #293), the in-session attribution guard (#315 to #319) and the writing-check loop fixes (#322 to #327).",
+     "Pull request #305 (house-rules 2.68.1: switch off the design loop) should close unmerged, because the real 2.68.1 patch (pull request #312) replaced it.",
+     "Risk: none. Closing changes no code, and an issue can be reopened."
+    ],
+    "Approve the sweep below, keeping any issue you want to test first."
+   ],
+   [
+    "lock",
+    "2 \u00b7 Prepare",
+    "Set two cloud settings before step 3, or every cloud session stops",
+    "you",
+    [
+     "The restructure (step 3) refuses every tool until the agent's name is set. Cloud sessions start in a fresh container, so the plugin reads the name from environment variables.",
+     "I checked this session: HOUSE_RULES_AGENT_NAME is not set, so after the merge a cloud session would be locked until the name is saved each time.",
+     "The steps are in docs/cloud-session-setup.md on the branch AjsAgent/issue-281-fix. In each cloud environment's settings, add HOUSE_RULES_AGENT_NAME=ajw2003sAgent and HOUSE_RULES_OWNED_BRANCHES. On your PC, the first session after the update asks for both and saves them once."
+    ],
+    "Add the two variables to each cloud environment you use."
+   ],
+   [
+    "swap",
+    "3 \u00b7 Test and merge",
+    "Restructure steps 3 to 7: built, passing, waiting on your QA",
+    "you",
+    [
+     "What it does: settings and identity (#341), safe git (#349), the design loop and pages (#343), writing and evidence rules (#344) and helper agents (#345), all following your five grilling rounds. Parent #381, release #382.",
+     "Where it is: the branch AjsAgent/issue-281-fix, house-rules 2.74.0, 34 files changed, and up to date with main. No pull request is open yet. The five per-step branches (issue-341-settings and the rest) are older copies already inside it.",
+     "Tested: I ran verify.py on that branch today and it exited 0, with 966 checks passing. tools/verify_tools.py passed all 47 checks. The QA page is docs/plans/2026-10-24-restructure-steps-3-7-qa.html on the branch.",
+     "Risk: high. It changes how every session starts, how commits and pull requests are credited, which deletes are allowed and what helper agents report, on every account that installs the plugin.",
+     "Version clash: this branch already uses 2.74.0, and the background work tracking plan (#396) also names 2.74.0. Whichever merges second needs the next number."
+    ],
+    "Once step 2 is done, say \"open the restructure pull request\", test it in a fresh session, then reply \"QA passed: restructure steps 3 to 7\"."
+   ],
+   [
+    "file",
+    "4 \u00b7 Rebase",
+    "Pull request #338: a failed plugin update no longer stalls a session",
+    "",
+    [
+     "What it does: a copy of the plugin synced from your claude.ai account gets a one-line notice instead of an update it can never run. That prompt once held an overnight FocusDesk run for hours.",
+     "State: still needed, because main's version check still tells a session to run claude plugin marketplace update. The branch is 99 commits behind main, conflicts with it, and uses version 2.69.0, which another release has since used.",
+     "Risk: medium. It touches the same core file as the restructure, so it is rebased after step 3 merges."
+    ],
+    "Nothing yet. After step 3 merges I rebase it, rerun both suites and give you a QA page."
+   ],
+   [
+    "list",
+    "5 \u00b7 Approve plan",
+    "Changelog page in every repo (#384 to #388): designed, not built",
+    "you",
+    [
+     "What it does: every repo keeps docs/changelog/, the session-start docs check names a missing one, and a pull request that leaves it unchanged gets a reminder, never a block.",
+     "State: you approved the design on 27 October. The build plan waits on your approval, on the branch claude/project-thread-4je2dp, published at claude.ai/artifact/HkCZV8e1ZLofXrAqRTGbg4. No plugin code exists yet.",
+     "Risk: low, since it only reminds. It adds one sentence to the injected rules, which are at about 8,900 of a 9,700-character limit."
+    ],
+    "Read the build plan and reply \"Build plan approved: changelog page rule\"."
+   ],
+   [
+    "search",
+    "6 \u00b7 Later",
+    "Attribution guard on GitHub (#350 to #355): designed, not built",
+    "",
+    [
+     "What it does: a shared GitHub workflow strips the Claude Code footer from pull requests and audits pushes in all 71 repos you own, and a merge gate in the hook refuses a merge until that check passes.",
+     "State: design approved 19 October; the build plan sits on the branch AjsAgent/attribution-guard-plan. No code exists.",
+     "Risk: the widest of anything here, because it writes a workflow into every repo you own and adds rulesets to the public ones. The plan already proves it on focus-deck-app before rolling out."
+    ],
+    "Nothing until steps 1 to 5 are done."
+   ],
+   [
+    "hand",
+    "7 \u00b7 Your call",
+    "Two old pull requests need a yes or no",
+    "you",
+    [
+     "Pull request #294 (issue-triage skill): you approved it on 15 October, but it never merged and now conflicts with main. It adds a skill and a command, with no hooks, so the risk is low. I suggest I rebase it so it can merge.",
+     "Pull request #166 (art-pipeline plugin): opened 8 October, still merges cleanly, but the branch is 410 commits behind main. Its gate was never tried in a live session. An art-pipeline skill already appears in this session's skill list, so it may live somewhere else now; I can't tell that from this repo."
+    ],
+    "Say keep or close for each."
+   ],
+   [
+    "list",
+    "8 \u00b7 Leftovers",
+    "Older in-progress issues that need sorting, not work",
+    "",
+    [
+     "#287 (configurable agent name) is done by restructure step 3 and can close once it merges.",
+     "#110 (turn every approved plan into issues) was built in 2.49.0 but carries both wontfix and in progress; it can close.",
+     "#297 to #300 (pull requests say how to test and what is next), #301, #304 and #120 have plans from mid-October but no code. They can be re-planned after the restructure, since step 3 changes the same checks.",
+     "#347 (restructure step 9, session triage) is labelled needs review but has no design or code yet.",
+     "Left alone on purpose: the QA evidence set #389 to #395 (another account's work) and #383 with #396 to #400 (another thread is building those)."
+    ],
+    "Nothing now; I can bring a second sweep for these after step 3."
+   ]
+  ]
+ },
+ "changes": [],
+ "sweep": [
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 368,
+   "title": "Restructure: rework verify.py into per-part test files with a parallel runner",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-21 - QA passed: verify rework\" records your QA pass. Merged by pull request #373 (house-rules 2.72.0, verify.py split into per-part test files with a parallel runner) on 2026-10-21."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 369,
+   "title": "Verify rework step 1: list which part every verify.py check belongs to",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-21 - QA passed: verify rework\" records your QA pass. Merged by pull request #373 (house-rules 2.72.0, verify.py split into per-part test files with a parallel runner) on 2026-10-21."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 370,
+   "title": "Verify rework step 2: per-part test files and a parallel runner",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-21 - QA passed: verify rework\" records your QA pass. Merged by pull request #373 (house-rules 2.72.0, verify.py split into per-part test files with a parallel runner) on 2026-10-21."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 371,
+   "title": "Verify rework step 3: the run-twice rule, docs, timing and QA page",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-21 - QA passed: verify rework\" records your QA pass. Merged by pull request #373 (house-rules 2.72.0, verify.py split into per-part test files with a parallel runner) on 2026-10-21."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 367,
+   "title": "Close and merge proof checks don't read the GitHub tool's wrapped results",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-24 - QA passed: proof check fix\" records your QA pass. Merged by pull request #380 (house-rules 2.73.0, the proof checks read the GitHub tool's replies) on 2026-10-23."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 374,
+   "title": "Proof check fix step 1: unwrap the GitHub tool's replies before both proof checks",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-24 - QA passed: proof check fix\" records your QA pass. Merged by pull request #380 (house-rules 2.73.0, the proof checks read the GitHub tool's replies) on 2026-10-23."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 375,
+   "title": "Proof check fix step 2: the design loop keeps one issue list per feature",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-24 - QA passed: proof check fix\" records your QA pass. Merged by pull request #380 (house-rules 2.73.0, the proof checks read the GitHub tool's replies) on 2026-10-23."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 376,
+   "title": "Proof check fix step 3: version, docs, QA page, then the stranded issues close",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-24 - QA passed: proof check fix\" records your QA pass. Merged by pull request #380 (house-rules 2.73.0, the proof checks read the GitHub tool's replies) on 2026-10-23."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 307,
+   "title": "house-rules 2.68.1: the design loop reads every approval in a message",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" records your QA pass. Merged by pull request #312 on 2026-10-16. The label still says in progress because the design loop refused to record a pass on one step of the bigger restructure (#306)."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 308,
+   "title": "house-rules 2.68.1: the design loop records only issues created in its own repo",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" records your QA pass. Merged by pull request #312 on 2026-10-16. The label still says in progress because the design loop refused to record a pass on one step of the bigger restructure (#306)."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 309,
+   "title": "house-rules 2.68.1: four checks report instead of blocking",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" records your QA pass. Merged by pull request #312 on 2026-10-16. The label still says in progress because the design loop refused to record a pass on one step of the bigger restructure (#306)."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 310,
+   "title": "house-rules 2.68.1: a blocked page stays owed across retries",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" records your QA pass. Merged by pull request #312 on 2026-10-16. The label still says in progress because the design loop refused to record a pass on one step of the bigger restructure (#306)."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 311,
+   "title": "house-rules 2.68.1: release the patch with its version, docs and QA page",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Decisions.md \"2026-10-16 - QA passed: plugin restructure 2.68.1 patch\" records your QA pass. Merged by pull request #312 on 2026-10-16. The label still says in progress because the design loop refused to record a pass on one step of the bigger restructure (#306)."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 303,
+   "title": "house-rules: the design loop is broken and blocks sessions; switch off the conflicting checks now",
+   "action": "not_planned",
+   "replaced_by": 311,
+   "evidence": "The emergency switch-off in pull request #305 was never merged. The 2.68.1 patch (#311) fixed the same incidents properly instead, and you passed its QA on 2026-10-16."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 240,
+   "title": "New item visual: New items on handover pages open to a three-box flow",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #234 on 2026-10-14, so it has run in every session since then. Its commits on main say Refs #240. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 241,
+   "title": "New item visual: the template draws the three labelled boxes and every item's file list",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #234 on 2026-10-14, so it has run in every session since then. Its commits on main say Refs #241. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 242,
+   "title": "New item visual: rebuild the changes page with real file counts",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #234 on 2026-10-14, so it has run in every session since then. Its commits on main say Refs #242. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 243,
+   "title": "New item visual: a pasted reply no longer becomes part of a feature's name",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #234 on 2026-10-14, so it has run in every session since then. Its commits on main say Refs #243. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 274,
+   "title": "The plugin creates the house labels a repo is missing",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. The /house-rules:labels command is in this session's skill list. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 275,
+   "title": "A label setup script that creates only the missing house labels",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. The /house-rules:labels command is in this session's skill list. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 276,
+   "title": "The hook creates missing house labels when it first needs them",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. The /house-rules:labels command is in this session's skill list. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 277,
+   "title": "A /house-rules:labels command that sets up a repo's labels on demand",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. The /house-rules:labels command is in this session's skill list. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 278,
+   "title": "Label advice uses the form that works in cloud sessions",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. The /house-rules:labels command is in this session's skill list. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 286,
+   "title": "Page copy box must hold the full reply the design gate accepts",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. A QA page was built for it (docs/plans, the guards, pages and labels build) but no pass was logged. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 288,
+   "title": "Page cards clip long words on a phone, and the visual check misses it",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. A QA page was built for it (docs/plans, the guards, pages and labels build) but no pass was logged. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 289,
+   "title": "Never-blocked list: agent-branch commits, page builder publishes and my own files always go through",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. A QA page was built for it (docs/plans, the guards, pages and labels build) but no pass was logged. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 290,
+   "title": "Prompt timer: each prompt waits on its own, with no chain of refusals",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. A QA page was built for it (docs/plans, the guards, pages and labels build) but no pass was logged. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 291,
+   "title": "Destructive actions are refused with the safe way named, and deletes are narrowed",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. A QA page was built for it (docs/plans, the guards, pages and labels build) but no pass was logged. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 292,
+   "title": "Remove the background-work guard and the Never hide work rule",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. A QA page was built for it (docs/plans, the guards, pages and labels build) but no pass was logged. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 293,
+   "title": "Enforced workflow checks name their exact fix when they refuse",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #295 on 2026-10-16, so it has run in every session since then. A QA page was built for it (docs/plans, the guards, pages and labels build) but no pass was logged. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 315,
+   "title": "The attribution guard still lets Claude credit through",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #320 on 2026-10-18, so it has run in every session since then.  No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 316,
+   "title": "Attribution guard: check gh api and curl writes to GitHub, and bodies in files",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #320 on 2026-10-18, so it has run in every session since then.  No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 317,
+   "title": "Attribution guard: recognise the footer GitHub appends",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #320 on 2026-10-18, so it has run in every session since then.  No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 318,
+   "title": "Attribution guard: read the body back after opening a pull request or issue",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #320 on 2026-10-18, so it has run in every session since then.  No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 319,
+   "title": "Attribution guard: rule text, docs and version",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #320 on 2026-10-18, so it has run in every session since then.  No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 322,
+   "title": "Stop the writing check and editor checkpoint from looping on retries",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #337 on 2026-10-19, so it has run in every session since then. It shipped as house-rules 2.68.5. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 323,
+   "title": "Make the end-of-reply retry report to aj only",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #337 on 2026-10-19, so it has run in every session since then. It shipped as house-rules 2.68.5. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 324,
+   "title": "Stop running the writing check on chat replies",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #337 on 2026-10-19, so it has run in every session since then. It shipped as house-rules 2.68.5. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 325,
+   "title": "Ask for the editor helper only on pages unless HOUSE_RULES_EDITOR=on",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #337 on 2026-10-19, so it has run in every session since then. It shipped as house-rules 2.68.5. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 326,
+   "title": "Say the page checkpoint's still-owed note once per message",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #337 on 2026-10-19, so it has run in every session since then. It shipped as house-rules 2.68.5. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  },
+  {
+   "repo": "Ajw2003/AjsClaudeCodeTools",
+   "number": 327,
+   "title": "Accept an approval the first time, and ask for the decisions-log entry afterwards",
+   "action": "completed",
+   "replaced_by": null,
+   "evidence": "Merged to main by pull request #337 on 2026-10-19, so it has run in every session since then. It shipped as house-rules 2.68.5. No QA pass is logged in Decisions.md, so closing it rests on your approval here, not on a recorded test."
+  }
+ ],
+ "wrapup": {
+  "summary": "A catch-up triage: 41 finished issues to close, one big tested feature to QA and merge, and two designed features to schedule.",
+  "changing": "Nothing changes until you approve. I have not merged, closed or relabelled anything.",
+  "blocking": "Your sweep approval, and the two cloud settings before the restructure merges.",
+  "next": "Once you approve the sweep, I close each issue with a comment quoting its evidence and close pull request #305.",
+  "todo": [
+   "Type \"Sweep approved: issues\" in the chat, adding \"keep #N\" for any issue you want to test first.",
+   "Add HOUSE_RULES_AGENT_NAME and HOUSE_RULES_OWNED_BRANCHES to each cloud environment you use.",
+   "Say \"open the restructure pull request\" when you are ready to test steps 3 to 7."
+  ]
+ }
+}
