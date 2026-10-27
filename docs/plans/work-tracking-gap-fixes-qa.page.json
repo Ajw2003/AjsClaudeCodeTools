@@ -1,0 +1,47 @@
+{
+  "title": "Work Tracking QA",
+  "eyebrow": "QA, second round · background work tracking (parent issue #396, \"every layer of delegated work is one tap away\"), house-rules 2.73.2",
+  "short": {
+    "lead": "Background work tracking is ready for QA again, on branch AjsAgent/background-work-tracking as house-rules 2.73.2 (pull request #402). The first round failed so that no known gap reaches main, so three more steps were added. The helper ledger, the feature names and the cloud update check are fixed (#403). Nothing the plugin writes credits Claude, and no claude.ai session, project, artifact or share link can reach git (#405). The docs are updated (#404). verify.py passes all 963 checks and verify_tools.py all 47. The four steps from the first round are unchanged, and the test for you is the same one.",
+    "hint": "Tap a row to see what was checked and how.",
+    "key": [["Checked by me", ""], ["Your test", "you"]],
+    "items": [
+      ["eye", "Thread", "The thread's own transcript link (#400)", "", "Unchanged since the first round: five verify.py cases pass, and the session-start hook produced this thread's own link from the real environment.", "Nothing from you."],
+      ["hand", "PC", "The Remote Control transcript link (#383)", "", "Unchanged since the first round: five verify.py cases pass. It has still not seen a real Remote Control start.", "Nothing from you."],
+      ["loop", "Helpers", "Helper work trails (#397)", "", "Unchanged since the first round: four verify.py cases pass, and a real helper's transcript rendered to a file listing its 19 shell commands.", "Nothing from you."],
+      ["stop", "Check", "The check for links owed (#398)", "", "Unchanged since the first round: eight verify.py cases pass, and a run over the first thread's real transcript flagged exactly the checklists that lacked the link.", "Nothing from you."],
+      ["file", "Bugs", "Helper ledger, feature names and the cloud update check (#403)", "", "New verify.py cases pass for all three. I also ran the fixed name cleaner on the names the design loop really stored for this feature: \"background work tracking 1A 2A</message>\" and \"background work tracking 1*\" both become \"background work tracking\", and \"3D printer\" stays whole. The update check, run against this session's real synced plugin copy, printed one plain line saying the copy is synced from your account and cannot be updated by command here, with no update command.", "Nothing from you."],
+      ["lock", "Credit", "No Claude credit and no claude.ai links reach git (#405)", "", "The plugin's own safety commit for a helper now ends with \"Committed by AJ's agent\"; a verify.py case makes a real one and reads its message back. The guard refuses an artifact link in a commit message, a share link in a pull request body, an artifact link on a staged file line (naming the file and line), the same link when a git add in the same command would stage it, and links in files written through the GitHub tools. A commit whose docs only name the claude.ai code address in prose passes. A search of the whole branch for session, project, artifact and share links finds none: the three real artifact links in docs/plans are gone, and every test link is built from two parts.", "Nothing from you."],
+      ["flask", "Your test", "Try it in a new project thread", "you", "After 2.73.2 is installed, start a new thread in a claude.ai project, ask for a task that uses a helper agent, then one that starts a Remote Control session on your PC.", "Check that the checklist header links to the thread's transcript, a helper's work-trail file is attached, and \"Transcript of the session on your PC\" is posted without you asking. Open each one."]
+    ]
+  },
+  "changes": [
+    ["chg", "Helper ledger, feature names, update check (#403)", "Three older bugs fixed.", ["The opt-in helper ledger listed no commands; feature names kept pasted tags and answer codes; a synced cloud copy got update commands that fail.", "The ledger lists the helper's commands; names are clean; a synced copy gets one plain line."], "scripts/house_rules/delegation.py, design_loop.py and core.py, with new verify.py cases."],
+    ["chg", "Safety commits (#405)", "The commit the plugin makes for a stalled helper.", ["Ended with a co-author line naming Claude and a session link.", "Ends with \"Committed by AJ's agent\"."], "scripts/house_rules/delegation.py: _wip_message. The unused session id plumbing is gone."],
+    ["chg", "Credit guard (#405)", "Stricter, as you asked.", ["Refused session links in messages only; artifact and share links and file contents got through.", "Refuses session, project, artifact and share links in messages, GitHub text, the lines a commit adds and GitHub file writes."], "scripts/house_rules/safe_git.py: _added_link_hit, _CLAUDE_LINK_RE. Described in docs/4-systems/guards.md, \"No claude.ai links in git (#405)\"."],
+    ["chg", "Three older QA pages (#405)", "Their published artifact links are taken out.", ["docs/plans held two real artifact links in three files.", "The pages name the published copy in words."], "docs/plans/2026-10-19-restructure-step-1-qa.html and .page.json, docs/plans/new-item-visual-qa.html."],
+    ["chg", "Docs (#404)", "The tiers that changed.", ["The systems doc called the gap fixes planned.", "docs/4-systems/work-tracking.md and guards.md describe them; ProjectState.md and Decisions.md have dated entries."], "Version stays 2.73.2: nothing was released."]
+  ],
+  "qa": {
+    "feature": "background work tracking",
+    "base": "origin/main",
+    "unverified": [
+      "No session has run 2.73.2 yet, because hooks load at session start; every check drove the branch's hook.py directly or called its functions",
+      "No real Remote Control session was started, so the rclink hook has only seen recorded results, and whether claude.ai runs hooks for that tool at all waits on your test",
+      "The fixed helper ledger was checked by a verify.py case on a fixture transcript, not on a real helper, because no helper ran in this session",
+      "A commit through a cd or -C the guard cannot follow skips the new link check; the rest of the guard still asks about that command",
+      "GitHub may still add its own footer to a pull request body in a cloud session; the read-back reports it rather than preventing it"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "Background work tracking, with every gap from the first round closed, is built as house-rules 2.73.2 and waits for your QA.",
+    "changing": "The first round's four hooks, three bug fixes, a stricter credit guard, three older QA pages and the docs.",
+    "blocking": "Your test in a new project thread.",
+    "next": "On a pass, pull request #402 is squash-merged into main, ahead of the restructure. On a fail, I fix it on this branch.",
+    "todo": [
+      "Run the test in the Your test row.",
+      "Reply \"QA passed: background work tracking\", or say what failed."
+    ]
+  }
+}
