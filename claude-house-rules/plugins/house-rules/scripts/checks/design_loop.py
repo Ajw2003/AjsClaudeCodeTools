@@ -759,6 +759,15 @@ _loop_cases.append(("the feature name stops at the end of its sentence (found in
 _names = [_ig_mod.design_loop._loop_name(_r) for _r in ("New item visual: 1C", "Label check plan: 1A 2A", "label check: 2*")]
 _loop_cases.append(("a pasted page reply's answer codes are not part of the name (aj's real messages, #243)",
                     _names == ["New item visual", "Label check plan", "label check"]))
+_jn = _ig_mod.design_loop._loop_name
+_loop_cases.append(("#403: a name ends at a pasted tag and drops trailing answer codes (real stored junk)",
+                    [_jn("background work tracking 1A 2A</message>"), _jn("background work tracking</message>"),
+                     _jn("background work tracking 1*")] == ["background work tracking"] * 3))
+_loop_cases.append(("#403: '3D printer' and '3D printer 2A' keep the name whole",
+                    [_jn("3D printer"), _jn("3D printer 2A")] == ["3D printer", "3D printer"]))
+_old = {"feature": "next one", "features": {"background work tracking 1*": {"name": "background work tracking 1*", "issues": []}}}
+_loop_cases.append(("#403: QA for a feature stored under a junk name still finds it",
+                    _ig_mod.design_loop._loop_stored(_old, "background work tracking") is not None))
 _loop_issue(201); _loop_issue(202)
 
 _loop_gh("in progress", 201, 202)
