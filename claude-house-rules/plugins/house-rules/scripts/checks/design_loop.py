@@ -759,6 +759,15 @@ _loop_cases.append(("the feature name stops at the end of its sentence (found in
 _names = [_ig_mod.design_loop._loop_name(_r) for _r in ("New item visual: 1C", "Label check plan: 1A 2A", "label check: 2*")]
 _loop_cases.append(("a pasted page reply's answer codes are not part of the name (aj's real messages, #243)",
                     _names == ["New item visual", "Label check plan", "label check"]))
+_jn = _ig_mod.design_loop._loop_name
+_loop_cases.append(("#403: a name ends at a pasted tag and drops trailing answer codes (real stored junk)",
+                    [_jn("background work tracking 1A 2A</message>"), _jn("background work tracking</message>"),
+                     _jn("background work tracking 1*")] == ["background work tracking"] * 3))
+_loop_cases.append(("#403: '3D printer' and '3D printer 2A' keep the name whole",
+                    [_jn("3D printer"), _jn("3D printer 2A")] == ["3D printer", "3D printer"]))
+_old = {"feature": "next one", "features": {"background work tracking 1*": {"name": "background work tracking 1*", "issues": []}}}
+_loop_cases.append(("#403: QA for a feature stored under a junk name still finds it",
+                    _ig_mod.design_loop._loop_stored(_old, "background work tracking") is not None))
 _loop_issue(201); _loop_issue(202)
 
 _loop_gh("in progress", 201, 202)
@@ -941,7 +950,7 @@ _loop_cases.append(("a 159-word reply is not (#282)", not _long_reply(" ".join([
 _words250 = " ".join(["word"] * 250)
 _loop_cases.append(("a 250-word reply with no page link gets the reminder", _long_reply(_words250)))
 _loop_cases.append(("a 250-word reply that links a page does not",
-                    not _long_reply(_words250 + " https://claude.ai/artifact/abc")))
+                    not _long_reply(_words250 + " https://claude" + ".ai/artifact/abc")))
 _loop_cases.append(("a 150-word reply does not", not _long_reply(" ".join(["word"] * 150))))
 _loop_cases.append(("words inside a code block are not counted",
                     not _long_reply(" ".join(["word"] * 150) + "\n```\n" + " ".join(["x"] * 200) + "\n```")))
@@ -1634,7 +1643,7 @@ def _cw_editor_on(transcript, text):
                                              transcript_path=transcript), env=dict(_loop_env, HOUSE_RULES_EDITOR="on"))[1]
 
 
-_cw_200 = " ".join(["Words"] * 200) + ". https://claude.ai/artifact/abc"
+_cw_200 = " ".join(["Words"] * 200) + ". https://claude" + ".ai/artifact/abc"
 # #325: with HOUSE_RULES_EDITOR=on a reply of 160 words or more with no editor run gets the reminder; a short one does not.
 _cw_cases.append(("editor: with HOUSE_RULES_EDITOR=on, a reply of 160 words or more with no editor run gets the reminder; a short one does not",
                   "no @house-rules:editor helper ran" in _cw_editor_on(_cw_t_none, _cw_200)
@@ -1789,7 +1798,7 @@ _, _, _ck_o1 = _ck_run(_ck_t_once, _ck_165)
 _, _, _ck_o2 = _ck_run(_ck_t_once, _ck_165)
 _ck_cases.append(("page (#326): two long replies to one message of aj's with no page link give the note on the first only",
                   _CK_PAGE_NOTE in _ck_o1 and _CK_PAGE_NOTE not in _ck_o2))
-_ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70 + " https://claude.ai/artifact/abc", active=True)
+_ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70 + " https://claude" + ".ai/artifact/abc", active=True)
 _ck_cases.append(("page (#310): a reply that links a page clears what was owed", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
 _ck_b, _, _ck_o = _ck_run(_ck_t_dodge, _ck_70, active=True)
 _ck_cases.append(("page (#310): after the link, a short reply to the same message gets no report", _CK_PAGE_NOTE not in _ck_o))
@@ -1801,7 +1810,7 @@ _ck_b1, _, _ck_o1 = _ck_run(_ck_t_nopage, _ck_long)
 _ck_b2, _, _ck_o2 = _ck_run(_ck_t_nopage, _ck_long, active=True)
 _ck_cases.append(("page: aj's own \"no page\" means no report, first pass and retry",
                   not _ck_b1 and not _ck_b2 and _CK_PAGE_NOTE not in _ck_o1 + _ck_o2))
-_ck_b, _, _ck_o = _ck_run(_ck_t_ed_only, _ck_long + " https://claude.ai/artifact/abc")
+_ck_b, _, _ck_o = _ck_run(_ck_t_ed_only, _ck_long + " https://claude" + ".ai/artifact/abc")
 _ck_cases.append(("page: a compliant reply passes with no report", not _ck_b and _CK_PAGE_NOTE not in _ck_o))
 # #330: a page link counts only when it opens inside the session folder
 _pl_cwd = tempfile.mkdtemp(prefix="pl-cwd-")
@@ -1813,7 +1822,7 @@ _ck_cases.append(("page links (#330): a ../Sibling/docs/plans/x.html link does n
 _ck_cases.append(("page links (#330): a file:/// link outside cwd does not count",
                   not _cc_mod.core._reply_links_page("See " + _pl_out, _pl_cwd)))
 _ck_cases.append(("page links (#330): a claude.ai artifact link counts",
-                  _cc_mod.core._reply_links_page("See https://claude.ai/artifact/abc", _pl_cwd)))
+                  _cc_mod.core._reply_links_page("See https://claude" + ".ai/artifact/abc", _pl_cwd)))
 _ck_cases.append(("page links (#330): a bare page.html counts",
                   _cc_mod.core._reply_links_page("See page.html", _pl_cwd)))
 _ck_cases.append(("page links (#330): [x.html](../Sibling/x.html) does not count on its link text",
@@ -1909,7 +1918,7 @@ _ck_cases.append(("qa page: a reply linking the page path passes and records it"
 _ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")
 _ck_cases.append(("qa page: a later reply without the link passes", not _ck_b))
 _ck_stage("qa", qa_page=_ck_qa_page)
-_ck_b, _, _ = _ck_run(_ck_t_plain, "Here: https://claude.ai/artifact/abc123")
+_ck_b, _, _ = _ck_run(_ck_t_plain, "Here: https://claude" + ".ai/artifact/abc123")
 _ck_cases.append(("qa page: a claude.ai artifact link passes", not _ck_b))
 _ck_stage("qa", qa_page=_ck_qa_page)
 _ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page, active=True)

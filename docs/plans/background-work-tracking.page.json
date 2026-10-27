@@ -1,0 +1,191 @@
+{
+  "title": "Background Work Tracking",
+  "eyebrow": "Proposal · issue #383 and the wider goal of seeing every layer of delegated work",
+  "approval": "Design approved: background work tracking",
+  "replyPrefix": "Work tracking answers",
+  "reply": "",
+  "short": {
+    "lead": "When a project thread hands work to another session, you lose sight of it. Issue #383, \"Give aj the transcript link whenever a project thread hands work to a Remote Control session\", fixes one case of that. This proposal covers the whole goal: every thread shows you three layers, and none of them needs you to ask. The three layers are what the thread needs from you (its checklist and replies already show this), a link to each session doing the work, and the commands each of those sessions ran. Two things already exist. The subagent audit hook reads a helper's transcript, but only the agent sees the result. The opt-in subagent ledger (HOUSE_RULES_SUBAGENT_LEDGER=on) writes a helper's commands into docs/sessions/, but it is off by default and never reaches you. This proposal reuses both rather than building new ones. One thing is now checked: swapping a cse_ id for a session_ link has worked on two sessions. This thread's own id and transcript page matched the same way.",
+    "hint": "Tap a row to see what each layer shows and where it comes from.",
+    "key": [
+      [
+        "Exists today",
+        "done"
+      ],
+      [
+        "New",
+        ""
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "list",
+        "Needed",
+        "Layer 1: what is needed from you",
+        "done",
+        "The thread's checklist and replies, as today. Nothing changes here except one new checklist line, described in layer 2.",
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "Thread",
+        "Layer 2: this thread's own session",
+        "",
+        "A pinned line at the top of every checklist links to the thread's own transcript. The link is built from the CLAUDE_CODE_REMOTE_SESSION_ID value that the container already sets, so no tool call is needed to find it.",
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "PC",
+        "Layer 2: a Remote Control session on your PC (issue #383)",
+        "",
+        "When start_remote_control returns started or already_running, a hook tells the thread to read the session id with remote_control_status, then post a link titled \"Transcript of the session on your PC\". The link is also attached so it stays in the Library. A second session gets a second link, and an unreadable id is reported by name.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Helpers",
+        "Layer 2 and 3: helper agents inside the thread",
+        "",
+        "A helper agent has no claude.ai page of its own, so its transcript disappears with the cloud container. When a helper finishes, the existing ledger renderer writes its commands to a file under /mnt/project-files/work-trail/, and the thread attaches it. The ledger is on by default inside a project thread and stays opt-in everywhere else.",
+        "Nothing from you."
+      ],
+      [
+        "search",
+        "Commands",
+        "Layer 3: the commands a session ran",
+        "",
+        "For the thread and for a Remote Control session, the transcript page from layer 2 already lists every command, with its output. For a helper, the work-trail file lists each command, its result, and what prompted it.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Check",
+        "A check that the links were really posted",
+        "",
+        "If a session started or a helper finished and no reply or checklist carried its link, a Stop hook blocks the end of the turn, once. It tells the thread which link is missing.",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Approve",
+        "You approve this page",
+        "you",
+        "Your answers to the two choices below. Once you send them, the build starts.",
+        "Reply \"Design approved: background work tracking\" with your choice letters, for example 1A 2A."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "New hook: link a Remote Control session (PostToolUse on mcp__hearthbot__start_remote_control)",
+      "Tells the thread to read the session id, then post and attach its transcript link.",
+      [
+        "Nothing happens. You cannot see the session unless you ask, and the agent has to know how to look up its id.",
+        "The first reply after the start carries \"Transcript of the session on your PC\" as a link and as an attached link output."
+      ],
+      "This is issue #383 as written. Swapping a cse_ id for a session_ link has worked on two sessions, and the build still checks that the link loads before relying on it."
+    ],
+    [
+      "chg",
+      "New hook: pin the thread's own transcript link (SessionStart)",
+      "Gives the thread its own link from the container's session id, to put at the top of its checklist.",
+      [
+        "The thread's own session has no visible link anywhere in the project.",
+        "Every checklist opens with \"Transcript of this thread's session\"."
+      ],
+      "Only runs when CLAUDE_CODE_PROJECTS_SESSION is set, so ordinary sessions see no change."
+    ],
+    [
+      "chg",
+      "Changed: the subagent ledger (SubagentStop, delegation.py)",
+      "Turns on by default inside a project thread, and writes to /mnt/project-files/work-trail/ instead of docs/sessions/.",
+      [
+        "Off by default. When on, it writes to docs/sessions/, which a cloud container loses unless someone commits it.",
+        "Inside a project thread, each finished helper's commands are written to a file, and the thread attaches that file to its next reply."
+      ],
+      "Outside a project thread nothing changes: still opt-in, still docs/sessions/."
+    ],
+    [
+      "chg",
+      "New Stop check: links owed",
+      "Blocks the end of a turn once when a link from the rows above was never posted.",
+      [
+        "A missed link fails silently.",
+        "The thread is told which link is missing and posts it before the turn ends."
+      ],
+      "Blocks only once per turn, so it can never loop."
+    ],
+    [
+      "chg",
+      "Docs, version and tests",
+      "One systems page, a changelog line, a minor version bump, and verify.py cases for every hook above.",
+      [
+        "No docs, no version bump and no tests for these hooks.",
+        "A test feeds each hook a recorded tool result and checks the instruction it gives."
+      ],
+      "Nothing about QA pages changes, because another account is working on them."
+    ]
+  ],
+  "choices": [
+    [
+      "scope",
+      "How much of the tracking should be built now?",
+      [
+        [
+          "A",
+          "All three layers: the thread's own link, Remote Control links (#383), helper work trails, and the Stop check",
+          1,
+          "Covers the whole goal you described in one feature."
+        ],
+        [
+          "B",
+          "Issue #383 only: Remote Control links and the Stop check",
+          0,
+          "Smallest change. The thread's own link and the helper work trails would come later, as new issues."
+        ],
+        [
+          "C",
+          "Option A, plus a live log of every shell command as it runs",
+          0,
+          "Most detail, but it writes a file on every command, which slows the command guard that runs before each one."
+        ]
+      ],
+      "Option A gets every layer to you without you asking. Option C adds detail that the transcript page already shows."
+    ],
+    [
+      "where",
+      "Where should the links appear in a thread?",
+      [
+        [
+          "A",
+          "Pinned at the top of the checklist, updated in place, plus once in the reply that starts the work",
+          1,
+          "Always one tap away, and only one notification."
+        ],
+        [
+          "B",
+          "In a separate reply each time a session starts or a helper finishes",
+          0,
+          "Hard to miss, but every helper sends you a notification."
+        ]
+      ],
+      "Both attach each link to the project's Library."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Every project thread shows what it needs from you first, links to each session doing the work, and links to the commands each session ran, all without being asked.",
+    "changing": "Two new hooks, one changed hook, one new Stop check, plus docs, tests and a version bump in the house-rules plugin. Nothing related to QA pages changes.",
+    "blocking": "Your answers to the two choices above: scope (1) and where the links appear (2).",
+    "next": "I file the build issues under #383, build on a new branch, and open a pull request that includes a QA page.",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
+  }
+}

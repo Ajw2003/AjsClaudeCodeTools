@@ -1,0 +1,75 @@
+{
+  "title": "Gap Fixes Build Plan",
+  "eyebrow": "Build plan · redo of background work tracking (parent issue #396), design approved 2026-10-27 with your own answer",
+  "approval": "Build plan approved: background work tracking",
+  "short": {
+    "lead": "You approved the gap fixes and answered the credit question your own way: no published link reaches git unless you ask, no Claude credit anywhere, and no link that could cause a security issue. So the credit guard stays strict and gets stricter. I have already taken this thread's session ids out of the feature's docs and out of the Remote Control issue (#383). Three steps are filed under the parent issue (#396). The version stays 2.73.2 because nothing has been released yet.",
+    "hint": "Tap a step to see what it fixes.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "file",
+        "Bugs",
+        "#403: helper ledger, feature names and the cloud update check",
+        "",
+        "The opt-in helper ledger lists the helper's commands. Feature names drop the message tag and trailing answer codes, while \"3D printer\" stays whole. A plugin synced from your account gets one plain line, because an update banner cannot work there.",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Credit",
+        "#405: no Claude credit and no claude.ai links reach git",
+        "",
+        "The plugin's safety commits say \"Committed by AJ's agent\". The guard also refuses artifact and share links in commit messages and GitHub text. It refuses any commit whose added lines carry a session, artifact or share link. The three artifact links already on main come out of the files.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "QA",
+        "#404: docs and a new QA page",
+        "",
+        "The systems docs and the state doc are updated. Both verify scripts pass, the GitHub check is green, and a new QA page covers all seven steps.",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Approve",
+        "You approve this plan",
+        "you",
+        "Once you send it, a helper builds the bug fixes (#403) first.",
+        "Reply \"Build plan approved: background work tracking\"."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Pull request #402 (background work tracking)",
+      "Gains the three fix steps.",
+      [
+        "Five steps, with five known gaps.",
+        "Seven steps, with those five gaps closed."
+      ],
+      "Its branch history still holds the session ids in earlier commits. Squash-merging the pull request keeps them out of main's history."
+    ]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "Three more steps on the background work tracking pull request close every gap found, with the credit guard made stricter, as you asked.",
+    "changing": "Three hook functions, the credit guard, three older docs pages, the checks for them, and the docs.",
+    "blocking": "Your approval of this plan.",
+    "next": "Helpers build the bug fixes (#403), then the credit fixes (#405), one after the other. Then I post a new QA page (#404).",
+    "todo": [
+      "Reply \"Build plan approved: background work tracking\", or tell me which part of the plan to change."
+    ]
+  }
+}
