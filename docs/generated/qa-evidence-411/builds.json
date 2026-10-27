@@ -1,0 +1,14 @@
+{
+  "old builder, page as sent": [
+    0,
+    "make_page: wrote <work dir>/pages/old-builder.html (0 picture(s) copied)\nmake_page: <work dir>/pages/old-builder.html is outside docs/generated/qa-evidence-411; a link to it will not open in the app (#329). Copy it into docs/generated/qa-evidence-411/docs/plans before linking.\nvisual check dark: page errors 0, overflow none\nmake_page: QA page not recorded because no feature is in progress (no <work dir>/demo/.claude/house-rules-loop.json)"
+  ],
+  "new builder, page as sent": [
+    2,
+    "make_page: QA mode needs qa.evidence, a non-empty list of {change, type, media/before/after or reason}, one entry per change; types are animation, model, ai, gameplay, visual or none"
+  ],
+  "new builder, page with evidence": [
+    0,
+    "make_page: wrote <work dir>/pages/new-builder.html (5 picture(s) copied)\nmake_page: <work dir>/pages/new-builder.html is outside docs/generated/qa-evidence-411; a link to it will not open in the app (#329). Copy it into docs/generated/qa-evidence-411/docs/plans before linking.\nvisual check dark: page errors 0, overflow none\nmake_page: QA page not recorded because no feature is in progress (no <work dir>/demo/.claude/house-rules-loop.json)"
+  ]
+}
