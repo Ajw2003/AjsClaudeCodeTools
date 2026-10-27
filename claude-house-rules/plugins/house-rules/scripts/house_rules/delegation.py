@@ -626,30 +626,93 @@ def _subagent_ledger_enabled():
     return os.environ.get("HOUSE_RULES_SUBAGENT_LEDGER", "off").strip().lower() not in _TOGGLE_OFF
 
 
-def _render_transcript(transcript_path, heading=""):
-    """Render a transcript file with the shared renderer; returns (markdown body, session id).
-    A heading adds one synthetic human record first, because a helper transcript has none and
-    build_turns would otherwise render zero turns. Raises on any failure - callers decide how
-    to report it."""
-    import session_ledger_render as slr
+# Attachment types that only re-send the harness's own setup (system prompt, tool lists, skill
+# lists) on every turn. The readout names each one in a single line instead of dumping it.
+_READOUT_SETUP_ATTACHMENTS = {
+    "prompt_snapshot", "deferred_tools_delta", "deferred_tools_record", "mcp_instructions_delta",
+    "skill_listing", "environment", "instructions", "session_context",
+}
 
+
+def _readout_text(value):
+    """A block's content as plain text: strings as they are, lists of text blocks joined, and
+    anything else as indented JSON, so nothing in the record is dropped."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list) and all(isinstance(b, dict) and b.get("type") == "text" for b in value):
+        return "\n".join(b.get("text", "") for b in value)
+    return json.dumps(value, indent=2, ensure_ascii=False)
+
+
+def _readout_fence(text):
+    fence = "```"
+    while fence in text:
+        fence += "`"
+    return "%s\n%s\n%s" % (fence, text, fence)
+
+
+def _render_transcript(transcript_path, heading=""):
+    """A raw readout of a transcript file: every prompt, reply, tool call with its full input,
+    tool result with its full output, and hook output, in the order they were recorded, with
+    nothing summarised. Returns (markdown body, session id). Raises on any failure - callers
+    decide how to report it."""
+    session_id = os.path.splitext(os.path.basename(transcript_path))[0]
+    out = ["# Raw transcript readout: `%s`" % session_id, "", "Transcript: `%s`" % transcript_path, ""]
+    if heading:
+        out += [heading, ""]
+    bad = 0
     with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
-        records = []
-        if heading:
-            records.append({"type": "user", "origin": {"kind": "human"},
-                            "message": {"role": "user", "content": heading}})
-        bad = 0
-        for line in f:
+        for number, line in enumerate(f, 1):
             line = line.strip()
             if not line:
                 continue
             try:
-                records.append(json.loads(line))
+                rec = json.loads(line)
             except ValueError:
                 bad += 1
-    session_id = os.path.splitext(os.path.basename(transcript_path))[0]
-    turns = slr.build_turns(records)
-    return slr.render(turns, transcript_path, session_id, bad), session_id
+                out += ["## %d. unreadable line" % number, "", _readout_fence(line), ""]
+                continue
+            stamp = rec.get("timestamp", "")
+            kind = rec.get("type", "")
+            if kind == "attachment":
+                att = rec.get("attachment") or {}
+                att_type = att.get("type", "")
+                if att_type in _READOUT_SETUP_ATTACHMENTS:
+                    out += ["## %d. %s, harness setup: %s (not shown)" % (number, stamp, att_type), ""]
+                    continue
+                label = att_type
+                if att.get("hookName") or att.get("hookEvent"):
+                    label += ", %s" % (att.get("hookName") or att.get("hookEvent"))
+                body = att.get("content", att.get("text", att))
+                out += ["## %d. %s, attachment: %s" % (number, stamp, label.strip()), "",
+                        _readout_fence(_readout_text(body)), ""]
+                continue
+            content = (rec.get("message") or {}).get("content")
+            if isinstance(content, str):
+                content = [{"type": "text", "text": content}]
+            if not isinstance(content, list):
+                out += ["## %d. %s, %s record" % (number, stamp, kind or "unknown"), "",
+                        _readout_fence(json.dumps(rec, indent=2, ensure_ascii=False)), ""]
+                continue
+            for block in content:
+                btype = block.get("type", "") if isinstance(block, dict) else ""
+                if btype == "text":
+                    title, text = "%s text" % kind, block.get("text", "")
+                elif btype == "thinking":
+                    title, text = "%s thinking" % kind, block.get("thinking", "")
+                elif btype == "tool_use":
+                    title = "tool call: %s (%s)" % (block.get("name", ""), block.get("id", ""))
+                    text = json.dumps(block.get("input"), indent=2, ensure_ascii=False)
+                elif btype == "tool_result":
+                    title = "tool result (%s)%s" % (block.get("tool_use_id", ""),
+                                                    ", error" if block.get("is_error") else "")
+                    text = _readout_text(block.get("content", ""))
+                else:
+                    title, text = "%s %s block" % (kind, btype or "unknown"), _readout_text(block)
+                out += ["## %d. %s, %s" % (number, stamp, title), "", _readout_fence(text), ""]
+    if bad:
+        out += ["%d line(s) of the transcript were not valid JSON and are shown as they were." % bad, ""]
+    return "\n".join(out), session_id
 
 
 WORKTRAIL_DEFAULT_DIR = "/mnt/project-files/work-trail/"
@@ -692,8 +755,6 @@ def _write_subagent_ledger(transcript_path, payload):
     status string for the systemMessage - never raises, since this is an opt-in extra, never
     allowed to take the whole verdict report down with it."""
     try:
-        # A helper transcript has no human message, so the renderer needs a heading as its
-        # synthetic opening turn (as the work-trail path does) or it lists no commands.
         body, session_id = _render_transcript(
             transcript_path,
             "Helper agent %s (%s) started"
@@ -937,15 +998,45 @@ def _agentcap_update(add=None, remove=None):
     return note
 
 
+BACKGROUND_HELPER_DENY = (
+    "House rules, no background helpers: this helper would run in the background (%s), where "
+    "aj cannot watch it or read its transcript until it finishes. Start it again with "
+    "run_in_background: false and no isolation: \"remote\", so it runs in the open and its raw "
+    "transcript readout is saved the moment it finishes. HOUSE_RULES_BACKGROUND_HELPERS=on "
+    "allows background helpers again."
+)
+
+
+def _background_spawn(data):
+    """Why an Agent/Task call would run in the background, or "" when it runs in the open.
+    An omitted run_in_background counts as background: the Agent tool's own default is to
+    background a helper, so only an explicit false is in the open."""
+    if os.environ.get("HOUSE_RULES_BACKGROUND_HELPERS", "off").strip().lower() not in _TOGGLE_OFF:
+        return ""
+    tool_input = data.get("tool_input") if isinstance(data, dict) else None
+    if not isinstance(tool_input, dict):
+        return ""
+    if tool_input.get("isolation") == "remote":
+        return "isolation: \"remote\" always runs in the background"
+    flag = tool_input.get("run_in_background")
+    if flag is False:
+        return ""
+    if flag is None:
+        return "run_in_background was left out, and the Agent tool backgrounds a helper by default"
+    return "run_in_background is %s" % json.dumps(flag)
+
+
 def event_agentcap():
     try:
         if not _agentcap_enabled():
             return 0
         payload = read_payload()
         caller = ""
+        background = ""
         try:
             data = json.loads(payload) if payload else {}
             caller = (data.get("agent_id") or "") if isinstance(data, dict) else ""
+            background = _background_spawn(data)
         except ValueError as exc:
             emit({"systemMessage": "house-rules: agent cap could not parse the call payload (%s); "
                   "the spawn is allowed, the cap is not enforced this time." % type(exc).__name__})
@@ -956,6 +1047,8 @@ def event_agentcap():
                 "Report back to the parent and let it decide. HOUSE_RULES_AGENTS=off disables "
                 "this check." % caller
             )
+        elif background:
+            reason = BACKGROUND_HELPER_DENY % background
         else:
             path = _agentcap_path()
             try:

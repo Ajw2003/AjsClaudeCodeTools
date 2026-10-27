@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-27 - Raw helper readout, and no background helpers
+
+**Context.** aj's live test of 2.73.2 in a project thread. The helper's work-trail file was the session
+ledger's summary, and a helper started in the background has no readable transcript until it ends.
+
+**Decision.** aj wrote: "id rather just a raw readout of the transcript be saved and nothing ever be
+backgrounded in such a way the transcript can't be viewed", then chose "No background helpers" over
+"Live readout while it runs" and "Both". The work trail becomes a raw readout of the helper's
+transcript, and the `agentcap` hook refuses any helper not started with `run_in_background: false`.
+Plugin 2.73.3. See `docs/4-systems/work-tracking.md`, "Raw readout and no background helpers".
+
+**Status.** Standing.
+
 ## 2026-10-27 - Build plan approved: background work tracking (gap fixes)
 
 **Context.** Build plan `docs/plans/work-tracking-gap-fixes-plan.html` for the redo of #396, three steps:
