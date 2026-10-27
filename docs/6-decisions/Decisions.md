@@ -7,6 +7,34 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-27 - A plugin update never stops a session's work (pull request #338 folded into the restructure)
+
+**Context.** An overnight FocusDesk run in a cloud session stalled for hours on a permission prompt
+(2026-10-19). The plugin there is synced from aj's claude.ai account into `~/.claude/plugins/synced/`,
+with no marketplace and no `installed_plugins.json`. When GitHub's version moved ahead of the synced
+copy, `versioncheck` ran `claude plugin marketplace update aj-house-rules`, which failed with
+"Marketplace 'aj-house-rules' not found". The banner then told Claude to stop and run the update
+before other work, and the marker it wrote put a `guard` permission prompt on the first shell
+command. Nobody was awake to answer it. The fix was written as pull request #338 (branch
+`AjsAgent/update-never-stalls`) against the old single-file `hook.py`.
+
+**Decision.** aj, 2026-10-27: close #338 and add its work to the restructuring pull request. The
+fix is re-applied in the split code (`scripts/house_rules/core.py`, `safe_git.py`):
+1. A copy synced from the claude.ai account (a `plugins/synced` segment in the plugin root, or
+   `HOUSE_RULES_VC_SYNCED=on`) is never asked to update: no command runs, and Claude tells the user
+   in one sentence which version runs and that claude.ai delivers the newer one.
+2. When the automatic update fails elsewhere, the banner tells Claude to carry on and list the
+   update under "Waiting on you" as an `UNTESTED:` step card, never to stop, wait, or run it itself.
+3. `versioncheck` no longer writes the session marker, and `guard` no longer prompts for it.
+
+**Rejected.** An allowlist entry for the two update commands in `.claude/settings.json`: the
+commands cannot succeed in a cloud session at all, and `guard`'s own "ask" prompts regardless.
+
+**Supersedes.** The "already answered" paragraph of `rules/detail/handover-command.md` and the
+marker design in `docs/architecture.md`; the 2026-09-26 decision to run the update itself stands.
+
+**Status.** Standing.
+
 ## 2026-10-24 - Build plan approved: restructure steps 3 to 7
 
 **Context.** Build plan `docs/plans/2026-10-24-restructure-steps-3-7-plan.html` for #381.

@@ -811,7 +811,7 @@ def vc_env(case="default", **overrides):
 
 def vc_marker_path(session_id):
     """Where versioncheck used to arm guard's permission prompt. It no longer writes one
-    (Decisions.md, 2026-10-19); the stale cases assert the file never appears."""
+    (Decisions.md, 2026-10-27); the stale cases assert the file never appears."""
     return os.path.join(tempfile.gettempdir(), f"house-rules-outdated-{session_id}.json")
 
 

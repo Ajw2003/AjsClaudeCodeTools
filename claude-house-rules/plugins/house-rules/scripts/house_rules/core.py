@@ -1379,7 +1379,7 @@ def event_versioncheck():
                 )
 
         # Never a reason to stop: an unanswered permission prompt for the update once held an
-        # overnight run for hours (docs/6-decisions/Decisions.md, 2026-10-19).
+        # overnight run for hours (docs/6-decisions/Decisions.md, 2026-10-27).
         banner_lines = [
             "",
             "=" * 70,
