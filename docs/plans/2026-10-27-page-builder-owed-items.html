@@ -273,7 +273,7 @@ const PAGE = {
   "eyebrow": "Design for approval (parent issue #419) · nothing built yet",
   "approval": "Design approved: page builder owed items",
   "short": {
-    "lead": "The page builder (make_page.py) let the usage limit handoff build plan go out with three change rows that read \"null\" and no row naming its files. This change makes the builder refuse any page until everything that kind of page owes is filled in. The refusal lists every missing item at once, each named by its place on the page, so one fix pass clears it.",
+    "lead": "The page builder (make_page.py) let the build plan for the usage limit handoff go out with three change rows that read \"null\" and with no row naming its files. This change makes the builder refuse any page until everything that kind of page owes is filled in. The refusal lists every missing item at once, each named by its place on the page, so one fix pass clears it.",
     "hint": "Tap a step to see what it adds and what it needs from you.",
     "key": [
       [
@@ -291,7 +291,7 @@ const PAGE = {
         "Every page",
         "No page lets an empty field through (#420)",
         "",
-        "Every field the template prints as text is checked: the title, the opening paragraph, each step's two texts, each change row's one line and detail, each choice and every wrap-up field. A field that is missing, blank, or the word \"null\" or \"undefined\" is owed. Optional parts, such as a before-and-after pair or a picture, may still be left out.",
+        "Every field the template prints as text is checked: the title, the opening paragraph, what each step creates and what it needs from you, each change row's one-line summary and its detail, each choice and every wrap-up field. A field that is missing, blank, or the word \"null\" or \"undefined\" is owed. Optional parts, such as a before-and-after pair or a picture, may still be left out.",
         "Nothing from you."
       ],
       [
@@ -299,7 +299,7 @@ const PAGE = {
         "Proposal",
         "What a proposal page owes (#421)",
         "",
-        "A \"Design approved:\" page needs at least one change row, at least one Kept or Changed row (or a sentence saying nothing like it exists), the three-part picture on every New row, and a suggested option with its reason on every choice.",
+        "A \"Design approved:\" page needs at least one change row, at least one row marked Kept (stays as it is) or Changed (or a sentence saying nothing like it exists today), and on every New row its three lines: what exists today, what the change creates, and how it affects you, and a suggested option with its reason on every choice.",
         "Nothing from you."
       ],
       [
@@ -307,7 +307,7 @@ const PAGE = {
         "Build plan",
         "What a build plan page owes (#422)",
         "",
-        "A \"Build plan approved:\" page needs a file list on every New and Changed row (path, estimated lines added and removed, and one plain-words part), an issue number on every step, and the files named in the wrap-up's \"What's changing\". This is the gap the handoff plan slipped through.",
+        "A \"Build plan approved:\" page needs a file list on every New and Changed row (the file's path, the estimated lines added and removed, and at least one sentence in plain words saying what changes in it), an issue number on every step, and the files named in the wrap-up's \"What's changing\". This is the gap the handoff plan slipped through.",
         "Nothing from you."
       ],
       [
@@ -315,7 +315,7 @@ const PAGE = {
         "QA page",
         "What a QA page owes (#423)",
         "",
-        "A \"QA passed:\" page needs a git file list that is not empty, at least one \"Still unverified\" entry or a line saying nothing is left, and an issue number plus check steps on every change row. It waits for the QA evidence work (#389) to merge, and does not change it.",
+        "A \"QA passed:\" page needs a list of the files git shows as changed, with at least one file, at least one \"Still unverified\" entry or a line saying nothing is left, and on every change row, the issue number it closes and the steps you follow to check it. It waits for the QA evidence work (issue #389) to merge, and does not alter that work.",
         "Nothing from you; this step starts after #389 merges."
       ],
       [
@@ -323,7 +323,7 @@ const PAGE = {
         "Prove it",
         "Tests, docs, version and a real run (#424)",
         "",
-        "Each owed item gets a test case in scripts/checks/make_page.py before its code. The broken handoff plan content (commit b7a1c13) must be refused with its rows named, and the fixed content (commit a5c22c6) must build.",
+        "Each owed item gets a test case in scripts/checks/make_page.py written before the code it tests. The broken version of the handoff plan (commit b7a1c13) must be refused, with its bad rows named, and the fixed version (commit a5c22c6) must build. This step also updates the docs and the plugin version, and ends with a real run of the builder.",
         "Nothing from you."
       ],
       [
@@ -363,7 +363,7 @@ const PAGE = {
       "The owed lists",
       "One list per page kind (proposal, build plan, QA) of what that page must fill in.",
       null,
-      "Choice 1 decides where they live. Either way, the lists are the single place that says what a page owes, so the refusal and the docs read from the same source.",
+      "Choice 1 (\"Where should the owed lists live?\") decides where they live. Either way, the lists are the single place that says what a page owes, so the refusal and the docs read from the same source.",
       [
         "Nothing says what a page owes; only four narrow refusals exist.",
         "A written list per page kind that the builder checks.",
@@ -374,7 +374,7 @@ const PAGE = {
     [
       "chg",
       "The after-build visual check (make_page.py, visual_check)",
-      "Only if you pick it in choice 3: also reads the rendered page for the words \"null\" and \"undefined\".",
+      "Only if you pick it in choice 3 (whether the visual check also searches for \"null\" and \"undefined\"): also reads the rendered page for the words \"null\" and \"undefined\".",
       [
         "Looks for script errors, sideways overflow and clipped cards.",
         "Also refuses a page whose visible text says \"null\" or \"undefined\"."
@@ -427,7 +427,7 @@ const PAGE = {
           "Fixes what you may still act on; leaves the finished history alone."
         ]
       ],
-      "Those pages record decisions already made. Rewriting them changes the record without changing any decision. The test for #420 would build only the pages that meet the new rules."
+      "Those pages record decisions already made. Rewriting them changes the record without changing any decision. The test cases for #420 would build only the older pages that already meet the rules, so the other 19 stay untouched."
     ],
     [
       "text",
@@ -435,7 +435,7 @@ const PAGE = {
       [
         [
           "A",
-          "Yes, a part whose whole text is the word",
+          "Yes, only where a row, line or box holds nothing but the word",
           1,
           "Refuses a row, line or box that reads only \"null\" or \"undefined\". A sentence that mentions the word, as this page does, still builds."
         ],
@@ -443,7 +443,7 @@ const PAGE = {
           "B",
           "Yes, the word anywhere on the page",
           0,
-          "Simpler, but it refuses this very page: I ran the search on it and the word appears 11 times, all in quoted sentences."
+          "Simpler, but it refuses this very page: I ran the search on this page: the word null appears 11 times, all inside quoted sentences."
         ],
         [
           "C",
@@ -476,7 +476,7 @@ const PAGE = {
   ],
   "wrapup": {
     "summary": "The page builder refuses a page until everything that kind of page owes is filled in, and lists every missing item at once.",
-    "changing": "make_page.py gains the owed checks for every page, proposal pages, build plan pages and QA pages; scripts/checks/make_page.py gains a test case for each.",
+    "changing": "make_page.py gains the owed checks that apply to every page, plus those for proposal pages, build plan pages and QA pages; scripts/checks/make_page.py gains a test case for each.",
     "blocking": "Your answers to the four choices and your approval of this design. The QA page step (#423) also waits for #389 to merge.",
     "next": "A build plan page (\"Build plan approved: page builder owed items\") with the files and line estimates, then #420 to #424 built in order, each with its test cases first.",
     "todo": [
