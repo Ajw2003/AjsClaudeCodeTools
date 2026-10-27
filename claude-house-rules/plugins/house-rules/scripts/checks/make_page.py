@@ -241,6 +241,9 @@ with open(_stage, encoding="utf-8") as _f:
     _sd = json.load(_f)
 _mp_cases.append(("make_page: QA mode writes qa_page into an existing stage file and keeps its other keys",
                   _rc == 0 and _sd == {"feature": "demo", "stage": "Build", "qa_page": "docs/plans/qa3.html"}))
+_rc, _o = _mp("build", _mp_qa_content("qa4", dict(_qa, base="HEAD")), "--project", _d)
+_mp_cases.append(("make_page (#415): a QA page counted against a base that already holds the feature (0 changed files) is refused, naming the fix",
+                  _rc == 2 and "counted 0 changed files" in _o))
 
 # The Ophan fixture (#412): the real Ophan QA page's content, with no evidence list, over a diff that
 # changes an animation, a model, gameplay code and a screenshot. It must be refused.

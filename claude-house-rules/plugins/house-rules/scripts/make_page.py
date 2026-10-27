@@ -279,6 +279,9 @@ def apply_qa(page, project):
         est = plan.get(f)
         part = ["Plan estimate: %s" % est[2], est[0], est[1]] if est else ["Not in the plan", 0, 0]
         rows.append([f, a, r, [part]])
+    if not seen:
+        die("QA mode counted 0 changed files against %s; the feature is probably already merged into it. "
+            "Build from the feature branch, or set qa.base to the commit from before the merge." % base)
     for f, est in plan.items():
         if f not in seen:
             rows.append([f, 0, 0, [["Planned but not changed: %s" % est[2], est[0], est[1]]]])
