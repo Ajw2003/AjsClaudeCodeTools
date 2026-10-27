@@ -1,9 +1,9 @@
 {
   "title": "Page Builder Owed Items",
-  "eyebrow": "Design for approval (parent issue #419) · nothing built yet",
+  "eyebrow": "Design for approval (parent issue #419), second version · nothing built yet",
   "approval": "Design approved: page builder owed items",
   "short": {
-    "lead": "The page builder (make_page.py) let the build plan for the usage limit handoff go out with three change rows that read \"null\" and with no row naming its files. This change makes the builder refuse any page until everything that kind of page owes is filled in. The refusal lists every missing item at once, each named by its place on the page, so one fix pass clears it.",
+    "lead": "The page builder (make_page.py) let the build plan for the usage limit handoff go out with change rows that read \"null\" and no row naming its files. This change makes the builder refuse any page until everything that kind of page owes is filled in, and lists every missing item at once. This second version adds what you asked for: a proposal page must show what a visual change will look like, with a before and after when it changes something that exists. QA pages already get that rule from the QA evidence work (parent issue #411), so this reuses it rather than building it twice.",
     "hint": "Tap a step to see what it adds and what it needs from you.",
     "key": [
       [
@@ -21,48 +21,61 @@
         "Every page",
         "No page lets an empty field through (#420)",
         "",
-        "Every field the template prints as text is checked: the title, the opening paragraph, what each step creates and what it needs from you, each change row's one-line summary and its detail, each choice and every wrap-up field. A field that is missing, blank, or the word \"null\" or \"undefined\" is owed. Optional parts, such as a before-and-after pair or a picture, may still be left out.",
-        "Nothing from you."
+        "Every field the template prints as text is checked: the title, the opening paragraph, what each step creates and what it needs from you, each change row's one-line summary and its detail, each choice and every wrap-up field. A field that is missing, blank, or the word \"null\" or \"undefined\" is owed. Optional parts, such as a before-and-after pair on a build plan, may still be left out.",
+        "Nothing from you.",
+        {
+          "src": "docs/generated/page-builder-owed-items/refusal-mock.png",
+          "alt": "A terminal where make_page refuses the handoff plan with seven named missing items, then refuses a made-up proposal for missing pictures",
+          "caption": "A mock of the refusal. The first seven lines are what the handoff plan's content would get; the last two show the proposal visual rule on a made-up page."
+        }
       ],
       [
         "bulb",
-        "Proposal",
-        "What a proposal page owes (#421)",
+        "Proposal text",
+        "What a proposal page owes in words (#421)",
         "",
-        "A \"Design approved:\" page needs at least one change row, at least one row marked Kept (stays as it is) or Changed (or a sentence saying nothing like it exists today), and on every New row its three lines: what exists today, what the change creates, and how it affects you, and a suggested option with its reason on every choice.",
+        "A \"Design approved:\" page needs at least one change row, at least one row marked Kept (stays as it is) or Changed, or else a sentence saying nothing like it exists today, the three lines on every New row (what exists today, what the change creates, how it affects you), and a suggested option with its reason on every choice.",
         "Nothing from you."
+      ],
+      [
+        "eye",
+        "Proposal visuals",
+        "What a proposal page owes in pictures (new step)",
+        "",
+        "Every New and Changed row on a proposal says what type of change it is: animation, model, texture, interface, gameplay, or none. Every type but none must carry a proposed picture or clip of what it will look like. A Changed row of a visual type must also carry a before (how it looks today) and an after (the proposal). A none row must say why nothing can be shown. This reuses the types, the clip player and the before-and-after layout from the QA evidence work (#411).",
+        "Nothing from you. This step starts after #411 merges, because it uses that code."
       ],
       [
         "list",
         "Build plan",
         "What a build plan page owes (#422)",
         "",
-        "A \"Build plan approved:\" page needs a file list on every New and Changed row (the file's path, the estimated lines added and removed, and at least one sentence in plain words saying what changes in it), an issue number on every step, and the files named in the wrap-up's \"What's changing\". This is the gap the handoff plan slipped through.",
+        "A \"Build plan approved:\" page needs a file list on every New and Changed row (the file's path, the estimated lines added and removed, and at least one plain sentence saying what changes in it), an issue number on every build step, and the files named in the wrap-up's \"What's changing\". The step where you approve the plan needs no issue number. No pictures are required here; a build plan may still add one.",
         "Nothing from you."
       ],
       [
         "check",
         "QA page",
-        "What a QA page owes (#423)",
+        "What a QA page owes (#423), now smaller",
         "",
-        "A \"QA passed:\" page needs a list of the files git shows as changed, with at least one file, at least one \"Still unverified\" entry or a line saying nothing is left, and on every change row, the issue number it closes and the steps you follow to check it. It waits for the QA evidence work (issue #389) to merge, and does not alter that work.",
-        "Nothing from you; this step starts after #389 merges."
+        "The QA evidence work (#411) already refuses a QA page without a clip or picture for each visual change, without a before and after, or with 0 changed files, and the builder already requires the \"Still unverified\" list. What is left for this step is an issue number and the steps you follow to check it, on every change row.",
+        "Nothing from you. This step starts after #411 merges."
       ],
       [
         "flask",
         "Prove it",
         "Tests, docs, version and a real run (#424)",
         "",
-        "Each owed item gets a test case in scripts/checks/make_page.py written before the code it tests. The broken version of the handoff plan (commit b7a1c13) must be refused, with its bad rows named, and the fixed version (commit a5c22c6) must build. This step also updates the docs and the plugin version, and ends with a real run of the builder.",
+        "Each owed item gets a test case in scripts/checks/make_page.py, written before the code it tests. The broken version of the handoff plan (commit b7a1c13) must be refused with its bad rows named, and the fixed version (commit a5c22c6) must build. A proposal with a visual change and no picture must be refused. This step also updates the docs and the plugin version, and ends with a real run of the builder.",
         "Nothing from you."
       ],
       [
         "hand",
         "Choices",
-        "Four calls for you",
+        "Five decisions for you",
         "you",
-        "Where the owed lists live, what happens to the older pages that would now fail, whether the after-build check also reads the page for \"null\", and how strict the build plan file rule is.",
-        "Your answers to the four choices."
+        "1. How a proposal says a change is visual. 2. What picture a proposed animation needs. 3. What happens to older pages. 4. Whether the after-build check reads the page for \"null\". 5. Where the owed lists live.",
+        "Your answers to the five choices."
       ]
     ]
   },
@@ -72,20 +85,52 @@
       "The four refusals the builder already makes (make_page.py)",
       "A reserved colour, a visual change with no picture, a wrong approval phrase, and missing QA fields.",
       null,
-      "These stay as they are. The new checks run beside them; the difference is that the new ones collect every problem before stopping, instead of stopping at the first.",
+      "These stay as they are. The new checks run beside them. The difference is that the new ones collect every problem before stopping, instead of stopping at the first.",
       null,
       null
+    ],
+    [
+      "keep",
+      "QA evidence by change type (parent issue #411, its own branch)",
+      "Reused, not rebuilt: the change types, the clip-or-picture rule and the before-and-after layout.",
+      null,
+      "That work is built and waiting on your QA pass. It makes a QA page carry a clip for an animation or gameplay change and a picture for a model or interface change, each with a before and an after, and plays clips side by side. Proposal visuals use the same pieces, so there is one layout for both page kinds. Nothing in it is changed by this work. The picture is a phone-width test render from the #411 branch, with blank stand-in clips.",
+      null,
+      null,
+      {
+        "src": "docs/generated/page-builder-owed-items/qa-evidence-layout.png",
+        "alt": "A QA page at phone width showing a Proof row for an animation change with a clip, then a Before clip and an After clip below it",
+        "caption": "The QA evidence layout from #411 at phone width: the change's clip, then before and after."
+      }
     ],
     [
       "chg",
       "The build step (make_page.py, build)",
       "Collects every owed item for the page's kind, then refuses once with the whole list.",
       [
-        "Builds a page with \"null\" in three rows.",
+        "Builds the page and prints \"null\" where the detail should be.",
         "Refuses, naming each empty row and each row with no files."
       ],
-      "A refusal line reads like: Changes row 3 \"Approval reading\": the detail is empty. The page kind comes from the approval phrase, which the builder already reads.",
+      "The page kind comes from the approval phrase, which the builder already reads. The picture is the real handoff build plan from commit b7a1c13, rebuilt today: two rows reading \"null\".",
       null,
+      null,
+      {
+        "src": "docs/generated/page-builder-owed-items/handoff-plan-null-rows.png",
+        "alt": "Two change rows of the handoff build plan, opened, each showing the word null where the detail should be",
+        "caption": "Before: the handoff plan as it went out, rebuilt from commit b7a1c13. The refusal that replaces it is pictured under In short, step 1."
+      }
+    ],
+    [
+      "new",
+      "Proposal visuals",
+      "Every New and Changed row on a proposal declares its type, and a visual one carries a proposed picture or clip.",
+      null,
+      "Today a picture is only required when a project's page style file (docs/page-style.json) says so, and only on rows someone remembered to mark visual, so a proposal for an animation can arrive with no picture at all. After this, a proposed animation, model, texture or interface change cannot reach you without one, and a change to something that exists shows how it looks now beside how it will look.",
+      [
+        "A picture is optional unless a style file asks, and only on rows marked visual.",
+        "Every proposal row names its type; visual types carry a proposed picture or clip, plus a before and after when they change something that exists.",
+        "You see what a change will look like before you approve it."
+      ],
       null
     ],
     [
@@ -93,7 +138,7 @@
       "The owed lists",
       "One list per page kind (proposal, build plan, QA) of what that page must fill in.",
       null,
-      "Choice 1 (\"Where should the owed lists live?\") decides where they live. Either way, the lists are the single place that says what a page owes, so the refusal and the docs read from the same source.",
+      "Choice 5 (\"Where should the owed lists live?\") decides where they live. Either way, the lists are the single place that says what a page owes, so the refusal and the docs read from the same source.",
       [
         "Nothing says what a page owes; only four narrow refusals exist.",
         "A written list per page kind that the builder checks.",
@@ -104,10 +149,10 @@
     [
       "chg",
       "The after-build visual check (make_page.py, visual_check)",
-      "Only if you pick it in choice 3 (whether the visual check also searches for \"null\" and \"undefined\"): also reads the rendered page for the words \"null\" and \"undefined\".",
+      "Only if you pick it in choice 4 (whether the visual check also searches for \"null\" and \"undefined\").",
       [
         "Looks for script errors, sideways overflow and clipped cards.",
-        "Also refuses a page whose visible text says \"null\" or \"undefined\"."
+        "Also refuses a row, line or box whose whole text is \"null\" or \"undefined\"."
       ],
       "This catches a gap the owed lists miss, such as a template field nobody listed yet. It runs in the browser check that already opens every card.",
       null,
@@ -116,27 +161,52 @@
   ],
   "choices": [
     [
-      "where",
-      "Where should the owed lists live?",
+      "declare",
+      "How does a proposal say whether a change is visual?",
       [
         [
           "A",
-          "Inside make_page.py",
+          "Every New and Changed row names its type",
           1,
-          "Beside the four refusals that already live there; one file to read and test."
+          "Animation, model, texture, interface, gameplay, or none with a reason. Nothing can be skipped by forgetting a flag."
         ],
         [
           "B",
-          "A data file beside the template",
+          "Only rows marked visual",
           0,
-          "Separate from the code, but a second file that has to stay in step with the template's fields."
+          "Today's optional marker. Less to fill in, but a forgotten marker lets a visual change through with no picture."
+        ],
+        [
+          "C",
+          "The builder guesses from the words",
+          0,
+          "Looks for words like animation, model or colour. Nothing to fill in, but it misses changes described in other words."
         ]
       ],
-      "The other refusals are already Python in make_page.py, and the lists need code anyway (an issue-number pattern, a file-entry shape), so a data file would only move half of each rule."
+      "You said a visual must be there whenever it would help. Only A makes the page say so for every row, and the none-with-a-reason option keeps a non-visual change, such as a change to a hook (a script Claude Code runs automatically), quick to fill in."
+    ],
+    [
+      "anim",
+      "Nothing is built yet when a proposal goes out. What may stand in for a proposed animation?",
+      [
+        [
+          "A",
+          "A clip or a picture",
+          1,
+          "A rough clip, or a sheet of key poses, counts. The QA page later must show the real clip."
+        ],
+        [
+          "B",
+          "A clip only, the same as QA",
+          0,
+          "Stricter, but it means animating something before you have approved the idea."
+        ]
+      ],
+      "Asking for a finished clip before approval means building the thing to propose it. A key-pose sheet shows the motion well enough to approve, and QA still demands the real clip."
     ],
     [
       "old",
-      "19 of the 54 older proposal, build plan and QA pages in docs/plans/ would now be refused (13 build plans have rows with no files). What happens to them?",
+      "19 of the 54 older proposal, build plan and QA pages in docs/plans/ fail the new text rules, and every older proposal page would fail the visual rule because no row names a type yet. What happens to them?",
       [
         [
           "A",
@@ -146,9 +216,9 @@
         ],
         [
           "B",
-          "Rebuild all 19",
+          "Rebuild all of them",
           0,
-          "Fills in every gap; costs a page-by-page pass over finished features."
+          "Fills in every gap; costs a page-by-page pass over finished features, including new pictures for each."
         ],
         [
           "C",
@@ -157,7 +227,7 @@
           "Fixes what you may still act on; leaves the finished history alone."
         ]
       ],
-      "Those pages record decisions already made. Rewriting them changes the record without changing any decision. The test cases for #420 would build only the older pages that already meet the rules, so the other 19 stay untouched."
+      "Those pages record decisions already made. Rewriting them changes the record without changing any decision. The new test cases build only pages that meet the new rules, so they do not depend on the older pages."
     ],
     [
       "text",
@@ -167,13 +237,13 @@
           "A",
           "Yes, only where a row, line or box holds nothing but the word",
           1,
-          "Refuses a row, line or box that reads only \"null\" or \"undefined\". A sentence that mentions the word, as this page does, still builds."
+          "A sentence that mentions the word, as this page does, still builds."
         ],
         [
           "B",
           "Yes, the word anywhere on the page",
           0,
-          "Simpler, but it refuses this very page: I ran the search on this page: the word null appears 11 times, all inside quoted sentences."
+          "Simpler, but it refuses this very page: I ran the search on its first version and the word null appeared 11 times, all inside quoted sentences."
         ],
         [
           "C",
@@ -182,33 +252,33 @@
           "The owed lists alone; nothing added to the visual check."
         ]
       ],
-      "The owed lists only cover fields someone wrote down. The rendered-text search catches a field nobody listed, which is how the handoff plan's \"null\" got through. Matching only a part that is nothing but the word keeps pages that talk about it buildable."
+      "The owed lists only cover fields someone wrote down. The rendered-text search catches a field nobody listed, which is how the handoff plan's \"null\" got through."
     ],
     [
-      "strict",
-      "On a build plan page, which rows must list their files?",
+      "where",
+      "Where should the owed lists live?",
       [
         [
           "A",
-          "New and Changed rows",
+          "Inside make_page.py",
           1,
-          "As issue #422 says; a Kept row changes nothing, so it has no files to list."
+          "Beside the refusals that already live there, including the QA evidence check; one file to read and test."
         ],
         [
           "B",
-          "Every row, Kept ones too",
+          "A data file beside the template",
           0,
-          "Stricter, but a Kept row would have to list files it does not touch."
+          "Separate from the code, but a second file that has to stay in step with the template's fields."
         ]
       ],
-      "A file list says what a row will change. A Kept row by definition changes nothing."
+      "The other refusals are already Python in make_page.py, and the lists need code anyway (how an issue number must look, what a file entry must contain), so a data file would hold only the list half of each rule while the code held the rest."
     ]
   ],
   "wrapup": {
-    "summary": "The page builder refuses a page until everything that kind of page owes is filled in, and lists every missing item at once.",
-    "changing": "make_page.py gains the owed checks that apply to every page, plus those for proposal pages, build plan pages and QA pages; scripts/checks/make_page.py gains a test case for each.",
-    "blocking": "Your answers to the four choices and your approval of this design. The QA page step (#423) also waits for #389 to merge.",
-    "next": "A build plan page (\"Build plan approved: page builder owed items\") with the files and line estimates, then #420 to #424 built in order, each with its test cases first.",
+    "summary": "The page builder refuses a page until everything that kind of page owes is filled in. Proposal pages must show a picture or clip of every visual change, with a before and after when it changes something that exists. QA pages keep the visual rule from #411, and build plans need no pictures.",
+    "changing": "make_page.py gains the owed checks that apply to every page, plus those for proposal pages (words and visuals), build plan pages and QA pages; scripts/checks/make_page.py gains a test case for each.",
+    "blocking": "Your answers to the five choices and your approval of this design. The proposal visuals step and the QA page step (#423) also wait for #411 to merge.",
+    "next": "I open a new step issue for proposal visuals and update #421 (proposal text) and #423 (QA page) to match this page, then write the build plan page (\"Build plan approved: page builder owed items\") with files and line estimates.",
     "todo": [
       "Pick your answers in Choices.",
       "Copy my reply."
