@@ -88,3 +88,8 @@ page's file name alone (`_record_qa_link`, `hook.py:7648`).
 | Tests | `scripts/verify.py` | Seven link-test cases (inside, `../` sibling, `file:///` outside, artifact, bare name, outside link with a bare-name link text, the note naming the path) and two warning cases (outside prints the line, inside does not). |
 
 Depends on: the hook payload's `cwd` field. Depended on by: the page checkpoint, the long-reply note and the QA stage.
+
+## QA evidence (#411)
+
+QA pages must also carry `qa.evidence`, one clip or picture set per change by type; the builder refuses a page
+without it and the end-of-reply check counts only a page whose evidence passed. See [qa-evidence.md](qa-evidence.md).

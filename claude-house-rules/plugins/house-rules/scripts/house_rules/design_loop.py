@@ -1900,6 +1900,10 @@ def _check_qa_page(ctx):
     if ctx.get("qa_stage") != "qa" or ctx.get("qa_linked"):
         return ""
     page = ctx.get("qa_page") or ""
+    if page and not ctx.get("qa_evidence"):  # #416: only a page whose evidence passed counts
+        return ("the QA page %s was built without the evidence check (an older builder or by hand); rebuild it "
+                "with `python3 %s build <content.json>` so each change carries its clip or picture"
+                % (page, os.path.join(SCRIPTS_DIR, "make_page.py")))
     if _record_qa_link(ctx):
         return ""
     missing = "the QA page is built but not linked in the reply" if page else "no QA page is built yet"
@@ -2240,7 +2244,8 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
                 if _pr:
                     raise OSError(_pr)
                 ctx.update(qa_stage=_st.get("stage"), qa_page=_st.get("qa_page"),
-                           qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd)
+                           qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd,
+                           qa_evidence=_st.get("qa_evidence"))
         except Exception as exc:
             trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
@@ -2262,7 +2267,8 @@ def handover_qa_retry(payload, have_reply, reply_text, trace_lines):
             _st, _pr = _loop_read(_gd)
             if _pr:
                 raise OSError(_pr)
-            if _st.get("stage") == "qa" and _st.get("qa_page") and not _st.get("qa_page_linked"):
+            if _st.get("stage") == "qa" and _st.get("qa_page") and _st.get("qa_evidence") \
+                    and not _st.get("qa_page_linked"):
                 _record_qa_link({"reply": reply_text if have_reply else "",
                                  "qa_page": _st.get("qa_page"), "qa_git_dir": _gd,
                                  "cwd": _payload_cwd(payload)})

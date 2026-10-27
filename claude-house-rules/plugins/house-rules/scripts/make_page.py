@@ -37,6 +37,21 @@ STYLE_REL = os.path.join("docs", "page-style.json")
 DRAFT_REL = os.path.join("docs", "page-style.draft.json")
 CMD_DRAFT = "make_page.py style --draft"
 CMD_QUICK = "make_page.py style --quick"
+CLIP_EXTS = (".mp4", ".webm")
+PIC_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+EVIDENCE_TYPES = ("animation", "model", "ai", "gameplay", "visual")  # detection order; first match wins
+CLIP_TYPES = ("animation", "gameplay", "ai")
+PIC_TYPES = ("model", "visual")
+EVIDENCE_FIELDS = ("media", "before", "after")
+DEFAULT_EVIDENCE_PATHS = {
+    "ignore": [r"(^|/)docs/", r"(^|/)Tests?/", r"(^|/)Editor/", r"\.meta$", r"(^|/)Tools/", r"\.md$", r"\.json$"],
+    "animation": [r"\.(anim|controller|overrideController|playable)$", r"(^|/)Animations?/"],
+    "model": [r"\.(fbx|obj|blend|glb|gltf|dae|3ds)$"],
+    "ai": [r"(?i)(^|/)(ai|enemy|enemies|npc|behaviou?rs?)/.*\.cs$"],
+    "gameplay": [r"(^|/)Scripts/Runtime/.*\.cs$", r"\.unity$", r"\.prefab$"],
+    "visual": [r"\.(uxml|uss|css|html|tsx|jsx|vue|svelte|shader|shadergraph|hlsl|vfx)$"],
+}
+NAMED_PATH = re.compile(r"[\w./-]+\.(?:png|jpe?g|gif|webp|mp4|webm)\b", re.I)
 HEX = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 
 
@@ -171,6 +186,9 @@ def copy_pictures(page, content_dir, project, out_html):
             while name in used.values():
                 n += 1
                 name = "%s-%d%s" % (stem, n, ext)
+            mb = os.path.getsize(found) / (1024.0 * 1024.0)
+            if os.path.getsize(found) > 15 * 1024 * 1024:
+                die("%s is %.1f MB; the claude.ai page host refuses files over 15 MB, so shorten or re-encode it" % (found, mb))
             os.makedirs(pics_dir, exist_ok=True)
             shutil.copyfile(found, os.path.join(pics_dir, name))
             used[key] = name
@@ -256,7 +274,94 @@ def run_git(project, *a):
     return r.stdout
 
 
-def apply_qa(page, project):
+def find_file(src, project, content_dir):
+    for root in (project, content_dir):
+        p = src if os.path.isabs(src) else os.path.join(root, src)
+        if os.path.isfile(p):
+            return p
+    return None
+
+
+def check_evidence(page, project, content_dir, style, changed_paths):
+    """#413: qa.evidence must hold what each change type needs, and cover every type the changed files imply."""
+    ev = page["qa"].get("evidence")
+    if not isinstance(ev, list) or not ev:
+        die("QA mode needs qa.evidence, a non-empty list of {change, type, media/before/after or reason}, one "
+            "entry per change; types are %s or none" % ", ".join(EVIDENCE_TYPES))
+    covered = set()
+    for i, e in enumerate(ev):
+        if not isinstance(e, dict):
+            die("qa.evidence entry %d is not an object" % i)
+        change, typ = e.get("change"), e.get("type")
+        if not isinstance(change, str) or not change.strip():
+            die("qa.evidence entry %d needs a non-empty 'change' (type %r)" % (i, typ))
+        if typ != "none" and typ not in EVIDENCE_TYPES:
+            die("evidence for change '%s' has unknown type %r; use one of %s or none"
+                % (change, typ, ", ".join(EVIDENCE_TYPES)))
+        if typ == "none":
+            if not isinstance(e.get("reason"), str) or not e["reason"].strip():
+                die("evidence for change '%s' (type none) needs a non-empty reason saying why nothing is shown" % change)
+            continue
+        kind, exts = ("clip", CLIP_EXTS) if typ in CLIP_TYPES else ("picture", PIC_EXTS)
+        for k in EVIDENCE_FIELDS:
+            v = e.get(k)
+            if not isinstance(v, str) or not v.strip():
+                die("evidence for change '%s' (type %s) is missing '%s'; a %s needs media, before and after, "
+                    "each a %s (%s)" % (change, typ, k, typ, kind, "/".join(exts)))
+            if not v.lower().endswith(exts):
+                die("evidence for change '%s' (type %s): '%s' is %s, which is not a %s (%s)"
+                    % (change, typ, k, v, kind, "/".join(exts)))
+            if not find_file(v, project, content_dir):
+                die("evidence for change '%s' (type %s): '%s' file not found: %s (looked under %s and %s)"
+                    % (change, typ, k, v, project, content_dir))
+        covered.add(typ)
+    if covered & {"gameplay", "ai"}:
+        covered |= {"gameplay", "ai"}
+    pats = dict(DEFAULT_EVIDENCE_PATHS)
+    over = style.get("evidence_paths") or {}
+    if not isinstance(over, dict):
+        die("page-style.json evidence_paths must be an object of pattern lists")
+    pats.update(over)
+    implied = {}
+    for path in changed_paths:
+        if any(re.search(p, path) for p in pats.get("ignore") or []):
+            continue
+        for t in EVIDENCE_TYPES:
+            if any(re.search(p, path) for p in pats.get(t) or []):
+                implied.setdefault(t, []).append(path)
+                break
+    lines = []
+    for t in EVIDENCE_TYPES:
+        if t in implied and t not in covered:
+            fs = implied[t]
+            lines.append("%s (implied by %d file(s): %s%s)" % (t, len(fs), ", ".join(fs[:5]), ", ..." if len(fs) > 5 else ""))
+    if lines:
+        die("the changed files imply evidence no qa.evidence entry provides: %s. Add an entry of that type "
+            "with its clip or picture (gameplay and ai cover each other)" % "; ".join(lines))
+
+
+def check_named_paths(page):
+    """#413: a picture or clip path named in the page's text must be a file the page shows."""
+    shown = set()
+    stripped = json.loads(json.dumps(page))
+    for e in stripped["qa"].get("evidence") or []:
+        if isinstance(e, dict):
+            for k in EVIDENCE_FIELDS:
+                v = e.pop(k, None)
+                if isinstance(v, str):
+                    shown.add(os.path.basename(v))
+    stripped["qa"].pop("files", None)
+    for d in walk(page):
+        if isinstance(d.get("src"), str):
+            shown.add(os.path.basename(d["src"]))
+    for s in strings(stripped):
+        for m in (x.group(0) for x in NAMED_PATH.finditer(s)):
+            if os.path.basename(m) not in shown:
+                die("the page names %s but shows no such file; add it as a picture or evidence entry, or "
+                    "remove the mention" % m)
+
+
+def apply_qa(page, project, content_dir, style):
     """QA mode: add the git-counted Files changed item and the Still unverified item."""
     qa = page["qa"]
     if not isinstance(qa, dict):
@@ -270,18 +375,38 @@ def apply_qa(page, project):
             "claims everything is proven is refused, so list what you did not check")
     plan = qa.get("files") or {}
     base = qa["base"]
-    rows, seen, tot_a, tot_r = [], set(), 0, 0
+    rows, seen, tot_a, tot_r, changed = [], set(), 0, 0, []
     for line in run_git(project, "diff", "--numstat", base + "...HEAD").splitlines():
         a, r, f = line.split("\t", 2)
         a, r = (int(a), int(r)) if a != "-" else (0, 0)
         tot_a, tot_r = tot_a + a, tot_r + r
         seen.add(f)
+        changed.append(f)
         est = plan.get(f)
         part = ["Plan estimate: %s" % est[2], est[0], est[1]] if est else ["Not in the plan", 0, 0]
         rows.append([f, a, r, [part]])
+    if not seen:
+        die("QA mode counted 0 changed files against %s; the feature is probably already merged into it. "
+            "Build from the feature branch, or set qa.base to the commit from before the merge." % base)
+    check_evidence(page, project, content_dir, style, changed)
+    check_named_paths(page)
     for f, est in plan.items():
         if f not in seen:
             rows.append([f, 0, 0, [["Planned but not changed: %s" % est[2], est[0], est[1]]]])
+    labels = {"animation": "Animation", "model": "Model", "gameplay": "Gameplay", "ai": "AI and behaviour",
+              "visual": "Visual", "none": "Nothing visible"}
+    proof = []
+    for e in qa["evidence"]:
+        t = e["type"]
+        obj = {"evidence": True, "type": t}
+        for k in EVIDENCE_FIELDS:
+            if t != "none":
+                obj[k] = {"src": e[k]}
+        obj["caption"] = e.get("caption") or ""
+        detail = e["reason"] if t == "none" else "Before and after below; the first is the change itself."
+        proof.append(["proof", "%s: %s" % (labels[t], e["change"]), e.get("caption") or e.get("reason") or "",
+                      None, detail, None, None, obj])
+    page["changes"] = proof + page.get("changes", [])
     page.setdefault("changes", []).append(
         ["chg", "Files changed, counted from git against %s" % base,
          "%d files, +%d −%d" % (len(seen), tot_a, tot_r),
@@ -392,7 +517,7 @@ def record_sweep(project, page):
     record_qa_page(project, None, key="sweep_proposed", value=rows, what="sweep rows")
 
 
-def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
+def record_qa_page(project, out, key="qa_page", value=None, what="QA page", extra=None):
     common = os.path.abspath(os.path.join(project, run_git(project, "rev-parse", "--git-common-dir").strip()))
     stage = os.path.join(os.path.dirname(common), ".claude", "house-rules-loop.json")
     if not os.path.isfile(stage):
@@ -407,6 +532,8 @@ def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
         print("make_page: %s not recorded: %s is unreadable (%s); left untouched" % (what, stage, e))
         return
     data[key] = value if value is not None else os.path.relpath(out, project).replace(os.sep, "/")
+    if extra:
+        data.update(extra)
     with open(stage, "w", encoding="utf-8", newline="\n") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write("\n")
@@ -429,7 +556,7 @@ def build(args):
     if "kind" in page and page["kind"] != "summary":
         die("content 'kind' is %r; the only allowed value is \"summary\" (or leave 'kind' out)" % (page["kind"],))
     if "qa" in page:
-        apply_qa(page, project)
+        apply_qa(page, project, os.path.dirname(os.path.abspath(args.content)), style)
     if "sweep" in page:
         apply_sweep(page)
     check_approval(page)
@@ -472,7 +599,9 @@ def build(args):
               % (out, os.getcwd(), os.path.join(os.getcwd(), "docs", "plans")))
     visual_check(out, style)
     if "qa" in page:
-        record_qa_page(project, out)
+        ev = page["qa"].get("evidence") or []
+        record_qa_page(project, out, extra={"qa_evidence": {"types": sorted({e["type"] for e in ev}),
+                                                            "entries": len(ev)}})
     if "sweep" in page:
         record_sweep(project, page)
 

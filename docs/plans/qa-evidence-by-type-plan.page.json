@@ -1,0 +1,348 @@
+{
+  "title": "QA Evidence by Change Type: Build Plan",
+  "eyebrow": "Build plan for approval, issue #389 (QA pages must prove each change with evidence for its type) · nothing built yet",
+  "approval": "Build plan approved: QA evidence by change type",
+  "short": {
+    "lead": "Six steps, each its own sub-issue of issue #389 (QA pages must prove each change with evidence for its type), built in this order. The first step turns the Ophan QA page's own content into a test that must be refused, so every later step is proven against the real failure. The design you approved (1A, 2A, 3A) is unchanged. Line counts are my estimates; the QA page will show the real counts from git beside them.",
+    "hint": "Tap a step to see what it changes and what it needs from you.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "flask",
+        "Ophan test",
+        "The real failure becomes a test",
+        "",
+        "Sub-issue #390 (the Ophan page's content becomes a test that must be refused). It fails on today's builder, which is the point.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Evidence rule",
+        "The builder requires evidence by type",
+        "",
+        "Sub-issue #391 (the page builder requires the evidence each change type needs): the evidence list, the type worked out from changed files (1A), and no way to skip it (3A).",
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "Clips",
+        "The page shows video clips",
+        "",
+        "Sub-issue #392 (the page template shows video clips, before and after side by side): two clips that play together (2A), and a 15 MB limit per clip.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Change list",
+        "No more \"0 files\"",
+        "",
+        "Sub-issue #393 (the change list refuses a count of 0 changed files).",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Reply check",
+        "The handover reply needs a proven page",
+        "",
+        "Sub-issue #394 (the handover reply counts only a QA page whose evidence passed).",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Real run",
+        "Rules, docs, version and a real QA page",
+        "you",
+        "Sub-issue #395 (rule text, docs, version and a real QA page with clips). Then every issue moves to needs review and the QA page goes to you.",
+        "You run QA from the QA page."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "#390: the Ophan page's content becomes a test that must be refused",
+      "A failing case in verify.py.",
+      null,
+      "The case copies the content behind the Ophan QA page and expects the builder to refuse it. Today the builder builds it, so the case fails until #391 and #393 land.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
+          60,
+          0,
+          [
+            [
+              "The Ophan case and its fixture",
+              60,
+              0
+            ]
+          ]
+        ]
+      ]
+    ],
+    [
+      "chg",
+      "#391: the page builder requires the evidence each change type needs",
+      "In QA mode, make_page.py checks each change against a new list of the evidence its type needs.",
+      [
+        "Pictures are checked only on Changes items marked visual, and only when the style file says pictures are required.",
+        "Every QA change carries evidence for its type, in every project. A type implied by the changed files can't be left out. A file path named in the text must be shown."
+      ],
+      "The default path patterns cover Unity: animator controllers and animation files mean animation, model files mean model, scripts under enemy or AI folders mean ai. A project adds its own patterns in page-style.json.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/scripts/make_page.py",
+          150,
+          10,
+          [
+            [
+              "Evidence check, type detection and named-path check",
+              150,
+              10
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
+          120,
+          0,
+          [
+            [
+              "One case per refusal",
+              120,
+              0
+            ]
+          ]
+        ]
+      ]
+    ],
+    [
+      "chg",
+      "#392: the page template shows video clips, before and after side by side",
+      "The page template gains support for video clips.",
+      [
+        "The page can show pictures only.",
+        "Clips as well, with before and after clips side by side that play and pause together."
+      ],
+      "The builder copies clips next to the page and refuses one over 15 MB. The QA page gets one card per evidence entry.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/templates/handover-page.html",
+          90,
+          5,
+          [
+            [
+              "Clip and clip-pair markup, synced playback, evidence cards",
+              90,
+              5
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/make_page.py",
+          30,
+          5,
+          [
+            [
+              "Copy clips; size limit",
+              30,
+              5
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
+          40,
+          0,
+          [
+            [
+              "Clip cases",
+              40,
+              0
+            ]
+          ]
+        ]
+      ]
+    ],
+    [
+      "chg",
+      "#393: the change list refuses a count of 0 changed files",
+      "The build refuses a count of 0 and names the fix.",
+      [
+        "0 changed files prints \"0 files, +0 −0\" without complaint.",
+        "0 changed files refuses the build and says to build from the feature branch or set qa.base to the commit before the merge."
+      ],
+      "",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/scripts/make_page.py",
+          15,
+          2,
+          [
+            [
+              "Zero-count refusal",
+              15,
+              2
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
+          25,
+          0,
+          [
+            [
+              "Zero-count case",
+              25,
+              0
+            ]
+          ]
+        ]
+      ]
+    ],
+    [
+      "chg",
+      "#394: the handover reply counts only a QA page whose evidence passed",
+      "The end-of-reply check for a QA page reads the record that make_page.py keeps of each page it built.",
+      [
+        "Any claude.ai artifact link in the reply satisfies the check.",
+        "Only the page make_page.py recorded with its evidence passed satisfies it."
+      ],
+      "",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
+          25,
+          8,
+          [
+            [
+              "qa page check reads the evidence record",
+              25,
+              8
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
+          40,
+          0,
+          [
+            [
+              "Blocked and passing cases",
+              40,
+              0
+            ]
+          ]
+        ]
+      ]
+    ],
+    [
+      "chg",
+      "#395: rule text, docs, version and a real QA page with clips",
+      "One rule line, two rule detail files, the docs, the plugin version, and a real run.",
+      [
+        "The rule asks for a before and after screenshot of a visual change.",
+        "The rule names the evidence each change type needs on a QA page and blocks the handover until it is attached."
+      ],
+      "The real run builds the QA page for #389 itself with the new builder.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/rules/house-rules.md",
+          2,
+          1,
+          [
+            [
+              "The rule line",
+              2,
+              1
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/detail/visual-check.md",
+          25,
+          2,
+          [
+            [
+              "Evidence by type",
+              25,
+              2
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/detail/show-dont-tell.md",
+          6,
+          2,
+          [
+            [
+              "QA page evidence",
+              6,
+              2
+            ]
+          ]
+        ],
+        [
+          "docs/4-systems/handover-pages.md",
+          30,
+          0,
+          [
+            [
+              "Evidence section",
+              30,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/3-state/ProjectState.md",
+          5,
+          1,
+          [
+            [
+              "State line",
+              5,
+              1
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json",
+          1,
+          1,
+          [
+            [
+              "Version",
+              1,
+              1
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "Six steps that make every QA page prove each change with the evidence its type needs, starting from the Ophan page as a failing test.",
+    "changing": "The house-rules plugin: make_page.py, the page template, the qa page check in design_loop.py, verify.py's cases, the rule text and docs, and the version.",
+    "blocking": "Your approval of this build plan.",
+    "next": "I build the six steps in order on branch AjsAgent/qa-evidence-by-type, then open a pull request into main that says \"Refs #389\" and hand it over with a QA page built by the new builder.",
+    "todo": [
+      "Tap <b>Copy my reply</b> and send it: \"Build plan approved: QA evidence by change type\", or say what to change."
+    ]
+  }
+}

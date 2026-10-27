@@ -97,7 +97,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .ci > summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;cursor:pointer;min-height:48px}
 .ci > summary::-webkit-details-marker{display:none}
 .tag{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
-.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.proof{background:var(--ok-soft);color:var(--ok)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .ci b{display:block}
 .ci small{color:var(--muted);font-size:.86rem}
 .ci .detail{padding:0 14px 14px 14px}
@@ -187,7 +187,12 @@ body{overflow-wrap:anywhere}
 .cmp-frame img{width:100%}
 .cmp-frame img + img{position:absolute;inset:0;height:100%;object-fit:fill;clip-path:inset(0 0 0 var(--pos,50%))}
 .cmp-slide input[type=range]{width:100%;accent-color:var(--accent);min-height:44px;margin:0}
-@media (max-width:639px){.cmp-side{display:none}.cmp-slide{display:grid}}
+.cmp-vid{display:grid;gap:6px;min-width:0}
+.cmp-vid .cmp-side > div{min-width:0}
+.pic video,.cmp video{display:block;width:100%;max-width:100%;height:auto;background:var(--bg)}
+.pic{display:grid;gap:6px}
+@media (max-width:639px){.cmp-vid .cmp-side{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:639px){.cmp-side{display:none}.cmp-vid .cmp-side{display:grid}.cmp-slide{display:grid}}
 dialog.lightbox{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:12px;width:min(96vw,960px);max-height:94vh;box-sizing:border-box;overflow:auto}
 dialog.lightbox::backdrop{background:rgba(0,0,0,.6)}
 dialog.lightbox img{display:block;width:100%;height:auto}
@@ -314,17 +319,45 @@ const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
 // A picture is found by shape (src or before), not position, because flow and files before it are optional.
 const picOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && (x.src || x.before));
 let picN = 0; const PICS = [];
+const isClip = x => /\.(mp4|webm)$/i.test(String(x && x.src || ""));
+const mediaHtml = (x, p) => {
+  const alt = x.alt || p.caption || "";
+  if (isClip(x)) return `<video src="${esc(x.src)}" muted loop playsinline autoplay controls preload="metadata" aria-label="${esc(alt)}"></video>`;
+  return `<img src="${esc(x.src)}" alt="${esc(alt)}">`;
+};
 const picHtml = p => {
   if (!p) return "";
+  let pre = "";
+  if (p.media) {
+    const k = isClip(p.media) ? -1 : PICS.push({ src: p.media.src, alt: p.media.alt || p.caption || "", caption: "" }) - 1;
+    pre = `<figure class="pic">${k < 0 ? mediaHtml(p.media, p) : `<button type="button" data-pic="${k}" aria-label="Open full width: ${esc(p.media.alt || p.caption || "")}">${mediaHtml(p.media, p)}</button>`}</figure>`;
+  }
   if (p.before && p.after) {
     const id = "cmp" + (picN++), cap = p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : "";
+    if (isClip(p.before) && isClip(p.after))
+      return pre + `<figure class="cmp cmp-vid"><div class="cmp-side"><div><b>Before</b>${mediaHtml(p.before, p)}</div><div><b>After</b>${mediaHtml(p.after, p)}</div></div>${cap}</figure>`;
     const im = x => `<img src="${esc(x.src)}" alt="${esc(x.alt || p.caption || "")}">`;
-    return `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
+    return pre + `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
       <div class="cmp-slide"><div class="cmp-frame">${im(p.before)}${im(p.after)}</div><label for="${id}">Reveal after over before: drag to compare</label><input type="range" id="${id}" min="0" max="100" value="50" aria-label="Compare before and after: ${esc(p.caption || "")}"></div>${cap}</figure>`;
   }
+  if (!p.src) return pre;
+  if (isClip(p)) return pre + `<figure class="pic">${mediaHtml(p, p)}${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</figure>`;
   const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
-  return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+  return pre + `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
 };
+// Paired clips (#414): play, pause and seek one, the other follows.
+let vidSync = false;
+["play", "pause", "seeked"].forEach(ev => document.addEventListener(ev, e => {
+  const v = e.target; if (vidSync || !v || v.tagName !== "VIDEO") return;
+  const fig = v.closest(".cmp-vid"); if (!fig) return;
+  const o = [...fig.querySelectorAll("video")].find(x => x !== v); if (!o) return;
+  vidSync = true;
+  try {
+    if (ev === "play" && o.paused) { const r = o.play(); if (r && r.catch) r.catch(() => {}); }
+    else if (ev === "pause" && !o.paused) o.pause();
+    else if (ev === "seeked" && Math.abs(o.currentTime - v.currentTime) > 0.3) o.currentTime = v.currentTime;
+  } finally { vidSync = false; }
+}, true));
 document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
 const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
 box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
@@ -366,16 +399,16 @@ glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); 
 if (PAGE.short.items.length) showItem(0);
 
 if (document.getElementById("cc")) {
-  const counts = { new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
+  const counts = { proof: 0, new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
   document.getElementById("cc-count").textContent =
-    `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
+    `${counts.proof ? counts.proof + " proof, " : ""}${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
   // A New item's picture (#241): what sets it off -> what it does -> what you get.
   // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
   const lineCounts = (a, r) => `+${a} \u2212${r}`;
   const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
     fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
       (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
-  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"${k === "proof" ? " open" : ""}><summary><span class="tag ${k}">${{ proof: "Proof", new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
      <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
 }
 

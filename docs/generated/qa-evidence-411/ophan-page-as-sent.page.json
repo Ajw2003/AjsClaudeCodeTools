@@ -1,0 +1,70 @@
+{
+  "title": "QA: the Ophan of Hours in the sky",
+  "eyebrow": "QA for pull request 445, issue #418 · merged into staging, not main · manual co-op test still owed",
+  "short": {
+    "lead": "In the last minute of a raid the Ophan of Hours hangs in the sky with its wings spread, watches whoever carries the most, locks on, and drains them with a beam unless stone is between you.",
+    "hint": "Tap an item to see what was checked and what you can try yourself.",
+    "key": [
+      [
+        "Checked by script",
+        "done"
+      ],
+      [
+        "You test this",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "The beam's look",
+        "It no longer floods your own view",
+        "done",
+        "On the target's own screen the beam fades out over its last 25 m and is 0.8 m wide at you, so you see the eye glow and your health drop, not a white wedge. Screenshot: docs/generated/ophan-418/staging-beam-host.png.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Wings spread (#443)",
+        "A new held pose in the sky",
+        "done",
+        "ophan_spread holds after the arrival: 13.2 m wide by 7.8 m tall on the model (the old hover was 11.7 by 9.5). Review sheet: docs/art/anim/fear/ophan_spread.png.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "The take",
+        "An artifact's carrier is spared",
+        "done",
+        "The host carried an artifact into the open: after the 3-second lock-on the piece was gone, the host stayed at 100 health, the Ophan left, and both machines showed the piece rising up the beam. Screenshot: staging-lift-host.png.",
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Play it",
+        "One hunted raid, two players",
+        "you",
+        "Set out with a friend and stay until the last minute.",
+        "Tell me how the drone and shake feel."
+      ]
+    ]
+  },
+  "wrapup": {
+    "summary": "The Ophan in the sky is built and passes every script check on its branch and on staging.",
+    "changing": "Every raid is hunted for now.",
+    "blocking": "#418 stays open until your QA pass.",
+    "next": "After you pass it, #419 branches off staging.",
+    "todo": [
+      "Play the steps under Play it.",
+      "Tap Copy my reply."
+    ]
+  },
+  "qa": {
+    "feature": "the Ophan in the sky",
+    "base": "main",
+    "unverified": [
+      "Nobody has played it by hand yet: every check was run by a script (manual co-op test still owed)."
+    ],
+    "files": {}
+  }
+}

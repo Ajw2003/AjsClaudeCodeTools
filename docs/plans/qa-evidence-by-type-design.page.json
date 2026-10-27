@@ -1,0 +1,224 @@
+{
+  "title": "QA Evidence by Change Type",
+  "eyebrow": "Design for approval · house-rules plugin · nothing built yet",
+  "approval": "Design approved: QA evidence by change type",
+  "short": {
+    "lead": "The QA page for the Ophan in the sky (PlunderSpell pull request 445) covered animation, enemy behaviour, a model change and co-op, yet it carried no clip, no picture and no before and after, and its change list said \"0 files, +0 −0\". The evidence existed: the pull request itself commits at least 48 screenshots and a clip of the wings-spread pose (docs/art/anim/fear/ophan_spread.mp4), a count taken from only the first 100 of its changed files, so the real total may be higher. The page builder let a page through that showed none of them. This design makes every QA page prove each change with the evidence its type needs, and refuses to build the page, or to let the handover reply end, until that evidence is attached.",
+    "hint": "Tap a step to see what it creates and what it needs from you.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "What went wrong",
+        "Seven gaps, all in the plugin's own code",
+        "",
+        [
+          "PlunderSpell's page-style.json says pictures are required, but make_page.py checks that rule only on Changes items the author marks as visual. The Ophan page marked none as visual, so the rule never ran.",
+          "All the work was listed in the page's \"In short\" steps, and the builder checks no pictures in those steps.",
+          "The page template can show only images, so a QA page has no way to include a video clip.",
+          "Nothing knows what kind of change was made, so nothing can ask for a clip for animation or a recording for enemy behaviour.",
+          "The page named screenshots as text (\"Screenshot: docs/generated/ophan-418/staging-beam-host.png\") instead of showing them, and the builder did not notice that they were only named. The committed clip ophan_spread.mp4 was never mentioned.",
+          "The file count compared the feature against staging after the feature had already been merged into staging, so git found no difference and the builder printed \"0 files\" without complaint.",
+          "The end-of-reply check only asks that a QA page is built and linked. It never checks whether the page proves anything."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Evidence by type",
+        "Each change declares its type, and the type sets the evidence it needs",
+        "",
+        [
+          "Animation: a clip of the animation, plus a before and after.",
+          "Model: a picture of the change, plus a before picture and an after picture.",
+          "Gameplay, or enemy AI and behaviour: a recording of it in play, plus a before clip and an after clip.",
+          "Other visible changes, such as interface or effects: a picture plus a before and after picture, as the current rule already asks.",
+          "A change with nothing to see, such as a test or a script: allowed only with a sentence saying why nothing is visible."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Blocked until proven",
+        "No build, and no handover reply, without it",
+        "",
+        [
+          "make_page.py refuses to build a QA page when any change is missing the evidence its type needs, when a named file doesn't exist, or when the git count finds no changed files.",
+          "It also refuses a page that names a screenshot or clip path in its text without showing that file on the page.",
+          "The end-of-reply check accepts a QA page only when make_page.py recorded that the evidence passed, so a page written and published by hand no longer counts."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "The QA page",
+        "Clips and before and after comparisons you can watch",
+        "",
+        [
+          "Each change gets its own card with its type, the clip or picture, and a before and after shown side by side.",
+          "Before and after clips play together, so you can watch the same moment in both.",
+          "The change list is counted against the commit from before the feature was merged, so it lists the files that really changed."
+        ],
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Your QA",
+        "You test only after you have seen it",
+        "you",
+        "You watch the clips and before and after comparisons first, then play the feature yourself, then reply from the page.",
+        "You read the page and send \"QA passed: <feature>\" or \"QA failed: <feature>\" with what to change."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "keep",
+      "The QA page and its checkpoint",
+      "The QA stage, the QA page and \"QA passed\" stay as they are.",
+      null,
+      "Nothing here adds a stage or a new reply. The QA mode in make_page.py, the stage file it writes and the end-of-reply \"qa page\" check already exist; this design gives them evidence rules to enforce.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Picture rule in make_page.py",
+      "Becomes an evidence rule, checked on every QA change.",
+      [
+        "Pictures are checked only on Changes items the author marks as visual, and only when the project's style file (page-style.json) says pictures are required.",
+        "Every change listed in the QA block is checked against the evidence its type needs, in every project, whatever the style file says."
+      ],
+      "The style file's pictures setting keeps its meaning for design and plan pages.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "Evidence list in the QA block",
+      "A new qa.evidence list in the content file.",
+      null,
+      "Each entry names the change, its type (animation, model, gameplay, ai, visual or none), and its files: a clip or picture, plus a before file and an after file. A type of none needs a reason. The builder copies every file next to the page, as it does pictures today.",
+      [
+        "The QA block has four fields: feature, base, unverified and files.",
+        "It would also have an evidence field: one entry per change, each with its proof attached.",
+        "You see each change's proof on the page instead of a sentence about it."
+      ],
+      null
+    ],
+    [
+      "chg",
+      "Page template",
+      "Learns to show video clips.",
+      [
+        "Pictures, and before and after pictures. No video clips.",
+        "Clips as well, with the before and after clips shown side by side and played together."
+      ],
+      "Clips are MP4 or WebM files. A clip over 15 MB is refused, with a note telling the author to shorten it, because the claude.ai page host refuses larger files.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "The change list's git count",
+      "Counted against the commit before the merge.",
+      [
+        "Counted against the base branch, which after a merge already holds the feature, so the Ophan page said 0 files.",
+        "Counted against the commit where the feature branched off its base, and a count of 0 files refuses the build."
+      ],
+      "This makes the change list name the files that really changed, along with the change type each file implies.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Rule text and docs",
+      "One line in house-rules.md, plus updates to visual-check.md and show-dont-tell.md.",
+      [
+        "The rule says a visual change needs a before screenshot and an after screenshot.",
+        "It names the evidence each change type needs on a QA page, and says a QA handover is blocked until it is attached."
+      ],
+      "verify.py gains a test case for each refusal. One of them is a copy of the Ophan page's content, which must now be refused.",
+      null,
+      null
+    ]
+  ],
+  "choices": [
+    [
+      "detect",
+      "How is a change's type decided?",
+      [
+        [
+          "A",
+          "I declare it, and the builder also works it out from the changed files",
+          1,
+          "A changed animator controller or animation file means animation, a changed model file means model, and a changed enemy script means AI and behaviour. The path patterns live in each project's page-style.json. I can add types, but I can't remove a type that the changed files imply."
+        ],
+        [
+          "B",
+          "I declare it, and nothing double-checks",
+          0,
+          "Simpler, but the Ophan page shows that an author can leave out evidence and nothing catches it."
+        ]
+      ],
+      "With A, pull request 445 changed TheOphanOfHours.controller and added new scripts under Scripts/Runtime/Raid/Ophan. Those changes could not have reached you without a clip and a recording, whatever I wrote."
+    ],
+    [
+      "compare",
+      "What counts as a before and after comparison for animation and gameplay?",
+      [
+        [
+          "A",
+          "Two clips side by side, playing together",
+          1,
+          "You watch the same moment old and new."
+        ],
+        [
+          "B",
+          "One clip of the new version, plus a still picture of the old one",
+          0,
+          "Faster for me to capture, but you can't compare the motion, because the old version is only a still picture."
+        ]
+      ],
+      "You asked for a before and after clip for gameplay, and for animation and gameplay the motion is what changed."
+    ],
+    [
+      "escape",
+      "Can a QA page ever go out without the evidence?",
+      [
+        [
+          "A",
+          "Never: a change I can't capture isn't ready for QA",
+          1,
+          "If I can't record it, I tell you so and the feature stays in the Build stage."
+        ],
+        [
+          "B",
+          "Only if you type \"QA without evidence: <feature>\" yourself",
+          0,
+          "Gives you a way to let through a change that you are happy to test without evidence."
+        ]
+      ],
+      "You said to prove the work first and test it yourself only after."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Make every QA page prove each change with the evidence its type needs, and block the QA handover until that evidence is attached.",
+    "changing": "In the house-rules plugin: scripts/make_page.py (QA mode and the evidence rule), templates/handover-page.html (video clips), scripts/house_rules/design_loop.py (the qa page check), rules/house-rules.md, two detail files (visual-check.md and show-dont-tell.md), verify.py, and the plugin version number.",
+    "blocking": "Your approval of this design, and your answers to the three choices under Choices.",
+    "next": "A build plan page, with one issue for each build step. The first step adds the Ophan page's own content to verify.py as a case that must be refused, so the fix is proven against the real failure.",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it: \"Design approved: QA evidence by change type\", or say what to change."
+    ]
+  }
+}

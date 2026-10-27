@@ -467,10 +467,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.73.2",
+    "issues: the rules section and its detail file exist, and the plugin is 2.74.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.73.2",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.74.0",
     "rules section + detail file + version",
 )
 
@@ -1899,13 +1899,14 @@ def _ck_stage(stage, **extra):
 
 
 _ck_qa_page = "docs/plans/f-qa.html"
+_ck_qa_ev = {"types": ["none"], "entries": 1}
 _ck_stage("qa")
 _ck_b, _ck_r, _ = _ck_run(_ck_t_plain, "The build is ready.")
 _ck_cases.append(("qa page: in QA with no page built a reply blocks, naming the rule and make_page.py",
                   _ck_b and "- qa page:" in _ck_r and "make_page.py" in _ck_r and "no QA page is built" in _ck_r))
 _ck_b, _, _o = _ck_run(_ck_t_plain, "The build is ready.", active=True)
 _ck_cases.append(("qa page: the retry never blocks", not _ck_b))
-_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_stage("qa", qa_page=_ck_qa_page, qa_evidence=_ck_qa_ev)
 _ck_b, _ck_r, _ = _ck_run(_ck_t_plain, "The build is ready.")
 _ck_cases.append(("qa page: built but not linked blocks, saying so", _ck_b and "not linked" in _ck_r))
 _ck_cases.append(("blocked checkpoint reason asks for what changed only, not the reply again",
@@ -1917,17 +1918,29 @@ _ck_cases.append(("qa page: a reply linking the page path passes and records it"
                   not _ck_b and json.load(open(_ck_sf, encoding="utf-8")).get("qa_page_linked") is True))
 _ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")
 _ck_cases.append(("qa page: a later reply without the link passes", not _ck_b))
-_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_stage("qa", qa_page=_ck_qa_page, qa_evidence=_ck_qa_ev)
 _ck_b, _, _ = _ck_run(_ck_t_plain, "Here: https://claude" + ".ai/artifact/abc123")
 _ck_cases.append(("qa page: a claude.ai artifact link passes", not _ck_b))
-_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_stage("qa", qa_page=_ck_qa_page, qa_evidence=_ck_qa_ev)
 _ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page, active=True)
 _ck_cases.append(("qa page: a retry reply linking the page does not block and records it",
                   not _ck_b and json.load(open(_ck_sf, encoding="utf-8")).get("qa_page_linked") is True))
-_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_stage("qa", qa_page=_ck_qa_page, qa_evidence=_ck_qa_ev)
 _ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.", active=True)
 _ck_cases.append(("qa page: a retry reply without the link does not block and records nothing",
                   not _ck_b and "qa_page_linked" not in json.load(open(_ck_sf, encoding="utf-8"))))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _ck_r, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page)
+_ck_cases.append(("qa page (#416): a page with no qa_evidence blocks, mentions evidence, and is not marked linked",
+                  _ck_b and "evidence" in _ck_r and "qa_page_linked" not in json.load(open(_ck_sf, encoding="utf-8"))))
+_ck_stage("qa", qa_page=_ck_qa_page)
+_ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page, active=True)
+_ck_cases.append(("qa page (#416): a retry reply linking a page with no qa_evidence records nothing",
+                  not _ck_b and "qa_page_linked" not in json.load(open(_ck_sf, encoding="utf-8"))))
+_ck_stage("qa", qa_page=_ck_qa_page, qa_evidence=_ck_qa_ev)
+_ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page)
+_ck_cases.append(("qa page (#416): with qa_evidence present the linked page passes and is marked linked",
+                  not _ck_b and json.load(open(_ck_sf, encoding="utf-8")).get("qa_page_linked") is True))
 for _st in ("build", "design"):
     _ck_stage(_st)
     _ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")

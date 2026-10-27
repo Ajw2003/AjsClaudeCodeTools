@@ -82,7 +82,7 @@ of its own, marked `in progress` while it is worked on. When it reaches the user
 is swapped for `needs review`. The user then closes it, or asks for changes and it goes back to
 `in progress`. Every step checks this, reading the labels from GitHub (or, when GitHub can't be read,
 from the label changes I made, and saying so): "Build plan approved" needs every issue `in progress`;
-swapping them all to `needs review`, or a pull request opening during Build, starts the QA stage and closes code, and the build is handed over with a QA page built by `make_page.py` in QA mode (its reply is "QA passed: <feature>"); a QA answer counts only in
+swapping them all to `needs review`, or a pull request opening during Build, starts the QA stage and closes code, and the build is handed over with a QA page built by `make_page.py` in QA mode (its reply is "QA passed: <feature>"); the page must carry `qa.evidence`, and the end-of-reply check counts only a page whose evidence passed; a QA answer counts only in
 QA; after "QA failed" the redo's "Design approved" needs them back to `in progress`; in Build a code
 edit is refused while any label is wrong; and the end-of-reply check names any label that doesn't
 fit (#235). The plan adds a sub-issue per step. Every

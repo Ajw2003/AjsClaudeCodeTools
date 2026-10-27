@@ -200,7 +200,8 @@ for _l in _mp_git(_d, "diff", "--numstat", "main~1...HEAD").splitlines():
     _a, _r, _f = _l.split("\t")
     _ns[_f] = (int(_a), int(_r))
 _qa = {"feature": "demo feature", "base": "main~1", "unverified": ["The live run."],
-       "files": {"planned.py": [5, 0, "grow"], "untouched.py": [3, 1, "tidy"]}}
+       "files": {"planned.py": [5, 0, "grow"], "untouched.py": [3, 1, "tidy"]},
+       "evidence": [{"change": "The demo", "type": "none", "reason": "Scripts only; nothing is drawn."}]}
 
 
 def _mp_qa_content(name, qa):
@@ -240,7 +241,193 @@ _rc, _o = _mp("build", _mp_qa_content("qa3", _qa), "--project", _d)
 with open(_stage, encoding="utf-8") as _f:
     _sd = json.load(_f)
 _mp_cases.append(("make_page: QA mode writes qa_page into an existing stage file and keeps its other keys",
-                  _rc == 0 and _sd == {"feature": "demo", "stage": "Build", "qa_page": "docs/plans/qa3.html"}))
+                  _rc == 0 and _sd == {"feature": "demo", "stage": "Build", "qa_page": "docs/plans/qa3.html",
+                                 "qa_evidence": {"types": ["none"], "entries": 1}}))
+_rc, _o = _mp("build", _mp_qa_content("qa4", dict(_qa, base="HEAD")), "--project", _d)
+_mp_cases.append(("make_page (#415): a QA page counted against a base that already holds the feature (0 changed files) is refused, naming the fix",
+                  _rc == 2 and "counted 0 changed files" in _o))
+
+# The Ophan fixture (#412): the real Ophan QA page's content, with no evidence list, over a diff that
+# changes an animation, a model, gameplay code and a screenshot. It must be refused.
+import struct as _oph_struct
+import zlib as _oph_zlib
+
+
+def _oph_png():
+    def chunk(t, b):
+        c = t + b
+        return _oph_struct.pack(">I", len(b)) + c + _oph_struct.pack(">I", _oph_zlib.crc32(c) & 0xffffffff)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", _oph_struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", _oph_zlib.compress(b"\x00\xff\x00\x00")) + chunk(b"IEND", b""))
+
+
+_oph_d = _mp_proj("ophan", {"use": "defaults"})
+_mp_git(_oph_d, "init", "-q", "-b", "main")
+with open(os.path.join(_oph_d, "placeholder.txt"), "w", encoding="utf-8") as _f:
+    _f.write("base\n")
+_mp_git(_oph_d, "add", "-A")
+_mp_git(_oph_d, "commit", "-q", "-m", "base")
+_mp_git(_oph_d, "checkout", "-q", "-b", "ophan-arrival")  # the feature branch, as in PlunderSpell
+for _n, _t in (("Assets/Models/ArtBible/Enemies/Fear/TheOphanOfHours/TheOphanOfHours.controller", b"%YAML 1.1\n"),
+               ("Assets/_Project/Scripts/Runtime/Raid/Ophan/OphanHunt.cs", b"class OphanHunt { }\n"),
+               ("Assets/Models/ArtBible/Animations/TheOphanOfHours_Generic.fbx", b"fbx\n"),
+               ("docs/generated/ophan-418/solo-beam.png", _oph_png())):
+    _p = os.path.join(_oph_d, *_n.split("/"))
+    os.makedirs(os.path.dirname(_p), exist_ok=True)
+    with open(_p, "wb") as _f:
+        _f.write(_t)
+_mp_git(_oph_d, "add", "-A")
+_mp_git(_oph_d, "commit", "-q", "-m", "ophan")
+_oph_qa = {"feature": "the Ophan in the sky", "base": "main",
+           "unverified": ["Nobody has played it by hand yet."], "files": {}}
+_oph_c = _mp_qa_content("ophan", _oph_qa)
+with open(_oph_c, encoding="utf-8") as _f:
+    _oph_pg = json.load(_f)
+_oph_pg["short"]["items"] = [
+    ["check", "The beam's look", "It no longer floods your own view", "done",
+     "On the target's own screen the beam fades out over its last 25 m. Screenshot: docs/generated/ophan-418/staging-beam-host.png.",
+     "Nothing from you."],
+    ["check", "The wings spread", "The wings open fully", "done",
+     "Review sheet: docs/art/anim/fear/ophan_spread.png.", "Nothing from you."],
+    ["check", "The take", "The lift looks right", "done",
+     "Screenshot: staging-lift-host.png.", "Nothing from you."]]
+with open(_oph_c, "w", encoding="utf-8") as _f:
+    json.dump(_oph_pg, _f)
+_rc, _o = _mp("build", _oph_c, "--project", _oph_d)
+_mp_cases.append(("make_page (#412): the Ophan QA page's content, with no evidence for its animation, model and gameplay changes, is refused",
+                  _rc == 2 and "evidence" in _o))
+
+# #413: the Ophan content with evidence entries; one passing build and one case per refusal.
+_ev_dir = os.path.join(_oph_d, "docs", "generated", "qa")
+os.makedirs(_ev_dir, exist_ok=True)
+for _n in ("hover.mp4", "spread.mp4", "wings.mp4", "rec-a.mp4", "rec-b.mp4", "rec.mp4", "m-old.png", "m-new.png", "m.png"):
+    with open(os.path.join(_ev_dir, _n), "wb") as _f:
+        _f.write(_oph_png() if _n.endswith(".png") else b"clip-bytes")
+_Q = "docs/generated/qa/"
+
+
+def _ev(**kw):
+    return dict(kw)
+
+
+def _ev_anim(**kw):
+    return _ev(**dict({"change": "Wings-spread pose", "type": "animation", "media": _Q + "wings.mp4",
+                       "before": _Q + "hover.mp4", "after": _Q + "spread.mp4"}, **kw))
+
+
+def _ev_model(**kw):
+    return _ev(**dict({"change": "The Ophan model", "type": "model", "media": "docs/generated/ophan-418/solo-beam.png",
+                       "before": _Q + "m-old.png", "after": _Q + "m-new.png"}, **kw))
+
+
+def _ev_game(**kw):
+    return _ev(**dict({"change": "The hunt", "type": "gameplay", "media": _Q + "rec.mp4",
+                       "before": _Q + "rec-a.mp4", "after": _Q + "rec-b.mp4"}, **kw))
+
+
+def _oph_build(name, evidence, items=None, style=None):
+    c = _mp_qa_content(name, dict(_oph_qa, evidence=evidence))
+    with open(c, encoding="utf-8") as f:
+        pg = json.load(f)
+    pg["short"]["items"] = items if items is not None else [
+        ["check", "The beam's look", "It no longer floods your own view", "done",
+         "Screenshot: docs/generated/ophan-418/solo-beam.png.", "Nothing from you."]]
+    with open(c, "w", encoding="utf-8") as f:
+        json.dump(pg, f)
+    sp = os.path.join(_oph_d, "docs", "page-style.json")
+    with open(sp, "w", encoding="utf-8") as f:
+        json.dump(style or {"use": "defaults"}, f)
+    return _mp("build", c, "--project", _oph_d)
+
+
+_full = [_ev_anim(), _ev_model(), _ev_game()]
+_rc, _o = _oph_build("ophan-ok", _full)
+_mp_cases.append(("make_page (#413): the Ophan content with animation, model and gameplay evidence and only shown screenshots builds",
+                  _rc == 0))
+_rc, _o = _oph_build("ev-empty", [])
+_mp_cases.append(("make_page (#413): an empty qa.evidence list is refused", _rc == 2 and "qa.evidence" in _o))
+_rc, _o = _oph_build("ev-type", [_ev_anim(type="sparkle")] + _full[1:])
+_mp_cases.append(("make_page (#413): an unknown evidence type is refused, naming the change and the type",
+                  _rc == 2 and "Wings-spread pose" in _o and "sparkle" in _o))
+_rc, _o = _oph_build("ev-pic", [_ev_anim(media=_Q + "m.png")] + _full[1:])
+_mp_cases.append(("make_page (#413): animation media that is a picture is refused, naming the change and field",
+                  _rc == 2 and "Wings-spread pose" in _o and "media" in _o and "clip" in _o))
+_bad = _ev_model()
+del _bad["before"]
+_rc, _o = _oph_build("ev-nobefore", [_full[0], _bad, _full[2]])
+_mp_cases.append(("make_page (#413): a model entry missing before is refused, naming the change, type and field",
+                  _rc == 2 and "The Ophan model" in _o and "model" in _o and "'before'" in _o))
+_rc, _o = _oph_build("ev-noreason", _full + [{"change": "A helper", "type": "none"}])
+_mp_cases.append(("make_page (#413): a none entry without a reason is refused, naming the change",
+                  _rc == 2 and "A helper" in _o and "reason" in _o))
+_rc, _o = _oph_build("ev-nofile", [_ev_anim(after=_Q + "ghost.mp4")] + _full[1:])
+_mp_cases.append(("make_page (#413): an evidence file that does not exist is refused, naming it",
+                  _rc == 2 and "ghost.mp4" in _o and "Wings-spread pose" in _o))
+_rc, _o = _oph_build("ev-uncovered", _full[:2])
+_mp_cases.append(("make_page (#413): a type implied by the changed files with no entry is refused, naming the type and a file",
+                  _rc == 2 and "gameplay" in _o and "OphanHunt.cs" in _o))
+_rc, _o = _oph_build("ev-named", _full, items=[
+    ["check", "The beam", "Beam", "done", "Screenshot: x.png.", "Nothing from you."]])
+_mp_cases.append(("make_page (#413): a 'Screenshot: x.png' in the text that the page does not show is refused, naming x.png",
+                  _rc == 2 and "x.png" in _o))
+_rc, _o = _oph_build("ev-over", _full[:2], style={"use": "defaults", "evidence_paths": {"ai": [r"Ophan/.*\.cs$"]}})
+_mp_cases.append(("make_page (#413): an evidence_paths override in page-style.json takes effect (the .cs file now implies ai)",
+                  _rc == 2 and "ai (implied" in _o and "gameplay (implied" not in _o))
+_rc, _o = _oph_build("ev-over2", _full[:2], style={"use": "defaults", "evidence_paths": {"gameplay": [], "ai": []}})
+_mp_cases.append(("make_page (#413): an evidence_paths override that empties gameplay and ai lets the same evidence build",
+                  _rc == 0))
+
+# ---- #414: the page shows each change's clip or picture ----
+_rc, _o = _oph_build("ev-render", _full)
+_rp = os.path.join(_oph_d, "docs", "plans", "ev-render.html")
+_pg = _mp_page_of(_rp) if _rc == 0 else None
+_ch = (_pg or {}).get("changes", [])
+_pr = [c for c in _ch if c[0] == "proof"]
+_mp_cases.append(("make_page (#414): the full-evidence Ophan build's PAGE has the proof items first, with evidence objects and srcs copied under the -pics folder",
+                  bool(_pg) and len(_pr) == 3 and [c[0] for c in _ch[:3]] == ["proof"] * 3
+                  and _pr[0][1] == "Animation: Wings-spread pose" and _pr[0][7].get("evidence") is True
+                  and all(_pr[0][7][k]["src"].startswith("ev-render-pics/") for k in ("media", "before", "after"))
+                  and os.path.isfile(os.path.join(_oph_d, "docs", "plans", _pr[0][7]["before"]["src"]))))
+_h = open(_rp, encoding="utf-8").read() if _rc == 0 else ""
+_d414 = _mp_proj("plain414", {"use": "defaults"})
+_rcn, _ = _mp("build", _c1, "--project", _d414)
+_np = os.path.join(_d414, "docs", "plans", "basic.html")
+_big = os.path.join(_oph_d, "docs", "generated", "qa", "big.mp4")
+with open(_big, "wb") as _f:
+    _f.truncate(16 * 1024 * 1024)
+_rc, _o = _oph_build("ev-big", [_ev_anim(media=_Q + "big.mp4")] + _full[1:])
+_mp_cases.append(("make_page (#414): a copied file over 15 MB is refused, naming the file and the size",
+                  _rc == 2 and "big.mp4" in _o and "16.0 MB" in _o and "15 MB" in _o))
+os.remove(_big)
+_NODE = shutil.which("node") or "/opt/node22/bin/node"
+_PWMOD = "/opt/node22/lib/node_modules"
+_JS414 = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();
+await p.addInitScript(()=>{window.__plays=[];HTMLMediaElement.prototype.play=function(){window.__plays.push(this.getAttribute('src'));return Promise.resolve();};});
+await p.goto('file://'+process.argv[2]);
+const out=await p.evaluate(()=>{const d=document.querySelector('#cc details.ci');const vs=d?[...d.querySelectorAll('.cmp-vid video')]:[];
+window.__plays.length=0;if(vs.length==2)vs[0].dispatchEvent(new Event('play'));
+const q=document.getElementById('cc-count').textContent;return {q,open:!!d&&d.open,n:vs.length,called:window.__plays.slice(),second:vs[1]&&vs[1].getAttribute('src')};});
+const p2=await b.newPage();await p2.goto('file://'+process.argv[3]);out.plain=await p2.evaluate(()=>document.getElementById('cc-count').textContent);
+console.log(JSON.stringify(out));await b.close();})();""")
+if not (_rc_ok := os.path.isfile(_rp)) or not (os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, "playwright"))):
+    report("SKIP", "make_page (#414): paired clips sync in a browser (no node or node playwright here)")
+else:
+    _jsf = os.path.join(_mp_tmp, "sync414.js")
+    with open(_jsf, "w", encoding="utf-8") as _f:
+        _f.write(_JS414)
+    _r = subprocess.run([_NODE, _jsf, _rp, _np], capture_output=True, text=True, timeout=180,
+                        env=dict(os.environ, NODE_PATH=_PWMOD, PLAYWRIGHT_BROWSERS_PATH=os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")))
+    try:
+        _sy = json.loads(_r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        _sy = None
+    if _sy is None:
+        report("SKIP", "make_page (#414): paired clips sync in a browser (browser did not run: %s)" % (_r.stderr.strip()[-200:] or "no output"))
+    else:
+        _mp_cases.append(("make_page (#414): the first proof item is open, holds two videos in .cmp-vid, and playing the first plays the second",
+                          _sy["open"] and _sy["n"] == 2 and _sy["called"] == [_sy["second"]]))
+        _mp_cases.append(("make_page (#414): the Ophan page's count line says '3 proof' and a non-QA page's count line has no proof",
+                          _rcn == 0 and _sy["q"].startswith("3 proof, ") and "proof" not in _sy["plain"] and "new," in _sy["plain"]))
 
 # The copy box must hold the exact phrase the design-loop gate accepts (#286).
 _hk_spec = _ig_util.spec_from_file_location("hook_for_approval", HOOK)
