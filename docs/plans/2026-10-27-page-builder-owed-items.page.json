@@ -26,7 +26,7 @@
         {
           "src": "docs/generated/page-builder-owed-items/refusal-mock.png",
           "alt": "A terminal where make_page refuses the handoff plan with seven named missing items, then refuses a made-up proposal for missing pictures",
-          "caption": "A mock of the refusal. The first seven lines are what the handoff plan's content would get; the last two show the proposal visual rule on a made-up page."
+          "caption": "A mock of the refusal. The first seven lines are the missing items it would name for the handoff plan; the last two show the proposal visual rule refusing a made-up page."
         }
       ],
       [
@@ -111,13 +111,13 @@
         "Builds the page and prints \"null\" where the detail should be.",
         "Refuses, naming each empty row and each row with no files."
       ],
-      "The page kind comes from the approval phrase, which the builder already reads. The picture is the real handoff build plan from commit b7a1c13, rebuilt today: two rows reading \"null\".",
+      "The page kind comes from the approval phrase, which the builder already reads. The picture shows two rows of the real handoff build plan, rebuilt today from commit b7a1c13. Both rows read \"null\" where the detail should be.",
       null,
       null,
       {
         "src": "docs/generated/page-builder-owed-items/handoff-plan-null-rows.png",
         "alt": "Two change rows of the handoff build plan, opened, each showing the word null where the detail should be",
-        "caption": "Before: the handoff plan as it went out, rebuilt from commit b7a1c13. The refusal that replaces it is pictured under In short, step 1."
+        "caption": "Before: two rows of the handoff plan as it went out, rebuilt from commit b7a1c13. The refusal that replaces it is pictured in the \"Every page\" step under In short."
       }
     ],
     [
