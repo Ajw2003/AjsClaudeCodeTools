@@ -292,7 +292,7 @@ const PAGE = {
         "Found in the lock's own code",
         "",
         [
-          "When a message arrives, scripts/house_rules/design_loop.py (_loop_scope_note) looks for a git repo (a project folder tracked by git) starting at the message's folder and walking up through the folders above it (core.py, _issues_locate).",
+          "When a message arrives, scripts/house_rules/design_loop.py (_loop_scope_note) looks for a git repo, which is a project folder tracked by git. It starts at the message's folder and walks up through the folders above it (core.py, _issues_locate).",
           "From /home/claude it walks up to / and finds no repo, so it gives up without a result: no stage moves, and no note says why.",
           "The part of the lock that refuses edits starts from the edited file's own location, so it does find the repo and refuses. The part that reads your messages can't find it, so the two halves of the lock disagree."
         ],
@@ -406,7 +406,7 @@ const PAGE = {
     "summary": "Make the code lock find the repo when a message arrives from the folder above it, and say out loud when it finds nothing.",
     "changing": "scripts/house_rules/design_loop.py, scripts/checks/design_loop.py, and the plugin version.",
     "blocking": "Your approval of this design, and your answers to the two choices under Choices.",
-    "next": "This fix touches two code files and has three changes, so it needs no separate issues. I build it, run verify.py, open a pull request into main that says \"No-issue: lock fix for #389's blocked approvals\" (#389 is QA pages must prove each change with evidence for its type), and tell you when to resend your two approvals.",
+    "next": "This fix touches two code files and has three changes, so it needs no separate issues. I build it and run verify.py. Then I open a pull request into main that says \"No-issue: lock fix for #389's blocked approvals\". #389 is the issue \"QA pages must prove each change with evidence for its type\". Last, I tell you when to resend your two approvals.",
     "todo": [
       "Pick your answers under Choices.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: missed approvals fix\", or say what to change."
