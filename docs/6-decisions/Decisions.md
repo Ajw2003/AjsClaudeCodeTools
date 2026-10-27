@@ -16,7 +16,7 @@ ledger's summary, and a helper started in the background has no readable transcr
 backgrounded in such a way the transcript can't be viewed", then chose "No background helpers" over
 "Live readout while it runs" and "Both". The work trail becomes a raw readout of the helper's
 transcript, and the `agentcap` hook refuses any helper not started with `run_in_background: false`.
-Plugin 2.73.3. See `docs/4-systems/work-tracking.md`, "Raw readout and no background helpers".
+Plugin 2.73.4. See `docs/4-systems/work-tracking.md`, "Raw readout and no background helpers".
 
 **Status.** Standing.
 

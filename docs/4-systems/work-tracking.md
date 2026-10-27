@@ -39,7 +39,7 @@ The swap is observed, not documented, so every message that carries a link also 
 |---|---|---|
 | Thread link | SessionStart, `inject` (`house_rules/delegation.py`) | Reads `CLAUDE_CODE_REMOTE_SESSION_ID`, builds the thread's transcript link and tells the thread to open every checklist header with it. A missing or malformed id is said, not skipped. |
 | Remote Control link (#383) | PostToolUse on `mcp__hearthbot__start_remote_control`, new handler `rclink` | When the result says `started` or `already_running`, tells the thread to call `remote_control_status`, read the session id, and post and attach "Transcript of the session on your PC". If the status call fails or carries no id, the thread says what failed in the same message. A second session gets its own link; an old one is never replaced silently. |
-| Helper work trail | PostToolUse on `Agent|Task` (`audit`), and UserPromptSubmit (`userpromptaudit`) for a backgrounded helper | Both already locate the helper's transcript. In a project thread they also write a raw readout of it (2.73.3, below) into `/mnt/project-files/work-trail/<date>-<agent type>-<agent id>.md` and tell the thread to attach that file. The opt-in SubagentStop ledger (`HOUSE_RULES_SUBAGENT_LEDGER`) is unchanged outside project threads. |
+| Helper work trail | PostToolUse on `Agent|Task` (`audit`), and UserPromptSubmit (`userpromptaudit`) for a backgrounded helper | Both already locate the helper's transcript. In a project thread they also write a raw readout of it (2.73.4, below) into `/mnt/project-files/work-trail/<date>-<agent type>-<agent id>.md` and tell the thread to attach that file. The opt-in SubagentStop ledger (`HOUSE_RULES_SUBAGENT_LEDGER`) is unchanged outside project threads. |
 | Links owed | Stop, `handover` (`hook.py`) | Reads this turn's records. If a Remote Control session started, a helper finished, or a checklist was posted, and no `post_message` or `update_progress_checklist` call this turn carried the matching link or trail path, it blocks the end of the turn once and names what is missing. On the retry it only reports. |
 
 The proposal page placed the helper trail on SubagentStop. It moves to `audit` and `userpromptaudit`
@@ -58,7 +58,7 @@ be told the file's path from there.
 - `checks/common.py`'s `run_hook` defaults `HOUSE_RULES_WORKTRAIL_DIR` to a temporary folder, so a
   verify run inside a project thread never writes test trails into the real project folder.
 
-## Raw readout and no background helpers (2.73.3)
+## Raw readout and no background helpers (2.73.4)
 
 aj's live test of 2.73.2 on 2026-10-27 showed the work trail's summary ledger was not what they wanted
 to read. They chose "No background helpers" on the follow-up choice. Two changes:
