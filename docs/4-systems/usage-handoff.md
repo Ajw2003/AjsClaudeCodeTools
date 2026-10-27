@@ -1,4 +1,7 @@
-# Usage handoff (planned)
+# Usage handoff (planned, paused)
+
+Paused 2026-10-27: issue #406 now sits under the restructure (#306), and its build plan is checked
+against restructure steps 3 to 7 (#381) before anything is built.
 
 How work stays saved and handed off, so a usage limit never strands it and a session on another
 Claude account can pick it up at once. Designed 2026-10-27 ("Design approved: usage limit handoff 1A
