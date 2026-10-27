@@ -20,6 +20,21 @@ Plugin 2.73.4. See `docs/4-systems/work-tracking.md`, "Raw readout and no backgr
 
 **Status.** Standing.
 
+## 2026-10-27 - Triage answers: docref skips its own test fixtures
+
+**Context.** `docref.py check` had reported the same 38 problems on `main` since at least 2026-10-16. All 38 came
+from deliberately broken pointers inside the test file `scripts/checks/docs.py`, which the check scanned as real
+code, so it could never pass and a real broken pointer would have hidden among them. Found by the catch-up
+triage (`docs/plans/2026-10-27-catch-up-triage.html`, step 9).
+
+**Decision.** aj answered choice 9A, "fix it now as a small patch". A code file whose first 10 lines carry
+`docref: skip-file` is skipped, and `check` prints one line naming each skipped file, so the skip is never
+silent. `scripts/checks/docs.py` carries the marker. Rejected: a hard-coded path exclusion, because docref runs
+in every repo, not only this one. Ships as 2.73.3, after pull request #402 (2.73.2) and before the restructure
+(2.74.0).
+
+**Status.** Standing.
+
 ## 2026-10-27 - Build plan approved: background work tracking (gap fixes)
 
 **Context.** Build plan `docs/plans/work-tracking-gap-fixes-plan.html` for the redo of #396, three steps:
