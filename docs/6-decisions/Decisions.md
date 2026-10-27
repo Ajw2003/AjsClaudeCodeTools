@@ -3043,3 +3043,22 @@ sub-plugin later. Design: `docs/4-systems/guards.md`, "Credit on GitHub".
 keep it off; reporting it honestly is the part the agent controls.
 
 **Status.** Standing.
+
+## 2026-10-27 — Usage limit handoff: save on every reply, not at 90%
+
+**Context.** aj asked for work to be saved and handed off when a session reaches 90% of its five-hour
+or weekly usage limit, so a session on another Claude account can continue it, on every surface:
+terminal, desktop app, cloud and phone. Tested that day: no hook input carries usage; only the
+terminal's status line does, a plugin can't set one, and a status line set in a cloud project thread
+never ran. Proposal: `docs/plans/2026-10-27-usage-limit-handoff-revised.html` (the first version, which
+waited for 90%, is kept as `docs/plans/2026-10-27-usage-limit-handoff.html`).
+
+**Decision.** aj approved "Design approved: usage limit handoff 1A 2A 3A": every reply that changed files
+ends committed, pushed and described in a handoff note (1A); the agent writes the note (2A); the note
+lives at `docs/5-today/handoff-<branch>.md` on the pushed branch and loads at session start (3A). Design:
+`docs/4-systems/usage-handoff.md`. It replaces issue #140.
+
+**Why.** A 90% trigger can't fire in cloud sessions or from the phone, and is untested in the desktop
+app. The end-of-reply hook runs on every surface, so saving there never depends on reading usage.
+
+**Status.** Standing.
