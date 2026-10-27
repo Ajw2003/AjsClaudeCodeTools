@@ -294,21 +294,23 @@ commit_case(
 
 # -- #177: a commit authored as Claude is refused ----------
 AGENT_IDENTITY_FIX_TEXT = (
-    "git config user.name \"AJ's agent\" && git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
+    "git config user.name \"" + TEST_AGENT_NAME + "\" && git config user.email \"<your own git email>\""
 )
+# A repo whose git email is the user's own gets that email in the fix command (read from git config, not a setting).
+AGENT_IDENTITY_FIX_GOOD = "git config user.name \"" + TEST_AGENT_NAME + "\" && git config user.email \"" + TEST_EMAIL + "\""
 _au1 = _iss_guard("git commit -m x", _au_bad)
 _au2 = _iss_guard("git commit -m x", _au_good)
 _au3 = _iss_guard('git commit --author "Claude <noreply@anthropic.com>" -m x', _au_good)
-_au4 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=79066376+Ajw2003@users.noreply.github.com commit -m x", _au_bad)
+_au4 = _iss_guard("git -c user.name=\"" + TEST_AGENT_NAME + "\" -c user.email=" + TEST_EMAIL + " commit -m x", _au_bad)
 _au5 = _iss_guard("GIT_AUTHOR_EMAIL=noreply@anthropic.com git commit -m x", _au_good)
 _au6 = _iss_guard("git commit --author='Claudette <c@example.com>' -m x", _au_bad)
 _au7 = _iss_guard("git commit -m x", _au_bad, HOUSE_RULES_ATTRIBUTION="off")
-_au9 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=bot@anthropic.com commit -m x", _au_good)
+_au9 = _iss_guard("git -c user.name=\"" + TEST_AGENT_NAME + "\" -c user.email=bot@anthropic.com commit -m x", _au_good)
 _au10 = _iss_guard("git -c \"user.name=Claude\" commit -m x", _au_good)
-_au11 = _iss_guard("git -c \"user.name=AJ's agent\" -c 'user.email=79066376+Ajw2003@users.noreply.github.com' commit -m x", _au_bad)
+_au11 = _iss_guard("git -c \"user.name=Test " + TEST_AGENT_NAME + "\" -c 'user.email=" + TEST_EMAIL + "' commit -m x", _au_bad)
 _au8 = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _au_bad, command="git commit -m x"), _au_bad)[1]
 commit_case(
-    "author: a Claude repo identity is refused with the repo-local fix command; AJ's agent passes",
+    "author: a Claude repo identity is refused with the repo-local fix command; " + TEST_AGENT_NAME + " passes",
     _iss_decision(_au1) == "deny" and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au1) and "--global" not in _iss_reason(_au1)
     and _iss_decision(_au2) != "deny",
     "out %r | %r" % (_au1[:200], _au2[:80]),
@@ -319,9 +321,9 @@ commit_case(
     "out %r | %r | %r" % (_au3[:80], _au5[:80], _au4[:80]),
 )
 commit_case(
-    "author: a quoted -c identity with a space is read (#189): a Claude email or name is refused, AJ's agent overrides a Claude config",
+    "author: a quoted -c identity with a space is read (#189): a Claude email or name is refused, " + TEST_AGENT_NAME + " overrides a Claude config",
     _iss_decision(_au9) == "deny" and _iss_decision(_au10) == "deny" and _iss_decision(_au11) != "deny"
-    and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au9),
+    and AGENT_IDENTITY_FIX_GOOD in _iss_reason(_au9),
     "out %r | %r | %r" % (_au9[:80], _au10[:80], _au11[:80]),
 )
 commit_case(
@@ -467,10 +469,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.73.3",
+    "issues: the rules section and its detail file exist, and the plugin is 2.74.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.73.3",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.74.0",
     "rules section + detail file + version",
 )
 
@@ -2095,6 +2097,7 @@ _pf_cases.append(("QA failed for a stored feature keeps it in the map back in bu
                   _a.get("stage") == "build" and _a.get("redo") is True and _pf_nums(_a.get("issues", [])) == [701, 702]
                   and not _st.get("closable") and _st.get("stage") == "build" and _st.get("feature") == "beta"
                   and "stays in the kept features" in _n))
+_pf_log()  # #343: the failed-QA approval's entry is written before the next approval counts
 _pf_note("QA passed: alpha")
 _st = _cl_state()
 _pf_cases.append(("a stored feature that failed QA can pass a later QA once its issues say needs review",
@@ -2103,6 +2106,67 @@ _pf_cases.append(("a stored feature that failed QA can pass a later QA once its 
 for _t, _ok in _pf_cases:
     report("PASS" if _ok else "FAIL", "per-feature issues: " + _t)
 
+
+# --- #343: sub-feature link reminder, one unlogged approval at a time, cloud page links ---
+_s3_cases = []
+_cl_set({"stage": "plan", "feature": "alpha"})
+_s3_pay = lambda body, resp: json.dumps({"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write",
+    "cwd": _cl_dir, "tool_input": {"method": "create", "title": "t", "body": body, "labels": ["Feature"]},
+    "tool_response": {"url": "https://github.com/o/r/issues/%d" % resp}})
+_o = _cc_mod.design_loop._issues_record(_s3_pay("Part of #381\n\nDone when x.", 801))
+_s3_cases.append(("an issue create saying `Part of #N` gets a reminder to link it as a sub-issue (sub_issue_write)",
+                  any("Part of #381" in x and "sub_issue_write" in x and "sub_issues" in x for x in _o)))
+_o = _cc_mod.design_loop._issues_record(_s3_pay("A top-level feature.", 802))
+_s3_cases.append(("an issue create without `Part of #N` gets no sub-issue reminder",
+                  not any("sub-issue" in x for x in _o)))
+_pf_two_features()
+_pf_note("QA passed: alpha")
+_st = _cl_state()
+_s3_cases.append(("a sub-feature's QA pass records only its own issues, not the feature built beside it",
+                  len(_st.get("closable") or []) == 1 and _pf_nums(_st["closable"][0].get("issues", [])) == [701, 702]
+                  and _pf_nums(_st.get("issues", [])) == [711, 712]))
+_cl_set({"feature": "demo", "stage": "plan", "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)]})
+_loop_gh("in progress", 1, 2)
+_st = _cl_state()
+_st["log_mark"] = hashlib.sha256(open(os.path.join(_cl_dir, "docs", "6-decisions", "Decisions.md"), "rb").read()).hexdigest()
+json.dump(_st, open(_cl_file, "w", encoding="utf-8"))
+_pf_note("Build plan approved: demo")  # log unchanged since the last mark: counts, entry owed
+_st = _cl_state()
+_s3_cases.append(("the first approval with no new log entry counts and marks the entry owed",
+                  _st.get("stage") == "build" and _st.get("log_owed") is True))
+_loop_gh("needs review", 1, 2)
+_n = _pf_note("QA passed: demo")
+_st = _cl_state()
+_s3_cases.append(("the next approval is refused while the previous approval's log entry was never written",
+                  _st.get("stage") != "done" and not _st.get("closable") and "Nothing moved" in _n and "never written" in _n))
+_pf_log()
+_n = _pf_note("QA passed: demo")
+_st = _cl_state()
+_s3_cases.append(("once the entry is written the same approval counts and the owed mark clears",
+                  _st.get("stage") == "done" and "log_owed" not in _st))
+
+def _s3_page(reply, remote):
+    old = os.environ.get("CLAUDE_CODE_REMOTE")
+    if remote:
+        os.environ["CLAUDE_CODE_REMOTE"] = "true"
+    else:
+        os.environ.pop("CLAUDE_CODE_REMOTE", None)
+    try:
+        return _cc_mod.design_loop._check_page({"reply": reply, "cwd": _pl_cwd, "long_words": 200})
+    finally:
+        os.environ.pop("CLAUDE_CODE_REMOTE", None)
+        if old is not None:
+            os.environ["CLAUDE_CODE_REMOTE"] = old
+_o = _s3_page("See [p](docs/plans/x.html)", True)
+_s3_cases.append(("cloud session: a reply linking only a local .html is blocked, naming the Artifact tool's publish step",
+                  "Artifact tool" in _o and "publish" in _o))
+_s3_cases.append(("cloud session: a reply linking a claude.ai artifact passes",
+                  _s3_page("See https://claude.ai/artifact/abc", True) == ""
+                  and _s3_page("See https://claude.ai/code/artifact/abc", True) == ""))
+_s3_cases.append(("local session: a local .html link passes",
+                  _s3_page("See [p](docs/plans/x.html)", False) == ""))
+for _t, _ok in _s3_cases:
+    report("PASS" if _ok else "FAIL", "restructure step 5 (#343): " + _t)
 
 
 

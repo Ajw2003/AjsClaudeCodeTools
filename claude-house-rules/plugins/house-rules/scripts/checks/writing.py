@@ -73,4 +73,40 @@ pv_case("Stop: HOUSE_RULES_PLAIN_SUMMARY=off switches it off",
         not _ps(_ps_wrote, _PS_TECH, HOUSE_RULES_PLAIN_SUMMARY="off"), "")
 
 
+# --- #344: skipping a check is aj's call; an unasked fix outside the request gets a note -------------------
+_sk_t = _turn_transcript("sk-read", "run the suite", [("Bash", "ls")])
+
+
+def _sk(reply, key):
+    return key in _stop_notes(_sk_t, reply)[2]
+
+
+_SK_SAID = "I skipped the full suite because it takes 20 minutes."
+pv_case("Stop: a check skipped for time with no question to aj gets the note quoting aj's rule (#344)",
+        _sk(_SK_SAID, "never decides on its own to skip a check"), "fired=%s" % _sk(_SK_SAID, "never decides on its own"))
+pv_case("Stop: the same skip with 'Should I skip it?' in the reply passes (#344)",
+        not _sk(_SK_SAID + " Should I skip it for good?", "never decides on its own"), "")
+pv_case("Stop: a check not run because it costs money, no question, gets the note (#344)",
+        _sk("I did not run the paid API test because it costs money.", "never decides on its own"), "")
+pv_case("Stop: a skip for a reason that is not time, cost or an unreachable machine is left to the other checks (#344)",
+        not _sk("I skipped the lint step because the file is generated.", "never decides on its own"), "")
+pv_case("Stop: 'I also fixed X' with no issue number gets the unasked-fix note (#344)",
+        _sk("The change is in. I also fixed a typo in the parser.", "outside the request"), "")
+pv_case("Stop: 'I also fixed X (#123)' with an issue number gets no note (#344)",
+        not _sk("The change is in. I also fixed a typo in the parser (#123).", "outside the request"), "")
+pv_case("Stop: the unasked-fix note is a note, not a block (#344)",
+        '"decision":"block"' not in run_hook("handover", stop_payload(
+            transcript_path=_sk_t, last_assistant_message="While I was there I fixed a typo."))[1], "")
+_SK_NORMAL = [
+    "Done. The Edit guard now refuses a change that replaces more than half a file.\n\nRESULT: PASS",
+    "I ran the tests. All 12 passed. I fixed the bug you asked about.",
+    "I skipped nothing; every check ran in 40 seconds.",
+    "Not run: the Unity editor is not installed here.",
+    # A real reply from 2026-10-24 that describes the rule rather than skipping anything:
+    "It also adds a reply check: skipping a long or paid check needs your answer first.",
+]
+pv_case("Stop: normal replies trigger neither the skip note nor the unasked-fix note (#344)",
+        not any(_sk(r, "never decides on its own") or _sk(r, "outside the request") for r in _SK_NORMAL), "")
+
+
 finish()

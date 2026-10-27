@@ -446,3 +446,97 @@ Step 2c (#359, commits `4558e83` and `86039ae`):
 
 **Timing.** The after-step-2 `verify.py` and hook-start timings are in `docs/4-systems/verify-suites.md`,
 "Planned: the verify.py rework".
+
+## Steps 3 to 7: one feature (#381)
+
+Design approved 2026-10-24 ("Design approved: restructure steps 3 to 7"); design page
+`docs/plans/2026-10-21-restructure-steps-3-7.html`, build plan `docs/plans/2026-10-24-restructure-steps-3-7-plan.html`.
+Built in order: step 3 #341 (settings and identity), step 4 #349 (safe git), step 5 #343 (design loop and pages),
+step 6 #344 (writing, evidence and rewrite rules), step 7 #345 (helper agents). One QA page and one release,
+#382, version 2.74.0. Steps 4 and 7 read the agent name and branch prefix from step 3's settings.
+
+
+**Built: step 3 (#341).** Two settings, `agent_name` and `extra_owned_prefixes`, live in a new leaf module,
+`scripts/house_rules/settings.py`, with a command-line front end, `scripts/settings.py` (`set`, `get`, `show`;
+it prints what it saved and where). *Settings file:* `<config dir>/house-rules/settings.json`, where the config
+dir is `$CLAUDE_CONFIG_DIR` or `~/.claude`, the same place `core.py` already reads per-user Claude state from, so
+it sits outside every repo and follows the machine (`HOUSE_RULES_SETTINGS_FILE` moves it; the checks use that).
+*Read order,* first value wins: the environment (`HOUSE_RULES_AGENT_NAME`, `HOUSE_RULES_OWNED_BRANCHES`), then the
+settings file, then `/plugin configure`, which is skipped because `plugin.json` has no `userConfig`. An empty
+`extra_owned_prefixes` counts as set; an empty `agent_name` does not. No setting has an assumed default. *The gate:*
+while a setting is unset the guard (for Bash) and a new no-matcher `settingsgate` hook (every other tool) refuse
+the call, naming each missing setting and its `settings.py set` command; the one thing let through is a lone
+`python <plugin>/scripts/settings.py set|get|show` (no `;`, `&`, `|`, `$`, backticks or redirects outside quotes,
+and only this plugin's own script). At session start, `profile` adds a note asking the model to ask the user, with
+the suggestion `<GitHub login lowercased>sAgent` from `gh api user`, else the git remote's owner, saying which.
+*Identity strings now from settings:* the credit lines (`Committed by <agent_name>`, `Opened by <agent_name>`),
+the agent branch prefix `<agent_name>/` (the cloud `claude/` move, the branch advice, the refusal texts), the
+owned-branch test (own prefix, the extras, and cloud-session `ccr-`), the commit author name, and the git
+identity fix text (its email is read from `git config user.email`, shown as `<your own git email>` when that is
+Claude's). *Left literal, in `settings.py` only:* the GitHub label names (`AjsAgent created this`,
+`AjsAgent completed this`, `Claude created this`) and their descriptions, because existing labels carry them and
+renaming would orphan every issue that has one; the default repo owner and the plugin.json address. The rules
+text in `rules/` and the docs still name "aj's agent" and `AjsAgent/`; they are prose, not code, and are not
+part of this step. The checks run with `HOUSE_RULES_AGENT_NAME=testsAgent` (set in `checks/common.py`) and assert
+values derived from it.
+
+**Built: step 4 (#349).** *Deletes:* a delete of a committed, unchanged file (git can restore it) is allowed
+only on a branch that is the agent's own (own prefix, the extras, `ccr-`, helper `worktree-agent-` branches). On
+any other branch, `main` included, it is refused naming the branch, with the words "not a branch of the agent's
+own", and the safe way (`_to_delete/` or a new branch under the agent prefix). Uncommitted, changed, never-committed,
+glob and recursive deletes are refused as before, and the scratchpad exemption is unchanged. *Identity:* the
+automatic work-in-progress commits (`_wip_message`, `_wip_commit` in `delegation.py`) now end with the derived
+`Committed by <agent_name>` line, carry no Claude `Co-Authored-By` or `Claude-Session` line, and are authored as
+`<agent_name>` with the user's own git email (`house-rules@localhost` only when git has none). The attribution
+and credit checks needed no new code: they refuse Claude's lines and accept anything else, so they already accept
+exactly the derived `Committed by` and `Opened by` lines; a new check pins that. *Snapshot branches:* the
+`worktreesweep` hook (every prompt) now also deletes an autosave snapshot, locally and on origin, once its
+helper's work is merged. There is no recorded merge event to trust, so the signal is what git can prove: the
+snapshot holds nothing a commit lacks (its tree equals its parent's) and that parent is contained in a branch that
+is not a helper branch. A snapshot with unsaved work, or whose commits sit only on helper branches, is kept. It
+cannot tell "merged" from "never started" (a helper with no commits also matches), which loses nothing because
+the snapshot then holds nothing. The autosave push still uses `--force`; that is step 7 (#345). *`run.sh`:* with no
+working Python the `settingsgate` event now fails closed (3 lines on stderr, exit 2), as `guard` does, instead of
+doing nothing. Seven checks were added to `checks/safe_git.py` (all prefixed `#349`).
+
+**Built: step 5 (#343).** *Sub-features:* when a `gh issue create` or the GitHub tool's `issue_write` create has
+the words "Part of" and an issue number in its body, the post-tool hook (`_sub_issue_note` in `design_loop.py`) adds a
+reminder to also link the new issue as a sub-issue of the parent with `mcp__github__sub_issue_write` or
+`gh api .../sub_issues`. It is a note, not a refusal, because the link can only be made after the create. A
+sub-feature's QA pass already records only its own issues (#375); a check now pins that. Nothing beyond the reminder
+was built for "finds its parent": the decisions say only that the link is GitHub's sub-issue link. *Decisions-log
+entry:* before, an unchanged log counted every time (#327), so an entry never written was never noticed. Now the first
+approval with no new entry still counts and sets `log_owed` in the stage file; the next approval with the log still
+unchanged is refused ("never written"), and a changed log clears `log_owed`. One older per-feature check needed a log
+write between its two approvals. *Cloud pages:* in a session with `CLAUDE_CODE_REMOTE` set, the end-of-reply page
+check also needs a `https://claude.ai/artifact/...` or `https://claude.ai/code/artifact/...` link; a local `.html`
+alone is blocked with a message naming the Artifact tool's publish step. A local session is unchanged. The page
+builder is untouched. Checks are in `checks/design_loop.py`, prefixed "restructure step 5 (#343)".
+
+**Built: step 6 (#344).** *Wholesale rewrite by Edit:* the `guardwrite` hook (matcher now `Write|Edit|MultiEdit`)
+also refuses an Edit or MultiEdit that replaces more than half the file's lines in one call. Replaced lines are
+old_string's line count (at least 1), times its occurrences for `replace_all`, summed over a MultiEdit's edits;
+refused when `replaced * 2 > file lines` (51 of 100 refused, 50 and 49 pass). The refusal and the approval
+mechanism are the Write guard's: a deny naming the rule, with "needs aj's approval by name". The exemption is the
+Write guard's own and nothing more: a file I made myself (untracked, inside the project) is never refused. There
+is no `docs/` or `.md` exemption on the Write guard, so none was added. *Skipping a check:* the end-of-reply
+check now adds a note (same single emission, so it reports and lets the reply stand on the retry, like the other
+reply notes) when a sentence says a check was skipped or not run and gives time, cost or an unreachable
+machine or account as the reason, and the reply asks aj no question about skipping or running it. The note
+quotes aj's rule. *Unasked fixes:* a note, not a block, when the reply says "while I was there/at it", "I also
+fixed/patched/cleaned up" or "unrelated fix/change" and names no `#number`. Both live in
+`house_rules/writing.py` (`skipped_check_reasons`, `unasked_fix_phrases`); a scan of 2,425 string fixtures in
+`checks/` found no false positive. Checks are prefixed "(#344)" in `checks/safe_git.py` and `checks/writing.py`.
+
+**Built: step 7 (#345).** *Helper instructions follow the grilling answers (round 1, answers 4, 5, 12, 13).*
+`agents/builder.md`, `agents/reviewer.md` and the subagent rules text that `event_subagentrules` injects
+(`SUBAGENT_MANDATE`) now say what `rules/detail/green-suite.md` says: while working run the parts the change
+touched (`verify.py --changed` here), at the end the touched parts twice and everything else once. A question
+only aj can answer stops the helper and goes in its final report under a `QUESTION FOR AJ` heading, for the
+parent to ask. The builder's 6-line report cap no longer covers RESULT and FAIL lines: every one is quoted
+verbatim. The parent-side audit (`_audit_report`) never checked report length, so it needed no change.
+*Autosave:* the local snapshot ref keeps its one name, `refs/house-rules/autosave/<branch>`. Each push to
+origin now goes to a fresh ref, `refs/house-rules/autosave/<branch>-s<UTC YYYYMMDDTHHMMSSZ>-<sha7>`, with no
+`--force`. `_autosave_cleanup` and `_autosave_merged_sweep` list origin with `ls-remote` (the legacy fixed name
+plus every `-s...` name) and delete all of them in one push. The worktree sweep is unchanged and a check now
+proves it commits only inside the helper's own worktree. Checks are titled "(#345)" in `checks/delegation.py`.

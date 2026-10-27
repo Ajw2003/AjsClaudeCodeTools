@@ -10,7 +10,7 @@ import os
 import re
 import time
 
-from house_rules import core
+from house_rules import core, settings
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _AUDIT_COMMAND_TOOLS,
@@ -175,6 +175,11 @@ SUBAGENT_CORE_CHAR_LIMIT = 4_500
 SUBAGENT_MANDATE = (
     "\nYour final report must list every command you ran and its result verbatim, every file "
     "you wrote or edited, and anything you could not do.\n"
+    "Checks: while working run only the parts your change touched; at the end run the touched parts "
+    "twice and everything else once. Quote every RESULT line and every FAIL line verbatim, with no "
+    "line limit.\n"
+    "A question only the user can answer: stop, and put it in your final report under its own heading "
+    "(QUESTION FOR AJ) for the parent session to ask. Do not guess.\n"
 )
 
 
@@ -1130,6 +1135,25 @@ def event_subagentcommit():
 
 AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
 
+# #345 (round 1 answers 12 and 13): the local snapshot ref keeps its one name (AUTOSAVE_REF_PREFIX +
+# branch); each push to origin goes to a fresh name, "<local ref>-s<UTC stamp>-<sha7>", without --force,
+# so a push never rewrites history on origin. Cleanup and the merged sweep delete every such name.
+AUTOSAVE_SNAP_RE = r"-s\d{8}T\d{6}Z-[0-9a-f]{7}$"
+
+
+def _autosave_fresh_ref(ref, sha, now):
+    import time as _t
+
+    return "%s-s%s-%s" % (ref, _t.strftime("%Y%m%dT%H%M%SZ", _t.gmtime(now)), sha[:7])
+
+
+def _autosave_origin_refs(top, ref):
+    """Every ref on origin that is a snapshot of `ref`: the legacy fixed name and each fresh one.
+    Raises RuntimeError when origin cannot be listed."""
+    out = _ag(top, ["ls-remote", "origin", ref, ref + "-s*"], timeout=AUTOSAVE_PUSH_TIMEOUT)[1]
+    names = [l.split()[1] for l in out.splitlines() if len(l.split()) == 2]
+    return [n for n in names if n == ref or (n.startswith(ref) and re.search(AUTOSAVE_SNAP_RE, n[len(ref):]))]
+
 
 COMMITGATE_THRESHOLD = 3
 
@@ -1248,8 +1272,9 @@ def _autosave_push(top, branch, sha, now, force=False):
     # Stamped before the attempt, so an unreachable origin costs one timeout a minute, not one
     # per edit.
     _autosave_write(stamp, "%s %s" % (now, prev[1] if len(prev) == 2 else "-"))
+    fresh = _autosave_fresh_ref(ref, sha, now)
     try:
-        _ag(top, ["push", "--force", "--quiet", "origin", "%s:%s" % (ref, ref)], timeout=AUTOSAVE_PUSH_TIMEOUT)
+        _ag(top, ["push", "--quiet", "origin", "%s:%s" % (sha, fresh)], timeout=AUTOSAVE_PUSH_TIMEOUT)
     except RuntimeError as exc:
         return "house-rules autosave: could not push %s to origin (%s). It is saved locally only." % (ref, exc)
     _autosave_write(stamp, "%s %s" % (now, sha))
@@ -1291,8 +1316,8 @@ def _autosave_snapshot(top, branch, force_push=False):
 
 
 def _wip_message(subject):
-    # #405: credited like every other commit; no co-author trailer and no session link.
-    return subject + "\n\nCommitted by AJ's agent"
+    """The automatic commit's message: the subject and the derived credit line, no Claude line (#349, #405)."""
+    return subject + "\n\n" + settings.commit_credit()
 
 
 def _wip_commit(top, subject):
@@ -1303,11 +1328,10 @@ def _wip_commit(top, subject):
     if not files:
         return None, []
     _ag(top, ["add", "-A"])
-    ident = []
-    if _ag(top, ["config", "user.name"], check=False)[0] != 0:
-        ident += ["-c", "user.name=house-rules"]
-    if _ag(top, ["config", "user.email"], check=False)[0] != 0:
-        ident += ["-c", "user.email=house-rules@localhost"]
+    # Author name is the agent's name, email the user's own git email (#349); house-rules@localhost only when
+    # git has no usable email, so the commit still happens.
+    ident = ["-c", "user.name=%s" % (settings.agent_name() or "house-rules"),
+             "-c", "user.email=%s" % (settings.git_email(top) or "house-rules@localhost")]
     _ag(top, ident + ["commit", "--no-verify", "-q", "-m", _wip_message(subject)])
     return _ag(top, ["rev-parse", "--short", "HEAD"])[1].strip(), files
 
@@ -1439,7 +1463,9 @@ def _autosave_cleanup(top):
     if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
         return None
     try:
-        _ag(top, ["push", "--quiet", "origin", ":" + ref], timeout=AUTOSAVE_PUSH_TIMEOUT)
+        gone = _autosave_origin_refs(top, ref)
+        if gone:
+            _ag(top, ["push", "--quiet", "origin"] + [":" + g for g in gone], timeout=AUTOSAVE_PUSH_TIMEOUT)
     except RuntimeError as exc:
         return "house-rules autosave: could not delete %s on origin (%s); delete it by hand." % (ref, exc)
     return None
@@ -1453,6 +1479,51 @@ def _newest_mtime(top, files):
         except OSError:
             continue  # a deleted file has no mtime; the others decide
     return newest
+
+
+def _autosave_merged_sweep(root):
+    """#349 (round 2 answer 7): delete an autosave snapshot, locally and on origin, once its helper's work is merged.
+    (dropped, problems), both lists of text.
+
+    The merge signal is what git can prove, not a recorded event: the snapshot holds nothing beyond the commit it
+    sits on (its tree equals its parent's tree), and that parent is contained in some branch that is not a helper
+    branch (a local branch or an origin one). Then every byte the snapshot holds is already on a real branch, so
+    deleting it loses nothing. A snapshot with uncommitted work in it (a live or killed helper) never matches."""
+    dropped, problems = [], []
+    rc, out, err = _ag(root, ["for-each-ref", "--format=%(refname) %(objectname)", AUTOSAVE_REF_PREFIX], check=False)
+    if rc != 0:
+        return dropped, ["could not list the autosave snapshots (%s)" % (err.strip() or "git failed")]
+    for line in out.splitlines():
+        ref, _sp, sha = line.partition(" ")
+        branch = ref[len(AUTOSAVE_REF_PREFIX):]
+        try:
+            rc1, parent, _e = _ag(root, ["rev-parse", "--verify", "-q", sha + "^"], check=False)
+            if rc1 != 0:
+                continue  # a snapshot always has a parent; one that does not is not ours to judge
+            parent = parent.strip()
+            if _ag(root, ["rev-parse", sha + "^{tree}"])[1].strip() != _ag(root, ["rev-parse", parent + "^{tree}"])[1].strip():
+                continue  # the snapshot holds work no commit has: not merged
+            homes = [r for r in _ag(root, ["for-each-ref", "--format=%(refname)", "--contains", parent,
+                                           "refs/heads", "refs/remotes"])[1].split()
+                     if r != "refs/heads/" + branch and not r.endswith("/" + branch) and not r.endswith("/HEAD")
+                     and not r.startswith(("refs/heads/" + AUTOSAVE_BRANCH_PREFIX, "refs/remotes/origin/" + AUTOSAVE_BRANCH_PREFIX))]
+            if not homes:
+                continue
+            _ag(root, ["update-ref", "-d", ref])
+            on_origin = ""
+            if _ag(root, ["remote", "get-url", "origin"], check=False)[0] == 0:
+                try:
+                    gone = _autosave_origin_refs(root, ref)
+                except RuntimeError as e2:
+                    gone = []
+                    problems.append("could not check origin for %s (%s); delete it there by hand if it exists" % (ref, str(e2).strip() or "ls-remote failed"))
+                if gone:
+                    _ag(root, ["push", "--quiet", "origin"] + [":" + g for g in gone], timeout=AUTOSAVE_PUSH_TIMEOUT)
+                    on_origin = " and on origin"
+            dropped.append("%s (work is in %s)%s" % (ref, homes[0].split("/", 2)[-1], on_origin))
+        except RuntimeError as exc:
+            problems.append("could not drop %s (%s)" % (ref, exc))
+    return dropped, problems
 
 
 def event_worktreesweep():
@@ -1480,6 +1551,8 @@ def event_worktreesweep():
             elif line.startswith("branch refs/heads/" + AUTOSAVE_BRANCH_PREFIX) and path:
                 worktrees.append((path, line[len("branch refs/heads/"):]))
         swept, problems = [], []
+        dropped, drop_problems = _autosave_merged_sweep(root)
+        problems += drop_problems
         now = _t.time()
         for top, branch in worktrees[:SWEEP_MAX_WORKTREES]:
             try:
@@ -1492,9 +1565,11 @@ def event_worktreesweep():
                              % (top, branch, len(done), sha, _shown(done), " | " + note if note else ""))
             except Exception as exc:
                 problems.append("%s (%s): %s" % (top, branch, exc))
-        if not swept and not problems:
+        if not swept and not problems and not dropped:
             return 0
         lines = []
+        if dropped:
+            lines.append("house-rules worktreesweep: dropped the snapshot of merged helper work: %s." % "; ".join(dropped))
         if swept:
             lines.append("house-rules worktreesweep: subagent work sat uncommitted for %d+ min, so the "
                          "hook committed it: %s." % (CHECKPOINT_MINUTES, "; ".join(swept)))

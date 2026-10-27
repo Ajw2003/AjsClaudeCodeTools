@@ -337,4 +337,87 @@ def handover_long_reply(payload, have_reply, reply_text):
     return _long_reply_words(reply_text, _payload_cwd(payload)) if (have_reply and _loop_enabled()) else 0
 
 
+# --- #344: skipping a check is aj's call; an unasked fix outside the request becomes an issue --------------
+# Round 2, answer 12: the agent never decides to skip a check on its own. Round 1, answer 6: an obvious bug
+# outside the request becomes an issue, named in the reply, not an unasked fix.
+_SKIP_SAID_RE = re.compile(
+    r"\b(?:skipp(?:ed|ing)|(?:did not|didn't|have not|haven't|will not|won't|did no|am not|'m not) "
+    r"(?:run(?:ning)?|do(?:ing)?)(?: (?:it|that|them|the \w+))?"
+    r"|(?:left|leaving) (?:it|that|them|the \w+) (?:out|unrun)|not (?:run|rerun))\b", re.IGNORECASE)
+_SKIP_REASON_RE = re.compile(
+    r"\b(?:too (?:long|slow|expensive|costly)|takes? (?:over|more than|about|around)? ?\d+ ?(?:min|minutes|hours?)|"
+    r"\d+ ?(?:min|minutes|hours?) (?:to run|long)|long[- ]running|slow|costs? (?:money|\$|real)|costly|expensive|"
+    r"paid|billing|no access|(?:can't|cannot|can not|couldn't) (?:reach|access|log in)|unreachable|"
+    r"another machine|other machine|your machine|different machine|account|credentials|time)\b", re.IGNORECASE)
+# The skip must be the agent's own: a sentence that only describes the rule ("skipping a long check needs your
+# answer") is not a skipped check. Found on 2026-10-24 by running this check over 262 real replies.
+_SKIP_OWN_RE = re.compile(r"(?:\b(?:I|I've|I'm|I'd|I'll|we|we've)\b|^\W*not (?:re)?run\b)", re.IGNORECASE)
+_SKIP_QUESTION_RE = re.compile(
+    r"\b(?:skip|run (?:it|that|them|this)|want me to|should I|shall I|ok(?:ay)? (?:to|if)|is that ok(?:ay)?|"
+    r"do you want|would you like)\b", re.IGNORECASE)
+_SKIP_RULE_QUOTE = (
+    "an agent never decides on its own to skip a check; when a check is over 10 minutes, costs money, or "
+    "needs a machine or account it can't reach, it names the check and asks aj plainly whether to skip it")
+
+
+def _reply_asks_to_skip(text):
+    """True when some sentence of the reply is a question about skipping or running a check."""
+    for part in re.split(r"(?<=[?])", text):
+        if part.rstrip().endswith("?") and _SKIP_QUESTION_RE.search(part):
+            return True
+    return False
+
+
+def skipped_check_reasons(reply):
+    """Sentences saying a check was skipped or not run for time, cost or an unreachable machine or account,
+    when the reply asks aj nothing about skipping ([] when none, or when it asks)."""
+    if not reply or clarity is None:
+        return []
+    text = clarity.prose(reply)
+    found = []
+    for m in _SKIP_SAID_RE.finditer(text):
+        if clarity._is_quoted(text, m.start()):
+            continue
+        sentence = clarity._sentence_around(text, m.start(), m.end())
+        if _SKIP_REASON_RE.search(sentence) and _SKIP_OWN_RE.search(sentence):
+            found.append(" ".join(sentence.split())[:120])
+    if found and _reply_asks_to_skip(text):
+        return []
+    return found
+
+
+def _skipped_check_note(sentences):
+    return (
+        "House rules, evidence before claims: this reply says a check was skipped or not run for time, cost "
+        "or an unreachable machine or account (%s) and does not ask aj whether to skip it. aj's rule: %s. "
+        "Name the check and ask aj plainly in this reply (\"Should I skip X?\"), or run it."
+        % ("; ".join("\"%s\"" % x for x in sentences[:3]), _SKIP_RULE_QUOTE)
+    )
+
+
+_UNASKED_FIX_RE = re.compile(
+    r"\b(?:while I was (?:there|in there|at it)|I also (?:fixed|patched|cleaned up)|unrelated (?:fix|bug fix|change))\b",
+    re.IGNORECASE)
+_ISSUE_NUMBER_RE = re.compile(r"(?<![\w/&])#\d+\b")
+
+
+def unasked_fix_phrases(reply):
+    """Phrases saying an unrequested fix was made, when the reply names no issue number ([] otherwise)."""
+    if not reply or clarity is None:
+        return []
+    text = clarity.prose(reply)
+    if _ISSUE_NUMBER_RE.search(text):
+        return []
+    return [m.group(0).lower() for m in _UNASKED_FIX_RE.finditer(text) if not clarity._is_quoted(text, m.start())]
+
+
+def _unasked_fix_note(phrases):
+    return (
+        "House rules, stay in scope (a note, not a block): this reply says it fixed something outside the "
+        "request (%s) and names no issue. An obvious bug outside the request becomes an issue, named in "
+        "the reply, not an unasked fix. File the issue and name it, or say the fix was asked for."
+        % ", ".join(sorted(set(phrases)))
+    )
+
+
 core.register_post_tool("artifact", _page_writing_note)

@@ -7,6 +7,69 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-27 - A plugin update never stops a session's work (pull request #338 folded into the restructure)
+
+**Context.** An overnight FocusDesk run in a cloud session stalled for hours on a permission prompt
+(2026-10-19). The plugin there is synced from aj's claude.ai account into `~/.claude/plugins/synced/`,
+with no marketplace and no `installed_plugins.json`. When GitHub's version moved ahead of the synced
+copy, `versioncheck` ran `claude plugin marketplace update aj-house-rules`, which failed with
+"Marketplace 'aj-house-rules' not found". The banner then told Claude to stop and run the update
+before other work, and the marker it wrote put a `guard` permission prompt on the first shell
+command. Nobody was awake to answer it. The fix was written as pull request #338 (branch
+`AjsAgent/update-never-stalls`) against the old single-file `hook.py`.
+
+**Decision.** aj, 2026-10-27: close #338 and add its work to the restructuring pull request. The
+fix is re-applied in the split code (`scripts/house_rules/core.py`, `safe_git.py`):
+1. A copy synced from the claude.ai account (a `plugins/synced` segment in the plugin root, or
+   `HOUSE_RULES_VC_SYNCED=on`) is never asked to update: no command runs, and Claude tells the user
+   in one sentence which version runs and that claude.ai delivers the newer one.
+2. When the automatic update fails elsewhere, the banner tells Claude to carry on and list the
+   update under "Waiting on you" as an `UNTESTED:` step card, never to stop, wait, or run it itself.
+3. `versioncheck` no longer writes the session marker, and `guard` no longer prompts for it.
+
+**Rejected.** An allowlist entry for the two update commands in `.claude/settings.json`: the
+commands cannot succeed in a cloud session at all, and `guard`'s own "ask" prompts regardless.
+
+**Supersedes.** The "already answered" paragraph of `rules/detail/handover-command.md` and the
+marker design in `docs/architecture.md`; the 2026-09-26 decision to run the update itself stands.
+
+**Status.** Standing.
+
+## 2026-10-24 - Build plan approved: restructure steps 3 to 7
+
+**Context.** Build plan `docs/plans/2026-10-24-restructure-steps-3-7-plan.html` for #381.
+
+**Decision.** aj's reply was "Build plan approved: restructure steps 3 to 7". Steps are built in order, one helper
+agent each: #341, #349, #343, #344, #345; then #382 (version 2.74.0, docs, one QA page, one release).
+
+**Status.** Standing.
+
+## 2026-10-24 - Design approved: restructure steps 3 to 7
+
+**Context.** Design page `docs/plans/2026-10-21-restructure-steps-3-7.html`: for each rule the grilling decided in
+steps 3 to 7, what the code does today (checked by a lookup helper on 2026-10-21) and what changes. Nothing is
+dropped.
+
+**Decision.** aj's reply was "Design approved: restructure steps 3 to 7". The feature is held by two new issues,
+#381 (the feature) and #382 (version 2.74.0, docs, QA page and release), because the design loop counts only
+issues created after a design approval; the existing step issues #341, #349, #343, #344 and #345 are built in that
+order and close by sweep after the release.
+
+**Status.** Standing.
+
+## 2026-10-24 - Sweep approved: restructure step 2's issues, and 5 issues closed
+
+**Context.** Sweep page `docs/plans/2026-10-24-step-2-sweep.html`, the route aj chose in answer 2A ("Proof check fix
+answers"), for #340 and #357 to #360, whose QA pass the design loop did not record.
+
+**Decision.** aj's reply was "Sweep approved: issues". The 5 issues were closed as completed, each with a comment
+quoting "2026-10-21 - QA passed: restructure step 2" and pull request #372, and labelled `AjsAgent completed this`.
+
+**Found.** After the closes, the 5 rows left the stage file's sweep list: the after-close check read the GitHub
+tool's wrapped reply, which it never did before #374. The 26 rows from the first sweep (2026-10-21) are still
+listed, because those issues were not closed again; the build plan said the next sweep would drop them, and no
+code does that yet, so they stay until a sweep page lists them or the stage file's sweep list is reset.
+
 ## 2026-10-27 - Triage answers: docref skips its own test fixtures
 
 **Context.** `docref.py check` had reported the same 38 problems on `main` since at least 2026-10-16. All 38 came
@@ -3125,5 +3188,24 @@ sub-plugin later. Design: `docs/4-systems/guards.md`, "Credit on GitHub".
 
 **Why.** The platform appends its footer after the agent's text is sent, so a guard alone can't
 keep it off; reporting it honestly is the part the agent controls.
+
+**Status.** Standing.
+
+## 2026-10-27 — Usage limit handoff: save on every reply, not at 90%
+
+**Context.** aj asked for work to be saved and handed off when a session reaches 90% of its five-hour
+or weekly usage limit, so a session on another Claude account can continue it, on every surface:
+terminal, desktop app, cloud and phone. Tested that day: no hook input carries usage; only the
+terminal's status line does, a plugin can't set one, and a status line set in a cloud project thread
+never ran. Proposal: `docs/plans/2026-10-27-usage-limit-handoff-revised.html` (the first version, which
+waited for 90%, is kept as `docs/plans/2026-10-27-usage-limit-handoff.html`).
+
+**Decision.** aj approved "Design approved: usage limit handoff 1A 2A 3A": every reply that changed files
+ends committed, pushed and described in a handoff note (1A); the agent writes the note (2A); the note
+lives at `docs/5-today/handoff-<branch>.md` on the pushed branch and loads at session start (3A). Design:
+`docs/4-systems/usage-handoff.md`. It replaces issue #140.
+
+**Why.** A 90% trigger can't fire in cloud sessions or from the phone, and is untested in the desktop
+app. The end-of-reply hook runs on every surface, so saving there never depends on reading usage.
 
 **Status.** Standing.

@@ -43,11 +43,9 @@ from house_rules.core import (  # noqa: F401
     _is_relayed_prompt,
     _parse_status_porcelain,
     _payload_cwd,
-    _read_and_clear_outdated_marker,
     _read_text,
     _time,
     _uncommitted_among,
-    _vc_session_id,
     _waiting_load,
     _waiting_path,
     _waiting_update,
@@ -160,20 +158,22 @@ GUARD_BUCKETS = [
 _DELETE_REASONS = ("deletes one or more files", "deletes files (Remove-Item)", "deletes files (del /f or rmdir /s)")
 SAFE_WAYS = {
     "rewrites remote history or pushes every branch (force push, --all, --mirror)":
-        "push a new branch instead: `git push -u origin AjsAgent/<topic>`",
+        "push a new branch instead: `git push -u origin @PREFIX@<topic>`",
     "deletes a branch on the remote (push --delete)": "leave the branch for aj to delete",
     "deletes a local branch even if its work is not merged (branch -D)": "leave the branch for aj to delete",
-    "discards work (reset)": "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
+    "discards work (reset)": "commit the work on a new branch first (`git switch -c @PREFIX@<topic>`, then commit)",
     "deletes untracked files or rewrites all history (clean / filter-branch)":
         "for clean, move the files into a `_to_delete/` folder; for filter-branch, rewrite on a copy branch "
         "(`git branch <name>-copy`)",
     "truncates or overwrites file contents in place": "write a new file beside it",
     "throws away uncommitted edits to a file (git checkout -- / git restore)":
-        "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
+        "commit the work on a new branch first (`git switch -c @PREFIX@<topic>`, then commit)",
     "deletes stashed work permanently (git stash drop / clear)": "keep the stash",
     "recursive": "move the folder into a `_to_delete/` folder instead",
     "unsaved": "move the file into a `_to_delete/` folder instead",
-    "not mine": "make a new branch and commit there: `git switch -c AjsAgent/<topic>`",
+    "theirs": "move the file into a `_to_delete/` folder instead, or make the delete on your own branch "
+              "(`git switch -c @PREFIX@<topic>`)",
+    "not mine": "make a new branch and commit there: `git switch -c @PREFIX@<topic>`",
 }
 _NO_SAFE_WAY_RE = re.compile(r"\bno safe way:\s*(\S.*)", re.IGNORECASE)
 GUARD_REFUSAL = (
@@ -263,7 +263,7 @@ def _agent_branch_enabled():
 
 
 def _agent_branch_block():
-    """Cloud session on the app's claude/<name> branch: tell the agent to move to AjsAgent/<name>.
+    """Cloud session on the app's claude/<name> branch: tell the agent to move to <agent prefix><name>.
 
     Text only - the hook never runs git switch. Never raises; an unreadable branch says so.
     """
@@ -273,11 +273,14 @@ def _agent_branch_block():
         import subprocess
         _mine, branch, note = branch_ownership()
         if branch is None:
-            return "\n\n---\n\nAjsAgent branch check: branch not read (%s)." % note
+            return "\n\n---\n\nAgent branch check: branch not read (%s)." % note
         if not branch.startswith("claude/"):
             return ""
         name = branch[len("claude/") :]
-        target = "AjsAgent/" + name
+        prefix = settings.agent_prefix()
+        if not prefix:
+            return "\n\n---\n\nAgent branch check: agent_name is not set, so the agent branch could not be named."
+        target = prefix + name
         cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
         exists = False
         for ref in ("refs/heads/" + target, "refs/remotes/origin/" + target):
@@ -298,7 +301,7 @@ def _agent_branch_block():
             "from that branch." % (branch, target, target)
         )
     except Exception as exc:
-        return "\n\n---\n\nAjsAgent branch check: branch not read (%s)." % exc
+        return "\n\n---\n\nAgent branch check: branch not read (%s)." % exc
 
 
 def _agent_identity_block():
@@ -312,7 +315,7 @@ def _agent_identity_block():
         ident = _git_author_ident(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if ident is None or not _is_claude_identity(*ident):
             return ""
-        return "\n\n---\n\nGit identity is Claude: before your first commit run `%s`." % AGENT_IDENTITY_FIX
+        return "\n\n---\n\nGit identity is Claude: before your first commit run `%s`." % agent_identity_fix(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
     except Exception: return ""  # unreadable identity adds no text, by design (#177)
 
 
@@ -353,7 +356,7 @@ def _trace_subject(subject, limit=60):
 PROTECTED_DENY = (
     "House rules: `%s` is the default branch, and it only changes through a pull request - never "
     "a direct commit, push or merge (refused: %s). Do this on a branch instead: `git switch -c "
-    "AjsAgent/<topic>`, commit and push there, then open a pull request. Do not retry it on the "
+    "@PREFIX@<topic>`, commit and push there, then open a pull request. Do not retry it on the "
     "default branch."
 )
 _GIT_PUSH_RE = re.compile(_GIT + r"push([^0-9A-Za-z-]|$)", re.IGNORECASE)
@@ -446,12 +449,18 @@ def event_guard():
         )
         return 2
 
+    # #341: while a setting is unset, only the settings script runs. First, before any other check.
+    unset = settings_refusal(payload)
+    if unset:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": unset}})
+        return 0
+
     if not payload:
         trace("guard: empty payload - nothing was checked for this call.")
         return 0
 
     subject = _guard_subject(payload)
-    outdated = _read_and_clear_outdated_marker(_vc_session_id(payload))
 
     # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
     # an ask is folded into the prompt built below so a compound command is asked about once.
@@ -499,8 +508,12 @@ def event_guard():
             if reason in _DELETE_REASONS:
                 delete_kind = delete_kind or _delete_refusal(subject, where)
                 if not delete_kind:
-                    exempted.append(reason)  # committed and unchanged, so git can bring it back (#291)
-                    continue
+                    # Committed and unchanged, so git can bring it back (#291). Allowed on the agent's own
+                    # branch only (#349, round 1 answer 1); anywhere else it is refused, naming whose branch.
+                    if known and branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+                        exempted.append(reason)
+                        continue
+                    delete_kind = "theirs"
             if marker == BRANCH_WRITE and known:
                 if protected:
                     refused.append(reason)
@@ -522,7 +535,7 @@ def event_guard():
 
     if refused:
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-                                     "permissionDecisionReason": PROTECTED_DENY % (branch, "; ".join(refused))}})
+                                     "permissionDecisionReason": settings.fill(PROTECTED_DENY % (branch, "; ".join(refused)))}})
         return 0
 
     # #291: destructive actions are refused with the safe way named, unless the command cites a source
@@ -537,10 +550,14 @@ def event_guard():
             safe = SAFE_WAYS["not mine"]
         elif r in _DELETE_REASONS:
             safe = SAFE_WAYS[delete_kind or "unsaved"]
+            if delete_kind == "theirs":
+                safe = ("this is %s, not a branch of the agent's own, so even a file git can restore is not "
+                        "deleted here: %s" % ("`%s`" % branch if branch else "a checkout whose branch can't be read",
+                                              safe))
         else:
             safe = SAFE_WAYS.get(r, "do the job without this step")
-        danger.append("  - %s: %s" % (r, safe))
-    danger += ["  - %s on `%s`, which the guard can't confirm is mine: %s" % (r, branch, SAFE_WAYS["not mine"])
+        danger.append("  - %s: %s" % (r, settings.fill(safe)))
+    danger += ["  - %s on `%s`, which the guard can't confirm is mine: %s" % (r, branch, settings.fill(SAFE_WAYS["not mine"]))
                for r in not_mine]
     if danger and not cited:
         if elsewhere:
@@ -562,7 +579,7 @@ def event_guard():
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _docs_status(subject, elsewhere, where) if is_commit else (None, None)
 
-    if not any(hits.values()) and not outdated and not issue_hit:
+    if not any(hits.values()) and not issue_hit:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
         # not to fire" from "never ran" - and it is the security-shaped backstop, so that is
         # the worst place to leave the ambiguity. Exactly one emit() call either way - two
@@ -602,7 +619,7 @@ def event_guard():
             trace_noop(allow_trace)
         return 0
 
-    if known and not issue_hit and not outdated and _never_blocked_git(subject, branch, where):
+    if known and not issue_hit and _never_blocked_git(subject, branch, where):
         # Never-blocked list: a routine commit/push on the agent's own branch is let through, silently.
         out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
         if docs_status == "needs-docs":
@@ -611,11 +628,6 @@ def event_guard():
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
-    if outdated:
-        lines.append("")
-        lines.append("  PLUGIN OUT OF DATE (found at session start, not by this command):")
-        for r in outdated.get("reasons", []):
-            lines.append("    - %s" % r)
     for title, _ in GUARD_BUCKETS:
         reasons = hits[title]
         if reasons:
@@ -679,7 +691,7 @@ def event_guard():
     reason_text = "\n".join(lines)
     rewrite = None
     all_hits = [r for rs in hits.values() for r in rs]
-    if all_hits and not outdated and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
+    if all_hits and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
         if elsewhere and not protected and all(r in plain_hits for r in all_hits):
             rewrite = ("Run it as plain `git ...` from %s, with no cd, -C or variables, and it will be "
                        "checked normally." % _payload_toplevel(payload))
@@ -838,6 +850,28 @@ def _guardwrite_new_line_count(payload):
     return len(text.splitlines())
 
 
+def _edit_replaced_lines(tool_input, resolved):
+    """Lines an Edit/MultiEdit replaces in one call: old_string's line count, times its occurrences
+    for replace_all; summed over a MultiEdit's edits. None when it cannot be told."""
+    edits = tool_input.get("edits") if isinstance(tool_input.get("edits"), list) else [tool_input]
+    try:
+        text = _read_text(resolved)
+    except OSError as exc:
+        sys.stderr.write("house-rules guardwrite: could not read %s (%s) to count the lines this edit "
+                         "replaces; the wholesale-rewrite check did not run.\n" % (resolved, exc))
+        return None
+    total = 0
+    for e in edits:
+        old = e.get("old_string") if isinstance(e, dict) else None
+        if not isinstance(old, str) or not old:
+            continue
+        n = max(1, len(old.splitlines()))
+        if e.get("replace_all"):
+            n *= max(1, text.count(old))
+        total += n
+    return total
+
+
 def event_guardwrite():
     try:
         payload = read_payload()
@@ -884,6 +918,27 @@ def event_guardwrite():
             "existing lines; asking anyway, with that count left out.\n" % (resolved, exc)
         )
 
+    try:
+        pl = json.loads(payload)
+    except ValueError:
+        pl = {}
+    tool = pl.get("tool_name") if isinstance(pl, dict) else None
+    if tool in ("Edit", "MultiEdit"):
+        # #344: a wholesale rewrite by Edit is more than half the file's lines replaced in one call.
+        # Same refusal and same approval mechanism as a whole-file Write; no docs/ or .md exemption
+        # exists on the Write guard, so none here (only the untracked-own-file shortcut above).
+        replaced = _edit_replaced_lines(pl.get("tool_input") or {}, resolved)
+        if replaced is None or not old_lines or replaced * 2 <= old_lines:
+            return 0
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+              "permissionDecisionReason": (
+                  "House rules, %s: refused. This %s replaces %d of the %d lines of `%s` (more than half), a "
+                  "wholesale rewrite of a file I did not create.\n"
+                  "Fix: split it into smaller edits that each change only the lines that need to change. A "
+                  "wholesale rewrite needs aj's approval by name first, with what it discards and why an "
+                  "in-place edit will not do." % (RULE_EDIT_IN_PLACE, tool, replaced, old_lines, file_path))}})
+        return 0
+
     new_lines = _guardwrite_new_line_count(payload)
 
     # #293: refused outright with the fix named, instead of asking. A file I created myself already
@@ -905,14 +960,14 @@ def event_guardwrite():
 
 # ---------------------------------------------------------------------------------------
 # branchnudge - PostToolUse on Write|Edit. The commit rule's "branch off first", at the moment
-# it applies: the first uncommitted change on a branch that is not AjsAgent/ (or claude/). Never obstructs.
+# it applies: the first uncommitted change on a branch that is not one of the agent's own branches. Never obstructs.
 # ---------------------------------------------------------------------------------------
 
 BRANCH_NUDGE_NOTE = (
     "House rules, commit on your own branch: that write is the only uncommitted change on "
-    "`{branch}`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened for this session's "
+    "`{branch}`, which is not one of your own branches ({owned}). If that branch was opened for this session's "
     "work, carry on and commit there. If it is the user's, branch off now, before editing "
-    "further (`git switch -c AjsAgent/<topic>` carries this change with it), and commit on that "
+    "further (`git switch -c @PREFIX@<topic>` carries this change with it), and commit on that "
     "branch, scoped to the paths you changed."
 )
 
@@ -963,7 +1018,7 @@ def event_branchnudge():
                 {
                     "hookSpecificOutput": {
                         "hookEventName": "PostToolUse",
-                        "additionalContext": BRANCH_NUDGE_NOTE.format(branch=branch),
+                        "additionalContext": settings.fill(BRANCH_NUDGE_NOTE.format(branch=branch, owned=", ".join(owned_branch_prefixes()))),
                     }
                 }
             )
@@ -1107,11 +1162,11 @@ def _waiting_summary(tool_name, tool_input):
 
 
 def _prompt_refusal(minutes, path, summary):
-    return (
+    return settings.fill(
         "Nobody answered this permission prompt for %s, so it was refused - not approved - and "
         "added to the waiting-on-you list (%s). Refused action: %s. Do not retry this action, or a "
         "variation of it, this session; aj has not approved it. Look for a route that needs no permission AND does "
-        "not have the same effect (for example: commit to an AjsAgent/ branch instead of aj's branch; "
+        "not have the same effect (for example: commit to one of your own branches (@PREFIX@) instead of aj's branch; "
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
         "it. Carry on with every part of the task that does not depend on this. Before you stop, "
@@ -1338,7 +1393,7 @@ def event_prompttimer():
 
 
 
-# Credit goes to "aj's agent", with no email and no Claude branding (issue #133). The Claude Code
+# Credit goes to the agent (settings: agent_name), with no email and no Claude branding (issue #133). The Claude Code
 # `attribution` setting is the primary mechanism and is written by tools/install.py; this check is
 # the backstop for sessions that never read the settings file (cloud sessions).
 _ATTRIBUTION_TEXT_RES = [
@@ -1432,9 +1487,9 @@ _ATTRIBUTION_CMD_RE = re.compile(
 _GH_API_WRITE_RE = re.compile(r"(?<![\w-])(?:-X\s*(?:POST|PATCH|PUT)|--method\b|-f\b|-F\b|--field\b|--raw-field\b|--input\b)", re.IGNORECASE)
 _GH_API_FILE_RE = re.compile(r"(?:(?<![\w-])-F|--field)(?:=|\s+)body=@(\"[^\"]+\"|'[^']+'|\S+)|--input(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
 ATTRIBUTION_DENY = (
-    "House rules, credit aj's agent: this %s credits Claude (`%s`). Credit \"aj's agent\" instead, "
-    "with no email and no Claude branding: commits end with `Committed by AJ's agent`, pull requests "
-    "with `Opened by AJ's agent`. HOUSE_RULES_ATTRIBUTION=off disables this check."
+    "House rules, credit @NAME@: this %s credits Claude (`%s`). Credit \"@NAME@\" instead, "
+    "with no email and no Claude branding: commits end with `@COMMIT_CREDIT@`, pull requests and issues "
+    "with `@PR_CREDIT@`. HOUSE_RULES_ATTRIBUTION=off disables this check."
 )
 
 
@@ -1472,7 +1527,7 @@ def _attribution_guard(subject, payload):
         m = rx.search(text)
         if m:
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
-            return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)
+            return ("deny", settings.fill(ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60])), None)
     if _GIT_COMMIT_RE.search(cmd):
         where, unclear = _command_dir(payload)
         if unclear:
@@ -1563,8 +1618,8 @@ def event_creditcheck():
 # pass through `guard`. Only title/body/message and branch/head are read, never file content.
 _GITHUB_COMMIT_TOOLS = ("push_files", "create_or_update_file")
 BRANCH_DENY = (
-    "House rules, credit aj's agent: `%s` is a new branch under `claude/`. Name agent branches "
-    "`AjsAgent/<topic>` instead. HOUSE_RULES_ATTRIBUTION=off disables this check."
+    "House rules, credit @NAME@: `%s` is a new branch under `claude/`. Name agent branches "
+    "`@PREFIX@<topic>` instead. HOUSE_RULES_ATTRIBUTION=off disables this check."
 )
 
 
@@ -1605,7 +1660,7 @@ def event_guardgithub():
         for rx in _ATTRIBUTION_TEXT_RES:
             m = rx.search(val)
             if m:
-                reason = ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60])
+                reason = settings.fill(ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]))
                 break
         if reason:
             break
@@ -1627,11 +1682,11 @@ def event_guardgithub():
         elif short == "create_pull_request":
             new_branch = args.get("head")
         if isinstance(new_branch, str) and new_branch.startswith("claude/"):
-            reason = BRANCH_DENY % new_branch
+            reason = settings.fill(BRANCH_DENY % new_branch)
     if not reason and short in _GITHUB_COMMIT_TOOLS:
         target = args.get("branch")
         if isinstance(target, str) and is_protected_branch(target, _payload_cwd(raw)):
-            reason = PROTECTED_DENY % (target, "a file write through the GitHub tools")
+            reason = settings.fill(PROTECTED_DENY % (target, "a file write through the GitHub tools"))
     if reason:
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": reason}})
