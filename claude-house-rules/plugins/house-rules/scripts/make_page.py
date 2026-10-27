@@ -517,7 +517,7 @@ def record_sweep(project, page):
     record_qa_page(project, None, key="sweep_proposed", value=rows, what="sweep rows")
 
 
-def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
+def record_qa_page(project, out, key="qa_page", value=None, what="QA page", extra=None):
     common = os.path.abspath(os.path.join(project, run_git(project, "rev-parse", "--git-common-dir").strip()))
     stage = os.path.join(os.path.dirname(common), ".claude", "house-rules-loop.json")
     if not os.path.isfile(stage):
@@ -532,6 +532,8 @@ def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
         print("make_page: %s not recorded: %s is unreadable (%s); left untouched" % (what, stage, e))
         return
     data[key] = value if value is not None else os.path.relpath(out, project).replace(os.sep, "/")
+    if extra:
+        data.update(extra)
     with open(stage, "w", encoding="utf-8", newline="\n") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write("\n")
@@ -597,7 +599,9 @@ def build(args):
               % (out, os.getcwd(), os.path.join(os.getcwd(), "docs", "plans")))
     visual_check(out, style)
     if "qa" in page:
-        record_qa_page(project, out)
+        ev = page["qa"].get("evidence") or []
+        record_qa_page(project, out, extra={"qa_evidence": {"types": sorted({e["type"] for e in ev}),
+                                                            "entries": len(ev)}})
     if "sweep" in page:
         record_sweep(project, page)
 
