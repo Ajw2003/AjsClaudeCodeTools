@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tempfile
 import time
 
 # #229: every run gets its own temp folder. The hooks keep small state files in the temp folder
@@ -134,6 +135,9 @@ def rules_corpus():
 
 def run_hook(event, payload="", env=None):
     e = dict(os.environ) if env is None else env
+    # #397: a sandbox that is itself a project thread would otherwise write test work trails into
+    # the real shared project folder.
+    e.setdefault("HOUSE_RULES_WORKTRAIL_DIR", os.path.join(tempfile.gettempdir(), "house-rules-verify-worktrail"))
     proc = subprocess.run(
         [sys.executable, HOOK, event],
         input=payload.encode("utf-8"),
