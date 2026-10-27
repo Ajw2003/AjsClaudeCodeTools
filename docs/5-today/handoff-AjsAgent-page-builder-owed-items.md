@@ -15,7 +15,7 @@ detail as "null". The builder's after-build visual check looks only for script e
 
 **Where it stands.** Issues are open: parent #419, steps #420 (no empty field on any page), #421
 (proposal page), #422 (build plan page), #423 (QA page) and #424 (tests, docs, version and a real
-run), all labelled `in progress`. The design page is built (`docs/plans/2026-10-27-page-builder-owed-items.html`) and waits on aj's four choices and approval. No code changed. This branch is cut from
+run), all labelled `in progress`. The design page (`docs/plans/2026-10-27-page-builder-owed-items.html`) is on its second version and waits on aj's five choices and approval. The second version adds aj's ask: proposal pages must show a picture or clip of every visual change, with a before and after for a change to something existing. QA pages reuse the evidence rule from #411 (re-filed from #389), which also shrinks #423. Build plans need no pictures. After approval, open a step issue for proposal visuals and update #421 and #423. No code changed. This branch is cut from
 `main` at 2.73.2.
 
 **Next step.** Write the design proposal page with `make_page.py build` and the approval phrase
