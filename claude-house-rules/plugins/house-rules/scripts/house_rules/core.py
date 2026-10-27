@@ -1273,6 +1273,15 @@ def _vc_restart_notice(on_disk, running, how):
     }
 
 
+def _is_synced_copy():
+    """#403: claude.ai cloud sessions load the plugin from a synced copy under
+    .../plugins/synced/, not from the marketplace, so `claude plugin update` cannot work."""
+    for root in (os.environ.get("CLAUDE_PLUGIN_ROOT", ""), _plugin_root()):
+        if "/plugins/synced/" in (root or "").replace("\\", "/"):
+            return True
+    return False
+
+
 def event_versioncheck():
     try:
         if not _version_check_enabled():
@@ -1287,6 +1296,20 @@ def event_versioncheck():
         market_version = _marketplace_version(problems)
         github_version = _github_version(problems)
         latest = github_version or market_version
+
+        if _is_synced_copy():
+            if installed and installed == latest:
+                return 0
+            line = (
+                "house-rules %s is a copy synced from your claude.ai account, so it cannot be "
+                "updated by command here%s."
+                % (installed or "(version unknown)", "; GitHub has %s" % latest if latest else "")
+            )
+            emit({
+                "systemMessage": line,
+                "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": line},
+            })
+            return 0
 
         market_name = plugin_id.split("@", 1)[1] if "@" in plugin_id else _VC_DEFAULT_MARKETPLACE
         plugin_ref = plugin_id or "%s@%s" % (_VC_PLUGIN_NAME, market_name)

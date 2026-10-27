@@ -1221,10 +1221,11 @@ _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # The agentcap entry runs only on an Agent spawn (plan: allowed), so it is exempt from this count;
 # so is guardgithub (#178), which runs only on a GitHub MCP write; and pagecheck (#257), which
 # exits at once unless the call is an .html page Write or an Artifact call; and closablemerge (#362), which
-# exits at once unless the call is a merge.
+# exits at once unless the call is a merge; and rclink (#383), which runs only on the one
+# start_remote_control MCP tool.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -2114,6 +2115,33 @@ if rc == 0 and "OUT OF DATE" not in out and not os.path.isfile(vc_marker_path("v
 else:
     report("FAIL", "versioncheck is quiet when installed, marketplace and GitHub all agree")
     print(f"          rc={rc} out={out[:200]!r}")
+
+# #403: in a synced copy (claude.ai cloud) the update commands cannot work, so one plain line.
+_sy_root = "/root/.claude/plugins/synced/org_id/house-rules~g2"
+rc, out, err = run_hook("versioncheck", vc_payload("vc-sync-old"),
+                        vc_env("vc-sync-old", CLAUDE_PLUGIN_ROOT=_sy_root,
+                               HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"))
+if (rc == 0 and "synced from your claude.ai account" in out and "99.0.0" in out
+        and "claude plugin" not in out and "OUT OF DATE" not in out):
+    report("PASS", "versioncheck in a synced copy says one plain line with no update command")
+else:
+    report("FAIL", "versioncheck in a synced copy says one plain line with no update command")
+    print(f"          rc={rc} out={out[:300]!r}")
+rc, out, err = run_hook("versioncheck", vc_payload("vc-sync-same"),
+                        vc_env("vc-sync-same", CLAUDE_PLUGIN_ROOT=_sy_root,
+                               HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB=_installed_version))
+if rc == 0 and not out.strip():
+    report("PASS", "versioncheck in a synced copy is silent when the version is current")
+else:
+    report("FAIL", "versioncheck in a synced copy is silent when the version is current")
+    print(f"          rc={rc} out={out[:300]!r}")
+rc, out, err = run_hook("versioncheck", vc_payload("vc-nosync"),
+                        vc_env("vc-nosync", HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"))
+if rc == 0 and "synced from your claude.ai account" not in out:
+    report("PASS", "versioncheck outside a synced copy keeps its normal behaviour")
+else:
+    report("FAIL", "versioncheck outside a synced copy keeps its normal behaviour")
+    print(f"          rc={rc} out={out[:300]!r}")
 
 # --- SessionStart loads the newest installed rules after an update (issue #252) -----------
 # An older folder runs SessionStart; installed_plugins.json names a newer folder. inject and
