@@ -54,6 +54,13 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
 
 ## Traps that have already cost time
 
+- **An approval sent from the folder above the repo moved nothing, silently.** A cloud session sits in
+  the folder that holds its cloned repos, which is not a repo, so `_loop_scope_note` found no stage
+  file and returned nothing while the edit lock (which works from the edited file's path) still refused.
+  aj's two approvals for QA evidence by change type (#389) were lost this way on 2026-10-27.
+  `_loop_locate_prompt` now tries the folders directly inside: exactly one with a stage file gets the
+  message, two or more get a note naming them, and none gets a note naming the folder searched
+  (approved as "Design approved: missed approvals fix 1A").
 - **A feature name ran on past a dash.** "QA failed: label check - it should say hi" saved the
   whole line as the name; a spaced dash now ends it (found in the label check's real run).
 - **The end-of-reply check goes quiet when nothing else fires.** A new reminder added only to the
