@@ -225,6 +225,8 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-21: house-rules 2.72.0 is on `main` (pull request #373; GitHub's `verify` check took 49 seconds). The close guard refused to close #371, because the merge was not stamped on the closable record: the merge-proof check doesn't read the GitHub tool's result, which is #367. #368 to #371 close once #367 is fixed.
 
+2026-10-27, plugin 2.73.1: the design-loop lock now finds the repo when aj's message arrives from the folder above it (a cloud session's folder of clones), and says so when it can't; before, both approvals for #389 (QA pages must prove each change with evidence for its type) were lost in silence. Branch `AjsAgent/loop-missed-approval`, pull request into `main`. #389's own build waits on this fix and aj resending its two approvals.
+
 2026-10-21, plugin 2.73.0: the proof check fix (#367) is built and waits on aj's QA. #374 unwraps the GitHub tool's text-block replies before both proof checks; #375 keeps each feature's issues under its name, so a QA pass after the next feature's approval still records the right issues. `verify.py` 925 PASS (40 seconds). Restructure steps 3 to 7 follow as one feature (`docs/plans/2026-10-21-restructure-steps-3-7.html`).
 
 2026-10-24: aj passed QA on the proof check fix; 2.73.0 goes to `main` by pull request, and aj tests the live close in a new session (this one loaded 2.72.0). The next merge in a 2.73.0 session stamps the waiting closable entries for the verify rework (#368 to #371) and the proof check fix (#374 to #376).

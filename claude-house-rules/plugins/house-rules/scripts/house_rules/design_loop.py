@@ -31,6 +31,7 @@ from house_rules.core import (  # noqa: F401
     _clear_writing_enabled,
     _command_dir,
     _common_git_dir,
+    _git_dir,
     _decoded_command,
     _effective_author,
     _field,
@@ -874,6 +875,36 @@ def _loop_apply_one(state, text, top):
     return ""
 
 
+def _loop_locate_prompt(start):
+    """(top, git_dir, note) for aj's message. A cloud session's folder often holds the cloned repos
+    without being one, so when `start` is outside a repo the folders directly inside it are tried:
+    exactly one with a stage file gets the message. None found, or more than one, gives no git_dir and
+    a note saying why, so an approval never moves nothing in silence or moves two repos at once."""
+    top, git_dir = _issues_locate(start)
+    if git_dir:
+        return top, git_dir, ""
+    found = []
+    try:
+        names = sorted(os.listdir(start))
+    except OSError:
+        names = []
+    for name in names:
+        sub = os.path.join(start, name)
+        if os.path.isdir(sub) and os.path.exists(os.path.join(sub, ".git")):
+            sub_git = _git_dir(sub)
+            if sub_git and os.path.isfile(_loop_path(sub_git)):
+                found.append((sub, sub_git))
+    if len(found) == 1:
+        return found[0][0], found[0][1], ""
+    if found:
+        return None, None, ("Design loop: this message was sent from %s, which is not a repo, and %d repos "
+                            "inside it have a design-loop stage file (%s), so nothing moved: one approval "
+                            "must not move two repos. Run the session inside the repo the approval is for."
+                            % (start, len(found), ", ".join(os.path.basename(t) for t, _ in found)))
+    return None, None, ("Design loop: this message was sent from %s, which is not a repo, and no repo "
+                        "directly inside it has a design-loop stage file, so nothing moved." % start)
+
+
 def _loop_scope_note(payload):
     """scope's half: read aj's message, move the stage, say what happened. Never raises."""
     if not _loop_enabled():
@@ -886,9 +917,9 @@ def _loop_scope_note(payload):
         if _is_relayed_prompt(text, payload):
             return ("Design loop: this message is a helper's report or a notification, not aj, "
                     "so it moved nothing.")
-        top, git_dir = _issues_locate(_payload_cwd(payload))
+        top, git_dir, missed = _loop_locate_prompt(_payload_cwd(payload))
         if not git_dir:
-            return ""
+            return missed if _LOOP_BARE_RE.search(text) else ""
         state, problem = _loop_read(git_dir)
         if problem:
             return problem
