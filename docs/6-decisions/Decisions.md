@@ -7,6 +7,23 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-27 - Design approved: background work tracking
+
+**Context.** Proposal page `docs/plans/background-work-tracking.html` for #383 (Give aj the transcript
+link whenever a project thread hands work to a Remote Control session) and aj's wider complaint that
+background work in project threads is hidden: every layer of delegated work must be easy to follow,
+automatically, without aj asking.
+
+**Decision.** aj's reply was "Design approved: background work tracking 1A 2A". Choice 1A: build all
+three layers now (the thread's own transcript link, Remote Control transcript links, helper work
+trails) plus a Stop check for links owed. Rejected: 1B (#383 alone) and 1C (a live log of every shell
+command, which would put a file write on the guard's per-command path). Choice 2A: the links are pinned
+at the top of the thread's checklist and posted once in the reply that starts the work. Rejected: 2B (a
+separate reply per link, one notification each). The `cse_` to `session_` link swap was seen working on
+two sessions (#383's and this thread's, `cse_018ddrfbUqBBFUVGmxxEzptr`).
+
+**Status.** Standing.
+
 ## 2026-10-24 - QA passed: proof check fix
 
 **Context.** QA page `docs/plans/2026-10-21-proof-check-fix-qa.html` for #367 (#374 unwrap the GitHub tool's
