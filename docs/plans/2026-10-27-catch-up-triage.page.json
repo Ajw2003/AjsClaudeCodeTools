@@ -50,7 +50,7 @@
      "Where it is: the branch AjsAgent/issue-281-fix, house-rules 2.74.0, 34 files changed, and up to date with main. No pull request is open yet. The five per-step branches (issue-341-settings and the rest) are older copies already inside it.",
      "Tested: I ran verify.py on that branch today and it exited 0, with 966 checks passing. tools/verify_tools.py passed all 47 checks. The QA page is docs/plans/2026-10-24-restructure-steps-3-7-qa.html on the branch.",
      "Risk: high. It changes how every session starts, how commits and pull requests are credited, which deletes are allowed and what helper agents report, on every account that installs the plugin.",
-     "Version clash: this branch already uses 2.74.0, and the background work tracking plan (#396) also names 2.74.0. Whichever merges second needs the next number."
+     "Merge order: you asked for background work tracking (#396) to ship as a 2.73.x patch, below this branch's 2.74.0. The CI version check (tools/check_plugin_version_bump.py) refuses any version that is not higher than main's, so tracking must merge first, as 2.73.1 or later (main is already 2.73.0). If this restructure merges first, tracking has to become 2.74.1."
     ],
     "Once step 2 is done, say \"open the restructure pull request\", test it in a fresh session, then reply \"QA passed: restructure steps 3 to 7\"."
    ],
