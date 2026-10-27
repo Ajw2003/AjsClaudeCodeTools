@@ -29,7 +29,7 @@
         "Evidence rule",
         "The builder requires evidence by type",
         "done",
-        "Sub-issue #413 (the page builder requires the evidence each change type needs). Each change in the page's qa.evidence list names its type: animation, model, ai, gameplay, visual, or none (with a reason). The changed files imply types too: an animator controller means animation, an .fbx file means model, a script under Scripts/Runtime means gameplay. The builder also refuses a page whose text names a picture or clip file that the page does not show.",
+        "Sub-issue #413 (the page builder requires the evidence each change type needs). Each change in the page's qa.evidence list names its type: animation, model, ai, gameplay, visual, or none (with a reason). The changed files imply types too: an animator controller means animation, an .fbx file means model, a script under Scripts/Runtime means gameplay. These file patterns are the defaults. The builder also refuses a page whose text names a picture or clip file that the page does not show.",
         "Checked by verify.py, with one test case for each refusal, plus a test of a project overriding the file patterns in its page-style.json."
       ],
       [
@@ -45,8 +45,8 @@
         "Change list",
         "No more \"0 files\"",
         "done",
-        "Sub-issue #415 (the change list refuses a count of 0 changed files). The Ophan page said 0 files because the staging branch already held the feature. A count of 0 now stops the build, and the message says to count from the commit before the merge.",
-        "Checked by verify.py, with the Ophan test repo on a feature branch, so that the build is refused for missing evidence and not for the 0-file count."
+        "Sub-issue #415 (the change list refuses a count of 0 changed files). The Ophan page said \"0 files\" because the staging branch already held the feature, so git found nothing to compare. A count of 0 now stops the build, and the message says to count from the commit before the merge.",
+        "Checked by verify.py. The Ophan test repo sits on a feature branch, so the build is refused for missing evidence and not because of the 0-file count."
       ],
       [
         "lock",
@@ -72,7 +72,7 @@
       "Recording of the new Ophan page",
       "A phone-width walk through the proof cards, with the clips playing.",
       null,
-      "Recorded with a headless browser from the page the new builder made. The first card is the real wings-spread clip from Ophan pull request 445. The before and after clips are stand-ins cut from that clip, and the video labels them as stand-ins. No before clip of the Ophan was ever recorded. A real handover would carry a recording from the game.",
+      "Recorded with a headless browser from the page the new builder made. The first card is the real wings-spread clip from Ophan pull request 445. The before and after clips are stand-ins cut from that clip, and the video labels them as stand-ins. No before clip of the Ophan enemy was ever recorded. A real handover would carry a recording from the game.",
       null,
       {
         "src": "docs/generated/qa-evidence-411/walkthrough.mp4",
@@ -84,7 +84,7 @@
       "Two small bugs I found, not fixed here",
       "Both are outside this build.",
       null,
-      "First, the stage file stored this feature's name as \"QA evidence by change type 1A 2A 3A&#34;</message>\", because the approval parser keeps a trailing quote and a closing tag. Second, the lock that blocks code edits outside the Build stage watches the Write and Edit tools but not a shell command that edits a source file. I suggest opening an issue for each bug.",
+      "First, the stage file stored this feature's name as \"QA evidence by change type 1A 2A 3A&#34;</message>\", because the approval parser keeps a trailing quote and a closing tag. Second, the lock that blocks code edits outside the Build stage watches the Write and Edit tools but not a shell command that edits a source file. I suggest one issue for each of these two bugs; say if you want them.",
       null,
       null
     ]
@@ -95,7 +95,7 @@
     "unverified": [
       "No real PlunderSpell QA page has been built with the new builder yet; the Ophan demo uses a throwaway repo with the real clip and screenshots",
       "The before and after clips in the Ophan demo are labelled stand-ins, because no before clip of the Ophan exists",
-      "This session runs the installed 2.73.1 hooks, so the 2.74.0 reply check does not run here until the branch is merged and the plugin is updated. The plugin update I tried in this session failed because the cloud container has no aj-house-rules marketplace"
+      "This session runs the installed 2.73.1 hooks, so the 2.74.0 reply check does not run here until the branch is merged and the plugin is updated. I tried to update the plugin in this session and the update failed, because the cloud container has no aj-house-rules marketplace"
     ],
     "evidence": [
       {
@@ -104,7 +104,7 @@
         "media": "docs/generated/qa-evidence-411/after-changes-desktop-full.png",
         "before": "docs/generated/qa-evidence-411/before-changes-desktop.png",
         "after": "docs/generated/qa-evidence-411/after-changes-desktop.png",
-        "caption": "Before: the Ophan page as the builder on main makes it, with no clip or picture. After: the same page from the new builder, given evidence. The first picture shows the whole Changes section of the page."
+        "caption": "Before: the Ophan page as the builder on main makes it, with no clip or picture. After: the same page from the new builder, given evidence. The large picture above the pair shows the whole Changes section of the new page."
       },
       {
         "change": "The builder refuses the page you were sent",
@@ -165,7 +165,7 @@
   },
   "wrapup": {
     "summary": "Every QA page must now show each change's clip or picture, with a before and after, or the builder refuses it.",
-    "changing": "This pull request changes make_page.py, the page template, the reply check in design_loop.py, the tests that verify.py runs, the rule text and its detail files, the docs, and the plugin version (2.74.0).",
+    "changing": "This pull request changes make_page.py, the page template, the reply check in design_loop.py, the tests that verify.py runs (the Ophan test and one case per refusal), the rule text and its detail files, the docs, and the plugin version (2.74.0).",
     "blocking": "Waiting on your QA verdict, passed or failed.",
     "next": "On QA passed, I merge the pull request and close #411 to #417. On QA failed, your list of changes starts the next design.",
     "todo": [
