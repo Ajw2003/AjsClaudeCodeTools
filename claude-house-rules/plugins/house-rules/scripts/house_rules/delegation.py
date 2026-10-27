@@ -1800,6 +1800,65 @@ def thread_link_note():
     )
 
 
+_TRAIL_PATH_RE = re.compile(r"Work trail for this helper: (\S+)\.(?:\s|$)")
+_POST_TOOL = "mcp__hearthbot__post_message"
+_CHECKLIST_TOOL = "mcp__hearthbot__update_progress_checklist"
+
+
+def handover_links_owed(turn_records):
+    """#398: in a project thread, the links this turn was told to post and did not. Reads the
+    hook_additional_context attachment records (the hooks' own injected text) and the later
+    tool_use blocks. Returns a list of phrases naming each missing link or path ([] when none)."""
+    if not _in_project_thread():
+        return []
+    events = []  # (kind, value) in transcript order
+    for rec in turn_records:
+        if not isinstance(rec, dict):
+            continue
+        if rec.get("type") == "attachment":
+            att = rec.get("attachment") or {}
+            if att.get("type") != "hook_additional_context":
+                continue
+            text = json.dumps(att.get("content"), ensure_ascii=False)
+            text = text.replace("\\\"", "\"")
+            if "Remote Control just started" in text:
+                events.append(("rc", None))
+            for m in _TRAIL_PATH_RE.finditer(text.replace("\\n", " ")):
+                events.append(("trail", m.group(1)))
+        elif rec.get("type") == "assistant":
+            content = (rec.get("message") or {}).get("content")
+            for block in content if isinstance(content, list) else []:
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    events.append(("use", block))
+    owed = []
+    for i, (kind, val) in enumerate(events):
+        if kind not in ("rc", "trail"):
+            continue
+        later = [b for k, b in events[i + 1:] if k == "use" and b.get("name") == _POST_TOOL]
+        blobs = [json.dumps(b.get("input"), ensure_ascii=False) for b in later]
+        if kind == "rc":
+            phrase = "the Remote Control session link (%s<id>)" % RCLINK_BASE
+            ok = any("/code/session_" in s for s in blobs)
+        else:
+            phrase = "the work trail %s" % val
+            ok = any(val in s for s in blobs)
+        if not ok and phrase not in owed:
+            owed.append(phrase)
+    raw = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID", "").strip()
+    m = _CSE_ID_RE.match(raw)
+    if m:
+        link = RCLINK_BASE + m.group(1)
+        for kind, val in events:
+            if kind != "use" or val.get("name") != _CHECKLIST_TOOL:
+                continue
+            inp = val.get("input") if isinstance(val.get("input"), dict) else {}
+            first = str(inp.get("text") or "").split("\n", 1)[0]
+            if link not in first:
+                owed.append("the thread's transcript link %s in the checklist header" % link)
+                break
+    return owed
+
+
 def _append_thread_link(body):
     return body + thread_link_note()
 

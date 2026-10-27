@@ -1624,4 +1624,69 @@ for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
 
 
+# --- links owed: the end-of-turn check for a link that was never posted (#398) ---------------
+def _lo_transcript(name, injected, uses):
+    lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}})]
+    for text in injected:
+        lines.append(json.dumps({"type": "attachment", "attachment": {
+            "type": "hook_additional_context", "hookEvent": "PostToolUse", "content": text}}))
+    for i, (tool, inp) in enumerate(uses):
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "lo%d" % i, "name": tool, "input": inp}]}}))
+    return _hand_transcript(name, lines)
+
+
+def _lo_run(transcript, retry=False, **env_extra):
+    e = {k: v for k, v in os.environ.items() if k not in _WT_STRIP}
+    e["HOUSE_RULES_COMMIT_CHECK"] = "off"
+    e.update(env_extra)
+    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, stop_hook_active=retry,
+                                                  last_assistant_message="ok"), env=e)
+    try:
+        o = json.loads(out)
+    except Exception:
+        o = {}
+    return (o.get("hookSpecificOutput") or {}).get("additionalContext", ""), o.get("systemMessage", "")
+
+
+_LO_RC = "House rules, work tracking: Remote Control just started (or was already running) for this session."
+RCLINK_BASE = "https://claude.ai" + "/code/session_"
+_LO_PT = {"CLAUDE_CODE_PROJECTS_SESSION": "1"}
+_lo_a = _lo_transcript("lo-a", [_LO_RC], [("mcp__hearthbot__post_message", {"text": "hello"})])
+_lo_ctx, _lo_sys = _lo_run(_lo_a, **_LO_PT)
+_wt_check("links owed: a Remote Control note with no posted link is named at Stop",
+          [] if "links owed" in _lo_ctx and "Remote Control" in _lo_ctx else [f"got {_lo_ctx!r}"])
+_lo_b = _lo_transcript("lo-b", [_LO_RC], [("mcp__hearthbot__post_message",
+                       {"attached_outputs": [{"kind": "link", "url": RCLINK_BASE + "abc"}]})])
+_lo_ctx, _lo_sys = _lo_run(_lo_b, **_LO_PT)
+_wt_check("links owed: a posted /code/session_ link silences it",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+_lo_ctx, _lo_sys = _lo_run(_lo_a, retry=True, **_LO_PT)
+_wt_check("links owed: on the retry it reports in systemMessage only",
+          [] if "links owed" in _lo_sys and "links owed" not in _lo_ctx else [f"ctx {_lo_ctx!r} sys {_lo_sys!r}"])
+_lo_x = "/mnt/project-files/work-trail/2026-01-01-helper-x1.md"
+_lo_d = _lo_transcript("lo-d", ["Helper done. Work trail for this helper: %s. Attach it." % _lo_x],
+                       [("mcp__hearthbot__post_message", {"text": "hello"})])
+_lo_ctx, _lo_sys = _lo_run(_lo_d, **_LO_PT)
+_wt_check("links owed: a work trail never posted is named by path",
+          [] if "links owed" in _lo_ctx and _lo_x in _lo_ctx else [f"got {_lo_ctx!r}"])
+_lo_d2 = _lo_transcript("lo-d2", ["Work trail for this helper: %s. Attach it." % _lo_x],
+                        [("mcp__hearthbot__post_message", {"attached_outputs": [{"kind": "file", "path": _lo_x}]})])
+_lo_ctx, _lo_sys = _lo_run(_lo_d2, **_LO_PT)
+_wt_check("links owed: a posted work trail path silences it",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+_lo_e = _lo_transcript("lo-e", [], [("mcp__hearthbot__update_progress_checklist", {"text": "Plain header\n- [ ] x"})])
+_lo_ctx, _lo_sys = _lo_run(_lo_e, CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST1", **_LO_PT)
+_wt_check("links owed: a checklist header without the thread link is named",
+          [] if "links owed" in _lo_ctx and "checklist header" in _lo_ctx else [f"got {_lo_ctx!r}"])
+_lo_e2 = _lo_transcript("lo-e2", [], [("mcp__hearthbot__update_progress_checklist",
+                        {"text": "[Transcript](%sTEST1)\n- [ ] x" % RCLINK_BASE})])
+_lo_ctx, _lo_sys = _lo_run(_lo_e2, CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST1", **_LO_PT)
+_wt_check("links owed: a checklist header with the thread link is fine",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+_lo_ctx, _lo_sys = _lo_run(_lo_a)
+_wt_check("links owed: silent outside a project thread",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+
+
 finish()

@@ -158,6 +158,15 @@ def event_handover():
     issue_line, issue_problem, label_line, label_problem = handover_stop_lines(payload)
 
     trace_lines = list(trace_lines_early)
+    # #398: links the hooks told a project thread to post and that never went out.
+    links_owed = []
+    try:
+        if transcript_path and delegation._in_project_thread():
+            links_records, _links_detail = _records_since_last_user_message(transcript_path)
+            if links_records is not None:
+                links_owed = handover_links_owed(links_records)
+    except Exception as exc:
+        trace_lines.append("house-rules: links-owed check could not run (%s)" % type(exc).__name__)
     if issue_problem:
         trace_lines.append(issue_problem)
     if label_problem:
@@ -191,7 +200,7 @@ def event_handover():
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed
-            and not shell_page_notes and not page_note):
+            and not shell_page_notes and not page_note and not links_owed):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -226,6 +235,9 @@ def event_handover():
         parts.append(issue_line)
     if label_line:
         parts.append(label_line)
+    if links_owed:
+        parts.append("House rules, work tracking: links owed - %s. Post them (post_message, attached) and "
+                     "fix the checklist header before ending the turn." % "; ".join(links_owed))
     if retry:
         # #322/#323: the retry reports to aj only; additionalContext would wake the model and loop.
         emit({"systemMessage": " ".join(trace_lines + parts)})
