@@ -1,0 +1,200 @@
+{
+ "title": "A Changelog Page in Every Repo",
+ "eyebrow": "Design for approval · nothing built yet",
+ "approval": "Design approved: changelog page rule",
+ "short": {
+  "lead": "You asked for the Changes section of the PlunderSpell roadmap to become a changelog page that every repo must have. This design makes it a house rule: the plugin carries the template, a check notices a repo without a changelog, and the page is built with the same page builder as every other page.",
+  "hint": "What already exists comes first. Tap a step to see what it creates and what it needs from you.",
+  "key": [
+   [
+    "Exists today",
+    "done"
+   ],
+   [
+    "New in this design",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "Tiers",
+    "The docs check already runs",
+    "done",
+    "The docstiers check runs at the start of every session and names any of the six documentation tiers a repo is missing.",
+    "Nothing. The changelog check joins it rather than adding a new hook."
+   ],
+   [
+    "file",
+    "Builder",
+    "The page builder already makes these rows",
+    "done",
+    "make_page.py already builds tagged rows (New, Changed, Kept) with a picture or a before-and-after slider. The changelog uses it unchanged.",
+    "Nothing."
+   ],
+   [
+    "file",
+    "Template",
+    "The changelog template",
+    "",
+    "A blank changelog page, filled from the PlunderSpell rows, saved inside the plugin so every repo gets the same one.",
+    "Nothing.",
+    {
+     "src": "docs/plans/changelog-rule/src/plunderspell-changes-section.png",
+     "alt": "The Changes section of the PlunderSpell roadmap at phone width: one Changed row opened with a before-and-after slider, then Kept rows",
+     "caption": "The PlunderSpell roadmap's Changes section, the template's source (published at claude.ai/artifact/6LzKZXSuHpiVjtTnkA8E5s)."
+    }
+   ],
+   [
+    "search",
+    "Check",
+    "A repo without a changelog is told so",
+    "",
+    "The session-start docs check also looks for the changelog and, when it is missing, says how to make one.",
+    "Your pick in choice 1 and 2."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve this design",
+    "you",
+    "A build plan page follows, then the build.",
+    "Reply with \"Design approved: changelog page rule\" and your picks."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "The changelog template in the plugin",
+   "A blank to copy, with every field explained.",
+   null,
+   "templates/changelog.page.json in the house-rules plugin, the same shape as the one saved in PlunderSpell's docs/templates/changelog/. Kept means built and checked, Changed means it works differently now with a before-and-after picture, New means being built or next.",
+   [
+    "Only PlunderSpell has the template.",
+    "Every repo with the plugin has it.",
+    "A changelog looks the same in every repo."
+   ]
+  ],
+  [
+   "chg",
+   "The session-start docs check",
+   "Also checks for the changelog.",
+   [
+    "Checks six tiers",
+    "Checks six tiers and the changelog"
+   ],
+   "When the changelog is missing it names the file and the template to start from. A repo that has it hears nothing, the same as today.",
+   null
+  ],
+  [
+   "new",
+   "The rule text",
+   "One sentence in the documentation rule, and a section in its detail file.",
+   null,
+   "The short rule already sits close to its size limit, so most of the wording goes in rules/detail/docs-tiers.md.",
+   [
+    "No rule mentions a changelog.",
+    "The documentation rule names the changelog.",
+    "Every session is told every repo keeps one."
+   ]
+  ],
+  [
+   "chg",
+   "The project-docs skill",
+   "Scaffolds the changelog with the six tiers.",
+   [
+    "Scaffolds six tiers",
+    "Scaffolds six tiers and a first changelog"
+   ],
+   "A first changelog is filled from the repo's existing history and screenshots, never generated pictures.",
+   null
+  ],
+  [
+   "new",
+   "Checks in verify.py",
+   "Proves the check speaks when the changelog is missing and stays quiet when it exists.",
+   null,
+   "Fixture repos with and without a changelog, the same way the tier check is tested today.",
+   [
+    "No test covers a changelog.",
+    "Two or more new cases.",
+    "A broken check fails the plugin's own tests."
+   ]
+  ]
+ ],
+ "choices": [
+  [
+   "where",
+   "Where should the changelog live in each repo?",
+   [
+    [
+     "A",
+     "docs/changelog/, next to the tiers",
+     1,
+     "Leaves the six-tier layout untouched; one folder holds changelog.json, the built page and its pictures."
+    ],
+    [
+     "B",
+     "A seventh tier, docs/7-changelog/",
+     0,
+     "Sorts with the tiers, but changes the six-tier layout every repo already has."
+    ]
+   ],
+   "A keeps the tier layout you already approved and still sits in docs/."
+  ],
+  [
+   "when",
+   "When should a missing or stale changelog be pointed out?",
+   [
+    [
+     "A",
+     "At session start, and on each pull request",
+     1,
+     "Session start names a missing changelog; a pull request that leaves the changelog unchanged gets a reminder, never a block."
+    ],
+    [
+     "B",
+     "At session start only",
+     0,
+     "Names a missing changelog, but nothing notices one that stops being updated."
+    ]
+   ],
+   "A changelog nobody updates is the failure that matters, and the pull request is the moment a new row is due."
+  ],
+  [
+   "pictures",
+   "Should a changelog row need a picture?",
+   [
+    [
+     "A",
+     "Visual rows need a real picture",
+     1,
+     "A row marked visual is refused without an existing screenshot, as the PlunderSpell roadmap was built."
+    ],
+    [
+     "B",
+     "Pictures are optional",
+     0,
+     "Fewer refusals, but a repo's changelog can end up all text."
+    ]
+   ],
+   "It is what made the roadmap readable, and repos without anything visual simply have no visual rows."
+  ]
+ ],
+ "wrapup": {
+  "summary": "A design to make a changelog page a house rule in every repo, from the PlunderSpell template.",
+  "changing": "The house-rules plugin: one template, the session-start docs check, the documentation rule, the project-docs skill and its tests. No game repo changes.",
+  "blocking": "Your approval of this design and the three choices.",
+  "next": "A build plan page with the issues for each step, then the build on its own branch and a pull request.",
+  "todo": [
+   "Pick your answers (Choices).",
+   "Tap <b>Copy my reply</b>.",
+   "Send it with \"Design approved: changelog page rule\", or what to change."
+  ]
+ }
+}
