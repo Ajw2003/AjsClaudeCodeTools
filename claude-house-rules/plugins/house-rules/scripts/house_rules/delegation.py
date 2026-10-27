@@ -692,7 +692,13 @@ def _write_subagent_ledger(transcript_path, payload):
     status string for the systemMessage - never raises, since this is an opt-in extra, never
     allowed to take the whole verdict report down with it."""
     try:
-        body, session_id = _render_transcript(transcript_path)
+        # A helper transcript has no human message, so the renderer needs a heading as its
+        # synthetic opening turn (as the work-trail path does) or it lists no commands.
+        body, session_id = _render_transcript(
+            transcript_path,
+            "Helper agent %s (%s) started"
+            % (_field(_AGENT_TYPE_RE, payload) or "agent", _field(_AGENT_ID_RE, payload) or "unknown"),
+        )
 
         root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
         outdir = os.path.join(root, "docs", "sessions")

@@ -1209,6 +1209,15 @@ else:
     report("FAIL", "HOUSE_RULES_SUBAGENT_LEDGER=on renders the subagent transcript into docs/sessions/")
     print(f"          exit {code}, out {out[:200]!r}, dir listing {_written}")
 
+_ledger_files = [os.path.join(_ledger_dir, f) for f in _written if f.endswith(".md")]
+_ledger_text = open(_ledger_files[0], encoding="utf-8").read() if _ledger_files else ""
+if "false" in _ledger_text and "Bash" in _ledger_text:
+    report("PASS", "the subagent ledger lists the helper's Bash commands (heading opens its turn)")
+    print(f"          ledger {os.path.basename(_ledger_files[0])} names the Bash command")
+else:
+    report("FAIL", "the subagent ledger lists the helper's Bash commands (heading opens its turn)")
+    print(f"          ledger text {_ledger_text[:300]!r}")
+
 # A failure rendering the ledger (unreadable transcript) says so and never crashes verdict.
 _ledger_bad_root = tempfile.mkdtemp(prefix="house-rules-ledger-bad-")
 atexit.register(shutil.rmtree, _ledger_bad_root, True)
