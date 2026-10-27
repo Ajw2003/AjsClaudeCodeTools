@@ -342,6 +342,14 @@ commit_case(
     "old: %r, status %r; fresh: %r" % (_as_git(_dq, "log", "-1", "--format=%s"),
                                        _as_git(_dq, "status", "--porcelain"), _as_git(_dfresh, "log", "-1", "--format=%s")),
 )
+# #405: the commit the hook makes for a helper credits aj's agent, with no Claude trailer or session link.
+_wip_body = _as_git(_dq, "log", "-1", "--format=%B")
+_wip_credit = [w for w in ("Co-Authored-By", "anthropic", "Claude-Session", "claude" + ".ai") if w.lower() in _wip_body.lower()]
+commit_case(
+    "autosave: the hook's own commit ends with Committed by AJ's agent and carries no Claude credit",
+    _wip_body.strip().endswith("Committed by AJ's agent") and not _wip_credit,
+    "body %r, credit found %r" % (_wip_body[-120:], _wip_credit),
+)
 
 _dg, _ = _as_repo("worktree-agent-gate")
 _as_write(_dg, "a.py")

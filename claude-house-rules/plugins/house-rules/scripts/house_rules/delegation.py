@@ -1090,11 +1090,10 @@ def event_subagentcommit():
         if re.search(r'"stop_hook_active"\s*:\s*true', payload):
             # The retry. Blocking again could loop. On the subagent's own worktree branch the hook
             # commits the leftovers itself; anywhere else it only names them.
-            sid = _field(re.compile(r'"session_id"\s*:\s*"([^"]*)"'), payload) or ""
             parts = []
             for top, branch, files in left:
                 if _autosave_enabled() and branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX):
-                    sha, done = _wip_commit(top, WIP_NOT_COMMITTED, sid)
+                    sha, done = _wip_commit(top, WIP_NOT_COMMITTED)
                     note = _autosave_snapshot(top, branch, force_push=True)
                     parts.append("committed %d file(s) in %s as %s%s"
                                  % (len(done), top, sha, " | " + note if note else ""))
@@ -1167,7 +1166,7 @@ def _autosave_enabled():
 
 
 def _autosave_target(payload):
-    """(repo top, branch, tool_name, session_id) when the edited file (or, for Bash, the payload
+    """(repo top, branch, tool_name) when the edited file (or, for Bash, the payload
     cwd) is in a repo on a worktree-agent- branch; None otherwise - not a subagent worktree."""
     try:
         data = json.loads(payload)
@@ -1197,7 +1196,7 @@ def _autosave_target(payload):
     branch = _repo_branch(top)
     if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX):
         return None
-    return top, branch, tool, data.get("session_id") or ""
+    return top, branch, tool
 
 
 def _autosave_state_path(top, branch, kind):
@@ -1291,14 +1290,12 @@ def _autosave_snapshot(top, branch, force_push=False):
     return _autosave_push(top, branch, sha, now, force=force_push)
 
 
-def _wip_message(subject, session_id=""):
-    msg = subject + "\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
-    if re.match(r"^session_[A-Za-z0-9]+$", session_id or ""):
-        msg += "\nClaude-Session: https://claude.ai/code/%s" % session_id
-    return msg
+def _wip_message(subject):
+    # #405: credited like every other commit; no co-author trailer and no session link.
+    return subject + "\n\nCommitted by AJ's agent"
 
 
-def _wip_commit(top, subject, session_id=""):
+def _wip_commit(top, subject):
     """Commit everything in the worktree on the subagent's behalf. (short sha, files), or
     (None, []) when there was nothing to commit. --no-verify: a repo's pre-commit hook must not
     be able to block the one commit that protects the work."""
@@ -1311,7 +1308,7 @@ def _wip_commit(top, subject, session_id=""):
         ident += ["-c", "user.name=house-rules"]
     if _ag(top, ["config", "user.email"], check=False)[0] != 0:
         ident += ["-c", "user.email=house-rules@localhost"]
-    _ag(top, ident + ["commit", "--no-verify", "-q", "-m", _wip_message(subject, session_id)])
+    _ag(top, ident + ["commit", "--no-verify", "-q", "-m", _wip_message(subject)])
     return _ag(top, ["rev-parse", "--short", "HEAD"])[1].strip(), files
 
 
@@ -1341,14 +1338,14 @@ def event_autosave():
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
             return 0
-        top, branch, tool, sid = target
+        top, branch, tool = target
         if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
             return 0
         notes = list(issue_notes)
         if _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
-            sha, done = _wip_commit(top, WIP_CHECKPOINT, sid)
+            sha, done = _wip_commit(top, WIP_CHECKPOINT)
             if sha:
                 notes.append("house-rules autosave: %d min passed without a commit on %s, so the "
                              "hook committed %d file(s) as %s: %s."
@@ -1388,7 +1385,7 @@ def event_commitgate():
         target = _autosave_target(payload)
         if target is None:
             return 0
-        top, branch, tool, sid = target
+        top, branch, tool = target
         if tool not in _GATED_TOOLS:
             return 0  # Bash is never gated: it is how the subagent commits
         files = _dirty_files(top)
@@ -1399,7 +1396,7 @@ def event_commitgate():
             return 0
         head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
         if _autosave_read(counter) == head:
-            sha, done = _wip_commit(top, WIP_NOT_COMMITTED, sid)
+            sha, done = _wip_commit(top, WIP_NOT_COMMITTED)
             os.remove(counter)
             note = _autosave_snapshot(top, branch, force_push=True)
             text = ("house-rules commitgate: the subagent did not commit when asked, so the hook "
@@ -1482,7 +1479,6 @@ def event_worktreesweep():
                 path = line[len("worktree "):]
             elif line.startswith("branch refs/heads/" + AUTOSAVE_BRANCH_PREFIX) and path:
                 worktrees.append((path, line[len("branch refs/heads/"):]))
-        sid = data.get("session_id", "") if isinstance(data, dict) else ""
         swept, problems = [], []
         now = _t.time()
         for top, branch in worktrees[:SWEEP_MAX_WORKTREES]:
@@ -1490,7 +1486,7 @@ def event_worktreesweep():
                 files = _dirty_files(top)
                 if not files or now - _newest_mtime(top, files) < CHECKPOINT_MINUTES * 60:
                     continue  # clean, or a live subagent is still editing it
-                sha, done = _wip_commit(top, WIP_PARENT, sid)
+                sha, done = _wip_commit(top, WIP_PARENT)
                 note = _autosave_snapshot(top, branch, force_push=True)
                 swept.append("%s (%s): committed %d file(s) as %s - %s%s"
                              % (top, branch, len(done), sha, _shown(done), " | " + note if note else ""))
