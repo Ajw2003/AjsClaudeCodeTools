@@ -1728,5 +1728,34 @@ def _scope_delegate_link(payload, field):
     return "", ""
 
 
+_CSE_ID_RE = re.compile(r"^cse_([A-Za-z0-9]+)$")
+
+
+def thread_link_note():
+    """inject (#400): in a project thread, the text telling the thread its own transcript link;
+    "" outside a project thread or with work tracking off."""
+    if not _worktracking_enabled() or os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") != "1":
+        return ""
+    raw = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID", "").strip()
+    m = _CSE_ID_RE.match(raw)
+    if not m:
+        return (
+            "\n\nHouse rules, work tracking: could not build the thread's transcript link - "
+            "CLAUDE_CODE_REMOTE_SESSION_ID is %s (expected cse_<id>). Say so in your first reply."
+            % ("missing" if not raw else "malformed")
+        )
+    return (
+        "\n\nHouse rules, work tracking: open every checklist header (the first line of the "
+        "update_progress_checklist text) with \"Transcript of this thread's session\" linked to %s%s, "
+        "and give the raw id %s beside it once in your first reply."
+        % (RCLINK_BASE, m.group(1), raw)
+    )
+
+
+def _append_thread_link(body):
+    return body + thread_link_note()
+
+
 core.register_session_start("inject", _strip_subagent_markers)
+core.register_session_start("inject", _append_thread_link)
 core.register_prompt(_scope_delegate_link)

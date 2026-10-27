@@ -1423,6 +1423,38 @@ _rc_case("rclink is silent outside a Projects session (CLAUDE_CODE_PROJECTS_SESS
 _rc_case("rclink is silent with HOUSE_RULES_WORKTRACKING=off", "started",
          _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1", HOUSE_RULES_WORKTRACKING="off"), False)
 
+# --- thread link: the thread's own transcript link at session start (#400) ----------------
+def _tl_ctx(**kw):
+    e = {k: v for k, v in os.environ.items()
+         if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "HOUSE_RULES_WORKTRACKING")}
+    e.update(kw)
+    code, ctx, err = _additional_context("inject", "", env=e)
+    return ctx or ""
+
+
+def _tl_case(title, ctx, must, must_not=()):
+    problems = [f"missing {n!r}" for n in must if n not in ctx]
+    problems += [f"unexpected {n!r}" for n in must_not if n in ctx]
+    report("FAIL" if problems else "PASS", title)
+    for p in problems:
+        print(f"          {p}")
+
+
+_tl_case("inject carries the thread's transcript link in a project thread",
+         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"),
+         ("/code/session_TEST123", "Transcript of this thread's session", "cse_TEST123"))
+_tl_case("inject adds no transcript link outside a project thread",
+         _tl_ctx(CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"), (), ("/code/session_", "could not build"))
+_tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is malformed",
+         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="bogus"),
+         ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
+_tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is missing",
+         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1"),
+         ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
+_tl_case("inject adds no transcript link with HOUSE_RULES_WORKTRACKING=off",
+         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123",
+                 HOUSE_RULES_WORKTRACKING="off"), (), ("/code/session_", "could not build"))
+
 # --- userpromptaudit: the background half, UserPromptSubmit --------------------------------
 def _task_notification(task_id, status="completed"):
     return (
