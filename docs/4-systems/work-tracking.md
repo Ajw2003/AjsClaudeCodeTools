@@ -1,6 +1,6 @@
 # Work tracking
 
-Status: **planned** for plugin 2.73.1. Design approved 2026-10-27 in the HouseRules project on
+Status: **built** in plugin 2.73.1 (#383, #400, #397, #398), awaiting aj's QA. Design approved 2026-10-27 in the HouseRules project on
 claude.ai ("Design approved: background work tracking 1A 2A"). Decision: `docs/6-decisions/Decisions.md`,
 entry "Design approved: background work tracking". Proposal page:
 `docs/plans/background-work-tracking.html`. Parent issue: "Background work tracking: every layer of
@@ -45,6 +45,18 @@ The proposal page placed the helper trail on SubagentStop. It moves to `audit` a
 because those two already reach the thread's model with `additionalContext`; SubagentStop output
 reaches only aj's screen (doc-ref 8313 in `docs/6-decisions/Decisions.md`), so the thread could never
 be told the file's path from there.
+
+## Changes from the plan
+
+- The helper work trail adds one synthetic "Helper agent <type> (<id>) started" prompt before rendering
+  (`_render_transcript` in `house_rules/delegation.py`). The shared renderer opens a turn only at a
+  human prompt, and a helper transcript has none, so without it the trail listed no commands. The
+  opt-in SubagentStop ledger still renders without it, and so still comes out empty for a helper;
+  that is a pre-existing gap, left for its own issue.
+- A backgrounded helper's trail file is named with `background` as its type, because the hand-back
+  notification carries no agent type.
+- `checks/common.py`'s `run_hook` defaults `HOUSE_RULES_WORKTRAIL_DIR` to a temporary folder, so a
+  verify run inside a project thread never writes test trails into the real project folder.
 
 ## Invariants
 
