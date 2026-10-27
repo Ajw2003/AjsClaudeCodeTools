@@ -292,7 +292,7 @@ const PAGE = {
         "you",
         [
           "14 issues were tested by you and merged: the verify rework (#368 to #371), the proof check fix (#367, #374 to #376) and the 2.68.1 patch (#307 to #311). #303 (the emergency switch-off) was replaced by that patch.",
-          "27 more were merged between 14 and 19 October and have run in every session since, but no QA pass was ever logged for them: the new item visual (#240 to #243), house labels (#274 to #278), the guards audit (#286, #288 to #293), the in-session attribution guard (#315 to #319) and the writing-check loop fixes (#322 to #327).",
+          "27 more were merged between 14 and 19 October and have run in every session since. No QA pass was ever logged for them. They are the new item visual (#240 to #243), house labels (#274 to #278), the guards audit (#286, #288 to #293), the in-session attribution guard (#315 to #319) and the writing-check loop fixes (#322 to #327).",
           "Pull request #305 (house-rules 2.68.1: switch off the design loop) should close unmerged, because the real 2.68.1 patch (pull request #312) replaced it.",
           "Risk: none. Closing changes no code, and an issue can be reopened."
         ],
@@ -344,7 +344,7 @@ const PAGE = {
         [
           "What it does: every repo keeps docs/changelog/, the session-start docs check names a missing one, and a pull request that leaves it unchanged gets a reminder, never a block.",
           "State: you approved the design on 27 October. The build plan is on the branch claude/project-thread-4je2dp and published at claude.ai/artifact/HkCZV8e1ZLofXrAqRTGbg4. It waits on your approval. No plugin code exists yet.",
-          "Risk: low, since it only reminds. It adds one sentence to the injected rules, which are at about 8,900 of a 9,700-character limit."
+          "Risk: low, since it only reminds. It adds one sentence to the injected rules, which measure 8,916 characters today (rules/house-rules.md) against the hook's 10,000-character inject limit."
         ],
         "Read the build plan and reply \"Build plan approved: changelog page rule\"."
       ],
@@ -379,7 +379,7 @@ const PAGE = {
         [
           "#287 (configurable agent name) is done by restructure step 3 and can close once it merges.",
           "#110 (turn every approved plan into issues) was built in 2.49.0 but carries both wontfix and in progress; it can close.",
-          "#297 to #300 (pull requests say how to test and what is next), #301 (a session finishes its own task), #304 (a tool that cleans a session transcript and files issues from it) and #120 (check every background job every 5 minutes) have plans from mid-October but no code. They can be re-planned after the restructure, since step 3 changes the same checks.",
+          "#297 to #300 (pull requests say how to test and what is next) and #301 (a session finishes its own task) have plans from mid-October but no code. So do #304 (a tool that cleans a session transcript and files issues from it) and #120 (check every background job every 5 minutes). They can be re-planned after the restructure, since step 3 changes the same checks.",
           "#347 (restructure step 9, session triage) is labelled needs review but has no design or code yet.",
           "Left alone on purpose: the QA evidence set #389 to #395 (another account's work) and #383 with #396 to #400 (another thread is building those)."
         ],

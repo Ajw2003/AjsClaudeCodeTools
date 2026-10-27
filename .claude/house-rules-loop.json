@@ -637,31 +637,247 @@
   "sweep_proposed": [
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 340,
+      "number": 368,
       "action": "completed",
       "replaced_by": null
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 357,
+      "number": 369,
       "action": "completed",
       "replaced_by": null
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 358,
+      "number": 370,
       "action": "completed",
       "replaced_by": null
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 359,
+      "number": 371,
       "action": "completed",
       "replaced_by": null
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 360,
+      "number": 367,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 374,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 375,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 376,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 307,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 308,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 309,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 310,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 311,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 303,
+      "action": "not_planned",
+      "replaced_by": 311
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 240,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 241,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 242,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 243,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 274,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 275,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 276,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 277,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 278,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 286,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 288,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 289,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 290,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 291,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 292,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 293,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 315,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 316,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 317,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 318,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 319,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 322,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 323,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 324,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 325,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 326,
+      "action": "completed",
+      "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 327,
       "action": "completed",
       "replaced_by": null
     }
