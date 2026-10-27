@@ -186,6 +186,9 @@ def copy_pictures(page, content_dir, project, out_html):
             while name in used.values():
                 n += 1
                 name = "%s-%d%s" % (stem, n, ext)
+            mb = os.path.getsize(found) / (1024.0 * 1024.0)
+            if os.path.getsize(found) > 15 * 1024 * 1024:
+                die("%s is %.1f MB; the claude.ai page host refuses files over 15 MB, so shorten or re-encode it" % (found, mb))
             os.makedirs(pics_dir, exist_ok=True)
             shutil.copyfile(found, os.path.join(pics_dir, name))
             used[key] = name
@@ -390,6 +393,20 @@ def apply_qa(page, project, content_dir, style):
     for f, est in plan.items():
         if f not in seen:
             rows.append([f, 0, 0, [["Planned but not changed: %s" % est[2], est[0], est[1]]]])
+    labels = {"animation": "Animation", "model": "Model", "gameplay": "Gameplay", "ai": "AI and behaviour",
+              "visual": "Visual", "none": "Nothing visible"}
+    proof = []
+    for e in qa["evidence"]:
+        t = e["type"]
+        obj = {"evidence": True, "type": t}
+        for k in EVIDENCE_FIELDS:
+            if t != "none":
+                obj[k] = {"src": e[k]}
+        obj["caption"] = e.get("caption") or ""
+        detail = e["reason"] if t == "none" else "Before and after below; the first is the change itself."
+        proof.append(["proof", "%s: %s" % (labels[t], e["change"]), e.get("caption") or e.get("reason") or "",
+                      None, detail, None, None, obj])
+    page["changes"] = proof + page.get("changes", [])
     page.setdefault("changes", []).append(
         ["chg", "Files changed, counted from git against %s" % base,
          "%d files, +%d −%d" % (len(seen), tot_a, tot_r),

@@ -376,6 +376,58 @@ _rc, _o = _oph_build("ev-over2", _full[:2], style={"use": "defaults", "evidence_
 _mp_cases.append(("make_page (#413): an evidence_paths override that empties gameplay and ai lets the same evidence build",
                   _rc == 0))
 
+# ---- #414: the page shows each change's clip or picture ----
+_rc, _o = _oph_build("ev-render", _full)
+_rp = os.path.join(_oph_d, "docs", "plans", "ev-render.html")
+_pg = _mp_page_of(_rp) if _rc == 0 else None
+_ch = (_pg or {}).get("changes", [])
+_pr = [c for c in _ch if c[0] == "proof"]
+_mp_cases.append(("make_page (#414): the full-evidence Ophan build's PAGE has the proof items first, with evidence objects and srcs copied under the -pics folder",
+                  bool(_pg) and len(_pr) == 3 and [c[0] for c in _ch[:3]] == ["proof"] * 3
+                  and _pr[0][1] == "Animation: Wings-spread pose" and _pr[0][7].get("evidence") is True
+                  and all(_pr[0][7][k]["src"].startswith("ev-render-pics/") for k in ("media", "before", "after"))
+                  and os.path.isfile(os.path.join(_oph_d, "docs", "plans", _pr[0][7]["before"]["src"]))))
+_h = open(_rp, encoding="utf-8").read() if _rc == 0 else ""
+_d414 = _mp_proj("plain414", {"use": "defaults"})
+_rcn, _ = _mp("build", _c1, "--project", _d414)
+_np = os.path.join(_d414, "docs", "plans", "basic.html")
+_big = os.path.join(_oph_d, "docs", "generated", "qa", "big.mp4")
+with open(_big, "wb") as _f:
+    _f.truncate(16 * 1024 * 1024)
+_rc, _o = _oph_build("ev-big", [_ev_anim(media=_Q + "big.mp4")] + _full[1:])
+_mp_cases.append(("make_page (#414): a copied file over 15 MB is refused, naming the file and the size",
+                  _rc == 2 and "big.mp4" in _o and "16.0 MB" in _o and "15 MB" in _o))
+os.remove(_big)
+_NODE = shutil.which("node") or "/opt/node22/bin/node"
+_PWMOD = "/opt/node22/lib/node_modules"
+_JS414 = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();
+await p.addInitScript(()=>{window.__plays=[];HTMLMediaElement.prototype.play=function(){window.__plays.push(this.getAttribute('src'));return Promise.resolve();};});
+await p.goto('file://'+process.argv[2]);
+const out=await p.evaluate(()=>{const d=document.querySelector('#cc details.ci');const vs=d?[...d.querySelectorAll('.cmp-vid video')]:[];
+window.__plays.length=0;if(vs.length==2)vs[0].dispatchEvent(new Event('play'));
+const q=document.getElementById('cc-count').textContent;return {q,open:!!d&&d.open,n:vs.length,called:window.__plays.slice(),second:vs[1]&&vs[1].getAttribute('src')};});
+const p2=await b.newPage();await p2.goto('file://'+process.argv[3]);out.plain=await p2.evaluate(()=>document.getElementById('cc-count').textContent);
+console.log(JSON.stringify(out));await b.close();})();""")
+if not (_rc_ok := os.path.isfile(_rp)) or not (os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, "playwright"))):
+    report("SKIP", "make_page (#414): paired clips sync in a browser (no node or node playwright here)")
+else:
+    _jsf = os.path.join(_mp_tmp, "sync414.js")
+    with open(_jsf, "w", encoding="utf-8") as _f:
+        _f.write(_JS414)
+    _r = subprocess.run([_NODE, _jsf, _rp, _np], capture_output=True, text=True, timeout=180,
+                        env=dict(os.environ, NODE_PATH=_PWMOD, PLAYWRIGHT_BROWSERS_PATH=os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")))
+    try:
+        _sy = json.loads(_r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        _sy = None
+    if _sy is None:
+        report("SKIP", "make_page (#414): paired clips sync in a browser (browser did not run: %s)" % (_r.stderr.strip()[-200:] or "no output"))
+    else:
+        _mp_cases.append(("make_page (#414): the first proof item is open, holds two videos in .cmp-vid, and playing the first plays the second",
+                          _sy["open"] and _sy["n"] == 2 and _sy["called"] == [_sy["second"]]))
+        _mp_cases.append(("make_page (#414): the Ophan page's count line says '3 proof' and a non-QA page's count line has no proof",
+                          _rcn == 0 and _sy["q"].startswith("3 proof, ") and "proof" not in _sy["plain"] and "new," in _sy["plain"]))
+
 # The copy box must hold the exact phrase the design-loop gate accepts (#286).
 _hk_spec = _ig_util.spec_from_file_location("hook_for_approval", HOOK)
 _hk = _ig_util.module_from_spec(_hk_spec)
