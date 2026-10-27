@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-27 - QA failed: background work tracking
+
+**Context.** QA page `docs/plans/background-work-tracking-qa.html` for #396, pull request #402. aj asked that
+no bug or gap reaches `main`, including ones older than the pull request; the gap sweep page
+`docs/plans/work-tracking-gap-fixes.html` lists five.
+
+**Decision.** aj's reply was "QA failed: background work tracking". The redo fixes the helper ledger's empty
+render, junk in design-loop feature names, versioncheck's update demand in a synced cloud copy, and the
+Claude credit in the plugin's own safety commits, plus aj's choice on letting thread links past the credit
+guard. All on pull request #402, version 2.73.2.
+
+**Status.** Standing.
+
 ## 2026-10-27 - Build plan approved: background work tracking
 
 **Context.** Build plan `docs/plans/background-work-tracking-build-plan.html` for #396 (Background work
