@@ -1,0 +1,152 @@
+{
+  "title": "Work Tracking Build Plan",
+  "eyebrow": "Build plan · design approved 2026-10-27 as \"background work tracking 1A 2A\"",
+  "approval": "Build plan approved: background work tracking",
+  "short": {
+    "lead": "You approved all three layers (choice 1A) with the links pinned in the checklist header (choice 2A). The work is filed as the parent issue \"Background work tracking: every layer of delegated work is one tap away\" (#396), with five steps under it. The Remote Control issue (#383) is the first step, rewritten to match the design. The build reuses two things the plugin already has: the audit hooks that find a helper's transcript, and the renderer behind the session ledger. One change from the proposal page: the helper work trail is written by the audit hooks, not by the hook that runs when a helper stops. That hook's output only reaches your screen, so it could never tell the thread where the file is. The systems doc, docs/4-systems/work-tracking.md, records the reason.",
+    "hint": "Tap a step to see what it builds and how it is tested.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "hand",
+        "PC link",
+        "#383: Remote Control transcript link",
+        "",
+        "A new hook runs after start_remote_control. When the session started, it tells the thread to read the session id and to post and attach \"Transcript of the session on your PC\", with the raw id beside it. Three tests: started, asked, and outside a project thread.",
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "Thread",
+        "#400: the thread's own transcript link",
+        "",
+        "The session-start hook builds the thread's link from CLAUDE_CODE_REMOTE_SESSION_ID and tells the thread to open every checklist header with it. Three tests: a good id, no project thread, and a malformed id.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Helpers",
+        "#397: helper work trails",
+        "",
+        "When a helper finishes, the audit hooks write its commands to /mnt/project-files/work-trail/ and tell the thread to attach the file. Tests cover a foreground helper, a background helper, and no project thread.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Check",
+        "#398: the check for links owed",
+        "",
+        "The end-of-turn hook blocks once when a link from steps 1 to 3 was never posted, and names it. Tests cover a missing link, a posted link, and the retry.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "Docs",
+        "#399: docs, version 2.74.0 and the QA page",
+        "",
+        "The systems doc is marked built, the hook table and version are updated, both verify scripts pass, and a QA page goes with the pull request.",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Approve",
+        "You approve this plan",
+        "you",
+        "Your answer to the choice below. Once you send it, the Remote Control link is built first.",
+        "Reply \"Build plan approved: background work tracking\" with your choice letter, for example 1A."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "rclink hook (scripts/house_rules/delegation.py, hooks/hooks.json)",
+      "The Remote Control link. Runs after start_remote_control in a project thread.",
+      [
+        "Nothing runs.",
+        "The thread is told to post and attach the transcript link."
+      ],
+      "Silent outside a project thread."
+    ],
+    [
+      "chg",
+      "inject hook (session start)",
+      "Adds the thread's own link in a project thread.",
+      [
+        "No link.",
+        "Every checklist header opens with the thread's transcript link."
+      ],
+      "Ordinary sessions see no change."
+    ],
+    [
+      "chg",
+      "audit and userpromptaudit hooks",
+      "Write a helper's work trail in a project thread.",
+      [
+        "Only the thread's model sees a summary of the helper's work.",
+        "A work-trail file in the project folder, attached to the thread."
+      ],
+      "The opt-in ledger at helper stop is unchanged."
+    ],
+    [
+      "chg",
+      "handover hook (end of turn)",
+      "Adds the links-owed check.",
+      [
+        "A missed link goes unnoticed.",
+        "The turn is blocked once, naming the missing link."
+      ],
+      "Only reports on the retry, so it cannot loop."
+    ],
+    [
+      "chg",
+      "Docs, version, verify.py",
+      "Version 2.74.0 and a test for each case above.",
+      [
+        "Version 2.73.0.",
+        "Version 2.74.0 with the new cases in verify.py."
+      ],
+      "Nothing about QA pages changes, because another account is working on them."
+    ]
+  ],
+  "choices": [
+    [
+      "ship",
+      "How should the five steps reach the main branch?",
+      [
+        [
+          "A",
+          "One pull request for all five steps, with one QA page",
+          1,
+          "You test the whole feature once, and the version moves once."
+        ],
+        [
+          "B",
+          "One pull request per step, each with its own QA page",
+          0,
+          "You can test sooner, but you get five QA pages and five version bumps."
+        ]
+      ],
+      "The steps only make sense together: a link without the check can be forgotten, and the check needs every link to exist."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Five steps under the parent issue, built in order, each with its own tests, ending in one QA page.",
+    "changing": "One new hook and three changed hooks in the house-rules plugin, plus docs and version 2.74.0.",
+    "blocking": "Your answer to the shipping choice above.",
+    "next": "A helper agent builds the Remote Control link (#383) first on the claude/project-thread-42w8p3 branch, then the other four steps follow in order.",
+    "todo": [
+      "Pick your answer under Choices.",
+      "Tap <b>Copy my reply</b> and send it, or tell me what to change."
+    ]
+  }
+}
