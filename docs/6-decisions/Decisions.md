@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-27 - Design approved: background work tracking (redo)
+
+**Context.** Gap fixes page `docs/plans/work-tracking-gap-fixes.html`, after the QA failure below.
+
+**Decision.** aj's reply was "Design approved: background work tracking 1*", with their own answer to the
+credit guard choice: "publicly available links published should never reach git unless asked for
+explicitly. no claude credit anywhere and no links that can cause security issues ever". So option 1A
+(let thread links past the guard) and 1B (leave it as it is) are both rejected. The guard gets stricter
+instead: it also refuses claude.ai artifact and share links, and checks the lines a commit adds. Session
+ids already written into this feature's docs and into #383 were taken out the same day. Steps #403, #405
+and #404 carry the fixes.
+
+**Status.** Standing.
+
 ## 2026-10-27 - QA failed: background work tracking
 
 **Context.** QA page `docs/plans/background-work-tracking-qa.html` for #396, pull request #402. aj asked that

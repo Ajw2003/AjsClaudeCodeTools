@@ -59,9 +59,18 @@ be told the file's path from there.
 - `checks/common.py`'s `run_hook` defaults `HOUSE_RULES_WORKTRAIL_DIR` to a temporary folder, so a
   verify run inside a project thread never writes test trails into the real project folder.
 
+## Redo after QA (planned)
+
+aj failed the first QA on 2026-10-27 so that every known gap is closed before `main`: #403 fixes the
+opt-in helper ledger, junk in design-loop feature names and the update check in a synced cloud copy;
+#405 stops the plugin's own safety commits crediting Claude and makes the credit guard refuse claude.ai
+session, artifact and share links in commit messages, GitHub text and the lines a commit adds; #404 is
+the docs and a new QA page. Plan: `docs/plans/work-tracking-gap-fixes-plan.html`.
+
 ## Invariants
 
 - Outside a project thread, every handler here is silent and changes nothing.
+- No session, artifact or share link is written into git: links go to the thread only.
 - No handler reaches the network. The Remote Control id is fetched by the thread's own tool call,
   which the hook asks for.
 - A work-trail file is written only from a transcript that already exists; nothing is logged per
