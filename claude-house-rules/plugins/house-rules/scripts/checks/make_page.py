@@ -265,6 +265,7 @@ with open(os.path.join(_oph_d, "placeholder.txt"), "w", encoding="utf-8") as _f:
     _f.write("base\n")
 _mp_git(_oph_d, "add", "-A")
 _mp_git(_oph_d, "commit", "-q", "-m", "base")
+_mp_git(_oph_d, "checkout", "-q", "-b", "ophan-arrival")  # the feature branch, as in PlunderSpell
 for _n, _t in (("Assets/Models/ArtBible/Enemies/Fear/TheOphanOfHours/TheOphanOfHours.controller", b"%YAML 1.1\n"),
                ("Assets/_Project/Scripts/Runtime/Raid/Ophan/OphanHunt.cs", b"class OphanHunt { }\n"),
                ("Assets/Models/ArtBible/Animations/TheOphanOfHours_Generic.fbx", b"fbx\n"),
@@ -292,7 +293,7 @@ with open(_oph_c, "w", encoding="utf-8") as _f:
     json.dump(_oph_pg, _f)
 _rc, _o = _mp("build", _oph_c, "--project", _oph_d)
 _mp_cases.append(("make_page (#412): the Ophan QA page's content, with no evidence for its animation, model and gameplay changes, is refused",
-                  _rc == 2))
+                  _rc == 2 and "evidence" in _o))
 
 # The copy box must hold the exact phrase the design-loop gate accepts (#286).
 _hk_spec = _ig_util.spec_from_file_location("hook_for_approval", HOOK)
