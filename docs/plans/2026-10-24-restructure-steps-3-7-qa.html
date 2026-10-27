@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- house-rules make_page 2.73.0 -->
+<!-- house-rules make_page 2.74.0 -->
 <meta charset="utf-8">
 <title>Steps 3 to 7 QA</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -272,7 +272,7 @@ const PAGE = {
   "title": "Steps 3 to 7 QA",
   "eyebrow": "QA · #381 restructure steps 3 to 7, built as one feature · house-rules 2.74.0",
   "short": {
-    "lead": "Restructure steps 3 to 7 (#381) are built on the branch AjsAgent/issue-281-fix as house-rules 2.74.0. Each step follows the grilling answers on the design page you approved. verify.py, the script that checks the hooks do what the docs say, passed all 966 checks. One thing matters before you install it: from 2.74.0, every tool is refused until the agent's name is set. So set the two cloud environment variables first (HOUSE_RULES_AGENT_NAME and HOUSE_RULES_OWNED_BRANCHES), using the steps in docs/cloud-session-setup.md.",
+    "lead": "Restructure steps 3 to 7 (#381) are built on the branch AjsAgent/issue-281-fix as house-rules 2.74.0. Each step follows the grilling answers on the design page you approved. verify.py, the script that checks the hooks do what the docs say, passed all 971 checks after main (2.73.1) was merged in and pull request #338's update fix was folded in. One thing matters before you install it: from 2.74.0, every tool is refused until the agent's name is set. So set the two cloud environment variables first (HOUSE_RULES_AGENT_NAME and HOUSE_RULES_OWNED_BRANCHES), using the steps in docs/cloud-session-setup.md.",
     "hint": "Tap a step to see what was built and how it was checked.",
     "key": [
       [
@@ -349,6 +349,19 @@ const PAGE = {
         "Nothing from you."
       ],
       [
+        "file",
+        "Fold-in · #338",
+        "A plugin update never stops a session",
+        "done",
+        [
+          "Folded in at your request (triage choice 4). A copy of the plugin synced from your claude.ai account no longer tries a claude plugin update it can never run, and never tells the session to stop. It gets a one-sentence notice naming the version it runs.",
+          "A failed update on any other install is listed under \"Waiting on you\" while the work carries on. The session marker and the guard's first-command prompt are gone.",
+          "I ran the shipped hook by hand on 27 October with GitHub's version forced to 99.0.0. As a synced copy it printed the notice in 0.17 seconds, called claude 0 times and wrote no file. As a normal install it tried the update once, printed the carry-on banner, and the guard then let ls through with no prompt.",
+          "That run also showed the guard refuses ls until HOUSE_RULES_OWNED_BRANCHES is set as well as the agent name, so both cloud variables are needed."
+        ],
+        "Nothing from you."
+      ],
+      [
         "hand",
         "Your test",
         "Set the variables, then pass or fail QA",
@@ -366,14 +379,14 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "34 files, +3102 −212",
+      "35 files, +3300 −389",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          41,
+          42,
           54,
           [
             [
@@ -468,8 +481,20 @@ const PAGE = {
           ]
         ],
         [
+          "claude-house-rules/plugins/house-rules/rules/detail/handover-command.md",
+          8,
+          8,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "claude-house-rules/plugins/house-rules/scripts/checks/common.py",
-          16,
+          21,
           3,
           [
             [
@@ -481,8 +506,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/core.py",
-          168,
-          1,
+          216,
+          21,
           [
             [
               "Not in the plan",
@@ -517,8 +542,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
-          218,
-          41,
+          227,
+          56,
           [
             [
               "Not in the plan",
@@ -553,8 +578,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/core.py",
-          40,
-          21,
+          86,
+          104,
           [
             [
               "Not in the plan",
@@ -601,8 +626,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
-          94,
-          31,
+          97,
+          42,
           [
             [
               "Not in the plan",
@@ -697,7 +722,7 @@ const PAGE = {
         ],
         [
           "docs/6-decisions/Decisions.md",
-          37,
+          65,
           0,
           [
             [
@@ -709,8 +734,8 @@ const PAGE = {
         ],
         [
           "docs/architecture.md",
-          2,
-          0,
+          20,
+          40,
           [
             [
               "Not in the plan",
@@ -721,7 +746,7 @@ const PAGE = {
         ],
         [
           "docs/cloud-session-setup.md",
-          48,
+          56,
           0,
           [
             [
@@ -757,7 +782,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-10-24-restructure-steps-3-7-qa.html",
-          919,
+          943,
           0,
           [
             [
