@@ -2,7 +2,7 @@
  "title": "Catch-up Triage",
  "eyebrow": "Triage \u00b7 open issues and pull requests in Ajw2003/AjsClaudeCodeTools, 27 October 2026",
  "short": {
-  "lead": "While you were away, most of the work landed. Of the 42 issues waiting on your review, 34 are already merged into main and running in every session, and only need closing. One feature is built and passing but not merged: restructure steps 3 to 7, which changes how every session starts. Two features are designed but not built: a changelog page in every repo and the attribution guard on GitHub. The steps below are in the order I suggest, and only step 3 carries real risk.",
+  "lead": "While you were away, most of the work landed. Of the 42 issues waiting on your review, 34 are already merged into main and running in every session. With 7 older in-progress leftovers, 41 issues only need closing. One feature is built and passing but not merged: restructure steps 3 to 7, which changes how every session starts. Two features are designed but not built: a changelog page in every repo and the attribution guard on GitHub. The steps below are in the order I suggest. Step 3 is the one with real risk to test now; step 6 touches the most repos but is not built yet.",
   "hint": "Tap a step to see what it does, its state and its risk.",
   "key": [
    [
@@ -26,7 +26,7 @@
      "Pull request #305 (house-rules 2.68.1: switch off the design loop) should close unmerged, because the real 2.68.1 patch (pull request #312) replaced it.",
      "Risk: none. Closing changes no code, and an issue can be reopened."
     ],
-    "Approve the sweep below, keeping any issue you want to test first."
+    "Approve the sweep (the list of issues further down the page), keeping any issue you want to test first."
    ],
    [
     "lock",
@@ -36,7 +36,7 @@
     [
      "The restructure (step 3) refuses every tool until the agent's name is set. Cloud sessions start in a fresh container, so the plugin reads the name from environment variables.",
      "I checked this session: HOUSE_RULES_AGENT_NAME is not set, so after the merge a cloud session would be locked until the name is saved each time.",
-     "The steps are in docs/cloud-session-setup.md on the branch AjsAgent/issue-281-fix. In each cloud environment's settings, add HOUSE_RULES_AGENT_NAME=ajw2003sAgent and HOUSE_RULES_OWNED_BRANCHES. On your PC, the first session after the update asks for both and saves them once."
+     "The steps are in docs/cloud-session-setup.md on the branch AjsAgent/issue-281-fix. In each cloud environment's settings, add HOUSE_RULES_AGENT_NAME=ajw2003sAgent and HOUSE_RULES_OWNED_BRANCHES=AjsAgent/,claude/. On your PC, the first session after the update asks for both and saves them once."
     ],
     "Add the two variables to each cloud environment you use."
    ],
@@ -50,7 +50,7 @@
      "Where it is: the branch AjsAgent/issue-281-fix, house-rules 2.74.0, 34 files changed, and up to date with main. No pull request is open yet. The five per-step branches (issue-341-settings and the rest) are older copies already inside it.",
      "Tested: I ran verify.py on that branch today and it exited 0, with 966 checks passing. tools/verify_tools.py passed all 47 checks. The QA page is docs/plans/2026-10-24-restructure-steps-3-7-qa.html on the branch.",
      "Risk: high. It changes how every session starts, how commits and pull requests are credited, which deletes are allowed and what helper agents report, on every account that installs the plugin.",
-     "Merge order: you asked for background work tracking (#396) to ship as a 2.73.x patch, below this branch's 2.74.0. The CI version check (tools/check_plugin_version_bump.py) refuses any version that is not higher than main's, so tracking must merge first, as 2.73.1 or later (main is already 2.73.0). If this restructure merges first, tracking has to become 2.74.1."
+     "Merge order: you asked for background work tracking (#396) to ship as a 2.73.x patch, a lower version than this branch's 2.74.0. The CI version check (tools/check_plugin_version_bump.py) refuses any version that is not higher than main's, so tracking must merge first, as 2.73.1 or later (main is already 2.73.0). If this restructure merges first, tracking has to become 2.74.1."
     ],
     "Once step 2 is done, say \"open the restructure pull request\", test it in a fresh session, then reply \"QA passed: restructure steps 3 to 7\"."
    ],
@@ -64,7 +64,7 @@
      "State: still needed, because main's version check still tells a session to run claude plugin marketplace update. The branch is 99 commits behind main, conflicts with it, and uses version 2.69.0, which another release has since used.",
      "Risk: medium. It touches the same core file as the restructure, so it is rebased after step 3 merges."
     ],
-    "Nothing yet. After step 3 merges I rebase it, rerun both suites and give you a QA page."
+    "Nothing yet. After step 3 merges I rebase it (replay its changes on top of the latest main), rerun both test suites (verify.py and tools/verify_tools.py) and give you a QA page."
    ],
    [
     "list",
@@ -73,7 +73,7 @@
     "you",
     [
      "What it does: every repo keeps docs/changelog/, the session-start docs check names a missing one, and a pull request that leaves it unchanged gets a reminder, never a block.",
-     "State: you approved the design on 27 October. The build plan waits on your approval, on the branch claude/project-thread-4je2dp, published at claude.ai/artifact/HkCZV8e1ZLofXrAqRTGbg4. No plugin code exists yet.",
+     "State: you approved the design on 27 October. The build plan is on the branch claude/project-thread-4je2dp and published at claude.ai/artifact/HkCZV8e1ZLofXrAqRTGbg4. It waits on your approval. No plugin code exists yet.",
      "Risk: low, since it only reminds. It adds one sentence to the injected rules, which are at about 8,900 of a 9,700-character limit."
     ],
     "Read the build plan and reply \"Build plan approved: changelog page rule\"."
@@ -97,7 +97,7 @@
     "you",
     [
      "Pull request #294 (issue-triage skill): you approved it on 15 October, but it never merged and now conflicts with main. It adds a skill and a command, with no hooks, so the risk is low. I suggest I rebase it so it can merge.",
-     "Pull request #166 (art-pipeline plugin): opened 8 October, still merges cleanly, but the branch is 410 commits behind main. Its gate was never tried in a live session. An art-pipeline skill already appears in this session's skill list, so it may live somewhere else now; I can't tell that from this repo."
+     "Pull request #166 (art-pipeline plugin): opened 8 October, still merges cleanly, but the branch is 410 commits behind main. The check it adds, its gate, was never tried in a live session. An art-pipeline skill already appears in this session's skill list, so it may live somewhere else now; I can't tell that from this repo."
     ],
     "Say keep or close for each."
    ],
@@ -109,7 +109,7 @@
     [
      "#287 (configurable agent name) is done by restructure step 3 and can close once it merges.",
      "#110 (turn every approved plan into issues) was built in 2.49.0 but carries both wontfix and in progress; it can close.",
-     "#297 to #300 (pull requests say how to test and what is next), #301, #304 and #120 have plans from mid-October but no code. They can be re-planned after the restructure, since step 3 changes the same checks.",
+     "#297 to #300 (pull requests say how to test and what is next), #301 (a session finishes its own task), #304 (a tool that cleans a session transcript and files issues from it) and #120 (check every background job every 5 minutes) have plans from mid-October but no code. They can be re-planned after the restructure, since step 3 changes the same checks.",
      "#347 (restructure step 9, session triage) is labelled needs review but has no design or code yet.",
      "Left alone on purpose: the QA evidence set #389 to #395 (another account's work) and #383 with #396 to #400 (another thread is building those)."
     ],
@@ -117,7 +117,198 @@
    ]
   ]
  },
+ "approval": "Sweep approved: issues",
  "changes": [],
+ "choices": [
+  [
+   "close",
+   "Close the 41 finished issues listed in the sweep?",
+   [
+    [
+     "A",
+     "Close all 41",
+     1,
+     "Each one is merged and has run in every session for 8 days or more. A closed issue can be reopened if something breaks."
+    ],
+    [
+     "B",
+     "Close only the 14 you tested",
+     0,
+     "Closes the verify rework, the proof check fix, the 2.68.1 patch and #303. The other 27 stay open until you test them."
+    ],
+    [
+     "C",
+     "Close nothing yet",
+     0,
+     "Everything stays as it is."
+    ]
+   ],
+   "I suggest closing all 41, because the 27 untested ones have been running in your sessions since mid-October."
+  ],
+  [
+   "pr305",
+   "Close pull request #305, the emergency switch-off of the design loop?",
+   [
+    [
+     "A",
+     "Close it unmerged",
+     1,
+     "The real 2.68.1 patch, pull request #312, replaced it and you passed its QA."
+    ],
+    [
+     "B",
+     "Keep it open",
+     0,
+     "It stays open and keeps conflicting with main."
+    ]
+   ],
+   ""
+  ],
+  [
+   "restructure",
+   "When should restructure steps 3 to 7 go to QA?",
+   [
+    [
+     "A",
+     "After background work tracking merges",
+     1,
+     "Background work tracking (#396) merges first as 2.73.1. You add the two cloud settings, then I open the restructure pull request and you test it."
+    ],
+    [
+     "B",
+     "Now, in parallel",
+     0,
+     "I open the restructure pull request today. It must not merge until background work tracking has merged. If it merges first, tracking has to become 2.74.1."
+    ],
+    [
+     "C",
+     "Later",
+     0,
+     "It waits on its branch, and I have to keep merging main into that branch as other work lands."
+    ]
+   ],
+   "I suggest waiting for tracking, because the version check forces that merge order anyway."
+  ],
+  [
+   "pr338",
+   "What should happen to pull request #338, which stops a failed plugin update from stalling a session?",
+   [
+    [
+     "A",
+     "Rebase it after the restructure merges",
+     1,
+     "Both change the same core file, so doing it second means one rebase instead of two."
+    ],
+    [
+     "B",
+     "Rebase it now as a 2.73.x patch",
+     0,
+     "It ships sooner, and the restructure branch then has to take it in."
+    ],
+    [
+     "C",
+     "Close it",
+     0,
+     "Cloud sessions keep getting a version notice they cannot act on."
+    ]
+   ],
+   ""
+  ],
+  [
+   "changelog",
+   "When should the changelog page rule (#384 to #388) be built?",
+   [
+    [
+     "A",
+     "Review its build plan now",
+     1,
+     "Its build is small and only reminds, so it can be built while the restructure waits for QA."
+    ],
+    [
+     "B",
+     "After the restructure merges",
+     0,
+     "Nothing new starts until the restructure is in."
+    ]
+   ],
+   ""
+  ],
+  [
+   "attribution",
+   "When should the attribution guard on GitHub (#350 to #355) be built?",
+   [
+    [
+     "A",
+     "After everything above",
+     1,
+     "It writes a workflow into all 71 of your repos, so it goes last, and it is proved on focus-deck-app first."
+    ],
+    [
+     "B",
+     "Start it now",
+     0,
+     "It runs alongside the restructure work."
+    ],
+    [
+     "C",
+     "Drop it",
+     0,
+     "The in-session guard stays the only check on Claude credit."
+    ]
+   ],
+   ""
+  ],
+  [
+   "pr294",
+   "What should happen to pull request #294, the issue-triage skill?",
+   [
+    [
+     "A",
+     "Rebase it and merge",
+     1,
+     "You approved it on 15 October. It adds a skill and a command, with no hooks."
+    ],
+    [
+     "B",
+     "Fold it into session triage (#347)",
+     0,
+     "It waits until restructure step 9 is designed."
+    ],
+    [
+     "C",
+     "Close it",
+     0,
+     "The skill is dropped."
+    ]
+   ],
+   ""
+  ],
+  [
+   "pr166",
+   "What should happen to pull request #166, the art-pipeline plugin?",
+   [
+    [
+     "A",
+     "Keep it open for now",
+     1,
+     "An art-pipeline skill already shows in this session's skill list, so I first check where that copy lives before doing anything."
+    ],
+    [
+     "B",
+     "Close it",
+     0,
+     "Choose this if the plugin already lives somewhere else."
+    ],
+    [
+     "C",
+     "Rebase it and test it",
+     0,
+     "Its gate gets its first live test in a real session."
+    ]
+   ],
+   "I suggest keeping it, because I can't tell from this repo whether it has already moved."
+  ]
+ ],
  "sweep": [
   {
    "repo": "Ajw2003/AjsClaudeCodeTools",
@@ -454,8 +645,8 @@
   "blocking": "Your sweep approval, and the two cloud settings before the restructure merges.",
   "next": "Once you approve the sweep, I close each issue with a comment quoting its evidence and close pull request #305.",
   "todo": [
-   "Type \"Sweep approved: issues\" in the chat, adding \"keep #N\" for any issue you want to test first.",
-   "Add HOUSE_RULES_AGENT_NAME and HOUSE_RULES_OWNED_BRANCHES to each cloud environment you use.",
+   "Pick an option for each choice, then copy the line from the copy box into the chat. Add \"keep #N\" for any issue you want to test first.",
+   "Add HOUSE_RULES_AGENT_NAME=ajw2003sAgent and HOUSE_RULES_OWNED_BRANCHES=AjsAgent/,claude/ to each cloud environment you use.",
    "Say \"open the restructure pull request\" when you are ready to test steps 3 to 7."
   ]
  }
