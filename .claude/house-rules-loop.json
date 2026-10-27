@@ -1,6 +1,6 @@
 {
-  "feature": "proof check fix 1A 2A",
-  "stage": "done",
+  "feature": "background work tracking 1*",
+  "stage": "plan",
   "skip": false,
   "approvals": [
     {
@@ -87,27 +87,16 @@
       "stage": "QA passed",
       "name": "proof check fix merge and ill test in a new session, you keep working",
       "at": 1792806288
+    },
+    {
+      "stage": "Design approved",
+      "name": "background work tracking 1*",
+      "at": 1793137591
     }
   ],
-  "log_mark": "f5819fc08669fb70f8455f35dcee4188b5cb20b8908bd1c67c96ff2a8081b593",
+  "log_mark": "50c7c8cdeccaf72f19bb6c0d093cdde321d862b0318dc03f44eafb83448cb0ec",
   "redo": false,
-  "issues": [
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 374,
-      "labelled": true
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 375,
-      "labelled": true
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 376,
-      "labelled": true
-    }
-  ],
+  "issues": [],
   "labels": {
     "Ajw2003/AjsClaudeCodeTools#289": [
       "AjsAgent created this",
@@ -632,8 +621,6 @@
       "merged_pr": null
     }
   ],
-  "qa_page": "docs/plans/2026-10-21-proof-check-fix-qa.html",
-  "qa_page_linked": true,
   "sweep_proposed": [
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
