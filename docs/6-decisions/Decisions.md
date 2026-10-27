@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-27 - Build plan approved: background work tracking
+
+**Context.** Build plan `docs/plans/background-work-tracking-build-plan.html` for #396 (Background work
+tracking: every layer of delegated work is one tap away), five steps: #383, #400, #397, #398, #399.
+
+**Decision.** aj's reply was "Build plan approved: background work tracking 1A except please make a
+smaller version number 2.73.0 - 2.73.5 instead of 2.74.0". Choice 1A: one pull request for all five
+steps, with one QA page. The version is 2.73.1, not 2.74.0, because the unmerged restructure branch
+(`AjsAgent/issue-281-fix`) already uses 2.74.0; no other remote branch used a 2.73 patch number on
+2026-10-27.
+
+**Status.** Standing.
+
 ## 2026-10-27 - Design approved: background work tracking
 
 **Context.** Proposal page `docs/plans/background-work-tracking.html` for #383 (Give aj the transcript
