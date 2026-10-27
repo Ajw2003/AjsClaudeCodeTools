@@ -25,6 +25,10 @@ FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 TRAIL_PUNCT = ".,;:)]\"'"
 LEGACY_RE = re.compile(r"docs/(?:4-systems/[\w.-]+\.md|6-decisions/Decisions\.md)")
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv"}
+# A code file whose first lines carry this opts out, so a test file full of deliberately broken
+# pointers does not keep the real check failing forever. Counted and printed, never silent.
+SKIP_FILE_MARK = "docref: skip-file"
+SKIP_FILE_LINES = 10
 
 
 def _read_bytes(path):
@@ -145,7 +149,8 @@ def scan(root, excludes=()):
     res = {
         "markers": {}, "pointers": [], "pointer_files": [], "malformed": [], "unreadable": list(walk_errors),
         "undecodable": [], "not_files": 0, "unmatched_excludes": [],
-        "legacy": 0, "files": 0, "docs": 0, "binary": 0, "source": source, "fallback_reason": reason,
+        "legacy": 0, "files": 0, "docs": 0, "binary": 0, "skipped_files": [], "source": source,
+        "fallback_reason": reason,
     }
     hit = set()
     for rel in names:
@@ -171,8 +176,11 @@ def scan(root, excludes=()):
         except OSError as e:
             res["unreadable"].append((rel, str(e)))
             continue
-        res["files"] += 1
         lines = text.split("\n")
+        if not in_docs and any(SKIP_FILE_MARK in line for line in lines[:SKIP_FILE_LINES]):
+            res["skipped_files"].append(rel)
+            continue
+        res["files"] += 1
         if in_docs:
             res["docs"] += 1
             _scan_doc(rel, lines, res)
@@ -241,6 +249,8 @@ def cmd_check(root, excludes):
     if res["not_files"]:
         print("docref: %d path(s) listed by git are not readable files (deleted, submodule or nested repo)"
               % res["not_files"])
+    for rel in res["skipped_files"]:
+        print("docref: skipped %s (it opts out with %r)" % (rel, SKIP_FILE_MARK))
     _print_notes(res)
     print("docref: %d pointers found: %d ok, %d stale, %d dangling, %d ambiguous"
           % (len(res["pointers"]), counts["ok"], counts["stale"], counts["dangling"], counts["ambiguous"]))
