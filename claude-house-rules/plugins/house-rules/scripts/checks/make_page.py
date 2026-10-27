@@ -242,6 +242,55 @@ with open(_stage, encoding="utf-8") as _f:
 _mp_cases.append(("make_page: QA mode writes qa_page into an existing stage file and keeps its other keys",
                   _rc == 0 and _sd == {"feature": "demo", "stage": "Build", "qa_page": "docs/plans/qa3.html"}))
 
+# The Ophan fixture (#412): the real Ophan QA page's content, with no evidence list, over a diff that
+# changes an animation, a model, gameplay code and a screenshot. It must be refused.
+import struct as _oph_struct
+import zlib as _oph_zlib
+
+
+def _oph_png():
+    def chunk(t, b):
+        c = t + b
+        return _oph_struct.pack(">I", len(b)) + c + _oph_struct.pack(">I", _oph_zlib.crc32(c) & 0xffffffff)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", _oph_struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", _oph_zlib.compress(b"\x00\xff\x00\x00")) + chunk(b"IEND", b""))
+
+
+_oph_d = _mp_proj("ophan", {"use": "defaults"})
+_mp_git(_oph_d, "init", "-q", "-b", "main")
+with open(os.path.join(_oph_d, "placeholder.txt"), "w", encoding="utf-8") as _f:
+    _f.write("base\n")
+_mp_git(_oph_d, "add", "-A")
+_mp_git(_oph_d, "commit", "-q", "-m", "base")
+for _n, _t in (("Assets/Models/ArtBible/Enemies/Fear/TheOphanOfHours/TheOphanOfHours.controller", b"%YAML 1.1\n"),
+               ("Assets/_Project/Scripts/Runtime/Raid/Ophan/OphanHunt.cs", b"class OphanHunt { }\n"),
+               ("Assets/Models/ArtBible/Animations/TheOphanOfHours_Generic.fbx", b"fbx\n"),
+               ("docs/generated/ophan-418/solo-beam.png", _oph_png())):
+    _p = os.path.join(_oph_d, *_n.split("/"))
+    os.makedirs(os.path.dirname(_p), exist_ok=True)
+    with open(_p, "wb") as _f:
+        _f.write(_t)
+_mp_git(_oph_d, "add", "-A")
+_mp_git(_oph_d, "commit", "-q", "-m", "ophan")
+_oph_qa = {"feature": "the Ophan in the sky", "base": "main",
+           "unverified": ["Nobody has played it by hand yet."], "files": {}}
+_oph_c = _mp_qa_content("ophan", _oph_qa)
+with open(_oph_c, encoding="utf-8") as _f:
+    _oph_pg = json.load(_f)
+_oph_pg["short"]["items"] = [
+    ["check", "The beam's look", "It no longer floods your own view", "done",
+     "On the target's own screen the beam fades out over its last 25 m. Screenshot: docs/generated/ophan-418/staging-beam-host.png.",
+     "Nothing from you."],
+    ["check", "The wings spread", "The wings open fully", "done",
+     "Review sheet: docs/art/anim/fear/ophan_spread.png.", "Nothing from you."],
+    ["check", "The take", "The lift looks right", "done",
+     "Screenshot: staging-lift-host.png.", "Nothing from you."]]
+with open(_oph_c, "w", encoding="utf-8") as _f:
+    json.dump(_oph_pg, _f)
+_rc, _o = _mp("build", _oph_c, "--project", _oph_d)
+_mp_cases.append(("make_page (#412): the Ophan QA page's content, with no evidence for its animation, model and gameplay changes, is refused",
+                  _rc == 2))
+
 # The copy box must hold the exact phrase the design-loop gate accepts (#286).
 _hk_spec = _ig_util.spec_from_file_location("hook_for_approval", HOOK)
 _hk = _ig_util.module_from_spec(_hk_spec)
