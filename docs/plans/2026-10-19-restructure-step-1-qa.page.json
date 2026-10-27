@@ -55,7 +55,7 @@
         "Your test",
         "Read the rebuilt grilling summary on your phone",
         "you",
-        "The page is docs/plans/2026-10-19-grilling-summary.html, also published privately at https://claude.ai/artifact/7mYSYu4NMgXvnEVcGw4Taa. Tap each of the ten topics: every \"Decided by\" line should say the round, what the question asked and what you chose, with nothing to look up.",
+        "The page is docs/plans/2026-10-19-grilling-summary.html. Tap each of the ten topics: every \"Decided by\" line should say the round, what the question asked and what you chose, with nothing to look up.",
         "Reply \"QA passed: restructure step 1\", or \"QA failed: restructure step 1\" and say what reads wrong."
       ]
     ]
