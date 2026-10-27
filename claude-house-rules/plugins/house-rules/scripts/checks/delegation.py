@@ -1379,6 +1379,50 @@ if ("    audit)" in read(RUN)):
 else:
     report("FAIL", "run.sh names audit in its no-interpreter fallback")
 
+# --- rclink: the Remote Control transcript link (#383) -------------------------------------
+def _rc_payload(result):
+    return json.dumps({"session_id": "verify", "tool_name": "mcp__hearthbot__start_remote_control",
+                       "tool_input": {}, "tool_response": [{"type": "text", "text": json.dumps({"result": result})}]})
+
+
+def _rc_env(**kw):
+    e = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "HOUSE_RULES_WORKTRACKING")}
+    e.update(kw)
+    return e
+
+
+def _rc_case(title, result, env, expect_fire):
+    code, out, err = run_hook("rclink", _rc_payload(result), env=env)
+    problems = []
+    if code != 0:
+        problems.append(f"exit {code}, must never be non-zero")
+    if expect_fire:
+        try:
+            ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        except Exception as exc:
+            problems.append(f"could not parse output: {exc}")
+            ctx = ""
+        for needle in ("remote_control_status", "Transcript of the session on your PC", 'kind "link"'):
+            if needle not in ctx:
+                problems.append(f"additionalContext is missing {needle!r}")
+    elif out.strip():
+        problems.append(f"expected no output, got {out[:120]!r}")
+    report("FAIL" if problems else "PASS", title)
+    for p in problems:
+        print(f"          {p}")
+
+
+_rc_case("rclink fires on a `started` Remote Control result and asks for the link to be posted and attached",
+         "started", _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1"), True)
+_rc_case("rclink fires on an `already_running` result", "already_running",
+         _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1"), True)
+_rc_case("rclink is silent on an `asked` result (nothing started yet)", "asked",
+         _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1"), False)
+_rc_case("rclink is silent outside a Projects session (CLAUDE_CODE_PROJECTS_SESSION unset)", "started",
+         _rc_env(), False)
+_rc_case("rclink is silent with HOUSE_RULES_WORKTRACKING=off", "started",
+         _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1", HOUSE_RULES_WORKTRACKING="off"), False)
+
 # --- userpromptaudit: the background half, UserPromptSubmit --------------------------------
 def _task_notification(task_id, status="completed"):
     return (

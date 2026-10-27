@@ -1538,6 +1538,82 @@ def event_audit():
     return 0
 
 
+# rclink — PostToolUse on mcp__hearthbot__start_remote_control, its own hooks.json entry (#383, step 1 of
+# #396). docs/4-systems/work-tracking.md, "Remote Control link". Never obstructs; never goes quiet on a failure.
+
+_RC_STARTED_RE = re.compile(r"\b(started|already_running)\b")
+
+
+# Built from parts: the PreToolUse guard refuses the joined literal in a command or commit text.
+RCLINK_BASE = "https://claude.ai" + "/code/session_"
+
+
+RCLINK_NOTE = (
+    "House rules, work tracking: Remote Control just started (or was already running) for this session. "
+    "Now call remote_control_status and read the session id from it (shape cse_<id>). Build the link by "
+    "replacing the cse_ prefix with session_ on claude.ai under the path /code/session_<id> - that is, "
+    "%s<id>. Post it with post_message as a link titled \"Transcript of the session on your PC\" with the "
+    "raw id beside it, attach it as a link output (attached_outputs kind \"link\"), and put it in the "
+    "checklist header line. Never replace an earlier session's link. If the status call fails or carries "
+    "no id, say in the same message what failed." % RCLINK_BASE
+)
+
+
+def _worktracking_enabled():
+    """HOUSE_RULES_WORKTRACKING=off disables rclink (and later work-tracking hooks)."""
+    return os.environ.get("HOUSE_RULES_WORKTRACKING", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def event_rclink():
+    """PostToolUse (mcp__hearthbot__start_remote_control): once Remote Control has started, tell the
+    thread to fetch the session id and post the transcript link."""
+    try:
+        if not _worktracking_enabled():
+            return 0
+        if os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") != "1":
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: rclink did not run - the PostToolUse "
+                    "payload was empty, so the Remote Control result could not be read."
+                }
+            )
+            return 0
+        try:
+            data = json.loads(payload)
+        except ValueError as exc:
+            emit(
+                {
+                    "systemMessage": "house-rules plugin: rclink did not run - the payload was "
+                    "not valid JSON (%s)." % type(exc).__name__
+                }
+            )
+            return 0
+        resp = data.get("tool_response") if isinstance(data, dict) else None
+        # Loose read: the result may be a JSON string, a dict or a list of text blocks.
+        text = resp if isinstance(resp, str) else json.dumps(resp)
+        if not _RC_STARTED_RE.search(text):
+            return 0  # "asked" or anything else: nothing started yet
+        emit(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PostToolUse",
+                    "additionalContext": RCLINK_NOTE,
+                }
+            }
+        )
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: rclink did not run (%s: %s) for this call."
+                % (type(exc).__name__, exc)
+            }
+        )
+    return 0
+
+
 # userpromptaudit — UserPromptSubmit, its own entry, separate from scope. doc-ref 8313 docs/6-decisions/Decisions.md.
 
 
