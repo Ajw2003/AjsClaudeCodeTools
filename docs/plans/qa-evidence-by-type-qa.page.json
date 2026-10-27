@@ -1,0 +1,176 @@
+{
+  "title": "QA Evidence by Change Type QA",
+  "eyebrow": "QA for issue #411 (QA pages must prove each change with evidence for its type) · plugin 2.74.0 · branch AjsAgent/qa-evidence-by-type",
+  "approval": "QA passed: QA evidence by change type",
+  "short": {
+    "lead": "All six steps of issue #411 are built, and this page was built by the new QA mode, so it had to pass the evidence check itself. The proof is the Ophan page you were sent. Rebuilt from its own content, the builder on main still makes it with no clip or picture, and the new builder refuses it. Given evidence, the new builder makes the cards shown under Changes, using the real wings-spread clip and the real beam screenshots from Ophan pull request 445.",
+    "hint": "Tap a step to see what was built and how it was checked.",
+    "key": [
+      [
+        "Built",
+        "done"
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "flask",
+        "Ophan test",
+        "The Ophan page is now a test",
+        "done",
+        "Sub-issue #412 (the Ophan page's content becomes a test that must be refused). The builder refuses a copy of that page's content when it is run in a test repo that uses the Ophan feature's file names.",
+        "Checked by verify.py, which also asserts that the refusal names the missing evidence."
+      ],
+      [
+        "stop",
+        "Evidence rule",
+        "The builder requires evidence by type",
+        "done",
+        "Sub-issue #413 (the page builder requires the evidence each change type needs). Each change in the page's qa.evidence list names its type: animation, model, ai, gameplay, visual, or none (with a reason). The changed files imply types too: an animator controller means animation, an .fbx file means model, a script under Scripts/Runtime means gameplay. The builder also refuses a page whose text names a picture or clip file that the page does not show.",
+        "Checked by verify.py, with one test case for each refusal, plus a test of a project overriding the file patterns in its page-style.json."
+      ],
+      [
+        "eye",
+        "Clips",
+        "Pages show clips, before and after side by side",
+        "done",
+        "Sub-issue #414 (the page template shows video clips). Before and after clips sit side by side on a wide screen, one above the other on a phone, and play, pause and seek together. A file over 15 MB is refused.",
+        "Checked by verify.py and by the screenshots and recording under Changes."
+      ],
+      [
+        "list",
+        "Change list",
+        "No more \"0 files\"",
+        "done",
+        "Sub-issue #415 (the change list refuses a count of 0 changed files). The Ophan page said 0 files because the staging branch already held the feature. A count of 0 now stops the build, and the message says to count from the commit before the merge.",
+        "Checked by verify.py, with the Ophan test repo on a feature branch, so that the build is refused for missing evidence and not for the 0-file count."
+      ],
+      [
+        "lock",
+        "Reply check",
+        "The handover reply needs a proven page",
+        "done",
+        "Sub-issue #416 (the handover reply counts only a QA page whose evidence passed). The builder records the evidence it checked in the design-loop stage file. The check that runs at the end of each reply refuses a QA page that has no such record.",
+        "Checked by verify.py."
+      ],
+      [
+        "check",
+        "Your QA",
+        "You look, then test it yourself",
+        "you",
+        "Sub-issue #417 (rule text, docs, version 2.74.0 and this page). Watch the recording and compare the before and after pictures under Changes, then try the builder on a real page of your own.",
+        "Send \"QA passed: QA evidence by change type\", or \"QA failed: QA evidence by change type\" with what to change."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "Recording of the new Ophan page",
+      "A phone-width walk through the proof cards, with the clips playing.",
+      null,
+      "Recorded with a headless browser from the page the new builder made. The first card is the real wings-spread clip from Ophan pull request 445. The before and after clips are stand-ins cut from that clip, and the video labels them as stand-ins. No before clip of the Ophan was ever recorded. A real handover would carry a recording from the game.",
+      null,
+      {
+        "src": "docs/generated/qa-evidence-411/walkthrough.mp4",
+        "caption": "The new builder's Ophan page at phone width"
+      }
+    ],
+    [
+      "keep",
+      "Two small bugs I found, not fixed here",
+      "Both are outside this build.",
+      null,
+      "First, the stage file stored this feature's name as \"QA evidence by change type 1A 2A 3A&#34;</message>\", because the approval parser keeps a trailing quote and a closing tag. Second, the lock that blocks code edits outside the Build stage watches the Write and Edit tools but not a shell command that edits a source file. I suggest opening an issue for each bug.",
+      null,
+      null
+    ]
+  ],
+  "qa": {
+    "feature": "QA evidence by change type",
+    "base": "origin/main",
+    "unverified": [
+      "No real PlunderSpell QA page has been built with the new builder yet; the Ophan demo uses a throwaway repo with the real clip and screenshots",
+      "The before and after clips in the Ophan demo are labelled stand-ins, because no before clip of the Ophan exists",
+      "This session runs the installed 2.73.1 hooks, so the 2.74.0 reply check does not run here until the branch is merged and the plugin is updated. The plugin update I tried in this session failed because the cloud container has no aj-house-rules marketplace"
+    ],
+    "evidence": [
+      {
+        "change": "The Changes part of a QA page",
+        "type": "visual",
+        "media": "docs/generated/qa-evidence-411/after-changes-desktop-full.png",
+        "before": "docs/generated/qa-evidence-411/before-changes-desktop.png",
+        "after": "docs/generated/qa-evidence-411/after-changes-desktop.png",
+        "caption": "Before: the Ophan page as the builder on main makes it, with no clip or picture. After: the same page from the new builder, given evidence. The first picture shows the whole Changes section of the page."
+      },
+      {
+        "change": "The builder refuses the page you were sent",
+        "type": "visual",
+        "media": "docs/generated/qa-evidence-411/refusal.png",
+        "before": "docs/generated/qa-evidence-411/before-short-desktop.png",
+        "after": "docs/generated/qa-evidence-411/refusal.png",
+        "caption": "Before: the builder on main builds the page as sent, exit 0. After: the new builder refuses the same content, exit 2."
+      }
+    ],
+    "files": {
+      "claude-house-rules/plugins/house-rules/scripts/make_page.py": [
+        134,
+        5,
+        "the evidence rule (#413), the 15 MB limit (#414), the zero count refusal (#415) and the stage record (#416)"
+      ],
+      "claude-house-rules/plugins/house-rules/templates/handover-page.html": [
+        40,
+        7,
+        "proof cards and clips (#414)"
+      ],
+      "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py": [
+        8,
+        2,
+        "the reply check reads the evidence record (#416)"
+      ],
+      "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py": [
+        189,
+        2,
+        "the Ophan test and one case per refusal (#412 to #415)"
+      ],
+      "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py": [
+        19,
+        6,
+        "the reply check cases (#416)"
+      ],
+      "claude-house-rules/plugins/house-rules/rules/detail/visual-check.md": [
+        32,
+        0,
+        "what each change type needs (#417)"
+      ],
+      "docs/4-systems/qa-evidence.md": [
+        43,
+        0,
+        "how it works (#417)"
+      ],
+      "docs/generated/qa-evidence-411/make_demo.py": [
+        98,
+        0,
+        "builds the Ophan page three ways for this page"
+      ],
+      "docs/generated/qa-evidence-411/shoot.js": [
+        71,
+        0,
+        "takes this page's screenshots and recording"
+      ]
+    }
+  },
+  "wrapup": {
+    "summary": "Every QA page must now show each change's clip or picture, with a before and after, or the builder refuses it.",
+    "changing": "This pull request changes make_page.py, the page template, the reply check in design_loop.py, the tests that verify.py runs, the rule text and its detail files, the docs, and the plugin version (2.74.0).",
+    "blocking": "Waiting on your QA verdict, passed or failed.",
+    "next": "On QA passed, I merge the pull request and close #411 to #417. On QA failed, your list of changes starts the next design.",
+    "todo": [
+      "Watch the recording and compare the before and after pictures under Changes.",
+      "Tap <b>Copy my reply</b> and send it: \"QA passed: QA evidence by change type\", or send \"QA failed: QA evidence by change type\" with what to change."
+    ]
+  }
+}
