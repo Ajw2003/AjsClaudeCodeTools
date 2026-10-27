@@ -46,25 +46,27 @@
     "Restructure steps 3 to 7: built, passing, waiting on your QA",
     "you",
     [
-     "What it does: settings and identity (#341), safe git (#349), the design loop and pages (#343), writing and evidence rules (#344) and helper agents (#345), all following your five grilling rounds. Parent #381, release #382.",
+     "What it does: settings and identity (#341), safe git (#349), the design loop and pages (#343), writing and evidence rules (#344) and helper agents (#345), all following your five grilling rounds. The parent issue is #381 and the release issue is #382.",
      "Where it is: the branch AjsAgent/issue-281-fix, house-rules 2.74.0, 34 files changed, and up to date with main. No pull request is open yet. The five per-step branches (issue-341-settings and the rest) are older copies already inside it.",
      "Tested: I ran verify.py on that branch today and it exited 0, with 966 checks passing. tools/verify_tools.py passed all 47 checks. The QA page is docs/plans/2026-10-24-restructure-steps-3-7-qa.html on the branch.",
+     "Your rule is that nothing with bugs or unfinished work reaches main. Two things stand in the way. First, since pull request #401 landed, the branch conflicts with main in two files (plugin.json and scripts/checks/design_loop.py), so I merge main in and rerun verify.py and tools/verify_tools.py. Second, the two bugs already on main, in step 4 and step 9 on this page, are fixed first.",
      "Risk: high. It changes how every session starts, how commits and pull requests are credited, which deletes are allowed and what helper agents report, on every account that installs the plugin.",
-     "Merge order: you asked for background work tracking (#396) to ship as a 2.73.x patch, a lower version than this branch's 2.74.0. The CI version check (tools/check_plugin_version_bump.py) refuses any version that is not higher than main's, so tracking must merge first, as 2.73.1 or later (main is already 2.73.0). If this restructure merges first, tracking has to become 2.74.1."
+     "Merge order: you asked for background work tracking (#396) to ship as a 2.73.x patch, a lower version than this branch's 2.74.0. The CI version check (tools/check_plugin_version_bump.py) refuses any version that is not higher than main's, so tracking must merge first, as 2.73.2 or later (main reached 2.73.1 tonight through pull request #401). If this restructure merges first, tracking has to become 2.74.1."
     ],
     "Once step 2 is done, say \"open the restructure pull request\", test it in a fresh session, then reply \"QA passed: restructure steps 3 to 7\"."
    ],
    [
     "file",
     "4 \u00b7 Rebase",
-    "Pull request #338: a failed plugin update no longer stalls a session",
+    "Pull request #338: fixes a live bug where a failed plugin update stalls a session",
     "",
     [
-     "What it does: a copy of the plugin synced from your claude.ai account gets a one-line notice instead of an update it can never run. That prompt once held an overnight FocusDesk run for hours.",
+     "What it does: a copy of the plugin synced from your claude.ai account gets a one-line notice instead of an update it can never run. That update prompt once held an overnight FocusDesk run for hours.",
      "State: still needed, because main's version check still tells a session to run claude plugin marketplace update. The branch is 99 commits behind main, conflicts with it, and uses version 2.69.0, which another release has since used.",
-     "Risk: medium. It touches the same core file as the restructure, so it is rebased after step 3 merges."
+     "It is a live bug on main: this thread's own session start tonight told me to run claude plugin marketplace update aj-house-rules, and the hook's own output shows it fails with Marketplace aj-house-rules not found.",
+     "Risk: medium. It was written against hook.py before that file was split into modules. The fix now has to be re-applied to scripts/house_rules/core.py, which the restructure also changes, so it goes in first as a small patch and the restructure branch takes it in."
     ],
-    "Nothing yet. After step 3 merges I rebase it (replay its changes on top of the latest main), rerun both test suites (verify.py and tools/verify_tools.py) and give you a QA page."
+    "Pick an option in choice 4 (pull request #338, further down the page). I suggest I rebase it now (replay its changes on top of the latest main), rerun both test suites (verify.py and tools/verify_tools.py) and give you a QA page."
    ],
    [
     "list",
@@ -114,6 +116,18 @@
      "Left alone on purpose: the QA evidence set #389 to #395 (another account's work) and #383 with #396 to #400 (another thread is building those)."
     ],
     "Nothing now; I can bring a second sweep for these after step 3."
+   ],
+   [
+    "search",
+    "9 \u00b7 Fix",
+    "The doc pointer check has failed on main for 11 days",
+    "",
+    [
+     "docref.py check, the command that proves the archivist's doc-ref pointers still resolve, reports 38 problems on main today. It reported the same 38 on 16 October.",
+     "I read all 38: every one is a deliberately broken pointer inside the test file scripts/checks/docs.py, which the check scans as if it were real code. So the check can never pass, and a real broken pointer would hide among them.",
+     "The restructure branch has the same 38, so merging it neither adds nor fixes any."
+    ],
+    "Pick an option in choice 9 (the doc pointer check, further down the page). I suggest I make the check skip the deliberately broken pointers in its own test file, as a small patch before the restructure."
    ]
   ]
  },
@@ -172,7 +186,7 @@
      "A",
      "After background work tracking merges",
      1,
-     "Background work tracking (#396) merges first as 2.73.1. You add the two cloud settings, then I open the restructure pull request and you test it."
+     "Background work tracking (#396) merges first as 2.73.2 or later. You add the two cloud settings, then I open the restructure pull request and you test it."
     ],
     [
      "B",
@@ -195,15 +209,15 @@
    [
     [
      "A",
-     "Rebase it after the restructure merges",
+     "Rebase it now (replay its changes on the latest main) as a 2.73.x patch",
      1,
-     "Both change the same core file, so doing it second means one rebase instead of two."
+     "It fixes a bug that is live on main today, and your rule says the restructure must not ship on top of a known bug."
     ],
     [
      "B",
-     "Rebase it now as a 2.73.x patch",
+     "Rebase it after the restructure merges",
      0,
-     "It ships sooner, and the restructure branch then has to take it in."
+     "One rebase instead of two, but the restructure would reach main while this bug is still there."
     ],
     [
      "C",
@@ -307,6 +321,25 @@
     ]
    ],
    "I suggest keeping it, because I can't tell from this repo whether it has already moved."
+  ],
+  [
+   "docref",
+   "Fix the doc pointer check that cannot pass on main?",
+   [
+    [
+     "A",
+     "Fix it now as a small patch",
+     1,
+     "The check skips its own test fixtures, so it passes on main and shows real broken pointers again."
+    ],
+    [
+     "B",
+     "Fix it inside the restructure",
+     0,
+     "One less pull request, but it makes a big change bigger."
+    ]
+   ],
+   "I suggest a separate patch, because a small fix is easier to test on its own."
   ]
  ],
  "sweep": [
