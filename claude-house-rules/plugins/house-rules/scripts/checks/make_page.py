@@ -200,7 +200,8 @@ for _l in _mp_git(_d, "diff", "--numstat", "main~1...HEAD").splitlines():
     _a, _r, _f = _l.split("\t")
     _ns[_f] = (int(_a), int(_r))
 _qa = {"feature": "demo feature", "base": "main~1", "unverified": ["The live run."],
-       "files": {"planned.py": [5, 0, "grow"], "untouched.py": [3, 1, "tidy"]}}
+       "files": {"planned.py": [5, 0, "grow"], "untouched.py": [3, 1, "tidy"]},
+       "evidence": [{"change": "The demo", "type": "none", "reason": "Scripts only; nothing is drawn."}]}
 
 
 def _mp_qa_content(name, qa):
@@ -294,6 +295,86 @@ with open(_oph_c, "w", encoding="utf-8") as _f:
 _rc, _o = _mp("build", _oph_c, "--project", _oph_d)
 _mp_cases.append(("make_page (#412): the Ophan QA page's content, with no evidence for its animation, model and gameplay changes, is refused",
                   _rc == 2 and "evidence" in _o))
+
+# #413: the Ophan content with evidence entries; one passing build and one case per refusal.
+_ev_dir = os.path.join(_oph_d, "docs", "generated", "qa")
+os.makedirs(_ev_dir, exist_ok=True)
+for _n in ("hover.mp4", "spread.mp4", "wings.mp4", "rec-a.mp4", "rec-b.mp4", "rec.mp4", "m-old.png", "m-new.png", "m.png"):
+    with open(os.path.join(_ev_dir, _n), "wb") as _f:
+        _f.write(_oph_png() if _n.endswith(".png") else b"clip-bytes")
+_Q = "docs/generated/qa/"
+
+
+def _ev(**kw):
+    return dict(kw)
+
+
+def _ev_anim(**kw):
+    return _ev(**dict({"change": "Wings-spread pose", "type": "animation", "media": _Q + "wings.mp4",
+                       "before": _Q + "hover.mp4", "after": _Q + "spread.mp4"}, **kw))
+
+
+def _ev_model(**kw):
+    return _ev(**dict({"change": "The Ophan model", "type": "model", "media": "docs/generated/ophan-418/solo-beam.png",
+                       "before": _Q + "m-old.png", "after": _Q + "m-new.png"}, **kw))
+
+
+def _ev_game(**kw):
+    return _ev(**dict({"change": "The hunt", "type": "gameplay", "media": _Q + "rec.mp4",
+                       "before": _Q + "rec-a.mp4", "after": _Q + "rec-b.mp4"}, **kw))
+
+
+def _oph_build(name, evidence, items=None, style=None):
+    c = _mp_qa_content(name, dict(_oph_qa, evidence=evidence))
+    with open(c, encoding="utf-8") as f:
+        pg = json.load(f)
+    pg["short"]["items"] = items if items is not None else [
+        ["check", "The beam's look", "It no longer floods your own view", "done",
+         "Screenshot: docs/generated/ophan-418/solo-beam.png.", "Nothing from you."]]
+    with open(c, "w", encoding="utf-8") as f:
+        json.dump(pg, f)
+    sp = os.path.join(_oph_d, "docs", "page-style.json")
+    with open(sp, "w", encoding="utf-8") as f:
+        json.dump(style or {"use": "defaults"}, f)
+    return _mp("build", c, "--project", _oph_d)
+
+
+_full = [_ev_anim(), _ev_model(), _ev_game()]
+_rc, _o = _oph_build("ophan-ok", _full)
+_mp_cases.append(("make_page (#413): the Ophan content with animation, model and gameplay evidence and only shown screenshots builds",
+                  _rc == 0))
+_rc, _o = _oph_build("ev-empty", [])
+_mp_cases.append(("make_page (#413): an empty qa.evidence list is refused", _rc == 2 and "qa.evidence" in _o))
+_rc, _o = _oph_build("ev-type", [_ev_anim(type="sparkle")] + _full[1:])
+_mp_cases.append(("make_page (#413): an unknown evidence type is refused, naming the change and the type",
+                  _rc == 2 and "Wings-spread pose" in _o and "sparkle" in _o))
+_rc, _o = _oph_build("ev-pic", [_ev_anim(media=_Q + "m.png")] + _full[1:])
+_mp_cases.append(("make_page (#413): animation media that is a picture is refused, naming the change and field",
+                  _rc == 2 and "Wings-spread pose" in _o and "media" in _o and "clip" in _o))
+_bad = _ev_model()
+del _bad["before"]
+_rc, _o = _oph_build("ev-nobefore", [_full[0], _bad, _full[2]])
+_mp_cases.append(("make_page (#413): a model entry missing before is refused, naming the change, type and field",
+                  _rc == 2 and "The Ophan model" in _o and "model" in _o and "'before'" in _o))
+_rc, _o = _oph_build("ev-noreason", _full + [{"change": "A helper", "type": "none"}])
+_mp_cases.append(("make_page (#413): a none entry without a reason is refused, naming the change",
+                  _rc == 2 and "A helper" in _o and "reason" in _o))
+_rc, _o = _oph_build("ev-nofile", [_ev_anim(after=_Q + "ghost.mp4")] + _full[1:])
+_mp_cases.append(("make_page (#413): an evidence file that does not exist is refused, naming it",
+                  _rc == 2 and "ghost.mp4" in _o and "Wings-spread pose" in _o))
+_rc, _o = _oph_build("ev-uncovered", _full[:2])
+_mp_cases.append(("make_page (#413): a type implied by the changed files with no entry is refused, naming the type and a file",
+                  _rc == 2 and "gameplay" in _o and "OphanHunt.cs" in _o))
+_rc, _o = _oph_build("ev-named", _full, items=[
+    ["check", "The beam", "Beam", "done", "Screenshot: x.png.", "Nothing from you."]])
+_mp_cases.append(("make_page (#413): a 'Screenshot: x.png' in the text that the page does not show is refused, naming x.png",
+                  _rc == 2 and "x.png" in _o))
+_rc, _o = _oph_build("ev-over", _full[:2], style={"use": "defaults", "evidence_paths": {"ai": [r"Ophan/.*\.cs$"]}})
+_mp_cases.append(("make_page (#413): an evidence_paths override in page-style.json takes effect (the .cs file now implies ai)",
+                  _rc == 2 and "ai (implied" in _o and "gameplay (implied" not in _o))
+_rc, _o = _oph_build("ev-over2", _full[:2], style={"use": "defaults", "evidence_paths": {"gameplay": [], "ai": []}})
+_mp_cases.append(("make_page (#413): an evidence_paths override that empties gameplay and ai lets the same evidence build",
+                  _rc == 0))
 
 # The copy box must hold the exact phrase the design-loop gate accepts (#286).
 _hk_spec = _ig_util.spec_from_file_location("hook_for_approval", HOOK)
