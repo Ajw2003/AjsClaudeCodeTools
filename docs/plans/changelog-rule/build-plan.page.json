@@ -1,0 +1,130 @@
+{
+ "title": "Changelog Page Rule: Build Plan",
+ "eyebrow": "Build plan for approval · design approved 1A 2A 3A",
+ "approval": "Build plan approved: changelog page rule",
+ "short": {
+  "lead": "Your design picks were 1A (docs/changelog/ next to the tiers), 2A (checked at session start and reminded on each pull request) and 3A (visual rows need a real picture). This is how it gets built: four steps, each its own GitHub issue under #384, built on a branch and handed back with a QA page.",
+  "hint": "Tap a step to see what it creates and what it needs from you.",
+  "key": [
+   [
+    "We build it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "file",
+    "Template",
+    "#385 The template ships in the plugin",
+    "",
+    "templates/changelog.page.json, and a section in the project-docs skill on making docs/changelog/ from it.",
+    "Nothing."
+   ],
+   [
+    "search",
+    "Check",
+    "#386 Session start names a missing changelog",
+    "",
+    "The docs check also looks for docs/changelog/changelog.json, in the same message as any missing tier. Silent when everything is there.",
+    "Nothing."
+   ],
+   [
+    "hand",
+    "Reminder",
+    "#387 Pull request reminder",
+    "",
+    "Creating a pull request whose branch leaves docs/changelog/ unchanged gets a reminder. Never a block. HOUSE_RULES_CHANGELOG=off turns it off.",
+    "Nothing."
+   ],
+   [
+    "list",
+    "Rule",
+    "#388 Rule text, docs and release",
+    "",
+    "One sentence in the documentation rule, the detail file, this repo's own first changelog, a version bump and a pull request with a QA page.",
+    "Nothing until QA."
+   ],
+   [
+    "check",
+    "QA",
+    "You test it",
+    "you",
+    "A QA page with the exact steps.",
+    "Your QA pass."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "templates/changelog.page.json",
+   "The blank changelog page.",
+   null,
+   "Copied from PlunderSpell's docs/templates/changelog/changelog.template.json. A verify.py case builds a filled copy and checks the unfilled one is refused.",
+   [
+    "Only PlunderSpell has it.",
+    "Every repo with the plugin has it.",
+    "Changelogs look the same everywhere."
+   ]
+  ],
+  [
+   "chg",
+   "scripts/house_rules/docs.py, event_docstiers",
+   "Also checks docs/changelog/changelog.json.",
+   [
+    "Six tiers",
+    "Six tiers and the changelog"
+   ],
+   "Four verify.py cases: all present (silent), changelog missing, both missing, not-owned repo.",
+   null
+  ],
+  [
+   "chg",
+   "The pull request checks in guard and guardgithub",
+   "A reminder when the branch skips the changelog.",
+   [
+    "No changelog check",
+    "A reminder, never a block"
+   ],
+   "git diff against the base under the existing short timeout. Says 'could not tell' rather than guessing. Four verify.py cases.",
+   null
+  ],
+  [
+   "chg",
+   "rules/house-rules.md and rules/detail/docs-tiers.md",
+   "The documentation rule names the changelog.",
+   [
+    "Six tiers",
+    "Six tiers and docs/changelog/"
+   ],
+   "The inject output size test must still pass.",
+   null
+  ],
+  [
+   "new",
+   "This repo's docs",
+   "A systems doc, a decision entry, state, today, and this repo's own first changelog.",
+   null,
+   "docs/4-systems/changelog.md is already written as the plan; it is updated as each step lands.",
+   [
+    "Nothing records this rule.",
+    "The usual tier updates.",
+    "You can find why and how later."
+   ]
+  ]
+ ],
+ "choices": [],
+ "wrapup": {
+  "summary": "The build plan for the changelog page rule: four issues, #385 to #388, under #384.",
+  "changing": "The house-rules plugin on branch claude/project-thread-4je2dp of AjsClaudeCodeTools. Nothing changes in your installed plugin until the pull request merges.",
+  "blocking": "Your approval of this build plan.",
+  "next": "I build the four steps, run verify.py and the tools checks, open a pull request and send a QA page.",
+  "todo": [
+   "Reply \"Build plan approved: changelog page rule\", or say what to change."
+  ]
+ }
+}
