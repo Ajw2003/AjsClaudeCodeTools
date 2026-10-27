@@ -1493,6 +1493,71 @@ else:
     for a in upa:
         print(f"          {a}")
 
+# --- work trail: a project thread keeps a helper's rendered transcript (#397) ---------------
+import tempfile as _wt_tf
+
+_WT_STRIP = ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "HOUSE_RULES_WORKTRAIL_DIR")
+
+
+def _wt_env(trail, projects="1"):
+    e = {k: v for k, v in os.environ.items() if k not in _WT_STRIP}
+    if projects:
+        e["CLAUDE_CODE_PROJECTS_SESSION"] = projects
+    if trail:
+        e["HOUSE_RULES_WORKTRAIL_DIR"] = trail
+    return e
+
+
+def _wt_ctx(event, payload, env):
+    code, out, err = run_hook(event, payload, env=env)
+    try:
+        return code, json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return code, ""
+
+
+def _wt_check(title, problems):
+    report("FAIL" if problems else "PASS", title)
+    for p in problems:
+        print(f"          {p}")
+
+
+for _wt_event, _wt_payload in (("audit", post_agent_payload()),
+                               ("userpromptaudit", userprompt_payload(_task_notification("audit1")))):
+    _wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
+    _wt_code, _wt_c = _wt_ctx(_wt_event, _wt_payload, _wt_env(_wt_dir))
+    _wt_files = [os.path.join(_wt_dir, n) for n in os.listdir(_wt_dir)]
+    _wt_p = []
+    if _wt_code != 0:
+        _wt_p.append(f"exit {_wt_code}")
+    if len(_wt_files) != 1:
+        _wt_p.append(f"expected one trail file, found {_wt_files}")
+    else:
+        if "pytest -q" not in open(_wt_files[0], encoding="utf-8").read():
+            _wt_p.append("trail file lacks the fixture command 'pytest -q'")
+        if "Work trail for this helper: " + _wt_files[0] not in _wt_c:
+            _wt_p.append("additionalContext does not name the trail path")
+        if "audit1" not in os.path.basename(_wt_files[0]):
+            _wt_p.append("file name lacks the agent id")
+    _wt_check(f"{_wt_event} in a project thread writes the work trail and names its path", _wt_p)
+
+_wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
+_wt_code, _wt_c = _wt_ctx("audit", post_agent_payload(), _wt_env(_wt_dir, projects=""))
+_wt_code0, _wt_c0 = _wt_ctx("audit", post_agent_payload(), _wt_env("", projects=""))
+_wt_p = []
+if os.listdir(_wt_dir):
+    _wt_p.append("a trail file was written outside a project thread")
+if _wt_c != _wt_c0 or "Work trail" in _wt_c or not _wt_c:
+    _wt_p.append("output differs outside a project thread")
+_wt_check("audit outside a project thread writes no work trail and is unchanged", _wt_p)
+
+_wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
+_wt_bad = os.path.join(_wt_dir, "afile")
+open(_wt_bad, "w").close()
+_wt_code, _wt_c = _wt_ctx("audit", post_agent_payload(), _wt_env(_wt_bad))
+_wt_p = [] if "could not write the work trail" in _wt_c and _wt_code == 0 else [f"got {_wt_c[-200:]!r}"]
+_wt_check("a work trail that cannot be written is named in additionalContext", _wt_p)
+
 # The ordinary case: a ordinary prompt must never be touched, and never even emit anything -
 # a non-zero exit or a wrong additionalContext here would corrupt or erase the user's prompt.
 code, out, err = run_hook("userpromptaudit", userprompt_payload("please fix the failing test"))

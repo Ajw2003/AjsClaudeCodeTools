@@ -626,27 +626,73 @@ def _subagent_ledger_enabled():
     return os.environ.get("HOUSE_RULES_SUBAGENT_LEDGER", "off").strip().lower() not in _TOGGLE_OFF
 
 
+def _render_transcript(transcript_path, heading=""):
+    """Render a transcript file with the shared renderer; returns (markdown body, session id).
+    A heading adds one synthetic human record first, because a helper transcript has none and
+    build_turns would otherwise render zero turns. Raises on any failure - callers decide how
+    to report it."""
+    import session_ledger_render as slr
+
+    with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+        records = []
+        if heading:
+            records.append({"type": "user", "origin": {"kind": "human"},
+                            "message": {"role": "user", "content": heading}})
+        bad = 0
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except ValueError:
+                bad += 1
+    session_id = os.path.splitext(os.path.basename(transcript_path))[0]
+    turns = slr.build_turns(records)
+    return slr.render(turns, transcript_path, session_id, bad), session_id
+
+
+WORKTRAIL_DEFAULT_DIR = "/mnt/project-files/work-trail/"
+
+
+def _in_project_thread():
+    return _worktracking_enabled() and os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") == "1"
+
+
+def _worktrail_note(transcript_path, agent_type, agent_id):
+    """#397: in a project thread, render a finished helper's transcript into the work-trail
+    folder and return the sentence for the thread ("" outside a project thread). A failure
+    is named in the sentence, never swallowed."""
+    if not _in_project_thread():
+        return ""
+    try:
+        import datetime
+
+        body, _sid = _render_transcript(
+            transcript_path, "Helper agent %s (%s) started" % (agent_type, agent_id)
+        )
+        outdir = os.environ.get("HOUSE_RULES_WORKTRAIL_DIR") or WORKTRAIL_DEFAULT_DIR
+        os.makedirs(outdir, exist_ok=True)
+        safe_type = (agent_type or "agent").replace(":", "-").replace("/", "-")
+        dest = os.path.join(
+            outdir, "%s-%s-%s.md" % (datetime.date.today().isoformat(), safe_type, agent_id)
+        )
+        with open(dest, "w", encoding="utf-8", newline="\n") as f:
+            f.write(body)
+        return (
+            " Work trail for this helper: %s. Attach it to your next reply (attached_outputs "
+            "kind \"file\") and list it in the checklist header." % dest
+        )
+    except Exception as exc:
+        return " House rules: could not write the work trail (%s: %s)." % (type(exc).__name__, exc)
+
+
 def _write_subagent_ledger(transcript_path, payload):
     """Render transcript_path into docs/sessions/ with the shared renderer. Returns a short
     status string for the systemMessage - never raises, since this is an opt-in extra, never
     allowed to take the whole verdict report down with it."""
     try:
-        import session_ledger_render as slr
-
-        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
-            records = []
-            bad = 0
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    records.append(json.loads(line))
-                except ValueError:
-                    bad += 1
-        session_id = os.path.splitext(os.path.basename(transcript_path))[0]
-        turns = slr.build_turns(records)
-        body = slr.render(turns, transcript_path, session_id, bad)
+        body, session_id = _render_transcript(transcript_path)
 
         root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
         outdir = os.path.join(root, "docs", "sessions")
@@ -1524,6 +1570,7 @@ def event_audit():
                     "additionalContext": (
                         "house-rules: %s (agent %s) finished (foreground) - %s"
                         % (agent_type, agent_id, _audit_report(found))
+                        + _worktrail_note(found, agent_type, agent_id)
                     ),
                 }
             }
@@ -1670,6 +1717,7 @@ def event_userpromptaudit():
                     "additionalContext": (
                         "house-rules: subagent %s finished (background) - %s"
                         % (agent_id, _audit_report(found))
+                        + _worktrail_note(found, "background", agent_id)
                     ),
                 }
             }
