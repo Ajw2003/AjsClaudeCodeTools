@@ -1,6 +1,6 @@
 # Work tracking
 
-Status: **built** in plugin 2.73.1 (#383, #400, #397, #398), awaiting aj's QA. Design approved 2026-10-27 in the HouseRules project on
+Status: **built** in plugin 2.73.2 (#383, #400, #397, #398), awaiting aj's QA. Design approved 2026-10-27 in the HouseRules project on
 claude.ai ("Design approved: background work tracking 1A 2A"). Decision: `docs/6-decisions/Decisions.md`,
 entry "Design approved: background work tracking". Proposal page:
 `docs/plans/background-work-tracking.html`. Parent issue: "Background work tracking: every layer of

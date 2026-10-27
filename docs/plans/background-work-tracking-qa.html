@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- house-rules make_page 2.73.1 -->
+<!-- house-rules make_page 2.73.2 -->
 <meta charset="utf-8">
 <title>Work Tracking QA</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -270,9 +270,9 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Work Tracking QA",
-  "eyebrow": "QA · background work tracking (parent issue #396, \"every layer of delegated work is one tap away\"), house-rules 2.73.1",
+  "eyebrow": "QA · background work tracking (parent issue #396, \"every layer of delegated work is one tap away\"), house-rules 2.73.2",
   "short": {
-    "lead": "Background work tracking is built on branch claude/project-thread-42w8p3 as house-rules 2.73.1. In a claude.ai project thread, four things now happen. The thread gets its own transcript link for its checklist header. A Remote Control session's link is asked for as soon as the session starts. Each finished helper's commands are written to a file in the shared project folder. If any of those links was never posted, the end of a turn is blocked once. verify.py passes all 947 checks and verify_tools.py all 47. Three of the four parts were also run against this thread's own real data, as the rows below say. Two things only you can test, because this session loaded 2.73.0 at start: a new project thread running 2.73.1, and a real Remote Control session.",
+    "lead": "Background work tracking is built on branch claude/project-thread-42w8p3 as house-rules 2.73.2. In a claude.ai project thread, four things now happen. The thread gets its own transcript link for its checklist header. A Remote Control session's link is asked for as soon as the session starts. Each finished helper's commands are written to a file in the shared project folder. If any of those links was never posted, the end of a turn is blocked once. verify.py passes all 951 checks and verify_tools.py all 47. Three of the four parts were also run against this thread's own real data, as the rows below say. Two things only you can test, because this session loaded an older version at start: a new project thread running 2.73.2, and a real Remote Control session.",
     "hint": "Tap a row to see what was checked and how.",
     "key": [
       [
@@ -322,7 +322,7 @@ const PAGE = {
         "Your test",
         "Try it in a new project thread",
         "you",
-        "After 2.73.1 is installed, start a new thread in a claude.ai project and ask it for any task that uses a helper agent, then one that starts a Remote Control session on your PC.",
+        "After 2.73.2 is installed, start a new thread in a claude.ai project and ask it for any task that uses a helper agent, then one that starts a Remote Control session on your PC.",
         "Check three things: the checklist header links to the thread's transcript, a helper's work-trail file is attached, and \"Transcript of the session on your PC\" is posted without you asking. Open each one."
       ]
     ]
@@ -371,25 +371,25 @@ const PAGE = {
     [
       "chg",
       "Version, docs and tests (#399)",
-      "house-rules 2.73.1, the systems doc, the state line and 22 new checks.",
+      "house-rules 2.73.2, the systems doc, the state line and 22 new checks.",
       [
-        "Before: version 2.73.0, with the work-tracking design marked as planned.",
-        "After: version 2.73.1, with docs/4-systems/work-tracking.md marked built and a \"Changes from the plan\" section."
+        "Before: version 2.73.1, with the work-tracking design marked as planned.",
+        "After: version 2.73.2, with docs/4-systems/work-tracking.md marked built and a \"Changes from the plan\" section."
       ],
       "This pull request has to merge before the restructure one, which uses 2.74.0."
     ],
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "20 files, +2063 −691",
+      "20 files, +3041 −28",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          1,
-          669,
+          58,
+          9,
           [
             [
               "Not in the plan",
@@ -402,18 +402,6 @@ const PAGE = {
           "claude-house-rules/README.md",
           1,
           0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json",
-          1,
-          1,
           [
             [
               "Not in the plan",
@@ -462,18 +450,6 @@ const PAGE = {
           "claude-house-rules/plugins/house-rules/scripts/checks/delegation.py",
           206,
           0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
-          2,
-          2,
           [
             [
               "Not in the plan",
@@ -603,6 +579,30 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/background-work-tracking-qa.html",
+          791,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/background-work-tracking-qa.page.json",
+          133,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/background-work-tracking.html",
           588,
           0,
@@ -633,7 +633,7 @@ const PAGE = {
       "Still unverified",
       "4 things not yet proven",
       null,
-      "No session has run 2.73.1 yet, because hooks load at session start; every check drove hook.py directly or called its functions on this thread's real files. No real Remote Control session was started, so the rclink hook has only seen recorded results. Whether claude.ai runs PostToolUse hooks for the start_remote_control tool at all is unproven until your test. The opt-in helper ledger at helper stop (HOUSE_RULES_SUBAGENT_LEDGER) still renders an empty file for a helper; that gap predates this work and needs its own issue.",
+      "No session has run 2.73.2 yet, because hooks load at session start; every check drove hook.py directly or called its functions on this thread's real files. No real Remote Control session was started, so the rclink hook has only seen recorded results. Whether claude.ai runs PostToolUse hooks for the start_remote_control tool at all is unproven until your test. The opt-in helper ledger at helper stop (HOUSE_RULES_SUBAGENT_LEDGER) still renders an empty file for a helper; that gap predates this work and needs its own issue.",
       null,
       null
     ]
@@ -642,7 +642,7 @@ const PAGE = {
     "feature": "background work tracking",
     "base": "origin/main",
     "unverified": [
-      "No session has run 2.73.1 yet, because hooks load at session start; every check drove hook.py directly or called its functions on this thread's real files",
+      "No session has run 2.73.2 yet, because hooks load at session start; every check drove hook.py directly or called its functions on this thread's real files",
       "No real Remote Control session was started, so the rclink hook has only seen recorded results",
       "Whether claude.ai runs PostToolUse hooks for the start_remote_control tool at all is unproven until your test",
       "The opt-in helper ledger at helper stop (HOUSE_RULES_SUBAGENT_LEDGER) still renders an empty file for a helper; that gap predates this work and needs its own issue"
@@ -650,7 +650,7 @@ const PAGE = {
     "files": {}
   },
   "wrapup": {
-    "summary": "Background work tracking is built as house-rules 2.73.1 and waits for your QA.",
+    "summary": "Background work tracking is built as house-rules 2.73.2 and waits for your QA.",
     "changing": "One new hook and three changed hooks in the house-rules plugin, 22 new checks, the systems doc, the state doc and the version.",
     "blocking": "Your test in a new project thread.",
     "next": "On a pass, the pull request goes to main, ahead of the restructure one. On a fail, I fix it on this branch.",

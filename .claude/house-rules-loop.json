@@ -1,6 +1,6 @@
 {
   "feature": "background work tracking 1A 2A</message>",
-  "stage": "build",
+  "stage": "qa",
   "skip": false,
   "approvals": [
     {
@@ -450,32 +450,32 @@
     "Ajw2003/AjsClaudeCodeTools#396": [
       "Feature",
       "AjsAgent created this",
-      "in progress"
+      "needs review"
     ],
     "Ajw2003/AjsClaudeCodeTools#383": [
       "Feature",
       "AjsAgent created this",
-      "in progress"
+      "needs review"
     ],
     "Ajw2003/AjsClaudeCodeTools#397": [
       "Feature",
       "AjsAgent created this",
-      "in progress"
+      "needs review"
     ],
     "Ajw2003/AjsClaudeCodeTools#398": [
       "Feature",
       "AjsAgent created this",
-      "in progress"
+      "needs review"
     ],
     "Ajw2003/AjsClaudeCodeTools#399": [
       "Feature",
       "AjsAgent created this",
-      "in progress"
+      "needs review"
     ],
     "Ajw2003/AjsClaudeCodeTools#400": [
       "Feature",
       "AjsAgent created this",
-      "in progress"
+      "needs review"
     ]
   },
   "sweep": [

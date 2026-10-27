@@ -1,8 +1,8 @@
 {
   "title": "Work Tracking QA",
-  "eyebrow": "QA · background work tracking (parent issue #396, \"every layer of delegated work is one tap away\"), house-rules 2.73.1",
+  "eyebrow": "QA · background work tracking (parent issue #396, \"every layer of delegated work is one tap away\"), house-rules 2.73.2",
   "short": {
-    "lead": "Background work tracking is built on branch claude/project-thread-42w8p3 as house-rules 2.73.1. In a claude.ai project thread, four things now happen. The thread gets its own transcript link for its checklist header. A Remote Control session's link is asked for as soon as the session starts. Each finished helper's commands are written to a file in the shared project folder. If any of those links was never posted, the end of a turn is blocked once. verify.py passes all 947 checks and verify_tools.py all 47. Three of the four parts were also run against this thread's own real data, as the rows below say. Two things only you can test, because this session loaded 2.73.0 at start: a new project thread running 2.73.1, and a real Remote Control session.",
+    "lead": "Background work tracking is built on branch claude/project-thread-42w8p3 as house-rules 2.73.2. In a claude.ai project thread, four things now happen. The thread gets its own transcript link for its checklist header. A Remote Control session's link is asked for as soon as the session starts. Each finished helper's commands are written to a file in the shared project folder. If any of those links was never posted, the end of a turn is blocked once. verify.py passes all 951 checks and verify_tools.py all 47. Three of the four parts were also run against this thread's own real data, as the rows below say. Two things only you can test, because this session loaded an older version at start: a new project thread running 2.73.2, and a real Remote Control session.",
     "hint": "Tap a row to see what was checked and how.",
     "key": [
       [
@@ -52,7 +52,7 @@
         "Your test",
         "Try it in a new project thread",
         "you",
-        "After 2.73.1 is installed, start a new thread in a claude.ai project and ask it for any task that uses a helper agent, then one that starts a Remote Control session on your PC.",
+        "After 2.73.2 is installed, start a new thread in a claude.ai project and ask it for any task that uses a helper agent, then one that starts a Remote Control session on your PC.",
         "Check three things: the checklist header links to the thread's transcript, a helper's work-trail file is attached, and \"Transcript of the session on your PC\" is posted without you asking. Open each one."
       ]
     ]
@@ -101,10 +101,10 @@
     [
       "chg",
       "Version, docs and tests (#399)",
-      "house-rules 2.73.1, the systems doc, the state line and 22 new checks.",
+      "house-rules 2.73.2, the systems doc, the state line and 22 new checks.",
       [
-        "Before: version 2.73.0, with the work-tracking design marked as planned.",
-        "After: version 2.73.1, with docs/4-systems/work-tracking.md marked built and a \"Changes from the plan\" section."
+        "Before: version 2.73.1, with the work-tracking design marked as planned.",
+        "After: version 2.73.2, with docs/4-systems/work-tracking.md marked built and a \"Changes from the plan\" section."
       ],
       "This pull request has to merge before the restructure one, which uses 2.74.0."
     ]
@@ -113,7 +113,7 @@
     "feature": "background work tracking",
     "base": "origin/main",
     "unverified": [
-      "No session has run 2.73.1 yet, because hooks load at session start; every check drove hook.py directly or called its functions on this thread's real files",
+      "No session has run 2.73.2 yet, because hooks load at session start; every check drove hook.py directly or called its functions on this thread's real files",
       "No real Remote Control session was started, so the rclink hook has only seen recorded results",
       "Whether claude.ai runs PostToolUse hooks for the start_remote_control tool at all is unproven until your test",
       "The opt-in helper ledger at helper stop (HOUSE_RULES_SUBAGENT_LEDGER) still renders an empty file for a helper; that gap predates this work and needs its own issue"
@@ -121,7 +121,7 @@
     "files": {}
   },
   "wrapup": {
-    "summary": "Background work tracking is built as house-rules 2.73.1 and waits for your QA.",
+    "summary": "Background work tracking is built as house-rules 2.73.2 and waits for your QA.",
     "changing": "One new hook and three changed hooks in the house-rules plugin, 22 new checks, the systems doc, the state doc and the version.",
     "blocking": "Your test in a new project thread.",
     "next": "On a pass, the pull request goes to main, ahead of the restructure one. On a fail, I fix it on this branch.",
