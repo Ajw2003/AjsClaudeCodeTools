@@ -2160,4 +2160,60 @@ for _t, _ok in _s3_cases:
     report("PASS" if _ok else "FAIL", "restructure step 5 (#343): " + _t)
 
 
+
+# ---- an approval sent from the folder above the repo (cloud sessions sit in the folder of clones) ----
+def _ma_repo(parent, name, staged=True):
+    d = os.path.join(parent, name)
+    os.makedirs(d)
+    subprocess.run(["git", "init", "-q", d], capture_output=True, timeout=60)
+    if staged:
+        os.makedirs(os.path.join(d, ".claude"))
+        with open(os.path.join(d, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+            json.dump({"feature": "", "stage": "design", "skip": False, "approvals": []}, f)
+    return d
+
+
+def _ma_say(cwd, prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "above", "cwd": cwd, "prompt": prompt}
+    _, out, _ = run_hook("scope", json.dumps(p), env=_loop_env)
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _ma_stage(d):
+    with open(os.path.join(d, ".claude", "house-rules-loop.json"), encoding="utf-8") as f:
+        return json.load(f)
+
+
+_ma_root = tempfile.mkdtemp(prefix="above-")
+_ma_cases = []
+_ma_in = _ma_repo(os.path.join(_ma_root, "inside"), "plugin")
+_ma_one = os.path.join(_ma_root, "one")
+_ma_up = _ma_repo(_ma_one, "plugin")
+_ma_repo(_ma_one, "unstaged", staged=False)
+_ma_said = "Design approved: demo above 1A"
+_ma_note_in = _ma_say(_ma_in, _ma_said)
+_ma_note_up = _ma_say(_ma_one, _ma_said)
+_ma_cases.append(("an approval sent from the folder above one staged repo moves that repo exactly as one sent "
+                  "inside it does", _ma_stage(_ma_up) == _ma_stage(_ma_in) and _ma_note_up == _ma_note_in
+                  and "Design loop" in _ma_note_in))
+_ma_two = os.path.join(_ma_root, "two")
+_ma_a, _ma_b = _ma_repo(_ma_two, "a"), _ma_repo(_ma_two, "b")
+_ma_note = _ma_say(_ma_two, _ma_said)
+_ma_cases.append(("an approval sent from a folder above two staged repos moves neither and names both",
+                  _ma_stage(_ma_a)["stage"] == "design" and _ma_stage(_ma_b)["stage"] == "design"
+                  and "nothing moved" in _ma_note and "a, b" in _ma_note))
+_ma_none = os.path.join(_ma_root, "none")
+os.makedirs(_ma_none)
+_ma_note = _ma_say(_ma_none, _ma_said)
+_ma_cases.append(("an approval sent from a folder with no repo anywhere says which folder it searched and that "
+                  "nothing moved", _ma_none in _ma_note and "nothing moved" in _ma_note))
+_ma_cases.append(("a message with no approval phrase sent from a folder with no repo stays quiet",
+                  "Design loop" not in _ma_say(_ma_none, "how is it going?")))
+for _t, _ok in _ma_cases:
+    report("PASS" if _ok else "FAIL", "approval from above the repo: " + _t)
+shutil.rmtree(_ma_root, True)
+
 finish()
