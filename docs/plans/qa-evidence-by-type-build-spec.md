@@ -1,6 +1,6 @@
 # QA evidence by change type: build spec
 
-Parent issue #389. Approved: "Design approved: QA evidence by change type 1A 2A 3A" and
+Parent issue #411 (re-filed from #389; steps #412 to #417 replace #390 to #395, in the same order). Approved: "Design approved: QA evidence by change type 1A 2A 3A" and
 "Build plan approved: QA evidence by change type" (aj, 2026-10-27). Design page:
 `docs/plans/qa-evidence-by-type-design.html`; plan page: `docs/plans/qa-evidence-by-type-plan.html`.
 
@@ -66,13 +66,13 @@ keys and the evidence entries' own path fields) is searched for paths ending in 
 extension. A named path whose basename is not the basename of some shown file (any `src` in the
 page, or an evidence `media`/`before`/`after`) is refused, naming the path.
 
-## Zero changed files (#393)
+## Zero changed files (#415)
 
 `apply_qa` refuses when the numstat lists 0 files: "QA mode counted 0 changed files against
 <base>; the feature is probably already merged into it. Build from the feature branch, or set
 qa.base to the commit from before the merge."
 
-## Rendering (#392)
+## Rendering (#414)
 
 The builder turns each evidence entry into a Changes item placed first:
 `["proof", "<Type label>: <change>", <caption or reason>, null, <detail>, null, null, <evidence object>]`
@@ -92,7 +92,7 @@ Template (`templates/handover-page.html`):
   same to the other (a capture-phase listener on `play`, `pause`, `seeked`; guard against loops).
 - image pairs keep today's compare markup unchanged.
 
-## Stage record and the handover reply (#394)
+## Stage record and the handover reply (#416)
 
 After a successful QA build, `record_qa_page` also writes `"qa_evidence": {"types": [...sorted
 types covered...], "entries": <n>}` into the stage file. In `scripts/house_rules/design_loop.py`
@@ -103,7 +103,7 @@ change carries its clip or picture". `_record_qa_link` must not mark it linked i
 
 ## Tests (verify.py parts)
 
-- `scripts/checks/make_page.py`: an Ophan fixture (#390) - a temporary git repo whose base commit
+- `scripts/checks/make_page.py`: an Ophan fixture (#412) - a temporary git repo whose base commit
   has `Assets/Models/ArtBible/Enemies/Fear/TheOphanOfHours/TheOphanOfHours.controller` absent and
   whose HEAD adds it plus `Assets/_Project/Scripts/Runtime/Raid/Ophan/OphanHunt.cs`,
   `Assets/Models/ArtBible/Animations/TheOphanOfHours_Generic.fbx` and

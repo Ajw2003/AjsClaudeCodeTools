@@ -2,7 +2,7 @@
 
 Status: **planned, not built.** Design approved 2026-10-27 ("Design approved: QA evidence by change type 1A 2A 3A").
 Design page: `docs/plans/qa-evidence-by-type-design.html`. Build plan: `docs/plans/qa-evidence-by-type-plan.html`.
-Build spec: `docs/plans/qa-evidence-by-type-build-spec.md`. Parent issue: #389 (QA pages must prove each change
+Build spec: `docs/plans/qa-evidence-by-type-build-spec.md`. Parent issue: #411 (QA pages must prove each change
 with evidence for its type).
 
 ## What it owns

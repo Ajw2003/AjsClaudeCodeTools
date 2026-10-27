@@ -3043,3 +3043,22 @@ sub-plugin later. Design: `docs/4-systems/guards.md`, "Credit on GitHub".
 keep it off; reporting it honestly is the part the agent controls.
 
 **Status.** Standing.
+
+## 2026-10-27 — QA pages must prove each change with evidence for its type (#411)
+
+**Context.** The QA page for PlunderSpell pull request #445 (the Ophan in the sky) covered animation, enemy
+behaviour and a model change but showed no clip, no picture and no before and after, and its change list read
+"0 files, +0 −0". The page builder's picture rule ran only on items an author marked visual.
+
+**Decision.** aj approved "Design approved: QA evidence by change type 1A 2A 3A": each QA change declares a type and
+the builder also works types out from the changed files (1A); a before and after for animation and gameplay is two
+clips played side by side (2A); no QA page goes out without the evidence (3A). Animation needs a clip plus a before
+and after; a model change a picture plus a before and after; gameplay or enemy AI a recording plus a before and after
+clip. Design: `docs/plans/qa-evidence-by-type-design.html`; system: `docs/4-systems/qa-evidence.md`. The first
+approval was lost by the lock (fixed in pull request #401, "Design approved: missed approvals fix 1A"), so the issues
+were re-filed as #411 to #417 and #389 to #395 are to be closed as replaced.
+
+**Why.** aj: "you must prove to me that the work is done show me what has been done don't tell me what has been done
+and then I can test it myself not before."
+
+**Status.** Standing.
