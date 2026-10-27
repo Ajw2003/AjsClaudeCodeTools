@@ -272,7 +272,7 @@ const PAGE = {
   "title": "Steps 3 to 7 QA",
   "eyebrow": "QA · #381 restructure steps 3 to 7, built as one feature · house-rules 2.74.0",
   "short": {
-    "lead": "Restructure steps 3 to 7 (#381) are built on the branch AjsAgent/issue-281-fix as house-rules 2.74.0. Each step follows the grilling answers on the design page you approved. verify.py, the script that checks the hooks do what the docs say, passed all 971 checks after main (2.73.1) was merged in and pull request #338's update fix was folded in. One thing matters before you install it: from 2.74.0, every tool is refused until the agent's name is set. So set the two cloud environment variables first (HOUSE_RULES_AGENT_NAME and HOUSE_RULES_OWNED_BRANCHES), using the steps in docs/cloud-session-setup.md.",
+    "lead": "Restructure steps 3 to 7 (#381) are built on the branch AjsAgent/issue-281-fix as house-rules 2.74.0. Each step follows the grilling answers on the design page you approved. verify.py, the script that checks the hooks do what the docs say, passed all 1007 checks, run twice, after main (2.73.3, with pull requests #402 and #418) was merged in and pull request #338's update fix was folded in. One thing matters before you install it: from 2.74.0, every tool is refused until the agent's name is set. So set the two cloud environment variables first (HOUSE_RULES_AGENT_NAME and HOUSE_RULES_OWNED_BRANCHES), using the steps in docs/cloud-session-setup.md.",
     "hint": "Tap a step to see what was built and how it was checked.",
     "key": [
       [
@@ -379,15 +379,15 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "35 files, +3300 −389",
+      "44 files, +6453 −367",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          42,
-          54,
+          657,
+          1,
           [
             [
               "Not in the plan",
@@ -506,8 +506,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/core.py",
-          216,
-          21,
+          224,
+          28,
           [
             [
               "Not in the plan",
@@ -518,8 +518,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/delegation.py",
-          66,
-          12,
+          68,
+          14,
           [
             [
               "Not in the plan",
@@ -542,8 +542,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
-          227,
-          56,
+          228,
+          57,
           [
             [
               "Not in the plan",
@@ -566,7 +566,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/hook.py",
-          13,
+          14,
           1,
           [
             [
@@ -579,7 +579,7 @@ const PAGE = {
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/core.py",
           86,
-          104,
+          127,
           [
             [
               "Not in the plan",
@@ -590,8 +590,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/delegation.py",
-          87,
-          13,
+          86,
+          11,
           [
             [
               "Not in the plan",
@@ -698,7 +698,19 @@ const PAGE = {
         ],
         [
           "docs/3-state/ProjectState.md",
-          10,
+          16,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/4-systems/README.md",
+          1,
           0,
           [
             [
@@ -721,8 +733,32 @@ const PAGE = {
           ]
         ],
         [
+          "docs/4-systems/usage-handoff.md",
+          69,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/5-today/handoff-AjsAgent-project-thread-bklzel.md",
+          11,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/6-decisions/Decisions.md",
-          65,
+          82,
           0,
           [
             [
@@ -782,7 +818,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-10-24-restructure-steps-3-7-qa.html",
-          943,
+          968,
           0,
           [
             [
@@ -794,7 +830,79 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-10-24-restructure-steps-3-7-qa.page.json",
-          116,
+          129,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-27-usage-limit-handoff-build-plan.html",
+          749,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-27-usage-limit-handoff-build-plan.page.json",
+          351,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-27-usage-limit-handoff-revised.html",
+          592,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-27-usage-limit-handoff-revised.page.json",
+          50,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-27-usage-limit-handoff.html",
+          593,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-10-27-usage-limit-handoff.page.json",
+          50,
           0,
           [
             [
