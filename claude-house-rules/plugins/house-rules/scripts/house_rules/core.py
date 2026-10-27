@@ -1118,65 +1118,6 @@ def _github_version(problems):
     return ""
 
 
-_VC_SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
-
-
-def _vc_session_id(payload):
-    m = _VC_SESSION_ID_RE.search(payload or "")
-    if not m:
-        return ""
-    return m.group(1).replace('\\"', '"').replace("\\\\", "\\").strip()
-
-
-def _outdated_marker_path(session_id):
-    if not session_id:
-        return ""
-    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id)[:100]
-    return os.path.join(tempfile.gettempdir(), "house-rules-outdated-%s.json" % safe)
-
-
-def _write_outdated_marker(session_id, reasons):
-    path = _outdated_marker_path(session_id)
-    if not path:
-        return
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"reasons": reasons}, f)
-    except OSError as exc:
-        sys.stderr.write(
-            "house-rules versioncheck: could not write the session marker (%s); the guard "
-            "prompt on the first shell command will not fire, only the SessionStart "
-            "warning.\n" % exc
-        )
-
-
-def _read_and_clear_outdated_marker(session_id):
-    """Read this session's out-of-date marker once, then delete it.
-
-    Consumed rather than merely read, so the guard prompt it drives fires on the first
-    Bash/PowerShell call of the session only - not every call after it, which would make
-    every command in an out-of-date session carry an extra prompt instead of one.
-    """
-    path = _outdated_marker_path(session_id)
-    if not path or not os.path.isfile(path):
-        return None
-    try:
-        data = json.loads(_read_text(path))
-    except Exception:
-        data = None
-    try:
-        os.remove(path)
-    except OSError as exc:
-        # Not fatal - the marker just lingers and gets ignored by every future session, whose
-        # own session_id will not match its filename. Worth a line so a permissions problem on
-        # the temp dir is not invisible, but never worth failing the command over.
-        sys.stderr.write(
-            "house-rules guard: could not remove the out-of-date marker %r (%s); it will be "
-            "ignored on future calls anyway.\n" % (path, exc)
-        )
-    return data
-
-
 _VC_PLUGIN_NAME = "house-rules"
 _VC_DEFAULT_MARKETPLACE = "aj-house-rules"
 # One budget for every update command together. hooks.json gives versioncheck 90 s, so this
@@ -1186,6 +1127,18 @@ _VC_UPDATE_BUDGET = 60.0
 
 def _auto_update_enabled():
     return os.environ.get("HOUSE_RULES_AUTO_UPDATE", "on").strip().lower() not in _TRACE_OFF
+
+
+def _synced_from_account():
+    """True when this copy was synced from the user's claude.ai account (a cloud session puts it
+    under ~/.claude/plugins/synced/) rather than installed from a marketplace. No `claude plugin`
+    command can update such a copy: the session has no marketplace for it, and claude.ai delivers
+    the newer version itself. HOUSE_RULES_VC_SYNCED (on/off) overrides the path test for verify.py."""
+    override = os.environ.get("HOUSE_RULES_VC_SYNCED")
+    if override is not None:
+        return override.strip().lower() not in _TRACE_OFF
+    parts = _plugin_root().replace("\\", "/").split("/")
+    return any(a == "plugins" and b == "synced" for a, b in zip(parts, parts[1:]))
 
 
 def _installed_plugins_path():
@@ -1301,9 +1254,6 @@ def event_versioncheck():
         if not _version_check_enabled():
             return 0
 
-        payload = read_payload()
-        session_id = _vc_session_id(payload)
-
         problems = []
         installed = _plugin_version(problems)
         plugin_id, on_disk = _installed_on_disk(problems)
@@ -1375,6 +1325,32 @@ def event_versioncheck():
                 )
             return 0
 
+        if _synced_from_account():
+            # The 2026-10-19 overnight stall: a cloud session's synced copy can never be updated
+            # from inside the session, so asking for it only parked the run on a permission prompt.
+            emit(
+                {
+                    "systemMessage": "house-rules %s is published; this session runs %s, synced "
+                    "from your claude.ai account, which delivers the update itself."
+                    % (latest, installed or "an unknown version"),
+                    "hookSpecificOutput": {
+                        "hookEventName": "SessionStart",
+                        "additionalContext": (
+                            "house-rules %s is published on GitHub, but this session runs %s. This "
+                            "copy was synced from the user's claude.ai account, not installed from "
+                            "a marketplace, so no `claude plugin` command can update it here and "
+                            "none was run; claude.ai delivers the newer version to a later session "
+                            "itself. Do not run any update command, do not ask about updating, and "
+                            "do not stop work. In your first reply, tell the user in one sentence "
+                            "which version this session runs and that %s arrives when claude.ai "
+                            "syncs it."
+                            % (latest, installed or "an unknown version", latest)
+                        ),
+                    },
+                }
+            )
+            return 0
+
         # Out of date: update it here rather than asking, then check the result on disk rather
         # than trusting the exit code (docs/6-decisions/Decisions.md, 2026-09-26).
         failure = "automatic updating is switched off (HOUSE_RULES_AUTO_UPDATE=off)"
@@ -1402,8 +1378,8 @@ def event_versioncheck():
                     % (", ".join(after) or "no house-rules install", latest or "a newer version")
                 )
 
-        _write_outdated_marker(session_id, reasons)
-
+        # Never a reason to stop: an unanswered permission prompt for the update once held an
+        # overnight run for hours (docs/6-decisions/Decisions.md, 2026-10-19).
         banner_lines = [
             "",
             "=" * 70,
@@ -1417,29 +1393,16 @@ def event_versioncheck():
         banner_lines.extend(
             [
                 "",
-                "Before doing any other work this session: run the command(s) below yourself, "
-                "in order, right now, on this machine - the same machine the check above just "
-                "read - and report the real output rather than the command. Do not ask in chat "
-                "first: the user has asked for the plugin's own update to just happen, and the "
-                "permission prompt the harness puts on your first shell command is where they "
-                "say yes or no. Check the result with `claude plugin list`; a reported update "
-                "is not a completed one. Once it is installed, tell the user it loads in a new "
-                "session (a /clear does not reload plugins) and carry on with their request.",
-                "",
-                "If they decline that prompt, or this session has no shell tool to run them "
-                "with, relay the command(s) instead - through the step-card format, marked "
-                "`UNTESTED:` since this hook relayed them and they have not been run on this "
-                "machine - then stop and wait for the user's answer.",
+                "Do not stop or wait over this, and do not run the update commands yourself: a "
+                "permission prompt for them would sit unanswered in an unattended run, and the "
+                "user has said an update must never hold up their work. Carry on with the "
+                "user's request. In your reply, list the update under 'Waiting on you' with the "
+                "command(s) below, relayed through the step-card format and marked `UNTESTED:`, "
+                "since this hook relayed them and they have not been run in the user's shell.",
                 "",
             ]
         )
         banner_lines.extend("- %s" % r for r in reasons)
-        banner_lines.append("")
-        banner_lines.append(
-            "As a second, harness-enforced signal in case this context gets missed, the "
-            "first Bash/PowerShell command run this session will also carry a permission "
-            "prompt repeating this notice, once."
-        )
         banner_lines.append("=" * 70)
         emit(
             {

@@ -43,11 +43,9 @@ from house_rules.core import (  # noqa: F401
     _is_relayed_prompt,
     _parse_status_porcelain,
     _payload_cwd,
-    _read_and_clear_outdated_marker,
     _read_text,
     _time,
     _uncommitted_among,
-    _vc_session_id,
     _waiting_load,
     _waiting_path,
     _waiting_update,
@@ -463,7 +461,6 @@ def event_guard():
         return 0
 
     subject = _guard_subject(payload)
-    outdated = _read_and_clear_outdated_marker(_vc_session_id(payload))
 
     # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
     # an ask is folded into the prompt built below so a compound command is asked about once.
@@ -582,7 +579,7 @@ def event_guard():
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _docs_status(subject, elsewhere, where) if is_commit else (None, None)
 
-    if not any(hits.values()) and not outdated and not issue_hit:
+    if not any(hits.values()) and not issue_hit:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
         # not to fire" from "never ran" - and it is the security-shaped backstop, so that is
         # the worst place to leave the ambiguity. Exactly one emit() call either way - two
@@ -622,7 +619,7 @@ def event_guard():
             trace_noop(allow_trace)
         return 0
 
-    if known and not issue_hit and not outdated and _never_blocked_git(subject, branch, where):
+    if known and not issue_hit and _never_blocked_git(subject, branch, where):
         # Never-blocked list: a routine commit/push on the agent's own branch is let through, silently.
         out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
         if docs_status == "needs-docs":
@@ -631,11 +628,6 @@ def event_guard():
         return 0
 
     lines = ["Your house rules want you asked before this runs:"]
-    if outdated:
-        lines.append("")
-        lines.append("  PLUGIN OUT OF DATE (found at session start, not by this command):")
-        for r in outdated.get("reasons", []):
-            lines.append("    - %s" % r)
     for title, _ in GUARD_BUCKETS:
         reasons = hits[title]
         if reasons:
@@ -699,7 +691,7 @@ def event_guard():
     reason_text = "\n".join(lines)
     rewrite = None
     all_hits = [r for rs in hits.values() for r in rs]
-    if all_hits and not outdated and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
+    if all_hits and not issue_hit and docs_status != "needs-docs" and not saved_blocked:
         if elsewhere and not protected and all(r in plain_hits for r in all_hits):
             rewrite = ("Run it as plain `git ...` from %s, with no cd, -C or variables, and it will be "
                        "checked normally." % _payload_toplevel(payload))

@@ -802,11 +802,16 @@ def vc_env(case="default", **overrides):
     e["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = vc_installed_json(case)
     e["VC_FAKE_LOG"] = os.path.join(_vc_fake_dir, f"calls-{case}.log")
     e.pop("HOUSE_RULES_AUTO_UPDATE", None)
+    # Off unless a case asks: verify.py may itself run from a synced copy, which would otherwise
+    # take every case down the synced branch.
+    e["HOUSE_RULES_VC_SYNCED"] = "off"
     e.update(overrides)
     return e
 
 
 def vc_marker_path(session_id):
+    """Where versioncheck used to arm guard's permission prompt. It no longer writes one
+    (Decisions.md, 2026-10-19); the stale cases assert the file never appears."""
     return os.path.join(tempfile.gettempdir(), f"house-rules-outdated-{session_id}.json")
 
 

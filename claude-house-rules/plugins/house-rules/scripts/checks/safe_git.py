@@ -1673,7 +1673,9 @@ commit_case(
     "b1 %r b2 %r" % (_b1[2][:100], _b2[2][:100]),
 )
 
-session_c = "vc-guard-consumes"
+# --- an out-of-date plugin never puts a permission prompt on a shell command ----------------------
+# 2026-10-19: guard's first-call prompt for the update held an overnight run for hours.
+session_c = "vc-guard-never-prompts"
 run_hook(
     "versioncheck",
     vc_payload(session_c),
@@ -1684,25 +1686,17 @@ guard_payload = json.dumps(
     {"session_id": session_c, "tool_name": "Bash", "tool_input": {"command": "ls"}}
 )
 rc1, out1, err1 = run_hook("guard", guard_payload)
-rc2, out2, err2 = run_hook("guard", guard_payload)
 ok = (
-    "PLUGIN OUT OF DATE" in out1
-    and '"permissionDecision":"ask"' in out1
-    and "PLUGIN OUT OF DATE" not in out2
-    and '"permissionDecision":"ask"' not in out2
+    "OUT OF DATE" not in out1
+    and '"permissionDecision":"ask"' not in out1
     and not os.path.isfile(marker_c)
 )
 if ok:
-    report("PASS", "guard surfaces versioncheck's marker once, on the first shell call, then stops")
-    print("          first `ls` call prompts for the stale plugin alone; the second call is silent")
+    report("PASS", "guard never prompts on a shell command because the plugin is out of date")
+    print("          versioncheck found a stale copy, and the first `ls` still runs without a prompt")
 else:
-    report("FAIL", "guard surfaces versioncheck's marker once, on the first shell call, then stops")
-    print(
-        f"          out1={out1[:200]!r} out2={out2[:200]!r} "
-        f"marker exists after: {os.path.isfile(marker_c)}"
-    )
-if os.path.isfile(marker_c):
-    os.remove(marker_c)
+    report("FAIL", "guard never prompts on a shell command because the plugin is out of date")
+    print(f"          out1={out1[:200]!r} marker exists: {os.path.isfile(marker_c)}")
 
 # ---- never-blocked list (#289): own-branch commits, make_page pages, own files go through ----
 def _nb_bash(repo, cmd):

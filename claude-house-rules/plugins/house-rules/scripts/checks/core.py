@@ -2200,47 +2200,49 @@ ok = (
     rc == 0
     and "OUT OF DATE" in out
     and "claude plugin update house-rules@aj-house-rules" in out
-    and os.path.isfile(marker_a)
+    and not os.path.isfile(marker_a)
 )
 if ok:
-    report("PASS", "versioncheck flags installed lagging the marketplace clone, and arms a marker")
-    print("          banner names the update command; marker written for guard's first-call prompt")
+    report("PASS", "versioncheck flags installed lagging the marketplace clone, and arms no prompt")
+    print("          banner names the update command; no marker, so guard never prompts for it")
 else:
-    report("FAIL", "versioncheck flags installed lagging the marketplace clone, and arms a marker")
+    report("FAIL", "versioncheck flags installed lagging the marketplace clone, and arms no prompt")
     print(f"          rc={rc} out={out[:300]!r}")
 
-# --- the out-of-date banner tells Claude to hand the command over properly and then stop -----
+# --- the out-of-date banner tells Claude to hand the command over and carry on -----
 # Why this is its own check, not folded into the mismatch check above: docs/4-systems/verify-suites.md, "Traps".
 vc_banner_out = out
 banner_ok = (
     "UNTESTED" in vc_banner_out
     and "step-card" in vc_banner_out
-    and "stop and wait" in vc_banner_out
-    and "permission" in vc_banner_out
-    and "run the command(s) below yourself" in vc_banner_out
-    and "Do not ask in chat" in vc_banner_out
+    and "Do not stop or wait" in vc_banner_out
+    and "do not run the update commands yourself" in vc_banner_out
+    and "Carry on with the user's request" in vc_banner_out
+    and "Waiting on you" in vc_banner_out
     and "could not finish" in vc_banner_out
+    and "stop and wait" not in vc_banner_out
+    and "Before doing any other work" not in vc_banner_out
 )
 if banner_ok:
-    report("PASS", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
-    print("          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
+    report("PASS", "when the automatic update fails, the banner says why, tells Claude to carry on, and lists the commands as an UNTESTED card under Waiting on you")
+    print("          no stop-and-wait, no run-it-now: an update never holds up the user's work")
 else:
-    report("FAIL", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
+    report("FAIL", "when the automatic update fails, the banner says why, tells Claude to carry on, and lists the commands as an UNTESTED card under Waiting on you")
     print(f"          out={vc_banner_out[:400]!r}")
 
 # --- that same instruction has not drifted from the rules document, bidirectionally ----------
 # Same shape as the delegate/harvest drift checks: the phrase must appear in BOTH house-rules.md
 # and what versioncheck actually emits, or a reword on one side silently stops matching the other.
 drift = []
-for phrase in ("relayed", "step-card", "UNTESTED", "stop and wait", "permission"):
+for phrase in ("relayed", "step-card", "UNTESTED", "permission"):
     if phrase.lower() not in rules_text.lower():
         drift.append(f"{phrase!r} missing from rules/house-rules.md")
     if phrase.lower() not in vc_banner_out.lower():
         drift.append(f"{phrase!r} missing from the emitted versioncheck banner")
 if not drift:
-    report("PASS", "the versioncheck banner and the rules document state the relay/stop rule the same way, both ways")
+    report("PASS", "the versioncheck banner and the rules document state the relay rule the same way, both ways")
 else:
-    report("FAIL", "the versioncheck banner and the rules document state the relay/stop rule the same way, both ways")
+    report("FAIL", "the versioncheck banner and the rules document state the relay rule the same way, both ways")
     for d in drift:
         print(f"          {d}")
 
@@ -2258,7 +2260,7 @@ ok = (
     rc == 0
     and "marketplace clone itself has not synced" in out
     and "claude plugin marketplace update aj-house-rules" in out
-    and os.path.isfile(marker_b)
+    and not os.path.isfile(marker_b)
 )
 if ok:
     report(
@@ -2291,6 +2293,32 @@ else:
     report("FAIL", "HOUSE_RULES_VERSION_CHECK=off disables the freshness check entirely")
     print(f"          rc={rc} out={out[:200]!r}")
 
+# --- a copy synced from the claude.ai account is never asked to update itself --------------------
+# Cloud sessions load plugins from ~/.claude/plugins/synced/, with no marketplace: every `claude
+# plugin` update fails there, and claude.ai delivers the newer version itself.
+case = "vc-synced-copy"
+vc_clear(case)
+rc, out, err = run_hook(
+    "versioncheck",
+    vc_payload(case),
+    vc_env(case, HOUSE_RULES_VC_MARKETPLACE="", HOUSE_RULES_VC_GITHUB="99.0.0", HOUSE_RULES_VC_SYNCED="on"),
+)
+ok = (
+    rc == 0
+    and vc_fake_calls(case) == []
+    and "OUT OF DATE" not in out
+    and "synced from the user's claude.ai account" in out
+    and "do not stop work" in out
+    and "99.0.0" in out
+    and not os.path.isfile(vc_marker_path(case))
+)
+if ok:
+    report("PASS", "versioncheck runs no update for a copy synced from claude.ai, and tells Claude to carry on")
+    print("          no `claude` call, no banner, no marker; one sentence for the user about the newer version")
+else:
+    report("FAIL", "versioncheck runs no update for a copy synced from claude.ai, and tells Claude to carry on")
+    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
+
 # --- versioncheck: the GitHub fetch falls back to the API, and a failure reaches the model ------
 # 2026-09-24: raw.githubusercontent.com was reset by a sandbox while api.github.com worked, and the
 # "couldn't verify" result went only to a systemMessage the model never sees. file:// URLs stand in
@@ -2315,11 +2343,11 @@ ok = (
     rc == 0
     and "OUT OF DATE" in out
     and "GitHub's default branch has 99.0.0" in out
-    and os.path.isfile(marker_d)
+    and not os.path.isfile(marker_d)
 )
 if ok:
     report("PASS", "versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy")
-    print("          raw route dead, API route reports 99.0.0 - banner fires and the marker is armed")
+    print("          raw route dead, API route reports 99.0.0 - the banner fires")
 else:
     report("FAIL", "versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy")
     print(f"          rc={rc} out={out[:300]!r} err={err[:200]!r}")
@@ -2447,11 +2475,11 @@ ok = (
     and vc_fake_calls(case) == ["plugin update house-rules@aj-house-rules"]
     and "OUT OF DATE" in out
     and "exited 0, but installed_plugins.json lists" in out
-    and os.path.isfile(vc_marker_path(case))
+    and not os.path.isfile(vc_marker_path(case))
 )
 if ok:
     report("PASS", "versioncheck does not trust an update's exit code: nothing new on disk still means out of date")
-    print("          only `plugin update` ran (marketplace already current); exit 0 with no new install -> banner and marker")
+    print("          only `plugin update` ran (marketplace already current); exit 0 with no new install -> banner")
 else:
     report("FAIL", "versioncheck does not trust an update's exit code: nothing new on disk still means out of date")
     print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
