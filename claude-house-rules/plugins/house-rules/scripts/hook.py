@@ -76,11 +76,7 @@ from house_rules.safe_git import (  # noqa: F401
 from house_rules.writing import (  # noqa: F401
     _plain_summary_enabled,
     _plain_summary_note,
-    _skipped_check_note,
-    _unasked_fix_note,
     _visual_check_enabled,
-    skipped_check_reasons,
-    unasked_fix_phrases,
     _visual_note,
     _writing_note,
 )
@@ -193,9 +189,6 @@ def event_handover():
     # #324: the writing check no longer runs on chat replies (pages and new issues keep it), so no findings
     # and no report line here; the not-checked disclosure still goes through _writing_note.
     writing = []
-    # #344: skipping a check is aj's call; an unasked fix outside the request becomes an issue.
-    skip_sentences = skipped_check_reasons(reply_text) if (have_reply and not retry) else []
-    unasked_phrases = unasked_fix_phrases(reply_text) if have_reply else []
 
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
     if not retry:
@@ -207,8 +200,7 @@ def event_handover():
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not writing and not editor_owed
-            and not shell_page_notes and not page_note and not skip_sentences and not unasked_phrases
-            and not links_owed):
+            and not shell_page_notes and not page_note and not links_owed):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -226,10 +218,6 @@ def event_handover():
         parts.append(_evidence_note(evidence_words, impossible_words))
     if not_checked or writing or long_words:
         parts.append(_writing_note(not_checked, writing, long_words))
-    if skip_sentences:
-        parts.append(_skipped_check_note(skip_sentences))
-    if unasked_phrases:
-        parts.append(_unasked_fix_note(unasked_phrases))
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
     parts.extend(shell_page_notes)
@@ -281,7 +269,6 @@ EVENTS = {
     "docstiers": event_docstiers,
     "versioncheck": event_versioncheck,
     "scope": event_scope,
-    "settingsgate": event_settingsgate,
     "guard": event_guard,
     "guardwrite": event_guardwrite,
     "guardgithub": event_guardgithub,

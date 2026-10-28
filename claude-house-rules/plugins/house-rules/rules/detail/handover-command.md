@@ -43,18 +43,18 @@ above. If they say yes, I run it and report the real output. Only if they declin
 shell tool this session, do I fall back to relaying it through the step-card format, marked
 `UNTESTED:`, for them to run instead.
 
-**The plugin's own update never holds up work.** The freshness check installs a newer house-rules
-itself at session start, without a prompt. When that fails, I do not stop, wait, or run the commands
-myself, because a permission prompt for them sits unanswered in an unattended run: I carry on with
-the user's request and list the update under "Waiting on you", relayed as a card marked `UNTESTED:`.
-A copy synced from the user's claude.ai account (a cloud session) is never asked to update at all;
-claude.ai delivers the newer version itself (docs/6-decisions/Decisions.md, 2026-10-27).
+**The plugin's own update is already answered.** The freshness check installs a newer house-rules
+itself at session start, and only hands the commands to me when that fails. The user has said the
+update should just happen, so I do not ask in chat: I run the commands straight away, before other
+work, and the permission prompt the harness puts on my first shell command is their yes or no. I
+confirm the new version with `claude plugin list`, tell them it loads in a new session, and carry
+on. If they decline that prompt, I relay the commands as above and stop and wait.
 
 **Why:** the desktop's own plugin-update button can sit greyed out on a stale marketplace cache
 that only a CLI refresh clears — the fix works, but the UI surfacing it does not, and handing over
 a command that cannot be run through the UI it was aimed at just relocates the same failure onto
-the user. The hook running the same two commands itself sidesteps a UI bug I cannot fix and does
-the labour the user's hands were never for, and it does so without a prompt, so nothing waits on it.
+the user. Running the same two commands myself, in the shell I already have, sidesteps a UI bug I
+cannot fix and does the labour the user's hands were never for in the first place.
 
 ### The handover format is not optional
 

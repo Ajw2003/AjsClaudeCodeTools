@@ -1225,13 +1225,12 @@ _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # start_remote_control MCP tool.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-# 13 since settingsgate (#341): one process on every tool call, the cost of refusing every tool while a setting is unset.
 _non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
-    not any("issue" in c for c in _tool_cmds) and _count_entries == 13 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 12 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
     "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
 )
 
@@ -2117,25 +2116,24 @@ else:
     report("FAIL", "versioncheck is quiet when installed, marketplace and GitHub all agree")
     print(f"          rc={rc} out={out[:200]!r}")
 
-# #403: in a synced copy (claude.ai cloud) the update commands cannot work, so no update command is given.
-# The restructure's #338 handler (_synced_from_account) answers it; "no `claude plugin` command" is prose.
+# #403: in a synced copy (claude.ai cloud) the update commands cannot work, so one plain line.
 _sy_root = "/root/.claude/plugins/synced/org_id/house-rules~g2"
 rc, out, err = run_hook("versioncheck", vc_payload("vc-sync-old"),
-                        vc_env("vc-sync-old", CLAUDE_PLUGIN_ROOT=_sy_root, HOUSE_RULES_VC_SYNCED="on",
+                        vc_env("vc-sync-old", CLAUDE_PLUGIN_ROOT=_sy_root,
                                HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"))
 if (rc == 0 and "synced from your claude.ai account" in out and "99.0.0" in out
-        and "claude plugin update" not in out and "marketplace update" not in out and "OUT OF DATE" not in out):
+        and "claude plugin" not in out and "OUT OF DATE" not in out):
     report("PASS", "versioncheck in a synced copy says one plain line with no update command")
 else:
     report("FAIL", "versioncheck in a synced copy says one plain line with no update command")
     print(f"          rc={rc} out={out[:300]!r}")
 rc, out, err = run_hook("versioncheck", vc_payload("vc-sync-same"),
-                        vc_env("vc-sync-same", CLAUDE_PLUGIN_ROOT=_sy_root, HOUSE_RULES_VC_SYNCED="on",
+                        vc_env("vc-sync-same", CLAUDE_PLUGIN_ROOT=_sy_root,
                                HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB=_installed_version))
-if rc == 0 and "OUT OF DATE" not in out and "claude plugin update" not in out and "synced from" not in out:
-    report("PASS", "versioncheck in a synced copy asks for nothing when the version is current")
+if rc == 0 and not out.strip():
+    report("PASS", "versioncheck in a synced copy is silent when the version is current")
 else:
-    report("FAIL", "versioncheck in a synced copy asks for nothing when the version is current")
+    report("FAIL", "versioncheck in a synced copy is silent when the version is current")
     print(f"          rc={rc} out={out[:300]!r}")
 rc, out, err = run_hook("versioncheck", vc_payload("vc-nosync"),
                         vc_env("vc-nosync", HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"))
@@ -2229,49 +2227,47 @@ ok = (
     rc == 0
     and "OUT OF DATE" in out
     and "claude plugin update house-rules@aj-house-rules" in out
-    and not os.path.isfile(marker_a)
+    and os.path.isfile(marker_a)
 )
 if ok:
-    report("PASS", "versioncheck flags installed lagging the marketplace clone, and arms no prompt")
-    print("          banner names the update command; no marker, so guard never prompts for it")
+    report("PASS", "versioncheck flags installed lagging the marketplace clone, and arms a marker")
+    print("          banner names the update command; marker written for guard's first-call prompt")
 else:
-    report("FAIL", "versioncheck flags installed lagging the marketplace clone, and arms no prompt")
+    report("FAIL", "versioncheck flags installed lagging the marketplace clone, and arms a marker")
     print(f"          rc={rc} out={out[:300]!r}")
 
-# --- the out-of-date banner tells Claude to hand the command over and carry on -----
+# --- the out-of-date banner tells Claude to hand the command over properly and then stop -----
 # Why this is its own check, not folded into the mismatch check above: docs/4-systems/verify-suites.md, "Traps".
 vc_banner_out = out
 banner_ok = (
     "UNTESTED" in vc_banner_out
     and "step-card" in vc_banner_out
-    and "Do not stop or wait" in vc_banner_out
-    and "do not run the update commands yourself" in vc_banner_out
-    and "Carry on with the user's request" in vc_banner_out
-    and "Waiting on you" in vc_banner_out
+    and "stop and wait" in vc_banner_out
+    and "permission" in vc_banner_out
+    and "run the command(s) below yourself" in vc_banner_out
+    and "Do not ask in chat" in vc_banner_out
     and "could not finish" in vc_banner_out
-    and "stop and wait" not in vc_banner_out
-    and "Before doing any other work" not in vc_banner_out
 )
 if banner_ok:
-    report("PASS", "when the automatic update fails, the banner says why, tells Claude to carry on, and lists the commands as an UNTESTED card under Waiting on you")
-    print("          no stop-and-wait, no run-it-now: an update never holds up the user's work")
+    report("PASS", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
+    print("          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
 else:
-    report("FAIL", "when the automatic update fails, the banner says why, tells Claude to carry on, and lists the commands as an UNTESTED card under Waiting on you")
+    report("FAIL", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
     print(f"          out={vc_banner_out[:400]!r}")
 
 # --- that same instruction has not drifted from the rules document, bidirectionally ----------
 # Same shape as the delegate/harvest drift checks: the phrase must appear in BOTH house-rules.md
 # and what versioncheck actually emits, or a reword on one side silently stops matching the other.
 drift = []
-for phrase in ("relayed", "step-card", "UNTESTED", "permission"):
+for phrase in ("relayed", "step-card", "UNTESTED", "stop and wait", "permission"):
     if phrase.lower() not in rules_text.lower():
         drift.append(f"{phrase!r} missing from rules/house-rules.md")
     if phrase.lower() not in vc_banner_out.lower():
         drift.append(f"{phrase!r} missing from the emitted versioncheck banner")
 if not drift:
-    report("PASS", "the versioncheck banner and the rules document state the relay rule the same way, both ways")
+    report("PASS", "the versioncheck banner and the rules document state the relay/stop rule the same way, both ways")
 else:
-    report("FAIL", "the versioncheck banner and the rules document state the relay rule the same way, both ways")
+    report("FAIL", "the versioncheck banner and the rules document state the relay/stop rule the same way, both ways")
     for d in drift:
         print(f"          {d}")
 
@@ -2289,7 +2285,7 @@ ok = (
     rc == 0
     and "marketplace clone itself has not synced" in out
     and "claude plugin marketplace update aj-house-rules" in out
-    and not os.path.isfile(marker_b)
+    and os.path.isfile(marker_b)
 )
 if ok:
     report(
@@ -2322,32 +2318,6 @@ else:
     report("FAIL", "HOUSE_RULES_VERSION_CHECK=off disables the freshness check entirely")
     print(f"          rc={rc} out={out[:200]!r}")
 
-# --- a copy synced from the claude.ai account is never asked to update itself --------------------
-# Cloud sessions load plugins from ~/.claude/plugins/synced/, with no marketplace: every `claude
-# plugin` update fails there, and claude.ai delivers the newer version itself.
-case = "vc-synced-copy"
-vc_clear(case)
-rc, out, err = run_hook(
-    "versioncheck",
-    vc_payload(case),
-    vc_env(case, HOUSE_RULES_VC_MARKETPLACE="", HOUSE_RULES_VC_GITHUB="99.0.0", HOUSE_RULES_VC_SYNCED="on"),
-)
-ok = (
-    rc == 0
-    and vc_fake_calls(case) == []
-    and "OUT OF DATE" not in out
-    and "synced from the user's claude.ai account" in out
-    and "do not stop work" in out
-    and "99.0.0" in out
-    and not os.path.isfile(vc_marker_path(case))
-)
-if ok:
-    report("PASS", "versioncheck runs no update for a copy synced from claude.ai, and tells Claude to carry on")
-    print("          no `claude` call, no banner, no marker; one sentence for the user about the newer version")
-else:
-    report("FAIL", "versioncheck runs no update for a copy synced from claude.ai, and tells Claude to carry on")
-    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
-
 # --- versioncheck: the GitHub fetch falls back to the API, and a failure reaches the model ------
 # 2026-09-24: raw.githubusercontent.com was reset by a sandbox while api.github.com worked, and the
 # "couldn't verify" result went only to a systemMessage the model never sees. file:// URLs stand in
@@ -2372,11 +2342,11 @@ ok = (
     rc == 0
     and "OUT OF DATE" in out
     and "GitHub's default branch has 99.0.0" in out
-    and not os.path.isfile(marker_d)
+    and os.path.isfile(marker_d)
 )
 if ok:
     report("PASS", "versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy")
-    print("          raw route dead, API route reports 99.0.0 - the banner fires")
+    print("          raw route dead, API route reports 99.0.0 - banner fires and the marker is armed")
 else:
     report("FAIL", "versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy")
     print(f"          rc={rc} out={out[:300]!r} err={err[:200]!r}")
@@ -2504,11 +2474,11 @@ ok = (
     and vc_fake_calls(case) == ["plugin update house-rules@aj-house-rules"]
     and "OUT OF DATE" in out
     and "exited 0, but installed_plugins.json lists" in out
-    and not os.path.isfile(vc_marker_path(case))
+    and os.path.isfile(vc_marker_path(case))
 )
 if ok:
     report("PASS", "versioncheck does not trust an update's exit code: nothing new on disk still means out of date")
-    print("          only `plugin update` ran (marketplace already current); exit 0 with no new install -> banner")
+    print("          only `plugin update` ran (marketplace already current); exit 0 with no new install -> banner and marker")
 else:
     report("FAIL", "versioncheck does not trust an update's exit code: nothing new on disk still means out of date")
     print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
@@ -2542,172 +2512,6 @@ else:
 if os.path.isfile(vc_marker_path(case)):
     os.remove(vc_marker_path(case))
 shutil.rmtree(_vc_fake_dir, ignore_errors=True)
-
-
-# -- #341: settings and identity. Every setting blocks until it is set; identity strings come from settings. -----
-import importlib.util as _st_util
-_st_spec = _st_util.spec_from_file_location("hr_settings_mod", os.path.join(HERE, "house_rules", "settings.py"))
-_st = _st_util.module_from_spec(_st_spec)
-_st_spec.loader.exec_module(_st)
-_ST_SCRIPT = os.path.join(HERE, "settings.py")
-_ST_DIR = tempfile.mkdtemp(prefix="hr-settings-", dir=_FIXTURE_ROOT)
-
-
-def _st_env(file_name="settings.json", **extra):
-    """The suite's environment with both settings variables removed, so nothing is set unless a case sets it."""
-    e = dict(os.environ)
-    e.pop("HOUSE_RULES_AGENT_NAME", None)
-    e.pop("HOUSE_RULES_OWNED_BRANCHES", None)
-    e["HOUSE_RULES_SETTINGS_FILE"] = os.path.join(_ST_DIR, file_name)
-    e.update(extra)
-    return e
-
-
-def _st_call(event, tool, tool_input, env):
-    pl = json.dumps({"session_id": "verify", "tool_name": tool, "tool_input": tool_input})
-    return run_hook(event, pl, env=env)[1]
-
-
-def _st_cli(args, env):
-    p = subprocess.run([sys.executable, _ST_SCRIPT] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-    return p.returncode, p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
-
-
-def _st_py(code, env):
-    return subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, %r); from house_rules import settings; %s" % (HERE, code)],
-                          stdout=subprocess.PIPE, env=env).stdout.decode().strip()
-
-
-# (a) an unset setting refuses a non-settings tool, naming the setting and the command
-_sa = [_st_call("guard", "Bash", {"command": "echo hi"}, _st_env("a.json")),
-       _st_call("settingsgate", "Write", {"file_path": "/x/a.txt", "content": "x"}, _st_env("a.json")),
-       _st_call("settingsgate", "mcp__github__issue_write", {"method": "create"}, _st_env("a.json")),
-       _st_call("settingsgate", "Read", {"file_path": "/x/a.txt"}, _st_env("a.json"))]
-commit_case(
-    "settings: an unset setting refuses a non-settings tool (Bash, Write, a GitHub tool, Read), naming the setting and the command (#341)",
-    all('"permissionDecision":"deny"' in o and "agent_name" in o and "extra_owned_prefixes" in o
-        and "settings.py set agent_name" in o and "settings.py set extra_owned_prefixes" in o for o in _sa),
-    "out %r" % [o[:90] for o in _sa],
-)
-_sa_set = _st_env("a.json", HOUSE_RULES_AGENT_NAME=TEST_AGENT_NAME, HOUSE_RULES_OWNED_BRANCHES="")
-commit_case(
-    "settings: with both settings set (an empty extra_owned_prefixes counts as set) the settings gate lets every tool through (#341)",
-    "settings not set" not in _st_call("guard", "Bash", {"command": "echo hi"}, _sa_set)
-    and _st_call("settingsgate", "Read", {"file_path": "/x"}, _sa_set) == "",
-    "set env: agent_name + empty extra_owned_prefixes",
-)
-
-# (b) the one allowed settings command passes the guard while unset; chained and look-alike commands do not
-_sb_ok = [_st_call("guard", "Bash", {"command": c}, _st_env("b.json")) for c in (
-    "python3 %s set agent_name %s" % (_ST_SCRIPT, TEST_AGENT_NAME),
-    "python3 \"%s\" set extra_owned_prefixes \"AjsAgent/,claude/\"" % _ST_SCRIPT,
-    "python3 %s set extra_owned_prefixes \"\"" % _ST_SCRIPT,
-    "python3 %s show" % _ST_SCRIPT)]
-_sb_ok += [_st_call("settingsgate", "Bash", {"command": "python3 %s get agent_name" % _ST_SCRIPT}, _st_env("b.json"))]
-_sb_bad = [_st_call("guard", "Bash", {"command": c}, _st_env("b.json")) for c in (
-    "python3 %s set agent_name x; echo hi" % _ST_SCRIPT,
-    "python3 %s set agent_name $(whoami)" % _ST_SCRIPT,
-    "python3 %s set agent_name x && echo hi" % _ST_SCRIPT,
-    "python3 /tmp/elsewhere/settings.py set agent_name x",
-    "python3 %s set agent_name x > /tmp/x" % _ST_SCRIPT)]
-commit_case(
-    "settings: the one settings command passes the guard and the settings gate while unset; chained, substituted and look-alike commands do not (#341)",
-    all("settings not set" not in o for o in _sb_ok) and all("settings not set" in o for o in _sb_bad),
-    "ok %r | bad %r" % ([o[:60] for o in _sb_ok], [o[:40] for o in _sb_bad]),
-)
-
-# (c) the environment variable is read before the settings file; the file is read when the variable is absent
-_sc_file = os.path.join(_ST_DIR, "c.json")
-_sc_env = _st_env("c.json")
-_sc_set = _st_cli(["set", "agent_name", "fileAgent"], _sc_env)
-_sc_get_file = _st_cli(["get", "agent_name"], _sc_env)
-_sc_get_env = _st_cli(["get", "agent_name"], dict(_sc_env, HOUSE_RULES_AGENT_NAME="envAgent"))
-_sc_none = _st_cli(["set", "extra_owned_prefixes", ""], _sc_env)
-_sc_show = _st_cli(["show"], _sc_env)
-_sc_bad = _st_cli(["set", "agent_name", "bad name/x"], _sc_env)
-_sc_missing_after = _st_py("print(settings.missing())", _sc_env)
-commit_case(
-    "settings: the environment variable is read before the settings file; set writes the file and says where; an empty extra_owned_prefixes counts as set (#341)",
-    _sc_set[0] == 0 and _sc_file in _sc_set[1] and _sc_get_file[1].strip() == "fileAgent"
-    and _sc_get_env[1].strip() == "envAgent" and _sc_none[0] == 0 and _sc_missing_after == "[]"
-    and "fileAgent" in _sc_show[1] and _sc_file in _sc_show[1] and _sc_bad[0] == 1 and "not saved" in _sc_bad[2],
-    "set %r | file %r | env %r | missing %r | bad %r" % (_sc_set[1][:80], _sc_get_file[1], _sc_get_env[1], _sc_missing_after, _sc_bad[2][:60]),
-)
-
-# the settings file sits outside the repo: under the Claude config dir, which follows the machine
-_sc_home = _st_env()
-_sc_home.pop("HOUSE_RULES_SETTINGS_FILE")
-_sc_home["CLAUDE_CONFIG_DIR"] = os.path.join(_ST_DIR, "cfg")
-_sc_loc = _st_py("print(settings.settings_path())", _sc_home)
-commit_case(
-    "settings: the settings file defaults to <config dir>/house-rules/settings.json, outside any repo (#341)",
-    _sc_loc == os.path.join(_ST_DIR, "cfg", "house-rules", "settings.json") and not _sc_loc.startswith(ROOT),
-    "path %r" % _sc_loc,
-)
-
-# the derived identity strings (this process has the suite's test settings)
-commit_case(
-    "settings: the credit lines, branch prefix and owned prefixes derive from agent_name and the extras (#341)",
-    _st.commit_credit() == "Committed by " + TEST_AGENT_NAME and _st.pr_credit() == "Opened by " + TEST_AGENT_NAME
-    and _st.agent_prefix() == TEST_AGENT_PREFIX
-    and _st.owned_prefixes() == (TEST_AGENT_PREFIX, "AjsAgent/", "claude/", "ccr-")
-    and _st.identity_fix().startswith("git config user.name \"%s\"" % TEST_AGENT_NAME),
-    "owned %r" % (_st.owned_prefixes(),),
-)
-
-# (d) no identity string is left in shipped code outside the defaults file
-_sd_rx = re.compile(r"AjsAgent|aj'?s agent|ajw2003", re.IGNORECASE)
-_sd_files = [os.path.join(HERE, n) for n in os.listdir(HERE) if n.endswith((".py", ".sh"))]
-_sd_files += [os.path.join(HERE, "house_rules", n) for n in os.listdir(os.path.join(HERE, "house_rules")) if n.endswith(".py")]
-_sd_files.append(HOOKS_JSON)
-_sd_defaults = os.path.join(HERE, "house_rules", "settings.py")
-_sd_hits = []
-for _f in _sd_files:
-    if _f == _sd_defaults:
-        continue
-    for _n, _line in enumerate(read(_f).splitlines(), 1):
-        if _sd_rx.search(_line):
-            _sd_hits.append("%s:%d" % (os.path.relpath(_f, HERE), _n))
-commit_case(
-    "settings: no identity string (AjsAgent, aj's agent, ajw2003) is left in the shipped scripts outside house_rules/settings.py (#341)",
-    bool(_sd_files) and not _sd_hits and _sd_rx.search(read(_sd_defaults)) is not None,
-    "scanned %d files (scripts/, scripts/house_rules/, hooks.json; not scripts/checks/); left: %s" % (len(_sd_files), _sd_hits[:8]),
-)
-
-# (e) the session-start note suggests <login lowercased>sAgent when unset, and is absent when set
-_se_bin = tempfile.mkdtemp(prefix="hr-gh-", dir=_FIXTURE_ROOT)
-_se_gh = os.path.join(_se_bin, "gh")
-with open(_se_gh, "w", encoding="utf-8") as _f:
-    _f.write("#!/bin/sh\nif [ \"$1\" = api ] && [ \"$2\" = user ]; then echo MixedCaseUser; exit 0; fi\nexit 1\n")
-os.chmod(_se_gh, 0o755)
-_se_path = _se_bin + os.pathsep + os.environ.get("PATH", "")
-_se_unset = run_hook("profile", "", env=_st_env("e.json", PATH=_se_path))[1]
-_se_set = run_hook("profile", "", env=_st_env("e.json", PATH=_se_path, HOUSE_RULES_AGENT_NAME=TEST_AGENT_NAME, HOUSE_RULES_OWNED_BRANCHES=""))[1]
-commit_case(
-    "settings: the session-start note suggests <GitHub login lowercased>sAgent, naming gh as the source, when unset; absent when set (#341)",
-    "mixedcaseusersAgent" in _se_unset and "gh api user" in _se_unset and "only once the user confirms" in _se_unset
-    and "settings are not set" in _se_unset and "settings are not set" not in _se_set and "mixedcaseusersAgent" not in _se_set,
-    "unset tail %r | set-has-note %s" % (_se_unset[-300:], "settings are not set" in _se_set),
-)
-_se_real = _st.subprocess.run
-
-
-def _se_fake(cmd, **kw):
-    if cmd[0] == "gh":
-        raise FileNotFoundError("gh")
-    return subprocess.CompletedProcess(cmd, 0, stdout="git@github.com:SomeOwner/repo.git\n", stderr="")
-
-
-_st.subprocess.run = _se_fake
-try:
-    _se_fb = _st.suggestion()
-finally:
-    _st.subprocess.run = _se_real
-commit_case(
-    "settings: when gh fails the suggestion falls back to the git remote's owner and says so (#341)",
-    _se_fb[0] == "someownersAgent" and "git remote" in _se_fb[1],
-    "suggestion %r" % (_se_fb,),
-)
 
 
 finish()
