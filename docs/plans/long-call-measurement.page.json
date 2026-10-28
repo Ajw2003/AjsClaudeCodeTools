@@ -1,0 +1,95 @@
+{
+  "title": "Long Call Measurement",
+  "eyebrow": "Findings · can work always be split into short visible steps? Measured 2026-10-28",
+  "approval": "Design approved: long call measurement",
+  "replyPrefix": "Measurement answers",
+  "reply": "",
+  "short": {
+    "lead": "I had said that almost all of my work can be split into short visible steps, but that was my judgement, not a measurement. I then measured it against the records in this container, and it is not proven. Full detail: docs/generated/2026-10-28-long-call-measurement.md.",
+    "hint": "Tap a row for the source and what it shows.",
+    "key": [
+      [
+        "Measured",
+        "done"
+      ],
+      [
+        "Can't measure here",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "list",
+        "Measured",
+        "This session: 0 of 38 calls over 30 seconds",
+        "done",
+        "Exact start and end times from this session's transcript, read by docs/generated/2026-10-28-call_durations.py. The longest were the two editor helpers, at 22.2 and 19.3 seconds. This session was planning work, so it is one light sample.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Measured",
+        "Full test run: 130 to 197 seconds, and it splits",
+        "done",
+        "docs/4-systems/verify-suites.md:125 and :651. If you run one part at a time with --parts, the longest part takes about 32 seconds (verify-suites.md:227). The run's output file stops growing until a part ends, so each status check must also count the running processes to show it is still working.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Measured",
+        "A builder helper ran 32 minutes",
+        "done",
+        "docs/6-decisions/Decisions.md, entry 2026-10-01. Work is split into issues of three steps or fewer, but while the helper runs, its own steps never show in this thread.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Can't measure",
+        "The 2026-09-09 session record",
+        "you",
+        "It records only when each turn started, not when each command started or ended, so it holds no per-call timings.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Can't measure",
+        "Unity builds and wait loops (#138, #139)",
+        "you",
+        "Those game projects are not in this container, so I have nothing to measure. A single compile cannot be cut up into shorter steps. It can only run in the background while I check on it in short status checks.",
+        "Pick how to measure a building session in the Choices section below."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "measure",
+      "How do I measure a real building session?",
+      [
+        [
+          "A",
+          "Record exact call times in your next build session here",
+          1,
+          "Gives a sample with exact per-call timings, and you do no work."
+        ],
+        [
+          "B",
+          "You point me at a game-project session to measure",
+          0,
+          "Covers Unity builds sooner, but you would need to give me that session's transcript."
+        ]
+      ],
+      "Option A needs nothing from you, because I record the call times myself."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Short steps are proven for the test suite. Helpers are split into issues, but their steps stay unseen inside each issue. Single builds cannot be split and can only be watched.",
+    "changing": "Nothing in the plugin has changed yet. The findings and the script are committed as 8c61244.",
+    "blocking": "Your pick between options A and B under Choices, on how to measure a real building session.",
+    "next": "Once you pick, I take that measurement, then update the live visibility page with the result.",
+    "todo": [
+      "Pick option A or B under Choices.",
+      "Tap <b>Copy my reply</b> and send it, or tell me what to change."
+    ]
+  }
+}
