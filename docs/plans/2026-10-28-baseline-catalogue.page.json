@@ -1,0 +1,51 @@
+{
+  "title": "2.73.3 Baseline Catalogue",
+  "eyebrow": "Design · step 2 of the restructure re-check (docs/5-today/2026-10-28-handoff-restructure-recheck.md), under #381",
+  "approval": "Design approved: baseline catalogue",
+  "short": {
+    "lead": "Step 2 writes down what every hook in house-rules 2.73.3 allows, refuses and says, because main runs that code today and it is the known working baseline. Each restructure step will be compared against it later. Before anything new is written, here is what already exists: docs/architecture.md has a hook table with one row per handler, describing each one's effect in prose. I checked that table against hooks/hooks.json. It covers 32 of the 33 handlers (promptran has no row), and it has not changed since 2.73.3. Nobody has checked it against the code or a real session, and it does not split allowed, refused and said apart.",
+    "hint": "Tap a group to see which hooks it holds and how it will be checked.",
+    "key": [["I build it", ""], ["Needs you", "you"]],
+    "items": [
+      ["search", "Read", "Read each handler's code", "", [
+        "34 hook registrations, 33 distinct handlers, across 9 events: SessionStart 7, UserPromptSubmit 3, PreToolUse 6, Stop 1, PostToolUse 11, PostToolUseFailure 1, SubagentStart 2, PermissionRequest 1, SubagentStop 2 (counted from hooks/hooks.json on main).",
+        "For each handler: when it fires, what it allows, what it refuses and the refusal text, and what it says into the session. Each line cites file:line at commit 2b30052 (2.73.3)."
+      ], "Nothing from you."],
+      ["lock", "Guards", "Run every refusing guard both ways", "you", [
+        "The six PreToolUse guards (guard, guardwrite, guardgithub, agentcap, commitgate, pagecheck) and any other handler the code reading shows can block are each run once on their allowed path and once on their refused path, as the standing rule of 2026-10-28 requires.",
+        "Runs happen in a cloud session and in a Remote Control session on your PC, with the refusal or allowed result quoted word for word.",
+        "Before any allowed path that writes to GitHub, I ask you first."
+      ], "You: approve the PowerShell prompts on your PC."],
+      ["list", "Notes", "Run the hooks that only add notes", "", [
+        "The handlers that only add text (session-start notes, end-of-reply reports) are confirmed by quoting what they printed in those same real sessions."
+      ], "Nothing from you."],
+      ["file", "Record", "Write it up and commit", "", [
+        "The catalogue goes where choice 1 below says. Every run is linked by its session id."
+      ], "Nothing from you."],
+      ["check", "Review", "You check the catalogue", "you", [
+        "You read the result page and pass or fail it. Step 3, comparing the restructure against this baseline, starts only after that."
+      ], "You: pass or fail the catalogue."]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    ["where", "Where should the catalogue live?", [
+      ["A", "A new dated document, docs/4-systems/hook-baseline-2.73.3.md, pinned to commit 2b30052", 1, "The baseline stays fixed while docs/architecture.md moves on with later releases. It links to the architecture table's rows rather than copying their prose, and the missing promptran row is added to that table as well."],
+      ["B", "New columns (allows, refuses, says) in the existing docs/architecture.md table", 0, "There is one table and no second document, but the baseline changes whenever a restructure step lands, so the later comparison loses its fixed reference."]
+    ], "The comparison in step 3 needs a reference that does not move, and a dated document keeps that without duplicating the architecture table."],
+    ["where-pc", "Where should the guard runs on your PC take place?", [
+      ["A", "A new scratch git repository, C:\\Users\\aj\\Desktop\\GameDev\\_hookcheck, created for the runs and moved to a _to_delete folder afterwards", 1, "No real project is touched, and a refused or allowed git action can only affect the scratch repository."],
+      ["B", "A new AjsAgent/ branch in an existing project, such as CanadaSouls", 0, "The runs use a real project's history and settings, but every allowed commit or branch lands in that project."]
+    ], "The guards refuse destructive git actions, so testing their allowed paths safely needs a repository with nothing in it to lose."]
+  ],
+  "wrapup": {
+    "summary": "A catalogue of what each of the 33 handlers in 2.73.3 allows, refuses and says, read from the code and confirmed in a cloud session and a session on your PC.",
+    "changing": "No code changes. The result is one document plus a fix to the architecture table's missing row.",
+    "blocking": "Your answers to the two choices.",
+    "next": "Once you approve, I read the handlers, then start the real-session runs.",
+    "todo": [
+      "Pick an answer for each choice on this page.",
+      "Type \"Design approved: baseline catalogue\" followed by your picks, for example \"1A 2A\", and send it."
+    ]
+  }
+}
