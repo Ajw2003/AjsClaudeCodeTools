@@ -7,6 +7,38 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-28 - Design approved: live visibility
+
+**Context.** aj reported that threads do not show their own session link by default, that project threads go
+quiet for minutes during long work so a stuck run cannot be told from a working one, and that helper and builder
+transcripts can no longer be seen. aj asked for this now, on the 2.74.1 code, not inside the reverted restructure
+(#306). Findings: the thread link is gated on `CLAUDE_CODE_PROJECTS_SESSION=1`, which a cloud session started from
+a project thread does not set (`house_rules/delegation.py`, `thread_link_note`); Claude Code now hands a helper's
+report back through a hand-back call, and the helper's steps stay under `~/.claude/projects/`, which the app cannot
+open; the existing work trail (#397) runs only in project threads and lists only shell commands and writes.
+Measurements: `docs/generated/2026-10-28-long-call-measurement.md`. Proposal page: `docs/plans/live-visibility.html`.
+
+**Decision.** aj's reply was "Design approved: live visibility 1A 2A 3A 4A":
+- 1A: every cloud session with a `cse_` session id gets its own transcript link, not only project threads.
+- 2A: the link opens the first reply, plus the checklist header in a project thread; the links-owed Stop check
+  enforces it.
+- 3A: a long or quiet tool call is stopped by a check and asked for in my reply; aj's next message saying yes lets
+  that one call through. Without it the work goes in short visible steps. aj picked this after raising that an
+  unanswered ask can stall a long session.
+- 4A: a helper agent counts as a long call, so it is asked for first, and the delegation rule says so.
+Also on the approved page, with no choice attached: a rule section in aj's words (nothing hidden without an easy
+way to see it); `HOUSE_RULES_TRACE` defaults to `verbose`; progress lines at least every 2 minutes for approved long
+work, using `stallcheck.py` with a new `--every` flag; every helper's full transcript written to a git-ignored
+`work-trail/` folder in the project, refreshed while it runs.
+
+**Rejected.** 1B (project threads only), 2B (checklist header only), 3B (the app's own permission prompt, which may
+not reach a project thread), 4B (helpers run unasked with progress lines).
+
+**Supersedes.** In part, "2026-10-15 - Guards audit: the design aj approved": its "Dropped" line removed the "Never
+hide work" rule. A rule in aj's words returns; the background-work guard it dropped stays dropped.
+
+**Status.** Standing.
+
 ## 2026-10-27 - Triage answers: docref skips its own test fixtures
 
 **Context.** `docref.py check` had reported the same 38 problems on `main` since at least 2026-10-16. All 38 came

@@ -6,6 +6,9 @@ entry "Design approved: background work tracking". Proposal page:
 `docs/plans/background-work-tracking.html`. Parent issue: "Background work tracking: every layer of
 delegated work is one tap away"; #383 is its first step.
 
+Extended by [live-visibility.md](live-visibility.md) (approved 2026-10-28): the thread link and the helper
+work trail reach every cloud session, not only project threads.
+
 ## What it owns
 
 Making sure aj can follow work a project thread delegates, at every layer, without asking for it:
