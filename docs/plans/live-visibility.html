@@ -337,7 +337,7 @@ const PAGE = {
         "Exists",
         "Helper work trail (#397), project threads only",
         "done",
-        "Turns a finished helper's transcript into a readable file, but only in project threads, and only into /mnt/project-files. Tested on 2026-10-28 against this session's editor helper: it ran one Read and one hand-back call, and the file listed neither of them, and it showed no turn time and no report, because the renderer lists only shell commands and file writes.",
+        "Turns a finished helper's transcript into a readable file, but only in project threads, and only into /mnt/project-files. Tested on 2026-10-28 against this session's editor helper, which ran one Read and one hand-back call. The file listed neither of them, and it showed no turn time and no report. That is because the renderer lists only shell commands and file writes.",
         "Nothing from you."
       ],
       [
@@ -400,7 +400,7 @@ const PAGE = {
     [
       "chg",
       "New rule text: nothing is quiet by default, and long work is asked for first",
-      "One section in house-rules.md, in your words: work, thoughts and processes are never hidden in a way you can't easily find; anything quieted names the switch that shows it; a long or quiet tool call is asked for first, and otherwise the work goes in short visible steps.",
+      "One section in house-rules.md, in your words. Work, thoughts and processes are never hidden in a way you can't easily find. Anything quieted names the switch that shows it. A long or quiet tool call is asked for first, and otherwise the work goes in short visible steps.",
       [
         "Since #292 there is no rule about this at all.",
         "Every session reads this rule when it starts."
@@ -430,7 +430,7 @@ const PAGE = {
     [
       "chg",
       "New hook: progress lines for long work you have approved",
-      "While long work you approved runs, the thread posts a line at least every 2 minutes: what it is doing, how long it has run, and when the work last wrote anything (from stallcheck.py, which gains a new --every flag that sets how often it reports). A stuck run says STALLED in words.",
+      "While long work you approved runs, the thread posts a line at least every 2 minutes. The line says what it is doing, how long it has run, and when the work last wrote anything (from stallcheck.py, which gains a new --every flag that sets how often it reports). A stuck run says STALLED in words.",
       [
         "An approved long run would still look stuck.",
         "You can tell running from stuck at any moment."
