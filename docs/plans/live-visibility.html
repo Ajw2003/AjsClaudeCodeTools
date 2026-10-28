@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Live visibility answers",
   "reply": "",
   "short": {
-    "lead": "You asked for three things now, not after the restructure (#306, reverted on 2026-10-28). First, every thread shows its own session link without being asked. Second, nothing runs quiet by default. Third, a long or quiet tool call needs your OK first; otherwise the work is split into short steps you can watch. The link goes missing because the plugin only builds it when CLAUDE_CODE_PROJECTS_SESSION is 1. This session is a cloud session started with CLAUDE_CODE_CHILD_SESSION=1 and a valid cse_ id, but CLAUDE_CODE_PROJECTS_SESSION is unset here, so no link was offered. Even inside a project thread, the link only appears in a checklist header.",
+    "lead": "You asked for three things, built on today's code rather than after the restructure (#306, which was reverted on 2026-10-28). First, every thread shows its own session link without being asked. Second, nothing runs quiet by default. Third, a long or quiet tool call needs your OK first; otherwise the work is split into short steps you can watch. The link goes missing because the plugin only builds it when CLAUDE_CODE_PROJECTS_SESSION is 1. This session is a cloud session started with CLAUDE_CODE_CHILD_SESSION=1 and a valid cse_ id, but CLAUDE_CODE_PROJECTS_SESSION is unset here, so no link was offered. Even inside a project thread, the link only appears in a checklist header.",
     "hint": "Tap a row to see what exists today and what this proposal adds.",
     "key": [
       [
@@ -329,7 +329,7 @@ const PAGE = {
         "Exists",
         "Quiet hook traces (HOUSE_RULES_TRACE, plugin 2.48.0)",
         "done",
-        "Since 2.48.0 a hook that looked and found nothing to do prints no line unless HOUSE_RULES_TRACE=verbose; the default is on, and off silences every line (house_rules/core.py, trace_enabled and trace_noop). Under your rule the default becomes verbose, and HOUSE_RULES_TRACE=on brings back today's quieter level.",
+        "Since 2.48.0 a hook that looked and found nothing to do prints no line unless HOUSE_RULES_TRACE=verbose; the default level is on, and off silences every line (house_rules/core.py, trace_enabled and trace_noop). Under your rule the default becomes verbose, and HOUSE_RULES_TRACE=on brings back today's quieter level.",
         "Nothing from you."
       ],
       [
@@ -377,7 +377,7 @@ const PAGE = {
       "One section in house-rules.md, in your words: work, thoughts and processes are never hidden in a way you can't easily find; anything quieted names the switch that shows it; a long or quiet tool call is asked for first, and otherwise the work goes in short visible steps.",
       [
         "Since #292 there is no rule about this at all.",
-        "Every session reads your standard at start."
+        "Every session reads this rule when it starts."
       ],
       "Replaces nothing that exists today; the old rule's file stays in _to_delete/."
     ],
@@ -404,12 +404,12 @@ const PAGE = {
     [
       "chg",
       "New hook: progress lines for long work you have approved",
-      "While long work you approved runs, the thread posts a line at least every 2 minutes: what it is doing, how long it has run, and when the work last wrote anything (from stallcheck.py, which gains an --every flag). A stuck run says STALLED in words.",
+      "While long work you approved runs, the thread posts a line at least every 2 minutes: what it is doing, how long it has run, and when the work last wrote anything (from stallcheck.py, which gains a new --every flag that sets how often it reports). A stuck run says STALLED in words.",
       [
         "An approved long run would still look stuck.",
         "You can tell running from stuck at any moment."
       ],
-      "UNTESTED: I have not yet confirmed that a watch line wakes a project thread mid-task; the build proves it on a real thread before anything relies on it."
+      "UNTESTED: I have not yet confirmed that a progress line wakes a project thread mid-task; the build proves it on a real thread before anything relies on it."
     ]
   ],
   "choices": [
