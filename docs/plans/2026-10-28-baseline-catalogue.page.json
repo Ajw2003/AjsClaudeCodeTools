@@ -1,6 +1,6 @@
 {
   "title": "2.73.3 Baseline Catalogue",
-  "eyebrow": "Design · step 2 of the restructure re-check (docs/5-today/2026-10-28-handoff-restructure-recheck.md), under #381",
+  "eyebrow": "Design · step 2 of the restructure re-check (docs/5-today/2026-10-28-handoff-restructure-recheck.md), tracked in issue #381",
   "approval": "Design approved: baseline catalogue",
   "short": {
     "lead": "Step 2 writes down what every hook in house-rules 2.73.3 allows, refuses and says, because main runs that code today and it is the known working baseline. Each restructure step will be compared against it later. Before anything new is written, here is what already exists: docs/architecture.md has a hook table with one row per handler, describing each one's effect in prose. I checked that table against hooks/hooks.json. It covers 32 of the 33 handlers (promptran has no row), and it has not changed since 2.73.3. Nobody has checked it against the code or a real session, and it does not split allowed, refused and said apart.",
@@ -12,15 +12,15 @@
         "For each handler: when it fires, what it allows, what it refuses and the refusal text, and what it says into the session. Each line cites file:line at commit 2b30052 (2.73.3)."
       ], "Nothing from you."],
       ["lock", "Guards", "Run every refusing guard both ways", "you", [
-        "The six PreToolUse guards (guard, guardwrite, guardgithub, agentcap, commitgate, pagecheck) and any other handler the code reading shows can block are each run once on their allowed path and once on their refused path, as the standing rule of 2026-10-28 requires.",
-        "Runs happen in a cloud session and in a Remote Control session on your PC, with the refusal or allowed result quoted word for word.",
+        "The six PreToolUse guards (guard, guardwrite, guardgithub, agentcap, commitgate, pagecheck) and any other handler the code reading shows can block are each run once on their allowed path and once on their refused path, as the standing rule dated 2026-10-28 requires (every guard is run on both its allowed and its refused path).",
+        "Each run happens twice, once in a cloud session and once in a Remote Control session on your PC. The refusal or allowed result is quoted word for word.",
         "Before any allowed path that writes to GitHub, I ask you first."
       ], "You: approve the PowerShell prompts on your PC."],
       ["list", "Notes", "Run the hooks that only add notes", "", [
         "The handlers that only add text (session-start notes, end-of-reply reports) are confirmed by quoting what they printed in those same real sessions."
       ], "Nothing from you."],
       ["file", "Record", "Write it up and commit", "", [
-        "The catalogue goes where choice 1 below says. Every run is linked by its session id."
+        "The catalogue goes where you choose in the first choice below, \"Where should the catalogue live?\" Every run is linked by its session id."
       ], "Nothing from you."],
       ["check", "Review", "You check the catalogue", "you", [
         "You read the result page and pass or fail it. Step 3, comparing the restructure against this baseline, starts only after that."
@@ -40,8 +40,8 @@
   ],
   "wrapup": {
     "summary": "A catalogue of what each of the 33 handlers in 2.73.3 allows, refuses and says, read from the code and confirmed in a cloud session and a session on your PC.",
-    "changing": "No code changes. The result is one document plus a fix to the architecture table's missing row.",
-    "blocking": "Your answers to the two choices.",
+    "changing": "No code changes. The result is one document, plus the missing promptran row added to the architecture table.",
+    "blocking": "Your answers to the two choices on this page: where the catalogue lives, and where the PC guard runs take place.",
     "next": "Once you approve, I read the handlers, then start the real-session runs.",
     "todo": [
       "Pick an answer for each choice on this page.",
