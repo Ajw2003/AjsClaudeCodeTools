@@ -225,3 +225,78 @@ def render(turns, path, session_id, bad_lines):
                 A("| %s | `%s` | %s |" % (what, src, detail.replace("|", "\\|")))
         A("")
     return "\n".join(out) + "\n"
+
+
+def _input_summary(name, inp):
+    """One line naming what a tool call acted on, from the fields tools commonly carry."""
+    for key in ("command", "file_path", "path", "pattern", "url", "query", "description", "prompt"):
+        if inp.get(key):
+            return one_line(inp[key], 110)
+    return one_line(", ".join(sorted(inp)), 110)
+
+
+def _result_text(block):
+    content = block.get("content")
+    if isinstance(content, list):
+        content = " ".join(str(c.get("text") or "") for c in content if isinstance(c, dict))
+    return one_line(content, 140)
+
+
+def render_helper_trail(records, heading, path):
+    """#432: a helper's whole run, in order - its prompt, every tool call with a short result, its
+    written text and thinking, and the report it handed back. The ledger above keeps only shell
+    commands and writes, because it exists to catch actions past a reply; a helper's trail exists
+    so aj can read everything the helper did."""
+    lines = ["# %s" % heading, "", "Rendered from `%s`." % path, ""]
+    prompt = None
+    report = None
+    last_text = None
+    results = {}
+    for r in records:
+        if r.get("type") != "user":
+            continue
+        for block in (r.get("message") or {}).get("content") or []:
+            if isinstance(block, dict) and block.get("type") == "tool_result":
+                results[block.get("tool_use_id")] = block
+    steps = []
+    for r in records:
+        kind = r.get("type")
+        ts = (r.get("timestamp") or "")[11:19] or "--:--:--"
+        content = (r.get("message") or {}).get("content")
+        if kind == "user" and isinstance(content, str) and not r.get("isMeta") and prompt is None:
+            prompt = (ts, content.strip())
+        if kind != "assistant" or not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            btype = block.get("type")
+            if btype == "text" and (block.get("text") or "").strip():
+                last_text = block["text"].strip()
+                steps.append("- %s **Wrote:** %s" % (ts, one_line(last_text, 300)))
+            elif btype == "thinking" and (block.get("thinking") or "").strip():
+                steps.append("- %s **Thought:** %s" % (ts, one_line(block["thinking"], 300)))
+            elif btype == "tool_use":
+                name = block.get("name") or "?"
+                inp = block.get("input") or {}
+                if name == "SubagentHandback":
+                    report = str(inp.get("message") or "")
+                    steps.append("- %s **Handed back its report** (below)" % ts)
+                    continue
+                res = results.get(block.get("id"))
+                if res is None:
+                    outcome = "no result yet"
+                else:
+                    outcome = ("ERROR: " if res.get("is_error") else "") + (_result_text(res) or "(empty)")
+                steps.append("- %s `%s` %s → %s" % (ts, name, _input_summary(name, inp), outcome))
+    lines += ["## Prompt", ""]
+    lines += ["%s %s" % prompt if prompt else "(no prompt found in the transcript)", ""]
+    lines += ["## Steps (%d)" % len(steps), ""] + (steps or ["(no steps yet)"]) + [""]
+    lines += ["## Report", ""]
+    if report is not None:
+        lines.append(report)
+    elif last_text:
+        lines.append("(no hand-back call; the helper's last written text) " + last_text)
+    else:
+        lines.append("(no report yet - the helper may still be running)")
+    return "\n".join(lines) + "\n"

@@ -764,6 +764,23 @@ _transcript("audit1", [
     ]),
     _user_result("t3", is_error=True),
 ])
+# trail1 (#432): what a helper's work trail must show - its prompt, a Read and an Edit with their results,
+# its written text, and the report it hands back - not only shell commands and writes.
+_transcript("trail1", [
+    json.dumps({"type": "user", "timestamp": "2026-10-28T12:00:00Z", "message": {"content": "PROMPT-TEXT fix a.py"}}),
+    json.dumps({"type": "user", "isMeta": True, "message": {"content": "<system-reminder>meta</system-reminder>"}}),
+    json.dumps({"type": "assistant", "timestamp": "2026-10-28T12:00:05Z", "message": {"content": [
+        {"type": "text", "text": "WRITTEN-TEXT reading first"},
+        {"type": "tool_use", "id": "r1", "name": "Read", "input": {"file_path": "/proj/notes.md"}}]}}),
+    json.dumps({"type": "user", "timestamp": "2026-10-28T12:00:06Z", "message": {"content": [
+        {"type": "tool_result", "tool_use_id": "r1", "content": "RESULT-OF-READ line one"}]}}),
+    json.dumps({"type": "assistant", "timestamp": "2026-10-28T12:00:09Z", "message": {"content": [
+        {"type": "tool_use", "id": "e1", "name": "Edit", "input": {"file_path": "/proj/a.py"}}]}}),
+    json.dumps({"type": "user", "timestamp": "2026-10-28T12:00:10Z", "message": {"content": [
+        {"type": "tool_result", "tool_use_id": "e1", "is_error": True, "content": "EDIT-FAILED no match"}]}}),
+    json.dumps({"type": "assistant", "timestamp": "2026-10-28T12:00:12Z", "message": {"content": [
+        {"type": "tool_use", "id": "h1", "name": "SubagentHandback", "input": {"message": "REPORT-TEXT all done"}}]}}),
+])
 # auditbig: 45 commands, to prove the 40-command cap and the "N more" line.
 _transcript("auditbig", sum((
     [_assistant("claude-sonnet-4-5-20250929", [{"type": "tool_use", "id": "b%d" % i, "name": "Bash",
@@ -1266,14 +1283,22 @@ else:
     for a in aud:
         print(f"          {a}")
 code, out, err = run_hook("audit", _async_payload)
-# #292: the 5-minute stall-check reminder is gone, so a backgrounded call's launch gets neither an audit
-# nor a reminder; its hand-back is audited when it arrives.
-if code == 0 and not out.strip() and code_off == 0 and not out_off.strip():
-    report("PASS", "audit gives no audit and no stall-check reminder on a backgrounded call's async_launched PostToolUse (#292)")
-    print("          nothing to audit yet, and no reminder, with autosave on or off")
-else:
-    report("FAIL", "audit gives no audit and no stall-check reminder on a backgrounded call's async_launched PostToolUse (#292)")
-    print(f"          exit {code}, out {out[:150]!r}; autosave off: exit {code_off}, out {out_off[:80]!r}")
+# #292: a backgrounded call's launch gets neither an audit nor a stall-check reminder; its hand-back is
+# audited when it arrives. #432: it does name the helper's work trail, so aj can open it while it runs.
+# The common.py autosave-off run happens before the audit1 fixture exists, so run it again here.
+code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
+_al = []
+if code != 0 or code_off != 0:
+    _al.append(f"exit {code} / autosave off {code_off}")
+for _label, _o in (("autosave on", out), ("autosave off", out_off)):
+    if "Work trail for this helper: " not in _o:
+        _al.append(f"{_label}: trail path not named: {_o[:150]!r}")
+    if "AUDIT" in _o or "stallcheck" in _o:
+        _al.append(f"{_label}: an audit or stall reminder on launch: {_o[:150]!r}")
+report("FAIL" if _al else "PASS",
+       "audit names the work trail, with no audit and no stall reminder, on a backgrounded launch (#292, #432)")
+for _a in _al:
+    print(f"          {_a}")
 
 
 # --- stallcheck.py (issue 120). The agentcap cases live with the spawn-cap tests above.
@@ -1566,15 +1591,37 @@ for _wt_event, _wt_payload in (("audit", post_agent_payload()),
             _wt_p.append("file name lacks the agent id")
     _wt_check(f"{_wt_event} in a project thread writes the work trail and names its path", _wt_p)
 
-_wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
-_wt_code, _wt_c = _wt_ctx("audit", post_agent_payload(), _wt_env(_wt_dir, projects=""))
-_wt_code0, _wt_c0 = _wt_ctx("audit", post_agent_payload(), _wt_env("", projects=""))
+# #432: every session keeps the trail; outside a project thread it goes to the project's own
+# work-trail/ folder, which ignores itself so it never reaches git.
+_wt_proj = _wt_tf.mkdtemp(prefix="house-rules-wtproj-")
+_wt_e = _wt_env("", projects="")
+_wt_e["HOUSE_RULES_WORKTRAIL_DIR"] = ""
+_wt_e["CLAUDE_PROJECT_DIR"] = _wt_proj
+_wt_code, _wt_c = _wt_ctx("audit", post_agent_payload(), _wt_e)
+_wt_folder = os.path.join(_wt_proj, "work-trail")
+_wt_names = sorted(os.listdir(_wt_folder)) if os.path.isdir(_wt_folder) else []
 _wt_p = []
-if os.listdir(_wt_dir):
-    _wt_p.append("a trail file was written outside a project thread")
-if _wt_c != _wt_c0 or "Work trail" in _wt_c or not _wt_c:
-    _wt_p.append("output differs outside a project thread")
-_wt_check("audit outside a project thread writes no work trail and is unchanged", _wt_p)
+if not any(n.endswith(".md") and "audit1" in n for n in _wt_names):
+    _wt_p.append(f"no trail in {_wt_folder}: {_wt_names}")
+if ".gitignore" not in _wt_names or open(os.path.join(_wt_folder, ".gitignore")).read().strip() != "*":
+    _wt_p.append("work-trail/ does not ignore itself")
+if "Work trail for this helper: " + _wt_folder not in _wt_c:
+    _wt_p.append(f"path not named: {_wt_c[-200:]!r}")
+if "attached_outputs" in _wt_c:
+    _wt_p.append("asks for a project-thread attachment outside a project thread")
+_wt_check("audit outside a project thread writes the trail to the project's git-ignored work-trail/ (#432)", _wt_p)
+
+_wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
+_wt_code, _wt_c = _wt_ctx("audit", post_agent_payload(tool_response={"status": "completed", "agentId": "trail1",
+                                                                    "agentType": "builder"}), _wt_env(_wt_dir))
+_wt_files = [os.path.join(_wt_dir, n) for n in os.listdir(_wt_dir) if n.endswith(".md")]
+_wt_body = open(_wt_files[0], encoding="utf-8").read() if len(_wt_files) == 1 else ""
+_wt_p = [f"missing {w!r}" for w in ("PROMPT-TEXT", "WRITTEN-TEXT", "Read", "/proj/notes.md", "RESULT-OF-READ",
+                                    "Edit", "/proj/a.py", "EDIT-FAILED", "REPORT-TEXT", "12:00:05")
+         if w not in _wt_body]
+if "<system-reminder>meta" in _wt_body:
+    _wt_p.append("a meta reminder is shown as the prompt")
+_wt_check("the work trail lists the prompt, every tool call with its result, the text and the report (#432)", _wt_p)
 
 _wt_dir = _wt_tf.mkdtemp(prefix="house-rules-worktrail-")
 _wt_bad = os.path.join(_wt_dir, "afile")

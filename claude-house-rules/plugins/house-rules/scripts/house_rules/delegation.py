@@ -659,30 +659,57 @@ def _in_project_thread():
     return _worktracking_enabled() and os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") == "1"
 
 
+def _worktrail_dir():
+    """#432: where a helper's trail goes. HOUSE_RULES_WORKTRAIL_DIR wins; a project thread keeps the
+    shared project folder; anywhere else it is work-trail/ in the project, which the app can open."""
+    override = os.environ.get("HOUSE_RULES_WORKTRAIL_DIR")
+    if override:
+        return override, False
+    if _in_project_thread():
+        return WORKTRAIL_DEFAULT_DIR, False
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    return os.path.join(root, "work-trail"), True
+
+
 def _worktrail_note(transcript_path, agent_type, agent_id):
-    """#397: in a project thread, render a finished helper's transcript into the work-trail
-    folder and return the sentence for the thread ("" outside a project thread). A failure
-    is named in the sentence, never swallowed."""
-    if not _in_project_thread():
+    """#397, #432: render a helper's whole run into its work-trail file and return the sentence
+    for the session ("" with work tracking off). A failure is named in the sentence, never
+    swallowed."""
+    if not _worktracking_enabled():
         return ""
     try:
         import datetime
+        import session_ledger_render as slr
 
-        body, _sid = _render_transcript(
-            transcript_path, "Helper agent %s (%s) started" % (agent_type, agent_id)
-        )
-        outdir = os.environ.get("HOUSE_RULES_WORKTRAIL_DIR") or WORKTRAIL_DEFAULT_DIR
+        records = []
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    records.append(json.loads(line))
+                except ValueError:
+                    continue
+        heading = "Helper agent %s (%s)" % (agent_type, agent_id)
+        body = slr.render_helper_trail(records, heading, transcript_path)
+        outdir, self_ignoring = _worktrail_dir()
         os.makedirs(outdir, exist_ok=True)
+        if self_ignoring:
+            # The folder ignores itself, so a trail never reaches git in any repo (#405).
+            ignore = os.path.join(outdir, ".gitignore")
+            if not os.path.exists(ignore):
+                with open(ignore, "w", encoding="utf-8", newline="\n") as f:
+                    f.write("*\n")
         safe_type = (agent_type or "agent").replace(":", "-").replace("/", "-")
         dest = os.path.join(
             outdir, "%s-%s-%s.md" % (datetime.date.today().isoformat(), safe_type, agent_id)
         )
         with open(dest, "w", encoding="utf-8", newline="\n") as f:
             f.write(body)
-        return (
-            " Work trail for this helper: %s. Attach it to your next reply (attached_outputs "
-            "kind \"file\") and list it in the checklist header." % dest
-        )
+        if _in_project_thread():
+            return (
+                " Work trail for this helper: %s. Attach it to your next reply (attached_outputs "
+                "kind \"file\") and list it in the checklist header." % dest
+            )
+        return " Work trail for this helper: %s. Name this path in your next reply so aj can open it." % dest
     except Exception as exc:
         return " House rules: could not write the work trail (%s: %s)." % (type(exc).__name__, exc)
 
@@ -1528,7 +1555,23 @@ def event_audit():
 
         status = _field(_RESPONSE_STATUS_RE, payload)
         # #292: a background subagent no longer gets the 5-minute stall-check reminder; its hand-back is
-        # still audited when it arrives (userpromptaudit).
+        # still audited when it arrives (userpromptaudit). #432: its work trail is named at launch.
+        if status == "async_launched":
+            launch_id = _field(_RESPONSE_AGENT_ID_RE, payload)
+            launch_type = _field(_TOOL_INPUT_SUBAGENT_TYPE_RE, payload) or "background"
+            if launch_id:
+                cands = _transcript_candidates(payload, agent_id=launch_id)
+                started = next((c for c in cands if os.path.isfile(c)), "")
+                if started:
+                    note = _worktrail_note(started, launch_type, launch_id)
+                else:
+                    note = (" House rules: the work trail for this helper is not written yet - its "
+                            "transcript does not exist yet (tried: %s)." % (", ".join(cands) or "nothing"))
+                if note:
+                    emit({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext":
+                          "house-rules: %s (agent %s) started in the background.%s"
+                          % (launch_type, launch_id, note)}})
+            return 0
         if status != "completed":
             # "async_launched" with autosave off, or an unrecognised shape: genuinely nothing
             # to audit yet, not a failure to report - userpromptaudit picks up a backgrounded
