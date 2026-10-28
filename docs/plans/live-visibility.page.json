@@ -1,53 +1,233 @@
 {
   "title": "Live Visibility",
-  "eyebrow": "Proposal · thread links that always show, and long work that never goes quiet",
+  "eyebrow": "Proposal · thread links that always show, and no long or quiet work without your OK",
   "approval": "Design approved: live visibility",
   "replyPrefix": "Live visibility answers",
   "reply": "",
   "short": {
-    "lead": "You asked for two things now, not after the restructure (#306, reverted on 2026-10-28): every thread shows its own session link without being asked, and long work never looks stuck. I found why the link is missing: the plugin only builds it when CLAUDE_CODE_PROJECTS_SESSION is 1. This very session is a cloud session started with CLAUDE_CODE_CHILD_SESSION=1 and a valid cse_ id, but CLAUDE_CODE_PROJECTS_SESSION is unset here, so no link was offered. Even inside a project thread, the link only appears in a checklist header, so a thread that never posts a checklist never shows it.",
+    "lead": "You asked for three things now, not after the restructure (#306, reverted on 2026-10-28). First, every thread shows its own session link without being asked. Second, nothing runs quiet by default. Third, a long or quiet tool call needs your OK first; otherwise the work is split into short steps you can watch. The link goes missing because the plugin only builds it when CLAUDE_CODE_PROJECTS_SESSION is 1. This session is a cloud session started with CLAUDE_CODE_CHILD_SESSION=1 and a valid cse_ id, but CLAUDE_CODE_PROJECTS_SESSION is unset here, so no link was offered. Even inside a project thread, the link only appears in a checklist header.",
     "hint": "Tap a row to see what exists today and what this proposal adds.",
-    "key": [["Exists today", "done"], ["New", ""], ["Needs you", "you"]],
+    "key": [
+      [
+        "Exists today",
+        "done"
+      ],
+      [
+        "New",
+        ""
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
     "items": [
-      ["list", "Exists", "Thread link builder (#400, house_rules/delegation.py, thread_link_note)", "done", "Builds https://claude.ai/code/session_<id> from CLAUDE_CODE_REMOTE_SESSION_ID. It is reused as it is; only the gate in front of it and where the link must appear change.", "Nothing from you."],
-      ["list", "Exists", "Links-owed end-of-turn check (#398, handover_links_owed)", "done", "Blocks the end of a turn once when a Remote Control link or helper work trail was never posted. It gains one more case: the session's own link missing from the first reply.", "Nothing from you."],
-      ["list", "Exists", "stallcheck.py (#120), unused since #292", "done", "Reads how long ago a helper's transcript or a command's output file was last written, and prints ok, STALLED or finished. Nothing calls it any more: #292 removed the 5-minute reminder on 2026-10-15. This proposal reuses it as the source of each progress line.", "Nothing from you."],
-      ["list", "Exists", "The removed \"Never hide work\" rule (_to_delete/no-hidden-work.md)", "done", "Dropped in #292 together with a guard that refused nohup, & and hidden windows. The guard stays dropped. Choice 4 (\"Does a \\\"never hide\\\" rule come back?\") asks whether a short rule in your wording comes back.", "Nothing from you."],
-      ["list", "New", "Progress lines while work runs", "", "When nothing you can see has been posted for 2 minutes, the thread posts one line: what it is doing, how long it has run, and when the work last wrote anything (from stallcheck). A STALLED line says so in words and names what the work is blocked on.", "Nothing from you."],
-      ["list", "Needs you", "What \"running a Trace\" means", "you", "I read it as a long helper agent or a long command, where today you see only the start and the end. If Trace is the name of a specific tool or step, tell me its name, because a hook can be pinned to it directly.", "If my reading is wrong, put the name of the tool or step in your reply."]
+      [
+        "list",
+        "Exists",
+        "Thread link builder (#400, house_rules/delegation.py, thread_link_note)",
+        "done",
+        "Builds https://claude.ai/code/session_<id> from CLAUDE_CODE_REMOTE_SESSION_ID. It is reused as it is; only the gate in front of it and where the link must appear change.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Exists",
+        "Links-owed end-of-turn check (#398, handover_links_owed)",
+        "done",
+        "Blocks the end of a turn once when a Remote Control link or helper work trail was never posted. It gains one more case: the session's own link missing from the first reply.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Exists",
+        "stallcheck.py (#120), unused since #292",
+        "done",
+        "Reads how long ago a helper's transcript or a command's output file was last written, and prints ok, STALLED or finished. Nothing calls it any more: #292 removed the 5-minute reminder on 2026-10-15. This proposal reuses it as the source of each progress line.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Exists",
+        "The removed \"Never hide work\" rule (_to_delete/no-hidden-work.md)",
+        "done",
+        "Dropped in #292 together with a guard that refused nohup, & and hidden windows. It comes back as a new rule in your words (see Changes). The old guard does not come back: the new check asks before long work instead of refusing background commands outright.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Exists",
+        "Quiet hook traces (HOUSE_RULES_TRACE, plugin 2.48.0)",
+        "done",
+        "Since 2.48.0 a hook that looked and found nothing to do prints no line unless HOUSE_RULES_TRACE=verbose; the default is on, and off silences every line (house_rules/core.py, trace_enabled and trace_noop). Under your rule the default becomes verbose, and HOUSE_RULES_TRACE=on brings back today's quieter level.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "New",
+        "A check before long or quiet calls",
+        "",
+        "Before a tool call that will run long or show you nothing while it runs, the plugin stops it and has me ask you in a reply first, saying what it is and roughly how long. Without your OK I do the work in short steps instead.",
+        "Your OK when I ask, or nothing if short steps are fine."
+      ],
+      [
+        "list",
+        "Needs you",
+        "What \"running a Trace\" means",
+        "you",
+        "I read it as a long helper agent or a long command, where today you see only the start and the end. If Trace is the name of a specific tool or step, tell me its name, because a hook can be pinned to it directly.",
+        "If my reading is wrong, put the name of the tool or step in your reply."
+      ]
     ]
   },
   "changes": [
-    ["chg", "Changed gate: every cloud session with a session id gets its link (thread_link_note)", "The link is offered whenever CLAUDE_CODE_REMOTE is true and CLAUDE_CODE_REMOTE_SESSION_ID has the cse_ shape, not only in project threads.", ["A cloud session started from a project thread, like this one, gets no link and is hard to find again.", "Its first reply opens with \"Transcript of this session\" as a link, with the raw id beside it."], "Checked on this session's own variables: CLAUDE_CODE_REMOTE=true, a cse_ id, CLAUDE_CODE_PROJECTS_SESSION unset. Links still never reach git, because the credit guard from #405 is unchanged."],
-    ["chg", "Changed rule text: the link opens the first reply, plus the checklist header in a project thread", "The injected instruction asks for the link at the top of the first reply, and the links-owed check blocks once if it is missing.", ["The link appears only if a checklist is posted.", "The link is the first thing you see in every thread."], "In a plain cloud session there is no post_message tool, so the check reads the first reply's text instead."],
-    ["chg", "New hook: progress lines (PostToolUse, every tool, project threads and cloud sessions)", "Keeps one timestamp file per session. After 2 minutes without a visible post, the next tool result tells the thread to post a progress line first.", ["The thread can run for many minutes with nothing posted.", "You get a line at least every 2 minutes while the thread is making tool calls."], "Cost: one small file read per tool call, no network. A hook fires only between tool calls, so a single call that runs for 10 minutes still goes quiet. The next row, on background helpers and commands, covers that gap."],
-    ["chg", "Changed instruction: long helpers and commands run in the background with a watch", "A helper or command expected to run over 1 minute starts in the background, and the thread starts stallcheck.py --watch --every 120 under Monitor. Each line it prints wakes the thread, which posts it.", ["A foreground helper blocks the thread for its whole run, so nothing can be posted.", "Each line reads, for example: \"builder: still working, last wrote 14 s ago\" or \"builder: STALLED, nothing written for 6 min\"."], "UNTESTED: I have not yet confirmed that a Monitor line wakes a project thread; the build proves it on a real thread before anything relies on it. stallcheck gains one flag, --every, to print a status line at a fixed interval, here every 120 seconds."],
-    ["chg", "Rule text: nothing is hidden without an easy way to see it", "One section in house-rules.md, in your words: work, thoughts and processes are never hidden in a way you can't easily find; anything quieted (such as HOUSE_RULES_TRACE lines) names the switch that shows it.", ["Since #292 there is no rule about this at all.", "Wherever something is quiet by default, it says how to turn it up."], "Only if you pick option A under \"Does a \\\"never hide\\\" rule come back?\""]
+    [
+      "chg",
+      "Changed gate: every cloud session with a session id gets its link (thread_link_note)",
+      "The link is offered whenever CLAUDE_CODE_REMOTE is true and CLAUDE_CODE_REMOTE_SESSION_ID has the cse_ shape, not only in project threads.",
+      [
+        "A cloud session started from a project thread, like this one, gets no link and is hard to find again.",
+        "Its first reply opens with \"Transcript of this session\" as a link, with the raw id beside it."
+      ],
+      "Checked on this session's own variables: CLAUDE_CODE_REMOTE=true, a cse_ id, CLAUDE_CODE_PROJECTS_SESSION unset. Links still never reach git, because the credit guard from #405 is unchanged."
+    ],
+    [
+      "chg",
+      "Changed rule text: the link opens the first reply, plus the checklist header in a project thread",
+      "The injected instruction asks for the link at the top of the first reply, and the links-owed check blocks once if it is missing.",
+      [
+        "The link appears only if a checklist is posted.",
+        "The link is the first thing you see in every thread."
+      ],
+      "In a plain cloud session there is no post_message tool, so the check reads the first reply's text instead."
+    ],
+    [
+      "chg",
+      "New rule text: nothing is quiet by default, and long work is asked for first",
+      "One section in house-rules.md, in your words: work, thoughts and processes are never hidden in a way you can't easily find; anything quieted names the switch that shows it; a long or quiet tool call is asked for first, and otherwise the work goes in short visible steps.",
+      [
+        "Since #292 there is no rule about this at all.",
+        "Every session reads your standard at start."
+      ],
+      "Replaces nothing that exists today; the old rule's file stays in _to_delete/."
+    ],
+    [
+      "chg",
+      "New check: long or quiet calls are stopped until you OK them (PreToolUse)",
+      "Stops a call that will run over 1 minute or show nothing while it runs: a command with a timeout over 60 seconds, sleep or wait loops, run_in_background, Monitor, and a foreground helper agent (see the helpers choice). The refusal tells me to ask you or split the work.",
+      [
+        "I can start a call that runs for many minutes and shows you nothing.",
+        "I ask first, or you see a run of short steps."
+      ],
+      "Your OK in a message lets through the one call I asked about, not every later one. HOUSE_RULES_LONG_CALLS=off turns the check off."
+    ],
+    [
+      "chg",
+      "Changed default: hook trace lines print unless turned down",
+      "HOUSE_RULES_TRACE defaults to verbose instead of on; setting it to on brings back today's behaviour, and off still silences every line.",
+      [
+        "A hook that found nothing to do prints nothing.",
+        "Every hook says it ran and what it decided."
+      ],
+      "Cost: one more line on your screen per hook call. The lines are sent as systemMessage, which the app shows you; I have not measured whether they also take up room in my context, and the build measures it with tools/measure_footprint.py."
+    ],
+    [
+      "chg",
+      "New hook: progress lines for long work you have approved",
+      "While long work you approved runs, the thread posts a line at least every 2 minutes: what it is doing, how long it has run, and when the work last wrote anything (from stallcheck.py, which gains an --every flag). A stuck run says STALLED in words.",
+      [
+        "An approved long run would still look stuck.",
+        "You can tell running from stuck at any moment."
+      ],
+      "UNTESTED: I have not yet confirmed that a watch line wakes a project thread mid-task; the build proves it on a real thread before anything relies on it."
+    ]
   ],
   "choices": [
-    ["sessions", "Which sessions show their own link?", [
-      ["A", "Every cloud session with a session id, including sessions a project thread starts", 1, "Covers the case you hit: this session had no link."],
-      ["B", "Project threads only, as today", 0, "Smallest change, but cloud sessions stay linkless."]
-    ], "Option A fixes the session you are reading now."],
-    ["where", "Where does the link appear?", [
-      ["A", "First line of the first reply, plus the checklist header in a project thread, enforced by the end-of-turn check", 1, "You see it without opening anything."],
-      ["B", "Checklist header only, as today", 0, "Threads without a checklist never show it."]
-    ], "Option A makes it show by default, which is what you asked for."],
-    ["quiet", "How is long work kept visible?", [
-      ["A", "Progress lines every 2 minutes, and long helpers and commands run in the background under a stallcheck watch", 1, "Closes both gaps: quiet between tool calls, and quiet inside one long call."],
-      ["B", "Progress lines only", 0, "Simpler, but a single long helper still goes quiet for its whole run."],
-      ["C", "Option A, plus the helper's work trail file rewritten at each progress line", 0, "You can read the helper's commands mid-run, at the cost of one file write every 2 minutes."]
-    ], "Option A answers \"is it stuck?\" with a line that says so."],
-    ["rule", "Does a \"never hide\" rule come back?", [
-      ["A", "Yes: one short section, in your wording, with no guard refusing commands", 1, "Puts your standard in writing so every session reads it."],
-      ["B", "No rule text: the hooks above are enough", 0, "Less rule text loaded each session."]
-    ], "Option A, because the hooks only cover the cases I thought of."]
+    [
+      "sessions",
+      "Which sessions show their own link?",
+      [
+        [
+          "A",
+          "Every cloud session with a session id, including sessions a project thread starts",
+          1,
+          "Covers the case you hit: this session had no link."
+        ],
+        [
+          "B",
+          "Project threads only, as today",
+          0,
+          "Smallest change, but cloud sessions stay linkless."
+        ]
+      ],
+      "Option A fixes the session you are reading now."
+    ],
+    [
+      "where",
+      "Where does the link appear?",
+      [
+        [
+          "A",
+          "First line of the first reply, plus the checklist header in a project thread, enforced by the end-of-turn check",
+          1,
+          "You see it without opening anything."
+        ],
+        [
+          "B",
+          "Checklist header only, as today",
+          0,
+          "Threads without a checklist never show it."
+        ]
+      ],
+      "Option A makes it show by default, which is what you asked for."
+    ],
+    [
+      "ask",
+      "How do I ask before a long or quiet call?",
+      [
+        [
+          "A",
+          "The check stops the call and I ask in my reply; your next message saying yes lets that one call through",
+          1,
+          "Works in project threads, where an app permission prompt may never reach you."
+        ],
+        [
+          "B",
+          "The app's own permission prompt pops up for each one",
+          0,
+          "One tap, but it may not show in a project thread or on your phone."
+        ]
+      ],
+      "Option A, because it works on every surface you use."
+    ],
+    [
+      "helpers",
+      "Do helper agents count as long calls?",
+      [
+        [
+          "A",
+          "Yes: I ask before each helper, and the delegation rule says so",
+          1,
+          "Matches what you said; today's delegation rule sends most building to helpers, so you will see more of those questions."
+        ],
+        [
+          "B",
+          "No: helpers run without asking, but must post progress lines",
+          0,
+          "Fewer questions, but a helper is still a long call you didn't OK."
+        ]
+      ],
+      "Option A. This changes the \"Once the approach is decided, delegate the execution\" rule, so it needs your pick."
+    ]
   ],
   "wrapup": {
-    "summary": "Every cloud session and project thread opens with its own transcript link, and long work posts a progress line at least every 2 minutes, saying STALLED in words when it is stuck.",
-    "changing": "One gate and one instruction in house_rules/delegation.py, one new progress hook, one new stallcheck.py flag, an optional rule section, plus tests, docs and a version bump. It builds on today's 2.74.1 code, not the reverted restructure.",
+    "summary": "Every session opens with its own link, nothing runs quiet by default, and any long or quiet call waits for your OK; without it, the work comes in short steps you can watch.",
+    "changing": "One gate and one instruction in house_rules/delegation.py, a new check before long calls, the trace default flipped, a progress hook with a new stallcheck.py flag, one rule section, plus tests, docs and a version bump. It builds on today's 2.74.1 code, not the reverted restructure.",
     "blocking": "Your answers to the four choices above, and whether my reading of \"running a Trace\" is right.",
     "next": "I file the build issues, build on AjsAgent/thread-links-trace-visibility-4eoxf3, prove the progress line on a real project thread, and hand it over with a QA page.",
-    "todo": ["Pick your answers under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
   }
 }
