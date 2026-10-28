@@ -334,6 +334,22 @@ const PAGE = {
       ],
       [
         "list",
+        "Exists",
+        "Helper work trail (#397), project threads only",
+        "done",
+        "Turns a finished helper's transcript into a readable file, but only in project threads, and only into /mnt/project-files. Tested on 2026-10-28 against this session's editor helper: it ran one Read and one hand-back call, and the file listed neither of them, and it showed no turn time and no report, because the renderer lists only shell commands and file writes.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Exists",
+        "Why helper steps no longer show (Claude Code's change, not the plugin's)",
+        "done",
+        "Claude Code's changelog: in auto mode a helper reports back through a hand-back call, and in VS Code background helpers show as one status line with the full transcript in /tasks. In this session the helpers' full transcripts sit under ~/.claude/projects/, which the app cannot open, and the main transcript holds none of their steps.",
+        "Nothing from you."
+      ],
+      [
+        "list",
         "New",
         "A check before long or quiet calls",
         "",
@@ -370,6 +386,16 @@ const PAGE = {
         "The link is the first thing you see in every thread."
       ],
       "In a plain cloud session there is no post_message tool, so the check reads the first reply's text instead."
+    ],
+    [
+      "chg",
+      "Changed work trail: every helper, every session, the full record, while it runs",
+      "Each helper's transcript is written to a file in a git-ignored work-trail/ folder inside the project folder, which the app can open. The file holds the helper's prompt, every tool call with a short result, its written text and its report. It is refreshed at each progress line while the helper runs, and its path is posted when the helper starts.",
+      [
+        "You see a helper's report, and its steps sit in a folder the app cannot open.",
+        "You open the helper's file at any time, during or after the run, and read every step."
+      ],
+      "Project threads keep /mnt/project-files/work-trail/ as today. The file never goes into git, because a transcript can quote session links (#405)."
     ],
     [
       "chg",
