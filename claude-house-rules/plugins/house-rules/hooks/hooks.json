@@ -72,15 +72,6 @@
     ],
     "PreToolUse": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" settingsgate",
-            "timeout": 10
-          }
-        ]
-      },
-      {
         "matcher": "Bash|PowerShell",
         "hooks": [
           {
@@ -92,7 +83,7 @@
         ]
       },
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write",
         "hooks": [
           {
             "type": "command",

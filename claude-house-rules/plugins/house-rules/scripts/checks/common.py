@@ -179,19 +179,6 @@ _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
 # The design-loop lock (#225) refuses code edits outside Build in any repo, which would turn every
 # fixture edit below into a refusal. It is off for the suite and switched on by its own cases.
 os.environ["HOUSE_RULES_LOOP"] = "off"
-# #341: every setting blocks until it is set, and the guard refuses every tool while one is unset. The suite runs
-# with fixed test values so it is not blocked: TEST_AGENT_NAME is the agent's name here, and every identity string a
-# check asserts is derived from it. The extra prefixes keep the fixture branches below (AjsAgent/..., claude/...)
-# counting as the agent's own. The settings file is pointed at a path that does not exist, so a machine's real file
-# never leaks in; checks that need the unset state remove the two variables for their own child process.
-TEST_AGENT_NAME = "testsAgent"
-TEST_AGENT_PREFIX = TEST_AGENT_NAME + "/"
-TEST_COMMIT_CREDIT = "Committed by " + TEST_AGENT_NAME
-TEST_PR_CREDIT = "Opened by " + TEST_AGENT_NAME
-TEST_EMAIL = "79066376+Ajw2003@users.noreply.github.com"
-os.environ["HOUSE_RULES_AGENT_NAME"] = TEST_AGENT_NAME
-os.environ["HOUSE_RULES_OWNED_BRANCHES"] = "AjsAgent/,claude/"
-os.environ["HOUSE_RULES_SETTINGS_FILE"] = os.path.join(_RUN_TMP, "no-settings-file.json")
 # Simulated spawns in this file must never leave records in the real repository's agent list.
 os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
@@ -199,7 +186,7 @@ atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
 # git at a fixture global config with the agent identity so these cases do not depend on the machine.
 _GIT_GLOBAL = os.path.join(_FIXTURE_ROOT, "gitconfig-global")
 with open(_GIT_GLOBAL, "w", encoding="utf-8") as _gf:
-    _gf.write("[user]\n\tname = %s\n\temail = %s\n" % (TEST_AGENT_NAME, TEST_EMAIL))
+    _gf.write("[user]\n\tname = AJ's agent\n\temail = 79066376+Ajw2003@users.noreply.github.com\n")
 os.environ["GIT_CONFIG_GLOBAL"] = _GIT_GLOBAL
 
 
@@ -562,7 +549,7 @@ def _au_repo(name, email):
     return d
 
 
-_AU_GOOD = (TEST_AGENT_NAME, TEST_EMAIL)
+_AU_GOOD = ("AJ's agent", "79066376+Ajw2003@users.noreply.github.com")
 _au_bad, _au_good = _au_repo("Claude", "noreply@anthropic.com"), _au_repo(*_AU_GOOD)
 # No gh on PATH is tested in-process, with shutil.which patched and then restored. A PATH built
 # from dirname(SH) does not work: on a Linux runner gh lives in /usr/bin beside sh and git.
@@ -598,7 +585,7 @@ RESTATEMENTS = [
         ["own branch", "branch off first", "scoped to"],
         False,
         ("commit on your own branch", "scoped to those paths", "say what you committed and where",
-         "not a checkpoint", TEST_AGENT_PREFIX + "<topic>"),
+         "not a checkpoint", "AjsAgent/<topic>"),
     ),
     Restatement(
         "the branch nudge (#97)",
@@ -806,16 +793,11 @@ def vc_env(case="default", **overrides):
     e["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = vc_installed_json(case)
     e["VC_FAKE_LOG"] = os.path.join(_vc_fake_dir, f"calls-{case}.log")
     e.pop("HOUSE_RULES_AUTO_UPDATE", None)
-    # Off unless a case asks: verify.py may itself run from a synced copy, which would otherwise
-    # take every case down the synced branch.
-    e["HOUSE_RULES_VC_SYNCED"] = "off"
     e.update(overrides)
     return e
 
 
 def vc_marker_path(session_id):
-    """Where versioncheck used to arm guard's permission prompt. It no longer writes one
-    (Decisions.md, 2026-10-27); the stale cases assert the file never appears."""
     return os.path.join(tempfile.gettempdir(), f"house-rules-outdated-{session_id}.json")
 
 

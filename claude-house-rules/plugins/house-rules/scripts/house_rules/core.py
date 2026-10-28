@@ -20,8 +20,6 @@ import tempfile
 import time
 import urllib.parse
 
-from house_rules import settings  # the settings and the one place identity strings live (#341)
-
 # This file is one folder deeper than hook.py, so every path hook.py computed from its own
 # __file__ is computed from this instead: the scripts/ folder that holds hook.py and house_rules/.
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -654,28 +652,6 @@ def event_showrule():
 # ---------------------------------------------------------------------------------------
 
 
-def settings_refusal(raw):
-    """The refusal text when a setting is unset (and the call is not the settings script), else None (#341)."""
-    try:
-        data = json.loads(raw) if raw else {}
-    except ValueError:
-        data = {}  # unreadable payload: it cannot be the settings command, so an unset setting refuses it
-    return settings.refusal(data if isinstance(data, dict) else {})
-
-
-def event_settingsgate():
-    """PreToolUse on every tool: refuse while a setting is unset, except the settings script itself (#341)."""
-    try:
-        raw = read_payload()
-    except Exception:
-        raw = ""
-    reason = settings_refusal(raw)
-    if reason:
-        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-                                     "permissionDecisionReason": reason}})
-    return 0
-
-
 def event_profile():
     here = SCRIPTS_DIR
     envfile = os.environ.get("HOUSE_RULES_ENV_FILE") or os.path.join(
@@ -703,8 +679,6 @@ def event_profile():
     )
 
     preflight = _preflight_warnings()
-    # #341: an unset setting adds a note asking the model to ask the user in the chat. "" when all are set.
-    preflight += settings.session_note()
 
     handover_block = ""
     if os.environ.get("CLAUDE_CODE_REMOTE"):
@@ -996,7 +970,10 @@ def event_standards():
 
 # A fork of this repo under a different owner should point this at its own copy - hence the
 # env override rather than only a hardcoded constant.
-_GITHUB_PLUGIN_JSON_URL = settings.PLUGIN_JSON_URL
+_GITHUB_PLUGIN_JSON_URL = (
+    "https://raw.githubusercontent.com/Ajw2003/AjsClaudeCodeTools/main/"
+    "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json"
+)
 _GITHUB_FETCH_TIMEOUT = 4.0
 
 # Relative to a marketplace clone's root (~/.claude/plugins/marketplaces/<name>/...) - matches
@@ -1118,6 +1095,65 @@ def _github_version(problems):
     return ""
 
 
+_VC_SESSION_ID_RE = re.compile(r'"session_id"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+def _vc_session_id(payload):
+    m = _VC_SESSION_ID_RE.search(payload or "")
+    if not m:
+        return ""
+    return m.group(1).replace('\\"', '"').replace("\\\\", "\\").strip()
+
+
+def _outdated_marker_path(session_id):
+    if not session_id:
+        return ""
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id)[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-outdated-%s.json" % safe)
+
+
+def _write_outdated_marker(session_id, reasons):
+    path = _outdated_marker_path(session_id)
+    if not path:
+        return
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"reasons": reasons}, f)
+    except OSError as exc:
+        sys.stderr.write(
+            "house-rules versioncheck: could not write the session marker (%s); the guard "
+            "prompt on the first shell command will not fire, only the SessionStart "
+            "warning.\n" % exc
+        )
+
+
+def _read_and_clear_outdated_marker(session_id):
+    """Read this session's out-of-date marker once, then delete it.
+
+    Consumed rather than merely read, so the guard prompt it drives fires on the first
+    Bash/PowerShell call of the session only - not every call after it, which would make
+    every command in an out-of-date session carry an extra prompt instead of one.
+    """
+    path = _outdated_marker_path(session_id)
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        data = json.loads(_read_text(path))
+    except Exception:
+        data = None
+    try:
+        os.remove(path)
+    except OSError as exc:
+        # Not fatal - the marker just lingers and gets ignored by every future session, whose
+        # own session_id will not match its filename. Worth a line so a permissions problem on
+        # the temp dir is not invisible, but never worth failing the command over.
+        sys.stderr.write(
+            "house-rules guard: could not remove the out-of-date marker %r (%s); it will be "
+            "ignored on future calls anyway.\n" % (path, exc)
+        )
+    return data
+
+
 _VC_PLUGIN_NAME = "house-rules"
 _VC_DEFAULT_MARKETPLACE = "aj-house-rules"
 # One budget for every update command together. hooks.json gives versioncheck 90 s, so this
@@ -1127,18 +1163,6 @@ _VC_UPDATE_BUDGET = 60.0
 
 def _auto_update_enabled():
     return os.environ.get("HOUSE_RULES_AUTO_UPDATE", "on").strip().lower() not in _TRACE_OFF
-
-
-def _synced_from_account():
-    """True when this copy was synced from the user's claude.ai account (a cloud session puts it
-    under ~/.claude/plugins/synced/) rather than installed from a marketplace. No `claude plugin`
-    command can update such a copy: the session has no marketplace for it, and claude.ai delivers
-    the newer version itself. HOUSE_RULES_VC_SYNCED (on/off) overrides the path test for verify.py."""
-    override = os.environ.get("HOUSE_RULES_VC_SYNCED")
-    if override is not None:
-        return override.strip().lower() not in _TRACE_OFF
-    parts = _plugin_root().replace("\\", "/").split("/")
-    return any(a == "plugins" and b == "synced" for a, b in zip(parts, parts[1:]))
 
 
 def _installed_plugins_path():
@@ -1249,10 +1273,22 @@ def _vc_restart_notice(on_disk, running, how):
     }
 
 
+def _is_synced_copy():
+    """#403: claude.ai cloud sessions load the plugin from a synced copy under
+    .../plugins/synced/, not from the marketplace, so `claude plugin update` cannot work."""
+    for root in (os.environ.get("CLAUDE_PLUGIN_ROOT", ""), _plugin_root()):
+        if "/plugins/synced/" in (root or "").replace("\\", "/"):
+            return True
+    return False
+
+
 def event_versioncheck():
     try:
         if not _version_check_enabled():
             return 0
+
+        payload = read_payload()
+        session_id = _vc_session_id(payload)
 
         problems = []
         installed = _plugin_version(problems)
@@ -1260,6 +1296,20 @@ def event_versioncheck():
         market_version = _marketplace_version(problems)
         github_version = _github_version(problems)
         latest = github_version or market_version
+
+        if _is_synced_copy():
+            if installed and installed == latest:
+                return 0
+            line = (
+                "house-rules %s is a copy synced from your claude.ai account, so it cannot be "
+                "updated by command here%s."
+                % (installed or "(version unknown)", "; GitHub has %s" % latest if latest else "")
+            )
+            emit({
+                "systemMessage": line,
+                "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": line},
+            })
+            return 0
 
         market_name = plugin_id.split("@", 1)[1] if "@" in plugin_id else _VC_DEFAULT_MARKETPLACE
         plugin_ref = plugin_id or "%s@%s" % (_VC_PLUGIN_NAME, market_name)
@@ -1325,32 +1375,6 @@ def event_versioncheck():
                 )
             return 0
 
-        if _synced_from_account():
-            # The 2026-10-19 overnight stall: a cloud session's synced copy can never be updated
-            # from inside the session, so asking for it only parked the run on a permission prompt.
-            emit(
-                {
-                    "systemMessage": "house-rules %s is published; this session runs %s, synced "
-                    "from your claude.ai account, which delivers the update itself."
-                    % (latest, installed or "an unknown version"),
-                    "hookSpecificOutput": {
-                        "hookEventName": "SessionStart",
-                        "additionalContext": (
-                            "house-rules %s is published on GitHub, but this session runs %s. This "
-                            "copy was synced from the user's claude.ai account, not installed from "
-                            "a marketplace, so no `claude plugin` command can update it here and "
-                            "none was run; claude.ai delivers the newer version to a later session "
-                            "itself. Do not run any update command, do not ask about updating, and "
-                            "do not stop work. In your first reply, tell the user in one sentence "
-                            "which version this session runs and that %s arrives when claude.ai "
-                            "syncs it."
-                            % (latest, installed or "an unknown version", latest)
-                        ),
-                    },
-                }
-            )
-            return 0
-
         # Out of date: update it here rather than asking, then check the result on disk rather
         # than trusting the exit code (docs/6-decisions/Decisions.md, 2026-09-26).
         failure = "automatic updating is switched off (HOUSE_RULES_AUTO_UPDATE=off)"
@@ -1378,8 +1402,8 @@ def event_versioncheck():
                     % (", ".join(after) or "no house-rules install", latest or "a newer version")
                 )
 
-        # Never a reason to stop: an unanswered permission prompt for the update once held an
-        # overnight run for hours (docs/6-decisions/Decisions.md, 2026-10-27).
+        _write_outdated_marker(session_id, reasons)
+
         banner_lines = [
             "",
             "=" * 70,
@@ -1393,16 +1417,29 @@ def event_versioncheck():
         banner_lines.extend(
             [
                 "",
-                "Do not stop or wait over this, and do not run the update commands yourself: a "
-                "permission prompt for them would sit unanswered in an unattended run, and the "
-                "user has said an update must never hold up their work. Carry on with the "
-                "user's request. In your reply, list the update under 'Waiting on you' with the "
-                "command(s) below, relayed through the step-card format and marked `UNTESTED:`, "
-                "since this hook relayed them and they have not been run in the user's shell.",
+                "Before doing any other work this session: run the command(s) below yourself, "
+                "in order, right now, on this machine - the same machine the check above just "
+                "read - and report the real output rather than the command. Do not ask in chat "
+                "first: the user has asked for the plugin's own update to just happen, and the "
+                "permission prompt the harness puts on your first shell command is where they "
+                "say yes or no. Check the result with `claude plugin list`; a reported update "
+                "is not a completed one. Once it is installed, tell the user it loads in a new "
+                "session (a /clear does not reload plugins) and carry on with their request.",
+                "",
+                "If they decline that prompt, or this session has no shell tool to run them "
+                "with, relay the command(s) instead - through the step-card format, marked "
+                "`UNTESTED:` since this hook relayed them and they have not been run on this "
+                "machine - then stop and wait for the user's answer.",
                 "",
             ]
         )
         banner_lines.extend("- %s" % r for r in reasons)
+        banner_lines.append("")
+        banner_lines.append(
+            "As a second, harness-enforced signal in case this context gets missed, the "
+            "first Bash/PowerShell command run this session will also carry a permission "
+            "prompt repeating this notice, once."
+        )
         banner_lines.append("=" * 70)
         emit(
             {
@@ -1794,7 +1831,7 @@ def event_promptran():
 # verbatim from hook.py.
 # ---------------------------------------------------------------------------------------
 
-# One shell word: quoted runs may hold spaces, so -c user.name="a name with spaces" is one word (#189).
+# One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
 _WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
 # `git` plus any run of global options before the subcommand.
 # Why the alternation's first branch exists: docs/architecture.md, "The pre-existing hole this exposed".
@@ -2049,10 +2086,13 @@ def register_docs_status(fn):
 # dispatcher in hook.py, use. The first group came out of the safe git part, the second out of hook.py.
 # ---------------------------------------------------------------------------------------
 
+OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-")  # claude/ = cloud app branches, old branches; ccr- = cloud sessions
+
+
 def owned_branch_prefixes():
-    """Branches that count as the agent's own (#341): the agent's prefix "<agent_name>/", the settings'
-    extra_owned_prefixes (HOUSE_RULES_OWNED_BRANCHES, then the settings file), and cloud-session ccr-."""
-    return settings.owned_prefixes()
+    """The defaults plus HOUSE_RULES_OWNED_BRANCHES (comma-separated extras, never replacing)."""
+    extra = tuple(p.strip() for p in os.environ.get("HOUSE_RULES_OWNED_BRANCHES", "").split(",") if p.strip())
+    return OWNED_BRANCH_PREFIXES + extra
 
 
 # Any -C at all, broad on purpose (`grep -C 3` included); only the `git -C <dir>` form below is
@@ -2290,9 +2330,10 @@ def _attribution_enabled():
 
 # The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
 # noreply@anthropic.com, which signs every commit as Claude whatever the message says.
-def agent_identity_fix(cwd=None):
-    """The command that signs this repo's commits as the agent: user.name = agent_name, user.email = the user's own."""
-    return settings.identity_fix(cwd)
+AGENT_IDENTITY_FIX = (
+    "git config user.name \"AJ's agent\" && "
+    "git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
+)
 
 
 _ARG = r"(\"[^\"]*\"|'[^']*'|\S+)"
@@ -2302,7 +2343,7 @@ _AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
 
 
 def _c_option_re(key):
-    """-c key=value, also with the whole pair quoted (-c "user.name=a name", #189)."""
+    """-c key=value, also with the whole pair quoted (-c "user.name=aj's agent", #189)."""
     return re.compile(
         r"(?:^|\s)-c\s*(?:\"" + key + r"=([^\"]*)\"|'" + key + r"=([^']*)'|" + key + r"=" + _ARG + r")",
         re.IGNORECASE,
@@ -2430,15 +2471,15 @@ def _branch_advice(is_mine, branch, note):
         )
     if branch:
         return (
-            "The checkout is on `%s`, which is not one of your own branches (%s). If that branch was opened "
+            "The checkout is on `%s`, which is not an AjsAgent/ (or claude/) branch. If that branch was opened "
             "for this session's work, commit there, scoped to those paths. If it is the user's, "
-            "branch off first (`git switch -c %s<topic>` carries the changes with it), "
+            "branch off first (`git switch -c AjsAgent/<topic>` carries the changes with it), "
             "then commit, scoped to those paths. Either way, say what you committed and where."
-            % (branch, ", ".join(owned_branch_prefixes()), settings.fill("@PREFIX@"))
+            % branch
         )
     return (
-        "No branch could be read (%s), so branch off first (`git switch -c %s<topic>`), "
-        "then commit, scoped to those paths, and say what you committed and where." % (note, settings.fill("@PREFIX@"))
+        "No branch could be read (%s), so branch off first (`git switch -c AjsAgent/<topic>`), "
+        "then commit, scoped to those paths, and say what you committed and where." % note
     )
 
 

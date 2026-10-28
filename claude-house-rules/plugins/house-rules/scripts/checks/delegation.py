@@ -191,16 +191,8 @@ def _as_ref(d, branch):
     return _as_git(d, "rev-parse", "--verify", "-q", "refs/house-rules/autosave/" + branch)
 
 
-def _as_remote_names(bare, branch):
-    """#345: every snapshot ref of this helper on origin: the legacy fixed name and each fresh one."""
-    p = "refs/house-rules/autosave/" + branch
-    return [l.split()[1] for l in _as_git(bare, "for-each-ref", "--format=%(objectname) %(refname)", p, p + "-s*").splitlines()]
-
-
-def _as_remote_shas(bare, branch):
-    return [l.split()[0] for l in _as_git(bare, "for-each-ref", "--format=%(objectname) %(refname)",
-                                          "refs/house-rules/autosave/" + branch,
-                                          "refs/house-rules/autosave/" + branch + "-s*").splitlines()]
+def _as_remote_ref(bare, branch):
+    return _as_git(bare, "rev-parse", "--verify", "-q", "refs/house-rules/autosave/" + branch)
 
 
 _d, _bare = _as_repo("worktree-agent-x")
@@ -214,8 +206,8 @@ _local = _as_ref(_d, "worktree-agent-x")
 commit_case(
     "autosave: an edit on a worktree-agent- branch saves an untracked file to the autosave ref and pushes it",
     bool(_local) and "new.py" in _as_git(_d, "ls-tree", "--name-only", _local)
-    and _as_remote_shas(_bare, "worktree-agent-x") == [_local],
-    "local %s, origin %s, out %r" % (_local[:9], _as_remote_shas(_bare, "worktree-agent-x"), out[:120]),
+    and _as_remote_ref(_bare, "worktree-agent-x") == _local,
+    "local %s, origin %s, out %r" % (_local[:9], _as_remote_ref(_bare, "worktree-agent-x")[:9], out[:120]),
 )
 commit_case(
     "autosave: the branch, the real index and the working tree are left exactly as they were",
@@ -227,10 +219,7 @@ commit_case("autosave: one edit stays well inside the 10 s hook budget", _elapse
 _p = _as_write(_d, "new.py", "y\n")
 run_hook("autosave", _as_payload("PostToolUse", "Edit", _p, _d), env=_as_env())
 _local2 = _as_ref(_d, "worktree-agent-x")
-_rate_ok = _local2 != _local and _as_remote_shas(_bare, "worktree-agent-x") == [_local]
-_names_before = _as_remote_names(_bare, "worktree-agent-x")
-_delegation_src = "\n".join(l for l in read(os.path.join(HERE, "house_rules", "delegation.py")).splitlines()
-                            if '"push"' in l or "'push'" in l)
+_rate_ok = _local2 != _local and _as_remote_ref(_bare, "worktree-agent-x") == _local
 _stamp = os.path.join(_as_git(_d, "rev-parse", "--absolute-git-dir"), "house-rules-autosave-worktree-agent-x.pushed")
 with open(_stamp, "w", encoding="utf-8") as f:
     f.write("%s %s" % (time.time() - 120, _local))
@@ -238,16 +227,9 @@ _p = _as_write(_d, "new.py", "z\n")
 run_hook("autosave", _as_payload("PostToolUse", "Edit", _p, _d), env=_as_env())
 commit_case(
     "autosave: pushes at most once a minute; the local ref still moves, and the next push after the window catches up",
-    _rate_ok and _as_ref(_d, "worktree-agent-x") in _as_remote_shas(_bare, "worktree-agent-x"),
-    "second edit local-only: %s; after the window origin holds the latest: %s"
-    % (_rate_ok, _as_ref(_d, "worktree-agent-x") in _as_remote_shas(_bare, "worktree-agent-x")),
-)
-_names_after = _as_remote_names(_bare, "worktree-agent-x")
-commit_case(
-    "autosave (#345): two autosave pushes write two different fresh snapshot refs on origin, and no push uses --force",
-    len(_names_before) == 1 and len(_names_after) == 2 and set(_names_before) < set(_names_after)
-    and "--force" not in _delegation_src and "force-with-lease" not in _delegation_src,
-    "origin refs after first push %s, after second %s" % (_names_before, _names_after),
+    _rate_ok and _as_remote_ref(_bare, "worktree-agent-x") == _as_ref(_d, "worktree-agent-x"),
+    "second edit local-only: %s; after the window origin matches: %s"
+    % (_rate_ok, _as_remote_ref(_bare, "worktree-agent-x") == _as_ref(_d, "worktree-agent-x")),
 )
 _quiet = []
 for _br in ("main", "claude/x"):
@@ -364,8 +346,8 @@ commit_case(
 _wip_body = _as_git(_dq, "log", "-1", "--format=%B")
 _wip_credit = [w for w in ("Co-Authored-By", "anthropic", "Claude-Session", "claude" + ".ai") if w.lower() in _wip_body.lower()]
 commit_case(
-    "autosave: the hook's own commit ends with the derived credit line and carries no Claude credit",
-    _wip_body.strip().endswith(TEST_COMMIT_CREDIT) and not _wip_credit,
+    "autosave: the hook's own commit ends with Committed by AJ's agent and carries no Claude credit",
+    _wip_body.strip().endswith("Committed by AJ's agent") and not _wip_credit,
     "body %r, credit found %r" % (_wip_body[-120:], _wip_credit),
 )
 
@@ -406,17 +388,10 @@ commit_case(
     not _gq, "; ".join(_gq) or "both passed with no output",
 )
 
-# (d) #345: the cleanup deletes every snapshot of the helper, however many pushes made.
 _ds, _bs = _as_repo("worktree-agent-done")
 _ps = _as_write(_ds, "s.py")
 run_hook("autosave", _as_payload("PostToolUse", "Write", _ps, _ds), env=_as_env())
-_ps = _as_write(_ds, "s.py", "again\n")
-_stamp_d = os.path.join(_as_git(_ds, "rev-parse", "--absolute-git-dir"), "house-rules-autosave-worktree-agent-done.pushed")
-with open(_stamp_d, "w", encoding="utf-8") as f:
-    f.write("%s -" % (time.time() - 120))
-run_hook("autosave", _as_payload("PostToolUse", "Edit", _ps, _ds), env=_as_env())
-_had_two = len(_as_remote_names(_bs, "worktree-agent-done")) == 2
-_had = bool(_as_remote_names(_bs, "worktree-agent-done"))
+_had = bool(_as_remote_ref(_bs, "worktree-agent-done"))
 _as_git(_ds, "add", "-A")
 _as_git(_ds, "commit", "-q", "-m", "feat: s")
 out = run_hook("subagentcommit", json.dumps({
@@ -425,10 +400,10 @@ out = run_hook("subagentcommit", json.dumps({
         "content": [{"type": "tool_use", "id": "d1", "name": "Write", "input": {"file_path": _ps}}]}})])}),
     env=_project_env(_FIXTURE_ROOT))[1]
 commit_case(
-    "subagentcommit: a clean finish deletes the autosave ref locally and every snapshot of it on origin (#345)",
-    _had and _had_two and not _as_ref(_ds, "worktree-agent-done") and not _as_remote_names(_bs, "worktree-agent-done"),
+    "subagentcommit: a clean finish deletes the autosave ref locally and on origin",
+    _had and not _as_ref(_ds, "worktree-agent-done") and not _as_remote_ref(_bs, "worktree-agent-done"),
     "on origin before: %s; after: local %r origin %r; out %r"
-    % (_had, _as_ref(_ds, "worktree-agent-done"), _as_remote_names(_bs, "worktree-agent-done"), out[:80]),
+    % (_had, _as_ref(_ds, "worktree-agent-done"), _as_remote_ref(_bs, "worktree-agent-done"), out[:80]),
 )
 _dr, _ = _as_repo("worktree-agent-retry")
 _pr = _as_write(_dr, "r.py")
@@ -473,21 +448,6 @@ _, osw2, _ = run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromp
 commit_case(
     "worktreesweep: says nothing when there is nothing to commit",
     osw2.strip() == "", "out %r" % osw2[:100],
-)
-# (e) #345: the sweep commits only inside a helper's own worktree: the parent's checkout is not touched.
-_dmain2, _ = _as_repo("main")
-_sw2 = os.path.join(_FIXTURE_ROOT, "wt-sweep-own")
-_as_git(_dmain2, "worktree", "add", "-q", "-b", "worktree-agent-own", _sw2)
-os.utime(_as_write(_sw2, "left.py"), (_long_ago, _long_ago))
-_as_write(_dmain2, "parent-work.py")
-_main_head = _as_git(_dmain2, "rev-parse", "HEAD")
-run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "hi",
-                                      "cwd": _dmain2, "session_id": "s1"}), env=_project_env(_dmain2))
-commit_case(
-    "worktreesweep (#345): commits only inside the helper's own worktree; the parent checkout keeps its uncommitted file and its HEAD",
-    _as_git(_sw2, "status", "--porcelain") == "" and _as_git(_sw2, "log", "-1", "--format=%s") == "wip: parent checkpoint of subagent work"
-    and _as_git(_dmain2, "status", "--porcelain") == "?? parent-work.py" and _as_git(_dmain2, "rev-parse", "HEAD") == _main_head,
-    "helper status %r; parent status %r" % (_as_git(_sw2, "status", "--porcelain"), _as_git(_dmain2, "status", "--porcelain")),
 )
 _multi = []
 for _name, _o in (("autosave", out_first_autosave), ("autosave unreachable origin", oq_unreach),
@@ -1040,20 +1000,6 @@ for needle in (
 ):
     if needle not in core:
         sar.append(f"subagent core is missing {needle!r}")
-_m345 = [n for n in ("run only the parts your change touched", "twice and everything else once",
-                      "A question only the user can answer: stop", "QUESTION FOR AJ")
-         if n not in core]
-report("FAIL" if _m345 else "PASS",
-       "subagentrules (#345): the injected rules carry the touched-parts run-twice rule and the stop-and-report rule for questions only aj can answer")
-if _m345:
-    print(f"          the subagent core is missing {_m345}")
-_bm = read(os.path.join(HERE, "..", "agents", "builder.md"))
-_b_bad = [l for l in _bm.splitlines() if re.search(r"\b(6|six) lines\b", l, re.I)]
-_b_ok = all(n in _bm for n in ("RESULT line", "FAIL line", "verbatim", "QUESTION FOR AJ", "verify.py --changed"))
-report("PASS" if _b_ok and not _b_bad else "FAIL",
-       "agents/builder.md (#345): no 6-line cap, RESULT and FAIL lines are exempt and quoted verbatim, aj-only questions go under their own heading")
-if _b_bad or not _b_ok:
-    print(f"          cap lines {_b_bad}; wording present {_b_ok}")
 if "${CLAUDE_PLUGIN_ROOT}" in core:
     sar.append("subagent core still carries a literal ${CLAUDE_PLUGIN_ROOT}")
 if "<!-- subagent -->" in core:

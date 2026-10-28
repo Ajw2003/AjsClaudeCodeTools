@@ -63,10 +63,10 @@ from house_rules.core import (  # noqa: F401
 ISSUES_FILE = "house-rules-issues.json"
 
 
-ISSUES_LABEL = settings.ISSUES_LABEL  # the GitHub label keeps its literal name; see settings.py
+ISSUES_LABEL = "AjsAgent created this"
 
 
-ISSUES_LABEL_OLD = settings.ISSUES_LABEL_OLD  # still counts: plans already in flight
+ISSUES_LABEL_OLD = "Claude created this"  # still counts: plans already in flight
 
 
 ISSUES_STEP_THRESHOLD = 3
@@ -80,7 +80,7 @@ ISSUE_NOTE = (
     "written create one parent issue for the plan and one child issue per step with `gh issue "
     "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
     "non-programmer can follow. Every issue carries at least one category label and the label "
-    "`" + ISSUES_LABEL + "`; if the repo lacks that label, create it first with `gh label "
+    "`AjsAgent created this`; if the repo lacks that label, create it first with `gh label "
     "create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels "
     "-f \"labels[]=in progress\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
@@ -482,18 +482,9 @@ def _loop_unlogged(state, top, label, name):
         # #327: the model can only log the entry after the approval, so refusing made aj type it twice.
         # The approval counts; the note asks for the entry. log_mark stays, so the next approval still
         # detects whether this one got logged.
-        if state.get("log_owed"):
-            # #343 (round 1, answer 10): the entry asked for at the last approval was never written, so
-            # the next stage's approval is refused until it is.
-            return ('Design loop: aj wrote "%s: %s", but the decisions log (%s) has nothing new since the '
-                    "last approval, and its entry was asked for and never written. Nothing moved. Add the "
-                    "entry for the previous stage, then ask aj to approve again."
-                    % (label, name, LOOP_LOG.replace(os.sep, "/")))
         state["log_ask"] = True
-        state["log_owed"] = True
         return ""
     state["log_mark"] = mark
-    state.pop("log_owed", None)
     return ""
 
 
@@ -1277,24 +1268,6 @@ def _loop_record_labels(payload):
                 % (type(exc).__name__, exc)]
 
 
-_PART_OF_RE = re.compile(r"\bPart of\s+(?:[\w.-]+/[\w.-]+)?#(\d+)", re.IGNORECASE)
-
-
-def _sub_issue_note(data, found):
-    """#343 (round 1 answer 9, round 2 answer 8): an issue created with `Part of #N` in its body must also
-    be linked as a sub-issue of #N. The link can only be made after the create, so this is a reminder."""
-    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
-    body = str(ti.get("body") or "") + " " + str(ti.get("command") or "")
-    m = _PART_OF_RE.search(body)
-    if not m or not found:
-        return []
-    return ["house-rules: issue %s#%s says `Part of #%s`, so also link it as a sub-issue of #%s: use the "
-            "GitHub tool mcp__github__sub_issue_write (method add), or `gh api repos/%s/issues/%s/sub_issues "
-            "-F sub_issue_id=<id of #%s>`. A feature that is one step of a bigger one finds its parent "
-            "through that link." % (found[0][0], found[0][1], m.group(1), m.group(1), found[0][0],
-                                    m.group(1), found[0][1])]
-
-
 def _issues_record(payload):
     """PostToolUse Bash or GitHub tool: record a created issue in the issue-gate and design-loop
     state. Returns a list of note strings (empty when nothing applies). Never raises."""
@@ -1309,7 +1282,7 @@ def _issues_record(payload):
         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return []
-        loop_notes = _loop_record_issues(git_dir, found, labelled, top) + _sub_issue_note(data, found)
+        loop_notes = _loop_record_issues(git_dir, found, labelled, top)
         if not _issues_enabled():
             return loop_notes
         state, problem = _issues_read(git_dir)
@@ -1394,10 +1367,10 @@ def _author_guard(subject, payload):
     except Exception: return None  # unreadable identity: let the commit through, as for an unreadable body file
     if who is None or not _is_claude_identity(*who):
         return None
-    return ("deny", "House rules, credit " + (settings.agent_name() or "the agent") + ": this commit would be authored as `%s <%s>`, "
+    return ("deny", "House rules, credit aj's agent: this commit would be authored as `%s <%s>`, "
             "which signs it as Claude. Set the agent's identity in this repo and retry: `%s`. "
             "HOUSE_RULES_ATTRIBUTION=off disables this check."
-            % (who[0] or "?", who[1] or "?", agent_identity_fix(_command_dir(payload)[0])), None)
+            % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
 
 
 def _guardgithub_issue_checks(payload, raw):
@@ -1439,8 +1412,8 @@ def _guardgithub_issue_checks(payload, raw):
 CLOSE_COMMENT_NOTE = (
     "House rules, this close is allowed: %s. Before or right after it, comment on issue #%d with that "
     "evidence (the QA message and the merged pull request link, or the sweep approval and the replacing "
-    "issue), add the label `" + settings.COMPLETED_LABEL + "` (`gh api repos/%s/issues/%d/labels -f "
-    "\"labels[]=" + settings.COMPLETED_LABEL + "\"`) and remove `in progress` (`gh api -X DELETE "
+    "issue), add the label `AjsAgent completed this` (`gh api repos/%s/issues/%d/labels -f "
+    "\"labels[]=AjsAgent completed this\"`) and remove `in progress` (`gh api -X DELETE "
     "repos/%s/issues/%d/labels/in%%20progress`)."
 )
 
@@ -1756,20 +1729,12 @@ def _page_escape(ctx):
     return bool(_NO_PAGE_RE.search(text)) and not _is_relayed_prompt(text)
 
 
-_CLOUD_ART_RE = re.compile(r"https://claude\.ai/(?:code/)?artifact/", re.IGNORECASE)
-
-
 def _check_page(ctx):
     if _page_escape(ctx):
         return ""
     reply = ctx.get("reply") or ""
     cwd = ctx.get("cwd") or ""
     if _reply_links_page(reply, cwd):
-        if os.environ.get("CLAUDE_CODE_REMOTE") and not _CLOUD_ART_RE.search(reply):
-            # #343 (round 5 answer 1C): in a cloud session a local .html shows raw code in the Claude app.
-            return ("this is a cloud session, where a local .html path shows raw code in the Claude app: "
-                    "publish the page with the Artifact tool (its publish step makes a private claude.ai "
-                    "artifact) and link the https://claude.ai/artifact/... link in the reply")
         return ""
     out = _outside_page_links(reply, cwd)
     if out:
