@@ -69,6 +69,19 @@ Each step is a proposal for aj first, as a page built with `make_page.py`, per t
 before aj approves it by name.
 
 1. **Read the PC check's result** (above) and record which version loaded and from where.
+
+   **Result, read 2026-10-28 from the transcript of session `session_01RFve8CWtaudLeNX7XfR3HV`:** the PC
+   session ran **2.74.0**, loaded from the synced copy
+   `C:\Users\aj\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\rpm\c470cc28\960cc781\plugin_01PUZ8WUWqbv9Fqiv98BTX7p`
+   (its `plugin.json` was last written 2026-10-27 17:44:52, PC local time). The Read tool was allowed and no hook
+   refused a tool, because `agent_name` was already saved in `C:\Users\aj\.claude\house-rules\settings.json`
+   (item 2). The `claude plugin` cache at `%USERPROFILE%\.claude\plugins\cache\aj-house-rules\house-rules\` did
+   gain a `2.74.1` folder (6:44:01 PM, PC local time) from the session-start update, but that cache is not what
+   loaded, which confirms item 6.
+   This result does not settle whether the synced copy picks up 2.74.1, because the PC session started at
+   00:43:53 UTC and the revert merged at 00:42:58 UTC (`git log -1 --format=%ci bc5a1b3`): only 55 seconds
+   apart, which is probably too soon for any sync. Until a re-run shows 2.74.1 in the synced copy, assume aj's
+   PC still runs the broken 2.74.0.
 2. **Catalogue 2.73.3's behaviour** (what `main` runs now): every hook in `hooks/hooks.json`, what it allows,
    refuses and says, read from the code and confirmed in a real session on aj's PC. This is the known working
    baseline.
