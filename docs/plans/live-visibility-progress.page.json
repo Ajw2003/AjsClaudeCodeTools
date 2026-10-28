@@ -1,0 +1,87 @@
+{
+  "title": "Live Visibility Progress",
+  "eyebrow": "Build progress · #430, three of six steps built",
+  "approval": "Build plan approved: live visibility",
+  "replyPrefix": "Live visibility progress answers",
+  "reply": "",
+  "short": {
+    "lead": "Steps 1 to 3 are built, tested and pushed on AjsAgent/thread-links-trace-visibility-4eoxf3. Each step passed the parts of the verify.py test suite it touched, on two runs. Each step was also run once in this real session. One decision from you is needed before step 4 (#434, the progress lines).",
+    "hint": "Tap a step to see how it was proved.",
+    "key": [
+      [
+        "Built",
+        "done"
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "list",
+        "Step 1",
+        "#431 Every cloud session is told its own link",
+        "done",
+        "The session-start hook now gives the link in any cloud session, not only project threads. The end-of-turn check keeps asking until a reply contains the link. Proved on this session, which had no link before. Commit 3245358.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 2",
+        "#432 Every helper's full run is a file you can open",
+        "done",
+        "Each helper's prompt, every step with its result, and its report are saved to a file in work-trail/. Git ignores that folder. Proved on this session's real editor helper; the file was sent to you. Commit c121c80.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 3",
+        "#433 Long or quiet calls wait for your yes",
+        "done",
+        "These are stopped until your next message says yes: background, detached and hidden commands, long waits, helper agents and Monitor watches. One yes lets one call through. Proved through the plugin's real entry point. A call was stopped, then let through once after a yes, then stopped again. Commit 2cd8d08.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Decision",
+        "The editor helper and your 4A",
+        "you",
+        "The end-of-turn check requires an editor helper pass on every page. Under your decision 4A (a helper counts as a long call), each pass would wait for your yes. Each pass took 12 to 22 seconds, and its steps are now saved in work-trail/.",
+        "Pick option A or option B under Choices."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "editor",
+      "Should the editor helper skip the long-call check by default?",
+      [
+        [
+          "A",
+          "Yes, skip the check only for house-rules:editor",
+          1,
+          "Page passes run without asking; every other helper still waits for your yes."
+        ],
+        [
+          "B",
+          "No, ask before every editor pass",
+          0,
+          "Matches your decision 4A exactly, but each page costs you one more answer."
+        ]
+      ],
+      "I recommend option A, because the editor helper is short and read-only, and its steps are now visible."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Three of six steps are built. The session link, the full helper transcripts and the long-call check all work.",
+    "changing": "Nothing new until you answer; then steps 4 to 6.",
+    "blocking": "Your pick between option A (skip the check for the editor helper) and option B (ask before every editor pass).",
+    "next": "I build step 4 (#434), the progress lines, and set the editor helper's default from your answer.",
+    "todo": [
+      "Pick option A or option B under Choices.",
+      "Tap <b>Copy my reply</b> and send it, or tell me what to change."
+    ]
+  }
+}
