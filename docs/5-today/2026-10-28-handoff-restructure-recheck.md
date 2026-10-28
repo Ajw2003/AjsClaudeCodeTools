@@ -82,6 +82,14 @@ before aj approves it by name.
    00:43:53 UTC and the revert merged at 00:42:58 UTC (`git log -1 --format=%ci bc5a1b3`): only 55 seconds
    apart, which is probably too soon for any sync. Until a re-run shows 2.74.1 in the synced copy, assume aj's
    PC still runs the broken 2.74.0.
+
+   **Re-run, 2026-10-28, session `session_01RFve8G9ECkwMqosv1VpMup` (started 00:57:10 UTC):** the PC now runs
+   **2.74.1**. It loaded from the same synced folder (`...\rpm\c470cc28\960cc781\plugin_01PUZ8WUWqbv9Fqiv98BTX7p`),
+   whose `plugin.json` now reads `"version": "2.74.1"` and was rewritten at 2026-10-27 18:54:01, PC local time
+   (UTC-6, which is 00:54:01 UTC). So the synced copy picked up the revert about 11 minutes after it merged, and
+   it did so in place: the folder name stayed the same and only its contents changed. The Read tool was allowed
+   and no hook refused a tool. The startup text named no plugin version, so the version came from `plugin.json`
+   alone. The cache folders are unchanged from the first check.
 2. **Catalogue 2.73.3's behaviour** (what `main` runs now): every hook in `hooks/hooks.json`, what it allows,
    refuses and says, read from the code and confirmed in a real session on aj's PC. This is the known working
    baseline.
