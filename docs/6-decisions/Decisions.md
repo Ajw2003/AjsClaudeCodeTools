@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-28 - Build plan approved: live visibility
+
+**Context.** Build plan `docs/plans/live-visibility-build-plan.html` for #430, six steps: #431 (thread link in
+every cloud session), #432 (full helper work trail), #433 (long-call check), #434 (progress lines), #435 (rule text
+and trace default), #436 (docs, version 2.75.0, QA page).
+
+**Decision.** aj's reply was "Build plan approved: live visibility 1A". Choice A: I build every step myself in
+this session, in short visible steps, with no builder helper, because until #432 is built a helper's steps cannot
+be read. Rejected: B, one builder helper per step, each asked for first. This sets aside the "delegate the
+execution" rule for this build, by aj's pick.
+
+**Status.** Standing.
+
 ## 2026-10-28 - Design approved: live visibility
 
 **Context.** aj reported that threads do not show their own session link by default, that project threads go
