@@ -1443,7 +1443,8 @@ _rc_case("rclink is silent with HOUSE_RULES_WORKTRACKING=off", "started",
 # --- thread link: the thread's own transcript link at session start (#400) ----------------
 def _tl_ctx(**kw):
     e = {k: v for k, v in os.environ.items()
-         if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "HOUSE_RULES_WORKTRACKING")}
+         if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "CLAUDE_CODE_REMOTE",
+                      "HOUSE_RULES_WORKTRACKING")}
     e.update(kw)
     code, ctx, err = _additional_context("inject", "", env=e)
     return ctx or ""
@@ -1459,8 +1460,14 @@ def _tl_case(title, ctx, must, must_not=()):
 
 _tl_case("inject carries the thread's transcript link in a project thread",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"),
-         ("/code/session_TEST123", "Transcript of this thread's session", "cse_TEST123"))
-_tl_case("inject adds no transcript link outside a project thread",
+         ("/code/session_TEST123", "Transcript of this session", "cse_TEST123", "first reply", "checklist header"))
+_tl_case("inject carries the link in a cloud session without the projects flag (#431)",
+         _tl_ctx(CLAUDE_CODE_REMOTE="true", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"),
+         ("/code/session_TEST123", "Transcript of this session", "cse_TEST123", "first reply"), ("checklist",))
+_tl_case("inject names a malformed id in a cloud session too (#431)",
+         _tl_ctx(CLAUDE_CODE_REMOTE="true", CLAUDE_CODE_REMOTE_SESSION_ID="bogus"),
+         ("could not build", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
+_tl_case("inject adds no transcript link in a local session (no CLAUDE_CODE_REMOTE, no projects flag)",
          _tl_ctx(CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"), (), ("/code/session_", "could not build"))
 _tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is malformed",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="bogus"),
@@ -1513,7 +1520,8 @@ else:
 # --- work trail: a project thread keeps a helper's rendered transcript (#397) ---------------
 import tempfile as _wt_tf
 
-_WT_STRIP = ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "HOUSE_RULES_WORKTRAIL_DIR")
+_WT_STRIP = ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "CLAUDE_CODE_REMOTE",
+             "HOUSE_RULES_WORKTRAIL_DIR")
 
 
 def _wt_env(trail, projects="1"):
@@ -1700,6 +1708,26 @@ _lo_e2 = _lo_transcript("lo-e2", [], [("mcp__hearthbot__update_progress_checklis
                         {"text": "[Transcript](%sTEST1)\n- [ ] x" % RCLINK_BASE})])
 _lo_ctx, _lo_sys = _lo_run(_lo_e2, CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST1", **_LO_PT)
 _wt_check("links owed: a checklist header with the thread link is fine",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+# #431: in a cloud session, a session whose replies never carried its own link owes it once.
+_LO_CLOUD = {"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_REMOTE_SESSION_ID": "cse_TEST1"}
+_lo_f = _lo_transcript("lo-f", [], [])
+_lo_ctx, _lo_sys = _lo_run(_lo_f, **_LO_CLOUD)
+_wt_check("links owed: a cloud session whose replies never carried its link is named (#431)",
+          [] if "links owed" in _lo_ctx and RCLINK_BASE + "TEST1" in _lo_ctx else [f"got {_lo_ctx!r}"])
+_lo_f2 = _hand_transcript("lo-f2", [
+    json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}}),
+    json.dumps({"type": "assistant", "message": {"content": [
+        {"type": "text", "text": "[Transcript of this session](%sTEST1) (cse_TEST1)" % RCLINK_BASE}]}})])
+_lo_ctx, _lo_sys = _lo_run(_lo_f2, **_LO_CLOUD)
+_wt_check("links owed: a cloud session whose reply carried its link is fine (#431)",
+          [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+_lo_f3 = _lo_transcript("lo-f3", ["Open your first reply with %sTEST1" % RCLINK_BASE], [])
+_lo_ctx, _lo_sys = _lo_run(_lo_f3, **_LO_CLOUD)
+_wt_check("links owed: the hook's own injected note does not count as the link being posted (#431)",
+          [] if "links owed" in _lo_ctx else [f"got {_lo_ctx!r}"])
+_lo_ctx, _lo_sys = _lo_run(_lo_f, CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST1")
+_wt_check("links owed: a local session owes no session link (#431)",
           [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
 _lo_ctx, _lo_sys = _lo_run(_lo_a)
 _wt_check("links owed: silent outside a project thread",

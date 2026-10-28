@@ -133,6 +133,12 @@ def rules_corpus():
     return corpus
 
 
+# #431: the session-link checks read these. A verify run inside a cloud session or project thread
+# would otherwise inherit them and get results CI never sees; a test that needs one sets it itself.
+for _session_var in ("CLAUDE_CODE_REMOTE", "CLAUDE_CODE_REMOTE_SESSION_ID", "CLAUDE_CODE_PROJECTS_SESSION"):
+    os.environ.pop(_session_var, None)
+
+
 def run_hook(event, payload="", env=None):
     e = dict(os.environ) if env is None else env
     # #397: a sandbox that is itself a project thread would otherwise write test work trails into

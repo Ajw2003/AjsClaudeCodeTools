@@ -165,6 +165,10 @@ def event_handover():
             links_records, _links_detail = _records_since_last_user_message(transcript_path)
             if links_records is not None:
                 links_owed = handover_links_owed(links_records)
+        if transcript_path and delegation._link_session():
+            own = delegation.session_link_owed(transcript_path, reply_text if have_reply else "")
+            if own:
+                links_owed.append(own)
     except Exception as exc:
         trace_lines.append("house-rules: links-owed check could not run (%s)" % type(exc).__name__)
     if issue_problem:
@@ -236,8 +240,11 @@ def event_handover():
     if label_line:
         parts.append(label_line)
     if links_owed:
-        parts.append("House rules, work tracking: links owed - %s. Post them (post_message, attached) and "
-                     "fix the checklist header before ending the turn." % "; ".join(links_owed))
+        if delegation._in_project_thread():
+            how = "Post them (post_message, attached) and fix the checklist header before ending the turn."
+        else:
+            how = "Put the link at the top of your reply before ending the turn."
+        parts.append("House rules, work tracking: links owed - %s. %s" % ("; ".join(links_owed), how))
     if retry:
         # #322/#323: the retry reports to aj only; additionalContext would wake the model and loop.
         emit({"systemMessage": " ".join(trace_lines + parts)})

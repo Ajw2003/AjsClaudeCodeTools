@@ -1781,25 +1781,62 @@ def _scope_delegate_link(payload, field):
 _CSE_ID_RE = re.compile(r"^cse_([A-Za-z0-9]+)$")
 
 
-def thread_link_note():
-    """inject (#400): in a project thread, the text telling the thread its own transcript link;
-    "" outside a project thread or with work tracking off."""
-    if not _worktracking_enabled() or os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") != "1":
-        return ""
+def _link_session():
+    """#431: the sessions that get their own transcript link - a project thread, or any cloud
+    session (CLAUDE_CODE_REMOTE=true), which includes a session a project thread starts."""
+    if not _worktracking_enabled():
+        return False
+    return (os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") == "1"
+            or os.environ.get("CLAUDE_CODE_REMOTE", "").strip().lower() == "true")
+
+
+def _session_link():
+    """(link, raw id) for this session, or (None, raw) when the id is missing or malformed."""
     raw = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID", "").strip()
     m = _CSE_ID_RE.match(raw)
-    if not m:
+    return (RCLINK_BASE + m.group(1) if m else None), raw
+
+
+def thread_link_note():
+    """inject (#400, #431): in a project thread or cloud session, the text telling the session
+    its own transcript link; "" in a local session or with work tracking off."""
+    if not _link_session():
+        return ""
+    link, raw = _session_link()
+    if not link:
         return (
             "\n\nHouse rules, work tracking: could not build the thread's transcript link - "
             "CLAUDE_CODE_REMOTE_SESSION_ID is %s (expected cse_<id>). Say so in your first reply."
             % ("missing" if not raw else "malformed")
         )
-    return (
-        "\n\nHouse rules, work tracking: open every checklist header (the first line of the "
-        "update_progress_checklist text) with \"Transcript of this thread's session\" linked to %s%s, "
-        "and give the raw id %s beside it once in your first reply."
-        % (RCLINK_BASE, m.group(1), raw)
+    note = (
+        "\n\nHouse rules, work tracking: open your first reply with \"Transcript of this session\" "
+        "linked to %s, with the raw id %s beside it." % (link, raw)
     )
+    if _in_project_thread():
+        note += (" Also open every checklist header (the first line of the "
+                 "update_progress_checklist text) with the same link.")
+    return note
+
+
+def session_link_owed(transcript_path, reply_text):
+    """#431: the session's own link, when no reply in this session has carried it yet; None when
+    it has, when this is a local session, or when the id is unusable (inject said so already).
+    Only assistant records count, so the hook's own injected note never satisfies it."""
+    if not _link_session():
+        return None
+    link, _raw = _session_link()
+    if not link or link in (reply_text or ""):
+        return None
+    with open(transcript_path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if link in line and '"assistant"' in line:
+                try:
+                    if json.loads(line).get("type") == "assistant":
+                        return None
+                except ValueError:
+                    continue
+    return "this session's own transcript link %s at the top of your reply" % link
 
 
 _TRAIL_PATH_RE = re.compile(r"Work trail for this helper: (\S+)\.(?:\s|$)")
