@@ -1222,10 +1222,11 @@ _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # so is guardgithub (#178), which runs only on a GitHub MCP write; and pagecheck (#257), which
 # exits at once unless the call is an .html page Write or an Artifact call; and closablemerge (#362), which
 # exits at once unless the call is a merge; and rclink (#383), which runs only on the one
-# start_remote_control MCP tool.
+# start_remote_control MCP tool; and longcall (#433), which runs only on Monitor (its Bash and Agent
+# halves run inside guard and agentcap, so a shell call gains no process).
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] or "longcall" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(

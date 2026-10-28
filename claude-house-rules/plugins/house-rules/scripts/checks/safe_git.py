@@ -42,16 +42,17 @@ GUARD_CASES = [
     ("pass", None, "git tag v1.2.0"),
     # #291: each destructive step is refused, and the refusal names the safe way (the cited text).
     ("deny", "commit the work on a new branch first", "git reset --hard origin/main"),
-    # #292: background and hidden work, and a wait piped through tail/head, run without a prompt.
-    ("pass", None, 'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"'),
-    ("pass", None, "npm run dev > dev.log 2>&1 &"),
-    ("pass", None, "nohup ./long-task.sh"),
-    ("pass", None, "until grep -q done status.txt; do sleep 5; done | tail -5"),
-    ("pass", None, "timeout 600 ./run_tests.sh | head -40"),
+    # #292 let background and hidden work, and long waits, run without a prompt. #433 (aj, 3A): they are
+    # stopped as long or quiet calls until aj says yes. A pipe through tail/head alone is still fine.
+    ("deny", "long or quiet call", 'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"'),
+    ("deny", "long or quiet call", "npm run dev > dev.log 2>&1 &"),
+    ("deny", "long or quiet call", "nohup ./long-task.sh"),
+    ("deny", "long or quiet call", "until grep -q done status.txt; do sleep 5; done | tail -5"),
+    ("deny", "long or quiet call", "timeout 600 ./run_tests.sh | head -40"),
     ("pass", None, "git log | head -5"),
     ("pass", None, "cat build.log | tail -50"),
     ("pass", None, "python sleepy.py | tail"),
-    ("pass", None, "Start-Job -ScriptBlock { ./build.ps1 }"),
+    ("deny", "long or quiet call", "Start-Job -ScriptBlock { ./build.ps1 }"),
     ("deny", "move the folder into a `_to_delete/` folder", "rm -rf node_modules"),
     ("deny", "move the file into a `_to_delete/` folder", "rm styles.css"),  # never committed
     ("deny", "move the folder into a `_to_delete/` folder", "Remove-Item -Recurse -Force ./dist"),
@@ -69,9 +70,9 @@ GUARD_CASES = [
     ("deny", "_to_delete/", "ls\nrm -rf build"),
     ("deny", "_to_delete/", "ls\trm -rf build"),
     ("deny", "_to_delete/", "ls &&\nrm -rf build"),
-    ("pass", None, "ls\nnohup ./long-task.sh"),
-    ("pass", None, "ls\nsetsid ./long-task.sh"),
-    ("pass", None, "sleep 99 &\nls"),
+    ("deny", "long or quiet call", "ls\nnohup ./long-task.sh"),
+    ("deny", "long or quiet call", "ls\nsetsid ./long-task.sh"),
+    ("deny", "long or quiet call", "sleep 99 &\nls"),
     ("pass", None, "ls\nsleep 5 | tail -1"),
     ("pass", None, "ls -la\necho done"),
     ("pass", None, "make 2>&1\nls"),
@@ -437,7 +438,9 @@ for _n, _cmd in (
     elif _n == "9" and not (_d == "deny" and ("run it as plain `git ...` from %s, with no cd, -C or variables, "
                                               "and it will be checked normally" % _fr_top) in _r):
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
-    elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
+    elif _n == "7b" and _d == "deny" and "long or quiet call" in _r:
+        pass  # #433: an open-ended wait loop is stopped as a long or quiet call, never "Do not retry"
+    elif _n != "9" and _d == "deny":
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
 for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)

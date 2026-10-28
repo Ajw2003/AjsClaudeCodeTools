@@ -966,9 +966,20 @@ def _agentcap_update(add=None, remove=None):
 
 def event_agentcap():
     try:
+        payload = read_payload()
+        try:
+            # #433: a helper is a long call (choice 4A). A helper's own spawn is left to the cap below,
+            # whose "report back to the parent" refusal is the precise answer there.
+            refusal = None if '"agent_id"' in (payload or "") else longcall_refusal(payload)
+        except Exception as exc:
+            refusal = None
+            emit({"systemMessage": "house-rules plugin: longcall could not check this helper (%s: %s), "
+                                   "so it was not stopped." % (type(exc).__name__, exc)})
+        if refusal:
+            _deny_longcall(refusal)
+            return 0
         if not _agentcap_enabled():
             return 0
-        payload = read_payload()
         caller = ""
         try:
             data = json.loads(payload) if payload else {}
@@ -1948,3 +1959,178 @@ def _append_thread_link(body):
 core.register_session_start("inject", _strip_subagent_markers)
 core.register_session_start("inject", _append_thread_link)
 core.register_prompt(_scope_delegate_link)
+
+
+# longcall — PreToolUse on Bash|PowerShell|Agent|Task|Monitor, its own hooks.json entry (#433).
+# docs/4-systems/live-visibility.md, "Long-call check". aj's rule: nothing runs quiet by default.
+
+LONGCALL_SECONDS = 60
+_LC_SLEEP_SECONDS = 10
+_LC_SLEEP_RE = re.compile(r"\bsleep\s+(\d+)")
+_LC_TIMEOUT_CMD_RE = re.compile(r"\btimeout\s+(?:-\S+\s+)*(\d+)")
+_LC_WAIT_LOOP_RE = re.compile(r"\b(while|until)\b[\s\S]*\bsleep\b")
+_LC_DETACH_RE = re.compile(r"(?:^|[\s;(&|])(nohup|setsid|disown)\b", re.MULTILINE)
+_LC_HIDDEN_RE = re.compile(r"-WindowStyle\s+Hidden\b|\bStart-Job\b", re.IGNORECASE)
+_LC_TRAILING_AMP_RE = re.compile(r"(?<![&|>])&[ \t]*$", re.MULTILINE)
+_LC_YES_RE = re.compile(r"\b(yes|yep|yeah|ok|okay|go ahead|go for it|do it|approved|sure|fine)\b", re.IGNORECASE)
+
+LONGCALL_REFUSAL = (
+    "House rules, long or quiet call (#433): this call %s. Nothing runs quiet by default. Either split "
+    "the work into short steps aj can watch, or ask aj in your reply first - say what the call is and "
+    "roughly how long it takes - and wait. aj's next message saying yes lets this one call through. "
+    "HOUSE_RULES_LONG_CALLS=off turns this check off."
+)
+LONGCALL_HELPER_REFUSAL = (
+    "House rules, long or quiet call (#433): this call %s. A helper cannot ask aj, so split the work "
+    "into short steps instead."
+)
+
+
+def _longcall_enabled():
+    return os.environ.get("HOUSE_RULES_LONG_CALLS", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _longcall_exempt():
+    raw = os.environ.get("HOUSE_RULES_LONG_CALLS_EXEMPT", "")
+    return {t.strip() for t in raw.split(",") if t.strip()}
+
+
+def _longcall_reason(tool, inp):
+    """Why this call is long or quiet, in words for the refusal; None when it is neither."""
+    if tool in ("Bash", "PowerShell"):
+        cmd = str(inp.get("command") or "")
+        if inp.get("run_in_background"):
+            return "runs in the background, where aj sees nothing until it ends"
+        m = _LC_DETACH_RE.search(cmd)
+        if m:
+            return "detaches a process with %s, so its output never shows" % m.group(1)
+        if _LC_HIDDEN_RE.search(cmd):
+            return "starts a hidden window or a background job, which shows nothing"
+        if _LC_TRAILING_AMP_RE.search(cmd):
+            return "starts a process in the background with &, which shows nothing"
+        timeout = inp.get("timeout")
+        if isinstance(timeout, (int, float)) and timeout > LONGCALL_SECONDS * 1000:
+            return "allows itself %d seconds" % (timeout // 1000)
+        if _LC_WAIT_LOOP_RE.search(cmd):
+            return "is a wait loop, which shows nothing until it ends"
+        for m in _LC_TIMEOUT_CMD_RE.finditer(cmd):
+            if int(m.group(1)) > LONGCALL_SECONDS:
+                return "wraps a command in a %s-second timeout" % m.group(1)
+        for m in _LC_SLEEP_RE.finditer(cmd):
+            if int(m.group(1)) > _LC_SLEEP_SECONDS:
+                return "sleeps for %s seconds" % m.group(1)
+        return None
+    if tool in ("Agent", "Task"):
+        kind = str(inp.get("subagent_type") or "general-purpose")
+        if kind in _longcall_exempt():
+            return None
+        return "starts a helper agent (%s), whose steps do not show in this thread while it runs" % kind
+    if tool == "Monitor":
+        return "starts a Monitor watch, which runs quietly in the background"
+    return None
+
+
+def _longcall_state_path(session_id):
+    import tempfile
+
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(tempfile.gettempdir(), "house-rules-longcall-%s.json" % safe)
+
+
+def _longcall_load(session_id):
+    path = _longcall_state_path(session_id)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return data if isinstance(data, dict) else {}
+
+
+def _longcall_save(session_id, state):
+    with open(_longcall_state_path(session_id), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(state, f)
+
+
+def longcall_refusal(payload):
+    """The refusal text for a long or quiet call aj has not said yes to, or None to let it run.
+    Shared by guard (Bash, PowerShell), agentcap (Agent, Task) and the Monitor-only longcall entry,
+    so a Bash call gains no new hook process (the per-call budget in checks/core.py)."""
+    if not _longcall_enabled():
+        return None
+    data = json.loads(payload) if payload else {}
+    if not isinstance(data, dict):
+        return None
+    tool = str(data.get("tool_name") or "")
+    inp = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    reason = _longcall_reason(tool, inp)
+    if not reason:
+        return None
+    if data.get("agent_id"):
+        return LONGCALL_HELPER_REFUSAL % reason
+    session_id = str(data.get("session_id") or "")
+    state = _longcall_load(session_id)
+    if state.get("approved") == tool:
+        state.pop("approved")
+        _longcall_save(session_id, state)
+        core.trace("house-rules: longcall let through the %s call aj said yes to (%s)." % (tool, reason))
+        return None
+    state["pending"] = tool
+    _longcall_save(session_id, state)
+    return LONGCALL_REFUSAL % reason
+
+
+def _deny_longcall(reason):
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                 "permissionDecisionReason": reason}})
+
+
+def event_longcall():
+    """PreToolUse (Monitor only): stop a Monitor watch until aj says yes to it."""
+    try:
+        reason = longcall_refusal(read_payload())
+        if reason:
+            _deny_longcall(reason)
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: longcall could not check this call (%s: %s), so "
+                               "it was not stopped." % (type(exc).__name__, exc)})
+    return 0
+
+
+def _longcall_guard(subject, payload):
+    """guard's hook (Bash, PowerShell): a long or quiet command is refused before guard's own checks."""
+    try:
+        reason = longcall_refusal(payload)
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: longcall could not check this command (%s: %s), "
+                               "so it was not stopped." % (type(exc).__name__, exc)})
+        return None
+    return ("deny", reason, None) if reason else None
+
+
+def _longcall_yes_link(payload, field):
+    """scope (UserPromptSubmit): aj's yes after a stopped long call lets that one call through.
+    A helper's report or a notification is never aj's yes."""
+    try:
+        if not field or not _longcall_enabled():
+            return "", ""
+        data = json.loads(payload)
+        session_id = str(data.get("session_id") or "")
+        state = _longcall_load(session_id)
+        tool = state.get("pending")
+        text = str(data.get("prompt") or "")
+        if not tool or not _LC_YES_RE.search(text):
+            return "", ""
+        from house_rules import design_loop
+
+        if design_loop._is_relayed_prompt(text, payload):
+            return "", ""
+        state.pop("pending")
+        state["approved"] = tool
+        _longcall_save(session_id, state)
+        return "", "Long-call check: aj said yes, so the next %s call that was stopped runs once." % tool
+    except Exception as exc:
+        return "", "Long-call check: could not read aj's answer (%s: %s)." % (type(exc).__name__, exc)
+
+
+core.register_prompt(_longcall_yes_link)
+core.register_guard_issue(_longcall_guard)

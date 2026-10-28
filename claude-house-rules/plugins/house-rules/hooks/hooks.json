@@ -114,6 +114,16 @@
         ]
       },
       {
+        "matcher": "Monitor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" longcall",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|NotebookEdit|Bash|PowerShell",
         "hooks": [
           {

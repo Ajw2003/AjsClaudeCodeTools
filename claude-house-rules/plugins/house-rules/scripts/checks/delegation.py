@@ -1097,6 +1097,7 @@ _cap_state = os.path.join(_FIXTURE_ROOT, "cap-agents.json")
 
 def _cap_env(**extra):
     e = dict(os.environ)
+    e["HOUSE_RULES_LONG_CALLS"] = "off"  # these cases test the cap; the long-call check has its own (#433)
     e["HOUSE_RULES_AGENTS_STATE"] = _cap_state
     e.pop("HOUSE_RULES_AGENTS", None)
     e.update(extra)
@@ -1694,6 +1695,83 @@ _nb_cases.append(("enforced: a helper starting its own helper is refused, naming
                   '"permissionDecision":"deny"' in _o and "Report back to the parent" in _o))
 for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
+
+
+# --- longcall: a long or quiet call is asked for first (#433) --------------------------------
+_lc_session = "lc-%d" % os.getpid()
+
+
+def _lc(tool, tool_input, session=None, **env_extra):
+    e = dict(os.environ)
+    e["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_wt_tf.mkdtemp(prefix="house-rules-lc-"), "agents.json")
+    e.update(env_extra)
+    payload = json.dumps({"session_id": session or _lc_session, "hook_event_name": "PreToolUse",
+                          "tool_name": tool, "tool_input": tool_input})
+    # The route Claude Code really calls: guard for a shell call, agentcap for a helper, longcall for Monitor.
+    event = {"Bash": "guard", "PowerShell": "guard", "Agent": "agentcap", "Task": "agentcap"}.get(tool, "longcall")
+    code, out, _ = run_hook(event, payload, env=e)
+    return code, out
+
+
+def _lc_denied(out):
+    return '"permissionDecision":"deny"' in out.replace(" ", "")
+
+
+def _lc_yes(text, session=None, **kw):
+    payload = json.dumps(dict({"session_id": session or _lc_session, "hook_event_name": "UserPromptSubmit",
+                               "prompt": text}, **kw))
+    return run_hook("scope", payload)
+
+
+_lc_cases = [
+    ("a Bash call with a 5-minute timeout is stopped", ("Bash", {"command": "make", "timeout": 300000}), True),
+    ("a Bash call with a 30-second timeout runs", ("Bash", {"command": "make", "timeout": 30000}), False),
+    ("a plain short Bash call runs", ("Bash", {"command": "ls"}), False),
+    ("sleep 30 is stopped", ("Bash", {"command": "sleep 30"}), True),
+    ("sleep 2 runs", ("Bash", {"command": "sleep 2"}), False),
+    ("a wait loop is stopped", ("Bash", {"command": "until grep -q done f; do sleep 5; done"}), True),
+    ("timeout 900 wrapping a command is stopped", ("Bash", {"command": "timeout 900 ./build.sh"}), True),
+    ("a background Bash call is stopped", ("Bash", {"command": "pytest", "run_in_background": True}), True),
+    ("a foreground helper is stopped (4A)", ("Agent", {"subagent_type": "builder", "prompt": "x"}), True),
+    ("a background helper is stopped (4A)", ("Agent", {"subagent_type": "builder", "prompt": "x",
+                                                       "run_in_background": True}), True),
+    ("a Monitor watch is stopped", ("Monitor", {"command": "tail -f x"}), True),
+    ("a trailing & is stopped", ("Bash", {"command": "npm run dev &"}), True),
+    ("&& between commands is not a trailing &", ("Bash", {"command": "npm ci && npm test"}), False),
+    ("2>&1 is not a trailing &", ("Bash", {"command": "make 2>&1"}), False),
+    ("nohup is stopped", ("Bash", {"command": "nohup ./x.sh"}), True),
+]
+for _t, (_tool, _inp), _want in _lc_cases:
+    _c, _o = _lc(_tool, _inp, session="lc-case-%d" % len(_t))
+    _ok = _c == 0 and _lc_denied(_o) == _want
+    if _want and _ok and not ("ask aj" in _o and "short" in _o):
+        _ok = False
+    report("PASS" if _ok else "FAIL", "longcall: " + _t + " (#433)")
+    if not _ok:
+        print(f"          exit {_c}, out {_o[:200]!r}")
+
+_c, _o = _lc("Bash", {"command": "pytest", "run_in_background": True}, HOUSE_RULES_LONG_CALLS="off")
+report("PASS" if _c == 0 and not _lc_denied(_o) else "FAIL", "longcall: HOUSE_RULES_LONG_CALLS=off lets it run (#433)")
+
+_c, _o = _lc("Agent", {"subagent_type": "house-rules:editor", "prompt": "x"},
+             HOUSE_RULES_LONG_CALLS_EXEMPT="house-rules:editor,house-rules:scout")
+report("PASS" if _c == 0 and not _lc_denied(_o) else "FAIL",
+       "longcall: a helper type named in HOUSE_RULES_LONG_CALLS_EXEMPT runs (#433)")
+
+# aj's yes lets exactly the one call that was asked about through.
+_lcs = "lc-yes-%d" % os.getpid()
+_bg = {"command": "pytest", "run_in_background": True}
+_steps = []
+_c, _o = _lc("Bash", _bg, session=_lcs); _steps.append(("first ask is stopped", _lc_denied(_o)))
+_lc_yes("<task-notification><task-id>x</task-id><status>completed</status></task-notification> yes", session=_lcs)
+_c, _o = _lc("Bash", _bg, session=_lcs); _steps.append(("a notification saying yes does not count", _lc_denied(_o)))
+_lc_yes("yes, go ahead", session=_lcs)
+_c, _o = _lc("Bash", _bg, session=_lcs); _steps.append(("after aj's yes the call runs", not _lc_denied(_o)))
+_c, _o = _lc("Bash", _bg, session=_lcs); _steps.append(("the next one is asked for again", _lc_denied(_o)))
+_bad = [t for t, ok in _steps if not ok]
+report("FAIL" if _bad else "PASS", "longcall: aj's yes lets exactly one asked-for call through (#433)")
+for _t in _bad:
+    print(f"          failed at: {_t}")
 
 
 # --- links owed: the end-of-turn check for a link that was never posted (#398) ---------------

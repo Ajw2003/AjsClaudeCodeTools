@@ -296,6 +296,7 @@ EVENTS = {
     "promptran": event_promptran,
     "audit": event_audit,
     "rclink": event_rclink,
+    "longcall": event_longcall,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,
     "harvest": event_harvest,
