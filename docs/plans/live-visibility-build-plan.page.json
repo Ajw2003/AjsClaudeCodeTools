@@ -1,0 +1,103 @@
+{
+  "title": "Live Visibility Build Plan",
+  "eyebrow": "Build plan · #430, six steps, on today's 2.74.1 code",
+  "approval": "Build plan approved: live visibility",
+  "replyPrefix": "Live visibility build answers",
+  "reply": "",
+  "short": {
+    "lead": "The design you approved (1A 2A 3A 4A) becomes six steps, #431 to #436, built in order on AjsAgent/thread-links-trace-visibility-4eoxf3. Each step runs verify.py twice, on the parts it touched, and is committed and pushed before the next step starts. One choice is yours: under your 4A, a builder helper is a long call, so I must ask you before using one. That changes how the building itself is done.",
+    "hint": "Tap a step to see what it changes and which files.",
+    "key": [
+      [
+        "Step",
+        ""
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "list",
+        "Step 1",
+        "#431 Every cloud session opens its first reply with its own link",
+        "",
+        "Changes the gate and the note in thread_link_note, and adds a case to handover_links_owed for a session's first reply. Files: house_rules/delegation.py, checks/delegation.py.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 2",
+        "#432 Every helper's full transcript is a file aj can open",
+        "",
+        "Runs the work trail in every session and writes it to a git-ignored work-trail/ folder. The renderer then lists every tool call, the prompt, the text and the report. Files: house_rules/delegation.py, session_ledger_render.py, .gitignore, checks/delegation.py.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 3",
+        "#433 A long or quiet call is asked for first",
+        "",
+        "New PreToolUse handler longcall, a pass that lets one call through once aj says yes, and an off switch. Files: a new house_rules module or delegation.py, hooks.json, and the checks.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 4",
+        "#434 Approved long work posts a progress line every 2 minutes",
+        "",
+        "New PostToolUse handler progress, and stallcheck.py --every with a count of live processes. Proving that a Monitor line wakes the session needs a real project thread.",
+        "A project thread for the Monitor proof, when I reach step 4."
+      ],
+      [
+        "list",
+        "Step 5",
+        "#435 The nothing-hidden rule, and hook traces on by default",
+        "",
+        "One rules section and one detail file, in aj's words. HOUSE_RULES_TRACE defaults to verbose. The plugin's token footprint is measured.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 6",
+        "#436 Docs, version bump and QA page",
+        "",
+        "The systems doc is marked built, the architecture table is updated, the version becomes 2.75.0, the QA page is written, and the pull request says Refs #430.",
+        "Nothing from you."
+      ]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    [
+      "build",
+      "How is the building done?",
+      [
+        [
+          "A",
+          "I build every step myself, in this session, in short steps you can watch",
+          1,
+          "No helper to ask about and nothing hidden in a helper's transcript. It uses more of this session's memory, and the session can summarise its history if that memory fills."
+        ],
+        [
+          "B",
+          "One builder helper per step, each asked for first, as the delegation rule says",
+          0,
+          "Cheaper on this session's memory, but you answer six asks, and until step 2 is built you can't read what a helper did."
+        ]
+      ],
+      "I recommend option A. Step 2 (readable helper transcripts) isn't built yet, so a helper now would hide exactly what you asked to see."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Six steps, #431 to #436, built in order, each tested and pushed before the next.",
+    "changing": "The plugin's hooks, one rule section, a trace default and the docs, shipped as 2.75.0 in one pull request into main.",
+    "blocking": "Your choice between option A and option B for how the building is done.",
+    "next": "I start #431 and post each step's result as it lands.",
+    "todo": [
+      "Pick option A or option B under \"How is the building done?\" in Choices.",
+      "Tap <b>Copy my reply</b> and send it, or tell me what to change."
+    ]
+  }
+}
