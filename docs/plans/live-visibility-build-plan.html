@@ -309,7 +309,7 @@ const PAGE = {
         "Step 3",
         "#433 A long or quiet call is asked for first",
         "",
-        "New PreToolUse handler longcall, a pass that lets one call through once aj says yes, and an off switch. Files: a new house_rules module or delegation.py, hooks.json, and the checks.",
+        "A new check named longcall, which runs before each tool call, plus a pass that lets one call through once aj says yes, and an off switch. Files: a new house_rules module or delegation.py, hooks.json, and the checks.",
         "Nothing from you."
       ],
       [
@@ -317,7 +317,7 @@ const PAGE = {
         "Step 4",
         "#434 Approved long work posts a progress line every 2 minutes",
         "",
-        "New PostToolUse handler progress, and stallcheck.py --every with a count of live processes. Proving that a Monitor line wakes the session needs a real project thread.",
+        "A new check named progress, which runs after each tool call, plus stallcheck.py --every with a count of live processes. Proving that a Monitor line wakes the session needs a real project thread.",
         "A project thread for the Monitor proof, when I reach step 4."
       ],
       [
