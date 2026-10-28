@@ -2578,16 +2578,21 @@ def _st_py(code, env):
                           stdout=subprocess.PIPE, env=env).stdout.decode().strip()
 
 
-# (a) an unset setting refuses a non-settings tool, naming the setting and the command
-_sa = [_st_call("guard", "Bash", {"command": "echo hi"}, _st_env("a.json")),
-       _st_call("settingsgate", "Write", {"file_path": "/x/a.txt", "content": "x"}, _st_env("a.json")),
-       _st_call("settingsgate", "mcp__github__issue_write", {"method": "create"}, _st_env("a.json")),
-       _st_call("settingsgate", "Read", {"file_path": "/x/a.txt"}, _st_env("a.json"))]
+# (a) an unset setting refuses only what carries the agent's name; every other tool, the reply included, runs
+_sa = [_st_call("guard", "Bash", {"command": "git commit -m x"}, _st_env("a.json")),
+       _st_call("settingsgate", "Bash", {"command": "git push -u origin x"}, _st_env("a.json")),
+       _st_call("settingsgate", "mcp__github__issue_write", {"method": "create"}, _st_env("a.json"))]
+_sa_free = [_st_call("guard", "Bash", {"command": "echo hi"}, _st_env("a.json")),
+            _st_call("settingsgate", "Write", {"file_path": "/x/a.txt", "content": "x"}, _st_env("a.json")),
+            _st_call("settingsgate", "Read", {"file_path": "/x/a.txt"}, _st_env("a.json")),
+            _st_call("settingsgate", "mcp__github__issue_read", {"method": "get"}, _st_env("a.json")),
+            _st_call("settingsgate", "SendUserMessage", {"message": "hi"}, _st_env("a.json"))]
 commit_case(
-    "settings: an unset setting refuses a non-settings tool (Bash, Write, a GitHub tool, Read), naming the setting and the command (#341)",
+    "settings: an unset setting refuses a commit, a push and a GitHub write, naming the setting and the command, and lets every other tool through (#341)",
     all('"permissionDecision":"deny"' in o and "agent_name" in o and "extra_owned_prefixes" in o
-        and "settings.py set agent_name" in o and "settings.py set extra_owned_prefixes" in o for o in _sa),
-    "out %r" % [o[:90] for o in _sa],
+        and "settings.py set agent_name" in o and "settings.py set extra_owned_prefixes" in o for o in _sa)
+    and all("settings not set" not in o for o in _sa_free),
+    "refused %r | free %r" % ([o[:90] for o in _sa], [o[:60] for o in _sa_free]),
 )
 _sa_set = _st_env("a.json", HOUSE_RULES_AGENT_NAME=TEST_AGENT_NAME, HOUSE_RULES_OWNED_BRANCHES="")
 commit_case(
@@ -2605,11 +2610,11 @@ _sb_ok = [_st_call("guard", "Bash", {"command": c}, _st_env("b.json")) for c in 
     "python3 %s show" % _ST_SCRIPT)]
 _sb_ok += [_st_call("settingsgate", "Bash", {"command": "python3 %s get agent_name" % _ST_SCRIPT}, _st_env("b.json"))]
 _sb_bad = [_st_call("guard", "Bash", {"command": c}, _st_env("b.json")) for c in (
-    "python3 %s set agent_name x; echo hi" % _ST_SCRIPT,
-    "python3 %s set agent_name $(whoami)" % _ST_SCRIPT,
-    "python3 %s set agent_name x && echo hi" % _ST_SCRIPT,
-    "python3 /tmp/elsewhere/settings.py set agent_name x",
-    "python3 %s set agent_name x > /tmp/x" % _ST_SCRIPT)]
+    "python3 %s set agent_name x; git commit -m y" % _ST_SCRIPT,
+    "python3 %s set agent_name $(git push)" % _ST_SCRIPT,
+    "python3 %s set agent_name x && git push" % _ST_SCRIPT,
+    "python3 /tmp/elsewhere/settings.py set agent_name x && gh pr create",
+    "python3 %s set agent_name x > /tmp/x; git tag v1" % _ST_SCRIPT)]
 commit_case(
     "settings: the one settings command passes the guard and the settings gate while unset; chained, substituted and look-alike commands do not (#341)",
     all("settings not set" not in o for o in _sb_ok) and all("settings not set" in o for o in _sb_bad),

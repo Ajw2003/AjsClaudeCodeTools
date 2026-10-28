@@ -664,7 +664,7 @@ def settings_refusal(raw):
 
 
 def event_settingsgate():
-    """PreToolUse on every tool: refuse while a setting is unset, except the settings script itself (#341)."""
+    """PreToolUse on every tool: while a setting is unset, refuse commits, pushes and GitHub writes (#341)."""
     try:
         raw = read_payload()
     except Exception:

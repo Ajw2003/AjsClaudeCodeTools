@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-28 - Unset settings refuse only commits, pushes and GitHub writes (2.74.1)
+
+**Decision.** aj's message: "we need to fix the plugin breaking new sessions because of the name guard ... it
+deletes the replies before they can be sent ... skip design patch this asap". While `agent_name` or
+`extra_owned_prefixes` is unset, `settingsgate` and `guard` now refuse only a call that would carry the agent's
+name: a `git` commit, push, merge or tag, any `gh` command, and a GitHub tool write (`settings.needs_identity`).
+Every other tool runs. `run.sh settingsgate` with no Python now fails loud (a systemMessage), not closed;
+`guard` still fails closed for commands.
+
+**Why.** Refusing every tool (round 3, answer 2) refused the reply itself on surfaces that send replies through
+a tool, and every session on a device that had just updated to 2.74.0 with no settings saved stopped dead.
+
+**Supersedes.** "2026-10-19 - Grilling round 3: aj's answers", answer 2.
+
+---
+
 ## 2026-10-27 - A plugin update never stops a session's work (pull request #338 folded into the restructure)
 
 **Context.** An overnight FocusDesk run in a cloud session stalled for hours on a permission prompt
@@ -499,7 +515,7 @@ round 2 entries sit in this log on the branch `AjsAgent/docs-context-layer`.
 2. Until the settings are set, the plugin refuses every tool, not only commits, pushes, branches, pull
    requests and issues. The refusal names the missing setting and how to set it.
 
-**Status.** Standing. The two answers meet: saving the answer is itself a tool call that answer 2
+**Status.** Superseded (answer 2) by "2026-10-28 - Unset settings refuse only commits, pushes and GitHub writes (2.74.1)". The two answers meet: saving the answer is itself a tool call that answer 2
 refuses. Cloud sessions also start in a fresh container, so a setting saved once per machine may not
 last. Both are asked in round 4, `docs/plans/2026-10-19-grilling-round-4.html`.
 

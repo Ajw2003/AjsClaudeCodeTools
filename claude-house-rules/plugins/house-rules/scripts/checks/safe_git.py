@@ -1908,17 +1908,16 @@ commit_case(
     "open %s/%s, unsaved %s/%s" % (_349_has(_349_open), _349_has(_349_open, True), _349_has(_349_unsaved), _349_has(_349_unsaved, True)),
 )
 
-# (f) run.sh settingsgate with no interpreter fails closed, like guard
+# (f) run.sh settingsgate with no interpreter fails loud, not closed: it runs on every tool, so failing closed refused the reply too
 _349_env = dict(os.environ)
 _349_env.pop("HOUSE_RULES_PYTHON", None)
 _349_env["PATH"] = ""
 _349_sg = run_shell([RUN, "settingsgate"], payload="{}", env=_349_env)
 _349_gd = run_shell([RUN, "guard"], payload="{}", env=_349_env)
 commit_case(
-    "run.sh settingsgate with no working interpreter fails closed (exit 2, a stderr message), as guard does (#349)",
-    _349_sg[0] == 2 and "settingsgate" in _349_sg[2] and "Blocking" in _349_sg[2] and _349_gd[0] == 2,
-    "settingsgate exit %s stderr %r | guard exit %s" % (_349_sg[0], _349_sg[2][:160], _349_gd[0]),
+    "run.sh settingsgate with no working interpreter fails loud (exit 0, a systemMessage) while guard still fails closed (#349)",
+    _349_sg[0] == 0 and "settingsgate" in _349_sg[1] and "systemMessage" in _349_sg[1] and _349_gd[0] == 2,
+    "settingsgate exit %s out %r | guard exit %s" % (_349_sg[0], _349_sg[1][:160], _349_gd[0]),
 )
-
 
 finish()

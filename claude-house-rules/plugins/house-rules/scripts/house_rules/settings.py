@@ -16,7 +16,8 @@ READ ORDER, first one that has a value wins (grilling rounds 2 to 4 in docs/6-de
      ~/.claude (the same place core.py already reads per-user Claude state from). It sits outside every repo, so it
      follows the machine. HOUSE_RULES_SETTINGS_FILE points it elsewhere (the checks use that).
   3. `/plugin configure` (userConfig): plugin.json declares no userConfig, so there is nothing to read; skipped.
-There is no assumed default. A setting with no value is "unset", and the guard refuses until it has one.
+There is no assumed default. A setting with no value is "unset", and the guard refuses commits, pushes and GitHub
+writes until it has one; every other tool runs.
 
 THE DEFAULTS PLACE. This file is the only shipped script allowed to hold the literal strings that name aj's agent or
 aj's account (verify.py greps every other shipped script for them). What must stay literal lives in the constants
@@ -220,6 +221,18 @@ def is_settings_command(command):
     return os.path.realpath(os.path.expanduser(script)) == ours  # this plugin's script, not any file called settings.py
 
 
+_IDENTITY_COMMAND_RE = re.compile(r"\bgit\b[^\n]*\b(?:commit|push|merge|tag)\b|\bgh\s")
+
+
+def needs_identity(tool, tool_input):
+    """True for the calls an unset agent_name would stamp a wrong name on: commits, pushes, merges, tags, `gh` and
+    GitHub tool writes. Refusing every tool (the 2.74.0 behaviour) also refused the reply itself, so it is narrowed."""
+    if tool in ("Bash", "PowerShell"):
+        command = tool_input.get("command")
+        return isinstance(command, str) and not is_settings_command(command) and bool(_IDENTITY_COMMAND_RE.search(command))
+    return tool.startswith("mcp__github__") and not re.search(r"__(?:get|list|search)_|_read$", tool)
+
+
 def refusal(payload):
     """None when the call may go ahead, else the refusal text. `payload` is the parsed hook payload (a dict)."""
     gone = missing()
@@ -228,10 +241,10 @@ def refusal(payload):
         return None
     tool = str(payload.get("tool_name") or "") if isinstance(payload, dict) else ""
     ti = payload.get("tool_input") if isinstance(payload, dict) and isinstance(payload.get("tool_input"), dict) else {}
-    if tool in ("Bash", "PowerShell") and is_settings_command(ti.get("command")):
+    if not needs_identity(tool, ti):
         return None
-    lines = ["House rules, settings not set: every tool is refused until each setting has a value, except the "
-             "settings script itself. Nothing runs on an assumed default."]
+    lines = ["House rules, settings not set: commits, pushes and GitHub writes are refused until each setting has "
+             "a value, because they would carry the agent's name. Every other tool still runs."]
     if problem:
         lines.append("Problem: " + problem + ".")
     for n in gone:
@@ -274,8 +287,8 @@ def session_note():
     gone = missing()
     if not gone:
         return ""
-    out = ["House rules settings are not set (%s). Until they are, every tool is refused except the settings "
-           "script. Ask the user in the chat for each value, then save it. Nothing runs on an assumed default." %
+    out = ["House rules settings are not set (%s). Until they are, commits, pushes and GitHub writes are refused; "
+           "every other tool runs. Ask the user in the chat for each value, then save it. Nothing runs on an assumed default." %
            ", ".join(gone)]
     if "agent_name" in gone:
         name, source = suggestion()
