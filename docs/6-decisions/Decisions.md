@@ -7,6 +7,32 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-10-28 - Nothing reaches staging or main on an unchecked assumption
+
+**Decision.** aj, after the 2.74.0 settings gate stopped every project and I claimed from memory how a plugin update
+reaches aj's PC: "before something goes to staging or main you need to check any and all assumptions and memory
+against actual tests and evidence the way the user would, not through a shim or otherwise partial test, properly".
+Cost is not a reason to skip it ("I don't care if research and checking it again costs more, I care that it is right").
+
+1. Before a pull request into `main` (or a staging branch) is opened, every assumption the change rests on is
+   listed and checked against evidence: the code, the repo's own docs and history, and a real run.
+2. "A real run" means the plugin as it ships, in a real Claude Code session, on the surfaces aj uses (the Claude
+   app on aj's Windows PC through Remote Control, and cloud sessions), with real data. `verify.py`, shims and
+   partial tests do not count on their own.
+3. A guard that can refuse work (the settings gate, the design-loop lock, `guard`) is run in that real session in
+   both its "allowed" and "refused" paths before it ships.
+4. Memory and earlier chat are never evidence on their own.
+
+**Why.** 2.74.0 passed 1007 `verify.py` checks, and one of them asserted the very behaviour that broke every project
+("an unset setting refuses ... Read"). No real session ran it before `main`. On 2026-10-28 I then said devices would
+update through `claude plugin update` without checking, although `docs/3-state/ProjectState.md` already said aj's
+synced copy runs no `claude plugin` update. The end-of-reply evidence check did not catch it: it looks only for ten
+success words (`house_rules/core.py:2603-2606`) and counts any tool call as evidence (`core.py:3017-3021`).
+
+**Status.** Standing. How it is enforced is planned with the restructure re-check (#381), not built yet.
+
+---
+
 ## 2026-10-27 - Triage answers: docref skips its own test fixtures
 
 **Context.** `docref.py check` had reported the same 38 problems on `main` since at least 2026-10-16. All 38 came
