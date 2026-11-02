@@ -691,6 +691,27 @@ check(_dpp.get("b") == (1, 1) and _dpp.get("c") == (5, 0),
       "diff_parts: a changed line belongs to its function, and a comment above a function to that function",
       f"got {_dpp!r}")
 
+# --- sync_library.py: --check passes on a matching copy, fails on a changed one (#439) ------
+import sync_library as _sl
+_slr = tempfile.mkdtemp(prefix="sync-library-")
+try:
+    _make_tree(os.path.join(_slr, _sl.SOURCE), {"__init__.py": "", "a.py": "A = 1\n"})
+    _sl.sync(_slr)
+    check(_sl.problems(_slr) == [] and _sl.main(["--check", "--root", _slr]) == 0,
+          "sync_library --check passes on a matching copy", f"problems={_sl.problems(_slr)!r}")
+    _slt = os.path.join(_slr, _sl.TARGETS[0], "a.py")
+    with open(_slt, "w") as _f:
+        _f.write("A = 2\n")
+    _slp = _sl.problems(_slr)
+    check(_sl.main(["--check", "--root", _slr]) == 1 and len(_slp) == 1 and "a.py" in _slp[0],
+          "sync_library --check fails naming a changed file", f"problems={_slp!r}")
+    os.remove(_slt)
+    _slp = _sl.problems(_slr)
+    check(len(_slp) == 1 and _slp[0].startswith("missing") and "a.py" in _slp[0],
+          "sync_library --check fails naming a missing file", f"problems={_slp!r}")
+finally:
+    shutil.rmtree(_slr, ignore_errors=True)
+
 print()
 print("-" * 32)
 if FAILURES:

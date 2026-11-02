@@ -37,6 +37,10 @@ jobs:
       - name: Run the tools test suite
         run: python tools/verify_tools.py
 
+      # The shared library lives once in plugins/house-lib; each plugin carries a copy (#439).
+      - name: Check the library copies match the source
+        run: python tools/sync_library.py --check
+
       # A push to main only happens via an already-checked PR merge, so re-checking there is
       # redundant noise rather than a gap - this only runs on the PR itself.
       - name: Block a plugin-file change with no version bump
