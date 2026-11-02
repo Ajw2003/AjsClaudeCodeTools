@@ -102,13 +102,14 @@ def _entry(data, session_id):
     return e
 
 
-def record_stop(cwd, session_id, check, mark, failing, missing="", fix=""):
+def record_stop(cwd, session_id, check, mark, failing, missing="", fix="", files=None):
     """Record one Stop result for `check` and return what the caller must do:
 
     "pass"    the check passes: its count is reset and any lock on it cleared.
     "block"   the check fails and has blocked fewer than BLOCK_LIMIT times for this message: block the reply.
     "through" the check fails and has already blocked BLOCK_LIMIT times for this message: let the reply go
-              through. The check is now locked, with `missing` (what it wants) and `fix` (how to supply it).
+              through. The check is now locked, with `missing` (what it wants), `fix` (how to supply it) and
+              `files` (the paths it named, repo-relative; a lock on them clears only when they are dealt with).
     Never returns "block" a fourth time for one message. Raises OSError/ValueError on unreadable state."""
     path = state_path(cwd, session_id)
     data = _load(path)
@@ -125,12 +126,16 @@ def record_stop(cwd, session_id, check, mark, failing, missing="", fix=""):
         counts[check] = {"mark": mark, "count": count + 1}
         changed, result = True, "block"
     else:
-        locks[check] = {"missing": missing, "fix": fix, "since": int(time.time())}
+        locks[check] = {"missing": missing, "fix": fix, "files": list(files or []), "since": int(time.time())}
         changed, result = True, "through"
     if changed:
         data[session_id] = entry
         _save(path, data)
     return result
+
+
+def is_locked_here(cwd, session_id, check):
+    return check in active_locks(cwd, session_id)
 
 
 def block_count(cwd, session_id, check, mark):
@@ -149,3 +154,36 @@ def active_locks(cwd, session_id):
 def is_locked(cwd, session_id, check=None):
     locks = active_locks(cwd, session_id)
     return bool(locks) if check is None else check in locks
+
+
+def _nearest_dir(path):
+    d = os.path.abspath(path)
+    while d and not os.path.isdir(d):
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    return d
+
+
+def _inside(path, root):
+    try:
+        p, r = os.path.normcase(os.path.abspath(path)), os.path.normcase(os.path.abspath(root))
+        return os.path.commonpath([p, r]) == r
+    except ValueError:
+        return False
+
+
+def locks_for_target(path, cwd, session_id):
+    """(locks, scope) for a file or folder a tool call touches, decided by the repository the TARGET is in,
+    not by the call's cwd. scope is "repo" (the target is in a git repository), "folder" (the target is inside
+    the session folder and that folder is not in any repository: the temp-file state applies) or "outside"
+    (a scratch path outside every repository and the session folder: never locked, locks == {}).
+    Raises OSError/ValueError when the state is unreadable."""
+    full = path if os.path.isabs(path) else os.path.join(cwd or os.getcwd(), path)
+    d = _nearest_dir(full if os.path.isdir(full) else os.path.dirname(full))
+    if common_git_dir(d):
+        return active_locks(d, session_id), "repo"
+    if cwd and not common_git_dir(cwd) and _inside(full, cwd):
+        return active_locks(cwd, session_id), "folder"
+    return {}, "outside"

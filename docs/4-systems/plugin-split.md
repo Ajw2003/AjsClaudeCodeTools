@@ -241,23 +241,38 @@ report-only checks marked #309 (the page row) and the `HOUSE_RULES_*` switches (
   A check whose result is unknown this time (commit or evidence "could not tell", an unreadable transcript)
   neither blocks nor clears a lock. A counter that cannot be read or written says so and does not block.
 - **Enforcement.** rule-enforcement `lockgate` (PreToolUse on `Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell`,
-  `rule_enforcement/lock.py`) refuses, while any check is locked: edits to files inside the session folder
-  that are not docs, and `git commit` / `git push` in a shell. The refusal names each locked check, what it
-  misses and how to supply it. Always allowed: `docs/**/*.md`, anything under `docs/plans/`, files outside
-  the session folder (a page's content file in a scratch folder), reading, tests, and the editor helper (not
-  matched). When the commit check is the locked one a commit is allowed (a push is not).
+  `rule_enforcement/lock.py`) refuses, while a check is locked: edits to source files, shell commands that
+  write a source file, and `git commit` / `git push`. The refusal names each locked check, what it misses, the
+  files a commit lock named and how to supply it. Shell writes use the detector that used to live in the
+  design loop (`house_lib/shellwrites.py`: redirects, tee, `sed -i`, `perl -pi`, python/node writes), plus
+  cp, mv, install, dd of=, truncate and ln; a write whose path cannot be read from the command text is
+  refused too (use Edit/Write). **The target's repository decides**, not the call's cwd: the lock is looked
+  up in the repo of the file an Edit/Write names, of each shell write target, and of the directory a git
+  command acts on (`git -C dir`, a leading `cd dir &&`, else cwd). Always allowed: `docs/**/*.md`, anything
+  under `docs/plans/`, paths in no git repository and outside the session folder (a page's content file in
+  a scratch folder; never another repo's source), reading, tests, and the editor helper (not matched). When
+  the commit check is the locked one a commit is allowed (a push is not). In a session folder that is not a
+  repository the temp-file state holds the lock and the folder's own files are covered.
+- **Clearing.** A lock clears only when the check passes on what it was locked for. The commit lock records
+  the repo-relative files it named and clears only when none of them is still uncommitted (a later turn that
+  writes nothing does not clear it, and blocks again while they stay dirty). The evidence, editor and plain-
+  summary locks clear only on a reply that carries the missing piece: a success claim with a tool run or
+  quoted output, an editor run, a finished-work reply with a plain opening. A reply that cannot be judged
+  against a lock keeps it and says so ("the X lock is kept"); an unreadable lock state keeps every lock and
+  says so.
 - **Fail mode.** If the state cannot be read, or the payload cannot be parsed, or the shim finds no Python,
   `lockgate` says "NOT enforced for this call" in a `systemMessage` and allows the call. It never refuses
   because something is broken (the 2.74.0 failure, `docs/3-state/ProjectState.md`, 2026-10-28).
 
 ### Limits, said plainly
 
-- A shell command that edits a source file by redirect or `sed -i` is not caught; only `git commit` and
-  `git push` are looked for in shell commands.
-- The lock is looked up by the session id and the folder in the tool call's payload. A call made with a
-  different `cwd` than the Stop that locked it (another repository) sees no lock.
-- Files outside the session folder being always allowed is a judgement made here, so a page's content file
-  can be written while locked; it is not in the approved points and is for aj to confirm.
+- A shell command can still write a source file in a way the detector cannot read (a program that writes a
+  path it computes at run time). Paths that cannot be read from the command text are refused; a path computed
+  inside a script is not seen.
+- The evidence lock needs a reply that makes a success claim to clear it: saying nothing never clears it.
+  That is intended, and the refusal says what to do.
+- Paths in no git repository and outside the session folder are always allowed while locked, so a page's
+  content file can be written. A repository's own files never are.
 
 ### Live proof (headless, CLI 2.1.316, throwaway config and repo)
 

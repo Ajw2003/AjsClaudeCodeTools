@@ -614,7 +614,7 @@ for _ in range(4):
 _c, _ref, _why, _sm, _o = _lk_gate("Bash", {"command": "git commit -am 'x'"})
 report("PASS" if (_ref and "evidence" in _why and "git commit" in _why) else "FAIL",
        "while another check (evidence) is locked, a commit is refused, naming that check")
-_c, _ref2, _why2, _, _ = _lk_gate("Bash", {"command": "git -C /x push origin main"})
+_c, _ref2, _why2, _, _ = _lk_gate("Bash", {"command": "git -C %s push origin main" % _lk_repo})
 report("PASS" if _ref2 else "FAIL", "while a check is locked, a push is refused too, even behind -C")
 _c, _ref3, _, _, _ = _lk_gate("Bash", {"command": "git log --grep commit && python3 -m pytest -q && ls"})
 report("PASS" if not _ref3 else "FAIL", "running tests, reading history and listing files are never refused by the lock")
@@ -661,12 +661,62 @@ for _tool, _ti in (("Edit", {"file_path": _LK_SRC}), ("Bash", {"command": "git c
     _c, _r, _, _sm, _o = _lk_gate(_tool, _ti, sid="broken")
     report("PASS" if (_c == 0 and not _r and "NOT enforced" in _sm and "allowed" in _sm) else "FAIL",
            f"unreadable lock state: a {_tool} call is allowed and the hook says loudly that the lock is not enforced")
+os.remove(_bl.state_path(_lk_repo, "broken"))  # the state file is per repository: later cases need it readable
 _p = run_hook("lockgate", "not json at all", env=env_in(_lk_repo))
 report("PASS" if (_p[0] == 0 and "NOT enforced" in _p[1] and "deny" not in _p[1]) else "FAIL",
        "an unreadable payload is allowed with a loud message, never a refusal")
 _p = run_shell([RUN, "lockgate"], env=dict(os.environ, PATH="/nonexistent", HOUSE_RULES_PYTHON=""))
 report("PASS" if (_p[0] == 0 and "NOT enforced" in _p[1] and "deny" not in _p[1]) else "FAIL",
        "with no working Python the lockgate shim exits 0 and says the lock is not enforced")
+# --- shell writes, the target's repository, and scratch paths (#440 part B follow-up) ---------------------
+_lk_other_repo = tempfile.mkdtemp(prefix="lock-other-")
+subprocess.run(["git", "init", "-q", _lk_other_repo], check=True)
+_lk_scratch_dir = tempfile.mkdtemp(prefix="lock-scratch-")  # inside no repository
+_XS = "xs-session"
+for _ in range(4):
+    _lk_stop("evidence", "x1", True, fix="run the check and quote its real output", sid=_XS)
+for _tool in ("Bash", "PowerShell"):
+    for _cmd in ("sed -i s/a/b/ src/app.py", "echo x > src/app.py", "echo x | tee src/app.py", "printf x >> src/app.py",
+                 "cp /etc/hostname src/app.py", "mv src/app.py src/old.py", "dd if=/dev/zero of=src/app.py",
+                 "python3 -c \"open('src/app.py','w').write('x')\"", "perl -pi -e s/a/b/ src/app.py"):
+        _c, _r, _why, _, _ = _lk_gate(_tool, {"command": _cmd}, sid=_XS)
+        report("PASS" if (_r and "evidence" in _why and "src/app.py" in _why) else "FAIL",
+               f"locked: {_tool} `{_cmd}` is refused like an Edit, naming the check")
+_c, _r, _, _, _ = _lk_gate("Bash", {"command": "echo x > $TARGET"}, sid=_XS)
+report("PASS" if _r else "FAIL", "locked: a shell write whose path cannot be read is refused, not waved through")
+for _cmd in ("echo x > docs/notes.md", "echo x > docs/plans/p.page.json", "sed -i s/a/b/ docs/3-state/ProjectState.md",
+             "echo x > %s/content.json" % _lk_scratch_dir, "echo hi | cat", "python3 -m pytest -q 2>&1 | tee /dev/null"):
+    _c, _r, _, _, _ = _lk_gate("Bash", {"command": _cmd}, sid=_XS)
+    report("PASS" if not _r else "FAIL", f"locked: `{_cmd}` is allowed (docs, docs/plans, a path in no repository, reading, tests)")
+# the target's repository decides, not the payload cwd
+_c, _r, _why, _, _ = _lk_gate("Edit", {"file_path": _LK_SRC}, sid=_XS, cwd=_lk_other_repo)
+report("PASS" if (_r and "evidence" in _why) else "FAIL", "a call whose cwd is another repo, editing the locked repo's file by its path, is refused")
+_c, _r, _, _, _ = _lk_gate("Edit", {"file_path": os.path.join(_lk_other_repo, "x.py")}, sid=_XS)
+report("PASS" if not _r else "FAIL", "a call from the locked repo editing a file in another (unlocked) repo is allowed")
+_c, _r, _, _, _ = _lk_gate("Bash", {"command": "echo x > %s" % _LK_SRC}, sid=_XS, cwd=_lk_other_repo)
+report("PASS" if _r else "FAIL", "a shell write by absolute path into the locked repo from another cwd is refused")
+_c, _r, _, _, _ = _lk_gate("Bash", {"command": "cd %s && echo x > src/app.py" % _lk_repo}, sid=_XS, cwd=_lk_other_repo)
+report("PASS" if _r else "FAIL", "`cd <locked repo> && echo x > file` from another cwd is refused")
+_c, _r, _, _, _ = _lk_gate("Bash", {"command": "git -C %s commit -m x" % _lk_repo}, sid=_XS, cwd=_lk_other_repo)
+report("PASS" if _r else "FAIL", "`git -C <locked repo> commit` from another cwd is refused")
+_c, _r, _, _, _ = _lk_gate("Bash", {"command": "git -C %s commit -m x" % _lk_other_repo}, sid=_XS)
+report("PASS" if not _r else "FAIL", "`git -C <other repo> commit` from the locked repo is allowed (that repo is not locked)")
+_c, _r, _, _, _ = _lk_gate("Write", {"file_path": os.path.join(_lk_scratch_dir, "c.json"), "content": "{}"}, sid=_XS)
+report("PASS" if not _r else "FAIL", "a scratch file in no repository is allowed")
+# a non-git session folder: the session-keyed temp file holds the lock, and the folder's files are covered
+_lk_plain = tempfile.mkdtemp(prefix="lock-plain-")
+for _ in range(4):
+    _bl.record_stop(_lk_plain, "plain-sid", "evidence", "p1", True, "needs evidence", "quote output")
+_c, _r, _, _, _ = _lk_gate("Edit", {"file_path": os.path.join(_lk_plain, "app.py")}, sid="plain-sid", cwd=_lk_plain)
+_c2, _r2, _, _, _ = _lk_gate("Edit", {"file_path": os.path.join(_lk_scratch_dir, "z.py")}, sid="plain-sid", cwd=_lk_plain)
+report("PASS" if (_r and not _r2) else "FAIL", "outside a repository the session folder's files are locked and a path outside it is not")
+# the lock record carries the files it named
+for _ in range(4):
+    _bl.record_stop(_lk_repo, "files-sid", "commit", "f1", True, "needs commit", "commit it", ["src/app.py"])
+_c, _r, _why, _, _ = _lk_gate("Edit", {"file_path": _LK_SRC}, sid="files-sid")
+report("PASS" if (_r and "Files it named: src/app.py" in _why) else "FAIL", "the refusal names the files a commit lock was recorded with")
+for _d in (_lk_other_repo, _lk_scratch_dir, _lk_plain):
+    shutil.rmtree(_d, True)
 shutil.rmtree(_lk_repo, True)
 
 

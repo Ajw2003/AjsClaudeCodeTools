@@ -1870,6 +1870,68 @@ _ck_cases.append(("commit: a committed file passes", not _ck_b))
 _ck_t_ps_wrote = _turn_transcript("ck-ps", "add the commit hooks", [("Edit", "/proj/src/app.py")])
 _ck_triple("plain summary", "plain summary", _ck_t_ps_wrote, _PS_TECH, _PS_PLAIN)
 
+# --- a lock clears only when the check passes on what it was locked for (#440 part B follow-up) ----------
+_lk_B = _cc_mod.design_loop._blocks
+
+
+def _lk_run(repo, transcript, reply, sid, active=False):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=repo, stop_hook_active=active,
+                                                  transcript_path=transcript, session_id=sid), env=_ck_cenv(repo))
+    try:
+        data = json.loads(out)
+    except ValueError:
+        data = {}
+    return data.get("decision") == "block", data.get("reason", ""), out
+
+
+def _lk_user(text, extra=()):
+    return _hand_transcript("lk-%s" % abs(hash(text)), _ck_user(text, extra))
+
+
+# commit: the lock names the files; a later turn that writes nothing does not clear it; committing does
+_lk_repo = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_lk_t1 = _wrote_transcript("lk-w1", [os.path.join(_lk_repo, "a.py")])
+for _i in range(3):
+    _lk_run(_lk_repo, _lk_t1, "Changed the file.", "lk-sid", active=_i > 0)
+_b, _r, _o = _lk_run(_lk_repo, _lk_t1, "Changed the file.", "lk-sid", active=True)
+_lk_entry = _lk_B.active_locks(_lk_repo, "lk-sid").get("commit", {})
+_ck_cases.append(("lock (#440): the commit lock records the uncommitted files it named",
+                  not _b and _lk_entry.get("files") == ["a.py"]))
+_lk_t2 = _lk_user("a different message that writes nothing")
+_b, _r, _o = _lk_run(_lk_repo, _lk_t2, "Nothing to write here.", "lk-sid")
+_ck_cases.append(("lock (#440): a later turn that writes nothing does NOT clear the commit lock; the file is still uncommitted, so it blocks again",
+                  _b and "- commit (block 1 of 3):" in _r and "a.py" in _r and _lk_B.is_locked(_lk_repo, "lk-sid", "commit")))
+subprocess.run(["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", _lk_repo,
+                "commit", "-q", "-am", "save a.py"], check=True)
+_b, _r, _o = _lk_run(_lk_repo, _lk_t2, "Nothing to write here.", "lk-sid", active=True)
+_ck_cases.append(("lock (#440): committing the named file clears the commit lock at the next Stop",
+                  not _b and not _lk_B.is_locked(_lk_repo, "lk-sid", "commit")))
+
+# evidence: a reply with no success claim keeps the lock and says so; a claim with its evidence clears it
+_lk_ev_repo = _commit_repo("claude/topic", committed=["a.py"])
+_lk_ev_plain = _lk_user("report on the tests")
+for _i in range(4):
+    _lk_run(_lk_ev_repo, _lk_ev_plain, "All done, the tests passed.", "lk-ev", active=_i > 0)
+_ck_cases.append(("lock (#440): an unbacked success claim blocked three times locks the evidence check",
+                  _lk_B.is_locked(_lk_ev_repo, "lk-ev", "evidence")))
+_b, _r, _o = _lk_run(_lk_ev_repo, _lk_user("what is next"), "The next step is the docs.", "lk-ev")
+_ck_cases.append(("lock (#440): a later reply with no success claim cannot clear the evidence lock, and says it is kept",
+                  not _b and _lk_B.is_locked(_lk_ev_repo, "lk-ev", "evidence") and "evidence lock is kept" in _o))
+_lk_ev_tool = _lk_user("run the tests again", [json.dumps({"type": "assistant", "message": {"content": [
+    {"type": "tool_use", "id": "r1", "name": "Bash", "input": {"command": "python3 t.py"}}]}})])
+_b, _r, _o = _lk_run(_lk_ev_repo, _lk_ev_tool, "All done, the tests passed.\n\nRESULT: PASS", "lk-ev")
+_ck_cases.append(("lock (#440): a reply that makes the claim with a tool run and quoted output clears the evidence lock",
+                  not _b and not _lk_B.is_locked(_lk_ev_repo, "lk-ev", "evidence")))
+# an unreadable lock state never blocks and never clears: it says so
+_lk_bad_repo = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_lk_bad_path = _lk_B.state_path(_lk_bad_repo, "lk-bad")
+os.makedirs(os.path.dirname(_lk_bad_path), exist_ok=True)
+with open(_lk_bad_path, "w", encoding="utf-8") as _f:
+    _f.write("{broken")
+_b, _r, _o = _lk_run(_lk_bad_repo, _wrote_transcript("lk-bad-t", [os.path.join(_lk_bad_repo, "a.py")]), "Changed it.", "lk-bad")
+_ck_cases.append(("lock (#440): unreadable block state is announced and the reply is not blocked",
+                  not _b and "could not" in _o))
+
 # the page rule's short replies
 _ck_proposal = ("Here is where I have landed on the storage.\n\nOption A: keep the JSON file. Option B: move to SQLite. "
                 "Option C: use the cloud store.\n\nWhich option do you want?")

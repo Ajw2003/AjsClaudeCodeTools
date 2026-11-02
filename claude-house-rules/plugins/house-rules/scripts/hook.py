@@ -65,11 +65,14 @@ from house_rules.core import (  # noqa: F401
     _TRANSCRIPT_RE,
     _clear_writing_enabled,
     _evidence_note,
+    _claim_words,
     _field,
+    _impossibility_claims,
     _last_user_text,
     _parity_enabled,
     _parity_report_note,
     _records_since_last_user_message,
+    _turn_tool_uses,
     _reply_needs_card_check,
 )
 from house_rules.safe_git import (  # noqa: F401
@@ -142,14 +145,21 @@ def event_handover():
     shell_page_notes = []
     trace_lines_early = []
     turn_ok = False
+    editor_ran = False
+    plain_applies = False
     transcript_path = _field(_TRANSCRIPT_RE, payload)
     if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
                             or _clear_writing_enabled()):
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
             turn_ok = True
+            editor_ran = any(b.get("name") in ("Agent", "Task") and isinstance(b.get("input"), dict)
+                             and str(b["input"].get("subagent_type", "")).endswith("editor")
+                             for b in _turn_tool_uses(turn_records))
             written_now, committed_now = handover_turn_writes(turn_records)
             plain_problems = handover_plain_check(written_now, committed_now, have_reply, reply_text)
+            plain_applies = bool((written_now or committed_now) and have_reply
+                                 and len(reply_text or "") >= PLAIN_SUMMARY_MIN_CHARS)
             if written_now and _parity_enabled():
                 pm = _PARITY_RE.search(_last_user_text(transcript_path))
                 reply_for_parity = reply_text if have_reply else ""
@@ -204,9 +214,18 @@ def event_handover():
         cannot_tell.add("commit")
     if not turn_ok:
         cannot_tell.update(("editor", "plain summary"))
+    # A lock clears only on a reply that carries what the check wants (a reply that makes no success claim, or
+    # runs no editor, says nothing about the evidence or editor lock).
+    judged = {"commit"}
+    if have_reply and (_claim_words(reply_text) or _impossibility_claims(reply_text)):
+        judged.add("evidence")
+    if editor_ran:
+        judged.add("editor")
+    if plain_applies:
+        judged.add("plain summary")
     blocked, through = handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words,
                                             editor_owed, needs_evidence, uncommitted, plain_problems,
-                                            trace_lines, retry, cannot_tell)
+                                            trace_lines, retry, cannot_tell, judged)
     if blocked:
         return 0
     if through:

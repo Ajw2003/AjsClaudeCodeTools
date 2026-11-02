@@ -1696,24 +1696,12 @@ _LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`
 
 
 # A statement-leading NAME=value, NAME="value" or NAME='value' followed by ; or && (#261).
-_ASSIGN_RE = re.compile(r"""(?:^|(?<=[;&\n]))\s*([A-Za-z_]\w*)=(?:"([^"$`\\\n]*)"|'([^'\n]*)'|([^\s;&|"'$`\\()<>*?]*))[ \t]*(?:&&|;)""")
-
-
 # cd/pushd only where a command can start, so `git commit -m "fix cd handling"` keeps the
 # exemption (#203); shell keywords count, so `if t; then cd x; fi` is still seen.
 _ANY_CD_RE = re.compile(r"(?:^|[;&|({!\n]|\b(?:if|elif|while|until|then|do|else|time|exec)\b)\s*(?:cd|pushd)(?=\s|$)")
 
 
-def _apply_assigns(cmd):
-    """#261/#262: drop simple same-command NAME=value assignments and expand $NAME / ${NAME}
-    from them; a name that was not assigned stays as written."""
-    assigns = {}
-    for am in _ASSIGN_RE.finditer(cmd):
-        assigns[am.group(1)] = am.group(2) if am.group(2) is not None else (am.group(3) if am.group(3) is not None else am.group(4))
-    if assigns:
-        cmd = _ASSIGN_RE.sub("", cmd)
-        cmd = re.sub(r"\$\{(\w+)\}|\$(\w+)", lambda mm: assigns.get(mm.group(1) or mm.group(2), mm.group(0)), cmd)
-    return cmd
+from house_lib.shellwrites import _ASSIGN_RE, _apply_assigns  # noqa: E402,F401 - moved to the library (#440 part B)
 
 
 def _command_dir(payload):

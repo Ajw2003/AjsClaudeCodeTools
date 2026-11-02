@@ -202,107 +202,10 @@ def _is_source_path(fp, cwd, top):
 _SHELL_TOOLS = ("Bash", "PowerShell")
 
 
-_HEREDOC_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.DOTALL)
-
-
-_QUOTED_RE = re.compile(r"(>>?[ \t]*)?(\"[^\"\n]*\"|'[^'\n]*')")
-
-
-_REDIRECT_RE = re.compile(r"(?<![<>&|])(?:\d|&)?>>?(?![&(>])[ \t]*(\"[^\"\n]+\"|'[^'\n]+'|[^\s;&|<>()\"']+)")
-
-
-_PY_OPEN_RE = re.compile(r"\bopen\(\s*([^,()]+?)\s*,\s*(?:mode\s*=\s*)?['\"][wax]")
-
-
-_PY_WRITE_TEXT_RE = re.compile(r"\.write_text\(")
-
-
-_PY_WRITE_TEXT_LIT_RE = re.compile(r"Path\(\s*(['\"])([^'\"]+)\1\s*\)\s*\.write_text\(")
-
-
-_NODE_WRITE_RE = re.compile(r"\bwriteFileSync\(")
-
-
-_NODE_WRITE_LIT_RE = re.compile(r"\bwriteFileSync\(\s*(['\"])([^'\"]+)\1")
-
-
-_SCRIPT_RUNNER_RE = re.compile(r"(?:^|[\s;&|(/])(?:python3?|py|node)(?:\.exe)?(?=\s|$)")
-
-
-_LITERAL_RE = re.compile(r"^(['\"])(.+)\1$")
-
-
-def _script_write_targets(cmd):
-    """(targets, unreadable): file paths a shell command writes through a python/node script
-    (open w/a, write_text, writeFileSync), sed -i / perl -pi, tee, or a > / >> redirect, and
-    whether some write's path could not be read from the command text (#262)."""
-    import shlex
-    targets, unreadable = [], False
-    body = _HEREDOC_RE.sub("", cmd)
-    if _SCRIPT_RUNNER_RE.search(cmd):
-        for m in _PY_OPEN_RE.finditer(cmd):
-            lit = _LITERAL_RE.match(m.group(1))
-            if lit and "$" not in lit.group(2):
-                targets.append(lit.group(2))
-            else:
-                unreadable = True
-        lits = _PY_WRITE_TEXT_LIT_RE.findall(cmd)
-        targets += [p for _, p in lits]
-        if len(_PY_WRITE_TEXT_RE.findall(cmd)) > len(lits):
-            unreadable = True
-        lits = _NODE_WRITE_LIT_RE.findall(cmd)
-        targets += [p for _, p in lits]
-        if len(_NODE_WRITE_RE.findall(cmd)) > len(lits):
-            unreadable = True
-    for stmt in re.split(r"&&|\|\||;|\n|\|", body):
-        try:
-            words = shlex.split(stmt)
-        except ValueError:
-            sys.stderr.write("house-rules design-loop lock: could not split a statement (unbalanced quotes) "
-                             "to look for sed -i / tee; skipping that statement.\n")
-            continue
-        for i, w in enumerate(words):
-            if w not in ("sed", "perl", "tee"):
-                continue
-            if any(p not in ("sudo", "env", "time", "nohup") and "=" not in p for p in words[:i]):
-                continue  # not in command position (e.g. `echo sed -i`, `grep tee f`)
-            rest = words[i + 1:]
-            files, has_script, skip = [], False, False
-            in_place = w == "tee"
-            for a in rest:
-                if skip:
-                    skip = False
-                elif a in ("-e", "-f", "--expression", "--file"):
-                    has_script, skip = True, True
-                elif re.match(r"^-[A-Za-z]+$", a) and a.endswith("e") and not re.match(r"^-[A-Za-z]*i", a):
-                    has_script, skip = True, True  # -ne / -pe: the next word is the script
-                elif a.startswith("-"):
-                    if a == "--in-place" or a.startswith("--in-place=") or re.match(r"^-[A-Za-z]*i", a):
-                        in_place = True
-                else:
-                    files.append(a)
-            if not in_place:
-                continue
-            if w == "sed" and not has_script and files:
-                files = files[1:]
-            if not files:
-                unreadable = True
-            for f in files:
-                if re.search(r"[$`~*?]", f):
-                    unreadable = True
-                else:
-                    targets.append(f)
-            break
-    plain = _QUOTED_RE.sub(lambda m: m.group(0) if m.group(1) else " ", body)
-    for m in _REDIRECT_RE.finditer(plain):
-        t = m.group(1).strip("'\"")
-        if t.startswith("/dev/"):
-            continue
-        if re.search(r"[$`~*?]", t):
-            unreadable = True
-        else:
-            targets.append(t)
-    return targets, unreadable
+from house_lib.shellwrites import (  # noqa: E402,F401 - moved to the shared library (#440 part B)
+    script_write_targets as _script_write_targets, _HEREDOC_RE, _QUOTED_RE, _REDIRECT_RE, _PY_OPEN_RE,
+    _PY_WRITE_TEXT_RE, _PY_WRITE_TEXT_LIT_RE, _NODE_WRITE_RE, _NODE_WRITE_LIT_RE, _SCRIPT_RUNNER_RE, _LITERAL_RE,
+)
 
 
 def _gated_script_write(payload):
@@ -2242,11 +2145,15 @@ def _turn_mark(transcript_path):
 
 def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
                          needs_evidence, uncommitted, plain_problems, trace_lines, retry=False,
-                         cannot_tell=()):
+                         cannot_tell=(), judged=("editor", "evidence", "commit", "plain summary")):
     """The blocking checkpoints at "reply ends". Returns (blocked, through): `blocked` is True when the reply
     was blocked (the block is emitted here); `through` is True when a check had already blocked three times for
     this message, so the reply goes through with the check locked (said in trace_lines). `cannot_tell` names
-    checks whose result is unknown this time: they neither block nor clear a lock. Block counts and locks live
+    checks whose result is unknown this time: they neither block nor clear a lock. `judged` names the checks
+    this reply carries enough to judge: a lock clears only when its check passes AND is judged (a reply with
+    no success claim cannot clear an evidence lock, one with no editor run cannot clear an editor lock); a
+    lock that cannot be cleared is kept and said so. A commit lock records the files it named and clears only
+    when those are committed. Block counts and locks live
     in house_lib.blocks. An error is added to trace_lines and nothing is blocked."""
     through = False
     try:
@@ -2277,15 +2184,47 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
         session_id = _field(_SESSION_ID_RE, payload) or ""
         mark = _turn_mark(transcript_path) if transcript_path else _blocks.message_mark("", ctx["user_text"])
         to_block, counts, through_lines = [], {}, []
+        cannot_tell = set(cannot_tell)
+        try:
+            locks_now = _blocks.active_locks(ctx["cwd"], session_id)
+        except (OSError, ValueError) as exc:
+            locks_now = {}
+            trace_lines.append("house-rules: the lock state could not be read (%s: %s), so no lock is cleared "
+                               "this reply." % (type(exc).__name__, exc))
+            cannot_tell.update(LOCKED_CHECKS)
+        commit_files = list(ctx["uncommitted"] or [])
+        lk = locks_now.get("commit") or {}
+        if lk.get("files") and "commit" not in cannot_tell:
+            try:
+                _top, _dirty = core._dirty_paths(ctx["cwd"])
+                still = core._uncommitted_among(lk["files"], _top, (_top, _dirty))
+            except Exception as exc:
+                cannot_tell.add("commit")
+                trace_lines.append("house-rules: could not tell whether the files the commit lock named (%s) are "
+                                   "committed (%s: %s), so the lock is kept." % (
+                                       ", ".join(lk["files"][:8]), type(exc).__name__, exc))
+            else:
+                if still:
+                    commit_files = list(dict.fromkeys(commit_files + still))
+                    fixes["commit"] = "commit %s on your own branch" % ", ".join(commit_files[:8])
         for name, fix in missed:
             if name not in LOCKED_CHECKS and not retry:  # qa page: once, on the first reply only
                 to_block.append((name, fix))
         for name in LOCKED_CHECKS:
             if name in cannot_tell:
+                if name in locks_now:
+                    trace_lines.append("house-rules: the %s lock is kept: this reply could not be judged against "
+                                       "it (the check could not tell)." % name)
+                continue
+            if name in locks_now and name not in fixes and name not in judged:
+                trace_lines.append("house-rules: the %s lock is kept: this reply does not carry what the check "
+                                   "wants (%s), so it cannot clear the lock. %s" % (
+                                       name, CHECKPOINT_RULES[name], locks_now[name].get("fix") or ""))
                 continue
             try:
                 action = _blocks.record_stop(ctx["cwd"], session_id, name, mark, name in fixes,
-                                             CHECKPOINT_RULES[name], fixes.get(name, ""))
+                                             CHECKPOINT_RULES[name], fixes.get(name, ""),
+                                             commit_files if name == "commit" else None)
             except (OSError, ValueError) as exc:
                 trace_lines.append("house-rules: the %s check could not read or write its block count (%s: %s), "
                                    "so it did not block this reply and no lock was set or cleared."
