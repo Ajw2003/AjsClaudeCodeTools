@@ -429,7 +429,6 @@ else:
     report("FAIL", "the disclosure rule states attribution, continuations, and check-the-record")
     print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
-# (the HOUSE_RULES_VOICE check moved to the rule-enforcement plugin's checks, #440)
 for event, payload, needle, why in trace_cases[1:]:  # artifact, runnable
     code, out, err = run_hook(event, payload, env=verbose_env())
     if code == 0 and '"systemMessage"' in out and needle in out:
@@ -704,16 +703,19 @@ else:
 
 # --- the command-handover check at Stop --------------------------------------------------------
 def hand_case(expect, title, payload, mode=""):
+    # Each case runs in a repo of its own, so the repeat-failure count of one case never reaches another.
+    repo = _commit_repo("AjsAgent/topic", committed=["a.py"])
     env = dict(os.environ)
-    if mode == "toggle":
-        env["HOUSE_RULES_HANDOVER"] = "off"
-    elif mode == "nopath":
+    env["CLAUDE_PROJECT_DIR"] = repo
+    if payload:
+        payload = json.dumps(dict(json.loads(payload), cwd=repo))
+    if mode == "nopath":
         env["PATH"] = ""
     code, out, err = run_hook("handover", payload, env=env)
     if '"hookEventName":"Stop"' in out and '"additionalContext"' in out:
         got = "feedback"
     elif '"decision":"block"' in out:
-        got = "block (the old shape - additionalContext is what it should emit now)"
+        got = "block"
     elif "systemMessage" in out and "house-rules plugin:" in out:
         got = "offline"
     elif "systemMessage" in out:
@@ -781,12 +783,6 @@ hand_case(
     "the retry after the check is allowed to finish - it cannot loop",
     stop_payload(stop_hook_active=True, last_assistant_message="```sh\nls\n```"),
 )
-hand_case(
-    "silent",
-    "the toggle switches the check off without touching any file",
-    stop_payload(last_assistant_message="```sh\nls\n```"),
-    mode="toggle",
-)
 # This used to expect silence, on the reasoning that an empty payload is "nothing to check".
 # The "nothing fails silently" rule reverses that: an empty payload is not a turn with no
 # command in it, it is a check that never got its input, and the two must not look the same.
@@ -821,8 +817,8 @@ _HAND_WITH_TOOL = _hand_transcript("with-tool", [
 ])
 
 hand_case(
-    "feedback",
-    "a success claim with no tool run since the last real message gets the evidence reminder",
+    "block",
+    "a success claim with no tool run since the last real message is sent back for evidence (evidence checkpoint)",
     stop_payload(
         transcript_path=_HAND_NO_TOOL,
         last_assistant_message="Fixed the bug, it works now.",
@@ -879,8 +875,8 @@ hand_case(
     ),
 )
 hand_case(
-    "feedback",
-    "'that can't be done' with no tool run this turn gets the evidence reminder (#92)",
+    "block",
+    "'that can't be done' with no tool run this turn is sent back for evidence (#92, evidence checkpoint)",
     stop_payload(
         transcript_path=_HAND_NO_TOOL,
         last_assistant_message="That can't be done in Claude Code; there is no setting for it.",
@@ -910,12 +906,16 @@ hand_case(
         last_assistant_message='Adding checks for "can\'t be done" claims and for a bare "untested".',
     ),
 )
+_repo92 = _commit_repo("AjsAgent/topic", committed=["a.py"])
 _, _out92, _ = run_hook("handover", stop_payload(
     transcript_path=_HAND_NO_TOOL,
     last_assistant_message="That setting doesn't exist.",
-))
-report("PASS" if "cannot be done or does not exist" in _out92 and "doesn't exist" in _out92 else "FAIL",
-       "the #92 note names the impossibility phrase it caught")
+    cwd=_repo92,
+), env=dict(os.environ, CLAUDE_PROJECT_DIR=_repo92))
+_note92 = _cc_mod._evidence_note([], _cc_mod._impossibility_claims("That setting doesn't exist."))
+report("PASS" if '"decision":"block"' in _out92 and "evidence (block 1 of 3)" in _out92
+       and "cannot be done or does not exist" in _note92 and "doesn't exist" in _note92 else "FAIL",
+       "the #92 claim is blocked as an evidence miss and its note names the impossibility phrase it caught")
 print(f"          {_out92[:160]!r}")
 hand_case(
     "silent",
@@ -957,8 +957,6 @@ pv_case("Stop (#309): the parity note is report-only - it demands no inventory o
         "note=%r" % _pv_ctx[_pv_ctx.find("re-creating"):][:200])
 _par, _, _ = _stop_notes(_pv_port, "Kept search and sorting; dropped the server sync, which needs a server.")
 pv_case("Stop: a port whose reply names what was kept and dropped gets no parity note", not _par, "parity=%s" % _par)
-_par, _, _ = _stop_notes(_pv_port, "Done.", HOUSE_RULES_PARITY="off")
-pv_case("Stop: HOUSE_RULES_PARITY=off switches the parity check off", not _par, "parity=%s" % _par)
 _pv_edit = _turn_transcript("pv-edit", "replace the colour in the header", [("Edit", "/proj/src/app.py")])
 _par, _vis, _ = _stop_notes(_pv_edit, "Changed the colour.")
 pv_case("Stop: an everyday 'replace' edit to a non-visual file trips neither check", not _par and not _vis,
@@ -1978,22 +1976,6 @@ else:
 if os.path.isfile(marker_b):
     os.remove(marker_b)
 
-rc, out, err = run_hook(
-    "versioncheck",
-    vc_payload("vc-off"),
-    vc_env(
-        HOUSE_RULES_VERSION_CHECK="off",
-        HOUSE_RULES_VC_MARKETPLACE="99.0.0",
-        HOUSE_RULES_VC_GITHUB="99.0.0",
-    ),
-)
-if rc == 0 and out == "":
-    report("PASS", "HOUSE_RULES_VERSION_CHECK=off disables the freshness check entirely")
-    print("          exits 0 with nothing emitted, even with a manufactured mismatch")
-else:
-    report("FAIL", "HOUSE_RULES_VERSION_CHECK=off disables the freshness check entirely")
-    print(f"          rc={rc} out={out[:200]!r}")
-
 # --- versioncheck: the GitHub fetch falls back to the API, and a failure reaches the model ------
 # 2026-09-24: raw.githubusercontent.com was reset by a sandbox while api.github.com worked, and the
 # "couldn't verify" result went only to a systemMessage the model never sees. file:// URLs stand in
@@ -2161,33 +2143,46 @@ else:
 if os.path.isfile(vc_marker_path(case)):
     os.remove(vc_marker_path(case))
 
-case = "vc-auto-update-off"
-vc_clear(case)
-rc, out, err = run_hook(
-    "versioncheck",
-    vc_payload(case),
-    vc_env(
-        case,
-        HOUSE_RULES_VC_MARKETPLACE="99.0.0",
-        HOUSE_RULES_VC_GITHUB="99.0.0",
-        HOUSE_RULES_AUTO_UPDATE="off",
-    ),
-)
-ok = (
-    rc == 0
-    and vc_fake_calls(case) == []
-    and "OUT OF DATE" in out
-    and "HOUSE_RULES_AUTO_UPDATE=off" in out
-)
-if ok:
-    report("PASS", "HOUSE_RULES_AUTO_UPDATE=off keeps the check but never runs the update")
-    print("          no `claude` call; the banner says automatic updating is off")
-else:
-    report("FAIL", "HOUSE_RULES_AUTO_UPDATE=off keeps the check but never runs the update")
-    print(f"          rc={rc} calls={vc_fake_calls(case)} out={out[:300]!r}")
-if os.path.isfile(vc_marker_path(case)):
-    os.remove(vc_marker_path(case))
 shutil.rmtree(_vc_fake_dir, ignore_errors=True)
+
+
+# --- no switch turns a check off (#440 part C) ---------------------------------------------------
+# The removed switches are written in pieces so this file does not contain them. A name counts only when
+# it ends there: the path, URL and number switches that start with the same letters are kept.
+import re as _sw_re
+_SW_REMOVED = ("AGENTS", "AGENT_BRANCH", "ATTRIBUTION", "AUTOSAVE", "AUTO_UPDATE", "CLEAR_WRITING", "COMMIT_CHECK",
+               "DELEGATION", "EDITOR", "HANDOVER", "HARVEST", "ISSUES", "LOOP", "PARITY", "PLAIN_SUMMARY",
+               "VERSION_CHECK", "VISUAL_CHECK", "VOICE", "WORKTRACKING")
+_SW_RE = _sw_re.compile("HOUSE_" + "RULES_(?:" + "|".join(_SW_REMOVED) + ")(?![A-Za-z0-9_])|"
+                        "HOUSE_" + "RULES_PROMPT_TIMEOUT=.?off", _sw_re.IGNORECASE)
+_SW_PLUGIN = os.path.abspath(os.path.join(HERE, ".."))
+_sw_hits = []
+for _sw_dir, _sw_dirs, _sw_files in os.walk(_SW_PLUGIN):
+    _sw_dirs[:] = [d for d in _sw_dirs if d != "__pycache__"]
+    for _sw_f in _sw_files:
+        if _sw_f.endswith(".pyc"):
+            continue
+        _sw_path = os.path.join(_sw_dir, _sw_f)
+        try:
+            _sw_text = open(_sw_path, encoding="utf-8").read()
+        except (OSError, UnicodeDecodeError) as _sw_exc:
+            _sw_hits.append("%s: could not be read (%s), so it was not checked" % (_sw_path, _sw_exc))
+            continue
+        for _sw_m in _SW_RE.finditer(_sw_text):
+            _sw_hits.append("%s: %s" % (os.path.relpath(_sw_path, _SW_PLUGIN), _sw_m.group(0)))
+if not _sw_hits:
+    report("PASS", "no removed off switch is named anywhere in this plugin's code or rules")
+    print("          %d names searched in every file under the plugin folder" % (len(_SW_REMOVED) + 1))
+else:
+    report("FAIL", "no removed off switch is named anywhere in this plugin's code or rules")
+    for _h in _sw_hits[:20]:
+        print(f"          {_h}")
+# the pattern itself finds a switch, a kept switch is not caught, and the prompt timeout's off value is
+_sw_probe_hit = _SW_RE.search("x HOUSE_" + "RULES_LOOP=off y") and _SW_RE.search("HOUSE_" + "RULES_PROMPT_TIMEOUT=off")
+_sw_probe_kept = any(_SW_RE.search("HOUSE_" + "RULES_" + k) for k in
+                     ("LOOP_LABELS_FILE", "AGENTS_STATE", "HARVEST_MIN_CHARS", "HANDOVER_TARGET_FILE", "PROMPT_TIMEOUT=300"))
+report("PASS" if _sw_probe_hit and not _sw_probe_kept else "FAIL",
+       "the removed-switch pattern catches the removed names and leaves the kept path and number switches alone")
 
 
 finish()

@@ -193,8 +193,8 @@ DEFAULT = "is the default branch"  # in every refusal of a default-branch git wr
 # Why fixtures instead of the developer's branch: docs/architecture.md, "Fixture repos, not the developer's branch".
 _FIXTURE_ROOT = tempfile.mkdtemp(prefix="house-rules-verify-")
 # The design-loop lock (#225) refuses code edits outside Build in any repo, which would turn every
-# fixture edit below into a refusal. It is off for the suite and switched on by its own cases.
-os.environ["HOUSE_RULES_LOOP"] = "off"
+# fixture edit below into a refusal. A fixture repo that edits source starts at the Build stage
+# (build_stage below); the cases that test the lock write their own stage file.
 # Simulated spawns in this file must never leave records in the real repository's agent list.
 os.environ["HOUSE_RULES_AGENTS_STATE"] = os.path.join(_FIXTURE_ROOT, "default-agents.json")
 atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
@@ -206,12 +206,22 @@ with open(_GIT_GLOBAL, "w", encoding="utf-8") as _gf:
 os.environ["GIT_CONFIG_GLOBAL"] = _GIT_GLOBAL
 
 
+def build_stage(repo):
+    """Put a fixture repo's design loop at Build, so edits to its source files are not refused by the lock.
+    The stage file goes in the git directory (the place the loop still reads), which keeps the tree clean."""
+    gd = os.path.join(repo, ".git")
+    os.makedirs(gd, exist_ok=True)
+    with open(os.path.join(gd, "house-rules-loop.json"), "w", encoding="utf-8") as f:
+        json.dump({"feature": "fixture", "stage": "build", "skip": False, "approvals": []}, f)
+    return repo
+
+
 def _repo_on(name, head_line):
     path = os.path.join(_FIXTURE_ROOT, name)
     os.makedirs(os.path.join(path, ".git"))
     with open(os.path.join(path, ".git", "HEAD"), "w", encoding="utf-8") as f:
         f.write(head_line)
-    return path
+    return build_stage(path)
 
 
 REPO_THEIRS = _repo_on("theirs", "ref: refs/heads/main\n")
@@ -387,13 +397,36 @@ def _turn_transcript(name, prompt, uses):
     return _hand_transcript(name, lines)
 
 
-def _stop_notes(transcript, reply, **env_extra):
+# --- the commit rule's obligation half (#97): Stop, branchnudge, audit, stale memories -------
+# Each case gets its own throwaway repo, so the branch and the dirty set are exactly what the
+# case says they are. The hook is pointed at it through CLAUDE_PROJECT_DIR, the same variable
+# Claude Code sets.
+def _commit_repo(branch, committed=(), dirty=()):
+    d = tempfile.mkdtemp(prefix="house-rules-commit-", dir=_FIXTURE_ROOT)
+    git = ["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", d]
+    subprocess.run(git + ["init", "-q", "-b", branch], check=True)
+    for rel in committed:
+        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+            f.write("original\n")
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    for rel in dirty:
+        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+            f.write("changed\n")
+    return build_stage(d)
+
+
+def _stop_notes(transcript, reply):
+    """Run the Stop check on one reply in a repo of its own (so block counts never carry over between cases)
+    and return (parity note, visual note, everything it said: the added context and the blocking reason)."""
+    repo = _commit_repo("AjsAgent/topic", committed=["a.py"])
     env = dict(os.environ)
-    env["HOUSE_RULES_COMMIT_CHECK"] = "off"
-    env.update(env_extra)
-    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=reply), env=env)
+    env["CLAUDE_PROJECT_DIR"] = repo
+    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=reply, cwd=repo),
+                         env=env)
     try:
-        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        data = json.loads(out)
+        ctx = (data.get("hookSpecificOutput") or {}).get("additionalContext", "") + data.get("reason", "")
     except Exception:
         ctx = ""
     return ("re-creating existing behaviour" in ctx, "checked by looking at it" in ctx, ctx)
@@ -413,25 +446,6 @@ _PS_PLAIN = ("The commit hooks are done and pushed. Claude now gets reminded to 
 _PS_TECH = ("`hook.py`: added `_dirty_paths`, `_uncommitted_among`, `branch_ownership` and "
             "`event_branchnudge`.\n\n" + "More detail follows here. " * 30)
 
-# --- the commit rule's obligation half (#97): Stop, branchnudge, audit, stale memories -------
-# Each case gets its own throwaway repo, so the branch and the dirty set are exactly what the
-# case says they are. The hook is pointed at it through CLAUDE_PROJECT_DIR, the same variable
-# Claude Code sets.
-def _commit_repo(branch, committed=(), dirty=()):
-    d = tempfile.mkdtemp(prefix="house-rules-commit-", dir=_FIXTURE_ROOT)
-    git = ["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", d]
-    subprocess.run(git + ["init", "-q", "-b", branch], check=True)
-    for rel in committed:
-        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
-            f.write("original\n")
-    subprocess.run(git + ["add", "-A"], check=True)
-    subprocess.run(git + ["commit", "-q", "--allow-empty", "-m", "base"], check=True)
-    for rel in dirty:
-        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
-            f.write("changed\n")
-    return d
-
-
 def _wrote_transcript(name, paths):
     lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "change it"}})]
     for i, p in enumerate(paths):
@@ -443,16 +457,31 @@ def _wrote_transcript(name, paths):
 def _project_env(root, **extra):
     e = dict(os.environ)
     e["CLAUDE_PROJECT_DIR"] = root
-    e.pop("HOUSE_RULES_COMMIT_CHECK", None)
     e.update(extra)
     return e
 
 
 def _stop_context(out):
+    """What a Stop run said to the model or to aj: the added context, the blocking reason, the message."""
     try:
-        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        data = json.loads(out)
     except Exception:
         return ""
+    return ((data.get("hookSpecificOutput") or {}).get("additionalContext", "") + data.get("reason", "")
+            + data.get("systemMessage", ""))
+
+
+def _stop_through(transcript, reply, repo):
+    """The Stop check's full note for a reply that keeps missing a counted check. The first replies are blocked
+    with the short reason; the fourth goes through with the whole note (the repeat-failure rule, choice 6A of the
+    plugin split), so that is the one whose text is returned. The state is the block count, kept per repo."""
+    out = ""
+    for _ in range(5):
+        out = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=reply, cwd=repo),
+                       env=_project_env(repo))[1]
+        if '"decision":"block"' not in out:
+            break
+    return out
 
 
 def commit_case(title, ok, detail):
@@ -472,22 +501,17 @@ _cc_mod = _cc_util.module_from_spec(_cc_spec)
 _cc_spec.loader.exec_module(_cc_mod)
 
 
-def _creditcheck(cmd, stdout, fetch, off=False):
+def _creditcheck(cmd, stdout, fetch):
     _cc_mod.safe_git._read_back_body = fetch  # #358: event_creditcheck lives in house_rules/safe_git.py now
-    _saved = (sys.stdin, sys.stdout, os.environ.get("HOUSE_RULES_ATTRIBUTION"))
+    _saved = (sys.stdin, sys.stdout)
     sys.stdin = type("S", (), {"buffer": _cc_io.BytesIO(json.dumps(
         {"tool_name": "Bash", "tool_input": {"command": cmd}, "tool_response": {"stdout": stdout}}).encode())})()
     sys.stdout = _cc_io.StringIO()
-    if off:
-        os.environ["HOUSE_RULES_ATTRIBUTION"] = "off"
     try:
         _cc_mod.event_creditcheck()
         return sys.stdout.getvalue()
     finally:
         sys.stdin, sys.stdout = _saved[0], _saved[1]
-        os.environ.pop("HOUSE_RULES_ATTRIBUTION", None)
-        if _saved[2] is not None:
-            os.environ["HOUSE_RULES_ATTRIBUTION"] = _saved[2]
 # autosave / commitgate / worktreesweep (2.47.0): a subagent killed mid-run never reaches
 # SubagentStop, so its work is protected while it runs. Each fixture repo has a local bare repo
 # as `origin`, standing in for GitHub.
@@ -507,7 +531,6 @@ _ISS_STUBDIR = tempfile.mkdtemp(prefix="house-rules-ghstub-", dir=_FIXTURE_ROOT)
 
 def _iss_env(**extra):
     e = _project_env(_FIXTURE_ROOT)
-    e.pop("HOUSE_RULES_ISSUES", None)
     e["PATH"] = _ISS_STUBDIR + os.pathsep + e.get("PATH", "")
     e.update(extra)
     return e
@@ -519,6 +542,7 @@ def _iss_repo(remote=None):
     _as_write(d, "base.py", "base\n")
     _as_git(d, "add", "-A")
     _as_git(d, "commit", "-q", "-m", "base")
+    build_stage(d)
     if remote:
         _as_git(d, "remote", "add", "origin", remote)
     return d
@@ -590,12 +614,8 @@ RESTATEMENTS = [
     ),
     Restatement(
         "the Stop commit note (#97), on the user's branch",
-        lambda: (lambda r: run_hook(
-            "handover",
-            stop_payload(transcript_path=_wrote_transcript("restate-commit", [os.path.join(r, "a.py")]),
-                         last_assistant_message="Changed a.py."),
-            env=_project_env(r),
-        )[1])(_commit_repo("main", committed=["a.py"], dirty=["a.py"])),
+        lambda: (lambda r: _stop_through(_wrote_transcript("restate-commit", [os.path.join(r, "a.py")]),
+                                         "Changed a.py.", r))(_commit_repo("main", committed=["a.py"], dirty=["a.py"])),
         ["own branch", "branch off first", "scoped to"],
         False,
         ("commit on your own branch", "scoped to those paths", "say what you committed and where",
@@ -761,11 +781,10 @@ def post_agent_payload(**kw):
 
 # A backgrounded call's PostToolUse fires immediately with status "async_launched" - nothing
 # has happened yet, so audit reports no audit. Since 2.47.0 it asks the parent for a check-in
-# instead (so worktreesweep runs while the subagent works); with autosave off it says nothing.
+# instead (so worktreesweep runs while the subagent works); on a repo with nothing to save it says nothing.
 _async_payload = post_agent_payload(
     tool_response={"isAsync": True, "status": "async_launched", "agentId": "audit1"}
 )
-code_off, out_off, _e = run_hook("audit", _async_payload, env=dict(os.environ, HOUSE_RULES_AUTOSAVE="off"))
 
 
 def vc_payload(session_id):
@@ -806,7 +825,6 @@ def vc_env(case="default", **overrides):
     e["HOUSE_RULES_VC_CLAUDE"] = json.dumps([sys.executable, _vc_fake_claude])
     e["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = vc_installed_json(case)
     e["VC_FAKE_LOG"] = os.path.join(_vc_fake_dir, f"calls-{case}.log")
-    e.pop("HOUSE_RULES_AUTO_UPDATE", None)
     e.update(overrides)
     return e
 
@@ -818,8 +836,7 @@ def vc_marker_path(session_id):
 _nb_r = _commit_repo("AjsAgent/topic", committed=["a.py"])
 # #293: each enforced workflow check refuses and names its exact fix (the page, credit-line and
 # helper-cap texts are checked where those checks are tested).
-_e293 = dict(os.environ, HOUSE_RULES_ATTRIBUTION="on", HOUSE_RULES_ISSUES="on", HOUSE_RULES_CLEAR_WRITING="on",
-             HOUSE_RULES_AGENTS="on")
+_e293 = dict(os.environ)
 
 
 def finish():

@@ -27,7 +27,6 @@ missing = [
         "### The voice",
         "gloss",
         "never buys warmth with accuracy",
-        "HOUSE_RULES_VOICE=off",
     ]
     if ph.lower() not in rules_text.lower()
 ]
@@ -46,17 +45,14 @@ pv_case("Stop: a visual edit with a Playwright screenshot in the turn gets no vi
 _pv_read = _turn_transcript("pv-read", "make the header blue", [("Edit", "/proj/site.css"), ("Read", "/proj/after.png")])
 _, _vis, _ = _stop_notes(_pv_read, "The header is blue.")
 pv_case("Stop: a visual edit whose turn read a captured image gets no visual note", not _vis, "visual=%s" % _vis)
-_, _vis, _ = _stop_notes(_turn_transcript("pv-off", "make the header blue", [("Edit", "/proj/site.css")]),
-                         "Done.", HOUSE_RULES_VISUAL_CHECK="off")
-pv_case("Stop: HOUSE_RULES_VISUAL_CHECK=off switches the visual check off", not _vis, "visual=%s" % _vis)
 _PS_WIDE = _PS_PLAIN + "\n\n| a | b | c | d |\n|---|---|---|---|\n| 1 | 2 | 3 | 4 |\n"
 _ps_wrote = _turn_transcript("ps-wrote", "add the commit hooks", [("Edit", "/proj/src/app.py")])
 _ps_read = _turn_transcript("ps-read", "what does this do?", [("Bash", "cat app.py")])
 _ps_commit = _turn_transcript("ps-commit", "commit it", [("Bash", "git commit -m x -- a.py && git push")])
 
 
-def _ps(transcript, reply, **env_extra):
-    return "plain summary first" in _stop_notes(transcript, reply, **env_extra)[2]
+def _ps(transcript, reply):
+    return "plain summary (block" in _stop_notes(transcript, reply)[2]
 
 
 pv_case("Stop: a work report opening with a pile of code names is sent back to lead with a plain summary (#98)",
@@ -69,8 +65,6 @@ pv_case("Stop: a turn that only committed counts as reporting work", _ps(_ps_com
         "fired=%s" % _ps(_ps_commit, _PS_TECH))
 pv_case("Stop: a turn that changed nothing is not a work report, so a technical answer is fine",
         not _ps(_ps_read, _PS_TECH), "fired=%s" % _ps(_ps_read, _PS_TECH))
-pv_case("Stop: HOUSE_RULES_PLAIN_SUMMARY=off switches it off",
-        not _ps(_ps_wrote, _PS_TECH, HOUSE_RULES_PLAIN_SUMMARY="off"), "")
 
 
 finish()
