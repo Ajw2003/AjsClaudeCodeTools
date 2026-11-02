@@ -274,7 +274,7 @@ const PAGE = {
   "approval": "Design approved: rerun limit",
   "reply": "",
   "short": {
-    "lead": "Issue #453 (\"Stop builders rerunning the same check\") has two halves. The builder rule is already built and pushed as plugin 2.74.3: every builder now carries a limit of two runs per in-game or harness check, and is told not to repair a check to make it pass. A rule is only text, though, and the PlunderSpell builder already broke a written limit once. This page is the other half: a hook that refuses the third run of the same check. It reuses the existing guard hook, which already sees every shell command and already blocks commits on main. I tested the issue's first question: the hook does fire inside a builder, and it can tell which builder sent the command.",
+    "lead": "Issue #453 (\"Stop builders rerunning the same check\") has two halves. The builder rule is already built and pushed as plugin 2.74.3: every builder now carries a limit of two runs per in-game or harness check, and is told not to repair a check to make it pass. A rule is only text, though, and the PlunderSpell builder already broke a written limit once. This page is the other half: a hook that refuses the third run of the same check. It reuses the existing guard hook, which already sees every shell command and already blocks commits on main. I tested the first question in the issue, whether the hook fires inside a builder. It does, and it can tell which builder sent the command.",
     "hint": "Tap a row to see what it does today and what would change.",
     "key": [
       [
@@ -292,7 +292,7 @@ const PAGE = {
         "Probe",
         "The hook runs inside a builder (tested today)",
         "",
-        "I ran a real Claude Code session in the sandbox with a hook that logs every shell command. The builder's command arrived with its own helper id (agent_id) and type; the main thread's arrived with none. Each builder can have its own count.",
+        "I ran a real Claude Code session in the sandbox with a hook that logs every shell command. The builder's command arrived with its own builder id (agent_id) and type. The main thread's command arrived with neither. Each builder can have its own count.",
         "Nothing from you."
       ],
       [
@@ -308,7 +308,7 @@ const PAGE = {
         "Same check",
         "Which commands count as one check",
         "you",
-        "Ordinary commands such as git status, a compile or a file listing must never be counted. Your answer to the first choice decides how a check is recognised.",
+        "Ordinary commands such as git status, a compile or a file listing must never be counted. Your answer to the first choice, \"What counts as the same check?\", decides how a check is recognised.",
         "Your answer under Choices."
       ],
       [
@@ -341,12 +341,12 @@ const PAGE = {
     [
       "chg",
       "Rerun limit in the guard hook (scripts/house_rules/safe_git.py and a small state file in .git)",
-      "Counts runs of one check per helper, and refuses the third with no code change in between.",
+      "Counts runs of one check per builder, and refuses the third run when there has been no code change in between.",
       [
         "A builder can run the same in-game check as many times as it likes. In PlunderSpell issue #569 one ran it 12 times in 23 minutes, each run opening Play mode and a second game window on your screen.",
         "The third run is refused with: \"This check has run twice since the last code change. Stop and report what failed; do not edit the check.\" The first two runs, and any run after a real code change, go through as before."
       ],
-      "Applies to builders and to the main thread alike, each with its own count. Nothing else the guard does changes. verify.py gains cases for: a third run refused, a run after a source edit allowed, an edit to the check script not resetting, git status never counted, and the off switch."
+      "Applies to builders and to the main thread alike. Each builder and the main thread has its own count. Nothing else the guard does changes. verify.py gains cases for: a third run refused, a run after a source edit allowed, an edit to the check script not resetting, git status never counted, and the off switch."
     ]
   ],
   "choices": [
@@ -373,7 +373,7 @@ const PAGE = {
           "Most precise, but every project needs a file first, and a project without one gets no protection."
         ]
       ],
-      "Unknown: if the PlunderSpell co-op check is started through a Unity tool call rather than a shell command, the guard never sees it. Please say how it is started, if you know."
+      "I don't know how the PlunderSpell co-op check is started. If it is started through a Unity tool call rather than a shell command, the guard never sees it and this hook can't limit it. Please say how it is started, if you know."
     ],
     [
       "reset",
@@ -392,7 +392,7 @@ const PAGE = {
           "Harder to game, but a builder would have to commit half-finished code just to run the check again."
         ]
       ],
-      "Both ignore edits to the check's own script."
+      "Both options ignore edits to the check's own script, so repairing the check never earns another run."
     ],
     [
       "override",
@@ -418,7 +418,7 @@ const PAGE = {
     "summary": "A hook that refuses the third run of the same check with no code change in between, inside builders and the main thread.",
     "changing": "The guard hook gains a run counter. No new hook entry, and nothing else the guard does changes.",
     "blocking": "Your answers to the three choices, and how the co-op check is started if you know.",
-    "next": "A builder writes it with its verify.py cases, I run verify.py twice and a real builder session that hits the limit, then hand you a QA page.",
+    "next": "A builder writes it along with its verify.py cases. I then run verify.py twice, run one real builder session that hits the limit, and hand you a QA page.",
     "todo": [
       "Pick your answers under Choices.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: rerun limit\", or say what to change."
