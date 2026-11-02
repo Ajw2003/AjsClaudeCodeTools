@@ -494,6 +494,10 @@ code, out, err = run_hook(
             "hook_event_name": "Stop",
             "stop_hook_active": False,
             "last_assistant_message": "a reply with no fenced block",
+            # An empty folder, so the design loop finds no stage file: without it the hook reads
+            # this checkout's own .claude/house-rules-loop.json and asks GitHub for its issues'
+            # labels, which prints a message wherever gh is not logged in (CI, #452).
+            "cwd": tempfile.mkdtemp(prefix="house-rules-verify-standdown-"),
         }
     ),
 )
