@@ -1,0 +1,57 @@
+{
+  "title": "Rerun Limit Hook",
+  "eyebrow": "Design for approval · issue #453, the hook half · nothing built yet",
+  "approval": "Design approved: rerun limit",
+  "reply": "",
+  "short": {
+    "lead": "Issue #453 (\"Stop builders rerunning the same check\") has two halves. The builder rule is already built and pushed as plugin 2.74.3: every builder now carries a limit of two runs per in-game or harness check, and is told not to repair a check to make it pass. A rule is only text, though, and the PlunderSpell builder already broke a written limit once. This page is the other half: a hook that refuses the third run of the same check. It reuses the existing guard hook, which already sees every shell command and already blocks commits on main. I tested the issue's first question: the hook does fire inside a builder, and it can tell which builder sent the command.",
+    "hint": "Tap a row to see what it does today and what would change.",
+    "key": [
+      ["Already exists, reused", ""],
+      ["New", "you"]
+    ],
+    "items": [
+      ["check", "Probe", "The hook runs inside a builder (tested today)", "", "I ran a real Claude Code session in the sandbox with a hook that logs every shell command. The builder's command arrived with its own helper id (agent_id) and type; the main thread's arrived with none. Each builder can have its own count.", "Nothing from you."],
+      ["lock", "Guard", "The existing guard hook does the refusing", "", "The guard already runs before every Bash and PowerShell call and already refuses commits on main. The count goes into the same route, with no new hook entry.", "Nothing from you."],
+      ["search", "Same check", "Which commands count as one check", "you", "Ordinary commands such as git status, a compile or a file listing must never be counted. Your answer to the first choice decides how a check is recognised.", "Your answer under Choices."],
+      ["loop", "Reset", "What lets a new run through", "you", "A real code change should allow another run. An edit to the check's own script must not, because repairing the check is exactly the failure in PlunderSpell issue #569 (\"co-op gap check\").", "Your answer under Choices."],
+      ["hand", "Override", "How an agent gets past it for a flaky failure", "you", "A flaky failure is one that passes or fails at random with no code change. This is your call, as issue #453 says.", "Your answer under Choices."],
+      ["file", "Switch", "HOUSE_RULES_RERUNS=off turns it off", "", "This follows the HOUSE_RULES_*=off pattern every other check uses.", "Nothing from you."]
+    ]
+  },
+  "changes": [
+    ["chg", "Rerun limit in the guard hook (scripts/house_rules/safe_git.py and a small state file in .git)",
+      "Counts runs of one check per helper, and refuses the third with no code change in between.",
+      ["A builder can run the same in-game check as many times as it likes. In PlunderSpell issue #569 one ran it 12 times in 23 minutes, each run opening Play mode and a second game window on your screen.",
+       "The third run is refused with: \"This check has run twice since the last code change. Stop and report what failed; do not edit the check.\" The first two runs, and any run after a real code change, go through as before."],
+      "Applies to builders and to the main thread alike, each with its own count. Nothing else the guard does changes. verify.py gains cases for: a third run refused, a run after a source edit allowed, an edit to the check script not resetting, git status never counted, and the off switch."]
+  ],
+  "choices": [
+    ["same", "What counts as the same check?",
+      [
+        ["A", "The same script file inside the project, whatever its arguments", 1, "Catches `python tools/coop_check.py --seed 2` and `--seed 3` as one check. A compile, git or a bare test runner never names a project script, so it never counts."],
+        ["B", "The exact same command text, with spacing tidied", 0, "Simplest, but changing one argument makes it a new check, which an agent can do without meaning to."],
+        ["C", "Only commands matching patterns each project lists in a file", 0, "Most precise, but every project needs a file first, and a project without one gets no protection."]
+      ],
+      "Unknown: if the PlunderSpell co-op check is started through a Unity tool call rather than a shell command, the guard never sees it. Please say how it is started, if you know."],
+    ["reset", "What resets the count?",
+      [
+        ["A", "Any change to the project's files since the last run, except the check's own script", 1, "Measured by a fingerprint of git's view of the working tree, so an edit made with sed counts too, not just the Edit tool."],
+        ["B", "Only a new commit", 0, "Harder to game, but a builder would have to commit half-finished code just to run the check again."]
+      ],
+      "Both ignore edits to the check's own script."],
+    ["override", "How does an agent get past it?",
+      [
+        ["A", "One extra run when the command starts with HOUSE_RULES_RERUN=\"flaky: <the failure>\", and the reason is noted for the report", 1, "Allowed once per check. The refusal message tells the agent the reason must appear in its final report."],
+        ["B", "No override: only a code change or you", 0, "Strictest. A genuinely flaky check then always needs you."]
+      ],
+      ""]
+  ],
+  "wrapup": {
+    "summary": "A hook that refuses the third run of the same check with no code change in between, inside builders and the main thread.",
+    "changing": "The guard hook gains a run counter. No new hook entry, and nothing else the guard does changes.",
+    "blocking": "Your answers to the three choices, and how the co-op check is started if you know.",
+    "next": "A builder writes it with its verify.py cases, I run verify.py twice and a real builder session that hits the limit, then hand you a QA page.",
+    "todo": ["Pick your answers under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}
