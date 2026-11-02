@@ -75,11 +75,19 @@
         "Nothing from you."
       ],
       [
+        "flask",
+        "CI",
+        "The first CI run on #452 failed, and is fixed",
+        "done",
+        "One test expected the end-of-reply hook to stay silent. In CI it printed a notice. The test read the design-loop file in this repo, and the label read through gh (the GitHub command-line tool) failed because GitHub Actions has no gh login. I reproduced it here with a fake gh that fails the same way. The test now runs in an empty folder, and all 937 checks pass with the fake failing gh and with the real gh (commit 8e78ff7). CI is running again on that fix.",
+        "Nothing from you."
+      ],
+      [
         "hand",
         "Gate",
         "Draft pull request #452 and its six checks",
         "you",
-        "Done: every suite passes locally (house-rules 937 checks, rule-enforcement 96, tools 55, the library copy check and the version-bump check). Still to run: (1) the same suites in CI on the pull request. (2) A replay of every hook through main's 2.74.1 and through this branch, with every difference traced to something you approved. (3) Real sessions showing no tool is refused that 2.74.1 allows. (4) A clean install from GitHub. (5) A tested one-step rollback. (6) Your QA pass.",
+        "Done: every suite passes locally (house-rules 937 checks, rule-enforcement 96, tools 55, the library copy check and the version-bump check). Running now: checks (2) and (3), handled by a builder. If it finds a difference it cannot trace to a change you approved, it reports that to you and does not fix it. Check (2) is a replay of every hook through main's 2.74.1 and through this branch, with every difference traced to something you approved. Check (3) is real sessions showing no tool is refused that 2.74.1 allows. Still to run: (1) the same suites in CI on the pull request, (4) a clean install from GitHub, (5) a tested one-step rollback, and (6) your QA pass.",
         "Say whether I should watch #452 for CI results and review comments."
       ]
     ]
@@ -101,7 +109,7 @@
     "summary": "Steps 1 to 3 are built and checked; draft pull request #452 waits on CI and five more checks.",
     "changing": "house-rules 2.75.0 and the new house-lib and rule-enforcement plugins, on the branch AjsAgent/house-rules-plugin-split-a9uusz.",
     "blocking": "Nothing yet. Your QA comes last, after the other checks.",
-    "next": "I run the remaining checks on #452, starting with the replay against 2.74.1.",
+    "next": "I check the second CI run and the builder's replay report myself.",
     "todo": [
       "Say whether I should watch #452 for CI results and review comments."
     ]
