@@ -16,21 +16,16 @@ line level, after the outputs of all hooks for the event are combined.
 | go-ahead delegation clause removed | 0 |
 | house-rules files line | 10 |
 | text no longer mentions removed switches | 12 |
-| UNEXPLAINED | 2 |
+| 2.74.2 bug fixed: quote-aware statement split | 2 |
+| UNEXPLAINED | 0 |
 
 Scenarios: 64. Identical in OLD and NEW: 49. With at least one difference: 15.
 
 Every hook entry in OLD's and NEW's hooks.json is reached by at least one scenario.
 
-## UNEXPLAINED differences (2)
+## UNEXPLAINED differences (0)
 
-- **guard: git commit on an owned branch** (PreToolUse Bash), `stderr`, only in new:
-
-  > house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement.
-
-- **guard: git commit crediting Claude** (PreToolUse Bash), `stderr`, only in new:
-
-  > house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement.
+None.
 
 ## Every difference, by scenario
 
@@ -94,14 +89,14 @@ Hooks run: OLD house-rules:scope, house-rules:userpromptaudit, house-rules:workt
 
 Hooks run: OLD house-rules:guard, house-rules:commitgate ; NEW house-rules:guard, house-rules:commitgate, rule-enforcement:lockgate
 
-- [UNEXPLAINED] `stderr` only in new: house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement.
+- [2.74.2 bug fixed: quote-aware statement split] `stderr` only in old: house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement.
 
 ### guard: git commit crediting Claude (PreToolUse Bash)
 
 Hooks run: OLD house-rules:guard, house-rules:commitgate ; NEW house-rules:guard, house-rules:commitgate, rule-enforcement:lockgate
 
 - [text no longer mentions removed switches] `decisions` only in old: HOUSE_RULES_ATTRIBUTION=off disables this check.
-- [UNEXPLAINED] `stderr` only in new: house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement.
+- [2.74.2 bug fixed: quote-aware statement split] `stderr` only in old: house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement. house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement.
 
 ### Write a source file (design stage) (PreToolUse Write)
 
@@ -227,7 +222,7 @@ Hooks run: OLD house-rules:announce, house-rules:subagentrules ; NEW house-rules
 
 - "house-rules files line" also holds the rules-text sentences reworded to name `make_page.py` and `handover-cards.md` without the `<plugin>/` prefix; they are the partner of the new session-start line.
 - Version strings (2.74.2 against 2.75.0) are normalised away before diffing; a version bump is not a behaviour difference.
-- The two UNEXPLAINED items are one finding: in NEW, `rule-enforcement:lockgate` (and house-rules `commitgate`) print "could not split a statement (unbalanced quotes)" to stderr on any `git commit -m` whose message has a newline inside quotes, while no lock is active and the stage is Build. OLD printed nothing for the same payload. Exit code stays 0 and no decision changes, so it is noise, not a refusal; it is a difference no approved change lists. Not fixed here; for aj to decide.
+- "2.74.2 bug fixed: quote-aware statement split" (2 differences, rerun after the fix): matches only a stderr line present in OLD and absent in NEW whose text is "could not split a statement (unbalanced quotes)". The first run showed this line only in NEW and the earlier note here said 2.74.2 did not print it; that was wrong. `origin/main` `design_loop.py:260` prints the same line (4 copies per `git commit -m` with a newline inside quotes). Cause: `re.split` cut the command inside its quotes, shlex raised, and the statement was skipped, so a `sed -i` / `tee` in it escaped the lock. Fix in `house_lib/shellwrites.py`: statements are split only outside quotes; a statement that truly cannot be split counts as unreadable (callers unchanged: lockgate refuses it while locked, the design-loop gate reports it), with no stderr line. NEW is now silent where OLD was noisy. Basis: Decisions.md, "The plugin split: no rule is optional".
 - Not replayed: the `HOUSE_RULES_*=off` switches themselves (set only in a user's environment; the removed-switch class here is the text that mentioned them). One earlier run of the tool, straight after an edit to its own classifier, showed 6 UNEXPLAINED; five later runs on fresh folders gave 2 each and the cause of the 6 was not found.
 
 ## Item 3: no tool refused that 2.74.x allows

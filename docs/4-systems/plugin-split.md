@@ -277,6 +277,7 @@ report-only checks marked #309 (the page row) and the `HOUSE_RULES_*` switches (
 - A shell command can still write a source file in a way the detector cannot read (a program that writes a
   path it computes at run time). Paths that cannot be read from the command text are refused; a path computed
   inside a script is not seen.
+- A command that cannot be split into statements (truly unbalanced quotes, which the shell itself rejects) counts as unreadable: refused while a lock is active, reported by the design-loop gate, never skipped. Statements are split only outside quotes (replay finding, fixed from 2.74.2 behaviour; see the replay report).
 - The evidence lock needs a reply that makes a success claim to clear it: saying nothing never clears it.
   That is intended, and the refusal says what to do.
 - Paths in no git repository and outside the session folder are always allowed while locked, so a page's

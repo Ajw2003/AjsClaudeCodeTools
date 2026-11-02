@@ -807,6 +807,15 @@ check([x["cls"] for x in _d] == ["rule loading moved", "rule loading moved"],
 _d = _rh.compare(_comb(blocks=["block: - commit: Files are committed."]), _comb(blocks=["block: - commit (block 1 of 3): Files are committed."]))
 check([x["cls"] for x in _d] == ["three blocks then lock"] * 2,
       "replay_hooks: block 1 of 3 against block-once is 'three blocks then lock'", f"got {_d!r}")
+_d = _rh.compare(_comb(stderr=["house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement."]), _comb())
+check(len(_d) == 1 and _d[0]["cls"] == "2.74.2 bug fixed: quote-aware statement split",
+      "replay_hooks: the old-only 'could not split a statement' stderr line is the quote-aware split fix", f"got {_d!r}")
+_d = _rh.compare(_comb(), _comb(stderr=["house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement."]))
+check(len(_d) == 1 and _d[0]["cls"] == "UNEXPLAINED",
+      "replay_hooks: the same line appearing only in NEW stays UNEXPLAINED", f"got {_d!r}")
+_d = _rh.compare(_comb(stderr=["some other old noise"]), _comb())
+check(len(_d) == 1 and _d[0]["cls"] == "UNEXPLAINED",
+      "replay_hooks: any other old-only stderr line stays UNEXPLAINED", f"got {_d!r}")
 _d = _rh.compare(_comb(decisions=["deny: refused one"]), _comb(decisions=["allow: fine"]))
 check(sorted(x["cls"] for x in _d) == ["UNEXPLAINED", "UNEXPLAINED"],
       "replay_hooks: a changed decision no rule covers is UNEXPLAINED", f"got {_d!r}")

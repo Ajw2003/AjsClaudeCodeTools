@@ -44,6 +44,7 @@ CLASSES = [
     "go-ahead delegation clause removed",
     "house-rules files line",
     "text no longer mentions removed switches",
+    "2.74.2 bug fixed: quote-aware statement split",
     "UNEXPLAINED",
 ]
 
@@ -70,6 +71,8 @@ def fold_roots(text):
 def classify(field, side, line, other_lines):
     """Class of one unit of text that is only on `side` ('old' or 'new') of a field.
     other_lines: the units only on the other side. Returns one of CLASSES."""
+    if field == "stderr" and side == "old" and "could not split a statement (unbalanced quotes)" in line:
+        return "2.74.2 bug fixed: quote-aware statement split"
     if side == "new" and _FILES_LINE_RE.match(line):
         return "house-rules files line"
     if (side == "old" and _FILES_OLD_RE.search(line)) or (side == "new" and _FILES_NEW_RE.search(line)):
