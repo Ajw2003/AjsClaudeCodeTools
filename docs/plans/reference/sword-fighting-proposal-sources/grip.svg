@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" font-family="Trebuchet MS,Verdana,sans-serif">
+<rect width="960" height="600" fill="#f4f7fb"/>
+<text x="30" y="44" font-size="26" font-weight="bold" fill="#1d2b3a">The phone is the hilt</text>
+<text x="30" y="72" font-size="16" fill="#46566a">Held upright, screen facing left or right. Your thumb rests on the screen as the grip.</text>
+<!-- panel 1: side view, screen visible -->
+<g transform="translate(70,110)">
+ <text x="120" y="0" font-size="15" font-weight="bold" fill="#1d2b3a" text-anchor="middle">From the side</text>
+ <!-- ghost blade -->
+ <polygon points="106,40 134,40 128,250 112,250" fill="#cfd8e3" stroke="#8a99ab" stroke-dasharray="6 4"/>
+ <polygon points="104,40 120,4 136,40" fill="#cfd8e3" stroke="#8a99ab" stroke-dasharray="6 4"/>
+ <rect x="62" y="250" width="116" height="16" rx="4" fill="#c9a14a"/>
+ <!-- phone -->
+ <rect x="82" y="266" width="76" height="150" rx="12" fill="#1d2b3a"/>
+ <rect x="88" y="276" width="64" height="130" rx="6" fill="#1f9aa3"/>
+ <circle cx="120" cy="372" r="20" fill="#ffffff" opacity=".85"/>
+ <text x="120" y="377" font-size="11" text-anchor="middle" fill="#1d2b3a" font-weight="bold">GRIP</text>
+ <!-- hand -->
+ <path d="M70 330 q-18 30 0 80 q30 22 92 14 q14 -40 0 -86 q-40 -18 -92 -8z" fill="#e0a982" opacity=".92"/>
+ <ellipse cx="120" cy="368" rx="16" ry="11" fill="#d39370"/>
+ <text x="190" y="372" font-size="13" fill="#46566a">thumb on the</text>
+ <text x="190" y="388" font-size="13" fill="#46566a">grip pad</text>
+ <text x="186" y="150" font-size="13" fill="#46566a">imaginary blade</text>
+ <text x="186" y="166" font-size="13" fill="#46566a">from the top edge</text>
+</g>
+<!-- panel 2: what the player sees (edge-on) -->
+<g transform="translate(400,110)">
+ <text x="80" y="0" font-size="15" font-weight="bold" fill="#1d2b3a" text-anchor="middle">From your eyes</text>
+ <polygon points="74,40 86,40 84,250 76,250" fill="#cfd8e3" stroke="#8a99ab" stroke-dasharray="6 4"/>
+ <rect x="40" y="250" width="80" height="16" rx="4" fill="#c9a14a"/>
+ <rect x="70" y="266" width="20" height="150" rx="6" fill="#1d2b3a"/>
+ <path d="M50 330 q-14 30 0 80 q30 20 60 10 q12 -40 0 -86 q-30 -14 -60 -4z" fill="#e0a982" opacity=".92"/>
+ <text x="80" y="450" font-size="13" text-anchor="middle" fill="#46566a">you see the phone's edge,</text>
+ <text x="80" y="466" font-size="13" text-anchor="middle" fill="#46566a">like a real sword's spine</text>
+</g>
+<!-- panel 3: axes -->
+<g transform="translate(640,110)">
+ <text x="140" y="10" font-size="15" font-weight="bold" fill="#1d2b3a" text-anchor="middle">Phone axes become sword axes</text>
+ <g transform="translate(70,60)">
+  <line x1="60" y1="200" x2="60" y2="40" stroke="#c8321e" stroke-width="5"/><polygon points="50,44 60,20 70,44" fill="#c8321e"/>
+  <line x1="60" y1="200" x2="170" y2="200" stroke="#1f9aa3" stroke-width="5"/><polygon points="166,190 190,200 166,210" fill="#1f9aa3"/>
+  <line x1="60" y1="200" x2="0" y2="250" stroke="#3a6fd6" stroke-width="5"/><polygon points="2,236 -14,262 14,252" fill="#3a6fd6"/>
+  <text x="76" y="40" font-size="14" fill="#c8321e" font-weight="bold">y, top edge → blade</text>
+  <text x="120" y="230" font-size="14" fill="#1f9aa3" font-weight="bold">x → cutting edge</text>
+  <text x="-50" y="290" font-size="14" fill="#3a6fd6" font-weight="bold">z, out of screen → flat</text>
+ </g>
+ <rect x="0" y="380" width="290" height="56" rx="8" fill="#fff" stroke="#cbd5e1"/>
+ <text x="12" y="402" font-size="13" fill="#1d2b3a">Re-centring at "en garde" absorbs the</text>
+ <text x="12" y="422" font-size="13" fill="#1d2b3a">left-or-right screen choice: both work.</text>
+</g>
+</svg>
