@@ -745,4 +745,17 @@ for _d in (_lk_other_repo, _lk_scratch_dir, _lk_plain):
 shutil.rmtree(_lk_repo, True)
 
 
+# --- every ${CLAUDE_PLUGIN_ROOT}/... or <plugin>/... path the rules name exists in this plugin (#440) ----
+import re as _re
+_rp_missing = []
+for _dp, _dn, _fn in os.walk(os.path.join(PLUGIN, "rules")):
+    for _f in _fn:
+        _txt = open(os.path.join(_dp, _f), encoding="utf-8").read()
+        for _m in _re.findall(r"(?:\$\{CLAUDE_PLUGIN_ROOT\}|<plugin>)/[A-Za-z0-9_./*-]+", _txt):
+            _rel = _re.sub(r"^(?:\$\{CLAUDE_PLUGIN_ROOT\}|<plugin>)/", "", _m).rstrip(".,;:)")
+            if not os.path.exists(os.path.join(PLUGIN, _rel)):
+                _rp_missing.append("%s -> %s" % (_f, _rel))
+report("FAIL" if _rp_missing else "PASS", "every plugin-root path in rules/ exists inside rule-enforcement" +
+       ("".join("\n          missing " + x for x in _rp_missing)))
+
 finish()

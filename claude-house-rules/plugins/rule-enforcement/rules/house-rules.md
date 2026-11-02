@@ -105,7 +105,7 @@ first line, above the fence, plus why; (6) **one numbered step per action** past
 #### The card
 
 The step-card shape lives only in the forced `handover-cards` output style
-(`${CLAUDE_PLUGIN_ROOT}/output-styles/handover-cards.md`). Full template,
+(`output-styles/handover-cards.md` in house-rules, whose path house-rules gives at session start). Full template,
 publish-a-page rule: `${CLAUDE_PLUGIN_ROOT}/rules/detail/handover-command.md`.
 
 ## Code follows the standards loaded for this project

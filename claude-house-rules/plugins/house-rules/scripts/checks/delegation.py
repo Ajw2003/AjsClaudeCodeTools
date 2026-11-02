@@ -9,6 +9,7 @@ STDLIB ONLY, like hook.py.
 """
 
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1341,6 +1342,11 @@ _tl_case("threadlink names CLAUDE_CODE_REMOTE_SESSION_ID when the id is malforme
 _tl_case("threadlink names CLAUDE_CODE_REMOTE_SESSION_ID when the id is missing",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1"),
          ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
+
+# --- threadlink also names the two files the moved rules point at (#440) -------------------
+_tl_paths = re.findall(r"(?:page builder|card style) (\S+)", _tl_ctx())
+report("PASS" if (len(_tl_paths) == 2 and all(os.path.exists(x) for x in _tl_paths)) else "FAIL",
+       "threadlink names two paths (make_page.py, handover-cards.md) and both exist: %r" % (_tl_paths,))
 
 # --- userpromptaudit: the background half, UserPromptSubmit --------------------------------
 def _task_notification(task_id, status="completed"):

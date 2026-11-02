@@ -1698,6 +1698,13 @@ def event_threadlink():
     to inject's rules text; inject moved to rule-enforcement (#440), so it is its own SessionStart hook."""
     try:
         note = thread_link_note().lstrip("\n")
+        # #440: the rules moved to rule-enforcement but name these two files, which stay here
+        root = os.path.normpath(os.path.join(SCRIPTS_DIR, ".."))
+        paths = "house-rules files the rules name: page builder %s ; handover card style %s" % (
+            os.path.join(root, "scripts", "make_page.py"),
+            os.path.join(root, "output-styles", "handover-cards.md"),
+        )
+        note = (note + "\n" if note else "") + paths
         if note:
             emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}})
     except Exception as exc:

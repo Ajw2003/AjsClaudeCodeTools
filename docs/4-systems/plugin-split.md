@@ -211,6 +211,14 @@ rules out; that is a design call for aj, not made here.
 - Fixed after part A: `tools/measure_footprint.py` reads each plugin's `hooks.json` to find which plugin declares
   an event, runs it through that plugin's `hook.py`, adds a `showrule` row, and reports the fixed per-session cost
   per plugin plus a total (`--repo`, or the installed cache for both plugins).
+- Fixed after part A (#440): the moved rules named two files that stayed in house-rules, `scripts/make_page.py` and
+  `output-styles/handover-cards.md`, as `${CLAUDE_PLUGIN_ROOT}/...`, which now expands to rule-enforcement, where
+  neither exists. The rules now name them without a prefix ("whose path house-rules gives at session start"), and
+  house-rules `threadlink` (the SessionStart hook with the shortest output: empty outside a project thread) adds one
+  line, `house-rules files the rules name: page builder <abs> ; handover card style <abs>`, built from its own
+  plugin root, so no other plugin's install path is guessed. Tests: rule-enforcement fails if any
+  `${CLAUDE_PLUGIN_ROOT}/` or `<plugin>/` path in `rules/` is missing inside it; house-rules checks the line names two
+  paths that exist.
 - `_rules_root` still reads `~/.claude/plugins/installed_plugins.json`, not `CLAUDE_CONFIG_DIR` (unchanged behaviour).
 
 ## Step 3 part B: the repeat-failure lock (#440)

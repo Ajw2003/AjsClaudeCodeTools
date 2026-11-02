@@ -122,7 +122,7 @@ checklist is written here, where every session can read it.
 
 ## The handover page
 
-Every page is built by the page builder, `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py build
+Every page is built by the house-rules page builder (its path is given at session start), `python3 make_page.py build
 <content.json>`, from `templates/handover-page.html`, which fills in from one PAGE block. The builder
 overrides the claude.ai publish tool's own page design, writes the page under `docs/plans/`, copies
 its pictures beside it and stamps a builder mark that the page check looks for.
