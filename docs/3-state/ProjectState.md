@@ -337,3 +337,5 @@ invocation.
 2026-11-02, branch `AjsAgent/house-rules-plugin-split-a9uusz`: aj asked to split house-rules into eight plugins (safe work, design loop, rule enforcement, no hiding, living docs, code standards, check your work, no trust memory). Proposal page `docs/plans/2026-11-02-plugin-split.html` places every hook, rule and script, lists seven pieces with no clear home, and asks eight choices. Nothing is built; it waits on aj's answers.
 
 2026-11-02: aj set the split's principle (no rule optional, friction is reworked, never bypassed; `docs/6-decisions/Decisions.md`, "The plugin split: no rule is optional"). The page now sorts the rules by how they are enforced today and asks how a repeatedly failing end-of-reply check behaves (choice 6).
+
+2026-11-02: aj approved the design ("Design approved: plugin split 1* 2A 3A 4A 5A 6A 7A 8A"; choice 1 adds a ninth plugin, Accessible AI). Systems doc `docs/4-systems/plugin-split.md`; parent issue #437 with steps #438 to #450; build plan page `docs/plans/2026-11-02-plugin-split-build-plan.html` waits on aj's approval and three choices.

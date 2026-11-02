@@ -1,0 +1,53 @@
+{
+  "title": "Plugin Split Build Plan",
+  "eyebrow": "Build plan · thirteen steps under the issue \"Split house-rules into nine plugins and a shared library\" (#437)",
+  "replyPrefix": "Plugin split build plan answers",
+  "reply": "",
+  "approval": "Build plan approved: plugin split",
+  "short": {
+    "lead": "You approved the design as \"Design approved: plugin split 1* 2A 3A 4A 5A 6A 7A 8A\". Your own answer to choice 1 on the design page adds a ninth plugin, Accessible AI. These are the thirteen steps, each a GitHub issue under #437 that names what it depends on and when it is done. The order puts the risky unknowns first: step 1 proves that plugins can depend on each other before anything moves. Every step that moves a part also turns that part's reminders, report-only checks and text-only rules into checks that refuse. The target layout is in docs/4-systems/plugin-split.md.",
+    "hint": "Tap a step to see what it moves and when it counts as done.",
+    "key": [["I build it", ""], ["Needs your input", "you"]],
+    "items": [
+      ["flask", "Step 1", "Prove that plugins can depend on each other and that several end-of-reply hooks can work together (#438)", "", "Two throwaway plugins test whether one plugin's dependencies field installs another, and what happens when two plugins block the same reply.", "Nothing from you."],
+      ["list", "Step 2", "The shared library plugin, with no hooks of its own (#439)", "", "The plumbing and the page builder move into a plugin that cannot refuse anything.", "Nothing from you."],
+      ["stop", "Step 3", "The Rule enforcement plugin and the repeat-failure lock (#440)", "", "Rule injection moves, a lock is built that refuses edits after a check has blocked three times, and the 21 off switches are removed.", "Nothing from you."],
+      ["lock", "Step 4", "The Safe work plugin (#441)", "", "safe_git.py and the work-saving hooks move. A new check refuses local paths in issues, and the guard on waiting commands, removed by the guard-friction issue (#292), is reworked.", "Nothing from you."],
+      ["file", "Step 5", "The Living docs plugin (#442)", "", "docs.py, the archivist, doc-ref and the plain-docs check move. The docs reminder at commit time starts refusing.", "Nothing from you."],
+      ["hammer", "Step 6", "The Code standards plugin (#443)", "", "The standards move, YAGNI, KISS and DRY are written in by name, and checks for what can be measured are added.", "Nothing from you."],
+      ["search", "Step 7", "The No trust memory plugin (#444)", "", "The evidence check, the stale-memory warning and the machine profile move. A docs-freshness check is new.", "Nothing from you."],
+      ["eye", "Step 8", "The Check your work plugin, with screenshot and video tools (#445)", "", "The proof rules, the visual check, handovers and the reviewer move. Screenshot and video tools and a review that must pass before \"done\" are new.", "Nothing from you."],
+      ["eye", "Step 9", "The No hiding plugin, with a research-citation check (#446)", "", "Audits, ledgers and the stall check move. A check that research cites sources with quotes is new.", "Nothing from you."],
+      ["loop", "Step 10", "The Design loop plugin (#447)", "you", "design_loop.py moves. The page check and the refusal of shell writes while code is locked only report today; both start refusing.", "Answer choice 1."],
+      ["bulb", "Step 11", "The Accessible AI plugin (#448)", "you", "The writing checks, the editor and the voice move. The features for ADHD, autism and dyslexia get their own design page first.", "Approve that design page when it comes."],
+      ["swap", "Step 12", "Delegation moves into claude-agent-router (#449)", "", "The delegation rule, the scout, builder and reviewer helpers, and the two-helper limit join the existing router plugin.", "Nothing from you."],
+      ["check", "Step 13", "Install tooling for many plugins, and retire house-rules (#450)", "you", "The install and update tools handle every plugin, and house-rules is uninstalled so no rule runs twice.", "You test it on your PC."]
+    ]
+  },
+  "changes": [
+    ["new", "Ten new plugins", "The library and nine plugins, each in its own folder beside house-rules, listed in .claude-plugin/marketplace.json.", ["One plugin, house-rules 2.74.1, holds everything.", "Each plugin ships on its own and moves its part out of house-rules in the same release, under choice 2."], "Each plugin's tests come from the matching file already in scripts/checks/, so no check is lost."],
+    ["chg", "claude-agent-router", "The existing offshoot plugin gains the delegation rule, the scout, builder and reviewer helpers, and the two-helper limit.", ["It nudges a prompt toward a model-pinned helper.", "It also holds the delegation rule and enforces the helper limit."], "Step 12."],
+    ["chg", "The earlier restructure issue (#306)", "The issue \"restructure into a shared core with project boundaries and six optional sub-plugins\" describes the plan this one replaces.", ["Open, with its 2.74.0 build reverted in pull request #428.", "Handled by choice 3."], "Its branch AjsAgent/issue-281-fix stays as a source to reuse code from."]
+  ],
+  "choices": [
+    ["loop", "Choice 1: does the Design loop become part of Accessible AI?", [
+      ["A", "No, it stays its own plugin", 1, "Accessible AI depends on it instead. Keeping the 2,281-line loop separate matches the reason for the split: smaller pieces are easier to maintain."],
+      ["B", "Yes, fold it into Accessible AI", 0, "One plugin for the whole think, design and plan flow, as your answer suggested, but it becomes the largest plugin."]
+    ], "Your answer to choice 1 said the design loop \"could also fit here as well\", which could mean keeping it separate or folding it in."],
+    ["migrate", "Choice 2: how do the plugins replace house-rules?", [
+      ["A", "One at a time", 1, "Each release ships one plugin and deletes the same part from house-rules, so every release can be tested and reverted alone."],
+      ["B", "All at once", 0, "One release swaps everything. This is how 2.74.0 shipped, and it was reverted."]
+    ], "This decides how many releases the split takes and what each QA pass covers."],
+    ["old", "Choice 3: what happens to the earlier restructure issue (#306)?", [
+      ["A", "Close it as replaced by #437", 1, "A comment names #437 as the plan that replaces it."],
+      ["B", "Leave it open", 0, "Two open parents describe the same work."]
+    ], "Its open sub-issues would be closed or moved under #437 the same way."]
+  ],
+  "wrapup": {
+    "summary": "Thirteen steps, one GitHub issue each (#438 to #450) under #437, starting with a test that plugins can depend on each other.",
+    "changing": "Nothing in the plugin yet. The new files are this page, docs/4-systems/plugin-split.md and two entries in docs/6-decisions/Decisions.md.",
+    "blocking": "Your approval of this plan and your answers to the three choices.",
+    "next": "I start step 1 (#438), the test of plugin dependencies.",
+    "todo": ["Pick an answer for each choice.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}

@@ -7,6 +7,30 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-02 — Design approved: plugin split
+
+**Context.** Proposal page `docs/plans/2026-11-02-plugin-split.html`, eight choices.
+
+**Decision.** aj's reply was "Design approved: plugin split 1* 2A 3A 4A 5A 6A 7A 8A".
+1. Clear writing and the voice (aj's own answer): a ninth plugin, Accessible AI, "that makes everything you
+   do more accessible to those with adhd, autism dyslexia, and other disabilities. the design loop could
+   also fit here as well. the general point is to make using ai an assistive device and not to do
+   everything for you." Whether the design loop moves into it is asked on the build plan page.
+2. Delegation: work saving to Safe work, audits to No hiding, helper rules to Rule enforcement; the
+   delegation rule, scout/builder/reviewer and the helper limit join `claude-agent-router`.
+3. Handing a command over: Check your work.
+4. Machine profile to No trust memory; open source first to Code standards.
+5. Shared plumbing: a library plugin with no hooks of its own; every plugin depends on it.
+6. An end-of-reply check that keeps failing blocks up to three times, then source edits and commits are
+   refused until it passes.
+7. The issue workflow stays in Design loop.
+8. The permission timer goes to Safe work.
+
+Plus the standing principle above ("no rule is optional"): the 21 switches that turn a check off go.
+Systems doc: `docs/4-systems/plugin-split.md`.
+
+**Status.** Standing.
+
 ## 2026-11-02 — The plugin split: no rule is optional
 
 **Context.** aj asked to split house-rules into eight plugins (proposal page
