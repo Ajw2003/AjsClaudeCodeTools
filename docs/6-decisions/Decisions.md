@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-02 — Library lookup: one source, copied into each plugin
+
+**Context.** Step 2 of the plugin split (#439). A normal install puts plugins in
+`plugins/cache/<marketplace>/<plugin>/<version>/`; a cloud session syncs them to
+`plugins/synced/<id>/<plugin>/` with no `installed_plugins.json`, and whether a dependency is synced is
+untested. Page `docs/plans/2026-11-02-library-lookup.html`.
+
+**Decision.** aj's reply was "Library lookup answered 1A": the shared library lives once in the repo, a release
+tool copies it into every plugin, and a check fails if any copy differs from the source. This refines
+"Design approved: plugin split" choice 5A; the library plugin still ships for the page builder and templates.
+
+**Status.** Standing.
+
 ## 2026-11-02 — Build plan approved: plugin split
 
 **Context.** Build plan page `docs/plans/2026-11-02-plugin-split-build-plan.html`: thirteen steps,
