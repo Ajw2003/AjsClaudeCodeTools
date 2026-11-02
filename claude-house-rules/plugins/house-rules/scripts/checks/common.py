@@ -462,7 +462,14 @@ def _project_env(root, **extra):
 
 
 def _stop_context(out):
-    """What a Stop run said to the model or to aj: the added context, the blocking reason, the message."""
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _stop_said(out):
+    """Everything a Stop run said to the model or to aj: the added context, the blocking reason, the message."""
     try:
         data = json.loads(out)
     except Exception:

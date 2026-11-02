@@ -933,7 +933,7 @@ commit_case(
     '"decision":"block"' in _first and "- commit (block 1 of 3):" in _first and "a.py" in _first,
     "stdout: %r" % _first[:200],
 )
-_ctx = _stop_context(_stop_through(_wrote_transcript("wrote-own", [os.path.join(_r, "a.py")]), "Changed a.py.", _r))
+_ctx = _stop_said(_stop_through(_wrote_transcript("wrote-own", [os.path.join(_r, "a.py")]), "Changed a.py.", _r))
 commit_case(
     "Stop: a file this turn wrote, still uncommitted on a claude/ branch, gets 'commit it now, scoped'",
     "commit on your own branch" in _ctx and "a.py" in _ctx and "`claude/topic`" in _ctx and "git commit -- <paths>" in _ctx,
@@ -941,7 +941,7 @@ commit_case(
 )
 
 _r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
-_ctx = _stop_context(_stop_through(_wrote_transcript("wrote-main", [os.path.join(_r, "a.py")]), "Changed a.py.", _r))
+_ctx = _stop_said(_stop_through(_wrote_transcript("wrote-main", [os.path.join(_r, "a.py")]), "Changed a.py.", _r))
 commit_case(
     "Stop: the same on the user's main says to branch off to AjsAgent/<topic> first",
     "not an AjsAgent/ (or claude/) branch" in _ctx and "branch off first" in _ctx and "git switch -c AjsAgent/<topic>" in _ctx,
