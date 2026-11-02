@@ -202,10 +202,9 @@ rules out; that is a design call for aj, not made here.
 
 ### Known gaps
 
-- `rules/standards/csharp-unity-standards.md` points at `${CLAUDE_PLUGIN_ROOT}/rules/detail/unity-tools-first.md`
-  and `skills/plain-docs/SKILL.md` at `rules/detail/clear-writing.md`. Both expand to the house-rules root, where
-  `rules/detail/` no longer is. Where those two detail files live is the standards/plain-docs plugins' call (later
-  steps); not fixed here.
+- Fixed after part A: `unity-tools-first.md` moved to house-rules `rules/standards/` beside the Unity standards that
+  point at it, and the plain-doc limits moved from `rules/detail/clear-writing.md` into `skills/plain-docs/SKILL.md`,
+  the skill that applies them. Neither pointer crosses a plugin now.
 - `tools/check_plugin_version_bump.py` still only watches the house-rules folder, so a change to rule-enforcement
   alone is not gated.
 - `tools/measure_footprint.py` runs `inject`, `showrule`, `scope` and `subagentrules` through house-rules' `hook.py`; those events now live in the rule-enforcement `hook.py`, so its numbers for them are wrong until it is pointed there (not done here).

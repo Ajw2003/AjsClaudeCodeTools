@@ -151,16 +151,8 @@ the user rather than by any check, and fixed only by defining `PROMPT-MULTI`, `P
 
 ## Plain doc copies
 
-The plain-docs skill writes plain copies of the docs; on top of this rule they hold to these limits
-(moved from the skill, which keeps its own shape rules and its length limit):
-
-| Rule | Limit |
-|---|---|
-| Sentences | 20 words or fewer as a target. |
-| Dashes | No em dashes or en dashes used as punctuation. Use a full stop, comma or colon. |
-| Jargon | None. A technical word that can't be avoided (like "hook") gets explained in plain words the first time, in the same sentence. |
-| Code detail | No file paths, line numbers, function names or code blocks. The full-doc link covers that. |
-| Filler | No intros, no "in summary", no restating the heading. |
+The plain-docs skill writes plain copies of the docs and holds its own limits (sentences, dashes, jargon,
+code detail, filler) in its SKILL.md, so they travel with the skill.
 
 ## How it is checked
 

@@ -1568,7 +1568,7 @@ std_case(
     {"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 2022.3.1f1\n"},
     lambda out: (
         _UNITY_RULE_HEADING in out
-        and "rules/detail/unity-tools-first.md" in out
+        and "rules/standards/unity-tools-first.md" in out
         and "rules/standards/csharp-unity-detail.md" in out
         and "${CLAUDE_PLUGIN_ROOT}" not in out,
         f"got: {_standards_len(out)} chars; heading={_UNITY_RULE_HEADING in out}",
