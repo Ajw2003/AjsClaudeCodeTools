@@ -25,22 +25,19 @@ import urllib.parse
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def read_payload():
-    try:
-        raw = sys.stdin.buffer.read().decode("utf-8", "replace")
-    except Exception as exc:
-        # Loud, not silent: an unreadable stdin and an empty stdin both return "" to the
-        # caller, so without this line the two are indistinguishable downstream.
-        sys.stderr.write("house-rules: could not read the hook payload from stdin: %s\n" % exc)
-        return ""
-    return raw.strip()
-
-
-def emit(obj):
-    sys.stdout.write(json.dumps(obj, separators=(",", ":")))
-
-
-_TRACE_OFF = {"off", "0", "false", "no"}
+# The shared plumbing and link registry live once in plugins/house-lib/house_lib/ and are copied
+# in here by tools/sync_library.py (#439). Re-exported so every name stays importable from core.
+sys.path.insert(0, SCRIPTS_DIR)
+from house_lib.plumbing import (  # noqa: E402,F401
+    read_payload, emit, _TRACE_OFF, _truncate_with_notice, trace_enabled, trace, trace_verbose,
+    trace_noop, _read_text,
+)
+from house_lib.links import (  # noqa: E402,F401
+    SESSION_START_HOOKS, PROMPT_HOOKS, POST_TOOL_HOOKS, GUARD_ISSUE_HOOKS, GITHUB_WRITE_HOOKS,
+    DOCS_STATUS_HOOKS, _register, register_session_start, register_prompt, register_post_tool,
+    _session_start_hooks, _post_tool_hooks, register_guard_issue, register_github_write,
+    register_docs_status,
+)
 
 # Claude Code's per-hook additionalContext limit is 10,000 chars (docs/6-decisions/Decisions.md, 2026-09-22).
 # The machine profile lives in its own SessionStart entry (profile), not appended to inject's
@@ -49,58 +46,6 @@ INJECT_CHAR_LIMIT = 10_000
 # The soft budget profile truncates itself against, well under the hard limit above so the
 # truncation notice it appends never itself pushes the total back over 10,000.
 PROFILE_SOFT_LIMIT = 9_500
-
-
-def _truncate_with_notice(text, limit, label):
-    """Cut text to fit limit, appending a notice that names what was cut and why - truncation
-    that happens without saying so is exactly what "nothing fails silently" forbids."""
-    if len(text) <= limit:
-        return text
-    notice = (
-        "\n\n[house-rules profile: %s is %d chars and was truncated to stay under the "
-        "SessionStart context limit - %d chars shown here. Read %s directly for the rest.]\n"
-        % (label, len(text), limit, label)
-    )
-    room = max(0, limit - len(notice))
-    return text[:room] + notice
-
-
-def trace_enabled():
-    """The decision trace ships ON. A diagnostic nobody enables until they are already lost
-    is not a diagnostic - see "nothing fails silently" in rules/house-rules.md. stderr is not
-    an option here: a hook that exits 0 has its stderr sent to the debug log only, never the
-    transcript, so a trace written there would be off by default in everything but name.
-    HOUSE_RULES_TRACE=off is the one lever, and it covers every handler. HOUSE_RULES_TRACE=
-    verbose additionally restores the "looked, nothing to do" traces (see trace_noop).
-    """
-    return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() not in _TRACE_OFF
-
-
-def trace(message):
-    """Say what this handler decided, on a path that would otherwise emit nothing.
-
-    Only for handlers with a genuinely silent success path - guard's allow, artifact,
-    runnable, handover and harvest. inject, standards, scope and delegate always emit
-    something already, so a trace there would duplicate the proof it exists to provide, at
-    the most expensive possible frequency (scope runs on every prompt).
-    """
-    if trace_enabled():
-        emit({"systemMessage": message})
-
-
-def trace_verbose():
-    return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() == "verbose"
-
-
-def trace_noop(message):
-    """The "looked, nothing to do" trace: a handler that decided nothing and acted on nothing.
-
-    Silence is the correct output there - rules/house-rules.md defines silence as "looked,
-    nothing to do". Emits only under HOUSE_RULES_TRACE=verbose. "Could not tell" and "acted"
-    traces stay on trace(), which still prints by default.
-    """
-    if trace_verbose():
-        emit({"systemMessage": message})
 
 
 # ---------------------------------------------------------------------------------------
@@ -113,12 +58,6 @@ import sys as _sys
 import time as _time
 
 
-def _read_text(path):
-    with open(path, "r", encoding="utf-8", newline="") as f:
-        return f.read()
-
-
-# Hardware and plan probes for the machine profile: doc-ref ad50 docs/4-systems/hook-engine.md
 PROBE_TIMEOUT_SECONDS = 3.0
 PROBE_TOTAL_SECONDS = 6.0
 _GIB = 1024 ** 3
@@ -2003,82 +1942,6 @@ def _payload_cwd(payload):
 
 
 _TOGGLE_OFF = {"off", "0", "false", "no"}
-
-
-# ---------------------------------------------------------------------------------------
-# The core links (#357). The core never imports hook.py or a part module, so where one of its
-# handlers needs code that belongs to another part, that code registers itself here and the
-# handler loops over the list. Three lists, one register function each:
-#   SESSION_START_HOOKS  (consumer, fn): inject asks fn(body) -> body, profile asks fn() -> text
-#   PROMPT_HOOKS         fn(payload, field) -> (clause, note)   scope runs each on every message;
-#                        field is the prompt JSON field or None; clause is added straight after
-#                        the reminder, note after it (a later hook's note goes in front)
-#   POST_TOOL_HOOKS      (consumer, fn): artifact asks fn(file_path) -> note text, promptran
-#                        asks fn(data) -> report text; each handler runs only its own consumer's
-# Step 2b adds three more, read by the safe git part (#358):
-#   GUARD_ISSUE_HOOKS    fn(subject, payload) -> None or (kind, reason, context); guard asks each,
-#                        in order, after its own attribution check, and takes the first answer
-#   GITHUB_WRITE_HOOKS   fn(payload, raw) -> True when it handled the call (and emitted);
-#                        guardgithub asks each before its own credit check
-#   DOCS_STATUS_HOOKS    fn(subject, elsewhere, root) -> (status, detail); guard asks the first
-# ---------------------------------------------------------------------------------------
-
-SESSION_START_HOOKS = []
-PROMPT_HOOKS = []
-POST_TOOL_HOOKS = []
-GUARD_ISSUE_HOOKS = []
-GITHUB_WRITE_HOOKS = []
-DOCS_STATUS_HOOKS = []
-
-
-def _register(hooks, entry):
-    # Replace an earlier registration of the same name instead of adding a second one:
-    # verify.py loads hook.py several times in one process, and a plain append would make
-    # every later load run each hook twice. The module loaded last is the one in use.
-    name = (entry[0], entry[-1].__name__) if isinstance(entry, tuple) else entry.__name__
-    for i, old in enumerate(hooks):
-        if ((old[0], old[-1].__name__) if isinstance(old, tuple) else old.__name__) == name:
-            hooks[i] = entry
-            return
-    hooks.append(entry)
-
-
-def register_session_start(consumer, fn):
-    _register(SESSION_START_HOOKS, (consumer, fn))
-    return fn
-
-
-def register_prompt(fn):
-    _register(PROMPT_HOOKS, fn)
-    return fn
-
-
-def register_post_tool(consumer, fn):
-    _register(POST_TOOL_HOOKS, (consumer, fn))
-    return fn
-
-
-def _session_start_hooks(consumer):
-    return [fn for name, fn in SESSION_START_HOOKS if name == consumer]
-
-
-def _post_tool_hooks(consumer):
-    return [fn for name, fn in POST_TOOL_HOOKS if name == consumer]
-
-
-def register_guard_issue(fn):
-    _register(GUARD_ISSUE_HOOKS, fn)
-    return fn
-
-
-def register_github_write(fn):
-    _register(GITHUB_WRITE_HOOKS, fn)
-    return fn
-
-
-def register_docs_status(fn):
-    _register(DOCS_STATUS_HOOKS, fn)
-    return fn
 
 
 # ---------------------------------------------------------------------------------------

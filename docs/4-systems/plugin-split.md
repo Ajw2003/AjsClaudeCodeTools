@@ -89,3 +89,21 @@ block was the one repeated; a cross-plugin repeat-failure counter needs its own 
 
 Not verified: more than one retry (hooks here stop blocking after the first); behaviour on the
 interactive path (only headless `-p` was run); hook ordering in other CLI versions.
+
+## Step 2: the library (#439)
+
+The library source lives once, in `claude-house-rules/plugins/house-lib/house_lib/` (a plugin with
+no hooks, version 0.1.0, listed in `.claude-plugin/marketplace.json`). Two modules moved verbatim
+out of `house_rules/core.py`, which now imports them back and re-exports every name:
+
+- `plumbing.py`: `read_payload`, `emit`, `_TRACE_OFF`, `_truncate_with_notice`, `trace_enabled`,
+  `trace`, `trace_verbose`, `trace_noop`, `_read_text`.
+- `links.py`: `_register`, the six registries (`SESSION_START_HOOKS`, `PROMPT_HOOKS`,
+  `POST_TOOL_HOOKS`, `GUARD_ISSUE_HOOKS`, `GITHUB_WRITE_HOOKS`, `DOCS_STATUS_HOOKS`) and the
+  `register_*` / `_session_start_hooks` / `_post_tool_hooks` functions.
+
+`python tools/sync_library.py` copies the source into each plugin listed in `TARGETS` (today
+`house-rules/scripts/house_lib/`); `--check` changes nothing and exits 1 naming each file that
+differs or is missing. CI runs the check (`.github/workflows/verify.yml`) and
+`tools/verify_tools.py` proves it on a temp folder. Edit the source, never a copy.
+Transcript and git helpers stay in `core.py` for now: they depend on core's other functions.

@@ -2158,6 +2158,8 @@ def _nr_make(name, version, tag, with_showrule):
     shutil.copy(HOOK, os.path.join(root, "scripts", "hook.py"))
     shutil.copytree(os.path.join(HERE, "house_rules"), os.path.join(root, "scripts", "house_rules"),
                     ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(os.path.join(HERE, "house_lib"), os.path.join(root, "scripts", "house_lib"),
+                    ignore=shutil.ignore_patterns("__pycache__"))
     with open(os.path.join(root, ".claude-plugin", "plugin.json"), "w", encoding="utf-8") as f:
         json.dump({"name": "house-rules", "version": version}, f)
     with open(os.path.join(root, "rules", "house-rules.md"), "w", encoding="utf-8") as f:
