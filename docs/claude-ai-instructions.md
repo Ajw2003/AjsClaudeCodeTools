@@ -14,7 +14,7 @@ everything Claude-Code-specific has been stripped out because none of it applies
 hooks, no `verify.py`, no `@house-rules:builder`, no coding standards, no artifact publishing.
 
 This file is committed so it can be diffed against
-[`rules/house-rules.md`](../claude-house-rules/plugins/house-rules/rules/house-rules.md) when the
+[`rules/house-rules.md`](../claude-house-rules/plugins/rule-enforcement/rules/house-rules.md) when the
 format changes. `verify.py` fails if its key phrases drift from that document.
 
 ````text

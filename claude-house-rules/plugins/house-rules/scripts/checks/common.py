@@ -51,7 +51,10 @@ DESIGN_LOOP = os.path.join(HERE, "house_rules", "design_loop.py")
 WRITING = os.path.join(HERE, "house_rules", "writing.py")
 RUN = os.path.join(HERE, "run.sh")
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
-RULES_FILE = os.path.join(HERE, "..", "rules", "house-rules.md")
+# The rules text moved to the rule-enforcement plugin (#440); the checks that read it for drift still read it there.
+RE_PLUGIN = os.path.join(HERE, "..", "..", "rule-enforcement")
+RE_HOOK = os.path.join(RE_PLUGIN, "scripts", "hook.py")
+RULES_FILE = os.path.join(RE_PLUGIN, "rules", "house-rules.md")
 HOOKS_JSON = os.path.join(HERE, "..", "hooks", "hooks.json")
 AGENTS_DIR = os.path.join(HERE, "..", "agents")
 # The three tier agents and the model each must declare (and, at SubagentStop, actually run on).
@@ -114,7 +117,7 @@ def read(path):
         return f.read()
 
 
-DETAIL_DIR = os.path.join(HERE, "..", "rules", "detail")
+DETAIL_DIR = os.path.join(RE_PLUGIN, "rules", "detail")
 STANDARDS_DIR = os.path.join(HERE, "..", "rules", "standards")
 
 
@@ -124,8 +127,8 @@ def rules_corpus():
     """
     corpus = read(RULES_FILE)
     # The show-don't-tell rule is injected by its own handler (showrule), not inside house-rules.md.
-    corpus += "\n\n" + read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))
-    corpus += "\n\n" + read(os.path.join(HERE, "..", "rules", "clear-writing.md"))
+    corpus += "\n\n" + read(os.path.join(RE_PLUGIN, "rules", "show-dont-tell.md"))
+    corpus += "\n\n" + read(os.path.join(RE_PLUGIN, "rules", "clear-writing.md"))
     if os.path.isdir(DETAIL_DIR):
         for name in sorted(os.listdir(DETAIL_DIR)):
             if name.endswith(".md"):
@@ -148,6 +151,19 @@ def run_hook(event, payload="", env=None):
     return proc.returncode, proc.stdout.decode("utf-8", "replace"), proc.stderr.decode(
         "utf-8", "replace"
     )
+
+
+def run_hook_re(event, payload="", env=None):
+    """run_hook for the events that moved to the rule-enforcement plugin (inject, showrule, scope, subagentrules)."""
+    e = dict(os.environ) if env is None else env
+    proc = subprocess.run(
+        [sys.executable, RE_HOOK, event],
+        input=payload.encode("utf-8"),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=e,
+    )
+    return proc.returncode, proc.stdout.decode("utf-8", "replace"), proc.stderr.decode("utf-8", "replace")
 
 
 def run_shell(args, payload="", env=None):
@@ -284,7 +300,7 @@ DOCSTIERS_OLD_LAYOUT = _docstiers_repo(
 )
 
 
-# --- inject, profile and standards each stay under the per-hook additionalContext limit ------
+# --- profile and standards each stay under the per-hook additionalContext limit ------
 # Margins per docs/6-decisions/Decisions.md, 2026-09-22 (second entry): inject 9,000, profile/standards 9,500,
 # each measured on the REAL emitted output, not source file size. profile is measured with
 # docs/example-environment.md standing in for a recorded profile.
@@ -301,8 +317,6 @@ def _additional_context(event, payload="", env=None):
 
 
 _size_cases = [
-    ("inject", 9_700, env_in(ROOT)),
-    ("showrule", 9_500, env_in(ROOT)),
     ("standards", 9_500, env_in(ROOT)),
     ("profile", 9_500, env_in(ROOT, HOUSE_RULES_ENV_FILE=EXAMPLE_ENV)),
     ("docstiers", 9_500, env_in(DOCSTIERS_NOT_OWNED)),
@@ -566,7 +580,7 @@ Restatement.__new__.__defaults__ = ((),)
 RESTATEMENTS = [
     Restatement(
         "the scope reminder (long form)",
-        lambda: run_hook("scope", json.dumps({"prompt": "run the build script"}))[1],
+        lambda: run_hook_re("scope", json.dumps({"prompt": "run the build script"}))[1],
         [
             "show, don't tell", "nothing unasked is built",
             "project directory", "hand over a command", "tier that changed",

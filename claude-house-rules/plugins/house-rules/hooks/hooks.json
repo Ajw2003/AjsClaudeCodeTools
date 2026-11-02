@@ -5,12 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" inject",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" showrule",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" threadlink",
             "timeout": 10
           },
           {
@@ -46,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" scope",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" scopelinks",
             "timeout": 10
           }
         ]
@@ -283,7 +278,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" subagentrules",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" subagentlinks",
             "timeout": 10
           }
         ]

@@ -5,7 +5,7 @@
 Dispatching every `house-rules` hook event — `SessionStart`, `UserPromptSubmit`, `PreToolUse`,
 `PostToolUse`, `Stop`, `SubagentStart`, `SubagentStop` — to the one handler that enforces the
 corresponding rule from
-[`rules/house-rules.md`](../../claude-house-rules/plugins/house-rules/rules/house-rules.md), at
+[`rules/house-rules.md`](../../claude-house-rules/plugins/rule-enforcement/rules/house-rules.md), at
 the moment Claude Code actually fires that event. If this is wrong, the rules stop being
 enforced and become prose nobody is checking against — a permission prompt that should have
 fired doesn't, or a reminder that should have reached Claude never does.

@@ -25,11 +25,13 @@ Each event handler mirrors the failure-mode contract its shell predecessor had:
   - guardwrite   (PreToolUse)   fails CLOSED and loud, same contract as guard: a Write that
                  would replace an existing file's entire contents is asked about, never let
                  through unchecked just because an internal error occurred.
-  - inject       (SessionStart) fails LOUD, not closed: prints a systemMessage, exits 0.
-  - scope        (UserPromptSubmit) cannot fail: never reads a file, never raises.
+  - threadlink   (SessionStart) fails LOUD, not closed: prints a systemMessage, exits 0.
+  - scopelinks   (UserPromptSubmit) can never erase the user's prompt: any failure emits a systemMessage
+                 and exits 0.
+  (inject, showrule, scope and subagentrules moved to the rule-enforcement plugin in #440.)
   - artifact, runnable, delegate, harvest, audit (PostToolUse) never obstruct, but never go
                  quiet: any failure emits a systemMessage and exits 0.
-  - announce, subagentrules (SubagentStart), verdict (SubagentStop) never obstruct a
+  - announce, subagentlinks (SubagentStart), verdict (SubagentStop) never obstruct a
                  delegation: any failure emits a systemMessage and exits 0.
   - userpromptaudit (UserPromptSubmit) can never erase the user's prompt: any failure
                  emits a systemMessage (never additionalContext) and exits 0.
@@ -256,19 +258,51 @@ def _scope_parity_link(payload, field):
 
 
 # The parity clause is the last prompt link, after the waiting, loop and delegate links the parts register
-# when they are imported above, so scope still adds the clauses in the order it always did.
+# when they are imported above, so the clauses come out in the order they always did.
 core.register_prompt(_scope_parity_link)
+
+_PROMPT_FIELD_RE = re.compile(r'"prompt"\s*:\s*"(?:[^"\\]|\\.)*"')
+
+
+def event_scopelinks():
+    """scopelinks (UserPromptSubmit): the clauses and notes the parts register on PROMPT_HOOKS (waiting, design
+    loop, delegation, parity). scope, which gathered them into one reminder, moved to the rule-enforcement
+    plugin (#440); this emits just these parts' text on the same event. A non-zero exit would ERASE THE USER'S
+    PROMPT, so nothing raises: a failure says so in a systemMessage and exits 0."""
+    try:
+        payload = read_payload()
+        m = _PROMPT_FIELD_RE.search(payload)
+        field = m.group(0) if m else None
+        # A note from a later hook goes in front of the ones before it; notes are kept as they come so a
+        # failing hook loses only its own.
+        clauses, notes = [], []
+        for fn in PROMPT_HOOKS:
+            clause, note = fn(payload, field)
+            clauses.append(clause)
+            if note:
+                notes.insert(0, note)
+        parts = []
+        if m and "".join(clauses).strip():
+            parts.append("".join(clauses).lstrip("\n"))
+        if notes:
+            parts.append("\n\n".join(notes))
+        if parts:
+            emit({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
+                                         "additionalContext": "\n\n".join(parts)}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: the prompt links hook hit an error (%s) and did not add "
+                               "its clauses to this prompt." % type(exc).__name__})
+    return 0
 
 
 EVENTS = {
-    "inject": event_inject,
-    "showrule": event_showrule,
+    "threadlink": event_threadlink,
     "issuelist": event_issuelist,
     "profile": event_profile,
     "standards": event_standards,
     "docstiers": event_docstiers,
     "versioncheck": event_versioncheck,
-    "scope": event_scope,
+    "scopelinks": event_scopelinks,
     "guard": event_guard,
     "guardwrite": event_guardwrite,
     "guardgithub": event_guardgithub,
@@ -278,7 +312,7 @@ EVENTS = {
     "runnable": event_runnable,
     "delegate": event_delegate,
     "announce": event_announce,
-    "subagentrules": event_subagentrules,
+    "subagentlinks": event_subagentlinks,
     "verdict": event_verdict,
     "subagentcommit": event_subagentcommit,
     "autosave": event_autosave,
@@ -324,14 +358,6 @@ def main(argv):
                 "an unchecked overwrite through.\n" % detail
             )
             return 2
-        if event == "inject":
-            emit(
-                {
-                    "systemMessage": "house-rules plugin: internal error (%s). The rules "
-                    "were NOT loaded into this session." % detail
-                }
-            )
-            return 0
         emit(
             {
                 "systemMessage": "house-rules plugin: the %s hook hit an internal error "

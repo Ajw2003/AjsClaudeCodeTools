@@ -467,10 +467,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.74.2",
+    "issues: the rules section and its detail file exist, and the plugin is 2.75.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.74.2",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.75.0",
     "rules section + detail file + version",
 )
 
@@ -583,7 +583,7 @@ def _loop_edit(rel, **extra):
 
 def _loop_say(prompt, session="loop"):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": session, "cwd": _loop_dir, "prompt": prompt}
-    _, out, _ = run_hook("scope", json.dumps(p), env=_loop_env)
+    _, out, _ = run_hook("scopelinks", json.dumps(p), env=_loop_env)
     try:
         return json.loads(out)["hookSpecificOutput"]["additionalContext"]
     except Exception:
@@ -661,7 +661,7 @@ _g = _loop_say("go ahead and build it")
 _loop_cases.append(("with the loop on, a go-ahead message no longer gets the guess", "reads like a go-ahead" not in _g))
 _sp = {"hook_event_name": "SubagentStart", "session_id": "loop", "agent_id": "h1", "agent_type": "house-rules:builder",
        "cwd": _loop_dir, "transcript_path": os.path.join(_FIXTURE_ROOT, "loop.jsonl")}
-_, _so, _ = run_hook("subagentrules", json.dumps(_sp), env=_loop_env)
+_, _so, _ = run_hook("subagentlinks", json.dumps(_sp), env=_loop_env)
 try:
     _so = json.loads(_so)["hookSpecificOutput"]["additionalContext"]
 except Exception:
@@ -705,7 +705,7 @@ _loop_cases.append(("#278: a repo label list, or a failed call, records nothing"
                     "o/r#203" not in _loop_state().get("labels", {})
                     and not any(k.endswith("/r") or k == "o/r" for k in _loop_state().get("labels", {}))))
 _hook_src = open(DESIGN_LOOP, encoding="utf-8").read()  # #359: the issue workflow lives in the design loop part
-_wf_src = open(os.path.join(HERE, "..", "rules", "detail", "issue-workflow.md"), encoding="utf-8").read()
+_wf_src = open(os.path.join(DETAIL_DIR, "issue-workflow.md"), encoding="utf-8").read()
 _created_note = _hook_src.split("was created without the", 1)[1][:400]
 _loop_cases.append(("#278: none of the label-advice places still says --add-label",
                     not any("--add-label" in _t for _t in (_ig_mod.ISSUE_NOTE, _created_note, _wf_src))
@@ -894,7 +894,7 @@ with open(os.path.join(_leg, ".git", "house-rules-loop.json"), "w") as _f:
     json.dump({"feature": "old", "stage": "design", "skip": False, "approvals": []}, _f)
 _leg_a = _wt_gate("Edit", {"file_path": os.path.join(_leg, "app.py")}, _leg)[0]  # Design: deny proves it was read
 _leg_p = {"hook_event_name": "UserPromptSubmit", "session_id": "leg", "cwd": _leg, "prompt": "skip design"}
-run_hook("scope", json.dumps(_leg_p), env=_loop_env)
+run_hook("scopelinks", json.dumps(_leg_p), env=_loop_env)
 _leg_new = os.path.join(_leg, ".claude", "house-rules-loop.json")
 for _t, _ok in (
         ("the stage committed in one checkout reads back in a fresh git clone", _clone_edit == "allow"),
@@ -929,7 +929,7 @@ _wt_stage("design")
 os.makedirs(os.path.join(_wt_main, "docs", "6-decisions"), exist_ok=True)
 with open(os.path.join(_wt_main, "docs", "6-decisions", "Decisions.md"), "w", encoding="utf-8") as _f:
     _f.write("design decisions\n")
-run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": "qa", "cwd": _wt_main,
+run_hook("scopelinks", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": "qa", "cwd": _wt_main,
          "prompt": "Design approved: enforced QA stage: 1A 2A 3A 4A"}), env=_loop_env)
 _loop_cases.append(('#266: "Design approved: enforced QA stage: 1A 2A 3A 4A" records "enforced QA stage"',
                     json.load(open(_qa_sf, encoding="utf-8")).get("feature") == "enforced QA stage"))
@@ -1002,7 +1002,7 @@ def _cl_state():
 
 def _cl_say(prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "cl", "cwd": _cl_dir, "prompt": prompt}
-    run_hook("scope", json.dumps(p), env=_cl_env)
+    run_hook("scopelinks", json.dumps(p), env=_cl_env)
 
 
 def _cl_merge(tool, tool_input, response, env=None):
@@ -1201,7 +1201,7 @@ with open(os.path.join(_cl_dir, "docs", "page-style.json"), "w", encoding="utf-8
 
 def _sw_say(prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "sw", "cwd": _cl_dir, "prompt": prompt}
-    return run_hook("scope", json.dumps(p), env=_cl_env)[1]
+    return run_hook("scopelinks", json.dumps(p), env=_cl_env)[1]
 
 
 def _sw_build(name, rows):
@@ -1314,7 +1314,7 @@ def _ma_set(state, labels=None):
 
 def _ma_say(prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "multi", "cwd": _ma_dir, "prompt": prompt}
-    _, out, _ = run_hook("scope", json.dumps(p), env=_ma_env)
+    _, out, _ = run_hook("scopelinks", json.dumps(p), env=_ma_env)
     try:
         note = json.loads(out)["hookSpecificOutput"]["additionalContext"]
     except Exception:
@@ -2028,7 +2028,7 @@ def _pf_issue(number):
 def _pf_note(prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "cl", "cwd": _cl_dir, "prompt": prompt}
     try:
-        return json.loads(run_hook("scope", json.dumps(p), env=_cl_env)[1])["hookSpecificOutput"]["additionalContext"]
+        return json.loads(run_hook("scopelinks", json.dumps(p), env=_cl_env)[1])["hookSpecificOutput"]["additionalContext"]
     except Exception:
         return ""
 
@@ -2120,7 +2120,7 @@ def _ma_repo(parent, name, staged=True):
 
 def _ma_say(cwd, prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "above", "cwd": cwd, "prompt": prompt}
-    _, out, _ = run_hook("scope", json.dumps(p), env=_loop_env)
+    _, out, _ = run_hook("scopelinks", json.dumps(p), env=_loop_env)
     try:
         return json.loads(out)["hookSpecificOutput"]["additionalContext"]
     except Exception:

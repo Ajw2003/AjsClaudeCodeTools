@@ -21,7 +21,7 @@ print("house-rules hooks - verification (Python) - part: docs")
 print("=" * 43)
 print()
 
-for _event, _margin, _env in _size_cases[4:]:  # docstiers
+for _event, _margin, _env in _size_cases[2:]:  # docstiers
     _code, _ctx, _err = _additional_context(_event, "", env=_env)
     if _ctx is None:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")

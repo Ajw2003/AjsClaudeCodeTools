@@ -471,7 +471,7 @@ try:
 except (OSError, ValueError):
     _ua_entries = []
 _ua_st = {e.get("session_id"): e.get("status") for e in _ua_entries}
-_ua_scope = run_hook("scope", json.dumps({"session_id": "verify-ua-sub", "prompt": "back now"}),
+_ua_scope = run_hook("scopelinks", json.dumps({"session_id": "verify-ua-sub", "prompt": "back now"}),
                      env=env_in(_ua_dir))[1]
 _ua_seen_file = os.path.join(tempfile.gettempdir(), "house-rules-last-seen-verify-ua-sub")
 report("PASS" if _ua_st.get("verify-ua-sub") == "refused" and "verify-ua-away" not in _ua_st
@@ -1537,7 +1537,7 @@ _pt_scope_env = _pt_env()
 
 
 def _pt_scope(prompt, sid="pt-sess"):
-    return run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": sid,
+    return run_hook("scopelinks", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": sid,
                                          "prompt": prompt}), env=_pt_scope_env)
 
 

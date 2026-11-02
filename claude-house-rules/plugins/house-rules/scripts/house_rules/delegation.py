@@ -27,7 +27,6 @@ from house_rules.core import (  # noqa: F401
     _branch_advice,
     _commit_check_enabled,
     _common_git_dir,
-    _expand_detail_paths,
     _field,
     _git_dir,
     _issues_enabled,
@@ -36,7 +35,6 @@ from house_rules.core import (  # noqa: F401
     _parse_status_porcelain,
     _plugin_version,
     _read_text,
-    _truncate_with_notice,
     _uncommitted_among,
 )
 
@@ -155,7 +153,7 @@ _MODEL_OVERRIDE_VARS = ("CLAUDE_CODE_SUBAGENT_MODEL_FORCE", "CLAUDE_CODE_SUBAGEN
 
 
 def _delegation_enabled():
-    """HOUSE_RULES_DELEGATION=off disables both handlers.
+    """HOUSE_RULES_DELEGATION=off disables the delegation handlers.
 
     Deliberately NOT HOUSE_RULES_TRACE-gated. The trace lever covers handlers whose output
     merely narrates an otherwise-silent path; here the report IS the feature, and hiding it
@@ -164,88 +162,19 @@ def _delegation_enabled():
     return os.environ.get("HOUSE_RULES_DELEGATION", "on").strip().lower() not in _TOGGLE_OFF
 
 
-# subagentrules — a third subagent-lifecycle handler, its own SubagentStart entry, separate
-# from announce. doc-ref c67d docs/6-decisions/Decisions.md
-SUBAGENT_SECTION_MARKER = "<!-- subagent -->"
-
-
-SUBAGENT_CORE_CHAR_LIMIT = 4_500
-
-
-SUBAGENT_MANDATE = (
-    "\nYour final report must list every command you ran and its result verbatim, every file "
-    "you wrote or edited, and anything you could not do.\n"
-)
-
-
-# The tier agents (agents/scout.md, builder.md, reviewer.md) carry their own short report formats,
-# so they are not also told to list every command verbatim. Every other agent type still is.
-TIER_AGENTS = ("scout", "builder", "reviewer")
-
-
-def _is_tier_agent(agent_type):
-    return (agent_type or "").split(":")[-1].strip() in TIER_AGENTS
-
-
-def _subagent_core(rules_path=None, agent_type=""):
-    """The marked sections of house-rules.md, in file order, plus SUBAGENT_MANDATE.
-
-    Returns (text, problems). A section is a "## " heading through the next "## " heading (or
-    end of file); it is included only when the line immediately after the heading is
-    SUBAGENT_SECTION_MARKER, which is then stripped from the emitted text - the marker is a
-    build-time signal, not something the subagent needs to read.
-    """
-    problems = []
-    if rules_path is None:
-        here = SCRIPTS_DIR
-        rules_path = os.path.join(here, "..", "rules", "house-rules.md")
-    try:
-        body = _read_text(rules_path)
-    except OSError as exc:
-        problems.append("could not read rules/house-rules.md (%s)" % type(exc).__name__)
-        return "", problems
-
-    body = body.replace("\r\n", "\n")
-    lines = body.split("\n")
-    sections = []
-    current = None
-    for line in lines:
-        if line.startswith("## "):
-            current = {"heading": line, "body": []}
-            sections.append(current)
-        elif current is not None:
-            current["body"].append(line)
-
-    kept = []
-    for sec in sections:
-        body_lines = sec["body"]
-        if body_lines and body_lines[0].strip() == SUBAGENT_SECTION_MARKER:
-            kept.append(sec["heading"] + "\n" + "\n".join(body_lines[1:]).strip())
-
-    if not kept:
-        problems.append("no section in house-rules.md is marked %s" % SUBAGENT_SECTION_MARKER)
-        return "", problems
-
-    text = "\n\n".join(kept).strip() + "\n" + SUBAGENT_MANDATE
-    # ${CLAUDE_PLUGIN_ROOT} is expanded the same way inject does it: additionalContext is
-    # plain text nothing else expands, so a literal placeholder here would be an unopenable
-    # path for the subagent, exactly the bug inject fixed for the main session.
-    text = _expand_detail_paths(text)
-    return _truncate_with_notice(text, SUBAGENT_CORE_CHAR_LIMIT, "the subagent rules core"), problems
-
-
-def event_subagentrules():
-    """SubagentStart: inject the subagent core, and tell the user where its transcript will
-    land, before it exists - so it is findable without waiting for verdict to say so."""
+# subagentrules (the SubagentStart rules core) moved to the rule-enforcement plugin (#440). What it used to
+# gather from this part - the design loop's helper note and the line saying where the subagent's transcript
+# will land - is emitted by event_subagentlinks below, on the same event.
+def event_subagentlinks():
+    """SubagentStart: tell the user where the subagent's transcript will land, before it exists - so it is
+    findable without waiting for verdict to say so - and hand the subagent the notes the parts registered
+    (SUBAGENT_NOTE_HOOKS: the design loop's helper note)."""
     try:
         if not _delegation_enabled():
             return 0
         payload = read_payload()
-        core, problems = _subagent_core(agent_type=_field(_AGENT_TYPE_RE, payload))
         loop_note = "".join(fn(payload or "") for fn in SUBAGENT_NOTE_HOOKS)
-        if loop_note:
-            core = (core + "\n\n" + loop_note) if core else loop_note
-        bits = []
+        bits, problems = [], []
         if not payload:
             problems.append("the SubagentStart payload was empty")
         else:
@@ -262,29 +191,30 @@ def event_subagentrules():
                     "predict the transcript path"
                 )
         if problems:
-            bits.append("house-rules subagentrules COULD NOT TELL: %s" % "; ".join(problems))
+            bits.append("house-rules subagentlinks COULD NOT TELL: %s" % "; ".join(problems))
         out = {}
         if bits:
             out["systemMessage"] = " | ".join(bits)
-        if core:
+        if loop_note:
             out["hookSpecificOutput"] = {
                 "hookEventName": "SubagentStart",
-                "additionalContext": core,
+                "additionalContext": loop_note,
             }
         if not out:
             out["systemMessage"] = (
-                "house-rules plugin: subagentrules had nothing to report or inject for this "
+                "house-rules plugin: subagentlinks had nothing to report or inject for this "
                 "subagent start."
             )
         emit(out)
     except Exception as exc:
         emit(
             {
-                "systemMessage": "house-rules plugin: the subagent-rules injector hit an "
+                "systemMessage": "house-rules plugin: the subagent links hook hit an "
                 "error (%s) and did not run for this call." % type(exc).__name__
             }
         )
     return 0
+
 
 
 def _agent_file(agent_type):
@@ -1763,13 +1693,6 @@ _SCOPE_GOAHEAD_RE = re.compile(
 )
 
 
-def _strip_subagent_markers(body):
-    """inject: the <!-- subagent --> markers are for _subagent_core(), not the main session."""
-    return "\n".join(
-        line for line in body.split("\n") if line.strip() != SUBAGENT_SECTION_MARKER
-    )
-
-
 def _scope_delegate_link(payload, field):
     # With the design loop on, only "Build plan approved" starts a build (#232), so the
     # go-ahead guess runs only when the loop is off.
@@ -1861,10 +1784,21 @@ def handover_links_owed(turn_records):
     return owed
 
 
-def _append_thread_link(body):
-    return body + thread_link_note()
+def event_threadlink():
+    """SessionStart (#400): in a project thread, tell the thread its own transcript link. This was appended
+    to inject's rules text; inject moved to rule-enforcement (#440), so it is its own SessionStart hook."""
+    try:
+        note = thread_link_note().lstrip("\n")
+        if note:
+            emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}})
+    except Exception as exc:
+        emit(
+            {
+                "systemMessage": "house-rules plugin: the project-thread link hook hit an "
+                "error (%s) and did not run for this session." % type(exc).__name__
+            }
+        )
+    return 0
 
 
-core.register_session_start("inject", _strip_subagent_markers)
-core.register_session_start("inject", _append_thread_link)
 core.register_prompt(_scope_delegate_link)

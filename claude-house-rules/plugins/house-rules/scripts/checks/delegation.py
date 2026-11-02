@@ -650,11 +650,11 @@ else:
 # boundary - and house-rules.md says the delegation rule covers them anyway - so a go-ahead
 # typed into an ordinary session used to get no delegation reminder at all. The prompt text is
 # the only stateless place to notice it.
-def scope_text(prompt):
+def scope_text(prompt):  # scopelinks: the clauses; the reminder itself is rule-enforcement's
     payload = json.dumps(
         {"session_id": "verify", "hook_event_name": "UserPromptSubmit", "prompt": prompt}
     )
-    code, out, err = run_hook("scope", payload)
+    code, out, err = run_hook("scopelinks", payload)
     try:
         return code, json.loads(out)["hookSpecificOutput"]["additionalContext"]
     except Exception:
@@ -697,14 +697,14 @@ for label, payload in (
     ("no prompt field", '{"session_id":"v","hook_event_name":"UserPromptSubmit"}'),
     ("prompt field with an escaped quote", '{"prompt":"go ahead \\"now\\" implement it"}'),
 ):
-    code, out, err = run_hook("scope", payload)
+    code, out, err = run_hook("scopelinks", payload)
     if code != 0:
         clause_drift.append(f"{label} exited {code} - this ERASES the user's prompt")
-    if "additionalContext" not in out:
-        clause_drift.append(f"{label} emitted no reminder at all: {out[:80]!r}")
+    if label == "prompt field with an escaped quote" and "@house-rules:builder" not in out:
+        clause_drift.append(f"{label} lost the go-ahead clause: {out[:80]!r}")
 if not clause_drift:
     report("PASS", "the go-ahead clause matches the rules and cannot erase a prompt")
-    print("          same phrases as house-rules.md; every failure path still exits 0 with a reminder")
+    print("          same phrases as house-rules.md; every failure path still exits 0")
 else:
     report("FAIL", "the go-ahead clause matches the rules and cannot erase a prompt")
     for c in clause_drift:
@@ -977,102 +977,67 @@ else:
     for s in shfall:
         print(f"          {s}")
 
-# --- subagentrules: a subagent core, generated from house-rules.md, injected at SubagentStart --
-# Judged against the real rules file, since a hand-copied fixture core would only prove the
-# handler can read a fixture, not that it stays in sync with the rules a human session sees.
-code, out, err = run_hook("subagentrules", sub_payload(
+# --- subagentlinks: the transcript line and the design loop's note, SubagentStart (#440) --------
+# subagentrules (the rules core) moved to the rule-enforcement plugin, whose own suite checks it.
+code, out, err = run_hook("subagentlinks", sub_payload(
     hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="x1"
 ))
-sar = []
-if code != 0:
-    sar.append(f"exit {code}, must never be non-zero")
 try:
     parsed = json.loads(out)
-    core = parsed["hookSpecificOutput"]["additionalContext"]
-except Exception as exc:
-    sar.append(f"could not parse subagentrules output: {exc}")
-    core = ""
-for needle in (
-    "Documentation goes in tiers", "Nothing fails silently", "Evidence before claims",
-    "Every artifact lives in the project directory", "Commit constantly on my own branches",
-    "Never take a destructive action", "Edit in place",
-    "final report must list every command you ran and its result verbatim",
-):
-    if needle not in core:
-        sar.append(f"subagent core is missing {needle!r}")
-if "${CLAUDE_PLUGIN_ROOT}" in core:
-    sar.append("subagent core still carries a literal ${CLAUDE_PLUGIN_ROOT}")
-if "<!-- subagent -->" in core:
-    sar.append("subagent core leaked the <!-- subagent --> marker into the subagent's own text")
-if len(core) > 4_500:
-    sar.append(f"subagent core is {len(core)} chars, over its own 4,500-char budget")
-if not sar:
-    report("PASS", "subagentrules generates a subagent core from house-rules.md's marked sections")
-    print(f"          {len(core)} chars, all marked sections present, no literal placeholder")
-else:
-    report("FAIL", "subagentrules generates a subagent core from house-rules.md's marked sections")
-    for s in sar:
-        print(f"          {s}")
-
-# A section NOT marked <!-- subagent --> (e.g. "Open source first") must not
-# appear as its own heading in the core - otherwise "marked sections only" is not what ships.
-if "## Open source first; paid is the last resort" in core:
-    report("FAIL", "subagentrules includes only the sections marked <!-- subagent -->")
-    print("          an unmarked heading leaked into the subagent core")
-else:
-    report("PASS", "subagentrules includes only the sections marked <!-- subagent -->")
-    print("          an unmarked rule (open source first) is absent from the subagent core")
-
+except Exception:
+    parsed = {}
 # SubagentStart also tells the user the transcript's EXPECTED path, before it exists.
 if code == 0 and "systemMessage" in parsed and "transcript expected at" in parsed["systemMessage"] \
         and os.path.join("sess1", "subagents", "agent-x1.jsonl") in parsed["systemMessage"]:
-    report("PASS", "subagentrules tells the user the expected transcript path at SubagentStart")
+    report("PASS", "subagentlinks tells the user the expected transcript path at SubagentStart")
     print(f"          {parsed['systemMessage'][:150]}")
 else:
-    report("FAIL", "subagentrules tells the user the expected transcript path at SubagentStart")
+    report("FAIL", "subagentlinks tells the user the expected transcript path at SubagentStart")
     print(f"          out {out[:200]!r}")
 
 # Never blocks a spawn: empty payload and unparseable input both still exit 0.
 sarq = []
-code, out, err = run_hook("subagentrules", "")
+code, out, err = run_hook("subagentlinks", "")
 if code != 0 or "systemMessage" not in out:
     sarq.append(f"empty payload: exit {code}, out {out[:120]!r}")
-code, out, err = run_hook("subagentrules", "not json at all {{{")
+code, out, err = run_hook("subagentlinks", "not json at all {{{")
 if code != 0:
     sarq.append(f"unparseable payload: exit {code}")
 if not sarq:
-    report("PASS", "subagentrules never blocks a subagent spawn")
+    report("PASS", "subagentlinks never blocks a subagent spawn")
     print("          empty and unparseable payloads both still exit 0")
 else:
-    report("FAIL", "subagentrules never blocks a subagent spawn")
-    for s in sarq:
-        print(f"          {s}")
+    report("FAIL", "subagentlinks never blocks a subagent spawn")
+    for s_ in sarq:
+        print(f"          {s_}")
 
 # Registered as its OWN SubagentStart entry, unmatched, separate from announce.
 _hj2 = json.loads(read(HOOKS_JSON))["hooks"]
 sarwire = []
 starts = _hj2.get("SubagentStart") or []
-if not any("subagentrules" in h.get("command", "") for e in starts for h in e.get("hooks", [])):
-    sarwire.append("hooks.json's SubagentStart has no subagentrules dispatch")
+if not any("subagentlinks" in h.get("command", "") for e in starts for h in e.get("hooks", [])):
+    sarwire.append("hooks.json's SubagentStart has no subagentlinks dispatch")
+if any("subagentrules" in h.get("command", "") for e in starts for h in e.get("hooks", [])):
+    sarwire.append("hooks.json's SubagentStart still dispatches subagentrules, which moved to rule-enforcement")
 announce_entries = [e for e in starts if any("announce" in h.get("command", "") for h in e.get("hooks", []))]
-subagentrules_entries = [e for e in starts if any("subagentrules" in h.get("command", "") for h in e.get("hooks", []))]
-if announce_entries and subagentrules_entries and announce_entries[0] is subagentrules_entries[0]:
-    sarwire.append("announce and subagentrules share one hook entry instead of two separate ones")
+links_entries = [e for e in starts if any("subagentlinks" in h.get("command", "") for h in e.get("hooks", []))]
+if announce_entries and links_entries and announce_entries[0] is links_entries[0]:
+    sarwire.append("announce and subagentlinks share one hook entry instead of two separate ones")
 if any("matcher" in e for e in starts):
     sarwire.append("SubagentStart is scoped by a matcher, so it misses other agents")
 if not sarwire:
-    report("PASS", "subagentrules is its own SubagentStart entry, separate from announce")
+    report("PASS", "subagentlinks is its own SubagentStart entry, separate from announce")
     print("          both fire, unmatched, on every subagent spawn")
 else:
-    report("FAIL", "subagentrules is its own SubagentStart entry, separate from announce")
-    for s in sarwire:
-        print(f"          {s}")
+    report("FAIL", "subagentlinks is its own SubagentStart entry, separate from announce")
+    for s_ in sarwire:
+        print(f"          {s_}")
 
-if ("    subagentrules)" in read(RUN)):
-    report("PASS", "run.sh names subagentrules in its no-interpreter fallback")
-    print("          no working Python still reports the subagent got no rules")
+if ("    subagentlinks)" in read(RUN)) and ("    subagentrules)" not in read(RUN)):
+    report("PASS", "run.sh names subagentlinks (and no longer subagentrules) in its no-interpreter fallback")
+    print("          no working Python still reports the subagent got no transcript line")
 else:
-    report("FAIL", "run.sh names subagentrules in its no-interpreter fallback")
+    report("FAIL", "run.sh names subagentlinks (and no longer subagentrules) in its no-interpreter fallback")
 
 # --- agentcap (2.50.0, #112): at most two running subagents, none started by a subagent -------
 _cap_state = os.path.join(_FIXTURE_ROOT, "cap-agents.json")
@@ -1445,7 +1410,7 @@ def _tl_ctx(**kw):
     e = {k: v for k, v in os.environ.items()
          if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "HOUSE_RULES_WORKTRACKING")}
     e.update(kw)
-    code, ctx, err = _additional_context("inject", "", env=e)
+    code, ctx, err = _additional_context("threadlink", "", env=e)
     return ctx or ""
 
 
@@ -1457,18 +1422,18 @@ def _tl_case(title, ctx, must, must_not=()):
         print(f"          {p}")
 
 
-_tl_case("inject carries the thread's transcript link in a project thread",
+_tl_case("threadlink carries the thread's transcript link in a project thread",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"),
          ("/code/session_TEST123", "Transcript of this thread's session", "cse_TEST123"))
-_tl_case("inject adds no transcript link outside a project thread",
+_tl_case("threadlink adds no transcript link outside a project thread",
          _tl_ctx(CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"), (), ("/code/session_", "could not build"))
-_tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is malformed",
+_tl_case("threadlink names CLAUDE_CODE_REMOTE_SESSION_ID when the id is malformed",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="bogus"),
          ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
-_tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is missing",
+_tl_case("threadlink names CLAUDE_CODE_REMOTE_SESSION_ID when the id is missing",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1"),
          ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
-_tl_case("inject adds no transcript link with HOUSE_RULES_WORKTRACKING=off",
+_tl_case("threadlink adds no transcript link with HOUSE_RULES_WORKTRACKING=off",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123",
                  HOUSE_RULES_WORKTRACKING="off"), (), ("/code/session_", "could not build"))
 
