@@ -15,7 +15,7 @@ Build every page with `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py build 
 overrides the claude.ai publish tool's own page design. A project's look comes from
 `docs/page-style.json` (no file: offer aj "create one" or "use the defaults"); one colour means you
 act in each project. A missing editor pass, evidence, commit or plain summary blocks the reply
-once. A missing page keeps blocking until the reply links one, up to three blocks in a row; only
+up to three times; then it goes through and source edits and commits are refused until that check passes. A missing page keeps blocking until the reply links one, up to three blocks in a row; only
 "no page" in aj's own message lets a reply through without one.
 
 A simple question gets a short answer. Each reply ends with one question or one next step; a

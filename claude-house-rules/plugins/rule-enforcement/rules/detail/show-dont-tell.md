@@ -117,7 +117,11 @@ one" or "use the defaults" (the quick choice writes a one-line file saying to us
 whose own palette uses orange; now one colour means you act in each project (aj, 2026-10-15).
 
 Checkpoints: at reply end one table runs the page, editor, evidence, commit and plain-summary rules.
-A miss blocks the reply once with the exact fix; on the retry it only reports. The page rule is the
+The editor, evidence, commit and plain-summary rules each count their own blocks per message of aj's.
+A miss blocks the reply with the exact fix, up to three times; after the third block the reply goes
+through, loudly, and from then on a hook refuses source edits and commits (docs/*.md, docs/plans/ and
+the commit that fixes the commit rule stay allowed) until a later reply passes that rule, which clears
+the lock. A rule never blocks a fourth time. The page rule is the
 exception: it blocks every retry until the reply links a page, and after three blocks in a row it lets
 the reply through with a note that no page could be made. Only "no page" in aj's own message skips it;
 the block never offers that phrase to me. `HOUSE_RULES_LOOP=off` turns them all off.

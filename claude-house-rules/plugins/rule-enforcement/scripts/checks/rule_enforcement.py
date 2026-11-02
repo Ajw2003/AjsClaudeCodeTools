@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""checks/rule_enforcement.py - the rule-enforcement plugin's checks (#440): inject, showrule, scope, subagentrules.
+"""checks/rule_enforcement.py - the rule-enforcement plugin's checks (#440): inject, showrule, scope, subagentrules, and the
+repeat-failure lock (lockgate, step 3 part B).
 
 Run it alone:  python3 claude-house-rules/plugins/rule-enforcement/scripts/checks/rule_enforcement.py
 It prints its own numbered results and a RESULT line, and exits non-zero if any check fails.
@@ -468,7 +469,8 @@ else:
 # --- the plugin is wired as the split says (#440) -----------------------------------------------
 _wire = []
 _hjw = json.loads(hooks_json_text)["hooks"]
-_want = {"SessionStart": ["inject", "showrule"], "SubagentStart": ["subagentrules"], "UserPromptSubmit": ["scope"]}
+_want = {"SessionStart": ["inject", "showrule"], "SubagentStart": ["subagentrules"], "UserPromptSubmit": ["scope"],
+         "PreToolUse": ["lockgate"]}
 for _evn, _names in _want.items():
     _cmds = [h.get("command", "") for e in _hjw.get(_evn, []) for h in e.get("hooks", [])]
     for _n in _names:
@@ -481,7 +483,7 @@ if _pj.get("name") != "rule-enforcement":
     _wire.append("plugin.json name is not rule-enforcement")
 if _pj.get("dependencies") != ["house-lib"]:
     _wire.append(f"plugin.json dependencies are {_pj.get('dependencies')!r}, expected ['house-lib']")
-report("FAIL" if _wire else "PASS", "hooks.json wires inject, showrule, subagentrules and scope; plugin.json depends on house-lib")
+report("FAIL" if _wire else "PASS", "hooks.json wires inject, showrule, subagentrules, scope and lockgate; plugin.json depends on house-lib")
 for _w in _wire:
     print(f"          {_w}")
 
@@ -555,5 +557,117 @@ if os.path.isfile(_hr_hooks):
         print(f"          still dispatched: {_dup}; rules files still in house-rules: {_hr_rules}; detail dir: {_hr_detail}")
 else:
     report("SKIP", "house-rules no longer dispatches the four moved events (house-rules is not beside this plugin)")
+
+# --- the repeat-failure lock (#440, step 3 part B, choice 6A) ---------------------------------------------
+from house_lib import blocks as _bl  # noqa: E402 - the vendored library, importable because common.py put scripts/ on sys.path
+
+_lk_repo = tempfile.mkdtemp(prefix="lock-repo-")
+subprocess.run(["git", "init", "-q", _lk_repo], check=True)
+os.makedirs(os.path.join(_lk_repo, "docs", "plans"))
+_LK_SID = "lock-verify"
+_LK_SRC = os.path.join(_lk_repo, "src", "app.py")
+
+
+def _lk_gate(tool, ti, sid=_LK_SID, cwd=None):
+    payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": sid, "cwd": cwd or _lk_repo,
+                          "tool_name": tool, "tool_input": ti})
+    _c, _o, _e = run_hook("lockgate", payload, env=env_in(_lk_repo))
+    try:
+        d = json.loads(_o) if _o.strip() else {}
+    except ValueError:
+        d = {"unparsable": _o}
+    hso = d.get("hookSpecificOutput", {})
+    return _c, hso.get("permissionDecision") == "deny", hso.get("permissionDecisionReason", ""), d.get("systemMessage", ""), _o
+
+
+def _lk_stop(check, mark, failing, fix="commit a.py on your own branch", sid=_LK_SID):
+    return _bl.record_stop(_lk_repo, sid, check, mark, failing, "Files a turn writes are committed.", fix)
+
+
+# block 1, 2, 3 then pass-through on the 4th, and never a fourth block
+_lk_seq = [_lk_stop("commit", "m1", True) for _ in range(6)]
+_lk_want = ["block", "block", "block", "through", "through", "through"]
+report("PASS" if _lk_seq == _lk_want else "FAIL",
+       "a failing check blocks three times for one message, then the reply goes through, and it never blocks a fourth time")
+if _lk_seq != _lk_want:
+    print(f"          got {_lk_seq}")
+_lk_state = _bl.state_path(_lk_repo, _LK_SID)
+_lk_porc = subprocess.run(["git", "-C", _lk_repo, "status", "--porcelain"], stdout=subprocess.PIPE).stdout.strip()
+report("PASS" if (os.path.join(".git", "house-rules") in _lk_state and os.path.isfile(_lk_state) and not _lk_porc) else "FAIL",
+       "the counter file lives inside the git directory, so git never sees it (never committed)")
+_lk_other = [_lk_stop("evidence", "m1", True, sid="other-session") for _ in range(2)]
+report("PASS" if (_lk_other == ["block", "block"] and _bl.block_count(_lk_repo, "other-session", "evidence", "m1") == 2
+                  and not _bl.is_locked(_lk_repo, "other-session")) else "FAIL",
+       "counts are per check and per session: another session's evidence check starts at its own count")
+report("PASS" if _lk_stop("commit", "m2", True) == "block" else "FAIL",
+       "a new message from aj starts the count again at block 1 (the lock stays until the check passes)")
+
+# the lock refuses a source edit and a commit, naming the check, what it misses and how to supply it
+_c, _ref, _why, _sm, _o = _lk_gate("Edit", {"file_path": _LK_SRC})
+report("PASS" if (_c == 0 and _ref and "commit" in _why and "Missing:" in _why and "To supply it: commit a.py" in _why) else "FAIL",
+       "while the commit check is locked a source-file edit is refused, naming the check, what it misses and the fix")
+if not _ref:
+    print(f"          out {_o[:200]!r}")
+_lk_stop("commit", "m2", False)  # clear commit, lock evidence instead
+for _ in range(4):
+    _lk_stop("evidence", "m3", True, fix="run the check and quote its real output")
+_c, _ref, _why, _sm, _o = _lk_gate("Bash", {"command": "git commit -am 'x'"})
+report("PASS" if (_ref and "evidence" in _why and "git commit" in _why) else "FAIL",
+       "while another check (evidence) is locked, a commit is refused, naming that check")
+_c, _ref2, _why2, _, _ = _lk_gate("Bash", {"command": "git -C /x push origin main"})
+report("PASS" if _ref2 else "FAIL", "while a check is locked, a push is refused too, even behind -C")
+_c, _ref3, _, _, _ = _lk_gate("Bash", {"command": "git log --grep commit && python3 -m pytest -q && ls"})
+report("PASS" if not _ref3 else "FAIL", "running tests, reading history and listing files are never refused by the lock")
+_lk_scratch = os.path.join(tempfile.gettempdir(), "content.json")
+for _tool, _fp in (("Write", os.path.join(_lk_repo, "docs", "plans", "x.page.json")),
+                   ("Edit", os.path.join(_lk_repo, "docs", "3-state", "ProjectState.md")),
+                   ("Write", "docs/notes.md"),
+                   ("Write", _lk_scratch)):
+    _c, _r, _, _, _o = _lk_gate(_tool, {"file_path": _fp, "content": "x"})
+    report("PASS" if (not _r and _c == 0) else "FAIL",
+           f"locked: {_tool} of {os.path.basename(_fp)} is allowed (docs, docs/plans, or outside the folder)")
+for _tool, _key in (("MultiEdit", "file_path"), ("NotebookEdit", "notebook_path"), ("Write", "file_path")):
+    _c, _r, _, _, _ = _lk_gate(_tool, {_key: "src/code.py"})
+    report("PASS" if _r else "FAIL", f"locked: a relative source path through {_tool} is refused")
+
+# the lock allows the commit when the commit check is the locked one
+for _ in range(4):
+    _lk_stop("commit", "m4", True, fix="commit a.py on your own branch")
+_lk_stop("evidence", "m3", False)
+_c, _r, _, _, _o = _lk_gate("Bash", {"command": "git add a.py && git commit -m 'x'"})
+report("PASS" if not _r else "FAIL", "when the commit check is the locked one, a commit is allowed (it is how the check passes)")
+_c, _r, _why, _, _ = _lk_gate("Bash", {"command": "git push origin HEAD"})
+report("PASS" if (_r and "commit" in _why) else "FAIL", "...but a push is still refused while the commit check is locked")
+_c, _r, _, _, _ = _lk_gate("Edit", {"file_path": _LK_SRC})
+report("PASS" if _r else "FAIL", "...and a source edit is still refused")
+
+# the lock clears the moment a later Stop finds the check passing
+_lk_stop("commit", "m5", False)
+_c, _r, _, _sm, _o = _lk_gate("Edit", {"file_path": _LK_SRC})
+_c2, _r2, _, _, _ = _lk_gate("Bash", {"command": "git push origin HEAD"})
+report("PASS" if (not _r and not _r2 and not _bl.is_locked(_lk_repo, _LK_SID)) else "FAIL",
+       "a later Stop that finds the check passing clears the lock at once: edits and pushes are allowed again")
+_lk_after = [_lk_stop("commit", "m6", True) for _ in range(2)]
+report("PASS" if _lk_after == ["block", "block"] else "FAIL", "after a pass the count is back to zero for the same check")
+
+# no lock at all: an ordinary session gets no refusal and no noise
+_c, _r, _, _sm, _o = _lk_gate("Edit", {"file_path": _LK_SRC}, sid="never-failed")
+report("PASS" if (_c == 0 and not _r and _o == "") else "FAIL", "with no locked check the hook allows everything and says nothing")
+
+# unreadable state: loud and open, never a refusal
+with open(_bl.state_path(_lk_repo, "broken"), "w", encoding="utf-8") as _f:
+    _f.write("{not json")
+for _tool, _ti in (("Edit", {"file_path": _LK_SRC}), ("Bash", {"command": "git commit -m x"})):
+    _c, _r, _, _sm, _o = _lk_gate(_tool, _ti, sid="broken")
+    report("PASS" if (_c == 0 and not _r and "NOT enforced" in _sm and "allowed" in _sm) else "FAIL",
+           f"unreadable lock state: a {_tool} call is allowed and the hook says loudly that the lock is not enforced")
+_p = run_hook("lockgate", "not json at all", env=env_in(_lk_repo))
+report("PASS" if (_p[0] == 0 and "NOT enforced" in _p[1] and "deny" not in _p[1]) else "FAIL",
+       "an unreadable payload is allowed with a loud message, never a refusal")
+_p = run_shell([RUN, "lockgate"], env=dict(os.environ, PATH="/nonexistent", HOUSE_RULES_PYTHON=""))
+report("PASS" if (_p[0] == 0 and "NOT enforced" in _p[1] and "deny" not in _p[1]) else "FAIL",
+       "with no working Python the lockgate shim exits 0 and says the lock is not enforced")
+shutil.rmtree(_lk_repo, True)
+
 
 finish()

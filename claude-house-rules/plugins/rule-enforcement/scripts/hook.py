@@ -2,11 +2,13 @@
 """hook.py - the rule-enforcement hook handlers (#440, step 3 part A of the plugin split).
 
 run.sh resolves a working interpreter and execs this with one argv value, the event name; the hook
-payload arrives on stdin. Four events, moved out of house-rules' hook.py with their text unchanged:
+payload arrives on stdin. Four events, moved out of house-rules' hook.py with their text unchanged, plus lockgate (step 3 part B):
 
   - inject, showrule (SessionStart) fail LOUD, not closed: a systemMessage, exit 0.
   - subagentrules    (SubagentStart) never obstructs a delegation: any failure emits a systemMessage
                      and exits 0.
+  - lockgate         (PreToolUse) the repeat-failure lock; never refuses because something broke: it says so
+                     in a systemMessage and allows the call.
   - scope            (UserPromptSubmit) can never erase the user's prompt: it never raises and always
                      exits 0 with at least the short reminder.
 
@@ -26,12 +28,14 @@ from rule_enforcement.core import (  # noqa: E402
     event_showrule,
     event_subagentrules,
 )
+from rule_enforcement.lock import event_lockgate  # noqa: E402
 
 EVENTS = {
     "inject": event_inject,
     "showrule": event_showrule,
     "scope": event_scope,
     "subagentrules": event_subagentrules,
+    "lockgate": event_lockgate,
 }
 
 

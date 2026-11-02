@@ -21,9 +21,10 @@
 #
 # DEPENDENCIES: /bin/sh only. This file must never itself need the thing it is looking for.
 #
-# FALLBACK WHEN NOTHING PROBES. All four events here are non-blocking, so none fails closed:
+# FALLBACK WHEN NOTHING PROBES. All five events here are non-blocking, so none fails closed:
 #   - inject, showrule (SessionStart) -> fails LOUD: a systemMessage JSON on stdout, exit 0.
 #   - subagentrules (SubagentStart)   -> fails LOUD, same: a systemMessage on stdout, exit 0.
+#   - lockgate (PreToolUse)           -> fails LOUD and OPEN: a systemMessage, exit 0, the call is allowed.
 #   - scope (UserPromptSubmit)        -> nothing on stdout, exit 0 (a non-zero exit erases the
 #                                       user's prompt).
 # Same shape and wording as house-rules' scripts/run.sh, which these events were moved out of
@@ -107,6 +108,10 @@ if [ -z "$PY" ]; then
       ;;
     subagentrules)
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. This subagent did NOT receive the house rules core. Run /house-rules:doctor."}'
+      exit 0
+      ;;
+    lockgate)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The repeat-failure lock is NOT enforced for this call; the call is allowed. Run /house-rules:doctor."}'
       exit 0
       ;;
     *)
