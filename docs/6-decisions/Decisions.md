@@ -7,6 +7,22 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-02 — Off switches answered: part C of step 3
+
+**Context.** Page `docs/plans/2026-11-02-off-switches.html`, two switches that are off by default.
+
+**Decision.** aj's reply was "Off switches answered 1B 2*".
+1. `HOUSE_RULES_EDITOR` is removed with the long-reply editor trigger: the editor pass stays required for
+   pages only.
+2. aj's own answer: "keep it for now as i need a way to view their work even if it is less secure, we do it
+   properly in the safe work and no hidden work portion but leave it as is for now". So
+   `HOUSE_RULES_SUBAGENT_LEDGER` stays exactly as it is (off by default, on by switch) until Safe work (#441)
+   and No hiding (#446) redo it.
+
+The other 18 rule switches and the off value of `HOUSE_RULES_PROMPT_TIMEOUT` are removed; their checks stay on.
+
+**Status.** Standing.
+
 ## 2026-11-02 — Library lookup: one source, copied into each plugin
 
 **Context.** Step 2 of the plugin split (#439). A normal install puts plugins in
