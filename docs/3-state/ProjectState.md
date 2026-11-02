@@ -355,3 +355,5 @@ invocation.
 2026-11-02: step 3 part B (#440) is built: the repeat-failure lock (house-lib `blocks.py`, rule-enforcement `lockgate`), with shell writes, target-repo lookup and lock clearing closed after review; house-rules verify 959 PASS, rule-enforcement 94 PASS, live proofs in `docs/4-systems/plugin-split.md`. Part C (removing the off switches) waits on two answers: `docs/plans/2026-11-02-off-switches.html`.
 
 2026-11-02, house-rules 2.75.0: step 3 (#440) is built (parts A, B and C, plus the rule-path fix 5cce2f8). Checked here: house-rules verify 937 PASS, rule-enforcement 96 PASS, verify_tools 55 PASS, sync and version-bump checks PASS. Draft pull request #452 is open; it stays a draft until the six-item gate in `docs/4-systems/plugin-split.md` has run. Next: the gate (CI, a replay against 2.74.1, real sessions, a GitHub install, a tested rollback, aj's QA).
+
+2026-11-02: merge gate for #452: items 1 to 5 pass (suites here and in CI, replay 0 unexplained after the quote-aware split fix f92fd63, no new refusal, clean GitHub install, one-step rollback); see `docs/4-systems/plugin-split.md`, "Gate results". Windows is not checked. QA page next.

@@ -400,3 +400,25 @@ The refusal text has no "switch this off" sentence in either run. Nothing was re
 the one refusal is the design-loop code lock, which 2.74.1 also applies in Design. An earlier run, before the
 version overrides were set, had the first shell command held once by the out-of-date notice (the throwaway
 install reads 2.75.0 and GitHub's default branch says otherwise); that is the version check, not a removed switch.
+
+### Gate results for pull request #452 (2026-11-02)
+
+1. **Every suite passes.** Here, after the last fix (154fbd4): house-rules verify.py 941 PASS, rule-enforcement
+   verify.py 100 PASS, tools/verify_tools.py 70 PASS, `sync_library.py --check` and `check_plugin_version_bump.py`
+   PASS. In CI: the first run failed one check (core 47, it read this checkout's own design-loop file and `gh` is not
+   logged in on Actions); fixed in 8e78ff7, and every later head has passed.
+2. **Same behaviour as main (2.74.2).** `tools/replay_hooks.py`: 64 scenarios, 49 identical, 15 with differences,
+   0 UNEXPLAINED. The replay first found a real bug, a statement split that ignored quotes (also a way around the
+   lock); it is fixed in f92fd63 and main has the same bug. Report: `docs/plans/2026-11-02-plugin-split-replay.md`.
+3. **No tool refused that main allows.** The same headless session on main's house-rules and on the branch's
+   plugins: zero deny decisions, zero Stop blocks, both `success` (same report, "Item 3").
+4. **A clean install from GitHub.** In a fresh `CLAUDE_CONFIG_DIR`,
+   `claude plugin marketplace add "Ajw2003/AjsClaudeCodeTools#AjsAgent/house-rules-plugin-split-a9uusz"` then
+   installing house-lib, rule-enforcement and house-rules gave 0.1.0, 0.1.0 and 2.75.0 from the plugin cache; one
+   headless session on it read a file with no refusal, the rules injected once and the house-rules files line present.
+5. **Rollback is one step.** On a local throwaway branch from `origin/main`, merging this branch and then
+   `git revert -m 1 <merge>` left a tree identical to `origin/main` (`git diff --quiet origin/main HEAD`).
+6. **aj's QA:** waits on the QA page `docs/plans/2026-11-02-plugin-split-qa.html`.
+
+Not checked: Windows. aj's PC (Windows 11, PowerShell 5.1, per the 2026-10-28 check in ProjectState) is where
+2.74.0 failed, and no computer of aj's is connected to this session, so every run above was on Linux.
