@@ -783,6 +783,85 @@ try:
 finally:
     shutil.rmtree(_slr, ignore_errors=True)
 
+# --- replay_hooks.py: the diff and the classes, on a tiny fake pair of plugins (#452) -------
+import replay_hooks as _rh
+
+
+def _comb(**kw):
+    c = {f: [] for f in _rh.FIELDS}
+    c.update(kw)
+    return c
+
+
+check(_rh.compare(_comb(context=["A one. B two."]), _comb(context=["A one. B two."])) == [],
+      "replay_hooks: identical outputs give no difference", "expected []")
+_d = _rh.compare(_comb(context=["Rules text. Link sentence."]), _comb(context=["Rules text.", "Link sentence."]))
+check(len(_d) == 1 and _d[0]["cls"].startswith("block boundary"),
+      "replay_hooks: the same text split into more blocks is a block-boundary difference", f"got {_d!r}")
+_d = _rh.compare(_comb(context=["Keep this. `HOUSE_RULES_LOOP=off` turns it off."]), _comb(context=["Keep this."]))
+check(len(_d) == 1 and _d[0]["side"] == "old" and _d[0]["cls"] == "text no longer mentions removed switches",
+      "replay_hooks: a dropped off-switch sentence is explained, not hidden", f"got {_d!r}")
+_d = _rh.compare(_comb(context=["Paths are under <HR>/rules."]), _comb(context=["Paths are under <RE>/rules."]))
+check([x["cls"] for x in _d] == ["rule loading moved", "rule loading moved"],
+      "replay_hooks: a changed plugin root token is 'rule loading moved'", f"got {_d!r}")
+_d = _rh.compare(_comb(blocks=["block: - commit: Files are committed."]), _comb(blocks=["block: - commit (block 1 of 3): Files are committed."]))
+check([x["cls"] for x in _d] == ["three blocks then lock"] * 2,
+      "replay_hooks: block 1 of 3 against block-once is 'three blocks then lock'", f"got {_d!r}")
+_d = _rh.compare(_comb(decisions=["deny: refused one"]), _comb(decisions=["allow: fine"]))
+check(sorted(x["cls"] for x in _d) == ["UNEXPLAINED", "UNEXPLAINED"],
+      "replay_hooks: a changed decision no rule covers is UNEXPLAINED", f"got {_d!r}")
+check(_rh.matches({"matcher": "Write|Edit"}, "Edit") and not _rh.matches({"matcher": "Write|Edit"}, "MultiEdit")
+      and _rh.matches({"matcher": ""}, "") and not _rh.matches({"matcher": "Bash"}, ""),
+      "replay_hooks: a matcher is a whole-name regex, empty matches everything", "matcher results wrong")
+_p = _rh.parse_output(0, json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                      "permissionDecisionReason": "no"}, "systemMessage": "sm"}), "")
+check(_p["decisions"] == ["deny: no"] and _p["system"] == ["sm"] and not _p["misc"],
+      "replay_hooks: a deny decision and a systemMessage are read from hook JSON", f"got {_p!r}")
+_p = _rh.parse_output(2, "", "refused on stderr")
+check(_p["stderr"] == ["refused on stderr"] and _p["misc"] == ["exit code 2"],
+      "replay_hooks: an exit-2 stderr refusal is kept, with its exit code", f"got {_p!r}")
+
+_rhr = tempfile.mkdtemp(prefix="replay-fake-")
+try:
+    def _fake(root, name, outputs):
+        d = os.path.join(root, name)
+        os.makedirs(os.path.join(d, "hooks"))
+        os.makedirs(os.path.join(d, "scripts"))
+        groups = [{"hooks": [{"type": "command", "command": 'sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" %s' % ev, "timeout": 10}]}
+                  for ev in outputs]
+        with open(os.path.join(d, "hooks", "hooks.json"), "w") as f:
+            json.dump({"hooks": {"UserPromptSubmit": groups}}, f)
+        with open(os.path.join(d, "scripts", "run.sh"), "w") as f:
+            f.write('cat >/dev/null\ncase "$1" in\n')
+            for ev, text in outputs.items():
+                f.write("%s) printf '%%s' '%s';;\n" % (ev, json.dumps(
+                    {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": text}})))
+            f.write("esac\n")
+        return d
+
+    _o = os.path.join(_rhr, "o")
+    _n = os.path.join(_rhr, "n")
+    _fake(_o, "alpha", {"one": "Shared. `HOUSE_RULES_LOOP=off` turns it off."})
+    _fake(_n, "alpha", {"one": "Shared."})
+    _fake(_n, "beta", {"two": "A surprise nobody approved."})
+    _op, _np = _rh.load_plugins(_o), _rh.load_plugins(_n)
+    _sc = [x for x in _rh.scenarios() if x["name"] == "UserPromptSubmit ordinary prompt"]
+    check(_rh.coverage(_op, _sc, "OLD") == [] and _rh.coverage(_np, _sc, "NEW") == []
+          and len(_rh.coverage(_np, [], "NEW")) == 2,
+          "replay_hooks: coverage names the hook entries no scenario reaches", "coverage wrong")
+    _old, _new = _rh.replay(_op, _np, _sc, os.path.join(_rhr, "w"))
+    _rows, _counts, _ident = _rh.full_report(_old, _new, _sc)
+    _k = _sc[0]["name"]
+    check(_old[_k]["ran"] == ["alpha:one"] and sorted(_new[_k]["ran"]) == ["alpha:one", "beta:two"]
+          and _counts == {"text no longer mentions removed switches": 1, "UNEXPLAINED": 1} and _ident == 0,
+          "replay_hooks: a fake pair is replayed per plugin and each difference is classified",
+          f"ran {_old[_k]['ran']} / {_new[_k]['ran']}, counts {dict(_counts)!r}")
+    _txt = _rh.render(_rows, _counts, _ident, _old, _new, [], "fake", ("alpha 0", "alpha, beta"))
+    check("A surprise nobody approved." in _txt.split("## Every difference")[0],
+          "replay_hooks: the report quotes every UNEXPLAINED difference in full", "quote missing before the full list")
+finally:
+    shutil.rmtree(_rhr, ignore_errors=True)
+
 print()
 print("-" * 32)
 if FAILURES:
