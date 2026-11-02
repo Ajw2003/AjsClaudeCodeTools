@@ -30,9 +30,9 @@
     "base": "origin/main",
     "unverified": [
       "Nothing ran on Windows, because no computer of yours is connected to this session; that is choice 1",
-      "An interactive session was not tried, only headless ones started with claude -p",
-      "A cloud session was not tried. It syncs plugins from your claude.ai account, and these plugins are not there until this merges. Whether a library installed only as a dependency gets synced there is also untested",
-      "The lock's shell-write check still cannot see a script that works out its write path while it runs"
+      "Every session here was headless, started with claude -p. No interactive session was run",
+      "No cloud session ran on these plugins. A cloud session syncs plugins from your claude.ai account, and these plugins will not be there until this merges. It is also untested whether a library installed only as a dependency (house-lib) gets synced to the cloud",
+      "The repeat-failure lock's shell-write check still cannot see a script that works out, while it runs, which file it will write to"
     ],
     "files": {}
   },

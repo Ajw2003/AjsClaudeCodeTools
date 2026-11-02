@@ -366,7 +366,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "115 files, +10449 −2070",
+      "117 files, +13336 −2070",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -385,7 +385,7 @@ const PAGE = {
         ],
         [
           ".claude/house-rules-loop.json",
-          1,
+          906,
           1,
           [
             [
@@ -1620,6 +1620,30 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/2026-11-02-plugin-split-qa.html",
+          1936,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-02-plugin-split-qa.page.json",
+          46,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/2026-11-02-plugin-split-replay.md",
           244,
           0,
@@ -1758,7 +1782,7 @@ const PAGE = {
       "Still unverified",
       "4 things not yet proven",
       null,
-      "Nothing ran on Windows, because no computer of yours is connected to this session; that is choice 1. An interactive session was not tried, only headless ones started with claude -p. A cloud session was not tried. It syncs plugins from your claude.ai account, and these plugins are not there until this merges. Whether a library installed only as a dependency gets synced there is also untested. The lock's shell-write check still cannot see a script that works out its write path while it runs.",
+      "Nothing ran on Windows, because no computer of yours is connected to this session; that is choice 1. Every session here was headless, started with claude -p. No interactive session was run. No cloud session ran on these plugins. A cloud session syncs plugins from your claude.ai account, and these plugins will not be there until this merges. It is also untested whether a library installed only as a dependency (house-lib) gets synced to the cloud. The repeat-failure lock's shell-write check still cannot see a script that works out, while it runs, which file it will write to.",
       null,
       null
     ]
@@ -1789,9 +1813,9 @@ const PAGE = {
     "base": "origin/main",
     "unverified": [
       "Nothing ran on Windows, because no computer of yours is connected to this session; that is choice 1",
-      "An interactive session was not tried, only headless ones started with claude -p",
-      "A cloud session was not tried. It syncs plugins from your claude.ai account, and these plugins are not there until this merges. Whether a library installed only as a dependency gets synced there is also untested",
-      "The lock's shell-write check still cannot see a script that works out its write path while it runs"
+      "Every session here was headless, started with claude -p. No interactive session was run",
+      "No cloud session ran on these plugins. A cloud session syncs plugins from your claude.ai account, and these plugins will not be there until this merges. It is also untested whether a library installed only as a dependency (house-lib) gets synced to the cloud",
+      "The repeat-failure lock's shell-write check still cannot see a script that works out, while it runs, which file it will write to"
     ],
     "files": {}
   },
