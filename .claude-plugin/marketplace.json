@@ -12,6 +12,11 @@
       "description": "Enforces aj's global CLAUDE.md rules as hooks: no hidden background work, no unasked git mutations, no unchecked destructive commands."
     },
     {
+      "name": "house-lib",
+      "source": "./claude-house-rules/plugins/house-lib",
+      "description": "Shared stdlib-only library for the house-rules plugins. No hooks of its own."
+    },
+    {
       "name": "prompt-workshop",
       "source": "./claude-prompt-workshop/plugins/prompt-workshop",
       "description": "STATUS: shell/v0.1. Notices an under-specified prompt and walks the user through goal, constraints, success criteria and gating before Claude runs with an inferred reading of it."

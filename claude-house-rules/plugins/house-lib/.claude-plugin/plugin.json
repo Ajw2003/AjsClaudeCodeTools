@@ -1,0 +1,9 @@
+{
+  "name": "house-lib",
+  "description": "Shared stdlib-only library for the house-rules plugins (payload, output, trace, hook links). No hooks of its own.",
+  "version": "0.1.0",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  }
+}
