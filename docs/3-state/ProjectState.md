@@ -345,3 +345,5 @@ invocation.
 2026-11-02: aj approved the sweep; #306 and its 9 open steps (#341, #343 to #349, #381) are closed as not planned, replaced by #437, each with a comment. Step 2 (#439) waits on one question, how a plugin finds the shared library (cloud sessions sync plugins to `plugins/synced/<id>/<plugin>/`, not `plugins/cache/`): `docs/plans/2026-11-02-library-lookup.html`.
 
 2026-11-02, plugin 2.74.2: step 2 (#439) is built. `claude-house-rules/plugins/house-lib/` holds the plumbing (`house_lib/plumbing.py`, `links.py`); `tools/sync_library.py` copies it into house-rules and `--check` runs in CI. Checked in this session: verify.py 965 checks PASS, verify_tools.py 50 PASS, sync check and version-bump check PASS, and `claude plugin install house-lib@aj-house-rules` from the local checkout installed and enabled it. Not yet: an install from GitHub (needs a merge to main) and the CI run. Next is step 3 (#440).
+
+2026-11-02: aj: open the pull request after step 3 (#440) and prove it breaks nothing before a merge is considered. The six-item gate is in `docs/4-systems/plugin-split.md`, "The gate before a merge to main".

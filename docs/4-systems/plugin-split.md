@@ -107,3 +107,23 @@ out of `house_rules/core.py`, which now imports them back and re-exports every n
 differs or is missing. CI runs the check (`.github/workflows/verify.yml`) and
 `tools/verify_tools.py` proves it on a temp folder. Edit the source, never a copy.
 Transcript and git helpers stay in `core.py` for now: they depend on core's other functions.
+
+## The gate before a merge to main
+
+aj, 2026-11-02: open the pull request after step 3 (#440), "but ensure it will break nothing before we
+consider merging to main. i dont want to repeat the first restructure attempt". The 2.74.0 restructure
+was reverted because its settings gate refused every tool, replies included (`docs/3-state/ProjectState.md`,
+2026-10-28). Nothing merges until every item below has run, with its output quoted on the QA page:
+
+1. **Every suite passes**, locally and in CI on the pull request: each plugin's `verify` run,
+   `tools/verify_tools.py`, `tools/sync_library.py --check`, `tools/check_plugin_version_bump.py`.
+2. **Same behaviour as 2.74.1.** One recorded payload per hook handler is replayed through `main`'s
+   house-rules 2.74.1 and through the branch's installed plugins together; the combined outputs are
+   diffed, and every difference is listed and traced to an approved change.
+3. **No tool refused that 2.74.1 allows.** Headless sessions on a clean config with the branch's plugins
+   installed read a file, edit a doc, run a shell command, spawn a helper and reply; the transcript shows
+   no refusal that the same session under 2.74.1 does not also give.
+4. **A clean install from GitHub** of the pull request's branch on a fresh config.
+5. **Rollback is one step:** the revert command for the merge is written on the QA page and tested on a
+   throwaway branch.
+6. **aj's QA pass** on the QA page, before the merge.
