@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-02 — Build plan approved: plugin split
+
+**Context.** Build plan page `docs/plans/2026-11-02-plugin-split-build-plan.html`: thirteen steps,
+#438 to #450, under #437.
+
+**Decision.** aj's reply was "Build plan approved: plugin split 1A 2A 3A".
+1. The Design loop stays its own plugin; Accessible AI depends on it.
+2. The plugins replace house-rules one at a time: each release ships one plugin and deletes the same part
+   from house-rules.
+3. The earlier restructure issue (#306) is closed as replaced by #437.
+
+**Status.** Standing.
+
 ## 2026-11-02 — Design approved: plugin split
 
 **Context.** Proposal page `docs/plans/2026-11-02-plugin-split.html`, eight choices.
