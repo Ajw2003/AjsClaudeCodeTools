@@ -302,3 +302,13 @@ Finding for aj: the commit check only looks at files the current turn wrote, so 
 nothing passes and clears the lock even though an earlier file is still uncommitted (seen once, a turn that
 only ran a refused command). That is the approved "clears when a later Stop finds it passing"; whether the
 commit check should also look at files left uncommitted by earlier turns is a design call, not made here.
+
+### Live proof of the follow-up (same setup)
+
+With the commit lock on (`"files": ["a.py"]` in the state), a shell `sed -i s/print\(1\)/print\(2\)/ a.py` came
+back `permissionDecision: deny`: "repeat-failure lock: this shell command writing the source file a.py is
+refused ... Locked check: commit. ... Files it named: a.py. To supply it: commit a.py on your own branch."
+(`a.py` stayed `print(1)`). A following turn that wrote nothing ("hello") did not clear the lock: its Stop
+blocked "commit (block 1 of 3)", "(block 2 of 3)", "(block 3 of 3)", then went through with the lock still in
+the state file. A last turn wrote `docs/3-state/ProjectState.md` and committed `a.py` with it
+(`1706866 add a.py and note it`); its Stop printed nothing and the state became `{"counts": {}, "locks": {}}`.
