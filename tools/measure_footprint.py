@@ -29,6 +29,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -55,25 +56,72 @@ def repo_plugin_dir():
     return os.path.join(repo_root(), "claude-house-rules", "plugins", "house-rules")
 
 
-def installed_plugin_dir():
+PLUGIN_NAMES = ("house-rules", "rule-enforcement")
+_HOOK_EVENT_RE = re.compile(r"scripts/run\.sh\"?\s+(\w+)")
+
+
+def repo_plugin_dirs():
+    base = os.path.join(repo_root(), "claude-house-rules", "plugins")
+    return {n: os.path.join(base, n) for n in PLUGIN_NAMES if os.path.isdir(os.path.join(base, n))}
+
+
+def installed_plugin_dirs():
+    """name -> highest installed version dir, for each plugin that is installed."""
+    out = {}
+    for name in PLUGIN_NAMES:
+        d = installed_plugin_dir(name)
+        if d:
+            out[name] = d
+    return out
+
+
+def declared_events(plugin_dir):
+    """Hook events (the word after run.sh) that this plugin's hooks.json declares."""
+    path = os.path.join(plugin_dir, "hooks", "hooks.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    events = set()
+    for groups in (data.get("hooks") or {}).values():
+        for group in groups:
+            for hook in group.get("hooks", []):
+                m = _HOOK_EVENT_RE.search(hook.get("command", ""))
+                if m:
+                    events.add(m.group(1))
+    return events
+
+
+def event_plugins(plugin_dirs):
+    """event -> plugin name, read from each plugin's hooks.json (nothing hard-coded).
+    An event declared by two plugins is an error, not a silent pick."""
+    owner = {}
+    for name, d in plugin_dirs.items():
+        for ev in declared_events(d):
+            if ev in owner:
+                raise ValueError(f"event {ev!r} is declared by both {owner[ev]} and {name}")
+            owner[ev] = name
+    return owner
+
+
+def installed_plugin_dir(name="house-rules"):
     """The highest version directory present in the plugin cache.
 
     Sorted numerically, not lexically: "2.10.0" must beat "2.9.0", which a string sort gets
     backwards. A cache holding only older versions is still reported, so the caller can see
     that the install is behind rather than getting a confusing missing-file error.
     """
-    if not os.path.isdir(PLUGIN_CACHE):
+    cache = os.path.join(os.path.dirname(PLUGIN_CACHE), name)
+    if not os.path.isdir(cache):
         return None
     versions = []
-    for name in os.listdir(PLUGIN_CACHE):
-        if os.path.isdir(os.path.join(PLUGIN_CACHE, name)):
+    for ver in os.listdir(cache):
+        if os.path.isdir(os.path.join(cache, ver)):
             try:
-                versions.append((tuple(int(p) for p in name.split(".")), name))
+                versions.append((tuple(int(p) for p in ver.split(".")), ver))
             except ValueError:
                 continue
     if not versions:
         return None
-    return os.path.join(PLUGIN_CACHE, max(versions)[1])
+    return os.path.join(cache, max(versions)[1])
 
 
 def reminder_text(stdout):
@@ -202,18 +250,33 @@ def main():
     args = parser.parse_args()
 
     if args.repo:
-        plugin_dir, label = repo_plugin_dir(), "repo working tree"
+        plugin_dirs, label = repo_plugin_dirs(), "repo working tree"
     else:
-        plugin_dir = installed_plugin_dir()
+        plugin_dirs = installed_plugin_dirs()
         label = "installed copy"
-        if plugin_dir is None:
-            print("No installed plugin found. Run tools/bootstrap.ps1 first, or pass --repo.")
-            return 1
-
-    hook_py = os.path.join(plugin_dir, "scripts", "hook.py")
-    if not os.path.isfile(hook_py):
-        print(f"No hook.py under {plugin_dir}")
+    missing = [n for n in PLUGIN_NAMES if n not in plugin_dirs]
+    if missing:
+        print(f"No {label} found for: {', '.join(missing)}. Run tools/bootstrap.ps1 first, or pass --repo.")
         return 1
+    plugin_dir = plugin_dirs["house-rules"]
+    try:
+        owner = event_plugins(plugin_dirs)
+    except (OSError, ValueError) as e:
+        print(f"Cannot read hooks.json: {e}")
+        return 1
+
+    def hook_py_for(event):
+        """The hook.py of the plugin whose hooks.json declares `event`."""
+        name = owner.get(event)
+        if name is None:
+            raise SystemExit(f"event {event!r} is declared by no plugin's hooks.json")
+        return os.path.join(plugin_dirs[name], "scripts", "hook.py")
+
+    for name, d in plugin_dirs.items():
+        if not os.path.isfile(os.path.join(d, "scripts", "hook.py")):
+            print(f"No hook.py under {d}")
+            return 1
+    hook_py = hook_py_for("guard")  # house-rules' own, for events not moved
 
     manifest = os.path.join(plugin_dir, ".claude-plugin", "plugin.json")
     version = "unknown"
@@ -224,12 +287,19 @@ def main():
     print("house-rules - token footprint")
     print("=" * 29)
     print(f"\nMeasuring the {label}, version {version}")
-    print(f"  {plugin_dir}")
+    for name, d in plugin_dirs.items():
+        pj = os.path.join(d, ".claude-plugin", "plugin.json")
+        pv = "unknown"
+        if os.path.isfile(pj):
+            with open(pj, encoding="utf-8") as f:
+                pv = json.load(f).get("version", "unknown")
+        print(f"  {name} {pv}: {d}")
+    per_plugin = {n: 0 for n in plugin_dirs}  # fixed per-session chars, filled in section 3
 
     # --- 1. per-prompt cost ------------------------------------------------------------------
     print("\n1. Per-prompt cost (scope)")
-    _, short_out = run_hook(hook_py, "scope", json.dumps({"prompt": "what do you think"}))
-    _, long_out = run_hook(hook_py, "scope", json.dumps({"prompt": "run the build script"}))
+    _, short_out = run_hook(hook_py_for("scope"), "scope", json.dumps({"prompt": "what do you think"}))
+    _, long_out = run_hook(hook_py_for("scope"), "scope", json.dumps({"prompt": "run the build script"}))
     short_chars, long_chars = len(reminder_text(short_out)), len(reminder_text(long_out))
     print(f"   short form : {short_chars:>6,} chars  (~{tokens(short_chars)} tokens)")
     print(f"   long form  : {long_chars:>6,} chars  (~{tokens(long_chars)} tokens)")
@@ -242,11 +312,8 @@ def main():
     if not prompts:
         print("   no transcripts found - skipping")
     else:
-        sys.path.insert(0, os.path.join(plugin_dir, "scripts"))
-        try:
-            from house_rules import core as scope_module  # 2.71.0 and later
-        except ImportError:
-            import hook as scope_module  # before the house_rules package existed
+        sys.path.insert(0, os.path.join(plugin_dirs[owner["scope"]], "scripts"))
+        from rule_enforcement import core as scope_module  # scope moved here in the plugin split
 
         pattern = scope_module._SCOPE_COMMAND_HINT_RE
         long_count = sum(1 for p in prompts if pattern.search(p))
@@ -267,13 +334,20 @@ def main():
 
     # --- 3. per-session cost -----------------------------------------------------------------
     print("\n3. Per-session cost (SessionStart)")
-    _, inject_out = run_hook(hook_py, "inject", "{}")
+    _, inject_out = run_hook(hook_py_for("inject"), "inject", "{}")
+    _, showrule_out = run_hook(hook_py_for("showrule"), "showrule", "{}")
     _, profile_out = run_hook(hook_py, "profile", "{}")
     _, standards_out = run_hook(hook_py, "standards", "{}")
     inject_chars = len(reminder_text(inject_out))
     profile_chars = len(reminder_text(profile_out))
     standards_chars = len(reminder_text(standards_out))
-    print(f"   inject     : {inject_chars:>6,} chars  (~{tokens(inject_chars):,} tokens)")
+    showrule_chars = len(reminder_text(showrule_out))
+    per_plugin[owner["inject"]] += inject_chars
+    per_plugin[owner["showrule"]] += showrule_chars
+    per_plugin[owner["profile"]] += profile_chars
+    per_plugin[owner["standards"]] += standards_chars
+    print(f"   inject     : {inject_chars:>6,} chars  (~{tokens(inject_chars):,} tokens)  [{owner['inject']}]")
+    print(f"   showrule   : {showrule_chars:>6,} chars  (~{tokens(showrule_chars):,} tokens)  [{owner['showrule']}]")
     print(f"   profile    : {profile_chars:>6,} chars  (~{tokens(profile_chars):,} tokens)")
     print(f"   standards  : {standards_chars:>6,} chars  (~{tokens(standards_chars):,} tokens)")
 
@@ -305,6 +379,11 @@ def main():
             _, out = run_hook(hook_py, event, "{}", env=env)
             chars = len(split_output(out)[0])
             print(f"   {event:<12} {state:<24}: {chars:>6,} chars  (~{tokens(chars):,} tokens)")
+    print("   fixed per-session total, inject + showrule + profile + standards, per plugin:")
+    for name, chars in per_plugin.items():
+        print(f"     {name:<17}: {chars:>6,} chars  (~{tokens(chars):,} tokens)")
+    all_chars = sum(per_plugin.values())
+    print(f"     {'total':<17}: {all_chars:>6,} chars  (~{tokens(all_chars):,} tokens)")
     print("   (paid once per session - a spawned subagent never sees this at all, see docs/architecture.md)")
     print("   (a subagent's own per-spawn cost is the 'subagentrules' row in section 4 below)")
 
@@ -392,7 +471,7 @@ def main():
     print(f"   {'handler':<15} {'when':<26} {'reminder':>20} {'trace':>20}")
     trace_total = 0
     for event, when, payload, label in calls:
-        _, out = run_hook(hook_py, event, payload)
+        _, out = run_hook(hook_py_for(event), event, payload)
         reminder, tr = split_output(out)
         trace_total += len(tr)
         r = f"{len(reminder):,} ch (~{tokens(len(reminder)):,} tok)" if reminder else "-"
@@ -403,7 +482,7 @@ def main():
     for event, _, payload, _ in calls:
         if event in not_trace_gated:
             continue
-        _, out = run_hook(hook_py, event, payload, env={"HOUSE_RULES_TRACE": "off"})
+        _, out = run_hook(hook_py_for(event), event, payload, env={"HOUSE_RULES_TRACE": "off"})
         off_total += len(split_output(out)[1])
     shutil.rmtree(scratch, ignore_errors=True)
     print(f"\n   decision traces across those calls : {trace_total:,} chars "
@@ -423,7 +502,7 @@ def main():
         ("malformed json", "not json at all{{{"),
         ("empty stdin", ""),
     ]:
-        code, out = run_hook(hook_py, "scope", payload)
+        code, out = run_hook(hook_py_for("scope"), "scope", payload)
         if code == 0 and out.strip():
             print(f"   PASS  {name}: exit 0, emitted {len(out)} chars")
         else:

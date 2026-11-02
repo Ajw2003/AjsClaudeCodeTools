@@ -205,7 +205,10 @@ rules out; that is a design call for aj, not made here.
 - Fixed after part A: `unity-tools-first.md` moved to house-rules `rules/standards/` beside the Unity standards that
   point at it, and the plain-doc limits moved from `rules/detail/clear-writing.md` into `skills/plain-docs/SKILL.md`,
   the skill that applies them. Neither pointer crosses a plugin now.
-- `tools/check_plugin_version_bump.py` still only watches the house-rules folder, so a change to rule-enforcement
-  alone is not gated.
-- `tools/measure_footprint.py` runs `inject`, `showrule`, `scope` and `subagentrules` through house-rules' `hook.py`; those events now live in the rule-enforcement `hook.py`, so its numbers for them are wrong until it is pointed there (not done here).
+- Fixed after part A: `tools/check_plugin_version_bump.py` now checks every plugin folder under
+  `claude-house-rules/plugins/` that has a `.claude-plugin/plugin.json` (a plugin not on the base passes as new);
+  `docs/` and the root `CLAUDE.md` still count for house-rules only. Its output names each plugin and its verdict.
+- Fixed after part A: `tools/measure_footprint.py` reads each plugin's `hooks.json` to find which plugin declares
+  an event, runs it through that plugin's `hook.py`, adds a `showrule` row, and reports the fixed per-session cost
+  per plugin plus a total (`--repo`, or the installed cache for both plugins).
 - `_rules_root` still reads `~/.claude/plugins/installed_plugins.json`, not `CLAUDE_CONFIG_DIR` (unchanged behaviour).

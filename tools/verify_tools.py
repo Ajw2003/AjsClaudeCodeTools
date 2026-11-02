@@ -453,6 +453,14 @@ check(
     "{0} CRLF line endings, {1} bare LF".format(n_crlf, n_bare_lf),
 )
 
+_owner = measure_footprint.event_plugins(measure_footprint.repo_plugin_dirs())
+check(
+    all(_owner.get(e) == "rule-enforcement" for e in ("inject", "showrule", "scope", "subagentrules"))
+    and _owner.get("guard") == "house-rules",
+    "measure_footprint points each event at the plugin whose hooks.json declares it",
+    f"inject/showrule/scope/subagentrules -> {_owner.get('inject')}, guard -> {_owner.get('guard')}",
+)
+
 check(
     "*.bat text eol=crlf" in open(os.path.join(ROOT, ".gitattributes"), encoding="utf-8").read(),
     ".gitattributes pins *.bat to CRLF so checkout does not depend on core.autocrlf",
@@ -567,6 +575,69 @@ try:
     )
 finally:
     shutil.rmtree(git_fixture, ignore_errors=True)
+
+# --- check_plugin_version_bump: every plugin is gated (main(), real git, temp repo) ----------
+bump_script = os.path.join(ROOT, "tools", "check_plugin_version_bump.py")
+multi = tempfile.mkdtemp(prefix="version-bump-multi-")
+try:
+    def mgit(*args):
+        proc = subprocess.run(["git"] + list(args), cwd=multi, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"git {args} failed: {proc.stderr}")
+    def mwrite(rel, content):
+        full = os.path.join(multi, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w", encoding="utf-8") as f:
+            f.write(content)
+    def mplugin(name, version):
+        mwrite(f"claude-house-rules/plugins/{name}/.claude-plugin/plugin.json",
+               json.dumps({"name": name, "version": version}))
+    def mrun():
+        proc = subprocess.run([sys.executable, bump_script, "--base", "base-ref", "--head", "HEAD"],
+                              cwd=multi, capture_output=True, text=True)
+        return proc.returncode, proc.stdout
+    mgit("init", "-q"); mgit("config", "user.email", "t@example.com"); mgit("config", "user.name", "T")
+    mplugin("house-rules", "1.0.0"); mplugin("rule-enforcement", "0.1.0")
+    mgit("add", "."); mgit("commit", "-q", "-m", "base"); mgit("branch", "-q", "-f", "base-ref")
+
+    # a second plugin changed without a bump fails, and the output names it
+    mwrite("claude-house-rules/plugins/rule-enforcement/scripts/x.py", "x\n")
+    mgit("add", "."); mgit("commit", "-q", "-m", "change")
+    code_a, out_a = mrun()
+    check(
+        code_a == 1 and "rule-enforcement: FAIL" in out_a and "house-rules: PASS" in out_a,
+        "version-bump check fails a second plugin changed without a bump and names each verdict",
+        out_a.strip().replace("\n", " | "),
+    )
+
+    # bumping it passes; a brand-new plugin passes as new
+    mplugin("rule-enforcement", "0.1.1"); mplugin("fresh-plugin", "0.1.0")
+    mwrite("claude-house-rules/plugins/fresh-plugin/scripts/y.py", "y\n")
+    mgit("add", "."); mgit("commit", "-q", "-m", "bump and new")
+    code_b, out_b = mrun()
+    check(
+        code_b == 0 and "fresh-plugin: PASS - new plugin" in out_b and "rule-enforcement: PASS" in out_b,
+        "version-bump check passes a bumped plugin and a plugin that is new on the base",
+        out_b.strip().replace("\n", " | "),
+    )
+
+    # house-rules behaviour unchanged: docs/ alone still needs a house-rules bump, and does not
+    # count for another plugin
+    mwrite("docs/a.md", "doc\n")
+    mgit("add", "."); mgit("commit", "-q", "-m", "docs")
+    code_c, out_c = mrun()
+    check(
+        code_c == 1 and "house-rules: FAIL" in out_c and "rule-enforcement: PASS" in out_c,
+        "version-bump check: docs/ still needs a house-rules bump and counts for no other plugin",
+        out_c.strip().replace("\n", " | "),
+    )
+    mplugin("house-rules", "1.0.1")
+    mgit("add", "."); mgit("commit", "-q", "-m", "bump hr")
+    code_d, out_d = mrun()
+    check(code_d == 0, "version-bump check passes once house-rules is bumped for a docs/ change",
+          out_d.strip().replace("\n", " | "))
+finally:
+    shutil.rmtree(multi, ignore_errors=True)
 
 # --- install.py's hash-verify-and-self-heal step --------------------------------------------
 def _make_tree(root, files):
