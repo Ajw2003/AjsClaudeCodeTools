@@ -141,11 +141,13 @@ def event_handover():
     editor_owed = None
     shell_page_notes = []
     trace_lines_early = []
+    turn_ok = False
     transcript_path = _field(_TRANSCRIPT_RE, payload)
     if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
                             or _clear_writing_enabled()):
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
+            turn_ok = True
             written_now, committed_now = handover_turn_writes(turn_records)
             plain_problems = handover_plain_check(written_now, committed_now, have_reply, reply_text)
             if written_now and _parity_enabled():
@@ -193,11 +195,24 @@ def event_handover():
     writing = []
 
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
-    if not retry:
-        if handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                                needs_evidence, uncommitted, plain_problems, trace_lines):
-            return 0
-    else:
+    # #440 (choice 6A): the four counted checks block up to three times per message of aj's, on the retries
+    # too; each counts its own blocks in house_lib.blocks (stop_hook_active is shared, so it counts nothing).
+    cannot_tell = set()
+    if could_not_tell:
+        cannot_tell.add("evidence")
+    if commit_could_not_tell:
+        cannot_tell.add("commit")
+    if not turn_ok:
+        cannot_tell.update(("editor", "plain summary"))
+    blocked, through = handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words,
+                                            editor_owed, needs_evidence, uncommitted, plain_problems,
+                                            trace_lines, retry, cannot_tell)
+    if blocked:
+        return 0
+    if through:
+        retry = True  # the reply goes through: report to aj only, additionalContext would wake the model again
+        needs_card = False
+    if retry:
         handover_qa_retry(payload, have_reply, reply_text, trace_lines)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line

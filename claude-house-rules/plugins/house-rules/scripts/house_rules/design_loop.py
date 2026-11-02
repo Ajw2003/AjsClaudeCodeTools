@@ -15,6 +15,7 @@ import tempfile
 import time
 import urllib.parse
 
+from house_lib import blocks as _blocks
 from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
@@ -1695,8 +1696,8 @@ def event_issuelist():
 
 # #256: the checkpoint table. Each row is (moment, rule name, check function, "block" or "remind").
 # A check takes the context dict event_handover builds and returns the exact fix when the rule is
-# missed, else "". A "block" row at "reply ends" stops the reply once; on the retry
-# (stop_hook_active) it only reports, the same safety event_subagentcommit uses.
+# missed, else "". A "block" row at "reply ends" stops the reply; the editor, evidence, commit
+# and plain summary rows do so up to three times per message of aj's, then lock (#440, house_lib.blocks); qa page once.
 _LIST_ITEM_RE = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+\S", re.MULTILINE)
 
 
@@ -1939,13 +1940,19 @@ def _missed_checkpoints(ctx):
             if moment == "reply ends" and mode == "block" for fix in [fn(ctx)] if fix]
 
 
-def _checkpoint_reason(missed):
+def _checkpoint_reason(missed, counts=None):
+    """`counts` is {rule name: blocks so far for this message, this one included}."""
+    counts = counts or {}
     lines = ["House rules, the reply is not done yet. It misses %d checkpoint%s:" % (
         len(missed), "" if len(missed) == 1 else "s")]
     for name, fix in missed:
-        lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
-    lines.append("Fix these and send only what changed, not the whole reply again. A missing page blocks every retry "
-                 "until the reply links one; the other checks block once. HOUSE_RULES_LOOP=off turns it off.")
+        n = counts.get(name)
+        tag = " (block %d of %d)" % (n, _blocks.BLOCK_LIMIT) if n else ""
+        lines.append("- %s%s: %s Fix: %s." % (name, tag, CHECKPOINT_RULES[name], fix))
+    lines.append("Fix these and send only what changed, not the whole reply again. A check that is still missed "
+                 "blocks up to %d times for the same message of aj's; after the last block the reply goes through "
+                 "and source edits and commits are refused until the check passes. HOUSE_RULES_LOOP=off turns it off."
+                 % _blocks.BLOCK_LIMIT)
     return "\n".join(lines)
 
 
@@ -2184,8 +2191,8 @@ def handover_stop_lines(payload):
 def handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines):
     """The page row of the checkpoint table (#283, #309, #310, #326): the report-only page note, or "". An error
     is added to trace_lines."""
-    # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
-    # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.
+    # #256: the checkpoint table. The page row is report-only (#309, a later step); the counted blocks
+    # of the other rows are in handover_checkpoints. Any error here fails open with a message.
     def _page_count(ctx, change=None):
         mark = hashlib.sha1((ctx.get("user_text") or "").encode("utf-8")).hexdigest()[:16]
         return _page_blocks(_page_blocks_path(_payload_cwd(payload), _field(_SESSION_ID_RE, payload) or ""),
@@ -2219,11 +2226,32 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
     return page_note
 
 
+# The four checks that block up to three times and then lock (#440, choice 6A). "qa page" stays block-once.
+LOCKED_CHECKS = ("editor", "evidence", "commit", "plain summary")
+
+
+def _turn_mark(transcript_path):
+    """The key of the message this reply answers: the user record's uuid and text."""
+    _records, user, _detail = core._load_turn(transcript_path)
+    if not user:
+        return _blocks.message_mark("", "")
+    content = (user.get("message") or {}).get("content")
+    text = content if isinstance(content, str) else json.dumps(content, sort_keys=True)
+    return _blocks.message_mark(user.get("uuid") or user.get("timestamp") or "", text)
+
+
 def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                         needs_evidence, uncommitted, plain_problems, trace_lines):
-    """The blocking checkpoints at "reply ends" (first reply only). True when the reply was blocked (the
-    block is emitted here). An error is added to trace_lines and nothing is blocked."""
+                         needs_evidence, uncommitted, plain_problems, trace_lines, retry=False,
+                         cannot_tell=()):
+    """The blocking checkpoints at "reply ends". Returns (blocked, through): `blocked` is True when the reply
+    was blocked (the block is emitted here); `through` is True when a check had already blocked three times for
+    this message, so the reply goes through with the check locked (said in trace_lines). `cannot_tell` names
+    checks whose result is unknown this time: they neither block nor clear a lock. Block counts and locks live
+    in house_lib.blocks. An error is added to trace_lines and nothing is blocked."""
+    through = False
     try:
+        if not _loop_enabled():
+            return False, False
         ctx = {
             "reply": reply_text if have_reply else "",
             "long_words": long_words,
@@ -2245,13 +2273,46 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
         missed = _missed_checkpoints(ctx)
-        if missed:
-            emit({"decision": "block", "reason": _checkpoint_reason(missed)})
-            return True
+        fixes = dict(missed)
+        session_id = _field(_SESSION_ID_RE, payload) or ""
+        mark = _turn_mark(transcript_path) if transcript_path else _blocks.message_mark("", ctx["user_text"])
+        to_block, counts, through_lines = [], {}, []
+        for name, fix in missed:
+            if name not in LOCKED_CHECKS and not retry:  # qa page: once, on the first reply only
+                to_block.append((name, fix))
+        for name in LOCKED_CHECKS:
+            if name in cannot_tell:
+                continue
+            try:
+                action = _blocks.record_stop(ctx["cwd"], session_id, name, mark, name in fixes,
+                                             CHECKPOINT_RULES[name], fixes.get(name, ""))
+            except (OSError, ValueError) as exc:
+                trace_lines.append("house-rules: the %s check could not read or write its block count (%s: %s), "
+                                   "so it did not block this reply and no lock was set or cleared."
+                                   % (name, type(exc).__name__, exc))
+                continue
+            if action == "block":
+                to_block.append((name, fixes[name]))
+                counts[name] = _blocks.block_count(ctx["cwd"], session_id, name, mark)
+            elif action == "through":
+                through = True
+                through_lines.append(
+                    "house-rules: the %s check still fails after %d blocks for this message, so the reply goes "
+                    "through and the check is LOCKED: source edits and commits are refused until it passes. "
+                    "Missing: %s Fix: %s." % (name, _blocks.BLOCK_LIMIT, CHECKPOINT_RULES[name], fixes[name]))
+        trace_lines.extend(through_lines)
+        if to_block:
+            order = {n: i for i, n in enumerate(m[1] for m in CHECKPOINTS)}
+            to_block.sort(key=lambda m: order.get(m[0], 99))
+            out = {"decision": "block", "reason": _checkpoint_reason(to_block, counts)}
+            if through_lines:
+                out["systemMessage"] = " ".join(through_lines)
+            emit(out)
+            return True, through
     except Exception as exc:
         trace_lines.append("house-rules: the checkpoint table hit an error (%s: %s), so this reply was "
                            "not blocked." % (type(exc).__name__, exc))
-    return False
+    return False, through
 
 
 def handover_qa_retry(payload, have_reply, reply_text, trace_lines):

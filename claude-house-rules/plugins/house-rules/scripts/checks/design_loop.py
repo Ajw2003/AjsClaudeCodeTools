@@ -1635,9 +1635,9 @@ def _cw_editor(transcript, text="The page is up."):
 
 
 _cw_cases.append(("editor: writing a page under docs/plans with no editor run gets the reminder",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+                  "hand the text to @house-rules:editor" in _cw_editor(_cw_t_page)))
 _cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
-                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
+                  "hand the text to @house-rules:editor" not in _cw_editor(_cw_t_edited)))
 def _cw_editor_on(transcript, text):
     return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir, stop_hook_active=True,
                                              transcript_path=transcript), env=dict(_loop_env, HOUSE_RULES_EDITOR="on"))[1]
@@ -1646,12 +1646,12 @@ def _cw_editor_on(transcript, text):
 _cw_200 = " ".join(["Words"] * 200) + ". https://claude" + ".ai/artifact/abc"
 # #325: with HOUSE_RULES_EDITOR=on a reply of 160 words or more with no editor run gets the reminder; a short one does not.
 _cw_cases.append(("editor: with HOUSE_RULES_EDITOR=on, a reply of 160 words or more with no editor run gets the reminder; a short one does not",
-                  "no @house-rules:editor helper ran" in _cw_editor_on(_cw_t_none, _cw_200)
-                  and "no @house-rules:editor helper ran" not in _cw_editor_on(_cw_t_none, "Done.")))
+                  "hand the text to @house-rules:editor" in _cw_editor_on(_cw_t_none, _cw_200)
+                  and "hand the text to @house-rules:editor" not in _cw_editor_on(_cw_t_none, "Done.")))
 _cw_cases.append(("editor (#325): a 200-word reply with no page and no editor run gets no editor reminder by default",
-                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, _cw_200)))
+                  "hand the text to @house-rules:editor" not in _cw_editor(_cw_t_none, _cw_200)))
 _cw_cases.append(("editor (#325): a turn that wrote a docs/plans page still owes the editor by default",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+                  "hand the text to @house-rules:editor" in _cw_editor(_cw_t_page)))
 
 # A page written by a shell command never passes the Write hook (found in the real run, #250).
 with open(os.path.join(_cw_pages, "shellpage.html"), "w", encoding="utf-8") as _f:
@@ -1663,7 +1663,7 @@ _cw_t_shell = _hand_transcript("cw-shell", [
                 "input": {"command": "printf '<p>x</p>' > docs/plans/shellpage.html"}}]}})])
 _cw_shell_out = _cw_editor(_cw_t_shell)
 _cw_cases.append(("page: a page written by a shell command is checked at the end of the reply, editor reminder too",
-                  "the page shellpage.html" in _cw_shell_out and "no @house-rules:editor helper ran" in _cw_shell_out))
+                  "shellpage.html" in _cw_shell_out and "hand the text to @house-rules:editor" in _cw_shell_out))
 
 # #284: in a git repository a page counts as written only when git shows it new, edited, or committed
 # since aj's message; a cloned page has a fresh file time but an old commit, so it does not count.
@@ -1728,7 +1728,7 @@ shutil.rmtree(_pm_repo, True)
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)
 
-# --- the checkpoint table (#256): a miss blocks once, then only reports on the retry -----------
+# --- the checkpoint table (#256, #440): a miss blocks up to three times, then the reply goes through and locks -----------
 _ck_cases = []
 _CK_ENV = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_LOOP="on")
 
@@ -1748,12 +1748,26 @@ def _ck_run(transcript, reply, active=False, env=None):
 
 
 def _ck_triple(label, rule, transcript, bad, good, env=None, good_transcript=None):
+    """#440 (choice 6A): a miss blocks three times for the same message, the fourth reply goes through with the
+    check locked and a fifth is never blocked; a compliant reply passes and clears the lock."""
     blocked, reason, _o = _ck_run(transcript, bad, env=env)
-    _ck_cases.append(("%s: a miss blocks once, naming the %s rule" % (label, rule), blocked and ("- %s:" % rule) in reason))
+    _ck_cases.append(("%s: a miss blocks, naming the %s rule (block 1 of 3)" % (label, rule),
+                      blocked and ("- %s (block 1 of 3):" % rule) in reason))
+    blocked, reason, _o = _ck_run(transcript, bad, active=True, env=env)
+    _ck_cases.append(("%s: the same reply on the retry blocks again (block 2 of 3)" % label,
+                      blocked and ("- %s (block 2 of 3):" % rule) in reason))
+    blocked, reason, _o = _ck_run(transcript, bad, active=True, env=env)
+    _ck_cases.append(("%s: and a third time (block 3 of 3)" % label, blocked and ("- %s (block 3 of 3):" % rule) in reason))
     blocked, _r, out = _ck_run(transcript, bad, active=True, env=env)
-    _ck_cases.append(("%s: the same reply on the retry only reports, never blocks" % label, not blocked and out.strip() != ""))
+    _ck_cases.append(("%s: the fourth reply goes through, loudly: the check is LOCKED" % label,
+                      not blocked and "LOCKED" in out and ("the %s check" % rule) in out))
+    blocked, _r, out = _ck_run(transcript, bad, active=True, env=env)
+    _locked = _cc_mod.design_loop._blocks.is_locked(_loop_dir, "verify", rule)
+    _ck_cases.append(("%s: a fifth is never blocked either, and the lock is on record" % label,
+                      not blocked and "LOCKED" in out and _locked))
     blocked, _r, _o = _ck_run(good_transcript or transcript, good, env=env)
-    _ck_cases.append(("%s: a compliant reply passes" % label, not blocked))
+    _ck_cases.append(("%s: a compliant reply passes and clears the lock" % label,
+                      not blocked and not _cc_mod.design_loop._blocks.is_locked(_loop_dir, "verify", rule)))
 
 
 _ck_t_plain = _hand_transcript("ck-plain", _ck_user("what is up"))
@@ -1831,7 +1845,7 @@ _ck_cases.append(("page links (#330): the outside-folder note names the path",
                   "../Sibling/docs/plans/x.html is outside" in _cc_mod.design_loop._check_page(
                       {"reply": "See [x.html](../Sibling/docs/plans/x.html)", "cwd": _pl_cwd, "long_words": 200})))
 # 2 editor
-_ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
+_ck_triple("editor", "editor", _hand_transcript("ck-ed-bad", [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "make the page for ck"}}), _CW_WRITE]), "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
 # 3 evidence
 _ck_triple("evidence", "evidence", _ck_t_plain, "All done, the tests passed.", "All done, the tests passed.",
            good_transcript=_ck_t_read)
@@ -1843,9 +1857,13 @@ _ck_t_w_clean = _wrote_transcript("ck-w-clean", [os.path.join(_ck_repo_clean, "a
 _ck_cenv = lambda root: _project_env(root, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
                                      HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
 _ck_b, _ck_r, _ = _ck_run(_ck_t_w_dirty, "Changed the file.", env=_ck_cenv(_ck_repo_dirty))
-_ck_cases.append(("commit: a turn that left its file uncommitted blocks once, naming the commit rule", _ck_b and "- commit:" in _ck_r))
+_ck_cases.append(("commit: a turn that left its file uncommitted blocks, naming the commit rule (block 1 of 3)",
+                  _ck_b and "- commit (block 1 of 3):" in _ck_r))
+for _n in (2, 3):
+    _ck_b, _ck_r, _ = _ck_run(_ck_t_w_dirty, "Changed the file.", active=True, env=_ck_cenv(_ck_repo_dirty))
+    _ck_cases.append(("commit: the retry blocks again (block %d of 3)" % _n, _ck_b and ("- commit (block %d of 3):" % _n) in _ck_r))
 _ck_b, _, _o = _ck_run(_ck_t_w_dirty, "Changed the file.", active=True, env=_ck_cenv(_ck_repo_dirty))
-_ck_cases.append(("commit: the same reply on the retry only reports", not _ck_b and "uncommitted" in _o))
+_ck_cases.append(("commit: the fourth reply goes through and reports the lock", not _ck_b and "LOCKED" in _o and "uncommitted" in _o))
 _ck_b, _, _ = _ck_run(_ck_t_w_clean, "Changed the file.", env=_ck_cenv(_ck_repo_clean))
 _ck_cases.append(("commit: a committed file passes", not _ck_b))
 # 5 plain summary
