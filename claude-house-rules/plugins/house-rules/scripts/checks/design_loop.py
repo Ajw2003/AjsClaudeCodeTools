@@ -829,6 +829,16 @@ _wt_k = _wt_bash("ls -la 2>&1 | grep x; echo done > /dev/null")[0]
 _wt_l = _wt_bash("python3 -c \"open('docs/x.txt', 'w').write('x')\"")[0]
 _wt_m = _wt_raw(_wt_heredoc)
 _wt_n = _wt_raw("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" app.py")
+def _wt_full(cmd):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt", "cwd": _wt_main,
+         "tool_input": {"command": cmd}}
+    return run_hook("commitgate", json.dumps(p), env=_loop_env)
+
+
+_wt_p = _wt_full('git commit -m "line one\nline two"')
+_wt_q = _wt_full('echo "a && b" > src.py')
+_wt_r = _wt_full('git commit -m "one\ntwo" && sed -i s/a/b/ app.py')
+_wt_s = _wt_full('echo "unclosed > notes.md')
 for _t, _ok in (
         ("a worktree reads the main checkout's stage: Build lets its Edit through", _wt_a == "allow"),
         ("a worktree reads the main checkout's stage: Design refuses its Edit", _wt_d == "deny"),
@@ -841,7 +851,13 @@ for _t, _ok in (
         ("#309: a >> redirect into a .py file and tee go through in Design", _wt_h == "allow" and _wt_j == "allow"),
         ("#309: a script whose target path is a variable goes through, and the report says the file couldn't be named",
          _wt_i[0] == "allow" and "a file it can't name" in _wt_n),
-        ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow")):
+        ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow"),
+        ("a multi-line commit message prints nothing to stderr and names no write target",
+         _wt_p[2] == "" and "report only" not in _wt_p[1]),
+        ("`echo \"a && b\" > src.py` is still read as a write to src.py", "src.py" in _wt_q[1]),
+        ("a sed -i after a quoted multi-line argument is still caught", "app.py" in _wt_r[1] and _wt_r[2] == ""),
+        ("a statement with truly unbalanced quotes counts as unreadable, with no stderr line",
+         "a file it can't name" in _wt_s[1] and _wt_s[2] == "")):
     _loop_cases.append((_t, _ok))
 # -- #265: the stage lives in a committed .claude file and survives a fresh clone ---------------
 _wt_stage("build")

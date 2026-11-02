@@ -9,7 +9,6 @@ adds cp / mv / install / dd of= / truncate for the lock. STDLIB ONLY.
 
 import re
 import shlex
-import sys
 
 _ASSIGN_RE = re.compile(r"""(?:^|(?<=[;&\n]))\s*([A-Za-z_]\w*)=(?:"([^"$`\\\n]*)"|'([^'\n]*)'|([^\s;&|"'$`\\()<>*?]*))[ \t]*(?:&&|;)""")
 
@@ -56,6 +55,41 @@ _SCRIPT_RUNNER_RE = re.compile(r"(?:^|[\s;&|(/])(?:python3?|py|node)(?:\.exe)?(?
 _LITERAL_RE = re.compile(r"^(['\"])(.+)\1$")
 
 
+def _statements(body):
+    """Cut a command into statements at && || ; newline | that sit OUTSIDE quotes (single, double,
+    backslash escapes), so a multi-line quoted message stays one statement."""
+    out, cur, i, n, q = [], [], 0, len(body), None
+    while i < n:
+        c = body[i]
+        if q == "'":
+            if c == "'":
+                q = None
+        elif q == '"':
+            if c == "\\" and i + 1 < n:
+                cur.append(c)
+                i += 1
+                c = body[i]
+            elif c == '"':
+                q = None
+        elif c == "\\" and i + 1 < n:
+            cur.append(c)
+            i += 1
+            c = body[i]
+        elif c in "'\"":
+            q = c
+        elif c in ";\n|" or (c == "&" and body[i + 1:i + 2] == "&"):
+            if c in "&|" and body[i + 1:i + 2] == c:
+                i += 1
+            out.append("".join(cur))
+            cur = []
+            i += 1
+            continue
+        cur.append(c)
+        i += 1
+    out.append("".join(cur))
+    return out
+
+
 def script_write_targets(cmd):
     """(targets, unreadable): file paths a shell command writes through a python/node script
     (open w/a, write_text, writeFileSync), sed -i / perl -pi, tee, or a > / >> redirect, and
@@ -77,12 +111,11 @@ def script_write_targets(cmd):
         targets += [p for _, p in lits]
         if len(_NODE_WRITE_RE.findall(cmd)) > len(lits):
             unreadable = True
-    for stmt in re.split(r"&&|\|\||;|\n|\|", body):
+    for stmt in _statements(body):
         try:
             words = shlex.split(stmt)
         except ValueError:
-            sys.stderr.write("house-rules design-loop lock: could not split a statement (unbalanced quotes) "
-                             "to look for sed -i / tee; skipping that statement.\n")
+            unreadable = True  # unbalanced quotes: the shell would reject it; cannot be read, so not skipped
             continue
         for i, w in enumerate(words):
             if w not in ("sed", "perl", "tee"):
@@ -133,10 +166,11 @@ def copy_targets(cmd):
     cp and install write their last argument; mv, truncate and dd of= name every file they touch."""
     targets, unreadable = [], False
     body = _HEREDOC_RE.sub("", cmd)
-    for stmt in re.split(r"&&|\|\||;|\n|\|", body):
+    for stmt in _statements(body):
         try:
             words = shlex.split(stmt)
         except ValueError:
+            unreadable = True
             continue
         for i, w in enumerate(words):
             name = w.rsplit("/", 1)[-1]

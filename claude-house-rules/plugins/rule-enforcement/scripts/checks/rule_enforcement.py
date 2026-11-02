@@ -713,6 +713,17 @@ for _cmd in ("echo x > docs/notes.md", "echo x > docs/plans/p.page.json", "sed -
              "echo x > %s/content.json" % _lk_scratch_dir, "echo hi | cat", "python3 -m pytest -q 2>&1 | tee /dev/null"):
     _c, _r, _, _, _ = _lk_gate("Bash", {"command": _cmd}, sid=_XS)
     report("PASS" if not _r else "FAIL", f"locked: `{_cmd}` is allowed (docs, docs/plans, a path in no repository, reading, tests)")
+# quote-aware statement splitting (replay finding, #452)
+_c, _r, _, _, _ = _lk_gate("Bash", {"command": 'echo "a && b" > src/app.py'}, sid=_XS)
+report("PASS" if _r else "FAIL", 'locked: `echo "a && b" > src/app.py` is still refused as a write to src/app.py')
+_c, _r, _why, _, _ = _lk_gate("Bash", {"command": 'echo "x\ny" && sed -i s/a/b/ src/app.py'}, sid=_XS)
+report("PASS" if (_r and "src/app.py" in _why) else "FAIL", "locked: a sed -i after a quoted multi-line argument is refused")
+_c, _r, _, _, _ = _lk_gate("Bash", {"command": 'echo "unclosed > docs/notes.md'}, sid=_XS)
+report("PASS" if _r else "FAIL", "locked: a statement with truly unbalanced quotes counts as unreadable and is refused")
+_c, _o, _e = run_hook("lockgate", json.dumps({"hook_event_name": "PreToolUse", "session_id": "nolock", "cwd": _lk_repo,
+                      "tool_name": "Bash", "tool_input": {"command": 'ls && echo "line one\nline two" | cat'}}),
+                      env=env_in(_lk_repo))
+report("PASS" if (_e == "" and not _o.strip()) else "FAIL", "a multi-line quoted argument prints nothing to stderr and is not refused")
 # the target's repository decides, not the payload cwd
 _c, _r, _why, _, _ = _lk_gate("Edit", {"file_path": _LK_SRC}, sid=_XS, cwd=_lk_other_repo)
 report("PASS" if (_r and "evidence" in _why) else "FAIL", "a call whose cwd is another repo, editing the locked repo's file by its path, is refused")
