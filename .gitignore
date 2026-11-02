@@ -15,3 +15,4 @@ claude-house-rules/plugins/house-rules/rules/handover-target.md
 
 # Interpreter cache written by scripts/run.sh - machine-local.
 claude-house-rules/plugins/house-rules/scripts/.python-cache
+claude-house-rules/plugins/rule-enforcement/scripts/.python-cache

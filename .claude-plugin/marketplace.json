@@ -12,6 +12,11 @@
       "description": "Enforces aj's global CLAUDE.md rules as hooks: no hidden background work, no unasked git mutations, no unchecked destructive commands."
     },
     {
+      "name": "rule-enforcement",
+      "source": "./claude-house-rules/plugins/rule-enforcement",
+      "description": "Loads aj's standing house rules into every session and subagent, and reminds on every prompt. Split out of house-rules; depends on house-lib."
+    },
+    {
       "name": "house-lib",
       "source": "./claude-house-rules/plugins/house-lib",
       "description": "Shared stdlib-only library for the house-rules plugins. No hooks of its own."

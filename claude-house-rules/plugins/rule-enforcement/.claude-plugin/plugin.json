@@ -1,0 +1,10 @@
+{
+  "name": "rule-enforcement",
+  "description": "Loads aj's standing house rules into every session and every subagent it spawns, and reminds on every prompt. The rule-loading half of house-rules, split out; install it beside house-rules.",
+  "version": "0.1.0",
+  "author": {
+    "name": "aj",
+    "email": "aydenjwilkins@gmail.com"
+  },
+  "dependencies": ["house-lib"]
+}

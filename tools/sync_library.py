@@ -16,6 +16,7 @@ SOURCE = "claude-house-rules/plugins/house-lib/house_lib"
 # Target plugins: add one line per plugin that vendors the library.
 TARGETS = [
     "claude-house-rules/plugins/house-rules/scripts/house_lib",
+    "claude-house-rules/plugins/rule-enforcement/scripts/house_lib",
 ]
 
 
