@@ -308,7 +308,7 @@ const PAGE = {
         "Same check",
         "Which commands count as one check",
         "you",
-        "Ordinary commands such as git status, a compile or a file listing must never be counted. Your answer to the first choice, \"What counts as the same check?\", decides how a check is recognised.",
+        "Ordinary commands such as git status, a compile or a file listing must never be counted. In PlunderSpell, helper scripts such as eval.sh are run constantly, so they must not be counted either. Your answer to the first choice under Choices, \"What counts as the same check?\", decides how the hook recognises a check.",
         "Your answer under Choices."
       ],
       [
@@ -356,24 +356,24 @@ const PAGE = {
       [
         [
           "A",
-          "The same script file inside the project, whatever its arguments",
+          "A project script whose file name contains \"check\", whatever its arguments, plus any extra scripts a project lists in docs/rerun-limit.json",
           1,
-          "Catches `python tools/coop_check.py --seed 2` and `--seed 3` as one check. A compile, git or a bare test runner never names a project script, so it never counts."
+          "In PlunderSpell this counts coop_guard_check.sh, coop_swarm_check.sh, coop_carry_check.sh and guard_awareness_check.sh by default, and leaves alone eval.sh, recompile.sh and run_tests.sh, which agents run all the time. coop_drop_latency.sh and perf_capture.sh would need listing in docs/rerun-limit.json."
         ],
         [
           "B",
-          "The exact same command text, with spacing tidied",
+          "Any script file inside the project, whatever its arguments",
           0,
-          "Simplest, but changing one argument makes it a new check, which an agent can do without meaning to."
+          "Counts every co-op check with no setup, but also counts eval.sh, which the PlunderSpell README tells agents to run before every recompile, so ordinary work would hit the limit."
         ],
         [
           "C",
-          "Only commands matching patterns each project lists in a file",
+          "The exact same command text, with spacing tidied",
           0,
-          "Most precise, but every project needs a file first, and a project without one gets no protection."
+          "Fails the PlunderSpell case: each co-op check takes a label such as \"before\" or \"after\", so changing that one word makes the hook see a new check."
         ]
       ],
-      "I don't know how the PlunderSpell co-op check is started. If it is started through a Unity tool call rather than a shell command, the guard never sees it and this hook can't limit it. Please say how it is started, if you know."
+      "Checked in PlunderSpell (commit b2195d5): every co-op check is a shell script under Tools/Unity, started as `bash Tools/Unity/coop_guard_check.sh <label>`, so the guard sees each one as a shell command. Each script calls coop_eval.sh itself, inside the same command, so those inner calls are not counted separately. I could not tell which script PlunderSpell issue #569 used, because that issue is not in the repo's files."
     ],
     [
       "reset",
