@@ -1,11 +1,11 @@
 {
   "title": "Plugin Split Progress",
-  "eyebrow": "Progress · the plugin split (#437): steps 1 and 2 built, step 3 parts A, B and C built",
+  "eyebrow": "Progress · the plugin split (#437): steps 1 to 3 built, draft pull request #452 open",
   "replyPrefix": "Plugin split progress",
   "reply": "",
   "approval": "Progress noted",
   "short": {
-    "lead": "Steps 1 and 2 of the plugin split are built, and so are all three parts of step 3. I checked each result by running it myself. One bug from part A is being fixed before the pull request opens. Nothing here needs a decision from you.",
+    "lead": "Steps 1, 2 and 3 of the plugin split are built, and I checked each result by running it myself. The draft pull request, #452, is open. It stays a draft until six checks pass. Half of the first is done: every suite passes here, but CI has not run yet.",
     "hint": "Tap a step for its evidence.",
     "key": [
       [
@@ -55,7 +55,7 @@
         "Fixed",
         "Three ways around the lock, closed",
         "done",
-        "The shell command sed -i (an in-place edit) on the locked file is now refused, and the file stays unchanged. A reply that wrote nothing no longer clears the lock. Committing the locked file still clears the lock. Checked: house-rules 959 checks pass, rule-enforcement 94 pass.",
+        "The shell command sed -i (an in-place edit) on the locked file is now refused, and the file stays unchanged. A reply that wrote nothing no longer clears the lock. A command run from another folder now meets the lock too. Committing the locked file still clears the lock, as intended. Checked: house-rules 959 checks pass, rule-enforcement 94 pass.",
         "Nothing from you."
       ],
       [
@@ -67,20 +67,20 @@
         "Nothing from you."
       ],
       [
-        "stop",
-        "Fixing",
-        "Two rule paths that point at the wrong plugin",
-        "",
-        "The rules now live in rule-enforcement, but they name the page builder (make_page.py) and the handover output style as if they were there too. Both live in house-rules. House-rules will give their real paths at session start, and a new test fails if the rules ever name a file that is not there.",
+        "check",
+        "Fixed",
+        "Two rule paths that pointed at the wrong plugin",
+        "done",
+        "House-rules now names the real paths of the page builder (make_page.py) and the handover output style at the start of every session. A live session printed the page builder's path, and running that file worked. A new test fails if the rules ever name a file their plugin does not hold.",
         "Nothing from you."
       ],
       [
-        "next",
-        "Next",
-        "The draft pull request",
-        "",
-        "After I check the fix, I open the pull request as a draft, which cannot be merged. Then I work through the six-item checklist in docs/4-systems/plugin-split.md.",
-        "Nothing from you."
+        "hand",
+        "Gate",
+        "Draft pull request #452 and its six checks",
+        "you",
+        "Done: every suite passes locally (house-rules 937 checks, rule-enforcement 96, tools 55, the library copy check and the version-bump check). Still to run: (1) the same suites in CI on the pull request. (2) A replay of every hook through main's 2.74.1 and through this branch, with every difference traced to something you approved. (3) Real sessions showing no tool is refused that 2.74.1 allows. (4) A clean install from GitHub. (5) A tested one-step rollback. (6) Your QA pass.",
+        "Say whether I should watch #452 for CI results and review comments."
       ]
     ]
   },
@@ -98,12 +98,12 @@
   ],
   "choices": [],
   "wrapup": {
-    "summary": "Steps 1 and 2 and all of step 3 are built and checked; one path bug is being fixed.",
+    "summary": "Steps 1 to 3 are built and checked; draft pull request #452 waits on CI and five more checks.",
     "changing": "house-rules 2.75.0 and the new house-lib and rule-enforcement plugins, on the branch AjsAgent/house-rules-plugin-split-a9uusz.",
-    "blocking": "Nothing.",
-    "next": "I check the fix myself, then open the pull request as a draft.",
+    "blocking": "Nothing yet. Your QA comes last, after the other checks.",
+    "next": "I run the remaining checks on #452, starting with the replay against 2.74.1.",
     "todo": [
-      "Nothing to do yet. The pull request opens after step 3, as you asked."
+      "Say whether I should watch #452 for CI results and review comments."
     ]
   }
 }
