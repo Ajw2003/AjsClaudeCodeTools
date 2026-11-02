@@ -325,7 +325,7 @@ const PAGE = {
         "Fixed",
         "Three ways around the lock, closed",
         "done",
-        "A sed -i on the locked file was refused and the file stayed unchanged, a turn that wrote nothing no longer cleared the lock, and committing the file cleared it. Checked: house-rules 959 checks pass, rule-enforcement 94 pass.",
+        "The shell command sed -i (an in-place edit) on the locked file is now refused, and the file stays unchanged. A reply that wrote nothing no longer clears the lock. Committing the file clears it. Checked: house-rules 959 checks pass, rule-enforcement 94 pass.",
         "Nothing from you."
       ],
       [
@@ -333,7 +333,7 @@ const PAGE = {
         "Step 3C",
         "Part C of step 3: the off switches",
         "",
-        "By your answers (\"Off switches answered 1B 2*\"), 18 rule switches, the off value of the permission timer and the long-reply editor switch are removed, and their checks stay on. The editor pass stays required for pages. The saved record of each helper's work keeps its switch for now. Tests that used the switches set up each part's state instead, and a new check fails if a removed switch comes back. After part C, the pull request opens and has to pass the six-item checklist in docs/4-systems/plugin-split.md.",
+        "Following your answers (1B: remove the long-reply editor pass; your own answer to 2: keep the helper record as it is), I am removing 18 rule switches, the off value of the permission timer, and the long-reply editor switch. The checks the 18 switches and the timer controlled stay on. The editor pass stays required for pages. The saved record of each helper's work keeps its switch for now. Tests that used the switches now set up the state they need directly, and a new check fails if a removed switch comes back. After part C, the pull request opens and has to pass the six-item checklist in docs/4-systems/plugin-split.md.",
         "Nothing from you."
       ]
     ]
