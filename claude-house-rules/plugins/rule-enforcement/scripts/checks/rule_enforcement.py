@@ -272,19 +272,13 @@ for form, payload_prompt in (("long", "run the build script"), ("short", "what d
         report("FAIL", f"scope's {form} form stays within +10% of its baseline size")
         print(f"          {actual} chars > {cap} (baseline {base}) or output unparseable")
 
-# --- HOUSE_RULES_VOICE=off removes the voice and nothing else -------------------------------
-# The section is cut by locating the next "## " heading. If that boundary is wrong the toggle
-# eats the rule after it, silently, and nobody notices until a rule stops being enforced.
-# Since #245 the voice lives in rules/clear-writing.md, loaded by showrule.
+# --- the voice is always loaded, and the rules around it are intact -------------------------------
+# Nothing turns the voice off any more: it is a preference, but no rule is optional. Since #245 the voice
+# lives in rules/clear-writing.md, loaded by showrule.
 code, on_out, err = run_hook("showrule", "")
-env_off = dict(os.environ)
-env_off["HOUSE_RULES_VOICE"] = "off"
-code_off, off_out, err_off = run_hook("showrule", "", env=env_off)
 voice_problems = []
 if "### The voice" not in on_out:
-    voice_problems.append("the voice is missing by default, but it ships on")
-if "### The voice" in off_out:
-    voice_problems.append("HOUSE_RULES_VOICE=off did not remove the voice section")
+    voice_problems.append("the voice is missing from what showrule loads")
 for kept in [
     "Write it so nothing is left to guess",
     "Explicit context",
@@ -292,17 +286,48 @@ for kept in [
     "Named references",
     "Show, don't tell; the user designs",
 ]:
-    if kept not in off_out:
-        voice_problems.append(f"turning the voice off also removed {kept!r}")
-if code_off != 0:
-    voice_problems.append(f"exited {code_off} with the voice off")
+    if kept not in on_out:
+        voice_problems.append(f"the rules lost {kept!r}")
+if code != 0:
+    voice_problems.append(f"showrule exited {code}")
 if not voice_problems:
-    report("PASS", "HOUSE_RULES_VOICE=off removes the voice and no rule around it")
-    print(f"          on: {len(on_out)} chars, off: {len(off_out)} chars; every neighbouring rule survives")
+    report("PASS", "showrule loads the voice and every rule around it")
+    print(f"          {len(on_out)} chars loaded")
 else:
-    report("FAIL", "HOUSE_RULES_VOICE=off removes the voice and no rule around it")
+    report("FAIL", "showrule loads the voice and every rule around it")
     for v in voice_problems:
         print(f"          {v}")
+
+# --- no switch turns a check off (#440 part C) ---------------------------------------------------
+# The removed switches are written in pieces so this file does not contain them. A name counts only when
+# it ends there: the path, URL and number switches that start with the same letters are kept.
+import re as _sw_re
+_SW_REMOVED = ("AGENTS", "AGENT_BRANCH", "ATTRIBUTION", "AUTOSAVE", "AUTO_UPDATE", "CLEAR_WRITING", "COMMIT_CHECK",
+               "DELEGATION", "EDITOR", "HANDOVER", "HARVEST", "ISSUES", "LOOP", "PARITY", "PLAIN_SUMMARY",
+               "VERSION_CHECK", "VISUAL_CHECK", "VOICE", "WORKTRACKING")
+_SW_RE = _sw_re.compile("HOUSE_" + "RULES_(?:" + "|".join(_SW_REMOVED) + ")(?![A-Za-z0-9_])|"
+                        "HOUSE_" + "RULES_PROMPT_TIMEOUT=.?off", _sw_re.IGNORECASE)
+_sw_hits = []
+for _sw_dir, _sw_dirs, _sw_files in os.walk(PLUGIN):
+    _sw_dirs[:] = [d for d in _sw_dirs if d != "__pycache__"]
+    for _sw_f in _sw_files:
+        if _sw_f.endswith(".pyc"):
+            continue
+        _sw_path = os.path.join(_sw_dir, _sw_f)
+        try:
+            _sw_text = open(_sw_path, encoding="utf-8").read()
+        except (OSError, UnicodeDecodeError) as _sw_exc:
+            _sw_hits.append("%s: could not be read (%s), so it was not checked" % (_sw_path, _sw_exc))
+            continue
+        for _sw_m in _SW_RE.finditer(_sw_text):
+            _sw_hits.append("%s: %s" % (os.path.relpath(_sw_path, PLUGIN), _sw_m.group(0)))
+if not _sw_hits:
+    report("PASS", "no removed off switch is named anywhere in this plugin's code or rules")
+    print("          %d names searched in every file under the plugin folder" % (len(_SW_REMOVED) + 1))
+else:
+    report("FAIL", "no removed off switch is named anywhere in this plugin's code or rules")
+    for _h in _sw_hits[:20]:
+        print(f"          {_h}")
 
 # --- SessionStart loads the newest installed rules after an update (issue #252) -----------
 # An older folder runs SessionStart; installed_plugins.json names a newer folder. inject and
