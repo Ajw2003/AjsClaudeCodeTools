@@ -434,7 +434,153 @@ def _docs_status(subject, elsewhere, root):
     return core.DOCS_STATUS_HOOKS[0](subject, elsewhere, root)
 
 
+RERUN_LIMIT = 2
+RERUN_STATE_FILE = "house-rules-reruns.json"
+RERUN_EXTS = (".sh", ".bash", ".py", ".ps1", ".js", ".mjs", ".ts", ".rb", ".bat", ".cmd")
+RERUN_GIT_BUDGET = 1.8  # seconds, all git calls of one check together (spec: under 2)
+_RERUN_NOTE = []  # one-line "could not check" notes from this call, added to the guard's output
+
+RERUN_DENY = (
+    "`%s` has run twice since the last commit that changed code. Stop: read the code for the "
+    "cause and report what failed, without editing the check. A new commit that changes code "
+    "allows two more runs. HOUSE_RULES_RERUNS=off turns this check off."
+)
+
+
+def _rerun_enabled():
+    return os.environ.get("HOUSE_RULES_RERUNS", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _rerun_command(payload, subject):
+    try:
+        cmd = json.loads(payload)["tool_input"]["command"]
+        if isinstance(cmd, str):
+            return cmd
+    except (ValueError, KeyError, TypeError):
+        pass
+    return _decoded_command(subject)
+
+
+def _rerun_candidates(cmd, where):
+    """Full paths of the existing script-extension words of the command, in order."""
+    import shlex
+    found = []
+    for stmt in re.split(r"&&|\|\||;|\||\n", cmd):
+        try:
+            words = shlex.split(stmt)
+        except ValueError:
+            words = stmt.split()
+        for w in words:
+            if w.lower().endswith(RERUN_EXTS):
+                full = os.path.realpath(w if os.path.isabs(w) else os.path.join(where, w))
+                if os.path.isfile(full):
+                    found.append(full)
+    return found
+
+
+def _rerun_script(candidates, top):
+    """Repo-relative path (forward slashes) of the first candidate inside the top level, or None."""
+    top_real = os.path.realpath(top)
+    for full in candidates:
+        try:
+            if os.path.commonpath([full, top_real]) != top_real:
+                continue
+        except ValueError:
+            continue
+        return os.path.relpath(full, top_real).replace(os.sep, "/")
+    return None
+
+
+def _rerun_check(payload, subject):
+    """A deny reason when the script has already run twice since a code commit; else None (and counts)."""
+    if not _rerun_enabled():
+        return None
+    try:
+        where, _unclear = _command_dir(payload)
+        cmd = _rerun_command(payload, subject)
+        candidates = _rerun_candidates(cmd, where)
+        if not candidates:  # names no existing script file: nothing to count, git is not run
+            return None
+        deadline = time.time() + RERUN_GIT_BUDGET
+
+        def git(args):
+            left = deadline - time.time()
+            if left <= 0:
+                raise RuntimeError("git calls used the 2-second budget")
+            return _ag(where, args, timeout=left)[1].strip()
+
+        top = git(["rev-parse", "--show-toplevel"])
+        script = _rerun_script(candidates, top)
+        if not script:
+            return None
+        data = json.loads(payload)
+        sid = str(data.get("session_id") or "")
+        agent = str(data.get("agent_id") or "main")
+        head = git(["rev-parse", "HEAD"])
+        override = os.environ.get("HOUSE_RULES_RERUNS_STATE", "").strip()
+        if override:
+            path = override
+        else:
+            cd = _common_git_dir(top)
+            if not cd:
+                raise RuntimeError("no git directory to keep the state in")
+            path = os.path.join(cd, RERUN_STATE_FILE)
+        recs = {}
+        if os.path.isfile(path):
+            recs = json.loads(_read_text(path)).get("records")
+            if not isinstance(recs, dict):
+                raise ValueError("state file %s is not the expected shape" % path)
+        key = "%s|%s|%s" % (sid, agent, script)
+        rec = recs.get(key)
+        count = 0
+        if isinstance(rec, dict):
+            count = int(rec.get("count", 0))
+            old = rec.get("head")
+            if old != head:
+                try:
+                    changed = git(["diff", "--name-only", "%s..%s" % (old, head)]).splitlines()
+                    if any(c.strip() and c.strip() != script for c in changed):
+                        count = 0
+                except RuntimeError:
+                    count = 0
+        if count >= RERUN_LIMIT:
+            return RERUN_DENY % script
+        recs[key] = {"script": script, "head": head, "count": count + 1}
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"records": recs}, f)
+        os.replace(tmp, path)
+    except Exception as exc:  # fail open and loud: noted in the guard's output
+        _RERUN_NOTE.append("house-rules: the rerun count could not be checked (%s: %s); the command was allowed."
+                           % (type(exc).__name__, str(exc)[:120]))
+    return None
+
+
 def event_guard():
+    """The guard, with any rerun-check note folded into the one JSON object it emits."""
+    import contextlib
+    import io
+    del _RERUN_NOTE[:]
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = _event_guard_main()
+    out = buf.getvalue()
+    if _RERUN_NOTE:
+        note = " ".join(_RERUN_NOTE)
+        try:
+            obj = json.loads(out) if out.strip() else {}
+        except ValueError:
+            obj = None
+        if isinstance(obj, dict):
+            obj["systemMessage"] = (obj["systemMessage"] + " " if obj.get("systemMessage") else "") + note
+            out = json.dumps(obj, separators=(",", ":"))
+        else:
+            sys.stderr.write(note + "\n")
+    sys.stdout.write(out)
+    return rc
+
+
+def _event_guard_main():
     try:
         payload = read_payload()
     except Exception:
@@ -461,6 +607,12 @@ def event_guard():
     if issue_hit and issue_hit[0] == "deny":
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": issue_hit[1]}})
+        return 0
+
+    rerun_deny = _rerun_check(payload, subject)
+    if rerun_deny:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": rerun_deny}})
         return 0
 
     allow_ctx = None  # #363: an allowed close carries its follow-up instruction
