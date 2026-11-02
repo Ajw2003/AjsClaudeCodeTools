@@ -5,7 +5,7 @@
   "reply": "",
   "approval": "Progress noted",
   "short": {
-    "lead": "Steps 1, 2 and 3 of the plugin split are built, and I checked each result by running it myself. The draft pull request, #452, is open. It stays a draft until six checks pass. Half of the first is done: every suite passes here, but CI has not run yet.",
+    "lead": "Steps 1, 2 and 3 of the plugin split are built, and draft pull request #452 is open. Three of its six checks have run. Check 1: every test suite passes here and in CI. Check 2: the replay against main found one bug. Check 3: the same session run on both versions was refused nothing. A builder helper is fixing the bug now.",
     "hint": "Tap a step for its evidence.",
     "key": [
       [
@@ -79,16 +79,24 @@
         "CI",
         "The first CI run on #452 failed, and is fixed",
         "done",
-        "One test expected the end-of-reply hook to stay silent. In CI it printed a notice. The test read the design-loop file in this repo, and the label read through gh (the GitHub command-line tool) failed because GitHub Actions has no gh login. I reproduced it here with a fake gh that fails the same way. The test now runs in an empty folder, and all 937 checks pass with the fake failing gh and with the real gh (commit 8e78ff7). CI is running again on that fix.",
+        "One test expected the end-of-reply hook to stay silent. In CI it printed a notice. The test read the design-loop file in this repo, and the label read through gh (the GitHub command-line tool) failed because GitHub Actions has no gh login. I reproduced it here with a fake gh that fails the same way. The test now runs in an empty folder, and all 937 checks pass with the fake failing gh and with the real gh (commit 8e78ff7). CI is running again on that fix. The rerun passed: the verify job succeeded on the fix commit and on the current head.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Bug",
+        "The replay found one bug, which is also a way around the lock",
+        "",
+        "The tool that looks for file writes split shell commands at line breaks and at && even inside quotes. A commit message containing a line break was cut in half, a warning was printed, and both halves were skipped. While a lock is active, a sed -i (an in-place edit) in a skipped half would go unchecked. The fix makes the split respect quotes. A command it still cannot split is treated as unreadable, and a lock refuses unreadable commands. Tests cover each case. After the fix, the replay must show zero unexplained differences. The full replay report is in docs/plans/2026-11-02-plugin-split-replay.md.",
         "Nothing from you."
       ],
       [
         "hand",
         "Gate",
         "Draft pull request #452 and its six checks",
-        "you",
-        "Done: every suite passes locally (house-rules 937 checks, rule-enforcement 96, tools 55, the library copy check and the version-bump check). Running now: checks (2) and (3), handled by a builder. If it finds a difference it cannot trace to a change you approved, it reports that to you and does not fix it. Check (2) is a replay of every hook through main's 2.74.1 and through this branch, with every difference traced to something you approved. Check (3) is real sessions showing no tool is refused that 2.74.1 allows. Still to run: (1) the same suites in CI on the pull request, (4) a clean install from GitHub, (5) a tested one-step rollback, and (6) your QA pass.",
-        "Say whether I should watch #452 for CI results and review comments."
+        "",
+        "Check 1, every suite: passes here and in CI. Check 2, the replay: 64 recorded hook inputs (the data Claude Code hands each hook) went through both versions; 49 gave identical output, and every difference but one traces to a change you approved. The one exception is the bug above. Check 3, real sessions: the same session ran on main's version and on the new plugins, and neither refused anything. Still to run: (4) a clean install from GitHub, (5) a tested one-step rollback, and (6) your QA pass.",
+        "Nothing from you until the QA page."
       ]
     ]
   },
@@ -106,12 +114,12 @@
   ],
   "choices": [],
   "wrapup": {
-    "summary": "Steps 1 to 3 are built and checked; draft pull request #452 waits on CI and five more checks.",
+    "summary": "Steps 1 to 3 are built; three of the six checks on #452 have run, and the one bug they found is being fixed.",
     "changing": "house-rules 2.75.0 and the new house-lib and rule-enforcement plugins, on the branch AjsAgent/house-rules-plugin-split-a9uusz.",
     "blocking": "Nothing yet. Your QA comes last, after the other checks.",
-    "next": "I check the second CI run and the builder's replay report myself.",
+    "next": "I check the fix myself and rerun the replay, then do the GitHub install and rollback checks.",
     "todo": [
-      "Say whether I should watch #452 for CI results and review comments."
+      "Nothing to do yet. I am watching #452, and your QA page comes after the last checks."
     ]
   }
 }
