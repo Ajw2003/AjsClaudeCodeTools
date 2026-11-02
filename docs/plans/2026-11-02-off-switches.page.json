@@ -1,0 +1,37 @@
+{
+  "title": "Off Switch Removal",
+  "eyebrow": "Part C of step 3 of the plugin split (#440) · two switches that are off by default",
+  "replyPrefix": "Off switch answers",
+  "reply": "",
+  "approval": "Off switches answered",
+  "short": {
+    "lead": "Part C removes the 21 environment switches whose names start with HOUSE_RULES_ and turn a check or rule off. For 19 of them the check is already on by default, so removing the switch keeps today's behaviour and only takes away the way to turn it off. Two are off by default, so removing them means choosing whether the check always runs or is removed. The permission timer (HOUSE_RULES_PROMPT_TIMEOUT) keeps its number of minutes and only loses its \"off\" value. The version check and self-updater stay on until step 13 (#450) replaces them with marketplace updates.",
+    "hint": "Tap a row for what the switch does today.",
+    "key": [["On by default, stays on", "done"], ["Off by default, needs your call", "you"]],
+    "items": [
+      ["check", "19 switches", "Checks that are on by default stay on, with no way to turn them off", "done", "The 19 are 18 switches, AGENTS, AGENT_BRANCH, ATTRIBUTION, AUTOSAVE, AUTO_UPDATE, CLEAR_WRITING, COMMIT_CHECK, DELEGATION, HANDOVER, HARVEST, ISSUES, LOOP, PARITY, PLAIN_SUMMARY, VERSION_CHECK, VISUAL_CHECK, VOICE and WORKTRACKING, plus the off value of PROMPT_TIMEOUT.", "Nothing from you."],
+      ["file", "Editor", "HOUSE_RULES_EDITOR: the editor pass on long replies", "you", "Off since the issue \"Ask for the editor helper only on pages unless HOUSE_RULES_EDITOR=on\" (#325). When on, a reply of 160 words or more must go past the editor helper before it is sent. Pages always need the editor pass, with or without this switch.", "Choice 1."],
+      ["list", "Ledger", "HOUSE_RULES_SUBAGENT_LEDGER: a saved record of each helper's work", "you", "Off by default. When on, every time a helper finishes, its transcript is written as a file into docs/sessions/. The audit summary that reaches you after each helper runs either way.", "Choice 2."]
+    ]
+  },
+  "changes": [
+    ["chg", "Tests that use the switches", "The test files name these switches 139 times, in 8 of the 9 test files, to set one off so one part does not interfere with another.", ["Before: a test turns a part off with a switch.", "After: a test sets up that part's state so the part has nothing to do. No switch exists to turn a check off."], "This keeps the tests as strict as before without leaving a way around a rule."]
+  ],
+  "choices": [
+    ["editor", "Choice 1: what happens to the editor pass on long replies?", [
+      ["A", "It always runs", 1, "Every reply of 160 words or more goes past the editor helper first. A reply that long already needs a page, so this runs rarely, and it fits the Accessible AI plugin, whose job is making each reply easier to read."],
+      ["B", "It is removed", 0, "The editor pass stays required for pages only."]
+    ], "Today it is off, so long replies skip the editor."],
+    ["ledger", "Choice 2: what happens to the saved record of each helper's work?", [
+      ["A", "It is removed for now", 1, "Transcripts can hold secrets, and the check that removes secrets (planned for Safe work, step 4, #441) does not exist yet. The audit summary after each helper still reaches you. The No hiding plugin (step 9, #446) can bring the record back once secrets are removed first."],
+      ["B", "It always runs", 0, "Every helper's transcript is saved into docs/sessions/ and committed, about one file per helper run."]
+    ], "In this session, helpers finished 14 times (13 started, one resumed), so option B would have written 14 files."]
+  ],
+  "wrapup": {
+    "summary": "19 switches become always on; two that are off by default need your call.",
+    "changing": "Nothing yet. This page is the only new file.",
+    "blocking": "Your answers to the two choices.",
+    "next": "I hand part C to a builder: remove the switches, rework the tests that used them, and run every suite.",
+    "todo": ["Pick an answer for each choice.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}
