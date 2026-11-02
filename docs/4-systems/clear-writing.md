@@ -12,15 +12,14 @@ exact-input and ask-when-unclear lines, and the plain-docs writing limits.
 
 | Piece | Where | What it does |
 |---|---|---|
-| Rule | `showrule` (SessionStart), `rules/clear-writing.md` | Loads after Show, don't tell, in the same slot. The voice section is last, so `HOUSE_RULES_VOICE=off` cuts only it. |
+| Rule | `showrule` (SessionStart), `rules/clear-writing.md` | Loads after Show, don't tell, in the same slot. The voice section is last, and always loads. |
 | Shared checker | `scripts/clarity.py` | Vague claims with no reason, bare references, repetition, jargon, long sentences, and the not-checked disclosure. One module for the hook and `plain_docs_check.py`; `python clarity.py [--page] < file` runs it by hand. |
 | Replies | `handover` (Stop), `_writing_note` | Chat replies are no longer checked for writing (since #324); the old reply note and the bare-reference report line are gone. Only the not-checked and long-reply notes still go through `_writing_note`. |
 | Pages | `artifact` (PostToolUse), `_page_writing_note` | A write to `docs/plans/*.html` runs the checker on what a reader sees: the visible text and a template page's PAGE strings. The report-only kinds are skipped here too. |
 | Issues | `guard` (`gh issue create`), `guardgithub` (`issue_write` create) | Refused without "Depends on", "Depended on by" and "Done when". |
-| Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page or a long reply. The end-of-reply check reminds me when a page was written and no editor ran. A reply of 160 words or more counts too only with `HOUSE_RULES_EDITOR=on` (default off, #325). |
+| Editor helper | `agents/editor.md` (Sonnet), `_editor_owed` | Rewrites a page. The end-of-reply check reminds me when a page was written and no editor ran. A long chat reply does not owe it (#325; the switch that brought it back was removed in #440). |
 
-`HOUSE_RULES_CLEAR_WRITING=off` turns off the page check, the issue check and the
-editor reminder. The not-checked disclosure stays on: it belongs to Evidence before claims.
+The not-checked disclosure stays on: it belongs to Evidence before claims.
 
 ## Stop the end-of-reply loop (#322)
 
@@ -41,8 +40,8 @@ and the editor checkpoint added a whole subagent run for one 386-word chat reply
 2. **The writing check leaves chat replies alone.** `_writing_findings` and `_writing_report_line` stop
    running on replies. The page check (`_page_writing_note`) and the issue check stay on, and the
    not-checked disclosure stays, because it belongs to Evidence before claims.
-3. **The editor checkpoint is pages-only by default.** `_editor_owed` asks for the editor only when a
-   page under `docs/plans/` was written. `HOUSE_RULES_EDITOR=on` brings back the 160-word reply trigger.
+3. **The editor checkpoint is pages-only.** `_editor_owed` asks for the editor only when a
+   page under `docs/plans/` was written. There is no longer a way to bring back the 160-word reply trigger.
 4. **The page checkpoint is said once (#326).** The #310 "still owed" note is delivered once per message of
    aj's, not after every later reply to it. The page-blocks count still records that a page is owed.
 

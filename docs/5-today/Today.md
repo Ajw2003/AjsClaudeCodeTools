@@ -16,7 +16,7 @@ covers how everything you read is written: proper sentences, a human tone, said 
 numbers counted rather than guessed, and references named. A checker reads every reply, page and issue for
 vague numbers, bare "#229"s, repetition, jargon and overlong sentences; an issue without "Depends on",
 "Depended on by" and "Done when" is refused; and a new editor helper rewrites pages and long replies. It
-replaced the plain-language rule and folded in three other lines. `HOUSE_RULES_CLEAR_WRITING=off` turns it off.
+replaced the plain-language rule and folded in three other lines.
 
 The new item visual, plugin 2.64.1 (issue #240). On a handover page, a New item now opens to three boxes:
 what sets it off, what it does, what you get. The changes page has one for each of its 13 new items. A pasted
@@ -34,7 +34,7 @@ Done, and only your own message moves it on: "Design approved: <feature>", "Buil
 "QA passed: <feature>" or "QA failed: <feature>". Code edits are refused outside Build, for helpers too; "skip
 design" lets one small change through. An approval only counts once the decisions log has a new entry, and a
 build plan needs its GitHub issues first. A reply over 200 words with no page gets a reminder, and every page is
-built from `templates/handover-page.html`. `HOUSE_RULES_LOOP=off` turns it all off. It reaches your sessions once
+built from `templates/handover-page.html`. It reaches your sessions once
 this branch is merged and the plugin updates. Proof: a real run in a scratch repo (`docs/plans/loop-qa.html`).
 
 

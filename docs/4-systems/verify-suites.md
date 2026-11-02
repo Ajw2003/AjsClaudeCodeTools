@@ -266,7 +266,7 @@ it with a real run.
 | 165-166 | 1878-1887 | delegation |  | 0.1 | delegate reminder after plan mode, and its hooks.json wiring | delegate reminds Claude to hand the plan to the bu |
 | 167 | 1910 | core |  | 0.0 | rules text: disclosure rule | the disclosure rule states attribution, continuati |
 | 168 | 1928 | writing |  | 0.0 | rules text: clear-writing rule carries the voice and hard constraint | the clear-writing rule carries the voice and its h |
-| 169 | 1959 | core |  | 0.1 | HOUSE_RULES_VOICE=off removes the voice from inject | HOUSE_RULES_VOICE=off removes the voice and no rul |
+| 169 | 1959 | core |  | 0.1 | the voice is loaded with the rules around it | showrule loads the voice and every rule around it |
 | 170-171 | 1983-1998 | safe git |  | 0.0 | rules text: commit rule, and every rule the guard cites is a real heading | the commit rule draws the line at branch ownership |
 | 172-195 | 2083-2292 | docs |  | 1.6 | harvest: long design comments flagged for docs/4-systems, thresholds, Edit handling, bad payloads | a design essay in a .cs file is flagged for portin |
 | 196 | 2315 | safe git |  | 0.1 | guard traces its allow decision | guard traces its decision on the allow path, the p |
@@ -374,7 +374,7 @@ it with a real run.
 | 837-839 | 9924 | design loop | writing | 0.2 | checkpoint row: plain summary | checkpoints: plain summary: a miss blocks once, na |
 | 840-844 | 9924 | design loop |  | 0.4 | checkpoint table: page rule on proposals and short answers; aj's no-page escape | checkpoints: page (#309): a short proposal with th |
 | 845-846 | 9924 | design loop | writing | 0.2 | checkpoint table: no-page escape for editor; bare reference gets no report line | checkpoints: editor: the same escape lets a long r |
-| 847-861 | 9924 | design loop |  | 1.1 | checkpoint table: QA page rows, retry never blocks, HOUSE_RULES_LOOP=off | checkpoints: page: "no page" quoted inside a helpe |
+| 847-861 | 9924 | design loop |  | 1.1 | checkpoint table: QA page rows, retry never blocks | checkpoints: page: "no page" quoted inside a helpe |
 | 862-880 | 10264 | tools/make_page |  | 17.4 | make_page.py: style file, build, QA mode, approval field, picture rules | make_page: build with no style file exits 3 and na |
 | 881 | 10264 | tools/make_page | design loop | 0.9 | make_page.py: the copied approval text matches the design-loop gate (loads design_loop) | make_page: the copied text, with choices (approval |
 | 882-891 | 10264 | tools/make_page |  | 9.2 | make_page.py: clipped-card check, outside-folder line, summary pages | make_page: a 40-character unbroken word in card te |

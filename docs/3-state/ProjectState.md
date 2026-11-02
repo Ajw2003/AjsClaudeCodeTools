@@ -104,7 +104,7 @@ prompts reach the timer (#143), and the overnight-style run (#147).
 
 2.51.0 (2026-10-01, #133) credits "aj's agent" instead of Claude: `tools/install.py` writes the `attribution` setting
 (a plugin cannot carry it: Claude Code accepts only `agent` and `subagentStatusLine` from a plugin's settings.json), and
-`guard` refuses text crediting Claude (kill switch `HOUSE_RULES_ATTRIBUTION=off`).
+`guard` refuses text crediting Claude.
 
 2.50.0 (2026-10-01, #110-#112) retires the executor for three tiers (`scout`, `builder`, `reviewer`),
 adds the `agentcap` spawn cap (two running, 45-minute expiry, no spawns from subagents), quiets the
@@ -191,7 +191,7 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-17, branch `AjsAgent/issue-315-attribution-routes`, plugin 2.68.3: #315 (attribution guard gaps, #316 to #319) is built and waiting for aj's QA.
 
-2026-10-18, branch `AjsAgent/nifty-newton-x2jaaj`, plugin 2.68.4: #322 (the end-of-reply checks looped on retries) is built and waiting for aj's QA. The Stop retry now only reports to aj and never continues the turn (#323); the writing check no longer runs on chat replies, only on pages and new issues (#324); the editor checkpoint is pages-only unless `HOUSE_RULES_EDITOR=on` (#325); the page checkpoint's note is said once per message of aj's (#326); and an approval counts the first time, with the decisions-log entry asked for afterwards (#327). The cloud QA run of #315 passed: the credit read-back reported the footer GitHub added to test issue #321.
+2026-10-18, branch `AjsAgent/nifty-newton-x2jaaj`, plugin 2.68.4: #322 (the end-of-reply checks looped on retries) is built and waiting for aj's QA. The Stop retry now only reports to aj and never continues the turn (#323); the writing check no longer runs on chat replies, only on pages and new issues (#324); the editor checkpoint is pages-only (#325); the page checkpoint's note is said once per message of aj's (#326); and an approval counts the first time, with the decisions-log entry asked for afterwards (#327). The cloud QA run of #315 passed: the credit read-back reported the footer GitHub added to test issue #321.
 
 2026-10-18, branch `AjsAgent/issue-329-page-links`, plugin 2.68.4: #329 (a page link in a reply must open, #330 to #332) is built and waiting for aj's QA. The page checkpoint counts an .html link only when it resolves inside the session's folder, and `make_page.py` warns when it writes a page outside the folder it runs in. `verify.py` still fails the 4 checks that already failed on `main` in a separate working folder (95, 97, 751, and the pagecheck case); no new failures.
 

@@ -362,7 +362,6 @@ def main():
         # uses - because run for real it reaches GitHub and, when out of date, runs
         # `claude plugin update`. A cost measurement must never update the plugin it measures.
         no_update = {
-            "HOUSE_RULES_AUTO_UPDATE": "off",
             "HOUSE_RULES_VC_CLAUDE": '["false"]',
             "HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON": os.path.join(bare_project, "none.json"),
         }
@@ -492,7 +491,7 @@ def main():
     print("   never the transcript, so a trace written there would be off by default in name")
     print("   only. HOUSE_RULES_TRACE=off is the lever, and it silences no reminder.")
     print("   announce/verdict are excluded from that total: their report is the feature, not a")
-    print("   trace, so HOUSE_RULES_DELEGATION=off is their lever instead.")
+    print("   trace, and nothing turns them off.")
 
     # --- 5. the path that must never fail ----------------------------------------------------
     print("\n5. Failure paths (a non-zero exit here erases the user's prompt)")
