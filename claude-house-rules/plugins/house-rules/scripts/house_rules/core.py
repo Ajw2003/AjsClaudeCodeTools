@@ -29,7 +29,7 @@ SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # in here by tools/sync_library.py (#439). Re-exported so every name stays importable from core.
 sys.path.insert(0, SCRIPTS_DIR)
 from house_lib.plumbing import (  # noqa: E402,F401
-    read_payload, emit, _TRACE_OFF, _truncate_with_notice, trace_enabled, trace, trace_verbose,
+    read_payload, emit, _truncate_with_notice, trace_enabled, trace, trace_verbose,
     trace_noop, _read_text,
 )
 from house_lib.links import (  # noqa: E402,F401
@@ -746,10 +746,6 @@ _MARKETPLACE_PLUGIN_JSON_REL = os.path.join(
 )
 
 
-def _version_check_enabled():
-    return os.environ.get("HOUSE_RULES_VERSION_CHECK", "on").strip().lower() not in _TRACE_OFF
-
-
 def _marketplace_plugin_json_path(problems):
     """The marketplace clone's plugin.json, or "" if none found (see docs/architecture.md)."""
     marketplaces_root = os.path.join(
@@ -924,10 +920,6 @@ _VC_DEFAULT_MARKETPLACE = "aj-house-rules"
 _VC_UPDATE_BUDGET = 60.0
 
 
-def _auto_update_enabled():
-    return os.environ.get("HOUSE_RULES_AUTO_UPDATE", "on").strip().lower() not in _TRACE_OFF
-
-
 def _installed_plugins_path():
     return os.environ.get("HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON") or os.path.join(
         os.path.expanduser("~"), ".claude", "plugins", "installed_plugins.json"
@@ -1047,9 +1039,6 @@ def _is_synced_copy():
 
 def event_versioncheck():
     try:
-        if not _version_check_enabled():
-            return 0
-
         payload = read_payload()
         session_id = _vc_session_id(payload)
 
@@ -1140,30 +1129,27 @@ def event_versioncheck():
 
         # Out of date: update it here rather than asking, then check the result on disk rather
         # than trusting the exit code (docs/6-decisions/Decisions.md, 2026-09-26).
-        failure = "automatic updating is switched off (HOUSE_RULES_AUTO_UPDATE=off)"
-        log = []
-        if _auto_update_enabled():
-            commands = []
-            if marketplace_stale or not market_version:
-                commands.append(["plugin", "marketplace", "update", market_name])
-            commands.append(["plugin", "update", plugin_ref])
-            log, failure = _run_update_commands(commands)
-            after_id, after = _installed_on_disk([])
-            if not failure and latest and latest in after:
-                if installed == latest:
-                    trace(
-                        "versioncheck: refreshed the stale marketplace clone; %s was already "
-                        "installed and running." % installed
-                    )
-                else:
-                    emit(_vc_restart_notice(latest, installed, " - updated automatically at "
-                                            "session start, up from %s" % installed))
-                return 0
-            if not failure:
-                failure = (
-                    "the update commands exited 0, but installed_plugins.json lists %s, not %s"
-                    % (", ".join(after) or "no house-rules install", latest or "a newer version")
+        commands = []
+        if marketplace_stale or not market_version:
+            commands.append(["plugin", "marketplace", "update", market_name])
+        commands.append(["plugin", "update", plugin_ref])
+        log, failure = _run_update_commands(commands)
+        after_id, after = _installed_on_disk([])
+        if not failure and latest and latest in after:
+            if installed == latest:
+                trace(
+                    "versioncheck: refreshed the stale marketplace clone; %s was already "
+                    "installed and running." % installed
                 )
+            else:
+                emit(_vc_restart_notice(latest, installed, " - updated automatically at "
+                                        "session start, up from %s" % installed))
+            return 0
+        if not failure:
+            failure = (
+                "the update commands exited 0, but installed_plugins.json lists %s, not %s"
+                % (", ".join(after) or "no house-rules install", latest or "a newer version")
+            )
 
         _write_outdated_marker(session_id, reasons)
 
@@ -1901,10 +1887,6 @@ def _decoded_command(subject):
     return text
 
 
-def _attribution_enabled():
-    return os.environ.get("HOUSE_RULES_ATTRIBUTION", "on").strip().lower() not in _TOGGLE_OFF
-
-
 # The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
 # noreply@anthropic.com, which signs every commit as Claude whatever the message says.
 AGENT_IDENTITY_FIX = (
@@ -1992,10 +1974,6 @@ def _effective_author(cmd, cwd):
 COMMIT_CHECK_TIMEOUT = 2.0
 
 
-def _commit_check_enabled():
-    return os.environ.get("HOUSE_RULES_COMMIT_CHECK", "on").strip().lower() not in _TOGGLE_OFF
-
-
 def _dirty_paths(root):
     """(repo top level, [repo-relative dirty paths]) for the repo containing `root`.
 
@@ -2078,10 +2056,6 @@ _AUDIT_WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
 _GATED_TOOLS = {"Write", "Edit", "NotebookEdit"}
 
 
-def _issues_enabled():
-    return os.environ.get("HOUSE_RULES_ISSUES", "on").strip().lower() not in _TOGGLE_OFF
-
-
 def _issues_locate(start):
     """(checkout top, resolved git directory) for `start`, or (None, None) outside a repo."""
     d = os.path.abspath(start)
@@ -2092,10 +2066,6 @@ def _issues_locate(start):
         if parent == d:
             return None, None
         d = parent
-
-
-def _loop_enabled():
-    return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
 
 
 # ---------------------------------------------------------------------------------------
@@ -2496,14 +2466,6 @@ def _outside_page_links(reply, cwd):
     if not cwd:
         return []
     return [p for p, a in _html_paths(reply, cwd) if a is not None and not _inside(a, cwd)]
-
-
-def _clear_writing_enabled():
-    return os.environ.get("HOUSE_RULES_CLEAR_WRITING", "on").strip().lower() not in _TOGGLE_OFF
-
-
-def _parity_enabled():
-    return os.environ.get("HOUSE_RULES_PARITY", "on").strip().lower() not in _TOGGLE_OFF
 
 
 def _parity_report_note(word):

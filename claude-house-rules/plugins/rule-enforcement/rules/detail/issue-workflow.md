@@ -30,8 +30,7 @@ does not count toward the gate, and the Focus Deck board ignores it.
 What the hooks do and do not do: they force me to do this; none of them runs `gh issue create` or
 `gh issue close` itself. The state is one file, `house-rules-issues.json`, in the git directory, so
 a subagent worktree (its own git directory) is not gated by the main session's plan. A corrupt state
-file is reported in one line and treated as no gate. `HOUSE_RULES_ISSUES=off` disables every part of
-this, in the same style as `HOUSE_RULES_AUTOSAVE=off`.
+file is reported in one line and treated as no gate.
 
 The session also starts with the open issue titles (up to 10, `gh issue list`, 5 s timeout, cached
 60 s) when `gh` is installed and the repo has a GitHub remote.

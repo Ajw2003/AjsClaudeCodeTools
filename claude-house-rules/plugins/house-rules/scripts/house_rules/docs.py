@@ -19,7 +19,6 @@ from house_rules.core import (  # noqa: F401
     _GIT,
     _GIT_COMMIT_RE,
     _STATEMENT_SPLIT_RE,
-    _TOGGLE_OFF,
     _field,
     _git_dir,
     _parse_status_porcelain,
@@ -576,12 +575,8 @@ def _harvest_trace(base, blocks, misses, min_chars, ranged, verbose):
 
 def event_harvest():
     try:
-        toggle = os.environ.get("HOUSE_RULES_HARVEST", "on").strip().lower()
-        if toggle in _TOGGLE_OFF:
-            return 0
-        # HOUSE_RULES_TRACE is the global lever and covers harvest too; HOUSE_RULES_HARVEST
-        # =quiet drops just this handler's trace while keeping its reminder.
-        quiet = toggle == "quiet" or not trace_enabled()
+        # HOUSE_RULES_TRACE is the global lever and covers harvest's trace too; the reminder stays.
+        quiet = not trace_enabled()
         verbose = os.environ.get("HOUSE_RULES_DEBUG", "").strip() not in ("", "0", "false", "no")
 
         payload = read_payload()

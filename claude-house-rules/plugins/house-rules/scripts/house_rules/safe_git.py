@@ -24,14 +24,11 @@ from house_rules.core import (  # noqa: F401
     _PROMPT_VALUE_RE,
     _PR_BODY_FILE_RE,
     _STATEMENT_SPLIT_RE,
-    _TOGGLE_OFF,
     _TRANSCRIPT_RE,
     _ag,
     _apply_assigns,
-    _attribution_enabled,
     _branch_advice,
     _command_dir,
-    _commit_check_enabled,
     _common_git_dir,
     _decoded_command,
     _dirty_paths,
@@ -258,17 +255,11 @@ def branch_ownership(start=None):
 
 
 
-def _agent_branch_enabled():
-    return os.environ.get("HOUSE_RULES_AGENT_BRANCH", "on").strip().lower() not in _TOGGLE_OFF
-
-
 def _agent_branch_block():
     """Cloud session on the app's claude/<name> branch: tell the agent to move to AjsAgent/<name>.
 
     Text only - the hook never runs git switch. Never raises; an unreadable branch says so.
     """
-    if not _agent_branch_enabled():
-        return ""
     try:
         import subprocess
         _mine, branch, note = branch_ownership()
@@ -307,8 +298,6 @@ def _agent_identity_block():
     Text only - the hook never runs git config. Never raises; adds nothing when fine or unreadable.
     """
     try:
-        if not _attribution_enabled():
-            return ""
         ident = _git_author_ident(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if ident is None or not _is_claude_identity(*ident):
             return ""
@@ -670,9 +659,7 @@ def event_guard():
         )
 
     lines.append("")
-    _tl = _prompt_timeout_line()
-    if _tl:
-        lines.append(_tl)
+    lines.append(_prompt_timeout_line())
     lines.append(
         "Approve to let it run, or reject and Claude will explain what it was about to do."
     )
@@ -924,8 +911,6 @@ def event_branchnudge():
     # change. If the user already had uncommitted edits, this stays quiet and the Stop commit
     # check still catches the turn's files.
     try:
-        if not _commit_check_enabled():
-            return 0
         payload = read_payload()
         if not payload:
             emit(
@@ -998,13 +983,11 @@ class _PromptAnswered(Exception):
 
 
 def _prompt_timeout_seconds():
-    """(seconds or None when off, problem text or "")."""
+    """(seconds, problem text or ""): the minutes the permission timer waits."""
     raw = os.environ.get("HOUSE_RULES_PROMPT_TIMEOUT")
     if raw is None or not raw.strip():
         return PROMPT_TIMEOUT_DEFAULT, ""
     val = raw.strip().lower()
-    if val in ("off", "0"):
-        return None, ""
     try:
         secs = float(val)
     except ValueError:
@@ -1012,7 +995,7 @@ def _prompt_timeout_seconds():
     if 0 < secs < float("inf"):
         return secs, ""
     return PROMPT_TIMEOUT_DEFAULT, (
-        "HOUSE_RULES_PROMPT_TIMEOUT=%r is not 'off', '0' or a positive number; using %d seconds"
+        "HOUSE_RULES_PROMPT_TIMEOUT=%r is not a positive number; using %d seconds"
         % (raw, PROMPT_TIMEOUT_DEFAULT)
     )
 
@@ -1125,10 +1108,8 @@ def _prompt_deny(text):
 
 
 def _prompt_timeout_line():
-    """The guard prompts' one line about the timer; "" when the timer is off."""
+    """The guard prompts' one line about the timer."""
     secs, _ = _prompt_timeout_seconds()
-    if secs is None:
-        return ""
     return ("If nobody answers within %s, this is refused (never approved) and added to the "
             "waiting-on-you list." % _prompt_minutes(secs))
 
@@ -1158,16 +1139,15 @@ UNATTENDED_REFUSAL = (
 def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
     """Emit the guard's ask - or, inside a subagent (the payload carries agent_id), a refusal
     (#198): a helper cannot answer a prompt. Refusals go on the waiting-on-you list.
-    HOUSE_RULES_PROMPT_TIMEOUT=off turns the refusal off. An ask is recorded for prompttimer."""
+    An ask is recorded for prompttimer."""
     why = None
-    secs, _ = _prompt_timeout_seconds()
     try:
         data = json.loads(payload)
     except ValueError:
         data = {}
     data = data if isinstance(data, dict) else {}
     session_id = str(data.get("session_id") or "")
-    if secs is not None and data.get("agent_id"):
+    if data.get("agent_id"):
         why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
     if not why:
         _record_ask(session_id, _waiting_key(str(data.get("tool_name") or "?"), data.get("tool_input")))
@@ -1209,9 +1189,6 @@ def event_prompttimer():
     secs, problem = _prompt_timeout_seconds()
     if problem:
         sys.stderr.write("house-rules prompttimer: %s.\n" % problem)
-    if secs is None:
-        sys.stderr.write("house-rules prompttimer: off (HOUSE_RULES_PROMPT_TIMEOUT), no timer for this prompt.\n")
-        return 0
     try:
         payload = read_payload()
     except Exception as exc:
@@ -1365,8 +1342,7 @@ _GIT_ADD_RE = re.compile(_GIT + r"add\b", re.IGNORECASE)
 CLAUDE_LINK_DENY = (
     "House rules, no published links in git: %s adds a claude.ai link (`%s`). Session, project, "
     "artifact and share links are private pages and stay out of the repo unless aj asks for one. "
-    "Take the link out of the file (name the page in words instead) and commit again. "
-    "HOUSE_RULES_ATTRIBUTION=off disables this check."
+    "Take the link out of the file (name the page in words instead) and commit again."
 )
 
 
@@ -1434,14 +1410,12 @@ _GH_API_FILE_RE = re.compile(r"(?:(?<![\w-])-F|--field)(?:=|\s+)body=@(\"[^\"]+\
 ATTRIBUTION_DENY = (
     "House rules, credit aj's agent: this %s credits Claude (`%s`). Credit \"aj's agent\" instead, "
     "with no email and no Claude branding: commits end with `Committed by AJ's agent`, pull requests "
-    "with `Opened by AJ's agent`. HOUSE_RULES_ATTRIBUTION=off disables this check."
+    "with `Opened by AJ's agent`."
 )
 
 
 def _attribution_guard(subject, payload):
     """None when the command's text does not credit Claude, else ("deny", reason, None)."""
-    if not _attribution_enabled():
-        return None
     cmd = _decoded_command(subject)
     if not _ATTRIBUTION_CMD_RE.search(cmd):
         return None
@@ -1484,8 +1458,7 @@ def _attribution_guard(subject, payload):
         except Exception as exc:
             # Strict, like an unreadable payload: the guard emits once, so a note cannot ride along.
             return ("deny", "House rules, no published links in git: could not read what this commit "
-                    "adds in %s (%s: %s), so it was not checked for claude.ai links. Run it again; "
-                    "HOUSE_RULES_ATTRIBUTION=off disables this check." % (where, type(exc).__name__, exc), None)
+                    "adds in %s (%s: %s), so it was not checked for claude.ai links. Run it again." % (where, type(exc).__name__, exc), None)
         if hit:
             return ("deny", CLAUDE_LINK_DENY % ("this commit, at %s line %d," % (hit[0], hit[1]), hit[2]), None)
     return None
@@ -1513,8 +1486,6 @@ def _read_back_body(path):
 
 def event_creditcheck():
     try:
-        if not _attribution_enabled():
-            return 0
         raw = read_payload()
         data = json.loads(raw) if raw else None
         ti = data.get("tool_input") if isinstance(data, dict) else None
@@ -1564,7 +1535,7 @@ def event_creditcheck():
 _GITHUB_COMMIT_TOOLS = ("push_files", "create_or_update_file")
 BRANCH_DENY = (
     "House rules, credit aj's agent: `%s` is a new branch under `claude/`. Name agent branches "
-    "`AjsAgent/<topic>` instead. HOUSE_RULES_ATTRIBUTION=off disables this check."
+    "`AjsAgent/<topic>` instead."
 )
 
 
@@ -1587,9 +1558,6 @@ def event_guardgithub():
     for _check in core.GITHUB_WRITE_HOOKS:
         if _check(payload, raw):
             return 0
-    if not _attribution_enabled():
-        trace_noop("guardgithub: HOUSE_RULES_ATTRIBUTION=off - nothing was checked.")
-        return 0
     tool = str(payload.get("tool_name") or "")
     short = tool.split("__")[-1]
     args = payload.get("tool_input")
@@ -1725,19 +1693,18 @@ def handover_commit_check(payload):
     reply says. Its "could not tell" is its own line - it must never be mistaken for the evidence check's."""
     uncommitted = []
     commit_could_not_tell = None
-    if _commit_check_enabled():
-        transcript_path = _field(_TRANSCRIPT_RE, payload)
-        if transcript_path:
-            written, detail = _written_since_last_user_message(transcript_path)
-            if written:
-                try:
-                    uncommitted = _uncommitted_among(
-                        written, os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
-                    )
-                except Exception as exc:
-                    commit_could_not_tell = "%s: %s" % (type(exc).__name__, exc)
-            elif written is None:
-                commit_could_not_tell = detail
+    transcript_path = _field(_TRANSCRIPT_RE, payload)
+    if transcript_path:
+        written, detail = _written_since_last_user_message(transcript_path)
+        if written:
+            try:
+                uncommitted = _uncommitted_among(
+                    written, os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+                )
+            except Exception as exc:
+                commit_could_not_tell = "%s: %s" % (type(exc).__name__, exc)
+        elif written is None:
+            commit_could_not_tell = detail
     return uncommitted, commit_could_not_tell
 
 

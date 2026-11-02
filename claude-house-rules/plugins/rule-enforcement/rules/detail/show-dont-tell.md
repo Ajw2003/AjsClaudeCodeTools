@@ -124,7 +124,7 @@ the commit that fixes the commit rule stay allowed) until a later reply passes t
 the lock. A rule never blocks a fourth time. The page rule is the
 exception: it blocks every retry until the reply links a page, and after three blocks in a row it lets
 the reply through with a note that no page could be made. Only "no page" in aj's own message skips it;
-the block never offers that phrase to me. `HOUSE_RULES_LOOP=off` turns them all off.
+the block never offers that phrase to me.
 
 **Why:** a page that the agent could skip by replying "no page" was skipped (aj, 2026-10-15, #281); the
 three-block limit stops a broken page builder from looping a session with nobody watching. A page that was saved or

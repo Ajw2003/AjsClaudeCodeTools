@@ -21,7 +21,7 @@ import sys
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPTS_DIR)
 from house_lib.plumbing import (  # noqa: E402,F401
-    read_payload, emit, _TRACE_OFF, _truncate_with_notice, _read_text,
+    read_payload, emit, _truncate_with_notice, _read_text,
 )
 
 # The plugin name _rules_root looks for in installed_plugins.json: the plugin that holds rules/.
@@ -43,35 +43,6 @@ def _plugin_version(problems=None):
         if problems is not None:
             problems.append("could not read the plugin version (%s)" % type(exc).__name__)
     return version
-
-
-def _delegation_enabled():
-    """HOUSE_RULES_DELEGATION=off disables subagentrules, as it did in house-rules (the off switches
-    are removed in a later part of #440)."""
-    return os.environ.get("HOUSE_RULES_DELEGATION", "on").strip().lower() not in {"off", "0", "false", "no"}
-
-
-# The voice is a preference, so it gets a lever - but it ships ON, for the same reason the
-# decision trace does: a setting nobody enables until they are already unhappy is not a setting.
-# Off removes only the "### The voice" subsection; the clear-writing rule above it is not a
-# preference and always loads. Since #245 the voice lives in rules/clear-writing.md (showrule).
-_VOICE_HEADING = "### The voice"
-
-
-def _apply_voice_toggle(body):
-    if os.environ.get("HOUSE_RULES_VOICE", "on").strip().lower() not in _TRACE_OFF:
-        return body
-    start = body.find(_VOICE_HEADING)
-    if start == -1:
-        # The section this is meant to remove is gone, which means the rules text moved and this
-        # toggle now silently does nothing. Say so rather than pretending it worked.
-        sys.stderr.write(
-            "house-rules: HOUSE_RULES_VOICE=off, but the %r section was not found in "
-            "the rules - the toggle had no effect.\n" % _VOICE_HEADING
-        )
-        return body
-    nxt = body.find("\n## ", start)
-    return body[:start] + (body[nxt + 1 :] if nxt != -1 else "")
 
 
 def _plugin_root():
@@ -228,7 +199,7 @@ def event_showrule():
         if not body.strip():
             missing.append("rules/%s is empty, so the %s rule was NOT loaded" % (name, label))
             continue
-        bodies.append(_apply_voice_toggle(body) if name == "clear-writing.md" else body)
+        bodies.append(body)
     if not bodies:
         emit({"systemMessage": "house-rules plugin: " + "; ".join(missing + ([note] if note else [])) + "."})
         return 0
@@ -405,8 +376,6 @@ def event_subagentrules():
     """SubagentStart: inject the subagent core. The transcript line and the design loop's helper note
     that used to ride along are emitted by house-rules' own subagentlinks hook on the same event."""
     try:
-        if not _delegation_enabled():
-            return 0
         core, problems = _subagent_core()
         out = {}
         if problems:

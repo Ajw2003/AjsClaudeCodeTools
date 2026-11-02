@@ -13,13 +13,10 @@ from house_rules.core import (  # noqa: F401
     _AUDIT_COMMAND_TOOLS,
     _AUDIT_WRITE_TOOLS,
     _MD_FENCED_BLOCK_RE,
-    _TOGGLE_OFF,
     _ag,
-    _clear_writing_enabled,
     _common_git_dir,
     _issues_locate,
     _load_turn,
-    _loop_enabled,
     _not_checked_note,
     _payload_cwd,
     _reply_links_page,
@@ -70,10 +67,6 @@ _MD_CODE_SPAN_RE = re.compile(r"`[^`\n]+`")
 _MD_LEADING_HEADING_RE = re.compile(r"^\s*#+ .*\n+")
 
 
-def _plain_summary_enabled():
-    return os.environ.get("HOUSE_RULES_PLAIN_SUMMARY", "on").strip().lower() not in _TOGGLE_OFF
-
-
 def _plain_summary_problems(reply):
     """What stops this reply's opening reading as a plain summary on a phone - [] when nothing
     does, or when the reply is too short to need one."""
@@ -119,13 +112,12 @@ def _long_reply_note(words):
 _WRITING_REPORT_ONLY = ("bare-ref",)
 
 
-# #249: a page goes past the editor helper before aj reads it; a long reply does too only with
-# HOUSE_RULES_EDITOR=on (#325: a long chat reply forcing a subagent run cost too many tokens).
+# #249: a page goes past the editor helper before aj reads it. A long chat reply does not (#325: forcing a
+# subagent run on every long reply cost too many tokens).
 EDITOR_NOTE = (
     "House rules, write it so nothing is left to guess: %s, and no @house-rules:editor helper ran this "
     "turn. Hand the text (or the page's path) to @house-rules:editor (Agent tool, subagent_type "
-    "house-rules:editor), apply its rewrites, then send the result. HOUSE_RULES_CLEAR_WRITING=off "
-    "turns this off; only pages are checked unless HOUSE_RULES_EDITOR=on adds long replies."
+    "house-rules:editor), apply its rewrites, then send the result."
 )
 
 
@@ -173,12 +165,7 @@ def _pages_changed_this_turn(transcript_path, cwd):
     return sorted(os.path.join(plans, n) for n in pages if os.path.getmtime(os.path.join(plans, n)) >= since), None
 
 
-def _editor_enabled():
-    # #325: off unless set to something that is not an "off" value, i.e. "on".
-    return os.environ.get("HOUSE_RULES_EDITOR", "off").strip().lower() not in _TOGGLE_OFF
-
-
-def _editor_owed(written, tool_uses, reply):
+def _editor_owed(written, tool_uses):
     """What makes the editor helper owed this turn ("" when nothing does, or when it ran)."""
     for block in tool_uses:
         inp = block.get("input") if isinstance(block.get("input"), dict) else {}
@@ -187,11 +174,6 @@ def _editor_owed(written, tool_uses, reply):
     pages = [os.path.basename(p) for p in written if _PLANS_PAGE_RE.search(str(p).replace("\\", "/"))]
     if pages:
         return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
-    if not _editor_enabled():  # #325: the long-reply trigger needs HOUSE_RULES_EDITOR=on
-        return ""
-    words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
-    if words >= LONG_REPLY_WORDS:
-        return "this reply is %d words" % words
     return ""
 
 
@@ -207,8 +189,7 @@ def _writing_note(not_checked, writing, long_words):
                 "- \"%s\": %s" % (phrase, why) for _kind, phrase, why in writing[:12])
             + ("\n(and %d more)" % (len(writing) - 12) if len(writing) > 12 else "")
             + "\nCount what can be counted, name what you point at, say each thing once, and give a "
-            "reason in the same sentence for anything that genuinely can't be measured. "
-            "HOUSE_RULES_CLEAR_WRITING=off turns this off.")
+            "reason in the same sentence for anything that genuinely can't be measured.")
     if long_words:
         lines.append(_long_reply_note(long_words))
     return "\n\n".join(lines)
@@ -222,10 +203,6 @@ def _plain_summary_note(problems):
         "read on a phone, with no table wider than three columns and jargon glossed on first "
         "use. Keep the technical detail; put it after the summary." % "; ".join(problems)
     )
-
-
-def _visual_check_enabled():
-    return os.environ.get("HOUSE_RULES_VISUAL_CHECK", "on").strip().lower() not in _TOGGLE_OFF
 
 
 def _looked_at_result(tool_uses):
@@ -257,8 +234,8 @@ _PLANS_PAGE_RE = re.compile(r"(?:^|[\\/])docs[\\/]plans[\\/][^\\/]+\.html?$", re
 
 def _page_writing_note(file_path):
     """#248: the shared writing checker on a page just written under docs/plans/, or "" when the
-    file is not such a page, is clean, or the check is off."""
-    if not _PLANS_PAGE_RE.search(file_path.replace("\\", "/")) or not _clear_writing_enabled():
+    file is not such a page or is clean."""
+    if not _PLANS_PAGE_RE.search(file_path.replace("\\", "/")):
         return ""
     if clarity is None:
         return CLARITY_ERROR
@@ -297,36 +274,34 @@ def handover_turn_writes(turn_records):
 def handover_plain_check(written_now, committed_now, have_reply, reply_text):
     """The plain-summary problems of the reply ([] when none)."""
     plain_problems = []
-    if (written_now or committed_now) and _plain_summary_enabled() and have_reply:
+    if (written_now or committed_now) and have_reply:
         plain_problems = _plain_summary_problems(reply_text)
     return plain_problems
 
 
-def handover_page_editor_check(transcript_path, payload, written_now, turn_records, have_reply, reply_text):
+def handover_page_editor_check(transcript_path, payload, written_now, turn_records):
     """(notes for pages a shell command wrote, what makes the editor owed or None, trace lines)."""
     shell_page_notes = []
     editor_owed = None
     trace_lines_early = []
-    if _clear_writing_enabled():
-        # A page written by a shell command never passes the Write hook (found in the real
-        # run, #250), so pages changed since aj's message are checked here too.
-        changed, page_problem = _pages_changed_this_turn(transcript_path, _payload_cwd(payload))
-        if page_problem:
-            trace_lines_early.append(page_problem)
-        shell_pages = [pg for pg in changed if pg not in written_now]
-        for pg in shell_pages:
-            note = _page_writing_note(pg)
-            if note:
-                shell_page_notes.append(note)
-        editor_owed = _editor_owed(written_now + shell_pages, list(_turn_tool_uses(turn_records)),
-                                   reply_text if have_reply else "")
+    # A page written by a shell command never passes the Write hook (found in the real
+    # run, #250), so pages changed since aj's message are checked here too.
+    changed, page_problem = _pages_changed_this_turn(transcript_path, _payload_cwd(payload))
+    if page_problem:
+        trace_lines_early.append(page_problem)
+    shell_pages = [pg for pg in changed if pg not in written_now]
+    for pg in shell_pages:
+        note = _page_writing_note(pg)
+        if note:
+            shell_page_notes.append(note)
+    editor_owed = _editor_owed(written_now + shell_pages, list(_turn_tool_uses(turn_records)))
     return shell_page_notes, editor_owed, trace_lines_early
 
 
 def handover_visual_check(written_now, turn_records):
     """The visual files written this turn that nothing looked at ([] when none)."""
     visual_files = []
-    if written_now and _visual_check_enabled():
+    if written_now:
         visual = [os.path.basename(p) for p in written_now if _VISUAL_EXT_RE.search(p)]
         if visual and not _looked_at_result(list(_turn_tool_uses(turn_records))):
             visual_files = visual
@@ -334,7 +309,7 @@ def handover_visual_check(written_now, turn_records):
 
 
 def handover_long_reply(payload, have_reply, reply_text):
-    return _long_reply_words(reply_text, _payload_cwd(payload)) if (have_reply and _loop_enabled()) else 0
+    return _long_reply_words(reply_text, _payload_cwd(payload)) if have_reply else 0
 
 
 core.register_post_tool("artifact", _page_writing_note)

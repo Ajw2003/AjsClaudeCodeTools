@@ -74,7 +74,7 @@ Two mechanisms, because a plugin cannot carry the Claude Code `attribution` sett
 `attribution` (`commit`, `pr`, `sessionUrl: false`) into `~/.claude/settings.json` on each machine,
 and the `guard` hook refuses a `git commit`, `gh pr create/edit` or `gh issue create/comment` whose
 text carries the old forms, naming the replacement wording. The guard is the backstop for sessions
-that never read the settings file (cloud sessions). `HOUSE_RULES_ATTRIBUTION=off` disables it.
+that never read the settings file (cloud sessions).
 
 The commit's author is credited too: the agent's identity is `AJ's agent
 <79066376+Ajw2003@users.noreply.github.com>`. A cloud container ships `user.name=Claude`, so the guard refuses

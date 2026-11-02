@@ -52,13 +52,12 @@ A prompt inside a subagent (the hook input carries `agent_id`) is refused at onc
 opened, because a subagent cannot answer a prompt (#198). How long ago aj last wrote no longer
 matters (#290).
 
-Each refusal goes on the waiting-on-you list, like a timed-out prompt. `HOUSE_RULES_PROMPT_TIMEOUT=off`
-turns these refusals off with the timer.
+Each refusal goes on the waiting-on-you list, like a timed-out prompt.
 
 ## When nobody answers the prompt
 
 The `prompttimer` hook refuses a permission prompt nobody has answered for 5 minutes
-(`HOUSE_RULES_PROMPT_TIMEOUT`, in seconds; `off` disables it). It never approves one. An unanswered
+(`HOUSE_RULES_PROMPT_TIMEOUT`, in seconds). It never approves one. An unanswered
 prompt is a no, not a yes. The refused action goes on a waiting-on-you list, and aj sees it on
 their next message and at the next session start. Each prompt waits on its own timer: an earlier
 unanswered prompt never causes a later one to be refused (#290). The timer applies only to the

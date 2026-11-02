@@ -25,13 +25,9 @@ from house_rules.core import (  # noqa: F401
     _TRANSCRIPT_RE,
     _ag,
     _branch_advice,
-    _commit_check_enabled,
     _common_git_dir,
     _field,
     _git_dir,
-    _issues_enabled,
-    _loop_enabled,
-    _parity_enabled,
     _parse_status_porcelain,
     _plugin_version,
     _read_text,
@@ -81,10 +77,9 @@ def event_delegate():
     try:
         note = DELEGATE_NOTE
         payload = read_payload() or ""
-        if _parity_enabled():
-            plan = _field(_PLAN_VALUE_RE, payload) or ""
-            if _PARITY_RE.search(plan) and not _PARITY_ACCOUNTED_RE.search(plan):
-                note = note + DELEGATE_PARITY_NOTE
+        plan = _field(_PLAN_VALUE_RE, payload) or ""
+        if _PARITY_RE.search(plan) and not _PARITY_ACCOUNTED_RE.search(plan):
+            note = note + DELEGATE_PARITY_NOTE
         for fn in DELEGATE_NOTE_HOOKS:
             note = note + fn(payload)
         emit(
@@ -152,16 +147,6 @@ _TASK_STATUS_RE = re.compile(r"<status>([^<]*)</status>")
 _MODEL_OVERRIDE_VARS = ("CLAUDE_CODE_SUBAGENT_MODEL_FORCE", "CLAUDE_CODE_SUBAGENT_MODEL")
 
 
-def _delegation_enabled():
-    """HOUSE_RULES_DELEGATION=off disables the delegation handlers.
-
-    Deliberately NOT HOUSE_RULES_TRACE-gated. The trace lever covers handlers whose output
-    merely narrates an otherwise-silent path; here the report IS the feature, and hiding it
-    behind the trace lever would make the thing being shipped optional by default.
-    """
-    return os.environ.get("HOUSE_RULES_DELEGATION", "on").strip().lower() not in _TOGGLE_OFF
-
-
 # subagentrules (the SubagentStart rules core) moved to the rule-enforcement plugin (#440). What it used to
 # gather from this part - the design loop's helper note and the line saying where the subagent's transcript
 # will land - is emitted by event_subagentlinks below, on the same event.
@@ -170,8 +155,6 @@ def event_subagentlinks():
     findable without waiting for verdict to say so - and hand the subagent the notes the parts registered
     (SUBAGENT_NOTE_HOOKS: the design loop's helper note)."""
     try:
-        if not _delegation_enabled():
-            return 0
         payload = read_payload()
         loop_note = "".join(fn(payload or "") for fn in SUBAGENT_NOTE_HOOKS)
         bits, problems = [], []
@@ -276,8 +259,6 @@ def _declared(agent_type, problems=None):
 def event_announce():
     """SubagentStart: say which agent is starting, and what it is DECLARED to run on."""
     try:
-        if not _delegation_enabled():
-            return 0
         payload = read_payload()
         if not payload:
             emit(
@@ -529,7 +510,7 @@ def _audit_report(found):
     lines.extend("  wrote: %s" % l for l in _capped_lines(files, AUDIT_MAX_FILES, AUDIT_COMMAND_CHARS))
     if len(commands) > len(failed):
         lines.append("  other commands: %d ok (not listed)" % (len(commands) - len(failed)))
-    if wrote and _commit_check_enabled():
+    if wrote:
         paths = [w.split(" ", 1)[1] for w in wrote if " " in w]
         try:
             left = _uncommitted_among(paths, os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
@@ -586,7 +567,7 @@ WORKTRAIL_DEFAULT_DIR = "/mnt/project-files/work-trail/"
 
 
 def _in_project_thread():
-    return _worktracking_enabled() and os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") == "1"
+    return os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") == "1"
 
 
 def _worktrail_note(transcript_path, agent_type, agent_id):
@@ -650,8 +631,6 @@ def _write_subagent_ledger(transcript_path, payload):
 def event_verdict():
     """SubagentStop: say which model ACTUALLY served the subagent, from its transcript."""
     try:
-        if not _delegation_enabled():
-            return 0
         payload = read_payload()
         if not payload:
             emit(
@@ -802,10 +781,6 @@ AGENT_STALE_SECONDS = 45 * 60
 AGENT_STATE_FILE = "house-rules-agents.json"
 
 
-def _agentcap_enabled():
-    return os.environ.get("HOUSE_RULES_AGENTS", "on").strip().lower() not in _TOGGLE_OFF
-
-
 def _agentcap_path():
     # HOUSE_RULES_AGENTS_STATE points the state file elsewhere: verify.py and measure_footprint.py
     # use it so their simulated spawns never leave records in the real repository.
@@ -843,8 +818,6 @@ def _agentcap_save(path, recs):
 
 def _agentcap_update(add=None, remove=None):
     """Add or remove one record. Returns "" or a one-line problem (never raises)."""
-    if not _agentcap_enabled():
-        return ""
     note = ""
     try:
         path = _agentcap_path()
@@ -869,8 +842,6 @@ def _agentcap_update(add=None, remove=None):
 
 def event_agentcap():
     try:
-        if not _agentcap_enabled():
-            return 0
         payload = read_payload()
         caller = ""
         try:
@@ -883,8 +854,7 @@ def event_agentcap():
         if caller:
             reason = (
                 "house-rules: a subagent may not start another subagent (agent %s tried). "
-                "Report back to the parent and let it decide. HOUSE_RULES_AGENTS=off disables "
-                "this check." % caller
+                "Report back to the parent and let it decide." % caller
             )
         else:
             path = _agentcap_path()
@@ -900,7 +870,7 @@ def event_agentcap():
             reason = (
                 "house-rules: %d subagents are already running (%s). Wait for one to finish "
                 "before spawning another; the cap is %d. A record older than %d minutes is "
-                "ignored. HOUSE_RULES_AGENTS=off disables this check."
+                "ignored."
                 % (len(recs), names, AGENT_CAP, AGENT_STALE_SECONDS // 60)
             )
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
@@ -976,8 +946,6 @@ def _uncommitted_by_repo(paths):
 
 def event_subagentcommit():
     try:
-        if not _commit_check_enabled():
-            return 0
         payload = read_payload()
         if not payload:
             emit(
@@ -1022,7 +990,7 @@ def event_subagentcommit():
             # commits the leftovers itself; anywhere else it only names them.
             parts = []
             for top, branch, files in left:
-                if _autosave_enabled() and branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX):
+                if branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX):
                     sha, done = _wip_commit(top, WIP_NOT_COMMITTED)
                     note = _autosave_snapshot(top, branch, force_push=True)
                     parts.append("committed %d file(s) in %s as %s%s"
@@ -1089,10 +1057,6 @@ WIP_PARENT = "wip: parent checkpoint of subagent work"
 
 
 _AUTOSAVE_TOOLS = {"Write", "Edit", "NotebookEdit", "Bash"}
-
-
-def _autosave_enabled():
-    return os.environ.get("HOUSE_RULES_AUTOSAVE", "on").strip().lower() not in _TOGGLE_OFF
 
 
 def _autosave_target(payload):
@@ -1254,8 +1218,6 @@ def event_autosave():
     worktree to the autosave ref and push it. The same entry records `gh issue create` calls for
     the issue gate (_issues_record), which is why it runs on any branch."""
     try:
-        if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
-            return 0
         payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: autosave got an empty payload and did not run for this call."})
@@ -1263,7 +1225,7 @@ def event_autosave():
         issue_notes = []
         for fn in TOOL_RECORD_HOOKS:
             issue_notes += fn(payload)
-        target = _autosave_target(payload) if _autosave_enabled() else None
+        target = _autosave_target(payload)
         if target is None:
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
@@ -1301,8 +1263,6 @@ def event_commitgate():
     moved), commit for the subagent instead and let the edit through. It also carries the issue
     gate (_issues_gate), which applies on any branch of the main session."""
     try:
-        if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
-            return 0
         payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: commitgate got an empty payload and did not run for this call."})
@@ -1310,8 +1270,6 @@ def event_commitgate():
         for fn in EDIT_GATE_HOOKS:
             if fn(payload):
                 return 0
-        if not _autosave_enabled():
-            return 0
         target = _autosave_target(payload)
         if target is None:
             return 0
@@ -1351,8 +1309,6 @@ def event_commitgate():
 def _autosave_cleanup(top):
     """On a subagent's clean finish, drop its autosave ref locally and on origin. A failure
     message, or None (also None when there is nothing to do)."""
-    if not _autosave_enabled():
-        return None
     branch = _repo_branch(top)
     if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX) or _dirty_files(top):
         return None
@@ -1392,8 +1348,6 @@ def event_worktreesweep():
     import time as _t
 
     try:
-        if not _autosave_enabled():
-            return 0
         payload = read_payload()
         try:
             data = json.loads(payload) if payload else {}
@@ -1444,8 +1398,6 @@ def event_audit():
     """PostToolUse (Agent|Task): hand the audit summary + reconcile instruction straight to
     the parent model as additionalContext when a FOREGROUND subagent call returns."""
     try:
-        if not _delegation_enabled():
-            return 0
         payload = read_payload()
         if not payload:
             emit(
@@ -1538,17 +1490,10 @@ RCLINK_NOTE = (
 )
 
 
-def _worktracking_enabled():
-    """HOUSE_RULES_WORKTRACKING=off disables rclink (and later work-tracking hooks)."""
-    return os.environ.get("HOUSE_RULES_WORKTRACKING", "on").strip().lower() not in _TOGGLE_OFF
-
-
 def event_rclink():
     """PostToolUse (mcp__hearthbot__start_remote_control): once Remote Control has started, tell the
     thread to fetch the session id and post the transcript link."""
     try:
-        if not _worktracking_enabled():
-            return 0
         if os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") != "1":
             return 0
         payload = read_payload()
@@ -1601,8 +1546,6 @@ def event_userpromptaudit():
     notification, hand the audit summary + reconcile instruction to the parent model as
     additionalContext - the completion this backgrounded call's own PostToolUse never saw."""
     try:
-        if not _delegation_enabled():
-            return 0
         payload = read_payload()
         if not payload:
             return 0
@@ -1667,47 +1610,13 @@ def event_userpromptaudit():
     return 0
 
 
-# The delegation clause. delegate only fires on ExitPlanMode, so an auto or accept-edits
-# session - which house-rules.md says the rule explicitly covers - never sees it, and neither
-# does a plan simply agreed in conversation. This closes that gap from the prompt side, which
-# is the only stateless place to close it: the go-ahead is in the prompt text.
-SCOPE_DELEGATE_CLAUSE = (
-    "\n- This reads like a go-ahead on settled work. Hand the implementation to the "
-    "@house-rules:builder subagent (one per issue, never per step; at most two running) rather "
-    "than running it on the planning model; its "
-    "description is marked for proactive use, so that is authorized without a fresh ask. "
-    "Skip it only when the work touches one file AND is three steps or fewer, and say so in "
-    "one line naming the count."
-)
-
-
-# Prompt text that reads as "go ahead and do the thing we agreed" - the case the delegation
-# clause exists for. Broad within the extracted field, like every other pattern here: a false
-# positive costs one extra sentence of reminder, a false negative costs a whole implementation
-# run on the planning model.
-_SCOPE_GOAHEAD_RE = re.compile(
-    r"\b(implement|execute|go ahead|build it|build that|do it|make the changes?|proceed|"
-    r"ship it|carry it out|get (?:it|that) done|start (?:on )?(?:it|that)|"
-    r"apply (?:the|those) (?:changes?|edits?|fixe?s?))\b",
-    re.IGNORECASE,
-)
-
-
-def _scope_delegate_link(payload, field):
-    # With the design loop on, only "Build plan approved" starts a build (#232), so the
-    # go-ahead guess runs only when the loop is off.
-    if field is not None and _SCOPE_GOAHEAD_RE.search(field) and not _loop_enabled():
-        return SCOPE_DELEGATE_CLAUSE, ""
-    return "", ""
-
-
 _CSE_ID_RE = re.compile(r"^cse_([A-Za-z0-9]+)$")
 
 
 def thread_link_note():
     """inject (#400): in a project thread, the text telling the thread its own transcript link;
-    "" outside a project thread or with work tracking off."""
-    if not _worktracking_enabled() or os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") != "1":
+    "" outside a project thread."""
+    if os.environ.get("CLAUDE_CODE_PROJECTS_SESSION", "") != "1":
         return ""
     raw = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID", "").strip()
     m = _CSE_ID_RE.match(raw)
@@ -1801,4 +1710,3 @@ def event_threadlink():
     return 0
 
 
-core.register_prompt(_scope_delegate_link)

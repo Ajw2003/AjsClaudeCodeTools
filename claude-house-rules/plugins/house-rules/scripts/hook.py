@@ -61,15 +61,12 @@ from house_rules.writing import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _PARITY_ACCOUNTED_RE,
     _PARITY_RE,
-    _TOGGLE_OFF,
     _TRANSCRIPT_RE,
-    _clear_writing_enabled,
     _evidence_note,
     _claim_words,
     _field,
     _impossibility_claims,
     _last_user_text,
-    _parity_enabled,
     _parity_report_note,
     _records_since_last_user_message,
     _turn_tool_uses,
@@ -79,9 +76,7 @@ from house_rules.safe_git import (  # noqa: F401
     _commit_note,
 )
 from house_rules.writing import (  # noqa: F401
-    _plain_summary_enabled,
     _plain_summary_note,
-    _visual_check_enabled,
     _visual_note,
     _writing_note,
 )
@@ -99,12 +94,6 @@ from house_rules.writing import (  # noqa: F401
 # ---------------------------------------------------------------------------------------
 
 def event_handover():
-    import os as _os
-
-    toggle = _os.environ.get("HOUSE_RULES_HANDOVER", "on").strip().lower()
-    if toggle in _TOGGLE_OFF:
-        return 0
-
     try:
         payload = read_payload()
     except Exception:
@@ -148,8 +137,7 @@ def event_handover():
     editor_ran = False
     plain_applies = False
     transcript_path = _field(_TRANSCRIPT_RE, payload)
-    if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
-                            or _clear_writing_enabled()):
+    if transcript_path:
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
             turn_ok = True
@@ -160,13 +148,13 @@ def event_handover():
             plain_problems = handover_plain_check(written_now, committed_now, have_reply, reply_text)
             plain_applies = bool((written_now or committed_now) and have_reply
                                  and len(reply_text or "") >= PLAIN_SUMMARY_MIN_CHARS)
-            if written_now and _parity_enabled():
+            if written_now:
                 pm = _PARITY_RE.search(_last_user_text(transcript_path))
                 reply_for_parity = reply_text if have_reply else ""
                 if pm and not _PARITY_ACCOUNTED_RE.search(reply_for_parity):
                     parity_word = pm.group(1)
             shell_page_notes, editor_owed, trace_lines_early = handover_page_editor_check(
-                transcript_path, payload, written_now, turn_records, have_reply, reply_text)
+                transcript_path, payload, written_now, turn_records)
             visual_files = handover_visual_check(written_now, turn_records)
 
     issue_line, issue_problem, label_line, label_problem = handover_stop_lines(payload)
@@ -286,7 +274,7 @@ def event_handover():
 
 
 def _scope_parity_link(payload, field):
-    if field is not None and _PARITY_RE.search(field) and _parity_enabled():
+    if field is not None and _PARITY_RE.search(field):
         return SCOPE_PARITY_CLAUSE, ""
     return "", ""
 
