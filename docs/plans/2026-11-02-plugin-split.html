@@ -360,10 +360,10 @@ const PAGE = {
       "Clear writing and the voice",
       "The rules that every reply, page and issue must be written in plain, complete English. None of your eight plugins names them.",
       [
-        "Inside house-rules: clarity.py (281 lines), writing.py (340 lines), the editor helper, the rules for how I sound in replies (the voice), the plain summary that opens a finished-work reply, and the rule that a reply of 160 words or more needs a page.",
+        "Inside house-rules: clarity.py (281 lines), writing.py (340 lines) and the editor helper. Also the rules for how I sound (the voice), the plain summary that opens a finished-work reply, and the rule that a reply of 160 words or more needs a page.",
         "Placed by choice 1."
       ],
-      "This is how the user follows the work, which is close to No hiding. It is also what pages are checked against, which is close to Design loop."
+      "It is how the user follows the work, as in No hiding. Pages are also checked against it, which ties it to Design loop."
     ],
     [
       "chg",
@@ -398,7 +398,7 @@ const PAGE = {
     [
       "new",
       "Shared plumbing that every plugin needs",
-      "The code that reads a hook's input and writes its output, run.sh, the 17 places where one part plugs into another, the version check and self-updater (about 520 lines, core.py:986-1510), the doctor command, and the page builder.",
+      "The code that reads a hook's input and writes its output, run.sh, the 17 places where one part plugs into another, the version check and self-updater (525 lines, core.py:986-1510), the doctor command, and the page builder.",
       [
         "Today everything sits in one plugin, so a single end-of-reply hook and a single per-message reminder run the checks for every part.",
         "Placed by choice 5. After the split, each plugin would have its own end-of-reply hook, so up to eight plugins could each block the same reply. That is why choice 5 matters."
