@@ -212,3 +212,49 @@ rules out; that is a design call for aj, not made here.
   an event, runs it through that plugin's `hook.py`, adds a `showrule` row, and reports the fixed per-session cost
   per plugin plus a total (`--repo`, or the installed cache for both plugins).
 - `_rules_root` still reads `~/.claude/plugins/installed_plugins.json`, not `CLAUDE_CONFIG_DIR` (unchanged behaviour).
+
+## Step 3 part B: the repeat-failure lock (#440)
+
+Choice 6A of the approved design: an end-of-reply (Stop) check that fails blocks the reply up to three
+times for the same message of aj's; after the third block the reply goes through, loudly, and from then on
+source edits and commits are refused until that check passes. Nothing passes silently. Not touched: the
+report-only checks marked #309 (the page row) and the `HOUSE_RULES_*` switches (part C).
+
+### How it works
+
+- **Library.** `house_lib/blocks.py` (library source in `house-lib`, vendored into house-rules and
+  rule-enforcement by `tools/sync_library.py`) holds the counter, the lock and the "is a lock active" query.
+  `record_stop(cwd, session_id, check, mark, failing, missing, fix)` returns `"pass"` (count reset, lock
+  cleared), `"block"` (fewer than three blocks so far for this message) or `"through"` (three blocks done:
+  the check is locked, with what it misses and how to supply it). It never returns `"block"` a fourth time
+  for one message. `active_locks(cwd, session_id)` is what the PreToolUse hook reads.
+- **State.** `<git common dir>/house-rules/check-blocks.json` (inside `.git`, so never committed; shared
+  by worktrees), else `house-rules-check-blocks-<session>.json` in the temp folder outside a repository.
+  Keyed by session id, then check name; a count remembers the message it answers (the transcript record's
+  uuid plus its text), so a new message from aj starts again at block 1. A lock outlives messages: only a
+  Stop that finds the check passing clears it. `stop_hook_active` is never used to count (it is shared
+  between plugins, see "Step 1 findings").
+- **The four checks.** house-rules `handover_checkpoints` (`design_loop.py`) records editor, evidence, commit
+  and plain summary through the library, on the first reply and on every retry. Block text says
+  "(block N of 3)". The `through` reply says the check is LOCKED, as a `systemMessage`, and the notes that
+  would have woken the model go to aj only (no `additionalContext`, so no loop). qa page still blocks once.
+  A check whose result is unknown this time (commit or evidence "could not tell", an unreadable transcript)
+  neither blocks nor clears a lock. A counter that cannot be read or written says so and does not block.
+- **Enforcement.** rule-enforcement `lockgate` (PreToolUse on `Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell`,
+  `rule_enforcement/lock.py`) refuses, while any check is locked: edits to files inside the session folder
+  that are not docs, and `git commit` / `git push` in a shell. The refusal names each locked check, what it
+  misses and how to supply it. Always allowed: `docs/**/*.md`, anything under `docs/plans/`, files outside
+  the session folder (a page's content file in a scratch folder), reading, tests, and the editor helper (not
+  matched). When the commit check is the locked one a commit is allowed (a push is not).
+- **Fail mode.** If the state cannot be read, or the payload cannot be parsed, or the shim finds no Python,
+  `lockgate` says "NOT enforced for this call" in a `systemMessage` and allows the call. It never refuses
+  because something is broken (the 2.74.0 failure, `docs/3-state/ProjectState.md`, 2026-10-28).
+
+### Limits, said plainly
+
+- A shell command that edits a source file by redirect or `sed -i` is not caught; only `git commit` and
+  `git push` are looked for in shell commands.
+- The lock is looked up by the session id and the folder in the tool call's payload. A call made with a
+  different `cwd` than the Stop that locked it (another repository) sees no lock.
+- Files outside the session folder being always allowed is a judgement made here, so a page's content file
+  can be written while locked; it is not in the approved points and is for aj to confirm.
