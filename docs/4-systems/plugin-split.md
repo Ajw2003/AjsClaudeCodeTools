@@ -35,4 +35,57 @@ the 17 that set a path, URL or number stay.
   own, so several could block the same reply; the repeat-failure lock has to count across plugins.
 - `guard` calls the docs reminder (`register_docs_status`) at commit time: 17 `register_*` calls link
   the parts today and each needs a cross-plugin route.
-- Plugin `dependencies` in `plugin.json` is not yet verified to install the library.
+- Plugin `dependencies` installing the library: verified, see "Step 1 findings (#438)" below.
+
+## Step 1 findings (#438)
+
+Throwaway plugins (`spike-lib`, `spike-a`, `spike-b`) in a local marketplace, installed into a
+throwaway `CLAUDE_CONFIG_DIR`, Claude Code CLI 2.1.316. The real `~/.claude` was not touched.
+
+### 1. Dependencies install the library: yes
+
+Schema (official plugins-reference, `dependencies`): array of `"name"`, `"name@marketplace"` or
+`{"name","marketplace","version"}`; bare names resolve against the plugin's own marketplace.
+`spike-a/.claude-plugin/plugin.json` had `"dependencies":["spike-lib"]`.
+
+```
+$ claude plugin marketplace add .../dep-spike/mkt
+√ Successfully added marketplace: spike-mkt (declared in user settings)
+$ claude plugin install spike-a@spike-mkt
+√ Successfully installed plugin: spike-a@spike-mkt (scope: user) (+ 1 dependency: spike-lib)
+$ claude plugin list
+  > spike-a@spike-mkt  Status: √ enabled
+  > spike-b@spike-mkt  Status: √ enabled
+  > spike-lib@spike-mkt  Status: √ enabled
+```
+
+Installing `spike-a` alone also installed and enabled `spike-lib`. (`claude plugin prune` removes
+auto-installed dependencies no longer needed.)
+
+### 2. Two blocking Stop hooks: both reasons reach the model, one retry
+
+Both `spike-a` and `spike-b` had a Stop hook that returns `{"decision":"block","reason":"REASON-FROM-<X>..."}`
+unless `stop_hook_active` is true, and logs the payload. Run: `CLAUDE_CONFIG_DIR=.../cfg claude -p "say hi" --output-format stream-json --verbose`
+(auth worked with the custom config dir; exit 0).
+
+Hook log (order of execution):
+
+```
+a stop_hook_active=False   (.717)
+b stop_hook_active=False   (.720)   - started 3 ms apart: run in parallel, not sequentially
+b stop_hook_active=True    (.969)
+a stop_hook_active=True    (.972)
+```
+
+- Order: on the first stop a ran first and b 3 ms later (parallel; do not rely on order). On the retry b was logged before a.
+- Both reasons reached the model: the transcript holds two separate user messages,
+  `Stop hook feedback:\nREASON-FROM-A...` and `Stop hook feedback:\nREASON-FROM-B...`; the model's reply said both words (AZZ, BZZ).
+- `stop_hook_active` read `True` on the retry, for both hooks.
+- Retries: exactly 1 (each hook ran twice).
+
+Consequence for the split: several plugins' Stop hooks can block one reply and all reasons are
+delivered together. `stop_hook_active` is shared, so it cannot tell a plugin whether its own earlier
+block was the one repeated; a cross-plugin repeat-failure counter needs its own shared state.
+
+Not verified: more than one retry (hooks here stop blocking after the first); behaviour on the
+interactive path (only headless `-p` was run); hook ordering in other CLI versions.
