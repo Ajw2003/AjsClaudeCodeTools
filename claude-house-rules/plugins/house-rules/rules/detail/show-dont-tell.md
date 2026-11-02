@@ -92,6 +92,34 @@ approved" does not count until at least two issues labelled `AjsAgent created th
 during the plan; issues made with the GitHub tool count the same as a terminal `gh issue create`
 (#231).
 
+## Plans and pitches follow the reference page
+
+A page that pitches an idea or proposes a plan takes its form from aj's reference,
+`docs/plans/reference/sword-fighting-proposal.html` in `Ajw2003/AjsClaudeCodeTools`. Its content
+file, pictures and picture sources sit beside it, and `docs/plans/reference/README.md` explains it.
+It is the reference for form, not content. Build such a page to this checklist:
+
+1. **The moment first.** The first item shows the core experience or outcome as a picture, and
+   says the idea in one line before any mechanism.
+2. **What exists before what is new.** Every new item's today, creates and impact lines name the
+   existing file or system it reuses. Where the change spans several parts, one diagram colours each
+   part as reused, adapted or new.
+3. **One picture per idea, of the right kind.** A mock-up or render shows what it will look like.
+   A plain labelled diagram explains how it works: a layout, a flow, a timing chart or a reuse map.
+   Each caption says what the picture shows, and says when it is a mock-up rather than the product.
+4. **Unknowns labelled.** Untested numbers are called starting values. An unmeasured risk names the
+   milestone that measures it, and a Risks item says what could sink the idea.
+5. **Checkable milestones.** Each milestone has an acceptance test someone else could run.
+6. **Choices last.** Each open decision has two to four options, one marked as the suggestion, the
+   reason for it, and pictures where the options are visual.
+7. **Plain language.** Jargon is defined on first use, every file and system is named, sentences
+   read on a phone, and `@house-rules:editor` reads the page before aj does.
+
+**Why:** aj chose the sword-duel pitch as the template for every future plan and pitch because its
+language, rendering, detail and diagrams let a reader picture the idea and understand all of it
+(aj, 2026-11-02). The reference lives in the repo rather than in the installed plugin, so the
+checklist is written here, where every session can read it.
+
 ## The handover page
 
 Every page is built by the page builder, `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py build

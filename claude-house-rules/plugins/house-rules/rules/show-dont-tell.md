@@ -18,6 +18,10 @@ act in each project. A missing editor pass, evidence, commit or plain summary bl
 once. A missing page keeps blocking until the reply links one, up to three blocks in a row; only
 "no page" in aj's own message lets a reply through without one.
 
+A plan or pitch page follows aj's reference, `docs/plans/reference/sword-fighting-proposal.html` in
+`Ajw2003/AjsClaudeCodeTools`: the moment first, what exists before what is new, one picture per
+idea, unknowns labelled, checkable milestones, choices last. The checklist is in the detail file.
+
 A simple question gets a short answer. Each reply ends with one question or one next step; a
 reply of 160 words or more needs a page (see above).
 
