@@ -1,0 +1,33 @@
+{
+  "title": "Library Lookup",
+  "eyebrow": "Design question · step 2 of the plugin split, the shared library (#439)",
+  "replyPrefix": "Library lookup answers",
+  "reply": "",
+  "approval": "Library lookup answered",
+  "short": {
+    "lead": "Step 1 (#438) proved that installing a plugin also installs a library it names in its dependencies field. A hook still has to find the library's code on disk, and the two installs I can see, local and cloud, lay plugins out differently. A normal install puts each plugin in plugins/cache/<marketplace>/<plugin>/<version>/ and lists that folder in plugins/installed_plugins.json, as the step 1 test install showed. This cloud session has plugins/synced/<id>/<plugin>/ instead, with no version folder and no installed_plugins.json. Only house-rules and mattpocock-skills are there today, so I cannot tell whether a library installed only as a dependency would be synced to a cloud session at all.",
+    "hint": "Tap a row for the detail.",
+    "key": [["Seen on disk", ""], ["Unknown", "you"]],
+    "items": [
+      ["file", "Local", "Normal install: plugins/cache/<marketplace>/<plugin>/<version>/", "", "The step 1 test install placed spike-lib beside spike-a, and installed_plugins.json gave both folders.", "Nothing from you."],
+      ["search", "Cloud", "Cloud session: plugins/synced/<id>/<plugin>/", "you", "No version folder and no installed_plugins.json. I have not tested whether a dependency gets synced, because nothing in this session installs one.", "Your choice below."]
+    ]
+  },
+  "changes": [
+    ["new", "How a plugin loads the shared code", "Every plugin's hooks import the library's Python code at the start of each hook call.", ["Today there is one plugin, so the shared code always sits in the same folder as the hook.", "Decided by the choice below."], "A hook that cannot find the library must refuse loudly, never pass silently."]
+  ],
+  "choices": [
+    ["lookup", "How does each plugin get the shared library's code?", [
+      ["A", "A copy inside each plugin, made from one source", 1, "The library lives once in the repo. A release tool copies it into every plugin, and verify.py fails if any copy differs from the source. It works on every surface, because nothing has to be found. The library plugin still ships, for the page builder and templates."],
+      ["B", "Find the installed library plugin at run time", 0, "Read installed_plugins.json, or look beside the plugin's own folder. This matches your earlier choice 5A (a shared library plugin) exactly, but it fails in the cloud unless the synced copy includes the library, which is untested."],
+      ["C", "Test the cloud first, then decide", 0, "Publish a test library and plugin to the marketplace and open a new cloud session to see whether the library is synced. This costs a release and a session before step 2 starts."]
+    ], "Option A changes your earlier choice 5A (\"a shared library plugin\") slightly: the code is copied, but there is still one source and a check that the copies match."]
+  ],
+  "wrapup": {
+    "summary": "One question about how a plugin finds the shared library, because cloud sessions lay plugins out differently from a normal install.",
+    "changing": "Nothing yet. This page is the only new file.",
+    "blocking": "Your answer.",
+    "next": "I build step 2 (#439) the way you choose.",
+    "todo": ["Pick an answer.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}
