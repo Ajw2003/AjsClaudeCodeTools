@@ -275,7 +275,7 @@ const PAGE = {
   "reply": "",
   "approval": "Design approved: plugin split",
   "short": {
-    "lead": "I read every hook, rule file, helper agent, command and script in the house-rules plugin (version 2.74.1) and placed each one in one of your eight plugins. Most of it fits. Seven pieces have no clear home. They are listed under the next tab, with a choice for each. Two things already exist that the split can reuse. The code is already in seven files, one per part (scripts/house_rules/), and its tests are split the same way (scripts/checks/). The 2026-10-16 audit also planned a core plus six sub-plugins, and that work is still on the branch AjsAgent/issue-281-fix. The last restructure (2.74.0, pull request #427) was reverted on 2026-10-28. Its shared settings check refused every tool call, replies included (docs/3-state/ProjectState.md). So this proposal keeps the shared code free of any check that can block.",
+    "lead": "I read every hook, rule file, helper agent, command and script in the house-rules plugin (version 2.74.1) and placed each one in one of your eight plugins. Most of it fits. Seven pieces have no clear home. They are listed under the next tab, with a choice for each. Two things already exist that the split can reuse. The code is already in seven files, one per part (scripts/house_rules/), and its tests are split the same way (scripts/checks/). The 2026-10-16 audit also planned a core plus six sub-plugins, and that work is still on the branch AjsAgent/issue-281-fix. The last restructure (2.74.0, pull request #427) was reverted on 2026-10-28. Its shared settings check refused every tool call, replies included (docs/3-state/ProjectState.md). So this proposal keeps the shared code free of any check that can block. One principle governs the whole split, in your words of 2026-11-02: none of it is optional. Every rule is enforced by code, never left to me, and an enforcement that breaks things is reworked, never switched off or bypassed.",
     "hint": "Tap a plugin to see what moves into it and what it is missing.",
     "key": [
       [
@@ -355,6 +355,26 @@ const PAGE = {
     ]
   },
   "changes": [
+    [
+      "chg",
+      "How each rule is enforced today",
+      "I sorted the rules by what the code actually does when one is broken. Only the first group meets your principle.",
+      [
+        "Refused every time (eight checks): the approval lock on source edits, the destructive-command guard, commits and pushes on main, and full-file rewrites. Also source edits before a plan's issues exist, a third running helper, a fourth uncommitted file, and commits credited to Claude.",
+        "Fall short: four checks block one reply and then let the next one through (evidence, editor pass, commit, plain summary). Three checks only report (the page check, the re-creation check, and shell writes while code is locked, all marked with the issue \"report only until the restructure\" (#309) in design_loop.py and core.py). Four only remind (docs tiers, the comment harvest, artifact location, running a file I wrote). And a search of the hook code found no check at all for eight rules. They are: open source first, read the docs first, build for a person alone, what the user does by hand, deliver a whole workflow, a stand-in compiler is not proof, say what prompted me, and no local paths in issues."
+      ],
+      "One example of the problem you describe: the guard on waiting commands piped through tail or head was removed by the guard-friction issue (#292) because it got in the way (safe_git.py:68-70), instead of being reworked. Each plugin's build step turns its rules into checks that refuse until the rule is met."
+    ],
+    [
+      "chg",
+      "The 38 off switches",
+      "Settled by your message: no rule can be switched off.",
+      [
+        "38 environment switches whose names start with HOUSE_RULES_. I counted 21 that switch a check or rule off, such as HOUSE_RULES_LOOP and HOUSE_RULES_ISSUES. The other 17 set a path, a URL or a number.",
+        "Every switch that turns a rule off is removed. Switches that only point a test at a fake file or tune a value (for example the version-check URLs and the environment file path) stay, because they cannot skip a rule."
+      ],
+      "Turning a plugin's rules off then means uninstalling that plugin, which you can see and I cannot do quietly."
+    ],
     [
       "chg",
       "Clear writing and the voice",
@@ -553,29 +573,29 @@ const PAGE = {
       "This decides how the eight plugins install and update together."
     ],
     [
-      "switches",
-      "Choice 6: what happens to the 38 off switches?",
+      "repeat",
+      "Choice 6: what happens when an end-of-reply check keeps failing on the same reply?",
       [
         [
           "A",
-          "Remove every switch that turns a rule off",
+          "Block up to three times, then lock edits until the check passes",
           1,
-          "Keep only the ones that tune a value or point a test elsewhere, such as the version-check URLs and the environment file path. Uninstalling a plugin becomes the way to turn its rules off."
+          "A check at the end of a reply cannot block forever without trapping the session in a loop. After the third block the reply goes out, but source edits and commits stay refused until the missing piece (the evidence, the page, the commit) exists. Nothing passes silently."
         ],
         [
           "B",
-          "Keep them all",
+          "Block up to three times, then file an issue",
           0,
-          "Nothing changes, and every rule stays optional."
+          "The reply goes out and the miss becomes a GitHub issue that the next session opens with. Work is not stopped, so the rule can still be skipped for the rest of the session."
         ],
         [
           "C",
-          "Remove all 38",
+          "Block every time, with no limit",
           0,
-          "The tests that point the hooks at fake files would need another way in."
+          "Strictest, but a check with a bug could trap the session until the plugin is fixed."
         ]
       ],
-      "Your description of Rule enforcement says no rule is optional, and 38 switches contradict that."
+      "Today four checks block once and then let the next reply through, which is the bypass you described."
     ],
     [
       "issues",
@@ -623,7 +643,7 @@ const PAGE = {
     ]
   ],
   "wrapup": {
-    "summary": "Your eight plugins cover most of house-rules. Seven pieces need a home: clear writing, delegation, handing commands over, the machine profile, the shared plumbing, the issue workflow with the permission timer, and four small leftovers.",
+    "summary": "Your eight plugins cover most of house-rules. Seven pieces need a home, and many rules are only reminded, reported or blocked once today. Under your principle, every rule gets a check that refuses until the rule is met.",
     "changing": "Nothing is built yet. This page and its content file in docs/plans/ are the only new files.",
     "blocking": "Your answers to the eight choices.",
     "next": "I check whether Claude Code installs a plugin's `dependencies`, then write a build plan page with one issue for each plugin, starting with the shared plumbing and Safe work.",

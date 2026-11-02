@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-02 — The plugin split: no rule is optional
+
+**Context.** aj asked to split house-rules into eight plugins (proposal page
+`docs/plans/2026-11-02-plugin-split.html`), then set the principle the split is built on.
+
+**Decision.** aj's words: "none of it should be optional. everything should be reasonably enforced in a way
+that doesn't hinder efficiency or cause problems but never is left just up to you to enforce. if enforcement
+breaks things we fix and rework it ... not in a way that just lets you bypass the rules". So every rule gets a
+code check; a check that causes friction is reworked, never removed or switched off (the opposite of #292,
+`safe_git.py:68-70`); the `HOUSE_RULES_*` switches that turn a rule off go. How a repeatedly failing
+end-of-reply check behaves is choice 6 on the page.
+
+**Status.** Standing. The rest of the split waits on aj's answers to the page.
+
 ## 2026-10-27 - Triage answers: docref skips its own test fixtures
 
 **Context.** `docref.py check` had reported the same 38 problems on `main` since at least 2026-10-16. All 38 came
