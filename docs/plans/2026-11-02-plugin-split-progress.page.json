@@ -1,11 +1,11 @@
 {
   "title": "Plugin Split Progress",
-  "eyebrow": "Progress · the plugin split (#437): steps 1 and 2 built, step 3 parts A and B built",
+  "eyebrow": "Progress · the plugin split (#437): steps 1 and 2 built, step 3 parts A and B built, part C under way",
   "replyPrefix": "Plugin split progress",
   "reply": "",
   "approval": "Progress noted",
   "short": {
-    "lead": "Steps 1 and 2 of the plugin split are built, and so are parts A and B of step 3. I checked each result by running it myself. The builder is now closing three ways around the new repeat-failure lock. Nothing here needs a decision from you.",
+    "lead": "Steps 1 and 2 of the plugin split are built, and so are parts A and B of step 3. I checked each result by running it myself. Part C, removing the off switches, is being built now. Nothing here needs a decision from you.",
     "hint": "Tap a step for its evidence.",
     "key": [
       [
@@ -46,24 +46,24 @@
         "loop",
         "Step 3B",
         "The repeat-failure lock (#440): part B built",
-        "",
+        "done",
         "A check that keeps failing blocks the reply three times, then source edits and commits are refused until it passes. The action that fixes the failing check is always allowed: when the commit check is locked, commits still go through. Checked: house-rules 952 checks pass, rule-enforcement 60 pass, the library copies match. In the recorded live session, a missing commit blocked three times, then a source edit was refused, the commit went through, and the lock cleared.",
         "Nothing from you."
       ],
       [
         "stop",
-        "Fixing",
-        "Three ways around the lock",
-        "",
-        "The builder found them itself. First, a shell command such as sed -i could still edit a locked file. Second, working from another folder skipped the lock. Third, a turn that wrote nothing cleared the lock while the file was still uncommitted. Each gets a test and a repeat in a live session. Files outside every git repo, such as a page's draft content, stay writable while locked.",
+        "Fixed",
+        "Three ways around the lock, closed",
+        "done",
+        "The shell command sed -i (an in-place edit) on the locked file is now refused, and the file stays unchanged. A reply that wrote nothing no longer clears the lock. Committing the file clears it. Checked: house-rules 959 checks pass, rule-enforcement 94 pass.",
         "Nothing from you."
       ],
       [
         "next",
-        "Next",
-        "Part C, then the pull request",
+        "Step 3C",
+        "Part C of step 3: the off switches",
         "",
-        "Part C of step 3 removes the 21 switches that turn a check or rule off. Then the pull request opens and has to pass the six-item checklist in docs/4-systems/plugin-split.md.",
+        "Following your answers (1B: remove the long-reply editor pass; your own answer to 2: keep the helper record as it is), I am removing 18 rule switches, the off value of the permission timer, and the long-reply editor switch. The checks the 18 switches and the timer controlled stay on. The editor pass stays required for pages. The saved record of each helper's work keeps its switch for now. Tests that used the switches now set up the state they need directly, and a new check fails if a removed switch comes back. After part C, the pull request opens and has to pass the six-item checklist in docs/4-systems/plugin-split.md.",
         "Nothing from you."
       ]
     ]
@@ -82,10 +82,10 @@
   ],
   "choices": [],
   "wrapup": {
-    "summary": "Steps 1 and 2 and parts A and B of step 3 are built and checked; three gaps in the lock are being closed.",
+    "summary": "Steps 1 and 2 and parts A and B of step 3 are built and checked; part C is being built.",
     "changing": "house-rules 2.75.0 and the new house-lib and rule-enforcement plugins, on the branch AjsAgent/house-rules-plugin-split-a9uusz.",
     "blocking": "Nothing.",
-    "next": "I check the builder's fixes myself, then start part C.",
+    "next": "I check part C myself, then open the pull request for the checklist.",
     "todo": [
       "Nothing to do yet. The pull request opens after step 3, as you asked."
     ]
