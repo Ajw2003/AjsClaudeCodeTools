@@ -270,12 +270,12 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Plugin Split Progress",
-  "eyebrow": "Progress · the plugin split (#437): steps 1 and 2 built, step 3 part A built",
+  "eyebrow": "Progress · the plugin split (#437): steps 1 and 2 built, step 3 parts A and B built",
   "replyPrefix": "Plugin split progress",
   "reply": "",
   "approval": "Progress noted",
   "short": {
-    "lead": "Steps 1 and 2 of the plugin split are built, and so is part A of step 3. I checked each result by running it myself. A builder helper is now fixing two tools that only know about house-rules. Nothing here needs a decision from you.",
+    "lead": "Steps 1 and 2 of the plugin split are built, and so are parts A and B of step 3. I checked each result by running it myself. The builder is now closing three ways around the new repeat-failure lock. Nothing here needs a decision from you.",
     "hint": "Tap a step for its evidence.",
     "key": [
       [
@@ -314,10 +314,26 @@ const PAGE = {
       ],
       [
         "loop",
-        "Next",
-        "Tool fixes, then parts B and C of step 3",
+        "Step 3B",
+        "The repeat-failure lock (#440): part B built",
         "",
-        "A builder is making the version-bump check and the footprint tool cover every plugin. Part B is the lock that refuses edits and commits after a check has blocked three times. Part C removes the 21 switches that turn a check or rule off. Then the pull request opens and has to pass the six-item checklist in docs/4-systems/plugin-split.md.",
+        "A check that keeps failing blocks the reply three times, then source edits and commits are refused until it passes. The action that fixes the failing check is always allowed: when the commit check is locked, commits still go through. Checked: house-rules 952 checks pass, rule-enforcement 60 pass, the library copies match. In the recorded live session, a missing commit blocked three times, then a source edit was refused, the commit went through, and the lock cleared.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Fixing",
+        "Three ways around the lock",
+        "",
+        "The builder found them itself. First, a shell command such as sed -i could still edit a locked file. Second, working from another folder skipped the lock. Third, a turn that wrote nothing cleared the lock while the file was still uncommitted. Each gets a test and a repeat in a live session. Files outside every git repo, such as a page's draft content, stay writable while locked.",
+        "Nothing from you."
+      ],
+      [
+        "next",
+        "Next",
+        "Part C, then the pull request",
+        "",
+        "Part C of step 3 removes the 21 switches that turn a check or rule off. Then the pull request opens and has to pass the six-item checklist in docs/4-systems/plugin-split.md.",
         "Nothing from you."
       ]
     ]
@@ -336,10 +352,10 @@ const PAGE = {
   ],
   "choices": [],
   "wrapup": {
-    "summary": "Steps 1 and 2 and part A of step 3 are built and checked.",
+    "summary": "Steps 1 and 2 and parts A and B of step 3 are built and checked; three gaps in the lock are being closed.",
     "changing": "house-rules 2.75.0 and the new house-lib and rule-enforcement plugins, on the branch AjsAgent/house-rules-plugin-split-a9uusz.",
     "blocking": "Nothing.",
-    "next": "I check the tool fixes myself, then start part B.",
+    "next": "I check the builder's fixes myself, then start part C.",
     "todo": [
       "Tap <b>Copy my reply<\/b> and send it: \"Progress noted\", or say what to change."
     ]
