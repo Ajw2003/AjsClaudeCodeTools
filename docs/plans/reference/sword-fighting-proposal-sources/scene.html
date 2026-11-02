@@ -1,0 +1,241 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#000;overflow:hidden;font-family:"Trebuchet MS",Verdana,sans-serif}
+  #wrap{position:relative;width:1280px;height:720px}
+  canvas{display:block}
+  .hud{position:absolute;inset:0;pointer-events:none;color:#fff}
+  .side{position:absolute;top:22px;display:flex;flex-direction:column;gap:6px;text-shadow:0 2px 4px rgba(0,0,0,.55)}
+  .side.l{left:28px}.side.r{right:28px;align-items:flex-end}
+  .name{font-size:22px;font-weight:bold;letter-spacing:.04em}
+  .tier{font-size:14px;opacity:.85}
+  .pips{display:flex;gap:6px}
+  .pips svg{width:34px;height:34px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+  .call{position:absolute;left:0;right:0;top:120px;text-align:center;font-size:56px;font-weight:bold;color:#fff3c4;
+        text-shadow:0 0 18px rgba(255,190,60,.9),0 3px 0 #8a3b12;letter-spacing:.08em}
+  .lab{position:absolute;bottom:26px;text-align:center;width:250px;margin-left:-125px;text-shadow:0 2px 4px rgba(0,0,0,.7)}
+  .lab b{display:block;font-size:22px}.lab span{font-size:14px;opacity:.9}
+  .stars{display:block;font-size:16px;color:#ffd257;margin-top:2px}
+</style></head>
+<body><div id="wrap"><div class="hud" id="hud"></div></div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const P = new URLSearchParams(location.search);
+const shot = P.get('shot') || 'hero';
+const W = 1280, H = 720;
+const renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+renderer.setSize(W,H); renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.getElementById('wrap').prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(62, W/H, 0.05, 900);
+
+// ---------- palette (sky/water/sun from RockSkipping LakeLouiseLook.json) ----------
+const look = {
+  dock:  {skyTop:0x3a6fd6, skyHor:0x9cc8ff, fog:0xb4cdef, water:0x1f9aa3, sun:0xfff1dc, amb:0x8397bd, ground:null},
+  maple: {skyTop:0x4f7fd0, skyHor:0xf3d9b0, fog:0xe9cfa8, water:0x2a8f9a, sun:0xffd9a8, amb:0x9a8a80, ground:0x7d9a3e},
+  ice:   {skyTop:0x050a24, skyHor:0x1d3a5c, fog:0x16304e, water:0xcfe6f2, sun:0x9fc4ff, amb:0x4a5c8a, ground:0xdaeef7},
+};
+const arena = shot.startsWith('arena-') ? shot.slice(6) : (P.get('arena') || 'dock');
+const L = look[arena];
+
+function flat(color, opts={}) { return new THREE.MeshStandardMaterial({color, flatShading:true, roughness:0.85, metalness:0, ...opts}); }
+function mesh(geo, mat, x=0,y=0,z=0) { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); scene.add(m); return m; }
+
+// sky dome with vertex-colour gradient
+{
+  const g = new THREE.SphereGeometry(800, 32, 16);
+  const top = new THREE.Color(L.skyTop), hor = new THREE.Color(L.skyHor), c = new THREE.Color();
+  const cols = []; const p = g.attributes.position;
+  for (let i=0;i<p.count;i++){ const t = Math.max(0, p.getY(i)/800); c.copy(hor).lerp(top, Math.pow(t,0.45)); cols.push(c.r,c.g,c.b); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols,3));
+  scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors:true, side:THREE.BackSide, fog:false})));
+}
+scene.fog = new THREE.Fog(L.fog, 80, 700);
+scene.add(new THREE.HemisphereLight(L.skyHor, L.amb, arena==='ice'?0.9:1.1));
+const sun = new THREE.DirectionalLight(L.sun, arena==='ice'?1.0:2.2); sun.position.set(-80,50,-30); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(30,20,40); scene.add(fill);
+
+// seeded random so every render is identical
+let seed = 7; const rnd = () => (seed = (seed*16807)%2147483647)/2147483647;
+
+// water / ground
+mesh(new THREE.PlaneGeometry(2000,2000).rotateX(-Math.PI/2), flat(L.water,{roughness:arena==='ice'?0.35:0.3, metalness:0.1}), 0,-0.6,0);
+
+// mountains: displaced cones with snow caps by vertex colour
+function mountain(x,z,h,r,rockCol=0x6f7f95){
+  const g = new THREE.ConeGeometry(r,h,7,4); g.translate(0,h/2,0);
+  const p = g.attributes.position;
+  for(let i=0;i<p.count;i++){ const y=p.getY(i); if(y>0.01 && y<h-0.01){ p.setX(i,p.getX(i)*(0.8+rnd()*0.4)); p.setZ(i,p.getZ(i)*(0.8+rnd()*0.4)); p.setY(i,y*(0.9+rnd()*0.2)); } }
+  const ng = g.toNonIndexed(); const q = ng.attributes.position; const cols=[];
+  const rock=new THREE.Color(rockCol), snow=new THREE.Color(arena==='ice'?0xbcd2ee:0xf4f7fb), grass=new THREE.Color(arena==='maple'?0x5d6e3a:0x3f5f4a);
+  for(let i=0;i<q.count;i+=3){ const ym=(q.getY(i)+q.getY(i+1)+q.getY(i+2))/3/h; const c= ym>0.62?snow: ym<0.18?grass:rock; for(let k=0;k<3;k++) cols.push(c.r,c.g,c.b); }
+  ng.setAttribute('color', new THREE.Float32BufferAttribute(cols,3)); ng.computeVertexNormals();
+  const m = mesh(ng, new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true, roughness:1}), x,-0.6,z);
+  m.rotation.y = rnd()*6; return m;
+}
+const rockTint = arena==='ice'?0x3e4f72:0x6f7f95;
+mountain(-150,-420,95,120,rockTint); mountain(-20,-470,120,140,rockTint); mountain(130,-430,100,130,rockTint);
+mountain(270,-400,80,110,rockTint); mountain(-280,-380,85,110,rockTint);
+mountain(-200,-300,55,80,rockTint); mountain(220,-310,60,85,rockTint); mountain(60,-360,70,90,rockTint);
+
+// pines and maples
+function pine(x,z,s=1){
+  const trunk = mesh(new THREE.CylinderGeometry(0.15*s,0.2*s,1.2*s,5), flat(0x5b3a24), x,-0.6+0.6*s,z);
+  const col = arena==='ice'?0x1f4a44:0x1f5a3a;
+  for(let i=0;i<3;i++){ mesh(new THREE.ConeGeometry((1.6-i*0.4)*s,1.9*s,6), flat(col), x,-0.6+(1.6+i*1.1)*s,z); }
+  if(arena==='ice'){ mesh(new THREE.ConeGeometry(0.55*s,0.8*s,6), flat(0xeef6ff), x,-0.6+4.25*s,z); }
+}
+function maple(x,z,s=1){
+  mesh(new THREE.CylinderGeometry(0.18*s,0.28*s,2.2*s,5), flat(0x5b3a24), x,-0.6+1.1*s,z);
+  const cols=[0xc8321e,0xe06a1f,0xf0a32a,0xb5261a];
+  for(let i=0;i<4;i++){ const m=mesh(new THREE.IcosahedronGeometry((1.3+rnd()*0.5)*s,0), flat(cols[(i+Math.floor(rnd()*4))%4]), x+(rnd()-0.5)*1.6*s,-0.6+(2.8+rnd()*1.2)*s,z+(rnd()-0.5)*1.6*s); m.rotation.set(rnd()*3,rnd()*3,0); }
+}
+function shoreline(){
+  // two forested shores framing the lake
+  for(let i=0;i<70;i++){
+    const side = i%2?1:-1; const z = -20 - rnd()*170; const x = side*(26+rnd()*45 + (-z)*0.25);
+    if(arena==='maple' && rnd()<0.55) maple(x,z,1.6+rnd()*1.2); else pine(x,z,1.8+rnd()*1.6);
+  }
+  // shore land masses
+  const landCol = arena==='ice'?0xe6f1f8:(arena==='maple'?0x6f8a38:0x4c6b45);
+  for(const side of [-1,1]){ const m=mesh(new THREE.BoxGeometry(160,1.2,400), flat(landCol), side*(105),-0.4,-120); m.rotation.y=side*0.18; }
+}
+shoreline();
+
+// arena floor
+if(arena==='dock'){
+  const plank = flat(0x9a6b42), plankDk = flat(0x7d5533);
+  for(let i=0;i<26;i++){ mesh(new THREE.BoxGeometry(3.4,0.12,0.28), i%3?plank:plankDk, 0,-0.05,2-i*0.31); }
+  for(const x of [-1.6,1.6]) for(let i=0;i<4;i++){ mesh(new THREE.CylinderGeometry(0.12,0.12,1.4,6), plankDk, x,-0.55,1.5-i*2.4); }
+} else if(arena==='maple'){
+  mesh(new THREE.CylinderGeometry(9,9.5,0.4,12), flat(0x8aa246), 0,-0.35,-3);
+  for(let i=0;i<60;i++){ // fallen leaves
+    const m=mesh(new THREE.CircleGeometry(0.09,5), flat([0xc8321e,0xe06a1f,0xf0a32a][i%3],{side:THREE.DoubleSide}), (rnd()-0.5)*7,-0.13,-rnd()*7+1); m.rotation.x=-Math.PI/2; m.rotation.z=rnd()*6; }
+  maple(-5.5,-12,1.0); maple(6,-14,1.1); pine(-8,-16,1.4);
+} else {
+  for(let i=0;i<14;i++){ const m=mesh(new THREE.CircleGeometry(1.2+rnd()*2,6), flat(0xb6d6e8,{roughness:0.2}), (rnd()-0.5)*16,-0.585,-rnd()*14); m.rotation.x=-Math.PI/2; }
+  // stars + aurora
+  const sv=[]; for(let i=0;i<500;i++){ const t=rnd()*Math.PI*2, u=0.15+rnd()*0.8; sv.push(Math.cos(t)*700*Math.cos(u), 700*Math.sin(u), Math.sin(t)*700*Math.cos(u)); }
+  const sg=new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(sv,3));
+  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({color:0xffffff,size:2,sizeAttenuation:false,fog:false})));
+  for(let k=0;k<3;k++){
+    const g=new THREE.PlaneGeometry(700,90,40,1); const p=g.attributes.position;
+    for(let i=0;i<p.count;i++){ const x=p.getX(i); p.setZ(i, Math.sin(x/70+k)*60); p.setY(i,p.getY(i)+Math.sin(x/45+k*2)*14); }
+    const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:[0x39ff9f,0x2ee6c8,0x9a6bff][k],transparent:true,opacity:0.38,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,fog:false,depthWrite:false}));
+    m.position.set(0,95+k*22,-430+k*30); m.rotation.x=0.1; scene.add(m);
+  }
+  // campfire glow
+  const fire=new THREE.PointLight(0xff8a3c,5,6); fire.position.set(3.5,0.2,-6); scene.add(fire);
+  mesh(new THREE.ConeGeometry(0.35,0.7,5), flat(0xff9a2a,{emissive:0xff6a10,emissiveIntensity:1.2}), 3.5,-0.25,-6);
+}
+
+// ---------- sword ----------
+function sword({tape=0x1b1b1b, guard=0xc9a14a, blade=0xdfe6ee}={}){
+  const g = new THREE.Group();
+  const bladeM = new THREE.MeshStandardMaterial({color:blade, metalness:0.25, roughness:0.35, flatShading:true, emissive:0x1a2230, emissiveIntensity:0.6});
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.05,1.0,4).scale(1,1,0.28), bladeM); b.position.y=0.62; g.add(b);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.05,0.14,4).scale(1,1,0.28), bladeM); tip.position.y=1.19; g.add(tip);
+  const gd = new THREE.Mesh(new THREE.BoxGeometry(0.30,0.05,0.07), flat(guard,{metalness:0.6,roughness:0.4})); gd.position.y=0.1; g.add(gd);
+  for(let i=0;i<5;i++){ const t=new THREE.Mesh(new THREE.CylinderGeometry(0.042,0.042,0.045,6), flat(i%2?tape:0x2c2c2c)); t.position.y=0.05-i*0.045; g.add(t); }
+  const pm = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045,0), flat(guard,{metalness:0.6,roughness:0.4})); pm.position.y=-0.19; g.add(pm);
+  return g;
+}
+
+function aim(obj, from, to){ obj.position.copy(from); obj.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), to.clone().sub(from).normalize()); }
+function limb(a,b,t,mat){ const len=a.distanceTo(b); const m=new THREE.Mesh(new THREE.BoxGeometry(t,len,t),mat); m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize()); scene.add(m); return m; }
+// ---------- fighters ----------
+const FIGHTERS = {
+  dummy:   {shirt:0xc9a86a, pants:0x8d7a52, hat:0xc4361f, pom:0xf4f4f4, skin:0xd8c08a, beard:null, sash:null, scale:1.0, straw:true},
+  lumber:  {shirt:0xb22a24, pants:0x2f4a6b, hat:0x1f1f1f, pom:null, skin:0xe0a982, beard:0x6b3d1f, sash:null, scale:1.08, plaid:true},
+  voyageur:{shirt:0x2f5f9e, pants:0x4a3b2a, hat:0xc4361f, pom:null, skin:0xd99a74, beard:null, sash:0xd8462a, scale:1.0, longcap:true},
+  winter:  {shirt:0xdbe9f5, pants:0x9db7d1, hat:0xffffff, pom:0xbfe3ff, skin:0xbfd3e6, beard:0xf7fbff, sash:0x6fb6e8, scale:1.12, ice:true},
+};
+function fighter(kind, armPose='guard'){ const noArm = armPose==='none';
+  const f = FIGHTERS[kind]; const g = new THREE.Group();
+  const leg = new THREE.BoxGeometry(0.17,0.8,0.2);
+  for(const x of [-0.12,0.12]){ const m=new THREE.Mesh(leg, flat(f.straw?0x8a6a3a:f.pants)); m.position.set(x,0.4,0); g.add(m);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.14,0.3), flat(f.straw?0x6b5030:0x3a2a1c)); boot.position.set(x,0.06,0.04); g.add(boot); }
+  if(f.straw){ const post=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.0,5), flat(0x6b4a2a)); post.position.y=0.3; g.add(post); }
+  const torsoG = new THREE.BoxGeometry(0.52,0.62,0.3,2,3,1);
+  if(f.plaid){ // vertex-colour plaid
+    const ng=torsoG.toNonIndexed(), p=ng.attributes.position, cols=[]; const a=new THREE.Color(f.shirt), b=new THREE.Color(0x1c1c1c);
+    for(let i=0;i<p.count;i+=3){ const cx=(p.getX(i)+p.getX(i+1)+p.getX(i+2))/3, cy=(p.getY(i)+p.getY(i+1)+p.getY(i+2))/3;
+      const dark=(Math.floor((cx+1)*6)+Math.floor((cy+1)*5))%2; const c=dark?b:a; for(let k=0;k<3;k++) cols.push(c.r,c.g,c.b); }
+    ng.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); ng.computeVertexNormals();
+    const t=new THREE.Mesh(ng,new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.9})); t.position.y=1.12; g.add(t);
+  } else { const t=new THREE.Mesh(torsoG, flat(f.shirt)); t.position.y=1.12; g.add(t); }
+  if(f.sash){ const s=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.1,0.33), flat(f.sash)); s.position.y=0.86; g.add(s); }
+  const head=new THREE.Mesh(new THREE.IcosahedronGeometry(0.17,0), flat(f.skin)); head.position.y=1.6; g.add(head);
+  const eyeM=flat(0x1a1a1a); for(const x of [-0.06,0.06]){ const e=new THREE.Mesh(new THREE.BoxGeometry(0.035,0.035,0.02),eyeM); e.position.set(x,1.62,0.155); g.add(e); }
+  if(f.beard){ const b=new THREE.Mesh(new THREE.ConeGeometry(0.15,f.ice?0.42:0.26,5), flat(f.beard)); b.position.set(0,f.ice?1.38:1.46,0.08); b.rotation.x=Math.PI; g.add(b); }
+  const hat = f.longcap ? new THREE.ConeGeometry(0.17,0.42,6) : new THREE.CylinderGeometry(0.15,0.18,0.16,6);
+  const h=new THREE.Mesh(hat, flat(f.hat)); h.position.y=f.longcap?1.88:1.76; if(f.longcap){h.rotation.z=-0.5;h.position.x=0.08;} g.add(h);
+  if(f.pom){ const pm=new THREE.Mesh(new THREE.IcosahedronGeometry(0.07,0), flat(f.pom)); pm.position.y=1.88; g.add(pm); }
+  if(f.ice){ for(let i=0;i<5;i++){ const c=new THREE.Mesh(new THREE.ConeGeometry(0.04,0.22,4), flat(0xcfefff,{emissive:0x6fbfff,emissiveIntensity:0.4})); c.position.set(-0.12+i*0.06,1.98,0); g.add(c);} }
+  // arms + sword
+  const armM = flat(f.straw?0xc9a86a:f.shirt);
+  const armL=new THREE.Mesh(new THREE.BoxGeometry(0.13,0.55,0.13), armM); armL.position.set(-0.34,1.12,0.05); armL.rotation.z=0.25; g.add(armL);
+  const armR=new THREE.Mesh(new THREE.BoxGeometry(0.13,0.55,0.13), armM); if(!noArm) g.add(armR);
+  const sw = sword({tape:f.ice?0x6fb6e8:0x1b1b1b, guard:f.ice?0xbfe3ff:0x9a7a3a, blade:f.ice?0xe8f6ff:0xcfd6de});
+  if(armPose==='guard'){ armR.position.set(0.36,1.18,0.18); armR.rotation.set(-0.9,0,-0.3); sw.position.set(0.38,1.0,0.42); sw.rotation.set(-0.35,0,-0.35); }
+  else { // overhead strike towards the player, angled to their left
+    armR.position.set(0.30,1.48,0.20); armR.rotation.set(-2.4,0,0.4); sw.position.set(0.18,1.72,0.45); sw.rotation.set(-1.0,0.2,0.95); }
+  if(!noArm) g.add(sw); g.scale.setScalar(f.scale); g.userData.sword = sw; scene.add(g); return g;
+}
+
+const hud = document.getElementById('hud');
+const leaf = (fill) => `<svg viewBox="-1.1 -1.1 2.2 2.2"><path transform="scale(1,-1)" fill="${fill}" stroke="#fff" stroke-width="0.09" stroke-linejoin="round" d="M0 1 L0.16 0.7 L0.36 0.8 L0.3 0.38 L0.58 0.66 L0.64 0.5 L0.92 0.56 L0.82 0.22 L0.96 0.14 L0.52 -0.2 L0.6 -0.36 L0.1 -0.3 L0.06 -0.82 L-0.06 -0.82 L-0.1 -0.3 L-0.6 -0.36 L-0.52 -0.2 L-0.96 0.14 L-0.82 0.22 L-0.92 0.56 L-0.64 0.5 L-0.58 0.66 L-0.3 0.38 L-0.36 0.8 L-0.16 0.7 Z"/></svg>`;
+const pips = (n, col) => `<div class="pips">${[0,1,2].map(i=>leaf(i<n?col:'rgba(255,255,255,0.18)')).join('')}</div>`;
+
+if(shot==='hero' || shot.startsWith('arena-')){
+  const wide = shot.startsWith('arena-');
+  const kind = P.get('foe') || (arena==='ice'?'winter':arena==='maple'?'voyageur':'lumber');
+  const foe = fighter(kind, wide?'guard':'none'); foe.position.set(0,0,-2.3); foe.rotation.y=0.05;
+  cam.position.set(0, 1.62, 0.25); cam.lookAt(0, 1.4, -2.5); scene.add(cam);
+  if(wide){ cam.position.set(1.4,2.3,3.6); cam.lookAt(0,1.2,-3); cam.fov=58; cam.updateProjectionMatrix(); }
+  if(!wide){
+    const F = FIGHTERS[kind];
+    const clash = new THREE.Vector3(-0.22,1.5,-1.25);
+    // the opponent's blade comes down from his raised sword hand, upper right of frame
+    const foeHilt = new THREE.Vector3(0.42,2.02,-1.95);
+    const foeSw = sword({blade:0xcfd6de, guard:0x9a7a3a}); scene.add(foeSw);
+    aim(foeSw, foeHilt, clash.clone().add(clash.clone().sub(foeHilt).multiplyScalar(0.35)));
+    limb(new THREE.Vector3(0.3,1.5,-2.25), foeHilt, 0.14, flat(F.shirt));
+    // the player's blade rises from the bottom right of frame into the crossing
+    const myHilt = new THREE.Vector3(0.36,1.02,-0.25);
+    const mine = sword({tape:0x1b1b1b}); scene.add(mine);
+    aim(mine, myHilt, clash.clone().add(clash.clone().sub(myHilt).multiplyScalar(0.18)));
+    mine.scale.setScalar(0.92);
+    const hand=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.14,0.13), flat(0xe0a982)); hand.position.set(0,-0.03,0); mine.add(hand);
+    const sleeve=new THREE.Mesh(new THREE.BoxGeometry(0.15,0.5,0.15), flat(0x2f6d4a)); sleeve.position.set(0,-0.34,0); mine.add(sleeve);
+    const sparkM = new THREE.MeshBasicMaterial({color:0xffd27a, blending:THREE.AdditiveBlending, transparent:true, depthWrite:false, fog:false});
+    for(let i=0;i<40;i++){
+      const dir = new THREE.Vector3(rnd()-0.5, rnd()-0.4, (rnd()-0.5)*0.4).normalize();
+      const len = 0.03+rnd()*0.14; const m=new THREE.Mesh(new THREE.ConeGeometry(0.003,len,3), sparkM);
+      m.position.copy(clash).addScaledVector(dir, 0.03+rnd()*0.16); m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir); scene.add(m);
+    }
+    const flash=new THREE.Mesh(new THREE.CircleGeometry(0.035,10), new THREE.MeshBasicMaterial({color:0xffffff,blending:THREE.AdditiveBlending,transparent:true,opacity:0.95,fog:false})); flash.position.copy(clash); flash.lookAt(cam.position); scene.add(flash);
+    const halo=new THREE.Mesh(new THREE.CircleGeometry(0.11,16), new THREE.MeshBasicMaterial({color:0xffb347,blending:THREE.AdditiveBlending,transparent:true,opacity:0.3,fog:false})); halo.position.copy(clash); halo.lookAt(cam.position); scene.add(halo);
+    const pl=new THREE.PointLight(0xffc070,4,2.5); pl.position.copy(clash); scene.add(pl);
+    const names={lumber:'LUMBERJACK LOU',voyageur:'VOYAGEUR MARIE',winter:'OLD MAN WINTER',dummy:'TRAINING POST'};
+    const tiers={lumber:'Tier 2 · Brawler',voyageur:'Tier 3 · Duellist',winter:'Tier 4 · Boss',dummy:'Tier 1 · Tutorial'};
+    hud.innerHTML = `<div class="side l"><div class="name">YOU</div>${pips(1,'#e8322a')}</div>
+      <div class="side r"><div class="name">${names[kind]}</div><div class="tier">${tiers[kind]}</div>${pips(2,'#e8322a')}</div>
+      <div class="call">PARRY!</div>`;
+  } else {
+    const nm={dock:'Lake Louise Dock',maple:'Algonquin Maple Clearing',ice:'Yellowknife Ice Road'}[arena];
+    hud.innerHTML = `<div class="side l"><div class="name">${nm}</div></div>`;
+  }
+} else if(shot==='roster'){
+  const kinds=['dummy','lumber','voyageur','winter'];
+  kinds.forEach((k,i)=>{ const f=fighter(k,'guard'); f.position.set(-2.55+i*1.7,0,-2.8); f.rotation.y=0.35-i*0.12; });
+  cam.position.set(0,1.45,2.6); cam.lookAt(0,1.0,-2.8); cam.fov=55; cam.updateProjectionMatrix();
+  const info=[['Training Post','Tutorial',1],['Lumberjack Lou','Brawler',2],['Voyageur Marie','Duellist',3],['Old Man Winter','Boss',4]];
+  const xs=[205,505,790,1075];
+  hud.innerHTML = info.map(([n,t,s],i)=>`<div class="lab" style="left:${xs[i]}px"><b>${n}</b><span>${t}</span><span class="stars">${'★'.repeat(s)}${'☆'.repeat(4-s)}</span></div>`).join('');
+}
+renderer.render(scene, cam);
+window.__done = true;
+</script></body></html>

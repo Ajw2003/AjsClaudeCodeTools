@@ -87,6 +87,22 @@ end-of-reply check behaves is choice 6 on the page.
 
 **Status.** Standing. The rest of the split waits on aj's answers to the page.
 
+## 2026-11-02 - Plans and pitches follow the sword-duel reference page
+
+**Context.** aj reviewed the sword-duel game pitch written for `Ajw2003/AjsCanadaPrty` and asked for it to be
+the template for every future plan and pitch, because its language, rendering, detail and diagrams let a
+reader picture the idea and understand all of it.
+
+**Decision.** The page, its content file, pictures and picture sources are saved at
+`docs/plans/reference/sword-fighting-proposal.html`, beside the 2026-10-17 reference
+(`learning-tools-plugin.html`), which stays. `rules/show-dont-tell.md` gains one sentence pointing at it, and
+`rules/detail/show-dont-tell.md` gains the seven-point checklist it is built to. The checklist is written into
+the rule because the reference lives in this repo's `docs/`, which the installed plugin does not carry, so
+sessions in other projects cannot open it from disk. Rejected: shipping the page inside the plugin. Its pictures
+are 1.1 MB, which every install would download for a page most sessions never open. Ships as 2.74.2.
+
+**Status.** Standing.
+
 ## 2026-10-27 - Triage answers: docref skips its own test fixtures
 
 **Context.** `docref.py check` had reported the same 38 problems on `main` since at least 2026-10-16. All 38 came

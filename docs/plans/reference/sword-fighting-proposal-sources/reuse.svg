@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" font-family="Trebuchet MS,Verdana,sans-serif">
+<rect width="960" height="560" fill="#f4f7fb"/>
+<text x="30" y="44" font-size="26" font-weight="bold" fill="#1d2b3a">What comes from RockSkipping, and what is new</text>
+<g font-size="13" fill="#1d2b3a">
+ <rect x="30" y="64" width="16" height="16" fill="#cfe9d4" stroke="#3c8a4f"/><text x="52" y="77">Reused as is</text>
+ <rect x="160" y="64" width="16" height="16" fill="#fff1c9" stroke="#c88a12"/><text x="182" y="77">Adapted</text>
+ <rect x="270" y="64" width="16" height="16" fill="#f9d6d2" stroke="#c8321e"/><text x="292" y="77">New</text>
+</g>
+<g font-size="14">
+ <text x="40" y="120" font-weight="bold" fill="#46566a">PHONE (web page)</text>
+ <rect x="40" y="130" width="260" height="56" rx="8" fill="#cfe9d4" stroke="#3c8a4f"/><text x="54" y="152" font-weight="bold">sensors.js</text><text x="54" y="172" font-size="12">quaternion attitude, gyro, calibration</text>
+ <rect x="40" y="196" width="260" height="56" rx="8" fill="#cfe9d4" stroke="#3c8a4f"/><text x="54" y="218" font-weight="bold">net.js · identity.js · join screen</text><text x="54" y="238" font-size="12">QR join, rejoin, names, colours</text>
+ <rect x="40" y="262" width="260" height="56" rx="8" fill="#fff1c9" stroke="#c88a12"/><text x="54" y="284" font-weight="bold">SwingController (from throw.js)</text><text x="54" y="304" font-size="12">same onset + stop detector, adds direction</text>
+ <rect x="40" y="328" width="260" height="56" rx="8" fill="#f9d6d2" stroke="#c8321e"/><text x="54" y="350" font-weight="bold">Grip pad screen</text><text x="54" y="370" font-size="12">thumb-hold to arm the sword, haptics</text>
+
+ <text x="350" y="120" font-weight="bold" fill="#46566a">RELAY + HOTSPOT (Node)</text>
+ <rect x="350" y="130" width="260" height="122" rx="8" fill="#cfe9d4" stroke="#3c8a4f"/><text x="364" y="152" font-weight="bold">relay/server.js, hotspot, DNS, TLS</text><text x="364" y="172" font-size="12">rooms, codes, offline HTTPS, cert fetch</text><text x="364" y="192" font-size="12">untouched: it only forwards messages</text>
+ <rect x="350" y="262" width="260" height="56" rx="8" fill="#fff1c9" stroke="#c88a12"/><text x="364" y="284" font-weight="bold">Two new message types</text><text x="364" y="304" font-size="12">POSE (~30-50 Hz, lossy), SWING (authoritative)</text>
+
+ <text x="660" y="120" font-weight="bold" fill="#46566a">UNITY (the TV)</text>
+ <rect x="660" y="130" width="270" height="56" rx="8" fill="#cfe9d4" stroke="#3c8a4f"/><text x="674" y="152" font-weight="bold">RelayClient, LocalServices, events</text><text x="674" y="172" font-size="12">same networking and event bus</text>
+ <rect x="660" y="196" width="270" height="56" rx="8" fill="#fff1c9" stroke="#c88a12"/><text x="674" y="218" font-weight="bold">PhoneAttitude + sword offset</text><text x="674" y="238" font-size="12">one basis change, upright neutral pose</text>
+ <rect x="660" y="262" width="270" height="56" rx="8" fill="#fff1c9" stroke="#c88a12"/><text x="674" y="284" font-weight="bold">Lake Louise look + SFX pipeline</text><text x="674" y="304" font-size="12">LakeLouiseLook.json, ProceduralClips</text>
+ <rect x="660" y="328" width="270" height="56" rx="8" fill="#f9d6d2" stroke="#c8321e"/><text x="674" y="350" font-weight="bold">SwordRig + arm model</text><text x="674" y="370" font-size="12">rotation drives a fake shoulder-elbow</text>
+ <rect x="660" y="394" width="270" height="56" rx="8" fill="#f9d6d2" stroke="#c8321e"/><text x="674" y="416" font-weight="bold">CombatResolver + BoutRules</text><text x="674" y="436" font-size="12">guards vs swings, first to three hits</text>
+ <rect x="660" y="460" width="270" height="70" rx="8" fill="#f9d6d2" stroke="#c8321e"/><text x="674" y="482" font-weight="bold">IFighterBrain</text><text x="674" y="502" font-size="12">NpcBrain now, PhoneBrain for you,</text><text x="674" y="520" font-size="12">a second PhoneBrain = PvP later</text>
+</g>
+<g stroke="#8a99ab" stroke-width="2" fill="none"><path d="M300 290 H350"/><path d="M610 290 H660"/></g>
+</svg>
