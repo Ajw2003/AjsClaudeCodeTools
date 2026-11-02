@@ -312,3 +312,82 @@ refused ... Locked check: commit. ... Files it named: a.py. To supply it: commit
 blocked "commit (block 1 of 3)", "(block 2 of 3)", "(block 3 of 3)", then went through with the lock still in
 the state file. A last turn wrote `docs/3-state/ProjectState.md` and committed `a.py` with it
 (`1706866 add a.py and note it`); its Stop printed nothing and the state became `{"counts": {}, "locks": {}}`.
+
+## Step 3 part C: the off switches removed (#440)
+
+Principle: no rule is optional, so no switch may turn a check off (`docs/6-decisions/Decisions.md`, "Off switches
+answered: part C of step 3"). Every check below now runs exactly as it did with its switch unset.
+
+### Removed (19 switches, plus one value)
+
+| Switch | What it used to turn off | Code that went |
+|---|---|---|
+| `HOUSE_RULES_AGENTS` | the two-subagent cap | `_agentcap_enabled` |
+| `HOUSE_RULES_AGENT_BRANCH` | the move-to-`AjsAgent/` advice at session start | `_agent_branch_enabled` |
+| `HOUSE_RULES_ATTRIBUTION` | the credit-aj's-agent guards, `creditcheck`, the author guard | `_attribution_enabled` |
+| `HOUSE_RULES_AUTOSAVE` | autosave, `commitgate`, `worktreesweep` | `_autosave_enabled` |
+| `HOUSE_RULES_AUTO_UPDATE` | the automatic `claude plugin update` at session start | `_auto_update_enabled`; the "switched off" banner text |
+| `HOUSE_RULES_CLEAR_WRITING` | the page, issue and editor checks | `_clear_writing_enabled` |
+| `HOUSE_RULES_COMMIT_CHECK` | the Stop commit check, `branchnudge`, `subagentcommit`, the audit line | `_commit_check_enabled` |
+| `HOUSE_RULES_DELEGATION` | `announce`, `verdict`, `audit`, `userpromptaudit`, `subagentlinks`, `subagentrules` | `_delegation_enabled` (both plugins) |
+| `HOUSE_RULES_HANDOVER` | the whole end-of-reply dispatcher | the check at the top of `event_handover` |
+| `HOUSE_RULES_HARVEST` | the comment-harvest reminder (`quiet` also dropped its trace) | the toggle; `HOUSE_RULES_TRACE` still covers the trace |
+| `HOUSE_RULES_ISSUES` | the issue workflow: gate, PR rule, close guard, issue list | `_issues_enabled` |
+| `HOUSE_RULES_LOOP` | the design loop: lock, approvals, page check, checkpoints, closable merge | `_loop_enabled` |
+| `HOUSE_RULES_PARITY` | the parity report | `_parity_enabled` |
+| `HOUSE_RULES_PLAIN_SUMMARY` | the plain-summary check | `_plain_summary_enabled` |
+| `HOUSE_RULES_VERSION_CHECK` | the version check | `_version_check_enabled` (the check stays until step 13, #450) |
+| `HOUSE_RULES_VISUAL_CHECK` | the visual check | `_visual_check_enabled` |
+| `HOUSE_RULES_VOICE` | the voice section of the clear-writing rule | `_apply_voice_toggle` |
+| `HOUSE_RULES_WORKTRACKING` | `rclink` and the thread link | `_worktracking_enabled` |
+| `HOUSE_RULES_EDITOR` | the long-reply editor trigger (it was off by default) | `_editor_enabled` and the long-reply branch of `_editor_owed`: the editor pass is required for pages only |
+| `HOUSE_RULES_PROMPT_TIMEOUT=off` (and `0`) | the permission timer | the value only: the number of seconds stays, and `off` or `0` is now named on stderr and the 300 second default applies |
+
+Two things went with them because they could only run when a switch was off: the go-ahead delegation clause
+(`scope` added it only when `HOUSE_RULES_LOOP=off`, so with the loop always on it never fired), and the
+"HOUSE_RULES_X=off disables it" sentences in the refusal and Stop messages, the rules text, the editor agent
+description, `docs/architecture.md`, `docs/4-systems/*.md`, the README table and `tools/measure_footprint.py`.
+`tools/measure_footprint.py` no longer sets the auto-update switch: it already points `HOUSE_RULES_VC_CLAUDE` at
+`false`, so no update can run during a measurement.
+
+### Kept
+
+| Switch | Why it stays |
+|---|---|
+| `HOUSE_RULES_SUBAGENT_LEDGER` | aj's own answer: "keep it for now as i need a way to view their work even if it is less secure"; redone in Safe work (#441) and No hiding (#446) |
+| `HOUSE_RULES_ENV_FILE`, `HOUSE_RULES_HANDOVER_TARGET_FILE`, `HOUSE_RULES_LOOP_LABELS_FILE`, `HOUSE_RULES_AGENTS_STATE`, `HOUSE_RULES_WORKTRAIL_DIR`, `HOUSE_RULES_MEMORY_DIR` | each only points at a path; none turns a check off |
+| `HOUSE_RULES_GITHUB_OWNER`, `HOUSE_RULES_OWNED_BRANCHES`, the `HOUSE_RULES_VC_*` URLs and paths | each only sets a name, a URL or a path |
+| `HOUSE_RULES_HARVEST_MIN_CHARS`, `HOUSE_RULES_PROMPT_TIMEOUT` (a number) | each only sets a number |
+| `HOUSE_RULES_TRACE`, `HOUSE_RULES_DEBUG` | how much a hook says, never whether a check runs; no reminder or refusal depends on them |
+
+### How the suites isolate now
+
+No test turns a check off, and there is no test-only switch. A fixture repo that edits source starts at the Build
+stage (`build_stage` in `checks/common.py` writes a stage file into the repo's git directory, where the loop still
+reads one, so the tree stays clean); the cases that test the lock write their own stage file. Each Stop case runs in
+a repo of its own, so the repeat-failure count of one case never reaches another. Because the checkpoints now always
+run, the evidence, commit and plain-summary checks block the first replies with their short reason; the cases that
+need the full note read the reply that goes through after three blocks (`_stop_through`). The 160-word editor case
+now asserts the reminder is not given. One check per plugin (`checks/core.py` in house-rules, `checks/rule_enforcement.py`
+in rule-enforcement) fails if a removed switch name, or `HOUSE_RULES_PROMPT_TIMEOUT=off`, appears anywhere under the
+plugin folder; a second case proves the pattern matches the removed names and ignores the kept ones.
+
+### Live proof
+
+Throwaway `CLAUDE_CONFIG_DIR` under the session scratchpad (`switch-live/cfg`), `house-rules` 2.75.0 and
+`rule-enforcement` 0.1.0 (plus `house-lib` as a dependency) installed from the local marketplace, Claude Code 2.1.316,
+headless (`claude -p`). Same five steps in two fresh repos: read `notes.txt`, write `docs/live-note.md`, run
+`echo live-ok`, write `app.py`, reply. The repos are on `AjsAgent/live` with no stage file (Design).
+
+| Step | Environment without `HOUSE_RULES_LOOP` | Environment with `HOUSE_RULES_LOOP=off` |
+|---|---|---|
+| Read `notes.txt` | allowed | allowed |
+| Write `docs/live-note.md` | allowed | allowed |
+| `echo live-ok` | allowed, printed `live-ok` | allowed, printed `live-ok` |
+| Write `app.py` | denied: "House rules, design loop: code edits are closed in the Design stage ..." | denied, same words |
+| End of reply | blocked once: "commit (block 1 of 3)"; the model committed the note | the same block; the model committed the note |
+
+The refusal text has no "switch this off" sentence in either run. Nothing was refused that 2.74.1 would allow:
+the one refusal is the design-loop code lock, which 2.74.1 also applies in Design. An earlier run, before the
+version overrides were set, had the first shell command held once by the out-of-date notice (the throwaway
+install reads 2.75.0 and GitHub's default branch says otherwise); that is the version check, not a removed switch.
