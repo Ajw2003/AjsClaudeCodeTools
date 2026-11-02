@@ -275,7 +275,7 @@ const PAGE = {
   "reply": "",
   "approval": "Progress noted",
   "short": {
-    "lead": "Steps 1, 2 and 3 of the plugin split are built, and draft pull request #452 is open. Three of its six checks have run. Check 1: every test suite passes here and in CI. Check 2: the replay against main found one bug. Check 3: the same session run on both versions was refused nothing. A builder helper is fixing the bug now.",
+    "lead": "Steps 1, 2 and 3 of the plugin split are built, and draft pull request #452 is open. Three of its six checks have run. Every test suite passes here and in CI; the replay against main found one bug; and when the same real session ran on both versions, neither one refused anything. A builder helper is fixing the bug now.",
     "hint": "Tap a step for its evidence.",
     "key": [
       [
@@ -365,7 +365,7 @@ const PAGE = {
         "Gate",
         "Draft pull request #452 and its six checks",
         "",
-        "Check 1, every suite: passes here and in CI. Check 2, the replay: 64 recorded hook inputs (the data Claude Code hands each hook) went through both versions; 49 gave identical output, and every difference but one traces to a change you approved. The one exception is the bug above. Check 3, real sessions: the same session ran on main's version and on the new plugins, and neither refused anything. Still to run: (4) a clean install from GitHub, (5) a tested one-step rollback, and (6) your QA pass.",
+        "The test suites (the first check) pass here and in CI. In the replay (the second), 64 recorded hook inputs (the data Claude Code hands each hook) went through both versions; 49 gave identical output, and every difference but one traces to a change you approved. The one exception is the bug in the item \"The replay found one bug, which is also a way around the lock\". In the third check, the same real session ran on main's version and on the new plugins, and neither one refused anything. Still to run: a clean install from GitHub, a tested one-step rollback, and your QA pass.",
         "Nothing from you until the QA page."
       ]
     ]
