@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" font-family="Trebuchet MS,Verdana,sans-serif">
+<defs><marker id="a" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" refX="10" refY="13" orient="auto"><path d="M0 0 L26 13 L0 26z" fill="#c8321e"/></marker>
+<marker id="b" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#1f9aa3"/></marker></defs>
+<rect width="960" height="540" fill="#f4f7fb"/>
+<text x="30" y="44" font-size="26" font-weight="bold" fill="#1d2b3a">Three swings, three guards, one parry</text>
+<text x="30" y="72" font-size="16" fill="#46566a">Seen from your eyes. Every attack comes from one of three lines, and every guard covers one of them.</text>
+<g transform="translate(40,100)">
+ <rect width="420" height="400" rx="14" fill="#dbe7f5"/>
+ <text x="210" y="32" font-size="17" font-weight="bold" fill="#c8321e" text-anchor="middle">ATTACK: swing hard, then stop</text>
+ <circle cx="210" cy="215" r="70" fill="none" stroke="#9fb3c8" stroke-dasharray="4 6"/>
+ <text x="210" y="220" font-size="13" fill="#46566a" text-anchor="middle">opponent</text>
+ <path d="M210 60 L210 140" stroke="#c8321e" stroke-width="9" marker-end="url(#a)"/>
+ <path d="M75 115 L148 188" stroke="#c8321e" stroke-width="9" marker-end="url(#a)"/>
+ <path d="M345 115 L272 188" stroke="#c8321e" stroke-width="9" marker-end="url(#a)"/>
+ <text x="222" y="78" font-size="15" font-weight="bold" fill="#1d2b3a">Overhead</text>
+ <text x="40" y="98" font-size="15" font-weight="bold" fill="#1d2b3a">Left cut</text>
+ <text x="300" y="98" font-size="15" font-weight="bold" fill="#1d2b3a">Right cut</text>
+ <text x="210" y="330" font-size="13" fill="#46566a" text-anchor="middle">Direction comes from the gyroscope's rotation axis.</text>
+ <text x="210" y="350" font-size="13" fill="#46566a" text-anchor="middle">A wrist flick under 60° of sweep is not a swing:</text>
+ <text x="210" y="370" font-size="13" fill="#46566a" text-anchor="middle">this stops the Wii-era "waggle" exploit.</text>
+</g>
+<g transform="translate(500,100)">
+ <rect width="420" height="400" rx="14" fill="#d6efee"/>
+ <text x="210" y="32" font-size="17" font-weight="bold" fill="#14757c" text-anchor="middle">GUARD: hold the sword across the line</text>
+ <g stroke="#1f9aa3" stroke-width="10" stroke-linecap="round">
+  <line x1="130" y1="90" x2="290" y2="90"/>
+  <line x1="95" y1="140" x2="95" y2="270"/>
+  <line x1="325" y1="140" x2="325" y2="270"/>
+ </g>
+ <text x="210" y="74" font-size="15" font-weight="bold" fill="#1d2b3a" text-anchor="middle">High guard</text>
+ <text x="40" y="300" font-size="15" font-weight="bold" fill="#1d2b3a">Left guard</text>
+ <text x="290" y="300" font-size="15" font-weight="bold" fill="#1d2b3a">Right guard</text>
+ <rect x="40" y="320" width="340" height="62" rx="10" fill="#fff" stroke="#9fd2d1"/>
+ <text x="210" y="344" font-size="14" font-weight="bold" fill="#c88a12" text-anchor="middle">PARRY = guard arrives in the last moment</text>
+ <text x="210" y="366" font-size="13" fill="#46566a" text-anchor="middle">opponent staggers, giving you a free swing</text>
+</g>
+</svg>
