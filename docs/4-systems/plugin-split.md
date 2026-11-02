@@ -258,3 +258,32 @@ report-only checks marked #309 (the page row) and the `HOUSE_RULES_*` switches (
   different `cwd` than the Stop that locked it (another repository) sees no lock.
 - Files outside the session folder being always allowed is a judgement made here, so a page's content file
   can be written while locked; it is not in the approved points and is for aj to confirm.
+
+### Live proof (headless, CLI 2.1.316, throwaway config and repo)
+
+house-rules and rule-enforcement installed from the local marketplace into a throwaway `CLAUDE_CONFIG_DIR`;
+the session ran in a throwaway git repo. The prompts began "skip design" (the design loop's own gate, in the
+throwaway session) and told the model not to commit, so the commit check kept failing. Turn A wrote `a.py`
+and never committed it:
+
+```
+Stop: "- commit (block 1 of 3): Files a turn writes are committed on your own branch before it ends."
+Stop: "- commit (block 2 of 3): ..."   Stop: "- commit (block 3 of 3): ..."
+Stop: {"systemMessage":"house-rules: the commit check still fails after 3 blocks for this message, so the reply goes through and the check is LOCKED: source edits and commits are refused until it passes. ..."}
+state: {"counts": {"commit": {"count": 3}}, "locks": {"commit": {"missing": "Files a turn writes are committed ...", "fix": "commit a.py on your own branch"}}}
+```
+
+Turn B asked for an Edit of `a.py`: `PreToolUse:Edit` came back `permissionDecision: deny`, "House rules,
+repeat-failure lock: editing the source file .../a.py is refused ... Locked check: commit. Missing: Files a
+turn writes are committed on your own branch before it ends. To supply it: commit a.py on your own branch."
+Turn C wrote `docs/3-state/ProjectState.md` (allowed) and ran `git add a.py docs/... && git commit` (allowed,
+`[AjsAgent/live-test cd8f5c9]`); that reply's Stop printed nothing and the state became
+`{"counts": {}, "locks": {}}`. Turn D's Edit of `a.py` then went through ("updated successfully"), and the
+cycle started again at block 1. An ordinary session (echo, Read, a docs Write, a docs commit, a reply with
+nothing failing) had zero lock mentions in its transcript and wrote no state file.
+
+Not proven live: the unreadable-state and no-Python paths (covered by the verify cases only).
+Finding for aj: the commit check only looks at files the current turn wrote, so a later message that writes
+nothing passes and clears the lock even though an earlier file is still uncommitted (seen once, a turn that
+only ran a refused command). That is the approved "clears when a later Stop finds it passing"; whether the
+commit check should also look at files left uncommitted by earlier turns is a design call, not made here.
