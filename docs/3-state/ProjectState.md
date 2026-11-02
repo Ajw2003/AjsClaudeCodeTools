@@ -333,3 +333,5 @@ invocation.
 - **`docs/sessions/` has exactly one recorded ledger** (2026-09-09), despite
   `tools/session_ledger.py` existing to produce one per session. The tool works; running it
   isn't yet a habit.
+
+2026-11-02, branch `AjsAgent/house-rules-plugin-split-a9uusz`: aj asked to split house-rules into eight plugins (safe work, design loop, rule enforcement, no hiding, living docs, code standards, check your work, no trust memory). Proposal page `docs/plans/2026-11-02-plugin-split.html` places every hook, rule and script, lists seven pieces with no clear home, and asks eight choices. Nothing is built; it waits on aj's answers.
