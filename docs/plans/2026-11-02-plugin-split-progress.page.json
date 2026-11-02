@@ -1,28 +1,77 @@
 {
   "title": "Plugin Split Progress",
-  "eyebrow": "Progress · the plugin split (#437), steps 1 and 2 built, step 3 under way",
+  "eyebrow": "Progress · the plugin split (#437): steps 1 and 2 built, step 3 part A built",
   "replyPrefix": "Plugin split progress",
   "reply": "",
   "approval": "Progress noted",
   "short": {
-    "lead": "Steps 1 and 2 of the plugin split are built, and I checked each result by running it myself. Step 3 is split into three parts, and a builder helper is working on part A in the background. Nothing here needs a decision from you.",
+    "lead": "Steps 1 and 2 of the plugin split are built, and so is part A of step 3. I checked each result by running it myself. A builder helper is now fixing two tools that only know about house-rules. Nothing here needs a decision from you.",
     "hint": "Tap a step for its evidence.",
-    "key": [["Built and checked", "done"], ["In progress", ""]],
+    "key": [
+      [
+        "Built and checked",
+        "done"
+      ],
+      [
+        "In progress",
+        ""
+      ]
+    ],
     "items": [
-      ["flask", "Step 1", "Plugins can depend on each other (#438)", "done", "Installing a test plugin printed \"Successfully installed plugin: spike-a@spike-mkt (scope: user) (+ 1 dependency: spike-lib)\". Two plugins that both block a reply run at the same time and both messages reach me. Every plugin sees the same stop_hook_active signal on the retry, so the lock has to count each check's blocks itself. Details are in the \"Step 1 findings (#438)\" section of docs/4-systems/plugin-split.md.", "Nothing from you."],
-      ["list", "Step 2", "The shared library, house-lib (#439)", "done", "verify.py: 965 checks pass and exits 0. verify_tools.py: 50 checks pass. The drift check (every copy of the library matches its source) and the version-bump check (the plugin version was raised) pass. claude plugin install house-lib@aj-house-rules installed and enabled it from this repo in a throwaway config folder. House-rules is now 2.74.2.", "Nothing from you."],
-      ["stop", "Step 3", "Rule enforcement plugin (#440), part A of three", "", "Part A moves rule loading (the session-start rules, the rules sent to helpers, the per-message reminder) into a new rule-enforcement plugin, then proves in a real session that the rules load once. Part B is the lock that refuses edits and commits after a check has blocked three times. Part C removes the 21 switches that turn a check or rule off.", "Nothing from you."]
+      [
+        "flask",
+        "Step 1",
+        "Plugins can depend on each other (#438)",
+        "done",
+        "Installing a test plugin printed \"Successfully installed plugin: spike-a@spike-mkt (scope: user) (+ 1 dependency: spike-lib)\". Two plugins that both block a reply run at the same time and both messages reach me. Every plugin sees the same stop_hook_active signal on the retry, so the lock has to count each check's blocks itself. Details are in the \"Step 1 findings (#438)\" section of docs/4-systems/plugin-split.md.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 2",
+        "The shared library, house-lib (#439)",
+        "done",
+        "verify.py: 965 checks pass and exits 0. verify_tools.py: 50 checks pass. The drift check (every copy of the library matches its source) and the version-bump check (the plugin version was raised) pass. claude plugin install house-lib@aj-house-rules installed and enabled it from this repo in a throwaway config folder. House-rules is now 2.74.2.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Step 3",
+        "Rule enforcement plugin (#440): part A built",
+        "done",
+        "Rule loading (the session-start rules, the rules sent to helpers, the per-message reminder) now lives in the new rule-enforcement plugin, and house-rules is 2.75.0. All four suites pass: house-rules 941 checks, rule-enforcement 35, tools 50, and the library drift check. In a real session with both plugins installed, each rule section loaded exactly once. I fixed two pointers that led from one plugin into the other (commit 7521340). The notes that house-rules used to add inside the rules text now arrive as their own messages, worded the same.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Next",
+        "Tool fixes, then parts B and C of step 3",
+        "",
+        "A builder is making the version-bump check and the footprint tool cover every plugin. Part B is the lock that refuses edits and commits after a check has blocked three times. Part C removes the 21 switches that turn a check or rule off. Then the pull request opens and has to pass the six-item checklist in docs/4-systems/plugin-split.md.",
+        "Nothing from you."
+      ]
     ]
   },
   "changes": [
-    ["chg", "Two checks that cannot run yet", "The CI run and an install from GitHub.", ["Not run.", "CI runs on a push to main or on a pull request, and no pull request has been asked for. A GitHub install reads the main branch, which does not have this work yet."], "Both run when you ask for a pull request into main."]
+    [
+      "chg",
+      "Two checks that cannot run yet",
+      "The CI run and an install from GitHub.",
+      [
+        "Not run.",
+        "CI runs on a push to main or on a pull request, and no pull request has been asked for. A GitHub install reads the main branch, which does not have this work yet."
+      ],
+      "Both run when you ask for a pull request into main."
+    ]
   ],
   "choices": [],
   "wrapup": {
-    "summary": "Steps 1 and 2 are built and checked; step 3 part A is being built.",
-    "changing": "house-rules 2.74.2 and the new house-lib plugin, on the branch AjsAgent/house-rules-plugin-split-a9uusz.",
+    "summary": "Steps 1 and 2 and part A of step 3 are built and checked.",
+    "changing": "house-rules 2.75.0 and the new house-lib and rule-enforcement plugins, on the branch AjsAgent/house-rules-plugin-split-a9uusz.",
     "blocking": "Nothing.",
-    "next": "I check part A's results myself when the builder finishes, then start part B.",
-    "todo": ["Nothing to do. Say if you want a pull request into main now, so CI and a GitHub install can run."]
+    "next": "I check the tool fixes myself, then start part B.",
+    "todo": [
+      "Nothing to do yet. The pull request opens after step 3, as you asked."
+    ]
   }
 }
