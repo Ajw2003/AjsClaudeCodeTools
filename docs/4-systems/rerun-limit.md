@@ -4,7 +4,8 @@
 third time with no new commit in between. Status: designed under issue #453 ("Stop builders
 rerunning the same check: a builder rule and a hook that enforces it"). aj approved the design on
 2026-11-02 as "Design approved: rerun limit 1B 2B 3B" on `docs/plans/rerun-limit-hook-plan.html`.
-The builder rule half shipped in 2.74.3; this hook is being built.
+The builder rule half shipped in 2.74.3; this hook is built in 2.75.0 (#454), in `_rerun_check` in
+`scripts/house_rules/safe_git.py`, with cases 191 to 197 in `scripts/checks/safe_git.py`.
 
 ## Why it exists
 
@@ -43,13 +44,21 @@ but a rule is only text; this hook makes the limit hold.
    lists any file other than the script, the count starts again at zero. A commit that only changes
    the script does not reset it.
 6. **Refusal.** The third run is denied (`permissionDecision: "deny"`), as the guard does for commits
-   on `main`. The message names the script and the two earlier runs, and says: stop, read the code
+   on `main`. The message names the script, and says: stop, read the code
    for the cause, and report what failed; do not edit the check; a new commit that changes the code
    allows two more runs.
 7. **Off switch.** `HOUSE_RULES_RERUNS=off`. `HOUSE_RULES_RERUNS_STATE` points the state file
    elsewhere, so `verify.py` never writes into the real repository.
 8. **Failure.** It fails open and loud: an unreadable state file, a missing `git` or a timeout lets
    the command through with a one-line `systemMessage` saying the count could not be checked.
+
+## Refused runs are taken back
+
+The count is taken before the guard's other rules run. When the guard then refuses the command or
+asks about it, `_rerun_take_back` restores the record, so a run that never happened does not count.
+This matters most inside a builder, where every ask becomes a refusal: the real-session test on
+2026-11-03 lost a builder's first run this way before the fix (case 197 covers it). A run aj
+approves after an ask is not counted either.
 
 ## Known cost of choice 1B
 

@@ -439,6 +439,7 @@ RERUN_STATE_FILE = "house-rules-reruns.json"
 RERUN_EXTS = (".sh", ".bash", ".py", ".ps1", ".js", ".mjs", ".ts", ".rb", ".bat", ".cmd")
 RERUN_GIT_BUDGET = 1.8  # seconds, all git calls of one check together (spec: under 2)
 _RERUN_NOTE = []  # one-line "could not check" notes from this call, added to the guard's output
+_RERUN_UNDO = []  # (state path, key, record before this run): taken back if the guard then refuses or asks
 
 RERUN_DENY = (
     "`%s` has run twice since the last commit that changed code. Stop: read the code for the "
@@ -544,6 +545,7 @@ def _rerun_check(payload, subject):
                     count = 0
         if count >= RERUN_LIMIT:
             return RERUN_DENY % script
+        _RERUN_UNDO.append((path, key, rec))
         recs[key] = {"script": script, "head": head, "count": count + 1}
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
@@ -555,15 +557,38 @@ def _rerun_check(payload, subject):
     return None
 
 
+def _rerun_take_back():
+    """Undo this call's count: the guard refused the command or asked about it, so it may never run."""
+    for path, key, before in _RERUN_UNDO:
+        try:
+            recs = json.loads(_read_text(path)).get("records")
+            if not isinstance(recs, dict):
+                raise ValueError("state file %s is not the expected shape" % path)
+            if before is None:
+                recs.pop(key, None)
+            else:
+                recs[key] = before
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"records": recs}, f)
+            os.replace(tmp, path)
+        except Exception as exc:  # loud: the run stays counted, and the note says so
+            _RERUN_NOTE.append("house-rules: a refused run could not be taken off the rerun count (%s: %s)."
+                               % (type(exc).__name__, str(exc)[:120]))
+
+
 def event_guard():
     """The guard, with any rerun-check note folded into the one JSON object it emits."""
     import contextlib
     import io
     del _RERUN_NOTE[:]
+    del _RERUN_UNDO[:]
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         rc = _event_guard_main()
     out = buf.getvalue()
+    if _RERUN_UNDO and (rc != 0 or re.search(r'"permissionDecision"\s*:\s*"(deny|ask)"', out)):
+        _rerun_take_back()
     if _RERUN_NOTE:
         note = " ".join(_RERUN_NOTE)
         try:

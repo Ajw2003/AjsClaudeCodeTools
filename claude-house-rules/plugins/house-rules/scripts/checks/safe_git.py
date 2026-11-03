@@ -1821,6 +1821,13 @@ _rr_reset()
 _rr_offs = [_rr_run("bash tools/x.sh a", HOUSE_RULES_RERUNS="off")[1] for _ in range(4)]
 report("PASS" if not any(_rr_denied(o) for o in _rr_offs) and not os.path.exists(_rr_state)
        else "FAIL", "rerun limit: HOUSE_RULES_RERUNS=off disables the check")
+_rr_reset()
+_rr_refused_cmd = "bash tools/x.sh a && " + "r" + "m -rf" + " tools"  # refused as a recursive delete; never runs
+_rr_refused = [_rr_run(_rr_refused_cmd, agent="ag3")[1] for _ in range(3)]
+_rr_o = _rr_run("bash tools/x.sh a", agent="ag3")
+report("PASS" if all('"permissionDecision":"deny"' in o or '"permissionDecision":"ask"' in o for o in _rr_refused)
+       and not _rr_denied(_rr_o[1]) else "FAIL",
+       "rerun limit: a run the guard refuses or asks about for another reason is not counted")
 with open(_rr_state, "w", encoding="utf-8") as _f:
     _f.write("{not json")
 _rr_o = _rr_run("bash tools/x.sh a")
