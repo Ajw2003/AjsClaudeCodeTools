@@ -800,6 +800,25 @@ def _loop_apply_one(state, text, top):
         m = _LOOP_DESIGN_RE.search(text)
         if m:
             name = _loop_name(m.group(1))
+            held = state.get("held")
+            if stage == "build" and isinstance(held, dict):  # #459: Held ends only on aj's approval of the same feature
+                same = {feature.lower(), _loop_name(feature).lower(),
+                        str(held.get("feature") or "").lower(), _loop_name(str(held.get("feature") or "")).lower()}
+                if name.lower() not in same:
+                    return ('Design loop: aj wrote "Design approved: %s", but the Held question is on "%s", so '
+                            "code edits stay refused." % (name, held.get("feature") or feature))
+                unlogged = _loop_unlogged(state, top, "Design approved", name)
+                if unlogged:
+                    return unlogged
+                state.pop("held", None)
+                state.setdefault("approvals", []).append(
+                    {"stage": "Design approved", "name": name, "at": int(time.time())})
+                note = ('Design loop: aj wrote "Design approved: %s". The Held state is cleared; the stage stays '
+                        "Build and code edits are open again." % name)
+                if state.pop("log_ask", False):
+                    note += (" The decisions log (%s) has nothing new since the last approval: add this stage's "
+                             "entry to it before the turn ends." % LOOP_LOG.replace(os.sep, "/"))
+                return note
             # #307: the redo is for the feature QA failed, even when the stored name went stale.
             failed = [a.get("name") or "" for a in state.get("approvals", [])
                       if isinstance(a, dict) and a.get("stage") == "QA failed"]
@@ -986,6 +1005,11 @@ def _loop_stop_line(payload):
     if problem:
         return None, problem
     stage = state["stage"]
+    if stage == "build" and isinstance(state.get("held"), dict):  # #459
+        held = state["held"]
+        return ("House rules, design loop: Held on %s. A question for aj is open; code edits are refused until "
+                'aj\'s own message says "Design approved: %s".'
+                % (held.get("page") or "a page", held.get("feature") or state.get("feature") or "<feature>")), None
     if stage == "done" or (stage == "design" and not state.get("redo")) or not state.get("issues"):
         return None, None
     labels, src = _loop_labels(state)
@@ -1019,6 +1043,11 @@ def _loop_gate(payload):
     state, problem = _loop_read(git_dir)
     if problem:
         return None, problem
+    if state["stage"] == "build" and isinstance(state.get("held"), dict):  # #459
+        held = state["held"]
+        return ('House rules, design loop: Held. A question for aj is open on %s. Code edits are refused until '
+                'aj\'s own message says "Design approved: %s".'
+                % (held.get("page") or "a page", held.get("feature") or state.get("feature") or "<feature>")), None
     if script and state["stage"] == "build":
         return None, None  # Build: nothing changes for shell commands
     if state["stage"] == "build":
