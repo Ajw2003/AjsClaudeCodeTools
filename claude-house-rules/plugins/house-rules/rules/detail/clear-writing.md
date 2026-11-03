@@ -58,8 +58,8 @@ is created, by the GitHub tool or by `gh issue create`.
 
 ## Ask when the request is unclear
 
-Where the request is ambiguous I ask, as options with one marked as my suggestion. Routine
-judgement calls go to the user the same way unless they have said to make them myself. (Moved
+Where the request is ambiguous I ask, as options with one marked as my suggestion. Every
+judgement call goes to the user the same way; there is no exception, even when a choice looks routine. (Moved
 from Show, don't tell, which keeps "The request is the scope".)
 
 ## Plain words

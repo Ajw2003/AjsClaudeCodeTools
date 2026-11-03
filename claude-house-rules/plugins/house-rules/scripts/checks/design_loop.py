@@ -974,6 +974,17 @@ _sdt_detail = read(os.path.join(DETAIL_DIR, "show-dont-tell.md"))
 _loop_cases.append(("the rule names the template and its four parts",
                     all(w in _sdt_detail for w in ("templates/handover-page.html", "In short", "Changes", "Choices", "Wrap-up"))))
 
+# -- #458: no judgement-call exception; helper questions go to aj ---------------------------------
+_, _nx_ctx, _ = _additional_context("showrule", "", env=env_in(ROOT))
+_loop_cases.append(("the injected show-don't-tell rule has no 'unless they have said' exception (#458)",
+                    bool(_nx_ctx) and "unless they have said" not in _nx_ctx))
+_nx_builder = read(os.path.join(HERE, "..", "agents", "builder.md"))
+_loop_cases.append(("agents/builder.md says never pick an answer yourself (#458)",
+                    "never pick an answer yourself" in _nx_builder))
+_nx_src = read(os.path.join(HERE, "house_rules", "design_loop.py"))
+_loop_cases.append(("the helper note says questions are never answered by the helper or the main session (#458)",
+                    "never answered by you or the main session" in _nx_src))
+
 for _t, _ok in _loop_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
