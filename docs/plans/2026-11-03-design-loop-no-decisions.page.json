@@ -108,7 +108,7 @@
         "make_page.py copies each picture into a folder named <page>-pics beside the page and links it by a relative path (make_page.py:150-177). The picture shows only if that folder goes wherever the page goes. Three routes can leave it behind. Publishing with the Artifact tool sends only the page unless the folder is listed in its files, and the page check (event_pagecheck, design_loop.py:1820) never looks. Sending the page with the send-file tool sends one file. A page written outside the session folder only gets a warning (#331, make_page.py warns when a page lands outside the folder it runs in). Which route a session takes varies, which is why it fails only some of the time.",
         "make_page.py writes each picture into the page itself as a data link (the picture's bytes written as text inside the HTML), so the page is one file and every route carries its pictures. The page check refuses a page that still links a picture by a relative path."
       ],
-      "Measured on this repo's 26 page pictures: the largest is 194 KB and the largest set is 1.1 MB, about 1.5 MB once inlined. That is far below the 16 MB limit for a published page. I have not reproduced a broken picture in this session, because I cannot see what the app shows you; QA checks it on your screen."
+      "Measured on this repo's 26 page pictures: the largest single picture is 194 KB, and the pictures on the largest page (the sword duel reference page) total 1.03 MB as files and 1.38 MB once written into the page, measured by encoding each file. That is far below the 16 MB limit for a published page. I have not reproduced a broken picture in this session, because I cannot see what the app shows you; QA checks it on your screen."
     ]
   ],
   "choices": [
@@ -189,7 +189,7 @@
           "A",
           "Inside the page file",
           1,
-          "Every picture is written into the HTML. One file, so publishing, sending and opening from the repo all show the pictures. Pages grow; the largest today would be about 1.5 MB."
+          "Every picture is written into the HTML. One file, so publishing, sending and opening from the repo all show the pictures. Pages get bigger: the biggest page today, the sword duel reference page, would carry 1.38 MB of pictures, a figure I measured."
         ],
         [
           "B",
