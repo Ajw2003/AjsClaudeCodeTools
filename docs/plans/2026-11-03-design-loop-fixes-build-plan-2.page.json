@@ -1,0 +1,27 @@
+{
+  "title": "Design Loop Fixes Plan 2",
+  "eyebrow": "Revised build plan · design loop fixes (parent issue #457) · your answers 1A and 2A added (the 16 MB page limit in #462, and the new #464)",
+  "approval": "Build plan approved: design loop fixes",
+  "short": {
+    "lead": "Your answers are in the plan, and nothing else changed. Your \"Design approved\" moved the loop back to Plan and locked code, because the Held step (#459: a question mid-build locks code) is not built yet. The Held step's builder was refused mid-edit and stopped to ask, as the new rules say it should. Approving this plan reopens code and the build carries on.",
+    "hint": "Tap a step to see what changed in it.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["check", "Done", "#458: remove the judgement-call exception", "", "Merged into the working branch. verify.py: all 976 checks passed.", "Nothing from you."],
+      ["lock", "Held", "#459: a question mid-build locks code", "", "Half built; the builder resumes from its saved edits.", "Nothing from you."],
+      ["stop", "Check", "#460 and #461: the decided-for-aj check, and the page check blocks again", "", "Unchanged from the plan you approved.", "Nothing from you."],
+      ["eye", "Pictures", "#462: pictures inside the page, up to 16 MB", "", "Pictures and videos go inside the page until it reaches 16 MB. The rest are published with it as separate files, and a publish that leaves one out is refused.", "Nothing from you."],
+      ["hand", "Copy", "#464: Copy my reply works (new)", "", "A second copy method, and a box that selects itself in one tap if copying is refused. Pages are published as claude.ai pages (the #343 rule, blocking again under #461).", "Nothing from you."],
+      ["flask", "QA", "#463: docs, version and QA page", "you", "The QA page also asks you to test the copy button on your phone.", "Your QA verdict."]
+    ]
+  },
+  "changes": [],
+  "choices": [],
+  "wrapup": {
+    "summary": "The plan now carries your answers: #462 uses one 16 MB page limit with overflow files published alongside, and the new #464 fixes the copy button.",
+    "changing": "Issue #462's text, the new issue #464, and issue #463's dependency list.",
+    "blocking": "Your approval of this revised plan.",
+    "next": "The #459 builder resumes, then #460, #461, #462 and #464 are built one at a time, and #463 brings you the QA page.",
+    "todo": ["Reply \"Build plan approved: design loop fixes\", or tell me what to change."]
+  }
+}
