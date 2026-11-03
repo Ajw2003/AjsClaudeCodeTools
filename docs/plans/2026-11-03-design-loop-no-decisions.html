@@ -320,7 +320,7 @@ const PAGE = {
         "QA",
         "You test it",
         "you",
-        "A QA page with a script of replies that should be blocked and replies that should pass.",
+        "A QA page with a list of sample replies, each marked as one the decided-for-aj check must block or one it must let through.",
         "Your verdict."
       ]
     ]
@@ -444,7 +444,7 @@ const PAGE = {
   ],
   "wrapup": {
     "summary": "The plugin lets me decide for you because a build has no way back to you, the end-of-reply check only notices replies that ask a question, and it only reports them without blocking, and the rule text allows judgement calls. The fix closes all three.",
-    "changing": "house_rules/design_loop.py (the code lock, the loop file, the checkpoint table), make_page.py (setting Held), rules/show-dont-tell.md, rules/detail/show-dont-tell.md, rules/detail/clear-writing.md, agents/builder.md, verify.py cases, and docs/4-systems/design-loop.md.",
+    "changing": "Code: house_rules/design_loop.py and make_page.py. Rules: the short and detailed show-dont-tell files, clear-writing.md and agents/builder.md. Tests and docs: new verify.py cases and docs/4-systems/design-loop.md.",
     "blocking": "Your approval of this design and your three picks.",
     "next": "After approval I log the decision, file a parent issue with one child per change, and bring a build plan page.",
     "todo": [

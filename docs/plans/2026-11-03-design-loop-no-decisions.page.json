@@ -10,7 +10,7 @@
       ["search", "Found", "Three holes in the design loop", "", "Each hole is described under Changes, with the file and line that cause it.", "Nothing from you.", {"src": "docs/generated/design-loop-holes/loop-holes.svg", "alt": "Diagram of the Design, Plan, Build and QA stages, with three red holes and a green Held path from Build back to Design", "caption": "A labelled diagram of the loop as it stands. It is not a screenshot."}],
       ["lock", "Approve", "You approve this design and pick the choices", "you", "A dated entry in docs/6-decisions/Decisions.md, a parent issue and one child issue per fix.", "Reply \"Design approved: no decisions without aj\" with your picks."],
       ["hammer", "Build", "Held move, decision check, rule text", "", "The four changes under Changes, each with a verify.py case.", "Nothing from you."],
-      ["eye", "QA", "You test it", "you", "A QA page with a script of replies that should be blocked and replies that should pass.", "Your verdict."]
+      ["eye", "QA", "You test it", "you", "A QA page with a list of sample replies, each marked as one the decided-for-aj check must block or one it must let through.", "Your verdict."]
     ]
   },
   "changes": [
@@ -53,7 +53,7 @@
   ],
   "wrapup": {
     "summary": "The plugin lets me decide for you because a build has no way back to you, the end-of-reply check only notices replies that ask a question, and it only reports them without blocking, and the rule text allows judgement calls. The fix closes all three.",
-    "changing": "house_rules/design_loop.py (the code lock, the loop file, the checkpoint table), make_page.py (setting Held), rules/show-dont-tell.md, rules/detail/show-dont-tell.md, rules/detail/clear-writing.md, agents/builder.md, verify.py cases, and docs/4-systems/design-loop.md.",
+    "changing": "Code: house_rules/design_loop.py and make_page.py. Rules: the short and detailed show-dont-tell files, clear-writing.md and agents/builder.md. Tests and docs: new verify.py cases and docs/4-systems/design-loop.md.",
     "blocking": "Your approval of this design and your three picks.",
     "next": "After approval I log the decision, file a parent issue with one child per change, and bring a build plan page.",
     "todo": ["Reply \"Design approved: no decisions without aj\" with your picks, for example \"1A 2A 3A\" (choice 1 option A, choice 2 option A, choice 3 option A), or tell me what to change."]
