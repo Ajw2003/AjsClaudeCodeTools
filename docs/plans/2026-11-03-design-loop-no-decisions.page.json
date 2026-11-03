@@ -1,61 +1,219 @@
 {
-  "title": "No Decisions Without aj",
-  "eyebrow": "Design proposal · house-rules design loop · nothing built yet",
-  "approval": "Design approved: no decisions without aj",
+  "title": "Design Loop Fixes",
+  "eyebrow": "Design proposal · house-rules design loop and page pictures · nothing built yet",
+  "approval": "Design approved: design loop fixes",
   "short": {
-    "lead": "You asked why the plugin lets me settle an unclear point myself and carry on. I read the design loop's code and rules and found three holes. First, once a build starts, every code edit is open, and a question found mid-build has no way back to you. Second, the end-of-reply page check only reports, and it only spots replies that ask a question, so a reply saying \"I went with X\" passes. Third, the rule text itself allows \"routine judgement calls\", and helpers hand their questions to the main session, which can answer them itself. The fix adds a new loop state called Held. While the loop is Held, code edits are refused, and a question page goes to you, a check that blocks replies which settle something you never chose, and removes the loopholes from the rule text.",
+    "lead": "This page covers two fixes. The first is for the plugin letting me settle an unclear point myself and carry on. I read the design loop's code and rules and found three holes. Once a build starts, every code edit is open, and a question found mid-build has no way back to you. The end-of-reply page check only reports, and it only spots replies that ask a question, so a reply saying \"I went with X\" passes. The rule text itself allows \"routine judgement calls\", and helpers hand their questions to the main session, which can answer them itself. The first fix adds a loop state called Held, which refuses code edits and sends you a question page. It also adds a check that blocks replies which settle something you never chose, and it removes the loopholes from the rule text. The second fix is for pages whose pictures don't show for you. The page builder puts pictures in a separate folder beside the page, and nothing makes that folder travel with the page when it is published or sent to you. The second fix puts the pictures inside the page file itself.",
     "hint": "Tap a step to see what it produces and what it needs from you.",
-    "key": [["I build it", ""], ["You decide", "you"]],
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
     "items": [
-      ["search", "Found", "Three holes in the design loop", "", "Each hole is described under Changes, with the file and line that cause it.", "Nothing from you.", {"src": "docs/generated/design-loop-holes/loop-holes.svg", "alt": "Diagram of the Design, Plan, Build and QA stages, with three red holes and a green Held path from Build back to Design", "caption": "A labelled diagram of the loop as it stands. It is not a screenshot."}],
-      ["lock", "Approve", "You approve this design and pick the choices", "you", "A dated entry in docs/6-decisions/Decisions.md, a parent issue and one child issue per fix.", "Reply \"Design approved: no decisions without aj\" with your picks."],
-      ["hammer", "Build", "Held move, decision check, rule text", "", "The four changes under Changes, each with a verify.py case.", "Nothing from you."],
-      ["eye", "QA", "You test it", "you", "A QA page with a list of sample replies, each marked as one the decided-for-aj check must block or one it must let through.", "Your verdict."]
+      [
+        "search",
+        "Found",
+        "Three holes in the design loop, and one in page pictures",
+        "",
+        "Each problem is described under Changes, with the file and line that cause it.",
+        "Nothing from you.",
+        {
+          "src": "docs/generated/design-loop-holes/loop-holes.svg",
+          "alt": "Diagram of the Design, Plan, Build and QA stages, with three red holes and a green Held path from Build back to Design",
+          "caption": "A labelled diagram of the loop as it stands. It is not a screenshot."
+        }
+      ],
+      [
+        "lock",
+        "Approve",
+        "You approve this design and pick the choices",
+        "you",
+        "A dated entry in docs/6-decisions/Decisions.md, a parent issue and one child issue per fix.",
+        "Reply \"Design approved: design loop fixes\" with your picks."
+      ],
+      [
+        "hammer",
+        "Build",
+        "Held state, decision check, rule text, pictures inside the page",
+        "",
+        "The five changes under Changes, each with a verify.py case.",
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "QA",
+        "You test it",
+        "you",
+        "A QA page with a list of sample replies, each marked as one the decided-for-aj check must block or one it must let through.",
+        "Your verdict."
+      ]
     ]
   },
   "changes": [
-    ["new", "Held: a way back to aj from inside a build", "When a build hits a question, code locks until aj answers on a page.",
+    [
+      "new",
+      "Held: a way back to aj from inside a build",
+      "When a build hits a question, code locks until aj answers on a page.",
       null,
       "Today the code lock in _loop_gate (house_rules/design_loop.py:1024) lets every edit through in the Build stage, as long as the issue labels are right. The only moves back are aj's own \"QA failed\" or a new \"Design approved\". So when something unclear turns up halfway through a build, nothing stops me from picking an answer and carrying on. The fix adds a Held state. Building a page that has a Choices section while the loop is in Build sets Held. While Held, code edits are refused with a message that names the question page. Held ends only when aj's own message says \"Design approved: <feature>\" for the same feature. That approval answers the questions and is logged in docs/6-decisions/Decisions.md like any other approval.",
-      ["_loop_gate opens every code edit in Build (design_loop.py:1024). There is no move from Build back to aj except QA failed.",
-       "A Held flag in the loop file, set by make_page.py when it builds a page with choices during Build, and cleared only by aj's Design approved for that feature.",
-       "A mid-build question stops the build. You see a question page, not a finished build with my choice inside it."]],
-    ["new", "A check that blocks a reply which decides for aj", "A reply that settles a design point you never chose is sent back.",
+      [
+        "_loop_gate opens every code edit in Build (design_loop.py:1024). There is no move from Build back to aj except QA failed.",
+        "A Held flag in the loop file, set by make_page.py when it builds a page with choices during Build, and cleared only by aj's Design approved for that feature.",
+        "A mid-build question stops the build. You see a question page, not a finished build with my choice inside it."
+      ]
+    ],
+    [
+      "new",
+      "A check that blocks a reply which decides for aj",
+      "A reply that settles a design point you never chose is sent back.",
       null,
       "The end-of-reply check only looks for replies that offer choices: _offers_choices (design_loop.py:1712) needs the reply to end with a question mark (line 1717). A reply that says \"I chose\", \"I went with\", \"I assumed\", \"I defaulted to\" or \"for now I'll\" ends in a full stop, so it is never seen. A new row in the end-of-reply checks, named decided-for-aj, looks for that wording in my reply and in each helper's hand-back report. When it finds it, the reply is blocked until it either links a page that puts the point to aj as a choice, or quotes aj's own message that already settled it. The word list is a starting value: it catches the usual phrasings and will miss some, and in the QA stage you test how many it misses.",
-      ["CHECKPOINTS (design_loop.py:1911) has no row that looks for decisions; the page row only reacts to questions.",
-       "A blocking decided-for-aj row, run on my reply and on helper reports.",
-       "A choice I made without you is caught before you read the reply, not found later in the code."]],
-    ["chg", "The page check blocks again for choices and decisions", "Long replies stay report-only; replies that offer or make a choice block.",
-      ["Since plugin 2.68.1 (#309) the page row is report-only (design_loop.py:1914), although the injected rules still say a missing page keeps blocking. The rules and the code disagree.",
-       "A reply that offers a choice or trips the decided-for-aj row is blocked until it links a page, with the existing three-block limit. A reply that is only long stays report-only, as plugin 2.68.1 (#309) chose."],
-      "Issue #309 downgraded the row because it blocked sessions too often. Splitting it keeps that relief for long replies while restoring the block where a decision is at stake."],
-    ["chg", "The loopholes come out of the rule text", "No exception for routine judgement calls; helpers' questions go to aj.",
-      ["rules/show-dont-tell.md:12 and rules/detail/clear-writing.md:61 say routine judgement calls go to aj \"unless they have said otherwise\". The helper start-up note (design_loop.py:970) sends anything unexpected \"back to the main session\", and agents/builder.md:11 says \"stop and ask\" without saying whom.",
-       "The exception is removed (see the first choice, on what happens to the exception). The helper note and builder.md say an unclear point is reported as a question for aj, never answered by the main session or the helper. The main session puts it on a question page, which sets Held."],
-      "The rule text is the only part the model reads directly, so a written exception is a standing invitation to use it."]
+      [
+        "CHECKPOINTS (design_loop.py:1911) has no row that looks for decisions; the page row only reacts to questions.",
+        "A blocking decided-for-aj row, run on my reply and on helper reports.",
+        "A choice I made without you is caught before you read the reply, not found later in the code."
+      ]
+    ],
+    [
+      "chg",
+      "The page check blocks again for choices and decisions",
+      "Long replies stay report-only; replies that offer or make a choice block.",
+      [
+        "Since plugin 2.68.1 (#309) the page row is report-only (design_loop.py:1914), although the injected rules still say a missing page keeps blocking. The rules and the code disagree.",
+        "A reply that offers a choice or trips the decided-for-aj row is blocked until it links a page, with the existing three-block limit. A reply that is only long stays report-only, as plugin 2.68.1 (#309) chose."
+      ],
+      "Issue #309 downgraded the row because it blocked sessions too often. Splitting it keeps that relief for long replies while restoring the block where a decision is at stake."
+    ],
+    [
+      "chg",
+      "The loopholes come out of the rule text",
+      "No exception for routine judgement calls; helpers' questions go to aj.",
+      [
+        "rules/show-dont-tell.md:12 and rules/detail/clear-writing.md:61 say routine judgement calls go to aj \"unless they have said otherwise\". The helper start-up note (design_loop.py:970) sends anything unexpected \"back to the main session\", and agents/builder.md:11 says \"stop and ask\" without saying whom.",
+        "The exception is removed (see the first choice, on what happens to the exception). The helper note and builder.md say an unclear point is reported as a question for aj, never answered by the main session or the helper. The main session puts it on a question page, which sets Held."
+      ],
+      "The rule text is the only part the model reads directly, so a written exception is a standing invitation to use it."
+    ],
+    [
+      "chg",
+      "Pictures travel inside the page",
+      "A page's pictures can no longer be left behind when it is published or sent.",
+      [
+        "make_page.py copies each picture into a folder named <page>-pics beside the page and links it by a relative path (make_page.py:150-177). The picture shows only if that folder goes wherever the page goes. Three routes can leave it behind. Publishing with the Artifact tool sends only the page unless the folder is listed in its files, and the page check (event_pagecheck, design_loop.py:1820) never looks. Sending the page with the send-file tool sends one file. A page written outside the session folder only gets a warning (#331, make_page.py warns when a page lands outside the folder it runs in). Which route a session takes varies, which is why it fails only some of the time.",
+        "make_page.py writes each picture into the page itself as a data link (the picture's bytes written as text inside the HTML), so the page is one file and every route carries its pictures. The page check refuses a page that still links a picture by a relative path."
+      ],
+      "Measured on this repo's 26 page pictures: the largest is 194 KB and the largest set is 1.1 MB, about 1.5 MB once inlined. That is far below the 16 MB limit for a published page. I have not reproduced a broken picture in this session, because I cannot see what the app shows you; QA checks it on your screen."
+    ]
   ],
   "choices": [
-    ["lock", "What should happen to the \"unless they have said otherwise\" exception for judgement calls?",
-      [["A", "Remove it entirely", 1, "Every unclear point goes to you, with no exception. This matches \"ever, period\"."],
-       ["B", "Keep it, but only from a recorded file", 0, "You list the kinds of call I may make in docs/page-style.json or a new file. Nothing outside the list counts, and nothing said in chat counts."]],
-      "You said ever, period. A written exception is exactly what the model leans on, so the clean fix is to remove it."],
-    ["flag", "What should the decided-for-aj check do when it finds decision wording?",
-      [["A", "Block until a page links, up to three times", 1, "The same strength as the restored page block. After three blocks in a row it lets the reply through with a note, so a broken builder cannot loop a session."],
-       ["B", "Block with no limit", 0, "Strictest, but a false match on harmless wording can stall a session with nobody watching."],
-       ["C", "Report only", 0, "It names the decision in a note but does not stop the reply. This is the strength that failed you today."]],
-      "Three blocks is the limit you already chose for the page rule (issue #283), and it keeps a false match from looping a session."],
-    ["refresh", "What should lift Held?",
-      [["A", "Your \"Design approved: <feature>\" for the same feature", 1, "It reuses the approval you already type, and the decisions log entry rule applies."],
-       ["B", "A new phrase, \"Questions answered: <feature>\"", 0, "Clearer in the log, but one more phrase to remember."],
-       ["C", "Any reply from you", 0, "Easiest, but a reply that does not answer the question would lift the lock."]],
-      "Reusing Design approved keeps one phrase for every design decision and needs no new parsing."]
+    [
+      "lock",
+      "What should happen to the \"unless they have said otherwise\" exception for judgement calls?",
+      [
+        [
+          "A",
+          "Remove it entirely",
+          1,
+          "Every unclear point goes to you, with no exception. This matches \"ever, period\"."
+        ],
+        [
+          "B",
+          "Keep it, but only from a recorded file",
+          0,
+          "You list the kinds of call I may make in docs/page-style.json or a new file. Nothing outside the list counts, and nothing said in chat counts."
+        ]
+      ],
+      "You said ever, period. A written exception is exactly what the model leans on, so the clean fix is to remove it."
+    ],
+    [
+      "flag",
+      "What should the decided-for-aj check do when it finds decision wording?",
+      [
+        [
+          "A",
+          "Block until a page links, up to three times",
+          1,
+          "The same strength as the restored page block. After three blocks in a row it lets the reply through with a note, so a broken builder cannot loop a session."
+        ],
+        [
+          "B",
+          "Block with no limit",
+          0,
+          "Strictest, but a false match on harmless wording can stall a session with nobody watching."
+        ],
+        [
+          "C",
+          "Report only",
+          0,
+          "It names the decision in a note but does not stop the reply. This is the strength that failed you today."
+        ]
+      ],
+      "Three blocks is the limit you already chose for the page rule (issue #283), and it keeps a false match from looping a session."
+    ],
+    [
+      "refresh",
+      "What should lift Held?",
+      [
+        [
+          "A",
+          "Your \"Design approved: <feature>\" for the same feature",
+          1,
+          "It reuses the approval you already type, and the decisions log entry rule applies."
+        ],
+        [
+          "B",
+          "A new phrase, \"Questions answered: <feature>\"",
+          0,
+          "Clearer in the log, but one more phrase to remember."
+        ],
+        [
+          "C",
+          "Any reply from you",
+          0,
+          "Easiest, but a reply that does not answer the question would lift the lock."
+        ]
+      ],
+      "Reusing Design approved keeps one phrase for every design decision and needs no new parsing."
+    ],
+    [
+      "image",
+      "How should a page carry its pictures?",
+      [
+        [
+          "A",
+          "Inside the page file",
+          1,
+          "Every picture is written into the HTML. One file, so publishing, sending and opening from the repo all show the pictures. Pages grow; the largest today would be about 1.5 MB."
+        ],
+        [
+          "B",
+          "Keep the folder, and check every publish",
+          0,
+          "The page check refuses a publish or send that leaves the picture folder out. Pages stay small, but each new route to you needs its own check, and a missed route fails again."
+        ],
+        [
+          "C",
+          "Inside the page, with a size cap",
+          0,
+          "Like A, but a picture over a size limit stays in the folder and the check from B covers it. No picture today comes near such a limit, so this adds a second path for no current case."
+        ]
+      ],
+      "A removes the folder that goes missing instead of guarding every route that can lose it, and today's largest page stays far under the publish limit."
+    ]
   ],
   "wrapup": {
-    "summary": "The plugin lets me decide for you because a build has no way back to you, the end-of-reply check only notices replies that ask a question, and it only reports them without blocking, and the rule text allows judgement calls. The fix closes all three.",
-    "changing": "Code: house_rules/design_loop.py and make_page.py. Rules: the short and detailed show-dont-tell files, clear-writing.md and agents/builder.md. Tests and docs: new verify.py cases and docs/4-systems/design-loop.md.",
-    "blocking": "Your approval of this design and your three picks.",
+    "summary": "The plugin lets me decide for you because a build has no way back to you, the end-of-reply check misses replies that decide, and the rule text allows judgement calls. Separately, page pictures live in a folder that can be left behind. The fixes close all four problems: the three holes in the loop and the lost pictures.",
+    "changing": "Code: house_rules/design_loop.py and make_page.py. Rules: the short and detailed show-dont-tell files, clear-writing.md and agents/builder.md. Tests and docs: new verify.py cases, docs/4-systems/design-loop.md and docs/4-systems/handover-pages.md.",
+    "blocking": "Your approval of this design and your four picks.",
     "next": "After approval I log the decision, file a parent issue with one child per change, and bring a build plan page.",
-    "todo": ["Reply \"Design approved: no decisions without aj\" with your picks, for example \"1A 2A 3A\" (choice 1 option A, choice 2 option A, choice 3 option A), or tell me what to change."]
+    "todo": [
+      "Reply \"Design approved: design loop fixes\" with your picks, for example \"1A 2A 3A 4A\" (choice 1 option A, choice 2 option A, and so on), or tell me what to change."
+    ]
   }
 }

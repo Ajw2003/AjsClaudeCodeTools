@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.75.0 -->
 <meta charset="utf-8">
-<title>No Decisions Without aj</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<title>Design Loop Fixes</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 /* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
@@ -269,11 +269,11 @@ dialog.lightbox button{margin-top:10px}
 const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
-  "title": "No Decisions Without aj",
-  "eyebrow": "Design proposal · house-rules design loop · nothing built yet",
-  "approval": "Design approved: no decisions without aj",
+  "title": "Design Loop Fixes",
+  "eyebrow": "Design proposal · house-rules design loop and page pictures · nothing built yet",
+  "approval": "Design approved: design loop fixes",
   "short": {
-    "lead": "You asked why the plugin lets me settle an unclear point myself and carry on. I read the design loop's code and rules and found three holes. First, once a build starts, every code edit is open, and a question found mid-build has no way back to you. Second, the end-of-reply page check only reports, and it only spots replies that ask a question, so a reply saying \"I went with X\" passes. Third, the rule text itself allows \"routine judgement calls\", and helpers hand their questions to the main session, which can answer them itself. The fix adds a new loop state called Held. While the loop is Held, code edits are refused, and a question page goes to you, a check that blocks replies which settle something you never chose, and removes the loopholes from the rule text.",
+    "lead": "This page covers two fixes. The first is for the plugin letting me settle an unclear point myself and carry on. I read the design loop's code and rules and found three holes. Once a build starts, every code edit is open, and a question found mid-build has no way back to you. The end-of-reply page check only reports, and it only spots replies that ask a question, so a reply saying \"I went with X\" passes. The rule text itself allows \"routine judgement calls\", and helpers hand their questions to the main session, which can answer them itself. The first fix adds a loop state called Held, which refuses code edits and sends you a question page. It also adds a check that blocks replies which settle something you never chose, and it removes the loopholes from the rule text. The second fix is for pages whose pictures don't show for you. The page builder puts pictures in a separate folder beside the page, and nothing makes that folder travel with the page when it is published or sent to you. The second fix puts the pictures inside the page file itself.",
     "hint": "Tap a step to see what it produces and what it needs from you.",
     "key": [
       [
@@ -289,9 +289,9 @@ const PAGE = {
       [
         "search",
         "Found",
-        "Three holes in the design loop",
+        "Three holes in the design loop, and one in page pictures",
         "",
-        "Each hole is described under Changes, with the file and line that cause it.",
+        "Each problem is described under Changes, with the file and line that cause it.",
         "Nothing from you.",
         {
           "src": "2026-11-03-design-loop-no-decisions-pics/loop-holes.svg",
@@ -305,14 +305,14 @@ const PAGE = {
         "You approve this design and pick the choices",
         "you",
         "A dated entry in docs/6-decisions/Decisions.md, a parent issue and one child issue per fix.",
-        "Reply \"Design approved: no decisions without aj\" with your picks."
+        "Reply \"Design approved: design loop fixes\" with your picks."
       ],
       [
         "hammer",
         "Build",
-        "Held move, decision check, rule text",
+        "Held state, decision check, rule text, pictures inside the page",
         "",
-        "The four changes under Changes, each with a verify.py case.",
+        "The five changes under Changes, each with a verify.py case.",
         "Nothing from you."
       ],
       [
@@ -369,6 +369,16 @@ const PAGE = {
         "The exception is removed (see the first choice, on what happens to the exception). The helper note and builder.md say an unclear point is reported as a question for aj, never answered by the main session or the helper. The main session puts it on a question page, which sets Held."
       ],
       "The rule text is the only part the model reads directly, so a written exception is a standing invitation to use it."
+    ],
+    [
+      "chg",
+      "Pictures travel inside the page",
+      "A page's pictures can no longer be left behind when it is published or sent.",
+      [
+        "make_page.py copies each picture into a folder named <page>-pics beside the page and links it by a relative path (make_page.py:150-177). The picture shows only if that folder goes wherever the page goes. Three routes can leave it behind. Publishing with the Artifact tool sends only the page unless the folder is listed in its files, and the page check (event_pagecheck, design_loop.py:1820) never looks. Sending the page with the send-file tool sends one file. A page written outside the session folder only gets a warning (#331, make_page.py warns when a page lands outside the folder it runs in). Which route a session takes varies, which is why it fails only some of the time.",
+        "make_page.py writes each picture into the page itself as a data link (the picture's bytes written as text inside the HTML), so the page is one file and every route carries its pictures. The page check refuses a page that still links a picture by a relative path."
+      ],
+      "Measured on this repo's 26 page pictures: the largest is 194 KB and the largest set is 1.1 MB, about 1.5 MB once inlined. That is far below the 16 MB limit for a published page. I have not reproduced a broken picture in this session, because I cannot see what the app shows you; QA checks it on your screen."
     ]
   ],
   "choices": [
@@ -440,15 +450,40 @@ const PAGE = {
         ]
       ],
       "Reusing Design approved keeps one phrase for every design decision and needs no new parsing."
+    ],
+    [
+      "image",
+      "How should a page carry its pictures?",
+      [
+        [
+          "A",
+          "Inside the page file",
+          1,
+          "Every picture is written into the HTML. One file, so publishing, sending and opening from the repo all show the pictures. Pages grow; the largest today would be about 1.5 MB."
+        ],
+        [
+          "B",
+          "Keep the folder, and check every publish",
+          0,
+          "The page check refuses a publish or send that leaves the picture folder out. Pages stay small, but each new route to you needs its own check, and a missed route fails again."
+        ],
+        [
+          "C",
+          "Inside the page, with a size cap",
+          0,
+          "Like A, but a picture over a size limit stays in the folder and the check from B covers it. No picture today comes near such a limit, so this adds a second path for no current case."
+        ]
+      ],
+      "A removes the folder that goes missing instead of guarding every route that can lose it, and today's largest page stays far under the publish limit."
     ]
   ],
   "wrapup": {
-    "summary": "The plugin lets me decide for you because a build has no way back to you, the end-of-reply check only notices replies that ask a question, and it only reports them without blocking, and the rule text allows judgement calls. The fix closes all three.",
-    "changing": "Code: house_rules/design_loop.py and make_page.py. Rules: the short and detailed show-dont-tell files, clear-writing.md and agents/builder.md. Tests and docs: new verify.py cases and docs/4-systems/design-loop.md.",
-    "blocking": "Your approval of this design and your three picks.",
+    "summary": "The plugin lets me decide for you because a build has no way back to you, the end-of-reply check misses replies that decide, and the rule text allows judgement calls. Separately, page pictures live in a folder that can be left behind. The fixes close all four problems: the three holes in the loop and the lost pictures.",
+    "changing": "Code: house_rules/design_loop.py and make_page.py. Rules: the short and detailed show-dont-tell files, clear-writing.md and agents/builder.md. Tests and docs: new verify.py cases, docs/4-systems/design-loop.md and docs/4-systems/handover-pages.md.",
+    "blocking": "Your approval of this design and your four picks.",
     "next": "After approval I log the decision, file a parent issue with one child per change, and bring a build plan page.",
     "todo": [
-      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: no decisions without aj\", or say what to change."
+      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: design loop fixes\", or say what to change."
     ]
   }
 };
