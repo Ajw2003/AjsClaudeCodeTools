@@ -176,6 +176,9 @@ the steps the user approved: it never designs, changes the plan or approves. The
 edits the same as mine. With the loop on, only "Build plan approved" starts a build; the old guess
 that a message "reads like a go-ahead" is not used (#232).
 
+A helper that meets an unclear point stops and reports it as a question for aj. Neither the helper
+nor the main session answers it: the main session puts it on a page with choices for aj.
+
 ## Where this rule loads
 
 This rule is injected by its own SessionStart handler (`showrule`), not inside

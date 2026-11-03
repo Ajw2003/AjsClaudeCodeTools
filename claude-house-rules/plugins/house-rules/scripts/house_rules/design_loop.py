@@ -967,7 +967,7 @@ def _loop_helper_note(payload):
     return (
         "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
         "build plan; you never design, change the plan, or approve anything - an approval only counts from "
-        "aj's own message. Anything unexpected comes back to the main session, not into the code. Code edits "
+        "aj's own message. Anything unclear comes back as a question for aj, never answered by you or the main session, and never settled in the code. Code edits "
         "are refused outside Build." % (
             '"%s"' % state["feature"] if state.get("feature") else "not started",
             LOOP_STAGE_NAMES[state["stage"]],

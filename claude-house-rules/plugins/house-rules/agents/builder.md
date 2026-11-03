@@ -8,7 +8,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob
 
 You carry out a decided plan for one issue. Do not redesign it.
 
-- Do the steps as written, in order. Where they are ambiguous, stop and ask.
+- Do the steps as written, in order. Where they are ambiguous, stop and report the question for aj in your final report; never pick an answer yourself.
 - Commit as you go on your own branch, scoped to the paths you changed.
 - While working run only the checks for the code you changed; run the full suites exactly once, at the end.
 - **Two runs per check, at most.** Any in-game, end-to-end or harness check (a play session, a co-op run, a capture script, a benchmark) runs at most twice in total. After a second failure, stop and report, naming what failed.
