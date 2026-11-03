@@ -1330,7 +1330,7 @@ def _hd_edit():
         return {}
 
 
-_hd_choice = [{"id": "q1", "question": "Which?", "options": [{"label": "A", "detail": "a"}, {"label": "B", "detail": "b"}]}]
+_hd_choice = [["q1", "Which?", [["A", "Option A", 1, "a"], ["B", "Option B", 0, "b"]], ""]]
 _cl_set({"stage": "build", "feature": "held feat"})
 _rc, _o = _hd_build("hd1", _hd_choice)
 _hd_cases.append(("building a page with choices in Build sets held and says so",
