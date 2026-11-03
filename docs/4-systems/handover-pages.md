@@ -96,10 +96,14 @@ Depends on: the hook payload's `cwd` field. Depended on by: the page checkpoint,
 arrived without its pictures. aj's screenshot of `docs/plans/2026-11-03-design-loop-no-decisions.html`
 showed the broken image on 2026-11-03.
 
-The approved fix (aj's own answer): the builder writes each picture into the page as a `data:` link.
-A file too large for that, for example a video, stays in the folder, and the page check refuses an
-Artifact publish or a send that leaves that folder out. The size limit is set by aj on the build plan
-page. Measured on 2026-11-03: the 26 page pictures in this repo top out at 194 KB each, and the
+The approved fix (aj's answers, 2026-11-03): the builder writes pictures and videos into the page as
+`data:` links until the page reaches 16 MB, the publish limit. Files past that are published with
+the page as separate files of the same claude.ai page (each up to 15 MB, up to 64 MB per publish), and
+the page check refuses a publish that leaves one out. Nothing is cut.
+
+The Copy my reply button gains a second copy method and, when both fail, a text box that selects
+itself in one tap; in a cloud session every page is published as a claude.ai page (#343, blocking
+again under #461). Measured on 2026-11-03: the 26 page pictures in this repo top out at 194 KB each, and the
 largest page's pictures total 1.38 MB once written in, against a 16 MB limit for a published page.
 
 Depends on: `copy_pictures` in `make_page.py`, `event_pagecheck`. Depended on by: every page.

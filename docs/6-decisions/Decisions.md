@@ -3188,3 +3188,23 @@ exception is what the model leans on, and a check that only notices questions re
 the build plan page; it is not chosen by the agent.
 
 **Status.** Standing.
+
+## 2026-11-03 — Design loop fixes: pictures past 16 MB, and the copy button
+
+**Context.** Approving the build plan for the design loop fixes (#457), aj answered the picture
+limit with "just the 16mb total limit; if files exceed it figure a way around to still include them
+instead of cutting", picked 2B (videos by size, like pictures), and asked that pages stop going out as
+bare HTML without a working Copy my reply button. The button (`templates/handover-page.html:415-417`)
+falls back to only selecting the text when the browser refuses to copy, which the app's file viewer
+does. Two open questions went to aj on `docs/plans/2026-11-03-design-loop-fixes-questions.html`.
+
+**Decision.** aj approved "Design approved: design loop fixes 1A 2A". 1A: pictures go inside the
+page until it reaches 16 MB, and the rest are published with it as separate files of the same
+claude.ai page; the page check refuses a publish that leaves one out. 2A: every page is published as a
+claude.ai page in a cloud session (the #343 rule, made to block again by #461), and the copy button
+gains a second copy method plus a one-tap selectable text box if both fail.
+
+**Why.** One link with the original files keeps nothing cut; covering both copy routes gives the
+button its best chance on aj's phone.
+
+**Status.** Standing.
