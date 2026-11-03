@@ -273,7 +273,7 @@ const PAGE = {
   "eyebrow": "Design question · design loop fixes (parent issue #457) · asked during Build by the #460 builder",
   "approval": "Design approved: design loop fixes",
   "short": {
-    "lead": "Your pick 2A said the decided-for-aj check blocks a reply until it links a page, up to three blocks in a row. The builder for #460 (Decided-for-aj check) found that the plugin cannot block a retried reply today, and stopped to ask rather than choose. The end-of-reply check blocks a reply once. When I send the reply again (a retry), the check only reports (hook.py:123). The three-in-a-row limit exists only as a constant that no code reads (design_loop.py:1984), and the check's own message wrongly says a missing page keeps blocking. The same question decides how #461 (Page check blocks again for choices and decisions) is built.",
+    "lead": "Your pick 2A said the decided-for-aj check blocks a reply until it links a page, up to three blocks in a row. The builder for #460 (Decided-for-aj check) found that the plugin cannot block a retried reply today, and stopped to ask rather than choose. Today the end-of-reply check can stop a reply only the first time I send it. When I send it again (a retry), the check only reports the problem and the reply goes through (hook.py:123). The three-in-a-row limit exists only as a constant that no code reads (design_loop.py:1984), and the check's own message wrongly says a missing page keeps blocking. The same question decides how #461 (Page check blocks again for choices and decisions) is built.",
     "hint": "Tap a step to see what it changes and what it needs from you.",
     "key": [
       [
