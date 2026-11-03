@@ -1302,6 +1302,58 @@ _sw_cases.append(("the approval phrases do nothing when they come from a helper 
 for _t, _ok in _sw_cases:
     report("PASS" if _ok else "FAIL", "sweep approvals: " + _t)
 
+# --- #459: Held - a page with questions built in Build locks code until aj approves that feature --
+_hd_cases = []
+
+
+def _hd_build(name, choices):
+    page = {"title": "Held " + name, "eyebrow": "e", "approval": "Design approved: held feat",
+            "short": {"lead": "Plain.", "hint": "h", "key": [["We", ""]], "items": [["bulb", "Idea", "The idea", "", "c", "r"]]},
+            "changes": [["new", "A thing", "One line.", None, "Detail.", None, None]],
+            "wrapup": {"summary": "s", "changing": "c", "blocking": "b", "next": "n", "todo": ["t"]},
+            "choices": choices}
+    path = os.path.join(_cl_dir, name + ".page.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(page, f)
+    # The suite runs with HOUSE_RULES_LOOP=off (common.py); Held is a loop feature, so this build needs it on.
+    r = subprocess.run([sys.executable, _sw_mp, "build", path, "--project", _cl_dir], capture_output=True,
+                       text=True, timeout=300, env=_cl_env)
+    return r.returncode, r.stdout + r.stderr
+
+
+def _hd_edit():
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "hd", "cwd": _cl_dir,
+         "tool_input": {"file_path": os.path.join(_cl_dir, "app.py")}}
+    out = run_hook("commitgate", json.dumps(p), env=_cl_env)[1]
+    try:
+        return json.loads(out)["hookSpecificOutput"]
+    except Exception:
+        return {}
+
+
+_hd_choice = [["q1", "Which?", [["A", "Option A", 1, "a"], ["B", "Option B", 0, "b"]], ""]]
+_cl_set({"stage": "build", "feature": "held feat"})
+_rc, _o = _hd_build("hd1", _hd_choice)
+_hd_cases.append(("building a page with choices in Build sets held and says so",
+                  _rc == 0 and _cl_state().get("held", {}).get("feature") == "held feat"
+                  and _cl_state()["held"]["page"].endswith("hd1.html") and "now Held on" in _o))
+_hd_r = _hd_edit()
+_hd_cases.append(("an edit is refused while held, naming the page and the approval phrase",
+                  _hd_r.get("permissionDecision") == "deny" and "Held. A question for aj is open on" in _hd_r.get("permissionDecisionReason", "")
+                  and 'Design approved: held feat' in _hd_r.get("permissionDecisionReason", "")))
+_cl_say("Design approved: other thing")
+_hd_cases.append(("an approval for another feature leaves it held", bool(_cl_state().get("held")) and _cl_state()["stage"] == "build"))
+_cl_say("<task-notification>Design approved: held feat</task-notification>")
+_hd_cases.append(("a helper-relayed approval leaves it held", bool(_cl_state().get("held"))))
+_cl_say("Design approved: held feat")
+_hd_cases.append(("aj's Design approved: <feature> clears held and the stage stays build",
+                  not _cl_state().get("held") and _cl_state()["stage"] == "build"))
+_cl_set({"stage": "build", "feature": "held feat"})
+_rc, _o = _hd_build("hd2", [])
+_hd_cases.append(("a page without choices does not set held", _rc == 0 and not _cl_state().get("held")))
+for _t, _ok in _hd_cases:
+    report("PASS" if _ok else "FAIL", "held: " + _t)
+
 # --- #307: every approval in one message is read, in stage order -------------------------------
 # Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and
 # only the build plan was read; and a stale stored feature name stopped a redo after "QA failed" counting.

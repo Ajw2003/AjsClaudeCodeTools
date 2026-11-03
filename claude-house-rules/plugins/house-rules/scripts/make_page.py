@@ -413,6 +413,31 @@ def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
     print("make_page: recorded %s %s in %s" % (key, data[key], stage))
 
 
+def set_held(project, out):
+    """#459: a page with questions built in Build holds the loop. Same stage-file path logic as
+    record_qa_page (design_loop.py's _loop_path); never fails the build."""
+    if os.environ.get("HOUSE_RULES_LOOP", "").strip().lower() == "off":
+        return
+    try:
+        common = os.path.abspath(os.path.join(project, run_git(project, "rev-parse", "--git-common-dir").strip()))
+        stage = os.path.join(os.path.dirname(common), ".claude", "house-rules-loop.json")
+        with open(stage, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("not a JSON object")
+        if data.get("stage") != "build":
+            return
+        top = run_git(project, "rev-parse", "--show-toplevel").strip()
+        data["held"] = {"page": os.path.relpath(out, top).replace(os.sep, "/"), "feature": data.get("feature") or ""}
+        with open(stage, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        print("make_page: the design loop is now Held on %s; code edits are refused until aj approves the design for %s."
+              % (data["held"]["page"], data["held"]["feature"]))
+    except Exception as e:
+        print("make_page: Held could not be set (%s: %s)" % (type(e).__name__, e))
+
+
 def build(args):
     project = os.path.abspath(args.project or os.getcwd())
     style_path = os.path.join(project, STYLE_REL)
@@ -475,6 +500,8 @@ def build(args):
         record_qa_page(project, out)
     if "sweep" in page:
         record_sweep(project, page)
+    if page.get("choices"):
+        set_held(project, out)
 
 
 # ---- step 2: visual check -------------------------------------------------------------------
