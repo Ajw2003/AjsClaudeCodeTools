@@ -452,13 +452,12 @@ def _rerun_enabled():
 
 
 def _rerun_command(payload, subject):
+    """The raw command; the decoded guard subject when the payload has no usable command field."""
     try:
         cmd = json.loads(payload)["tool_input"]["command"]
-        if isinstance(cmd, str):
-            return cmd
     except (ValueError, KeyError, TypeError):
-        pass
-    return _decoded_command(subject)
+        cmd = None  # falls back to the decoded subject below, which every guard rule already reads
+    return cmd if isinstance(cmd, str) else _decoded_command(subject)
 
 
 def _rerun_candidates(cmd, where):
