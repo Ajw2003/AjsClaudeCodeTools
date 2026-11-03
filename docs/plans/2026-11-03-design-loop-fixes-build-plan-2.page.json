@@ -21,9 +21,9 @@
   "choices": [],
   "wrapup": {
     "summary": "The plan now carries your answers: #462 uses one 16 MB page limit with overflow files published alongside, and the new #464 fixes the copy button.",
-    "changing": "Issue #462's text, three new issues (#464 for the copy button, #465 and #466 for two bugs found this session), and issue #463's dependency list.",
+    "changing": "Issue #462's text (the 16 MB page limit), three new issues (#464 for the copy button, #465 and #466 for two bugs found this session), and which issues #463 has to wait for.",
     "blocking": "Your approval of this revised plan.",
-    "next": "The #459 builder resumes, then #460, #461, #462, #464, #465 and #466 are built one at a time, and #463 brings you the QA page.",
+    "next": "The builder for #459 (a question mid-build locks code) resumes. Then #460 and #461 (the decided-for-aj check, and the page check blocks again), #462 (pictures inside the page), #464 (Copy my reply works), #465 (the rerun limit stops counting reads as runs) and #466 (the page builder refuses unknown icon names) are built one at a time. #463 then brings you the QA page.",
     "todo": ["Reply \"Build plan approved: design loop fixes\", or tell me what to change."]
   }
 }
