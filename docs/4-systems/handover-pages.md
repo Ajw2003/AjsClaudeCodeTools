@@ -88,3 +88,18 @@ page's file name alone (`_record_qa_link`, `hook.py:7648`).
 | Tests | `scripts/verify.py` | Seven link-test cases (inside, `../` sibling, `file:///` outside, artifact, bare name, outside link with a bare-name link text, the note naming the path) and two warning cases (outside prints the line, inside does not). |
 
 Depends on: the hook payload's `cwd` field. Depended on by: the page checkpoint, the long-reply note and the QA stage.
+
+## Pictures inside the page (approved 2026-11-03, building)
+
+`make_page.py` copied each picture into `<page>-pics/` and linked it by a relative path
+(`make_page.py:150-177`), so a page published with the Artifact tool or sent with the send-file tool
+arrived without its pictures. aj's screenshot of `docs/plans/2026-11-03-design-loop-no-decisions.html`
+showed the broken image on 2026-11-03.
+
+The approved fix (aj's own answer): the builder writes each picture into the page as a `data:` link.
+A file too large for that, for example a video, stays in the folder, and the page check refuses an
+Artifact publish or a send that leaves that folder out. The size limit is set by aj on the build plan
+page. Measured on 2026-11-03: the 26 page pictures in this repo top out at 194 KB each, and the
+largest page's pictures total 1.38 MB once written in, against a 16 MB limit for a published page.
+
+Depends on: `copy_pictures` in `make_page.py`, `event_pagecheck`. Depended on by: every page.

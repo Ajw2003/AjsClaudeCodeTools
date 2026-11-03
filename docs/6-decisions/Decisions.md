@@ -3157,3 +3157,34 @@ sub-plugin later. Design: `docs/4-systems/guards.md`, "Credit on GitHub".
 keep it off; reporting it honestly is the part the agent controls.
 
 **Status.** Standing.
+
+## 2026-11-03 — No design decision without aj, and page pictures travel inside the page
+
+**Context.** aj found the plugin still let the agent settle an unclear point and carry on. Reading
+the code showed three holes: `_loop_gate` opens every code edit in Build
+(`scripts/house_rules/design_loop.py:1024`) with no way back to aj except "QA failed"; the page
+checkpoint is report-only since #309 (`design_loop.py:1914`) and `_offers_choices`
+(`design_loop.py:1712`) only reacts to a reply ending in a question mark, so "I went with X" passes;
+and the rule text allows "routine judgement calls ... unless they have said otherwise"
+(`rules/show-dont-tell.md:12`, `rules/detail/clear-writing.md:61`), while helpers hand questions to
+the main session (`design_loop.py:970`, `agents/builder.md:11`). Separately, `make_page.py:150-177`
+links pictures from a `<page>-pics/` folder that is lost when a page is published or sent alone; aj's
+screenshot on 2026-11-03 showed the broken diagram on the proposal page itself.
+
+**Decision.** aj approved "Design approved: design loop fixes" with 1A 2A 3A and an own answer for 4.
+1A: the "unless they have said otherwise" exception is removed entirely. 2A: a new decided-for-aj
+checkpoint blocks a reply (or helper report) that settles a design point, up to three blocks in a
+row. 3A: a new Held state, set when a page with choices is built during Build, refuses code edits
+until aj's "Design approved: <feature>". 4 (aj's own): pictures are written inside the page, unless
+the files are too large, for example videos; those stay in the folder and every publish or send is
+checked to carry the folder. Also approved with the design: the page checkpoint blocks again for
+replies that offer or make a choice, while long replies stay report-only. Proposal:
+`docs/plans/2026-11-03-design-loop-no-decisions.html`.
+
+**Why.** aj: the agent never decides a design without consulting aj, "ever, period". A written
+exception is what the model leans on, and a check that only notices questions rewards not asking.
+
+**Open.** The size above which a picture counts as too large to write into the page goes to aj on
+the build plan page; it is not chosen by the agent.
+
+**Status.** Standing.

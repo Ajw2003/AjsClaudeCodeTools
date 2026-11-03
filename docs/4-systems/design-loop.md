@@ -69,3 +69,17 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
   `gh issue create`; cloud sessions use the GitHub tool (aj chose to record both, #231).
 - **Writing the tracker on every message** gave a fresh project a file on a bare "approved"; the
   write now happens only on a real change.
+
+## Decisions only from aj (approved 2026-11-03, building)
+
+Design: `docs/plans/2026-11-03-design-loop-no-decisions.html`; decision logged in
+`docs/6-decisions/Decisions.md`, 2026-11-03.
+
+| Part | Where | What it does |
+|---|---|---|
+| Held state | `_loop_gate`, the loop file, `make_page.py` | Building a page with a Choices section while the stage is Build sets `held`. While held, every code edit is refused with a message naming the question page. Only aj's own "Design approved: <feature>" for the same feature clears it. |
+| Decided-for-aj checkpoint | `CHECKPOINTS`, a new `_check_decided` | Looks for decision wording ("I chose", "I went with", "I decided", "I assumed", "I defaulted to", "for now I'll") in the reply and in each helper's report. Blocks until the reply links a page that puts the point to aj as a choice, or quotes aj's message that settled it. Three blocks in a row let the reply through with a note, as the page rule does (#283). The word list is a starting value. |
+| Page checkpoint split | `CHECKPOINTS` page row | A reply that offers a choice, or trips the decided-for-aj row, is blocked until it links a page. A reply that is only long stays report-only, as #309 chose. |
+| Rule text | `rules/show-dont-tell.md`, `rules/detail/show-dont-tell.md`, `rules/detail/clear-writing.md`, `agents/builder.md`, `_loop_helper_note` | No exception for judgement calls. A helper reports an unclear point as a question for aj and never answers it; the main session puts it on a question page, which sets Held. |
+
+Depends on: the loop file, `make_page.py`, the checkpoint table. Depended on by: every build.
