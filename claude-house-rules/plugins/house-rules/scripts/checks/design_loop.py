@@ -1315,8 +1315,9 @@ def _hd_build(name, choices):
     path = os.path.join(_cl_dir, name + ".page.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(page, f)
+    # The suite runs with HOUSE_RULES_LOOP=off (common.py); Held is a loop feature, so this build needs it on.
     r = subprocess.run([sys.executable, _sw_mp, "build", path, "--project", _cl_dir], capture_output=True,
-                       text=True, timeout=300)
+                       text=True, timeout=300, env=_cl_env)
     return r.returncode, r.stdout + r.stderr
 
 
