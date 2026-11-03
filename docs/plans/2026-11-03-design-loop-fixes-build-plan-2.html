@@ -327,6 +327,22 @@ const PAGE = {
         "Nothing from you."
       ],
       [
+        "swap",
+        "Bug",
+        "#465: the rerun limit stops counting reads as runs (new)",
+        "",
+        "Reading a script with sed, grep or cat no longer counts as running it. Only a real run counts.",
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Bug",
+        "#466: the page builder refuses unknown icon names (new)",
+        "",
+        "A page that names an icon the template lacks is refused, listing the valid names.",
+        "Nothing from you."
+      ],
+      [
         "flask",
         "QA",
         "#463: docs, version and QA page",
@@ -340,7 +356,7 @@ const PAGE = {
   "choices": [],
   "wrapup": {
     "summary": "The plan now carries your answers: #462 uses one 16 MB page limit with overflow files published alongside, and the new #464 fixes the copy button.",
-    "changing": "Issue #462's text, the new issue #464, and issue #463's dependency list.",
+    "changing": "Issue #462's text, three new issues (#464 for the copy button, #465 and #466 for two bugs found this session), and issue #463's dependency list.",
     "blocking": "Your approval of this revised plan.",
     "next": "The #459 builder resumes, then #460, #461, #462 and #464 are built one at a time, and #463 brings you the QA page.",
     "todo": [
