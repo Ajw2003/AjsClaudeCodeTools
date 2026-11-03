@@ -61,6 +61,17 @@ If the example breaks a standard, I say so in the prompt and name the right patt
 as "the key reading pattern" (Ajw2003/PlunderSpell#350). The builder copied it into a new class, and
 the project's move to the new Input System had to be redone for that class too.
 
+**A measured number is never a builder's only finish line.** A builder already carries a limit of
+two runs per in-game, end-to-end or harness check, and it reports after the second failure rather
+than repairing the check. So a spawn prompt's done-when names the code change; a number from a
+check is evidence the builder reports, not a target it chases. When a builder is running such a
+check, I look at it after about 10 minutes rather than waiting for it to finish.
+
+**Why:** in Ajw2003/PlunderSpell#569, on 2026-11-02, a builder ran one co-op gap check 12 times
+in 23 minutes, and several of those runs went on repairing the check instead of the code. The
+parent had written a number from that check as the only done-when, with no limit on runs. The
+same thing happened in Ajw2003/PlunderSpell#238 with 8 runs (#139, #453).
+
 A subagent stopping is not the same as its task finishing, and a `SubagentStop` or background-task
 notification reporting only a status update ("I've launched...", "I'll report back...") is not a
 report of concrete deliverables. Before treating a delegation as done, or relaunching one, check
