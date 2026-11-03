@@ -14,7 +14,7 @@
     ]
   },
   "changes": [
-    ["chg", "Builder rule (agents/builder.md, rules/detail/delegate-execution.md)", "Builders may run a check twice, must never edit a check to make it pass, and must read the code between runs.", ["Builders had a limit on test suites only.", "Builders carry the two-run limit; parent agents don't use a measured number as the only condition for calling a task done, and check a running builder after about 10 minutes."], "Shipped in 2.74.3."],
+    ["chg", "Builder rule (agents/builder.md, rules/detail/delegate-execution.md)", "Builders may run a check twice, must never edit a check to make it pass, and must read the code between runs.", ["Builders had a limit on test suites only.", "Builders carry the two-run limit; parent agents don't use a measured number as the only condition for calling a task done, and check a running builder after 10 minutes."], "Shipped in 2.74.3."],
     ["chg", "Rerun limit (house_rules/safe_git.py, checks/safe_git.py)", "The guard counts runs per session, per agent, per project script.", ["Any agent could run the same script without limit.", "The third run is refused; a commit that changes a file other than the script resets it; HOUSE_RULES_RERUNS=off turns it off."], "Every project script counts, helpers such as eval.sh and verify.py included, as you chose with option 1B."]
   ],
   "qa": {
