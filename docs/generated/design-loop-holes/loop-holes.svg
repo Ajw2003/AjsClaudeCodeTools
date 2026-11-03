@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14">
+  <rect width="760" height="400" fill="#ffffff"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+  </defs>
+  <text x="20" y="28" font-size="16" font-weight="700" fill="#0f172a">The design loop today, and where a decision slips past aj</text>
+
+  <!-- stages -->
+  <g fill="#f1f5f9" stroke="#475569" stroke-width="1.5">
+    <rect x="20" y="70" width="130" height="56" rx="10"/>
+    <rect x="200" y="70" width="130" height="56" rx="10"/>
+    <rect x="380" y="70" width="170" height="56" rx="10"/>
+    <rect x="600" y="70" width="140" height="56" rx="10"/>
+  </g>
+  <g text-anchor="middle" fill="#0f172a" font-weight="600">
+    <text x="85" y="103">Design</text>
+    <text x="265" y="103">Plan</text>
+    <text x="465" y="103">Build</text>
+    <text x="670" y="103">QA</text>
+  </g>
+  <g stroke="#475569" stroke-width="1.5" marker-end="url(#a)">
+    <line x1="150" y1="98" x2="198" y2="98"/>
+    <line x1="330" y1="98" x2="378" y2="98"/>
+    <line x1="550" y1="98" x2="598" y2="98"/>
+  </g>
+  <text x="85" y="60" text-anchor="middle" font-size="12" fill="#475569">code locked</text>
+  <text x="265" y="60" text-anchor="middle" font-size="12" fill="#475569">code locked</text>
+  <text x="465" y="60" text-anchor="middle" font-size="12" fill="#475569">every code edit open</text>
+  <text x="670" y="60" text-anchor="middle" font-size="12" fill="#475569">code locked</text>
+
+  <!-- holes -->
+  <g fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5">
+    <circle cx="465" cy="160" r="14"/>
+    <circle cx="140" cy="250" r="14"/>
+    <circle cx="140" cy="330" r="14"/>
+  </g>
+  <g text-anchor="middle" font-weight="700" fill="#b91c1c">
+    <text x="465" y="165">1</text><text x="140" y="255">2</text><text x="140" y="335">3</text>
+  </g>
+  <text x="488" y="156" font-size="13" fill="#0f172a">A question found mid-build has nowhere to go.</text>
+  <text x="488" y="174" font-size="13" fill="#0f172a">Only aj's "QA failed" ever sends work back.</text>
+  <text x="164" y="246" font-size="13" fill="#0f172a">The end-of-reply page check only reports since #309, and it only spots a</text>
+  <text x="164" y="264" font-size="13" fill="#0f172a">reply that asks. "I went with X" ends in a full stop, so it is never seen.</text>
+  <text x="164" y="326" font-size="13" fill="#0f172a">The rule text allows "routine judgement calls" when aj "said otherwise",</text>
+  <text x="164" y="344" font-size="13" fill="#0f172a">and helpers hand questions to the main session, which can answer them itself.</text>
+
+  <!-- proposed held path -->
+  <path d="M440,126 C400,225 110,225 90,128" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#g)"/>
+  <rect x="268" y="186" width="150" height="26" rx="13" fill="#dcfce7" stroke="#15803d"/>
+  <text x="343" y="204" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Proposed: Held</text>
+  <text x="20" y="385" font-size="12" fill="#475569">Red circles: the three holes found. Green dashed path: the proposed new move, which locks code and sends a question page to aj.</text>
+</svg>
