@@ -3,28 +3,28 @@
   "eyebrow": "Design question · design loop fixes (parent issue #457) · asked during Build by the #460 builder",
   "approval": "Design approved: design loop fixes",
   "short": {
-    "lead": "Your pick 2A said the decided-for-aj check blocks a reply until it links a page, up to three blocks in a row. The builder for #460 (Decided-for-aj check) found that the plugin cannot do that today, and stopped to ask rather than choose. The end-of-reply check blocks a reply once. When I send the reply again (a retry), it only reports, and it never blocks (hook.py:123). The three-in-a-row limit exists only as an unused number (design_loop.py:1984), and the check's own message wrongly says a missing page keeps blocking. The same question decides #461 (Page check blocks again for choices and decisions).",
+    "lead": "Your pick 2A said the decided-for-aj check blocks a reply until it links a page, up to three blocks in a row. The builder for #460 (Decided-for-aj check) found that the plugin cannot block a retried reply today, and stopped to ask rather than choose. The end-of-reply check blocks a reply once. When I send the reply again (a retry), the check only reports (hook.py:123). The three-in-a-row limit exists only as a constant that no code reads (design_loop.py:1984), and the check's own message wrongly says a missing page keeps blocking. The same question decides how #461 (Page check blocks again for choices and decisions) is built.",
     "hint": "Tap a step to see what it changes and what it needs from you.",
     "key": [["I build it", ""], ["You decide", "you"]],
     "items": [
-      ["search", "Found", "A retry is never blocked", "", "hook.py lines 194-199 run the blocking checks only on the first try. On a retry, every check only reports.", "Nothing from you."],
+      ["search", "Found", "A retry is never blocked", "", "hook.py lines 194-199 run the blocking checks only the first time I send a reply. On a retry, they only report.", "Nothing from you."],
       ["hand", "Decide", "How hard should these two checks hold?", "you", "Your pick sets how #460 and #461 are built.", "Your pick below."],
-      ["hammer", "Meanwhile", "#465 is being built", "", "#465 (Rerun limit counts reading a script as running it) does not depend on this answer.", "Nothing from you."]
+      ["lock", "Held", "Code is locked until you answer", "", "Building this page set the new Held state, so I stopped the builder for #465 (Rerun limit counts reading a script as running it). Its saved work resumes after your answer.", "Nothing from you."]
     ]
   },
   "changes": [],
   "choices": [
     ["stop", "How should the decided-for-aj check and the page check block?",
-      [["A", "Block on retries too, up to three in a row", 1, "Only these two checks may block a retry. After three blocks in a row the reply goes through with a note naming what is missing, so a broken page builder cannot loop a session with nobody watching. Every other check keeps today's once-only rule. The check's message is corrected to match."],
-       ["B", "Block once, like the other checks", 0, "The reply is blocked once. If my retry still settles a point without a page, it goes through with a report. Simpler, but a second try can get past it, which is how decisions slipped through before."],
-       ["C", "Block on every retry, with no limit", 0, "Strictest. A false match on harmless wording, or a broken page builder, would stop the session until you step in."]],
-      "A matches the three-block limit you chose for the page rule in #283, and it is the only option where a retry cannot simply walk past the check."]
+      [["A", "Block on retries too, up to three in a row", 1, "Only these two checks may block a retry. After three blocks in a row the reply goes through with a note naming the missing page, so a fault in the page builder cannot keep a session blocked while nobody is watching. Every other check keeps today's once-only rule. The check's message is corrected to match."],
+       ["B", "Block once, like the other checks", 0, "The reply is blocked once. If my retry still settles a point without a page, the reply goes through with a report. Simpler, but a second try can get past it, which is how decisions slipped through before."],
+       ["C", "Block on every retry, with no limit", 0, "Strictest. If the check wrongly flagged harmless wording, or the page builder broke, the session would stay blocked until you step in."]],
+      "A matches the three-block limit you chose for the page rule in #283 (the automatic-pages build plan), and it is the only option where a retry cannot simply walk past the check."]
   ],
   "wrapup": {
     "summary": "The decided-for-aj check and the page check need permission to block a retry, which no check has today. One pick decides both.",
-    "changing": "Nothing until you answer. #465 is being built meanwhile.",
+    "changing": "Nothing until you answer. Code is locked, and #465 (Rerun limit counts reading a script as running it) waits.",
     "blocking": "Your pick.",
-    "next": "Your answer goes into #460 and #461, and the builder for #460 resumes.",
+    "next": "Your answer goes into #460 (Decided-for-aj check) and #461 (Page check blocks again for choices and decisions). The builders for #460 and #465 resume.",
     "todo": ["Reply \"Design approved: design loop fixes\" with your pick, for example \"1A\", or tell me what to change."]
   }
 }
