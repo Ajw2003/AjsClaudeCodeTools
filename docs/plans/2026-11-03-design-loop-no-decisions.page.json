@@ -3,11 +3,11 @@
   "eyebrow": "Design proposal · house-rules design loop · nothing built yet",
   "approval": "Design approved: no decisions without aj",
   "short": {
-    "lead": "You asked why the plugin lets me settle an unclear point myself and carry on. I read the design loop's code and rules and found three holes. First, once a build starts, every code edit is open, and a question found mid-build has no way back to you. Second, the end-of-reply page check only reports, and it only spots replies that ask a question, so a reply saying \"I went with X\" passes. Third, the rule text itself allows \"routine judgement calls\", and helpers hand their questions to the main session, which can answer them itself. The fix adds a Held move that locks code and sends a question page to you, a check that blocks replies which settle something you never chose, and removes the loopholes from the rule text.",
+    "lead": "You asked why the plugin lets me settle an unclear point myself and carry on. I read the design loop's code and rules and found three holes. First, once a build starts, every code edit is open, and a question found mid-build has no way back to you. Second, the end-of-reply page check only reports, and it only spots replies that ask a question, so a reply saying \"I went with X\" passes. Third, the rule text itself allows \"routine judgement calls\", and helpers hand their questions to the main session, which can answer them itself. The fix adds a new loop state called Held. While the loop is Held, code edits are refused, and a question page goes to you, a check that blocks replies which settle something you never chose, and removes the loopholes from the rule text.",
     "hint": "Tap a step to see what it produces and what it needs from you.",
     "key": [["I build it", ""], ["You decide", "you"]],
     "items": [
-      ["search", "Found", "Three holes in the design loop", "", "Each hole is shown under Changes with the file and line that causes it.", "Nothing from you.", {"src": "docs/generated/design-loop-holes/loop-holes.svg", "alt": "Diagram of the Design, Plan, Build and QA stages, with three red holes and a green Held path from Build back to Design", "caption": "A labelled diagram of the loop as it stands. It is not a screenshot."}],
+      ["search", "Found", "Three holes in the design loop", "", "Each hole is described under Changes, with the file and line that cause it.", "Nothing from you.", {"src": "docs/generated/design-loop-holes/loop-holes.svg", "alt": "Diagram of the Design, Plan, Build and QA stages, with three red holes and a green Held path from Build back to Design", "caption": "A labelled diagram of the loop as it stands. It is not a screenshot."}],
       ["lock", "Approve", "You approve this design and pick the choices", "you", "A dated entry in docs/6-decisions/Decisions.md, a parent issue and one child issue per fix.", "Reply \"Design approved: no decisions without aj\" with your picks."],
       ["hammer", "Build", "Held move, decision check, rule text", "", "The four changes under Changes, each with a verify.py case.", "Nothing from you."],
       ["eye", "QA", "You test it", "you", "A QA page with a script of replies that should be blocked and replies that should pass.", "Your verdict."]
@@ -16,23 +16,23 @@
   "changes": [
     ["new", "Held: a way back to aj from inside a build", "When a build hits a question, code locks until aj answers on a page.",
       null,
-      "Today the code lock in _loop_gate (house_rules/design_loop.py:1024) lets every edit through in the Build stage, as long as the issue labels are right. The only moves back are aj's own \"QA failed\" or a new \"Design approved\". So when something unclear turns up halfway through a build, nothing stops me from picking an answer and carrying on. The fix adds a Held state. Building a page that has a Choices section while the loop is in Build sets Held. While Held, code edits are refused with a message that names the question page. Held lifts only when aj's own message says \"Design approved: <feature>\" for the same feature. That approval answers the questions and is logged in docs/6-decisions/Decisions.md like any other approval.",
+      "Today the code lock in _loop_gate (house_rules/design_loop.py:1024) lets every edit through in the Build stage, as long as the issue labels are right. The only moves back are aj's own \"QA failed\" or a new \"Design approved\". So when something unclear turns up halfway through a build, nothing stops me from picking an answer and carrying on. The fix adds a Held state. Building a page that has a Choices section while the loop is in Build sets Held. While Held, code edits are refused with a message that names the question page. Held ends only when aj's own message says \"Design approved: <feature>\" for the same feature. That approval answers the questions and is logged in docs/6-decisions/Decisions.md like any other approval.",
       ["_loop_gate opens every code edit in Build (design_loop.py:1024). There is no move from Build back to aj except QA failed.",
        "A Held flag in the loop file, set by make_page.py when it builds a page with choices during Build, and cleared only by aj's Design approved for that feature.",
        "A mid-build question stops the build. You see a question page, not a finished build with my choice inside it."]],
     ["new", "A check that blocks a reply which decides for aj", "A reply that settles a design point you never chose is sent back.",
       null,
-      "The end-of-reply check only looks for replies that offer choices: _offers_choices (design_loop.py:1712) needs the reply to end with a question mark (line 1717). A reply that says \"I chose\", \"I went with\", \"I assumed\", \"I defaulted to\" or \"for now I'll\" ends in a full stop, so it is never seen. A new checkpoint row, decided for aj, looks for that wording in my reply and in each helper's hand-back report. When it finds it, the reply is blocked until it either links a page that puts the point to aj as a choice, or quotes aj's own message that already settled it. The word list is a starting value: it catches the usual phrasings and will miss some, and QA measures how many.",
+      "The end-of-reply check only looks for replies that offer choices: _offers_choices (design_loop.py:1712) needs the reply to end with a question mark (line 1717). A reply that says \"I chose\", \"I went with\", \"I assumed\", \"I defaulted to\" or \"for now I'll\" ends in a full stop, so it is never seen. A new row in the end-of-reply checks, named decided-for-aj, looks for that wording in my reply and in each helper's hand-back report. When it finds it, the reply is blocked until it either links a page that puts the point to aj as a choice, or quotes aj's own message that already settled it. The word list is a starting value: it catches the usual phrasings and will miss some, and in the QA stage you test how many it misses.",
       ["CHECKPOINTS (design_loop.py:1911) has no row that looks for decisions; the page row only reacts to questions.",
        "A blocking decided-for-aj row, run on my reply and on helper reports.",
        "A choice I made without you is caught before you read the reply, not found later in the code."]],
     ["chg", "The page check blocks again for choices and decisions", "Long replies stay report-only; replies that offer or make a choice block.",
       ["Since plugin 2.68.1 (#309) the page row is report-only (design_loop.py:1914), although the injected rules still say a missing page keeps blocking. The rules and the code disagree.",
-       "A reply that offers a choice or trips the decided-for-aj row is blocked until it links a page, with the existing three-block limit. A reply that is only long stays report-only, as #309 chose."],
-      "#309 downgraded the row because it blocked sessions too often. Splitting it keeps that relief for long replies while restoring the block where a decision is at stake."],
+       "A reply that offers a choice or trips the decided-for-aj row is blocked until it links a page, with the existing three-block limit. A reply that is only long stays report-only, as plugin 2.68.1 (#309) chose."],
+      "Issue #309 downgraded the row because it blocked sessions too often. Splitting it keeps that relief for long replies while restoring the block where a decision is at stake."],
     ["chg", "The loopholes come out of the rule text", "No exception for routine judgement calls; helpers' questions go to aj.",
       ["rules/show-dont-tell.md:12 and rules/detail/clear-writing.md:61 say routine judgement calls go to aj \"unless they have said otherwise\". The helper start-up note (design_loop.py:970) sends anything unexpected \"back to the main session\", and agents/builder.md:11 says \"stop and ask\" without saying whom.",
-       "The exception is removed (see the choice below). The helper note and builder.md say an unclear point is reported as a question for aj, never answered by the main session or the helper. The main session puts it on a question page, which sets Held."],
+       "The exception is removed (see the first choice, on what happens to the exception). The helper note and builder.md say an unclear point is reported as a question for aj, never answered by the main session or the helper. The main session puts it on a question page, which sets Held."],
       "The rule text is the only part the model reads directly, so a written exception is a standing invitation to use it."]
   ],
   "choices": [
@@ -44,7 +44,7 @@
       [["A", "Block until a page links, up to three times", 1, "The same strength as the restored page block. After three blocks in a row it lets the reply through with a note, so a broken builder cannot loop a session."],
        ["B", "Block with no limit", 0, "Strictest, but a false match on harmless wording can stall a session with nobody watching."],
        ["C", "Report only", 0, "It names the decision in a note but does not stop the reply. This is the strength that failed you today."]],
-      "Three blocks is the limit you already chose for the page rule (#283), and it keeps a false match from looping a session."],
+      "Three blocks is the limit you already chose for the page rule (issue #283), and it keeps a false match from looping a session."],
     ["refresh", "What should lift Held?",
       [["A", "Your \"Design approved: <feature>\" for the same feature", 1, "It reuses the approval you already type, and the decisions log entry rule applies."],
        ["B", "A new phrase, \"Questions answered: <feature>\"", 0, "Clearer in the log, but one more phrase to remember."],
@@ -52,10 +52,10 @@
       "Reusing Design approved keeps one phrase for every design decision and needs no new parsing."]
   ],
   "wrapup": {
-    "summary": "The plugin lets me decide for you because a build has no way back to you, the end-of-reply check only notices questions and only reports, and the rule text allows judgement calls. The fix closes all three.",
+    "summary": "The plugin lets me decide for you because a build has no way back to you, the end-of-reply check only notices replies that ask a question, and it only reports them without blocking, and the rule text allows judgement calls. The fix closes all three.",
     "changing": "house_rules/design_loop.py (the code lock, the loop file, the checkpoint table), make_page.py (setting Held), rules/show-dont-tell.md, rules/detail/show-dont-tell.md, rules/detail/clear-writing.md, agents/builder.md, verify.py cases, and docs/4-systems/design-loop.md.",
     "blocking": "Your approval of this design and your three picks.",
     "next": "After approval I log the decision, file a parent issue with one child per change, and bring a build plan page.",
-    "todo": ["Reply \"Design approved: no decisions without aj\" with your picks, for example \"1A 2A 3A\", or tell me what to change."]
+    "todo": ["Reply \"Design approved: no decisions without aj\" with your picks, for example \"1A 2A 3A\" (choice 1 option A, choice 2 option A, choice 3 option A), or tell me what to change."]
   }
 }
