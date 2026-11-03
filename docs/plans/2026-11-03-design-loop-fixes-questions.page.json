@@ -1,0 +1,39 @@
+{
+  "title": "Two Open Questions",
+  "eyebrow": "Design questions · design loop fixes (parent issue #457) · asked during Build",
+  "approval": "Design approved: design loop fixes",
+  "short": {
+    "lead": "Your build plan answers raised two points I should not settle myself. First, you set one 16 MB limit for the whole page, and asked that files over it still be included rather than cut. There is more than one way to do that. Second, the Copy my reply button failed for you, because the app's file viewer blocks the browser's copy function. The button then only selects the text. Meanwhile #458 (Remove the judgement-call exception) is being built, because neither question touches it.",
+    "hint": "Tap a step to see what it changes and what it needs from you.",
+    "key": [["I build it", ""], ["You decide", "you"]],
+    "items": [
+      ["eye", "Over 16 MB", "Include files past the page limit", "you", "One of the routes in the first choice, built into #462 (Pictures inside the page).", "Your pick."],
+      ["hand", "Copy button", "Make Copy my reply work for you", "you", "A new sub-issue under #457, built after #461 (Page check blocks again).", "Your pick."]
+    ]
+  },
+  "changes": [
+    ["chg", "Cloud pages are published, not sent as files", "A rule for this already exists, and it is switched off.",
+      ["Since issue #343, a reply in a cloud session must link a published claude.ai page, not a local file. Since issue #309, the page check has only reported a broken rule and has not blocked anything, so the rule never stopped me, and I sent you local files instead of a published page this session.",
+       "#461 (Page check blocks again) makes the published-page rule block again in cloud sessions. This page is published as a claude.ai page, so you can try its button now."],
+      "I can't test from here whether the browser's copy function works on a published claude.ai page. The quality-check step of the build tests it on your phone."]
+  ],
+  "choices": [
+    ["eye", "How should files past the 16 MB page limit still be included?",
+      [["A", "As separate files of the same published page", 1, "Pictures go inside the page until it reaches 16 MB. The rest are published with it as separate files: each can be up to 15 MB, and one publish carries up to 64 MB. The page check refuses a publish that leaves one out. You open one link, as today."],
+       ["B", "Split into linked pages", 0, "The builder makes a second page, then a third, each under 16 MB, with Next links between them. Every picture stays inside its page, but one proposal becomes several links."],
+       ["C", "Shrink pictures until they fit", 0, "Large pictures are re-saved at lower quality until the page fits. Nothing is left out, but the pictures you see are not the originals."]],
+      "A keeps one link and the original files, and the 15 MB per-file and 64 MB per-publish limits are large enough for every page we have made so far."],
+    ["hand", "How should the Copy my reply button be made to work?",
+      [["A", "Publish every page and add a second copy method", 1, "Pages are published as claude.ai pages. The button also tries a second copy method that more viewers allow. If both fail, the reply shows in a text box that selects itself in one tap, ready for your phone's Copy."],
+       ["B", "Only add the second copy method", 0, "Pages can still be sent as files, and the button tries harder. Whether it works in the app's file viewer is unknown until you try it."],
+       ["C", "Only publish every page", 0, "The button is unchanged, and it works only if published pages allow copying."]],
+      "A covers both routes, so the button has the best chance on your phone, and the one-tap box saves you selecting by hand if it still fails."]
+  ],
+  "wrapup": {
+    "summary": "Two questions came up while building: how to include files past the 16 MB page limit, and how to make the copy button work for you.",
+    "changing": "Nothing until you answer. #458 is being built meanwhile.",
+    "blocking": "Your two picks.",
+    "next": "Your answer goes into #462 (Pictures inside the page) and a new sub-issue for the copy button, and the rest of the build continues in order.",
+    "todo": ["Tap Copy my reply below to test it, then send \"Design approved: design loop fixes\" with your picks, for example \"1A 2A\", or tell me what to change."]
+  }
+}
