@@ -23,7 +23,7 @@
     "summary": "The plan now carries your answers: #462 uses one 16 MB page limit with overflow files published alongside, and the new #464 fixes the copy button.",
     "changing": "Issue #462's text, three new issues (#464 for the copy button, #465 and #466 for two bugs found this session), and issue #463's dependency list.",
     "blocking": "Your approval of this revised plan.",
-    "next": "The #459 builder resumes, then #460, #461, #462 and #464 are built one at a time, and #463 brings you the QA page.",
+    "next": "The #459 builder resumes, then #460, #461, #462, #464, #465 and #466 are built one at a time, and #463 brings you the QA page.",
     "todo": ["Reply \"Build plan approved: design loop fixes\", or tell me what to change."]
   }
 }
