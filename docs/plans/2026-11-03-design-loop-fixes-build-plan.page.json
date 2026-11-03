@@ -1,0 +1,44 @@
+{
+  "title": "Design Loop Fixes Plan",
+  "eyebrow": "Build plan · design loop fixes (parent issue #457), design approved 2026-11-03 with 1A 2A 3A and your own answer for choice 4",
+  "approval": "Build plan approved: design loop fixes",
+  "short": {
+    "lead": "You approved the design. Your answer to the pictures choice was to put pictures inside the page unless the files are too large, for example videos. It leaves one thing open: how large counts as too large. Under the rule we are building, I don't pick that number, so it is the first choice at the end of this page. The work is filed as six steps under parent issue #457 (Design loop fixes). The decision is logged, and each of the two systems docs now has a section describing it.",
+    "hint": "Tap a step to see what it changes and what it needs from you.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["file", "Rules", "#458: remove the judgement-call exception", "", "The rule files, the builder helper's instructions and its start-up note stop offering any exception. A helper reports an unclear point as a question for you.", "Nothing from you."],
+      ["lock", "Held", "#459: a question mid-build locks code", "", "Building a page with choices during Build sets Held. Code edits are refused until your \"Design approved: <feature>\".", "Nothing from you."],
+      ["flag", "Check", "#460: block a reply that decides for you", "", "A new end-of-reply check looks for wording such as \"I went with\" and blocks the reply until it links a choice page or quotes your message.", "Nothing from you."],
+      ["refresh", "Page check", "#461: the page check blocks for choices again", "", "Replies that offer or make a choice are blocked until they link a page. Replies that are only long stay report-only.", "Nothing from you."],
+      ["image", "Pictures", "#462: pictures inside the page", "you", "Small pictures are written into the page. Large files stay in the folder, and a publish without that folder is refused.", "Your size limit, in the choices below."],
+      ["eye", "QA", "#463: docs, version and QA page", "you", "Updated docs, a version bump and a QA page with replies to try and a picture page to open on your phone.", "Your QA verdict."]
+    ]
+  },
+  "changes": [
+    ["new", "Order of the build", "One helper at a time, in issue order.",
+      null,
+      "#458, #459 and #460 depend on nothing and go first, one after another. #461 needs #460, because it reuses that check's result. #462 waits for your size limit. #463 comes last and depends on all five. Each helper builds in its own copy of the repo and runs only its own checks. The full verify scripts run once, at the end of each step.",
+      ["Six open sub-issues under #457 (Design loop fixes), each labelled in progress.",
+       "One commit series per sub-issue on branch ccr-61d7e1ac-k86gi7, then one pull request that says Refs #457.",
+       "You see the QA page when every sub-issue is labelled needs review."]]
+  ],
+  "choices": [
+    ["image", "Above what size should a file stay out of the page?",
+      [["A", "2 MB per file", 1, "A 2 MB file becomes about 2.67 MB inside the page, because writing it in as text adds a third. Five such files still fit under the 16 MB publish limit. Today's largest picture is 194 KB, so every current picture goes inside."],
+       ["B", "5 MB per file", 0, "Fewer files stay out, but three 5 MB files written in come to 20 MB, which is over the 16 MB publish limit."],
+       ["C", "A page budget of 10 MB", 0, "Pictures go in until the page reaches 10 MB, and the rest stay in the folder. It adapts to how many pictures a page has, but which pictures stay out depends on their order."]],
+      "A per-file limit is simple to check, and 2 MB leaves room for several large pictures on one page under the publish limit."],
+    ["flag", "Should videos always stay out of the page, whatever their size?",
+      [["A", "Yes, always", 1, "Videos stay in the folder even when small, as your answer named them. Pages stay quick to open."],
+       ["B", "No, by size only", 0, "A short clip under the limit goes inside the page like a picture."]],
+      "You named videos as the case for the folder, so treating them as a kind rather than a size follows your answer most closely."]
+  ],
+  "wrapup": {
+    "summary": "The build is filed as six steps under #457. One question is open: the size above which a file stays out of the page.",
+    "changing": "Nothing yet. Code stays locked until you approve this plan.",
+    "blocking": "Your approval of this plan and your two picks.",
+    "next": "A helper builds #458 first, then #459 and #460, then #461. #462 follows with your size limit, and #463 brings you the QA page.",
+    "todo": ["Reply \"Build plan approved: design loop fixes\" with your picks, for example \"1A 2A\" (size limit option A, videos option A), or tell me what to change."]
+  }
+}
