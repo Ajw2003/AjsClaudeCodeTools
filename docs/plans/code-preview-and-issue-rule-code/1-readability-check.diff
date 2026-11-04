@@ -1,0 +1,510 @@
+diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
+index 252db05..77fcb7c 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
++++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
+@@ -357,6 +357,100 @@ _rc, _o = _mp("build", _c1, "--project", _ds_d)
+ _nk_h = open(os.path.join(_ds_d, "docs", "plans", "basic.html"), encoding="utf-8").read() if _rc == 0 else ""
+ _mp_cases.append(("summary (#339): a content file with no kind has no kind in its PAGE and still carries the Requires label",
+                   _rc == 0 and '"kind"' not in _nk_h.split("const PAGE", 1)[1].split("\n};", 1)[0] and 'ic("hand") + "Requires"' in _nk_h))
++# ---- readability.py: the six readable-code rules, checked on the lines a diff adds (#473) ----
++READABILITY = os.path.join(HERE, "readability.py")
++readability_project = tempfile.mkdtemp(prefix="readability-")
++
++
++def diff_adding(file_name, added_lines):
++    """A unified diff that creates file_name holding exactly added_lines."""
++    header = ["diff --git a/%s b/%s" % (file_name, file_name), "new file mode 100644",
++              "--- /dev/null", "+++ b/%s" % file_name, "@@ -0,0 +1,%d @@" % len(added_lines)]
++    body = ["+" + line for line in added_lines]
++    return "\n".join(header + body) + "\n"
++
++
++def diff_changing(file_name, removed_lines, added_lines):
++    """A unified diff that replaces removed_lines with added_lines in an existing file."""
++    header = ["diff --git a/%s b/%s" % (file_name, file_name), "--- a/%s" % file_name,
++              "+++ b/%s" % file_name, "@@ -1,%d +1,%d @@" % (len(removed_lines), len(added_lines))]
++    removed_body = ["-" + line for line in removed_lines]
++    added_body = ["+" + line for line in added_lines]
++    body = removed_body + added_body
++    return "\n".join(header + body) + "\n"
++
++
++def readability_findings(file_name, added_lines):
++    """What readability.py prints for a diff that adds these lines, and its exit code."""
++    draft_path = os.path.join(readability_project, "draft.diff")
++    with open(draft_path, "w", encoding="utf-8") as draft_file:
++        changes_existing_lines = any(line.startswith(("-", "+")) for line in added_lines)
++        if changes_existing_lines:
++            removed_lines = [line[1:] for line in added_lines if line.startswith("-")]
++            new_lines = [line[1:] for line in added_lines if line.startswith("+")]
++            draft_file.write(diff_changing(file_name, removed_lines, new_lines))
++        else:
++            draft_file.write(diff_adding(file_name, added_lines))
++    command = [sys.executable, READABILITY, "check", draft_path, "--project", readability_project]
++    finished = subprocess.run(command, capture_output=True, text=True, timeout=60)
++    return finished.returncode, finished.stdout
++
++
++def flags_rule(rule_number, file_name, added_lines):
++    """True when the check refuses these lines and names this rule."""
++    exit_code, findings = readability_findings(file_name, added_lines)
++    names_the_rule = ("rule %d," % rule_number) in findings
++    return exit_code == 1 and names_the_rule
++
++
++def passes_check(file_name, added_lines):
++    """True when the check finds every one of these lines readable."""
++    exit_code, findings = readability_findings(file_name, added_lines)
++    return exit_code == 0 and "is readable" in findings
++
++
++readability_cases = [
++    ("rule 1: short names such as _rc and _o are refused",
++     flags_rule(1, "app.py", ["_rc, _o = run_build()"])),
++    ("rule 1: whole-word names pass",
++     passes_check("app.py", ["exit_code, output = run_build()"])),
++    ("rule 1: a connecting word such as an is fine inside a longer name, not alone",
++     passes_check("app.py", ["links_an_artifact = True"])
++     and flags_rule(1, "app.py", ["an = True"])),
++    ("rule 1: a name already in the line a diff replaces is left to the clean-up issue",
++     not flags_rule(1, "app.py", ["-def record(git_dir):",
++                                  "+def record(git_dir, parent_number):"])),
++    ("rule 1: a guesswork abbreviation such as msg is refused",
++     flags_rule(1, "app.py", ["error_msg = read_error()"])),
++    ("rule 2: two statements joined by a semicolon are refused",
++     flags_rule(2, "app.py", ["first_value = 1; second_value = 2"])),
++    ("rule 3: a three-part condition with an unnamed part is refused",
++     flags_rule(3, "app.py", ["if count > 0 and is_ready or is_late:", "    start_now()"])),
++    ("rule 3: a condition made only of named yes-or-no values passes",
++     passes_check("app.py", ["if is_ready and has_name and not is_done:", "    start_now()"])),
++    ("rule 4: a line over 100 characters is refused",
++     flags_rule(4, "notes.md", ["word " * 25])),
++    ("rule 4: a Markdown table row may run long, because it cannot wrap",
++     passes_check("notes.md", ["| " + "cell | " * 30])),
++    ("rule 5: a new function with no description is refused",
++     flags_rule(5, "app.py", ["def total(items):", "    return sum(items)"])),
++    ("rule 5: a new function that opens with a plain sentence passes",
++     passes_check("app.py", ["def total(items):",
++                             '    """Add up the items."""',
++                             "    return sum(items)"])),
++    ("rule 6: a lambda is refused",
++     flags_rule(6, "app.py", ["sort_key = lambda item: item.size"])),
++    ("rule 6: a JavaScript one-line arrow holding a choice is refused",
++     flags_rule(6, "page.js", ["const labels = items.map(item => item.done ? 'Done' : 'Open');"])),
++    ("text inside quotes is never read as code",
++     passes_check("app.py", ['warning = "a; b and c or d and e"'])),
++    ("HTML: style lines are only checked for length; script lines are checked as code",
++     passes_check("page.html", ["<style>", ".x{color:red}", "</style>"])
++     and flags_rule(1, "page.html", ["<script>", "const el = find();", "</script>"])),
++]
++for case_title, case_passed in readability_cases:
++    _mp_cases.append(("readability (#473): " + case_title, case_passed))
++
+ for _t, _ok in _mp_cases:
+     report("PASS" if _ok else "FAIL", _t)
+ shutil.rmtree(_mp_tmp, True)
+diff --git a/claude-house-rules/plugins/house-rules/scripts/readability.py b/claude-house-rules/plugins/house-rules/scripts/readability.py
+new file mode 100644
+index 0000000..a7a87f8
+--- /dev/null
++++ b/claude-house-rules/plugins/house-rules/scripts/readability.py
+@@ -0,0 +1,399 @@
++#!/usr/bin/env python3
++"""readability.py - checks that every line a diff adds is easy to read (#473).
++
++    readability.py check <draft.diff> [--project <root>]
++
++The six rules are the house coding standard in rules/standards/coding-philosophy.md:
++  1. Names say what they hold, in whole words.
++  2. One thing per line.
++  3. A condition with more than two parts becomes named yes-or-no values.
++  4. Lines are at most 100 characters.
++  5. Every new function starts with one plain sentence saying what it does.
++  6. No logic inside one-line lambdas or nested comprehensions.
++
++Python and JavaScript lines are checked, including the script part of an HTML file.
++Markdown, JSON and CSS lines are only checked for length; the writing check reads prose.
++
++Exit codes: 0 every added line is readable, 1 a rule is broken (each problem is printed),
++2 bad input.
++
++STDLIB ONLY, Python 3.8+. Never installs anything.
++"""
++
++import os
++import re
++import sys
++
++MAX_LINE_LENGTH = 100
++MIN_WORD_LENGTH = 3
++
++# Short words a reader knows without guessing. Anything else shorter than three letters is refused.
++KNOWN_SHORT_WORDS = {"i", "j", "id", "ok", "os", "re", "_"}
++
++# Short connecting words that read naturally inside a longer name, such as links_an_artifact.
++# Alone, each is still too short to be a name.
++CONNECTING_WORDS = {"a", "an", "as", "at", "by", "if", "in", "is", "no", "of", "on", "or", "to",
++                    "up"}
++
++# Abbreviations so common they read as words.
++KNOWN_ABBREVIATIONS = {"url", "html", "json", "git", "sha", "css", "env", "args", "kwargs",
++                       "self", "cls", "sys", "api", "uri", "utf", "http", "https", "js", "py",
++                       "md", "pr", "gh", "qa"}
++
++# Abbreviations that make a reader guess. Each is refused even though it is three letters or more.
++GUESSWORK_ABBREVIATIONS = {"cfg", "msg", "tmp", "val", "idx", "cnt", "num", "obj", "arr",
++                           "btn", "ctx", "req", "res", "buf", "ptr", "src", "dst", "esc", "pkg",
++                           "opt", "opts", "seg", "ops", "rel", "pos", "len", "str", "dir", "elt",
++                           "itm", "lst", "dct", "fnc"}
++
++SPLIT_STATEMENTS = "rule 2, one thing per line: put each statement joined by ; on its own line"
++NAME_THE_CONDITION = "rule 3, named conditions: give each part of this condition a yes-or-no name"
++NO_LAMBDA = "rule 6, no packed logic: write a named function instead of a lambda"
++NO_NESTED_LOOPS = "rule 6, no packed logic: write the nested comprehension as loops"
++NAME_THE_ARROW = "rule 6, no packed logic: give this one-line arrow function a name and a body"
++DESCRIBE_THE_FUNCTION = "rule 5, describe each function: open it with one plain sentence"
++
++PYTHON_EXTENSIONS = (".py",)
++JAVASCRIPT_EXTENSIONS = (".js", ".mjs", ".ts", ".tsx", ".jsx")
++HTML_EXTENSIONS = (".html", ".htm")
++
++STRING_LITERAL = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"")
++BLOCK_STRING_START = re.compile(r"[rRbBuUfF]*(\"\"\"|''')")
++PYTHON_NAME_LIST =r"([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)"
++PYTHON_ASSIGNMENT = re.compile(r"^\s*" + PYTHON_NAME_LIST + r"\s*(?:[-+*/]?=)(?!=)")
++PYTHON_FUNCTION = re.compile(r"^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(([^)]*)")
++PYTHON_LOOP_NAMES = re.compile(r"\bfor\s+" + PYTHON_NAME_LIST + r"\s+in\b")
++PYTHON_AS_NAME = re.compile(r"\bas\s+([A-Za-z_]\w*)")
++JAVASCRIPT_DECLARATION = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)")
++JAVASCRIPT_FUNCTION = re.compile(r"\bfunction\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)")
++JAVASCRIPT_ARROW_PARAMETERS = re.compile(r"(?:\(([^()]*)\)|\b([A-Za-z_$][\w$]*))\s*=>")
++JAVASCRIPT_ARROW_FUNCTION = re.compile(
++    r"\b(?:const|let)\s+[A-Za-z_$][\w$]*\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{")
++PLAIN_NAME = re.compile(r"^\(?\s*(?:not\s+|!)?[A-Za-z_$][\w$.]*[\s),;]*$")
++CAMEL_CASE_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
++
++
++def words_in_name(name):
++    """The words a name is made of: split on underscores and on camelCase capitals."""
++    words = []
++    for piece in name.strip("_$").split("_"):
++        words.extend(CAMEL_CASE_BOUNDARY.split(piece))
++    return [word.lower() for word in words if word]
++
++
++def name_problem(name):
++    """Why a name makes the reader guess, or "" when it says what it holds."""
++    if name in KNOWN_SHORT_WORDS:
++        return ""
++    words = words_in_name(name)
++    has_several_words = len(words) > 1
++    for word in words:
++        is_known_word = word in KNOWN_SHORT_WORDS or word in KNOWN_ABBREVIATIONS
++        is_connecting_word = has_several_words and word in CONNECTING_WORDS
++        if is_known_word or is_connecting_word or word.isdigit():
++            continue
++        if word in GUESSWORK_ABBREVIATIONS:
++            return '"%s" is an abbreviation; write the whole word' % word
++        if len(word) < MIN_WORD_LENGTH:
++            return '"%s" is too short to say what it holds' % word
++    return ""
++
++
++def parameter_names(parameter_text):
++    """The names in a parameter list such as "items, count=0, *rest"."""
++    names = []
++    for parameter in parameter_text.split(","):
++        bare = parameter.split("=")[0].split(":")[0].strip().lstrip("*").strip()
++        if re.match(r"^[A-Za-z_$][\w$]*$", bare):
++            names.append(bare)
++    return names
++
++
++def without_strings(line):
++    """The line with the inside of every quoted string blanked, so code rules never read text.
++    A triple-quoted string that opens on this line is blanked to the end of the line."""
++    block_start = BLOCK_STRING_START.search(line)
++    if block_start:
++        line = line[:block_start.start()] + '""'
++    return STRING_LITERAL.sub('""', line)
++
++
++def names_bound_in_python(code):
++    """Every name a Python line creates: assignments, functions, parameters, loops and "as"."""
++    names = []
++    assignment = PYTHON_ASSIGNMENT.match(code)
++    if assignment:
++        names.extend(part.strip() for part in assignment.group(1).split(","))
++    function = PYTHON_FUNCTION.match(code)
++    if function:
++        names.append(function.group(1))
++        names.extend(parameter_names(function.group(2)))
++    for loop in PYTHON_LOOP_NAMES.finditer(code):
++        names.extend(part.strip() for part in loop.group(1).split(","))
++    names.extend(PYTHON_AS_NAME.findall(code))
++    return names
++
++
++def names_bound_in_javascript(code):
++    """Every name a JavaScript line creates: declarations, functions and arrow parameters."""
++    names = list(JAVASCRIPT_DECLARATION.findall(code))
++    for function in JAVASCRIPT_FUNCTION.finditer(code):
++        names.append(function.group(1))
++        names.extend(parameter_names(function.group(2)))
++    for arrow in JAVASCRIPT_ARROW_PARAMETERS.finditer(code):
++        bracketed_parameters, single_parameter = arrow.groups()
++        if bracketed_parameters is not None:
++            names.extend(parameter_names(bracketed_parameters))
++        elif single_parameter:
++            names.append(single_parameter)
++    return names
++
++
++def has_unnamed_condition(code, joiner_pattern):
++    """True when a condition joins three or more parts and one is not a plain yes-or-no name."""
++    condition = re.split(r"\bif\b|\bwhile\b|\breturn\b|=(?!=)", code)[-1].rstrip(":{ ")
++    parts = re.split(joiner_pattern, condition)
++    if len(parts) < 3:
++        return False
++    return not all(PLAIN_NAME.match(part.strip()) for part in parts)
++
++
++def python_problems(code, existing_names):
++    """Rules 1, 2, 3 and 6 for one line of Python with its strings blanked. Names in
++    existing_names were already in the file, so rule 1 leaves them to the clean-up issue."""
++    problems = []
++    for name in names_bound_in_python(code):
++        if name in existing_names:
++            continue
++        why = name_problem(name)
++        if why:
++            problems.append("rule 1, whole-word names: %s" % why)
++    if ";" in code.split("#")[0]:
++        problems.append(SPLIT_STATEMENTS)
++    if has_unnamed_condition(code, r"\band\b|\bor\b"):
++        problems.append(NAME_THE_CONDITION)
++    if re.search(r"\blambda\b", code):
++        problems.append(NO_LAMBDA)
++    expression = re.sub(r"^\s*for\b", "", code)
++    if len(re.findall(r"\bfor\b", expression)) >= 2:
++        problems.append(NO_NESTED_LOOPS)
++    return problems
++
++
++def javascript_problems(code, existing_names):
++    """Rules 1, 2, 3 and 6 for one line of JavaScript with its strings blanked. Names in
++    existing_names were already in the file, so rule 1 leaves them to the clean-up issue."""
++    problems = []
++    for name in names_bound_in_javascript(code):
++        if name in existing_names:
++            continue
++        why = name_problem(name)
++        if why:
++            problems.append("rule 1, whole-word names: %s" % why)
++    statement_part = re.sub(r"\bfor\s*\([^)]*\)", "for ()", code.split("//")[0]).rstrip()
++    if ";" in statement_part.rstrip(";"):
++        problems.append(SPLIT_STATEMENTS)
++    if has_unnamed_condition(code, r"&&|\|\|"):
++        problems.append(NAME_THE_CONDITION)
++    if "=>" in code:
++        arrow_body = code.split("=>", 1)[1]
++        has_choice = "?" in arrow_body and ":" in arrow_body
++        has_condition = "&&" in arrow_body or "||" in arrow_body
++        has_nested_arrow = "=>" in arrow_body
++        if has_choice or has_condition or has_nested_arrow:
++            problems.append(NAME_THE_ARROW)
++    return problems
++
++
++def language_of(file_name):
++    """ "python", "javascript", "html" or "" for a file the code rules do not read."""
++    if file_name.endswith(PYTHON_EXTENSIONS):
++        return "python"
++    if file_name.endswith(JAVASCRIPT_EXTENSIONS):
++        return "javascript"
++    if file_name.endswith(HTML_EXTENSIONS):
++        return "html"
++    return ""
++
++
++class LineState:
++    """Where a line sits in its file: inside a multi-line string, and, in HTML, inside a script."""
++
++    def __init__(self):
++        """Start outside every string and script, as at the top of a file."""
++        self.in_python_block_string = False
++        self.in_javascript_template = False
++        self.in_html_script = False
++
++    def is_code(self, language):
++        """True when the next line is code the rules read, not text in a string or HTML."""
++        if language == "python":
++            return not self.in_python_block_string
++        if language == "javascript":
++            return not self.in_javascript_template
++        if language == "html":
++            return self.in_html_script and not self.in_javascript_template
++        return False
++
++    def move_past(self, line, language):
++        """Update the state for what this line opens or closes."""
++        if language == "python":
++            block_quotes = line.count('"""') + line.count("'''")
++            if block_quotes % 2 == 1:
++                self.in_python_block_string = not self.in_python_block_string
++            return
++        if language == "html":
++            if re.search(r"<script\b", line, re.IGNORECASE):
++                self.in_html_script = True
++            if re.search(r"</script>", line, re.IGNORECASE):
++                self.in_html_script = False
++        backticks = len(re.findall(r"(?<!\\)`", line))
++        if backticks % 2 == 1:
++            self.in_javascript_template = not self.in_javascript_template
++
++
++def state_before_line(original_lines, line_number, language):
++    """The LineState at a line of the original file, found by reading every line above it."""
++    state = LineState()
++    for line in original_lines[:max(0, line_number - 1)]:
++        state.move_past(line, language)
++    return state
++
++
++def read_original_file(project, file_name):
++    """The file's lines before the diff, or [] when it is new or can't be read."""
++    try:
++        with open(os.path.join(project, file_name), encoding="utf-8") as original:
++            return original.read().splitlines()
++    except (OSError, UnicodeDecodeError):
++        return []
++
++
++def function_description_problem(added_line, next_lines, previous_line, language):
++    """Rule 5: why a new function has no plain description, or ""."""
++    is_python_function = language == "python" and PYTHON_FUNCTION.match(added_line)
++    is_javascript_function = language in ("javascript", "html") and (
++        JAVASCRIPT_FUNCTION.search(added_line) or JAVASCRIPT_ARROW_FUNCTION.search(added_line))
++    if not (is_python_function or is_javascript_function):
++        return ""
++    previous_is_comment = previous_line.strip().startswith(("#", "//", "/*", "*"))
++    if previous_is_comment:
++        return ""
++    if is_python_function:
++        body_lines = [line.strip() for line in next_lines if line.strip()]
++        first_body_line = body_lines[0] if body_lines else ""
++        if first_body_line.startswith(('"""', "'''", "#")):
++            return ""
++    return DESCRIBE_THE_FUNCTION
++
++
++def names_in_removed_lines(lines, language):
++    """Every name the hunk's removed lines bind: names that existed before this change."""
++    names = set()
++    for kind, text in lines:
++        if kind != "-":
++            continue
++        code = without_strings(text)
++        if language == "python":
++            names.update(names_bound_in_python(code))
++        else:
++            names.update(names_bound_in_javascript(code))
++    return names
++
++
++def problems_in_file(file_name, hunks, project, read_file=None):
++    """Every rule broken by the lines this file's hunks add, as "file:line: problem" strings."""
++    language = language_of(file_name)
++    if read_file is None:
++        original_lines = read_original_file(project, file_name)
++    else:
++        original_lines = read_file(file_name)
++    problems = []
++    for old_start, new_start, lines in hunks:
++        state = state_before_line(original_lines, old_start, language)
++        new_line_number = new_start
++        new_side = [(kind, text) for kind, text in lines if kind != "-"]
++        existing_names = names_in_removed_lines(lines, language)
++        for position, (kind, text) in enumerate(new_side):
++            is_added = kind == "+"
++            is_code = state.is_code(language)
++            if is_added:
++                where = "%s:%d" % (file_name, new_line_number)
++                is_table_row = file_name.endswith(".md") and text.lstrip().startswith("|")
++                if len(text) > MAX_LINE_LENGTH and not is_table_row:
++                    problems.append("%s: rule 4, short lines: %d characters, at most %d"
++                                    % (where, len(text), MAX_LINE_LENGTH))
++                if is_code:
++                    code = without_strings(text)
++                    if language == "python":
++                        line_problems = python_problems(code, existing_names)
++                    else:
++                        line_problems = javascript_problems(code, existing_names)
++                    previous_line = new_side[position - 1][1] if position else ""
++                    next_lines = [line for _, line in new_side[position + 1:position + 4]]
++                    description = function_description_problem(
++                        text, next_lines, previous_line, language)
++                    if description:
++                        line_problems.append(description)
++                    problems.extend("%s: %s" % (where, problem) for problem in line_problems)
++            state.move_past(text, language)
++            new_line_number += 1
++    return problems
++
++
++def hunks_by_file(diff_text):
++    """{file: [(old start, new start, [(kind, text), ...]), ...]} from a unified diff."""
++    files = {}
++    current_file = None
++    for line in diff_text.splitlines():
++        if line.startswith("diff --git "):
++            current_file = line.split(" b/", 1)[-1]
++            files[current_file] = []
++            continue
++        header = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
++        if header and current_file is not None:
++            files[current_file].append((int(header.group(1)), int(header.group(2)), []))
++            continue
++        is_file_header = line.startswith(("--- ", "+++ ", "index ", "new file", "deleted file"))
++        is_before_first_hunk = current_file is None or not files[current_file]
++        if is_before_first_hunk or is_file_header:
++            continue
++        kind = line[:1] if line[:1] in ("+", "-", " ") else " "
++        files[current_file][-1][2].append((kind, line[1:]))
++    return files
++
++
++def find_problems(diff_text, project, read_file=None):
++    """Every readability problem in the lines a unified diff adds, in file order."""
++    problems = []
++    for file_name, hunks in hunks_by_file(diff_text).items():
++        problems.extend(problems_in_file(file_name, hunks, project, read_file))
++    return problems
++
++
++def main(arguments):
++    """Command line: check one draft and print each problem."""
++    if len(arguments) < 2 or arguments[0] != "check":
++        print(__doc__.strip().splitlines()[2].strip())
++        return 2
++    project = os.getcwd()
++    if "--project" in arguments:
++        project = arguments[arguments.index("--project") + 1]
++    try:
++        with open(arguments[1], encoding="utf-8") as draft:
++            diff_text = draft.read()
++    except OSError as error:
++        print("readability: could not read %s: %s" % (arguments[1], error))
++        return 2
++    problems = find_problems(diff_text, project)
++    for problem in problems:
++        print(problem)
++    if problems:
++        print("readability: %d problem(s) in %s" % (len(problems), arguments[1]))
++        return 1
++    print("readability: every added line in %s is readable" % arguments[1])
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main(sys.argv[1:]))

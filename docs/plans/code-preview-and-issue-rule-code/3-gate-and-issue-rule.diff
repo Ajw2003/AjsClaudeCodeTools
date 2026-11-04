@@ -1,0 +1,437 @@
+diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
+index c9c120f..e0a8861 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
++++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
+@@ -54,6 +54,19 @@ def _iss_stub(body_ok=True):
+         os.chmod(path, 0o755)
+ 
+ 
++def give_build_plan_page(project_directory, **overrides):
++    """#470: give the stage file in project_directory a build plan page that passes the gate:
++    built, linked in a reply, and with no drafts to go stale. Overrides replace those values."""
++    stage_path = os.path.join(project_directory, ".claude", "house-rules-loop.json")
++    with open(stage_path, encoding="utf-8") as stage_file:
++        state = json.load(stage_file)
++    passing_page = {"page": "docs/plans/p.html", "drafts": {}, "steps": 1, "large": 0,
++                    "linked": True}
++    state["plan_page"] = dict(passing_page, **overrides)
++    with open(stage_path, "w", encoding="utf-8") as stage_file:
++        json.dump(state, stage_file)
++
++
+ def _iss_state_path(d):
+     return os.path.join(_as_git(d, "rev-parse", "--absolute-git-dir"), "house-rules-issues.json")
+ 
+@@ -102,8 +115,10 @@ _fp = lambda rel: os.path.join(_d, rel)
+ _, _og, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp("Assets/Foo.cs"), content="x"), _d)
+ _issues_outputs.append(("gate deny", _og))
+ commit_case(
+-    "issues: with the gate closed, a Write to a source file is denied naming both missing pieces",
+-    _iss_decision(_og) == "deny" and "parent issue" in _iss_reason(_og) and "child issue" in _iss_reason(_og),
++    "issues (#470): with the gate closed, a source Write is denied, naming the issues it needs",
++    _iss_decision(_og) == "deny" and "one issue for the plan" in _iss_reason(_og)
++    and "child issue per large step" in _iss_reason(_og)
++    and "(0 of 1 recorded)" in _iss_reason(_og),
+     "out %r" % _og[:160],
+ )
+ _, _oe, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Edit", _d, file_path=_fp("src/a.py")), _d)
+@@ -149,16 +164,35 @@ commit_case(
+     and _st["created"] and _st["created"][0]["labelled"] is False,
+     "state %r out %r" % (_st, _ou[:100]),
+ )
+-_, _o1, _ = _iss_created(_d, _label_cmd, 51)
+-_st1 = _iss_state(_d)
+-_, _o2, _ = _iss_created(_d, _label_cmd, 52)
+-_issues_outputs.append(("labelled create 2", _o2))
+-_st2 = _iss_state(_d)
++_, first_issue_output, _ = _iss_created(_d, _label_cmd, 51)
++_issues_outputs.append(("labelled create 1", first_issue_output))
++state_after_one_issue = _iss_state(_d)
++newest_issue = state_after_one_issue["created"][-1]
+ commit_case(
+-    "issues: the gate clears after two labelled issues (parent plus one child), not after one",
+-    _st1["needs_issues"] is True and _st2["needs_issues"] is False and "unblocked" in _o2
+-    and _st2["created"][-1] == {"repo": "o/r", "number": 52, "labelled": True},
+-    "after one %r, after two %r" % (_st1["needs_issues"], _st2["needs_issues"]),
++    "issues (#470): with no large steps the gate clears after one labelled issue",
++    state_after_one_issue["needs_issues"] is False and "unblocked" in first_issue_output
++    and newest_issue == {"repo": "o/r", "number": 51, "labelled": True},
++    "needs_issues after one %r" % (state_after_one_issue["needs_issues"],),
++)
++large_plan_project = _iss_repo()
++plan_approved = _iss_payload("PostToolUse", "ExitPlanMode", large_plan_project, plan=_ISS_PLAN5)
++_iss_call("delegate", plan_approved, large_plan_project)
++os.makedirs(os.path.join(large_plan_project, ".claude"), exist_ok=True)
++with open(os.path.join(large_plan_project, ".claude", "house-rules-loop.json"), "w",
++          encoding="utf-8") as stage_file:
++    json.dump({"feature": "f", "stage": "plan"}, stage_file)
++give_build_plan_page(large_plan_project, large=2, steps=3)
++still_needs_issues = []
++for issue_number in (61, 62, 63):
++    _iss_created(large_plan_project, _label_cmd, issue_number)
++    still_needs_issues.append(_iss_state(large_plan_project)["needs_issues"])
++source_file = os.path.join(large_plan_project, "a.py")
++source_write = _iss_payload("PreToolUse", "Write", large_plan_project, file_path=source_file)
++_, write_output, _ = _iss_call("commitgate", source_write, large_plan_project)
++commit_case(
++    "issues (#470): with two large steps the gate needs three issues: main plus one per large step",
++    still_needs_issues == [True, True, False] and write_output.strip() == "",
++    "needs_issues after each %r, out %r" % (still_needs_issues, write_output[:80]),
+ )
+ _, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp("Assets/Foo.cs")), _d)
+ commit_case("issues: once cleared the same source Write is allowed", _oa.strip() == "", "out %r" % _oa[:80])
+@@ -634,18 +668,74 @@ _loop_log("design decisions for blockers")
+ _n = _loop_say("Design approved: blockers")
+ _loop_cases.append(('"Design approved: <feature>" moves to Plan, code still closed',
+                     _loop_stage() == "plan" and "now Plan" in _n and _loop_edit("app.py") == "deny"))
+-_n = _loop_say("Build plan approved: blockers")
+-_loop_cases.append(("a build-plan approval with no feature issues moves nothing",
+-                    "labelled issue(s)" in _n and _loop_stage() == "plan"))
++note = _loop_say("Build plan approved: blockers")
++names_plan_mode = "no build plan page with the code is recorded" in note and "`plan` block" in note
++_loop_cases.append(("#470: an approval with no build plan page moves nothing, naming plan mode",
++                    names_plan_mode and _loop_stage() == "plan"))
++APPROVED_DRAFT_TEXT = "the approved draft\n"
++APPROVED_DRAFT_HASH = hashlib.sha256(APPROVED_DRAFT_TEXT.encode("utf-8")).hexdigest()
++draft_path = os.path.join(_loop_dir, "docs", "plans", "blockers-code", "1.diff")
++os.makedirs(os.path.dirname(draft_path))
++
++
++def write_draft(text):
++    """Write the blockers feature's one draft."""
++    with open(draft_path, "w", encoding="utf-8") as draft_file:
++        draft_file.write(text)
++
++
++write_draft(APPROVED_DRAFT_TEXT)
++blockers_page_path = os.path.join(_loop_dir, "docs", "plans", "blockers-plan.html")
++with open(blockers_page_path, "w", encoding="utf-8") as page_file:
++    page_file.write("<!doctype html>\n")
++BLOCKERS_PAGE = {"page": "docs/plans/blockers-plan.html",
++                 "drafts": {"docs/plans/blockers-code/1.diff": APPROVED_DRAFT_HASH}}
++give_build_plan_page(_loop_dir, linked=False, **BLOCKERS_PAGE)
++note = _loop_say("Build plan approved: blockers")
++names_the_unlinked_page = "docs/plans/blockers-plan.html is built but has not been linked" in note
++_loop_cases.append(("#470: a page not yet linked in a reply moves nothing, naming the page",
++                    names_the_unlinked_page and _loop_stage() == "plan"))
++
++
++def reply_with(text):
++    """End a reply with this text, as the end-of-reply hook sees it."""
++    run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir), env=_loop_env)
++
++
++reply_with("The plan: docs/plans/other.html")
++linked_after_other_page = _loop_state().get("plan_page", {}).get("linked")
++reply_with("The build plan: docs/plans/blockers-plan.html")
++linked_after_this_page = _loop_state().get("plan_page", {}).get("linked")
++_loop_cases.append(("#470: a reply linking the build plan page marks it linked; another does not",
++                    linked_after_other_page is False and linked_after_this_page is True))
++write_draft("the draft, changed after the page was built\n")
++note = _loop_say("Build plan approved: blockers")
++names_the_changed_draft = "docs/plans/blockers-code/1.diff changed after the build plan" in note
++_loop_cases.append(("#470: a draft changed after the page was built moves nothing, naming it",
++                    names_the_changed_draft and _loop_stage() == "plan"))
++write_draft(APPROVED_DRAFT_TEXT)
++note = _loop_say("Build plan approved: blockers")
++_loop_cases.append(("a build-plan approval with a fresh linked page but no issues moves nothing",
++                    "has 0 labelled issue(s)" in note and "needs 1" in note
++                    and _loop_stage() == "plan"))
+ _loop_issue(101, labelled=False)
+-_loop_issue(102)
+-_n = _loop_say("Build plan approved: blockers")
++note = _loop_say("Build plan approved: blockers")
+ _loop_cases.append(("an unlabelled issue does not count toward the feature's issues",
+-                    "has 1 labelled issue(s)" in _n and _loop_stage() == "plan"))
++                    "has 0 labelled issue(s)" in note and _loop_stage() == "plan"))
++_loop_issue(102)
+ _loop_issue(103, via="bash")
+-_n = _loop_say("Build plan approved: blockers")
++give_build_plan_page(_loop_dir, large=3, steps=3, **BLOCKERS_PAGE)
++note = _loop_say("Build plan approved: blockers")
++_loop_cases.append(("#470: three large steps need four issues; two are refused, naming 4",
++                    "has 2 labelled issue(s)" in note and "needs 4" in note
++                    and _loop_stage() == "plan"))
++give_build_plan_page(_loop_dir, **BLOCKERS_PAGE)
++note = _loop_say("Build plan approved: blockers")
++recorded_issues = _loop_state().get("issues", [])
++labelled_numbers = [issue["number"] for issue in recorded_issues if issue.get("labelled")]
+ _loop_cases.append(("issues from the GitHub tool and from gh both count, so the next check is reached",
+-                    "labelled issue(s)" not in _n and _loop_stage() == "plan"))
++                    "labelled issue(s)" not in note and _loop_stage() == "plan"
++                    and labelled_numbers == [102, 103]))
+ _loop_log("plan decisions for blockers")
+ _loop_gh("in progress", 101, 102)
+ _n = _loop_say("Build plan approved: blockers")
+@@ -773,7 +863,11 @@ _loop_issue(201); _loop_issue(202)
+ _loop_gh("in progress", 201, 202)
+ _loop_post("mcp__github__create_pull_request", {"owner": "o", "repo": "r"}, {"url": "https://github.com/o/r/pull/9"})
+ _loop_cases.append(("#267: a pull request opening in Plan moves nothing", _loop_stage() == "plan"))
+-_loop_log("v2 plan"); _loop_say("Build plan approved: blockers v2")
++_loop_cases.append(("#470: a redone design starts with no build plan page",
++                    "plan_page" not in _loop_state()))
++give_build_plan_page(_loop_dir)
++_loop_log("v2 plan")
++_loop_say("Build plan approved: blockers v2")
+ 
+ _loop_post("mcp__github__create_pull_request", {"owner": "o", "repo": "r"}, {"error": "422 validation failed"})
+ _loop_post("Bash", {"command": 'gh pr create --body "Refs #267"'}, {"stdout": "", "stderr": "no commits"})
+@@ -1346,6 +1440,8 @@ if _s.get("issues") != [{"repo": "o/r", "number": 7, "labelled": True}]:
+ 
+ # #327: an unchanged decisions log no longer refuses; the approval counts and the note asks for the entry.
+ _ma_set({"feature": "demo", "stage": "plan",
++         "plan_page": {"page": "docs/plans/p.html", "drafts": {}, "steps": 1, "large": 0,
++                       "linked": True},
+          "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2, 3)]},
+         {"o/r#%d" % n: ["Feature", "AjsAgent created this", "in progress"] for n in (1, 2, 3)})
+ _ma_log = os.path.join(_ma_dir, "docs", "6-decisions", "Decisions.md")
+@@ -2044,11 +2140,15 @@ def _pf_two_features():
+     _pf_log(); _pf_note("Design approved: alpha")
+     _pf_issue(701); _pf_issue(702)
+     _loop_gh("in progress", 701, 702)
+-    _pf_log(); _pf_note("Build plan approved: alpha")
++    give_build_plan_page(_cl_dir)
++    _pf_log()
++    _pf_note("Build plan approved: alpha")
+     _pf_log(); _pf_note("Design approved: beta")
+     _pf_issue(711); _pf_issue(712)
+     _loop_gh("in progress", 711, 712)
+-    _pf_log(); _pf_note("Build plan approved: beta")
++    give_build_plan_page(_cl_dir)
++    _pf_log()
++    _pf_note("Build plan approved: beta")
+     _loop_gh("needs review", 701, 702)
+ 
+ 
+diff --git a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
+index 02aeae8..3d984a0 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
++++ b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
+@@ -72,18 +72,45 @@ ISSUES_LABEL_OLD = "Claude created this"  # still counts: plans already in fligh
+ ISSUES_STEP_THRESHOLD = 3
+ 
+ 
+-ISSUES_NEEDED = 2  # one parent plus at least one child
++def issues_needed(state):
++    """#470: how many labelled issues a feature needs: one, plus one per large step when two or more
++    steps are large. The large-step count comes from the build plan page (plan_page); with no
++    plan page, one issue is enough."""
++    plan_page = state.get("plan_page") if isinstance(state, dict) else None
++    large_steps = plan_page.get("large") if isinstance(plan_page, dict) else 0
++    has_several_large_steps = isinstance(large_steps, int) and large_steps >= 2
++    if has_several_large_steps:
++        return 1 + large_steps
++    return 1
++
++
++def issues_needed_in_checkout(git_directory):
++    """issues_needed for the feature in this checkout's stage file; 1 when it can't be read."""
++    state, problem = _loop_read(git_directory)
++    if problem:
++        return 1
++    return issues_needed(state)
++
++
++ISSUES_STILL_NEEDED = (
++    "House rules, plans become issues: the approved plan has %s steps, so source edits are blocked "
++    "until its issues exist: one issue for the plan, plus one child issue per large step saying "
++    "`Part of #<parent>` when two or more steps are large, each with the label `%s` (%d of %d "
++    "recorded). Create them with `gh issue create --label \"%s\"`, show the user the numbers, then "
++    "repeat this edit. docs/, .md files and .claude/ are editable meanwhile. To switch this off: "
++    "HOUSE_RULES_ISSUES=off.")
+ 
+ 
+ ISSUE_NOTE = (
+     " Issue workflow: this plan has {n} steps, which is more than three, so before any code is "
+-    "written create one parent issue for the plan and one child issue per step with `gh issue "
+-    "create`. Each child says `Part of #<parent>` in its body. Titles are plain language a "
++    "written create one parent issue for the plan with `gh issue create`, plus one child "
++    "issue per large step when two or more steps are large. Each child says `Part of #<parent>` "
++    "in its body. Titles are plain language a "
+     "non-programmer can follow. Every issue carries at least one category label and the label "
+     "`AjsAgent created this`; if the repo lacks that label, create it first with `gh label "
+     "create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels "
+     "-f \"labels[]=in progress\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. "
+-    "Until a parent and at least one child exist, a hook blocks edits to source files "
++    "Until those issues exist, a hook blocks edits to source files "
+     "(docs/, .md files and .claude/ stay open). Do not close any issue yourself: closing always "
+     "asks the user."
+ )
+@@ -342,16 +369,10 @@ def _issues_gate(payload):
+     if not state or not state.get("needs_issues"):
+         return None, None
+     have = _labelled_count(state)
+-    return (
+-        "House rules, plans become issues: the approved plan has %s steps, so source edits are "
+-        "blocked until its issues exist. Two pieces are missing: (1) a parent issue for the plan, "
+-        "(2) at least one child issue per step saying `Part of #<parent>`, each carrying the label "
+-        "`%s` (%d of %d recorded). Create them with `gh issue create --label \"%s\"`, show the user "
+-        "the numbers, then repeat this edit. docs/, .md files and .claude/ are editable meanwhile. "
+-        "To switch this off: HOUSE_RULES_ISSUES=off." % (state.get("plan_steps", "more than 3"),
+-                                                          ISSUES_LABEL, have, ISSUES_NEEDED, ISSUES_LABEL),
+-        None,
+-    )
++    plan_steps = state.get("plan_steps", "more than 3")
++    needed = issues_needed_in_checkout(git_dir)
++    refusal = ISSUES_STILL_NEEDED % (plan_steps, ISSUES_LABEL, have, needed, ISSUES_LABEL)
++    return refusal, None
+ 
+ 
+ # ---------------------------------------------------------------------------------------
+@@ -770,6 +791,42 @@ def _loop_stored_qa(state, entry, verdict, name, top):
+                                               LOOP_STAGE_NAMES[state["stage"]]))
+ 
+ 
++def file_sha256(path):
++    """The sha256 of a file's bytes, or None when it can't be read."""
++    digest = None
++    try:
++        with open(path, "rb") as opened_file:
++            digest = hashlib.sha256(opened_file.read()).hexdigest()
++    except OSError:
++        digest = None  # an unreadable draft counts as changed, and the refusal names it
++    return digest
++
++
++def build_plan_page_problem(state, top):
++    """#470: what stops "Build plan approved" on the build plan page's side, or "" when nothing
++    does. The page must be built by make_page.py plan mode, linked in a reply, and still show every
++    draft as it is now."""
++    plan_page = state.get("plan_page")
++    has_plan_page = isinstance(plan_page, dict) and bool(plan_page.get("page"))
++    if not has_plan_page:
++        page_builder = os.path.join(SCRIPTS_DIR, "make_page.py")
++        return ("no build plan page with the code is recorded. Write each step's code as a diff "
++                "under docs/plans/<feature>-code/, build the page with `python3 %s build "
++                "<name>.page.json` and a `plan` block, and link it in a reply" % page_builder)
++    if not plan_page.get("linked"):
++        return ("the build plan page %s is built but has not been linked in a reply yet"
++                % plan_page["page"])
++    changed_drafts = []
++    for draft_path, approved_hash in sorted((plan_page.get("drafts") or {}).items()):
++        if file_sha256(os.path.join(top, draft_path)) != approved_hash:
++            changed_drafts.append(draft_path)
++    if changed_drafts:
++        return ("%s changed after the build plan page was built, so the page no longer shows "
++                "the code being approved. Rebuild the page and link it again"
++                % ", ".join(changed_drafts))
++    return ""
++
++
+ def _loop_apply_one(state, text, top):
+     """Move the stage for one approval phrase (or none). Returns a note for the model, or "" when the
+     text approves nothing. Mutates state."""
+@@ -781,13 +838,21 @@ def _loop_apply_one(state, text, top):
+         if stage != "plan":
+             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
+                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
++        page_problem = build_plan_page_problem(state, top)
++        if page_problem:
++            return ('Design loop: aj wrote "Build plan approved: %s", but %s. Nothing moved: an '
++                    "approval covers the code aj has seen, so ask aj to approve again once that is "
++                    "fixed." % (name, page_problem))
+         have = sum(1 for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled"))
+-        if have < ISSUES_NEEDED:
+-            return ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
+-                    "made since its design was approved, and needs at least %d: one issue for the feature "
+-                    "and a sub-issue per step, each naming what it depends on, what depends on it and when "
+-                    "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again."
+-                    % (name, have, ISSUES_NEEDED, ISSUES_LABEL))
++        needed = issues_needed(state)
++        if have < needed:
++            return ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d '
++                    "labelled issue(s) made since its design was approved, and needs %d: one issue "
++                    "for the feature, plus a sub-issue per large step when two or more steps are "
++                    "large, each naming what it depends on, what depends on it and when it counts "
++                    "as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve "
++                    "again."
++                    % (name, have, needed, ISSUES_LABEL))
+         labels, src = _loop_labels(state)
+         wrong = _loop_wrong(labels, LOOP_WORKING)
+         if wrong:
+@@ -816,6 +881,7 @@ def _loop_apply_one(state, text, top):
+                 return unlogged
+             state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
+             state["redo"] = False
++            state.pop("plan_page", None)  # #470: a new or redone design gets a new build plan page
+             if not redo:
+                 _loop_keep_feature(state, feature, stage)  # #375: a feature in build or QA keeps its issues
+                 state["issues"] = []
+@@ -1303,7 +1369,7 @@ def _issues_record(payload):
+                          "api repos/%s/issues/%s/labels -f \"labels[]=%s\"` and create the next issues with it."
+                          % (found[0][1], ISSUES_LABEL, found[0][0], found[0][1], ISSUES_LABEL))
+         have = _labelled_count(state)
+-        if have >= ISSUES_NEEDED:
++        if have >= issues_needed_in_checkout(git_dir):
+             state["needs_issues"] = False
+             notes.append("house-rules: %d labelled issues recorded, so source edits are unblocked." % have)
+         _issues_write(git_dir, state)
+@@ -1324,10 +1390,13 @@ def _issues_stop_line(payload):
+     if problem:
+         return None, problem
+     if state and state.get("needs_issues"):
+-        return ("House rules, plans become issues: the approved %s-step plan still has no parent and "
+-                "child issues recorded (%d of %d), so source edits stay blocked. Create them with `gh "
+-                "issue create` and the `%s` label, or tell the user why not."
+-                % (state.get("plan_steps", "multi"), _labelled_count(state), ISSUES_NEEDED, ISSUES_LABEL)), None
++        plan_steps = state.get("plan_steps", "multi")
++        needed = issues_needed_in_checkout(git_dir)
++        reminder = ("House rules, plans become issues: the approved %s-step plan still has too few "
++                    "issues recorded (%d of %d), so source edits stay blocked. Create them with "
++                    "`gh issue create` and the `%s` label, or tell the user why not."
++                    % (plan_steps, _labelled_count(state), needed, ISSUES_LABEL))
++        return reminder, None
+     return None, None
+ 
+ 
+@@ -1894,6 +1963,32 @@ def _record_qa_link(ctx):
+     return True
+ 
+ 
++def record_plan_page_link(reply, git_directory, cwd):
++    """#470: in Plan, a reply that links the recorded build plan page marks it linked.
++    True when it did."""
++    state, problem = _loop_read(git_directory)
++    if problem:
++        raise OSError(problem)
++    plan_page = state.get("plan_page")
++    is_waiting_for_link = (state.get("stage") == "plan" and isinstance(plan_page, dict)
++                           and not plan_page.get("linked"))
++    if not is_waiting_for_link:
++        return False
++    page_path = plan_page.get("page") or ""
++    names_the_path = bool(page_path) and page_path in reply
++    names_the_file = bool(page_path) and os.path.basename(page_path) in reply
++    names_the_page = names_the_path or names_the_file
++    if names_the_page and cwd:  # #329: the page counts only when its path opens inside the folder
++        full_path = os.path.normcase(os.path.abspath(os.path.join(cwd, page_path)))
++        names_the_page = _inside(full_path, cwd)
++    links_an_artifact = bool(_QA_ARTIFACT_RE.search(reply))
++    if not (names_the_page or links_an_artifact):
++        return False
++    plan_page["linked"] = True
++    _loop_write(git_directory, state)
++    return True
++
++
+ def _check_qa_page(ctx):
+     """#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not
+     skipped by "no page": a QA page is mandatory."""
+@@ -2241,6 +2336,8 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
+                     raise OSError(_pr)
+                 ctx.update(qa_stage=_st.get("stage"), qa_page=_st.get("qa_page"),
+                            qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd)
++                if have_reply:
++                    record_plan_page_link(reply_text, _gd, _payload_cwd(payload))
+         except Exception as exc:
+             trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
+                                "so it is off for this reply." % (type(exc).__name__, exc))
+@@ -2262,6 +2359,8 @@ def handover_qa_retry(payload, have_reply, reply_text, trace_lines):
+             _st, _pr = _loop_read(_gd)
+             if _pr:
+                 raise OSError(_pr)
++            if have_reply:
++                record_plan_page_link(reply_text, _gd, _payload_cwd(payload))
+             if _st.get("stage") == "qa" and _st.get("qa_page") and not _st.get("qa_page_linked"):
+                 _record_qa_link({"reply": reply_text if have_reply else "",
+                                  "qa_page": _st.get("qa_page"), "qa_git_dir": _gd,

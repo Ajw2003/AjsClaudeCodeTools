@@ -1,0 +1,862 @@
+diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
+index 77fcb7c..e9d61cc 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
++++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
+@@ -357,6 +357,239 @@ _rc, _o = _mp("build", _c1, "--project", _ds_d)
+ _nk_h = open(os.path.join(_ds_d, "docs", "plans", "basic.html"), encoding="utf-8").read() if _rc == 0 else ""
+ _mp_cases.append(("summary (#339): a content file with no kind has no kind in its PAGE and still carries the Requires label",
+                   _rc == 0 and '"kind"' not in _nk_h.split("const PAGE", 1)[1].split("\n};", 1)[0] and 'ic("hand") + "Requires"' in _nk_h))
++# ---- plan mode: a build plan page shows each step's code for aj to review (#469, #473) ----
++plan_project = _mp_proj("plan", {"use": "defaults"})
++_mp_git(plan_project, "init", "-q", "-b", "main")
++with open(os.path.join(plan_project, "app.py"), "w", encoding="utf-8") as app_file:
++    app_file.write("def total(items):\n    return sum(items)\n")
++with open(os.path.join(plan_project, "spacing.py"), "w", encoding="utf-8") as spacing_file:
++    spacing_file.write("first_value = 1\n\nsecond_value = 2\n")
++_mp_git(plan_project, "add", "-A")
++_mp_git(plan_project, "commit", "-q", "-m", "base")
++drafts_folder = os.path.join(plan_project, "docs", "plans", "demo-code")
++os.makedirs(drafts_folder)
++
++REFUSE_EMPTY_DRAFT = """diff --git a/app.py b/app.py
++--- a/app.py
+++++ b/app.py
++@@ -1,2 +1,4 @@
++ def total(items):
+++    if not items:
+++        raise ValueError("no items to total")
++     return sum(items)
++diff --git a/tests/test_app.py b/tests/test_app.py
++new file mode 100644
++--- /dev/null
+++++ b/tests/test_app.py
++@@ -0,0 +1,3 @@
+++def test_empty_list_is_refused():
+++    \"\"\"An empty list raises instead of returning 0.\"\"\"
+++    assert raises_value_error(total, [])
++"""
++CLEARER_MESSAGE_DRAFT = """diff --git a/app.py b/app.py
++--- a/app.py
+++++ b/app.py
++@@ -1,4 +1,4 @@
++ def total(items):
++     if not items:
++-        raise ValueError("no items to total")
+++        raise ValueError("total() needs at least one item")
++     return sum(items)
++"""
++UNREADABLE_DRAFT = """diff --git a/app.py b/app.py
++--- a/app.py
+++++ b/app.py
++@@ -1,2 +1,3 @@
++ def total(items):
+++    _rc = len(items)
++     return sum(items)
++"""
++BLANK_LINE_FIRST_DRAFT = """diff --git a/spacing.py b/spacing.py
++--- a/spacing.py
+++++ b/spacing.py
++@@ -2,2 +2,3 @@
++
++ second_value = 2
+++third_value = 3
++"""
++STALE_DRAFT = REFUSE_EMPTY_DRAFT.replace(" def total(items):", " def total(things):")
++for draft_name, draft_text in (("1.diff", REFUSE_EMPTY_DRAFT), ("2.diff", CLEARER_MESSAGE_DRAFT),
++                               ("unreadable.diff", UNREADABLE_DRAFT), ("stale.diff", STALE_DRAFT),
++                               ("blank-first.diff", BLANK_LINE_FIRST_DRAFT)):
++    with open(os.path.join(drafts_folder, draft_name), "w", encoding="utf-8") as draft_file:
++        draft_file.write(draft_text)
++
++stage_path = os.path.join(plan_project, ".claude", "house-rules-loop.json")
++os.makedirs(os.path.dirname(stage_path))
++with open(stage_path, "w", encoding="utf-8") as stage_file:
++    json.dump({"feature": "demo", "stage": "plan"}, stage_file)
++
++
++def plan_step(name, draft_name, captions, size="large"):
++    """One step of a plan block, with its draft under docs/plans/demo-code/."""
++    return {"name": name, "draft": "docs/plans/demo-code/" + draft_name, "size": size,
++            "summary": "What " + name + " does.", "changes": captions}
++
++
++REFUSE_EMPTY_STEP = plan_step("Refuse an empty list", "1.diff",
++                              ["Refuse an empty list instead of returning 0.",
++                               "A test that an empty list is refused."])
++
++
++def build_plan_page(page_name, steps, approval="Build plan approved: demo"):
++    """Build a plan-mode page in the plan project. Returns the exit code, output and page data."""
++    content_path = _mp_content(page_name, approval=approval)
++    with open(content_path, encoding="utf-8") as content_file:
++        content = json.load(content_file)
++    content["plan"] = {"steps": steps}
++    with open(content_path, "w", encoding="utf-8") as content_file:
++        json.dump(content, content_file)
++    exit_code, output = _mp("build", content_path, "--project", plan_project)
++    page_path = os.path.join(plan_project, "docs", "plans", page_name + ".html")
++    page_data = _mp_page_of(page_path) if os.path.isfile(page_path) else None
++    return exit_code, output, page_data or {"changes": []}
++
++
++def is_refused_with(exit_code, output, words):
++    """True when the build was refused and its message says these words."""
++    return exit_code == 2 and words in output
++
++
++exit_code, output, page_data = build_plan_page("plan1", [REFUSE_EMPTY_STEP])
++step_titles = [item[1] for item in page_data["changes"]]
++step_item = None
++if "Step 1: Refuse an empty list" in step_titles:
++    step_item = page_data["changes"][step_titles.index("Step 1: Refuse an empty list")]
++step_code = step_item[7]["plan_step"] if step_item else {"blocks": []}
++captions_shown = [block.get("caption") for block in step_code["blocks"]]
++test_flags = [block["is_test"] for block in step_code["blocks"]]
++with open(stage_path, encoding="utf-8") as stage_file:
++    recorded = json.load(stage_file).get("plan_page", {})
++draft_hash = hashlib.sha256(REFUSE_EMPTY_DRAFT.encode("utf-8")).hexdigest()
++plan_cases = [
++    ("a step becomes a Changes item with its counts and summary",
++     exit_code == 0 and step_item is not None
++     and step_item[2] == "Large step · 2 files, 1 change, 1 test block"
++     and step_item[4] == "What Refuse an empty list does."),
++    ("each block of changed lines carries its caption, in draft order",
++     captions_shown == REFUSE_EMPTY_STEP["changes"]),
++    ("a block in a test file is marked as a test, so the page folds it",
++     test_flags == [False, True]),
++    ("plan_page records the page, the draft's sha256 and the large-step count, not yet linked",
++     recorded == {"drafts": {"docs/plans/demo-code/1.diff": draft_hash}, "steps": 1, "large": 1,
++                  "linked": False, "page": "docs/plans/plan1.html"}),
++    ("the page passes the phone-width visual check, with code scrolling inside its box",
++     "overflow none" in output and "clipped" not in output),
++]
++
++missing_draft_step = {"name": "No code", "size": "small", "changes": []}
++refusals = [
++    ("a step with no draft is refused, naming the step",
++     build_plan_page("plan2", [missing_draft_step]), '"No code" names no draft'),
++    ("a step not marked large or small is refused",
++     build_plan_page("plan3", [dict(REFUSE_EMPTY_STEP, size=None)]), 'needs "size"'),
++    ("a step whose captions do not match its blocks is refused, with both counts",
++     build_plan_page("plan4", [dict(REFUSE_EMPTY_STEP, changes=["Only one caption."])]),
++     'has 2 blocks of changed lines but "changes" has 1 captions'),
++    ("a draft that breaks a readability rule is refused, naming the line and the rule",
++     build_plan_page("plan5", [plan_step("Packed", "unreadable.diff", ["Count the items."])]),
++     "app.py:2: rule 1, whole-word names"),
++    ("a draft that does not apply to the last commit is refused, naming the step",
++     build_plan_page("plan6", [plan_step("Old lines", "stale.diff", ["One.", "Two."])]),
++     '"Old lines": its draft does not apply'),
++    ("a plan block on a page that is not a build plan is refused",
++     build_plan_page("plan7", [REFUSE_EMPTY_STEP], approval="Design approved: demo"),
++     "Build plan approved"),
++]
++for case_title, (refused_code, refused_output, _page), words in refusals:
++    plan_cases.append((case_title, is_refused_with(refused_code, refused_output, words)))
++
++clearer_message_step = plan_step("Clearer message", "2.diff", ["Say what total() needs."],
++                                 size="small")
++stacked_code, _output, _page = build_plan_page("plan8", [REFUSE_EMPTY_STEP, clearer_message_step])
++alone_code, alone_output, _page = build_plan_page("plan9", [clearer_message_step])
++working_tree_unchanged = _mp_git(plan_project, "status", "--porcelain", "app.py") == ""
++alone_is_refused = is_refused_with(alone_code, alone_output, '"Clearer message"')
++stacked_draft_passes = stacked_code == 0
++plan_cases.append(("a draft is checked on top of the earlier steps' drafts; alone it is refused",
++                   stacked_draft_passes and alone_is_refused and working_tree_unchanged))
++
++exit_code, output, page_data = build_plan_page("plan1", [REFUSE_EMPTY_STEP])
++sys.path.insert(0, HERE)
++import clarity as writing_check  # noqa: E402 - loaded here, beside the page it reads
++with open(os.path.join(plan_project, "docs", "plans", "plan1.html"), encoding="utf-8") as page_file:
++    visible_prose = writing_check.page_text(page_file.read())
++plan_cases.append(("the writing check reads the step summary but none of the step's code",
++                   "What Refuse an empty list does." in visible_prose
++                   and "raise ValueError" not in visible_prose
++                   and "def test_empty_list_is_refused" not in visible_prose))
++
++REVIEW_SCRIPT = r"""const {chromium} = require('playwright');
++(async () => {
++  const browser = await chromium.launch();
++  const page = await browser.newPage();
++  await page.goto('file://' + process.argv[2]);
++  await page.evaluate(() => {
++    document.querySelectorAll('[data-part]').forEach(part => { part.hidden = false; });
++    document.querySelectorAll('details').forEach(section => { section.open = true; });
++  });
++  const replyText = () => page.evaluate(() => document.getElementById('out').textContent);
++  const beforeTick = await replyText();
++  await page.check('input.step-looks-right');
++  const afterTick = await replyText();
++  await page.click('[data-edit-block="code-0-0"]');
++  const editor = page.locator('#code-0-0 textarea');
++  const code = await editor.inputValue();
++  await editor.fill(code.replace('no items to total', 'total() needs an item'));
++  const afterEdit = await replyText();
++  await page.goto('file://' + process.argv[3]);
++  const blankFirstReply = await replyText();
++  console.log(JSON.stringify({beforeTick, afterTick, afterEdit, blankFirstReply}));
++  await browser.close();
++})();
++"""
++node_is_ready = os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, "playwright"))
++if not node_is_ready:
++    report("SKIP", "plan mode: the tick and edit flow in a browser (no node or playwright)")
++else:
++    script_path = os.path.join(_mp_tmp, "review.js")
++    with open(script_path, "w", encoding="utf-8") as script_file:
++        script_file.write(REVIEW_SCRIPT)
++    browser_environment = dict(os.environ, NODE_PATH=_PWMOD,
++                               PLAYWRIGHT_BROWSERS_PATH=os.environ.get("PLAYWRIGHT_BROWSERS_PATH",
++                                                                       "/opt/pw-browsers"))
++    page_path = os.path.join(plan_project, "docs", "plans", "plan1.html")
++    blank_first_step = plan_step("Third value", "blank-first.diff", ["Add a third value."])
++    build_plan_page("plan12", [blank_first_step])
++    blank_first_page = os.path.join(plan_project, "docs", "plans", "plan12.html")
++    browser_run = subprocess.run([_NODE, script_path, page_path, blank_first_page],
++                                 capture_output=True, text=True,
++                                 timeout=180, env=browser_environment)
++    try:
++        replies = json.loads(browser_run.stdout.strip().splitlines()[-1])
++    except (ValueError, IndexError):
++        replies = None
++    if replies is None:
++        report("SKIP", "plan mode: the tick and edit flow in a browser (it did not run: %s)"
++               % (browser_run.stderr.strip()[-200:] or "no output"))
++    else:
++        edit_reply = replies["afterEdit"]
++        plan_cases.extend([
++            ("before its step is ticked, the reply holds no approval, only what is left to review",
++             replies["beforeTick"] == "Still to review: step 1."),
++            ("once every step is ticked, the reply holds the approval phrase",
++             replies["afterTick"] == "Build plan approved: demo"),
++            ("a block whose code starts with a blank line does not look edited",
++             replies["blankFirstReply"] == "Still to review: step 1."),
++            ("an edit on the page puts the changed lines in the reply, and no approval",
++             edit_reply.startswith("Change the build plan code:")
++             and '-         raise ValueError("no items to total")' in edit_reply
++             and '+         raise ValueError("total() needs an item")' in edit_reply
++             and "Build plan approved" not in edit_reply),
++        ])
++for case_title, case_passed in plan_cases:
++    _mp_cases.append(("plan mode (#469, #473): " + case_title, case_passed))
++
+ # ---- readability.py: the six readable-code rules, checked on the lines a diff adds (#473) ----
+ READABILITY = os.path.join(HERE, "readability.py")
+ readability_project = tempfile.mkdtemp(prefix="readability-")
+diff --git a/claude-house-rules/plugins/house-rules/scripts/clarity.py b/claude-house-rules/plugins/house-rules/scripts/clarity.py
+index cd212ff..3f563d0 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/clarity.py
++++ b/claude-house-rules/plugins/house-rules/scripts/clarity.py
+@@ -4,6 +4,7 @@ One list of writing checks, used by hook.py (replies, pages, issues) and plain_d
+ doc copies). Each detector takes plain text and returns findings: (kind, phrase, why). Stdlib only,
+ like hook.py. A pattern can't judge grammar or tone; the @house-rules:editor helper does that.
+ """
++import json
+ import re
+ 
+ # --- shared word list -------------------------------------------------------------------------
+@@ -257,16 +258,48 @@ _SCRIPT_STYLE_RE = re.compile(r"<(script|style)\b.*?</\1>", re.DOTALL | re.IGNOR
+ _TAG_RE = re.compile(r"<[^>]+>")
+ 
+ 
++def prose_strings(value):
++    """Every string in a page's content, except the code a build plan step carries (#473): code is
++    the readability check's job, and its paths and names would read as repeated prose."""
++    if isinstance(value, str):
++        return [value]
++    if isinstance(value, dict):
++        strings = []
++        for key, inner_value in value.items():
++            if key != "plan_step":
++                strings.extend(prose_strings(inner_value))
++        return strings
++    if isinstance(value, list):
++        strings = []
++        for inner_value in value:
++            strings.extend(prose_strings(inner_value))
++        return strings
++    return []
++
++
++def page_block_strings(page_block_text):
++    """The prose strings of a template page's PAGE block: read as JSON when the page builder
++    wrote it, and by pattern when the block is hand-written JavaScript."""
++    try:
++        page = json.loads("{" + page_block_text + "\n}")
++    except ValueError:
++        page = None
++    if page is not None:
++        return prose_strings(page)
++    found = _JS_STRING_RE.findall(page_block_text)
++    return [text.replace('\\"', '"').replace("\\n", " ") for text in found]
++
++
+ def page_text(html):
+     """What a reader sees on an HTML page: the visible text outside scripts and styles, plus the
+     strings of a template page's PAGE block. Each string becomes its own paragraph."""
+     parts = []
+     m = _PAGE_BLOCK_RE.search(html or "")
+     if m:
+-        for s in _JS_STRING_RE.findall(m.group(1)):
+-            s = s.replace('\\"', '"').replace("\\n", " ")
+-            if len(_WORD_RE.findall(s)) >= 3:
+-                parts.append(_TAG_RE.sub("", s))
++        for text in page_block_strings(m.group(1)):
++            text = text.replace("\n", " ")
++            if len(_WORD_RE.findall(text)) >= 3:
++                parts.append(_TAG_RE.sub("", text))
+     body = _TAG_RE.sub("\n", _SCRIPT_STYLE_RE.sub("", html or ""))
+     parts.extend(line.strip() for line in body.splitlines() if len(_WORD_RE.findall(line)) >= 3)
+     return "\n\n".join(parts)
+diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
+index d95169b..2fd2ad7 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
++++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
+@@ -15,6 +15,17 @@ The project style file is `docs/page-style.json` (see docs/plans/page-style/plun
+ `{"use": "defaults"}` means the template's own look. One palette is applied in every theme the file
+ allows; when `themes` has one entry the page is forced to that theme.
+ 
++Plan mode (#469, #473): a `plan` block turns a build plan page into a code review.
++    "plan": {"steps": [{"name": ..., "draft": "docs/plans/<feature>-code/1.diff",
++                        "size": "large" or "small", "summary": one sentence,
++                        "changes": [one caption per block of changed lines, in draft order]}]}
++Each draft is a unified diff. The builder refuses a draft that breaks a readability rule
++(scripts/readability.py), a draft whose caption count does not match its blocks, and a draft
++that does not apply on top of the earlier steps' drafts. The page shows each step as plain
++sentences, then captioned code blocks, with tests folded and a tick per step. The page, each
++draft's sha256 and the large-step count are recorded as plan_page in the stage file, for the
++"Build plan approved" gate.
++
+ Exit codes: 0 built, 2 refused or bad input, 3 no style file (two options are printed).
+ 
+ STDLIB ONLY, Python 3.8+. Never installs anything.
+@@ -22,6 +33,7 @@ STDLIB ONLY, Python 3.8+. Never installs anything.
+ 
+ import argparse
+ import glob
++import hashlib
+ import json
+ import os
+ import re
+@@ -295,6 +307,196 @@ def apply_qa(page, project):
+     page.pop("reply", None)
+ 
+ 
++TEST_PATH_MARKERS = ("/checks/", "/tests/", "/test/")
++TEST_FILE_PATTERN = re.compile(r"(^|/)test_[^/]*$|_test\.py$|\.test\.[jt]sx?$")
++HUNK_HEADER = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
++
++
++def is_test_file(file_name):
++    """True when a file holds tests, so its blocks are folded under the step's tests."""
++    in_test_folder = any(marker in "/" + file_name for marker in TEST_PATH_MARKERS)
++    return in_test_folder or bool(TEST_FILE_PATTERN.search(file_name))
++
++
++def draft_blocks(draft_text):
++    """Each block of changed lines (one hunk) in a unified diff: its file, start line and lines."""
++    blocks = []
++    current_file = None
++    for line in draft_text.splitlines():
++        if line.startswith("diff --git "):
++            current_file = line.split(" b/", 1)[-1]
++            continue
++        header = HUNK_HEADER.match(line)
++        if header and current_file is not None:
++            blocks.append({"file": current_file, "new_start": int(header.group(1)), "lines": [],
++                           "is_test": is_test_file(current_file)})
++            continue
++        is_file_header = line.startswith(("--- ", "+++ ", "index ", "new file", "deleted file"))
++        if not blocks or is_file_header:
++            continue
++        kind = line[:1] if line[:1] in ("+", "-") else " "
++        blocks[-1]["lines"].append([kind, line[1:]])
++    return blocks
++
++
++def file_counts(blocks):
++    """[[file, added, removed, []], ...] in the order the files first appear."""
++    counts = {}
++    for block in blocks:
++        row = counts.setdefault(block["file"], [block["file"], 0, 0, []])
++        for kind, _text in block["lines"]:
++            if kind == "+":
++                row[1] += 1
++            elif kind == "-":
++                row[2] += 1
++    return list(counts.values())
++
++
++def readability_problems(draft_text, project, read_file):
++    """The readability rules this draft breaks, from scripts/readability.py beside this script.
++    read_file gives each file as the earlier steps' drafts leave it."""
++    sys.path.insert(0, HERE)
++    import readability
++    return readability.find_problems(draft_text, project, read_file)
++
++
++class DraftChecker:
++    """Applies each step's draft, in order, to a throwaway git index built from the last commit,
++    so a later step's draft is checked on top of the earlier ones and no file on disk changes."""
++
++    def __init__(self, project):
++        """Build the throwaway index from the branch's last commit."""
++        self.project = project
++        self.index_path = tempfile.NamedTemporaryFile(prefix="make-page-plan-", suffix=".index",
++                                                      delete=False).name
++        self.git_environment = dict(os.environ, GIT_INDEX_FILE=self.index_path)
++        self.applied_drafts = set()
++        finished = self.run_git("read-tree", "HEAD")
++        if finished.returncode:
++            self.close()
++            die("plan mode needs a git checkout with at least one commit to check drafts "
++                "against: %s" % finished.stderr.strip())
++
++    def run_git(self, *git_arguments):
++        """Run git in the project against the throwaway index."""
++        try:
++            return subprocess.run(["git", "-C", self.project] + list(git_arguments),
++                                  env=self.git_environment, capture_output=True, text=True,
++                                  timeout=60)
++        except (OSError, subprocess.SubprocessError) as error:
++            self.close()
++            die("plan mode: git did not run to check the drafts: %s" % error)
++
++    def apply(self, step_name, draft_path):
++        """Apply one step's draft, or refuse the build naming the step when it does not fit."""
++        if draft_path in self.applied_drafts:
++            return
++        finished = self.run_git("apply", "--cached", draft_path)
++        if finished.returncode:
++            self.close()
++            die('plan step "%s": its draft does not apply on top of the last commit and the '
++                "earlier steps' drafts, so the page would show stale lines; redo the draft. "
++                "git said: %s" % (step_name, finished.stderr.strip()))
++        self.applied_drafts.add(draft_path)
++
++    def file_lines(self, file_name):
++        """A file's lines as the earlier steps' drafts leave it, or [] when it doesn't exist yet."""
++        finished = self.run_git("show", ":" + file_name)
++        if finished.returncode:
++            return []
++        return finished.stdout.splitlines()
++
++    def close(self):
++        """Remove the throwaway index."""
++        if os.path.exists(self.index_path):
++            os.unlink(self.index_path)
++
++
++def counted(number, singular, plural):
++    """A count with its noun, such as "1 file" or "3 files"."""
++    noun = singular if number == 1 else plural
++    return "%d %s" % (number, noun)
++
++
++def plan_step_item(step_number, step, draft_relative_path, draft_text, blocks):
++    """The Changes item for one step: its counts, its summary, and its captioned blocks of code."""
++    for block, caption in zip(blocks, step["changes"]):
++        block["caption"] = caption
++    code_blocks = [block for block in blocks if not block["is_test"]]
++    test_blocks = [block for block in blocks if block["is_test"]]
++    counts = file_counts(blocks)
++    subtitle = "%s step · %s, %s, %s" % (step["size"].capitalize(),
++                                        counted(len(counts), "file", "files"),
++                                        counted(len(code_blocks), "change", "changes"),
++                                        counted(len(test_blocks), "test block", "test blocks"))
++    plan_step = {"step_number": step_number, "draft": draft_relative_path, "blocks": blocks}
++    return ["chg", "Step %d: %s" % (step_number, step["name"]), subtitle, None,
++            step.get("summary") or "", None, counts, {"plan_step": plan_step}]
++
++
++def checked_step(step_number, step, project, draft_checker):
++    """Read one plan step's draft and refuse the build if any of plan mode's rules is broken.
++    Returns the draft's repo-relative path, its text and its blocks."""
++    if not isinstance(step, dict) or not step.get("name"):
++        die("plan step %d needs a 'name'" % step_number)
++    step_name = step["name"]
++    if step.get("size") not in ("large", "small"):
++        die('plan step "%s" needs "size": "large" or "small"; you mark it, and aj can overrule it'
++            % step_name)
++    draft_relative_path = step.get("draft")
++    if not draft_relative_path:
++        die('plan step "%s" names no draft: write its code as a diff under '
++            'docs/plans/<feature>-code/ and name that file in "draft"' % step_name)
++    draft_path = os.path.join(project, draft_relative_path)
++    if not os.path.isfile(draft_path):
++        die('plan step "%s": its draft %s does not exist' % (step_name, draft_relative_path))
++    with open(draft_path, encoding="utf-8") as draft_file:
++        draft_text = draft_file.read()
++    blocks = draft_blocks(draft_text)
++    captions = step.get("changes")
++    has_one_caption_per_block = isinstance(captions, list) and len(captions) == len(blocks)
++    if not has_one_caption_per_block:
++        caption_count = len(captions) if isinstance(captions, list) else 0
++        die('plan step "%s": its draft has %d blocks of changed lines but "changes" has %d '
++            "captions; write one plain sentence per block, in draft order"
++            % (step_name, len(blocks), caption_count))
++    problems = readability_problems(draft_text, project, draft_checker.file_lines)
++    if problems:
++        shown = "\n  ".join(problems[:15])
++        more = "\n  ... and %d more" % (len(problems) - 15) if len(problems) > 15 else ""
++        die('plan step "%s": its draft breaks %d readability rule(s); fix them before aj '
++            "reads it:\n  %s%s" % (step_name, len(problems), shown, more))
++    draft_checker.apply(step_name, draft_path)
++    return draft_relative_path.replace(os.sep, "/"), draft_text, blocks
++
++
++def apply_plan(page, project):
++    """Plan mode (#469, #473): check every step's draft and add one Changes item per step.
++    Returns the record for the stage file's plan_page."""
++    plan = page["plan"]
++    steps = plan.get("steps") if isinstance(plan, dict) else None
++    has_steps = isinstance(steps, list) and len(steps) > 0
++    if not has_steps:
++        die("content 'plan' must be an object with a non-empty 'steps' list")
++    if not str(page.get("approval", "")).startswith("Build plan approved"):
++        die('a page with a \'plan\' block is a build plan, so its approval must be '
++            '"Build plan approved: <feature>"')
++    draft_checker = DraftChecker(project)
++    draft_hashes = {}
++    large_steps = 0
++    for step_number, step in enumerate(plan["steps"], 1):
++        draft_relative_path, draft_text, blocks = checked_step(step_number, step, project,
++                                                               draft_checker)
++        draft_hashes[draft_relative_path] = hashlib.sha256(draft_text.encode("utf-8")).hexdigest()
++        if step["size"] == "large":
++            large_steps += 1
++        item = plan_step_item(step_number, step, draft_relative_path, draft_text, blocks)
++        page.setdefault("changes", []).append(item)
++    draft_checker.close()
++    return {"drafts": draft_hashes, "steps": len(plan["steps"]), "large": large_steps,
++            "linked": False}
++
++
+ def apply_sweep(page):
+     """Sweep mode (#364): each row becomes a Changes item showing its evidence and suggested action."""
+     rows = page["sweep"]
+@@ -432,6 +634,9 @@ def build(args):
+         apply_qa(page, project)
+     if "sweep" in page:
+         apply_sweep(page)
++    plan_record = None
++    if "plan" in page:
++        plan_record = apply_plan(page, project)
+     check_approval(page)
+     apply_approval_todo(page)
+     page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one
+@@ -475,6 +680,9 @@ def build(args):
+         record_qa_page(project, out)
+     if "sweep" in page:
+         record_sweep(project, page)
++    if plan_record is not None:
++        plan_record["page"] = os.path.relpath(out, project).replace(os.sep, "/")
++        record_qa_page(project, out, key="plan_page", value=plan_record, what="build plan page")
+ 
+ 
+ # ---- step 2: visual check -------------------------------------------------------------------
+@@ -509,6 +717,8 @@ CLIP_JS = r"""() => {
+     const title = ((card.querySelector('h3,b,summary') || card).textContent || '').trim().split('\n')[0].trim().slice(0, 60);
+     const cr = card.getBoundingClientRect();
+     for (const el of [card, ...card.querySelectorAll('*')]) {
++      // A code block scrolls sideways on purpose (#473), so nothing inside it counts as clipped.
++      if (el.closest('.code-scroll')) continue;
+       const r = el.getBoundingClientRect();
+       const wider = el.clientWidth > 0 && el.scrollWidth - el.clientWidth > 1;
+       if (wider || (r.width > 0 && r.right > cr.right + 1)) { out.add(title); return; }
+diff --git a/claude-house-rules/plugins/house-rules/templates/handover-page.html b/claude-house-rules/plugins/house-rules/templates/handover-page.html
+index 5bb193b..22a93bf 100644
+--- a/claude-house-rules/plugins/house-rules/templates/handover-page.html
++++ b/claude-house-rules/plugins/house-rules/templates/handover-page.html
+@@ -166,6 +166,37 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
+ .g.done span.c{background:var(--ok-soft);color:var(--ok)}
+ .sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+ .owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
++/* Plan mode (#469, #473): a step's code as captioned blocks. Lines never wrap mid-word; a long
++   line scrolls sideways inside its own box. Added lines take the accent tint (I build it). */
++.change-list { margin: 8px 0 12px; padding-left: 1.4em; }
++.change-list li { margin: 4px 0; }
++.code-block { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; }
++.code-caption {
++  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px;
++  padding: 8px 10px; border-bottom: 1px solid var(--line);
++}
++.code-caption small { color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
++.code-scroll { overflow-x: auto; }
++.code-lines { border-collapse: collapse; min-width: 100%; }
++.code-lines td {
++  white-space: pre; vertical-align: top; padding: 0 10px 0 0;
++  font: 13px/1.6 ui-monospace, Consolas, monospace;
++}
++.code-lines td.line-number { color: var(--muted); text-align: right; padding: 0 8px; }
++.code-lines tr.added td.code-text { background: var(--accent-soft); }
++.code-lines tr.removed td.code-text { color: var(--muted); text-decoration: line-through; }
++.code-edit {
++  display: block; width: 100%; box-sizing: border-box; min-height: 10em; padding: 10px;
++  border: 0; border-top: 1px solid var(--line); background: var(--bg); color: var(--fg);
++  font: 13px/1.6 ui-monospace, Consolas, monospace; white-space: pre; overflow-x: auto;
++}
++.code-block > button { margin: 8px 10px; }
++.test-list { margin: 0 0 12px; }
++.test-list summary { cursor: pointer; padding: 6px 0; }
++.step-review {
++  display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px;
++  padding: 10px; border: 2px solid var(--you); border-radius: 10px; background: var(--you-soft);
++}
+ /* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+ .pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+ .pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+@@ -325,6 +356,211 @@ const picHtml = p => {
+   const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+   return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+ };
++// Plan mode (#469, #473): each step's code as captioned blocks, then a tick per step.
++const PLAN_STEPS = [];
++const ROW_CLASS_FOR_KIND = { "+": "added", "-": "removed", " ": "kept" };
++
++// True when a value is the {plan_step: ...} object plan mode adds to a Changes item.
++function isPlanStepObject(value) {
++  const isObject = value !== null && typeof value === "object";
++  return isObject && "plan_step" in value;
++}
++
++// The plan step a Changes item carries, or undefined when it carries no code.
++function planStepOf(changesItem) {
++  const found = changesItem.slice(5).find(isPlanStepObject);
++  return found ? found.plan_step : undefined;
++}
++
++// The new code a block leaves in its file: kept and added lines. This is what aj edits.
++function newCodeOf(block) {
++  const newSideLines = [];
++  for (const [kind, text] of block.lines) {
++    if (kind !== "-") {
++      newSideLines.push(text);
++    }
++  }
++  return newSideLines.join("\n");
++}
++
++// The table rows for one block. A removed line has no line number, because it leaves the file.
++function codeRowsHtml(block) {
++  let lineNumber = block.new_start;
++  const rows = [];
++  for (const [kind, text] of block.lines) {
++    let numberText = "";
++    if (kind !== "-") {
++      numberText = String(lineNumber);
++      lineNumber += 1;
++    }
++    const rowClass = ROW_CLASS_FOR_KIND[kind];
++    rows.push(`<tr class="${rowClass}"><td class="line-number">${numberText}</td>` +
++      `<td class="code-text">${esc(text)}</td></tr>`);
++  }
++  return rows.join("");
++}
++
++// One captioned block of changed lines, with an Edit button that swaps in a text box.
++function codeBlockHtml(stepIndex, blockIndex, block) {
++  const blockId = `code-${stepIndex}-${blockIndex}`;
++  const where = `${block.file}, from line ${block.new_start}`;
++  return `<div class="code-block" id="${blockId}">` +
++    `<div class="code-caption"><span>${esc(block.caption)}</span>` +
++    `<small>${esc(where)}</small></div>` +
++    `<div class="code-scroll"><table class="code-lines">${codeRowsHtml(block)}</table></div>` +
++    `<textarea class="code-edit" hidden spellcheck="false" data-step="${stepIndex}" ` +
++    `data-block="${blockIndex}" aria-label="Edit: ${esc(block.caption)}">` +
++    // A text box drops its first newline, so one is added to keep a leading blank line.
++    `\n${esc(newCodeOf(block))}</textarea>` +
++    `<button type="button" class="secondary" data-edit-block="${blockId}">Edit</button></div>`;
++}
++
++// A step's code: its changes in plain words, their blocks, the tests folded, then the tick.
++function planStepHtml(planStep) {
++  if (!planStep) {
++    return "";
++  }
++  const stepIndex = PLAN_STEPS.push(planStep) - 1;
++  const captions = [];
++  const codeBlocks = [];
++  const testBlocks = [];
++  planStep.blocks.forEach((block, blockIndex) => {
++    const blockHtml = codeBlockHtml(stepIndex, blockIndex, block);
++    if (block.is_test) {
++      testBlocks.push(blockHtml);
++    } else {
++      captions.push(`<li>${esc(block.caption)}</li>`);
++      codeBlocks.push(blockHtml);
++    }
++  });
++  let testsHtml = "";
++  if (testBlocks.length) {
++    testsHtml = `<details class="test-list"><summary>Tests for this step (${testBlocks.length})` +
++      `</summary>${testBlocks.join("")}</details>`;
++  }
++  return `<h4>What this step changes</h4><ol class="change-list">${captions.join("")}</ol>` +
++    codeBlocks.join("") + testsHtml +
++    `<div class="step-review"><label><input type="checkbox" class="step-looks-right" ` +
++    `data-step="${stepIndex}"> Looks right</label>` +
++    `<button type="button" class="secondary" data-change-step="${stepIndex}">` +
++    `Change something</button></div>`;
++}
++
++// Show or hide one block's text box. While it is open the block's code view is hidden.
++function toggleBlockEditor(blockElement, editButton) {
++  const editor = blockElement.querySelector("textarea");
++  const codeView = blockElement.querySelector(".code-scroll");
++  const isOpening = editor.hidden;
++  editor.hidden = !isOpening;
++  codeView.hidden = isOpening;
++  editButton.textContent = isOpening ? "Done editing" : "Edit";
++  if (isOpening) {
++    editor.focus();
++  }
++}
++
++// Edit opens a block's text box; Change something opens the step's first block.
++document.addEventListener("click", event => {
++  const editButton = event.target.closest("[data-edit-block]");
++  if (editButton) {
++    toggleBlockEditor(document.getElementById(editButton.dataset.editBlock), editButton);
++    return;
++  }
++  const changeButton = event.target.closest("[data-change-step]");
++  if (changeButton) {
++    const firstBlock = document.getElementById(`code-${changeButton.dataset.changeStep}-0`);
++    if (firstBlock) {
++      toggleBlockEditor(firstBlock, firstBlock.querySelector("[data-edit-block]"));
++    }
++  }
++});
++
++// For each pair of positions, how many lines the rest of the two texts have in common.
++function commonLineCounts(beforeLines, afterLines) {
++  const table = [];
++  for (let row = 0; row <= beforeLines.length; row += 1) {
++    table.push(new Int32Array(afterLines.length + 1));
++  }
++  for (let row = beforeLines.length - 1; row >= 0; row -= 1) {
++    for (let column = afterLines.length - 1; column >= 0; column -= 1) {
++      if (beforeLines[row] === afterLines[column]) {
++        table[row][column] = table[row + 1][column + 1] + 1;
++      } else {
++        table[row][column] = Math.max(table[row + 1][column], table[row][column + 1]);
++      }
++    }
++  }
++  return table;
++}
++
++// The lines aj changed in one block, written as "- before" and "+ after", for the reply.
++function changedLinesText(beforeText, afterText) {
++  const beforeLines = beforeText.split("\n");
++  const afterLines = afterText.split("\n");
++  const common = commonLineCounts(beforeLines, afterLines);
++  const changes = [];
++  let row = 0;
++  let column = 0;
++  while (row < beforeLines.length || column < afterLines.length) {
++    const beforeIsLeft = row < beforeLines.length;
++    const afterIsLeft = column < afterLines.length;
++    const linesMatch = beforeIsLeft && afterIsLeft && beforeLines[row] === afterLines[column];
++    if (linesMatch) {
++      row += 1;
++      column += 1;
++      continue;
++    }
++    let dropBeforeLine = !afterIsLeft;
++    if (beforeIsLeft && afterIsLeft) {
++      dropBeforeLine = common[row + 1][column] >= common[row][column + 1];
++    }
++    if (dropBeforeLine) {
++      changes.push("- " + beforeLines[row]);
++      row += 1;
++    } else {
++      changes.push("+ " + afterLines[column]);
++      column += 1;
++    }
++  }
++  return changes.join("\n");
++}
++
++// aj's review of the plan's code: each edited block as changed lines, and the unticked steps.
++function planReview() {
++  const edits = [];
++  for (const editor of document.querySelectorAll("textarea.code-edit")) {
++    const planStep = PLAN_STEPS[Number(editor.dataset.step)];
++    const block = planStep.blocks[Number(editor.dataset.block)];
++    const original = newCodeOf(block);
++    if (editor.value !== original) {
++      const heading = `Step ${planStep.step_number}, "${block.caption}" (${block.file}):`;
++      edits.push(heading + "\n" + changedLinesText(original, editor.value));
++    }
++  }
++  const unticked = [];
++  for (const tick of document.querySelectorAll("input.step-looks-right")) {
++    if (!tick.checked) {
++      unticked.push(PLAN_STEPS[Number(tick.dataset.step)].step_number);
++    }
++  }
++  return { edits, unticked };
++}
++
++// On a build plan, the reply holds the approval only once every step is ticked and none is edited.
++function applyPlanReview() {
++  if (!PLAN_STEPS.length) {
++    return;
++  }
++  const review = planReview();
++  if (review.edits.length) {
++    out.textContent = "Change the build plan code:\n\n" + review.edits.join("\n\n");
++    return;
++  }
++  if (review.unticked.length) {
++    out.textContent = `Still to review: step ${review.unticked.join(", step ")}.`;
++    miss.innerHTML = `<span class="missing">Tick Looks right on each step you have read.</span>`;
++  }
++}
+ document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+ const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+ box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+@@ -375,8 +611,25 @@ if (document.getElementById("cc")) {
+   const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+     fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+       (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+-  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+-     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
++  const TAG_LABELS = { new: "New", chg: "Changed", keep: "Kept" };
++  // One Changes item: its tag, title and line, then on open its before and after, flow strip,
++  // detail, picture, files and, on a build plan, its code.
++  function changesItemHtml(item) {
++    const [tag, title, subtitle, fromTo, detail, flowStrip, fileList] = item;
++    let fromToHtml = "";
++    if (fromTo) {
++      fromToHtml = `<div class="fromto"><span>${esc(fromTo[0])}</span>` +
++        `<span aria-hidden="true">→</span><span class="to">${esc(fromTo[1])}</span></div>`;
++    }
++    const flowHtml = Array.isArray(flowStrip) ? flow(flowStrip) : "";
++    const filesHtml = Array.isArray(fileList) ? files(fileList) : "";
++    return `<details class="ci"><summary><span class="tag ${tag}">${TAG_LABELS[tag]}</span>` +
++      `<span><b>${esc(title)}</b><small>${esc(subtitle)}</small></span>` +
++      `<span class="more">More</span></summary><div class="detail">${fromToHtml}${flowHtml}` +
++      `<p>${esc(detail)}</p>${picHtml(picOf(item, 5))}${filesHtml}` +
++      `${planStepHtml(planStepOf(item))}</div></details>`;
++  }
++  document.getElementById("cc").innerHTML = PAGE.changes.map(changesItemHtml).join("");
+ }
+ 
+ if (document.getElementById("qs")) {
+@@ -409,8 +662,14 @@ function reply() {
+   const m = picks.filter(([, v]) => !v).map(([n]) => n);
+   miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
+   const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
++  applyPlanReview();
+ }
+ document.addEventListener("change", reply);
++document.addEventListener("input", event => {
++  if (event.target.matches("textarea.code-edit")) {
++    reply();
++  }
++});
+ document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
+ document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
+   navigator.clipboard.writeText(out.textContent).then(() => st.textContent = "Copied. Paste it into the chat.")
