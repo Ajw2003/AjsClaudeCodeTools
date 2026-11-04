@@ -273,7 +273,7 @@ const PAGE = {
   "eyebrow": "Design for approval · two changes to the design loop · nothing built yet",
   "approval": "Design approved: code preview and issue rule",
   "short": {
-    "lead": "Today a build plan says which files each step touches and roughly how many lines, but you never see the lines themselves until the build is done. With this change, every step in a build plan carries the actual code I intend to write, shown as a diff against today's code. You read it, change it, and only then type \"Build plan approved\". A habit you don't want, such as a swallowed error or a value quietly reset, is caught on the page instead of in a pull request. Separately, a build plan will need only one issue. Sub-issues, one per step, are required only when the work has several large steps.",
+    "lead": "Today a build plan says which files each step touches and roughly how many lines, but you never see the lines themselves until the build is done. With this change, every step in a build plan carries the actual code I intend to write, shown as a diff against today's code. You read it, change it, and only then type \"Build plan approved\". A habit you don't want, such as a swallowed error or a value quietly reset, is caught on the page instead of in a pull request. Separately, a build plan will need only one issue. When two or more steps are large, each large step also gets its own sub-issue.",
     "hint": "Tap an item to see what it creates and what it needs from you.",
     "key": [
       [
@@ -333,7 +333,7 @@ const PAGE = {
         {
           "src": "code-preview-design-pics/issues.svg",
           "alt": "Two issue layouts side by side: a small feature with a single issue, and Animate the guards as a main issue with five sub-issues, the last of which, Review, is aj's move",
-          "caption": "Your example. A small fix is one issue. Animate the guards is a main issue with one sub-issue per large step, ending in your review."
+          "caption": "Your example. A small fix is one issue. Animate the guards is a main issue with five sub-issues, the last of them your review."
         }
       ],
       [
@@ -352,7 +352,7 @@ const PAGE = {
       "What stays as it is",
       "The design page, the issues, the labels and the decisions log.",
       null,
-      "The Design stage is untouched. The Plan stage still needs a systems doc, a parent issue and a sub-issue per step, labelled `AjsAgent created this` and `in progress`, and a decisions-log entry. This change adds to the Plan stage; it removes nothing from it.",
+      "The Design stage is untouched. The Plan stage still needs a systems doc, a main issue (plus sub-issues for large steps, as described below), labelled `AjsAgent created this` and `in progress`, and a decisions-log entry. This change adds to the Plan stage; it removes nothing from it.",
       null,
       null,
       {
@@ -568,7 +568,7 @@ const PAGE = {
         "Every build plan needs at least two labelled issues, a parent and a child, before \"Build plan approved\" counts. Separately, any plan with more than three numbered lines blocks code edits until two issues exist.",
         "Every build plan needs one labelled issue. When two or more steps are marked large, it also needs one sub-issue per large step, each saying \"Part of\" the main issue. Small steps never need their own issue."
       ],
-      "Both checks read one number, ISSUES_NEEDED in house_rules/design_loop.py, which is 2 today. That number becomes a rule: one issue, plus one per large step when there are two or more large steps. Which steps count as large is the choice below called \"Who decides that a step is large?\". The rule text changes in three places: the issue line in rules/house-rules.md, rules/detail/issue-workflow.md and rules/detail/show-dont-tell.md.",
+      "Both checks read one number, ISSUES_NEEDED in house_rules/design_loop.py, which is 2 today. That number is replaced by the rule above. Which steps count as large is the choice below called \"Who decides that a step is large?\". The rule text changes in three places: the issue line in rules/house-rules.md, rules/detail/issue-workflow.md and rules/detail/show-dont-tell.md.",
       null,
       [
         [
@@ -739,8 +739,8 @@ const PAGE = {
     ]
   ],
   "wrapup": {
-    "summary": "Every build plan step will carry the actual code I intend to write, shown as a diff you can change before approving. The approval waits for that code, the builder follows it, and QA shows where the real code differs. A build plan also needs only one issue, with sub-issues only for features that have several large steps.",
-    "changing": "The Plan stage gains code drafts and a plan page that shows them. The \"Build plan approved\" gate, the builder hand-off and QA mode are adapted. The two-issue minimum becomes one issue, plus one per large step when there are two or more. Nothing else is removed.",
+    "summary": "Every build plan step will carry the actual code I intend to write, shown as a diff you can change before approving. The approval waits for that code, the builder follows it, and QA shows where the real code differs. A build plan also needs only one issue. Sub-issues are added only when two or more steps are large.",
+    "changing": "The Plan stage gains code drafts and a plan page that shows them. The \"Build plan approved\" gate, the builder hand-off and QA mode are adapted. The two-issue minimum becomes one issue, with sub-issues only when two or more steps are large. Nothing else is removed.",
     "blocking": "Nothing is built until you approve this design.",
     "next": "After you approve, I write the systems doc and the issues under the new rule, then bring the build plan. That build plan will be the first one to carry its own code preview, with its code drafted by hand, since plan mode won't exist yet.",
     "todo": [
