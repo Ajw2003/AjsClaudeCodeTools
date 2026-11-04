@@ -379,7 +379,7 @@ const PAGE = {
       "Plan mode in the page builder",
       "make_page.py renders the drafts on the build plan page.",
       null,
-      "A plan block in the page's content file (the .page.json) names each step's draft. The builder reads each diff, shows it per file with added and removed lines marked, refuses a step that names no draft or a draft that doesn't apply to the current code, and records the page's path in the design loop's stage file as the plan page, the way QA mode already records the QA page.",
+      "A plan block in the page's content file (the .page.json) names each step's draft. The builder reads each diff and shows it per file, with added and removed lines marked. It refuses a step that names no draft, or a draft that doesn't apply to the current code. It records the page's path in the design loop's stage file as the plan page, the way QA mode already records the QA page.",
       [
         "make_page.py has a QA mode and a sweep mode, and no plan mode.",
         "A plan mode that renders and checks the drafts.",
@@ -565,7 +565,7 @@ const PAGE = {
       "Milestones",
       "Four checks, each one you can run or look at yourself.",
       null,
-      "1. make_page.py in plan mode renders a sample diff, and refuses a step without a draft and a draft that doesn't apply: the new verify.py cases pass. 2. \"Build plan approved\" is refused with no plan page, with an unlinked page, and with a page older than a draft, and accepted with a fresh linked page: the new verify.py cases pass. 3. A QA page built from a build that departs from its draft lists that departure, and one that only reformats lists none: the new verify.py cases pass. 4. One small real feature goes through Design, Plan with code, Build and QA, with screenshots of its plan page at phone width in light and dark, and the extra Plan time noted.",
+      "Milestones 1 to 3 each pass when their new verify.py cases pass. 1. make_page.py in plan mode renders a sample diff, and refuses a step without a draft and a draft that doesn't apply. 2. \"Build plan approved\" is refused with no plan page, with an unlinked page, and with a page older than a draft, and accepted with a fresh linked page. 3. A QA page built from a build that departs from its draft lists that departure, and one that only reformats lists none. 4. One small real feature goes through Design, Plan with code, Build and QA, with screenshots of its plan page at phone width in light and dark, and the extra Plan time noted.",
       [
         "No milestones exist for this.",
         "Four checkable milestones.",
