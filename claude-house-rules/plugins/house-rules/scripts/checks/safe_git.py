@@ -1720,4 +1720,94 @@ for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
 
 
+# --- rerun limit (#454): a project script's third run with no code commit in between is refused ---
+_rr_dir = os.path.join(_FIXTURE_ROOT, "rerun-repo")
+os.makedirs(os.path.join(_rr_dir, "tools"))
+_rr_state = os.path.join(_FIXTURE_ROOT, "rerun-state.json")
+with open(os.path.join(_rr_dir, "tools", "x.sh"), "w", encoding="utf-8") as _f:
+    _f.write("echo x\n")
+with open(os.path.join(_rr_dir, "other.txt"), "w", encoding="utf-8") as _f:
+    _f.write("1\n")
+_as_git(_rr_dir, "init", "-q", "-b", "feature/rr")
+_as_git(_rr_dir, "add", "-A")
+_as_git(_rr_dir, "commit", "-q", "-m", "init")
+
+
+def _rr_run(cmd, agent="", **extra):
+    pl = {"session_id": "rr", "cwd": _rr_dir, "tool_name": "Bash", "tool_input": {"command": cmd}}
+    if agent:
+        pl["agent_id"] = agent
+    e = env_in(_rr_dir, HOUSE_RULES_RERUNS_STATE=_rr_state)
+    e.pop("HOUSE_RULES_RERUNS", None)
+    e.update(extra)
+    return run_hook("guard", json.dumps(pl), env=e)
+
+
+def _rr_denied(out):
+    return '"permissionDecision":"deny"' in out and "has run twice" in out
+
+
+def _rr_reset():
+    if os.path.exists(_rr_state):
+        os.remove(_rr_state)
+
+
+def _rr_commit(rel, text):
+    with open(os.path.join(_rr_dir, rel), "a", encoding="utf-8") as f:
+        f.write(text)
+    _as_git(_rr_dir, "add", "-A")
+    _as_git(_rr_dir, "commit", "-q", "-m", "change " + rel)
+
+
+_rr_a = _rr_run("bash tools/x.sh a")
+_rr_b = _rr_run("bash tools/x.sh b")
+_rr_c = _rr_run("bash tools/x.sh a")
+report("PASS" if not _rr_denied(_rr_a[1]) and not _rr_denied(_rr_b[1]) and _rr_denied(_rr_c[1]) and "tools/x.sh" in _rr_c[1]
+       else "FAIL", "rerun limit: the first two runs pass (different arguments too) and the third is refused, naming the script")
+_rr_reset()
+_rr_st = [_rr_run("git status")[1] for _ in range(4)]
+report("PASS" if not any(_rr_denied(o) for o in _rr_st) and not os.path.exists(_rr_state)
+       else "FAIL", "rerun limit: git status is never counted")
+_rr_reset()
+_rr_run("bash tools/x.sh a")
+_rr_run("bash tools/x.sh a")
+_rr_commit("other.txt", "2\n")
+_rr_o = _rr_run("bash tools/x.sh a")
+report("PASS" if not _rr_denied(_rr_o[1]) else "FAIL", "rerun limit: a commit that changes another file resets the count")
+_rr_reset()
+_rr_run("bash tools/x.sh a")
+_rr_run("bash tools/x.sh a")
+_rr_commit(os.path.join("tools", "x.sh"), "echo y\n")
+_rr_o = _rr_run("bash tools/x.sh a")
+report("PASS" if _rr_denied(_rr_o[1]) else "FAIL", "rerun limit: a commit that changes only the script does not reset the count")
+_rr_reset()
+_rr_run("bash tools/x.sh a", agent="ag1")
+_rr_run("bash tools/x.sh a", agent="ag1")
+_rr_o1 = _rr_run("bash tools/x.sh a", agent="ag1")
+_rr_o2 = _rr_run("bash tools/x.sh a", agent="ag2")
+report("PASS" if _rr_denied(_rr_o1[1]) and not _rr_denied(_rr_o2[1]) else "FAIL",
+       "rerun limit: two agent_ids keep separate counts")
+_rr_reset()
+_rr_offs = [_rr_run("bash tools/x.sh a", HOUSE_RULES_RERUNS="off")[1] for _ in range(4)]
+report("PASS" if not any(_rr_denied(o) for o in _rr_offs) and not os.path.exists(_rr_state)
+       else "FAIL", "rerun limit: HOUSE_RULES_RERUNS=off disables the check")
+_rr_reset()
+_rr_refused_cmd = "bash tools/x.sh a && " + "r" + "m -rf" + " tools"  # refused as a recursive delete; never runs
+_rr_refused = [_rr_run(_rr_refused_cmd, agent="ag3")[1] for _ in range(3)]
+_rr_o = _rr_run("bash tools/x.sh a", agent="ag3")
+report("PASS" if all('"permissionDecision":"deny"' in o or '"permissionDecision":"ask"' in o for o in _rr_refused)
+       and not _rr_denied(_rr_o[1]) else "FAIL",
+       "rerun limit: a run the guard refuses or asks about for another reason is not counted")
+with open(_rr_state, "w", encoding="utf-8") as _f:
+    _f.write("{not json")
+_rr_o = _rr_run("bash tools/x.sh a")
+try:
+    _rr_msg = json.loads(_rr_o[1]).get("systemMessage", "")
+except ValueError:
+    _rr_msg = "unparseable: " + _rr_o[1][:80]
+report("PASS" if _rr_o[0] == 0 and not _rr_denied(_rr_o[1]) and "rerun count could not be checked" in _rr_msg
+       else "FAIL", "rerun limit: a corrupt state file lets the command through, with a message")
+_rr_reset()
+
+
 finish()

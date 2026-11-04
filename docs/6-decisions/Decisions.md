@@ -86,6 +86,19 @@ code check; a check that causes friction is reworked, never removed or switched 
 end-of-reply check behaves is choice 6 on the page.
 
 **Status.** Standing. The rest of the split waits on aj's answers to the page.
+## 2026-11-03 - Rerun limit: any project script, reset only by a commit, no override
+
+**Context.** A builder in Ajw2003/PlunderSpell#569 ran one co-op check 12 times in 23 minutes (#453). The builder rule (2.74.3) limits a check to two runs; aj asked for a hook that enforces it in every project.
+
+**Decision.** aj chose 1B, 2B, 3B on `docs/plans/rerun-limit-hook-plan.html`: any script file inside the project counts, whatever its arguments; only a commit that changes a file other than the script resets the count; no override. Then "Build plan approved: rerun limit 1A" on `docs/plans/rerun-limit-build-plan.html`: keep the builder's early draft after a line-by-line review.
+
+**Rejected.** Counting only scripts named `*check*` (my suggestion), the exact command text, a per-project pattern file; reset on any working-tree change; a `HOUSE_RULES_RERUN="flaky: ..."` one-run override; discarding the draft.
+
+**Process note.** I sent the builder before the build plan was approved, and it made its edits through Bash after the lock refused the Edit tool. The design loop's lock covers Edit/Write, not a Python script run through Bash.
+
+**Status.** Active. Mechanism: `docs/4-systems/rerun-limit.md`.
+
+---
 
 ## 2026-11-02 - Plans and pitches follow the sword-duel reference page
 

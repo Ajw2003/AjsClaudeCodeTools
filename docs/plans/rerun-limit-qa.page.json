@@ -1,0 +1,36 @@
+{
+  "title": "Rerun Limit QA",
+  "eyebrow": "QA · #453: stop builders rerunning the same check",
+  "short": {
+    "lead": "Both halves of #453 are built on branch ccr-e35d967e-dmwsj0 as house-rules 2.75.0. Every builder now carries a limit of two runs per in-game or harness check (2.74.3). The guard hook now refuses any agent's third run of the same project script when no commit since its last run changed a file other than that script (2.75.0). A real Claude Code session with a builder subagent saw both outcomes: the third run was refused, and the run after a code commit went through. That session also showed a bug, which is fixed: a run the guard refused for another reason used to count toward the limit anyway. Nothing reaches PlunderSpell until this is merged into main and the plugin updates there.",
+    "hint": "Tap a row to see what was checked and how.",
+    "key": [["Checked by me", ""], ["Your test", "you"]],
+    "items": [
+      ["lock", "Third run", "A builder's third run is refused", "", "Real session, throwaway repo, plugin loaded from this branch with --plugin-dir. A house-rules:builder ran bash tools/x.sh twice; the third call was refused with: \"`tools/x.sh` has run twice since the last commit that changed code. Stop: read the code for the cause and report what failed, without editing the check.\"", "Nothing from you."],
+      ["loop", "Reset", "A code commit allows two more runs", "", "In the same session the builder committed a change to src.txt, and its next run of tools/x.sh printed \"check ran with d\". verify.py cases 193 and 194 check that a commit changing only the script does not reset the count.", "Nothing from you."],
+      ["check", "Not counted", "git status, compile commands, and runs the guard refused", "", "verify.py cases 192 and 197 check this. Case 197 was added after the real session lost a builder's first run to an unrelated refusal; with the fix removed, case 197 fails.", "Nothing from you."],
+      ["file", "Suites", "No failures", "", "verify.py: all 973 checks pass. tools/verify_tools.py: all 47 pass. docref.py check: OK.", "Nothing from you."],
+      ["hand", "Your test", "Use it in PlunderSpell", "you", "After the merge, update the plugin on your PC and start a new PlunderSpell session. Ask a builder for a co-op check: its third run of the same script without a commit should be refused with the stop-and-report message.", "Run it, then pass or fail QA."]
+    ]
+  },
+  "changes": [
+    ["chg", "Builder rule (agents/builder.md, rules/detail/delegate-execution.md)", "Builders may run a check twice, must never edit a check to make it pass, and must read the code between runs.", ["Builders had a limit on test suites only.", "Builders carry the two-run limit; parent agents don't use a measured number as the only condition for calling a task done, and check a running builder after 10 minutes."], "Shipped in 2.74.3."],
+    ["chg", "Rerun limit (house_rules/safe_git.py, checks/safe_git.py)", "The guard counts runs per session, per agent, per project script.", ["Any agent could run the same script without limit.", "The third run is refused; a commit that changes a file other than the script resets it; HOUSE_RULES_RERUNS=off turns it off."], "Every project script counts, helpers such as eval.sh and verify.py included, as you chose with option 1B."]
+  ],
+  "qa": {
+    "feature": "rerun limit",
+    "base": "origin/main",
+    "unverified": [
+      "Not yet run on your PC or in PlunderSpell; the real sessions ran in this cloud sandbox",
+      "With option 1B (every project script counts), helper scripts such as eval.sh count too; how often that interrupts ordinary work is unmeasured"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "The rerun limit is built as house-rules 2.75.0 and waits for your QA.",
+    "changing": "The guard hook, the builder rule, their verify cases and the docs.",
+    "blocking": "Your QA of #453, the rerun limit.",
+    "next": "On a pass I open a pull request into main. On a fail I fix it on this branch.",
+    "todo": ["Run the test in the \"Use it in PlunderSpell\" row, or ask me to open the pull request first so you can.", "Reply \"QA passed: rerun limit\", or say what failed."]
+  }
+}
