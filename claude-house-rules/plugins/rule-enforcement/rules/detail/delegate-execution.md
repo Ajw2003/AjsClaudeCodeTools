@@ -12,7 +12,7 @@ read-only lookups; `@house-rules:builder` (sonnet) for one issue's chunk of work
 fewer; `@house-rules:reviewer` (opus) for a second opinion on a finished diff, only when asked or
 after a builder failed twice. The tier files set only model, tools and role; the job goes in the
 spawn prompt. One at a time, never more than two running (the `agentcap` hook denies a third,
-ignoring records older than 45 minutes; `HOUSE_RULES_AGENTS=off` disables it). Subagents do not
+ignoring records older than 45 minutes). Subagents do not
 start subagents: the tiers omit the `Agent` tool and `agentcap` denies a spawn made from inside one. I do not re-plan inside the delegation;
 if the plan turns out to be wrong, that comes back to me, it is not quietly redesigned down there.
 

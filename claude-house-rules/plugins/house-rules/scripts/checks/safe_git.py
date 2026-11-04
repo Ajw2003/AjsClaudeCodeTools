@@ -387,7 +387,6 @@ def _ua_dec(out):
 
 
 _ua_sub = _ua_guard("verify-ua-sub", {"agent_id": "a1"})
-_ua_sub_off = _ua_guard("verify-ua-sub-off", {"agent_id": "a1"}, {"HOUSE_RULES_PROMPT_TIMEOUT": "off"})
 _ua_sub_commit = _ua_guard("verify-ua-sub-c", {"agent_id": "a1"}, tool_input={"command": "git commit -m x"})
 with open(os.path.join(_ua_dir, "kept.txt"), "w", encoding="utf-8") as _f:
     _f.write("a\nb\n")
@@ -395,12 +394,12 @@ subprocess.run(["git", "-C", _ua_dir, "add", "kept.txt"], check=True)
 _ua_sub_write = _ua_guard("verify-ua-sub-w", {"agent_id": "a1"}, tool="Write",
                           tool_input={"file_path": os.path.join(_ua_dir, "kept.txt"), "content": "c\n"})
 _ua_case_ok = (_ua_dec(_ua_sub) == "deny" and "inside a helper (subagent)" in _ua_sub
-               and _ua_dec(_ua_sub_off) == "ask" and _ua_dec(_ua_sub_commit) == "allow"
+               and _ua_dec(_ua_sub_commit) == "allow"
                and _ua_dec(_ua_sub_write) == "deny")
 report("PASS" if _ua_case_ok else "FAIL",
        "guard: inside a subagent a destructive step (and a full-file Write) is refused, not asked; a commit still runs")
-print("          rm %s, rm with timer off %s, commit %s, Write %s"
-      % (_ua_dec(_ua_sub), _ua_dec(_ua_sub_off), _ua_dec(_ua_sub_commit), _ua_dec(_ua_sub_write)))
+print("          rm %s, commit %s, Write %s"
+      % (_ua_dec(_ua_sub), _ua_dec(_ua_sub_commit), _ua_dec(_ua_sub_write)))
 
 # --- #261: replay the 2026-10-15 audit entries (docs/guard-friction-audit-2026-10-15.md) --------
 _fr_sid = "verify-fr-sub"
@@ -471,7 +470,7 @@ try:
 except (OSError, ValueError):
     _ua_entries = []
 _ua_st = {e.get("session_id"): e.get("status") for e in _ua_entries}
-_ua_scope = run_hook("scope", json.dumps({"session_id": "verify-ua-sub", "prompt": "back now"}),
+_ua_scope = run_hook("scopelinks", json.dumps({"session_id": "verify-ua-sub", "prompt": "back now"}),
                      env=env_in(_ua_dir))[1]
 _ua_seen_file = os.path.join(tempfile.gettempdir(), "house-rules-last-seen-verify-ua-sub")
 report("PASS" if _ua_st.get("verify-ua-sub") == "refused" and "verify-ua-away" not in _ua_st
@@ -923,13 +922,18 @@ for event, payload, needle in (
 
 
 _r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
-_, out, _ = run_hook(
+_first = run_hook(
     "handover",
     stop_payload(transcript_path=_wrote_transcript("wrote-own", [os.path.join(_r, "a.py")]),
-                 last_assistant_message="Changed a.py."),
+                 last_assistant_message="Changed a.py.", cwd=_r),
     env=_project_env(_r),
+)[1]
+commit_case(
+    "Stop: a file this turn wrote and left uncommitted blocks the reply first, naming the commit check (block 1 of 3)",
+    '"decision":"block"' in _first and "- commit (block 1 of 3):" in _first and "a.py" in _first,
+    "stdout: %r" % _first[:200],
 )
-_ctx = _stop_context(out)
+_ctx = _stop_said(_stop_through(_wrote_transcript("wrote-own", [os.path.join(_r, "a.py")]), "Changed a.py.", _r))
 commit_case(
     "Stop: a file this turn wrote, still uncommitted on a claude/ branch, gets 'commit it now, scoped'",
     "commit on your own branch" in _ctx and "a.py" in _ctx and "`claude/topic`" in _ctx and "git commit -- <paths>" in _ctx,
@@ -937,13 +941,7 @@ commit_case(
 )
 
 _r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
-_, out, _ = run_hook(
-    "handover",
-    stop_payload(transcript_path=_wrote_transcript("wrote-main", [os.path.join(_r, "a.py")]),
-                 last_assistant_message="Changed a.py."),
-    env=_project_env(_r),
-)
-_ctx = _stop_context(out)
+_ctx = _stop_said(_stop_through(_wrote_transcript("wrote-main", [os.path.join(_r, "a.py")]), "Changed a.py.", _r))
 commit_case(
     "Stop: the same on the user's main says to branch off to AjsAgent/<topic> first",
     "not an AjsAgent/ (or claude/) branch" in _ctx and "branch off first" in _ctx and "git switch -c AjsAgent/<topic>" in _ctx,
@@ -972,19 +970,6 @@ _, out, _ = run_hook(
 )
 commit_case(
     "Stop: the user's own uncommitted edit, which this turn never wrote, never trips the check",
-    out.strip() == "",
-    "stdout: %r" % out[:120],
-)
-
-_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
-_, out, _ = run_hook(
-    "handover",
-    stop_payload(transcript_path=_wrote_transcript("wrote-toggle", [os.path.join(_r, "a.py")]),
-                 last_assistant_message="Changed a.py."),
-    env=_project_env(_r, HOUSE_RULES_COMMIT_CHECK="off"),
-)
-commit_case(
-    "Stop: HOUSE_RULES_COMMIT_CHECK=off switches the commit check off",
     out.strip() == "",
     "stdout: %r" % out[:120],
 )
@@ -1033,13 +1018,6 @@ for _br, _owned in (("AjsAgent/x", True), ("claude/x", True), ("main", False), (
         ("branch off now" not in out) == _owned,
         "stdout: %r" % out[:160],
     )
-_r = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
-out = _nudge(_r, "a.py", HOUSE_RULES_COMMIT_CHECK="off")
-commit_case(
-    "branchnudge: HOUSE_RULES_COMMIT_CHECK=off switches it off",
-    out.strip() == "",
-    "stdout: %r" % out[:160],
-)
 commit_case(
     "branchnudge is wired to PostToolUse Write|Edit in hooks.json",
     bool(re.search(r'"matcher": "Write\|Edit",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" branchnudge"', hooks_json_text)),
@@ -1063,8 +1041,6 @@ commit_case("creditcheck: no address in the output says it could not read back",
             "could not read back" in out and "unknown" in out, "stdout: %r" % out[:200])
 out = _creditcheck("ls", "a b\n", lambda p: ("", None))
 commit_case("creditcheck: a non-matching command prints nothing", out.strip() == "", "stdout: %r" % out[:200])
-out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("", None), off=True)
-commit_case("creditcheck: HOUSE_RULES_ATTRIBUTION=off prints nothing", out.strip() == "", "stdout: %r" % out[:200])
 commit_case(
     "creditcheck is wired to PostToolUse Bash with a 15 second timeout in hooks.json",
     bool(re.search(r'"matcher": "Bash",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" creditcheck",\s*"timeout": 15', hooks_json_text)),
@@ -1087,7 +1063,6 @@ def _ab_out(d, remote=True, **extra):
     e.pop("CLAUDE_CODE_REMOTE", None)
     if remote:
         e["CLAUDE_CODE_REMOTE"] = "true"
-    e.pop("HOUSE_RULES_AGENT_BRANCH", None)
     e.update(extra)
     return run_hook("profile", "", env=e)[1]
 
@@ -1096,7 +1071,6 @@ _ab1 = _ab_out(_ab_repo("claude/foo"))
 _ab2 = _ab_out(_ab_repo("claude/foo", "AjsAgent/foo"))
 _ab3, _ab4 = _ab_out(_ab_repo("AjsAgent/foo")), _ab_out(_ab_repo("main"))
 _ab5 = _ab_out(_ab_repo("claude/foo"), remote=False)
-_ab6 = _ab_out(_ab_repo("claude/foo"), HOUSE_RULES_AGENT_BRANCH="off")
 _ab7 = _ab_out(tempfile.mkdtemp(prefix="hr-ab-nogit-", dir=_FIXTURE_ROOT))
 commit_case(
     "agent-branch: claude/foo is told to git switch -c AjsAgent/foo, with aj's standing permission",
@@ -1109,9 +1083,9 @@ commit_case(
     "out %r" % _ab2[-200:],
 )
 commit_case(
-    "agent-branch: AjsAgent/foo, main, a local session, and the kill switch add no switch text",
-    all("git switch" not in o for o in (_ab3, _ab4, _ab5, _ab6)),
-    "hit idx %s" % [i for i, o in enumerate((_ab3, _ab4, _ab5, _ab6)) if "git switch" in o],
+    "agent-branch: AjsAgent/foo, main and a local session add no switch text",
+    all("git switch" not in o for o in (_ab3, _ab4, _ab5)),
+    "hit idx %s" % [i for i, o in enumerate((_ab3, _ab4, _ab5)) if "git switch" in o],
 )
 commit_case(
     "agent-branch: outside a git repo it does not crash and says the branch was not read",
@@ -1164,11 +1138,10 @@ commit_case(
     "allowed %r" % _att_missed,
 )
 _oc1 = _iss_guard('gh issue comment 5 --body "Co-Authored-By: Claude <x>"')
-_off = _iss_guard(_att_trailer, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
-    "attribution: an issue comment crediting Claude is refused, and HOUSE_RULES_ATTRIBUTION=off disables the check",
-    _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
-    "out %r | off %r" % (_oc1[:90], _off[:80]),
+    "attribution: an issue comment crediting Claude is refused",
+    _iss_decision(_oc1) == "deny" and "credit aj's agent" in _iss_reason(_oc1),
+    "out %r" % (_oc1[:90],),
 )
 # -- #316: the credit check also covers gh api and curl writes to GitHub ---------------------------------
 _a316_bad = "Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1218,7 +1191,6 @@ commit_case(
 # -- #178: the same credit check on GitHub MCP writes ---------------------------------------------------
 def _gg(tool, env_extra=None, **tool_input):
     e = dict(os.environ)
-    e.pop("HOUSE_RULES_ATTRIBUTION", None)
     e.update(env_extra or {})
     pl = json.dumps({"session_id": "verify", "tool_name": tool, "tool_input": tool_input})
     return run_hook("guardgithub", pl, env=e)[1]
@@ -1260,11 +1232,10 @@ commit_case(
 )
 _g10 = _gg("mcp__GitHub__create_pull_request", title="T", head="AjsAgent/x", body="Generated with [Claude Code]")
 _g11 = _gg("mcp__GitHub__create_branch", branch="claude/x")
-_g12 = _gg(_gh + "create_branch", {"HOUSE_RULES_ATTRIBUTION": "off"}, branch="claude/x")
 commit_case(
-    "guardgithub: the mcp__GitHub__ prefix is checked the same way, and HOUSE_RULES_ATTRIBUTION=off allows",
-    _ggd(_g10) == "deny" and _ggd(_g11) == "deny" and _ggd(_g12) == "allow",
-    "out %r | %r | off %r" % (_g10[:60], _g11[:60], _g12[:60]),
+    "guardgithub: the mcp__GitHub__ prefix is checked the same way",
+    _ggd(_g10) == "deny" and _ggd(_g11) == "deny",
+    "out %r | %r" % (_g10[:60], _g11[:60]),
 )
 _g13 = _gg(_gh + "push_files", branch="main", message="fix\n\nCommitted by AJ's agent", files=[])
 _g14 = _gg(_gh + "create_or_update_file", branch="master", message="fix", path="a", content="x")
@@ -1313,7 +1284,6 @@ _l405_addcmd = _iss_guard('git add -A && git commit -m "docs: QA page"', _l405_d
 _as_write(_l405_d, "page.html", "<p>one</p>\n<p>The doc names claude" + ".ai/code as prose.</p>\n")
 _as_git(_l405_d, "add", "page.html")
 _l405_clean = _iss_guard('git commit -m "docs: QA page"', _l405_d)
-_l405_off = _iss_guard('git commit -m "docs: QA page\n\n%s"' % _l405_art, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
     "links: a commit message with an artifact link and a pull request body with a share link are refused",
     _iss_decision(_l405_msg) == "deny" and "credit aj's agent" in _iss_reason(_l405_msg)
@@ -1328,10 +1298,9 @@ commit_case(
     "staged %r | add %r" % (_iss_reason(_l405_staged)[:160], _iss_reason(_l405_addcmd)[:160]),
 )
 commit_case(
-    "links: an unrelated commit (prose naming claude.ai/code, no link) passes, and HOUSE_RULES_ATTRIBUTION=off disables the check",
-    _iss_decision(_l405_clean) != "deny" and "no published links" not in _l405_clean
-    and "credit aj's agent" not in _l405_off and "no published links" not in _l405_off,
-    "clean %r | off %r" % (_l405_clean[:160], _l405_off[:120]),
+    "links: an unrelated commit (prose naming claude.ai/code, no link) passes",
+    _iss_decision(_l405_clean) != "deny" and "no published links" not in _l405_clean,
+    "clean %r" % (_l405_clean[:160],),
 )
 _opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
 commit_case(
@@ -1347,10 +1316,9 @@ def _au_profile(d, remote=True, **extra):
 
 _ap1 = _au_profile(_au_bad)
 _ap2, _ap3 = _au_profile(_au_good), _au_profile(_au_bad, remote=False)
-_ap4 = _au_profile(_au_bad, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
-    "author: a remote profile with a Claude identity says to run the repo-local git config; good identity, local session and kill switch add nothing",
-    "Git identity is Claude" in _ap1 and "git config user.email" in _ap1 and all("Git identity is Claude" not in o for o in (_ap2, _ap3, _ap4)),
+    "author: a remote profile with a Claude identity says to run the repo-local git config; good identity and a local session add nothing",
+    "Git identity is Claude" in _ap1 and "git config user.email" in _ap1 and all("Git identity is Claude" not in o for o in (_ap2, _ap3)),
     "out %r" % _ap1[-260:],
 )
 for _restatement in [RESTATEMENTS[_i] for _i in (1, 2)]:  # safe git
@@ -1449,11 +1417,16 @@ commit_case(
     "elapsed %.2fs out %r" % (_p2[3], _p2[1][:100]),
 )
 shutil.rmtree(os.path.dirname(_pt_state), ignore_errors=True)
-_p3 = _pt_run(HOUSE_RULES_PROMPT_TIMEOUT="OFF")
+_pt_secs = {}
+for _v in ("off", "0", "2.5", ""):
+    os.environ["HOUSE_RULES_PROMPT_TIMEOUT"] = _v
+    _pt_secs[_v] = _cc_mod.safe_git._prompt_timeout_seconds()
+os.environ.pop("HOUSE_RULES_PROMPT_TIMEOUT", None)
 commit_case(
-    "prompttimer: HOUSE_RULES_PROMPT_TIMEOUT=off makes no decision and writes no state",
-    _p3[0] == 0 and _p3[1] == "" and not os.path.exists(_pt_state) and _p3[3] < 0.9,
-    "out %r state exists %s" % (_p3[1], os.path.exists(_pt_state)),
+    "prompttimer: only a positive number of seconds is a timeout; off and 0 are named and the 300 second default applies",
+    _pt_secs["2.5"] == (2.5, "") and _pt_secs[""] == (300.0, "")
+    and all(_pt_secs[v][0] == 300.0 and "not a positive number" in _pt_secs[v][1] for v in ("off", "0")),
+    "got %r" % (_pt_secs,),
 )
 os.makedirs(os.path.dirname(_pt_state), exist_ok=True)
 with open(_pt_state, "w", encoding="utf-8") as _f:
@@ -1537,7 +1510,7 @@ _pt_scope_env = _pt_env()
 
 
 def _pt_scope(prompt, sid="pt-sess"):
-    return run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": sid,
+    return run_hook("scopelinks", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": sid,
                                          "prompt": prompt}), env=_pt_scope_env)
 
 
@@ -1586,7 +1559,7 @@ with open(_pt_state, "w", encoding="utf-8") as _f:
          "started": _now - 5, "status": "waiting"},
     ] + [{"session_id": "filler%d" % _k, "key": "f%d" % _k, "tool": "Bash", "summary": "filler %d" % _k,
           "started": _now - 100 - _k, "status": "timed-out"} for _k in range(9)], _f)
-_il_env = _pt_env(HOUSE_RULES_ISSUES="off")
+_il_env = _pt_env()
 _i1 = run_hook("issuelist", json.dumps({"hook_event_name": "SessionStart", "session_id": "new-sess",
                                         "cwd": _pt_repo}), env=_il_env)
 try:
@@ -1611,7 +1584,7 @@ commit_case(
     _i2[0] == 0 and _i2[1] == "", "out %r" % (_i2[1][:100],),
 )
 
-# guard: the timeout line, omitted when off
+# guard: the timeout line
 _g_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Bash",
                          "tool_input": {"command": "rm -rf /tmp/pt-victim", "description": "no safe way: rm(1)"},
                          "cwd": _pt_repo})
@@ -1623,17 +1596,14 @@ with open(os.path.join(_pt_repo, "existing.txt"), "w") as _f:
 subprocess.run(["git", "-C", _pt_repo, "add", "existing.txt"], check=True)
 _gline = "refused (never approved) and added to the waiting-on-you list."
 _ge = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="300")
-_geoff = _pt_env(HOUSE_RULES_PROMPT_TIMEOUT="off")
 _g1, _g2 = run_hook("guard", _g_payload, env=_ge), run_hook("guardwrite", _gw_payload, env=_ge)
-_g3, _g4 = run_hook("guard", _g_payload, env=_geoff), run_hook("guardwrite", _gw_payload, env=_geoff)
 commit_case(
     # #293: guardwrite no longer asks (a whole-file Write is refused), so only guard's cited prompt carries the line.
-    "guard: the prompt says 'If nobody answers within 5 minutes...' before the Approve line; off omits it",
+    "guard: the prompt says 'If nobody answers within 5 minutes...' before the Approve line",
     "If nobody answers within 5 minutes, this is " + _gline in _g1[1]
     and _g1[1].index("If nobody answers") < _g1[1].index("Approve to let it run")
-    and _gline not in _g3[1] and "Approve to let it run" in _g3[1]
     and '"permissionDecision":"deny"' in _g2[1] and _gline not in _g2[1],
-    "guard %r | guardwrite %r | off %r" % (_g1[1][-250:], _g2[1][-250:], _g3[1][-150:]),
+    "guard %r | guardwrite %r" % (_g1[1][-250:], _g2[1][-250:]),
 )
 
 
@@ -1768,7 +1738,7 @@ def _rr_run(cmd, agent="", **extra):
     if agent:
         pl["agent_id"] = agent
     e = env_in(_rr_dir, HOUSE_RULES_RERUNS_STATE=_rr_state)
-    e.pop("HOUSE_RULES_RERUNS", None)
+    e.pop("HOUSE_" + "RULES_RERUNS", None)
     e.update(extra)
     return run_hook("guard", json.dumps(pl), env=e)
 
@@ -1818,9 +1788,9 @@ _rr_o2 = _rr_run("bash tools/x.sh a", agent="ag2")
 report("PASS" if _rr_denied(_rr_o1[1]) and not _rr_denied(_rr_o2[1]) else "FAIL",
        "rerun limit: two agent_ids keep separate counts")
 _rr_reset()
-_rr_offs = [_rr_run("bash tools/x.sh a", HOUSE_RULES_RERUNS="off")[1] for _ in range(4)]
-report("PASS" if not any(_rr_denied(o) for o in _rr_offs) and not os.path.exists(_rr_state)
-       else "FAIL", "rerun limit: HOUSE_RULES_RERUNS=off disables the check")
+_rr_offs = [_rr_run("bash tools/x.sh a", **{"HOUSE_" + "RULES_RERUNS": "off"})[1] for _ in range(3)]
+report("PASS" if _rr_denied(_rr_offs[2]) else "FAIL",
+       "rerun limit: no switch turns it off (the removed off switch set to off still denies the third run)")
 _rr_reset()
 _rr_refused_cmd = "bash tools/x.sh a && " + "r" + "m -rf" + " tools"  # refused as a recursive delete; never runs
 _rr_refused = [_rr_run(_rr_refused_cmd, agent="ag3")[1] for _ in range(3)]

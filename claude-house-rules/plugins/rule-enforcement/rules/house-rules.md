@@ -105,7 +105,7 @@ first line, above the fence, plus why; (6) **one numbered step per action** past
 #### The card
 
 The step-card shape lives only in the forced `handover-cards` output style
-(`${CLAUDE_PLUGIN_ROOT}/output-styles/handover-cards.md`). Full template,
+(`output-styles/handover-cards.md` in house-rules, whose path house-rules gives at session start). Full template,
 publish-a-page rule: `${CLAUDE_PLUGIN_ROOT}/rules/detail/handover-command.md`.
 
 ## Code follows the standards loaded for this project
@@ -136,7 +136,7 @@ Before code: one parent issue, one child per step (`Part of #N`), plain titles, 
 `AjsAgent created this` plus a category; a hook blocks source edits until they exist. PR bodies say
 `Refs #N`, never Closes/Fixes/Resolves. I close an issue only after the user's QA pass and a merge, or
 on a list they approved; a guard checks the evidence.
-`HOUSE_RULES_ISSUES=off` disables it. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/issue-workflow.md`.
+See `${CLAUDE_PLUGIN_ROOT}/rules/detail/issue-workflow.md`.
 
 ## Commit constantly on my own branches, never on theirs
 <!-- subagent -->

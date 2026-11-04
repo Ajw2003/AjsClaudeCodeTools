@@ -95,7 +95,7 @@ this needed its own tool" above.
 `docstiers` and `versioncheck` are silent in the common case and large in the rare one, so each
 is priced in every state it can be in: `docstiers` against this repo and against an empty
 project, `versioncheck` up to date, with GitHub unreachable, and out of date. `versioncheck` is
-fed fixed versions through its own `HOUSE_RULES_VC_*` overrides with `HOUSE_RULES_AUTO_UPDATE=off`
+fed fixed versions through its own `HOUSE_RULES_VC_*` overrides, one of which swaps the `claude` it would run for `false`
 — run for real it reaches GitHub and, when out of date, runs `claude plugin update`, and a cost
 measurement must never update the plugin it is measuring.
 

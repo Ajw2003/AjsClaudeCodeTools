@@ -1,0 +1,123 @@
+{
+  "title": "Restructure Issue Sweep",
+  "eyebrow": "Sweep · close the earlier restructure (#306) and its 9 open steps as replaced by the plugin split (#437)",
+  "short": {
+    "lead": "A sweep page lists issues to close, each with its evidence, for your approval. In the plugin split build plan, you chose 3A: close the earlier restructure (#306), \"Restructure into a shared core with project boundaries and six optional sub-plugins\", as replaced by #437, \"Split house-rules into nine plugins and a shared library\". The close guard, the check that refuses a close without proof, refused my first attempt, because closing an issue as not planned needs a sweep that you approve on this page. This page closes 10 issues: #306 and its 9 open steps (#341, #343 through #349, and #381), all listed with their titles below. Two open sub-issues of #306 are not part of the split and stay open: the Unity prefab and scene map (#334) and keeping work saved through a usage limit (#406).",
+    "hint": "Each row shows the issue, the suggested action and its evidence.",
+    "key": [
+      [
+        "Close as not planned, replaced by #437",
+        ""
+      ],
+      [
+        "Keep open",
+        "done"
+      ]
+    ],
+    "items": [
+      [
+        "stop",
+        "Sweep",
+        "10 issues to close as replaced by #437, \"Split house-rules into nine plugins and a shared library\"",
+        "",
+        [
+          "Each row quotes the decisions-log entry with your choice 3A."
+        ],
+        "Your approval."
+      ]
+    ]
+  },
+  "changes": [],
+  "sweep": [
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 306,
+      "title": "Restructure into a shared core with project boundaries and six optional sub-plugins",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 341,
+      "title": "Restructure step 3: settings and identity",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 343,
+      "title": "Restructure step 5: design loop and pages follow the grilling answers",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 344,
+      "title": "Restructure step 6: writing, evidence and rewrite rules follow the grilling answers",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 345,
+      "title": "Restructure step 7: helper agents follow the grilling answers",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 346,
+      "title": "Restructure step 8: the docs context layer",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 347,
+      "title": "Restructure step 9: session triage, designed first",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 348,
+      "title": "Restructure step 10: split into installable plugins and release",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 349,
+      "title": "Restructure step 4: safe git follows the grilling answers",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 381,
+      "title": "Restructure steps 3 to 7: settings, safe git, design loop, writing and helper agents",
+      "action": "not_planned",
+      "replaced_by": 437,
+      "evidence": "Decisions.md, in the entry \"2026-11-02 - Build plan approved: plugin split\", records aj's reply \"Build plan approved: plugin split 1A 2A 3A\". In that plan, choice 3A closes the earlier restructure (#306) and its open steps as replaced by \"Split house-rules into nine plugins and a shared library\" (#437). The 2.74.0 restructure build was reverted in pull request #428."
+    }
+  ],
+  "wrapup": {
+    "summary": "A sweep page closing the earlier restructure (#306) and its 9 open steps as replaced by the plugin split (#437).",
+    "changing": "Nothing closes until you approve.",
+    "blocking": "Your sweep approval.",
+    "next": "Once you approve, I close the 10 issues, each with a comment naming #437.",
+    "todo": [
+      "Type \"Sweep approved: issues\" in the chat, or add \"keep #N\" for any issue to leave open.",
+      "Send the message."
+    ]
+  }
+}

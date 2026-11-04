@@ -1,0 +1,125 @@
+{
+  "title": "Plugin Split Progress",
+  "eyebrow": "Progress · the plugin split (#437): steps 1 to 3 built, draft pull request #452 open",
+  "replyPrefix": "Plugin split progress",
+  "reply": "",
+  "approval": "Progress noted",
+  "short": {
+    "lead": "Steps 1, 2 and 3 of the plugin split are built, and draft pull request #452 is open. Three of its six checks have run. Every test suite passes here and in CI; the replay against main found one bug; and when the same real session ran on both versions, neither one refused anything. A builder helper is fixing the bug now.",
+    "hint": "Tap a step for its evidence.",
+    "key": [
+      [
+        "Built and checked",
+        "done"
+      ],
+      [
+        "In progress",
+        ""
+      ]
+    ],
+    "items": [
+      [
+        "flask",
+        "Step 1",
+        "Plugins can depend on each other (#438)",
+        "done",
+        "Installing a test plugin printed \"Successfully installed plugin: spike-a@spike-mkt (scope: user) (+ 1 dependency: spike-lib)\". Two plugins that both block a reply run at the same time and both messages reach me. Every plugin sees the same stop_hook_active signal on the retry, so the lock has to count each check's blocks itself. Details are in the \"Step 1 findings (#438)\" section of docs/4-systems/plugin-split.md.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 2",
+        "The shared library, house-lib (#439)",
+        "done",
+        "verify.py: 965 checks pass and exits 0. verify_tools.py: 50 checks pass. The drift check (every copy of the library matches its source) and the version-bump check (the plugin version was raised) pass. claude plugin install house-lib@aj-house-rules installed and enabled it from this repo in a throwaway config folder. House-rules is now 2.74.2.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Step 3",
+        "Rule enforcement plugin (#440): part A built",
+        "done",
+        "Rule loading (the session-start rules, the rules sent to helpers, the per-message reminder) now lives in the new rule-enforcement plugin, and house-rules is 2.75.0. All four suites pass: house-rules 941 checks, rule-enforcement 35, tools 50, and the library drift check. In a real session with both plugins installed, each rule section loaded exactly once. I fixed two pointers that led from one plugin into the other (commit 7521340). The notes that house-rules used to add inside the rules text now arrive as their own messages, worded the same.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Step 3B",
+        "The repeat-failure lock (#440): part B built",
+        "done",
+        "A check that keeps failing blocks the reply three times, then source edits and commits are refused until it passes. The action that fixes the failing check is always allowed: when the commit check is locked, commits still go through. Checked: house-rules 952 checks pass, rule-enforcement 60 pass, the library copies match. In the recorded live session, a missing commit blocked three times, then a source edit was refused, the commit went through, and the lock cleared.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Fixed",
+        "Three ways around the lock, closed",
+        "done",
+        "The shell command sed -i (an in-place edit) on the locked file is now refused, and the file stays unchanged. A reply that wrote nothing no longer clears the lock. A command run from another folder now meets the lock too. Committing the locked file still clears the lock, as intended. Checked: house-rules 959 checks pass, rule-enforcement 94 pass.",
+        "Nothing from you."
+      ],
+      [
+        "next",
+        "Step 3C",
+        "Part C of step 3: the off switches, removed",
+        "done",
+        "I removed 19 off switches, and the off setting of the permission timer. The checks they controlled now always run. The helper-record switch is kept, as you asked. Checked: house-rules 936 checks pass, rule-enforcement 95, tools 55. In a live session, setting HOUSE_RULES_LOOP=off changed nothing. While I worked, main gained a reference page for plans and pitches. I merged main into this branch, and every suite still passes.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Fixed",
+        "Two rule paths that pointed at the wrong plugin",
+        "done",
+        "House-rules now names the real paths of the page builder (make_page.py) and the handover output style at the start of every session. A live session printed the page builder's path, and running that file worked. A new test fails if the rules ever name a file their plugin does not hold.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "CI",
+        "The first CI run on #452 failed, and is fixed",
+        "done",
+        "One test expected the end-of-reply hook to stay silent. In CI it printed a notice. The test read the design-loop file in this repo, and the label read through gh (the GitHub command-line tool) failed because GitHub Actions has no gh login. I reproduced it here with a fake gh that fails the same way. The test now runs in an empty folder, and all 937 checks pass with the fake failing gh and with the real gh (commit 8e78ff7). CI is running again on that fix. The rerun passed: the verify job succeeded on the fix commit and on the current head.",
+        "Nothing from you."
+      ],
+      [
+        "stop",
+        "Bug",
+        "The replay found one bug, which is also a way around the lock",
+        "",
+        "The shell-write detector (shellwrites.py in house-lib, which on main sits inside design_loop.py) split shell commands at line breaks and at && even inside quotes. A commit message containing a line break was cut in half, a warning was printed, and both halves were skipped. While a lock is active, a sed -i (an in-place edit) in a skipped half would go unchecked. The fix makes the split respect quotes. A command it still cannot split is treated as unreadable, and a lock refuses unreadable commands. Tests cover each case. After the fix, the replay must show zero unexplained differences. The full replay report is in docs/plans/2026-11-02-plugin-split-replay.md. Update: the fix is in (commit f92fd63), and I checked it: house-rules passes 941 checks and rule-enforcement 100, including the new cases. The replay then showed that main's 2.74.2 has the same bug: it prints the same warning at design_loop.py line 260. The first replay report was wrong to say it did not. What is left is removing that warning. That also closes a way around the code lock, which main has too, so it falls under your rule that nothing can be bypassed. The replay will count it as a fixed bug, matching only that warning, and the rerun is what proves it.",
+        "Nothing from you."
+      ],
+      [
+        "hand",
+        "Gate",
+        "Draft pull request #452 and its six checks",
+        "",
+        "The test suites (the first check) pass here and in CI. In the replay (the second), 64 recorded hook inputs (the data Claude Code hands each hook) went through both versions; 49 gave identical output, and every difference but one traces to a change you approved. The one exception is the bug in the item \"The replay found one bug, which is also a way around the lock\". In the third check, the same real session ran on main's version and on the new plugins, and neither one refused anything. Still to run: a clean install from GitHub, a tested one-step rollback, and your QA pass.",
+        "Nothing from you until the QA page."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Two checks that cannot run yet",
+      "The CI run and an install from GitHub.",
+      [
+        "Not run.",
+        "CI runs on a push to main or on a pull request, and no pull request has been asked for. A GitHub install reads the main branch, which does not have this work yet."
+      ],
+      "Both run when you ask for a pull request into main."
+    ]
+  ],
+  "choices": [],
+  "wrapup": {
+    "summary": "Steps 1 to 3 are built; three of the six checks on #452 have run, and the one bug they found is being fixed.",
+    "changing": "house-rules 2.75.0 and the new house-lib and rule-enforcement plugins, on the branch AjsAgent/house-rules-plugin-split-a9uusz.",
+    "blocking": "Nothing yet. Your QA comes last, after the other checks.",
+    "next": "I check the fix myself and rerun the replay, then do the GitHub install and rollback checks.",
+    "todo": [
+      "Nothing to do yet. I am watching #452, and your QA page comes after the last checks."
+    ]
+  }
+}

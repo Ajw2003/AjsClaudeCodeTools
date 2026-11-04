@@ -1,0 +1,385 @@
+{
+  "title": "House Rules Split",
+  "eyebrow": "Proposal · splitting house-rules into your eight plugins · nothing built yet",
+  "replyPrefix": "Plugin split answers",
+  "reply": "",
+  "approval": "Design approved: plugin split",
+  "short": {
+    "lead": "I read every hook, rule file, helper agent, command and script in the house-rules plugin (version 2.74.1) and placed each one in one of your eight plugins. Most of it fits. Seven pieces have no clear home. They are listed under the next tab, with a choice for each. Two things already exist that the split can reuse. The code is already in seven files, one per part (scripts/house_rules/), and its tests are split the same way (scripts/checks/). The 2026-10-16 audit also planned a core plus six sub-plugins, and that work is still on the branch AjsAgent/issue-281-fix. The last restructure (2.74.0, pull request #427) was reverted on 2026-10-28. Its shared settings check refused every tool call, replies included (docs/3-state/ProjectState.md). So this proposal keeps the shared code free of any check that can block. One principle governs the whole split, in your words of 2026-11-02: none of it is optional. Every rule is enforced by code, never left to me, and an enforcement that breaks things is reworked, never switched off or bypassed.",
+    "hint": "Tap a plugin to see what moves into it and what it is missing.",
+    "key": [
+      [
+        "Fits cleanly",
+        ""
+      ],
+      [
+        "Needs your decision",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "lock",
+        "Safe work",
+        "1. Safe work: guards against lost work, including git",
+        "",
+        "Gets the destructive-command guard, the refusal to commit or push on main, the full-file rewrite guard, the credit check on commits and GitHub writes, the branch nudge, and the edit-in-place rule. Today that is scripts/house_rules/safe_git.py (1,745 lines). The automatic saving of a helper's unfinished work (autosave, commitgate, worktreesweep and subagentcommit) also moves here from delegation.py, because its job is to stop work being lost.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Design loop",
+        "2. Design loop: approvals, pages and QA",
+        "you",
+        "Gets the approval lock on source edits, the stage labels, the page builder (make_page.py and its template), the page check, the QA page, the issue list shown at session start, and the labels command. Today that is design_loop.py (2,281 lines). The issue workflow (a plan of more than three steps becomes issues, and the guard on closing them) lives in this file too, and choice 7 asks whether it stays.",
+        "Answer choice 7."
+      ],
+      [
+        "stop",
+        "Rule enforcement",
+        "3. Rule enforcement: no rule is optional",
+        "you",
+        "Gets the session-start injection of the rules (inject and showrule), the rules sent to every helper agent (subagentrules), the reminder added to every message (scope), and the mechanism that blocks a reply at its end. One finding works against this plugin's purpose: I counted 38 environment switches in the code whose names start with HOUSE_RULES_, and most of them turn a rule off.",
+        "Answer choice 6."
+      ],
+      [
+        "eye",
+        "No hiding",
+        "4. No hiding: the user can see and follow every piece of work",
+        "",
+        "Gets the rules that artifacts live in the project folder, that nothing fails silently, and that I name what prompted an action. It also gets the helper announcements and audits, the helper transcript ledger, the session ledger tool, the stall check and the remote-control link. Missing: nothing today checks that research cites sources with quotes, so that check would be new.",
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Living docs",
+        "5. Living docs: the six tiers, the archivist and the comment harvest",
+        "",
+        "Gets the docs-tier check at session start, the commit-time reminder that a source change has no docs update, the long-comment harvest, the archivist helper, the doc-ref pointer command and the project-docs skill. Today that is docs.py (717 lines). The plain-English doc copies (plain_docs_check.py and the plain-docs skill) go wherever choice 1 puts clear writing.",
+        "Nothing from you."
+      ],
+      [
+        "hammer",
+        "Code standards",
+        "6. Code standards: YAGNI, KISS, DRY and readable code",
+        "",
+        "Gets the standards loaded at session start, the files in rules/standards/, and the rules on code standards and building for a person working alone. Missing: coding-philosophy.md says \"delete before you add\" and \"clarity over cleverness\", but it never names YAGNI, KISS or DRY, and no hook checks code against it. The plugin only loads the text.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Check your work",
+        "7. Check your work: proof before saying it is done",
+        "",
+        "Gets the rules that a passing test suite, a hand-written stand-in for the compiler and an \"already up to date\" message are not proof. It also gets the visual check, the reminder to run a file I just wrote, the check against the original after a port, and the reviewer helper. Missing: there is no screenshot or video tool. The visual check only looks for a tool name or command containing words like \"screenshot\" or \"playwright\" (writing.py:38), so recording tools would be new.",
+        "Nothing from you."
+      ],
+      [
+        "search",
+        "No trust memory",
+        "8. No trust memory: evidence before any claim",
+        "",
+        "Gets the rules to read the docs and then check them against the code, and that every claim needs evidence. It also gets the end-of-reply check that flags a claim made with no tool use behind it, and the warning about stale memory files. Missing: nothing proves the docs are up to date. The doc-ref check and the docs-tier check are the nearest, and a docs-freshness check would be new.",
+        "Nothing from you."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "How each rule is enforced today",
+      "I sorted the rules by what the code actually does when one is broken. Only the first group meets your principle.",
+      [
+        "Refused every time (eight checks): the approval lock on source edits, the destructive-command guard, commits and pushes on main, and full-file rewrites. Also source edits before a plan's issues exist, a third running helper, a fourth uncommitted file, and commits credited to Claude.",
+        "Fall short: four checks block one reply and then let the next one through (evidence, editor pass, commit, plain summary). Three checks only report (the page check, the re-creation check, and shell writes while code is locked, all marked with the issue \"report only until the restructure\" (#309) in design_loop.py and core.py). Four only remind (docs tiers, the comment harvest, artifact location, running a file I wrote). And a search of the hook code found no check at all for eight rules. They are: open source first, read the docs first, build for a person alone, what the user does by hand, deliver a whole workflow, a stand-in compiler is not proof, say what prompted me, and no local paths in issues."
+      ],
+      "One example of the problem you describe: the guard on waiting commands piped through tail or head was removed by the guard-friction issue (#292) because it got in the way (safe_git.py:68-70), instead of being reworked. Each plugin's build step turns its rules into checks that refuse until the rule is met."
+    ],
+    [
+      "chg",
+      "The 38 off switches",
+      "Settled by your message: no rule can be switched off.",
+      [
+        "38 environment switches whose names start with HOUSE_RULES_. I counted 21 that switch a check or rule off, such as HOUSE_RULES_LOOP and HOUSE_RULES_ISSUES. The other 17 set a path, a URL or a number.",
+        "Every switch that turns a rule off is removed. Switches that only point a test at a fake file or tune a value (for example the version-check URLs and the environment file path) stay, because they cannot skip a rule."
+      ],
+      "Turning a plugin's rules off then means uninstalling that plugin, which you can see and I cannot do quietly."
+    ],
+    [
+      "chg",
+      "Clear writing and the voice",
+      "The rules that every reply, page and issue must be written in plain, complete English. None of your eight plugins names them.",
+      [
+        "Inside house-rules: clarity.py (281 lines), writing.py (340 lines) and the editor helper. Also the rules for how I sound (the voice), the plain summary that opens a finished-work reply, and the rule that a reply of 160 words or more needs a page.",
+        "Placed by choice 1."
+      ],
+      "It is how the user follows the work, as in No hiding. Pages are also checked against it, which ties it to Design loop."
+    ],
+    [
+      "chg",
+      "Delegation to helper agents",
+      "The rule that a settled plan goes to helpers, the scout, builder and reviewer helpers, and the limit of two running helpers. This is 1,870 lines in delegation.py.",
+      [
+        "One file holding helper rules, audits, work saving and the helper limit.",
+        "Placed by choice 2. Most of the file has a natural home: work saving goes to Safe work, audits to No hiding, and the rules sent to helpers to Rule enforcement. What is left is the delegation rule itself, the three helpers and the helper limit."
+      ],
+      "The offshoot plugin claude-agent-router already sends a prompt to a helper chosen by model, so the delegation rule, the three helpers and the helper limit could join it."
+    ],
+    [
+      "chg",
+      "Handing a command to the user",
+      "The rule against handing over a command I have not run in the user's shell. Also the six-field step card and its template, the handover-cards output style that is forced on, and the rules on what the user does by hand and on delivering a whole workflow.",
+      [
+        "Spread across several rule files and output-styles/handover-cards.md.",
+        "Placed by choice 3."
+      ],
+      "This is checking work (I ran it before handing it over), but it is also about the user being able to follow along."
+    ],
+    [
+      "chg",
+      "Machine profile and open source first",
+      "The session-start hook that detects the machine and its hardware, the files rules/environment.md and rules/handover-target.md, and the rule to try open source first and paid tools last.",
+      [
+        "Profile and hardware probes in core.py; the open-source rule in rules/detail/free-first.md.",
+        "Placed by choice 4."
+      ],
+      "Recording the real machine instead of guessing matches No trust memory. Choosing open source over paid tools is closest to how code is built."
+    ],
+    [
+      "new",
+      "Shared plumbing that every plugin needs",
+      "The code that reads a hook's input and writes its output, run.sh, the 17 places where one part plugs into another, the version check and self-updater (525 lines, core.py:986-1510), the doctor command, and the page builder.",
+      [
+        "Today everything sits in one plugin, so a single end-of-reply hook and a single per-message reminder run the checks for every part.",
+        "Placed by choice 5. After the split, each plugin would have its own end-of-reply hook, so up to eight plugins could each block the same reply. That is why choice 5 matters."
+      ],
+      "The earlier plan relied on the `dependencies` field in plugin.json to make Claude Code install the shared part automatically. I have not checked in this session that Claude Code honours that field. Checking it is the first step of the build plan."
+    ],
+    [
+      "chg",
+      "Issue workflow and the permission timer",
+      "Two pieces whose current home does not match their job.",
+      [
+        "The issue workflow sits in design_loop.py. The timer that refuses a permission dialog left unanswered sits in safe_git.py.",
+        "Placed by choices 7 and 8."
+      ],
+      "Issue labels drive the design stages, so the issue workflow is tied to the loop. The timer exists so a session does not stall waiting for the user."
+    ],
+    [
+      "chg",
+      "Small leftovers",
+      "Four items too small for a choice of their own. My placement is given for each.",
+      [
+        "No local paths in issues or pull requests; session_triage.py (an empty one-line file for a planned secret scrub); the claude-prompt-workshop offshoot; the remote-control link, which uses one person's own server (hearthbot).",
+        "No local paths and the secret scrub go to Safe work. prompt-workshop stays separate and overlaps the \"Ask when unclear\" writing rule. The remote-control link goes to No hiding."
+      ],
+      "Say so in your reply if any of these should go elsewhere."
+    ]
+  ],
+  "choices": [
+    [
+      "writing",
+      "Choice 1: where does clear writing and the voice go?",
+      [
+        [
+          "A",
+          "Into No hiding",
+          1,
+          "Plain writing is how the user follows the work, which is your own description of No hiding. The plain-English doc copies go to Living docs."
+        ],
+        [
+          "B",
+          "Into a ninth plugin, Clear writing",
+          0,
+          "It keeps the largest checker separate, but adds a plugin to the eight."
+        ],
+        [
+          "C",
+          "Split it up",
+          0,
+          "The page rules go to Design loop and the plain summary goes to No hiding. Nothing else is left."
+        ]
+      ],
+      "Clear writing is checked on replies, pages and issues alike, so it touches more plugins than anything else."
+    ],
+    [
+      "delegation",
+      "Choice 2: where does delegation to helper agents go?",
+      [
+        [
+          "A",
+          "Split it, and merge the rest into claude-agent-router",
+          1,
+          "Work saving goes to Safe work, audits to No hiding, and helper rules to Rule enforcement. The delegation rule, the three helpers and the helper limit join claude-agent-router."
+        ],
+        [
+          "B",
+          "Into a ninth plugin, Delegation",
+          0,
+          "It keeps the 1,870 lines together, but adds a plugin."
+        ],
+        [
+          "C",
+          "Whole into Rule enforcement",
+          0,
+          "Delegation becomes a rule like any other, but the core gets its biggest part back."
+        ]
+      ],
+      "Splitting it sends three quarters of the code to plugins that already fit it."
+    ],
+    [
+      "handover",
+      "Choice 3: where does handing a command to the user go?",
+      [
+        [
+          "A",
+          "Into Check your work",
+          1,
+          "A command is work, and running it in the user's shell before handing it over is checking it."
+        ],
+        [
+          "B",
+          "Into No hiding",
+          0,
+          "The step card exists so the user can follow every action."
+        ],
+        [
+          "C",
+          "Into a ninth plugin, Handover",
+          0,
+          "It keeps the forced output style separate."
+        ]
+      ],
+      "The output style is forced on whenever its plugin is on, so this choice also decides which plugin forces it."
+    ],
+    [
+      "profile",
+      "Choice 4: where do the machine profile and open source first go?",
+      [
+        [
+          "A",
+          "Profile to No trust memory, open source first to Code standards",
+          1,
+          "Recording the real machine is evidence over guessing. Picking a tool or dependency is a coding decision."
+        ],
+        [
+          "B",
+          "Both to No trust memory",
+          0,
+          "Both are rules about checking before choosing."
+        ],
+        [
+          "C",
+          "Profile to No trust memory, open source first dropped",
+          0,
+          "The rule leaves the plugins."
+        ]
+      ],
+      "Other plugins read the profile too: Check your work needs the user's shell for handovers."
+    ],
+    [
+      "core",
+      "Choice 5: where does the shared plumbing go?",
+      [
+        [
+          "A",
+          "A shared library plugin with no hooks of its own",
+          1,
+          "Every plugin depends on it. It cannot block a tool call or a reply, which is how 2.74.0 failed."
+        ],
+        [
+          "B",
+          "Inside Rule enforcement, and the others depend on it",
+          0,
+          "This matches your word \"core\", but a fault in the enforcement hooks then reaches every plugin."
+        ],
+        [
+          "C",
+          "A copy in each plugin",
+          0,
+          "No dependency to install, but eight copies to keep in step."
+        ]
+      ],
+      "This decides how the eight plugins install and update together."
+    ],
+    [
+      "repeat",
+      "Choice 6: what happens when an end-of-reply check keeps failing on the same reply?",
+      [
+        [
+          "A",
+          "Block up to three times, then lock edits until the check passes",
+          1,
+          "A check at the end of a reply cannot block forever without trapping the session in a loop. After the third block the reply goes out, but source edits and commits stay refused until the missing piece (the evidence, the page, the commit) exists. Nothing passes silently."
+        ],
+        [
+          "B",
+          "Block up to three times, then file an issue",
+          0,
+          "The reply goes out and the miss becomes a GitHub issue that the next session opens with. Work is not stopped, so the rule can still be skipped for the rest of the session."
+        ],
+        [
+          "C",
+          "Block every time, with no limit",
+          0,
+          "Strictest, but a check with a bug could trap the session until the plugin is fixed."
+        ]
+      ],
+      "Today four checks block once and then let the next reply through, which is the bypass you described."
+    ],
+    [
+      "issues",
+      "Choice 7: where does the issue workflow go?",
+      [
+        [
+          "A",
+          "It stays in Design loop",
+          1,
+          "The labels in progress and needs review are what move the design stages."
+        ],
+        [
+          "B",
+          "Into No hiding",
+          0,
+          "Issues are how the user tracks work. Design loop would then read the labels from No hiding."
+        ]
+      ],
+      "This covers the rule that a plan of more than three steps becomes issues, the close guard and the labels command."
+    ],
+    [
+      "timer",
+      "Choice 8: where does the permission timer go?",
+      [
+        [
+          "A",
+          "Into Safe work",
+          1,
+          "It already lives in safe_git.py, and it refuses an action instead of letting it run unchecked."
+        ],
+        [
+          "B",
+          "Into No hiding",
+          0,
+          "It lists what is waiting on the user."
+        ],
+        [
+          "C",
+          "Drop it",
+          0,
+          "A permission dialog then waits for as long as the user takes."
+        ]
+      ],
+      "The timer is controlled by the environment switch HOUSE_RULES_PROMPT_TIMEOUT."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Your eight plugins cover most of house-rules. Seven pieces need a home, and many rules are only reminded, reported or blocked once today. Under your principle, every rule gets a check that refuses until the rule is met.",
+    "changing": "Nothing is built yet. This page and its content file in docs/plans/ are the only new files.",
+    "blocking": "Your answers to the eight choices.",
+    "next": "I check whether Claude Code installs a plugin's `dependencies`, then write a build plan page with one issue for each plugin, starting with the shared plumbing and Safe work.",
+    "todo": [
+      "Pick an answer for each choice.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
+  }
+}

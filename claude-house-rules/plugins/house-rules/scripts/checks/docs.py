@@ -21,7 +21,7 @@ print("house-rules hooks - verification (Python) - part: docs")
 print("=" * 43)
 print()
 
-for _event, _margin, _env in _size_cases[4:]:  # docstiers
+for _event, _margin, _env in _size_cases[2:]:  # docstiers
     _code, _ctx, _err = _additional_context(_event, "", env=_env)
     if _ctx is None:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
@@ -167,7 +167,6 @@ def harv_case(expect, title, file_path, content, tool="Write", env=None, expect_
     field = "content" if tool == "Write" else "new_string"
     payload = json.dumps({"tool_name": tool, "tool_input": {"file_path": file_path, field: content}})
     e = dict(os.environ)
-    e.pop("HOUSE_RULES_HARVEST", None)
     e.pop("HOUSE_RULES_HARVEST_MIN_CHARS", None)
     e.pop("HOUSE_RULES_DEBUG", None)
     e["HOUSE_RULES_TRACE"] = "verbose"  # the no-blocks trace is verbose-only; env= may override
@@ -294,20 +293,13 @@ harv_case(
     expect_in=["banana", "using the defaults"],
 )
 
-# --- harvest: toggles --------------------------------------------------------------------------
+# --- harvest: the trace lever -------------------------------------------------------------------
 harv_case(
     "remind",
-    "HOUSE_RULES_HARVEST=quiet keeps the reminder and drops the trace",
+    "HOUSE_RULES_TRACE=off keeps the harvest reminder and drops its trace",
     r"C:\proj\Assets\Orbit.cs",
     ESSAY_CS,
-    env={"HOUSE_RULES_HARVEST": "quiet"},
-)
-harv_case(
-    "silent",
-    "HOUSE_RULES_HARVEST=off disables the reminder and the trace together",
-    r"C:\proj\Assets\Orbit.cs",
-    ESSAY_CS,
-    env={"HOUSE_RULES_HARVEST": "off"},
+    env={"HOUSE_RULES_TRACE": "off"},
 )
 
 # --- harvest: an Edit carries a fragment, so its line numbers are withheld ---------------------

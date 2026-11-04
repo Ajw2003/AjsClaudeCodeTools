@@ -26,11 +26,10 @@
 #   - guard (PreToolUse)      -> fails CLOSED: 3 lines on stderr, exit 2. Blocks the command.
 #   - guardwrite (PreToolUse) -> fails CLOSED, same as guard: 3 lines on stderr, exit 2.
 #                              Blocks the Write rather than letting an overwrite through unchecked.
-#   - inject (SessionStart)   -> fails LOUD, not closed: a systemMessage JSON on stdout, exit 0.
-#   - standards (SessionStart)-> fails LOUD, not closed, same as inject: a systemMessage JSON
+#   - standards, threadlink   -> fails LOUD, not closed (SessionStart): a systemMessage JSON
 #                              on stdout, exit 0. Never blocks - there is nothing to block.
 #   - announce/verdict/       -> fails LOUD, not closed, same as harvest: a systemMessage on
-#     subagentrules/audit        stdout, exit 0.
+#     subagentlinks/audit        stdout, exit 0.
 #   - userpromptaudit         -> nothing on stdout, exit 0 (see "everything else" below).
 #   - everything else         -> nothing on stdout, exit 0. PostToolUse/Stop/UserPromptSubmit
 #                              hooks either cannot block (PostToolUse) or must never block
@@ -117,12 +116,12 @@ if [ -z "$PY" ]; then
       echo "Run /house-rules:doctor, or set HOUSE_RULES_PYTHON to a working interpreter." >&2
       exit 2
       ;;
-    inject)
-      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The rules were NOT loaded into this session. Run /house-rules:doctor."}'
+    threadlink)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The project-thread transcript link was NOT prompted. Run /house-rules:doctor."}'
       exit 0
       ;;
-    showrule)
-      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The show-don'"'"'t-tell rule was NOT loaded into this session. Run /house-rules:doctor."}'
+    subagentlinks)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. This subagent started without the transcript line and design-loop note. Run /house-rules:doctor."}'
       exit 0
       ;;
     standards)
@@ -135,10 +134,6 @@ if [ -z "$PY" ]; then
       ;;
     announce)
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. This subagent started unreported - which agent, model and digest it is running are unknown. Run /house-rules:doctor."}'
-      exit 0
-      ;;
-    subagentrules)
-      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. This subagent did NOT receive the house rules core. Run /house-rules:doctor."}'
       exit 0
       ;;
     verdict)

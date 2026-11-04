@@ -7,6 +7,99 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-04 — The rerun limit's off switch goes with the others
+
+**Context.** Main gained the rerun limit (#456, house-rules 2.75.0) with a new `HOUSE_RULES_RERUNS=off` switch.
+Merging it into the plugin split (#452) crashed every guard call, because the switch read `_TOGGLE_OFF`, which part C
+removed with the other off switches.
+
+**Decision.** Under the standing rule "The plugin split: no rule is optional" (2026-11-02), the switch is removed
+rather than the helper restored; the rerun limit itself is unchanged and always on. `RERUNS` joins the removed-switch
+scan in both plugins. The plugin split's house-rules becomes 2.76.0, since main's rerun limit took 2.75.0. The limit
+also counts commands that only name a script (a `sed -i`, a `git add`) as runs of it; that is #467, to be reworked,
+not switched off. Not yet seen by aj: it is on the QA page for #452.
+
+**Status.** Standing, pending aj's QA of #452.
+
+## 2026-11-02 — Off switches answered: part C of step 3
+
+**Context.** Page `docs/plans/2026-11-02-off-switches.html`, two switches that are off by default.
+
+**Decision.** aj's reply was "Off switches answered 1B 2*".
+1. `HOUSE_RULES_EDITOR` is removed with the long-reply editor trigger: the editor pass stays required for
+   pages only.
+2. aj's own answer: "keep it for now as i need a way to view their work even if it is less secure, we do it
+   properly in the safe work and no hidden work portion but leave it as is for now". So
+   `HOUSE_RULES_SUBAGENT_LEDGER` stays exactly as it is (off by default, on by switch) until Safe work (#441)
+   and No hiding (#446) redo it.
+
+The other 18 rule switches and the off value of `HOUSE_RULES_PROMPT_TIMEOUT` are removed; their checks stay on.
+
+**Status.** Standing.
+
+## 2026-11-02 — Library lookup: one source, copied into each plugin
+
+**Context.** Step 2 of the plugin split (#439). A normal install puts plugins in
+`plugins/cache/<marketplace>/<plugin>/<version>/`; a cloud session syncs them to
+`plugins/synced/<id>/<plugin>/` with no `installed_plugins.json`, and whether a dependency is synced is
+untested. Page `docs/plans/2026-11-02-library-lookup.html`.
+
+**Decision.** aj's reply was "Library lookup answered 1A": the shared library lives once in the repo, a release
+tool copies it into every plugin, and a check fails if any copy differs from the source. This refines
+"Design approved: plugin split" choice 5A; the library plugin still ships for the page builder and templates.
+
+**Status.** Standing.
+
+## 2026-11-02 — Build plan approved: plugin split
+
+**Context.** Build plan page `docs/plans/2026-11-02-plugin-split-build-plan.html`: thirteen steps,
+#438 to #450, under #437.
+
+**Decision.** aj's reply was "Build plan approved: plugin split 1A 2A 3A".
+1. The Design loop stays its own plugin; Accessible AI depends on it.
+2. The plugins replace house-rules one at a time: each release ships one plugin and deletes the same part
+   from house-rules.
+3. The earlier restructure issue (#306) is closed as replaced by #437.
+
+**Status.** Standing.
+
+## 2026-11-02 — Design approved: plugin split
+
+**Context.** Proposal page `docs/plans/2026-11-02-plugin-split.html`, eight choices.
+
+**Decision.** aj's reply was "Design approved: plugin split 1* 2A 3A 4A 5A 6A 7A 8A".
+1. Clear writing and the voice (aj's own answer): a ninth plugin, Accessible AI, "that makes everything you
+   do more accessible to those with adhd, autism dyslexia, and other disabilities. the design loop could
+   also fit here as well. the general point is to make using ai an assistive device and not to do
+   everything for you." Whether the design loop moves into it is asked on the build plan page.
+2. Delegation: work saving to Safe work, audits to No hiding, helper rules to Rule enforcement; the
+   delegation rule, scout/builder/reviewer and the helper limit join `claude-agent-router`.
+3. Handing a command over: Check your work.
+4. Machine profile to No trust memory; open source first to Code standards.
+5. Shared plumbing: a library plugin with no hooks of its own; every plugin depends on it.
+6. An end-of-reply check that keeps failing blocks up to three times, then source edits and commits are
+   refused until it passes.
+7. The issue workflow stays in Design loop.
+8. The permission timer goes to Safe work.
+
+Plus the standing principle above ("no rule is optional"): the 21 switches that turn a check off go.
+Systems doc: `docs/4-systems/plugin-split.md`.
+
+**Status.** Standing.
+
+## 2026-11-02 — The plugin split: no rule is optional
+
+**Context.** aj asked to split house-rules into eight plugins (proposal page
+`docs/plans/2026-11-02-plugin-split.html`), then set the principle the split is built on.
+
+**Decision.** aj's words: "none of it should be optional. everything should be reasonably enforced in a way
+that doesn't hinder efficiency or cause problems but never is left just up to you to enforce. if enforcement
+breaks things we fix and rework it ... not in a way that just lets you bypass the rules". So every rule gets a
+code check; a check that causes friction is reworked, never removed or switched off (the opposite of #292,
+`safe_git.py:68-70`); the `HOUSE_RULES_*` switches that turn a rule off go. How a repeatedly failing
+end-of-reply check behaves is choice 6 on the page.
+
+**Status.** Standing. The rest of the split waits on aj's answers to the page.
 ## 2026-11-03 - Rerun limit: any project script, reset only by a commit, no override
 
 **Context.** A builder in Ajw2003/PlunderSpell#569 ran one co-op check 12 times in 23 minutes (#453). The builder rule (2.74.3) limits a check to two runs; aj asked for a hook that enforces it in every project.

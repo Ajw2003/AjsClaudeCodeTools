@@ -12,7 +12,7 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 | Piece | Where | What it does |
 |---|---|---|
 | Rule | `showrule` (SessionStart), `rules/show-dont-tell.md` | Loads the rule every session in its own slot: `house-rules.md` had 47 characters of room left. |
-| Stage tracker | `.claude/house-rules-loop.json` in the main checkout (shared by every worktree) | Holds the feature, its stage (Design, Plan, Build, QA, Done), aj's approvals, the issues made during Plan, and a fingerprint of the decisions log. Committed with the branch, so a fresh clone or new cloud session keeps the stage. A legacy `.git/house-rules-loop.json` is still read when the new file is missing; the next write moves it. A Write, Edit, NotebookEdit or shell redirect to the file is refused in every stage: only aj's approval messages move the stage (`HOUSE_RULES_LOOP=off` turns the loop off). |
+| Stage tracker | `.claude/house-rules-loop.json` in the main checkout (shared by every worktree) | Holds the feature, its stage (Design, Plan, Build, QA, Done), aj's approvals, the issues made during Plan, and a fingerprint of the decisions log. Committed with the branch, so a fresh clone or new cloud session keeps the stage. A legacy `.git/house-rules-loop.json` is still read when the new file is missing; the next write moves it. A Write, Edit, NotebookEdit or shell redirect to the file is refused in every stage: only aj's approval messages move the stage. |
 | Approvals | `scope` (UserPromptSubmit), `_loop_scope_note`, `_loop_apply` | Reads aj's message before the model does. "Design approved: <feature>" → Plan; "Build plan approved: <feature>" → Build; "QA passed: <feature>" → Done and "QA failed: <feature>" → Design, both only from QA; "skip design" → one code edit. A bare "approved" moves nothing and tells the model to ask which. Since 2.68.1 (#307) every approval phrase in one message is applied, in stage order (design, build plan, QA), each with its own note; and a redo after "QA failed" matches the feature QA named even when the stored name is stale. |
 | Logged first | `_loop_unlogged` | An approval needs `docs/6-decisions/Decisions.md` to exist (#230). If the log is unchanged since the last approval, the approval still counts and its note asks the model to add the stage's entry before the turn ends; the log mark is not updated, so the next approval checks again (#327). |
 | Feature home | `_loop_record_issues`, `autosave` (PostToolUse) | Issues made during Plan, by `gh issue create` or the GitHub tool, are recorded; "Build plan approved" needs two labelled `AjsAgent created this` (#231). Since 2.68.1 (#308) only issues made in the repo named by the checkout's GitHub `origin` count; one made elsewhere gets a note instead. A checkout with no GitHub origin counts every issue, as before. |
@@ -47,10 +47,9 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
   on aj's behalf.
 - The tracker file is written only when the stage, approvals, issues or skip flag actually change.
 - Every failure is loud: an unreadable tracker turns the lock off for that call and says so.
-- `HOUSE_RULES_LOOP=off` turns off the lock, the approvals, the helper note and the long-reply
-  reminder together, and restores the go-ahead guess.
-- `verify.py` runs with the loop off (its fixtures edit files freely) and switches it on for its own
-  "design loop:" cases.
+- Nothing turns the loop off (the switch was removed in #440). `verify.py`'s fixture repos start at the Build
+  stage (a stage file in the git directory), so their edits are not refused, and its "design loop:" cases write
+  their own stage files.
 
 ## Traps that have already cost time
 

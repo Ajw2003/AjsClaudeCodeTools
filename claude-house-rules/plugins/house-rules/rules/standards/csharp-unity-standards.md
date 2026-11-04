@@ -30,4 +30,4 @@ Tooling (Rider).
 
 Before any Unity task, check for the `unity:*` skills and the `unity` CLI, then use them
 unprompted — never wait to be told. Missing or unreachable → say so, then fall back. See
-`${CLAUDE_PLUGIN_ROOT}/rules/detail/unity-tools-first.md`.
+`${CLAUDE_PLUGIN_ROOT}/rules/standards/unity-tools-first.md`.

@@ -85,8 +85,7 @@ defect, or dress up bad news — a cheerful account of a broken build is a lie w
 Where tone and precision pull against each other, precision wins and the register goes flat, and
 that flatness is itself worth reading: it means something is actually wrong.
 
-It is on by default and `HOUSE_RULES_VOICE=off` turns it off, because a preference that ships
-switched off is a preference nobody has.
+It is always on: a preference that ships switched off is a preference nobody has.
 
 **Why:** a summary exists to be understood by someone who was not there. Vocabulary that is
 efficient between me and the code is friction between me and the reader, and it disguises how
@@ -127,7 +126,6 @@ thin: the detail still follows, below the summary, for whoever wants it.
 The `handover` (Stop) hook checks a long reply from a turn that wrote files or committed: an
 opening that is a code block, a table, or a paragraph of more than three code names, or any table
 wider than three columns, gets sent back once to lead with the summary.
-`HOUSE_RULES_PLAIN_SUMMARY=off` turns it off.
 
 **Why:** the user reads these reports on a phone as often as at a desk, and had to ask for a
 technical report to be re-explained "in layman terms, in a bit more detail". A report the reader
@@ -151,16 +149,8 @@ the user rather than by any check, and fixed only by defining `PROMPT-MULTI`, `P
 
 ## Plain doc copies
 
-The plain-docs skill writes plain copies of the docs; on top of this rule they hold to these limits
-(moved from the skill, which keeps its own shape rules and its length limit):
-
-| Rule | Limit |
-|---|---|
-| Sentences | 20 words or fewer as a target. |
-| Dashes | No em dashes or en dashes used as punctuation. Use a full stop, comma or colon. |
-| Jargon | None. A technical word that can't be avoided (like "hook") gets explained in plain words the first time, in the same sentence. |
-| Code detail | No file paths, line numbers, function names or code blocks. The full-doc link covers that. |
-| Filler | No intros, no "in summary", no restating the heading. |
+The plain-docs skill writes plain copies of the docs and holds its own limits (sentences, dashes, jargon,
+code detail, filler) in its SKILL.md, so they travel with the skill.
 
 ## How it is checked
 
@@ -168,9 +158,8 @@ The plain-docs skill writes plain copies of the docs; on top of this rule they h
   repeated phrases, jargon and overlong sentences. The end-of-reply check no longer runs it on chat replies (#324); a write to `docs/plans/*.html` runs it on the page's text; `plain_docs_check.py`
   uses its word list and sentence check.
 - **Issues** missing "Depends on", "Depended on by" or "Done when" are refused when created.
-- **The editor helper** (`@house-rules:editor`, Sonnet) reads a page or a long reply and returns
+- **The editor helper** (`@house-rules:editor`, Sonnet) reads a page and returns
   rewrites for anything that does not read as proper English. The end-of-reply check reminds me
-  when a turn wrote a page and no editor helper ran. A reply of 160 words or more counts too only
-  with `HOUSE_RULES_EDITOR=on` (default off, #325).
+  when a turn wrote a page and no editor helper ran. A long chat reply does not (#325).
 - A pattern cannot judge grammar or tone, which is why the editor exists; it cannot judge whether a
   request is clear either, which is why the design loop's code lock stays the real check on that.

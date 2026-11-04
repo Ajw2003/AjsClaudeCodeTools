@@ -1,0 +1,154 @@
+{
+  "title": "Plugin Split QA",
+  "eyebrow": "QA · steps 1 to 3 of the plugin split (#438, #439, #440) in draft pull request #452",
+  "short": {
+    "lead": "Steps 1 to 3 of the plugin split are built, and five of the six checks you asked for before any merge have passed. Existing behaviour is unchanged. Main's house-rules 2.75.0 and this branch gave the same result for 49 of the 64 recorded hook inputs, and each of the other 15 differs because of a change you approved. What is new: house-rules 2.76.0, the house-lib library and the rule-enforcement plugin. The sixth check is your QA, and its Windows part has not been run. Everything ran on Linux, but your PC runs Windows, which is where the 2.74.0 restructure broke. Choice 1 below asks how to check Windows before you pass QA.",
+    "hint": "Tap a check for its evidence.",
+    "key": [
+      [
+        "Passed",
+        "done"
+      ],
+      [
+        "Needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Suites",
+        "1. Every test suite passes, here and in CI",
+        "done",
+        "Here: house-rules verify.py 949 checks, rule-enforcement 100, tools 70, the check that every house-lib copy matches its source and the check that each changed plugin's version was raised all pass. CI: the first run failed one test that read this repo's own files; it was fixed in commit 8e78ff7, and every run since has passed.",
+        "Nothing from you."
+      ],
+      [
+        "swap",
+        "Replay",
+        "2. Same behaviour as main",
+        "done",
+        "tools/replay_hooks.py fed 64 recorded hook inputs through main and through this branch. 15 differ, and each traces to an approved change. It also found a real bug that main has too: the command splitter ignored quotes, so a sed -i inside a quoted command slipped past a lock. Commit f92fd63 fixes it. Report: docs/plans/2026-11-02-plugin-split-replay.md.",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Refusals",
+        "3. Nothing refused that main allows",
+        "done",
+        "The same real session (read, doc edit, source edit, a shell command, a helper, a commit, a reply) ran on main and on this branch. Neither refused anything, and both ended in success.",
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Install",
+        "4. A clean install from GitHub",
+        "done",
+        "In a fresh config, the marketplace added from GitHub's copy of this branch installed house-lib 0.1.0, rule-enforcement 0.1.0 and house-rules 2.76.0. A session on that install read a file with no refusal, and the rules loaded once.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Rollback",
+        "5. Rolling back is one step",
+        "done",
+        "On a throwaway copy of main, merging this branch and then running git revert -m 1 on the merge left files identical to main. After a real merge, the same one command undoes it.",
+        "Nothing from you."
+      ],
+      [
+        "swap",
+        "Merge",
+        "Main moved, and one more switch went",
+        "you",
+        "While this waited, main gained the rerun limit (pull request #456) as house-rules 2.75.0, so this branch is now 2.76.0. Merging it crashed every guard call: the rerun limit read its own off switch, HOUSE_RULES_RERUNS, through a helper that part C (the removal of the off switches) had removed. Under your rule that no check can be turned off, I removed that switch rather than bring the helper back. The rerun limit itself is unchanged and always on. Every check above was rerun after the fix, and the replay against the new main still shows 0 unexplained differences. The rerun limit also refuses commands that only name a script, such as a sed edit or a git add of it. That is filed as issue #467, \"The rerun limit counts a command that only names a script as a run of it\".",
+        "Say in your QA reply if the HOUSE_RULES_RERUNS switch should come back."
+      ],
+      [
+        "hand",
+        "Windows",
+        "6. Your QA, starting with Windows",
+        "you",
+        "Nothing here ran on Windows. Your PC was recorded on 2026-10-28 as Windows 11 with PowerShell 5.1 and Python 3.13.7. That record comes from a check run on your PC that day and was not confirmed today.",
+        "Choice 1, then your QA reply."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "house-lib 0.1.0",
+      "Shared plumbing with no hooks of its own, copied into each plugin by tools/sync_library.py; CI fails if a copy drifts.",
+      null,
+      "Step 2 (#439)."
+    ],
+    [
+      "new",
+      "rule-enforcement 0.1.0",
+      "Loads the rules at session start, sends them to helpers, adds the per-message reminder, and holds the repeat-failure lock.",
+      [
+        "Before: house-rules loaded the rules itself, and each of four end-of-reply checks blocked once, then let the next reply through.",
+        "A failing end-of-reply check blocks up to three times, then source edits and commits are refused until it passes. The action that fixes the check is always allowed."
+      ],
+      "Step 3 (#440), part A (rule loading moved) and part B (the repeat-failure lock)."
+    ],
+    [
+      "chg",
+      "house-rules 2.76.0",
+      "Loses the rule-loading hooks and 19 of its 21 switches that turned a check off.",
+      [
+        "21 HOUSE_RULES_ switches could turn a check off.",
+        "19 of the 21 are gone. The permission timer, the 20th, loses only its off setting, and the helper-record switch, the 21st, stays, as you asked."
+      ],
+      "Step 3 (#440), part C (the off switches removed)."
+    ],
+    [
+      "keep",
+      "The word \"shim\" in the file list",
+      "The file list below includes rules/detail/shim-compiles.md. The word \"shim\" in that name is explained here.",
+      null,
+      "That file holds the rule that a shim (a hand-written stand-in for a real compiler or API) is not proof that the real code compiles. It moved to the rule-enforcement plugin unchanged."
+    ]
+  ],
+  "choices": [
+    [
+      "windows",
+      "Choice 1: how does the Windows check happen before you pass QA?",
+      [
+        [
+          "A",
+          "Connect your PC, and I run it",
+          1,
+          "In the Claude desktop app on your PC, turn on Remote Control under Settings, Claude Code, Remote Control, and add your AjsClaudeCodeTools folder. Then tell me here, and I ask to use that folder. I then install the branch's plugins into a throwaway config there and run the same checks, in your shell."
+        ],
+        [
+          "B",
+          "Pass QA without a Windows check",
+          0,
+          "The risk is the one that sank 2.74.0: a fault that only shows on Windows reaches main. Rolling back is one tested command."
+        ]
+      ],
+      "Whichever you pick, nothing merges until you pass QA."
+    ]
+  ],
+  "qa": {
+    "feature": "plugin split steps 1 to 3",
+    "base": "origin/main",
+    "unverified": [
+      "Nothing ran on Windows, because no computer of yours is connected to this session; that is choice 1",
+      "Every session here was headless, started with claude -p. No interactive session was run",
+      "No cloud session ran on these plugins. A cloud session syncs plugins from your claude.ai account, and these plugins will not be there until this merges. It is also untested whether a library installed only as a dependency (house-lib) gets synced to the cloud",
+      "The repeat-failure lock's shell-write check still cannot see a script that works out, while it runs, which file it will write to"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "Steps 1 to 3 are built and five of the six merge checks pass; your QA and a Windows check remain.",
+    "changing": "Nothing merges until you pass QA. Draft pull request #452 holds the work.",
+    "blocking": "Your answer to choice 1, then your QA reply.",
+    "next": "With choice 1, option A, I run the checks on your PC. Once you pass QA, I mark #452 ready and you merge it.",
+    "todo": [
+      "Pick an answer for choice 1.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
+  }
+}

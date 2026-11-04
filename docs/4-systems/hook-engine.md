@@ -5,7 +5,7 @@
 Dispatching every `house-rules` hook event — `SessionStart`, `UserPromptSubmit`, `PreToolUse`,
 `PostToolUse`, `Stop`, `SubagentStart`, `SubagentStop` — to the one handler that enforces the
 corresponding rule from
-[`rules/house-rules.md`](../../claude-house-rules/plugins/house-rules/rules/house-rules.md), at
+[`rules/house-rules.md`](../../claude-house-rules/plugins/rule-enforcement/rules/house-rules.md), at
 the moment Claude Code actually fires that event. If this is wrong, the rules stop being
 enforced and become prose nobody is checking against — a permission prompt that should have
 fired doesn't, or a reminder that should have reached Claude never does.
@@ -91,7 +91,7 @@ line while the gate is shut; `guard` denies a `gh pr create` whose body lacks `R
 --state closed` and a `gh api` PATCH to closed. `issuelist` is a sixth SessionStart entry (its own, because
 `inject` sits near its size margin) that lists up to 10 open issues with a 5 s timeout and a 60 s cache;
 it is the only network call and never runs on a tool call. A corrupt state file is reported in one line
-and treated as no gate. `HOUSE_RULES_ISSUES=off` disables all of it. Known limit: `gh issue create` run
+and treated as no gate. Known limit: `gh issue create` run
 through the `PowerShell` tool is not recorded (the `autosave` entry matches `Bash`, not `PowerShell`, and
 widening it would add a process per PowerShell call). Plan: `docs/plans/issue-workflow-build-plan.md`.
 
@@ -148,7 +148,7 @@ prompt that this could have silenced adds one line saying why it did not. Force-
 whose text credits Claude (a `Co-Authored-By` line naming Claude or anthropic.com, `Generated with [Claude Code]`, a
 `Claude-Session` trailer or a claude.ai/code link). The wording to use is `Committed by AJ's agent` and
 `Opened by AJ's agent`, with no email. This is the backstop: the primary mechanism is the Claude Code `attribution`
-setting, which `tools/install.py` writes into the user's settings file. Kill switch `HOUSE_RULES_ATTRIBUTION=off`.
+setting, which `tools/install.py` writes into the user's settings file.
 A `--body-file` is read; a commit `-F file` is not.
 
 **Author identity (2.58.0, issue #177).** Cloud containers ship `user.name=Claude`, which signs every commit as
@@ -167,8 +167,7 @@ skipped the attribution check. `event_guardgithub` (own `PreToolUse` entry, matc
 `message` and denies on any `_ATTRIBUTION_TEXT_RES` hit with the `ATTRIBUTION_DENY` wording ("commit message" for
 `push_files` and `create_or_update_file`, else "pull request or issue text"). It also denies a `create_branch`
 `branch` or `create_pull_request` `head` starting `claude/`, telling the agent to use `AjsAgent/<topic>`. File
-`content` is never read, and a push onto an existing `claude/` branch is allowed. Kill switch
-`HOUSE_RULES_ATTRIBUTION=off`. Unlike `guard` it fails open: an unreadable payload is a one-line `systemMessage`
+`content` is never read, and a push onto an existing `claude/` branch is allowed. Unlike `guard` it fails open: an unreadable payload is a one-line `systemMessage`
 and an internal error falls to `main()`'s "hook hit an internal error" message, exit 0.
 
 **Helper tiers and the spawn cap (2.50.0, issues #110-#112).** `agents/executor.md` is retired; `scout`
@@ -179,7 +178,7 @@ attempted, never on Write, Edit or Bash). It reads a JSON list in the common rep
 (`git rev-parse --git-common-dir`, found through the `commondir` file `_git_dir()`'s directory holds, so
 every worktree shares it), kept by `announce` (adds) and `verdict` (removes). Two running subagents deny a
 third; a record older than 45 minutes is ignored; a spawn whose payload carries `agent_id` is denied;
-`HOUSE_RULES_AGENTS=off` disables it; a corrupt or unreadable file is one `systemMessage` and the spawn is
+a corrupt or unreadable file is one `systemMessage` and the spawn is
 allowed. `audit`/`verdict`/`userpromptaudit` now print counts per tool, every failed command in full,
 every file written and a count of the other commands. `issuelist` adds a visible
 `house-rules: N open issues loaded` (or `no open issues`) in the same JSON object as its context.
@@ -257,9 +256,9 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
   session on a `claude/<name>` branch also gets `_agent_branch_block`: an instruction to
   `git switch -c AjsAgent/<name>` (or `git switch` to it when it already exists locally or on
   `origin`) and to push and open PRs from there. Text only, the hook never switches;
-  `HOUSE_RULES_AGENT_BRANCH=off` disables it. A remote session whose `git var GIT_AUTHOR_IDENT` is Claude also gets
+  A remote session whose `git var GIT_AUTHOR_IDENT` is Claude also gets
   `_agent_identity_block`, one line telling it to run the repo-local `git config` fix before its first commit
-  (text only; nothing when the identity is fine or unreadable; `HOUSE_RULES_ATTRIBUTION=off` disables it). Only the
+  (text only; nothing when the identity is fine or unreadable). Only the
   fallback probes: a hand-recorded `rules/environment.md` replaces it, so hardware missing from
   that file is not re-detected. The macOS and Windows branches were written to the documented
   command shapes and not run on those systems.

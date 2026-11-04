@@ -25,11 +25,13 @@ Each event handler mirrors the failure-mode contract its shell predecessor had:
   - guardwrite   (PreToolUse)   fails CLOSED and loud, same contract as guard: a Write that
                  would replace an existing file's entire contents is asked about, never let
                  through unchecked just because an internal error occurred.
-  - inject       (SessionStart) fails LOUD, not closed: prints a systemMessage, exits 0.
-  - scope        (UserPromptSubmit) cannot fail: never reads a file, never raises.
+  - threadlink   (SessionStart) fails LOUD, not closed: prints a systemMessage, exits 0.
+  - scopelinks   (UserPromptSubmit) can never erase the user's prompt: any failure emits a systemMessage
+                 and exits 0.
+  (inject, showrule, scope and subagentrules moved to the rule-enforcement plugin in #440.)
   - artifact, runnable, delegate, harvest, audit (PostToolUse) never obstruct, but never go
                  quiet: any failure emits a systemMessage and exits 0.
-  - announce, subagentrules (SubagentStart), verdict (SubagentStop) never obstruct a
+  - announce, subagentlinks (SubagentStart), verdict (SubagentStop) never obstruct a
                  delegation: any failure emits a systemMessage and exits 0.
   - userpromptaudit (UserPromptSubmit) can never erase the user's prompt: any failure
                  emits a systemMessage (never additionalContext) and exits 0.
@@ -59,24 +61,22 @@ from house_rules.writing import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _PARITY_ACCOUNTED_RE,
     _PARITY_RE,
-    _TOGGLE_OFF,
     _TRANSCRIPT_RE,
-    _clear_writing_enabled,
     _evidence_note,
+    _claim_words,
     _field,
+    _impossibility_claims,
     _last_user_text,
-    _parity_enabled,
     _parity_report_note,
     _records_since_last_user_message,
+    _turn_tool_uses,
     _reply_needs_card_check,
 )
 from house_rules.safe_git import (  # noqa: F401
     _commit_note,
 )
 from house_rules.writing import (  # noqa: F401
-    _plain_summary_enabled,
     _plain_summary_note,
-    _visual_check_enabled,
     _visual_note,
     _writing_note,
 )
@@ -94,12 +94,6 @@ from house_rules.writing import (  # noqa: F401
 # ---------------------------------------------------------------------------------------
 
 def event_handover():
-    import os as _os
-
-    toggle = _os.environ.get("HOUSE_RULES_HANDOVER", "on").strip().lower()
-    if toggle in _TOGGLE_OFF:
-        return 0
-
     try:
         payload = read_payload()
     except Exception:
@@ -139,20 +133,28 @@ def event_handover():
     editor_owed = None
     shell_page_notes = []
     trace_lines_early = []
+    turn_ok = False
+    editor_ran = False
+    plain_applies = False
     transcript_path = _field(_TRANSCRIPT_RE, payload)
-    if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
-                            or _clear_writing_enabled()):
+    if transcript_path:
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
+            turn_ok = True
+            editor_ran = any(b.get("name") in ("Agent", "Task") and isinstance(b.get("input"), dict)
+                             and str(b["input"].get("subagent_type", "")).endswith("editor")
+                             for b in _turn_tool_uses(turn_records))
             written_now, committed_now = handover_turn_writes(turn_records)
             plain_problems = handover_plain_check(written_now, committed_now, have_reply, reply_text)
-            if written_now and _parity_enabled():
+            plain_applies = bool((written_now or committed_now) and have_reply
+                                 and len(reply_text or "") >= PLAIN_SUMMARY_MIN_CHARS)
+            if written_now:
                 pm = _PARITY_RE.search(_last_user_text(transcript_path))
                 reply_for_parity = reply_text if have_reply else ""
                 if pm and not _PARITY_ACCOUNTED_RE.search(reply_for_parity):
                     parity_word = pm.group(1)
             shell_page_notes, editor_owed, trace_lines_early = handover_page_editor_check(
-                transcript_path, payload, written_now, turn_records, have_reply, reply_text)
+                transcript_path, payload, written_now, turn_records)
             visual_files = handover_visual_check(written_now, turn_records)
 
     issue_line, issue_problem, label_line, label_problem = handover_stop_lines(payload)
@@ -191,11 +193,33 @@ def event_handover():
     writing = []
 
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
-    if not retry:
-        if handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                                needs_evidence, uncommitted, plain_problems, trace_lines):
-            return 0
-    else:
+    # #440 (choice 6A): the four counted checks block up to three times per message of aj's, on the retries
+    # too; each counts its own blocks in house_lib.blocks (stop_hook_active is shared, so it counts nothing).
+    cannot_tell = set()
+    if could_not_tell:
+        cannot_tell.add("evidence")
+    if commit_could_not_tell:
+        cannot_tell.add("commit")
+    if not turn_ok:
+        cannot_tell.update(("editor", "plain summary"))
+    # A lock clears only on a reply that carries what the check wants (a reply that makes no success claim, or
+    # runs no editor, says nothing about the evidence or editor lock).
+    judged = {"commit"}
+    if have_reply and (_claim_words(reply_text) or _impossibility_claims(reply_text)):
+        judged.add("evidence")
+    if editor_ran:
+        judged.add("editor")
+    if plain_applies:
+        judged.add("plain summary")
+    blocked, through = handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words,
+                                            editor_owed, needs_evidence, uncommitted, plain_problems,
+                                            trace_lines, retry, cannot_tell, judged)
+    if blocked:
+        return 0
+    if through:
+        retry = True  # the reply goes through: report to aj only, additionalContext would wake the model again
+        needs_card = False
+    if retry:
         handover_qa_retry(payload, have_reply, reply_text, trace_lines)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
@@ -250,25 +274,57 @@ def event_handover():
 
 
 def _scope_parity_link(payload, field):
-    if field is not None and _PARITY_RE.search(field) and _parity_enabled():
+    if field is not None and _PARITY_RE.search(field):
         return SCOPE_PARITY_CLAUSE, ""
     return "", ""
 
 
 # The parity clause is the last prompt link, after the waiting, loop and delegate links the parts register
-# when they are imported above, so scope still adds the clauses in the order it always did.
+# when they are imported above, so the clauses come out in the order they always did.
 core.register_prompt(_scope_parity_link)
+
+_PROMPT_FIELD_RE = re.compile(r'"prompt"\s*:\s*"(?:[^"\\]|\\.)*"')
+
+
+def event_scopelinks():
+    """scopelinks (UserPromptSubmit): the clauses and notes the parts register on PROMPT_HOOKS (waiting, design
+    loop, delegation, parity). scope, which gathered them into one reminder, moved to the rule-enforcement
+    plugin (#440); this emits just these parts' text on the same event. A non-zero exit would ERASE THE USER'S
+    PROMPT, so nothing raises: a failure says so in a systemMessage and exits 0."""
+    try:
+        payload = read_payload()
+        m = _PROMPT_FIELD_RE.search(payload)
+        field = m.group(0) if m else None
+        # A note from a later hook goes in front of the ones before it; notes are kept as they come so a
+        # failing hook loses only its own.
+        clauses, notes = [], []
+        for fn in PROMPT_HOOKS:
+            clause, note = fn(payload, field)
+            clauses.append(clause)
+            if note:
+                notes.insert(0, note)
+        parts = []
+        if m and "".join(clauses).strip():
+            parts.append("".join(clauses).lstrip("\n"))
+        if notes:
+            parts.append("\n\n".join(notes))
+        if parts:
+            emit({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
+                                         "additionalContext": "\n\n".join(parts)}})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: the prompt links hook hit an error (%s) and did not add "
+                               "its clauses to this prompt." % type(exc).__name__})
+    return 0
 
 
 EVENTS = {
-    "inject": event_inject,
-    "showrule": event_showrule,
+    "threadlink": event_threadlink,
     "issuelist": event_issuelist,
     "profile": event_profile,
     "standards": event_standards,
     "docstiers": event_docstiers,
     "versioncheck": event_versioncheck,
-    "scope": event_scope,
+    "scopelinks": event_scopelinks,
     "guard": event_guard,
     "guardwrite": event_guardwrite,
     "guardgithub": event_guardgithub,
@@ -278,7 +334,7 @@ EVENTS = {
     "runnable": event_runnable,
     "delegate": event_delegate,
     "announce": event_announce,
-    "subagentrules": event_subagentrules,
+    "subagentlinks": event_subagentlinks,
     "verdict": event_verdict,
     "subagentcommit": event_subagentcommit,
     "autosave": event_autosave,
@@ -324,14 +380,6 @@ def main(argv):
                 "an unchecked overwrite through.\n" % detail
             )
             return 2
-        if event == "inject":
-            emit(
-                {
-                    "systemMessage": "house-rules plugin: internal error (%s). The rules "
-                    "were NOT loaded into this session." % detail
-                }
-            )
-            return 0
         emit(
             {
                 "systemMessage": "house-rules plugin: the %s hook hit an internal error "

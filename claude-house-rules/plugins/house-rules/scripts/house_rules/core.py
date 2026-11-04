@@ -25,22 +25,19 @@ import urllib.parse
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def read_payload():
-    try:
-        raw = sys.stdin.buffer.read().decode("utf-8", "replace")
-    except Exception as exc:
-        # Loud, not silent: an unreadable stdin and an empty stdin both return "" to the
-        # caller, so without this line the two are indistinguishable downstream.
-        sys.stderr.write("house-rules: could not read the hook payload from stdin: %s\n" % exc)
-        return ""
-    return raw.strip()
-
-
-def emit(obj):
-    sys.stdout.write(json.dumps(obj, separators=(",", ":")))
-
-
-_TRACE_OFF = {"off", "0", "false", "no"}
+# The shared plumbing and link registry live once in plugins/house-lib/house_lib/ and are copied
+# in here by tools/sync_library.py (#439). Re-exported so every name stays importable from core.
+sys.path.insert(0, SCRIPTS_DIR)
+from house_lib.plumbing import (  # noqa: E402,F401
+    read_payload, emit, _truncate_with_notice, trace_enabled, trace, trace_verbose,
+    trace_noop, _read_text,
+)
+from house_lib.links import (  # noqa: E402,F401
+    SESSION_START_HOOKS, PROMPT_HOOKS, POST_TOOL_HOOKS, GUARD_ISSUE_HOOKS, GITHUB_WRITE_HOOKS,
+    DOCS_STATUS_HOOKS, _register, register_session_start, register_prompt, register_post_tool,
+    _session_start_hooks, _post_tool_hooks, register_guard_issue, register_github_write,
+    register_docs_status,
+)
 
 # Claude Code's per-hook additionalContext limit is 10,000 chars (docs/6-decisions/Decisions.md, 2026-09-22).
 # The machine profile lives in its own SessionStart entry (profile), not appended to inject's
@@ -49,58 +46,6 @@ INJECT_CHAR_LIMIT = 10_000
 # The soft budget profile truncates itself against, well under the hard limit above so the
 # truncation notice it appends never itself pushes the total back over 10,000.
 PROFILE_SOFT_LIMIT = 9_500
-
-
-def _truncate_with_notice(text, limit, label):
-    """Cut text to fit limit, appending a notice that names what was cut and why - truncation
-    that happens without saying so is exactly what "nothing fails silently" forbids."""
-    if len(text) <= limit:
-        return text
-    notice = (
-        "\n\n[house-rules profile: %s is %d chars and was truncated to stay under the "
-        "SessionStart context limit - %d chars shown here. Read %s directly for the rest.]\n"
-        % (label, len(text), limit, label)
-    )
-    room = max(0, limit - len(notice))
-    return text[:room] + notice
-
-
-def trace_enabled():
-    """The decision trace ships ON. A diagnostic nobody enables until they are already lost
-    is not a diagnostic - see "nothing fails silently" in rules/house-rules.md. stderr is not
-    an option here: a hook that exits 0 has its stderr sent to the debug log only, never the
-    transcript, so a trace written there would be off by default in everything but name.
-    HOUSE_RULES_TRACE=off is the one lever, and it covers every handler. HOUSE_RULES_TRACE=
-    verbose additionally restores the "looked, nothing to do" traces (see trace_noop).
-    """
-    return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() not in _TRACE_OFF
-
-
-def trace(message):
-    """Say what this handler decided, on a path that would otherwise emit nothing.
-
-    Only for handlers with a genuinely silent success path - guard's allow, artifact,
-    runnable, handover and harvest. inject, standards, scope and delegate always emit
-    something already, so a trace there would duplicate the proof it exists to provide, at
-    the most expensive possible frequency (scope runs on every prompt).
-    """
-    if trace_enabled():
-        emit({"systemMessage": message})
-
-
-def trace_verbose():
-    return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() == "verbose"
-
-
-def trace_noop(message):
-    """The "looked, nothing to do" trace: a handler that decided nothing and acted on nothing.
-
-    Silence is the correct output there - rules/house-rules.md defines silence as "looked,
-    nothing to do". Emits only under HOUSE_RULES_TRACE=verbose. "Could not tell" and "acted"
-    traces stay on trace(), which still prints by default.
-    """
-    if trace_verbose():
-        emit({"systemMessage": message})
 
 
 # ---------------------------------------------------------------------------------------
@@ -113,12 +58,6 @@ import sys as _sys
 import time as _time
 
 
-def _read_text(path):
-    with open(path, "r", encoding="utf-8", newline="") as f:
-        return f.read()
-
-
-# Hardware and plan probes for the machine profile: doc-ref ad50 docs/4-systems/hook-engine.md
 PROBE_TIMEOUT_SECONDS = 3.0
 PROBE_TOTAL_SECONDS = 6.0
 _GIB = 1024 ** 3
@@ -449,90 +388,8 @@ def _preflight_warnings():
     )
 
 
-# The voice is a preference, so it gets a lever - but it ships ON, for the same reason the
-# decision trace does: a setting nobody enables until they are already unhappy is not a setting.
-# Off removes only the "### The voice" subsection; the clear-writing rule above it is not a
-# preference and always loads. Since #245 the voice lives in rules/clear-writing.md (showrule).
-_VOICE_HEADING = "### The voice"
-
-
-def _apply_voice_toggle(body):
-    if os.environ.get("HOUSE_RULES_VOICE", "on").strip().lower() not in _TRACE_OFF:
-        return body
-    start = body.find(_VOICE_HEADING)
-    if start == -1:
-        # The section this is meant to remove is gone, which means the rules text moved and this
-        # toggle now silently does nothing. Say so rather than pretending it worked.
-        sys.stderr.write(
-            "house-rules: HOUSE_RULES_VOICE=off, but the %r section was not found in "
-            "the rules - the toggle had no effect.\n" % _VOICE_HEADING
-        )
-        return body
-    nxt = body.find("\n## ", start)
-    return body[:start] + (body[nxt + 1 :] if nxt != -1 else "")
-
-
 def _plugin_root():
     return os.path.normpath(os.path.join(SCRIPTS_DIR, ".."))
-
-
-def _version_tuple(text):
-    parts = []
-    for piece in str(text).split("."):
-        m = re.match(r"\d+", piece)
-        parts.append(int(m.group()) if m else 0)
-    return tuple(parts)
-
-
-def _rules_root(needed):
-    """(root, note): the plugin folder whose rules SessionStart should load.
-
-    A session starts on the folder the harness resolved at launch. If an update lands during
-    that same SessionStart (versioncheck, last in hooks.json), inject and showrule already ran
-    from the old folder, so a session carried the old rules beside the new checks (issue #252).
-    So: use installed_plugins.json's installPath when it exists, is newer by version, and has
-    every file in `needed` (paths under rules/); otherwise this folder. `note` is one line, or
-    "" when nothing differs. It is never silent when the answer could not be worked out.
-    """
-    own = _plugin_root()
-    path = _installed_plugins_path()
-    if not os.path.isfile(path):
-        return own, "could not check for newer rules: %s does not exist, so this folder's rules (%s) were loaded" % (path, own)
-    try:
-        data = json.loads(_read_text(path))
-        plugins = data.get("plugins", {}) if isinstance(data, dict) else {}
-        entry = None
-        for plugin_id, entries in sorted(plugins.items()):
-            if plugin_id.split("@", 1)[0] != _VC_PLUGIN_NAME:
-                continue
-            if isinstance(entries, dict):
-                entries = [entries]
-            entry = next((e for e in entries if isinstance(e, dict) and e.get("installPath")), None)
-            break
-    except Exception as exc:
-        return own, "could not check for newer rules: installed_plugins.json is unreadable (%s), so this folder's rules (%s) were loaded" % (type(exc).__name__, own)
-    if entry is None:
-        return own, "could not check for newer rules: installed_plugins.json has no installPath for %s, so this folder's rules (%s) were loaded" % (_VC_PLUGIN_NAME, own)
-    new_root = os.path.normpath(entry["installPath"])
-    if os.path.realpath(new_root) == os.path.realpath(own):
-        return own, ""
-    try:
-        new_version = str(entry.get("version", "")) or _plugin_version_of(new_root)
-    except Exception as exc:
-        return own, "could not check for newer rules: no version for %s (%s), so this folder's rules (%s) were loaded" % (new_root, type(exc).__name__, own)
-    own_version = _plugin_version()
-    if not new_version or _version_tuple(new_version) <= _version_tuple(own_version):
-        return own, ""
-    missing = [n for n in needed if not os.path.isfile(os.path.join(new_root, "rules", n))]
-    if missing:
-        return own, "newer rules %s are installed at %s but lack rules/%s, so this folder's %s rules were loaded" % (
-            new_version, new_root, ", rules/".join(missing), own_version or "unknown")
-    return new_root, "loaded the rules from house-rules %s (%s), not this session's %s, because an update installed it after this session started" % (
-        new_version, new_root, own_version or "unknown")
-
-
-def _plugin_version_of(root):
-    return json.loads(_read_text(os.path.join(root, ".claude-plugin", "plugin.json"))).get("version", "") or ""
 
 
 def _expand_detail_paths(text, root=None):
@@ -545,102 +402,8 @@ def _expand_detail_paths(text, root=None):
     return "<plugin> in the paths below is the plugin root: %s\n\n%s" % (root, text)
 
 
-def event_inject():
-    root, note = _rules_root(("house-rules.md",))
-    rules_path = os.path.join(root, "rules", "house-rules.md")
-
-    try:
-        body = _read_text(rules_path)
-    except OSError:
-        emit(
-            {
-                "systemMessage": "house-rules plugin: cannot read rules/house-rules.md. "
-                "The rules were NOT loaded into this session."
-            }
-        )
-        return 0
-
-    body = body.replace("\r\n", "\n")
-    # The <!-- subagent --> markers are a build-time signal for _subagent_core() (which
-    # sections of this same file to re-inject at a subagent's own SubagentStart), not
-    # something the main session needs to read - stripping them here keeps this file the
-    # single source for both without paying for the markers twice.
-    # That strip is delegation's knowledge, so it is a hook registered under "inject" on
-    # SESSION_START_HOOKS: each takes the rules text and returns it.
-    for fn in _session_start_hooks("inject"):
-        body = fn(body)
-    if not body.strip():
-        emit(
-            {
-                "systemMessage": "house-rules plugin: rules/house-rules.md is empty. "
-                "The rules were NOT loaded into this session."
-            }
-        )
-        return 0
-
-    # The rules text names its detail files as ${CLAUDE_PLUGIN_ROOT}/rules/detail/<file>.md -
-    # that variable is expanded by the harness in hooks.json's own command strings, but this
-    # text is going into additionalContext, which nothing expands. The root is stated once
-    # rather than substituted into every pointer: 26 copies of a long install path pushed this
-    # past its size margin on a CI runner whose checkout path was merely 26 chars longer.
-    body = _expand_detail_paths(body, root)
-
-    preamble = (
-        "The following are the user standing house rules. They apply to every project and "
-        "override default behaviour. A PreToolUse hook also refuses destructive commands, "
-        "naming the safe way, and refuses commit/push/merge on `main`. "
-        "That hook is a backstop, not "
-        "permission to skip asking first. Machine profile: injected separately.\n\n"
-    )
-
-    out = {
-        "suppressOutput": True,
-        "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
-            "additionalContext": preamble + body,
-        },
-    }
-    if note:
-        out["systemMessage"] = "house-rules plugin: " + note + "."
-    emit(out)
-    return 0
-
-
-# ---------------------------------------------------------------------------------------
-# showrule — the "Show, don't tell" rule, injected by its own SessionStart entry for the same
-# reason profile was split out: house-rules.md was 47 chars from inject's size margin when the
-# rule was approved (issue #224). Full rationale: rules/detail/show-dont-tell.md.
-# ---------------------------------------------------------------------------------------
-
-
-# The rules loaded in their own slot, in order: show-dont-tell (#225) and clear-writing (#245).
-SHOWRULE_FILES = (("show-dont-tell.md", "show-don't-tell"), ("clear-writing.md", "clear-writing"))
-
-
-def event_showrule():
-    root, note = _rules_root(tuple(n for n, _ in SHOWRULE_FILES))
-    bodies, missing = [], []
-    for name, label in SHOWRULE_FILES:
-        try:
-            body = _read_text(os.path.join(root, "rules", name)).replace("\r\n", "\n")
-        except OSError:
-            missing.append("cannot read rules/%s, so the %s rule was NOT loaded" % (name, label))
-            continue
-        if not body.strip():
-            missing.append("rules/%s is empty, so the %s rule was NOT loaded" % (name, label))
-            continue
-        bodies.append(_apply_voice_toggle(body) if name == "clear-writing.md" else body)
-    if not bodies:
-        emit({"systemMessage": "house-rules plugin: " + "; ".join(missing + ([note] if note else [])) + "."})
-        return 0
-    out = {"suppressOutput": True, "hookSpecificOutput": {
-        "hookEventName": "SessionStart",
-        "additionalContext": "Standing house rules, loaded separately from the rest:\n\n"
-        + _expand_detail_paths("\n\n".join(bodies), root)}}
-    if missing or note:
-        out["systemMessage"] = "house-rules plugin: " + "; ".join(missing + ([note] if note else [])) + "."
-    emit(out)
-    return 0
+# inject, showrule and scope moved to the rule-enforcement plugin (#440): see
+# plugins/rule-enforcement/scripts/rule_enforcement/core.py and docs/4-systems/plugin-split.md.
 
 
 # ---------------------------------------------------------------------------------------
@@ -983,10 +746,6 @@ _MARKETPLACE_PLUGIN_JSON_REL = os.path.join(
 )
 
 
-def _version_check_enabled():
-    return os.environ.get("HOUSE_RULES_VERSION_CHECK", "on").strip().lower() not in _TRACE_OFF
-
-
 def _marketplace_plugin_json_path(problems):
     """The marketplace clone's plugin.json, or "" if none found (see docs/architecture.md)."""
     marketplaces_root = os.path.join(
@@ -1161,10 +920,6 @@ _VC_DEFAULT_MARKETPLACE = "aj-house-rules"
 _VC_UPDATE_BUDGET = 60.0
 
 
-def _auto_update_enabled():
-    return os.environ.get("HOUSE_RULES_AUTO_UPDATE", "on").strip().lower() not in _TRACE_OFF
-
-
 def _installed_plugins_path():
     return os.environ.get("HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON") or os.path.join(
         os.path.expanduser("~"), ".claude", "plugins", "installed_plugins.json"
@@ -1284,9 +1039,6 @@ def _is_synced_copy():
 
 def event_versioncheck():
     try:
-        if not _version_check_enabled():
-            return 0
-
         payload = read_payload()
         session_id = _vc_session_id(payload)
 
@@ -1377,30 +1129,27 @@ def event_versioncheck():
 
         # Out of date: update it here rather than asking, then check the result on disk rather
         # than trusting the exit code (docs/6-decisions/Decisions.md, 2026-09-26).
-        failure = "automatic updating is switched off (HOUSE_RULES_AUTO_UPDATE=off)"
-        log = []
-        if _auto_update_enabled():
-            commands = []
-            if marketplace_stale or not market_version:
-                commands.append(["plugin", "marketplace", "update", market_name])
-            commands.append(["plugin", "update", plugin_ref])
-            log, failure = _run_update_commands(commands)
-            after_id, after = _installed_on_disk([])
-            if not failure and latest and latest in after:
-                if installed == latest:
-                    trace(
-                        "versioncheck: refreshed the stale marketplace clone; %s was already "
-                        "installed and running." % installed
-                    )
-                else:
-                    emit(_vc_restart_notice(latest, installed, " - updated automatically at "
-                                            "session start, up from %s" % installed))
-                return 0
-            if not failure:
-                failure = (
-                    "the update commands exited 0, but installed_plugins.json lists %s, not %s"
-                    % (", ".join(after) or "no house-rules install", latest or "a newer version")
+        commands = []
+        if marketplace_stale or not market_version:
+            commands.append(["plugin", "marketplace", "update", market_name])
+        commands.append(["plugin", "update", plugin_ref])
+        log, failure = _run_update_commands(commands)
+        after_id, after = _installed_on_disk([])
+        if not failure and latest and latest in after:
+            if installed == latest:
+                trace(
+                    "versioncheck: refreshed the stale marketplace clone; %s was already "
+                    "installed and running." % installed
                 )
+            else:
+                emit(_vc_restart_notice(latest, installed, " - updated automatically at "
+                                        "session start, up from %s" % installed))
+            return 0
+        if not failure:
+            failure = (
+                "the update commands exited 0, but installed_plugins.json lists %s, not %s"
+                % (", ".join(after) or "no house-rules install", latest or "a newer version")
+            )
 
         _write_outdated_marker(session_id, reasons)
 
@@ -1456,104 +1205,6 @@ def event_versioncheck():
             {
                 "systemMessage": "house-rules plugin: the version-freshness check hit an "
                 "internal error (%s) and could not run for this session." % type(exc).__name__
-            }
-        )
-    return 0
-
-
-
-# ---------------------------------------------------------------------------------------
-# scope — UserPromptSubmit. Must not be able to fail: one fixed string, no file read.
-# ---------------------------------------------------------------------------------------
-
-SCOPE_REMINDER = (
-    # The long form fires on roughly 40% of real prompts, so its size is paid often. It was
-    # trimmed from 1,435 chars by merging the two handover bullets: the step-card shape and
-    # the per-command fields are one rule from the model's point of view, and stating them
-    # separately bought nothing. Every rule the old text carried is still here - this is the
-    # same content said once instead of twice, not a shorter list of rules.
-    "Standing house rules (full text was injected at session start):\n"
-    "- Show, don't tell: plans reach the user as a page to approve; nothing unasked is "
-    "built.\n"
-    "- Find out what machine you are on and build for that. The coding standards injected "
-    "at session start are binding, each governing only its own languages.\n"
-    "- Deliver a whole workflow: exact commands to run, nothing left for the user to "
-    "configure by hand.\n"
-    "- Artifacts are real files in the project directory, not chat and not a temp "
-    "directory.\n"
-    "- Never hand over a command you have not run where the user will run it. Running "
-    "something similar is not running it.\n"
-    "- Update the docs tier that changed before this turn ends - state usually - or say why "
-    "none did.\n"
-    "- No success claim without a run you can quote: evidence before claims, every time.\n"
-    "- Commit finished work on your own branch, scoped to the paths you changed; on the "
-    "user's branch, branch off first."
-)
-
-SCOPE_REMINDER_SHORT = (
-    "House rules reminder: update the docs tier that changed; no success claim without a run "
-    "you can quote; commit finished work on your own branch. Never hand over a command you "
-    "have not run. Build only what was asked - where it is ambiguous, ask instead of assuming."
-)
-
-# Prompt text suggesting this turn will involve commands, files, or builds - the case the full
-# reminder exists for. Deliberately broad (over-triggering here just means the longer, still-
-# correct string fires) - the same "match the extracted field, stay broad within it" posture as
-# guard's patterns.
-_SCOPE_COMMAND_HINT_RE = re.compile(
-    r"\b(run|install|build|deploy|command|script|terminal|shell|powershell|bash|npm|pip|git|"
-    r"file|files|folder|directory|write|edit|create|delete|download|test|config|setup)\b",
-    re.IGNORECASE,
-)
-
-_PROMPT_FIELD_RE = re.compile(r'"prompt"\s*:\s*"(?:[^"\\]|\\.)*"')
-
-
-def event_scope():
-    # UserPromptSubmit: a non-zero exit here ERASES THE USER'S PROMPT. Every failure path -
-    # unreadable payload, missing "prompt" key, any exception at all - must fall through to
-    # emitting the safe short reminder and exiting 0. Never raise, never exit non-zero.
-    reminder = SCOPE_REMINDER_SHORT
-    waiting = ""
-    try:
-        payload = read_payload()
-        m = _PROMPT_FIELD_RE.search(payload)
-        field = m.group(0) if m else None
-        # The prompt links (PROMPT_HOOKS): code that belongs to another part adds its clause
-        # to the reminder and/or a note after it. A note from a later hook goes in front of
-        # the ones before it; notes are kept as they come so a failing hook loses only its own.
-        clauses, notes = [], []
-        for fn in PROMPT_HOOKS:
-            clause, note = fn(payload, field)
-            clauses.append(clause)
-            if note:
-                notes.insert(0, note)
-                waiting = "\n\n".join(notes)
-        if m:
-            if _SCOPE_COMMAND_HINT_RE.search(field):
-                reminder = SCOPE_REMINDER
-            reminder = reminder + "".join(clauses)
-    except Exception:
-        # Whatever went wrong, the safe short reminder still goes out. A non-zero exit or a
-        # raise here would ERASE THE USER'S PROMPT, so this recovers rather than reporting.
-        reminder = SCOPE_REMINDER_SHORT
-
-    try:
-        emit(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "UserPromptSubmit",
-                    "additionalContext": reminder + ("\n\n" + waiting if waiting else ""),
-                }
-            }
-        )
-    except Exception:
-        emit(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "UserPromptSubmit",
-                    "additionalContext": SCOPE_REMINDER_SHORT,
-                }
             }
         )
     return 0
@@ -2006,82 +1657,6 @@ _TOGGLE_OFF = {"off", "0", "false", "no"}
 
 
 # ---------------------------------------------------------------------------------------
-# The core links (#357). The core never imports hook.py or a part module, so where one of its
-# handlers needs code that belongs to another part, that code registers itself here and the
-# handler loops over the list. Three lists, one register function each:
-#   SESSION_START_HOOKS  (consumer, fn): inject asks fn(body) -> body, profile asks fn() -> text
-#   PROMPT_HOOKS         fn(payload, field) -> (clause, note)   scope runs each on every message;
-#                        field is the prompt JSON field or None; clause is added straight after
-#                        the reminder, note after it (a later hook's note goes in front)
-#   POST_TOOL_HOOKS      (consumer, fn): artifact asks fn(file_path) -> note text, promptran
-#                        asks fn(data) -> report text; each handler runs only its own consumer's
-# Step 2b adds three more, read by the safe git part (#358):
-#   GUARD_ISSUE_HOOKS    fn(subject, payload) -> None or (kind, reason, context); guard asks each,
-#                        in order, after its own attribution check, and takes the first answer
-#   GITHUB_WRITE_HOOKS   fn(payload, raw) -> True when it handled the call (and emitted);
-#                        guardgithub asks each before its own credit check
-#   DOCS_STATUS_HOOKS    fn(subject, elsewhere, root) -> (status, detail); guard asks the first
-# ---------------------------------------------------------------------------------------
-
-SESSION_START_HOOKS = []
-PROMPT_HOOKS = []
-POST_TOOL_HOOKS = []
-GUARD_ISSUE_HOOKS = []
-GITHUB_WRITE_HOOKS = []
-DOCS_STATUS_HOOKS = []
-
-
-def _register(hooks, entry):
-    # Replace an earlier registration of the same name instead of adding a second one:
-    # verify.py loads hook.py several times in one process, and a plain append would make
-    # every later load run each hook twice. The module loaded last is the one in use.
-    name = (entry[0], entry[-1].__name__) if isinstance(entry, tuple) else entry.__name__
-    for i, old in enumerate(hooks):
-        if ((old[0], old[-1].__name__) if isinstance(old, tuple) else old.__name__) == name:
-            hooks[i] = entry
-            return
-    hooks.append(entry)
-
-
-def register_session_start(consumer, fn):
-    _register(SESSION_START_HOOKS, (consumer, fn))
-    return fn
-
-
-def register_prompt(fn):
-    _register(PROMPT_HOOKS, fn)
-    return fn
-
-
-def register_post_tool(consumer, fn):
-    _register(POST_TOOL_HOOKS, (consumer, fn))
-    return fn
-
-
-def _session_start_hooks(consumer):
-    return [fn for name, fn in SESSION_START_HOOKS if name == consumer]
-
-
-def _post_tool_hooks(consumer):
-    return [fn for name, fn in POST_TOOL_HOOKS if name == consumer]
-
-
-def register_guard_issue(fn):
-    _register(GUARD_ISSUE_HOOKS, fn)
-    return fn
-
-
-def register_github_write(fn):
-    _register(GITHUB_WRITE_HOOKS, fn)
-    return fn
-
-
-def register_docs_status(fn):
-    _register(DOCS_STATUS_HOOKS, fn)
-    return fn
-
-
-# ---------------------------------------------------------------------------------------
 # Moved here in step 2c (#359): helpers that more than one part, or a part and the end-of-reply
 # dispatcher in hook.py, use. The first group came out of the safe git part, the second out of hook.py.
 # ---------------------------------------------------------------------------------------
@@ -2107,24 +1682,12 @@ _LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`
 
 
 # A statement-leading NAME=value, NAME="value" or NAME='value' followed by ; or && (#261).
-_ASSIGN_RE = re.compile(r"""(?:^|(?<=[;&\n]))\s*([A-Za-z_]\w*)=(?:"([^"$`\\\n]*)"|'([^'\n]*)'|([^\s;&|"'$`\\()<>*?]*))[ \t]*(?:&&|;)""")
-
-
 # cd/pushd only where a command can start, so `git commit -m "fix cd handling"` keeps the
 # exemption (#203); shell keywords count, so `if t; then cd x; fi` is still seen.
 _ANY_CD_RE = re.compile(r"(?:^|[;&|({!\n]|\b(?:if|elif|while|until|then|do|else|time|exec)\b)\s*(?:cd|pushd)(?=\s|$)")
 
 
-def _apply_assigns(cmd):
-    """#261/#262: drop simple same-command NAME=value assignments and expand $NAME / ${NAME}
-    from them; a name that was not assigned stays as written."""
-    assigns = {}
-    for am in _ASSIGN_RE.finditer(cmd):
-        assigns[am.group(1)] = am.group(2) if am.group(2) is not None else (am.group(3) if am.group(3) is not None else am.group(4))
-    if assigns:
-        cmd = _ASSIGN_RE.sub("", cmd)
-        cmd = re.sub(r"\$\{(\w+)\}|\$(\w+)", lambda mm: assigns.get(mm.group(1) or mm.group(2), mm.group(0)), cmd)
-    return cmd
+from house_lib.shellwrites import _ASSIGN_RE, _apply_assigns  # noqa: E402,F401 - moved to the library (#440 part B)
 
 
 def _command_dir(payload):
@@ -2324,10 +1887,6 @@ def _decoded_command(subject):
     return text
 
 
-def _attribution_enabled():
-    return os.environ.get("HOUSE_RULES_ATTRIBUTION", "on").strip().lower() not in _TOGGLE_OFF
-
-
 # The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
 # noreply@anthropic.com, which signs every commit as Claude whatever the message says.
 AGENT_IDENTITY_FIX = (
@@ -2415,10 +1974,6 @@ def _effective_author(cmd, cwd):
 COMMIT_CHECK_TIMEOUT = 2.0
 
 
-def _commit_check_enabled():
-    return os.environ.get("HOUSE_RULES_COMMIT_CHECK", "on").strip().lower() not in _TOGGLE_OFF
-
-
 def _dirty_paths(root):
     """(repo top level, [repo-relative dirty paths]) for the repo containing `root`.
 
@@ -2501,10 +2056,6 @@ _AUDIT_WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
 _GATED_TOOLS = {"Write", "Edit", "NotebookEdit"}
 
 
-def _issues_enabled():
-    return os.environ.get("HOUSE_RULES_ISSUES", "on").strip().lower() not in _TOGGLE_OFF
-
-
 def _issues_locate(start):
     """(checkout top, resolved git directory) for `start`, or (None, None) outside a repo."""
     d = os.path.abspath(start)
@@ -2515,10 +2066,6 @@ def _issues_locate(start):
         if parent == d:
             return None, None
         d = parent
-
-
-def _loop_enabled():
-    return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
 
 
 # ---------------------------------------------------------------------------------------
@@ -2919,14 +2466,6 @@ def _outside_page_links(reply, cwd):
     if not cwd:
         return []
     return [p for p, a in _html_paths(reply, cwd) if a is not None and not _inside(a, cwd)]
-
-
-def _clear_writing_enabled():
-    return os.environ.get("HOUSE_RULES_CLEAR_WRITING", "on").strip().lower() not in _TOGGLE_OFF
-
-
-def _parity_enabled():
-    return os.environ.get("HOUSE_RULES_PARITY", "on").strip().lower() not in _TOGGLE_OFF
 
 
 def _parity_report_note(word):

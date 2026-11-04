@@ -1,7 +1,7 @@
 # Rules backlog
 
 Rule changes that are decided but not yet written into
-[`rules/house-rules.md`](../claude-house-rules/plugins/house-rules/rules/house-rules.md).
+[`rules/house-rules.md`](../claude-house-rules/plugins/rule-enforcement/rules/house-rules.md).
 
 This file exists so a decision made mid-task has somewhere to land that is neither "implement it
 right now, off-scope" nor "mention it in chat and lose it". An entry here is a commitment, not an

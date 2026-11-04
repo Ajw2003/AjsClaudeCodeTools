@@ -15,6 +15,7 @@ import tempfile
 import time
 import urllib.parse
 
+from house_lib import blocks as _blocks
 from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
@@ -27,8 +28,6 @@ from house_rules.core import (  # noqa: F401
     _PR_BODY_FILE_RE,
     _SESSION_ID_RE,
     _apply_assigns,
-    _attribution_enabled,
-    _clear_writing_enabled,
     _command_dir,
     _common_git_dir,
     _git_dir,
@@ -38,10 +37,8 @@ from house_rules.core import (  # noqa: F401
     _inside,
     _is_claude_identity,
     _is_relayed_prompt,
-    _issues_enabled,
     _issues_locate,
     _last_user_text,
-    _loop_enabled,
     _outside_page_links,
     _payload_cwd,
     _plugin_root,
@@ -57,7 +54,7 @@ from house_rules.core import (  # noqa: F401
 # to do these things; none of them runs `gh issue create` or `gh issue close` itself. No new
 # hook process on Write/Edit/Bash: delegate writes the state, the Bash PostToolUse entry that
 # autosave uses records creations, commitgate gates, handover nags, guard checks the gh commands.
-# Plan: docs/plans/issue-workflow-build-plan.md. HOUSE_RULES_ISSUES=off disables all of it.
+# Plan: docs/plans/issue-workflow-build-plan.md.
 # ---------------------------------------------------------------------------------------
 
 ISSUES_FILE = "house-rules-issues.json"
@@ -129,8 +126,6 @@ def _plan_step_count(plan):
 def _issues_plan_note(payload):
     """Delegate's issue half: count the plan's steps, write the gate state when it is over the
     threshold, and return the text to append to the delegate note (always at least one sentence)."""
-    if not _issues_enabled():
-        return ""
     raw = _field(_PLAN_VALUE_RE, payload or "")
     if raw is None:
         return " Issue workflow: could not read the plan text from the payload, so the issue gate is off for this plan."
@@ -201,107 +196,10 @@ def _is_source_path(fp, cwd, top):
 _SHELL_TOOLS = ("Bash", "PowerShell")
 
 
-_HEREDOC_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.DOTALL)
-
-
-_QUOTED_RE = re.compile(r"(>>?[ \t]*)?(\"[^\"\n]*\"|'[^'\n]*')")
-
-
-_REDIRECT_RE = re.compile(r"(?<![<>&|])(?:\d|&)?>>?(?![&(>])[ \t]*(\"[^\"\n]+\"|'[^'\n]+'|[^\s;&|<>()\"']+)")
-
-
-_PY_OPEN_RE = re.compile(r"\bopen\(\s*([^,()]+?)\s*,\s*(?:mode\s*=\s*)?['\"][wax]")
-
-
-_PY_WRITE_TEXT_RE = re.compile(r"\.write_text\(")
-
-
-_PY_WRITE_TEXT_LIT_RE = re.compile(r"Path\(\s*(['\"])([^'\"]+)\1\s*\)\s*\.write_text\(")
-
-
-_NODE_WRITE_RE = re.compile(r"\bwriteFileSync\(")
-
-
-_NODE_WRITE_LIT_RE = re.compile(r"\bwriteFileSync\(\s*(['\"])([^'\"]+)\1")
-
-
-_SCRIPT_RUNNER_RE = re.compile(r"(?:^|[\s;&|(/])(?:python3?|py|node)(?:\.exe)?(?=\s|$)")
-
-
-_LITERAL_RE = re.compile(r"^(['\"])(.+)\1$")
-
-
-def _script_write_targets(cmd):
-    """(targets, unreadable): file paths a shell command writes through a python/node script
-    (open w/a, write_text, writeFileSync), sed -i / perl -pi, tee, or a > / >> redirect, and
-    whether some write's path could not be read from the command text (#262)."""
-    import shlex
-    targets, unreadable = [], False
-    body = _HEREDOC_RE.sub("", cmd)
-    if _SCRIPT_RUNNER_RE.search(cmd):
-        for m in _PY_OPEN_RE.finditer(cmd):
-            lit = _LITERAL_RE.match(m.group(1))
-            if lit and "$" not in lit.group(2):
-                targets.append(lit.group(2))
-            else:
-                unreadable = True
-        lits = _PY_WRITE_TEXT_LIT_RE.findall(cmd)
-        targets += [p for _, p in lits]
-        if len(_PY_WRITE_TEXT_RE.findall(cmd)) > len(lits):
-            unreadable = True
-        lits = _NODE_WRITE_LIT_RE.findall(cmd)
-        targets += [p for _, p in lits]
-        if len(_NODE_WRITE_RE.findall(cmd)) > len(lits):
-            unreadable = True
-    for stmt in re.split(r"&&|\|\||;|\n|\|", body):
-        try:
-            words = shlex.split(stmt)
-        except ValueError:
-            sys.stderr.write("house-rules design-loop lock: could not split a statement (unbalanced quotes) "
-                             "to look for sed -i / tee; skipping that statement.\n")
-            continue
-        for i, w in enumerate(words):
-            if w not in ("sed", "perl", "tee"):
-                continue
-            if any(p not in ("sudo", "env", "time", "nohup") and "=" not in p for p in words[:i]):
-                continue  # not in command position (e.g. `echo sed -i`, `grep tee f`)
-            rest = words[i + 1:]
-            files, has_script, skip = [], False, False
-            in_place = w == "tee"
-            for a in rest:
-                if skip:
-                    skip = False
-                elif a in ("-e", "-f", "--expression", "--file"):
-                    has_script, skip = True, True
-                elif re.match(r"^-[A-Za-z]+$", a) and a.endswith("e") and not re.match(r"^-[A-Za-z]*i", a):
-                    has_script, skip = True, True  # -ne / -pe: the next word is the script
-                elif a.startswith("-"):
-                    if a == "--in-place" or a.startswith("--in-place=") or re.match(r"^-[A-Za-z]*i", a):
-                        in_place = True
-                else:
-                    files.append(a)
-            if not in_place:
-                continue
-            if w == "sed" and not has_script and files:
-                files = files[1:]
-            if not files:
-                unreadable = True
-            for f in files:
-                if re.search(r"[$`~*?]", f):
-                    unreadable = True
-                else:
-                    targets.append(f)
-            break
-    plain = _QUOTED_RE.sub(lambda m: m.group(0) if m.group(1) else " ", body)
-    for m in _REDIRECT_RE.finditer(plain):
-        t = m.group(1).strip("'\"")
-        if t.startswith("/dev/"):
-            continue
-        if re.search(r"[$`~*?]", t):
-            unreadable = True
-        else:
-            targets.append(t)
-    return targets, unreadable
+from house_lib.shellwrites import (  # noqa: E402,F401 - moved to the shared library (#440 part B)
+    script_write_targets as _script_write_targets, _HEREDOC_RE, _QUOTED_RE, _REDIRECT_RE, _PY_OPEN_RE,
+    _PY_WRITE_TEXT_RE, _PY_WRITE_TEXT_LIT_RE, _NODE_WRITE_RE, _NODE_WRITE_LIT_RE, _SCRIPT_RUNNER_RE, _LITERAL_RE,
+)
 
 
 def _gated_script_write(payload):
@@ -347,8 +245,7 @@ def _issues_gate(payload):
         "blocked until its issues exist. Two pieces are missing: (1) a parent issue for the plan, "
         "(2) at least one child issue per step saying `Part of #<parent>`, each carrying the label "
         "`%s` (%d of %d recorded). Create them with `gh issue create --label \"%s\"`, show the user "
-        "the numbers, then repeat this edit. docs/, .md files and .claude/ are editable meanwhile. "
-        "To switch this off: HOUSE_RULES_ISSUES=off." % (state.get("plan_steps", "more than 3"),
+        "the numbers, then repeat this edit. docs/, .md files and .claude/ are editable meanwhile." % (state.get("plan_steps", "more than 3"),
                                                           ISSUES_LABEL, have, ISSUES_NEEDED, ISSUES_LABEL),
         None,
     )
@@ -359,7 +256,7 @@ def _issues_gate(payload):
 # LOOP_FILE in .claude/ of the main checkout and carried across sessions. Only aj's own message moves it
 # (scope reads it before the model does), and code edits are refused outside build. "I review"
 # happens inside build, because fixing what the review finds is code. Design:
-# docs/plans/loop-design.html. HOUSE_RULES_LOOP=off disables it.
+# docs/plans/loop-design.html.
 # ---------------------------------------------------------------------------------------
 
 LOOP_FILE = "house-rules-loop.json"
@@ -452,8 +349,7 @@ def _loop_file_refusal(payload):
             p = p if os.path.isabs(p) else os.path.join(cwd, p)
             if os.path.normcase(os.path.abspath(p)) == want:
                 return ("House rules, design loop: %s is the stage tracker and only aj's approval messages "
-                        "move the stage, so it cannot be edited by hand. To switch the loop off: "
-                        "HOUSE_RULES_LOOP=off." % LOOP_FILE)
+                        "move the stage, so it cannot be edited by hand." % LOOP_FILE)
     return None
 
 
@@ -926,8 +822,6 @@ def _loop_locate_prompt(start):
 
 def _loop_scope_note(payload):
     """scope's half: read aj's message, move the stage, say what happened. Never raises."""
-    if not _loop_enabled():
-        return ""
     try:
         m = _PROMPT_VALUE_RE.search(payload or "")
         if not m:
@@ -955,8 +849,6 @@ def _loop_scope_note(payload):
 def _loop_helper_note(payload):
     """#232: what a helper is told at start-up about the feature it works inside. "" when the loop
     is off or the helper is not in a repo."""
-    if not _loop_enabled():
-        return ""
     _, git_dir = _issues_locate(_payload_cwd(payload))
     if not git_dir:
         return ""
@@ -977,8 +869,6 @@ def _loop_helper_note(payload):
 def _loop_stop_line(payload):
     """#238, handover: (line or None, problem or None) - name every issue whose label doesn't fit the
     stage. Quiet when there is no feature with issues, or every label fits."""
-    if not _loop_enabled():
-        return None, None
     _, git_dir = _issues_locate(_payload_cwd(payload))
     if not git_dir:
         return None, None
@@ -1049,7 +939,7 @@ def _loop_gate(payload):
         "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
         "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
         "change. docs/, .claude/ and .md files stay open, so write the design or plan as a page "
-        "now. To switch this off: HOUSE_RULES_LOOP=off." % (
+        "now." % (
             LOOP_STAGE_NAMES[state["stage"]], ' of "%s"' % feature if feature else ""),
         None,
     )
@@ -1121,7 +1011,7 @@ def _loop_record_issues(git_dir, found, labelled, top=None):
     #308: only issues made in the repo that owns the stage file count. In an Unblocked session, two issues
     opened in another repo were counted as Unblocked's, and the label check then blocked the turn seven
     times. A checkout with no GitHub origin can't say which repo it is, so its issues count as before."""
-    if not _loop_enabled() or not found:
+    if not found:
         return []
     state, problem = _loop_read(git_dir)
     if problem:
@@ -1232,8 +1122,6 @@ def _pr_opened(data):
 def _loop_record_labels(payload):
     """PostToolUse: record label changes for the GitHub-read fallback, and move Build to QA once every
     issue says needs review. Returns notes. Never raises."""
-    if not _loop_enabled():
-        return []
     try:
         data = json.loads(payload)
         changes = _label_changes(data) if isinstance(data, dict) else []
@@ -1283,8 +1171,6 @@ def _issues_record(payload):
         if not git_dir:
             return []
         loop_notes = _loop_record_issues(git_dir, found, labelled, top)
-        if not _issues_enabled():
-            return loop_notes
         state, problem = _issues_read(git_dir)
         if problem:
             return loop_notes + [problem]
@@ -1315,8 +1201,6 @@ def _issues_record(payload):
 
 def _issues_stop_line(payload):
     """Handover: (line or None, problem or None) - the gate is still closed at Stop."""
-    if not _issues_enabled():
-        return None, None
     top, git_dir = _issues_locate(_payload_cwd(payload))
     if not git_dir:
         return None, None
@@ -1357,8 +1241,6 @@ PR_ASK_NOTE = (
 
 def _author_guard(subject, payload):
     """None unless a git commit would be authored as Claude, else ("deny", reason, None)."""
-    if not _attribution_enabled():
-        return None
     cmd = _decoded_command(subject)
     if not _GIT_COMMIT_RE.search(cmd):
         return None
@@ -1368,8 +1250,7 @@ def _author_guard(subject, payload):
     if who is None or not _is_claude_identity(*who):
         return None
     return ("deny", "House rules, credit aj's agent: this commit would be authored as `%s <%s>`, "
-            "which signs it as Claude. Set the agent's identity in this repo and retry: `%s`. "
-            "HOUSE_RULES_ATTRIBUTION=off disables this check."
+            "which signs it as Claude. Set the agent's identity in this repo and retry: `%s`."
             % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
 
 
@@ -1379,7 +1260,7 @@ def _guardgithub_issue_checks(payload, raw):
     # #248: an issue made with the GitHub tool needs its three sections, like one made with gh.
     ti = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
     if (_GITHUB_ISSUE_WRITE_RE.match(str(payload.get("tool_name") or ""))
-            and str(ti.get("method", "")).lower() == "create" and _issues_enabled() and _clear_writing_enabled()):
+            and str(ti.get("method", "")).lower() == "create"):
         if clarity is None:
             emit({"systemMessage": CLARITY_ERROR + " The issue was NOT checked for its sections."})
         else:
@@ -1389,7 +1270,7 @@ def _guardgithub_issue_checks(payload, raw):
                       "permissionDecisionReason": ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing)}})
                 return True
     # #363: a close through the GitHub tool goes through the same close guard as gh.
-    if (_GITHUB_ISSUE_WRITE_RE.match(str(payload.get("tool_name") or "")) and _issues_enabled()
+    if (_GITHUB_ISSUE_WRITE_RE.match(str(payload.get("tool_name") or ""))
             and str(ti.get("method", "")).lower() == "update" and str(ti.get("state", "")).lower() == "closed"):
         num = ti.get("issue_number")
         try:
@@ -1541,8 +1422,6 @@ def _close_gh_decision(cmd, payload):
 def _issues_guard(subject, payload):
     """None when the issue rules have nothing to say about this command, else
     (kind, reason, context) with kind "deny" or "ask"."""
-    if not _issues_enabled():
-        return None
     cmd = _decoded_command(subject)
     if _GH_PR_CREATE_RE.search(cmd):
         body = cmd
@@ -1574,7 +1453,7 @@ def _issues_guard(subject, payload):
                     "`Refs #N`, `Refs owner/repo#N` or `Part of #N`, or a line `No-issue: <reason>`. "
                     "Add it and run the command again.", None)
         return None
-    if _GH_ISSUE_CREATE_RE.search(cmd) and _clear_writing_enabled() and clarity is not None:
+    if _GH_ISSUE_CREATE_RE.search(cmd) and clarity is not None:
         body = cmd
         fm = _PR_BODY_FILE_RE.search(cmd)
         if fm and fm.group(1).strip("\"'") != "-":
@@ -1599,7 +1478,7 @@ ISSUE_SECTIONS_DENY = (
     "House rules, write it so nothing is left to guess: this issue is missing %s. Every issue needs "
     "\"Depends on\", \"Depended on by\" and \"Done when\" sections (\"Nothing\" is a fine answer), so "
     "a blocker shows up as an unfinished dependency and done means something. Add them and create it "
-    "again. HOUSE_RULES_CLEAR_WRITING=off turns this off."
+    "again."
 )
 
 
@@ -1665,23 +1544,21 @@ def event_issuelist():
         payload = read_payload()
         waiting = _waiting_session_note(payload)
         text, problem = "", ""
-        if _issues_enabled():
-            text, problem = _open_issues_text(_payload_cwd(payload or ""))
+        text, problem = _open_issues_text(_payload_cwd(payload or ""))
         out = {}
         context = [t for t in (text, waiting) if t]
         if context:
             out["hookSpecificOutput"] = {"hookEventName": "SessionStart",
                                          "additionalContext": "\n\n".join(context)}
         notes = []
-        if _issues_enabled():
-            if problem and not text:
-                notes.append("house-rules: could not list open issues (%s)" % problem)
-            elif text:
-                n = sum(1 for l in text.splitlines() if l.startswith("- #"))
-                notes.append("house-rules: %d open issue%s loaded" % (n, "" if n == 1 else "s")
-                             if n else "house-rules: no open issues")
-                if problem:
-                    notes.append("house-rules: open issue list: %s" % problem)
+        if problem and not text:
+            notes.append("house-rules: could not list open issues (%s)" % problem)
+        elif text:
+            n = sum(1 for l in text.splitlines() if l.startswith("- #"))
+            notes.append("house-rules: %d open issue%s loaded" % (n, "" if n == 1 else "s")
+                         if n else "house-rules: no open issues")
+            if problem:
+                notes.append("house-rules: open issue list: %s" % problem)
         if waiting:
             notes.append("house-rules: " + waiting)
         if notes:
@@ -1695,8 +1572,8 @@ def event_issuelist():
 
 # #256: the checkpoint table. Each row is (moment, rule name, check function, "block" or "remind").
 # A check takes the context dict event_handover builds and returns the exact fix when the rule is
-# missed, else "". A "block" row at "reply ends" stops the reply once; on the retry
-# (stop_hook_active) it only reports, the same safety event_subagentcommit uses.
+# missed, else "". A "block" row at "reply ends" stops the reply; the editor, evidence, commit
+# and plain summary rows do so up to three times per message of aj's, then lock (#440, house_lib.blocks); qa page once.
 _LIST_ITEM_RE = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+\S", re.MULTILINE)
 
 
@@ -1787,7 +1664,7 @@ _PAGE_SKIP_ACTIONS = {"read", "list", "open", "delete", "view", "get", "ls", "re
 _PAGE_DENY = (
     "House rules, page check: %s is a hand-written page - it has no house-rules make_page mark. "
     "Pages are built, not typed. Write the content file, then run: python3 %s build <content.json> "
-    "and use the page it builds. HOUSE_RULES_LOOP=off turns this check off."
+    "and use the page it builds."
 )
 
 
@@ -1819,8 +1696,6 @@ def _page_candidates(ti):
 
 def event_pagecheck():
     try:
-        if not _loop_enabled():
-            return 0
         payload = read_payload()
         data = json.loads(payload) if payload else {}
         ti = data.get("tool_input") if isinstance(data, dict) else None
@@ -1923,7 +1798,7 @@ CHECKPOINTS = [
 CHECKPOINT_RULES = {
     "page built": "A handover page is built by make_page.py, never typed by hand.",
     "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
-    "editor": "A page goes past @house-rules:editor before aj reads it; a long reply too when HOUSE_RULES_EDITOR=on.",
+    "editor": "A page goes past @house-rules:editor before aj reads it.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
@@ -1933,19 +1808,23 @@ CHECKPOINT_RULES = {
 
 def _missed_checkpoints(ctx):
     """[(rule name, fix)] for every blocking checkpoint at 'reply ends' that the reply misses."""
-    if not _loop_enabled():
-        return []
     return [(name, fix) for moment, name, fn, mode in CHECKPOINTS
             if moment == "reply ends" and mode == "block" for fix in [fn(ctx)] if fix]
 
 
-def _checkpoint_reason(missed):
+def _checkpoint_reason(missed, counts=None):
+    """`counts` is {rule name: blocks so far for this message, this one included}."""
+    counts = counts or {}
     lines = ["House rules, the reply is not done yet. It misses %d checkpoint%s:" % (
         len(missed), "" if len(missed) == 1 else "s")]
     for name, fix in missed:
-        lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
-    lines.append("Fix these and send only what changed, not the whole reply again. A missing page blocks every retry "
-                 "until the reply links one; the other checks block once. HOUSE_RULES_LOOP=off turns it off.")
+        n = counts.get(name)
+        tag = " (block %d of %d)" % (n, _blocks.BLOCK_LIMIT) if n else ""
+        lines.append("- %s%s: %s Fix: %s." % (name, tag, CHECKPOINT_RULES[name], fix))
+    lines.append("Fix these and send only what changed, not the whole reply again. A check that is still missed "
+                 "blocks up to %d times for the same message of aj's; after the last block the reply goes through "
+                 "and source edits and commits are refused until the check passes."
+                 % _blocks.BLOCK_LIMIT)
     return "\n".join(lines)
 
 
@@ -2094,9 +1973,6 @@ def _closed_issue_of(data):
 
 def event_closablemerge():
     try:
-        if not _loop_enabled():
-            trace("house-rules plugin: closable-merge stamping is off (HOUSE_RULES_LOOP=off), so it did nothing.")
-            return 0
         payload = read_payload()
         if not payload:
             return 0
@@ -2141,7 +2017,7 @@ def _scope_loop_link(payload, field):
 # What the delegation part used to call directly (#359, step 2c). It loops over core lists; these are the entries.
 def _post_tool_records(payload):
     """The issue and label recording event_autosave used to run first (core.TOOL_RECORD_HOOKS)."""
-    issue_notes = _issues_record(payload) if (_issues_enabled() or _loop_enabled()) else []
+    issue_notes = _issues_record(payload)
     issue_notes += _loop_record_labels(payload)
     return issue_notes
 
@@ -2149,23 +2025,21 @@ def _post_tool_records(payload):
 def _edit_gates(payload):
     """The loop and issue gates event_commitgate used to run first (core.EDIT_GATE_HOOKS). True when the call
     was answered."""
-    if _loop_enabled():
-        deny, problem = _loop_gate(payload)
-        if deny:
-            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-                                         "permissionDecisionReason": deny}})
-            return True
-        if problem:
-            emit({"systemMessage": problem})
-    if _issues_enabled():
-        deny, problem = _issues_gate(payload)
-        if deny:
-            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-                                         "permissionDecisionReason": deny}})
-            return True
-        if problem:
-            emit({"systemMessage": problem})
-            return True
+    deny, problem = _loop_gate(payload)
+    if deny:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": deny}})
+        return True
+    if problem:
+        emit({"systemMessage": problem})
+    deny, problem = _issues_gate(payload)
+    if deny:
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                     "permissionDecisionReason": deny}})
+        return True
+    if problem:
+        emit({"systemMessage": problem})
+        return True
     return False
 
 
@@ -2184,8 +2058,8 @@ def handover_stop_lines(payload):
 def handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines):
     """The page row of the checkpoint table (#283, #309, #310, #326): the report-only page note, or "". An error
     is added to trace_lines."""
-    # #256: the checkpoint table. A miss blocks once, except the page row (#283), which blocks every
-    # retry up to PAGE_BLOCK_LIMIT in a row. Any error here fails open with a message.
+    # #256: the checkpoint table. The page row is report-only (#309, a later step); the counted blocks
+    # of the other rows are in handover_checkpoints. Any error here fails open with a message.
     def _page_count(ctx, change=None):
         mark = hashlib.sha1((ctx.get("user_text") or "").encode("utf-8")).hexdigest()[:16]
         return _page_blocks(_page_blocks_path(_payload_cwd(payload), _field(_SESSION_ID_RE, payload) or ""),
@@ -2194,35 +2068,57 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
     # #309 (incident 6 of #303): the page row reports instead of blocking, on the first reply and the retry
     # alike, until the restructure. It pushed another repo's work into a session as a proposal page.
     page_note = ""
-    if _loop_enabled():
-        try:
-            pctx = {"reply": reply_text if have_reply else "", "long_words": long_words,
-                    "cwd": _payload_cwd(payload),
-                    "user_text": _last_user_text(transcript_path) if transcript_path else ""}
-            fix = _check_page(pctx)
-            # #310: once a reply to aj's message is flagged, the page stays owed for every later reply to the
-            # same message until one links a page - a shorter retry no longer clears it. The page-blocks file
-            # keeps a count per message; above zero means owed.
-            if _page_escape(pctx) or _reply_links_page(pctx["reply"], pctx["cwd"]):
-                _page_count(pctx, "clear")
-            elif fix or _page_count(pctx) > 0:
-                # #326: the note is said once per message of aj's, on the first flag (count 0). The bump still
-                # records that a page is owed; later replies to the same message, flagged or owed, stay quiet.
-                first = _page_count(pctx) == 0
-                _page_count(pctx, "bump")
-                if first:
-                    page_note = ("House rules, page checkpoint (report only, #309): %s. Nothing is blocked; if this "
-                                 "reply belongs to another repo's work, the issue for that repo is enough." % fix)
-        except Exception as exc:
-            trace_lines.append("house-rules: the page checkpoint could not run (%s: %s), so this reply got no "
-                               "page reminder." % (type(exc).__name__, exc))
+    try:
+        pctx = {"reply": reply_text if have_reply else "", "long_words": long_words,
+                "cwd": _payload_cwd(payload),
+                "user_text": _last_user_text(transcript_path) if transcript_path else ""}
+        fix = _check_page(pctx)
+        # #310: once a reply to aj's message is flagged, the page stays owed for every later reply to the
+        # same message until one links a page - a shorter retry no longer clears it. The page-blocks file
+        # keeps a count per message; above zero means owed.
+        if _page_escape(pctx) or _reply_links_page(pctx["reply"], pctx["cwd"]):
+            _page_count(pctx, "clear")
+        elif fix or _page_count(pctx) > 0:
+            # #326: the note is said once per message of aj's, on the first flag (count 0). The bump still
+            # records that a page is owed; later replies to the same message, flagged or owed, stay quiet.
+            first = _page_count(pctx) == 0
+            _page_count(pctx, "bump")
+            if first:
+                page_note = ("House rules, page checkpoint (report only, #309): %s. Nothing is blocked; if this "
+                             "reply belongs to another repo's work, the issue for that repo is enough." % fix)
+    except Exception as exc:
+        trace_lines.append("house-rules: the page checkpoint could not run (%s: %s), so this reply got no "
+                           "page reminder." % (type(exc).__name__, exc))
     return page_note
 
 
+# The four checks that block up to three times and then lock (#440, choice 6A). "qa page" stays block-once.
+LOCKED_CHECKS = ("editor", "evidence", "commit", "plain summary")
+
+
+def _turn_mark(transcript_path):
+    """The key of the message this reply answers: the user record's uuid and text."""
+    _records, user, _detail = core._load_turn(transcript_path)
+    if not user:
+        return _blocks.message_mark("", "")
+    content = (user.get("message") or {}).get("content")
+    text = content if isinstance(content, str) else json.dumps(content, sort_keys=True)
+    return _blocks.message_mark(user.get("uuid") or user.get("timestamp") or "", text)
+
+
 def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                         needs_evidence, uncommitted, plain_problems, trace_lines):
-    """The blocking checkpoints at "reply ends" (first reply only). True when the reply was blocked (the
-    block is emitted here). An error is added to trace_lines and nothing is blocked."""
+                         needs_evidence, uncommitted, plain_problems, trace_lines, retry=False,
+                         cannot_tell=(), judged=("editor", "evidence", "commit", "plain summary")):
+    """The blocking checkpoints at "reply ends". Returns (blocked, through): `blocked` is True when the reply
+    was blocked (the block is emitted here); `through` is True when a check had already blocked three times for
+    this message, so the reply goes through with the check locked (said in trace_lines). `cannot_tell` names
+    checks whose result is unknown this time: they neither block nor clear a lock. `judged` names the checks
+    this reply carries enough to judge: a lock clears only when its check passes AND is judged (a reply with
+    no success claim cannot clear an evidence lock, one with no editor run cannot clear an editor lock); a
+    lock that cannot be cleared is kept and said so. A commit lock records the files it named and clears only
+    when those are committed. Block counts and locks live
+    in house_lib.blocks. An error is added to trace_lines and nothing is blocked."""
+    through = False
     try:
         ctx = {
             "reply": reply_text if have_reply else "",
@@ -2245,13 +2141,78 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
         missed = _missed_checkpoints(ctx)
-        if missed:
-            emit({"decision": "block", "reason": _checkpoint_reason(missed)})
-            return True
+        fixes = dict(missed)
+        session_id = _field(_SESSION_ID_RE, payload) or ""
+        mark = _turn_mark(transcript_path) if transcript_path else _blocks.message_mark("", ctx["user_text"])
+        to_block, counts, through_lines = [], {}, []
+        cannot_tell = set(cannot_tell)
+        try:
+            locks_now = _blocks.active_locks(ctx["cwd"], session_id)
+        except (OSError, ValueError) as exc:
+            locks_now = {}
+            trace_lines.append("house-rules: the lock state could not be read (%s: %s), so no lock is cleared "
+                               "this reply." % (type(exc).__name__, exc))
+            cannot_tell.update(LOCKED_CHECKS)
+        commit_files = list(ctx["uncommitted"] or [])
+        lk = locks_now.get("commit") or {}
+        if lk.get("files") and "commit" not in cannot_tell:
+            try:
+                _top, _dirty = core._dirty_paths(ctx["cwd"])
+                still = core._uncommitted_among(lk["files"], _top, (_top, _dirty))
+            except Exception as exc:
+                cannot_tell.add("commit")
+                trace_lines.append("house-rules: could not tell whether the files the commit lock named (%s) are "
+                                   "committed (%s: %s), so the lock is kept." % (
+                                       ", ".join(lk["files"][:8]), type(exc).__name__, exc))
+            else:
+                if still:
+                    commit_files = list(dict.fromkeys(commit_files + still))
+                    fixes["commit"] = "commit %s on your own branch" % ", ".join(commit_files[:8])
+        for name, fix in missed:
+            if name not in LOCKED_CHECKS and not retry:  # qa page: once, on the first reply only
+                to_block.append((name, fix))
+        for name in LOCKED_CHECKS:
+            if name in cannot_tell:
+                if name in locks_now:
+                    trace_lines.append("house-rules: the %s lock is kept: this reply could not be judged against "
+                                       "it (the check could not tell)." % name)
+                continue
+            if name in locks_now and name not in fixes and name not in judged:
+                trace_lines.append("house-rules: the %s lock is kept: this reply does not carry what the check "
+                                   "wants (%s), so it cannot clear the lock. %s" % (
+                                       name, CHECKPOINT_RULES[name], locks_now[name].get("fix") or ""))
+                continue
+            try:
+                action = _blocks.record_stop(ctx["cwd"], session_id, name, mark, name in fixes,
+                                             CHECKPOINT_RULES[name], fixes.get(name, ""),
+                                             commit_files if name == "commit" else None)
+            except (OSError, ValueError) as exc:
+                trace_lines.append("house-rules: the %s check could not read or write its block count (%s: %s), "
+                                   "so it did not block this reply and no lock was set or cleared."
+                                   % (name, type(exc).__name__, exc))
+                continue
+            if action == "block":
+                to_block.append((name, fixes[name]))
+                counts[name] = _blocks.block_count(ctx["cwd"], session_id, name, mark)
+            elif action == "through":
+                through = True
+                through_lines.append(
+                    "house-rules: the %s check still fails after %d blocks for this message, so the reply goes "
+                    "through and the check is LOCKED: source edits and commits are refused until it passes. "
+                    "Missing: %s Fix: %s." % (name, _blocks.BLOCK_LIMIT, CHECKPOINT_RULES[name], fixes[name]))
+        trace_lines.extend(through_lines)
+        if to_block:
+            order = {n: i for i, n in enumerate(m[1] for m in CHECKPOINTS)}
+            to_block.sort(key=lambda m: order.get(m[0], 99))
+            out = {"decision": "block", "reason": _checkpoint_reason(to_block, counts)}
+            if through_lines:
+                out["systemMessage"] = " ".join(through_lines)
+            emit(out)
+            return True, through
     except Exception as exc:
         trace_lines.append("house-rules: the checkpoint table hit an error (%s: %s), so this reply was "
                            "not blocked." % (type(exc).__name__, exc))
-    return False
+    return False, through
 
 
 def handover_qa_retry(payload, have_reply, reply_text, trace_lines):

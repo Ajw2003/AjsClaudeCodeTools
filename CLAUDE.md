@@ -16,7 +16,7 @@ running a command in this repo — what's built, where it stands, how each syste
 decisions were made. (`docs/README.md` is the short, plain-English version, for people.)
 
 **This file is a pointer, not a copy.** The actual rules text lives at
-[claude-house-rules/plugins/house-rules/rules/house-rules.md](claude-house-rules/plugins/house-rules/rules/house-rules.md),
+[claude-house-rules/plugins/rule-enforcement/rules/house-rules.md](claude-house-rules/plugins/rule-enforcement/rules/house-rules.md),
 injected every session by the plugin's own `SessionStart` hook, and its full detail lives under
 `rules/detail/`. **Never paste the rules back into this file** — Claude Code auto-loads every
 `CLAUDE.md` it finds, so a copy here loads twice and drifts from the original unnoticed;

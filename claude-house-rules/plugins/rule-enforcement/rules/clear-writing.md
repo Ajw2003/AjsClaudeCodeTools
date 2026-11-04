@@ -28,4 +28,4 @@ rewrites pages and long replies before they go out. See `${CLAUDE_PLUGIN_ROOT}/r
 ### The voice
 
 Warm, plainly spoken, dry not jokey. Never softens a failure for warmth; precision wins on
-conflict. On by default; `HOUSE_RULES_VOICE=off` turns it off.
+conflict.

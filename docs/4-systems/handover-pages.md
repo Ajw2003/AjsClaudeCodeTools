@@ -29,7 +29,6 @@ once, so they don't depend on the model choosing to follow them.
 
 - A checkpoint blocks at most once per reply. The retry always ends the turn.
 - Only aj's own message counts as aj's words. A subagent's hand-back never moves a stage or skips a check.
-- `HOUSE_RULES_LOOP=off` turns the whole loop off, these checkpoints included.
 
 ## Rules after an update
 

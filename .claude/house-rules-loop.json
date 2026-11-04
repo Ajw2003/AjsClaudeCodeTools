@@ -1,6 +1,6 @@
 {
-  "feature": "rerun limit",
-  "stage": "qa",
+  "feature": "plugin split",
+  "stage": "build",
   "skip": false,
   "approvals": [
     {
@@ -115,26 +115,86 @@
     },
     {
       "stage": "Design approved",
-      "name": "rerun limit",
-      "at": 1793653331
+      "name": "plugin split",
+      "at": 1793583743
     },
     {
       "stage": "Build plan approved",
-      "name": "rerun limit",
-      "at": 1793666060
+      "name": "plugin split",
+      "at": 1793584092
     }
   ],
-  "log_mark": "1d0c5eacf3f13d5973d03b89cd37261e5ee45cb00da12a9db8a7da9028d24d12",
+  "log_mark": "56a12695715bd7a1c6ba8ed11c17af41b38e98164bd6c869a8f6a43637f81584",
   "redo": false,
   "issues": [
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 454,
+      "number": 437,
       "labelled": true
     },
     {
       "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 455,
+      "number": 438,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 439,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 440,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 441,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 442,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 443,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 444,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 445,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 446,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 447,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 448,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 449,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 450,
       "labelled": true
     }
   ],
@@ -201,8 +261,8 @@
     ],
     "Ajw2003/AjsClaudeCodeTools#306": [
       "enhancement",
-      "in progress",
-      "AjsAgent created this"
+      "AjsAgent created this",
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#307": [
       "bug",
@@ -241,36 +301,43 @@
     ],
     "Ajw2003/AjsClaudeCodeTools#341": [
       "AjsAgent created this",
-      "Feature"
+      "Feature",
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#343": [
       "AjsAgent created this",
-      "Feature"
+      "Feature",
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#344": [
       "AjsAgent created this",
-      "Feature"
+      "Feature",
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#345": [
       "AjsAgent created this",
-      "Feature"
+      "Feature",
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#346": [
       "AjsAgent created this",
-      "Feature"
+      "Feature",
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#347": [
       "AjsAgent created this",
       "Feature",
-      "needs review"
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#348": [
       "AjsAgent created this",
-      "Feature"
+      "Feature",
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#349": [
       "AjsAgent created this",
-      "Feature"
+      "Feature",
+      "AjsAgent completed this"
     ],
     "Ajw2003/AjsClaudeCodeTools#357": [
       "AjsAgent created this",
@@ -502,21 +569,84 @@
       "needs review",
       "AjsAgent created this"
     ],
-    "Ajw2003/AjsClaudeCodeTools#454": [
+    "Ajw2003/AjsClaudeCodeTools#437": [
       "AjsAgent created this",
-      "bug",
-      "needs review"
+      "in progress",
+      "Feature"
     ],
-    "Ajw2003/AjsClaudeCodeTools#455": [
+    "Ajw2003/AjsClaudeCodeTools#438": [
       "AjsAgent created this",
-      "bug",
-      "needs review"
+      "in progress",
+      "Feature"
     ],
-    "Ajw2003/AjsClaudeCodeTools#453": [
-      "bug",
-      "source:rules-backlog",
+    "Ajw2003/AjsClaudeCodeTools#439": [
       "AjsAgent created this",
-      "needs review"
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#440": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#441": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#442": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#443": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#444": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#445": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#446": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#447": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#448": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#449": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#450": [
+      "AjsAgent created this",
+      "in progress",
+      "Feature"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#381": [
+      "AjsAgent created this",
+      "Feature",
+      "AjsAgent completed this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#467": [
+      "AjsAgent created this",
+      "bug"
     ]
   },
   "sweep": [
@@ -675,6 +805,36 @@
       "number": 225,
       "action": "completed",
       "replaced_by": null
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 341,
+      "action": "not_planned",
+      "replaced_by": 437
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 343,
+      "action": "not_planned",
+      "replaced_by": 437
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 344,
+      "action": "not_planned",
+      "replaced_by": 437
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 346,
+      "action": "not_planned",
+      "replaced_by": 437
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 349,
+      "action": "not_planned",
+      "replaced_by": 437
     }
   ],
   "closable": [
@@ -723,38 +883,6 @@
       "merged_pr": null
     }
   ],
-  "sweep_proposed": [
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 340,
-      "action": "completed",
-      "replaced_by": null
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 357,
-      "action": "completed",
-      "replaced_by": null
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 358,
-      "action": "completed",
-      "replaced_by": null
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 359,
-      "action": "completed",
-      "replaced_by": null
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 360,
-      "action": "completed",
-      "replaced_by": null
-    }
-  ],
   "features": {
     "background work tracking 1*": {
       "name": "background work tracking 1*",
@@ -778,6 +906,5 @@
       "stage": "qa"
     }
   },
-  "qa_page": "docs/plans/rerun-limit-qa.html",
-  "qa_page_linked": true
+  "qa_page": "docs/plans/2026-11-02-plugin-split-qa.html"
 }

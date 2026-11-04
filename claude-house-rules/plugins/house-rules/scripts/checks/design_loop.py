@@ -210,24 +210,6 @@ commit_case(
     "out %r" % _oc[:160],
 )
 
-_dk = _iss_repo()
-_, _ok, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk, plan=_ISS_PLAN5), _dk,
-                      HOUSE_RULES_ISSUES="off")
-_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk, plan=_ISS_PLAN5), _dk)  # state now exists
-_, _ogk, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _dk, file_path=os.path.join(_dk, "a.cs")), _dk,
-                       HOUSE_RULES_ISSUES="off")
-_, _opk, _ = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _dk, command='gh pr create --title T --body "Closes #5"'), _dk,
-                       HOUSE_RULES_ISSUES="off")
-_, _ock, _ = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _dk, command="gh issue close 5"), _dk,
-                       HOUSE_RULES_ISSUES="off")
-_dk2 = _iss_repo()
-_iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dk2, plan=_ISS_PLAN5), _dk2, HOUSE_RULES_ISSUES="off")
-commit_case(
-    "issues: HOUSE_RULES_ISSUES=off writes no state and disables the gate, the PR rule and the close prompt",
-    _iss_state(_dk2) is None and _ogk.strip() == "" and _opk.strip() == "" and _ock.strip() == "",
-    "gate %r pr %r close %r" % (_ogk[:40], _opk[:40], _ock[:40]),
-)
-
 _dw = _iss_repo()
 _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _dw, plan=_ISS_PLAN5), _dw)
 _wt = os.path.join(_FIXTURE_ROOT, "iss-subagent-wt")
@@ -302,7 +284,6 @@ _au3 = _iss_guard('git commit --author "Claude <noreply@anthropic.com>" -m x', _
 _au4 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=79066376+Ajw2003@users.noreply.github.com commit -m x", _au_bad)
 _au5 = _iss_guard("GIT_AUTHOR_EMAIL=noreply@anthropic.com git commit -m x", _au_good)
 _au6 = _iss_guard("git commit --author='Claudette <c@example.com>' -m x", _au_bad)
-_au7 = _iss_guard("git commit -m x", _au_bad, HOUSE_RULES_ATTRIBUTION="off")
 _au9 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=bot@anthropic.com commit -m x", _au_good)
 _au10 = _iss_guard("git -c \"user.name=Claude\" commit -m x", _au_good)
 _au11 = _iss_guard("git -c \"user.name=AJ's agent\" -c 'user.email=79066376+Ajw2003@users.noreply.github.com' commit -m x", _au_bad)
@@ -325,9 +306,9 @@ commit_case(
     "out %r | %r | %r" % (_au9[:80], _au10[:80], _au11[:80]),
 )
 commit_case(
-    "author: a name merely containing claude passes, and HOUSE_RULES_ATTRIBUTION=off disables the check",
-    _iss_decision(_au6) != "deny" and _iss_decision(_au7) != "deny",
-    "out %r | %r" % (_au6[:80], _au7[:80]),
+    "author: a name merely containing claude passes",
+    _iss_decision(_au6) != "deny",
+    "out %r" % (_au6[:80],),
 )
 commit_case(
     "author: the same refusal applies through the PowerShell tool",
@@ -437,8 +418,6 @@ commit_case(
     "issuelist: no GitHub remote, no remote at all, or no gh on PATH is silent (nothing to list)",
     _ol4.strip() == "" and _ol5.strip() == "" and _ol6.strip() == "", "out %r %r %r" % (_ol4[:40], _ol5[:40], _ol6[:40]),
 )
-_, _ol7, _ = _iss_call("issuelist", {"hook_event_name": "SessionStart", "cwd": _dl}, _dl, HOUSE_RULES_ISSUES="off")
-commit_case("issuelist: HOUSE_RULES_ISSUES=off prints nothing", _ol7.strip() == "", "out %r" % _ol7[:60])
 
 # -- constraints the plan sets --------------------------------------------------------------------------
 if os.path.exists(_ISS_MARK):
@@ -467,10 +446,9 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.75.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.76.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
-    and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.75.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.76.0",
     "rules section + detail file + version",
 )
 
@@ -537,8 +515,7 @@ else:
 _loop_dir = tempfile.mkdtemp(prefix="house-rules-loop-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _loop_dir], check=True)
 _loop_labels_file = os.path.join(_FIXTURE_ROOT, "loop-labels.json")
-_loop_env = dict(os.environ, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
-                 HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+_loop_env = dict(os.environ, HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
 
 
 def _loop_gh(label, *numbers):
@@ -583,7 +560,7 @@ def _loop_edit(rel, **extra):
 
 def _loop_say(prompt, session="loop"):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": session, "cwd": _loop_dir, "prompt": prompt}
-    _, out, _ = run_hook("scope", json.dumps(p), env=_loop_env)
+    _, out, _ = run_hook("scopelinks", json.dumps(p), env=_loop_env)
     try:
         return json.loads(out)["hookSpecificOutput"]["additionalContext"]
     except Exception:
@@ -661,7 +638,7 @@ _g = _loop_say("go ahead and build it")
 _loop_cases.append(("with the loop on, a go-ahead message no longer gets the guess", "reads like a go-ahead" not in _g))
 _sp = {"hook_event_name": "SubagentStart", "session_id": "loop", "agent_id": "h1", "agent_type": "house-rules:builder",
        "cwd": _loop_dir, "transcript_path": os.path.join(_FIXTURE_ROOT, "loop.jsonl")}
-_, _so, _ = run_hook("subagentrules", json.dumps(_sp), env=_loop_env)
+_, _so, _ = run_hook("subagentlinks", json.dumps(_sp), env=_loop_env)
 try:
     _so = json.loads(_so)["hookSpecificOutput"]["additionalContext"]
 except Exception:
@@ -705,7 +682,7 @@ _loop_cases.append(("#278: a repo label list, or a failed call, records nothing"
                     "o/r#203" not in _loop_state().get("labels", {})
                     and not any(k.endswith("/r") or k == "o/r" for k in _loop_state().get("labels", {}))))
 _hook_src = open(DESIGN_LOOP, encoding="utf-8").read()  # #359: the issue workflow lives in the design loop part
-_wf_src = open(os.path.join(HERE, "..", "rules", "detail", "issue-workflow.md"), encoding="utf-8").read()
+_wf_src = open(os.path.join(DETAIL_DIR, "issue-workflow.md"), encoding="utf-8").read()
 _created_note = _hook_src.split("was created without the", 1)[1][:400]
 _loop_cases.append(("#278: none of the label-advice places still says --add-label",
                     not any("--add-label" in _t for _t in (_ig_mod.ISSUE_NOTE, _created_note, _wf_src))
@@ -793,9 +770,6 @@ _loop_cases.append(('"QA passed" moves to Done and closes code', _loop_stage() =
                     and _loop_edit("app.py") == "deny"))
 _loop_cases.append(("a helper's edit is held by the same lock",
                     _loop_edit("app.py", agent_id="helper1") == "deny"))
-_loop_env["HOUSE_RULES_LOOP"] = "off"
-_loop_cases.append(("HOUSE_RULES_LOOP=off lifts the lock", _loop_edit("app.py") == "allow"))
-_loop_env["HOUSE_RULES_LOOP"] = "on"
 os.makedirs(os.path.join(_loop_dir, ".claude"), exist_ok=True)
 with open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), "w") as _f:
     _f.write("{not json")
@@ -855,9 +829,16 @@ _wt_k = _wt_bash("ls -la 2>&1 | grep x; echo done > /dev/null")[0]
 _wt_l = _wt_bash("python3 -c \"open('docs/x.txt', 'w').write('x')\"")[0]
 _wt_m = _wt_raw(_wt_heredoc)
 _wt_n = _wt_raw("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" app.py")
-_wt_loop_off = dict(_loop_env, HOUSE_RULES_LOOP="off")
-_, _wt_o, _ = run_hook("commitgate", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt",
-                       "cwd": _wt_main, "tool_input": {"command": _wt_heredoc}}), env=_wt_loop_off)
+def _wt_full(cmd):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt", "cwd": _wt_main,
+         "tool_input": {"command": cmd}}
+    return run_hook("commitgate", json.dumps(p), env=_loop_env)
+
+
+_wt_p = _wt_full('git commit -m "line one\nline two"')
+_wt_q = _wt_full('echo "a && b" > src.py')
+_wt_r = _wt_full('git commit -m "one\ntwo" && sed -i s/a/b/ app.py')
+_wt_s = _wt_full('echo "unclosed > notes.md')
 for _t, _ok in (
         ("a worktree reads the main checkout's stage: Build lets its Edit through", _wt_a == "allow"),
         ("a worktree reads the main checkout's stage: Design refuses its Edit", _wt_d == "deny"),
@@ -871,7 +852,12 @@ for _t, _ok in (
         ("#309: a script whose target path is a variable goes through, and the report says the file couldn't be named",
          _wt_i[0] == "allow" and "a file it can't name" in _wt_n),
         ("redirects to /dev/null and a write into docs/ stay open", _wt_k == "allow" and _wt_l == "allow"),
-        ("HOUSE_RULES_LOOP=off leaves script writes alone", "deny" not in _wt_o)):
+        ("a multi-line commit message prints nothing to stderr and names no write target",
+         _wt_p[2] == "" and "report only" not in _wt_p[1]),
+        ("`echo \"a && b\" > src.py` is still read as a write to src.py", "src.py" in _wt_q[1]),
+        ("a sed -i after a quoted multi-line argument is still caught", "app.py" in _wt_r[1] and _wt_r[2] == ""),
+        ("a statement with truly unbalanced quotes counts as unreadable, with no stderr line",
+         "a file it can't name" in _wt_s[1] and _wt_s[2] == "")):
     _loop_cases.append((_t, _ok))
 # -- #265: the stage lives in a committed .claude file and survives a fresh clone ---------------
 _wt_stage("build")
@@ -894,7 +880,7 @@ with open(os.path.join(_leg, ".git", "house-rules-loop.json"), "w") as _f:
     json.dump({"feature": "old", "stage": "design", "skip": False, "approvals": []}, _f)
 _leg_a = _wt_gate("Edit", {"file_path": os.path.join(_leg, "app.py")}, _leg)[0]  # Design: deny proves it was read
 _leg_p = {"hook_event_name": "UserPromptSubmit", "session_id": "leg", "cwd": _leg, "prompt": "skip design"}
-run_hook("scope", json.dumps(_leg_p), env=_loop_env)
+run_hook("scopelinks", json.dumps(_leg_p), env=_loop_env)
 _leg_new = os.path.join(_leg, ".claude", "house-rules-loop.json")
 for _t, _ok in (
         ("the stage committed in one checkout reads back in a fresh git clone", _clone_edit == "allow"),
@@ -929,7 +915,7 @@ _wt_stage("design")
 os.makedirs(os.path.join(_wt_main, "docs", "6-decisions"), exist_ok=True)
 with open(os.path.join(_wt_main, "docs", "6-decisions", "Decisions.md"), "w", encoding="utf-8") as _f:
     _f.write("design decisions\n")
-run_hook("scope", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": "qa", "cwd": _wt_main,
+run_hook("scopelinks", json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": "qa", "cwd": _wt_main,
          "prompt": "Design approved: enforced QA stage: 1A 2A 3A 4A"}), env=_loop_env)
 _loop_cases.append(('#266: "Design approved: enforced QA stage: 1A 2A 3A 4A" records "enforced QA stage"',
                     json.load(open(_qa_sf, encoding="utf-8")).get("feature") == "enforced QA stage"))
@@ -954,9 +940,6 @@ _loop_cases.append(("a 250-word reply that links a page does not",
 _loop_cases.append(("a 150-word reply does not", not _long_reply(" ".join(["word"] * 150))))
 _loop_cases.append(("words inside a code block are not counted",
                     not _long_reply(" ".join(["word"] * 150) + "\n```\n" + " ".join(["x"] * 200) + "\n```")))
-_loop_env["HOUSE_RULES_LOOP"] = "off"
-_loop_cases.append(("HOUSE_RULES_LOOP=off also turns the reminder off", not _long_reply(_words250)))
-_loop_env["HOUSE_RULES_LOOP"] = "on"
 
 # -- #233: the handover page template -----------------------------------------------------------
 _tpl_path = os.path.join(HERE, "..", "templates", "handover-page.html")
@@ -981,7 +964,7 @@ for _t, _ok in _loop_cases:
 _cl_dir = tempfile.mkdtemp(prefix="house-rules-closable-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _cl_dir], check=True)
 _cl_file = os.path.join(_cl_dir, ".claude", "house-rules-loop.json")
-_cl_env = dict(_loop_env, HOUSE_RULES_LOOP="on")
+_cl_env = dict(_loop_env)
 
 
 def _cl_set(state):
@@ -1002,7 +985,7 @@ def _cl_state():
 
 def _cl_say(prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "cl", "cwd": _cl_dir, "prompt": prompt}
-    run_hook("scope", json.dumps(p), env=_cl_env)
+    run_hook("scopelinks", json.dumps(p), env=_cl_env)
 
 
 def _cl_merge(tool, tool_input, response, env=None):
@@ -1052,10 +1035,6 @@ _cl_cases.append(("with no exit code, a gh pr merge with no success line, or an 
 _cl_merge("Bash", {"command": "gh pr merge 16 --squash"}, {"stdout": "", "stderr": "✓ Squashed and merged pull request #16 (title)"})
 _cl_cases.append(("with no exit code, gh's success line stamps the entry",
                   (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 16))
-_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
-_o = _cl_merge("Bash", {"command": "gh pr merge 15"}, {"exit_code": 0}, env=dict(_cl_env, HOUSE_RULES_LOOP="off"))
-_cl_cases.append(("HOUSE_RULES_LOOP=off stamps nothing and says so",
-                  _cl_state()["closable"][0]["merged_pr"] is None and "HOUSE_RULES_LOOP=off" in _o))
 # #374: the real GitHub tool replies are a list holding one text block (recorded 2026-10-21).
 _w_merge = [{"type": "text", "text": "{\"sha\":\"ed36dc31e8907157117de6a72f48db31de606601\",\"merged\":true,\"message\":\"Pull Request successfully merged\"}"}]
 _w_nomerge = [{"type": "text", "text": "{\"sha\":\"ed36dc31e8907157117de6a72f48db31de606601\",\"merged\":false,\"message\":\"Pull Request not mergeable\"}"}]
@@ -1165,11 +1144,6 @@ _o2 = _cg_mcp({"method": "update", "owner": "o", "repo": "r", "state": "closed"}
 _cg_cases.append(("a close with no issue number is refused, saying so, on both routes",
                   all(_iss_decision(x) == "deny" and "could not tell which issue" in _iss_reason(x) for x in (_o1, _o2))
                   and bool(_cl_state().get("closable"))))
-_cl_set({"stage": "done"})
-_o = _cg_gh("gh issue close 7", env=_iss_env(HOUSE_RULES_ISSUES="off"))
-_cg_cases.append(("HOUSE_RULES_ISSUES=off keeps its old behaviour: the close guard does not run on either route",
-                  "close guard" not in _o and "refused" not in _o
-                  and _cg_mcp(_cg_mc, env=_iss_env(HOUSE_RULES_ISSUES="off")).find("close guard") < 0))
 # #374: wrapped replies from the GitHub tool (recorded 2026-10-21).
 _w_close = [{"type": "text", "text": "{\"id\":\"5952121313\",\"url\":\"https://github.com/Ajw2003/AjsClaudeCodeTools/issues/371\"}"}]
 _w_err = "Error: failed to create issue: Something went wrong while executing your query"
@@ -1201,7 +1175,7 @@ with open(os.path.join(_cl_dir, "docs", "page-style.json"), "w", encoding="utf-8
 
 def _sw_say(prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "sw", "cwd": _cl_dir, "prompt": prompt}
-    return run_hook("scope", json.dumps(p), env=_cl_env)[1]
+    return run_hook("scopelinks", json.dumps(p), env=_cl_env)[1]
 
 
 def _sw_build(name, rows):
@@ -1314,7 +1288,7 @@ def _ma_set(state, labels=None):
 
 def _ma_say(prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "multi", "cwd": _ma_dir, "prompt": prompt}
-    _, out, _ = run_hook("scope", json.dumps(p), env=_ma_env)
+    _, out, _ = run_hook("scopelinks", json.dumps(p), env=_ma_env)
     try:
         note = json.loads(out)["hookSpecificOutput"]["additionalContext"]
     except Exception:
@@ -1602,13 +1576,13 @@ _CW_GOOD_BODY = "## Depends on\nNothing.\n## Depended on by\nNothing.\n## Done w
 def _cw_issue_tool(body):
     p = {"hook_event_name": "PreToolUse", "tool_name": "mcp__github__issue_write", "session_id": "loop",
          "cwd": _loop_dir, "tool_input": {"method": "create", "owner": "o", "repo": "r", "title": "t", "body": body}}
-    return run_hook("guardgithub", json.dumps(p), env=dict(_loop_env, HOUSE_RULES_ISSUES="on"))[1]
+    return run_hook("guardgithub", json.dumps(p), env=dict(_loop_env))[1]
 
 
 def _cw_issue_gh(body):
     p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "loop", "cwd": _loop_dir,
          "tool_input": {"command": "gh issue create --title t --body %s" % json.dumps(body)}}
-    return run_hook("guard", json.dumps(p), env=dict(_loop_env, HOUSE_RULES_ISSUES="on"))[1]
+    return run_hook("guard", json.dumps(p), env=dict(_loop_env))[1]
 
 
 _cw_cases.append(("issue: the GitHub tool's issue with no sections is refused, naming all three",
@@ -1635,23 +1609,15 @@ def _cw_editor(transcript, text="The page is up."):
 
 
 _cw_cases.append(("editor: writing a page under docs/plans with no editor run gets the reminder",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+                  "hand the text to @house-rules:editor" in _cw_editor(_cw_t_page)))
 _cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
-                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
-def _cw_editor_on(transcript, text):
-    return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir, stop_hook_active=True,
-                                             transcript_path=transcript), env=dict(_loop_env, HOUSE_RULES_EDITOR="on"))[1]
-
-
+                  "hand the text to @house-rules:editor" not in _cw_editor(_cw_t_edited)))
 _cw_200 = " ".join(["Words"] * 200) + ". https://claude" + ".ai/artifact/abc"
-# #325: with HOUSE_RULES_EDITOR=on a reply of 160 words or more with no editor run gets the reminder; a short one does not.
-_cw_cases.append(("editor: with HOUSE_RULES_EDITOR=on, a reply of 160 words or more with no editor run gets the reminder; a short one does not",
-                  "no @house-rules:editor helper ran" in _cw_editor_on(_cw_t_none, _cw_200)
-                  and "no @house-rules:editor helper ran" not in _cw_editor_on(_cw_t_none, "Done.")))
-_cw_cases.append(("editor (#325): a 200-word reply with no page and no editor run gets no editor reminder by default",
-                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, _cw_200)))
-_cw_cases.append(("editor (#325): a turn that wrote a docs/plans page still owes the editor by default",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+# #325: the editor pass is owed for pages only; a long reply does not owe it, and nothing turns that on.
+_cw_cases.append(("editor (#325): a 200-word reply with no page and no editor run gets no editor reminder",
+                  "hand the text to @house-rules:editor" not in _cw_editor(_cw_t_none, _cw_200)))
+_cw_cases.append(("editor (#325): a turn that wrote a docs/plans page still owes the editor",
+                  "hand the text to @house-rules:editor" in _cw_editor(_cw_t_page)))
 
 # A page written by a shell command never passes the Write hook (found in the real run, #250).
 with open(os.path.join(_cw_pages, "shellpage.html"), "w", encoding="utf-8") as _f:
@@ -1663,7 +1629,7 @@ _cw_t_shell = _hand_transcript("cw-shell", [
                 "input": {"command": "printf '<p>x</p>' > docs/plans/shellpage.html"}}]}})])
 _cw_shell_out = _cw_editor(_cw_t_shell)
 _cw_cases.append(("page: a page written by a shell command is checked at the end of the reply, editor reminder too",
-                  "the page shellpage.html" in _cw_shell_out and "no @house-rules:editor helper ran" in _cw_shell_out))
+                  "shellpage.html" in _cw_shell_out and "hand the text to @house-rules:editor" in _cw_shell_out))
 
 # #284: in a git repository a page counts as written only when git shows it new, edited, or committed
 # since aj's message; a cloned page has a fresh file time but an old commit, so it does not count.
@@ -1728,9 +1694,9 @@ shutil.rmtree(_pm_repo, True)
 for _t, _ok in _cw_cases:
     report("PASS" if _ok else "FAIL", "clear writing: " + _t)
 
-# --- the checkpoint table (#256): a miss blocks once, then only reports on the retry -----------
+# --- the checkpoint table (#256, #440): a miss blocks up to three times, then the reply goes through and locks -----------
 _ck_cases = []
-_CK_ENV = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_LOOP="on")
+_CK_ENV = dict(_loop_env)
 
 
 def _ck_user(text, extra=()):
@@ -1748,12 +1714,26 @@ def _ck_run(transcript, reply, active=False, env=None):
 
 
 def _ck_triple(label, rule, transcript, bad, good, env=None, good_transcript=None):
+    """#440 (choice 6A): a miss blocks three times for the same message, the fourth reply goes through with the
+    check locked and a fifth is never blocked; a compliant reply passes and clears the lock."""
     blocked, reason, _o = _ck_run(transcript, bad, env=env)
-    _ck_cases.append(("%s: a miss blocks once, naming the %s rule" % (label, rule), blocked and ("- %s:" % rule) in reason))
+    _ck_cases.append(("%s: a miss blocks, naming the %s rule (block 1 of 3)" % (label, rule),
+                      blocked and ("- %s (block 1 of 3):" % rule) in reason))
+    blocked, reason, _o = _ck_run(transcript, bad, active=True, env=env)
+    _ck_cases.append(("%s: the same reply on the retry blocks again (block 2 of 3)" % label,
+                      blocked and ("- %s (block 2 of 3):" % rule) in reason))
+    blocked, reason, _o = _ck_run(transcript, bad, active=True, env=env)
+    _ck_cases.append(("%s: and a third time (block 3 of 3)" % label, blocked and ("- %s (block 3 of 3):" % rule) in reason))
     blocked, _r, out = _ck_run(transcript, bad, active=True, env=env)
-    _ck_cases.append(("%s: the same reply on the retry only reports, never blocks" % label, not blocked and out.strip() != ""))
+    _ck_cases.append(("%s: the fourth reply goes through, loudly: the check is LOCKED" % label,
+                      not blocked and "LOCKED" in out and ("the %s check" % rule) in out))
+    blocked, _r, out = _ck_run(transcript, bad, active=True, env=env)
+    _locked = _cc_mod.design_loop._blocks.is_locked(_loop_dir, "verify", rule)
+    _ck_cases.append(("%s: a fifth is never blocked either, and the lock is on record" % label,
+                      not blocked and "LOCKED" in out and _locked))
     blocked, _r, _o = _ck_run(good_transcript or transcript, good, env=env)
-    _ck_cases.append(("%s: a compliant reply passes" % label, not blocked))
+    _ck_cases.append(("%s: a compliant reply passes and clears the lock" % label,
+                      not blocked and not _cc_mod.design_loop._blocks.is_locked(_loop_dir, "verify", rule)))
 
 
 _ck_t_plain = _hand_transcript("ck-plain", _ck_user("what is up"))
@@ -1831,7 +1811,7 @@ _ck_cases.append(("page links (#330): the outside-folder note names the path",
                   "../Sibling/docs/plans/x.html is outside" in _cc_mod.design_loop._check_page(
                       {"reply": "See [x.html](../Sibling/docs/plans/x.html)", "cwd": _pl_cwd, "long_words": 200})))
 # 2 editor
-_ck_triple("editor", "editor", _cw_t_page, "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
+_ck_triple("editor", "editor", _hand_transcript("ck-ed-bad", [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "make the page for ck"}}), _CW_WRITE]), "The page is up.", "The page is up.", good_transcript=_ck_t_edited)
 # 3 evidence
 _ck_triple("evidence", "evidence", _ck_t_plain, "All done, the tests passed.", "All done, the tests passed.",
            good_transcript=_ck_t_read)
@@ -1840,17 +1820,82 @@ _ck_repo_dirty = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"]
 _ck_repo_clean = _commit_repo("claude/topic", committed=["a.py"])
 _ck_t_w_dirty = _wrote_transcript("ck-w-dirty", [os.path.join(_ck_repo_dirty, "a.py")])
 _ck_t_w_clean = _wrote_transcript("ck-w-clean", [os.path.join(_ck_repo_clean, "a.py")])
-_ck_cenv = lambda root: _project_env(root, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
-                                     HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+_ck_cenv = lambda root: _project_env(root, HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
 _ck_b, _ck_r, _ = _ck_run(_ck_t_w_dirty, "Changed the file.", env=_ck_cenv(_ck_repo_dirty))
-_ck_cases.append(("commit: a turn that left its file uncommitted blocks once, naming the commit rule", _ck_b and "- commit:" in _ck_r))
+_ck_cases.append(("commit: a turn that left its file uncommitted blocks, naming the commit rule (block 1 of 3)",
+                  _ck_b and "- commit (block 1 of 3):" in _ck_r))
+for _n in (2, 3):
+    _ck_b, _ck_r, _ = _ck_run(_ck_t_w_dirty, "Changed the file.", active=True, env=_ck_cenv(_ck_repo_dirty))
+    _ck_cases.append(("commit: the retry blocks again (block %d of 3)" % _n, _ck_b and ("- commit (block %d of 3):" % _n) in _ck_r))
 _ck_b, _, _o = _ck_run(_ck_t_w_dirty, "Changed the file.", active=True, env=_ck_cenv(_ck_repo_dirty))
-_ck_cases.append(("commit: the same reply on the retry only reports", not _ck_b and "uncommitted" in _o))
+_ck_cases.append(("commit: the fourth reply goes through and reports the lock", not _ck_b and "LOCKED" in _o and "uncommitted" in _o))
 _ck_b, _, _ = _ck_run(_ck_t_w_clean, "Changed the file.", env=_ck_cenv(_ck_repo_clean))
 _ck_cases.append(("commit: a committed file passes", not _ck_b))
 # 5 plain summary
 _ck_t_ps_wrote = _turn_transcript("ck-ps", "add the commit hooks", [("Edit", "/proj/src/app.py")])
 _ck_triple("plain summary", "plain summary", _ck_t_ps_wrote, _PS_TECH, _PS_PLAIN)
+
+# --- a lock clears only when the check passes on what it was locked for (#440 part B follow-up) ----------
+_lk_B = _cc_mod.design_loop._blocks
+
+
+def _lk_run(repo, transcript, reply, sid, active=False):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=repo, stop_hook_active=active,
+                                                  transcript_path=transcript, session_id=sid), env=_ck_cenv(repo))
+    try:
+        data = json.loads(out)
+    except ValueError:
+        data = {}
+    return data.get("decision") == "block", data.get("reason", ""), out
+
+
+def _lk_user(text, extra=()):
+    return _hand_transcript("lk-%s" % abs(hash(text)), _ck_user(text, extra))
+
+
+# commit: the lock names the files; a later turn that writes nothing does not clear it; committing does
+_lk_repo = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_lk_t1 = _wrote_transcript("lk-w1", [os.path.join(_lk_repo, "a.py")])
+for _i in range(3):
+    _lk_run(_lk_repo, _lk_t1, "Changed the file.", "lk-sid", active=_i > 0)
+_b, _r, _o = _lk_run(_lk_repo, _lk_t1, "Changed the file.", "lk-sid", active=True)
+_lk_entry = _lk_B.active_locks(_lk_repo, "lk-sid").get("commit", {})
+_ck_cases.append(("lock (#440): the commit lock records the uncommitted files it named",
+                  not _b and _lk_entry.get("files") == ["a.py"]))
+_lk_t2 = _lk_user("a different message that writes nothing")
+_b, _r, _o = _lk_run(_lk_repo, _lk_t2, "Nothing to write here.", "lk-sid")
+_ck_cases.append(("lock (#440): a later turn that writes nothing does NOT clear the commit lock; the file is still uncommitted, so it blocks again",
+                  _b and "- commit (block 1 of 3):" in _r and "a.py" in _r and _lk_B.is_locked(_lk_repo, "lk-sid", "commit")))
+subprocess.run(["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", _lk_repo,
+                "commit", "-q", "-am", "save a.py"], check=True)
+_b, _r, _o = _lk_run(_lk_repo, _lk_t2, "Nothing to write here.", "lk-sid", active=True)
+_ck_cases.append(("lock (#440): committing the named file clears the commit lock at the next Stop",
+                  not _b and not _lk_B.is_locked(_lk_repo, "lk-sid", "commit")))
+
+# evidence: a reply with no success claim keeps the lock and says so; a claim with its evidence clears it
+_lk_ev_repo = _commit_repo("claude/topic", committed=["a.py"])
+_lk_ev_plain = _lk_user("report on the tests")
+for _i in range(4):
+    _lk_run(_lk_ev_repo, _lk_ev_plain, "All done, the tests passed.", "lk-ev", active=_i > 0)
+_ck_cases.append(("lock (#440): an unbacked success claim blocked three times locks the evidence check",
+                  _lk_B.is_locked(_lk_ev_repo, "lk-ev", "evidence")))
+_b, _r, _o = _lk_run(_lk_ev_repo, _lk_user("what is next"), "The next step is the docs.", "lk-ev")
+_ck_cases.append(("lock (#440): a later reply with no success claim cannot clear the evidence lock, and says it is kept",
+                  not _b and _lk_B.is_locked(_lk_ev_repo, "lk-ev", "evidence") and "evidence lock is kept" in _o))
+_lk_ev_tool = _lk_user("run the tests again", [json.dumps({"type": "assistant", "message": {"content": [
+    {"type": "tool_use", "id": "r1", "name": "Bash", "input": {"command": "python3 t.py"}}]}})])
+_b, _r, _o = _lk_run(_lk_ev_repo, _lk_ev_tool, "All done, the tests passed.\n\nRESULT: PASS", "lk-ev")
+_ck_cases.append(("lock (#440): a reply that makes the claim with a tool run and quoted output clears the evidence lock",
+                  not _b and not _lk_B.is_locked(_lk_ev_repo, "lk-ev", "evidence")))
+# an unreadable lock state never blocks and never clears: it says so
+_lk_bad_repo = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
+_lk_bad_path = _lk_B.state_path(_lk_bad_repo, "lk-bad")
+os.makedirs(os.path.dirname(_lk_bad_path), exist_ok=True)
+with open(_lk_bad_path, "w", encoding="utf-8") as _f:
+    _f.write("{broken")
+_b, _r, _o = _lk_run(_lk_bad_repo, _wrote_transcript("lk-bad-t", [os.path.join(_lk_bad_repo, "a.py")]), "Changed it.", "lk-bad")
+_ck_cases.append(("lock (#440): unreadable block state is announced and the reply is not blocked",
+                  not _b and "could not" in _o))
 
 # the page rule's short replies
 _ck_proposal = ("Here is where I have landed on the storage.\n\nOption A: keep the JSON file. Option B: move to SQLite. "
@@ -1936,19 +1981,13 @@ if _ck_sf_old is None:
     os.remove(_ck_sf)
 else:
     open(_ck_sf, "w", encoding="utf-8").write(_ck_sf_old)
-# the switch
-_ck_b, _, out = _ck_run(_ck_t_plain, _ck_proposal, env=dict(_CK_ENV, HOUSE_RULES_LOOP="off"))
-_ck_cases.append(("HOUSE_RULES_LOOP=off turns every checkpoint off", not _ck_b))
-_ck_b, _, _ = _ck_run(_ck_t_plain, "All done, the tests passed.", env=dict(_CK_ENV, HOUSE_RULES_LOOP="off"))
-_ck_cases.append(("HOUSE_RULES_LOOP=off also stops the evidence checkpoint", not _ck_b))
 
 for _t, _ok in _ck_cases:
     report("PASS" if _ok else "FAIL", "checkpoints: " + _t)
 
 # ---- pagecheck: the page check before saving or publishing (#257) ----
 _pc_tmp = tempfile.mkdtemp(prefix="pc-")
-_pc_env = dict(os.environ, HOUSE_RULES_LOOP="on")
-_pc_off = dict(os.environ, HOUSE_RULES_LOOP="off")
+_pc_env = dict(os.environ)
 _pc_hand = "<!doctype html>\n<html><body>by hand</body></html>\n"
 _pc_built = "<!doctype html>\n<!-- house-rules make_page 9.9.9 -->\n<html><body>built</body></html>\n"
 
@@ -1998,9 +2037,6 @@ _o = _pc("Artifact", {"type": "chart", "file_path": _pc_data_f})
 _pc_cases.append(("Artifact typed data file is skipped with a note", not _pc_denied(_o) and "skipped" in _o))
 _o = _pc("Artifact", {"file_path": os.path.join(_pc_tmp, "missing.html")})
 _pc_cases.append(("Artifact unreadable file is allowed with a note", not _pc_denied(_o) and "could not read" in _o))
-_pc_cases.append(("HOUSE_RULES_LOOP=off allows a hand-written Write and a hand-written publish",
-                  _pc("Write", {"file_path": _pc_plans, "content": _pc_hand}, _pc_off) == ""
-                  and _pc("Artifact", {"file_path": _pc_hand_f}, _pc_off) == ""))
 _pc_cases.append(("a payload with no tool_input fails open with a note",
                   "could not run" in _pc("Write", None)))
 for _t, _ok in _pc_cases:
@@ -2012,7 +2048,7 @@ with open(_nb_pg, "w", encoding="utf-8") as f:
     f.write("<!doctype html>\n<!-- house-rules make_page 9.9.9 -->\n<html></html>\n")
 _nb_cases.append(("publishing a make_page.py page goes through with no prompt or refusal",
                   run_hook("pagecheck", json.dumps({"tool_name": "Artifact", "tool_input": {"file_path": _nb_pg}}),
-                           env=dict(_project_env(_nb_r), HOUSE_RULES_LOOP="on"))[1] == ""))
+                           env=_project_env(_nb_r))[1] == ""))
 for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
 
@@ -2028,7 +2064,7 @@ def _pf_issue(number):
 def _pf_note(prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "cl", "cwd": _cl_dir, "prompt": prompt}
     try:
-        return json.loads(run_hook("scope", json.dumps(p), env=_cl_env)[1])["hookSpecificOutput"]["additionalContext"]
+        return json.loads(run_hook("scopelinks", json.dumps(p), env=_cl_env)[1])["hookSpecificOutput"]["additionalContext"]
     except Exception:
         return ""
 
@@ -2120,7 +2156,7 @@ def _ma_repo(parent, name, staged=True):
 
 def _ma_say(cwd, prompt):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "above", "cwd": cwd, "prompt": prompt}
-    _, out, _ = run_hook("scope", json.dumps(p), env=_loop_env)
+    _, out, _ = run_hook("scopelinks", json.dumps(p), env=_loop_env)
     try:
         return json.loads(out)["hookSpecificOutput"]["additionalContext"]
     except Exception:

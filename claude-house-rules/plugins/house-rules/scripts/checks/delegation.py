@@ -9,6 +9,7 @@ STDLIB ONLY, like hook.py.
 """
 
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -100,7 +101,7 @@ commit_case(
 
 # subagentcommit: a subagent cannot finish with files it wrote still uncommitted - it is sent
 # back once (decision "block", probed on CLI 2.1.284), and the retry is let through.
-def _subagent_stop(paths, active=False, **env_extra):
+def _subagent_stop(paths, active=False):
     tr = _hand_transcript("subcommit-%d" % len(os.listdir(_HAND_ROOT)), [
         json.dumps({"type": "assistant", "message": {"content": [
             {"type": "tool_use", "id": "s%d" % i, "name": "Write", "input": {"file_path": p}}]}})
@@ -108,7 +109,7 @@ def _subagent_stop(paths, active=False, **env_extra):
     ])
     payload = json.dumps({"hook_event_name": "SubagentStop", "agent_type": "house-rules:builder",
                           "agent_transcript_path": tr, "stop_hook_active": active})
-    return run_hook("subagentcommit", payload, env=_project_env(_FIXTURE_ROOT, **env_extra))[1]
+    return run_hook("subagentcommit", payload, env=_project_env(_FIXTURE_ROOT))[1]
 
 
 _r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
@@ -134,13 +135,6 @@ out = _subagent_stop([os.path.join(_r, "a.py")])
 commit_case(
     "subagentcommit: a subagent that committed what it wrote finishes without being held",
     '"decision"' not in out,
-    "stdout: %r" % out[:160],
-)
-_r = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"])
-out = _subagent_stop([os.path.join(_r, "a.py")], HOUSE_RULES_COMMIT_CHECK="off")
-commit_case(
-    "subagentcommit: HOUSE_RULES_COMMIT_CHECK=off switches it off",
-    out.strip() == "",
     "stdout: %r" % out[:160],
 )
 # The project dir is _FIXTURE_ROOT (not a repo); the file lives in its own repo, like a worktree.
@@ -172,6 +166,7 @@ def _as_repo(branch, backdate_minutes=0):
         env.update(GIT_COMMITTER_DATE=when, GIT_AUTHOR_DATE=when)
     _as_git(d, "commit", "-q", "-m", "base", env=env)
     _as_git(d, "remote", "add", "origin", bare)
+    build_stage(d)
     return d, bare
 
 
@@ -182,7 +177,6 @@ def _as_payload(event, tool, path, cwd):
 
 def _as_env(**extra):
     e = _project_env(_FIXTURE_ROOT, **extra)
-    e.pop("HOUSE_RULES_AUTOSAVE", None)
     e.update(extra)
     return e
 
@@ -238,14 +232,9 @@ for _br in ("main", "claude/x"):
     _, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env())
     if _as_ref(_dq, _br) or oq.strip():
         _quiet.append("%s: ref %r, out %r" % (_br, _as_ref(_dq, _br), oq[:80]))
-_dq, _ = _as_repo("worktree-agent-off")
-_pq = _as_write(_dq, "new.py")
-_, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env(HOUSE_RULES_AUTOSAVE="off"))
-if _as_ref(_dq, "worktree-agent-off") or oq.strip():
-    _quiet.append("HOUSE_RULES_AUTOSAVE=off still acted: out %r" % oq[:80])
 commit_case(
-    "autosave: does nothing on main, on a claude/ branch, or with HOUSE_RULES_AUTOSAVE=off",
-    not _quiet, "; ".join(_quiet) or "no ref and no output in all three",
+    "autosave: does nothing on main or on a claude/ branch",
+    not _quiet, "; ".join(_quiet) or "no ref and no output in both",
 )
 # .git/HEAD fast path (2.48.0): a branch that is not worktree-agent-* is ruled out by reading
 # .git/HEAD, so no git subprocess is spawned. The probe counts subprocess.Popen constructions
@@ -645,72 +634,6 @@ else:
     report("FAIL", "the scout and builder descriptions authorize proactive use")
     print(f'          {", ".join(_proactive)}: description has no "proactively" (or similar) wording')
 
-# --- scope's go-ahead clause closes the no-plan-mode delegation gap --------------------------
-# delegate only fires on ExitPlanMode. Auto and accept-edits sessions never cross that
-# boundary - and house-rules.md says the delegation rule covers them anyway - so a go-ahead
-# typed into an ordinary session used to get no delegation reminder at all. The prompt text is
-# the only stateless place to notice it.
-def scope_text(prompt):
-    payload = json.dumps(
-        {"session_id": "verify", "hook_event_name": "UserPromptSubmit", "prompt": prompt}
-    )
-    code, out, err = run_hook("scope", payload)
-    try:
-        return code, json.loads(out)["hookSpecificOutput"]["additionalContext"]
-    except Exception:
-        return code, ""
-
-
-goahead = []
-for prompt in ("go ahead", "implement it in two groups", "do it", "proceed", "ship it",
-               "make the changes", "apply those fixes", "execute the plan"):
-    code, text = scope_text(prompt)
-    if code != 0:
-        goahead.append(f"{prompt!r} exited {code} - scope must never exit non-zero")
-    if "@house-rules:builder" not in text:
-        goahead.append(f"{prompt!r} is a go-ahead but got no delegation clause")
-for prompt in ("what does this function do?", "explain the guard handler",
-               "why did the suite fail?"):
-    code, text = scope_text(prompt)
-    if "@house-rules:builder" in text:
-        goahead.append(f"{prompt!r} is a question, not a go-ahead, but got the clause")
-if not goahead:
-    report("PASS", "scope adds the delegation clause on a go-ahead and not on a question")
-    print("          closes the gap where delegate never fires outside plan mode")
-else:
-    report("FAIL", "scope adds the delegation clause on a go-ahead and not on a question")
-    for g in goahead:
-        print(f"          {g}")
-
-# The clause restates the rule, so it is drift-checked in both directions like the delegate
-# reminder - and it must never be able to take the prompt down with it.
-clause_drift = []
-_, goahead_text = scope_text("go ahead and implement it")
-for phrase in ("@house-rules:builder", "proactiv", "one file", "three steps or fewer"):
-    if phrase.lower() not in goahead_text.lower():
-        clause_drift.append(f"{phrase!r} missing from the emitted go-ahead clause")
-    if phrase.lower() not in rules_text.lower():
-        clause_drift.append(f"{phrase!r} missing from rules/house-rules.md")
-for label, payload in (
-    ("empty payload", ""),
-    ("unparseable payload", "not json {{{ go ahead"),
-    ("no prompt field", '{"session_id":"v","hook_event_name":"UserPromptSubmit"}'),
-    ("prompt field with an escaped quote", '{"prompt":"go ahead \\"now\\" implement it"}'),
-):
-    code, out, err = run_hook("scope", payload)
-    if code != 0:
-        clause_drift.append(f"{label} exited {code} - this ERASES the user's prompt")
-    if "additionalContext" not in out:
-        clause_drift.append(f"{label} emitted no reminder at all: {out[:80]!r}")
-if not clause_drift:
-    report("PASS", "the go-ahead clause matches the rules and cannot erase a prompt")
-    print("          same phrases as house-rules.md; every failure path still exits 0 with a reminder")
-else:
-    report("FAIL", "the go-ahead clause matches the rules and cannot erase a prompt")
-    for c in clause_drift:
-        print(f"          {c}")
-
-
 def _transcript(agent_id, lines):
     d = os.path.join(_SUB_ROOT, "sess1", "subagents")
     if not os.path.isdir(d):
@@ -913,31 +836,21 @@ else:
     for q in quiet:
         print(f"          {q}")
 
-# One lever, and it is NOT the trace lever - the report is the feature, not a trace.
-_off = dict(os.environ)
-_off["HOUSE_RULES_DELEGATION"] = "off"
+# The report is the feature, not a trace, so the trace lever does not silence it.
 deloff = []
-for ev, pl in (("announce", sub_payload(agent_type="house-rules:builder")),
-               ("verdict", sub_payload(agent_type="house-rules:builder", agent_id="sonnet"))):
-    code, out, err = run_hook(ev, pl, env=_off)
-    if out.strip():
-        deloff.append(f"{ev} still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
 _tron = dict(os.environ)
 _tron["HOUSE_RULES_TRACE"] = "off"
 code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="sonnet"), env=_tron)
 if "claude-sonnet" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the verdict, which is not a trace")
-code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"), env=_off)
-if out.strip():
-    deloff.append(f"suspicious-completion report still emitted with HOUSE_RULES_DELEGATION=off: {out[:80]}")
 code, out, err = run_hook("verdict", sub_payload(agent_type="house-rules:builder", agent_id="notools"), env=_tron)
 if "SUSPICIOUS COMPLETION" not in out:
     deloff.append("HOUSE_RULES_TRACE=off silenced the suspicious-completion report, which is not a trace")
 if not deloff:
-    report("PASS", "HOUSE_RULES_DELEGATION=off silences both, and the trace lever does not")
+    report("PASS", "the trace lever does not silence the verdict or the suspicious-completion report")
     print("          the model report is the deliverable, so it is not trace-gated")
 else:
-    report("FAIL", "HOUSE_RULES_DELEGATION=off silences both, and the trace lever does not")
+    report("FAIL", "the trace lever does not silence the verdict or the suspicious-completion report")
     for d in deloff:
         print(f"          {d}")
 
@@ -977,102 +890,67 @@ else:
     for s in shfall:
         print(f"          {s}")
 
-# --- subagentrules: a subagent core, generated from house-rules.md, injected at SubagentStart --
-# Judged against the real rules file, since a hand-copied fixture core would only prove the
-# handler can read a fixture, not that it stays in sync with the rules a human session sees.
-code, out, err = run_hook("subagentrules", sub_payload(
+# --- subagentlinks: the transcript line and the design loop's note, SubagentStart (#440) --------
+# subagentrules (the rules core) moved to the rule-enforcement plugin, whose own suite checks it.
+code, out, err = run_hook("subagentlinks", sub_payload(
     hook_event_name="SubagentStart", agent_type="house-rules:builder", agent_id="x1"
 ))
-sar = []
-if code != 0:
-    sar.append(f"exit {code}, must never be non-zero")
 try:
     parsed = json.loads(out)
-    core = parsed["hookSpecificOutput"]["additionalContext"]
-except Exception as exc:
-    sar.append(f"could not parse subagentrules output: {exc}")
-    core = ""
-for needle in (
-    "Documentation goes in tiers", "Nothing fails silently", "Evidence before claims",
-    "Every artifact lives in the project directory", "Commit constantly on my own branches",
-    "Never take a destructive action", "Edit in place",
-    "final report must list every command you ran and its result verbatim",
-):
-    if needle not in core:
-        sar.append(f"subagent core is missing {needle!r}")
-if "${CLAUDE_PLUGIN_ROOT}" in core:
-    sar.append("subagent core still carries a literal ${CLAUDE_PLUGIN_ROOT}")
-if "<!-- subagent -->" in core:
-    sar.append("subagent core leaked the <!-- subagent --> marker into the subagent's own text")
-if len(core) > 4_500:
-    sar.append(f"subagent core is {len(core)} chars, over its own 4,500-char budget")
-if not sar:
-    report("PASS", "subagentrules generates a subagent core from house-rules.md's marked sections")
-    print(f"          {len(core)} chars, all marked sections present, no literal placeholder")
-else:
-    report("FAIL", "subagentrules generates a subagent core from house-rules.md's marked sections")
-    for s in sar:
-        print(f"          {s}")
-
-# A section NOT marked <!-- subagent --> (e.g. "Open source first") must not
-# appear as its own heading in the core - otherwise "marked sections only" is not what ships.
-if "## Open source first; paid is the last resort" in core:
-    report("FAIL", "subagentrules includes only the sections marked <!-- subagent -->")
-    print("          an unmarked heading leaked into the subagent core")
-else:
-    report("PASS", "subagentrules includes only the sections marked <!-- subagent -->")
-    print("          an unmarked rule (open source first) is absent from the subagent core")
-
+except Exception:
+    parsed = {}
 # SubagentStart also tells the user the transcript's EXPECTED path, before it exists.
 if code == 0 and "systemMessage" in parsed and "transcript expected at" in parsed["systemMessage"] \
         and os.path.join("sess1", "subagents", "agent-x1.jsonl") in parsed["systemMessage"]:
-    report("PASS", "subagentrules tells the user the expected transcript path at SubagentStart")
+    report("PASS", "subagentlinks tells the user the expected transcript path at SubagentStart")
     print(f"          {parsed['systemMessage'][:150]}")
 else:
-    report("FAIL", "subagentrules tells the user the expected transcript path at SubagentStart")
+    report("FAIL", "subagentlinks tells the user the expected transcript path at SubagentStart")
     print(f"          out {out[:200]!r}")
 
 # Never blocks a spawn: empty payload and unparseable input both still exit 0.
 sarq = []
-code, out, err = run_hook("subagentrules", "")
+code, out, err = run_hook("subagentlinks", "")
 if code != 0 or "systemMessage" not in out:
     sarq.append(f"empty payload: exit {code}, out {out[:120]!r}")
-code, out, err = run_hook("subagentrules", "not json at all {{{")
+code, out, err = run_hook("subagentlinks", "not json at all {{{")
 if code != 0:
     sarq.append(f"unparseable payload: exit {code}")
 if not sarq:
-    report("PASS", "subagentrules never blocks a subagent spawn")
+    report("PASS", "subagentlinks never blocks a subagent spawn")
     print("          empty and unparseable payloads both still exit 0")
 else:
-    report("FAIL", "subagentrules never blocks a subagent spawn")
-    for s in sarq:
-        print(f"          {s}")
+    report("FAIL", "subagentlinks never blocks a subagent spawn")
+    for s_ in sarq:
+        print(f"          {s_}")
 
 # Registered as its OWN SubagentStart entry, unmatched, separate from announce.
 _hj2 = json.loads(read(HOOKS_JSON))["hooks"]
 sarwire = []
 starts = _hj2.get("SubagentStart") or []
-if not any("subagentrules" in h.get("command", "") for e in starts for h in e.get("hooks", [])):
-    sarwire.append("hooks.json's SubagentStart has no subagentrules dispatch")
+if not any("subagentlinks" in h.get("command", "") for e in starts for h in e.get("hooks", [])):
+    sarwire.append("hooks.json's SubagentStart has no subagentlinks dispatch")
+if any("subagentrules" in h.get("command", "") for e in starts for h in e.get("hooks", [])):
+    sarwire.append("hooks.json's SubagentStart still dispatches subagentrules, which moved to rule-enforcement")
 announce_entries = [e for e in starts if any("announce" in h.get("command", "") for h in e.get("hooks", []))]
-subagentrules_entries = [e for e in starts if any("subagentrules" in h.get("command", "") for h in e.get("hooks", []))]
-if announce_entries and subagentrules_entries and announce_entries[0] is subagentrules_entries[0]:
-    sarwire.append("announce and subagentrules share one hook entry instead of two separate ones")
+links_entries = [e for e in starts if any("subagentlinks" in h.get("command", "") for h in e.get("hooks", []))]
+if announce_entries and links_entries and announce_entries[0] is links_entries[0]:
+    sarwire.append("announce and subagentlinks share one hook entry instead of two separate ones")
 if any("matcher" in e for e in starts):
     sarwire.append("SubagentStart is scoped by a matcher, so it misses other agents")
 if not sarwire:
-    report("PASS", "subagentrules is its own SubagentStart entry, separate from announce")
+    report("PASS", "subagentlinks is its own SubagentStart entry, separate from announce")
     print("          both fire, unmatched, on every subagent spawn")
 else:
-    report("FAIL", "subagentrules is its own SubagentStart entry, separate from announce")
-    for s in sarwire:
-        print(f"          {s}")
+    report("FAIL", "subagentlinks is its own SubagentStart entry, separate from announce")
+    for s_ in sarwire:
+        print(f"          {s_}")
 
-if ("    subagentrules)" in read(RUN)):
-    report("PASS", "run.sh names subagentrules in its no-interpreter fallback")
-    print("          no working Python still reports the subagent got no rules")
+if ("    subagentlinks)" in read(RUN)) and ("    subagentrules)" not in read(RUN)):
+    report("PASS", "run.sh names subagentlinks (and no longer subagentrules) in its no-interpreter fallback")
+    print("          no working Python still reports the subagent got no transcript line")
 else:
-    report("FAIL", "run.sh names subagentrules in its no-interpreter fallback")
+    report("FAIL", "run.sh names subagentlinks (and no longer subagentrules) in its no-interpreter fallback")
 
 # --- agentcap (2.50.0, #112): at most two running subagents, none started by a subagent -------
 _cap_state = os.path.join(_FIXTURE_ROOT, "cap-agents.json")
@@ -1081,16 +959,15 @@ _cap_state = os.path.join(_FIXTURE_ROOT, "cap-agents.json")
 def _cap_env(**extra):
     e = dict(os.environ)
     e["HOUSE_RULES_AGENTS_STATE"] = _cap_state
-    e.pop("HOUSE_RULES_AGENTS", None)
     e.update(extra)
     return e
 
 
-def _cap_spawn(agent_id="", **extra):
+def _cap_spawn(agent_id=""):
     pl = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {"prompt": "x"}}
     if agent_id:
         pl["agent_id"] = agent_id
-    return run_hook("agentcap", json.dumps(pl), env=_cap_env(**extra))
+    return run_hook("agentcap", json.dumps(pl), env=_cap_env())
 
 
 def _cap_denied(out):
@@ -1138,11 +1015,10 @@ commit_case(
 )
 with open(_cap_state, "w", encoding="utf-8") as _f:
     json.dump({"agents": [{"id": "k1", "type": "x", "start": time.time()}, {"id": "k2", "type": "x", "start": time.time()}]}, _f)
-_c5 = _cap_spawn(HOUSE_RULES_AGENTS="off")
 _c5b = _cap_spawn()
 commit_case(
-    "agentcap: HOUSE_RULES_AGENTS=off disables the cap (and the same state denies without it)",
-    _c5[1].strip() == "" and _cap_denied(_c5b[1]), "off: %r; on: %r" % (_c5[1][:60], _c5b[1][:60]),
+    "agentcap: two fresh records deny the next spawn, with nothing to turn it off",
+    _cap_denied(_c5b[1]), "out: %r" % (_c5b[1][:60],),
 )
 with open(_cap_state, "w", encoding="utf-8") as _f:
     _f.write("{not json")
@@ -1268,12 +1144,12 @@ else:
 code, out, err = run_hook("audit", _async_payload)
 # #292: the 5-minute stall-check reminder is gone, so a backgrounded call's launch gets neither an audit
 # nor a reminder; its hand-back is audited when it arrives.
-if code == 0 and not out.strip() and code_off == 0 and not out_off.strip():
+if code == 0 and not out.strip():
     report("PASS", "audit gives no audit and no stall-check reminder on a backgrounded call's async_launched PostToolUse (#292)")
-    print("          nothing to audit yet, and no reminder, with autosave on or off")
+    print("          nothing to audit yet, and no reminder")
 else:
     report("FAIL", "audit gives no audit and no stall-check reminder on a backgrounded call's async_launched PostToolUse (#292)")
-    print(f"          exit {code}, out {out[:150]!r}; autosave off: exit {code_off}, out {out_off[:80]!r}")
+    print(f"          exit {code}, out {out[:150]!r}")
 
 
 # --- stallcheck.py (issue 120). The agentcap cases live with the spawn-cap tests above.
@@ -1403,7 +1279,7 @@ def _rc_payload(result):
 
 
 def _rc_env(**kw):
-    e = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "HOUSE_RULES_WORKTRACKING")}
+    e = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_PROJECTS_SESSION"}
     e.update(kw)
     return e
 
@@ -1437,15 +1313,13 @@ _rc_case("rclink is silent on an `asked` result (nothing started yet)", "asked",
          _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1"), False)
 _rc_case("rclink is silent outside a Projects session (CLAUDE_CODE_PROJECTS_SESSION unset)", "started",
          _rc_env(), False)
-_rc_case("rclink is silent with HOUSE_RULES_WORKTRACKING=off", "started",
-         _rc_env(CLAUDE_CODE_PROJECTS_SESSION="1", HOUSE_RULES_WORKTRACKING="off"), False)
 
 # --- thread link: the thread's own transcript link at session start (#400) ----------------
 def _tl_ctx(**kw):
     e = {k: v for k, v in os.environ.items()
-         if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID", "HOUSE_RULES_WORKTRACKING")}
+         if k not in ("CLAUDE_CODE_PROJECTS_SESSION", "CLAUDE_CODE_REMOTE_SESSION_ID")}
     e.update(kw)
-    code, ctx, err = _additional_context("inject", "", env=e)
+    code, ctx, err = _additional_context("threadlink", "", env=e)
     return ctx or ""
 
 
@@ -1457,20 +1331,22 @@ def _tl_case(title, ctx, must, must_not=()):
         print(f"          {p}")
 
 
-_tl_case("inject carries the thread's transcript link in a project thread",
+_tl_case("threadlink carries the thread's transcript link in a project thread",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"),
          ("/code/session_TEST123", "Transcript of this thread's session", "cse_TEST123"))
-_tl_case("inject adds no transcript link outside a project thread",
+_tl_case("threadlink adds no transcript link outside a project thread",
          _tl_ctx(CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123"), (), ("/code/session_", "could not build"))
-_tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is malformed",
+_tl_case("threadlink names CLAUDE_CODE_REMOTE_SESSION_ID when the id is malformed",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="bogus"),
          ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
-_tl_case("inject names CLAUDE_CODE_REMOTE_SESSION_ID when the id is missing",
+_tl_case("threadlink names CLAUDE_CODE_REMOTE_SESSION_ID when the id is missing",
          _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1"),
          ("could not build the thread's transcript link", "CLAUDE_CODE_REMOTE_SESSION_ID"), ("/code/session_",))
-_tl_case("inject adds no transcript link with HOUSE_RULES_WORKTRACKING=off",
-         _tl_ctx(CLAUDE_CODE_PROJECTS_SESSION="1", CLAUDE_CODE_REMOTE_SESSION_ID="cse_TEST123",
-                 HOUSE_RULES_WORKTRACKING="off"), (), ("/code/session_", "could not build"))
+
+# --- threadlink also names the two files the moved rules point at (#440) -------------------
+_tl_paths = re.findall(r"(?:page builder|card style) (\S+)", _tl_ctx())
+report("PASS" if (len(_tl_paths) == 2 and all(os.path.exists(x) for x in _tl_paths)) else "FAIL",
+       "threadlink names two paths (make_page.py, handover-cards.md) and both exist: %r" % (_tl_paths,))
 
 # --- userpromptaudit: the background half, UserPromptSubmit --------------------------------
 def _task_notification(task_id, status="completed"):
@@ -1655,7 +1531,6 @@ def _lo_transcript(name, injected, uses):
 
 def _lo_run(transcript, retry=False, **env_extra):
     e = {k: v for k, v in os.environ.items() if k not in _WT_STRIP}
-    e["HOUSE_RULES_COMMIT_CHECK"] = "off"
     e.update(env_extra)
     _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, stop_hook_active=retry,
                                                   last_assistant_message="ok"), env=e)

@@ -2,7 +2,7 @@
 
 Deepening opportunities identified in the plugin's own code but not yet decided on. Sibling to
 [`rules-backlog.md`](rules-backlog.md), which queues changes to
-[`rules/house-rules.md`](../claude-house-rules/plugins/house-rules/rules/house-rules.md); this
+[`rules/house-rules.md`](../claude-house-rules/plugins/rule-enforcement/rules/house-rules.md); this
 file queues changes to the code that enforces it — `hook.py`, `verify.py`, and the files they
 police.
 

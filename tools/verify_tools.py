@@ -453,6 +453,14 @@ check(
     "{0} CRLF line endings, {1} bare LF".format(n_crlf, n_bare_lf),
 )
 
+_owner = measure_footprint.event_plugins(measure_footprint.repo_plugin_dirs())
+check(
+    all(_owner.get(e) == "rule-enforcement" for e in ("inject", "showrule", "scope", "subagentrules"))
+    and _owner.get("guard") == "house-rules",
+    "measure_footprint points each event at the plugin whose hooks.json declares it",
+    f"inject/showrule/scope/subagentrules -> {_owner.get('inject')}, guard -> {_owner.get('guard')}",
+)
+
 check(
     "*.bat text eol=crlf" in open(os.path.join(ROOT, ".gitattributes"), encoding="utf-8").read(),
     ".gitattributes pins *.bat to CRLF so checkout does not depend on core.autocrlf",
@@ -567,6 +575,69 @@ try:
     )
 finally:
     shutil.rmtree(git_fixture, ignore_errors=True)
+
+# --- check_plugin_version_bump: every plugin is gated (main(), real git, temp repo) ----------
+bump_script = os.path.join(ROOT, "tools", "check_plugin_version_bump.py")
+multi = tempfile.mkdtemp(prefix="version-bump-multi-")
+try:
+    def mgit(*args):
+        proc = subprocess.run(["git"] + list(args), cwd=multi, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"git {args} failed: {proc.stderr}")
+    def mwrite(rel, content):
+        full = os.path.join(multi, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w", encoding="utf-8") as f:
+            f.write(content)
+    def mplugin(name, version):
+        mwrite(f"claude-house-rules/plugins/{name}/.claude-plugin/plugin.json",
+               json.dumps({"name": name, "version": version}))
+    def mrun():
+        proc = subprocess.run([sys.executable, bump_script, "--base", "base-ref", "--head", "HEAD"],
+                              cwd=multi, capture_output=True, text=True)
+        return proc.returncode, proc.stdout
+    mgit("init", "-q"); mgit("config", "user.email", "t@example.com"); mgit("config", "user.name", "T")
+    mplugin("house-rules", "1.0.0"); mplugin("rule-enforcement", "0.1.0")
+    mgit("add", "."); mgit("commit", "-q", "-m", "base"); mgit("branch", "-q", "-f", "base-ref")
+
+    # a second plugin changed without a bump fails, and the output names it
+    mwrite("claude-house-rules/plugins/rule-enforcement/scripts/x.py", "x\n")
+    mgit("add", "."); mgit("commit", "-q", "-m", "change")
+    code_a, out_a = mrun()
+    check(
+        code_a == 1 and "rule-enforcement: FAIL" in out_a and "house-rules: PASS" in out_a,
+        "version-bump check fails a second plugin changed without a bump and names each verdict",
+        out_a.strip().replace("\n", " | "),
+    )
+
+    # bumping it passes; a brand-new plugin passes as new
+    mplugin("rule-enforcement", "0.1.1"); mplugin("fresh-plugin", "0.1.0")
+    mwrite("claude-house-rules/plugins/fresh-plugin/scripts/y.py", "y\n")
+    mgit("add", "."); mgit("commit", "-q", "-m", "bump and new")
+    code_b, out_b = mrun()
+    check(
+        code_b == 0 and "fresh-plugin: PASS - new plugin" in out_b and "rule-enforcement: PASS" in out_b,
+        "version-bump check passes a bumped plugin and a plugin that is new on the base",
+        out_b.strip().replace("\n", " | "),
+    )
+
+    # house-rules behaviour unchanged: docs/ alone still needs a house-rules bump, and does not
+    # count for another plugin
+    mwrite("docs/a.md", "doc\n")
+    mgit("add", "."); mgit("commit", "-q", "-m", "docs")
+    code_c, out_c = mrun()
+    check(
+        code_c == 1 and "house-rules: FAIL" in out_c and "rule-enforcement: PASS" in out_c,
+        "version-bump check: docs/ still needs a house-rules bump and counts for no other plugin",
+        out_c.strip().replace("\n", " | "),
+    )
+    mplugin("house-rules", "1.0.1")
+    mgit("add", "."); mgit("commit", "-q", "-m", "bump hr")
+    code_d, out_d = mrun()
+    check(code_d == 0, "version-bump check passes once house-rules is bumped for a docs/ change",
+          out_d.strip().replace("\n", " | "))
+finally:
+    shutil.rmtree(multi, ignore_errors=True)
 
 # --- install.py's hash-verify-and-self-heal step --------------------------------------------
 def _make_tree(root, files):
@@ -690,6 +761,115 @@ check([_dpo["added"], _dpo["removed"]] == [int(_dpn[0]), int(_dpn[1])],
 check(_dpp.get("b") == (1, 1) and _dpp.get("c") == (5, 0),
       "diff_parts: a changed line belongs to its function, and a comment above a function to that function",
       f"got {_dpp!r}")
+
+# --- sync_library.py: --check passes on a matching copy, fails on a changed one (#439) ------
+import sync_library as _sl
+_slr = tempfile.mkdtemp(prefix="sync-library-")
+try:
+    _make_tree(os.path.join(_slr, _sl.SOURCE), {"__init__.py": "", "a.py": "A = 1\n"})
+    _sl.sync(_slr)
+    check(_sl.problems(_slr) == [] and _sl.main(["--check", "--root", _slr]) == 0,
+          "sync_library --check passes on a matching copy", f"problems={_sl.problems(_slr)!r}")
+    _slt = os.path.join(_slr, _sl.TARGETS[0], "a.py")
+    with open(_slt, "w") as _f:
+        _f.write("A = 2\n")
+    _slp = _sl.problems(_slr)
+    check(_sl.main(["--check", "--root", _slr]) == 1 and len(_slp) == 1 and "a.py" in _slp[0],
+          "sync_library --check fails naming a changed file", f"problems={_slp!r}")
+    os.remove(_slt)
+    _slp = _sl.problems(_slr)
+    check(len(_slp) == 1 and _slp[0].startswith("missing") and "a.py" in _slp[0],
+          "sync_library --check fails naming a missing file", f"problems={_slp!r}")
+finally:
+    shutil.rmtree(_slr, ignore_errors=True)
+
+# --- replay_hooks.py: the diff and the classes, on a tiny fake pair of plugins (#452) -------
+import replay_hooks as _rh
+
+
+def _comb(**kw):
+    c = {f: [] for f in _rh.FIELDS}
+    c.update(kw)
+    return c
+
+
+check(_rh.compare(_comb(context=["A one. B two."]), _comb(context=["A one. B two."])) == [],
+      "replay_hooks: identical outputs give no difference", "expected []")
+_d = _rh.compare(_comb(context=["Rules text. Link sentence."]), _comb(context=["Rules text.", "Link sentence."]))
+check(len(_d) == 1 and _d[0]["cls"].startswith("block boundary"),
+      "replay_hooks: the same text split into more blocks is a block-boundary difference", f"got {_d!r}")
+_d = _rh.compare(_comb(context=["Keep this. `HOUSE_RULES_LOOP=off` turns it off."]), _comb(context=["Keep this."]))
+check(len(_d) == 1 and _d[0]["side"] == "old" and _d[0]["cls"] == "text no longer mentions removed switches",
+      "replay_hooks: a dropped off-switch sentence is explained, not hidden", f"got {_d!r}")
+_d = _rh.compare(_comb(context=["Paths are under <HR>/rules."]), _comb(context=["Paths are under <RE>/rules."]))
+check([x["cls"] for x in _d] == ["rule loading moved", "rule loading moved"],
+      "replay_hooks: a changed plugin root token is 'rule loading moved'", f"got {_d!r}")
+_d = _rh.compare(_comb(blocks=["block: - commit: Files are committed."]), _comb(blocks=["block: - commit (block 1 of 3): Files are committed."]))
+check([x["cls"] for x in _d] == ["three blocks then lock"] * 2,
+      "replay_hooks: block 1 of 3 against block-once is 'three blocks then lock'", f"got {_d!r}")
+_d = _rh.compare(_comb(stderr=["house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement."]), _comb())
+check(len(_d) == 1 and _d[0]["cls"] == "2.74.2 bug fixed: quote-aware statement split",
+      "replay_hooks: the old-only 'could not split a statement' stderr line is the quote-aware split fix", f"got {_d!r}")
+_d = _rh.compare(_comb(), _comb(stderr=["house-rules design-loop lock: could not split a statement (unbalanced quotes) to look for sed -i / tee; skipping that statement."]))
+check(len(_d) == 1 and _d[0]["cls"] == "UNEXPLAINED",
+      "replay_hooks: the same line appearing only in NEW stays UNEXPLAINED", f"got {_d!r}")
+_d = _rh.compare(_comb(stderr=["some other old noise"]), _comb())
+check(len(_d) == 1 and _d[0]["cls"] == "UNEXPLAINED",
+      "replay_hooks: any other old-only stderr line stays UNEXPLAINED", f"got {_d!r}")
+_d = _rh.compare(_comb(decisions=["deny: refused one"]), _comb(decisions=["allow: fine"]))
+check(sorted(x["cls"] for x in _d) == ["UNEXPLAINED", "UNEXPLAINED"],
+      "replay_hooks: a changed decision no rule covers is UNEXPLAINED", f"got {_d!r}")
+check(_rh.matches({"matcher": "Write|Edit"}, "Edit") and not _rh.matches({"matcher": "Write|Edit"}, "MultiEdit")
+      and _rh.matches({"matcher": ""}, "") and not _rh.matches({"matcher": "Bash"}, ""),
+      "replay_hooks: a matcher is a whole-name regex, empty matches everything", "matcher results wrong")
+_p = _rh.parse_output(0, json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                      "permissionDecisionReason": "no"}, "systemMessage": "sm"}), "")
+check(_p["decisions"] == ["deny: no"] and _p["system"] == ["sm"] and not _p["misc"],
+      "replay_hooks: a deny decision and a systemMessage are read from hook JSON", f"got {_p!r}")
+_p = _rh.parse_output(2, "", "refused on stderr")
+check(_p["stderr"] == ["refused on stderr"] and _p["misc"] == ["exit code 2"],
+      "replay_hooks: an exit-2 stderr refusal is kept, with its exit code", f"got {_p!r}")
+
+_rhr = tempfile.mkdtemp(prefix="replay-fake-")
+try:
+    def _fake(root, name, outputs):
+        d = os.path.join(root, name)
+        os.makedirs(os.path.join(d, "hooks"))
+        os.makedirs(os.path.join(d, "scripts"))
+        groups = [{"hooks": [{"type": "command", "command": 'sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" %s' % ev, "timeout": 10}]}
+                  for ev in outputs]
+        with open(os.path.join(d, "hooks", "hooks.json"), "w") as f:
+            json.dump({"hooks": {"UserPromptSubmit": groups}}, f)
+        with open(os.path.join(d, "scripts", "run.sh"), "w") as f:
+            f.write('cat >/dev/null\ncase "$1" in\n')
+            for ev, text in outputs.items():
+                f.write("%s) printf '%%s' '%s';;\n" % (ev, json.dumps(
+                    {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": text}})))
+            f.write("esac\n")
+        return d
+
+    _o = os.path.join(_rhr, "o")
+    _n = os.path.join(_rhr, "n")
+    _fake(_o, "alpha", {"one": "Shared. `HOUSE_RULES_LOOP=off` turns it off."})
+    _fake(_n, "alpha", {"one": "Shared."})
+    _fake(_n, "beta", {"two": "A surprise nobody approved."})
+    _op, _np = _rh.load_plugins(_o), _rh.load_plugins(_n)
+    _sc = [x for x in _rh.scenarios() if x["name"] == "UserPromptSubmit ordinary prompt"]
+    check(_rh.coverage(_op, _sc, "OLD") == [] and _rh.coverage(_np, _sc, "NEW") == []
+          and len(_rh.coverage(_np, [], "NEW")) == 2,
+          "replay_hooks: coverage names the hook entries no scenario reaches", "coverage wrong")
+    _old, _new = _rh.replay(_op, _np, _sc, os.path.join(_rhr, "w"))
+    _rows, _counts, _ident = _rh.full_report(_old, _new, _sc)
+    _k = _sc[0]["name"]
+    check(_old[_k]["ran"] == ["alpha:one"] and sorted(_new[_k]["ran"]) == ["alpha:one", "beta:two"]
+          and _counts == {"text no longer mentions removed switches": 1, "UNEXPLAINED": 1} and _ident == 0,
+          "replay_hooks: a fake pair is replayed per plugin and each difference is classified",
+          f"ran {_old[_k]['ran']} / {_new[_k]['ran']}, counts {dict(_counts)!r}")
+    _txt = _rh.render(_rows, _counts, _ident, _old, _new, [], "fake", ("alpha 0", "alpha, beta"))
+    check("A surprise nobody approved." in _txt.split("## Every difference")[0],
+          "replay_hooks: the report quotes every UNEXPLAINED difference in full", "quote missing before the full list")
+finally:
+    shutil.rmtree(_rhr, ignore_errors=True)
 
 print()
 print("-" * 32)

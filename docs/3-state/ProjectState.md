@@ -104,7 +104,7 @@ prompts reach the timer (#143), and the overnight-style run (#147).
 
 2.51.0 (2026-10-01, #133) credits "aj's agent" instead of Claude: `tools/install.py` writes the `attribution` setting
 (a plugin cannot carry it: Claude Code accepts only `agent` and `subagentStatusLine` from a plugin's settings.json), and
-`guard` refuses text crediting Claude (kill switch `HOUSE_RULES_ATTRIBUTION=off`).
+`guard` refuses text crediting Claude.
 
 2.50.0 (2026-10-01, #110-#112) retires the executor for three tiers (`scout`, `builder`, `reviewer`),
 adds the `agentcap` spawn cap (two running, 45-minute expiry, no spawns from subagents), quiets the
@@ -197,7 +197,7 @@ the page check, and the rule text. Waiting on aj's QA and the PlunderSpell regen
 
 2026-10-17, branch `AjsAgent/issue-315-attribution-routes`, plugin 2.68.3: #315 (attribution guard gaps, #316 to #319) is built and waiting for aj's QA.
 
-2026-10-18, branch `AjsAgent/nifty-newton-x2jaaj`, plugin 2.68.4: #322 (the end-of-reply checks looped on retries) is built and waiting for aj's QA. The Stop retry now only reports to aj and never continues the turn (#323); the writing check no longer runs on chat replies, only on pages and new issues (#324); the editor checkpoint is pages-only unless `HOUSE_RULES_EDITOR=on` (#325); the page checkpoint's note is said once per message of aj's (#326); and an approval counts the first time, with the decisions-log entry asked for afterwards (#327). The cloud QA run of #315 passed: the credit read-back reported the footer GitHub added to test issue #321.
+2026-10-18, branch `AjsAgent/nifty-newton-x2jaaj`, plugin 2.68.4: #322 (the end-of-reply checks looped on retries) is built and waiting for aj's QA. The Stop retry now only reports to aj and never continues the turn (#323); the writing check no longer runs on chat replies, only on pages and new issues (#324); the editor checkpoint is pages-only (#325); the page checkpoint's note is said once per message of aj's (#326); and an approval counts the first time, with the decisions-log entry asked for afterwards (#327). The cloud QA run of #315 passed: the credit read-back reported the footer GitHub added to test issue #321.
 
 2026-10-18, branch `AjsAgent/issue-329-page-links`, plugin 2.68.4: #329 (a page link in a reply must open, #330 to #332) is built and waiting for aj's QA. The page checkpoint counts an .html link only when it resolves inside the session's folder, and `make_page.py` warns when it writes a page outside the folder it runs in. `verify.py` still fails the 4 checks that already failed on `main` in a separate working folder (95, 97, 751, and the pagecheck case); no new failures.
 
@@ -339,3 +339,27 @@ invocation.
 - **`docs/sessions/` has exactly one recorded ledger** (2026-09-09), despite
   `tools/session_ledger.py` existing to produce one per session. The tool works; running it
   isn't yet a habit.
+
+2026-11-02, branch `AjsAgent/house-rules-plugin-split-a9uusz`: aj asked to split house-rules into eight plugins (safe work, design loop, rule enforcement, no hiding, living docs, code standards, check your work, no trust memory). Proposal page `docs/plans/2026-11-02-plugin-split.html` places every hook, rule and script, lists seven pieces with no clear home, and asks eight choices. Nothing is built; it waits on aj's answers.
+
+2026-11-02: aj set the split's principle (no rule optional, friction is reworked, never bypassed; `docs/6-decisions/Decisions.md`, "The plugin split: no rule is optional"). The page now sorts the rules by how they are enforced today and asks how a repeatedly failing end-of-reply check behaves (choice 6).
+
+2026-11-02: aj approved the design ("Design approved: plugin split 1* 2A 3A 4A 5A 6A 7A 8A"; choice 1 adds a ninth plugin, Accessible AI). Systems doc `docs/4-systems/plugin-split.md`; parent issue #437 with steps #438 to #450; build plan page `docs/plans/2026-11-02-plugin-split-build-plan.html` waits on aj's approval and three choices.
+
+2026-11-02: aj approved the build plan ("Build plan approved: plugin split 1A 2A 3A"). Step 1 (#438) is built: plugin `dependencies` installs the library (CLI 2.1.316), and two blocking Stop hooks run in parallel, both reasons reach the model, and `stop_hook_active` is shared (`docs/4-systems/plugin-split.md`, "Step 1 findings (#438)"). Closing #306 was refused by the close guard; sweep page `docs/plans/2026-11-02-restructure-sweep.html` waits on aj's "Sweep approved: issues". Next is step 2 (#439), the shared library.
+
+2026-11-02: aj approved the sweep; #306 and its 9 open steps (#341, #343 to #349, #381) are closed as not planned, replaced by #437, each with a comment. Step 2 (#439) waits on one question, how a plugin finds the shared library (cloud sessions sync plugins to `plugins/synced/<id>/<plugin>/`, not `plugins/cache/`): `docs/plans/2026-11-02-library-lookup.html`.
+
+2026-11-02, plugin 2.74.2: step 2 (#439) is built. `claude-house-rules/plugins/house-lib/` holds the plumbing (`house_lib/plumbing.py`, `links.py`); `tools/sync_library.py` copies it into house-rules and `--check` runs in CI. Checked in this session: verify.py 965 checks PASS, verify_tools.py 50 PASS, sync check and version-bump check PASS, and `claude plugin install house-lib@aj-house-rules` from the local checkout installed and enabled it. Not yet: an install from GitHub (needs a merge to main) and the CI run. Next is step 3 (#440).
+
+2026-11-02: aj: open the pull request after step 3 (#440) and prove it breaks nothing before a merge is considered. The six-item gate is in `docs/4-systems/plugin-split.md`, "The gate before a merge to main".
+
+2026-11-02, house-rules 2.75.0 + rule-enforcement 0.1.0: step 3 part A (#440) is built. `inject`, `showrule`, `scope` and `subagentrules` and the rules files (`rules/house-rules.md`, `show-dont-tell.md`, `clear-writing.md`, `rules/detail/`) moved to `claude-house-rules/plugins/rule-enforcement/`; house-rules gained `threadlink`, `scopelinks` and `subagentlinks` for the parts that stay. Detail and the link table: `docs/4-systems/plugin-split.md`, "Step 3 part A". Not yet: the repeat-failure lock and removing the off switches (later parts of #440), and two dangling `rules/detail/` pointers from the standards and plain-docs files.
+
+2026-11-02: step 3 part B (#440) is built: the repeat-failure lock (house-lib `blocks.py`, rule-enforcement `lockgate`), with shell writes, target-repo lookup and lock clearing closed after review; house-rules verify 959 PASS, rule-enforcement 94 PASS, live proofs in `docs/4-systems/plugin-split.md`. Part C (removing the off switches) waits on two answers: `docs/plans/2026-11-02-off-switches.html`.
+
+2026-11-02, house-rules 2.75.0: step 3 (#440) is built (parts A, B and C, plus the rule-path fix 5cce2f8). Checked here: house-rules verify 937 PASS, rule-enforcement 96 PASS, verify_tools 55 PASS, sync and version-bump checks PASS. Draft pull request #452 is open; it stays a draft until the six-item gate in `docs/4-systems/plugin-split.md` has run. Next: the gate (CI, a replay against 2.74.1, real sessions, a GitHub install, a tested rollback, aj's QA).
+
+2026-11-02: merge gate for #452: items 1 to 5 pass (suites here and in CI, replay 0 unexplained after the quote-aware split fix f92fd63, no new refusal, clean GitHub install, one-step rollback); see `docs/4-systems/plugin-split.md`, "Gate results". Windows is not checked. QA page next.
+
+2026-11-04: main gained the rerun limit (#456, house-rules 2.75.0); merged into #452 (b664bf2), which crashed the guard until the rerun limit's off switch was removed (7a7678b). The plugin split's house-rules is now 2.76.0. All suites pass again and the replay against the new main has 0 unexplained differences. The limit miscounts commands that only name a script: #467.
