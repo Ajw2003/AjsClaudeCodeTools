@@ -1,0 +1,209 @@
+diff --git a/claude-house-rules/plugins/house-rules/agents/builder.md b/claude-house-rules/plugins/house-rules/agents/builder.md
+index 71eaf94..7fef423 100644
+--- a/claude-house-rules/plugins/house-rules/agents/builder.md
++++ b/claude-house-rules/plugins/house-rules/agents/builder.md
+@@ -9,6 +9,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob
+ You carry out a decided plan for one issue. Do not redesign it.
+ 
+ - Do the steps as written, in order. Where they are ambiguous, stop and ask.
++- If the spawn prompt names an approved draft (a diff under `docs/plans/<feature>-code/`), that draft is the specification: write that code. Where the real code has to differ from it, make the change and list each difference in your report with its reason. Never depart from it silently.
+ - Commit as you go on your own branch, scoped to the paths you changed.
+ - While working run only the checks for the code you changed; run the full suites exactly once, at the end.
+ - **Two runs per check, at most.** Any in-game, end-to-end or harness check (a play session, a co-op run, a capture script, a benchmark) runs at most twice in total. After a second failure, stop and report, naming what failed.
+@@ -18,4 +19,4 @@ You carry out a decided plan for one issue. Do not redesign it.
+ - If the scope grows, stop and say what new issue it needs. Do not do it.
+ - Every wait has a time limit and a branch that says why it gave up (e.g. `timeout 900 ...`); never an unbounded `until`/`while ... sleep`. The harness's completion notice beats polling.
+ - Do not touch GitHub issues, labels or PRs.
+-- Final report is 6 lines at most: done or not done; files changed; each check with pass or fail and its one result line; what is unverified and why; branch and head SHA. Quote full output only for a failure.
++- Final report is 6 lines at most (plus one line per departure from an approved draft): done or not done; files changed; each check with pass or fail and its one result line; what is unverified and why; branch and head SHA. Quote full output only for a failure.
+diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
+index 4c5f050..a39eedc 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
++++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
+@@ -718,6 +718,8 @@ _loop_cases.append(('"Build plan approved: <feature>" opens code', _loop_stage()
+                     and _loop_edit("app.py") == "allow"))
+ _loop_say("hello", session="other")
+ _loop_cases.append(('"Build plan approved" carries the hand-to-a-helper instruction', "@house-rules:builder" in _n))
++_loop_cases.append(("#471: the Build note names the approved drafts as the builder's specification and says departures are reported",
++                    "The approved code is in docs/plans/blockers-code/1.diff" in _n and "never silently" in _n))
+ _g = _loop_say("go ahead and build it")
+ _loop_cases.append(("with the loop on, a go-ahead message no longer gets the guess", "reads like a go-ahead" not in _g))
+ _sp = {"hook_event_name": "SubagentStart", "session_id": "loop", "agent_id": "h1", "agent_type": "house-rules:builder",
+diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
+index 72c66d0..894a6c4 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
++++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
+@@ -391,6 +391,46 @@ else:
+                           and _ap.returncode == 0 and _after == _PL_DRAFT.replace("no items to total", "total() needs at least one item")
+                           and "total() needs at least one item" in _ed["shown"]))
+ 
++# QA mode lists departures from the approved drafts (#471): a match lists none, a changed line is listed, reformatting is not.
++_pl_draft_path = os.path.join(_d, "docs", "plans", "demo-code", "1.diff")
++with open(_pl_draft_path, "w", encoding="utf-8") as _f:
++    _f.write(_PL_DRAFT)
++_mp_git(_d, "add", "-A")
++_mp_git(_d, "commit", "-q", "-m", "plan")
++_pl_base = _mp_git(_d, "rev-parse", "HEAD").strip()
++_mp_git(_d, "apply", _pl_draft_path)
++_mp_git(_d, "commit", "-q", "-am", "build as drafted")
++
++
++def _mp_departures(name):
++    _rc, _o = _mp("build", _mp_qa_content(name, dict(_qa, base=_pl_base, files={})), "--project", _d)
++    pg = _mp_page_of(os.path.join(_d, "docs", "plans", name + ".html")) or {"changes": []}
++    return _rc, next((c for c in pg["changes"] if c[1] == "Departures from the approved code"), None)
++
++
++_rc, _dep = _mp_departures("dep1")
++_mp_cases.append(("QA mode (#471): a build that matches its approved draft lists no departures",
++                  _rc == 0 and _dep is not None and _dep[2] == "None: the build matches the approved code" and _dep[6] == []))
++with open(os.path.join(_d, "app.py"), "w", encoding="utf-8") as _f:
++    _f.write("def total(items):\n    if not items:\n        raise ValueError(\"empty\")\n    return sum(items)\n")
++_mp_git(_d, "commit", "-q", "-am", "a different message")
++_rc, _dep = _mp_departures("dep2")
++_mp_cases.append(("QA mode (#471): a build that changes a drafted line lists both sides of it, under its file",
++                  _rc == 0 and _dep is not None and _dep[2] == "2 lines in 1 file differ from the drafts"
++                  and _dep[6] == [["app.py", 1, 1, [["Written, not in the draft: raise ValueError(\"empty\")", 1, 0],
++                                                    ["In the draft, not written: raise ValueError(\"no items to total\")", 0, 1]]]]))
++with open(os.path.join(_d, "app.py"), "w", encoding="utf-8") as _f:
++    _f.write("def total(items):\n    if not   items:  \n\n        raise ValueError(\"no items to total\")\n    return sum(items)\n")
++_mp_git(_d, "commit", "-q", "-am", "reformatted")
++_rc, _dep = _mp_departures("dep3")
++_mp_cases.append(("QA mode (#471): a build that only reformats the drafted code lists no departures",
++                  _rc == 0 and _dep is not None and _dep[6] == []))
++_rc, _o = _mp("build", _mp_qa_content("dep4", _qa), "--project", _mp_proj("qa"))
++_pg = _mp_page_of(os.path.join(_mp_proj("qa"), "docs", "plans", "dep4.html")) or {"changes": []}
++_mp_cases.append(("QA mode (#471): with no approved drafts recorded, the departures item says it was not checked, and why",
++                  any(c[1] == "Departures from the approved code" and c[2] == "Not checked: no approved drafts"
++                      and "no build plan page with drafts" in c[4] for c in _pg["changes"])))
++
+ # a 40-character unbroken word in card text must not clip on a phone (#288); the old 1fr CSS must be caught
+ _LONGW = "HOUSE_RULES_AGENT_NAME_WITH_A_VERY_LONG_TAIL_X"
+ _lw = _mp_content("longword")
+diff --git a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
+index 06e10c2..5916e5b 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
++++ b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
+@@ -918,6 +918,11 @@ def _loop_apply_one(state, text, top):
+                      "to build it yourself; helpers build only approved steps and never design or approve. When "
+                      "the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA."
+                      % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
++            drafts = sorted(((state.get("plan_page") or {}).get("drafts") or {}))
++            if drafts:  # #471: the approved code is the specification
++                note += (" The approved code is in %s: give each builder its step's draft as the specification. "
++                         "Where the real code has to differ, the builder makes the change and reports it with the "
++                         "reason, never silently; the QA page lists every departure." % ", ".join(drafts))
+         elif approval[0] == "QA failed":
+             note += (" Their list of changes starts the next design. Move every issue back to `%s` now; the "
+                      "redo's \"Design approved\" is refused until they are." % LOOP_WORKING)
+diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
+index 8d05bb5..ac9a432 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
++++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
+@@ -294,6 +294,7 @@ def apply_qa(page, project):
+          "%d files, +%d −%d" % (len(seen), tot_a, tot_r),
+          None, "The added and removed counts come from git (git diff --numstat %s...HEAD); the estimates "
+          "beside them come from the plan." % base, None, rows])
++    page["changes"].append(departures_item(project, base))
+     page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
+                             " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv), None, None])
+     page.setdefault("choices", [])  # a QA page usually has none, and the template maps over the list
+@@ -372,6 +373,81 @@ def apply_plan(page, project):
+     return {"drafts": drafts, "steps": len(plan["steps"]), "large": large, "linked": False}
+ 
+ 
++def changed_lines(text):
++    """{file: ([added], [removed])} from a unified diff. Spacing is collapsed and blank lines are left out,
++    so reformatting and shifted line numbers never count as a change."""
++    out, cur = {}, None
++    for line in text.splitlines():
++        if line.startswith("diff --git "):
++            cur = out.setdefault(line.split(" b/", 1)[-1], ([], []))
++        elif cur is None or line.startswith(("+++ ", "--- ")):
++            continue
++        elif line[:1] in ("+", "-") and line[1:].strip():
++            cur[0 if line[0] == "+" else 1].append(" ".join(line[1:].split()))
++    return out
++
++
++def minus(have, take):
++    """The lines of have left after taking away one copy of each line in take."""
++    left = list(have)
++    for t in take:
++        if t in left:
++            left.remove(t)
++    return left
++
++
++DEPARTURE_LIMIT = 20  # lines listed per file; the rest are counted
++
++
++def departures_item(project, base):
++    """QA mode (#471): the lines where the build differs from the approved drafts recorded in plan_page.
++    Pages under docs/plans/ and the stage file are not code, so they are left out."""
++    try:
++        with open(stage_file(project), encoding="utf-8") as f:
++            page = json.load(f).get("plan_page")
++    except (OSError, ValueError, AttributeError) as e:
++        page, why = None, "the stage file could not be read (%s)" % e
++    else:
++        why = "the stage file records no build plan page with drafts"
++    title = "Departures from the approved code"
++    if not isinstance(page, dict) or not page.get("drafts"):
++        return ["keep", title, "Not checked: no approved drafts", None,
++                "Departures could not be checked because %s." % why, None, None]
++    planned = {}
++    for rel in sorted(page["drafts"]):
++        try:
++            with open(os.path.join(project, rel), encoding="utf-8") as f:
++                text = f.read()
++        except OSError as e:
++            die("QA mode: the approved draft %s could not be read (%s); restore it from the branch history" % (rel, e))
++        for name, (a, r) in changed_lines(text).items():
++            planned.setdefault(name, ([], []))[0].extend(a)
++            planned[name][1].extend(r)
++    real = changed_lines(run_git(project, "diff", "-w", base + "...HEAD"))
++    rows, total = [], 0
++    for name in sorted(set(planned) | set(real)):
++        if name.startswith(("docs/plans/", ".claude/")):
++            continue
++        pa, pr = planned.get(name, ([], []))
++        ra, rr = real.get(name, ([], []))
++        parts = ([["Written, not in the draft: " + t, 1, 0] for t in minus(ra, pa)] +
++                 [["Removed, not in the draft: " + t, 0, 1] for t in minus(rr, pr)] +
++                 [["In the draft, not written: " + t, 0, 1] for t in minus(pa, ra)] +
++                 [["Draft removes it, the build kept it: " + t, 1, 0] for t in minus(pr, rr)])
++        if parts:
++            total += len(parts)
++            more = len(parts) - DEPARTURE_LIMIT
++            shown = parts[:DEPARTURE_LIMIT] + ([["... and %d more lines" % more, 0, 0]] if more > 0 else [])
++            rows.append([name, sum(x[1] for x in parts), sum(x[2] for x in parts), shown])
++    line = ("%d %s in %d %s differ from the drafts" % (total, "line" if total == 1 else "lines", len(rows),
++                                                      "file" if len(rows) == 1 else "files")
++            if rows else "None: the build matches the approved code")
++    return ["chg" if rows else "keep", title, line, None,
++            "Every line the build wrote or removed that the approved drafts did not, and every draft line the build "
++            "did not write, compared with spacing ignored, so reformatting and moved lines are not departures. "
++            "The builder's report gives the reason for each.", None, rows]
++
++
+ def apply_sweep(page):
+     """Sweep mode (#364): each row becomes a Changes item showing its evidence and suggested action."""
+     rows = page["sweep"]
+@@ -469,9 +545,14 @@ def record_sweep(project, page):
+     record_qa_page(project, None, key="sweep_proposed", value=rows, what="sweep rows")
+ 
+ 
+-def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
++def stage_file(project):
++    """The design loop's stage file: .claude/ in the main checkout (the parent of the common git directory)."""
+     common = os.path.abspath(os.path.join(project, run_git(project, "rev-parse", "--git-common-dir").strip()))
+-    stage = os.path.join(os.path.dirname(common), ".claude", "house-rules-loop.json")
++    return os.path.join(os.path.dirname(common), ".claude", "house-rules-loop.json")
++
++
++def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
++    stage = stage_file(project)
+     if not os.path.isfile(stage):
+         print("make_page: %s not recorded because no feature is in progress (no %s)" % (what, stage))
+         return

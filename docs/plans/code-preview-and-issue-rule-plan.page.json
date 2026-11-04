@@ -1,0 +1,158 @@
+{
+ "title": "Code Preview Build Plan",
+ "eyebrow": "Build plan for approval · issue #468 (the main issue for this feature) · all the code below is drafted and tested in a scratch copy; none of it is in the plugin yet",
+ "approval": "Build plan approved: code preview and issue rule",
+ "short": {
+  "lead": "This is the first build plan that carries its own code. Each of the four steps below opens to the exact diff it will write (a diff is a list of added and removed lines). I wrote and ran this code in a scratch copy of the repo. You can read the code, edit it on the page, or approve it as it is.",
+  "hint": "Tap a step to see what it builds and what it needs from you.",
+  "key": [
+   [
+    "I build it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "hammer",
+    "Step 1",
+    "Plan mode in the page builder",
+    "",
+    "Sub-issue #469 (Page builder shows each step's planned code, editable on the page). This page was built with it.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Step 2",
+    "The approval waits for the code; one issue",
+    "",
+    "Sub-issue #470 (Build plan approval waits for the code, and needs one issue).",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Step 3",
+    "Builder follows the draft; QA lists departures",
+    "",
+    "Sub-issue #471 (Builder follows the approved draft; QA page lists every departure).",
+    "Nothing from you."
+   ],
+   [
+    "file",
+    "Step 4",
+    "Rule text, docs and version",
+    "",
+    "Sub-issue #472 (Rule text, docs, version and a real run).",
+    "Nothing from you."
+   ],
+   [
+    "eye",
+    "Review",
+    "You review the code",
+    "you",
+    "Your edits come back in your reply as a diff of the draft file. I apply the diff and rebuild the page.",
+    "Open each step under Changes, tap Edit on anything you want changed, then copy your reply."
+   ]
+  ]
+ },
+ "plan": {
+  "steps": [
+   {
+    "name": "Plan mode in the page builder (#469)",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/1-plan-mode.diff",
+    "size": "large",
+    "detail": "make_page.py gains a plan block. It applies each draft in order, on top of the earlier steps' drafts, to a temporary copy of the branch's last commit (a throwaway git index), so no file on disk changes. The template shows each draft in full with an Edit button, and your edits go into the copied reply as a diff. Tests: 9 new page-builder checks, including a browser run in which an edit made on the page becomes a diff that applies cleanly to the draft."
+   },
+   {
+    "name": "The approval waits for the code, and needs one issue (#470)",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/2-gate-and-issue-rule.diff",
+    "size": "large",
+    "detail": "In design_loop.py, _loop_plan_page_problem refuses \"Build plan approved\" when there is no plan page, when the page was never linked in a reply, or when a draft has changed since the page was built. _issues_needed replaces the fixed ISSUES_NEEDED = 2 in both issue checks, so the count depends on the plan. _record_plan_link marks a page as linked once a reply links it. Tests: the existing approval tests now record a plan page first, and 8 new design-loop checks."
+   },
+   {
+    "name": "Builder follows the draft; QA lists departures (#471)",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/3-builder-and-departures.diff",
+    "size": "large",
+    "detail": "The note that opens the Build stage names the approved drafts. builder.md tells the builder to report every departure from them. The QA page gains a \"Departures from the approved code\" item. Tests: 5 new checks, covering an exact match, a changed line, a reformat-only change, no drafts recorded, and the Build note."
+   },
+   {
+    "name": "Rule text, docs and version (#472)",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/4-rules-docs-version.diff",
+    "size": "large",
+    "detail": "house-rules.md, show-dont-tell.md and the two detail files will say that a feature needs one issue plus one per large step, and that a build plan carries its code. The systems doc moves from \"designed\" to \"built\". The plugin version goes from 2.75.0 to 2.76.0. The real run in a scratch repo, with screenshots, happens during the build and goes on the QA page."
+   }
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Where the draft differs from the approved design",
+   "The draft differs from the approved design in two places. Both are listed here so your approval covers them.",
+   [
+    "The design said the QA page compares code hunk by hunk (a hunk is one block of changed lines), and that each draft is checked on its own with git apply --check.",
+    "The QA page compares line by line, ignoring spacing, and the drafts are checked in order, each on top of the ones before it."
+   ],
+   "Line by line: a hunk changes shape when nearby code changes, so the same edit could be reported as a departure. Comparing lines and ignoring spacing meets the design's aim that reformatting and moved lines are not departures. This is option A in the first choice below. In order: git apply --check takes each draft on its own, but steps 2 and 3 change files that step 1 already changed. Checked alone, step 3 is refused. Checked in order, all four pass.",
+   null,
+   null
+  ],
+  [
+   "keep",
+   "What I have proven, and what I have not",
+   "Tested in a scratch copy. One test run was refused by the rerun guard (a check that stops the same test file running a third time).",
+   null,
+   "Proven: before the last change to plan mode, the full suite passed 993 of 993 checks, against 973 on the untouched copy. After that change, the page-builder checks passed 43 of 43. The four drafts apply in order to this branch's last commit, and applied together they reproduce the tested copy byte for byte. Not proven: the full suite after that last change, and each step's checks run on their own after it. The rerun guard refused a third run of the same check file, and I did not switch it off. Both of those runs happen again during the build. Also open: issue #457 (Design loop fixes) is on another branch and already moves the version to 2.76.0, so whichever branch merges second takes the next number.",
+   null,
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "compare",
+   "How should the QA page compare the real code with the draft?",
+   [
+    [
+     "A",
+     "Line by line, spacing ignored",
+     1,
+     "What the draft does now. Reformatting and moved lines never count as departures."
+    ],
+    [
+     "B",
+     "Hunk by hunk, as the design said",
+     0,
+     "Closer to the design's words, but a hunk can change shape when nearby code moves, and the QA page would then report departures that are not real."
+    ]
+   ],
+   "Both meet the design's aim. Option A is the one that held up in the tests, including a build that only reformatted code and correctly listed no departures."
+  ],
+  [
+   "sizes",
+   "Are all four steps large?",
+   [
+    [
+     "A",
+     "Yes, all four are large",
+     1,
+     "Main issue #468 plus four sub-issues, #469 through #472, all of which already exist. Each step gets its own sub-issue."
+    ],
+    [
+     "B",
+     "Step 4 is small",
+     0,
+     "Step 4 is rule text and docs only. Under the new rule it would not need its own sub-issue. Issue #472 (Rule text, docs, version and a real run) would be closed as not planned, and its work would move into #471 (Builder follows the approved draft; QA page lists every departure)."
+    ]
+   ],
+   "Step 4 also carries the real run and the version change, and together those are a piece of work that can be checked on its own."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Four steps, each with its full code on this page: plan mode in the page builder, the approval gate and one-issue rule, the builder and QA departures, and the rule text, docs and version.",
+  "changing": "Nothing is committed to the plugin until you approve. After approval, each step goes to a builder with its draft as the specification.",
+  "blocking": "Nothing starts until you review the code and answer the two choices above.",
+  "next": "After you approve, the builders apply the drafts, run the full suite, do the real run, and I bring the QA page with any departures listed."
+ }
+}

@@ -1,0 +1,781 @@
+<!doctype html>
+<!-- house-rules make_page 2.76.0 -->
+<meta charset="utf-8">
+<title>Code Preview Build Plan</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#566174; --line:#d5dbe6;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --you:#b35f00; --you-soft:#fdeed9;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.55 var(--body)}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:1.9rem;font-weight:800}
+h2{font-size:1.45rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.ico{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* stepper */
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stepper button{border:0;background:none;display:grid;justify-items:center;gap:4px;padding:4px 0;font-size:.72rem;color:var(--muted)}
+.stepper .bar{width:100%;height:6px;border-radius:3px;background:var(--line)}
+.stepper button.done .bar{background:var(--accent)}
+.stepper button[aria-current="step"]{color:var(--fg);font-weight:700}
+.stepper button[aria-current="step"] .bar{background:var(--accent)}
+
+.panel{display:grid;gap:18px}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.lead{font-size:1.1rem}
+
+/* at-a-glance strip */
+.glance{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.g{display:grid;justify-items:center;gap:4px;width:56px;text-align:center;font-size:.72rem;color:var(--muted)}
+.g span.c{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
+.arrow{color:var(--muted);font-size:1.1rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
+.glance .lk .ico{width:14px;height:14px}
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p,.crb li{font-size:.9rem}
+.crb ul.cl{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.sd h3{display:flex;gap:8px;align-items:center}
+.sd .back{padding-left:0}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.key i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent)}
+.key i.y{border-radius:4px;background:var(--you-soft);border-color:var(--you)}
+
+/* stage list */
+.stages{display:grid;gap:8px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.st > summary{list-style:none;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;cursor:pointer;min-height:48px}
+.st > summary::-webkit-details-marker{display:none}
+.st .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.st.you .c{border-radius:11px;background:var(--you-soft);color:var(--you)}
+.st.you{border-color:var(--you)}
+.st .nm b{display:block}
+.st .nm small{color:var(--muted);font-size:.85rem}
+.more{font-size:.78rem;color:var(--accent);font-weight:700;white-space:nowrap}
+details[open] > summary .more::after{content:" ▲"} details:not([open]) > summary .more::after{content:" ▼"}
+.detail{padding:0 14px 14px 68px;display:grid;gap:8px;font-size:.92rem}
+@media (max-width:420px){.detail{padding-left:14px}}
+.row{display:grid;grid-template-columns:72px 1fr;gap:8px}
+.row > span:first-child{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.back{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--you);padding-left:12px}
+
+/* created / changed */
+.cc{display:grid;gap:8px}
+.ci{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.ci > summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;cursor:pointer;min-height:48px}
+.ci > summary::-webkit-details-marker{display:none}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ci b{display:block}
+.ci small{color:var(--muted);font-size:.86rem}
+.ci .detail{padding:0 14px 14px 14px}
+.fromto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:.88rem}
+.fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
+.fromto span.to{background:var(--accent-soft)}
+.flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch;font-size:.84rem}
+.flow > span{border-radius:8px;padding:8px;background:var(--bg);display:grid;gap:2px;align-content:start;min-width:0}
+.flow > span.mid{background:var(--accent-soft)}
+.flow > i{align-self:center;color:var(--muted);font-style:normal}
+.flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+@media (max-width:479px){.flow{grid-template-columns:minmax(0,1fr)}.flow > i{justify-self:center;transform:rotate(90deg)}}
+.files{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.files h4{margin:0;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.frow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;align-items:baseline}
+.frow code{font-size:.82rem;word-break:break-all}
+.files .n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.parts{margin:0 0 4px;padding-left:18px;display:grid;gap:4px;font-size:.86rem}
+.parts li span:first-child{margin-right:8px}
+
+/* choices */
+.q{display:grid;gap:8px}
+.q h3{display:flex;gap:10px;align-items:flex-start}
+.qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input[type=radio]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.opt small{display:block;color:var(--muted);font-size:.86rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+.rec{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.rec .ico{width:12px;height:12px}
+.why{font-size:.88rem}
+.why summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:32px}
+.why p{margin-top:6px;color:var(--muted)}
+
+/* wrap-up */
+.wrapup{display:grid;gap:10px}
+.wu{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.wu .c{width:40px;height:40px;border-radius:10px;display:grid;place-items:center}
+.wu h3{margin-bottom:2px}
+.wu p,.wu li{font-size:.94rem}
+.wu ol{margin:4px 0 0;padding-left:20px;display:grid;gap:4px}
+.wu.do{border:2px solid var(--you)}
+.reply{display:grid;gap:8px}
+.reply pre{white-space:pre-wrap;margin:0;background:var(--card);border:1px dashed var(--accent);border-radius:10px;padding:12px;font-size:.92rem}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:12px;padding:14px 18px;font-weight:800;min-height:48px}
+.secondary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:700;min-height:48px}
+.nav{display:flex;justify-content:space-between;gap:10px}
+.nav .primary{margin-left:auto}
+.status{font-size:.88rem;color:var(--muted)}
+.missing{color:var(--gap);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.panel{animation:in .2s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+<style>
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.g.done span.c{background:var(--ok-soft);color:var(--ok)}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+/* plan mode (#469): a step's drafted code. Added lines take the accent tint (I build it), never --you or --ok. Wrapped, not scrolled, so nothing is wider than its card. */
+.code{margin:12px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.codebar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line)}
+.codebar code{font-size:.8rem;word-break:break-all}
+.code pre,.code textarea{display:block;margin:0;padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;width:100%;box-sizing:border-box;color:var(--fg)}
+.code pre span{display:block;min-height:1.5em}
+.code .add{background:var(--accent-soft)}
+.code .del{color:var(--muted);text-decoration:line-through}
+.code .hunk{color:var(--muted)}
+.code textarea{min-height:18em;border:0;background:var(--bg);resize:vertical}
+/* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+.pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+.pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+.pic img,.cmp img{display:block;max-width:100%;height:auto;background:var(--bg)}
+.pic,.pic button{width:100%;box-sizing:border-box}
+/* A tall screenshot shrunk to fit a short box is a sliver: fill the width and show its top instead. */
+.pic button img{width:100%;max-height:280px;object-fit:cover;object-position:top;border-radius:6px}
+.pic figcaption,.cmp figcaption{font-size:.86rem;color:var(--muted)}
+.pic,.cmp{margin:0}
+.cmp{display:grid;gap:6px;min-width:0}
+.cmp-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+body{overflow-wrap:anywhere}
+.crb p,.crb li,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
+@media (max-width:479px){.cr{grid-template-columns:minmax(0,1fr)}}
+.cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
+.cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cmp-slide{display:none;gap:6px;min-width:0}
+.cmp-frame{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.cmp-frame img{width:100%}
+.cmp-frame img + img{position:absolute;inset:0;height:100%;object-fit:fill;clip-path:inset(0 0 0 var(--pos,50%))}
+.cmp-slide input[type=range]{width:100%;accent-color:var(--accent);min-height:44px;margin:0}
+@media (max-width:639px){.cmp-side{display:none}.cmp-slide{display:grid}}
+dialog.lightbox{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:12px;width:min(96vw,960px);max-height:94vh;box-sizing:border-box;overflow:auto}
+dialog.lightbox::backdrop{background:rgba(0,0,0,.6)}
+dialog.lightbox img{display:block;width:100%;height:auto}
+dialog.lightbox p{margin-top:8px;font-size:.9rem}
+dialog.lightbox button{margin-top:10px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L3 15l3 3 8-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+</defs></svg>
+
+<!--
+  Handover page template (house-rules, issue #233). The approved format: four parts in this order -
+  In short, Changes, Choices, Wrap-up - and a part is left out only when it would be empty.
+  Copy this file, edit PAGE below, and nothing else. Every part keeps four rules:
+  detail only on tap; names, never bare numbers; one colour, one meaning (orange = the user acts,
+  green = done, nothing else orange); I check it first (phone width, light and dark, every tap,
+  a bare-number search). Rule: rules/detail/show-dont-tell.md.
+-->
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="eyebrow" id="eyebrow"></span>
+    <h1 id="title"></h1>
+  </header>
+  <nav class="stepper" aria-label="Steps" id="stepper"></nav>
+  <section class="panel" data-part="short" aria-labelledby="h-short">
+    <h2 id="h-short" tabindex="-1">In short</h2>
+    <div class="card">
+      <p class="lead" id="lead"></p>
+      <div class="key" id="key"></div>
+      <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
+      <p class="muted" style="font-size:.85rem" id="hint"></p>
+      <div class="sd" id="sd" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="panel" data-part="changes" aria-labelledby="h-changes" hidden>
+    <h2 id="h-changes" tabindex="-1">What this creates or changes</h2>
+    <p class="muted" id="cc-count"></p>
+    <div class="cc" id="cc"></div>
+  </section>
+  <section class="panel" data-part="choices" aria-labelledby="h-choices" hidden>
+    <h2 id="h-choices" tabindex="-1">Your choices</h2>
+    <p class="muted">My suggestion is marked, nothing is picked for you, and each has room for your own answer.</p>
+    <div id="qs" style="display:grid;gap:22px"></div>
+  </section>
+  <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
+    <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
+    <div class="wrapup" id="wrapup"></div>
+    <div class="reply">
+      <pre id="out" aria-live="polite"></pre>
+      <p class="status" id="miss"></p>
+      <button class="primary" id="copy" type="button">Copy my reply</button>
+      <p class="status" id="st"></p>
+    </div>
+  </section>
+  <div class="nav">
+    <button class="secondary" id="prev" type="button">‹ Back</button>
+    <button class="primary" id="next" type="button">Next ›</button>
+  </div>
+</div>
+
+<script>
+// ---- PAGE: the only part you edit. Example content shows every field. ----------------------
+// Tiny inline SVGs so the template stays one file; real pages use a data: URI or a path next to the page.
+const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
+const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
+const PAGE = {
+  "title": "Code Preview Build Plan",
+  "eyebrow": "Build plan for approval · issue #468 (the main issue for this feature) · all the code below is drafted and tested in a scratch copy; none of it is in the plugin yet",
+  "approval": "Build plan approved: code preview and issue rule",
+  "short": {
+    "lead": "This is the first build plan that carries its own code. Each of the four steps below opens to the exact diff it will write (a diff is a list of added and removed lines). I wrote and ran this code in a scratch copy of the repo. You can read the code, edit it on the page, or approve it as it is.",
+    "hint": "Tap a step to see what it builds and what it needs from you.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "hammer",
+        "Step 1",
+        "Plan mode in the page builder",
+        "",
+        "Sub-issue #469 (Page builder shows each step's planned code, editable on the page). This page was built with it.",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Step 2",
+        "The approval waits for the code; one issue",
+        "",
+        "Sub-issue #470 (Build plan approval waits for the code, and needs one issue).",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Step 3",
+        "Builder follows the draft; QA lists departures",
+        "",
+        "Sub-issue #471 (Builder follows the approved draft; QA page lists every departure).",
+        "Nothing from you."
+      ],
+      [
+        "file",
+        "Step 4",
+        "Rule text, docs and version",
+        "",
+        "Sub-issue #472 (Rule text, docs, version and a real run).",
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "Review",
+        "You review the code",
+        "you",
+        "Your edits come back in your reply as a diff of the draft file. I apply the diff and rebuild the page.",
+        "Open each step under Changes, tap Edit on anything you want changed, then copy your reply."
+      ]
+    ]
+  },
+  "plan": {
+    "steps": [
+      {
+        "name": "Plan mode in the page builder (#469)",
+        "draft": "docs/plans/code-preview-and-issue-rule-code/1-plan-mode.diff",
+        "size": "large",
+        "detail": "make_page.py gains a plan block. It applies each draft in order, on top of the earlier steps' drafts, to a temporary copy of the branch's last commit (a throwaway git index), so no file on disk changes. The template shows each draft in full with an Edit button, and your edits go into the copied reply as a diff. Tests: 9 new page-builder checks, including a browser run in which an edit made on the page becomes a diff that applies cleanly to the draft."
+      },
+      {
+        "name": "The approval waits for the code, and needs one issue (#470)",
+        "draft": "docs/plans/code-preview-and-issue-rule-code/2-gate-and-issue-rule.diff",
+        "size": "large",
+        "detail": "In design_loop.py, _loop_plan_page_problem refuses \"Build plan approved\" when there is no plan page, when the page was never linked in a reply, or when a draft has changed since the page was built. _issues_needed replaces the fixed ISSUES_NEEDED = 2 in both issue checks, so the count depends on the plan. _record_plan_link marks a page as linked once a reply links it. Tests: the existing approval tests now record a plan page first, and 8 new design-loop checks."
+      },
+      {
+        "name": "Builder follows the draft; QA lists departures (#471)",
+        "draft": "docs/plans/code-preview-and-issue-rule-code/3-builder-and-departures.diff",
+        "size": "large",
+        "detail": "The note that opens the Build stage names the approved drafts. builder.md tells the builder to report every departure from them. The QA page gains a \"Departures from the approved code\" item. Tests: 5 new checks, covering an exact match, a changed line, a reformat-only change, no drafts recorded, and the Build note."
+      },
+      {
+        "name": "Rule text, docs and version (#472)",
+        "draft": "docs/plans/code-preview-and-issue-rule-code/4-rules-docs-version.diff",
+        "size": "large",
+        "detail": "house-rules.md, show-dont-tell.md and the two detail files will say that a feature needs one issue plus one per large step, and that a build plan carries its code. The systems doc moves from \"designed\" to \"built\". The plugin version goes from 2.75.0 to 2.76.0. The real run in a scratch repo, with screenshots, happens during the build and goes on the QA page."
+      }
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Where the draft differs from the approved design",
+      "The draft differs from the approved design in two places. Both are listed here so your approval covers them.",
+      [
+        "The design said the QA page compares code hunk by hunk (a hunk is one block of changed lines), and that each draft is checked on its own with git apply --check.",
+        "The QA page compares line by line, ignoring spacing, and the drafts are checked in order, each on top of the ones before it."
+      ],
+      "Line by line: a hunk changes shape when nearby code changes, so the same edit could be reported as a departure. Comparing lines and ignoring spacing meets the design's aim that reformatting and moved lines are not departures. This is option A in the first choice below. In order: git apply --check takes each draft on its own, but steps 2 and 3 change files that step 1 already changed. Checked alone, step 3 is refused. Checked in order, all four pass.",
+      null,
+      null
+    ],
+    [
+      "keep",
+      "What I have proven, and what I have not",
+      "Tested in a scratch copy. One test run was refused by the rerun guard (a check that stops the same test file running a third time).",
+      null,
+      "Proven: before the last change to plan mode, the full suite passed 993 of 993 checks, against 973 on the untouched copy. After that change, the page-builder checks passed 43 of 43. The four drafts apply in order to this branch's last commit, and applied together they reproduce the tested copy byte for byte. Not proven: the full suite after that last change, and each step's checks run on their own after it. The rerun guard refused a third run of the same check file, and I did not switch it off. Both of those runs happen again during the build. Also open: issue #457 (Design loop fixes) is on another branch and already moves the version to 2.76.0, so whichever branch merges second takes the next number.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Step 1: Plan mode in the page builder (#469)",
+      "Large step · 3 files, +242 −2",
+      null,
+      "make_page.py gains a plan block. It applies each draft in order, on top of the earlier steps' drafts, to a temporary copy of the branch's last commit (a throwaway git index), so no file on disk changes. The template shows each draft in full with an Edit button, and your edits go into the copied reply as a diff. Tests: 9 new page-builder checks, including a browser run in which an edit made on the page becomes a diff that applies cleanly to the draft.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
+          102,
+          0,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/make_page.py",
+          81,
+          0,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/templates/handover-page.html",
+          59,
+          2,
+          []
+        ]
+      ],
+      {
+        "code": {
+          "draft": "docs/plans/code-preview-and-issue-rule-code/1-plan-mode.diff",
+          "text": "diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py\nindex 252db05..72c66d0 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py\n@@ -289,6 +289,108 @@ else:\n         _mp_cases.append((\"make_page: the copied text, with choices (approval then picks) and without (approval alone), matches the gate\",\n                           _w == _ph + \" 1A\" and _n == _ph and _gate(_w) and _gate(_n)))\n \n+# Plan mode (#469): each step's drafted code is checked, shown in full, editable, and recorded as plan_page.\n+_d = _mp_proj(\"plan\", {\"use\": \"defaults\"})\n+_mp_git(_d, \"init\", \"-q\", \"-b\", \"main\")\n+with open(os.path.join(_d, \"app.py\"), \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(\"def total(items):\\n    return sum(items)\\n\")\n+_mp_git(_d, \"add\", \"-A\")\n+_mp_git(_d, \"commit\", \"-q\", \"-m\", \"base\")\n+_PL_DRAFT = (\"diff --git a/app.py b/app.py\\n--- a/app.py\\n+++ b/app.py\\n@@ -1,2 +1,4 @@\\n def total(items):\\n\"\n+             \"+    if not items:\\n+        raise ValueError(\\\"no items to total\\\")\\n     return sum(items)\\n\")\n+_PL_STALE = _PL_DRAFT.replace(\" def total(items):\", \" def total(things):\")\n+os.makedirs(os.path.join(_d, \"docs\", \"plans\", \"demo-code\"))\n+for _n, _t in ((\"1.diff\", _PL_DRAFT), (\"stale.diff\", _PL_STALE)):\n+    with open(os.path.join(_d, \"docs\", \"plans\", \"demo-code\", _n), \"w\", encoding=\"utf-8\") as _f:\n+        _f.write(_t)\n+\n+\n+def _mp_plan_content(name, steps, approval=\"Build plan approved: demo\"):\n+    c = _mp_content(name, approval=approval)\n+    with open(c, encoding=\"utf-8\") as f:\n+        pg = json.load(f)\n+    pg[\"plan\"] = {\"steps\": steps}\n+    with open(c, \"w\", encoding=\"utf-8\") as f:\n+        json.dump(pg, f)\n+    return c\n+\n+\n+_stage = os.path.join(_d, \".claude\", \"house-rules-loop.json\")\n+os.makedirs(os.path.dirname(_stage))\n+with open(_stage, \"w\", encoding=\"utf-8\") as _f:\n+    json.dump({\"feature\": \"demo\", \"stage\": \"plan\"}, _f)\n+_good = [{\"name\": \"Refuse an empty list\", \"draft\": \"docs/plans/demo-code/1.diff\", \"size\": \"large\"},\n+         {\"name\": \"Same draft, small\", \"draft\": \"docs/plans/demo-code/1.diff\", \"size\": \"small\"}]\n+_rc, _o = _mp(\"build\", _mp_plan_content(\"plan1\", _good), \"--project\", _d)\n+_pg = _mp_page_of(os.path.join(_d, \"docs\", \"plans\", \"plan1.html\")) or {\"changes\": []}\n+_st1 = next((c for c in _pg[\"changes\"] if c[1] == \"Step 1: Refuse an empty list\"), None)\n+_mp_cases.append((\"plan mode (#469): a step's draft becomes a Changes item with its file counts and the full code\",\n+                  _rc == 0 and _st1 is not None and _st1[2] == \"Large step · 1 file, +2 −0\"\n+                  and _st1[6] == [[\"app.py\", 2, 0, []]] and _st1[7] == {\"code\": {\"draft\": \"docs/plans/demo-code/1.diff\", \"text\": _PL_DRAFT}}))\n+with open(_stage, encoding=\"utf-8\") as _f:\n+    _sd = json.load(_f)\n+_sha = hashlib.sha256(_PL_DRAFT.encode(\"utf-8\")).hexdigest()\n+_mp_cases.append((\"plan mode (#469): plan_page records the page, each draft's sha256, the step and large-step counts, unlinked\",\n+                  _sd.get(\"plan_page\") == {\"drafts\": {\"docs/plans/demo-code/1.diff\": _sha}, \"steps\": 2, \"large\": 1,\n+                                           \"linked\": False, \"page\": \"docs/plans/plan1.html\"} and _sd.get(\"stage\") == \"plan\"))\n+_mp_cases.append((\"plan mode (#469): the page with code passes the phone-width visual check\",\n+                  \"overflow none\" in _o and \"clipped\" not in _o))\n+_rc, _o = _mp(\"build\", _mp_plan_content(\"plan2\", [{\"name\": \"No code\", \"size\": \"small\"}]), \"--project\", _d)\n+_mp_cases.append((\"plan mode (#469): a step with no draft is refused, naming the step\", _rc == 2 and '\"No code\" names no draft' in _o))\n+_rc, _o = _mp(\"build\", _mp_plan_content(\"plan3\", [{\"name\": \"Old lines\", \"draft\": \"docs/plans/demo-code/stale.diff\", \"size\": \"small\"}]), \"--project\", _d)\n+_mp_cases.append((\"plan mode (#469): a draft that does not apply to the current code is refused, naming the step\",\n+                  _rc == 2 and '\"Old lines\": its draft docs/plans/demo-code/stale.diff does not apply' in _o))\n+_PL_NEXT = (\"diff --git a/app.py b/app.py\\n--- a/app.py\\n+++ b/app.py\\n@@ -1,4 +1,4 @@\\n def total(items):\\n\"\n+            \"     if not items:\\n-        raise ValueError(\\\"no items to total\\\")\\n+        raise ValueError(\\\"total() needs an item\\\")\\n\"\n+            \"     return sum(items)\\n\")\n+with open(os.path.join(_d, \"docs\", \"plans\", \"demo-code\", \"2.diff\"), \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(_PL_NEXT)\n+_rc, _o = _mp(\"build\", _mp_plan_content(\"plan6\", [_good[0], {\"name\": \"Better message\", \"draft\": \"docs/plans/demo-code/2.diff\",\n+                                                             \"size\": \"small\"}]), \"--project\", _d)\n+_rc2, _o2 = _mp(\"build\", _mp_plan_content(\"plan7\", [{\"name\": \"Better message\", \"draft\": \"docs/plans/demo-code/2.diff\",\n+                                                      \"size\": \"small\"}]), \"--project\", _d)\n+_mp_cases.append((\"plan mode (#469): a step's draft is checked on top of the earlier steps' drafts, and alone it is refused\",\n+                  _rc == 0 and _rc2 == 2 and '\"Better message\"' in _o2 and _mp_git(_d, \"status\", \"--porcelain\", \"app.py\") == \"\"))\n+_rc, _o = _mp(\"build\", _mp_plan_content(\"plan1\", _good), \"--project\", _d)  # plan1 is the recorded page again\n+_rc, _o = _mp(\"build\", _mp_plan_content(\"plan4\", [{\"name\": \"Unsized\", \"draft\": \"docs/plans/demo-code/1.diff\"}]), \"--project\", _d)\n+_mp_cases.append((\"plan mode (#469): a step not marked large or small is refused\", _rc == 2 and '\"Unsized\" needs \"size\"' in _o))\n+_rc, _o = _mp(\"build\", _mp_plan_content(\"plan5\", _good, approval=\"Design approved: demo\"), \"--project\", _d)\n+_mp_cases.append((\"plan mode (#469): a plan block on a page that is not a build plan is refused\", _rc == 2 and \"Build plan approved\" in _o))\n+# Choice 3B: aj edits the code on the page, and the copied reply carries a diff that applies to the draft file.\n+_JS_EDIT = (r\"\"\"const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();\n+await p.goto('file://'+process.argv[2]);\n+await p.evaluate(()=>{document.querySelectorAll('[data-part]').forEach(x=>x.hidden=false);document.querySelectorAll('details').forEach(d=>d.open=true);});\n+await p.click('[data-edit=\"0\"]');\n+const ta=p.locator('.code[data-code=\"0\"] textarea');\n+const v=await ta.inputValue();await ta.fill(v.replace('no items to total','total() needs at least one item'));\n+await p.click('[data-edit=\"0\"]');\n+console.log(JSON.stringify({out:await p.evaluate(()=>document.getElementById('out').textContent),\n+  shown:await p.evaluate(()=>document.querySelector('.code[data-code=\"0\"] pre').textContent)}));await b.close();})();\"\"\")\n+if not (os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, \"playwright\"))):\n+    report(\"SKIP\", \"plan mode (#469): an edit on the page reaches the reply as a diff that applies (no node or node playwright here)\")\n+else:\n+    _jsf = os.path.join(_mp_tmp, \"edit.js\")\n+    with open(_jsf, \"w\", encoding=\"utf-8\") as _f:\n+        _f.write(_JS_EDIT)\n+    _r = subprocess.run([_NODE, _jsf, os.path.join(_d, \"docs\", \"plans\", \"plan1.html\")], capture_output=True, text=True, timeout=180,\n+                        env=dict(os.environ, NODE_PATH=_PWMOD, PLAYWRIGHT_BROWSERS_PATH=os.environ.get(\"PLAYWRIGHT_BROWSERS_PATH\", \"/opt/pw-browsers\")))\n+    try:\n+        _ed = json.loads(_r.stdout.strip().splitlines()[-1])\n+    except (ValueError, IndexError):\n+        _ed = None\n+    if _ed is None:\n+        report(\"SKIP\", \"plan mode (#469): an edit on the page reaches the reply as a diff that applies (browser did not run: %s)\"\n+               % (_r.stderr.strip()[-200:] or \"no output\"))\n+    else:\n+        _head, _, _patch = _ed[\"out\"].partition(\"(apply with git apply):\\n\")\n+        _ap = subprocess.run([\"git\", \"-C\", _d, \"apply\", \"-\"], input=_patch, capture_output=True, text=True, timeout=60)\n+        with open(os.path.join(_d, \"docs\", \"plans\", \"demo-code\", \"1.diff\"), encoding=\"utf-8\") as _f:\n+            _after = _f.read()\n+        _mp_cases.append((\"plan mode (#469): an edit on the page reaches the reply as a diff that applies to the draft exactly\",\n+                          _head.startswith(\"Build plan approved: demo\") and \"My edits to docs/plans/demo-code/1.diff\" in _head\n+                          and _ap.returncode == 0 and _after == _PL_DRAFT.replace(\"no items to total\", \"total() needs at least one item\")\n+                          and \"total() needs at least one item\" in _ed[\"shown\"]))\n+\n # a 40-character unbroken word in card text must not clip on a phone (#288); the old 1fr CSS must be caught\n _LONGW = \"HOUSE_RULES_AGENT_NAME_WITH_A_VERY_LONG_TAIL_X\"\n _lw = _mp_content(\"longword\")\ndiff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py\nindex d95169b..8d05bb5 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/make_page.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py\n@@ -15,6 +15,12 @@ The project style file is `docs/page-style.json` (see docs/plans/page-style/plun\n `{\"use\": \"defaults\"}` means the template's own look. One palette is applied in every theme the file\n allows; when `themes` has one entry the page is forced to that theme.\n \n+Plan mode (#469): a `plan` block, {\"steps\": [{\"name\", \"draft\", \"size\"}]}, turns a build plan page into a code\n+preview. Each draft is a unified diff under docs/plans/<feature>-code/; it must apply, and is\n+shown in full as its own Changes item, editable on the page. Drafts are checked in order, each on top of\n+the earlier ones, against the branch's last commit, in a throwaway git index (nothing on disk changes). \"size\" is \"large\" or \"small\". The page, each draft's\n+sha256 and the large-step count are recorded as plan_page in the stage file, for the \"Build plan approved\" gate.\n+\n Exit codes: 0 built, 2 refused or bad input, 3 no style file (two options are printed).\n \n STDLIB ONLY, Python 3.8+. Never installs anything.\n@@ -22,6 +28,7 @@ STDLIB ONLY, Python 3.8+. Never installs anything.\n \n import argparse\n import glob\n+import hashlib\n import json\n import os\n import re\n@@ -295,6 +302,76 @@ def apply_qa(page, project):\n     page.pop(\"reply\", None)\n \n \n+def draft_files(text):\n+    \"\"\"[[file, added, removed, []], ...] for each file a unified diff touches, in order.\"\"\"\n+    rows = []\n+    for line in text.splitlines():\n+        if line.startswith(\"diff --git \"):\n+            rows.append([line.split(\" b/\", 1)[-1], 0, 0, []])\n+        elif rows and line.startswith(\"+\") and not line.startswith(\"+++ \"):\n+            rows[-1][1] += 1\n+        elif rows and line.startswith(\"-\") and not line.startswith(\"--- \"):\n+            rows[-1][2] += 1\n+    return rows\n+\n+\n+def apply_plan(page, project):\n+    \"\"\"Plan mode (#469): each step's drafted code is checked against the current branch and shown in full\n+    on the build plan page, editable there. Returns the record for the stage file's plan_page.\"\"\"\n+    plan = page[\"plan\"]\n+    if not isinstance(plan, dict) or not isinstance(plan.get(\"steps\"), list) or not plan[\"steps\"]:\n+        die(\"content 'plan' must be an object with a non-empty 'steps' list; each step has name, draft and size\")\n+    if not str(page.get(\"approval\", \"\")).startswith(\"Build plan approved\"):\n+        die(\"a page with a 'plan' block is a build plan, so its approval must be \\\"Build plan approved: <feature>\\\"\")\n+    drafts, large = {}, 0\n+    index = tempfile.NamedTemporaryFile(prefix=\"make-page-plan-\", suffix=\".index\", delete=False).name\n+    env = dict(os.environ, GIT_INDEX_FILE=index)  # a later step's draft builds on the earlier steps' drafts\n+    try:\n+        subprocess.run([\"git\", \"-C\", project, \"read-tree\", \"HEAD\"], env=env, check=True, capture_output=True, timeout=60)\n+    except (OSError, subprocess.SubprocessError) as e:\n+        os.unlink(index)\n+        die(\"plan mode needs a git checkout with at least one commit to check drafts against: %s\" % e)\n+    for n, step in enumerate(plan[\"steps\"], 1):\n+        if not isinstance(step, dict) or not step.get(\"name\"):\n+            die(\"plan step %d needs a 'name'\" % n)\n+        name, size, rel = step[\"name\"], step.get(\"size\"), step.get(\"draft\")\n+        if size not in (\"large\", \"small\"):\n+            die('plan step \"%s\" needs \"size\": \"large\" or \"small\"; you mark it, and aj can overrule it' % name)\n+        if not rel:\n+            die('plan step \"%s\" names no draft: write its code as a diff under docs/plans/<feature>-code/ '\n+                'and name that file in \"draft\"' % name)\n+        path = os.path.join(project, rel)\n+        if not os.path.isfile(path):\n+            os.unlink(index)\n+            die('plan step \"%s\": its draft %s does not exist' % (name, rel))\n+        if rel.replace(os.sep, \"/\") not in drafts:  # a draft shared by two steps is applied once\n+            try:\n+                r = subprocess.run([\"git\", \"-C\", project, \"apply\", \"--cached\", path], env=env,\n+                                   capture_output=True, text=True, timeout=60)\n+            except (OSError, subprocess.SubprocessError) as e:\n+                os.unlink(index)\n+                die('plan step \"%s\": git did not run to check its draft: %s' % (name, e))\n+            if r.returncode:\n+                os.unlink(index)\n+                die('plan step \"%s\": its draft %s does not apply to the last commit plus the earlier steps\\' drafts, '\n+                    \"so the page would show stale lines; redo the draft. git said: %s\"\n+                    % (name, rel, (r.stderr or r.stdout).strip()))\n+        with open(path, encoding=\"utf-8\") as f:\n+            text = f.read()\n+        with open(path, \"rb\") as f:\n+            drafts[rel.replace(os.sep, \"/\")] = hashlib.sha256(f.read()).hexdigest()\n+        large += size == \"large\"\n+        files = draft_files(text)\n+        page.setdefault(\"changes\", []).append(\n+            [\"chg\", \"Step %d: %s\" % (n, name),\n+             \"%s step · %d %s, +%d −%d\" % (size.capitalize(), len(files), \"file\" if len(files) == 1 else \"files\",\n+                                           sum(f[1] for f in files), sum(f[2] for f in files)),\n+             None, step.get(\"detail\") or \"This is the code this step will write. Tap Edit to change it; \"\n+             \"your edits go into your reply as a diff.\", None, files, {\"code\": {\"draft\": rel, \"text\": text}}])\n+    os.unlink(index)\n+    return {\"drafts\": drafts, \"steps\": len(plan[\"steps\"]), \"large\": large, \"linked\": False}\n+\n+\n def apply_sweep(page):\n     \"\"\"Sweep mode (#364): each row becomes a Changes item showing its evidence and suggested action.\"\"\"\n     rows = page[\"sweep\"]\n@@ -432,6 +509,7 @@ def build(args):\n         apply_qa(page, project)\n     if \"sweep\" in page:\n         apply_sweep(page)\n+    plan_record = apply_plan(page, project) if \"plan\" in page else None\n     check_approval(page)\n     apply_approval_todo(page)\n     page.setdefault(\"choices\", [])  # the template maps over the list, so a page with no choices gets an empty one\n@@ -475,6 +553,9 @@ def build(args):\n         record_qa_page(project, out)\n     if \"sweep\" in page:\n         record_sweep(project, page)\n+    if plan_record is not None:\n+        plan_record[\"page\"] = os.path.relpath(out, project).replace(os.sep, \"/\")\n+        record_qa_page(project, out, key=\"plan_page\", value=plan_record, what=\"build plan page\")\n \n \n # ---- step 2: visual check -------------------------------------------------------------------\ndiff --git a/claude-house-rules/plugins/house-rules/templates/handover-page.html b/claude-house-rules/plugins/house-rules/templates/handover-page.html\nindex 5bb193b..89ba362 100644\n--- a/claude-house-rules/plugins/house-rules/templates/handover-page.html\n+++ b/claude-house-rules/plugins/house-rules/templates/handover-page.html\n@@ -166,6 +166,16 @@ details[open] > summary .more::after{content:\" ▲\"} details:not([open]) > summa\n .g.done span.c{background:var(--ok-soft);color:var(--ok)}\n .sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}\n .owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}\n+/* plan mode (#469): a step's drafted code. Added lines take the accent tint (I build it), never --you or --ok. Wrapped, not scrolled, so nothing is wider than its card. */\n+.code{margin:12px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}\n+.codebar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line)}\n+.codebar code{font-size:.8rem;word-break:break-all}\n+.code pre,.code textarea{display:block;margin:0;padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;width:100%;box-sizing:border-box;color:var(--fg)}\n+.code pre span{display:block;min-height:1.5em}\n+.code .add{background:var(--accent-soft)}\n+.code .del{color:var(--muted);text-decoration:line-through}\n+.code .hunk{color:var(--muted)}\n+.code textarea{min-height:18em;border:0;background:var(--bg);resize:vertical}\n /* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */\n .pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}\n .pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}\n@@ -325,6 +335,48 @@ const picHtml = p => {\n   const alt = p.alt || p.caption || \"\", k = PICS.push({ src: p.src, alt, caption: p.caption || \"\" }) - 1;\n   return `<figure class=\"pic\"><button type=\"button\" data-pic=\"${k}\" aria-label=\"Open full width: ${esc(alt)}\"><img src=\"${esc(p.src)}\" alt=\"${esc(alt)}\">${p.caption ? `<figcaption>${esc(p.caption)}<\/figcaption>` : \"\"}<\/button><\/figure>`;\n };\n+// Plan mode (#469): a step's drafted code, shown in full. Edit swaps in a text box; any edit goes into the reply as a diff.\n+const codeOf = (a, from) => a.slice(from).find(x => x && typeof x === \"object\" && !Array.isArray(x) && x.code);\n+const CODE = [];\n+const codeLine = l => `<span class=\"${/^\\+(?!\\+\\+ )/.test(l) ? \"add\" : /^-(?!-- )/.test(l) ? \"del\" : l.startsWith(\"@@\") ? \"hunk\" : \"\"}\">${esc(l)}<\/span>`;\n+const codeView = t => t.replace(/\\n$/, \"\").split(\"\\n\").map(codeLine).join(\"\");\n+const codeHtml = c => {\n+  if (!c) return \"\";\n+  const k = CODE.push({ draft: c.code.draft, text: c.code.text }) - 1;\n+  return `<div class=\"code\" data-code=\"${k}\"><div class=\"codebar\"><code>${esc(c.code.draft)}<\/code><button type=\"button\" class=\"secondary\" data-edit=\"${k}\" aria-pressed=\"false\">Edit<\/button><\/div>\n+    <pre class=\"view\">${codeView(c.code.text)}<\/pre><textarea class=\"edit\" hidden spellcheck=\"false\" aria-label=\"Edit the planned code in ${esc(c.code.draft)}\">${esc(c.code.text)}<\/textarea><\/div>`;\n+};\n+document.addEventListener(\"click\", e => {\n+  const b = e.target.closest(\"[data-edit]\"); if (!b) return;\n+  const wrap = b.closest(\".code\"), ta = wrap.querySelector(\"textarea\"), pre = wrap.querySelector(\"pre\"), on = ta.hidden;\n+  ta.hidden = !on; pre.hidden = on; b.textContent = on ? \"Done editing\" : \"Edit\"; b.setAttribute(\"aria-pressed\", on);\n+  if (!on) pre.innerHTML = codeView(ta.value);\n+  else ta.focus();\n+});\n+// A unified diff of the draft before and after aj's edits, so the edit can be applied exactly with git apply.\n+function udiff(a, b, name) {\n+  const A = a.replace(/\\n$/, \"\").split(\"\\n\"), B = b.replace(/\\n$/, \"\").split(\"\\n\"), n = A.length, m = B.length;\n+  const L = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));\n+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);\n+  const ops = []; let i = 0, j = 0;\n+  while (i < n || j < m) {\n+    if (i < n && j < m && A[i] === B[j]) { ops.push([\" \", A[i], i, j]); i++; j++; }\n+    else if (j < m && (i === n || L[i][j + 1] >= L[i + 1][j])) { ops.push([\"+\", B[j], i, j]); j++; }\n+    else { ops.push([\"-\", A[i], i, j]); i++; }\n+  }\n+  const ch = ops.map((o, k) => o[0] === \" \" ? -1 : k).filter(k => k >= 0);\n+  if (!ch.length) return \"\";\n+  const groups = []; let g = [ch[0], ch[0]];\n+  for (const k of ch.slice(1)) { if (k - g[1] <= 6) g[1] = k; else { groups.push(g); g = [k, k]; } }\n+  groups.push(g);\n+  let out = `--- a/${name}\\n+++ b/${name}\\n`;\n+  for (const [s0, e0] of groups) {\n+    const seg = ops.slice(Math.max(0, s0 - 3), Math.min(ops.length, e0 + 4));\n+    const oc = seg.filter(o => o[0] !== \"+\").length, nc = seg.filter(o => o[0] !== \"-\").length;\n+    out += `@@ -${oc ? seg[0][2] + 1 : seg[0][2]},${oc} +${nc ? seg[0][3] + 1 : seg[0][3]},${nc} @@\\n` + seg.map(o => o[0] + o[1]).join(\"\\n\") + \"\\n\";\n+  }\n+  return out;\n+}\n document.addEventListener(\"input\", e => { if (e.target.matches(\".cmp-slide input[type=range]\")) e.target.closest(\".cmp-slide\").querySelector(\".cmp-frame\").style.setProperty(\"--pos\", e.target.value + \"%\"); });\n const box = document.createElement(\"dialog\"); box.className = \"lightbox\"; box.setAttribute(\"aria-label\", \"Picture\");\n box.innerHTML = `<img alt=\"\"><p><\/p><button type=\"button\" class=\"secondary\">Close<\/button>`; document.body.appendChild(box);\n@@ -375,8 +427,8 @@ if (document.getElementById(\"cc\")) {\n   const files = fs => !fs || !fs.length ? \"\" : `<div class=\"files\"><h4>${fs.length} ${fs.length === 1 ? \"file\" : \"files\"} \\u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}<\/h4>` +\n     fs.map(([p, a, r, parts]) => `<div class=\"frow\"><code>${esc(p)}<\/code><span class=\"n\">${lineCounts(a, r)}<\/span><\/div>` +\n       (parts && parts.length ? `<ul class=\"parts\">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}<\/span><span class=\"n\">${lineCounts(pa, pr)}<\/span><\/li>`).join(\"\")}<\/ul>` : \"\")).join(\"\") + `<\/div>`;\n-  document.getElementById(\"cc\").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class=\"ci\"><summary><span class=\"tag ${k}\">${{ new: \"New\", chg: \"Changed\", keep: \"Kept\" }[k]}<\/span><span><b>${esc(t)}<\/b><small>${esc(s)}<\/small><\/span><span class=\"more\">More<\/span><\/summary>\n-     <div class=\"detail\">${ft ? `<div class=\"fromto\"><span>${esc(ft[0])}<\/span><span aria-hidden=\"true\">→<\/span><span class=\"to\">${esc(ft[1])}<\/span><\/div>` : \"\"}${fl ? flow(fl) : \"\"}<p>${esc(d)}<\/p>${picHtml(pic)}${files(fs)}<\/div><\/details>`; }).join(\"\");\n+  document.getElementById(\"cc\").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), code = codeOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class=\"ci\"><summary><span class=\"tag ${k}\">${{ new: \"New\", chg: \"Changed\", keep: \"Kept\" }[k]}<\/span><span><b>${esc(t)}<\/b><small>${esc(s)}<\/small><\/span><span class=\"more\">More<\/span><\/summary>\n+     <div class=\"detail\">${ft ? `<div class=\"fromto\"><span>${esc(ft[0])}<\/span><span aria-hidden=\"true\">→<\/span><span class=\"to\">${esc(ft[1])}<\/span><\/div>` : \"\"}${fl ? flow(fl) : \"\"}<p>${esc(d)}<\/p>${picHtml(pic)}${files(fs)}${codeHtml(code)}<\/div><\/details>`; }).join(\"\");\n }\n \n if (document.getElementById(\"qs\")) {\n@@ -406,11 +458,16 @@ function reply() {\n     ? A + \" \" + picks.map(([n, v]) => `${n}${v === \"own\" ? \"*\" : v || \"?\"}`).join(\" \") +\n       picks.filter(([, v]) => v === \"own\").map(([n, , t]) => `\\nChoice ${n}, my own answer: ${t}`).join(\"\")\n     : A;  // no choices: the approval phrase alone, such as \"QA passed: <feature>\"\n+  CODE.forEach((c, k) => {  // #469: aj's edits to a draft, as a diff of the draft file itself\n+    const ta = document.querySelector(`.code[data-code=\"${k}\"] textarea`), d = ta ? udiff(c.text, ta.value, c.draft) : \"\";\n+    if (d) out.textContent += `\\n\\nMy edits to ${c.draft} (apply with git apply):\\n${d}`;\n+  });\n   const m = picks.filter(([, v]) => !v).map(([n]) => n);\n   miss.innerHTML = m.length ? `<span class=\"missing\">Still to pick: choice ${m.join(\", \")}.<\/span> <button type=\"button\" class=\"secondary\" style=\"min-height:36px;padding:4px 10px\" id=\"goq\">Go to choices<\/button>` : \"\";\n   const g = document.getElementById(\"goq\"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === \"choices\") + 1);\n }\n document.addEventListener(\"change\", reply);\n+document.addEventListener(\"input\", e => { if (e.target.matches(\".code textarea\")) reply(); });\n document.addEventListener(\"input\", e => { if (e.target.classList.contains(\"owntext\")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });\n document.getElementById(\"copy\").onclick = () => { const st = document.getElementById(\"st\");\n   navigator.clipboard.writeText(out.textContent).then(() => st.textContent = \"Copied. Paste it into the chat.\")\n"
+        }
+      }
+    ],
+    [
+      "chg",
+      "Step 2: The approval waits for the code, and needs one issue (#470)",
+      "Large step · 2 files, +163 −30",
+      null,
+      "In design_loop.py, _loop_plan_page_problem refuses \"Build plan approved\" when there is no plan page, when the page was never linked in a reply, or when a draft has changed since the page was built. _issues_needed replaces the fixed ISSUES_NEEDED = 2 in both issue checks, so the count depends on the plan. _record_plan_link marks a page as linked once a reply links it. Tests: the existing approval tests now record a plan page first, and 8 new design-loop checks.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
+          80,
+          14,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
+          83,
+          16,
+          []
+        ]
+      ],
+      {
+        "code": {
+          "draft": "docs/plans/code-preview-and-issue-rule-code/2-gate-and-issue-rule.diff",
+          "text": "diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\nindex c9c120f..4c5f050 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\n@@ -54,6 +54,16 @@ def _iss_stub(body_ok=True):\n         os.chmod(path, 0o755)\n \n \n+def _set_plan_page(d, **kw):\n+    \"\"\"#470: give the stage file in d a build plan page that passes the gate (built, linked, no drafts).\"\"\"\n+    path = os.path.join(d, \".claude\", \"house-rules-loop.json\")\n+    with open(path, encoding=\"utf-8\") as f:\n+        state = json.load(f)\n+    state[\"plan_page\"] = dict({\"page\": \"docs/plans/p.html\", \"drafts\": {}, \"steps\": 1, \"large\": 0, \"linked\": True}, **kw)\n+    with open(path, \"w\", encoding=\"utf-8\") as f:\n+        json.dump(state, f)\n+\n+\n def _iss_state_path(d):\n     return os.path.join(_as_git(d, \"rev-parse\", \"--absolute-git-dir\"), \"house-rules-issues.json\")\n \n@@ -102,8 +112,9 @@ _fp = lambda rel: os.path.join(_d, rel)\n _, _og, _ = _iss_call(\"commitgate\", _iss_payload(\"PreToolUse\", \"Write\", _d, file_path=_fp(\"Assets/Foo.cs\"), content=\"x\"), _d)\n _issues_outputs.append((\"gate deny\", _og))\n commit_case(\n-    \"issues: with the gate closed, a Write to a source file is denied naming both missing pieces\",\n-    _iss_decision(_og) == \"deny\" and \"parent issue\" in _iss_reason(_og) and \"child issue\" in _iss_reason(_og),\n+    \"issues: with the gate closed, a Write to a source file is denied naming the issues it needs\",\n+    _iss_decision(_og) == \"deny\" and \"one issue for the plan\" in _iss_reason(_og)\n+    and \"child issue per large step\" in _iss_reason(_og) and \"(0 of 1 recorded)\" in _iss_reason(_og),\n     \"out %r\" % _og[:160],\n )\n _, _oe, _ = _iss_call(\"commitgate\", _iss_payload(\"PreToolUse\", \"Edit\", _d, file_path=_fp(\"src/a.py\")), _d)\n@@ -150,15 +161,28 @@ commit_case(\n     \"state %r out %r\" % (_st, _ou[:100]),\n )\n _, _o1, _ = _iss_created(_d, _label_cmd, 51)\n+_issues_outputs.append((\"labelled create 1\", _o1))\n _st1 = _iss_state(_d)\n-_, _o2, _ = _iss_created(_d, _label_cmd, 52)\n-_issues_outputs.append((\"labelled create 2\", _o2))\n-_st2 = _iss_state(_d)\n commit_case(\n-    \"issues: the gate clears after two labelled issues (parent plus one child), not after one\",\n-    _st1[\"needs_issues\"] is True and _st2[\"needs_issues\"] is False and \"unblocked\" in _o2\n-    and _st2[\"created\"][-1] == {\"repo\": \"o/r\", \"number\": 52, \"labelled\": True},\n-    \"after one %r, after two %r\" % (_st1[\"needs_issues\"], _st2[\"needs_issues\"]),\n+    \"issues (#470): with no large steps the gate clears after one labelled issue\",\n+    _st1[\"needs_issues\"] is False and \"unblocked\" in _o1\n+    and _st1[\"created\"][-1] == {\"repo\": \"o/r\", \"number\": 51, \"labelled\": True},\n+    \"after one %r\" % (_st1[\"needs_issues\"],),\n+)\n+_dlg = _iss_repo()\n+_iss_call(\"delegate\", _iss_payload(\"PostToolUse\", \"ExitPlanMode\", _dlg, plan=_ISS_PLAN5), _dlg)\n+os.makedirs(os.path.join(_dlg, \".claude\"), exist_ok=True)\n+with open(os.path.join(_dlg, \".claude\", \"house-rules-loop.json\"), \"w\", encoding=\"utf-8\") as _f:\n+    json.dump({\"feature\": \"f\", \"stage\": \"plan\"}, _f)\n+_set_plan_page(_dlg, large=2, steps=3)\n+_lg = []\n+for _n in (61, 62, 63):\n+    _iss_created(_dlg, _label_cmd, _n)\n+    _lg.append(_iss_state(_dlg)[\"needs_issues\"])\n+_, _olg, _ = _iss_call(\"commitgate\", _iss_payload(\"PreToolUse\", \"Write\", _dlg, file_path=os.path.join(_dlg, \"a.py\")), _dlg)\n+commit_case(\n+    \"issues (#470): with two large steps the gate needs three issues: main plus one per large step\",\n+    _lg == [True, True, False] and _olg.strip() == \"\", \"needs_issues after each %r, out %r\" % (_lg, _olg[:80]),\n )\n _, _oa, _ = _iss_call(\"commitgate\", _iss_payload(\"PreToolUse\", \"Write\", _d, file_path=_fp(\"Assets/Foo.cs\")), _d)\n commit_case(\"issues: once cleared the same source Write is allowed\", _oa.strip() == \"\", \"out %r\" % _oa[:80])\n@@ -635,17 +659,54 @@ _n = _loop_say(\"Design approved: blockers\")\n _loop_cases.append(('\"Design approved: <feature>\" moves to Plan, code still closed',\n                     _loop_stage() == \"plan\" and \"now Plan\" in _n and _loop_edit(\"app.py\") == \"deny\"))\n _n = _loop_say(\"Build plan approved: blockers\")\n-_loop_cases.append((\"a build-plan approval with no feature issues moves nothing\",\n-                    \"labelled issue(s)\" in _n and _loop_stage() == \"plan\"))\n+_loop_cases.append((\"#470: a build-plan approval with no build plan page moves nothing, naming plan mode\",\n+                    \"no build plan page with the code is recorded\" in _n and \"`plan` block\" in _n\n+                    and _loop_stage() == \"plan\"))\n+_lp_draft = os.path.join(_loop_dir, \"docs\", \"plans\", \"blockers-code\", \"1.diff\")\n+os.makedirs(os.path.dirname(_lp_draft))\n+with open(_lp_draft, \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(\"the approved draft\\n\")\n+with open(os.path.join(_loop_dir, \"docs\", \"plans\", \"blockers-plan.html\"), \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(\"<!doctype html>\\n\")\n+_set_plan_page(_loop_dir, page=\"docs/plans/blockers-plan.html\", linked=False,\n+               drafts={\"docs/plans/blockers-code/1.diff\": hashlib.sha256(b\"the approved draft\\n\").hexdigest()})\n+_n = _loop_say(\"Build plan approved: blockers\")\n+_loop_cases.append((\"#470: a build plan page not yet linked in a reply moves nothing, naming the page\",\n+                    \"docs/plans/blockers-plan.html is built but has not been linked\" in _n and _loop_stage() == \"plan\"))\n+run_hook(\"handover\", stop_payload(last_assistant_message=\"The plan: docs/plans/other.html\", cwd=_loop_dir), env=_loop_env)\n+_lp_unlinked = _loop_state().get(\"plan_page\", {}).get(\"linked\")\n+run_hook(\"handover\", stop_payload(last_assistant_message=\"The build plan: docs/plans/blockers-plan.html\", cwd=_loop_dir),\n+         env=_loop_env)\n+_loop_cases.append((\"#470: a reply that links the build plan page marks it linked; one linking another page does not\",\n+                    _lp_unlinked is False and _loop_state().get(\"plan_page\", {}).get(\"linked\") is True))\n+with open(_lp_draft, \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(\"the draft, changed after the page was built\\n\")\n+_n = _loop_say(\"Build plan approved: blockers\")\n+_loop_cases.append((\"#470: a draft changed after the page was built moves nothing, naming the draft\",\n+                    \"docs/plans/blockers-code/1.diff changed after the build plan page was built\" in _n\n+                    and _loop_stage() == \"plan\"))\n+with open(_lp_draft, \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(\"the approved draft\\n\")\n+_n = _loop_say(\"Build plan approved: blockers\")\n+_loop_cases.append((\"a build-plan approval with a fresh linked page but no feature issues moves nothing\",\n+                    \"has 0 labelled issue(s)\" in _n and \"needs 1\" in _n and _loop_stage() == \"plan\"))\n _loop_issue(101, labelled=False)\n-_loop_issue(102)\n _n = _loop_say(\"Build plan approved: blockers\")\n _loop_cases.append((\"an unlabelled issue does not count toward the feature's issues\",\n-                    \"has 1 labelled issue(s)\" in _n and _loop_stage() == \"plan\"))\n+                    \"has 0 labelled issue(s)\" in _n and _loop_stage() == \"plan\"))\n+_loop_issue(102)\n _loop_issue(103, via=\"bash\")\n+_set_plan_page(_loop_dir, page=\"docs/plans/blockers-plan.html\", large=3, steps=3,\n+               drafts={\"docs/plans/blockers-code/1.diff\": hashlib.sha256(b\"the approved draft\\n\").hexdigest()})\n+_n = _loop_say(\"Build plan approved: blockers\")\n+_loop_cases.append((\"#470: three large steps need four issues: two labelled issues are refused, naming 4\",\n+                    \"has 2 labelled issue(s)\" in _n and \"needs 4\" in _n and _loop_stage() == \"plan\"))\n+_set_plan_page(_loop_dir, page=\"docs/plans/blockers-plan.html\",\n+               drafts={\"docs/plans/blockers-code/1.diff\": hashlib.sha256(b\"the approved draft\\n\").hexdigest()})\n _n = _loop_say(\"Build plan approved: blockers\")\n _loop_cases.append((\"issues from the GitHub tool and from gh both count, so the next check is reached\",\n-                    \"labelled issue(s)\" not in _n and _loop_stage() == \"plan\"))\n+                    \"labelled issue(s)\" not in _n and _loop_stage() == \"plan\"\n+                    and [i[\"number\"] for i in _loop_state().get(\"issues\", []) if i.get(\"labelled\")] == [102, 103]))\n _loop_log(\"plan decisions for blockers\")\n _loop_gh(\"in progress\", 101, 102)\n _n = _loop_say(\"Build plan approved: blockers\")\n@@ -773,6 +834,8 @@ _loop_issue(201); _loop_issue(202)\n _loop_gh(\"in progress\", 201, 202)\n _loop_post(\"mcp__github__create_pull_request\", {\"owner\": \"o\", \"repo\": \"r\"}, {\"url\": \"https://github.com/o/r/pull/9\"})\n _loop_cases.append((\"#267: a pull request opening in Plan moves nothing\", _loop_stage() == \"plan\"))\n+_loop_cases.append((\"#470: a redone design starts with no build plan page\", \"plan_page\" not in _loop_state()))\n+_set_plan_page(_loop_dir)\n _loop_log(\"v2 plan\"); _loop_say(\"Build plan approved: blockers v2\")\n \n _loop_post(\"mcp__github__create_pull_request\", {\"owner\": \"o\", \"repo\": \"r\"}, {\"error\": \"422 validation failed\"})\n@@ -1346,6 +1409,7 @@ if _s.get(\"issues\") != [{\"repo\": \"o/r\", \"number\": 7, \"labelled\": True}]:\n \n # #327: an unchanged decisions log no longer refuses; the approval counts and the note asks for the entry.\n _ma_set({\"feature\": \"demo\", \"stage\": \"plan\",\n+         \"plan_page\": {\"page\": \"docs/plans/p.html\", \"drafts\": {}, \"steps\": 1, \"large\": 0, \"linked\": True},\n          \"issues\": [{\"repo\": \"o/r\", \"number\": n, \"labelled\": True} for n in (1, 2, 3)]},\n         {\"o/r#%d\" % n: [\"Feature\", \"AjsAgent created this\", \"in progress\"] for n in (1, 2, 3)})\n _ma_log = os.path.join(_ma_dir, \"docs\", \"6-decisions\", \"Decisions.md\")\n@@ -2044,10 +2108,12 @@ def _pf_two_features():\n     _pf_log(); _pf_note(\"Design approved: alpha\")\n     _pf_issue(701); _pf_issue(702)\n     _loop_gh(\"in progress\", 701, 702)\n+    _set_plan_page(_cl_dir)\n     _pf_log(); _pf_note(\"Build plan approved: alpha\")\n     _pf_log(); _pf_note(\"Design approved: beta\")\n     _pf_issue(711); _pf_issue(712)\n     _loop_gh(\"in progress\", 711, 712)\n+    _set_plan_page(_cl_dir)\n     _pf_log(); _pf_note(\"Build plan approved: beta\")\n     _loop_gh(\"needs review\", 701, 702)\n \ndiff --git a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py\nindex 02aeae8..06e10c2 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py\n@@ -72,18 +72,30 @@ ISSUES_LABEL_OLD = \"Claude created this\"  # still counts: plans already in fligh\n ISSUES_STEP_THRESHOLD = 3\n \n \n-ISSUES_NEEDED = 2  # one parent plus at least one child\n+def _issues_needed(state):\n+    \"\"\"#470: one labelled issue, plus one sub-issue per large step when two or more steps are large. The\n+    large-step count comes from the build plan page (plan_page, written by make_page.py plan mode); with no\n+    plan page, one issue is enough.\"\"\"\n+    page = state.get(\"plan_page\") if isinstance(state, dict) else None\n+    large = page.get(\"large\") if isinstance(page, dict) else 0\n+    return 1 + large if isinstance(large, int) and large >= 2 else 1\n+\n+\n+def _issues_needed_at(git_dir):\n+    \"\"\"_issues_needed for the feature in this checkout's stage file; 1 when it can't be read.\"\"\"\n+    state, problem = _loop_read(git_dir)\n+    return _issues_needed(state) if not problem else 1\n \n \n ISSUE_NOTE = (\n     \" Issue workflow: this plan has {n} steps, which is more than three, so before any code is \"\n-    \"written create one parent issue for the plan and one child issue per step with `gh issue \"\n-    \"create`. Each child says `Part of #<parent>` in its body. Titles are plain language a \"\n+    \"written create one parent issue for the plan with `gh issue create`, plus one child issue per \"\n+    \"large step when two or more steps are large. Each child says `Part of #<parent>` in its body. Titles are plain language a \"\n     \"non-programmer can follow. Every issue carries at least one category label and the label \"\n     \"`AjsAgent created this`; if the repo lacks that label, create it first with `gh label \"\n     \"create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels \"\n     \"-f \\\"labels[]=in progress\\\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. \"\n-    \"Until a parent and at least one child exist, a hook blocks edits to source files \"\n+    \"Until those issues exist, a hook blocks edits to source files \"\n     \"(docs/, .md files and .claude/ stay open). Do not close any issue yourself: closing always \"\n     \"asks the user.\"\n )\n@@ -344,12 +356,12 @@ def _issues_gate(payload):\n     have = _labelled_count(state)\n     return (\n         \"House rules, plans become issues: the approved plan has %s steps, so source edits are \"\n-        \"blocked until its issues exist. Two pieces are missing: (1) a parent issue for the plan, \"\n-        \"(2) at least one child issue per step saying `Part of #<parent>`, each carrying the label \"\n+        \"blocked until its issues exist: one issue for the plan, plus one child issue per large step \"\n+        \"saying `Part of #<parent>` when two or more steps are large, each carrying the label \"\n         \"`%s` (%d of %d recorded). Create them with `gh issue create --label \\\"%s\\\"`, show the user \"\n         \"the numbers, then repeat this edit. docs/, .md files and .claude/ are editable meanwhile. \"\n         \"To switch this off: HOUSE_RULES_ISSUES=off.\" % (state.get(\"plan_steps\", \"more than 3\"),\n-                                                          ISSUES_LABEL, have, ISSUES_NEEDED, ISSUES_LABEL),\n+                                                          ISSUES_LABEL, have, _issues_needed_at(git_dir), ISSUES_LABEL),\n         None,\n     )\n \n@@ -770,6 +782,31 @@ def _loop_stored_qa(state, entry, verdict, name, top):\n                                               LOOP_STAGE_NAMES[state[\"stage\"]]))\n \n \n+def _loop_plan_page_problem(state, top):\n+    \"\"\"#470: what stops \"Build plan approved\" on the build plan page's side, or \"\" when nothing does. The\n+    page must be built by make_page.py plan mode, linked in a reply, and show every draft as it is now.\"\"\"\n+    page = state.get(\"plan_page\")\n+    if not isinstance(page, dict) or not page.get(\"page\"):\n+        return (\"no build plan page with the code is recorded. Write each step's code as a diff under \"\n+                \"docs/plans/<feature>-code/, build the page with `python3 %s build <name>.page.json` and a \"\n+                \"`plan` block, and link it in a reply\" % os.path.join(SCRIPTS_DIR, \"make_page.py\"))\n+    if not page.get(\"linked\"):\n+        return \"the build plan page %s is built but has not been linked in a reply yet\" % page[\"page\"]\n+    changed = []\n+    for rel, digest in sorted((page.get(\"drafts\") or {}).items()):\n+        try:\n+            with open(os.path.join(top, rel), \"rb\") as f:\n+                now = hashlib.sha256(f.read()).hexdigest()\n+        except OSError:\n+            now = None\n+        if now != digest:\n+            changed.append(rel)\n+    if changed:\n+        return (\"%s changed after the build plan page was built, so the page no longer shows the code being \"\n+                \"approved. Rebuild the page and link it again\" % \", \".join(changed))\n+    return \"\"\n+\n+\n def _loop_apply_one(state, text, top):\n     \"\"\"Move the stage for one approval phrase (or none). Returns a note for the model, or \"\" when the\n     text approves nothing. Mutates state.\"\"\"\n@@ -781,13 +818,18 @@ def _loop_apply_one(state, text, top):\n         if stage != \"plan\":\n             return ('Design loop: aj wrote \"Build plan approved: %s\", but the stage is %s, not Plan, so '\n                     \"nothing moved. A build plan is approved after its design.\" % (name, LOOP_STAGE_NAMES[stage]))\n+        problem = _loop_plan_page_problem(state, top)\n+        if problem:\n+            return ('Design loop: aj wrote \"Build plan approved: %s\", but %s. Nothing moved: an approval covers '\n+                    \"the code aj has seen, so ask aj to approve again once that is fixed.\" % (name, problem))\n         have = sum(1 for i in state.get(\"issues\", []) if isinstance(i, dict) and i.get(\"labelled\"))\n-        if have < ISSUES_NEEDED:\n+        needed = _issues_needed(state)\n+        if have < needed:\n             return ('Design loop: aj wrote \"Build plan approved: %s\", but the feature has %d labelled issue(s) '\n-                    \"made since its design was approved, and needs at least %d: one issue for the feature \"\n-                    \"and a sub-issue per step, each naming what it depends on, what depends on it and when \"\n-                    \"it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again.\"\n-                    % (name, have, ISSUES_NEEDED, ISSUES_LABEL))\n+                    \"made since its design was approved, and needs %d: one issue for the feature, plus a \"\n+                    \"sub-issue per large step when two or more steps are large, each naming what it depends on, \"\n+                    \"what depends on it and when it counts as done, labelled `%s`. Nothing moved. Create them, \"\n+                    \"then ask aj to approve again.\" % (name, have, needed, ISSUES_LABEL))\n         labels, src = _loop_labels(state)\n         wrong = _loop_wrong(labels, LOOP_WORKING)\n         if wrong:\n@@ -816,6 +858,7 @@ def _loop_apply_one(state, text, top):\n                 return unlogged\n             state[\"feature\"], state[\"stage\"], approval = name, \"plan\", (\"Design approved\", name)\n             state[\"redo\"] = False\n+            state.pop(\"plan_page\", None)  # #470: a new or redone design gets a new build plan page\n             if not redo:\n                 _loop_keep_feature(state, feature, stage)  # #375: a feature in build or QA keeps its issues\n                 state[\"issues\"] = []\n@@ -1303,7 +1346,7 @@ def _issues_record(payload):\n                          \"api repos/%s/issues/%s/labels -f \\\"labels[]=%s\\\"` and create the next issues with it.\"\n                          % (found[0][1], ISSUES_LABEL, found[0][0], found[0][1], ISSUES_LABEL))\n         have = _labelled_count(state)\n-        if have >= ISSUES_NEEDED:\n+        if have >= _issues_needed_at(git_dir):\n             state[\"needs_issues\"] = False\n             notes.append(\"house-rules: %d labelled issues recorded, so source edits are unblocked.\" % have)\n         _issues_write(git_dir, state)\n@@ -1324,10 +1367,11 @@ def _issues_stop_line(payload):\n     if problem:\n         return None, problem\n     if state and state.get(\"needs_issues\"):\n-        return (\"House rules, plans become issues: the approved %s-step plan still has no parent and \"\n-                \"child issues recorded (%d of %d), so source edits stay blocked. Create them with `gh \"\n+        return (\"House rules, plans become issues: the approved %s-step plan still has too few issues \"\n+                \"recorded (%d of %d), so source edits stay blocked. Create them with `gh \"\n                 \"issue create` and the `%s` label, or tell the user why not.\"\n-                % (state.get(\"plan_steps\", \"multi\"), _labelled_count(state), ISSUES_NEEDED, ISSUES_LABEL)), None\n+                % (state.get(\"plan_steps\", \"multi\"), _labelled_count(state), _issues_needed_at(git_dir),\n+                   ISSUES_LABEL)), None\n     return None, None\n \n \n@@ -1894,6 +1938,25 @@ def _record_qa_link(ctx):\n     return True\n \n \n+def _record_plan_link(reply, git_dir, cwd):\n+    \"\"\"#470: in Plan, a reply that links the recorded build plan page marks it linked. True when it did.\"\"\"\n+    state, problem = _loop_read(git_dir)\n+    if problem:\n+        raise OSError(problem)\n+    page = state.get(\"plan_page\")\n+    if state.get(\"stage\") != \"plan\" or not isinstance(page, dict) or page.get(\"linked\") or not page.get(\"page\"):\n+        return False\n+    path = page[\"page\"]\n+    in_reply = path in reply or os.path.basename(path) in reply\n+    if in_reply and cwd:  # #329: the page counts only when its path opens inside the folder\n+        in_reply = _inside(os.path.normcase(os.path.abspath(os.path.join(cwd, path))), cwd)\n+    if not (in_reply or _QA_ARTIFACT_RE.search(reply)):\n+        return False\n+    page[\"linked\"] = True\n+    _loop_write(git_dir, state)\n+    return True\n+\n+\n def _check_qa_page(ctx):\n     \"\"\"#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not\n     skipped by \"no page\": a QA page is mandatory.\"\"\"\n@@ -2241,6 +2304,8 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_\n                     raise OSError(_pr)\n                 ctx.update(qa_stage=_st.get(\"stage\"), qa_page=_st.get(\"qa_page\"),\n                            qa_linked=_st.get(\"qa_page_linked\"), qa_git_dir=_gd)\n+                if have_reply:\n+                    _record_plan_link(reply_text, _gd, _payload_cwd(payload))\n         except Exception as exc:\n             trace_lines.append(\"house-rules: the QA page checkpoint could not read the stage file (%s: %s), \"\n                                \"so it is off for this reply.\" % (type(exc).__name__, exc))\n@@ -2262,6 +2327,8 @@ def handover_qa_retry(payload, have_reply, reply_text, trace_lines):\n             _st, _pr = _loop_read(_gd)\n             if _pr:\n                 raise OSError(_pr)\n+            if have_reply:\n+                _record_plan_link(reply_text, _gd, _payload_cwd(payload))\n             if _st.get(\"stage\") == \"qa\" and _st.get(\"qa_page\") and not _st.get(\"qa_page_linked\"):\n                 _record_qa_link({\"reply\": reply_text if have_reply else \"\",\n                                  \"qa_page\": _st.get(\"qa_page\"), \"qa_git_dir\": _gd,\n"
+        }
+      }
+    ],
+    [
+      "chg",
+      "Step 3: Builder follows the draft; QA lists departures (#471)",
+      "Large step · 5 files, +132 −3",
+      null,
+      "The note that opens the Build stage names the approved drafts. builder.md tells the builder to report every departure from them. The QA page gains a \"Departures from the approved code\" item. Tests: 5 new checks, covering an exact match, a changed line, a reformat-only change, no drafts recorded, and the Build note.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/agents/builder.md",
+          2,
+          1,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
+          2,
+          0,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
+          40,
+          0,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
+          5,
+          0,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/make_page.py",
+          83,
+          2,
+          []
+        ]
+      ],
+      {
+        "code": {
+          "draft": "docs/plans/code-preview-and-issue-rule-code/3-builder-and-departures.diff",
+          "text": "diff --git a/claude-house-rules/plugins/house-rules/agents/builder.md b/claude-house-rules/plugins/house-rules/agents/builder.md\nindex 71eaf94..7fef423 100644\n--- a/claude-house-rules/plugins/house-rules/agents/builder.md\n+++ b/claude-house-rules/plugins/house-rules/agents/builder.md\n@@ -9,6 +9,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob\n You carry out a decided plan for one issue. Do not redesign it.\n \n - Do the steps as written, in order. Where they are ambiguous, stop and ask.\n+- If the spawn prompt names an approved draft (a diff under `docs/plans/<feature>-code/`), that draft is the specification: write that code. Where the real code has to differ from it, make the change and list each difference in your report with its reason. Never depart from it silently.\n - Commit as you go on your own branch, scoped to the paths you changed.\n - While working run only the checks for the code you changed; run the full suites exactly once, at the end.\n - **Two runs per check, at most.** Any in-game, end-to-end or harness check (a play session, a co-op run, a capture script, a benchmark) runs at most twice in total. After a second failure, stop and report, naming what failed.\n@@ -18,4 +19,4 @@ You carry out a decided plan for one issue. Do not redesign it.\n - If the scope grows, stop and say what new issue it needs. Do not do it.\n - Every wait has a time limit and a branch that says why it gave up (e.g. `timeout 900 ...`); never an unbounded `until`/`while ... sleep`. The harness's completion notice beats polling.\n - Do not touch GitHub issues, labels or PRs.\n-- Final report is 6 lines at most: done or not done; files changed; each check with pass or fail and its one result line; what is unverified and why; branch and head SHA. Quote full output only for a failure.\n+- Final report is 6 lines at most (plus one line per departure from an approved draft): done or not done; files changed; each check with pass or fail and its one result line; what is unverified and why; branch and head SHA. Quote full output only for a failure.\ndiff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\nindex 4c5f050..a39eedc 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\n@@ -718,6 +718,8 @@ _loop_cases.append(('\"Build plan approved: <feature>\" opens code', _loop_stage()\n                     and _loop_edit(\"app.py\") == \"allow\"))\n _loop_say(\"hello\", session=\"other\")\n _loop_cases.append(('\"Build plan approved\" carries the hand-to-a-helper instruction', \"@house-rules:builder\" in _n))\n+_loop_cases.append((\"#471: the Build note names the approved drafts as the builder's specification and says departures are reported\",\n+                    \"The approved code is in docs/plans/blockers-code/1.diff\" in _n and \"never silently\" in _n))\n _g = _loop_say(\"go ahead and build it\")\n _loop_cases.append((\"with the loop on, a go-ahead message no longer gets the guess\", \"reads like a go-ahead\" not in _g))\n _sp = {\"hook_event_name\": \"SubagentStart\", \"session_id\": \"loop\", \"agent_id\": \"h1\", \"agent_type\": \"house-rules:builder\",\ndiff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py\nindex 72c66d0..894a6c4 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py\n@@ -391,6 +391,46 @@ else:\n                           and _ap.returncode == 0 and _after == _PL_DRAFT.replace(\"no items to total\", \"total() needs at least one item\")\n                           and \"total() needs at least one item\" in _ed[\"shown\"]))\n \n+# QA mode lists departures from the approved drafts (#471): a match lists none, a changed line is listed, reformatting is not.\n+_pl_draft_path = os.path.join(_d, \"docs\", \"plans\", \"demo-code\", \"1.diff\")\n+with open(_pl_draft_path, \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(_PL_DRAFT)\n+_mp_git(_d, \"add\", \"-A\")\n+_mp_git(_d, \"commit\", \"-q\", \"-m\", \"plan\")\n+_pl_base = _mp_git(_d, \"rev-parse\", \"HEAD\").strip()\n+_mp_git(_d, \"apply\", _pl_draft_path)\n+_mp_git(_d, \"commit\", \"-q\", \"-am\", \"build as drafted\")\n+\n+\n+def _mp_departures(name):\n+    _rc, _o = _mp(\"build\", _mp_qa_content(name, dict(_qa, base=_pl_base, files={})), \"--project\", _d)\n+    pg = _mp_page_of(os.path.join(_d, \"docs\", \"plans\", name + \".html\")) or {\"changes\": []}\n+    return _rc, next((c for c in pg[\"changes\"] if c[1] == \"Departures from the approved code\"), None)\n+\n+\n+_rc, _dep = _mp_departures(\"dep1\")\n+_mp_cases.append((\"QA mode (#471): a build that matches its approved draft lists no departures\",\n+                  _rc == 0 and _dep is not None and _dep[2] == \"None: the build matches the approved code\" and _dep[6] == []))\n+with open(os.path.join(_d, \"app.py\"), \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(\"def total(items):\\n    if not items:\\n        raise ValueError(\\\"empty\\\")\\n    return sum(items)\\n\")\n+_mp_git(_d, \"commit\", \"-q\", \"-am\", \"a different message\")\n+_rc, _dep = _mp_departures(\"dep2\")\n+_mp_cases.append((\"QA mode (#471): a build that changes a drafted line lists both sides of it, under its file\",\n+                  _rc == 0 and _dep is not None and _dep[2] == \"2 lines in 1 file differ from the drafts\"\n+                  and _dep[6] == [[\"app.py\", 1, 1, [[\"Written, not in the draft: raise ValueError(\\\"empty\\\")\", 1, 0],\n+                                                    [\"In the draft, not written: raise ValueError(\\\"no items to total\\\")\", 0, 1]]]]))\n+with open(os.path.join(_d, \"app.py\"), \"w\", encoding=\"utf-8\") as _f:\n+    _f.write(\"def total(items):\\n    if not   items:  \\n\\n        raise ValueError(\\\"no items to total\\\")\\n    return sum(items)\\n\")\n+_mp_git(_d, \"commit\", \"-q\", \"-am\", \"reformatted\")\n+_rc, _dep = _mp_departures(\"dep3\")\n+_mp_cases.append((\"QA mode (#471): a build that only reformats the drafted code lists no departures\",\n+                  _rc == 0 and _dep is not None and _dep[6] == []))\n+_rc, _o = _mp(\"build\", _mp_qa_content(\"dep4\", _qa), \"--project\", _mp_proj(\"qa\"))\n+_pg = _mp_page_of(os.path.join(_mp_proj(\"qa\"), \"docs\", \"plans\", \"dep4.html\")) or {\"changes\": []}\n+_mp_cases.append((\"QA mode (#471): with no approved drafts recorded, the departures item says it was not checked, and why\",\n+                  any(c[1] == \"Departures from the approved code\" and c[2] == \"Not checked: no approved drafts\"\n+                      and \"no build plan page with drafts\" in c[4] for c in _pg[\"changes\"])))\n+\n # a 40-character unbroken word in card text must not clip on a phone (#288); the old 1fr CSS must be caught\n _LONGW = \"HOUSE_RULES_AGENT_NAME_WITH_A_VERY_LONG_TAIL_X\"\n _lw = _mp_content(\"longword\")\ndiff --git a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py\nindex 06e10c2..5916e5b 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py\n@@ -918,6 +918,11 @@ def _loop_apply_one(state, text, top):\n                      \"to build it yourself; helpers build only approved steps and never design or approve. When \"\n                      \"the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA.\"\n                      % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))\n+            drafts = sorted(((state.get(\"plan_page\") or {}).get(\"drafts\") or {}))\n+            if drafts:  # #471: the approved code is the specification\n+                note += (\" The approved code is in %s: give each builder its step's draft as the specification. \"\n+                         \"Where the real code has to differ, the builder makes the change and reports it with the \"\n+                         \"reason, never silently; the QA page lists every departure.\" % \", \".join(drafts))\n         elif approval[0] == \"QA failed\":\n             note += (\" Their list of changes starts the next design. Move every issue back to `%s` now; the \"\n                      \"redo's \\\"Design approved\\\" is refused until they are.\" % LOOP_WORKING)\ndiff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py\nindex 8d05bb5..ac9a432 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/make_page.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py\n@@ -294,6 +294,7 @@ def apply_qa(page, project):\n          \"%d files, +%d −%d\" % (len(seen), tot_a, tot_r),\n          None, \"The added and removed counts come from git (git diff --numstat %s...HEAD); the estimates \"\n          \"beside them come from the plan.\" % base, None, rows])\n+    page[\"changes\"].append(departures_item(project, base))\n     page[\"changes\"].append([\"keep\", \"Still unverified\", \"%d things not yet proven\" % len(unv), None,\n                             \" \".join(u if u.rstrip()[-1:] in \".!?\" else u.rstrip() + \".\" for u in unv), None, None])\n     page.setdefault(\"choices\", [])  # a QA page usually has none, and the template maps over the list\n@@ -372,6 +373,81 @@ def apply_plan(page, project):\n     return {\"drafts\": drafts, \"steps\": len(plan[\"steps\"]), \"large\": large, \"linked\": False}\n \n \n+def changed_lines(text):\n+    \"\"\"{file: ([added], [removed])} from a unified diff. Spacing is collapsed and blank lines are left out,\n+    so reformatting and shifted line numbers never count as a change.\"\"\"\n+    out, cur = {}, None\n+    for line in text.splitlines():\n+        if line.startswith(\"diff --git \"):\n+            cur = out.setdefault(line.split(\" b/\", 1)[-1], ([], []))\n+        elif cur is None or line.startswith((\"+++ \", \"--- \")):\n+            continue\n+        elif line[:1] in (\"+\", \"-\") and line[1:].strip():\n+            cur[0 if line[0] == \"+\" else 1].append(\" \".join(line[1:].split()))\n+    return out\n+\n+\n+def minus(have, take):\n+    \"\"\"The lines of have left after taking away one copy of each line in take.\"\"\"\n+    left = list(have)\n+    for t in take:\n+        if t in left:\n+            left.remove(t)\n+    return left\n+\n+\n+DEPARTURE_LIMIT = 20  # lines listed per file; the rest are counted\n+\n+\n+def departures_item(project, base):\n+    \"\"\"QA mode (#471): the lines where the build differs from the approved drafts recorded in plan_page.\n+    Pages under docs/plans/ and the stage file are not code, so they are left out.\"\"\"\n+    try:\n+        with open(stage_file(project), encoding=\"utf-8\") as f:\n+            page = json.load(f).get(\"plan_page\")\n+    except (OSError, ValueError, AttributeError) as e:\n+        page, why = None, \"the stage file could not be read (%s)\" % e\n+    else:\n+        why = \"the stage file records no build plan page with drafts\"\n+    title = \"Departures from the approved code\"\n+    if not isinstance(page, dict) or not page.get(\"drafts\"):\n+        return [\"keep\", title, \"Not checked: no approved drafts\", None,\n+                \"Departures could not be checked because %s.\" % why, None, None]\n+    planned = {}\n+    for rel in sorted(page[\"drafts\"]):\n+        try:\n+            with open(os.path.join(project, rel), encoding=\"utf-8\") as f:\n+                text = f.read()\n+        except OSError as e:\n+            die(\"QA mode: the approved draft %s could not be read (%s); restore it from the branch history\" % (rel, e))\n+        for name, (a, r) in changed_lines(text).items():\n+            planned.setdefault(name, ([], []))[0].extend(a)\n+            planned[name][1].extend(r)\n+    real = changed_lines(run_git(project, \"diff\", \"-w\", base + \"...HEAD\"))\n+    rows, total = [], 0\n+    for name in sorted(set(planned) | set(real)):\n+        if name.startswith((\"docs/plans/\", \".claude/\")):\n+            continue\n+        pa, pr = planned.get(name, ([], []))\n+        ra, rr = real.get(name, ([], []))\n+        parts = ([[\"Written, not in the draft: \" + t, 1, 0] for t in minus(ra, pa)] +\n+                 [[\"Removed, not in the draft: \" + t, 0, 1] for t in minus(rr, pr)] +\n+                 [[\"In the draft, not written: \" + t, 0, 1] for t in minus(pa, ra)] +\n+                 [[\"Draft removes it, the build kept it: \" + t, 1, 0] for t in minus(pr, rr)])\n+        if parts:\n+            total += len(parts)\n+            more = len(parts) - DEPARTURE_LIMIT\n+            shown = parts[:DEPARTURE_LIMIT] + ([[\"... and %d more lines\" % more, 0, 0]] if more > 0 else [])\n+            rows.append([name, sum(x[1] for x in parts), sum(x[2] for x in parts), shown])\n+    line = (\"%d %s in %d %s differ from the drafts\" % (total, \"line\" if total == 1 else \"lines\", len(rows),\n+                                                      \"file\" if len(rows) == 1 else \"files\")\n+            if rows else \"None: the build matches the approved code\")\n+    return [\"chg\" if rows else \"keep\", title, line, None,\n+            \"Every line the build wrote or removed that the approved drafts did not, and every draft line the build \"\n+            \"did not write, compared with spacing ignored, so reformatting and moved lines are not departures. \"\n+            \"The builder's report gives the reason for each.\", None, rows]\n+\n+\n def apply_sweep(page):\n     \"\"\"Sweep mode (#364): each row becomes a Changes item showing its evidence and suggested action.\"\"\"\n     rows = page[\"sweep\"]\n@@ -469,9 +545,14 @@ def record_sweep(project, page):\n     record_qa_page(project, None, key=\"sweep_proposed\", value=rows, what=\"sweep rows\")\n \n \n-def record_qa_page(project, out, key=\"qa_page\", value=None, what=\"QA page\"):\n+def stage_file(project):\n+    \"\"\"The design loop's stage file: .claude/ in the main checkout (the parent of the common git directory).\"\"\"\n     common = os.path.abspath(os.path.join(project, run_git(project, \"rev-parse\", \"--git-common-dir\").strip()))\n-    stage = os.path.join(os.path.dirname(common), \".claude\", \"house-rules-loop.json\")\n+    return os.path.join(os.path.dirname(common), \".claude\", \"house-rules-loop.json\")\n+\n+\n+def record_qa_page(project, out, key=\"qa_page\", value=None, what=\"QA page\"):\n+    stage = stage_file(project)\n     if not os.path.isfile(stage):\n         print(\"make_page: %s not recorded because no feature is in progress (no %s)\" % (what, stage))\n         return\n"
+        }
+      }
+    ],
+    [
+      "chg",
+      "Step 4: Rule text, docs and version (#472)",
+      "Large step · 7 files, +36 −15",
+      null,
+      "house-rules.md, show-dont-tell.md and the two detail files will say that a feature needs one issue plus one per large step, and that a build plan carries its code. The systems doc moves from \"designed\" to \"built\". The plugin version goes from 2.75.0 to 2.76.0. The real run in a scratch repo, with screenshots, happens during the build and goes on the QA page.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json",
+          1,
+          1,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/detail/issue-workflow.md",
+          4,
+          3,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/detail/show-dont-tell.md",
+          20,
+          4,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/house-rules.md",
+          2,
+          1,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/show-dont-tell.md",
+          2,
+          1,
+          []
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
+          2,
+          2,
+          []
+        ],
+        [
+          "docs/4-systems/design-loop.md",
+          5,
+          3,
+          []
+        ]
+      ],
+      {
+        "code": {
+          "draft": "docs/plans/code-preview-and-issue-rule-code/4-rules-docs-version.diff",
+          "text": "diff --git a/claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json b/claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json\nindex 60af6d1..14dc31a 100644\n--- a/claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json\n+++ b/claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json\n@@ -1,7 +1,7 @@\n {\n   \"name\": \"house-rules\",\n   \"description\": \"aj's global rules, enforced. Injects the rules into every session and into every subagent it spawns, audits a subagent's own transcript against its report, reminds at commit time when a source change has no docs update, prompts for approval before hidden background work, destructive commands, or git commands that mutate anything beyond a commit or push on its own branch, and checks every turn for commands handed over untested or success claimed with nothing to back it.\",\n-  \"version\": \"2.75.0\",\n+  \"version\": \"2.76.0\",\n   \"author\": {\n     \"name\": \"aj\",\n     \"email\": \"aydenjwilkins@gmail.com\"\ndiff --git a/claude-house-rules/plugins/house-rules/rules/detail/issue-workflow.md b/claude-house-rules/plugins/house-rules/rules/detail/issue-workflow.md\nindex 08b96d9..8f1adde 100644\n--- a/claude-house-rules/plugins/house-rules/rules/detail/issue-workflow.md\n+++ b/claude-house-rules/plugins/house-rules/rules/detail/issue-workflow.md\n@@ -4,10 +4,11 @@ The loop, in order:\n \n 1. A plan with more than three steps (numbered lines, `- [ ]` items, `### Step` or `### Change`\n    headings) is approved. The `delegate` hook counts the steps and records that issues are needed.\n-2. Before any source edit, I create one parent issue for the plan and one child issue per step with\n-   `gh issue create`. Each child says `Part of #<parent>` in its body. Titles are plain language a\n+2. Before any source edit, I create one parent issue for the plan with `gh issue create`, plus one\n+   child issue per large step when two or more steps are large (#470). I mark each step Large or Small on\n+   the build plan page and the user can overrule it. Each child says `Part of #<parent>` in its body. Titles are plain language a\n    non-programmer can follow. I show the user the issue numbers.\n-3. Until a parent and at least one child exist (two issues with the `AjsAgent created this` label),\n+3. Until those issues exist (each with the `AjsAgent created this` label),\n    the `commitgate` hook refuses Write, Edit and NotebookEdit on source files. Files under `docs/`\n    and `.claude/`, any `.md` file, and files outside the project stay editable.\n 4. When work on a step starts I mark its issue `in progress`\ndiff --git a/claude-house-rules/plugins/house-rules/rules/detail/show-dont-tell.md b/claude-house-rules/plugins/house-rules/rules/detail/show-dont-tell.md\nindex e572c03..20e28a0 100644\n--- a/claude-house-rules/plugins/house-rules/rules/detail/show-dont-tell.md\n+++ b/claude-house-rules/plugins/house-rules/rules/detail/show-dont-tell.md\n@@ -85,12 +85,28 @@ from the label changes I made, and saying so): \"Build plan approved\" needs every\n swapping them all to `needs review`, or a pull request opening during Build, starts the QA stage and closes code, and the build is handed over with a QA page built by `make_page.py` in QA mode (its reply is \"QA passed: <feature>\"); a QA answer counts only in\n QA; after \"QA failed\" the redo's \"Design approved\" needs them back to `in progress`; in Build a code\n edit is refused while any label is wrong; and the end-of-reply check names any label that doesn't\n-fit (#235). The plan adds a sub-issue per step. Every\n+fit (#235). The plan adds a sub-issue per large step when two or more steps are large (#470). Every\n issue and sub-issue names what it depends on, what depends on it, and when it counts as done, so a\n blocker shows as an unfinished dependency and progress is visible at a glance. \"Build plan\n-approved\" does not count until at least two issues labelled `AjsAgent created this` were made\n-during the plan; issues made with the GitHub tool count the same as a terminal `gh issue create`\n-(#231).\n+approved\" does not count until enough issues labelled `AjsAgent created this` were made\n+during the plan: one, plus one per large step when two or more are large; issues made with the GitHub\n+tool count the same as a terminal `gh issue create` (#231, #470).\n+\n+## A build plan shows its code\n+\n+Every step in a build plan carries the code it will write, as a unified diff under\n+`docs/plans/<feature>-code/`, shown in full on the build plan page by `make_page.py` plan mode. The\n+user can edit the code on the page; their edits come back in the copied reply as a diff of the draft,\n+which I apply to the draft file and rebuild the page. \"Build plan approved\" is refused until that page\n+is recorded, linked in a reply, and built after the last edit to any draft, so an approval always\n+covers the code the user saw (#469, #470). In Build, each step's draft is the builder's specification:\n+where the real code has to differ, the builder makes the change and reports it with the reason, and\n+the QA page lists every departure, compared line by line with spacing ignored (#471).\n+\n+**Why:** a build plan that only named files and line counts let unwanted habits (a swallowed error, a\n+silent default) reach a pull request before aj could see them; aj asked to review the code itself\n+before it is written (aj, 2026-11-04, \"Design approved: code preview and issue rule 1A 2A 3B 4A\").\n+Two issues for every plan was too rigid for small work.\n \n ## Plans and pitches follow the reference page\n \ndiff --git a/claude-house-rules/plugins/house-rules/rules/house-rules.md b/claude-house-rules/plugins/house-rules/rules/house-rules.md\nindex 74e221e..debefaf 100644\n--- a/claude-house-rules/plugins/house-rules/rules/house-rules.md\n+++ b/claude-house-rules/plugins/house-rules/rules/house-rules.md\n@@ -132,7 +132,8 @@ Issue/PR text never carries a local path — repo-relative paths, other repos as\n \n ## A plan over three steps becomes issues; a pull request links, never closes\n \n-Before code: one parent issue, one child per step (`Part of #N`), plain titles, each labelled\n+Before code: one issue, plus one child per large step when two or more are large (`Part of #N`),\n+plain titles, each labelled\n `AjsAgent created this` plus a category; a hook blocks source edits until they exist. PR bodies say\n `Refs #N`, never Closes/Fixes/Resolves. I close an issue only after the user's QA pass and a merge, or\n on a list they approved; a guard checks the evidence.\ndiff --git a/claude-house-rules/plugins/house-rules/rules/show-dont-tell.md b/claude-house-rules/plugins/house-rules/rules/show-dont-tell.md\nindex 0b2224c..30b3969 100644\n--- a/claude-house-rules/plugins/house-rules/rules/show-dont-tell.md\n+++ b/claude-house-rules/plugins/house-rules/rules/show-dont-tell.md\n@@ -25,7 +25,8 @@ idea, unknowns labelled, checkable milestones, choices last. The checklist is in\n A simple question gets a short answer. Each reply ends with one question or one next step; a\n reply of 160 words or more needs a page (see above).\n \n-Ideas come before code. Every session starts locked: a hook refuses source edits until the user\n+Ideas come before code, and a build plan shows its code: each step's diff, editable on the page\n+(`make_page.py` plan mode); approving the plan approves that code. Every session starts locked: a hook refuses source edits until the user\n types \"approved\" naming what was approved (\"Idea A approved\", \"approved 1A 2C\"). A bare\n \"approved\" does not count. \"skip design\" lets one change through. Each issue's label says whose move it is (`in progress`\n mine, `needs review` the user's) and every step checks it. A build is handed over for QA with a QA page built by the page builder (`make_page.py` QA mode); QA starts when a pull request opens or every issue says `needs review`. Docs and `.md` files stay\ndiff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\nindex a39eedc..265d7af 100644\n--- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\n+++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py\n@@ -491,10 +491,10 @@ commit_case(\"issues: every new output parses as exactly one JSON object\", not _m\n _rules_text = read(RULES_FILE)\n _detail = os.path.join(DETAIL_DIR, \"issue-workflow.md\")\n commit_case(\n-    \"issues: the rules section and its detail file exist, and the plugin is 2.75.0\",\n+    \"issues: the rules section and its detail file exist, and the plugin is 2.76.0\",\n     \"becomes issues\" in _rules_text and \"rules/detail/issue-workflow.md\" in _rules_text and os.path.isfile(_detail)\n     and \"HOUSE_RULES_ISSUES=off\" in read(_detail)\n-    and json.load(open(os.path.join(HERE, \"..\", \".claude-plugin\", \"plugin.json\"), encoding=\"utf-8\"))[\"version\"] == \"2.75.0\",\n+    and json.load(open(os.path.join(HERE, \"..\", \".claude-plugin\", \"plugin.json\"), encoding=\"utf-8\"))[\"version\"] == \"2.76.0\",\n     \"rules section + detail file + version\",\n )\n \ndiff --git a/docs/4-systems/design-loop.md b/docs/4-systems/design-loop.md\nindex df3ba78..8ca296d 100644\n--- a/docs/4-systems/design-loop.md\n+++ b/docs/4-systems/design-loop.md\n@@ -15,7 +15,7 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss\n | Stage tracker | `.claude/house-rules-loop.json` in the main checkout (shared by every worktree) | Holds the feature, its stage (Design, Plan, Build, QA, Done), aj's approvals, the issues made during Plan, and a fingerprint of the decisions log. Committed with the branch, so a fresh clone or new cloud session keeps the stage. A legacy `.git/house-rules-loop.json` is still read when the new file is missing; the next write moves it. A Write, Edit, NotebookEdit or shell redirect to the file is refused in every stage: only aj's approval messages move the stage (`HOUSE_RULES_LOOP=off` turns the loop off). |\n | Approvals | `scope` (UserPromptSubmit), `_loop_scope_note`, `_loop_apply` | Reads aj's message before the model does. \"Design approved: <feature>\" → Plan; \"Build plan approved: <feature>\" → Build; \"QA passed: <feature>\" → Done and \"QA failed: <feature>\" → Design, both only from QA; \"skip design\" → one code edit. A bare \"approved\" moves nothing and tells the model to ask which. Since 2.68.1 (#307) every approval phrase in one message is applied, in stage order (design, build plan, QA), each with its own note; and a redo after \"QA failed\" matches the feature QA named even when the stored name is stale. |\n | Logged first | `_loop_unlogged` | An approval needs `docs/6-decisions/Decisions.md` to exist (#230). If the log is unchanged since the last approval, the approval still counts and its note asks the model to add the stage's entry before the turn ends; the log mark is not updated, so the next approval checks again (#327). |\n-| Feature home | `_loop_record_issues`, `autosave` (PostToolUse) | Issues made during Plan, by `gh issue create` or the GitHub tool, are recorded; \"Build plan approved\" needs two labelled `AjsAgent created this` (#231). Since 2.68.1 (#308) only issues made in the repo named by the checkout's GitHub `origin` count; one made elsewhere gets a note instead. A checkout with no GitHub origin counts every issue, as before. |\n+| Feature home | `_loop_record_issues`, `autosave` (PostToolUse) | Issues made during Plan, by `gh issue create` or the GitHub tool, are recorded; \"Build plan approved\" needs one labelled `AjsAgent created this`, plus one per large step when two or more steps are large (`_issues_needed`, #231, #470). Since 2.68.1 (#308) only issues made in the repo named by the checkout's GitHub `origin` count; one made elsewhere gets a note instead. A checkout with no GitHub origin counts every issue, as before. |\n | Issue labels | `_loop_labels`, `_loop_wrong` | An issue's label says whose move it is: `in progress` is mine, `needs review` is aj's. Read from GitHub every time (`gh api`, in parallel, 5-second limit); if that fails, from the changes `autosave` recorded (`_loop_record_labels`), and the note says why (#235, #236). Design `docs/plans/label-check.html`, plan `docs/plans/label-check-plan.html`. |\n | Label checks | `scope`, `commitgate`, `handover` | \"Build plan approved\" needs every issue `in progress`. Swapping every issue to `needs review` moves Build to QA and closes code; so does a pull request opening during Build (#267). A QA answer counts only in QA. \"QA failed\" keeps the issues, and the redo's \"Design approved\" needs them back to `in progress`. In Build an edit is refused while any label is wrong. The end-of-reply check names wrong labels (#237, #238). |\n | QA start and page | `autosave`, `make_page.py` QA mode, `handover` (`qa page` row) | A pull request opening during Build moves the stage to QA (#267); the QA page is built by the page builder and its path stored as `qa_page` (#268); a reply in QA is sent back once until that page is linked (#269). See below. |\n@@ -41,7 +41,7 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht\n   set and the page is linked (#269).\n - **The stage survives a new session**: the stage file is committed with the branch (#265).\n \n-### Code preview and the issue rule (designed, not built, #468)\n+### Code preview and the issue rule (built, #468)\n \n Designed in `docs/plans/code-preview-design.html`, approved 2026-11-04 as \"code preview and issue rule 1A 2A 3B 4A\".\n \n@@ -55,7 +55,9 @@ Designed in `docs/plans/code-preview-design.html`, approved 2026-11-04 as \"code\n - **Issue rule.** Both issue checks need one labelled issue, plus one per large step when two or more steps are\n   marked large; this replaces `ISSUES_NEEDED = 2` (#470).\n - **Build and QA.** The builder applies the approved draft and reports each departure; QA mode lists departures\n-  hunk by hunk, ignoring shifted line numbers and whitespace (#471).\n+  line by line with spacing ignored (`departures_item`), so reformatting and moved lines are not departures (#471).\n+- **Linked.** A reply in Plan that links the recorded page (its path, or a claude.ai artifact link) sets\n+  `plan_page.linked` (`_record_plan_link`, run by `handover` on the reply and on its retry).\n \n ## Invariants\n \n"
+        }
+      }
+    ]
+  ],
+  "choices": [
+    [
+      "compare",
+      "How should the QA page compare the real code with the draft?",
+      [
+        [
+          "A",
+          "Line by line, spacing ignored",
+          1,
+          "What the draft does now. Reformatting and moved lines never count as departures."
+        ],
+        [
+          "B",
+          "Hunk by hunk, as the design said",
+          0,
+          "Closer to the design's words, but a hunk can change shape when nearby code moves, and the QA page would then report departures that are not real."
+        ]
+      ],
+      "Both meet the design's aim. Option A is the one that held up in the tests, including a build that only reformatted code and correctly listed no departures."
+    ],
+    [
+      "sizes",
+      "Are all four steps large?",
+      [
+        [
+          "A",
+          "Yes, all four are large",
+          1,
+          "Main issue #468 plus four sub-issues, #469 through #472, all of which already exist. Each step gets its own sub-issue."
+        ],
+        [
+          "B",
+          "Step 4 is small",
+          0,
+          "Step 4 is rule text and docs only. Under the new rule it would not need its own sub-issue. Issue #472 (Rule text, docs, version and a real run) would be closed as not planned, and its work would move into #471 (Builder follows the approved draft; QA page lists every departure)."
+        ]
+      ],
+      "Step 4 also carries the real run and the version change, and together those are a piece of work that can be checked on its own."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Four steps, each with its full code on this page: plan mode in the page builder, the approval gate and one-issue rule, the builder and QA departures, and the rule text, docs and version.",
+    "changing": "Nothing is committed to the plugin until you approve. After approval, each step goes to a builder with its draft as the specification.",
+    "blocking": "Nothing starts until you review the code and answer the two choices above.",
+    "next": "After you approve, the builders apply the drafts, run the full suite, do the real run, and I bring the QA page with any departures listed.",
+    "todo": [
+      "Tap <b>Copy my reply<\/b> and send it: \"Build plan approved: code preview and issue rule\", or say what to change."
+    ]
+  }
+};
+// ---- End of PAGE. Nothing below needs editing. ----------------------------------------------
+
+const ic = id => `<svg class="ico"><use href="#i-${id}"/></svg>`;
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// A picture is found by shape (src or before), not position, because flow and files before it are optional.
+const picOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && (x.src || x.before));
+let picN = 0; const PICS = [];
+const picHtml = p => {
+  if (!p) return "";
+  if (p.before && p.after) {
+    const id = "cmp" + (picN++), cap = p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : "";
+    const im = x => `<img src="${esc(x.src)}" alt="${esc(x.alt || p.caption || "")}">`;
+    return `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
+      <div class="cmp-slide"><div class="cmp-frame">${im(p.before)}${im(p.after)}</div><label for="${id}">Reveal after over before: drag to compare</label><input type="range" id="${id}" min="0" max="100" value="50" aria-label="Compare before and after: ${esc(p.caption || "")}"></div>${cap}</figure>`;
+  }
+  const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+  return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+};
+// Plan mode (#469): a step's drafted code, shown in full. Edit swaps in a text box; any edit goes into the reply as a diff.
+const codeOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && x.code);
+const CODE = [];
+const codeLine = l => `<span class="${/^\+(?!\+\+ )/.test(l) ? "add" : /^-(?!-- )/.test(l) ? "del" : l.startsWith("@@") ? "hunk" : ""}">${esc(l)}</span>`;
+const codeView = t => t.replace(/\n$/, "").split("\n").map(codeLine).join("");
+const codeHtml = c => {
+  if (!c) return "";
+  const k = CODE.push({ draft: c.code.draft, text: c.code.text }) - 1;
+  return `<div class="code" data-code="${k}"><div class="codebar"><code>${esc(c.code.draft)}</code><button type="button" class="secondary" data-edit="${k}" aria-pressed="false">Edit</button></div>
+    <pre class="view">${codeView(c.code.text)}</pre><textarea class="edit" hidden spellcheck="false" aria-label="Edit the planned code in ${esc(c.code.draft)}">${esc(c.code.text)}</textarea></div>`;
+};
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-edit]"); if (!b) return;
+  const wrap = b.closest(".code"), ta = wrap.querySelector("textarea"), pre = wrap.querySelector("pre"), on = ta.hidden;
+  ta.hidden = !on; pre.hidden = on; b.textContent = on ? "Done editing" : "Edit"; b.setAttribute("aria-pressed", on);
+  if (!on) pre.innerHTML = codeView(ta.value);
+  else ta.focus();
+});
+// A unified diff of the draft before and after aj's edits, so the edit can be applied exactly with git apply.
+function udiff(a, b, name) {
+  const A = a.replace(/\n$/, "").split("\n"), B = b.replace(/\n$/, "").split("\n"), n = A.length, m = B.length;
+  const L = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const ops = []; let i = 0, j = 0;
+  while (i < n || j < m) {
+    if (i < n && j < m && A[i] === B[j]) { ops.push([" ", A[i], i, j]); i++; j++; }
+    else if (j < m && (i === n || L[i][j + 1] >= L[i + 1][j])) { ops.push(["+", B[j], i, j]); j++; }
+    else { ops.push(["-", A[i], i, j]); i++; }
+  }
+  const ch = ops.map((o, k) => o[0] === " " ? -1 : k).filter(k => k >= 0);
+  if (!ch.length) return "";
+  const groups = []; let g = [ch[0], ch[0]];
+  for (const k of ch.slice(1)) { if (k - g[1] <= 6) g[1] = k; else { groups.push(g); g = [k, k]; } }
+  groups.push(g);
+  let out = `--- a/${name}\n+++ b/${name}\n`;
+  for (const [s0, e0] of groups) {
+    const seg = ops.slice(Math.max(0, s0 - 3), Math.min(ops.length, e0 + 4));
+    const oc = seg.filter(o => o[0] !== "+").length, nc = seg.filter(o => o[0] !== "-").length;
+    out += `@@ -${oc ? seg[0][2] + 1 : seg[0][2]},${oc} +${nc ? seg[0][3] + 1 : seg[0][3]},${nc} @@\n` + seg.map(o => o[0] + o[1]).join("\n") + "\n";
+  }
+  return out;
+}
+document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+let boxFrom = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-pic]");
+  if (b) { const p = PICS[+b.dataset.pic]; boxFrom = b; box.querySelector("img").src = p.src; box.querySelector("img").alt = p.alt; box.querySelector("p").textContent = p.caption; box.showModal(); return; }
+  if (e.target === box || e.target.closest("dialog.lightbox")) box.close();  // tap anywhere on it closes; Escape does too
+});
+box.addEventListener("close", () => { if (boxFrom) boxFrom.focus(); boxFrom = null; });
+document.title = PAGE.title;
+document.getElementById("title").textContent = PAGE.title;
+document.getElementById("eyebrow").textContent = PAGE.eyebrow;
+document.getElementById("lead").textContent = PAGE.short.lead;
+document.getElementById("hint").textContent = PAGE.short.hint;
+document.getElementById("key").innerHTML = PAGE.short.key.map(([l, k]) =>
+  `<span><i class="${k === "you" ? "y" : ""}"${k === "done" ? ' style="background:var(--ok-soft);border-color:var(--ok)"' : ""}></i>${esc(l)}</span>`).join("");
+
+// A part is left out only when it would be empty.
+const PARTS = [["short", "In short"], ["changes", "Changes"], ["choices", "Choices"], ["wrapup", "Wrap-up"]]
+  .filter(([id]) => id === "short" || id === "wrapup" || (PAGE[id] && PAGE[id].length));
+document.querySelectorAll("[data-part]").forEach(p => { if (!PARTS.some(([id]) => id === p.dataset.part)) p.remove(); });
+
+const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+const lst = v => Array.isArray(v) ? `<ul class="cl">${v.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p>${esc(v)}</p>`;
+const glance = document.getElementById("glance"), sd = document.getElementById("sd");
+glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
+  `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
+function showItem(n) {
+  glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
+  const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
+  const row = PAGE.short.items[n], summary = PAGE.kind === "summary";
+  const strip = Array.isArray(row[6]) && row[6].length === 3 && row[6].every(x => typeof x === "string") ? row[6] : null;
+  const needsYou = !summary && !/^Nothing/.test(Array.isArray(requires) ? requires.join(" ") : requires);
+  sd.innerHTML = `<h3>${esc(t)}</h3>${strip ? flow(strip) : ""}<div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span>${lst(creates)}</div>
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${summary ? ic("check") + "Decided by" : ic("hand") + "Requires"}</span>${lst(requires)}</div></div>${picHtml(pic)}`;
+}
+glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
+if (PAGE.short.items.length) showItem(0);
+
+if (document.getElementById("cc")) {
+  const counts = { new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
+  document.getElementById("cc-count").textContent =
+    `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
+  // A New item's picture (#241): what sets it off -> what it does -> what you get.
+  // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
+  const lineCounts = (a, r) => `+${a} \u2212${r}`;
+  const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+    fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+      (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), code = codeOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}${codeHtml(code)}</div></details>`; }).join("");
+}
+
+if (document.getElementById("qs")) {
+  document.getElementById("qs").innerHTML = PAGE.choices.map(([id, q, opts, why], n) =>
+    `<fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n + 1}</span>${esc(q)}</h3></legend>
+     ${opts.map(o => { const [v, l, rec, d] = o; return `<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${esc(l)}</b>${rec ? '<span class="rec">' + ic("check") + 'Suggested</span>' : ""}${d ? `<small>${esc(d)}</small>` : ""}</span></label>${picHtml(picOf(o, 4))}`; }).join("")}
+     <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to: ${esc(q)}" placeholder="Type your idea here"></span></label>
+     ${why ? `<details class="why"><summary>Why I suggest this</summary><p>${esc(why)}</p></details>` : ""}</fieldset>`).join("");
+}
+
+const W = PAGE.wrapup;
+document.getElementById("wrapup").innerHTML = [
+  ["file", "Summary", W.summary, "accent"], ["swap", "What's changing", W.changing, "accent"],
+  ["stop", "What's blocking", W.blocking, "gap"], ["next", "What's next", W.next, "ok"]
+].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("") +
+  `<div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)">${ic("hand")}</span><div><h3>What you need to do</h3><ol>${W.todo.map(x => `<li>${x}</li>`).join("")}</ol></div></div>`;
+
+const out = document.getElementById("out"), miss = document.getElementById("miss");
+function reply() {
+  const picks = PAGE.choices.map(([id], i) => {
+    const c = document.querySelector(`input[name=${id}]:checked`);
+    if (c && c.value === "own") { const t = document.querySelector(`.owntext[data-for=${id}]`).value.trim(); return [i + 1, t ? "own" : null, t]; }
+    return [i + 1, c && c.value];
+  });
+  const A = PAGE.approval || PAGE.replyPrefix;  // replyPrefix: only for pages built before approval existed
+  out.textContent = picks.length
+    ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
+      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
+    : A;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
+  CODE.forEach((c, k) => {  // #469: aj's edits to a draft, as a diff of the draft file itself
+    const ta = document.querySelector(`.code[data-code="${k}"] textarea`), d = ta ? udiff(c.text, ta.value, c.draft) : "";
+    if (d) out.textContent += `\n\nMy edits to ${c.draft} (apply with git apply):\n${d}`;
+  });
+  const m = picks.filter(([, v]) => !v).map(([n]) => n);
+  miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
+  const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
+}
+document.addEventListener("change", reply);
+document.addEventListener("input", e => { if (e.target.matches(".code textarea")) reply(); });
+document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
+document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
+  navigator.clipboard.writeText(out.textContent).then(() => st.textContent = "Copied. Paste it into the chat.")
+  .catch(() => { const r = document.createRange(); r.selectNodeContents(out); getSelection().removeAllRanges(); getSelection().addRange(r); st.textContent = "Couldn't copy automatically. The reply is selected; copy it by hand."; }); };
+
+let cur = 1;
+const stepper = document.getElementById("stepper");
+stepper.style.gridTemplateColumns = `repeat(${PARTS.length},1fr)`;
+stepper.innerHTML = PARTS.map(([, s], i) => `<button type="button" data-go="${i + 1}"><span class="bar"></span>${s}</button>`).join("");
+function go(n, focus = true) {
+  cur = Math.min(PARTS.length, Math.max(1, n));
+  const id = PARTS[cur - 1][0];
+  document.querySelectorAll("[data-part]").forEach(p => p.hidden = p.dataset.part !== id);
+  stepper.querySelectorAll("button").forEach((b, i) => { b.classList.toggle("done", i + 1 < cur); if (i + 1 === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  document.getElementById("prev").hidden = cur === 1;
+  const nx = document.getElementById("next"); nx.hidden = cur === PARTS.length; nx.textContent = cur === PARTS.length - 1 ? "Wrap-up ›" : "Next ›";
+  if (focus) { document.getElementById("h-" + id).focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+}
+stepper.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(+b.dataset.go); });
+document.getElementById("prev").onclick = () => go(cur - 1);
+document.getElementById("next").onclick = () => go(cur + 1);
+go(1, false); reply();
+</script>

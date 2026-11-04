@@ -1,0 +1,331 @@
+diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
+index 252db05..72c66d0 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
++++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
+@@ -289,6 +289,108 @@ else:
+         _mp_cases.append(("make_page: the copied text, with choices (approval then picks) and without (approval alone), matches the gate",
+                           _w == _ph + " 1A" and _n == _ph and _gate(_w) and _gate(_n)))
+ 
++# Plan mode (#469): each step's drafted code is checked, shown in full, editable, and recorded as plan_page.
++_d = _mp_proj("plan", {"use": "defaults"})
++_mp_git(_d, "init", "-q", "-b", "main")
++with open(os.path.join(_d, "app.py"), "w", encoding="utf-8") as _f:
++    _f.write("def total(items):\n    return sum(items)\n")
++_mp_git(_d, "add", "-A")
++_mp_git(_d, "commit", "-q", "-m", "base")
++_PL_DRAFT = ("diff --git a/app.py b/app.py\n--- a/app.py\n+++ b/app.py\n@@ -1,2 +1,4 @@\n def total(items):\n"
++             "+    if not items:\n+        raise ValueError(\"no items to total\")\n     return sum(items)\n")
++_PL_STALE = _PL_DRAFT.replace(" def total(items):", " def total(things):")
++os.makedirs(os.path.join(_d, "docs", "plans", "demo-code"))
++for _n, _t in (("1.diff", _PL_DRAFT), ("stale.diff", _PL_STALE)):
++    with open(os.path.join(_d, "docs", "plans", "demo-code", _n), "w", encoding="utf-8") as _f:
++        _f.write(_t)
++
++
++def _mp_plan_content(name, steps, approval="Build plan approved: demo"):
++    c = _mp_content(name, approval=approval)
++    with open(c, encoding="utf-8") as f:
++        pg = json.load(f)
++    pg["plan"] = {"steps": steps}
++    with open(c, "w", encoding="utf-8") as f:
++        json.dump(pg, f)
++    return c
++
++
++_stage = os.path.join(_d, ".claude", "house-rules-loop.json")
++os.makedirs(os.path.dirname(_stage))
++with open(_stage, "w", encoding="utf-8") as _f:
++    json.dump({"feature": "demo", "stage": "plan"}, _f)
++_good = [{"name": "Refuse an empty list", "draft": "docs/plans/demo-code/1.diff", "size": "large"},
++         {"name": "Same draft, small", "draft": "docs/plans/demo-code/1.diff", "size": "small"}]
++_rc, _o = _mp("build", _mp_plan_content("plan1", _good), "--project", _d)
++_pg = _mp_page_of(os.path.join(_d, "docs", "plans", "plan1.html")) or {"changes": []}
++_st1 = next((c for c in _pg["changes"] if c[1] == "Step 1: Refuse an empty list"), None)
++_mp_cases.append(("plan mode (#469): a step's draft becomes a Changes item with its file counts and the full code",
++                  _rc == 0 and _st1 is not None and _st1[2] == "Large step · 1 file, +2 −0"
++                  and _st1[6] == [["app.py", 2, 0, []]] and _st1[7] == {"code": {"draft": "docs/plans/demo-code/1.diff", "text": _PL_DRAFT}}))
++with open(_stage, encoding="utf-8") as _f:
++    _sd = json.load(_f)
++_sha = hashlib.sha256(_PL_DRAFT.encode("utf-8")).hexdigest()
++_mp_cases.append(("plan mode (#469): plan_page records the page, each draft's sha256, the step and large-step counts, unlinked",
++                  _sd.get("plan_page") == {"drafts": {"docs/plans/demo-code/1.diff": _sha}, "steps": 2, "large": 1,
++                                           "linked": False, "page": "docs/plans/plan1.html"} and _sd.get("stage") == "plan"))
++_mp_cases.append(("plan mode (#469): the page with code passes the phone-width visual check",
++                  "overflow none" in _o and "clipped" not in _o))
++_rc, _o = _mp("build", _mp_plan_content("plan2", [{"name": "No code", "size": "small"}]), "--project", _d)
++_mp_cases.append(("plan mode (#469): a step with no draft is refused, naming the step", _rc == 2 and '"No code" names no draft' in _o))
++_rc, _o = _mp("build", _mp_plan_content("plan3", [{"name": "Old lines", "draft": "docs/plans/demo-code/stale.diff", "size": "small"}]), "--project", _d)
++_mp_cases.append(("plan mode (#469): a draft that does not apply to the current code is refused, naming the step",
++                  _rc == 2 and '"Old lines": its draft docs/plans/demo-code/stale.diff does not apply' in _o))
++_PL_NEXT = ("diff --git a/app.py b/app.py\n--- a/app.py\n+++ b/app.py\n@@ -1,4 +1,4 @@\n def total(items):\n"
++            "     if not items:\n-        raise ValueError(\"no items to total\")\n+        raise ValueError(\"total() needs an item\")\n"
++            "     return sum(items)\n")
++with open(os.path.join(_d, "docs", "plans", "demo-code", "2.diff"), "w", encoding="utf-8") as _f:
++    _f.write(_PL_NEXT)
++_rc, _o = _mp("build", _mp_plan_content("plan6", [_good[0], {"name": "Better message", "draft": "docs/plans/demo-code/2.diff",
++                                                             "size": "small"}]), "--project", _d)
++_rc2, _o2 = _mp("build", _mp_plan_content("plan7", [{"name": "Better message", "draft": "docs/plans/demo-code/2.diff",
++                                                      "size": "small"}]), "--project", _d)
++_mp_cases.append(("plan mode (#469): a step's draft is checked on top of the earlier steps' drafts, and alone it is refused",
++                  _rc == 0 and _rc2 == 2 and '"Better message"' in _o2 and _mp_git(_d, "status", "--porcelain", "app.py") == ""))
++_rc, _o = _mp("build", _mp_plan_content("plan1", _good), "--project", _d)  # plan1 is the recorded page again
++_rc, _o = _mp("build", _mp_plan_content("plan4", [{"name": "Unsized", "draft": "docs/plans/demo-code/1.diff"}]), "--project", _d)
++_mp_cases.append(("plan mode (#469): a step not marked large or small is refused", _rc == 2 and '"Unsized" needs "size"' in _o))
++_rc, _o = _mp("build", _mp_plan_content("plan5", _good, approval="Design approved: demo"), "--project", _d)
++_mp_cases.append(("plan mode (#469): a plan block on a page that is not a build plan is refused", _rc == 2 and "Build plan approved" in _o))
++# Choice 3B: aj edits the code on the page, and the copied reply carries a diff that applies to the draft file.
++_JS_EDIT = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();
++await p.goto('file://'+process.argv[2]);
++await p.evaluate(()=>{document.querySelectorAll('[data-part]').forEach(x=>x.hidden=false);document.querySelectorAll('details').forEach(d=>d.open=true);});
++await p.click('[data-edit="0"]');
++const ta=p.locator('.code[data-code="0"] textarea');
++const v=await ta.inputValue();await ta.fill(v.replace('no items to total','total() needs at least one item'));
++await p.click('[data-edit="0"]');
++console.log(JSON.stringify({out:await p.evaluate(()=>document.getElementById('out').textContent),
++  shown:await p.evaluate(()=>document.querySelector('.code[data-code="0"] pre').textContent)}));await b.close();})();""")
++if not (os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, "playwright"))):
++    report("SKIP", "plan mode (#469): an edit on the page reaches the reply as a diff that applies (no node or node playwright here)")
++else:
++    _jsf = os.path.join(_mp_tmp, "edit.js")
++    with open(_jsf, "w", encoding="utf-8") as _f:
++        _f.write(_JS_EDIT)
++    _r = subprocess.run([_NODE, _jsf, os.path.join(_d, "docs", "plans", "plan1.html")], capture_output=True, text=True, timeout=180,
++                        env=dict(os.environ, NODE_PATH=_PWMOD, PLAYWRIGHT_BROWSERS_PATH=os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")))
++    try:
++        _ed = json.loads(_r.stdout.strip().splitlines()[-1])
++    except (ValueError, IndexError):
++        _ed = None
++    if _ed is None:
++        report("SKIP", "plan mode (#469): an edit on the page reaches the reply as a diff that applies (browser did not run: %s)"
++               % (_r.stderr.strip()[-200:] or "no output"))
++    else:
++        _head, _, _patch = _ed["out"].partition("(apply with git apply):\n")
++        _ap = subprocess.run(["git", "-C", _d, "apply", "-"], input=_patch, capture_output=True, text=True, timeout=60)
++        with open(os.path.join(_d, "docs", "plans", "demo-code", "1.diff"), encoding="utf-8") as _f:
++            _after = _f.read()
++        _mp_cases.append(("plan mode (#469): an edit on the page reaches the reply as a diff that applies to the draft exactly",
++                          _head.startswith("Build plan approved: demo") and "My edits to docs/plans/demo-code/1.diff" in _head
++                          and _ap.returncode == 0 and _after == _PL_DRAFT.replace("no items to total", "total() needs at least one item")
++                          and "total() needs at least one item" in _ed["shown"]))
++
+ # a 40-character unbroken word in card text must not clip on a phone (#288); the old 1fr CSS must be caught
+ _LONGW = "HOUSE_RULES_AGENT_NAME_WITH_A_VERY_LONG_TAIL_X"
+ _lw = _mp_content("longword")
+diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
+index d95169b..8d05bb5 100644
+--- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
++++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
+@@ -15,6 +15,12 @@ The project style file is `docs/page-style.json` (see docs/plans/page-style/plun
+ `{"use": "defaults"}` means the template's own look. One palette is applied in every theme the file
+ allows; when `themes` has one entry the page is forced to that theme.
+ 
++Plan mode (#469): a `plan` block, {"steps": [{"name", "draft", "size"}]}, turns a build plan page into a code
++preview. Each draft is a unified diff under docs/plans/<feature>-code/; it must apply, and is
++shown in full as its own Changes item, editable on the page. Drafts are checked in order, each on top of
++the earlier ones, against the branch's last commit, in a throwaway git index (nothing on disk changes). "size" is "large" or "small". The page, each draft's
++sha256 and the large-step count are recorded as plan_page in the stage file, for the "Build plan approved" gate.
++
+ Exit codes: 0 built, 2 refused or bad input, 3 no style file (two options are printed).
+ 
+ STDLIB ONLY, Python 3.8+. Never installs anything.
+@@ -22,6 +28,7 @@ STDLIB ONLY, Python 3.8+. Never installs anything.
+ 
+ import argparse
+ import glob
++import hashlib
+ import json
+ import os
+ import re
+@@ -295,6 +302,76 @@ def apply_qa(page, project):
+     page.pop("reply", None)
+ 
+ 
++def draft_files(text):
++    """[[file, added, removed, []], ...] for each file a unified diff touches, in order."""
++    rows = []
++    for line in text.splitlines():
++        if line.startswith("diff --git "):
++            rows.append([line.split(" b/", 1)[-1], 0, 0, []])
++        elif rows and line.startswith("+") and not line.startswith("+++ "):
++            rows[-1][1] += 1
++        elif rows and line.startswith("-") and not line.startswith("--- "):
++            rows[-1][2] += 1
++    return rows
++
++
++def apply_plan(page, project):
++    """Plan mode (#469): each step's drafted code is checked against the current branch and shown in full
++    on the build plan page, editable there. Returns the record for the stage file's plan_page."""
++    plan = page["plan"]
++    if not isinstance(plan, dict) or not isinstance(plan.get("steps"), list) or not plan["steps"]:
++        die("content 'plan' must be an object with a non-empty 'steps' list; each step has name, draft and size")
++    if not str(page.get("approval", "")).startswith("Build plan approved"):
++        die("a page with a 'plan' block is a build plan, so its approval must be \"Build plan approved: <feature>\"")
++    drafts, large = {}, 0
++    index = tempfile.NamedTemporaryFile(prefix="make-page-plan-", suffix=".index", delete=False).name
++    env = dict(os.environ, GIT_INDEX_FILE=index)  # a later step's draft builds on the earlier steps' drafts
++    try:
++        subprocess.run(["git", "-C", project, "read-tree", "HEAD"], env=env, check=True, capture_output=True, timeout=60)
++    except (OSError, subprocess.SubprocessError) as e:
++        os.unlink(index)
++        die("plan mode needs a git checkout with at least one commit to check drafts against: %s" % e)
++    for n, step in enumerate(plan["steps"], 1):
++        if not isinstance(step, dict) or not step.get("name"):
++            die("plan step %d needs a 'name'" % n)
++        name, size, rel = step["name"], step.get("size"), step.get("draft")
++        if size not in ("large", "small"):
++            die('plan step "%s" needs "size": "large" or "small"; you mark it, and aj can overrule it' % name)
++        if not rel:
++            die('plan step "%s" names no draft: write its code as a diff under docs/plans/<feature>-code/ '
++                'and name that file in "draft"' % name)
++        path = os.path.join(project, rel)
++        if not os.path.isfile(path):
++            os.unlink(index)
++            die('plan step "%s": its draft %s does not exist' % (name, rel))
++        if rel.replace(os.sep, "/") not in drafts:  # a draft shared by two steps is applied once
++            try:
++                r = subprocess.run(["git", "-C", project, "apply", "--cached", path], env=env,
++                                   capture_output=True, text=True, timeout=60)
++            except (OSError, subprocess.SubprocessError) as e:
++                os.unlink(index)
++                die('plan step "%s": git did not run to check its draft: %s' % (name, e))
++            if r.returncode:
++                os.unlink(index)
++                die('plan step "%s": its draft %s does not apply to the last commit plus the earlier steps\' drafts, '
++                    "so the page would show stale lines; redo the draft. git said: %s"
++                    % (name, rel, (r.stderr or r.stdout).strip()))
++        with open(path, encoding="utf-8") as f:
++            text = f.read()
++        with open(path, "rb") as f:
++            drafts[rel.replace(os.sep, "/")] = hashlib.sha256(f.read()).hexdigest()
++        large += size == "large"
++        files = draft_files(text)
++        page.setdefault("changes", []).append(
++            ["chg", "Step %d: %s" % (n, name),
++             "%s step · %d %s, +%d −%d" % (size.capitalize(), len(files), "file" if len(files) == 1 else "files",
++                                           sum(f[1] for f in files), sum(f[2] for f in files)),
++             None, step.get("detail") or "This is the code this step will write. Tap Edit to change it; "
++             "your edits go into your reply as a diff.", None, files, {"code": {"draft": rel, "text": text}}])
++    os.unlink(index)
++    return {"drafts": drafts, "steps": len(plan["steps"]), "large": large, "linked": False}
++
++
+ def apply_sweep(page):
+     """Sweep mode (#364): each row becomes a Changes item showing its evidence and suggested action."""
+     rows = page["sweep"]
+@@ -432,6 +509,7 @@ def build(args):
+         apply_qa(page, project)
+     if "sweep" in page:
+         apply_sweep(page)
++    plan_record = apply_plan(page, project) if "plan" in page else None
+     check_approval(page)
+     apply_approval_todo(page)
+     page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one
+@@ -475,6 +553,9 @@ def build(args):
+         record_qa_page(project, out)
+     if "sweep" in page:
+         record_sweep(project, page)
++    if plan_record is not None:
++        plan_record["page"] = os.path.relpath(out, project).replace(os.sep, "/")
++        record_qa_page(project, out, key="plan_page", value=plan_record, what="build plan page")
+ 
+ 
+ # ---- step 2: visual check -------------------------------------------------------------------
+diff --git a/claude-house-rules/plugins/house-rules/templates/handover-page.html b/claude-house-rules/plugins/house-rules/templates/handover-page.html
+index 5bb193b..89ba362 100644
+--- a/claude-house-rules/plugins/house-rules/templates/handover-page.html
++++ b/claude-house-rules/plugins/house-rules/templates/handover-page.html
+@@ -166,6 +166,16 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
+ .g.done span.c{background:var(--ok-soft);color:var(--ok)}
+ .sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+ .owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
++/* plan mode (#469): a step's drafted code. Added lines take the accent tint (I build it), never --you or --ok. Wrapped, not scrolled, so nothing is wider than its card. */
++.code{margin:12px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
++.codebar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line)}
++.codebar code{font-size:.8rem;word-break:break-all}
++.code pre,.code textarea{display:block;margin:0;padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;width:100%;box-sizing:border-box;color:var(--fg)}
++.code pre span{display:block;min-height:1.5em}
++.code .add{background:var(--accent-soft)}
++.code .del{color:var(--muted);text-decoration:line-through}
++.code .hunk{color:var(--muted)}
++.code textarea{min-height:18em;border:0;background:var(--bg);resize:vertical}
+ /* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+ .pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+ .pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+@@ -325,6 +335,48 @@ const picHtml = p => {
+   const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+   return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+ };
++// Plan mode (#469): a step's drafted code, shown in full. Edit swaps in a text box; any edit goes into the reply as a diff.
++const codeOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && x.code);
++const CODE = [];
++const codeLine = l => `<span class="${/^\+(?!\+\+ )/.test(l) ? "add" : /^-(?!-- )/.test(l) ? "del" : l.startsWith("@@") ? "hunk" : ""}">${esc(l)}</span>`;
++const codeView = t => t.replace(/\n$/, "").split("\n").map(codeLine).join("");
++const codeHtml = c => {
++  if (!c) return "";
++  const k = CODE.push({ draft: c.code.draft, text: c.code.text }) - 1;
++  return `<div class="code" data-code="${k}"><div class="codebar"><code>${esc(c.code.draft)}</code><button type="button" class="secondary" data-edit="${k}" aria-pressed="false">Edit</button></div>
++    <pre class="view">${codeView(c.code.text)}</pre><textarea class="edit" hidden spellcheck="false" aria-label="Edit the planned code in ${esc(c.code.draft)}">${esc(c.code.text)}</textarea></div>`;
++};
++document.addEventListener("click", e => {
++  const b = e.target.closest("[data-edit]"); if (!b) return;
++  const wrap = b.closest(".code"), ta = wrap.querySelector("textarea"), pre = wrap.querySelector("pre"), on = ta.hidden;
++  ta.hidden = !on; pre.hidden = on; b.textContent = on ? "Done editing" : "Edit"; b.setAttribute("aria-pressed", on);
++  if (!on) pre.innerHTML = codeView(ta.value);
++  else ta.focus();
++});
++// A unified diff of the draft before and after aj's edits, so the edit can be applied exactly with git apply.
++function udiff(a, b, name) {
++  const A = a.replace(/\n$/, "").split("\n"), B = b.replace(/\n$/, "").split("\n"), n = A.length, m = B.length;
++  const L = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
++  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
++  const ops = []; let i = 0, j = 0;
++  while (i < n || j < m) {
++    if (i < n && j < m && A[i] === B[j]) { ops.push([" ", A[i], i, j]); i++; j++; }
++    else if (j < m && (i === n || L[i][j + 1] >= L[i + 1][j])) { ops.push(["+", B[j], i, j]); j++; }
++    else { ops.push(["-", A[i], i, j]); i++; }
++  }
++  const ch = ops.map((o, k) => o[0] === " " ? -1 : k).filter(k => k >= 0);
++  if (!ch.length) return "";
++  const groups = []; let g = [ch[0], ch[0]];
++  for (const k of ch.slice(1)) { if (k - g[1] <= 6) g[1] = k; else { groups.push(g); g = [k, k]; } }
++  groups.push(g);
++  let out = `--- a/${name}\n+++ b/${name}\n`;
++  for (const [s0, e0] of groups) {
++    const seg = ops.slice(Math.max(0, s0 - 3), Math.min(ops.length, e0 + 4));
++    const oc = seg.filter(o => o[0] !== "+").length, nc = seg.filter(o => o[0] !== "-").length;
++    out += `@@ -${oc ? seg[0][2] + 1 : seg[0][2]},${oc} +${nc ? seg[0][3] + 1 : seg[0][3]},${nc} @@\n` + seg.map(o => o[0] + o[1]).join("\n") + "\n";
++  }
++  return out;
++}
+ document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+ const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+ box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+@@ -375,8 +427,8 @@ if (document.getElementById("cc")) {
+   const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+     fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+       (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+-  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+-     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
++  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), code = codeOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
++     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}${codeHtml(code)}</div></details>`; }).join("");
+ }
+ 
+ if (document.getElementById("qs")) {
+@@ -406,11 +458,16 @@ function reply() {
+     ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
+       picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
+     : A;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
++  CODE.forEach((c, k) => {  // #469: aj's edits to a draft, as a diff of the draft file itself
++    const ta = document.querySelector(`.code[data-code="${k}"] textarea`), d = ta ? udiff(c.text, ta.value, c.draft) : "";
++    if (d) out.textContent += `\n\nMy edits to ${c.draft} (apply with git apply):\n${d}`;
++  });
+   const m = picks.filter(([, v]) => !v).map(([n]) => n);
+   miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
+   const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
+ }
+ document.addEventListener("change", reply);
++document.addEventListener("input", e => { if (e.target.matches(".code textarea")) reply(); });
+ document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
+ document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
+   navigator.clipboard.writeText(out.textContent).then(() => st.textContent = "Copied. Paste it into the chat.")
