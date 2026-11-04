@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- house-rules make_page 2.75.0 -->
+<!-- house-rules make_page 2.76.0 -->
 <meta charset="utf-8">
 <title>Plugin Split QA</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -272,7 +272,7 @@ const PAGE = {
   "title": "Plugin Split QA",
   "eyebrow": "QA · steps 1 to 3 of the plugin split (#438, #439, #440) in draft pull request #452",
   "short": {
-    "lead": "Steps 1 to 3 of the plugin split are built, and five of the six checks you asked for before any merge have passed. Existing behaviour is unchanged. Main's house-rules 2.74.2 and this branch gave the same result for 49 of the 64 recorded hook inputs, and each of the other 15 differs because of a change you approved. What is new: house-rules 2.75.0, the house-lib library and the rule-enforcement plugin. The sixth check is your QA, and one part of it has not been done: everything ran on Linux, but your PC runs Windows, which is where the 2.74.0 restructure broke. Choice 1 below asks how to check Windows before you pass QA.",
+    "lead": "Steps 1 to 3 of the plugin split are built, and five of the six checks you asked for before any merge have passed. Existing behaviour is unchanged. Main's house-rules 2.75.0 and this branch gave the same result for 49 of the 64 recorded hook inputs, and each of the other 15 differs because of a change you approved. What is new: house-rules 2.76.0, the house-lib library and the rule-enforcement plugin. The sixth check is your QA, and its Windows part has not been run. Everything ran on Linux, but your PC runs Windows, which is where the 2.74.0 restructure broke. Choice 1 below asks how to check Windows before you pass QA.",
     "hint": "Tap a check for its evidence.",
     "key": [
       [
@@ -290,7 +290,7 @@ const PAGE = {
         "Suites",
         "1. Every test suite passes, here and in CI",
         "done",
-        "Here: house-rules verify.py 941 checks, rule-enforcement 100, tools 70, the check that every house-lib copy matches its source and the check that each changed plugin's version was raised all pass. CI: the first run failed one test that read this repo's own files; it was fixed in commit 8e78ff7, and every run since has passed.",
+        "Here: house-rules verify.py 949 checks, rule-enforcement 100, tools 70, the check that every house-lib copy matches its source and the check that each changed plugin's version was raised all pass. CI: the first run failed one test that read this repo's own files; it was fixed in commit 8e78ff7, and every run since has passed.",
         "Nothing from you."
       ],
       [
@@ -314,7 +314,7 @@ const PAGE = {
         "Install",
         "4. A clean install from GitHub",
         "done",
-        "In a fresh config, the marketplace added from GitHub's copy of this branch installed house-lib 0.1.0, rule-enforcement 0.1.0 and house-rules 2.75.0. A session on that install read a file with no refusal, and the rules loaded once.",
+        "In a fresh config, the marketplace added from GitHub's copy of this branch installed house-lib 0.1.0, rule-enforcement 0.1.0 and house-rules 2.76.0. A session on that install read a file with no refusal, and the rules loaded once.",
         "Nothing from you."
       ],
       [
@@ -324,6 +324,14 @@ const PAGE = {
         "done",
         "On a throwaway copy of main, merging this branch and then running git revert -m 1 on the merge left files identical to main. After a real merge, the same one command undoes it.",
         "Nothing from you."
+      ],
+      [
+        "swap",
+        "Merge",
+        "Main moved, and one more switch went",
+        "you",
+        "While this waited, main gained the rerun limit (pull request #456) as house-rules 2.75.0, so this branch is now 2.76.0. Merging it crashed every guard call: the rerun limit read its own off switch, HOUSE_RULES_RERUNS, through a helper that part C (the removal of the off switches) had removed. Under your rule that no check can be turned off, I removed that switch rather than bring the helper back. The rerun limit itself is unchanged and always on. Every check above was rerun after the fix, and the replay against the new main still shows 0 unexplained differences. The rerun limit also refuses commands that only name a script, such as a sed edit or a git add of it. That is filed as issue #467, \"The rerun limit counts a command that only names a script as a run of it\".",
+        "Say in your QA reply if the HOUSE_RULES_RERUNS switch should come back."
       ],
       [
         "hand",
@@ -355,7 +363,7 @@ const PAGE = {
     ],
     [
       "chg",
-      "house-rules 2.75.0",
+      "house-rules 2.76.0",
       "Loses the rule-loading hooks and 19 of its 21 switches that turned a check off.",
       [
         "21 HOUSE_RULES_ switches could turn a check off.",
@@ -373,7 +381,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "117 files, +13360 −2070",
+      "118 files, +12592 −2865",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -392,8 +400,8 @@ const PAGE = {
         ],
         [
           ".claude/house-rules-loop.json",
-          906,
           1,
+          783,
           [
             [
               "Not in the plan",
@@ -644,8 +652,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
-          41,
-          71,
+          45,
+          75,
           [
             [
               "Not in the plan",
@@ -788,8 +796,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
-          22,
-          55,
+          23,
+          62,
           [
             [
               "Not in the plan",
@@ -1376,7 +1384,7 @@ const PAGE = {
         ],
         [
           "docs/3-state/ProjectState.md",
-          24,
+          26,
           2,
           [
             [
@@ -1436,8 +1444,20 @@ const PAGE = {
         ],
         [
           "docs/4-systems/plugin-split.md",
-          424,
+          432,
           0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/4-systems/rerun-limit.md",
+          2,
+          2,
           [
             [
               "Not in the plan",
@@ -1472,7 +1492,7 @@ const PAGE = {
         ],
         [
           "docs/6-decisions/Decisions.md",
-          80,
+          93,
           0,
           [
             [
@@ -1628,7 +1648,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-02-plugin-split-qa.html",
-          1960,
+          1967,
           0,
           [
             [
@@ -1640,7 +1660,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-02-plugin-split-qa.page.json",
-          46,
+          146,
           0,
           [
             [
