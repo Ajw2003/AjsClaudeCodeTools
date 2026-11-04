@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-04 - Design approved: code preview and issue rule
+
+**Context.** aj wanted to see and change the code a build plan intends to write before it is written, to stop unwanted habits before they ship, not only a systems description. aj also found the two-issue minimum too rigid for small work.
+
+**Decision.** aj sent "Design approved: code preview and issue rule 1A 2A 3B 4A" on `docs/plans/code-preview-design.html`. During Plan, each step's code is drafted as a diff under `docs/plans/<feature>-code/` and shown in full on the build plan page (1A). The build follows the approved draft and reports every departure, which the QA page lists (2A). aj edits the code on the page itself, and the edits are copied into the reply as a diff (3B). A build plan needs one issue, plus one sub-issue per large step when two or more steps are large; I mark steps Large or Small and aj can overrule (4A). Issues: #468, with sub-issues #469 to #472.
+
+**Rejected.** Signatures-only or risky-parts-only previews (1B, 1C); a hook that stops the build at any departure, and drafts as guidance only (2B, 2C); changes sent only by reply or by editing the file (3A, my suggestion, and 3C); a line-count rule or aj naming large steps each time (4B, 4C).
+
+**Status.** Active. Mechanism: `docs/4-systems/design-loop.md`, "Code preview and the issue rule".
+
+---
+
 ## 2026-11-03 - Rerun limit: any project script, reset only by a commit, no override
 
 **Context.** A builder in Ajw2003/PlunderSpell#569 ran one co-op check 12 times in 23 minutes (#453). The builder rule (2.74.3) limits a check to two runs; aj asked for a hook that enforces it in every project.

@@ -41,6 +41,22 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
   set and the page is linked (#269).
 - **The stage survives a new session**: the stage file is committed with the branch (#265).
 
+### Code preview and the issue rule (designed, not built, #468)
+
+Designed in `docs/plans/code-preview-design.html`, approved 2026-11-04 as "code preview and issue rule 1A 2A 3B 4A".
+
+- **Drafts.** During Plan, each step's code is written as a unified diff at `docs/plans/<feature>-code/<step>.diff`.
+  `docs/` stays open under the code lock, so drafting needs no exception (#469).
+- **Plan mode.** `make_page.py build` with a `plan` block shows every draft in full, refuses a missing draft or
+  one that fails `git apply --check`, makes each code view editable (aj's edits go into the copied reply as a diff),
+  and records the page, the drafts' modified times and the large-step count as `plan_page` (#469).
+- **Gate.** "Build plan approved" also needs `plan_page`, the page linked in a reply, and no draft edited after
+  the page was built (#470).
+- **Issue rule.** Both issue checks need one labelled issue, plus one per large step when two or more steps are
+  marked large; this replaces `ISSUES_NEEDED = 2` (#470).
+- **Build and QA.** The builder applies the approved draft and reports each departure; QA mode lists departures
+  hunk by hunk, ignoring shifted line numbers and whitespace (#471).
+
 ## Invariants
 
 - Only aj's message moves the stage. `scope` reads the prompt itself, so the model cannot approve
