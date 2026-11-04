@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="400" viewBox="0 0 760 400" font-family="system-ui,Segoe UI,sans-serif" font-size="13">
+<rect width="760" height="400" fill="#ffffff"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#555f6d"/></marker></defs>
+<g font-weight="700" font-size="15" fill="#1d2433"><text x="40" y="40">Design</text><text x="225" y="40">Plan</text><text x="420" y="40">Build</text><text x="610" y="40">QA</text></g>
+<rect x="30" y="56" width="150" height="56" rx="8" fill="#eef0f3" stroke="#98a2b3"/><text x="42" y="80">Design page</text><text x="42" y="98" fill="#555f6d">kept as it is</text>
+<rect x="215" y="56" width="170" height="56" rx="8" fill="#eef0f3" stroke="#98a2b3"/><text x="227" y="80">Issues, labels, log</text><text x="227" y="98" fill="#555f6d">kept as it is</text>
+<rect x="215" y="124" width="170" height="70" rx="8" fill="#2f5bd3"/><text x="227" y="148" fill="#fff" font-weight="700">Code drafts</text><text x="227" y="166" fill="#fff">one folder per feature</text><text x="227" y="184" fill="#fff">one .diff per step</text>
+<rect x="215" y="206" width="170" height="70" rx="8" fill="#2f5bd3"/><text x="227" y="230" fill="#fff" font-weight="700">Plan mode</text><text x="227" y="248" fill="#fff">make_page.py shows</text><text x="227" y="266" fill="#fff">each draft as a diff</text>
+<rect x="215" y="288" width="170" height="70" rx="8" fill="#fff" stroke="#2f5bd3" stroke-width="2"/><text x="227" y="312" font-weight="700" fill="#2f5bd3">Approval gate</text><text x="227" y="330" fill="#1d2433">also needs a fresh,</text><text x="227" y="348" fill="#1d2433">linked plan page</text>
+<rect x="410" y="124" width="170" height="70" rx="8" fill="#fff" stroke="#2f5bd3" stroke-width="2"/><text x="422" y="148" font-weight="700" fill="#2f5bd3">Builder hand-off</text><text x="422" y="166" fill="#1d2433">told to apply the</text><text x="422" y="184" fill="#1d2433">approved draft</text>
+<rect x="600" y="124" width="140" height="70" rx="8" fill="#fff" stroke="#2f5bd3" stroke-width="2"/><text x="612" y="148" font-weight="700" fill="#2f5bd3">QA mode</text><text x="612" y="166" fill="#1d2433">planned vs real,</text><text x="612" y="184" fill="#1d2433">each change named</text>
+<rect x="20" y="300" width="180" height="56" rx="8" fill="#fdeed9" stroke="#b35f00" stroke-width="2"/><text x="32" y="324" font-weight="700" fill="#7a4100">You review the code</text><text x="32" y="342" fill="#7a4100">and say what to change</text>
+<path d="M200 328 L213 324" stroke="#b35f00" stroke-width="2" marker-end="url(#a)"/>
+<path d="M385 160 L408 160" stroke="#555f6d" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M580 160 L598 160" stroke="#555f6d" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M300 194 L300 204" stroke="#555f6d" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M300 276 L300 286" stroke="#555f6d" stroke-width="1.5" marker-end="url(#a)"/>
+<g font-size="12"><rect x="420" y="250" width="16" height="16" rx="3" fill="#eef0f3" stroke="#98a2b3"/><text x="444" y="263">Reused unchanged</text>
+<rect x="420" y="274" width="16" height="16" rx="3" fill="#fff" stroke="#2f5bd3" stroke-width="2"/><text x="444" y="287">Existing part I adapt</text>
+<rect x="420" y="298" width="16" height="16" rx="3" fill="#2f5bd3"/><text x="444" y="311">New part I build</text>
+<rect x="420" y="322" width="16" height="16" rx="3" fill="#fdeed9" stroke="#b35f00" stroke-width="2"/><text x="444" y="335">Your move</text></g>
+</svg>
