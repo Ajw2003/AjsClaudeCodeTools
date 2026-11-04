@@ -1,0 +1,44 @@
+{
+  "title": "Readable Code Review",
+  "eyebrow": "Design for approval · changes the build plan for #468 (code preview and issue rule) · nothing redrafted yet",
+  "approval": "Readable code approved: code preview",
+  "short": {
+    "lead": "Code review only becomes routine if it is easy. Today's drafts use short names like _rc and _o, pack several things into one line, and the page wraps lines in the middle of words. With this change, a check refuses unreadable code before you see it. Each step then opens with plain sentences saying what it changes, followed by short labelled blocks of code. Making the code readable is my work, not yours.",
+    "hint": "Tap an item to see what it creates and what it needs from you.",
+    "key": [["I build it", ""], ["You act on it", "you"]],
+    "items": [
+      ["search", "Check", "A readability check on every draft", "", "Plan mode refuses to build the page while any added line breaks a readability rule, naming the line and the rule. I fix it before you see it.", "Nothing from you."],
+      ["eye", "View", "A view built for reading", "", "Each step opens with one plain sentence per change. Each change is a short block with its own caption, line numbers and colour, and no line breaks mid-word. Tests are folded under their plain-English names.", "Nothing from you.",
+       {"src": "readable-code-sources/after.png", "alt": "A mock-up of one build plan step: a numbered list of three plain-English changes, one change shown as four short lines of code with descriptive names and line numbers, tests folded under their names, and a Looks right box", "caption": "A mock-up, not the finished page. One step: what it changes in plain words first, then a short captioned block of code, tests folded, and one tick."}],
+      ["file", "Writing", "The writing check skips code", "", "The check that flagged 379 repeated phrases stops reading the code views as prose. It still reads every sentence on the page.", "Nothing from you."],
+      ["check", "Review", "You tick each step", "you", "Each step has Looks right and Change something. Your ticks and edits build the reply for you.", "You read each step's sentences, glance at the code, and tick."]
+    ]
+  },
+  "changes": [
+    ["chg", "The code on the build plan page", "From one wrapped wall of diff to plain sentences and short captioned blocks.", null,
+     "The step's draft is split into its changes, one block of changed lines each. Each block gets a one-sentence caption that I write, and plan mode refuses a block with no caption. Lines keep their shape: a long line scrolls sideways inside its box instead of breaking mid-word. Test code is folded under each test's plain-English name, so the first thing you read is what the step changes.", null, null,
+     {"before": {"src": "readable-code-sources/before.png", "alt": "Four lines of today's drafted test code, wrapped mid-word, using names like _rc, _o and _mp"}, "after": {"src": "readable-code-sources/after.png", "alt": "The same step in the proposed view, with plain sentences, a captioned four-line code block and named tests"}, "caption": "Before: a real excerpt of step 1's tests as the page shows them today. After: a mock-up of the proposed view."}],
+    ["new", "The readability check", "Six rules, checked on every line a draft adds.", null,
+     "1. Names say what they hold, in whole words: step_size, not _s or sz. Standard words stay allowed (id, url, html, json, git, and i in a counted loop). 2. One thing per line: no semicolons joining statements, and no splitting a result into short names such as _rc, _o. 3. A condition with more than two parts becomes named yes-or-no values, such as was_refused and names_the_step. 4. Lines are at most 100 characters. 5. Every new function starts with one plain sentence saying what it does. 6. No logic inside one-line lambdas (small unnamed functions) or nested comprehensions (loops written inside a list). Plan mode refuses a draft that breaks a rule, and names the file, the line and the rule. The writing check covers Markdown and rule text.",
+     ["Nothing checks how readable drafted code is.", "A check that refuses unreadable drafted code, naming line and rule.", "The code you review has already been made readable."], null],
+    ["chg", "The writing check", "It reads the page's sentences, not its code.", ["The writing check reads every string on the page, code included, and flagged 379 repeated phrases in the build plan.", "It skips the code views and still checks every sentence, caption and choice."],
+     "The change is in page_text, in scripts/clarity.py, which reads the page's content block. Code readability is the readability check's job.", null, null],
+    ["chg", "The four drafts", "Rewritten to the rules, tests included.", ["Steps 1 to 4 use the file's existing short-name style.", "Every line they add follows the six rules, and each block of changes has its caption."],
+     "Existing code around the drafts keeps its style unless the second choice says otherwise. The redrafted steps are tested as before. The full suite runs in the scratch copy, and the drafts must reproduce the tested copy exactly.", null, null],
+    ["new", "Risks and unknowns", "What could make this cost more than it saves.", null,
+     "Readable code is longer. The drafts will grow by an amount I have not measured yet, and the redraft will measure it. New lines will look different from older code in the same file. The second choice decides whether that is fixed now or later. The house coding standard says a file's existing style wins. For these rules, your need to read clearly wins instead. The third choice decides how far that reaches.",
+     ["No risk today.", "Longer drafts, and two styles side by side in some files.", "You read code that explains itself."], null]
+  ],
+  "choices": [
+    ["strict", "What happens when a draft breaks a readability rule?", [["A", "The page is not built until I fix it", 1, "You never see unreadable code. The friction is mine."], ["B", "The page is built with a warning on that line", 0, "You see the problem and decide. More for you to read."]], "You said friction makes review easy to skip. Option A keeps every fix on my side."],
+    ["reach", "How much code do the rules cover?", [["A", "Every line a draft adds or changes", 1, "New code is readable. Older code around it is left as it is."], ["B", "Also the whole function or test block a draft touches", 0, "Each block you read is readable throughout, but the drafts grow larger."], ["C", "A now, plus a separate issue to make the whole plugin readable", 0, "New code now; the rest later, as its own planned work."]], "Option A keeps each review small. If the mix of styles bothers you while reading, option C plans the rest without making this build bigger."],
+    ["where", "Where should the readable-code rules apply?", [["A", "Every project, as a house coding standard", 1, "The six rules go into the coding standards loaded in every session, so any project's code follows them."], ["B", "Only drafts in this plugin's build plans", 0, "The rules live in the readability check alone."]], "Your need to read code clearly is the same in every project, so the rules should follow you there."],
+    ["tick", "How do you approve the code?", [["A", "One tick per step; the reply builds itself", 1, "Each step has Looks right and Change something. When every step is ticked, the copy box holds the approval."], ["B", "One approval for the whole plan, as now", 0, "Fewer taps, but nothing shows which steps you have read."]], "A tick per step makes it visible which code you have looked at, without adding anything to type."]
+  ],
+  "wrapup": {
+    "summary": "Drafted code passes a readability check before you see it. The page then shows plain sentences, short captioned code, folded tests and a tick per step.",
+    "changing": "Plan mode gains the readability check, captions and the new view; the writing check skips code; the four drafts are rewritten to the rules.",
+    "blocking": "Your four choices.",
+    "next": "After you choose, I add this as a step under #468 (code preview and issue rule), redraft all the code to the rules, test it, and bring the build plan back."
+  }
+}

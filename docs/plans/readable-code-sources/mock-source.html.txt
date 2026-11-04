@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Readable code mock-up</title>
+<style>
+body{margin:0;background:#f3f5f8;font-family:system-ui,Segoe UI,sans-serif;color:#17202e}
+.card{width:640px;margin:16px;background:#fff;border:1px solid #d5dbe6;border-radius:12px;padding:16px}
+h3{margin:0 0 4px;font-size:17px}
+.sub{color:#566174;font-size:13px;margin:0 0 12px}
+.before pre{margin:0;padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;background:#e3eafc}
+.does{margin:0 0 12px;padding:0;list-style:none}
+.does li{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid #eef0f3;font-size:14px}
+.does b{color:#2f5bd3;font-size:12px;white-space:nowrap}
+.block{border:1px solid #d5dbe6;border-radius:10px;margin:0 0 12px;overflow:hidden}
+.cap{padding:8px 10px;font-size:14px;border-bottom:1px solid #d5dbe6;display:flex;justify-content:space-between;gap:8px}
+.cap span{color:#566174;font-size:12px;font-family:ui-monospace,Consolas,monospace}
+table{border-collapse:collapse;font:13px/1.6 ui-monospace,Consolas,monospace;width:100%}
+td.n{color:#98a2b3;text-align:right;padding:0 8px;width:28px}
+td.c{white-space:pre;padding-right:10px}
+tr.add td.c{background:#e3eafc}
+.str{color:#7a4100}.kw{color:#2f5bd3;font-weight:600}
+.fold{padding:10px;border:1px dashed #98a2b3;border-radius:10px;color:#566174;font-size:14px}
+.tick{margin-top:12px;padding:10px;border:2px solid #b35f00;border-radius:10px;background:#fdeed9;color:#7a4100;font-size:14px;display:flex;gap:16px}
+</style></head>
+<body>
+<div class="card before" id="before">
+<h3>Today</h3><p class="sub">Step 1's tests, as the build plan page shows them now.</p>
+<pre>+_rc, _o = _mp("build", _mp_plan_content("plan4", [{"name": "Unsized", "draft": "docs/plans/demo-code/1.diff"}]), "--project", _d)
++_mp_cases.append(("plan mode (#469): a step not marked large or small is refused", _rc == 2 and '"Unsized" needs "size"' in _o))
++_rc, _o = _mp("build", _mp_plan_content("plan5", _good, approval="Design approved: demo"), "--project", _d)
++_mp_cases.append(("plan mode (#469): a plan block on a page that is not a build plan is refused", _rc == 2 and "Build plan approved" in _o))</pre>
+</div>
+<div class="card" id="after">
+<h3>Step 1: Plan mode in the page builder</h3><p class="sub">3 files · 6 changes · 9 tests</p>
+<ul class="does">
+<li><b>Change 1</b>Reads each step's draft and checks it fits on top of the earlier steps.</li>
+<li><b>Change 2</b>Refuses a step that does not say whether it is large or small.</li>
+<li><b>Change 3</b>Shows each draft on the page with an Edit button.</li>
+</ul>
+<div class="block"><div class="cap">Change 2: refuse a step with no size<span>make_page.py, lines 312–315</span></div>
+<table>
+<tr class="add"><td class="n">312</td><td class="c">    step_size = step.get(<span class="str">"size"</span>)</td></tr>
+<tr class="add"><td class="n">313</td><td class="c">    size_is_marked = step_size <span class="kw">in</span> (<span class="str">"large"</span>, <span class="str">"small"</span>)</td></tr>
+<tr class="add"><td class="n">314</td><td class="c">    <span class="kw">if not</span> size_is_marked:</td></tr>
+<tr class="add"><td class="n">315</td><td class="c">        refuse(<span class="str">'Step "%s" needs "size": "large" or "small".'</span> % step_name)</td></tr>
+</table></div>
+<div class="fold">▸ Tests for this step (9), each named in plain words; tap one for its code:<br>&nbsp;&nbsp;✓ A step with no size is refused, naming the step<br>&nbsp;&nbsp;✓ A plan block on a page that is not a build plan is refused<br>&nbsp;&nbsp;… 7 more</div>
+<div class="tick"><span>☐ Looks right</span><span>✎ Change something</span></div>
+</div>
+</body></html>
