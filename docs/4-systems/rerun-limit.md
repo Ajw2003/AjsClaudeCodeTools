@@ -20,7 +20,7 @@ but a rule is only text; this hook makes the limit hold.
 |---|---|---|
 | What counts as the same check? | 1B | Any script file inside the project, whatever its arguments. |
 | What resets the count? | 2B | Only a new commit, and only one that changes a file other than the script itself. |
-| How does an agent get past it? | 3B | No override. Only a new commit, `HOUSE_RULES_RERUNS=off`, or aj. |
+| How does an agent get past it? | 3B | No override. Only a new commit, or aj. (The off switch was removed on 2026-11-04 under "The plugin split: no rule is optional".) |
 
 ## How it works
 
@@ -47,7 +47,7 @@ but a rule is only text; this hook makes the limit hold.
    on `main`. The message names the script, and says: stop, read the code
    for the cause, and report what failed; do not edit the check; a new commit that changes the code
    allows two more runs.
-7. **Off switch.** `HOUSE_RULES_RERUNS=off`. `HOUSE_RULES_RERUNS_STATE` points the state file
+7. **No off switch.** The switch this shipped with was removed on 2026-11-04 under aj's rule that no check can be turned off (`docs/6-decisions/Decisions.md`, "The plugin split: no rule is optional"). `HOUSE_RULES_RERUNS_STATE` points the state file
    elsewhere, so `verify.py` never writes into the real repository.
 8. **Failure.** It fails open and loud: an unreadable state file, a missing `git` or a timeout lets
    the command through with a one-line `systemMessage` saying the count could not be checked.

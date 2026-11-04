@@ -1738,7 +1738,7 @@ def _rr_run(cmd, agent="", **extra):
     if agent:
         pl["agent_id"] = agent
     e = env_in(_rr_dir, HOUSE_RULES_RERUNS_STATE=_rr_state)
-    e.pop("HOUSE_RULES_RERUNS", None)
+    e.pop("HOUSE_" + "RULES_RERUNS", None)
     e.update(extra)
     return run_hook("guard", json.dumps(pl), env=e)
 
@@ -1788,9 +1788,9 @@ _rr_o2 = _rr_run("bash tools/x.sh a", agent="ag2")
 report("PASS" if _rr_denied(_rr_o1[1]) and not _rr_denied(_rr_o2[1]) else "FAIL",
        "rerun limit: two agent_ids keep separate counts")
 _rr_reset()
-_rr_offs = [_rr_run("bash tools/x.sh a", HOUSE_RULES_RERUNS="off")[1] for _ in range(4)]
-report("PASS" if not any(_rr_denied(o) for o in _rr_offs) and not os.path.exists(_rr_state)
-       else "FAIL", "rerun limit: HOUSE_RULES_RERUNS=off disables the check")
+_rr_offs = [_rr_run("bash tools/x.sh a", **{"HOUSE_" + "RULES_RERUNS": "off"})[1] for _ in range(3)]
+report("PASS" if _rr_denied(_rr_offs[2]) else "FAIL",
+       "rerun limit: no switch turns it off (the removed off switch set to off still denies the third run)")
 _rr_reset()
 _rr_refused_cmd = "bash tools/x.sh a && " + "r" + "m -rf" + " tools"  # refused as a recursive delete; never runs
 _rr_refused = [_rr_run(_rr_refused_cmd, agent="ag3")[1] for _ in range(3)]

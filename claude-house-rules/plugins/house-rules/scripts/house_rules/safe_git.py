@@ -433,12 +433,8 @@ _RERUN_UNDO = []  # (state path, key, record before this run): taken back if the
 RERUN_DENY = (
     "`%s` has run twice since the last commit that changed code. Stop: read the code for the "
     "cause and report what failed, without editing the check. A new commit that changes code "
-    "allows two more runs. HOUSE_RULES_RERUNS=off turns this check off."
+    "allows two more runs."
 )
-
-
-def _rerun_enabled():
-    return os.environ.get("HOUSE_RULES_RERUNS", "on").strip().lower() not in _TOGGLE_OFF
 
 
 def _rerun_command(payload, subject):
@@ -482,8 +478,6 @@ def _rerun_script(candidates, top):
 
 def _rerun_check(payload, subject):
     """A deny reason when the script has already run twice since a code commit; else None (and counts)."""
-    if not _rerun_enabled():
-        return None
     try:
         where, _unclear = _command_dir(payload)
         cmd = _rerun_command(payload, subject)

@@ -304,7 +304,7 @@ else:
 import re as _sw_re
 _SW_REMOVED = ("AGENTS", "AGENT_BRANCH", "ATTRIBUTION", "AUTOSAVE", "AUTO_UPDATE", "CLEAR_WRITING", "COMMIT_CHECK",
                "DELEGATION", "EDITOR", "HANDOVER", "HARVEST", "ISSUES", "LOOP", "PARITY", "PLAIN_SUMMARY",
-               "VERSION_CHECK", "VISUAL_CHECK", "VOICE", "WORKTRACKING")
+               "VERSION_CHECK", "VISUAL_CHECK", "VOICE", "WORKTRACKING", "RERUNS")
 _SW_RE = _sw_re.compile("HOUSE_" + "RULES_(?:" + "|".join(_SW_REMOVED) + ")(?![A-Za-z0-9_])|"
                         "HOUSE_" + "RULES_PROMPT_TIMEOUT=.?off", _sw_re.IGNORECASE)
 _sw_hits = []
