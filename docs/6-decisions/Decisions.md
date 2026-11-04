@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-04 — The rerun limit's off switch goes with the others
+
+**Context.** Main gained the rerun limit (#456, house-rules 2.75.0) with a new `HOUSE_RULES_RERUNS=off` switch.
+Merging it into the plugin split (#452) crashed every guard call, because the switch read `_TOGGLE_OFF`, which part C
+removed with the other off switches.
+
+**Decision.** Under the standing rule "The plugin split: no rule is optional" (2026-11-02), the switch is removed
+rather than the helper restored; the rerun limit itself is unchanged and always on. `RERUNS` joins the removed-switch
+scan in both plugins. The plugin split's house-rules becomes 2.76.0, since main's rerun limit took 2.75.0. The limit
+also counts commands that only name a script (a `sed -i`, a `git add`) as runs of it; that is #467, to be reworked,
+not switched off. Not yet seen by aj: it is on the QA page for #452.
+
+**Status.** Standing, pending aj's QA of #452.
+
 ## 2026-11-02 — Off switches answered: part C of step 3
 
 **Context.** Page `docs/plans/2026-11-02-off-switches.html`, two switches that are off by default.

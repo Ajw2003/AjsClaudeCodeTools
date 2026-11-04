@@ -422,3 +422,11 @@ install reads 2.75.0 and GitHub's default branch says otherwise); that is the ve
 
 Not checked: Windows. aj's PC (Windows 11, PowerShell 5.1, per the 2026-10-28 check in ProjectState) is where
 2.74.0 failed, and no computer of aj's is connected to this session, so every run above was on Linux.
+
+### After main moved (2026-11-04)
+
+Main gained the rerun limit (#456) as house-rules 2.75.0, so this branch's house-rules is now **2.76.0**. The merge
+(b664bf2) crashed every guard call until the rerun limit's off switch was removed (7a7678b; Decisions.md, "The rerun
+limit's off switch goes with the others"). Rerun after the fix: house-rules verify.py 949 PASS, rule-enforcement 100,
+tools/verify_tools.py 70, sync and version-bump checks PASS, and `tools/replay_hooks.py` against the new main exits 0
+with 0 UNEXPLAINED (64 scenarios, 49 identical). The GitHub install and rollback checks above ran before this merge.

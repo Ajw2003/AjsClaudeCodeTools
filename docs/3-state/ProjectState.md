@@ -361,3 +361,5 @@ invocation.
 2026-11-02, house-rules 2.75.0: step 3 (#440) is built (parts A, B and C, plus the rule-path fix 5cce2f8). Checked here: house-rules verify 937 PASS, rule-enforcement 96 PASS, verify_tools 55 PASS, sync and version-bump checks PASS. Draft pull request #452 is open; it stays a draft until the six-item gate in `docs/4-systems/plugin-split.md` has run. Next: the gate (CI, a replay against 2.74.1, real sessions, a GitHub install, a tested rollback, aj's QA).
 
 2026-11-02: merge gate for #452: items 1 to 5 pass (suites here and in CI, replay 0 unexplained after the quote-aware split fix f92fd63, no new refusal, clean GitHub install, one-step rollback); see `docs/4-systems/plugin-split.md`, "Gate results". Windows is not checked. QA page next.
+
+2026-11-04: main gained the rerun limit (#456, house-rules 2.75.0); merged into #452 (b664bf2), which crashed the guard until the rerun limit's off switch was removed (7a7678b). The plugin split's house-rules is now 2.76.0. All suites pass again and the replay against the new main has 0 unexplained differences. The limit miscounts commands that only name a script: #467.
