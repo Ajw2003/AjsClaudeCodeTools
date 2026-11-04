@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.75.0 -->
 <meta charset="utf-8">
-<title>Code Preview In The Build Plan</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<title>Code Preview And A Lighter Issue Rule</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 /* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
@@ -269,11 +269,11 @@ dialog.lightbox button{margin-top:10px}
 const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
-  "title": "Code Preview In The Build Plan",
-  "eyebrow": "Design for approval · changes the design loop · nothing built yet",
-  "approval": "Design approved: code preview",
+  "title": "Code Preview And A Lighter Issue Rule",
+  "eyebrow": "Design for approval · two changes to the design loop · nothing built yet",
+  "approval": "Design approved: code preview and issue rule",
   "short": {
-    "lead": "Today a build plan says which files each step touches and roughly how many lines, but you never see the lines themselves until the build is done. With this change, every step in a build plan carries the actual code I intend to write, shown as a diff against today's code. You read it, change it, and only then type \"Build plan approved\". A habit you don't want, such as a swallowed error or a value quietly reset, is caught on the page instead of in a pull request.",
+    "lead": "Today a build plan says which files each step touches and roughly how many lines, but you never see the lines themselves until the build is done. With this change, every step in a build plan carries the actual code I intend to write, shown as a diff against today's code. You read it, change it, and only then type \"Build plan approved\". A habit you don't want, such as a swallowed error or a value quietly reset, is caught on the page instead of in a pull request. Separately, a build plan will need only one issue. Sub-issues, one per step, are required only when the work has several large steps.",
     "hint": "Tap an item to see what it creates and what it needs from you.",
     "key": [
       [
@@ -322,6 +322,19 @@ const PAGE = {
         "",
         "\"Build plan approved\" is refused until the plan page with code exists, I have linked it in my reply, and it was built after the last edit to any draft.",
         "Nothing from you."
+      ],
+      [
+        "file",
+        "Issues",
+        "One issue, sub-issues for large steps",
+        "",
+        "A small feature needs one issue. A feature with two or more large steps gets one main issue plus one sub-issue per large step.",
+        "Nothing from you, unless you disagree with which steps I marked large.",
+        {
+          "src": "code-preview-design-pics/issues.svg",
+          "alt": "Two issue layouts side by side: a small feature with a single issue, and Animate the guards as a main issue with five sub-issues, the last of which, Review, is aj's move",
+          "caption": "Your example. A small fix is one issue. Animate the guards is a main issue with one sub-issue per large step, ending in your review."
+        }
       ],
       [
         "check",
@@ -548,6 +561,55 @@ const PAGE = {
       null
     ],
     [
+      "chg",
+      "The issue requirement",
+      "One issue is enough unless the work has several large steps.",
+      [
+        "Every build plan needs at least two labelled issues, a parent and a child, before \"Build plan approved\" counts. Separately, any plan with more than three numbered lines blocks code edits until two issues exist.",
+        "Every build plan needs one labelled issue. When two or more steps are marked large, it also needs one sub-issue per large step, each saying \"Part of\" the main issue. Small steps never need their own issue."
+      ],
+      "Both checks read one number, ISSUES_NEEDED in house_rules/design_loop.py, which is 2 today. That number becomes a rule: one issue, plus one per large step when there are two or more large steps. Which steps count as large is the choice below called \"Who decides that a step is large?\". The rule text changes in three places: the issue line in rules/house-rules.md, rules/detail/issue-workflow.md and rules/detail/show-dont-tell.md.",
+      null,
+      [
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
+          30,
+          8,
+          [
+            [
+              "Issue count follows the large steps, in both checks",
+              30,
+              8
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
+          45,
+          4,
+          [
+            [
+              "One issue passes; two large steps need three issues",
+              45,
+              4
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/house-rules.md",
+          2,
+          2,
+          [
+            [
+              "The issue rule's wording",
+              2,
+              2
+            ]
+          ]
+        ]
+      ]
+    ],
+    [
       "new",
       "Risks and unknowns",
       "What could make this cost more than it saves.",
@@ -563,12 +625,12 @@ const PAGE = {
     [
       "new",
       "Milestones",
-      "Four checks, each one you can run or look at yourself.",
+      "Five checks, each one you can run or look at yourself.",
       null,
-      "Milestones 1 to 3 each pass when their new verify.py cases pass. 1. make_page.py in plan mode renders a sample diff, and refuses a step without a draft and a draft that doesn't apply. 2. \"Build plan approved\" is refused with no plan page, with an unlinked page, and with a page older than a draft, and accepted with a fresh linked page. 3. A QA page built from a build that departs from its draft lists that departure, and one that only reformats lists none. 4. One small real feature goes through Design, Plan with code, Build and QA, with screenshots of its plan page at phone width in light and dark, and the extra Plan time noted.",
+      "Milestones 1, 2, 3 and 5 each pass when their new verify.py cases pass. 1. make_page.py in plan mode renders a sample diff, and refuses a step without a draft and a draft that doesn't apply. 2. \"Build plan approved\" is refused with no plan page, with an unlinked page, and with a page older than a draft, and accepted with a fresh linked page. 3. A QA page built from a build that departs from its draft lists that departure, and one that only reformats lists none. 4. One small real feature goes through Design, Plan with code, Build and QA, with screenshots of its plan page at phone width in light and dark, and the extra Plan time noted. 5. A plan with one small step is approved with one issue, and a plan with two large steps is refused until it has a main issue and two sub-issues.",
       [
         "No milestones exist for this.",
-        "Four checkable milestones.",
+        "Five checkable milestones.",
         "You can see when each part is done."
       ],
       null
@@ -649,15 +711,40 @@ const PAGE = {
         ]
       ],
       "A reply works from your phone, and editing the file works at a desk. Both already exist, so nothing new has to be built for them."
+    ],
+    [
+      "large",
+      "Who decides that a step is large?",
+      [
+        [
+          "A",
+          "I mark it on the plan page; you can overrule",
+          1,
+          "Each step on the build plan page says Large or Small. The page builder records how many are large, and the gate counts from that."
+        ],
+        [
+          "B",
+          "A size rule decides",
+          0,
+          "A step is large when its planned code passes a line count, such as 100 lines. Measurable, but art steps such as building rigs have no code to count."
+        ],
+        [
+          "C",
+          "You say it each time",
+          0,
+          "You name the large steps in your reply before I create the issues."
+        ]
+      ],
+      "Your guards example is mostly art and animation work, where a line count means nothing. Marking each step on the page lets you see and correct the call before any issue is made."
     ]
   ],
   "wrapup": {
-    "summary": "Every build plan step will carry the actual code I intend to write, shown as a diff you can change before approving. The approval waits for that code, the builder follows it, and QA shows where the real code differs.",
-    "changing": "The Plan stage gains code drafts and a plan page that shows them. The \"Build plan approved\" gate, the builder hand-off and QA mode are adapted. Nothing is removed.",
+    "summary": "Every build plan step will carry the actual code I intend to write, shown as a diff you can change before approving. The approval waits for that code, the builder follows it, and QA shows where the real code differs. A build plan also needs only one issue, with sub-issues only for features that have several large steps.",
+    "changing": "The Plan stage gains code drafts and a plan page that shows them. The \"Build plan approved\" gate, the builder hand-off and QA mode are adapted. The two-issue minimum becomes one issue, plus one per large step when there are two or more. Nothing else is removed.",
     "blocking": "Nothing is built until you approve this design.",
-    "next": "After you approve, I write the systems doc, the parent issue and one sub-issue for each of the four milestones, and bring the build plan. That build plan will be the first one to carry its own code preview, with its code drafted by hand, since plan mode won't exist yet.",
+    "next": "After you approve, I write the systems doc and the issues under the new rule, then bring the build plan. That build plan will be the first one to carry its own code preview, with its code drafted by hand, since plan mode won't exist yet.",
     "todo": [
-      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: code preview\", or say what to change."
+      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: code preview and issue rule\", or say what to change."
     ]
   }
 };
