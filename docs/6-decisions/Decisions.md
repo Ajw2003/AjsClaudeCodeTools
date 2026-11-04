@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-04 - Readable code approved: code preview
+
+**Context.** The first build plan with code (`docs/plans/code-preview-and-issue-rule-plan.html`) showed drafts written in the plugin's dense style (`_rc`, `_o`, several things per line), wrapped mid-word on the page. aj, who is ADHD and autistic, could not read it, and said review must be easy and routine, because added friction makes important steps easy to skip.
+
+**Decision.** aj sent "Readable code approved: code preview 1A 2* 3A 4A" on `docs/plans/readable-code-design.html`. A readability check refuses a draft that breaks a rule before aj sees it (1A). The rules cover every line a draft adds, plus a separate issue to make the whole plugin readable, plus a reusable skill that makes code readable in aj's most-used languages in any repo, because this is a systemic problem across the repos I have touched (2, aj's own answer: C plus the skill). The rules become a house coding standard for every project (3A). aj approves the code with one tick per step (4A). The build plan for #468 waits for the redraft.
+
+**Rejected.** A warning on the page instead of a refusal (1B); rules for new lines only (2A) or whole touched functions (2B); rules for this plugin's drafts only (3B); one approval for the whole plan (4B).
+
+**Status.** Active. Mechanism: `docs/4-systems/design-loop.md`, "Code preview and the issue rule".
+
+---
+
 ## 2026-11-04 - Design approved: code preview and issue rule
 
 **Context.** aj wanted to see and change the code a build plan intends to write before it is written, to stop unwanted habits before they ship, not only a systems description. aj also found the two-issue minimum too rigid for small work.
