@@ -441,7 +441,7 @@ for _n, _cmd in (
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
     elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
-for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/../x" % _ua_dir, "rm -rf /tmp/claude-0/*"):
+for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/sub/../x" % _ua_dir, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)
     if _d != "deny" or (_cmd.startswith("rm -rf /home") and "_to_delete/" not in _r) \
             or (_cmd.startswith("git push") and "Do not retry" not in _r):
