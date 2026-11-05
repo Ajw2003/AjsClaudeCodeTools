@@ -1,7 +1,7 @@
 # Audit fixes
 
 **Owns:** the order and scope of the fixes for the 45 findings in
-[`docs/audits/2026-11-05-combined-ranked.md`](../audits/2026-11-05-combined-ranked.md). Status: planned, parent issue #476.
+[`docs/audits/2026-11-05-combined-ranked.md`](../audits/2026-11-05-combined-ranked.md). Status: building, parent issue #476. aj approved all the code on 2026-11-05 as "Build plan approved: audit fix order 1A 2A 3A 4* 5A 6B 7A 8A 9A 10A". The ten choices are recorded in `docs/6-decisions/Decisions.md`. Choice 6B changes the D9 proposal in `docs/plans/audit-fixes-code/steps-4-6.md`: when GitHub can't be read, Build edits are refused.
 aj approved the order on 2026-11-05 as "Design approved: audit fix order 1A" on
 `docs/plans/2026-11-05-combined-ranked.html`. Choice A means critical holes first, then the blocks
 on routine work, then handoff and full disk.
