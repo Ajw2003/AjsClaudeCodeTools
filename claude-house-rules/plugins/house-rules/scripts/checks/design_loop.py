@@ -1050,10 +1050,10 @@ report("PASS" if "nothing was recorded" in _n else "FAIL", "U1: Issues for is re
 _u1_plan = dict(_u1_state(), stage="plan", issues=[])
 with open(os.path.join(_u1_dir, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
     json.dump(_u1_plan, f)
-_n = _u1_say("Issues for login: #6 #7")
+_n = _u1_say("Issues for login: o/r#6 o/r#7")  # the fixture origin is a folder, so the repo is named
 _u1_nums = sorted(i.get("number") for i in _u1_state().get("issues", []))
 report("PASS" if _u1_nums == [6, 7] else "FAIL", "U1: aj's Issues for records the named issues in Plan (got %r)" % _u1_nums)
-_n = _u1_say("Issues for payments: #8")
+_n = _u1_say("Issues for payments: o/r#8")
 _u1_nums = sorted(i.get("number") for i in _u1_state().get("issues", []))
 report("PASS" if _u1_nums == [6, 7] else "FAIL", "U1: Issues for a different feature records nothing (got %r)" % _u1_nums)
 
