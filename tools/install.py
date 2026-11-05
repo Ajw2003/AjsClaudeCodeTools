@@ -250,8 +250,11 @@ def apply_settings(claude_dir, skip, ok, bad, info):
 
     if changed:
         kept = [k for k in settings if k not in [w["name"] for w in to_apply]]
-        with open(settings_path, "w", encoding="utf-8") as f:
+        # #477 (A8): write beside it and swap, so a failed write never leaves settings.json half-written.
+        tmp = "%s.%d.tmp" % (settings_path, os.getpid())
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(settings, f, indent=2)
+        os.replace(tmp, settings_path)
         if kept:
             info(f"kept: {', '.join(kept)}")
 

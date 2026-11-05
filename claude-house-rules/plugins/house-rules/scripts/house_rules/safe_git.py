@@ -125,24 +125,38 @@ GUARD_R3 = [
     ),
 ]
 
+# #477: one statement's worth of text in the JSON-encoded subject, stopping at ;, &, | and an encoded new line.
+_STMT = r"(?:(?!\\n)[^;&|])*"
+
 GUARD_R4 = [
     (
         # Was -r/-f only, so a plain `rm styles.css` - no recursive or force flag needed to
         # delete a single existing file - slipped through unasked. Deleting one file this way is
         # exactly the mechanism behind the CSS-file regression this rule now also has to catch.
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_./-])rm\s+\S",
+        # #477 (A3): /bin/rm and /usr/bin/rm, and unlink, delete the same way.
+        r"(^|" + _LINE_START + r"[^0-9A-Za-z_./-]|/bin/)(rm|unlink)\s+\S",
         "deletes one or more files",
     ),
     (r"Remove-Item", "deletes files (Remove-Item)"),
     (r"(del|erase)\s+/[fqs]|rmdir\s+/s", "deletes files (del /f or rmdir /s)"),
+    (r"\bfind\b" + _STMT + r"\s-delete\b", "deletes files (find -delete)"),
     (
-        r"Clear-Content|truncate\s+-s",
+        # #477 (A3): a statement that is only a redirect (`: > f`, `> f`, `true > f`) empties the file.
+        r"Clear-Content|truncate\s+-s|(:\s*\"|\\[nrt]|[;|(]|&&)\s*(?::|true)?\s*>(?![>&])\s*[^\s>&]",
         "truncates or overwrites file contents in place",
     ),
     (
-        _GIT + r"(checkout\s+(--|\.(\s|$))|restore([^0-9A-Za-z-]|$))",
+        # #477 (A4): `checkout HEAD -- f`, `checkout -f` and `switch -f` discard edits too. #478 (H2):
+        # `restore --staged` only takes a file out of the next commit, unless it also names --worktree.
+        _GIT + r"(checkout\b" + _STMT + r"(\s--(\s|\"|$)|\s-f\b|--force)|checkout\s+\.(\s|\"|$)"
+        r"|switch\b" + _STMT + r"(\s-f\b|--force|--discard-changes)"
+        r"|restore\b(?!" + _STMT + r"(\s--staged\b|\s-S\b))|restore\b" + _STMT + r"(\s--worktree\b|\s-W\b))",
         "throws away uncommitted edits to a file (git checkout -- / git restore)",
         SAVED,
+    ),
+    (
+        _GIT + r"worktree\s+remove\b" + _STMT + r"(\s--force\b|\s-f\b)",
+        "deletes a worktree with its uncommitted changes (git worktree remove --force)",
     ),
     (
         _GIT + r"stash\s+(drop|clear)([^0-9A-Za-z-]|$)",
@@ -171,7 +185,17 @@ SAFE_WAYS = {
     "throws away uncommitted edits to a file (git checkout -- / git restore)":
         "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
     "deletes stashed work permanently (git stash drop / clear)": "keep the stash",
-    "recursive": "move the folder into a `_to_delete/` folder instead",
+    "deletes a worktree with its uncommitted changes (git worktree remove --force)":
+        "run `git worktree remove <path>` without --force: git refuses it while the worktree has changes, "
+        "so commit them first",
+    # #479 (U4): a move frees no disk space, so the refusal names the deletes that do go through.
+    "recursive": ("`rm -r` goes through for a folder under /tmp or ~/.cache, a git-ignored `node_modules`, "
+                  "`__pycache__`, `.venv`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `dist`, `build`, "
+                  "`.next` or `target`, and a folder whose files are all committed and unchanged. For a helper's "
+                  "worktree, run `git worktree remove <path>`, which git refuses while it holds changes. "
+                  "Anything else: move the folder into a `_to_delete/` folder"),
+    "deletes files (find -delete)": ("delete the files by name with `rm <file>` (a committed, unchanged file goes "
+                                     "through), or move them into a `_to_delete/` folder"),
     "unsaved": "move the file into a `_to_delete/` folder instead",
     "not mine": "make a new branch and commit there: `git switch -c AjsAgent/<topic>`",
 }
@@ -381,10 +405,40 @@ def _push_targets_protected(subject, where):
 _ONLY_GIT_STMT_RE = re.compile(r"^\s*(git\s|cd\s)")
 
 
+# #477 (A1): a $(...), backtick or <(...) runs a program, and `git -c key=value` can point git at one
+# (core.hooksPath, core.fsmonitor, gpg.program). A command holding any of them is never approved here.
+_GIT_RUNS_CODE_RE = re.compile(r"\$\(|`|<\(|(?:^|\s)-c\s*[\"']?[\w.-]+=|--config-env\b|--exec-path\b")
+
+
 def _only_git_statements(subject):
-    """True when every statement of the command (pipes split too) is a git or cd statement."""
-    stmts = [x for x in re.split(r"&&|\|\||;|\n|\|", _decoded_command(subject)) if x.strip()]
+    """True when every statement of the command (pipes split too) is a git or cd statement and none of
+    them runs a program inside it or sets git config with -c (#477)."""
+    text = _decoded_command(subject)
+    if _GIT_RUNS_CODE_RE.search(text):
+        return False
+    stmts = [x for x in re.split(r"&&|\|\||;|\n|\|", text) if x.strip()]
     return bool(stmts) and all(_ONLY_GIT_STMT_RE.match(x) for x in stmts)
+
+
+_RESET_STMT_RE = re.compile(_GIT + r"reset\b(?P<rest>.*)", re.IGNORECASE)
+
+
+def _reset_unstages_only(subject):
+    """#478 (H2): True when every `git reset` names paths (`reset HEAD a.py`, `reset -- a.py`). git takes a
+    reset with paths as "unstage these files": the branch and the edits on disk don't move."""
+    found = False
+    for stmt in _STATEMENT_SPLIT_RE.split(_decoded_command(subject)):
+        m = _RESET_STMT_RE.search(stmt)
+        if not m:
+            continue
+        found = True
+        words = m.group("rest").split()
+        if "--" in words:
+            continue
+        flags = [w for w in words if w.startswith("-")]
+        if any(f not in ("-q", "--quiet") for f in flags) or len([w for w in words if not w.startswith("-")]) < 2:
+            return False
+    return found
 
 
 _NB_GIT_RE = re.compile(r"^\s*(cd\s+\S+\s*&&\s*)?" + _GIT + r"(commit|push)\b")
@@ -669,6 +723,8 @@ def _event_guard_main():
             pattern, reason = entry[0], entry[1]
             if not re.search(pattern, subject, re.IGNORECASE):
                 continue
+            if reason == "discards work (reset)" and _reset_unstages_only(subject):
+                continue  # #478 (H2): unstaging only; the edits stay on disk
             marker = entry[2] if len(entry) > 2 else None
             if reason == "deletes one or more files" and _rm_only_in_scratchpad(subject, payload):
                 continue  # #261: every rm path is inside this session's scratchpad
@@ -884,44 +940,82 @@ def _payload_toplevel(payload):
     return cwd
 
 
-_DELETE_CMD_RE = re.compile(r"(^|[\s;&|(])(rm|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
+_DELETE_CMD_RE = re.compile(r"(^|[\s;&|(]|/bin/)(rm|unlink|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
 _RECURSIVE_DELETE_RE = re.compile(
-    r"(^|[\s;&|(])rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
+    r"(^|[\s;&|(]|/bin/)rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
     r"|rmdir\s+/s|Remove-Item\b.*-Recurse|(del|erase)\s+(?:\S+\s+)*?/s(\s|$)", re.IGNORECASE)
+
+# #479 (U4): folders an install or a build makes again. Deleted only when git ignores them, so a folder
+# that merely shares the name and holds real work is still refused.
+REBUILDABLE_DIRS = ("node_modules", "__pycache__", ".venv", ".pytest_cache", ".mypy_cache", ".ruff_cache",
+                    "dist", "build", ".next", "target")
+
+
+def _temp_roots():
+    """Folders that hold only temporary files by definition: /tmp and ~/.cache."""
+    return [os.path.realpath("/tmp"), os.path.realpath(os.path.expanduser("~/.cache"))]
+
+
+def _folder_recoverable(path):
+    """#479 (U4): True when deleting this folder loses nothing that can't come back: it is inside /tmp or
+    ~/.cache, or it is a git-ignored folder on REBUILDABLE_DIRS, or every file in it is committed and
+    unchanged, with no untracked or ignored file inside and no separate repo of its own."""
+    real = os.path.realpath(path)
+    if any(real.startswith(root + os.sep) for root in _temp_roots()):
+        return True
+    if not os.path.isdir(real):
+        return False
+    parent = os.path.dirname(real)
+    if os.path.basename(real) in REBUILDABLE_DIRS:
+        return _ag(parent, ["check-ignore", "-q", "--", real], check=False)[0] == 0
+    rc, top_in, _e = _ag(real, ["rev-parse", "--show-toplevel"], check=False)
+    rc2, top_out, _e = _ag(parent, ["rev-parse", "--show-toplevel"], check=False)
+    if rc != 0 or rc2 != 0 or top_in.strip() != top_out.strip():
+        return False  # not in a repo, or its own repo (a clone or a worktree), whose unpushed commits would go
+    rc, listed, _e = _ag(real, ["ls-files", "--", "."], check=False)
+    rc2, status, _e = _ag(real, ["status", "--porcelain", "--ignored", "--untracked-files=all", "--", "."], check=False)
+    return rc == 0 and rc2 == 0 and bool(listed.strip()) and not status.strip()
 
 
 def _delete_refusal(subject, where):
-    """#291: "recursive" for a recursive delete, "unsaved" when any target has uncommitted changes, was
-    never committed, or can't be checked (a glob or variable), else None: every target is committed and
-    unchanged, so git can bring it back."""
+    """#291: "recursive" for a recursive delete of a folder that can't come back (#479), "unsaved" when any
+    target has uncommitted changes, was never committed, or can't be checked (a glob or variable), else
+    None: every target can be brought back by git, an install, or is temporary."""
     import shlex
     text = _decoded_command(subject)
-    if _RECURSIVE_DELETE_RE.search(text):
-        return "recursive"
+    recursive = bool(_RECURSIVE_DELETE_RE.search(text))
+    refusal = "recursive" if recursive else "unsaved"
     base = where or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
     for stmt in re.split(r"&&|\|\||;|\n|\|", text):
         m = _DELETE_CMD_RE.search(stmt)
         if not m:
             continue
+        if recursive and m.group(2).lower() not in ("rm",):
+            return "recursive"  # rmdir /s, Remove-Item -Recurse, del /s: their targets are not parsed here
         try:
             words = shlex.split(stmt[m.end(2):])
         except ValueError:
-            return "unsaved"
+            return refusal
         targets = [w for w in words if not w.startswith(("-", "/")) or os.path.isabs(w) and not re.match(r"^/[a-zA-Z]$", w)]
         if not targets:
-            return "unsaved"
+            return refusal
         for t in targets:
-            if re.search(r"[*?\[\]$`~]", t):
-                return "unsaved"
+            if re.search(r"[*?\[\]$`]", t) or "~" in t[1:]:
+                return refusal
+            t = os.path.expanduser(t)
             path = t if os.path.isabs(t) else os.path.join(base, t)
-            folder = os.path.dirname(os.path.abspath(path))
             try:
+                if os.path.isdir(path) or any(os.path.realpath(path).startswith(r + os.sep) for r in _temp_roots()):
+                    if _folder_recoverable(path):
+                        continue
+                    return "recursive"
+                folder = os.path.dirname(os.path.abspath(path))
                 tracked, _o, _e = _ag(folder, ["ls-files", "--error-unmatch", "--", path], check=False)
                 changed, _o, _e = _ag(folder, ["diff", "--quiet", "HEAD", "--", path], check=False)
             except RuntimeError:
-                return "unsaved"
+                return refusal
             if tracked != 0 or changed != 0:
-                return "unsaved"
+                return refusal
     return None
 
 

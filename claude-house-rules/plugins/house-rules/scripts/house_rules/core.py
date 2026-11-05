@@ -1913,9 +1913,12 @@ _PROMPT_VALUE_RE = re.compile(r'"prompt"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
 
 # #253: prompts that reach UserPromptSubmit but are a helper's report or a system notice, not aj.
+# #477 (D1): a pull request event, a webhook delivery and a child session's event arrive as prompts too,
+# and anyone who can comment on a pull request writes their text.
 _RELAYED_PROMPT_RE = re.compile(
     r"<task-notification>|<system-reminder>|<agent-message\b|\[Subagent hand-?back\]"
-    r"|Another Claude session sent a message", re.IGNORECASE)
+    r"|Another Claude session sent a message"
+    r"|<wake\b|<webhook-payload\b|<event\s+source=|<child-session-event\b", re.IGNORECASE)
 
 
 def _is_relayed_prompt(text, payload=None):

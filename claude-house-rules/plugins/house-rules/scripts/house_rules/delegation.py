@@ -1093,7 +1093,7 @@ def event_subagentcommit():
             parts = []
             for top, branch, files in left:
                 if _autosave_enabled() and branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX):
-                    sha, done = _wip_commit(top, WIP_NOT_COMMITTED)
+                    sha, done = _wip_commit(top, branch, WIP_NOT_COMMITTED)
                     note = _autosave_snapshot(top, branch, force_push=True)
                     parts.append("committed %d file(s) in %s as %s%s"
                                  % (len(done), top, sha, " | " + note if note else ""))
@@ -1269,7 +1269,7 @@ def _autosave_snapshot(top, branch, force_push=False):
         if os.path.exists(idx):
             os.remove(idx)
         _ag(top, ["read-tree", "HEAD"], env=env)
-        _ag(top, ["add", "-A"], env=env)
+        _autosave_stage(top, branch, env=env)
         tree = _ag(top, ["write-tree"], env=env)[1].strip()
     finally:
         if os.path.exists(idx):
@@ -1295,14 +1295,39 @@ def _wip_message(subject):
     return subject + "\n\nCommitted by AJ's agent"
 
 
-def _wip_commit(top, subject):
-    """Commit everything in the worktree on the subagent's behalf. (short sha, files), or
-    (None, []) when there was nothing to commit. --no-verify: a repo's pre-commit hook must not
+def _autosave_stage(top, branch, env=None):
+    """#477 (A11): stage tracked changes plus the files the helper wrote with Write, Edit or NotebookEdit.
+    Other untracked files are left out: one may be a token or a data dump that must never reach origin."""
+    _ag(top, ["add", "-u"], env=env)
+    written = [p for p in _autosave_read(_autosave_state_path(top, branch, "written")).splitlines()
+               if p and os.path.isfile(os.path.join(top, p))]
+    if written:
+        _ag(top, ["add", "--"] + written, env=env)
+
+
+def _autosave_remember(top, branch, payload):
+    """#477 (A11): record a file the helper wrote with a file tool, so autosave may save it."""
+    ti = json.loads(payload).get("tool_input") or {}
+    path = ti.get("file_path") or ti.get("notebook_path")
+    if not path:
+        return
+    rel = os.path.relpath(os.path.realpath(path), os.path.realpath(top)).replace(os.sep, "/")
+    listed = _autosave_state_path(top, branch, "written")
+    have = _autosave_read(listed).splitlines()
+    if not rel.startswith("../") and rel not in have:
+        _autosave_write(listed, "\n".join(have + [rel]))
+
+
+def _wip_commit(top, branch, subject):
+    """Commit the helper's work on its behalf: tracked changes and the files it wrote (#477). (short sha,
+    files), or (None, []) when there was nothing to commit. --no-verify: a repo's pre-commit hook must not
     be able to block the one commit that protects the work."""
-    files = _dirty_files(top)
+    if not _dirty_files(top):
+        return None, []
+    _autosave_stage(top, branch)
+    files = [p for p in _ag(top, ["diff", "--cached", "--name-only"])[1].splitlines() if p]
     if not files:
         return None, []
-    _ag(top, ["add", "-A"])
     ident = []
     if _ag(top, ["config", "user.name"], check=False)[0] != 0:
         ident += ["-c", "user.name=house-rules"]
@@ -1339,13 +1364,15 @@ def event_autosave():
                 emit({"systemMessage": " | ".join(issue_notes)})
             return 0
         top, branch, tool = target
+        if tool in ("Write", "Edit", "NotebookEdit"):
+            _autosave_remember(top, branch, payload)
         if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
             return 0
         notes = list(issue_notes)
         if _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
-            sha, done = _wip_commit(top, WIP_CHECKPOINT)
+            sha, done = _wip_commit(top, branch, WIP_CHECKPOINT)
             if sha:
                 notes.append("house-rules autosave: %d min passed without a commit on %s, so the "
                              "hook committed %d file(s) as %s: %s."
@@ -1396,7 +1423,7 @@ def event_commitgate():
             return 0
         head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
         if _autosave_read(counter) == head:
-            sha, done = _wip_commit(top, WIP_NOT_COMMITTED)
+            sha, done = _wip_commit(top, branch, WIP_NOT_COMMITTED)
             os.remove(counter)
             note = _autosave_snapshot(top, branch, force_push=True)
             text = ("house-rules commitgate: the subagent did not commit when asked, so the hook "
@@ -1486,7 +1513,7 @@ def event_worktreesweep():
                 files = _dirty_files(top)
                 if not files or now - _newest_mtime(top, files) < CHECKPOINT_MINUTES * 60:
                     continue  # clean, or a live subagent is still editing it
-                sha, done = _wip_commit(top, WIP_PARENT)
+                sha, done = _wip_commit(top, branch, WIP_PARENT)
                 note = _autosave_snapshot(top, branch, force_push=True)
                 swept.append("%s (%s): committed %d file(s) as %s - %s%s"
                              % (top, branch, len(done), sha, _shown(done), " | " + note if note else ""))
