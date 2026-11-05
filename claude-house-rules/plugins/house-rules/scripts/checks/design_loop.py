@@ -1209,6 +1209,10 @@ _cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNu
           env=dict(_cl_env, HOUSE_RULES_LOOP_PR_BODIES_FILE=_bodies))
 _cl_cases.append(("A2: a pull request opened elsewhere is read once, and its Refs #7 stamps #7's record",
                   (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 21))
+_cl_set({"feature": "f", "stage": "qa", "closable": [], "issues": _cl_issues})
+_o = _cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 30}, {"merged": True})
+_cl_cases.append(("U3: a merge while the feature is in QA leaves the stage alone and asks for aj's verdict",
+                  _cl_state()["stage"] == "qa" and "QA passed: f" in _o))
 for _t, _ok in _cl_cases:
     report("PASS" if _ok else "FAIL", "closable record: " + _t)
 
@@ -1493,6 +1497,33 @@ report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "Importer"
        "when the stored feature name is stale - its issues are kept")
 if _s.get("issues") != [{"repo": "o/r", "number": 7, "labelled": True}]:
     print("          feature %r, issues %r, note %r" % (_s.get("feature"), _s.get("issues"), _n[:300]))
+
+_ma_set({"feature": "feat", "stage": "build", "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)]},
+        {"o/r#%d" % n: ["Feature", "in progress"] for n in (1, 2)})
+_n, _s = _ma_say("Design approved: feat")
+report("PASS" if (_s["stage"] == "plan" and [i["number"] for i in _s.get("issues", [])] == [1, 2]
+                  and "feat" not in (_s.get("features") or {})) else "FAIL",
+       "design loop (D5): a design approved again in Build goes to Plan and keeps the feature's issues")
+_ma_set({"feature": "feat", "stage": "qa", "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)]},
+        {"o/r#%d" % n: ["Feature", "in progress"] for n in (1, 2)})
+_n, _s = _ma_say("QA failed: feat. Design approved: feat")
+report("PASS" if (_s["stage"] == "plan" and len(_s.get("issues", [])) == 2) else "FAIL",
+       "design loop (D5): \"QA failed: X. Design approved: X\" is read in order - the redo keeps the issues")
+_ma_set({"feature": "login", "stage": "plan", "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)]},
+        {"o/r#%d" % n: ["Feature", "in progress"] for n in (1, 2)})
+_n, _s = _ma_say("Build plan approved: payments")
+_n2, _s2 = _ma_say("Build plan approved: login 1A except keep the old flag")
+report("PASS" if (_s["stage"] == "plan" and '"login"' in _n and _s2["stage"] == "build") else "FAIL",
+       "design loop (D6): a build plan approval naming another feature moves nothing; a longer form of the name counts")
+_ma_set({"feature": "x", "stage": "build", "issues": [{"repo": "o/r", "number": 1, "labelled": True}]},
+        {"o/r#1": ["in progress"]})
+_n, _s = _ma_say("skip design")
+_ma_set({"feature": "x", "stage": "plan", "skip": True,
+         "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)]},
+        {"o/r#%d" % n: ["in progress"] for n in (1, 2)})
+_n2, _s2 = _ma_say("Build plan approved: x")
+report("PASS" if (not _s.get("skip") and "already open" in _n and _s2["stage"] == "build" and not _s2["skip"])
+       else "FAIL", "design loop (D7): skip design in Build stores nothing, and a stage move clears an unused skip")
 
 # #327: an unchanged decisions log no longer refuses; the approval counts and the note asks for the entry.
 _ma_set({"feature": "demo", "stage": "plan",
@@ -2069,7 +2100,16 @@ _ck_b, _, _ = _ck_run(_ck_t_plain, "The build is ready.")
 _ck_cases.append(("qa page: a later reply without the link passes", not _ck_b))
 _ck_stage("qa", qa_page=_ck_qa_page)
 _ck_b, _, _ = _ck_run(_ck_t_plain, "Here: https://claude" + ".ai/artifact/abc123")
-_ck_cases.append(("qa page: a claude.ai artifact link passes", not _ck_b))
+# D8 (#481, aj approved): a bare artifact link no longer counts as the QA page; only the page's file name does.
+_ck_cases.append(("qa page: a bare claude.ai artifact link does not pass (D8)", _ck_b))
+import importlib
+_dl_mod = importlib.import_module("house_rules.design_loop")
+_ck_stage("qa", qa_page="docs/plans/feat-qa.html")
+_qa8 = {"qa_stage": "qa", "qa_page": "docs/plans/feat-qa.html", "reply": "QA page: https://claude" ".ai/artifact/abc",
+        "cwd": _loop_dir, "qa_git_dir": os.path.join(_loop_dir, ".git")}
+_ck_cases.append(("D8: a bare artifact link doesn't count as the QA page; the page's file name does",
+                  _dl_mod._check_qa_page(dict(_qa8)) != ""
+                  and _dl_mod._check_qa_page(dict(_qa8, reply="QA page: docs/plans/feat-qa.html")) == ""))
 _ck_stage("qa", qa_page=_ck_qa_page)
 _ck_b, _, _ = _ck_run(_ck_t_plain, "QA page: %s" % _ck_qa_page, active=True)
 _ck_cases.append(("qa page: a retry reply linking the page does not block and records it",
