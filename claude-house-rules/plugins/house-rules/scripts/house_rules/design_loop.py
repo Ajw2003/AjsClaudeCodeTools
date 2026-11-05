@@ -1367,7 +1367,7 @@ def _author_guard(subject, payload):
     except Exception: return None  # unreadable identity: let the commit through, as for an unreadable body file
     if who is None or not _is_claude_identity(*who):
         return None
-    return ("deny", "House rules, credit aj's agent: this commit would be authored as `%s <%s>`, "
+    return ("deny", "House rules, credit Edens Agent: this commit would be authored as `%s <%s>`, "
             "which signs it as Claude. Set the agent's identity in this repo and retry: `%s`. "
             "HOUSE_RULES_ATTRIBUTION=off disables this check."
             % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)

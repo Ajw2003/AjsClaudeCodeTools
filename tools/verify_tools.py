@@ -669,7 +669,7 @@ def _run_settings(initial, skip=()):
     return text, msgs
 
 
-_want = {"commit": "Committed by AJ's agent", "pr": "Opened by AJ's agent", "sessionUrl": False}
+_want = {"commit": "Committed by Edens Agent", "pr": "Opened by Edens Agent", "sessionUrl": False}
 _t, _m = _run_settings(None)
 _j = json.loads(_t)
 check(_j.get("attribution") == _want and not _m["bad"],

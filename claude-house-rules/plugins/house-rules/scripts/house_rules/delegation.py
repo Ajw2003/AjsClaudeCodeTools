@@ -1291,7 +1291,7 @@ def _autosave_snapshot(top, branch, force_push=False):
 
 def _wip_message(subject):
     # #405: credited like every other commit; no co-author trailer and no session link.
-    return subject + "\n\nCommitted by AJ's agent"
+    return subject + "\n\nCommitted by Edens Agent"
 
 
 def _autosave_stage(top, branch, env=None):

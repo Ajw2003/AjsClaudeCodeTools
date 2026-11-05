@@ -298,9 +298,9 @@ def _agent_branch_block():
         _mine, branch, note = branch_ownership()
         if branch is None:
             return "\n\n---\n\nAjsAgent branch check: branch not read (%s)." % note
-        if not branch.startswith("claude/"):
+        if not branch.startswith(("claude/", "agent/")):
             return ""
-        name = branch[len("claude/") :]
+        name = branch.split("/", 1)[1]
         target = "AjsAgent/" + name
         cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
         exists = False
@@ -326,18 +326,24 @@ def _agent_branch_block():
 
 
 def _agent_identity_block():
-    """Cloud session whose git identity is Claude: tell the agent to set the repo-local identity.
-
-    Text only - the hook never runs git config. Never raises; adds nothing when fine or unreadable.
-    """
+    """Cloud session whose git identity is Claude: set this repo's own identity to Edens Agent (#478, U7),
+    so the first commit is not refused for it. Repo-local `git config` only, never --global. Never raises."""
     try:
         if not _attribution_enabled():
             return ""
-        ident = _git_author_ident(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        top = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        ident = _git_author_ident(top)
         if ident is None or not _is_claude_identity(*ident):
             return ""
-        return "\n\n---\n\nGit identity is Claude: before your first commit run `%s`." % AGENT_IDENTITY_FIX
-    except Exception: return ""  # unreadable identity adds no text, by design (#177)
+        rc1 = _ag(top, ["config", "user.name", "Edens Agent"], check=False)[0]
+        rc2 = _ag(top, ["config", "user.email", "79066376+Ajw2003@users.noreply.github.com"], check=False)[0]
+        if rc1 == 0 and rc2 == 0:
+            return "\n\n---\n\nGit identity was Claude, so the hook set this repo's identity to Edens Agent."
+        return ("\n\n---\n\nGit identity is Claude, and setting it failed (git config exited %d and %d): before "
+                "your first commit run `%s`." % (rc1, rc2, AGENT_IDENTITY_FIX))
+    except Exception as exc:
+        return ("\n\n---\n\nGit identity check failed (%s: %s); if a commit is refused for the Claude identity, "
+                "run `%s`." % (type(exc).__name__, exc, AGENT_IDENTITY_FIX))
 
 
 
@@ -350,6 +356,58 @@ def _guard_subject(payload):
     return m.group(0) if m else payload
 
 
+# #478 (U6): a heredoc fed to cat or tee with a quoted delimiter (<<'EOF') is only text written to a file.
+_HEREDOC_CAT_RE = re.compile(r"(\b(?:cat|tee)\b[^\n]*<<-?\s*(['\"])(\w+)\2[^\n]*\n)(.*?\n)(\s*\3[ \t]*(?:\n|$))",
+                             re.DOTALL)
+_INERT_CMDS = ("echo", "printf", "grep", "egrep", "fgrep", "rg")
+_MESSAGE_FLAGS = ("-m", "--message", "--title", "--body", "-b", "-t", "--notes")
+
+
+def _inert_text_stripped(cmd, messages=True):
+    """#478 (U6, H1): cmd with text that can't run emptied to '' or "": the body of a quoted-delimiter heredoc
+    fed to cat or tee, and a quoted string holding a space that is an argument of echo, printf, grep or rg, or
+    (when `messages`) the value of a message flag such as -m or --body. A double-quoted string holding $, a
+    backtick or a backslash is kept, because $(...) inside it runs; after a backslash the rest is kept whole.
+    A quoted word with no space is kept, because the shell passes '--force' as --force."""
+    if messages:  # the issue check (messages=False) reads heredoc bodies, which carry a PR's Refs line
+        cmd = _HEREDOC_CAT_RE.sub(lambda m: m.group(1) + m.group(5), cmd)
+    out, words, i = [], [], 0
+    while i < len(cmd):
+        c = cmd[i]
+        if c in "'\"":
+            j = cmd.find(c, i + 1)
+            text = cmd[i:] if j < 0 else cmd[i:j + 1]
+            if j < 0 or c == '"' and re.search(r"[$`\\]", text):
+                if j < 0 or "\\" in text:
+                    out.append(cmd[i:])
+                    break
+                out.append(text)
+            else:
+                first = words[0] if words else ""
+                flag = (words[-1] if words else "").rstrip("=")
+                inert = " " in text and (first in _INERT_CMDS or messages and flag in _MESSAGE_FLAGS)
+                out.append(c + c if inert else text)
+            words.append(text)
+            i += len(text)
+            continue
+        if c in ";&|\n()":
+            words = []
+        elif not c.isspace():
+            w = re.match(r"[^\s;&|()'\"]+", cmd[i:]).group(0)
+            words.append(w)
+            out.append(w)
+            i += len(w)
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _quiet_subject(subject, messages=True):
+    """The guard subject, JSON-encoded as the patterns expect, with _inert_text_stripped applied."""
+    text = _decoded_command(subject)
+    quiet = _inert_text_stripped(text, messages)
+    return subject if quiet == text else '"command":' + json.dumps(quiet)
 
 
 
@@ -515,8 +573,15 @@ def _rerun_command(payload, subject):
     return cmd if isinstance(cmd, str) else _decoded_command(subject)
 
 
+_RERUN_INTERPRETER_RE = re.compile(r"(python[\d.]*|py|sh|bash|zsh|node|deno|tsx|ruby|pwsh|powershell|cmd)(\.exe)?$",
+                                   re.IGNORECASE)
+
+
 def _rerun_candidates(cmd, where):
-    """Full paths of the existing script-extension words of the command, in order."""
+    """Full paths of the scripts the command runs, in order: a statement's first word, or the first
+    non-option word after an interpreter (#478, A6: `cat`, `sed`, `git add` and a commit name a script
+    without running it). shortcut: a wrapper such as `env`, `timeout` or `uv run` hides the script; add
+    wrappers here if a builder is seen slipping past."""
     import shlex
     found = []
     for stmt in re.split(r"&&|\|\||;|\||\n", cmd):
@@ -524,11 +589,17 @@ def _rerun_candidates(cmd, where):
             words = shlex.split(stmt)
         except ValueError:
             words = stmt.split()
-        for w in words:
-            if w.lower().endswith(RERUN_EXTS):
-                full = os.path.realpath(w if os.path.isabs(w) else os.path.join(where, w))
-                if os.path.isfile(full):
-                    found.append(full)
+        while words and re.match(r"^[A-Za-z_]\w*=", words[0]):
+            words = words[1:]  # FOO=1 ./x.sh
+        if not words:
+            continue
+        run = words[0]
+        if _RERUN_INTERPRETER_RE.match(os.path.basename(run)):
+            run = next((w for w in words[1:] if not w.startswith("-")), "")
+        if run.lower().endswith(RERUN_EXTS):
+            full = os.path.realpath(run if os.path.isabs(run) else os.path.join(where, run))
+            if os.path.isfile(full):
+                found.append(full)
     return found
 
 
@@ -675,13 +746,15 @@ def _event_guard_main():
         return 0
 
     subject = _guard_subject(payload)
+    quiet = _quiet_subject(subject)  # #478 (U6, H1): the destructive patterns never read text that can't run
     outdated = _read_and_clear_outdated_marker(_vc_session_id(payload))
 
     # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
     # an ask is folded into the prompt built below so a compound command is asked about once.
     issue_hit = _attribution_guard(subject, payload)
+    issue_subject = _quiet_subject(subject, messages=False)  # #478: keeps --body, which the issue check reads
     for _issue_guard in core.GUARD_ISSUE_HOOKS:  # _author_guard, _issues_guard: registered by hook.py
-        issue_hit = issue_hit or _issue_guard(subject, payload)
+        issue_hit = issue_hit or _issue_guard(issue_subject, payload)
     if issue_hit and issue_hit[0] == "deny":
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": issue_hit[1]}})
@@ -721,7 +794,7 @@ def _event_guard_main():
     for title, patterns in GUARD_BUCKETS:
         for entry in patterns:
             pattern, reason = entry[0], entry[1]
-            if not re.search(pattern, subject, re.IGNORECASE):
+            if not re.search(pattern, quiet, re.IGNORECASE):
                 continue
             if reason == "discards work (reset)" and _reset_unstages_only(subject):
                 continue  # #478 (H2): unstaging only; the edits stay on disk
@@ -940,9 +1013,10 @@ def _payload_toplevel(payload):
     return cwd
 
 
-_DELETE_CMD_RE = re.compile(r"(^|[\s;&|(]|/bin/)(rm|unlink|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
+# #478: a quote before the word counts too, so bash -c 'rm -rf docs' is read as the delete it runs.
+_DELETE_CMD_RE = re.compile(r"(^|[\s;&|('\"]|/bin/)(rm|unlink|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
 _RECURSIVE_DELETE_RE = re.compile(
-    r"(^|[\s;&|(]|/bin/)rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
+    r"(^|[\s;&|('\"]|/bin/)rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
     r"|rmdir\s+/s|Remove-Item\b.*-Recurse|(del|erase)\s+(?:\S+\s+)*?/s(\s|$)", re.IGNORECASE)
 
 # #479 (U4): folders an install or a build makes again. Deleted only when git ignores them, so a folder
@@ -1623,7 +1697,7 @@ def event_prompttimer():
 
 
 
-# Credit goes to "aj's agent", with no email and no Claude branding (issue #133). The Claude Code
+# Credit goes to "Edens Agent", with no email and no Claude branding (issue #133). The Claude Code
 # `attribution` setting is the primary mechanism and is written by tools/install.py; this check is
 # the backstop for sessions that never read the settings file (cloud sessions).
 _ATTRIBUTION_TEXT_RES = [
@@ -1717,9 +1791,10 @@ _ATTRIBUTION_CMD_RE = re.compile(
 _GH_API_WRITE_RE = re.compile(r"(?<![\w-])(?:-X\s*(?:POST|PATCH|PUT)|--method\b|-f\b|-F\b|--field\b|--raw-field\b|--input\b)", re.IGNORECASE)
 _GH_API_FILE_RE = re.compile(r"(?:(?<![\w-])-F|--field)(?:=|\s+)body=@(\"[^\"]+\"|'[^']+'|\S+)|--input(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
 ATTRIBUTION_DENY = (
-    "House rules, credit aj's agent: this %s credits Claude (`%s`). Credit \"aj's agent\" instead, "
-    "with no email and no Claude branding: commits end with `Committed by AJ's agent`, pull requests "
-    "with `Opened by AJ's agent`. HOUSE_RULES_ATTRIBUTION=off disables this check."
+    "House rules, credit Edens Agent: this %s credits Claude (`%s`). Remove every `Co-Authored-By:` and "
+    "`Claude-Session:` line and every claude.ai link, then credit \"Edens Agent\" with no email and no Claude "
+    "branding: commits end with `Committed by Edens Agent`, pull requests with `Opened by Edens Agent`. "
+    "HOUSE_RULES_ATTRIBUTION=off disables this check."
 )
 
 
@@ -1848,7 +1923,7 @@ def event_creditcheck():
 # pass through `guard`. Only title/body/message and branch/head are read, never file content.
 _GITHUB_COMMIT_TOOLS = ("push_files", "create_or_update_file")
 BRANCH_DENY = (
-    "House rules, credit aj's agent: `%s` is a new branch under `claude/`. Name agent branches "
+    "House rules, credit Edens Agent: `%s` is a new branch under `claude/`. Name agent branches "
     "`AjsAgent/<topic>` instead. HOUSE_RULES_ATTRIBUTION=off disables this check."
 )
 
