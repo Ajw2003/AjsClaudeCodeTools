@@ -278,7 +278,7 @@ index cd212ff..3f563d0 100644
 +                parts.append(_TAG_RE.sub("", text))
      body = _TAG_RE.sub("\n", _SCRIPT_STYLE_RE.sub("", html or ""))
 diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-index d95169b..f72f5d0 100644
+index d95169b..92f6ff1 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
 @@ -17,2 +17,13 @@ allows; when `themes` has one entry the page is forced to that theme.
@@ -505,20 +505,23 @@ index d95169b..f72f5d0 100644
  
 @@ -511,2 +715,4 @@ CLIP_JS = r"""() => {
      for (const el of [card, ...card.querySelectorAll('*')]) {
-+      // A code block scrolls sideways on purpose (#473), so nothing inside it counts as clipped.
-+      if (el.closest('.code-scroll')) continue;
++      // A code block spreads past its card to the window's width on purpose (#473): nothing inside it, and no card holding it, counts as clipped.
++      if (el.closest('.code-block') || el.querySelector('.code-block')) continue;
        const r = el.getBoundingClientRect();
 diff --git a/claude-house-rules/plugins/house-rules/templates/handover-page.html b/claude-house-rules/plugins/house-rules/templates/handover-page.html
-index 5bb193b..540e801 100644
+index 5bb193b..e602b14 100644
 --- a/claude-house-rules/plugins/house-rules/templates/handover-page.html
 +++ b/claude-house-rules/plugins/house-rules/templates/handover-page.html
-@@ -168,2 +168,36 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
+@@ -168,2 +168,39 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
  .owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
 +/* Plan mode (#469, #473): a step's code as captioned blocks. The code keeps each statement on one line; the page
 +   wraps a long line to fit the screen, with the rest indented under it. Added lines take the accent tint (I build it). */
 +.change-list { margin: 8px 0 12px; padding-left: 1.4em; }
 +.change-list li { margin: 4px 0; }
-+.code-block { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; }
++/* A code block spreads past the reading column to the window's width (up to 1400px), centred on the page, so long lines need less wrapping. */
++/* The step bar stays on top while code scrolls past it, so its background reaches the window's edges too. */
++.stepper { box-shadow: 0 0 0 100vmax var(--bg); clip-path: inset(0 -100vmax); }
++.code-block { margin: 0 calc(50% - min(700px, 50vw - 24px)) 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 +.code-caption {
 +  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px;
 +  padding: 8px 10px; border-bottom: 1px solid var(--line);
@@ -549,7 +552,7 @@ index 5bb193b..540e801 100644
 +  padding: 10px; border: 2px solid var(--you); border-radius: 10px; background: var(--you-soft);
 +}
  /* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
-@@ -327,2 +361,196 @@ const picHtml = p => {
+@@ -327,2 +364,196 @@ const picHtml = p => {
  };
 +// Plan mode (#469, #473): each step's code as captioned blocks, then a tick per step.
 +const PLAN_STEPS = [];
@@ -746,7 +749,7 @@ index 5bb193b..540e801 100644
 +  }
 +}
  document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
-@@ -377,4 +605,16 @@ if (document.getElementById("cc")) {
+@@ -377,4 +608,16 @@ if (document.getElementById("cc")) {
        (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
 -  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
 -     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
@@ -765,7 +768,7 @@ index 5bb193b..540e801 100644
 +  }
 +  document.getElementById("cc").innerHTML = PAGE.changes.map(changesItemHtml).join("");
  }
-@@ -411,4 +651,12 @@ function reply() {
+@@ -411,4 +654,12 @@ function reply() {
    const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
 +  applyPlanReview();
  }

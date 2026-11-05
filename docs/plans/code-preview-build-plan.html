@@ -172,7 +172,10 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
    wraps a long line to fit the screen, with the rest indented under it. Added lines take the accent tint (I build it). */
 .change-list { margin: 8px 0 12px; padding-left: 1.4em; }
 .change-list li { margin: 4px 0; }
-.code-block { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; }
+/* A code block spreads past the reading column to the window's width (up to 1400px), centred on the page, so long lines need less wrapping. */
+/* The step bar stays on top while code scrolls past it, so its background reaches the window's edges too. */
+.stepper { box-shadow: 0 0 0 100vmax var(--bg); clip-path: inset(0 -100vmax); }
+.code-block { margin: 0 calc(50% - min(700px, 50vw - 24px)) 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 .code-caption {
   display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px;
   padding: 8px 10px; border-bottom: 1px solid var(--line);
@@ -4423,7 +4426,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-          250,
+          253,
           2,
           []
         ]
@@ -6455,11 +6458,11 @@ const PAGE = {
                 ],
                 [
                   "+",
-                  "      // A code block scrolls sideways on purpose (#473), so nothing inside it counts as clipped."
+                  "      // A code block spreads past its card to the window's width on purpose (#473): nothing inside it, and no card holding it, counts as clipped."
                 ],
                 [
                   "+",
-                  "      if (el.closest('.code-scroll')) continue;"
+                  "      if (el.closest('.code-block') || el.querySelector('.code-block')) continue;"
                 ],
                 [
                   " ",
@@ -6495,7 +6498,19 @@ const PAGE = {
                 ],
                 [
                   "+",
-                  ".code-block { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; }"
+                  "/* A code block spreads past the reading column to the window's width (up to 1400px), centred on the page, so long lines need less wrapping. */"
+                ],
+                [
+                  "+",
+                  "/* The step bar stays on top while code scrolls past it, so its background reaches the window's edges too. */"
+                ],
+                [
+                  "+",
+                  ".stepper { box-shadow: 0 0 0 100vmax var(--bg); clip-path: inset(0 -100vmax); }"
+                ],
+                [
+                  "+",
+                  ".code-block { margin: 0 calc(50% - min(700px, 50vw - 24px)) 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }"
                 ],
                 [
                   "+",
@@ -6623,7 +6638,7 @@ const PAGE = {
             },
             {
               "file": "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-              "new_start": 361,
+              "new_start": 364,
               "lines": [
                 [
                   " ",
@@ -7415,7 +7430,7 @@ const PAGE = {
             },
             {
               "file": "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-              "new_start": 605,
+              "new_start": 608,
               "lines": [
                 [
                   " ",
@@ -7495,7 +7510,7 @@ const PAGE = {
             },
             {
               "file": "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-              "new_start": 651,
+              "new_start": 654,
               "lines": [
                 [
                   " ",
@@ -10881,7 +10896,7 @@ const PAGE = {
             },
             {
               "file": "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-              "new_start": 553,
+              "new_start": 556,
               "lines": [
                 [
                   " ",

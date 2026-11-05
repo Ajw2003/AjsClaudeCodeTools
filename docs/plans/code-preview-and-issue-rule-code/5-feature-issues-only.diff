@@ -182,7 +182,7 @@ index 6ef1e68..633081d 100644
 +        loop_notes = _loop_record_issues(git_dir, found, labelled, top, parent_number=parent_number)
          if not _issues_enabled():
 diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-index 4e997db..095bf1a 100644
+index 24404e8..a462216 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
 @@ -20,3 +20,4 @@ Plan mode (#469, #473): a `plan` block turns a build plan page into a code revie
@@ -211,10 +211,10 @@ index 4e997db..095bf1a 100644
 +    add_not_part_of_line(page, plan.get("not_part_of"))
      return {"drafts": draft_hashes, "steps": len(plan["steps"]), "large": large_steps, "linked": False}
 diff --git a/claude-house-rules/plugins/house-rules/templates/handover-page.html b/claude-house-rules/plugins/house-rules/templates/handover-page.html
-index 540e801..90ab5ea 100644
+index e602b14..82e1d96 100644
 --- a/claude-house-rules/plugins/house-rules/templates/handover-page.html
 +++ b/claude-house-rules/plugins/house-rules/templates/handover-page.html
-@@ -553,2 +553,7 @@ function applyPlanReview() {
+@@ -556,2 +556,7 @@ function applyPlanReview() {
      miss.innerHTML = `<span class="missing">Tick Looks right on each step you have read.</span>`;
 +    return;
 +  }

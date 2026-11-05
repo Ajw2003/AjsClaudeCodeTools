@@ -90,7 +90,7 @@ index 7da6ba0..6ef1e68 100644
 +                note += f" The approved code is in {approved_list}: give each builder its step's draft as the specification. Where the real code has to differ, the builder makes the change and reports it with the reason, never silently; the QA page lists every departure."
          elif approval[0] == "QA failed":
 diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-index f72f5d0..4e997db 100644
+index 92f6ff1..24404e8 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
 @@ -303,2 +303,3 @@ def apply_qa(page, project):
