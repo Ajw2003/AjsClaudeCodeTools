@@ -2513,5 +2513,15 @@ if os.path.isfile(vc_marker_path(case)):
     os.remove(vc_marker_path(case))
 shutil.rmtree(_vc_fake_dir, ignore_errors=True)
 
+# A7: _write_atomic replaces a file whole and leaves no temp file behind
+import importlib
+_core = importlib.import_module("house_rules.core")
+_aw = os.path.join(_FIXTURE_ROOT, "atomic", "state.json")
+_core._write_atomic(_aw, '{"a": 1}')
+_core._write_atomic(_aw, '{"a": 2}')
+report("PASS" if (json.load(open(_aw, encoding="utf-8")) == {"a": 2}
+                  and os.listdir(os.path.dirname(_aw)) == ["state.json"]) else "FAIL",
+       "A7: _write_atomic replaces the file whole and leaves no temp file behind")
+
 
 finish()

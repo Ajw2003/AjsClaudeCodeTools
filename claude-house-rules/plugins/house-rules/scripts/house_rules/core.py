@@ -2199,12 +2199,22 @@ def _waiting_load(path):
     return data
 
 
+def _write_atomic(path, text):
+    """A7: write `text` so a reader never sees a half-written file: a temp file named for this process, then
+    os.replace, which is atomic on one filesystem. The temp file is removed if the write fails."""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    tmp = "%s.%d.tmp" % (path, os.getpid())
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
 def _waiting_save(path, entries):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(entries, f, indent=1)
-    os.replace(tmp, path)
+    _write_atomic(path, json.dumps(entries, indent=1))
 
 
 WAITING_LOCK_WAIT = 3.0

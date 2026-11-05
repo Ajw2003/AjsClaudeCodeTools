@@ -28,6 +28,7 @@ from house_rules.core import (  # noqa: F401
     _TRANSCRIPT_RE,
     _ag,
     _apply_assigns,
+    _write_atomic,
     _attribution_enabled,
     _branch_advice,
     _command_dir,
@@ -672,10 +673,7 @@ def _rerun_check(payload, subject):
             return RERUN_DENY % script
         _RERUN_UNDO.append((path, key, rec))
         recs[key] = {"script": script, "head": head, "count": count + 1}
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"records": recs}, f)
-        os.replace(tmp, path)
+        _write_atomic(path, json.dumps({"records": recs}))
     except Exception as exc:  # fail open and loud: noted in the guard's output
         _RERUN_NOTE.append("house-rules: the rerun count could not be checked (%s: %s); the command was allowed."
                            % (type(exc).__name__, str(exc)[:120]))
@@ -693,10 +691,7 @@ def _rerun_take_back():
                 recs.pop(key, None)
             else:
                 recs[key] = before
-            tmp = path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump({"records": recs}, f)
-            os.replace(tmp, path)
+            _write_atomic(path, json.dumps({"records": recs}))
         except Exception as exc:  # loud: the run stays counted, and the note says so
             _RERUN_NOTE.append("house-rules: a refused run could not be taken off the rerun count (%s: %s)."
                                % (type(exc).__name__, str(exc)[:120]))

@@ -1181,6 +1181,20 @@ commit_case(
     _c6[0] == 0 and not _cap_denied(_c6[1]) and "could not read" in _c6msg and "allowed" in _c6msg,
     "systemMessage %r" % _c6msg[:160],
 )
+if os.path.exists(_cap_state):
+    os.remove(_cap_state)
+_c10 = [_cap_spawn() for _ in range(3)]
+commit_case(
+    "agentcap (A10): three launches before any helper starts - the third is denied",
+    not _cap_denied(_c10[0][1]) and not _cap_denied(_c10[1][1]) and _cap_denied(_c10[2][1]),
+    "outs %r" % [o[1][:80] for o in _c10],
+)
+_cap_start("capP")
+commit_case(
+    "agentcap (A10): a starting helper takes its launch's placeholder, so the count stays two",
+    len(json.load(open(_cap_state, encoding="utf-8"))["agents"]) == 2,
+    "state %r" % open(_cap_state, encoding="utf-8").read()[:200],
+)
 os.remove(_cap_state)
 _c7 = _cap_spawn(agent_id="sub9")
 commit_case(
