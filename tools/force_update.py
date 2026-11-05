@@ -80,7 +80,11 @@ def main():
             print("WARNING: Marketplace clone has uncommitted changes; installing them as-is.")
 
     invoke_claude(["plugin", "uninstall", args.plugin], f"Uninstalling {args.plugin}")
-    invoke_claude(["plugin", "install", args.plugin, "-y"], f"Reinstalling {args.plugin}")
+    try:
+        invoke_claude(["plugin", "install", args.plugin, "-y"], f"Reinstalling {args.plugin}")
+    except SystemExit as exc:
+        raise SystemExit(f"{exc}\nThe plugin is now UNINSTALLED, so its guard hooks are off. "
+                         f"Install it again with: claude plugin install {args.plugin} -y")
 
     cache_root = os.path.join(plugins_root, "cache", market, name)
     installed = None

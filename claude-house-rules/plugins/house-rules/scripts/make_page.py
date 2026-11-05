@@ -574,10 +574,9 @@ def visual_check(out, style):
             reasons.append("node playwright probe failed: %s" % e)
         if r is not None:
             if r.returncode == 0:
-                fd, js = tempfile.mkstemp(suffix=".js")
-                with os.fdopen(fd, "w") as f:
-                    f.write(NODE_JS)
-                runs.append(("node playwright", [node, js, out, arg, "(%s)()" % CLIP_JS]))
+                # A14: run from the folder the probe ran in, so require finds the same playwright; "make_page"
+                # fills process.argv[1], keeping the page at argv[2] as NODE_JS expects. No temp file is left behind.
+                runs.append(("node playwright", [node, "-e", NODE_JS, "make_page", out, arg, "(%s)()" % CLIP_JS]))
             else:
                 reasons.append("node has no playwright module")
     for label, cmd in runs:

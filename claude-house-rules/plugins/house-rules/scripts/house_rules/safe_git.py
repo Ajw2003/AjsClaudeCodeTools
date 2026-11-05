@@ -18,6 +18,7 @@ from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _COMMAND_VALUE_RE,
+    _COMMIT_ALL_RE,
     _GH_PREFIX,
     _GIT,
     _GIT_COMMIT_RE,
@@ -1714,7 +1715,6 @@ _CLAUDE_LINK_RE = re.compile(
     r"claude\.ai/(?:code/(?:session_|project/|artifact/)|(?:public/)?artifacts?/|share/)[\w-]",
     re.IGNORECASE,
 )
-_COMMIT_ALL_RE = re.compile(r"\scommit\b[^\n;&|]*?\s(?:-a\b|--all\b|-[A-Za-z]*a[A-Za-z]*\b)")
 _GIT_ADD_RE = re.compile(_GIT + r"add\b", re.IGNORECASE)
 CLAUDE_LINK_DENY = (
     "House rules, no published links in git: %s adds a claude.ai link (`%s`). Session, project, "

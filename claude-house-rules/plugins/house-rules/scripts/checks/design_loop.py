@@ -707,10 +707,11 @@ _o += _loop_post("Bash", {"command": "gh api -X POST repos/o/r/issues/202/labels
 _loop_cases.append(("#278: a REST label add (gh api .../issues/N/labels) is recorded against the issue in the path",
                     _loop_state().get("labels", {}).get("o/r#201") == ["in progress"]
                     and _loop_state().get("labels", {}).get("o/r#202") == ["needs review", "bug"]))
-_o = _loop_post("Bash", {"command": "gh api -X DELETE repos/o/r/issues/201/labels/in%20progress"}, "")
+_o = _loop_post("Bash", {"command": "gh api -X DELETE repos/o/r/issues/201/labels/in%20progress"},
+                {"stdout": "[]\n", "stderr": ""})  # D12: a real DELETE answers with the remaining labels, not ""
 _loop_cases.append(("#278: a REST label remove with %20 is recorded as removing `in progress`",
                     _loop_state().get("labels", {}).get("o/r#201") == []))
-_loop_post("Bash", {"command": "gh api --method DELETE repos/o/r/issues/202/labels/bug"}, "")
+_loop_post("Bash", {"command": "gh api --method DELETE repos/o/r/issues/202/labels/bug"}, {"stdout": "[]\n", "stderr": ""})  # D12: as above
 _loop_cases.append(("#278: the --method DELETE form is recorded too",
                     _loop_state().get("labels", {}).get("o/r#202") == ["needs review"]))
 _loop_post("Bash", {"command": "gh api repos/o/r/labels"}, [{"name": "bug"}])

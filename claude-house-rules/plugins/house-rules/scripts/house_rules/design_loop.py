@@ -1275,16 +1275,20 @@ def _created_issue(data):
         if not (_GH_ISSUE_CREATE_RE.search(cmd) or _GH_API_ISSUE_CREATE_RE.search(cmd)
                 or _PY_GH_ISSUE_CREATE_RE.search(cmd)):
             return None
-        label_text, how = cmd, "`gh issue create`"
+        how = "`gh issue create`"
+        if _GH_ISSUE_CREATE_RE.search(cmd):
+            labels = _gh_label_flags(cmd)["add"]  # D11: the label flags, not the title
+        else:  # adapted: the gh api and python forms (step 5) carry no --label flag, so they keep the text search
+            labels = [l for l in (ISSUES_LABEL, ISSUES_LABEL_OLD) if l.lower() in cmd.lower()]
     elif _GITHUB_ISSUE_WRITE_RE.match(tool) and str(ti.get("method", "")).lower() == "create":
-        labels = ti.get("labels") if isinstance(ti.get("labels"), list) else []
-        label_text, how = " ".join(str(l) for l in labels), "GitHub tool issue_write"
+        labels = [str(l) for l in ti["labels"]] if isinstance(ti.get("labels"), list) else []
+        how = "GitHub tool issue_write"
     else:
         return None
     resp = data.get("tool_response")
     text = resp if isinstance(resp, str) else json.dumps(resp)
     found = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
-    labelled = any(l.lower() in label_text.lower() for l in (ISSUES_LABEL, ISSUES_LABEL_OLD))
+    labelled = bool({l.lower() for l in labels} & {ISSUES_LABEL.lower(), ISSUES_LABEL_OLD.lower()})
     return found, labelled, how
 
 
@@ -1357,11 +1361,29 @@ _GH_API_LABEL_FIELD_RE = re.compile(r"(?:-f|-F|--raw-field|--field)(?:=|\s+)(?:\
 _GH_API_FAILED_RE = re.compile(r"\(HTTP [45]\d\d\)|^gh: |\"status\":\s*\"[45]\d\d\"", re.M)
 
 
-def _gh_api_label_change(cmd, text):
+def _gh_api_worked(resp):
+    """D12: proof a `gh api` labels call worked: exit code 0, or, where none is reported, the JSON list of labels
+    the endpoint answers with. A sign-in prompt or any other text is not proof."""
+    if isinstance(resp, list):
+        return True
+    if isinstance(resp, str):
+        resp = {"stdout": resp}
+    if not isinstance(resp, dict):
+        return False
+    code = resp.get("exit_code", resp.get("exitCode", resp.get("returncode")))
+    if code is not None:
+        return code == 0
+    try:
+        return isinstance(json.loads(resp.get("stdout") or ""), list)
+    except ValueError:
+        return False
+
+
+def _gh_api_label_change(cmd, text, resp=None):
     """#278: (repo, number, None, add, remove) for a succeeded `gh api repos/O/R/issues/N/labels` call (the REST
     form that works in cloud sessions), else None. Repo and number come from the path, not the response."""
     m = _GH_API_LABELS_RE.search(cmd)
-    if not m or _GH_API_FAILED_RE.search(text):
+    if not m or _GH_API_FAILED_RE.search(text) or not _gh_api_worked(resp):
         return None
     pre, repo, number, name, post = m.groups()
     method = (_GH_API_METHOD_RE.search(pre + " " + post) or [None, "POST" if "-f" in post or "-F" in post or "field" in post else "GET"])[1].upper()
@@ -1397,7 +1419,7 @@ def _label_changes(data):
     if _GH_ISSUE_CREATE_RE.search(cmd):
         flags = _gh_label_flags(cmd)
         return [(repo, int(n), flags["add"], [], []) for repo, n in urls]
-    api = _gh_api_label_change(cmd, text)
+    api = _gh_api_label_change(cmd, text, resp)
     if api:
         return [api]
     m = _GH_ISSUE_EDIT_RE.search(cmd)
