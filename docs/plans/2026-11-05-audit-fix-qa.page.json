@@ -1,0 +1,40 @@
+{
+  "title": "Audit Fixes QA",
+  "eyebrow": "QA · parent issue #476 (\"Fix the 45 findings from the 2026-11-05 audits, in six steps\") · house-rules 2.76.0",
+  "short": {
+    "lead": "All six steps of the audit fixes are built on the branch AjsAgent/audit-2026-11-05 as house-rules 2.76.0, and this page is the one QA you asked for. Every fix landed with its test. verify.py passes all 1052 checks, and tools/verify_tools.py passes all 52. A real Claude Code session, with this branch's plugin and the installed one switched off, ran 14 routine and dangerous commands in a throwaway repo, and each got the answer the plan promised. While building, my own commands were refused several times by the old installed guard, for the same reasons the audit lists. That is the friction this build removes once it ships. Nothing reaches your machines until this is merged into main and the plugin updates there.",
+    "hint": "Tap a row to see what was checked and how.",
+    "key": [["Checked by me", ""], ["Your test", "you"]],
+    "items": [
+      ["stop", "Critical holes", "Issue #477 (\"close the holes where harm happens with no prompt\"): 7 findings, plus 2 the audits missed", "", "A commit carrying $(...), backticks or -c is no longer auto-approved. /bin/rm, unlink, : > file and find -delete are checked. checkout HEAD --, switch -f, worktree remove --force and a plain git checkout . are refused. Autosave pushes only tracked changes and files written with Write or Edit, and says why when it saved nothing. The installer writes settings.json atomically. Webhook, GitHub-event and child-session messages can't approve. The builder of the next step also found that bash -c 'rm -rf docs' got past the delete guard; that is fixed. One change from the written plan: a folder under /tmp counts as temporary only when no .git sits above it, because a repo there can hold unpushed work.", "Nothing from you."],
+      ["unlock", "Routine work", "Issue #478 (\"stop the guard refusing routine commands\"): 5 findings, and the Edens Agent name", "", "agent/ branches are the agent's own. Reading or staging a script no longer counts as running it. Quoted text that can't run anything is ignored, while $(...) in a message is still refused. Unstaging is allowed. In a cloud session the hook sets the repo's git identity to Edens Agent, and every 'AJ's agent' in the plugin and tools now says Edens Agent. The labels already on GitHub keep their old descriptions.", "Nothing from you."],
+      ["folder", "Handoff and disk", "Issue #479 (\"hand off and free disk space without new approvals\"): 4 findings", "", "Your own message can say 'Continue from: <branch>' to copy that branch's stage and issues, or 'Issues for <feature>: owner/repo#N' to record issues in Plan. A relayed message can't do either. Rebuildable folders can be deleted. Issues made by loops, python3 -c and gh api are counted. Each approval note says to commit and push the stage file.", "Nothing from you."],
+      ["lock", "The lock's side doors", "Issue #480 (\"close the ways around the code lock\"): 8 findings", "", "The old .git stage file, .claude/settings.json, code under docs/ and worktree sources are locked. Shell commands that write the stage file are refused, and the file is written atomically. A question or a 'don't' doesn't approve. Only a pull request that names an issue unlocks closing it. The limit of two helpers still holds when several are launched at once. In Build, when GitHub can't be read, edits are refused, as you chose in answer 6B; the REST read the hook uses works in cloud sessions, checked by reading the labels of the critical-holes issue. .txt and .csv files are open for edits, .json and .tsv files stay locked, as you chose in answer 8A.", "Nothing from you."],
+      ["check", "Approvals and tooling", "17 findings, in issue #481 (\"make each approval move only what aj named\") and issue #482 (\"fix the tooling and remove dead code\")", "", "Re-approving keeps the feature's issues. An approval must name the current feature; choices after the name, like 1A 2B, are fine, as you chose in answer 7A. 'skip design' ends with its stage. Only the feature's own QA page counts. A merge keeps the stage on main and asks you what to do next, as you chose in answer 9A. The version check, installer, page builder, force_update.py and label recording give right answers. Dead code and tools/check_verify_inventory.py are deleted (your 10A). The hook merge was measured and not built: it would save 14 ms per shell command (the median of 20 timed runs), under the 100 ms bar.", "Nothing from you."],
+      ["flask", "Real session", "14 commands through the real plugin", "", "First session: git restore --staged ran. A commit whose message says rm -rf ran, authored as Edens Agent although the repo's identity was Claude. Reading a script with cat three times ran; rm -rf of an ignored node_modules ran; git checkout . and find src -delete were refused; rm -rf src ran, correctly, because src matched its last commit. Second session, with an unsaved edit in src/a.txt: rm -rf src and git checkout -- src/a.txt were both refused, and the edit survived.", "Nothing from you."],
+      ["hand", "Your test", "Use it on your machine", "you", "After the merge, update the plugin on your PC and start a new session in any project. Try a commit whose message mentions rm -rf, then hand off to a new session with 'Continue from: <the old branch>' and check the stage carried over.", "Run it, then pass or fail QA."]
+    ]
+  },
+  "changes": [
+    ["chg", "house-rules 2.76.0: the 45 audit findings", "Six steps, each a child issue of the audit fixes issue, merged into AjsAgent/audit-2026-11-05.",
+      ["The guard let some dangerous commands through, blocked routine ones, and the design loop had side doors.", "Each finding is fixed with a test, except H4 (merging the hooks into one), which was measured and left alone, and D10, the shell-write gap, which moved to its own issue, #484 (\"Refuse shell writes to source files outside Build\")."],
+      "The three promises hold: only your messages move a stage, code stays locked before a build plan, and nothing is deleted that can't come back."]
+  ],
+  "qa": {
+    "feature": "audit fix order",
+    "base": "origin/main",
+    "unverified": [
+      "Not yet run on your PC; the real sessions ran in this cloud container",
+      "Not confirmed (D1): whether Claude Code marks scheduled-task prompts with any of the markers that identify relayed messages. No real message from Claude Code was inspected for them",
+      "The hook merge timing (H4) was not measured inside Claude Code itself or on your machine"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "The audit fixes are built as house-rules 2.76.0 and wait for your one QA.",
+    "changing": "The guard, design loop, autosave, installer and tools, their tests, and the docs.",
+    "blocking": "Your QA of the audit fixes.",
+    "next": "On a pass I open a pull request into main. On a fail I fix it on this branch.",
+    "todo": ["Run the test in the Your test row, or ask me to open the pull request first so you can.", "Reply \"QA passed: audit fix order\", or say what failed."]
+  }
+}
