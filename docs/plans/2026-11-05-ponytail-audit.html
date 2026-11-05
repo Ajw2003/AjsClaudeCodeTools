@@ -358,7 +358,7 @@ const PAGE = {
       "3 and 4. Delete and discard forms the guard misses",
       "safe_git.py:133 and :143.",
       [
-        "/bin/rm -rf, find -delete, unlink, ': > file', checkout HEAD -- FILE, checkout -f and switch -f all got no decision.",
+        "/bin/rm -rf, find -delete, unlink, ': > file', checkout HEAD -- FILE, checkout HEAD FILE, checkout -f and switch -f all got no decision.",
         "Each form is refused the way rm -rf and checkout -- already are, keeping the saved-work exemption."
       ],
       "Proved: each command was fed to the real guard.",
@@ -499,8 +499,8 @@ const PAGE = {
   ],
   "wrapup": {
     "summary": "Twenty findings across the whole repo, six of them holes in the guard and the issue lock, each proved by a run except four marked by reading, plus about 380 lines that can go.",
-    "changing": "Nothing yet. The report is docs/audits/2026-11-05-ponytail-audit-full.md, committed on the local branch AjsAgent/audit-2026-11-05.",
-    "blocking": "Your two picks, and whether I may push AjsAgent/audit-2026-11-05: this session is only allowed to push agent/optimistic-planck-1h64c9, which the guard refuses to commit to (finding 5).",
+    "changing": "Nothing yet. The report is docs/audits/2026-11-05-ponytail-audit-full.md, committed and pushed on the branch AjsAgent/audit-2026-11-05.",
+    "blocking": "Your two picks.",
     "next": "After approval: one parent issue with a child per finding in scope, then each fix with its test, then the four test suites run twice before handing over for QA.",
     "todo": [
       "Pick your two answers under Choices.",
