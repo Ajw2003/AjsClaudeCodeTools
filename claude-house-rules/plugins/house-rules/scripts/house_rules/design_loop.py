@@ -86,7 +86,7 @@ ISSUE_NOTE = (
     "create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels "
     "-f \"labels[]=in progress\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
-    "(docs/, .md files and .claude/ stay open). Do not close any issue yourself: closing always "
+    "(docs/ pages, .claude/ files other than settings, and .md, .txt and .csv files stay open). Do not close any issue yourself: closing always "
     "asks the user."
 )
 
@@ -162,7 +162,7 @@ def _issues_plan_note(payload):
 # D4: under docs/ only code is locked; H5: notes and data files are open everywhere, like .md.
 _CODE_EXTS = (".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".sh", ".bash", ".ps1", ".rb", ".bat",
               ".cmd", ".cs", ".go", ".rs", ".java", ".c", ".cpp", ".h")
-_OPEN_EXTS = (".md", ".txt", ".csv", ".tsv")
+_OPEN_EXTS = (".md", ".txt", ".csv")  # aj chose 8A: notes and csv data open; .json stays locked
 
 
 def _gated_edit(payload, who):
@@ -190,7 +190,7 @@ def _gated_edit(payload, who):
 
 def _is_source_path(fp, cwd, top):
     """The commitgate test: is `fp` a source file of the checkout at `top`? False for a path outside it,
-    any .md, .txt, .csv or .tsv file, the tracker files, and docs/ or .claude/ files that are not code.
+    any .md, .txt or .csv file, the tracker files, and docs/ or .claude/ files that are not code.
     .claude/settings*.json is locked (it can switch the loop off), and a path inside
     .claude/worktrees/<name>/ is judged as if from that worktree, which is a whole checkout (D4, H5)."""
     if not os.path.isabs(fp):
