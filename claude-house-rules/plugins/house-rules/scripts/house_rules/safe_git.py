@@ -369,7 +369,8 @@ def _inert_text_stripped(cmd, messages=True):
     (when `messages`) the value of a message flag such as -m or --body. A double-quoted string holding $, a
     backtick or a backslash is kept, because $(...) inside it runs; after a backslash the rest is kept whole.
     A quoted word with no space is kept, because the shell passes '--force' as --force."""
-    cmd = _HEREDOC_CAT_RE.sub(lambda m: m.group(1) + m.group(5), cmd)
+    if messages:  # the issue check (messages=False) reads heredoc bodies, which carry a PR's Refs line
+        cmd = _HEREDOC_CAT_RE.sub(lambda m: m.group(1) + m.group(5), cmd)
     out, words, i = [], [], 0
     while i < len(cmd):
         c = cmd[i]
@@ -1012,9 +1013,10 @@ def _payload_toplevel(payload):
     return cwd
 
 
-_DELETE_CMD_RE = re.compile(r"(^|[\s;&|(]|/bin/)(rm|unlink|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
+# #478: a quote before the word counts too, so bash -c 'rm -rf docs' is read as the delete it runs.
+_DELETE_CMD_RE = re.compile(r"(^|[\s;&|('\"]|/bin/)(rm|unlink|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
 _RECURSIVE_DELETE_RE = re.compile(
-    r"(^|[\s;&|(]|/bin/)rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
+    r"(^|[\s;&|('\"]|/bin/)rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
     r"|rmdir\s+/s|Remove-Item\b.*-Recurse|(del|erase)\s+(?:\S+\s+)*?/s(\s|$)", re.IGNORECASE)
 
 # #479 (U4): folders an install or a build makes again. Deleted only when git ignores them, so a folder
