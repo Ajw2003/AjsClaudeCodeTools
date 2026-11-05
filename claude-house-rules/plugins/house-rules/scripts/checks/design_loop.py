@@ -621,6 +621,13 @@ _loop_cases = []
 _loop_cases.append(("a fresh project refuses a code edit", _loop_edit("app.py") == "deny"))
 _loop_cases.append(("docs/, .claude/ and .md files stay open",
                     _loop_edit("docs/page.html") == _loop_edit(".claude/x.json") == _loop_edit("notes.md") == "allow"))
+_loop_cases.append(("D4: .claude/settings.json, a worktree's source file and code under docs/ are locked",
+                    _loop_edit(".claude/settings.json") == _loop_edit(".claude/settings.local.json")
+                    == _loop_edit(".claude/worktrees/agent-1/src/a.py") == _loop_edit("docs/tool.py") == "deny"))
+_loop_cases.append(("D4/H5: pages, .claude/ state, a worktree's .md and plain data files stay open",
+                    _loop_edit("docs/plans/x.page.json") == _loop_edit(".claude/x.json")
+                    == _loop_edit(".claude/worktrees/agent-1/README.md") == _loop_edit("notes.txt")
+                    == _loop_edit("data.csv") == "allow"))
 _n = _loop_say("looks good, approved")
 _loop_cases.append(('a bare "approved" moves nothing and asks which', "names no stage and feature" in _n
                     and _loop_stage() == "design (no file)"))
@@ -907,6 +914,43 @@ for _t, _ok in (
         ("the next write after a legacy read lands in .claude/", os.path.isfile(_leg_new)
          and json.load(open(_leg_new, encoding="utf-8")).get("feature") == "old")):
     _loop_cases.append((_t, _ok))
+_d3 = tempfile.mkdtemp(prefix="house-rules-d3-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _d3], check=True)
+_d3_w = _wt_gate("Write", {"file_path": os.path.join(_d3, ".git", "house-rules-loop.json"), "content": "{}"}, _d3)[0]
+_d3_sh = _wt_bash("echo '{\"stage\": \"build\"}' > .git/house-rules-loop.json", _d3)[0]
+_loop_cases.append(("D3: a Write or a shell redirect into the old .git stage file is refused",
+                    _d3_w == "deny" and _d3_sh == "deny"))
+_a9 = [_wt_bash(c)[0] for c in ("cp /tmp/x.json .claude/house-rules-loop.json",
+                                "mv x .claude/house-rules-loop.json",
+                                "git checkout HEAD~3 -- .claude/house-rules-loop.json")]
+_a9_ok = [_wt_bash(c)[0] for c in ("cat .claude/house-rules-loop.json",
+                                   "git add .claude/house-rules-loop.json && git commit -m x",
+                                   "python3 -c \"import json; print(json.load(open('.claude/house-rules-loop.json')))\"")]
+_loop_cases.append(("A9: cp, mv and git checkout -- onto the stage file are refused; reads and git add/commit are not",
+                    _a9 == ["deny"] * 3 and "deny" not in _a9_ok))
+# D9 (aj chose 6B): in Build, an unreadable GitHub refuses the source edit even when the stage file records in progress.
+_d9 = tempfile.mkdtemp(prefix="house-rules-d9-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _d9], check=True)
+os.makedirs(os.path.join(_d9, ".claude"))
+json.dump({"feature": "old", "stage": "build", "skip": False, "approvals": [],
+           "issues": [{"repo": "o/r", "number": 1, "labelled": True}],
+           "labels": {"o/r#1": ["in progress"]}},
+          open(os.path.join(_d9, ".claude", "house-rules-loop.json"), "w", encoding="utf-8"))
+_d9_good = os.path.join(_FIXTURE_ROOT, "d9-labels.json")
+json.dump({"o/r#1": ["Feature", "in progress"]}, open(_d9_good, "w", encoding="utf-8"))
+
+
+def _d9_edit(labels_file):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "d9", "cwd": _d9,
+         "tool_input": {"file_path": os.path.join(_d9, "app.py")}}
+    return run_hook("commitgate", json.dumps(p), env=dict(_loop_env, HOUSE_RULES_LOOP_LABELS_FILE=labels_file))[1]
+
+
+_d9_bad = _d9_edit(os.path.join(_FIXTURE_ROOT, "no-such-labels.json"))
+_d9_ok = _d9_edit(_d9_good)
+_loop_cases.append(("D9: in Build a source edit is refused when GitHub can't be read, whatever the stage file recorded; a good read passes",
+                    '"deny"' in _d9_bad and "could not read GitHub" in _d9_bad and "once gh can read" in _d9_bad
+                    and '"deny"' not in _d9_ok))
 # -- #266: the QA edit that got through, and a feature name that keeps "QA stage" ---------------
 _qa_state = {"feature": "f", "stage": "build", "skip": False, "approvals": [],
              "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)],
@@ -1071,7 +1115,9 @@ _cl_env = dict(_loop_env, HOUSE_RULES_LOOP="on")
 def _cl_set(state):
     os.makedirs(os.path.join(_cl_dir, ".claude"), exist_ok=True)
     with open(_cl_file, "w", encoding="utf-8") as f:
-        json.dump(dict({"skip": False, "approvals": [], "issues": []}, **state), f)
+        json.dump(dict({"skip": False, "approvals": [], "issues": [],
+                        "pr_refs": {"o/r#12": [["o/r", 7]], "o/r#14": [["o/r", 7]], "o/r#16": [["o/r", 7]],
+                                    "ajw2003/ajsclaudecodetools#373": [["ajw2003/ajsclaudecodetools", 7]]}}, **state), f)
     os.makedirs(os.path.join(_cl_dir, "docs", "6-decisions"), exist_ok=True)
     with open(os.path.join(_cl_dir, "docs", "6-decisions", "Decisions.md"), "a", encoding="utf-8") as f:
         f.write("an entry written at %r\n" % time.time())
@@ -1096,7 +1142,7 @@ def _cl_merge(tool, tool_input, response, env=None):
 
 
 _cl_issues = [{"repo": "o/r", "number": 7, "labelled": True}, {"repo": "o/r", "number": 8, "labelled": True}]
-_cl_open = {"feature": "f", "issues": [], "qa_at": 1, "qa": "QA passed: f", "merged_pr": None}
+_cl_open = {"feature": "f", "issues": [{"repo": "o/r", "number": 7}], "qa_at": 1, "qa": "QA passed: f", "merged_pr": None}
 _cl_cases = []
 _cl_set({"feature": "alpha", "stage": "qa", "issues": _cl_issues})
 _cl_say("QA failed: alpha")
@@ -1152,6 +1198,17 @@ _cl_merge("mcp__github__merge_pull_request", _w_ti, _w_merge)
 _m = _cl_state()["closable"][0]["merged_pr"] or {}
 _cl_cases.append(("a wrapped GitHub tool merge reply stamps a waiting closable entry",
                   _m.get("repo") == "Ajw2003/AjsClaudeCodeTools" and _m.get("number") == 373))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)], "pr_refs": {"other/repo#99": [["other/repo", 1]]}})
+_o = _cl_merge("mcp__github__merge_pull_request", {"owner": "other", "repo": "repo", "pullNumber": 99}, {"merged": True})
+_cl_cases.append(("A2: a merge whose pull request links none of the QA-passed issues stamps nothing, and says so",
+                  _cl_state()["closable"][0]["merged_pr"] is None and "stamped no closable record" in _o))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_bodies = os.path.join(_FIXTURE_ROOT, "pr-bodies.json")
+json.dump({"o/r#21": "Refs #7"}, open(_bodies, "w", encoding="utf-8"))
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 21}, {"merged": True},
+          env=dict(_cl_env, HOUSE_RULES_LOOP_PR_BODIES_FILE=_bodies))
+_cl_cases.append(("A2: a pull request opened elsewhere is read once, and its Refs #7 stamps #7's record",
+                  (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 21))
 for _t, _ok in _cl_cases:
     report("PASS" if _ok else "FAIL", "closable record: " + _t)
 
@@ -1407,6 +1464,15 @@ def _ma_say(prompt):
     return note, state
 
 
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("What would happen if I said Design approved: login page? Don't do it yet.")
+_ma_set({"feature": "x", "stage": "plan"})
+_n2, _s2 = _ma_say("Please don't skip design on this one.")
+_ma_set({"feature": "", "stage": "design"})
+_n3, _s3 = _ma_say("<message>Thanks. Design approved: login page 1A</message>")
+report("PASS" if (_s["stage"] == "design" and not _s2.get("skip") and _s3["stage"] == "plan"
+                  and _s3.get("feature") == "login page") else "FAIL",
+       "design loop (D2): a question or a don't moves nothing; an approval after a sentence or a tag still counts")
 _ma_set({"feature": "Label setup", "stage": "design"})
 _n, _s = _ma_say("Design approved: importer.  Build plan approved: Importer")
 report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "importer"
