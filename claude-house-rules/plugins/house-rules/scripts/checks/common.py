@@ -408,6 +408,7 @@ def _commit_repo(branch, committed=(), dirty=()):
     git = ["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", d]
     subprocess.run(git + ["init", "-q", "-b", branch], check=True)
     for rel in committed:
+        os.makedirs(os.path.dirname(os.path.join(d, rel)), exist_ok=True)
         with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
             f.write("original\n")
     subprocess.run(git + ["add", "-A"], check=True)

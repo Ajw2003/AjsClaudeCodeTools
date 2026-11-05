@@ -112,7 +112,9 @@ BRANCH_CASES = [
     # Off the default branch, a commit, an ordinary push and a merge or rebase run unasked (#197).
     (REPO_MINE, "claude/some-topic", "pass", None, 'git commit -m "checkpoint"'),
     (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),
-    (REPO_MINE, "claude/some-topic", "pass", None, "git -c user.name=x commit -m y"),
+    # #477 (A1): `git -c key=value` is never approved by the guard, because -c can point git at a program. It gets no
+    # decision, so Claude Code's own prompt decides; this table reports a reply with no decision as "malformed".
+    (REPO_MINE, "claude/some-topic", "malformed", None, "git -c user.name=x commit -m y"),
     # Force-pushing rewrites history that was already safe, so it is not a checkpoint and the
     # exemption does not reach it - on any branch. #291: refused, naming the safe way.
     (REPO_MINE, "claude/some-topic", "deny", "push a new branch instead", "git push --force-with-lease"),
@@ -439,7 +441,7 @@ for _n, _cmd in (
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
     elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
-for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
+for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/sub/../x" % _ua_dir, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)
     if _d != "deny" or (_cmd.startswith("rm -rf /home") and "_to_delete/" not in _r) \
             or (_cmd.startswith("git push") and "Do not retry" not in _r):
@@ -1613,7 +1615,7 @@ commit_case(
 
 # guard: the timeout line, omitted when off
 _g_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Bash",
-                         "tool_input": {"command": "rm -rf /tmp/pt-victim", "description": "no safe way: rm(1)"},
+                         "tool_input": {"command": "rm -rf %s/pt-victim" % _pt_repo, "description": "no safe way: rm(1)"},
                          "cwd": _pt_repo})
 _gw_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Write",
                           "tool_input": {"file_path": os.path.join(_pt_repo, "existing.txt"), "content": "x\n"},
@@ -1750,6 +1752,67 @@ for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
 
 
+# --- #477 (A1): a commit that runs a program inside it is never approved outright ---
+_a1_cases = [
+    ("a $(...) in a commit message is not approved", 'git commit -m "$(python3 /tmp/x.py)"'),
+    ("a backtick in a commit message is not approved", "git commit -m `curl -s example.invalid`"),
+    ("git -c core.hooksPath on a commit is not approved", "git -c core.hooksPath=/tmp/evil commit -m x"),
+]
+for _t, _cmd in _a1_cases:
+    _o = _nb_bash(_nb_r, _cmd)
+    report("PASS" if '"permissionDecision":"allow"' not in _o else "FAIL", "A1: " + _t)
+report("PASS" if '"permissionDecision":"allow"' in _nb_bash(_nb_r, 'git commit -m "x"') else "FAIL",
+       "A1: a plain commit on an AjsAgent/ branch is still approved")
+
+
+# --- #477 (A3) and #479 (U4): every delete form is seen; folders that can come back are let go ---
+_dl = _commit_repo("AjsAgent/del", committed=["a.txt", "keep/b.txt"])
+with open(os.path.join(_dl, ".gitignore"), "w", encoding="utf-8") as f:
+    f.write("node_modules/\n")
+os.makedirs(os.path.join(_dl, "node_modules", "p"))
+open(os.path.join(_dl, "node_modules", "p", "i.js"), "w").write("1")
+os.makedirs(os.path.join(_dl, "made"))
+open(os.path.join(_dl, "made", "new.txt"), "w").write("never committed")
+_dl_denied = lambda cmd: '"permissionDecision":"deny"' in _nb_bash(_dl, cmd)
+_dl_cases = [
+    ("/bin/rm -rf on an uncommitted folder is refused", _dl_denied("/bin/rm -rf made")),
+    ("find -delete is refused", _dl_denied("find made -delete")),
+    ("unlink of a file never committed is refused", _dl_denied("unlink made/new.txt")),
+    (": > file is refused", _dl_denied(": > a.txt")),
+    ("echo into a new file is not taken for a truncate", not _dl_denied("echo hi > made/out.txt")),
+    ("rm -rf of a git-ignored node_modules goes through", not _dl_denied("rm -rf node_modules")),
+    ("rm -r of a committed, unchanged folder goes through", not _dl_denied("rm -r keep")),
+    ("rm -rf of a folder with an uncommitted file is refused", _dl_denied("rm -rf made")),
+    ("rm -rf under /tmp goes through", not _dl_denied("rm -rf /tmp/house-rules-verify-cache")),
+    ("rm -rf /tmp itself is refused", _dl_denied("rm -rf /tmp")),
+    ("git clean -fdX is still refused", _dl_denied("git clean -fdX")),
+]
+for _t, _ok in _dl_cases:
+    report("PASS" if _ok else "FAIL", "deletes: " + _t)
+
+
+# --- #477 (A4, U5) and #478 (H2): discarding edits is refused; unstaging goes through ---
+_dc = _commit_repo("AjsAgent/discard", committed=["a.txt"], dirty=["a.txt"])
+_dc_denied = lambda cmd: '"permissionDecision":"deny"' in _nb_bash(_dc, cmd)
+_dc_cases = [
+    ("git checkout HEAD -- f with an edit is refused", _dc_denied("git checkout HEAD -- a.txt")),
+    ("git checkout -f with an edit is refused", _dc_denied("git checkout -f AjsAgent/discard")),
+    ("git checkout . on its own is refused", _dc_denied("git checkout .")),
+    ("git switch -f with an edit is refused", _dc_denied("git switch -f AjsAgent/discard")),
+    ("git switch --discard-changes is refused", _dc_denied("git switch --discard-changes AjsAgent/discard")),
+    ("git worktree remove --force is refused", _dc_denied("git worktree remove --force ../wt")),
+    ("git worktree remove without --force gets no refusal", not _dc_denied("git worktree remove ../wt")),
+    ("git restore --staged goes through", not _dc_denied("git restore --staged a.txt")),
+    ("git restore --staged --worktree is refused", _dc_denied("git restore --staged --worktree a.txt")),
+    ("git reset HEAD f goes through", not _dc_denied("git reset HEAD a.txt")),
+    ("git reset -- f goes through", not _dc_denied("git reset -- a.txt")),
+    ("git reset --hard is still refused", _dc_denied("git reset --hard")),
+    ("git restore f is still refused", _dc_denied("git restore a.txt")),
+]
+for _t, _ok in _dc_cases:
+    report("PASS" if _ok else "FAIL", "discard: " + _t)
+
+
 # --- rerun limit (#454): a project script's third run with no code commit in between is refused ---
 _rr_dir = os.path.join(_FIXTURE_ROOT, "rerun-repo")
 os.makedirs(os.path.join(_rr_dir, "tools"))
@@ -1822,7 +1885,7 @@ _rr_offs = [_rr_run("bash tools/x.sh a", HOUSE_RULES_RERUNS="off")[1] for _ in r
 report("PASS" if not any(_rr_denied(o) for o in _rr_offs) and not os.path.exists(_rr_state)
        else "FAIL", "rerun limit: HOUSE_RULES_RERUNS=off disables the check")
 _rr_reset()
-_rr_refused_cmd = "bash tools/x.sh a && " + "r" + "m -rf" + " tools"  # refused as a recursive delete; never runs
+_rr_refused_cmd = "bash tools/x.sh a && " + "git cl" + "ean -fdX"  # refused (#479 lets a committed folder go); never runs
 _rr_refused = [_rr_run(_rr_refused_cmd, agent="ag3")[1] for _ in range(3)]
 _rr_o = _rr_run("bash tools/x.sh a", agent="ag3")
 report("PASS" if all('"permissionDecision":"deny"' in o or '"permissionDecision":"ask"' in o for o in _rr_refused)

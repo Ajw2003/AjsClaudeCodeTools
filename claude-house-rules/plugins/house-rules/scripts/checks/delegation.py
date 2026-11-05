@@ -293,6 +293,22 @@ commit_case(
     _n > 0 and bool(_as_ref(_dq, "worktree-agent-fast")),
     "%d spawns, autosave ref %r" % (_n, _as_ref(_dq, "worktree-agent-fast")[:9]),
 )
+# --- #477 (A11): autosave saves the helper's written files, never other untracked files ---
+_as = _commit_repo("worktree-agent-a11", committed=["a.txt"])
+open(os.path.join(_as, "secret.token"), "w").write("ghp_not_a_real_token")
+open(os.path.join(_as, "made.py"), "w").write("print(1)\n")
+_as_pl = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": "a11", "cwd": _as,
+          "tool_input": {"file_path": os.path.join(_as, "made.py")}, "tool_response": {}}
+run_hook("autosave", json.dumps(_as_pl), env=_project_env(_as, HOUSE_RULES_AUTOSAVE="on"))
+_as_refs = subprocess.run(["git", "-C", _as, "for-each-ref", "--format=%(refname)", "refs/"],
+                         capture_output=True, text=True).stdout.split()
+_as_saved = [r for r in _as_refs if "autosave" in r]
+_as_tree = subprocess.run(["git", "-C", _as, "ls-tree", "-r", "--name-only", _as_saved[0]],
+                          capture_output=True, text=True).stdout.split() if _as_saved else []
+report("PASS" if "made.py" in _as_tree and "secret.token" not in _as_tree else "FAIL",
+       "A11: the autosave snapshot holds the written file and not the untracked token")
+
+
 _dq, _ = _as_repo("worktree-agent-det")
 _as_git(_dq, "checkout", "-q", "--detach")
 _pq = _as_write(_dq, "new.py")
@@ -351,11 +367,17 @@ commit_case(
     "body %r, credit found %r" % (_wip_body[-120:], _wip_credit),
 )
 
+def _as_saw_write(d, path):
+    """Tell autosave a file tool wrote this file, as the PostToolUse hook does for a real Write (#477)."""
+    run_hook("autosave", _as_payload("PostToolUse", "Write", path, d), env=_as_env())
+
+
 _dg, _ = _as_repo("worktree-agent-gate")
-_as_write(_dg, "a.py")
+_as_saw_write(_dg, _as_write(_dg, "a.py"))
 _pg = _as_write(_dg, "b.py")
+_as_saw_write(_dg, _pg)
 _, o2, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
-_as_write(_dg, "c.py")
+_as_saw_write(_dg, _as_write(_dg, "c.py"))
 _, o3, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
 commit_case(
     "commitgate: 2 uncommitted files pass; 3 block the edit, naming the files, with nothing committed",
@@ -407,6 +429,7 @@ commit_case(
 )
 _dr, _ = _as_repo("worktree-agent-retry")
 _pr = _as_write(_dr, "r.py")
+_as_saw_write(_dr, _pr)
 out = _subagent_stop([_pr], active=True)
 _dc, _ = _as_repo("claude/retry")
 _pc = _as_write(_dc, "r.py")
@@ -428,7 +451,9 @@ _as_git(_dmain, "worktree", "add", "-q", "-b", "worktree-agent-new", _sweep_new)
 _as_git(_dmain, "worktree", "add", "-q", "-b", "claude/sweep", _sweep_mine)
 _long_ago = time.time() - 20 * 60
 for _wt in (_sweep_old, _sweep_mine):
-    os.utime(_as_write(_wt, "left.py"), (_long_ago, _long_ago))
+    _left = _as_write(_wt, "left.py")
+    _as_saw_write(_wt, _left)
+    os.utime(_left, (_long_ago, _long_ago))
 _as_write(_sweep_new, "live.py")
 _, osw, _ = run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "hi",
                                                   "cwd": _dmain, "session_id": "s1"}),
