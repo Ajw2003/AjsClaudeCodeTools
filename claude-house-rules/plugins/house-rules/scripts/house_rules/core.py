@@ -2310,7 +2310,8 @@ def _waiting_session_note(payload):
         return ""
 
 
-_GH_PREFIX = r"(?:^|[;&|(\n`]|\$\()\s*gh\s+"
+# #479 (U2b): `do gh`, `then gh`, `else gh` and `xargs gh` run gh too (a one-line for or if).
+_GH_PREFIX = r"(?:^|[;&|(\n`]|\$\(|\b(?:do|then|else|xargs))\s*gh\s+"
 
 
 _PR_BODY_FILE_RE = re.compile(r"(?:--body-file|(?<![\w-])-F)(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")

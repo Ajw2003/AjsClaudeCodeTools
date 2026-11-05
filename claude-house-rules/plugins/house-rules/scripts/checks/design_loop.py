@@ -634,6 +634,9 @@ _loop_log("design decisions for blockers")
 _n = _loop_say("Design approved: blockers")
 _loop_cases.append(('"Design approved: <feature>" moves to Plan, code still closed',
                     _loop_stage() == "plan" and "now Plan" in _n and _loop_edit("app.py") == "deny"))
+# #479 (U2): the approval note tells the model to commit and save the stage file
+_loop_cases.append(("an approval note tells the model to commit and push the stage file",
+                    "git add .claude/house-rules-loop.json" in _n and "git push" in _n))
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("a build-plan approval with no feature issues moves nothing",
                     "labelled issue(s)" in _n and _loop_stage() == "plan"))
@@ -985,6 +988,74 @@ _d1_before = _loop_stage()
 _n = _loop_say(_d1[0])
 report("PASS" if _loop_stage() == _d1_before and "moved nothing" in _n else "FAIL",
        "D1: a GitHub comment event carrying an approval moves nothing")
+
+
+# --- #479 (U2b): issues made in a one-line loop, through gh api or inline Python are counted ---
+from house_rules import design_loop as _u2b_dl
+_u2b_resp = {"stdout": "https://github.com/o/r/issues/1\nhttps://github.com/o/r/issues/2"}
+for _cmd in ('for t in a b; do gh issue create --title "$t" --label "AjsAgent created this"; done',
+             "gh api repos/o/r/issues -f title=x -f 'labels[]=AjsAgent created this'",
+             "python3 -c \"import subprocess; subprocess.run(['gh', 'issue', 'create', '--title', 'x'])\""):
+    _got = _u2b_dl._created_issue({"tool_name": "Bash", "tool_input": {"command": _cmd}, "tool_response": _u2b_resp})
+    report("PASS" if _got and len(_got[0]) == 2 else "FAIL", "U2b: counted: " + _cmd[:50])
+_got = _u2b_dl._created_issue({"tool_name": "Bash", "tool_input": {"command": "gh api repos/o/r/issues/5"},
+                               "tool_response": _u2b_resp})
+report("PASS" if _got is None else "FAIL", "U2b: reading an issue with gh api is not counted as creating one")
+
+# --- #479 (U1): "Continue from:" and "Issues for:" work only from aj, and never invent a stage ---
+# (own fixture repo: the _loop_dir above has no remote and is left in odd states by the cases before)
+_u1_remote = tempfile.mkdtemp(prefix="house-rules-u1-remote-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", "--bare", _u1_remote], check=True)
+_u1_src = tempfile.mkdtemp(prefix="house-rules-u1-src-", dir=_FIXTURE_ROOT)
+_u1_old = {"feature": "login", "stage": "build", "skip": False, "approvals": [],
+           "issues": [{"repo": "o/r", "number": 5, "labelled": True}]}
+_u1_id = ["-c", "user.name=v", "-c", "user.email=v@x.invalid"]
+subprocess.run(["git", "init", "-q", "-b", "AjsAgent/old"], cwd=_u1_src, check=True)
+os.makedirs(os.path.join(_u1_src, ".claude"))
+with open(os.path.join(_u1_src, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+    json.dump(_u1_old, f)
+for _a in (["add", "-A"], _u1_id + ["commit", "-qm", "stage"], ["push", "-q", _u1_remote, "AjsAgent/old"]):
+    subprocess.run(["git"] + _a, cwd=_u1_src, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+_u1_dir = tempfile.mkdtemp(prefix="house-rules-u1-", dir=_FIXTURE_ROOT)
+for _a in (["init", "-q"], ["remote", "add", "origin", _u1_remote]):
+    subprocess.run(["git"] + _a, cwd=_u1_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def _u1_say(prompt):
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "u1", "cwd": _u1_dir, "prompt": prompt}
+    _, out, _ = run_hook("scope", json.dumps(p), env=_loop_env)
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _u1_state():
+    try:
+        return json.load(open(os.path.join(_u1_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+_n = _u1_say("<task-notification>Continue from: AjsAgent/old</task-notification>")
+report("PASS" if _u1_state().get("feature") != "login" else "FAIL", "U1: a relayed Continue from moves nothing")
+_n = _u1_say("Continue from: AjsAgent/old")
+report("PASS" if _u1_state().get("feature") == "login" and _u1_state().get("stage") == "build" else "FAIL",
+       "U1: aj's Continue from copies the other branch's stage and issues")
+_n = _u1_say("Continue from: AjsAgent/no-such-branch")
+report("PASS" if "nothing moved" in _n and _u1_state().get("stage") == "build" else "FAIL",
+       "U1: a branch that can't be fetched moves nothing")
+_n = _u1_say("Issues for login: #6 #7")
+report("PASS" if "nothing was recorded" in _n else "FAIL", "U1: Issues for is refused outside Plan")
+_u1_plan = dict(_u1_state(), stage="plan", issues=[])
+with open(os.path.join(_u1_dir, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+    json.dump(_u1_plan, f)
+_n = _u1_say("Issues for login: o/r#6 o/r#7")  # the fixture origin is a folder, so the repo is named
+_u1_nums = sorted(i.get("number") for i in _u1_state().get("issues", []))
+report("PASS" if _u1_nums == [6, 7] else "FAIL", "U1: aj's Issues for records the named issues in Plan (got %r)" % _u1_nums)
+_n = _u1_say("Issues for payments: o/r#8")
+_u1_nums = sorted(i.get("number") for i in _u1_state().get("issues", []))
+report("PASS" if _u1_nums == [6, 7] else "FAIL", "U1: Issues for a different feature records nothing (got %r)" % _u1_nums)
 
 
 for _t, _ok in _loop_cases:

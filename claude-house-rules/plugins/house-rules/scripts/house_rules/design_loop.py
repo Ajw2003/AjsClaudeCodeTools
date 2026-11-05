@@ -26,6 +26,7 @@ from house_rules.core import (  # noqa: F401
     _PROMPT_VALUE_RE,
     _PR_BODY_FILE_RE,
     _SESSION_ID_RE,
+    _ag,  # #479 (U1): adaptation - the plan's code calls _ag but design_loop.py didn't import it
     _apply_assigns,
     _attribution_enabled,
     _clear_writing_enabled,
@@ -682,9 +683,78 @@ def _loop_sweep_apply(state, text):
 
 
 def _loop_apply(state, text, top):
+    carry = _loop_continue_apply(state, text, top)  # #479: first, so "Continue from: x. Build plan approved: y" works
     sweep_note = _loop_sweep_apply(state, text)
+    issues_note = _loop_issues_for_apply(state, text, top)
     note = _loop_apply_stage(state, text, top)
-    return " ".join(n for n in (sweep_note, note) if n)
+    return " ".join(n for n in (carry, sweep_note, issues_note, note) if n)
+
+
+_LOOP_CONTINUE_RE = re.compile(r"\bcontinue\s+from\s*:\s*([\w./-]+)", re.IGNORECASE)
+
+
+_LOOP_ISSUES_FOR_RE = re.compile(
+    r"\bissues\s+for\s+([^:\n]+?)\s*:\s*((?:[\w.-]+/[\w.-]+)?#\d+(?:[\s,]+(?:and\s+)?(?:[\w.-]+/[\w.-]+)?#\d+)*)",
+    re.IGNORECASE)
+
+
+def _loop_continue_apply(state, text, top):
+    """#479 (U1): "Continue from: <branch>" in aj's own message copies that branch's stage file from origin, so
+    a handoff keeps the approvals aj already gave. It never invents a stage: a branch with no valid stage file
+    moves nothing. Returns a note, or "" when the phrase is absent."""
+    m = _LOOP_CONTINUE_RE.search(text)
+    if not m:
+        return ""
+    branch = m.group(1).rstrip(".,")
+    if branch.startswith("-") or ".." in branch:
+        return 'Design loop: aj wrote "Continue from: %s", which is not a branch name, so nothing moved.' % branch
+    rc, _o, err = _ag(top, ["fetch", "--quiet", "origin", branch], check=False, timeout=20)
+    if rc != 0:
+        return ('Design loop: aj wrote "Continue from: %s", but `git fetch origin %s` failed (%s), so nothing '
+                "moved." % (branch, branch, err[:120] or "exit %d" % rc))
+    rc, out, _e = _ag(top, ["show", "FETCH_HEAD:.claude/" + LOOP_FILE], check=False)
+    try:
+        other = json.loads(out) if rc == 0 else None
+    except ValueError:
+        other = None
+    if not isinstance(other, dict) or other.get("stage") not in LOOP_STAGE_NAMES:
+        return ('Design loop: aj wrote "Continue from: %s", but that branch has no readable stage file '
+                "(.claude/%s), so nothing moved." % (branch, LOOP_FILE))
+    state.clear()
+    state.update(other)
+    state.setdefault("approvals", []).append({"stage": "Continue from", "name": branch, "at": int(time.time())})
+    return ('Design loop: aj wrote "Continue from: %s". This branch now has that branch\'s stage: "%s" in %s, with '
+            "%d recorded issue(s). Commit and push .claude/%s now, so the next session has it too."
+            % (branch, state.get("feature") or "(none)", LOOP_STAGE_NAMES[state["stage"]],
+               len(state.get("issues") or []), LOOP_FILE))
+
+
+def _loop_issues_for_apply(state, text, top):
+    """#479 (U1, U2b): "Issues for <feature>: #N #M" in aj's own message records issues that already exist for
+    the feature in Plan - made by a script, in another session, or any way the hook didn't see. The feature
+    must be the one in Plan. "Build plan approved" still checks each issue's labels on GitHub."""
+    m = _LOOP_ISSUES_FOR_RE.search(text)
+    if not m:
+        return ""
+    name, feature = _loop_name(m.group(1)), state.get("feature") or ""
+    if state["stage"] != "plan" or name.lower() not in {feature.lower(), _loop_name(feature).lower()}:
+        return ('Design loop: aj wrote "Issues for %s:", but %s, so nothing was recorded. Issues attach only to '
+                "the feature being planned." % (name, 'the feature in Plan is "%s"' % feature
+                                                 if state["stage"] == "plan" else "no feature is in Plan"))
+    own, _problem = _origin_slug(top)
+    have = {(str(i.get("repo")).lower(), i.get("number")) for i in state.get("issues", []) if isinstance(i, dict)}
+    added = []
+    for repo, n in re.findall(r"(?:([\w.-]+/[\w.-]+))?#(\d+)", m.group(2)):
+        repo = repo or own
+        if not repo:
+            return ('Design loop: aj wrote "Issues for %s:", but this checkout has no GitHub origin to say which '
+                    "repo #%s is in, so nothing was recorded. Write them as owner/repo#N." % (name, n))
+        if (repo.lower(), int(n)) not in have:
+            state.setdefault("issues", []).append({"repo": repo, "number": int(n), "labelled": True})
+            have.add((repo.lower(), int(n)))
+            added.append("%s#%s" % (repo, n))
+    return ('Design loop: aj wrote "Issues for %s:". Recorded %s for it. "Build plan approved" still checks every '
+            "issue's labels on GitHub." % (name, ", ".join(added) or "nothing new"))
 
 
 def _loop_apply_stage(state, text, top):
@@ -860,6 +930,9 @@ def _loop_apply_one(state, text, top):
             {"stage": approval[0], "name": approval[1], "at": int(time.time())})
         note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
             approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        # #479 (U2): the approval is only on this disk until it is pushed, and a session that stops loses it.
+        note += (" Save it now, before anything else: `git add .claude/%s && git commit -m \"chore: record %s\" "
+                 "&& git push`." % (LOOP_FILE, approval[0].lower()))
         if state.pop("log_ask", False):  # #327
             note += (" The decisions log (%s) has nothing new since the last approval: add this stage's "
                      "entry to it before the turn ends." % LOOP_LOG.replace(os.sep, "/"))
@@ -1056,6 +1129,11 @@ def _loop_gate(payload):
 
 
 _GH_ISSUE_CREATE_RE = re.compile(_GH_PREFIX + r"issue\s+create\b")
+# #479 (U2b): the REST form, `gh api repos/O/R/issues -f title=...`, and Python's ['gh', 'issue', 'create'].
+_GH_API_ISSUE_CREATE_RE = re.compile(
+    _GH_PREFIX + r"api\b(?=[^\n]*\brepos/[\w.-]+/[\w.-]+/issues(?![/\w]))(?=[^\n]*(?:-f|-F|--field|--raw-field)"
+    r"[=\s]+[\"']?title=)", re.IGNORECASE)
+_PY_GH_ISSUE_CREATE_RE = re.compile(r"""['"]gh['"]\s*,\s*['"]issue['"]\s*,\s*['"]create['"]""")
 
 
 _GH_PR_CREATE_RE = re.compile(_GH_PREFIX + r"pr\s+create\b")
@@ -1084,7 +1162,8 @@ def _created_issue(data):
     tool = data.get("tool_name") or ""
     if tool == "Bash":
         cmd = ti.get("command") or ""
-        if not _GH_ISSUE_CREATE_RE.search(cmd):
+        if not (_GH_ISSUE_CREATE_RE.search(cmd) or _GH_API_ISSUE_CREATE_RE.search(cmd)
+                or _PY_GH_ISSUE_CREATE_RE.search(cmd)):
             return None
         label_text, how = cmd, "`gh issue create`"
     elif _GITHUB_ISSUE_WRITE_RE.match(tool) and str(ti.get("method", "")).lower() == "create":
