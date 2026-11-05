@@ -314,7 +314,7 @@ const PAGE = {
         "The lock's side doors",
         "Issue #480 (\"close the ways around the code lock\"): 8 findings",
         "",
-        "The old .git stage file, .claude/settings.json, code under docs/ and worktree sources are locked. Shell commands that write the stage file are refused, and the file is written atomically. A question or a 'don't' doesn't approve. Only a pull request that names an issue unlocks closing it. The helper cap holds for launches made together. In Build, when GitHub can't be read, edits are refused (your 6B); the REST read the hook uses works in cloud sessions, checked by reading the labels of the critical-holes issue. .txt and .csv are open, .json and .tsv stay locked (your 8A).",
+        "The old .git stage file, .claude/settings.json, code under docs/ and worktree sources are locked. Shell commands that write the stage file are refused, and the file is written atomically. A question or a 'don't' doesn't approve. Only a pull request that names an issue unlocks closing it. The limit of two helpers still holds when several are launched at once. In Build, when GitHub can't be read, edits are refused, which is the stricter option you picked; the REST read the hook uses works in cloud sessions, checked by reading the labels of the critical-holes issue. .txt and .csv files are open for edits, .json and .tsv files stay locked, which is the rule you picked for data files.",
         "Nothing from you."
       ],
       [
@@ -322,7 +322,7 @@ const PAGE = {
         "Approvals and tooling",
         "17 findings, in issue #481 (\"make each approval move only what aj named\") and issue #482 (\"fix the tooling and remove dead code\")",
         "",
-        "Re-approving keeps the feature's issues. An approval must name the current feature; choices after the name, like 1A 2B, are fine (your 7A). 'skip design' ends with its stage. Only the feature's own QA page counts. A merge keeps the stage on main and asks you what's next (your 9A). The version check, installer, page builder, force_update.py and label recording give right answers. Dead code and tools/check_verify_inventory.py are deleted (your 10A). The hook merge was measured and not built: it would save 14 ms per shell command (the median of 20 timed runs), under the 100 ms bar.",
+        "Re-approving keeps the feature's issues. An approval must name the current feature; choices after the name, like 1A 2B, are fine; the strict name match is what you picked. 'skip design' ends with its stage. Only the feature's own QA page counts. A merge keeps the stage on main and asks you what to do next, so a merge never moves the loop. The version check, installer, page builder, force_update.py and label recording give right answers. Dead code and tools/check_verify_inventory.py are deleted (your 10A). The hook merge was measured and not built: it would save 14 ms per shell command (the median of 20 timed runs), under the 100 ms bar.",
         "Nothing from you."
       ],
       [
@@ -350,22 +350,22 @@ const PAGE = {
       "Six steps, each a child issue of the audit fixes issue, merged into AjsAgent/audit-2026-11-05.",
       [
         "The guard let some dangerous commands through, blocked routine ones, and the design loop had side doors.",
-        "Each finding is fixed with a test, except H4, which was measured and left alone, and D10, the shell-write gap, which moved to its own issue, #484 (\"Refuse shell writes to source files outside Build\")."
+        "Each finding is fixed with a test, except H4 (merging the hooks into one), which was measured and left alone, and D10, the shell-write gap, which moved to its own issue, #484 (\"Refuse shell writes to source files outside Build\")."
       ],
       "The three promises hold: only your messages move a stage, code stays locked before a build plan, and nothing is deleted that can't come back."
     ],
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "56 files, +9191 −1416",
+      "58 files, +10524 −640",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          1,
-          783,
+          96,
+          7,
           [
             [
               "Not in the plan",
@@ -843,6 +843,30 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/2026-11-05-audit-fix-qa.html",
+          1198,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-05-audit-fix-qa.page.json",
+          40,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/2026-11-05-combined-ranked.html",
           545,
           0,
@@ -1041,7 +1065,7 @@ const PAGE = {
       "Still unverified",
       "3 things not yet proven",
       null,
-      "Not yet run on your PC; the real sessions ran in this cloud container. Whether Claude Code marks scheduled-task prompts with any of the relayed-message markers (D1) was not seen in a real message from Claude Code. The hook merge timing (H4) inside Claude Code itself, and on your machine, was not measured.",
+      "Not yet run on your PC; the real sessions ran in this cloud container. D1: whether Claude Code marks a scheduled task's message with any of the markers that identify relayed messages is unknown, because no scheduled task fired into this session to inspect. The hook merge timing (H4) was not measured inside Claude Code itself or on your machine.",
       null,
       null
     ]
@@ -1051,8 +1075,8 @@ const PAGE = {
     "base": "origin/main",
     "unverified": [
       "Not yet run on your PC; the real sessions ran in this cloud container",
-      "Whether Claude Code marks scheduled-task prompts with any of the relayed-message markers (D1) was not seen in a real message from Claude Code",
-      "The hook merge timing (H4) inside Claude Code itself, and on your machine, was not measured"
+      "D1: whether Claude Code marks a scheduled task's message with any of the markers that identify relayed messages is unknown, because no scheduled task fired into this session to inspect",
+      "The hook merge timing (H4) was not measured inside Claude Code itself or on your machine"
     ],
     "files": {}
   },
