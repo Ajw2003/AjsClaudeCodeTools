@@ -656,19 +656,24 @@ _loop_cases.append(("an unlabelled issue does not count toward the feature's iss
                     "has 1 labelled issue(s)" in _n and _loop_stage() == "plan"))
 _loop_cases.append(("an unreadable sub-issue list says so in the refusal",
                     "Could not read the sub-issues of o/r#102" in _n))
+_loop_state_path = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
+_loop_state_before = read(_loop_state_path)
 with open(_loop_subissues_file, "w", encoding="utf-8") as _f:
     json.dump({"o/r#102": [{"number": 110, "labels": ["AjsAgent created this"]}, {"number": 111, "labels": ["x"]}]}, _f)
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("a labelled sub-issue GitHub links under a recorded issue counts; an unlabelled one does not",
                     "labelled issue(s)" not in _n and _loop_stage() == "plan"
-                    and [i["number"] for i in json.load(open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"),
-                                                             encoding="utf-8"))["issues"]] == [101, 102, 110]))
+                    and [i["number"] for i in json.loads(read(_loop_state_path))["issues"]] == [101, 102, 110]))
+# The rest of this flow expects only the issues it made itself.
+os.remove(_loop_subissues_file)
+with open(_loop_state_path, "w", encoding="utf-8") as _f:
+    _f.write(_loop_state_before)
 _loop_issue(103, via="bash")
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("issues from the GitHub tool and from gh both count, so the next check is reached",
                     "labelled issue(s)" not in _n and _loop_stage() == "plan"))
 _loop_log("plan decisions for blockers")
-_loop_gh("in progress", 101, 102, 110)
+_loop_gh("in progress", 101, 102)
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("label check: a build-plan approval is refused while an issue isn't in progress, naming it",
                     "not labelled `in progress`: #103" in _n and _loop_stage() == "plan"))
