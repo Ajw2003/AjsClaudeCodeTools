@@ -17,7 +17,7 @@
   "changes": [
     ["chg", "1. Commits that run a program are approved unasked", "safe_git.py:744-745 and _only_git_statements at :384-387.", ["Any statement starting with git is approved, $(...), backticks and -c core.hooksPath included.", "Approved only when there is no $( or backtick outside the $(cat <<'EOF' message form and no core.hooksPath; otherwise Claude Code asks."], "Proved: a commit with $(...), one with backticks and one with core.hooksPath each got allow.", null, null],
     ["chg", "2. Any merge unlocks any issue close", "design_loop.py:2123-2129.", ["A merge in other/repo#99 stamped and unlocked the close of own/repo#5.", "Only a merge in the same repo that names the issue with Refs #N unlocks its close."], "Proved: the close went from deny to allow after the unrelated merge.", null, null],
-    ["chg", "3 and 4. Delete and discard forms the guard misses", "safe_git.py:133 and :143.", ["/bin/rm -rf, find -delete, unlink, ': > file', checkout HEAD -- FILE, checkout HEAD FILE, checkout -f and switch -f all got no decision.", "Each form is refused the way rm -rf and checkout -- already are, keeping the saved-work exemption."], "Proved: each command was fed to the real guard.", null, null],
+    ["chg", "3 and 4. Delete and discard forms the guard misses", "safe_git.py:133 and :143.", ["The guard gave no allow or refuse decision for any of these commands: /bin/rm -rf, find -delete, unlink, ': > file', checkout HEAD -- FILE, checkout HEAD FILE, checkout -f and switch -f.", "Each form is refused the way rm -rf and checkout -- already are, keeping the saved-work exemption."], "Proved: each command was fed to the real guard.", null, null],
     ["chg", "5. agent/ branches are the agent's own", "core.py:2089 and safe_git.py:265-301.", ["Commit refused on agent/optimistic-planck-1h64c9, the branch this session must push to.", "agent/ joins AjsAgent/, claude/ and ccr- as an owned prefix."], "Proved: this session's own commit was refused.", null, null],
     ["chg", "6. Reading a script no longer counts as running it", "safe_git.py:464-478.", ["Any word that names an existing .py, .sh or similar file counts as running it, so a second sed of safe_git.py was refused.", "Only the first word, or the first argument after python, sh, bash, node or pwsh, counts."], "Proved: a second sed of safe_git.py was refused during this audit.", null, null],
     ["chg", "7, 9 and 10. The stage lock and the helper cap hold", "design_loop.py, delegation.py, safe_git.py and make_page.py writers.", ["State files are emptied and rewritten in place; an empty stage file turns the lock off; cp overwrites it; three helpers launched together all pass.", "Writes go to a per-process temp file and os.replace; a shell command naming the stage file is refused unless read-only; agentcap adds a placeholder record."], "Proved by runs, except the race where two writers overwrite each other's changes, which is by reading.", null, null],
@@ -39,8 +39,8 @@
   ],
   "wrapup": {
     "summary": "Twenty findings across the whole repo, six of them holes in the guard and the issue lock, each proved by a run except four marked by reading, plus about 380 lines that can go.",
-    "changing": "Nothing yet. The report is docs/audits/2026-11-05-ponytail-audit-full.md, committed and pushed on the branch AjsAgent/audit-2026-11-05.",
-    "blocking": "Your two picks.",
+    "changing": "Nothing has been changed yet. The report is in docs/audits/2026-11-05-ponytail-audit-full.md, and it is committed and pushed on the branch AjsAgent/audit-2026-11-05.",
+    "blocking": "Waiting on your two choices: what gets fixed first, and what happens to tools/check_verify_inventory.py.",
     "next": "After approval: one parent issue with a child per finding in scope, then each fix with its test, then the four test suites run twice before handing over for QA.",
     "todo": [
       "Pick your two answers under Choices.",
