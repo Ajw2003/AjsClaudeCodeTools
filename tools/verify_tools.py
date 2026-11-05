@@ -713,6 +713,61 @@ check(_dpp.get("b") == (1, 1) and _dpp.get("c") == (5, 0),
       "diff_parts: a changed line belongs to its function, and a comment above a function to that function",
       f"got {_dpp!r}")
 
+# --- #482 (A13): the installer's file check ignores the cache files running the hooks writes ---
+from _plugin_sync import tree_hash, diff_trees  # noqa: E402
+_ts = tempfile.mkdtemp(); _td = tempfile.mkdtemp()
+for _root in (_ts, _td):
+    open(os.path.join(_root, "a.py"), "w").write("x = 1\n")
+os.makedirs(os.path.join(_td, "__pycache__"))
+open(os.path.join(_td, "__pycache__", "a.cpython-313.pyc"), "wb").write(b"\0")
+open(os.path.join(_td, ".python-cache"), "w").write("python3\n")
+check(diff_trees(tree_hash(_ts), tree_hash(_td)) == [],
+      "A13: tree_hash ignores __pycache__, .pyc and .python-cache", f"diff {diff_trees(tree_hash(_ts), tree_hash(_td))}")
+shutil.rmtree(_ts, True); shutil.rmtree(_td, True)
+
+# --- #482 (A16): a failed reinstall says the plugin is now uninstalled, and how to put it back ---
+_fu = tempfile.mkdtemp(prefix="force-update-")
+_fb = os.path.join(_fu, "bin"); os.makedirs(_fb)
+with open(os.path.join(_fb, "claude"), "w") as _f:
+    _f.write('#!/bin/sh\n[ "$2" = install ] && exit 1\nexit 0\n')
+os.chmod(os.path.join(_fb, "claude"), 0o755)
+_fr = subprocess.run([sys.executable, os.path.join(HERE, "force_update.py"), "--skip-marketplace-update"],
+                     capture_output=True, text=True, timeout=60,
+                     env=dict(os.environ, PATH=_fb + os.pathsep + os.environ["PATH"], HOME=_fu, USERPROFILE=_fu))
+_fo = _fr.stdout + _fr.stderr
+check(_fr.returncode != 0 and "UNINSTALLED" in _fo and "claude plugin install house-rules@aj-house-rules -y" in _fo,
+      "A16: force_update says the plugin is UNINSTALLED when the reinstall fails, and the command to fix it",
+      f"rc={_fr.returncode} out={_fo[-300:]!r}")
+shutil.rmtree(_fu, True)
+
+# --- #482 (A18): diff_parts counts a removed '---' line (a Markdown rule) as content ---
+_ar = tempfile.mkdtemp(prefix="diff-parts-dash-")
+subprocess.run(["git", "init", "-q", _ar], check=True)
+_ag = ["git", "-C", _ar, "-c", "user.name=t", "-c", "user.email=t@t"]
+with open(os.path.join(_ar, "m.md"), "w") as _f:
+    _f.write("top\n---\nmiddle\nend\n")
+subprocess.run(_ag + ["add", "."], check=True)
+subprocess.run(_ag + ["commit", "-qm", "one"], check=True)
+with open(os.path.join(_ar, "m.md"), "w") as _f:
+    _f.write("top\nend\n")
+subprocess.run(_ag + ["commit", "-qam", "two"], check=True)
+_aro = _dp.parts(_ar, "HEAD~1", "HEAD", "m.md")
+check(_aro["removed"] == 2, "A18: diff_parts counts a removed --- line, so removed equals git's numstat (2)",
+      f"removed={_aro['removed']}")
+shutil.rmtree(_ar, True)
+
+# --- #482 (A20): verify_and_self_heal's one failure is counted once, by bad(), not again by main() ---
+import inspect  # noqa: E402
+_hb = []
+_hs, _hd = tempfile.mkdtemp(), tempfile.mkdtemp()
+open(os.path.join(_hs, "a.txt"), "w").write("new")
+open(os.path.join(_hd, "a.txt"), "w").write("old")
+install.verify_and_self_heal(_hs, _hd, lambda: None, ok=lambda m: None, bad=_hb.append, info=lambda m: None)
+check(len(_hb) == 1 and "if not verify_and_self_heal(" not in inspect.getsource(install.main),
+      "A20: a failed self-heal is one failure: bad() once, and main() adds none of its own",
+      f"bad() called {len(_hb)} time(s)")
+shutil.rmtree(_hs, True); shutil.rmtree(_hd, True)
+
 print()
 print("-" * 32)
 if FAILURES:

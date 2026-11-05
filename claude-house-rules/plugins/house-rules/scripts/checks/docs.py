@@ -1818,5 +1818,12 @@ else:
         expect_rc=1,
     )
 
+import importlib  # noqa: E402
+_ca = importlib.import_module("house_rules.core")._COMMIT_ALL_RE
+report("PASS" if ([bool(_ca.search(c)) for c in ("git commit -sam x", "git commit -qa -m x", "git commit -am x",
+                                                  "git commit --amend -m x", "git commit -m x")]
+                  == [True, True, True, False, False]) else "FAIL",
+       "A15: one commit -a pattern, which sees -sam and -qa and not --amend")
+
 
 finish()
