@@ -299,7 +299,7 @@ const PAGE = {
         "Handoff",
         "A new session repeats every approval, plus two new issues",
         "",
-        "Finding 1: the file that records the stage follows the branch, and a cloud handoff gets a new branch from main, so the new session starts in Design. Proved: aj's 'Build plan approved' was refused, then 'Design approved' worked, then the build plan was refused again because the new session had no issues recorded, while the earlier session's two issues sat on GitHub. Finding 2: an approval reaches GitHub only when the main session pushes, because autosave covers only the branches of helper sessions. Finding 3: the stage file on main still says QA for 'rerun limit', although that feature has been merged.",
+        "Finding 1: the file that records the stage follows the branch, and a cloud handoff gets a new branch from main, so the new session starts in Design. Proved: aj's 'Build plan approved' was refused, then 'Design approved' worked, then the build plan was refused again because the new session had no issues recorded, while the earlier session's two issues sat on GitHub. Finding 2: an approval reaches GitHub only when the main session pushes, because autosave covers only the branches of helper sessions. Finding 2b: issues made by a script or a one-line loop are never counted; in another session, six step issues (#708 to #713) opened from a Python loop left only #707 recorded. Writing them into the stage file by hand would be the model setting its own approval state. Finding 3: the stage file on main still says QA for 'rerun limit', although that feature has been merged.",
         "Nothing from you."
       ],
       [
@@ -347,7 +347,7 @@ const PAGE = {
       "Issues for <feature>: #12 #13",
       "aj attaches existing issues during Plan.",
       null,
-      "For when the old stage file was never pushed. The build plan approval still needs aj, and the label check still runs.",
+      "For when the old stage file was never pushed, or the issues were made by a script the hook can't see. The build plan approval still needs aj, and the label check still runs.",
       [
         "Re-planning after a lost session reuses the issues already on GitHub."
       ],
