@@ -112,7 +112,9 @@ BRANCH_CASES = [
     # Off the default branch, a commit, an ordinary push and a merge or rebase run unasked (#197).
     (REPO_MINE, "claude/some-topic", "pass", None, 'git commit -m "checkpoint"'),
     (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),
-    (REPO_MINE, "claude/some-topic", "pass", None, "git -c user.name=x commit -m y"),
+    # #477 (A1): `git -c key=value` is never approved by the guard, because -c can point git at a program. It gets no
+    # decision, so Claude Code's own prompt decides; this table reports a reply with no decision as "malformed".
+    (REPO_MINE, "claude/some-topic", "malformed", None, "git -c user.name=x commit -m y"),
     # Force-pushing rewrites history that was already safe, so it is not a checkpoint and the
     # exemption does not reach it - on any branch. #291: refused, naming the safe way.
     (REPO_MINE, "claude/some-topic", "deny", "push a new branch instead", "git push --force-with-lease"),
@@ -439,7 +441,7 @@ for _n, _cmd in (
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
     elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
-for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
+for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/../x" % _ua_dir, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)
     if _d != "deny" or (_cmd.startswith("rm -rf /home") and "_to_delete/" not in _r) \
             or (_cmd.startswith("git push") and "Do not retry" not in _r):
@@ -1613,7 +1615,7 @@ commit_case(
 
 # guard: the timeout line, omitted when off
 _g_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Bash",
-                         "tool_input": {"command": "rm -rf /tmp/pt-victim", "description": "no safe way: rm(1)"},
+                         "tool_input": {"command": "rm -rf %s/pt-victim" % _pt_repo, "description": "no safe way: rm(1)"},
                          "cwd": _pt_repo})
 _gw_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Write",
                           "tool_input": {"file_path": os.path.join(_pt_repo, "existing.txt"), "content": "x\n"},
@@ -1883,7 +1885,7 @@ _rr_offs = [_rr_run("bash tools/x.sh a", HOUSE_RULES_RERUNS="off")[1] for _ in r
 report("PASS" if not any(_rr_denied(o) for o in _rr_offs) and not os.path.exists(_rr_state)
        else "FAIL", "rerun limit: HOUSE_RULES_RERUNS=off disables the check")
 _rr_reset()
-_rr_refused_cmd = "bash tools/x.sh a && " + "r" + "m -rf" + " tools"  # refused as a recursive delete; never runs
+_rr_refused_cmd = "bash tools/x.sh a && " + "git cl" + "ean -fdX"  # refused (#479 lets a committed folder go); never runs
 _rr_refused = [_rr_run(_rr_refused_cmd, agent="ag3")[1] for _ in range(3)]
 _rr_o = _rr_run("bash tools/x.sh a", agent="ag3")
 report("PASS" if all('"permissionDecision":"deny"' in o or '"permissionDecision":"ask"' in o for o in _rr_refused)
