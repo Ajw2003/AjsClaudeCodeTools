@@ -1095,8 +1095,7 @@ def event_subagentcommit():
                 if _autosave_enabled() and branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX):
                     sha, done = _wip_commit(top, branch, WIP_NOT_COMMITTED)
                     note = _autosave_snapshot(top, branch, force_push=True)
-                    parts.append("committed %d file(s) in %s as %s%s"
-                                 % (len(done), top, sha, " | " + note if note else ""))
+                    parts.append("in %s: %s%s" % (top, _saved_text(sha, done, files), " | " + note if note else ""))
                 else:
                     parts.append("%s in %s left uncommitted" % (", ".join(files[:8]), top))
             emit(
@@ -1318,6 +1317,14 @@ def _autosave_remember(top, branch, payload):
         _autosave_write(listed, "\n".join(have + [rel]))
 
 
+def _saved_text(sha, done, files):
+    """What a hook commit did, for its message: the files it committed, or why it committed none (#477)."""
+    if sha:
+        return "committed %d file(s) as %s: %s" % (len(done), sha, _shown(done))
+    return ("saved nothing, because %s %s not written with Write or Edit, so it is left for the helper to "
+            "commit (#477)" % (_shown(files), "was" if len(files) == 1 else "were"))
+
+
 def _wip_commit(top, branch, subject):
     """Commit the helper's work on its behalf: tracked changes and the files it wrote (#477). (short sha,
     files), or (None, []) when there was nothing to commit. --no-verify: a repo's pre-commit hook must not
@@ -1426,8 +1433,8 @@ def event_commitgate():
             sha, done = _wip_commit(top, branch, WIP_NOT_COMMITTED)
             os.remove(counter)
             note = _autosave_snapshot(top, branch, force_push=True)
-            text = ("house-rules commitgate: the subagent did not commit when asked, so the hook "
-                    "committed %d file(s) on %s as %s: %s." % (len(done), branch, sha, _shown(done)))
+            text = ("house-rules commitgate: the subagent did not commit when asked, so on %s the hook %s."
+                    % (branch, _saved_text(sha, done, files)))
             emit({"systemMessage": text + (" | " + note if note else "")})
             return 0
         _autosave_write(counter, head)
@@ -1515,8 +1522,7 @@ def event_worktreesweep():
                     continue  # clean, or a live subagent is still editing it
                 sha, done = _wip_commit(top, branch, WIP_PARENT)
                 note = _autosave_snapshot(top, branch, force_push=True)
-                swept.append("%s (%s): committed %d file(s) as %s - %s%s"
-                             % (top, branch, len(done), sha, _shown(done), " | " + note if note else ""))
+                swept.append("%s (%s): %s%s" % (top, branch, _saved_text(sha, done, files), " | " + note if note else ""))
             except Exception as exc:
                 problems.append("%s (%s): %s" % (top, branch, exc))
         if not swept and not problems:

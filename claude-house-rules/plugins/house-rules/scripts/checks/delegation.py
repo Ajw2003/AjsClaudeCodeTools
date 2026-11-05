@@ -367,11 +367,17 @@ commit_case(
     "body %r, credit found %r" % (_wip_body[-120:], _wip_credit),
 )
 
+def _as_saw_write(d, path):
+    """Tell autosave a file tool wrote this file, as the PostToolUse hook does for a real Write (#477)."""
+    run_hook("autosave", _as_payload("PostToolUse", "Write", path, d), env=_as_env())
+
+
 _dg, _ = _as_repo("worktree-agent-gate")
-_as_write(_dg, "a.py")
+_as_saw_write(_dg, _as_write(_dg, "a.py"))
 _pg = _as_write(_dg, "b.py")
+_as_saw_write(_dg, _pg)
 _, o2, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
-_as_write(_dg, "c.py")
+_as_saw_write(_dg, _as_write(_dg, "c.py"))
 _, o3, _ = run_hook("commitgate", _as_payload("PreToolUse", "Edit", _pg, _dg), env=_as_env())
 commit_case(
     "commitgate: 2 uncommitted files pass; 3 block the edit, naming the files, with nothing committed",
@@ -423,6 +429,7 @@ commit_case(
 )
 _dr, _ = _as_repo("worktree-agent-retry")
 _pr = _as_write(_dr, "r.py")
+_as_saw_write(_dr, _pr)
 out = _subagent_stop([_pr], active=True)
 _dc, _ = _as_repo("claude/retry")
 _pc = _as_write(_dc, "r.py")
@@ -444,7 +451,9 @@ _as_git(_dmain, "worktree", "add", "-q", "-b", "worktree-agent-new", _sweep_new)
 _as_git(_dmain, "worktree", "add", "-q", "-b", "claude/sweep", _sweep_mine)
 _long_ago = time.time() - 20 * 60
 for _wt in (_sweep_old, _sweep_mine):
-    os.utime(_as_write(_wt, "left.py"), (_long_ago, _long_ago))
+    _left = _as_write(_wt, "left.py")
+    _as_saw_write(_wt, _left)
+    os.utime(_left, (_long_ago, _long_ago))
 _as_write(_sweep_new, "live.py")
 _, osw, _ = run_hook("worktreesweep", json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "hi",
                                                   "cwd": _dmain, "session_id": "s1"}),
