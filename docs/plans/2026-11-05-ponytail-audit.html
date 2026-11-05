@@ -273,7 +273,7 @@ const PAGE = {
   "eyebrow": "Full audit of every code file in AjsClaudeCodeTools · nothing changed yet",
   "approval": "Design approved: audit fixes",
   "short": {
-    "lead": "I read every code file in the repo, with two forked helpers taking the two biggest parts of the plugin, and I re-ran every probe they used. All four test suites pass, but the guard that is meant to stop risky commands has six real holes. A commit with a hidden program inside it is approved with no prompt. Two common delete forms and two forms that throw away edits get no decision at all. Any merged pull request unlocks closing any issue. Cloud sessions can't commit to the branch they are told to push. Reading a script counts as running it. There are 20 findings in all, plus about 380 lines that can go.",
+    "lead": "I read every code file in the repo, with two forked helpers taking the two biggest parts of the plugin, and I re-ran every probe they used. All four test suites pass, but the guard that is meant to stop risky commands has six real holes. A commit with a hidden program inside it is approved with no prompt. Four delete forms and four forms that throw away edits get no decision at all. Any merged pull request unlocks closing any issue. Cloud sessions can't commit to the branch they are told to push. Reading a script counts as running it. There are 20 findings in all, plus about 380 lines that can go.",
     "hint": "Tap a card to see the evidence behind it.",
     "key": [
       [
@@ -299,7 +299,7 @@ const PAGE = {
         "Must fix",
         "Six holes in the guard and the issue lock",
         "",
-        "1: a commit carrying $(...), backticks or -c core.hooksPath is approved, which also skips Claude Code's own prompt. 2: any merged pull request unlocks closing any QA-passed issue. 3: /bin/rm -rf, find -delete, unlink and ': > file' get no decision. 4: git checkout HEAD -- FILE and git switch -f get no decision. 5: agent/ branches count as not the agent's own, so cloud sessions can't commit where they must push. 6: cat, grep or git commit naming a .py file counts as running it.",
+        "1: a commit carrying $(...), backticks or -c core.hooksPath is approved, which also skips Claude Code's own prompt. 2: any merged pull request unlocks closing any QA-passed issue. 3: /bin/rm -rf, find -delete, unlink and ': > file' get no decision. 4: git checkout HEAD -- FILE, git checkout HEAD FILE, git checkout -f and git switch -f get no decision. 5: agent/ branches count as not the agent's own, so cloud sessions can't commit where they must push. 6: cat, grep or git commit naming a .py file counts as running it.",
         "Nothing from you."
       ],
       [
@@ -307,7 +307,7 @@ const PAGE = {
         "Should fix",
         "Locks that fail open, and tools that report wrongly",
         "",
-        "The stage file that locks code edits is rewritten in place, so a hook reading it mid-write turns the lock off. A cp from the shell can overwrite it, and three helpers launched together all pass the two-helper cap. The installer can empty settings.json if a write fails, and its file check always finds a difference. Autosave pushes untracked files, a stray token file included. The version check 'updates' a newer copy down to an older one.",
+        "The stage file that locks code edits is rewritten in place, so a hook reading it mid-write turns the lock off. A cp from the shell can overwrite it, and three helpers launched together all pass the two-helper cap. The installer can empty settings.json if a write fails, and its check for changed files always reports a difference. Autosave pushes untracked files, a stray token file included. The version check 'updates' a newer copy down to an older one.",
         "Nothing from you."
       ],
       [
@@ -324,7 +324,7 @@ const PAGE = {
         "Pick what gets fixed first",
         "you",
         "Choose the scope of the first fix, and whether the unused inventory checker is deleted or added to CI. Approving starts the fix as a feature, with one issue per step and a test for each hole.",
-        "Send the approval line with your two picks, or tell me what to change."
+        "Send \"Design approved: audit fixes\" with your two picks, or tell me what to change."
       ]
     ]
   },
@@ -335,9 +335,9 @@ const PAGE = {
       "safe_git.py:744-745 and _only_git_statements at :384-387.",
       [
         "Any statement starting with git is approved, $(...), backticks and -c core.hooksPath included.",
-        "Approved only with no $( or backtick outside the $(cat <<'EOF' message form and no core.hooksPath; otherwise Claude Code asks."
+        "Approved only when there is no $( or backtick outside the $(cat <<'EOF' message form and no core.hooksPath; otherwise Claude Code asks."
       ],
-      "Proved: all three test commands got allow.",
+      "Proved: a commit with $(...), one with backticks and one with core.hooksPath each got allow.",
       null,
       null
     ],
@@ -382,10 +382,10 @@ const PAGE = {
       "6. Reading a script no longer counts as running it",
       "safe_git.py:464-478.",
       [
-        "Any existing .py, .sh or similar word counts, so a second sed of safe_git.py was refused.",
+        "Any word that names an existing .py, .sh or similar file counts as running it, so a second sed of safe_git.py was refused.",
         "Only the first word, or the first argument after python, sh, bash, node or pwsh, counts."
       ],
-      "Proved: refused during this audit.",
+      "Proved: a second sed of safe_git.py was refused during this audit.",
       null,
       null
     ],
@@ -397,7 +397,7 @@ const PAGE = {
         "State files are emptied and rewritten in place; an empty stage file turns the lock off; cp overwrites it; three helpers launched together all pass.",
         "Writes go to a per-process temp file and os.replace; a shell command naming the stage file is refused unless read-only; agentcap adds a placeholder record."
       ],
-      "Proved by runs, except the lost-update race, which is by reading.",
+      "Proved by runs, except the race where two writers overwrite each other's changes, which is by reading.",
       null,
       null
     ],
@@ -418,7 +418,7 @@ const PAGE = {
       "11, 14 and 15. Leaks and wrong answers",
       "delegation.py:1252-1290, make_page.py:569-578, docs.py:208.",
       [
-        "Autosave adds untracked files with git add -A; the node visual check looks for playwright in a different folder from the probe; two commit -a patterns disagree on -sam.",
+        "Autosave adds untracked files with git add -A; the node visual check looks for playwright in a different folder from the probe; two commit -a patterns disagree on whether -sam counts as commit -a.",
         "git add -u plus files the helper wrote; node -e and a deleted temp file; one shared pattern."
       ],
       "Autosave is by reading, because a run would push to the real remote.",
@@ -443,7 +443,7 @@ const PAGE = {
       "18 to 20. Lean cleanup",
       "About 380 lines, no dependencies.",
       [
-        "check_verify_inventory.py, 55 blank lines, dead code in clarity.py, hook.py and design_loop.py, a second fence parser, a double-counted failure, and diff_parts.py dropping lines that start with -- or ++.",
+        "check_verify_inventory.py, 55 blank lines, dead code in clarity.py, hook.py and design_loop.py, a second fence parser, a failed self-heal counted twice in tools/install.py, and diff_parts.py dropping lines that start with -- or ++.",
         "Deleted or merged into the one correct copy."
       ],
       "Lean figure is approximate because reusing docref.py's fence parser adds a few lines back.",
