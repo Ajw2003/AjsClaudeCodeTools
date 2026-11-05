@@ -1,0 +1,51 @@
+{
+  "title": "Design Loop Usability Audit",
+  "eyebrow": "Where routine work hits friction, and fixes that keep the loop's promises · nothing changed yet",
+  "approval": "Design approved: loop friction fixes",
+  "short": {
+    "lead": "You named two problems, and both are real. A session that takes over from another starts from nothing: aj approves the design and the build plan again, and the build plan is then refused until the model opens two new issues, because the ones that already exist can't be attached. A session that runs out of disk can't free any: every folder delete is refused, even node_modules, build output and finished helper checkouts, and the safe way the refusal names, a move into _to_delete/, frees nothing on the same disk. I found six more points of friction, three of them hit by this session while doing the work. Each fix below keeps the loop's three promises: only aj moves a stage, code stays locked until aj approves a build plan, and nothing is deleted that can't come back.",
+    "hint": "Tap a card to see the evidence behind it.",
+    "key": [["Found in this audit", ""], ["Needs your answer", "you"]],
+    "items": [
+      ["search", "How I tested", "The real hooks, fed real commands", "", "A probe built throwaway repos and called the design loop's own functions, and real shell commands were piped through hook.py guard on an AjsAgent/ branch. Three findings were also hit by this session while it worked. One claim is unverified: a commit failing on a full disk, because filling this container's disk would end the session.", "Nothing from you."],
+      ["stop", "Handoff", "A new session repeats every approval, plus two new issues", "", "Finding 1: the file that records the stage follows the branch, and a cloud handoff gets a new branch from main, so the new session starts in Design. Proved: aj's 'Build plan approved' was refused, then 'Design approved' worked, then the build plan was refused again because the new session had no issues recorded, while the earlier session's two issues sat on GitHub. Finding 2: an approval reaches GitHub only when the main session pushes, because autosave covers only the branches of helper sessions. Finding 3: the stage file on main still says QA for 'rerun limit', although that feature has been merged.", "Nothing from you."],
+      ["stop", "Out of disk", "No folder can be deleted, so the session must hand off", "", "Finding 4: rm -r of committed, unchanged files, node_modules, build, a helper's worktree, /tmp and ~/.cache, and git clean -fdX, are all refused. Only a single committed file can go. The refusal says to move it into _to_delete/, which frees no space on the same disk. Finding 5: git worktree remove --force gets no decision, so the right tool for helper folders has an unguarded form.", "Nothing from you."],
+      ["flask", "Routine friction", "Refusals for things that weren't happening", "", "Finding 6: text inside a heredoc (a block of text passed to a command) or a sed expression is read as a command; this session was refused twice for a commit and a delete that never ran. Finding 7: the first commit of a cloud session is refused three times. The harness asks for a Claude footer, the guard refuses that footer, and the git identity setup was chained to the same refused command. Finding 8: reading a script with sed counts as running it, which is finding 6 in the full audit, docs/audits/2026-11-05-ponytail-audit-full.md.", "Nothing from you."],
+      ["check", "Your verdict", "Pick the handoff fix and the disk fix", "you", "Three choices below: how a new session picks up from an old one, what may be deleted to free disk, and whether a merged pull request moves QA to Done. Findings 5 to 7 come with either pick, because they are small and change no promise.", "Send \"Design approved: loop friction fixes\" along with your picks (handoff A, B or C; disk A, B or C; merge A or B), or tell me what to change."]
+    ]
+  },
+  "changes": [
+    ["new", "Continue from: <branch>", "A new approval phrase aj types in the new session.", null, "The hook fetches that branch, reads its .claude/house-rules-loop.json, and adopts its feature, stage, issues and recorded labels. A start-up note lists remote branches whose stage is Plan, Build or QA, so the model can tell aj the exact phrase to type.", ["Handoff costs aj one line instead of two approvals.", "No duplicate issues.", "Only aj's message moves the stage, and the stage is copied, never invented."], null],
+    ["new", "Issues for <feature>: #12 #13", "aj attaches existing issues during Plan.", null, "For when the old stage file was never pushed. The build plan approval still needs aj, and the label check still runs.", ["Re-planning after a lost session reuses the issues already on GitHub."], null],
+    ["chg", "Approvals are pushed straight away", "design_loop.py approval note.", ["An approval sits on disk until the model happens to commit and push.", "The approval note tells the model to commit and push the stage file before anything else."], "Autosave covers helper branches only. Found by reading the code.", null, null],
+    ["chg", "Folder deletes git or an install can undo", "safe_git.py:893-900 and :174.", ["Every recursive delete is refused, and the refusal suggests a move that frees nothing.", "Allowed: a folder whose every file is committed, unchanged and pushed; git-ignored folders on a fixed list (node_modules, __pycache__, .venv, .pytest_cache, dist, build, .next, target); anything under /tmp, the scratchpad or ~/.cache; git worktree remove. Refused: git worktree remove --force."], "Proved: each command in the table was fed to the real guard.", null, null],
+    ["chg", "Only text that runs is checked", "safe_git.py destructive patterns.", ["The text inside heredocs (blocks of text passed to a command) and inside quotes is scanned as if it were a command.", "They are stripped first, the way design_loop.py already does with _HEREDOC_RE and _QUOTED_RE."], "This session was refused twice for commands that never ran.", null, null],
+    ["chg", "The first cloud commit works first time", "SessionStart and the attribution refusal.", ["The model is asked to set the git identity; the harness footer is refused with no plain fix named.", "The hook sets the identity itself, and the refusal says to drop the Co-Authored-By line and end with 'Committed by AJ's agent'."], "Hit in this session: three refusals for one commit.", null, null]
+  ],
+  "choices": [
+    ["handoff", "How does a new session pick up from an old one?", [
+      ["A", "'Continue from: <branch>' plus the start-up note and 'Issues for'", 1, "One line from aj. The old approvals carry over, and nothing is approved without aj's message."],
+      ["B", "Only 'Issues for <feature>: #N'", 0, "Smallest change. aj still approves twice, but no duplicate issues are opened."],
+      ["C", "Adopt the newest remote stage automatically", 0, "No typing at all, but an old branch could hand the session a Build stage aj never meant, which breaks the first promise."]
+    ], "My suggestion is A, because it removes the repeat approvals and keeps aj as the only one who moves a stage."],
+    ["disk", "What may be deleted to free disk?", [
+      ["A", "Committed-and-pushed folders, the ignored rebuild list, temp folders and git worktree remove", 1, "Covers everything that filled the disk, and git or an install can bring each one back."],
+      ["B", "Only committed-and-pushed folders", 0, "The strictest form of the existing single-file rule, but node_modules and build output stay stuck."],
+      ["C", "Keep the rule, and add a 'Free space approved: <paths>' phrase aj types", 0, "aj decides each delete, but a full disk then waits on aj."]
+    ], "My suggestion is A, because every folder on it can be rebuilt and the rest stay refused."],
+    ["merge", "Should a merged pull request move QA to Done?", [
+      ["A", "Yes, but only once 'QA passed' is already recorded", 1, "The merge is aj's act after the pass, so the stage file stops saying something false."],
+      ["B", "No, leave it as it is", 0, "main keeps a stale stage until the next 'Design approved' replaces it."]
+    ], "My suggestion is A, because it only tidies a stage that aj has already passed."]
+  ],
+  "wrapup": {
+    "summary": "Eight points of friction. Both of the problems you named were proved with the real hooks, and three more were hit by this session while doing the work.",
+    "changing": "Nothing has been changed yet. The report is in docs/audits/2026-11-05-loop-usability-audit.md, committed on the branch AjsAgent/audit-2026-11-05.",
+    "blocking": "Waiting on three choices from you: the handoff fix, the disk fix, and whether a merge moves QA to Done.",
+    "next": "After approval: one parent issue with a child per fix, each fix landing with a verify.py test case, and a real handoff between two sessions run as the QA check.",
+    "todo": [
+      "Pick your three answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it to me, or tell me what to change."
+    ]
+  }
+}
