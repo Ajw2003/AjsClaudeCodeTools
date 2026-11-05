@@ -10,6 +10,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -532,6 +533,45 @@ def _loop_key(repo, number):
     return "%s#%d" % (repo, int(number))
 
 
+# Tests point this at a JSON file of {"owner/repo#n": [{"number": m, "labels": [...]}]} standing in for
+# GitHub's sub-issue list; a missing file reads as a failed GitHub read.
+LOOP_SUBISSUES_FILE_ENV = "HOUSE_RULES_LOOP_SUBISSUES_FILE"
+
+
+def _loop_sub_issues(repo, number):
+    """[{"number", "labels"}] for the sub-issues GitHub has linked under repo#number."""
+    stand_in = os.environ.get(LOOP_SUBISSUES_FILE_ENV)
+    if stand_in:
+        with open(stand_in, "r", encoding="utf-8") as f:
+            return json.load(f).get(_loop_key(repo, number), [])
+    proc = subprocess.run(["gh", "api", "repos/%s/issues/%d/sub_issues" % (repo, number), "--jq",
+                           "[.[] | {number, labels: [.labels[].name]}]"],
+                          capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip().splitlines()
+        raise RuntimeError(detail[0] if detail else "gh exited %d" % proc.returncode)
+    return json.loads(proc.stdout)
+
+
+def _loop_add_linked_children(state):
+    """Adds labelled sub-issues linked under the feature's recorded labelled issues, so steps made in a way
+    the create hook did not see (a batch script, the web) still count. Returns "" or a note on a failed read."""
+    recorded = [i for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled") and i.get("repo")]
+    known = {_loop_key(i["repo"], i["number"]) for i in state.get("issues", []) if isinstance(i, dict) and i.get("repo")}
+    for parent in recorded:
+        try:
+            children = _loop_sub_issues(parent["repo"], parent["number"])
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+            return " (Could not read the sub-issues of %s: %s.)" % (_loop_key(parent["repo"], parent["number"]), exc)
+        project_labels = (ISSUES_LABEL.lower(), ISSUES_LABEL_OLD.lower())
+        for child in children:
+            key = _loop_key(parent["repo"], child["number"])
+            if key not in known and any(l.lower() in project_labels for l in child.get("labels", [])):
+                state["issues"].append({"repo": parent["repo"], "number": int(child["number"]), "labelled": True})
+                known.add(key)
+    return ""
+
+
 def _loop_gh_labels(repo, number):
     import subprocess
     proc = subprocess.run(["gh", "api", "repos/%s/issues/%d" % (repo, number), "--jq", "[.labels[].name]"],
@@ -782,12 +822,16 @@ def _loop_apply_one(state, text, top):
             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
         have = sum(1 for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled"))
+        sub_note = ""
+        if have < ISSUES_NEEDED:
+            sub_note = _loop_add_linked_children(state)
+            have = sum(1 for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled"))
         if have < ISSUES_NEEDED:
             return ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
                     "made since its design was approved, and needs at least %d: one issue for the feature "
                     "and a sub-issue per step, each naming what it depends on, what depends on it and when "
-                    "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again."
-                    % (name, have, ISSUES_NEEDED, ISSUES_LABEL))
+                    "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again.%s"
+                    % (name, have, ISSUES_NEEDED, ISSUES_LABEL, sub_note))
         labels, src = _loop_labels(state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
         if wrong:
