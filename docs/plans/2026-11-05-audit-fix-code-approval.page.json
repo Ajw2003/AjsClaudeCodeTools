@@ -1,0 +1,73 @@
+{
+  "title": "Audit Fixes: All the Code, for Approval",
+  "eyebrow": "Build plan for approval · parent issue #476 (\"Fix the 45 findings from the 2026-11-05 audits, in six steps\") · every fix written out before any source file changes",
+  "approval": "Build plan approved: audit fix order",
+  "reply": "",
+  "short": {
+    "lead": "You asked to see all of the code before anything is built, and to approve or deny it once instead of six times. Every fix for the 45 findings is now written out as the current code beside its proposed replacement, each with its test case. The code is in two files in docs/plans/audit-fixes-code/: steps-1-3.md and steps-4-6.md. No source file has changed. The proposals replace 296 current lines of code with 835 new lines, plus 175 lines of tests for the first three steps. The last three steps also delete the unused 304-line tools/check_verify_inventory.py. Ten choices below need your answer. After you approve, the six steps are built in order, and you get one QA page at the end.",
+    "hint": "Tap a card to see what that step's code does.",
+    "key": [["Code written, not applied", ""], ["Needs your answer", "you"]],
+    "items": [
+      ["stop", "Critical holes", "Seven findings, issue #477 (\"close the holes where harm happens with no prompt\")", "", "Commits that carry $(...), backticks or -c core.hooksPath are refused (A1). /bin/rm, unlink and : > file are checked like rm, and find -delete is always refused (A3). checkout HEAD --, switch -f and worktree remove --force are refused (A4, U5). Autosave adds only tracked changes and files the helper wrote with the Write or Edit tool (A11). The installer writes settings.json atomically (A8). Webhook, GitHub-event and child-session messages can't approve (D1). While checking the proposal, the helper found one more hole: a plain git checkout . got no decision. It is fixed with A4.", "In steps-1-3.md. Proof: every command listed was run through the real guard hook today and got the wrong answer."],
+      ["unlock", "Routine work", "5 findings, issue #478 (\"stop the guard refusing routine commands\")", "", "agent/ branches count as the agent's own (A5). A script counts as run only when it is the command itself or an interpreter's first argument (A6, H3, U8). Quoted text that can't run anything is ignored (U6, H1). git restore --staged and git reset HEAD on a file are allowed (H2). The first cloud commit sets the agent identity itself (U7).", "56 cases of the new patterns passed on a copy, including the ones that must still be refused, like $(rm -rf docs) inside a message."],
+      ["folder", "Handoff and disk", "4 findings, issue #479 (\"hand off and free disk space without new approvals\")", "", "Rebuildable folders can be deleted: anything under /tmp or ~/.cache, a git-ignored node_modules, __pycache__, .venv, dist, build, .next or target, and a fully committed, unchanged folder (U4). git clean -fdX stays refused, because ignored files include .env secrets. Your own message can say 'Continue from: <branch>' or 'Issues for <feature>: #N' (U1). Issues from loops, python -c and gh api are counted (U2b). The model is told to push straight after each approval (U2).", "In steps-1-3.md."],
+      ["lock", "Ways around the lock", "8 findings, issue #480 (\"close the ways around the code lock\")", "", "The old .git stage file can't open Build (D3). Settings and code under docs/ are locked (D4). Shell commands that write the stage file are refused (A9). The stage file is written atomically (A7). An approval counts only where it starts your sentence (D2). Recorded labels move out of the branch, so switching branches can't bring old ones back (D9). Only a pull request that names an issue unlocks closing it (A2). A placeholder record stops three helpers starting at once (A10).", "In steps-4-6.md."],
+      ["check", "Approvals and tidying", "17 findings, issue #481 (\"make each approval move only what aj named\") and issue #482 (\"fix the tooling and remove dead code\")", "", "Re-approving keeps the feature's issues (D5). An approval must name the current feature (D6). 'skip design' ends with its stage (D7). Only the feature's own QA page counts (D8). The version check, installer, page builder and label recording give right answers (A12 to A16, D11, D12). Notes and data files are open (H5). Dead code and the unused checker are deleted (A18 to A20). Combining the small hooks so each command starts fewer processes (H4) is built only if it saves 100 ms per command.", "In steps-4-6.md. D8, D9, U3, A7, A12, A14, A16 and A18 were checked by reading, not run."],
+      ["flask", "Not run yet", "The tests themselves", "", "The test cases are written, but none has run, because test files are code and stay locked until you approve. The proposed code hasn't run in place either. Both test suites run after each step, and the full build is tried in a real session before your QA.", "Nothing from you."]
+    ]
+  },
+  "changes": [
+    ["chg", "Six steps, built in order, one QA at the end", "Each step is one child issue under the audit fixes issue and one commit. Its checks must pass before the next step starts.",
+      ["45 findings, none fixed, and six QA rounds planned.", "Every fix arrives with its test. You approve the code once now and check the whole build once."],
+      "The three promises hold: only your messages move a stage, code stays locked before a build plan, and nothing is deleted that can't come back."]
+  ],
+  "choices": [
+    ["quotes", "U6: which quoted text should the guard ignore?", [
+      ["A", "Single quotes, quoted heredocs, and double quotes with no $, backtick or backslash inside", 1, "Text like that can't run anything. It covers H1's commit messages, which are written in double quotes."],
+      ["B", "Single quotes and quoted heredocs only", 0, "Stricter, but commit messages in double quotes that mention rm -rf stay refused."]
+    ], ""],
+    ["autosave", "A11: what should autosave push?", [
+      ["A", "Tracked changes plus files the helper wrote with the Write or Edit tool", 1, "Nothing the helper didn't write reaches GitHub. A file made from the shell waits until the helper commits it."],
+      ["B", "Everything except a list of secret file names (.env, *.token, *.pem, *.key)", 0, "Saves more, but leaks anything the list misses."]
+    ], ""],
+    ["push", "U2: who pushes the stage file after an approval?", [
+      ["A", "The model, told to by the hook", 1, "Costs nothing extra. If the session stops before the model pushes, the approval is lost."],
+      ["B", "The hook itself", 0, "Always saved, but every approval message waits for the push."]
+    ], ""],
+    ["identity", "U7: may the hook set this repo's git identity to AJ's agent?", [
+      ["A", "Yes, and record that it reverses the earlier decision that the hook never runs git config (#177, \"credit aj's agent\")", 1, "One refusal becomes zero. It changes only this repo's local config."],
+      ["B", "No, but make the one refusal name the full fix", 0, "Keeps that earlier decision. The first commit is still refused once."]
+    ], ""],
+    ["folders", "U4: is the list of deletable folders right?", [
+      ["A", "Yes, as listed on the handoff and disk card", 1, "Each one can be rebuilt by an install, a build or git."],
+      ["B", "Leave out build and dist", 0, "Safer for projects that keep hand-made files in an ignored build folder, but those folders then can't be cleared."]
+    ], ""],
+    ["labels", "D9: when GitHub can't be read, what decides whether Build edits are allowed?", [
+      ["A", "Labels recorded outside the branch, in the shared git folder", 1, "Switching branches can't bring old labels back, and Build still works offline."],
+      ["B", "Refuse every Build edit until GitHub can be read", 0, "Simpler, but blocks all Build work where gh isn't signed in."]
+    ], ""],
+    ["names", "D6: how strictly must an approval name the feature?", [
+      ["A", "Exactly, or as a new feature on purpose", 1, "Two of your nine past build-plan approvals would have needed retyping, because their names differed slightly from the design they followed (guard audit after guards audit)."],
+      ["B", "Shared words are enough", 0, "Easier to type, but a wrong feature can get through again."]
+    ], ""],
+    ["json", "H5: should .json files be open in every stage?", [
+      ["A", "No, only .txt and .csv; .json stays locked outside docs/ and .claude/", 1, "Files like package.json change how a build runs."],
+      ["B", "Yes, .json too", 0, "Fewer refusals, but build config could change before a plan is approved."]
+    ], ""],
+    ["merged", "U3: what happens to a merged feature's stage on main?", [
+      ["A", "Keep it, and ask you what's next", 1, "A merge moving the stage would mean something other than you moved it."],
+      ["B", "Clear it on merge", 0, "Tidier, but a merge would move the loop without your message."]
+    ], ""],
+    ["checker", "A20: what happens to tools/check_verify_inventory.py?", [
+      ["A", "Delete it", 1, "Nothing runs it, and its table is already out of date. Git keeps the history."],
+      ["B", "Run it in tools/verify_tools.py and update its table", 0, "Keeps the inventory true, at 304 lines of upkeep."]
+    ], ""]
+  ],
+  "wrapup": {
+    "summary": "All the code for the 45 audit fixes, written out with tests, for one approval and one QA.",
+    "changing": "Nothing until you approve. The code is in docs/plans/audit-fixes-code/ on branch AjsAgent/audit-2026-11-05.",
+    "blocking": "Your approval of the code, and your answer (A or B) to each of the ten questions under Choices.",
+    "next": "The six steps are built in order, both test suites run after each, then one real session test and one QA page.",
+    "todo": ["Pick an answer for each question under Choices.", "Tap <b>Copy my reply</b> and send it, or tell me what to change."]
+  }
+}
