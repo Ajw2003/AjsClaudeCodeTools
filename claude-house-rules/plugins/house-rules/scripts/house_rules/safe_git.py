@@ -956,12 +956,27 @@ def _temp_roots():
     return [os.path.realpath("/tmp"), os.path.realpath(os.path.expanduser("~/.cache"))]
 
 
+def _in_temp_root(path):
+    """True when path is inside /tmp or ~/.cache and not inside a git work tree there: a repo under /tmp can
+    hold unpushed commits and edits, so it is guarded like any other repo."""
+    real = os.path.realpath(path)
+    root = next((r for r in _temp_roots() if real.startswith(r + os.sep)), None)
+    if root is None:
+        return False
+    probe = real
+    while probe != root:  # any .git (a repo's folder, or a worktree's file) above the path makes it a repo
+        if os.path.exists(os.path.join(probe, ".git")):
+            return False
+        probe = os.path.dirname(probe)
+    return True
+
+
 def _folder_recoverable(path):
     """#479 (U4): True when deleting this folder loses nothing that can't come back: it is inside /tmp or
     ~/.cache, or it is a git-ignored folder on REBUILDABLE_DIRS, or every file in it is committed and
     unchanged, with no untracked or ignored file inside and no separate repo of its own."""
     real = os.path.realpath(path)
-    if any(real.startswith(root + os.sep) for root in _temp_roots()):
+    if _in_temp_root(real):
         return True
     if not os.path.isdir(real):
         return False
@@ -995,7 +1010,7 @@ def _delete_refusal(subject, where):
         try:
             words = shlex.split(stmt[m.end(2):])
         except ValueError:
-            return refusal
+            return "recursive" if recursive else "unsaved"  # unparseable quoting: its targets can't be checked
         targets = [w for w in words if not w.startswith(("-", "/")) or os.path.isabs(w) and not re.match(r"^/[a-zA-Z]$", w)]
         if not targets:
             return refusal
@@ -1005,7 +1020,7 @@ def _delete_refusal(subject, where):
             t = os.path.expanduser(t)
             path = t if os.path.isabs(t) else os.path.join(base, t)
             try:
-                if os.path.isdir(path) or any(os.path.realpath(path).startswith(r + os.sep) for r in _temp_roots()):
+                if os.path.isdir(path) or _in_temp_root(path):
                     if _folder_recoverable(path):
                         continue
                     return "recursive"
@@ -1013,7 +1028,7 @@ def _delete_refusal(subject, where):
                 tracked, _o, _e = _ag(folder, ["ls-files", "--error-unmatch", "--", path], check=False)
                 changed, _o, _e = _ag(folder, ["diff", "--quiet", "HEAD", "--", path], check=False)
             except RuntimeError:
-                return refusal
+                return "recursive" if recursive else "unsaved"  # git couldn't answer, so the target is not proved safe
             if tracked != 0 or changed != 0:
                 return refusal
     return None
