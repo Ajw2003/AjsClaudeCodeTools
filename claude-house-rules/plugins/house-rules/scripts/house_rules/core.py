@@ -2306,7 +2306,8 @@ def _waiting_session_note(payload):
         return ""
 
 
-_GH_PREFIX = r"(?:^|[;&|(\n`]|\$\()\s*gh\s+"
+# `{` and do/then/else: a gh call inside a shell function or loop body (`mk(){ gh issue create ...`) still counts.
+_GH_PREFIX = r"(?:^|[;&|({\n`]|\$\(|\b(?:do|then|else)\s)\s*gh\s+"
 
 
 _PR_BODY_FILE_RE = re.compile(r"(?:--body-file|(?<![\w-])-F)(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")

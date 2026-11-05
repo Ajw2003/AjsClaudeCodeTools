@@ -172,6 +172,17 @@ for _lc, _nm in ((_label_cmd, "AjsAgent created this"), (_old_label_cmd, "Claude
         "issues: a `gh issue create` with the `%s` label counts as labelled" % _nm,
         _stl["created"] and _stl["created"][0]["labelled"] is True, "state %r" % (_stl,),
     )
+for _bc, _nm in (('mk(){ gh issue create --label "AjsAgent created this" --title "$1"; }; mk a; mk b', "a shell function"),
+                 ('for t in a b; do gh issue create --label "AjsAgent created this" --title "$t"; done', "a for loop")):
+    _db = _iss_repo()
+    _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _db, plan=_ISS_PLAN5), _db)
+    _iss_call("autosave", dict(_iss_payload("PostToolUse", "Bash", _db, command=_bc),
+                               tool_response={"stdout": "https://github.com/o/r/issues/80\nhttps://github.com/o/r/issues/81\n"}), _db)
+    _stb = _iss_state(_db)
+    commit_case(
+        "issues: `gh issue create` inside %s records every issue it prints" % _nm,
+        [c["number"] for c in _stb["created"]] == [80, 81], "state %r" % (_stb,),
+    )
 _dn = _iss_repo()
 _, _onone, _ = _iss_created(_dn, _label_cmd, 60)
 commit_case(
