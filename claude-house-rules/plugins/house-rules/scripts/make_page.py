@@ -407,9 +407,11 @@ def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
         print("make_page: %s not recorded: %s is unreadable (%s); left untouched" % (what, stage, e))
         return
     data[key] = value if value is not None else os.path.relpath(out, project).replace(os.sep, "/")
-    with open(stage, "w", encoding="utf-8", newline="\n") as f:
+    tmp = "%s.%d.tmp" % (stage, os.getpid())  # A7: never leave a half-written stage file
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write("\n")
+    os.replace(tmp, stage)
     print("make_page: recorded %s %s in %s" % (key, data[key], stage))
 
 

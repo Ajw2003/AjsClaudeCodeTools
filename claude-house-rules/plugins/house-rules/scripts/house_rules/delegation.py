@@ -19,6 +19,7 @@ from house_rules.core import (  # noqa: F401
     _PARITY_ACCOUNTED_RE,
     _PARITY_RE,
     _PLAN_VALUE_RE,
+    _write_atomic,
     _PROMPT_VALUE_RE,
     _SESSION_ID_RE,
     _TOGGLE_OFF,
@@ -899,16 +900,17 @@ def _agentcap_load(path):
     return recs
 
 
+AGENT_PENDING_SECONDS = 120  # A10: a launch the cap allowed holds a place until its SubagentStart arrives
+
+
 def _agentcap_live(recs, now=None):
     now = time.time() if now is None else now
-    return [r for r in recs if now - r["start"] <= AGENT_STALE_SECONDS]
+    return [r for r in recs if now - r["start"] <= (AGENT_PENDING_SECONDS if str(r.get("id", "")).startswith("pending:")
+                                                    else AGENT_STALE_SECONDS)]
 
 
 def _agentcap_save(path, recs):
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        json.dump({"agents": recs}, f)
-    os.replace(tmp, path)
+    _write_atomic(path, json.dumps({"agents": recs}))
 
 
 def _agentcap_update(add=None, remove=None):
@@ -930,6 +932,9 @@ def _agentcap_update(add=None, remove=None):
             recs = [r for r in recs if r.get("id") != remove]
         if add:
             recs = [r for r in recs if r.get("id") != add[0]]
+            pending = [r for r in recs if str(r.get("id", "")).startswith("pending:")]
+            if pending and not str(add[0]).startswith("pending:"):
+                recs.remove(min(pending, key=lambda r: r["start"]))  # A10: this agent takes its launch's place
             recs.append({"id": add[0], "type": add[1], "start": time.time()})
         _agentcap_save(path, recs)
     except Exception as exc:
@@ -965,6 +970,9 @@ def event_agentcap():
                       "allowed, the cap is not enforced this time." % (path, type(exc).__name__)})
                 return 0
             if len(recs) < AGENT_CAP:
+                note = _agentcap_update(add=("pending:%s" % (data.get("tool_use_id") or time.time()), "starting"))
+                if note:
+                    emit({"systemMessage": "house-rules: " + note})
                 return 0
             names = ", ".join("%s %s" % (r.get("type") or "agent", r.get("id") or "?") for r in recs)
             reason = (
@@ -1212,8 +1220,7 @@ def _autosave_read(path):
 
 
 def _autosave_write(path, text):
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+    _write_atomic(path, text)
 
 
 def _dirty_files(top):
