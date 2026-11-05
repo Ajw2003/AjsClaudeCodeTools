@@ -168,8 +168,8 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .g.done span.c{background:var(--ok-soft);color:var(--ok)}
 .sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
 .owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
-/* Plan mode (#469, #473): a step's code as captioned blocks. Lines never wrap mid-word; a long
-   line scrolls sideways inside its own box. Added lines take the accent tint (I build it). */
+/* Plan mode (#469, #473): a step's code as captioned blocks. The code keeps each statement on one line; the page
+   wraps a long line to fit the screen, with the rest indented under it. Added lines take the accent tint (I build it). */
 .change-list { margin: 8px 0 12px; padding-left: 1.4em; }
 .change-list li { margin: 4px 0; }
 .code-block { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; }
@@ -179,19 +179,21 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 }
 .code-caption small { color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
 .code-scroll { overflow-x: auto; }
-.code-lines { border-collapse: collapse; min-width: 100%; }
+.code-lines { border-collapse: collapse; width: 100%; table-layout: fixed; }
 .code-lines td {
-  white-space: pre; vertical-align: top; padding: 0 10px 0 0;
+  vertical-align: top; padding: 0 10px 0 0;
   font: 13px/1.6 ui-monospace, Consolas, monospace;
 }
-.code-lines td.line-number { color: var(--muted); text-align: right; padding: 0 8px; }
+/* --indent is the line's own indent, in characters: a wrapped line continues four characters further in, under itself. */
+.code-lines td.code-text { white-space: pre-wrap; overflow-wrap: anywhere; padding-left: calc((var(--indent, 0) + 4) * 1ch); text-indent: -4ch; }
+.code-lines td.line-number { width: 3.5em; white-space: nowrap; color: var(--muted); text-align: right; padding: 0 8px; }
 .code-lines tr.added td.code-text { background: var(--accent-soft); }
 .code-lines tr.removed td.code-text { color: var(--muted); text-decoration: line-through; }
 .code-lines tr.kept td.code-text { color: var(--muted); }  /* existing code, shown for place */
 .code-edit {
   display: block; width: 100%; box-sizing: border-box; min-height: 10em; padding: 10px;
   border: 0; border-top: 1px solid var(--line); background: var(--bg); color: var(--fg);
-  font: 13px/1.6 ui-monospace, Consolas, monospace; white-space: pre; overflow-x: auto;
+  font: 13px/1.6 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .code-block > button { margin: 8px 10px; }
 .test-list { margin: 0 0 12px; }
@@ -4421,7 +4423,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-          246,
+          250,
           2,
           []
         ]
@@ -6477,11 +6479,11 @@ const PAGE = {
                 ],
                 [
                   "+",
-                  "/* Plan mode (#469, #473): a step's code as captioned blocks. Lines never wrap mid-word; a long"
+                  "/* Plan mode (#469, #473): a step's code as captioned blocks. The code keeps each statement on one line; the page"
                 ],
                 [
                   "+",
-                  "   line scrolls sideways inside its own box. Added lines take the accent tint (I build it). */"
+                  "   wraps a long line to fit the screen, with the rest indented under it. Added lines take the accent tint (I build it). */"
                 ],
                 [
                   "+",
@@ -6521,7 +6523,7 @@ const PAGE = {
                 ],
                 [
                   "+",
-                  ".code-lines { border-collapse: collapse; min-width: 100%; }"
+                  ".code-lines { border-collapse: collapse; width: 100%; table-layout: fixed; }"
                 ],
                 [
                   "+",
@@ -6529,7 +6531,7 @@ const PAGE = {
                 ],
                 [
                   "+",
-                  "  white-space: pre; vertical-align: top; padding: 0 10px 0 0;"
+                  "  vertical-align: top; padding: 0 10px 0 0;"
                 ],
                 [
                   "+",
@@ -6541,7 +6543,15 @@ const PAGE = {
                 ],
                 [
                   "+",
-                  ".code-lines td.line-number { color: var(--muted); text-align: right; padding: 0 8px; }"
+                  "/* --indent is the line's own indent, in characters: a wrapped line continues four characters further in, under itself. */"
+                ],
+                [
+                  "+",
+                  ".code-lines td.code-text { white-space: pre-wrap; overflow-wrap: anywhere; padding-left: calc((var(--indent, 0) + 4) * 1ch); text-indent: -4ch; }"
+                ],
+                [
+                  "+",
+                  ".code-lines td.line-number { width: 3.5em; white-space: nowrap; color: var(--muted); text-align: right; padding: 0 8px; }"
                 ],
                 [
                   "+",
@@ -6569,7 +6579,7 @@ const PAGE = {
                 ],
                 [
                   "+",
-                  "  font: 13px/1.6 ui-monospace, Consolas, monospace; white-space: pre; overflow-x: auto;"
+                  "  font: 13px/1.6 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere;"
                 ],
                 [
                   "+",
@@ -6613,7 +6623,7 @@ const PAGE = {
             },
             {
               "file": "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-              "new_start": 359,
+              "new_start": 361,
               "lines": [
                 [
                   " ",
@@ -6773,7 +6783,15 @@ const PAGE = {
                 ],
                 [
                   "+",
-                  "    rows.push(`<tr class=\"${rowClass}\"><td class=\"line-number\">${numberText}<\/td><td class=\"code-text\">${esc(text)}<\/td><\/tr>`);"
+                  "    // The line's own indent is handed to the style as --indent, so a wrapped line continues under itself."
+                ],
+                [
+                  "+",
+                  "    const indentWidth = text.length - text.trimStart().length;"
+                ],
+                [
+                  "+",
+                  "    rows.push(`<tr class=\"${rowClass}\"><td class=\"line-number\">${numberText}<\/td><td class=\"code-text\" style=\"--indent: ${indentWidth}\">${esc(text.trimStart())}<\/td><\/tr>`);"
                 ],
                 [
                   "+",
@@ -7397,7 +7415,7 @@ const PAGE = {
             },
             {
               "file": "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-              "new_start": 601,
+              "new_start": 605,
               "lines": [
                 [
                   " ",
@@ -7477,7 +7495,7 @@ const PAGE = {
             },
             {
               "file": "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-              "new_start": 647,
+              "new_start": 651,
               "lines": [
                 [
                   " ",
@@ -10863,7 +10881,7 @@ const PAGE = {
             },
             {
               "file": "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-              "new_start": 549,
+              "new_start": 553,
               "lines": [
                 [
                   " ",
@@ -11675,7 +11693,9 @@ function codeRowsHtml(block) {
       lineNumber += 1;
     }
     const rowClass = ROW_CLASS_FOR_KIND[kind];
-    rows.push(`<tr class="${rowClass}"><td class="line-number">${numberText}</td><td class="code-text">${esc(text)}</td></tr>`);
+    // The line's own indent is handed to the style as --indent, so a wrapped line continues under itself.
+    const indentWidth = text.length - text.trimStart().length;
+    rows.push(`<tr class="${rowClass}"><td class="line-number">${numberText}</td><td class="code-text" style="--indent: ${indentWidth}">${esc(text.trimStart())}</td></tr>`);
   }
   return rows.join("");
 }

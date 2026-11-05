@@ -211,10 +211,10 @@ index 4e997db..095bf1a 100644
 +    add_not_part_of_line(page, plan.get("not_part_of"))
      return {"drafts": draft_hashes, "steps": len(plan["steps"]), "large": large_steps, "linked": False}
 diff --git a/claude-house-rules/plugins/house-rules/templates/handover-page.html b/claude-house-rules/plugins/house-rules/templates/handover-page.html
-index e176807..1e5496d 100644
+index 540e801..90ab5ea 100644
 --- a/claude-house-rules/plugins/house-rules/templates/handover-page.html
 +++ b/claude-house-rules/plugins/house-rules/templates/handover-page.html
-@@ -549,2 +549,7 @@ function applyPlanReview() {
+@@ -553,2 +553,7 @@ function applyPlanReview() {
      miss.innerHTML = `<span class="missing">Tick Looks right on each step you have read.</span>`;
 +    return;
 +  }

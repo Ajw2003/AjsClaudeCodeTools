@@ -870,10 +870,10 @@
   "plan_page": {
     "drafts": {
       "docs/plans/code-preview-and-issue-rule-code/1-readability-check.diff": "80920cc85f3a82dabe05b015a407e2405199474aa8ad87dc5a3025ac145beaf6",
-      "docs/plans/code-preview-and-issue-rule-code/2-plan-mode-and-view.diff": "b13b6d2ebcf845ce34e0698464bb4a55b97c0d72d57821b935205a43b30fa607",
+      "docs/plans/code-preview-and-issue-rule-code/2-plan-mode-and-view.diff": "9f8d74c97ba4dd0d4eb8dd134eaf7f37da37179ace73c9fe22cabfe6fdf7b519",
       "docs/plans/code-preview-and-issue-rule-code/3-gate-and-issue-rule.diff": "facdef94a79f8ee7dac25c636e08b159961b4f8a9737f70178df879b453811fa",
       "docs/plans/code-preview-and-issue-rule-code/4-builder-and-departures.diff": "3972a7561a898d65853b34137737cbd1d6d3f9a14ba8a8ed5a2150e87642c356",
-      "docs/plans/code-preview-and-issue-rule-code/5-feature-issues-only.diff": "de9717c8a8366d9a350964cd70ce577f6ecc6e90c6a5ec8840c46e3f78402b98",
+      "docs/plans/code-preview-and-issue-rule-code/5-feature-issues-only.diff": "319de0f1fe0441785de7aca0dfee10ccd10941f37601904c45cf9626fc6677c9",
       "docs/plans/code-preview-and-issue-rule-code/6-rules-docs-version.diff": "b78e53e36543462bda04144373a87fe083e6be9918dd9a15b2632d32813cb565"
     },
     "steps": 6,
