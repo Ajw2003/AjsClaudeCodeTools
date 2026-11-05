@@ -80,7 +80,7 @@
     "name": "The readability check",
     "draft": "docs/plans/code-preview-and-issue-rule-code/1-readability-check.diff",
     "size": "large",
-    "summary": "A new script, scripts/readability.py, checks every line a diff adds, in Python, JavaScript and C#. Names are whole words. Each line holds one statement, and a statement is never split across lines, even if that makes it long. Each part of a long condition gets a yes-or-no name. Each function opens with a plain sentence, and no logic is packed into a one-line lambda (a small unnamed function). Values sit inside f-strings or interpolated strings (strings with the value written in the text), and patterns are built from named pieces.",
+    "summary": "A new script, scripts/readability.py, checks every line a diff adds, in Python, JavaScript and C#. Names are whole words. A line holds one statement, which is never split across lines, even if that makes it long. Every part of a long condition gets a yes-or-no name. Functions open with a plain sentence, and no logic is packed into a one-line lambda (a small unnamed function). Values sit inside f-strings or interpolated strings (strings with the value written in the text), and patterns are built from named pieces.",
     "changes": [
      "Tests: each rule refuses a bad line and passes a good one, in Python, JavaScript and C#. More tests cover quoted text, comments, two quoted strings side by side on one line, older helpers and names that already existed.",
      "The pattern builder: named pieces such as spaces, digits and capture(...). Patterns (regular expressions) are built from them, so each one reads as a sentence. It is the one file that holds raw pattern syntax.",
