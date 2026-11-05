@@ -593,6 +593,16 @@ def _loop_name(raw):
     return cut or raw.strip()
 
 
+def _loop_same(a, b):
+    """D6: True when two feature names agree, ignoring case and _loop_name's clean-up, or when one starts with the
+    other as whole words ("background work tracking" and "background work tracking 1A except ...")."""
+    x, y = _loop_name(a or "").lower(), _loop_name(b or "").lower()
+    if not x or not y:
+        return False
+    short, longer = sorted((x, y), key=len)
+    return longer == short or longer.startswith(short + " ")
+
+
 # #235: an issue's label says whose move it is - `in progress` is mine, `needs review` is aj's - and
 # every stage move checks it. Labels are read from GitHub every time (#236); when that read fails,
 # from the label changes this hook recorded, and the note says why.
@@ -818,7 +828,7 @@ def _loop_issues_for_apply(state, text, top):
     if not m:
         return ""
     name, feature = _loop_name(m.group(1)), state.get("feature") or ""
-    if state["stage"] != "plan" or name.lower() not in {feature.lower(), _loop_name(feature).lower()}:
+    if state["stage"] != "plan" or not _loop_same(name, feature):  # D6: same name matching as the approvals
         return ('Design loop: aj wrote "Issues for %s:", but %s, so nothing was recorded. Issues attach only to '
                 "the feature being planned." % (name, 'the feature in Plan is "%s"' % feature
                                                  if state["stage"] == "plan" else "no feature is in Plan"))
@@ -843,14 +853,14 @@ def _loop_apply_stage(state, text, top):
     message approves nothing. Mutates state.
 
     #307: a message can hold more than one approval ("Design approved: X.  Build plan approved: X").
-    Each phrase is cut out up to where the next one starts, and the pieces are applied in stage order -
-    design, then build plan, then QA - so one refusal no longer hides the approvals beside it."""
+    Each phrase is cut out up to where the next one starts, and the pieces are applied in the order aj
+    wrote them (D5), so one refusal no longer hides the approvals beside it."""
     found = sorted((m.start(), order) for rx, order in _LOOP_STAGE_ORDER for m in rx.finditer(text))
     if len(found) < 2:
         return _loop_apply_one(state, text, top)
     pieces = [(order, text[start:found[i + 1][0] if i + 1 < len(found) else len(text)])
               for i, (start, order) in enumerate(found)]
-    notes = [_loop_apply_one(state, piece, top) for _order, piece in sorted(pieces, key=lambda p: p[0])]
+    notes = [_loop_apply_one(state, piece, top) for _order, piece in pieces]  # D5: in the order aj wrote them
     return " ".join(n for n in notes if n)
 
 
@@ -929,6 +939,10 @@ def _loop_apply_one(state, text, top):
     m = _LOOP_PLAN_RE.search(text)
     if m:
         name = _loop_name(m.group(1))
+        if stage == "plan" and not _loop_same(name, feature):
+            return ('Design loop: aj wrote "Build plan approved: %s", but the feature in Plan is "%s", so nothing '
+                    "moved. Ask aj to approve it by that name, or to approve a design for \"%s\" first."
+                    % (name, feature, name))
         if stage != "plan":
             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
@@ -965,9 +979,12 @@ def _loop_apply_one(state, text, top):
             unlogged = _loop_unlogged(state, top, "Design approved", name)
             if unlogged:
                 return unlogged
+            same = stage in ("build", "qa") and _loop_same(name, feature)  # D5: an amended design, not a new feature
             state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
             state["redo"] = False
-            if not redo:
+            if same:
+                state.pop("qa_page", None); state.pop("qa_page_linked", None)  # the amended build gets a new QA page
+            elif not redo:
                 _loop_keep_feature(state, feature, stage)  # #375: a feature in build or QA keeps its issues
                 state["issues"] = []
                 state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: not the next feature's
@@ -978,6 +995,10 @@ def _loop_apply_one(state, text, top):
                 stored = _loop_stored(state, name)
                 if stored is not None:
                     return _loop_stored_qa(state, stored, verdict, name, top)
+                if stage in ("build", "qa") and not _loop_same(name, feature):
+                    return ('Design loop: aj wrote "QA %s: %s", but the feature in %s is "%s" and no kept feature has '
+                            "that name, so nothing moved. Ask aj which feature they meant."
+                            % (verdict, name, LOOP_STAGE_NAMES[stage], feature))
                 if stage == "build":
                     labels, src = _loop_labels(state)
                     if not _loop_to_qa(state, labels):
@@ -1007,6 +1028,7 @@ def _loop_apply_one(state, text, top):
                     state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: the redo gets a new page
                 approval = ("QA " + verdict, name)
     if approval:
+        state["skip"] = False  # D7: a skip belongs to the stage it was typed in
         state.setdefault("approvals", []).append(
             {"stage": approval[0], "name": approval[1], "at": int(time.time())})
         note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
@@ -1039,6 +1061,9 @@ def _loop_apply_one(state, text, top):
             note += " Code edits stay closed."
         return note
     if _LOOP_SKIP_RE.search(text):
+        if stage == "build":
+            return ('Design loop: aj wrote "skip design", but the stage is Build, so code edits are already open '
+                    "and nothing was stored.")
         state["skip"] = True
         return 'Design loop: aj wrote "skip design", so the next code edit goes through, then the lock is back.'
     if _LOOP_BARE_RE.search(text):
@@ -2051,9 +2076,6 @@ def _check_page_saved(ctx):
     return ""  # runs as the PreToolUse hook event_pagecheck, never at Stop
 
 
-_QA_ARTIFACT_RE = re.compile(r"https://claude\.ai/artifact/\S+|claude\.ai/code/artifact/\S+", re.IGNORECASE)
-
-
 def _record_qa_link(ctx):
     """True (and qa_page_linked recorded) when the reply links the QA page. Also used on a retry."""
     page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
@@ -2061,7 +2083,7 @@ def _record_qa_link(ctx):
     in_reply = page in reply or os.path.basename(page) in reply
     if page and cwd and in_reply:  # #329: the page counts only when its path opens inside the folder
         in_reply = _inside(os.path.normcase(os.path.abspath(os.path.join(cwd, page))), cwd)
-    if not (page and (in_reply or _QA_ARTIFACT_RE.search(reply))):
+    if not (page and in_reply):  # D8: the reply names this feature's QA page; a bare artifact link proves nothing
         return False
     state, problem = _loop_read(ctx["qa_git_dir"])
     if problem:
@@ -2081,7 +2103,7 @@ def _check_qa_page(ctx):
         return ""
     missing = "the QA page is built but not linked in the reply" if page else "no QA page is built yet"
     return ("%s: build it with `python3 %s build docs/plans/<name>-qa.page.json`, where the content file has a "
-            "`qa` block (feature, base, unverified, files), then link the page in the reply"
+            "`qa` block (feature, base, unverified, files), then name the page's file in the reply, beside any link"
             % (missing, os.path.join(SCRIPTS_DIR, "make_page.py")))
 
 
@@ -2345,7 +2367,10 @@ def event_closablemerge():
                 notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (
                     repo, number, why or "it links none of the QA-passed issues with `Refs #N`"))
             trace("house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit)))
-        # shortcut: U3's stage-file-says-QA note is step 5 (#481) and is not added here.
+        if state.get("stage") == "qa":  # U3: the merge never moves the stage; aj is asked for the verdict
+            notes.append('Design loop: pull request %s#%d merged while "%s" is in QA, so the stage file still '
+                         'says QA. Ask aj for "QA passed: %s" or "QA failed: %s"; the stage moves only on their word.'
+                         % ((repo, number) + (state.get("feature") or "this feature",) * 3))
         if notes:
             emit({"systemMessage": " ".join(notes),
                   "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": " ".join(notes)}})
