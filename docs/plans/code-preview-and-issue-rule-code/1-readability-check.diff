@@ -1,28 +1,42 @@
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-index 252db05..77fcb7c 100644
+index 252db05..c085891 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-@@ -357,6 +357,100 @@ _rc, _o = _mp("build", _c1, "--project", _ds_d)
- _nk_h = open(os.path.join(_ds_d, "docs", "plans", "basic.html"), encoding="utf-8").read() if _rc == 0 else ""
- _mp_cases.append(("summary (#339): a content file with no kind has no kind in its PAGE and still carries the Requires label",
+@@ -359,2 +359,129 @@ _mp_cases.append(("summary (#339): a content file with no kind has no kind in it
                    _rc == 0 and '"kind"' not in _nk_h.split("const PAGE", 1)[1].split("\n};", 1)[0] and 'ic("hand") + "Requires"' in _nk_h))
 +# ---- readability.py: the six readable-code rules, checked on the lines a diff adds (#473) ----
 +READABILITY = os.path.join(HERE, "readability.py")
 +readability_project = tempfile.mkdtemp(prefix="readability-")
++# Readable names for this file's older helpers; renaming them everywhere is issue #474.
++page_check_results = _mp_cases
++
++# What git writes in a diff: "diff --git a/<old path> b/<new path>" starts each file, then
++# "--- <old path>" and "+++ <new path>" name the files, then "@@ -<old> +<new> @@" starts a hunk.
++FILE_START_MARKER = "diff --git "
++NEW_PATH_MARKER = " b/"
++OLD_FILE_MARKER = "--- "
++NEW_FILE_MARKER = "+++ "
++HUNK_MARKER = "@@"
++# A percent sign, kept out of the quoted test text below so the rule 7 test can name it.
++PERCENT_SIGN = "%"
 +
 +
 +def diff_adding(file_name, added_lines):
 +    """A unified diff that creates file_name holding exactly added_lines."""
-+    header = ["diff --git a/%s b/%s" % (file_name, file_name), "new file mode 100644",
-+              "--- /dev/null", "+++ b/%s" % file_name, "@@ -0,0 +1,%d @@" % len(added_lines)]
++    file_start = f"{FILE_START_MARKER}a/{file_name}{NEW_PATH_MARKER}{file_name}"
++    hunk_header = f"{HUNK_MARKER} -0,0 +1,{len(added_lines)} {HUNK_MARKER}"
++    header = [file_start, "new file mode 100644", f"{OLD_FILE_MARKER}/dev/null",
++              f"{NEW_FILE_MARKER}b/{file_name}", hunk_header]
 +    body = ["+" + line for line in added_lines]
 +    return "\n".join(header + body) + "\n"
 +
 +
 +def diff_changing(file_name, removed_lines, added_lines):
 +    """A unified diff that replaces removed_lines with added_lines in an existing file."""
-+    header = ["diff --git a/%s b/%s" % (file_name, file_name), "--- a/%s" % file_name,
-+              "+++ b/%s" % file_name, "@@ -1,%d +1,%d @@" % (len(removed_lines), len(added_lines))]
++    file_start = f"{FILE_START_MARKER}a/{file_name}{NEW_PATH_MARKER}{file_name}"
++    hunk_header = (f"{HUNK_MARKER} -1,{len(removed_lines)} +1,{len(added_lines)} {HUNK_MARKER}")
++    header = [file_start, f"{OLD_FILE_MARKER}a/{file_name}", f"{NEW_FILE_MARKER}b/{file_name}",
++              hunk_header]
 +    removed_body = ["-" + line for line in removed_lines]
 +    added_body = ["+" + line for line in added_lines]
 +    body = removed_body + added_body
@@ -48,7 +62,7 @@ index 252db05..77fcb7c 100644
 +def flags_rule(rule_number, file_name, added_lines):
 +    """True when the check refuses these lines and names this rule."""
 +    exit_code, findings = readability_findings(file_name, added_lines)
-+    names_the_rule = ("rule %d," % rule_number) in findings
++    names_the_rule = f"rule {rule_number}," in findings
 +    return exit_code == 1 and names_the_rule
 +
 +
@@ -81,6 +95,23 @@ index 252db05..77fcb7c 100644
 +     flags_rule(4, "notes.md", ["word " * 25])),
 +    ("rule 4: a Markdown table row may run long, because it cannot wrap",
 +     passes_check("notes.md", ["| " + "cell | " * 30])),
++    ("rule 7: a percent placeholder is refused; the same text as an f-string passes",
++     flags_rule(7, "app.py", [f'note = "step {PERCENT_SIGN}s failed" {PERCENT_SIGN} step_name'])
++     and passes_check("app.py", ['note = f"step {step_name} failed"'])),
++    ("rule 8: a pattern with no comment is refused; with a plain comment above it, it passes",
++     flags_rule(8, "app.py", ['HEADER = re.compile(r"^@@")'])
++     and passes_check("app.py", ["# The line that starts a block of changes.",
++                                 'HEADER = re.compile(r"^@@")'])),
++    ("rule 1: an older helper with a short name is refused where new code calls it",
++     flags_rule(1, "app.py", ["exit_code = _mp(page_name)"])),
++    ("rule 1: a line that only gives an older helper a readable name passes",
++     passes_check("app.py", ["run_git_in = _mp_git"])),
++    ("a triple quote written inside an ordinary string does not hide the next lines from the check",
++     flags_rule(1, "app.py", ['QUOTES = ("x", "\'\'\'")', "_rc = 1"])),
++    ("rule 8: a pattern held in a named variable needs no second comment where it is used",
++     passes_check("app.py", ["parts = re.split(joiner_pattern, condition)"])),
++    ("a comment is prose: words such as or, and, lambda in it are not read as code",
++     passes_check("app.py", ["total = 0  # one or two and three, not a lambda"])),
 +    ("rule 5: a new function with no description is refused",
 +     flags_rule(5, "app.py", ["def total(items):", "    return sum(items)"])),
 +    ("rule 5: a new function that opens with a plain sentence passes",
@@ -98,17 +129,15 @@ index 252db05..77fcb7c 100644
 +     and flags_rule(1, "page.html", ["<script>", "const el = find();", "</script>"])),
 +]
 +for case_title, case_passed in readability_cases:
-+    _mp_cases.append(("readability (#473): " + case_title, case_passed))
++    page_check_results.append(("readability (#473): " + case_title, case_passed))
 +
  for _t, _ok in _mp_cases:
-     report("PASS" if _ok else "FAIL", _t)
- shutil.rmtree(_mp_tmp, True)
 diff --git a/claude-house-rules/plugins/house-rules/scripts/readability.py b/claude-house-rules/plugins/house-rules/scripts/readability.py
 new file mode 100644
-index 0000000..a7a87f8
+index 0000000..160dd1f
 --- /dev/null
 +++ b/claude-house-rules/plugins/house-rules/scripts/readability.py
-@@ -0,0 +1,399 @@
+@@ -0,0 +1,554 @@
 +#!/usr/bin/env python3
 +"""readability.py - checks that every line a diff adds is easy to read (#473).
 +
@@ -121,6 +150,8 @@ index 0000000..a7a87f8
 +  4. Lines are at most 100 characters.
 +  5. Every new function starts with one plain sentence saying what it does.
 +  6. No logic inside one-line lambdas or nested comprehensions.
++  7. Values sit inside the text they fill: f-strings, not percent placeholders.
++  8. Every pattern (regular expression) has a plain comment above it saying what it matches.
 +
 +Python and JavaScript lines are checked, including the script part of an HTML file.
 +Markdown, JSON and CSS lines are only checked for length; the writing check reads prose.
@@ -155,7 +186,7 @@ index 0000000..a7a87f8
 +GUESSWORK_ABBREVIATIONS = {"cfg", "msg", "tmp", "val", "idx", "cnt", "num", "obj", "arr",
 +                           "btn", "ctx", "req", "res", "buf", "ptr", "src", "dst", "esc", "pkg",
 +                           "opt", "opts", "seg", "ops", "rel", "pos", "len", "str", "dir", "elt",
-+                           "itm", "lst", "dct", "fnc"}
++                           "itm", "lst", "dct", "fnc", "cmd", "iss", "mod"}
 +
 +SPLIT_STATEMENTS = "rule 2, one thing per line: put each statement joined by ; on its own line"
 +NAME_THE_CONDITION = "rule 3, named conditions: give each part of this condition a yes-or-no name"
@@ -163,24 +194,76 @@ index 0000000..a7a87f8
 +NO_NESTED_LOOPS = "rule 6, no packed logic: write the nested comprehension as loops"
 +NAME_THE_ARROW = "rule 6, no packed logic: give this one-line arrow function a name and a body"
 +DESCRIBE_THE_FUNCTION = "rule 5, describe each function: open it with one plain sentence"
++VALUES_IN_PLACE = ("rule 7, values in place: write an f-string such as f\"step {name}\" instead of "
++                   "percent placeholders")
++EXPLAIN_THE_PATTERN = ("rule 8, explain patterns: put a plain comment above it saying "
++                       "what it matches")
++
++# What git writes in a unified diff: "diff --git a/<old path> b/<new path>" starts each file.
++# The lines "--- <old path>" then "+++ <new path>" name the old file, then the new one.
++FILE_START_MARKER = "diff --git "
++NEW_PATH_MARKER = " b/"
++OLD_FILE_MARKER = "--- "
++NEW_FILE_MARKER = "+++ "
++
++# A block header such as "@@ -12,3 +14,5 @@": captures the old and new start lines.
++HUNK_HEADER = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
++
++# A percent placeholder inside quoted text: a percent sign, optional width, then the value's type.
++PERCENT_PLACEHOLDER = re.compile(r"%[-+ 0-9.]*[sdrfxi]|%\(")
++
++# Quoted text followed by the percent operator that fills it.
++PERCENT_OPERATOR = re.compile(r"\"\"\s*[%](?!=)")
++
++# A Python pattern written out in place: re.compile(...) always, or another re call whose first
++# argument is quoted text. A pattern held in a named variable is explained where it is named.
++PYTHON_PATTERN_CALL = re.compile(
++    r"\bre\.compile\("
++    r"|\bre\.(?:search|match|fullmatch|findall|finditer|sub|split)\(\s*[rRbB]*[\"']")
++
++# A JavaScript pattern written between slashes, right after an opening bracket, comma or equals.
++JAVASCRIPT_PATTERN = re.compile(r"[(,=]\s*/[^/*\s][^/]*/[gimsuy]*")
++
++# A private helper's name: an underscore, then a letter. Attribute access (.name) is not one.
++PRIVATE_NAME = re.compile(r"(?<![\w.])_[A-Za-z]\w*")
++
++# A line that only gives an old private helper a new name: readable_name = _old_name
++ALIAS_LINE = re.compile(r"^\s*([A-Za-z]\w*)\s*=\s*_[A-Za-z]\w*\s*(?:#.*)?$")
++
++# Any name in a line of code.
++ANY_NAME = re.compile(r"[A-Za-z_$][\w$]*")
 +
 +PYTHON_EXTENSIONS = (".py",)
 +JAVASCRIPT_EXTENSIONS = (".js", ".mjs", ".ts", ".tsx", ".jsx")
 +HTML_EXTENSIONS = (".html", ".htm")
 +
++# A quoted piece of text: single quotes or double quotes, with backslash escapes allowed inside.
 +STRING_LITERAL = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"")
++# The start of a triple-quoted string, with a prefix letter like r in front.
++# Where a triple-quoted string opens: an optional r, b, u or f prefix, then three quotes.
 +BLOCK_STRING_START = re.compile(r"[rRbBuUfF]*(\"\"\"|''')")
++# One Python name, or several separated by commas: "a" or "first, second".
 +PYTHON_NAME_LIST =r"([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)"
++# A Python line that assigns to one or more names: "total = 0" or "first, second = pair".
 +PYTHON_ASSIGNMENT = re.compile(r"^\s*" + PYTHON_NAME_LIST + r"\s*(?:[-+*/]?=)(?!=)")
++# A Python function definition: its name, then the text of its parameters.
 +PYTHON_FUNCTION = re.compile(r"^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(([^)]*)")
++# The names a Python "for ... in" loop creates.
 +PYTHON_LOOP_NAMES = re.compile(r"\bfor\s+" + PYTHON_NAME_LIST + r"\s+in\b")
++# The name after "as", in "with ... as name" or "except ... as name".
 +PYTHON_AS_NAME = re.compile(r"\bas\s+([A-Za-z_]\w*)")
++# The name a JavaScript const, let or var declares.
 +JAVASCRIPT_DECLARATION = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)")
++# A JavaScript function definition: its name, then the text of its parameters.
 +JAVASCRIPT_FUNCTION = re.compile(r"\bfunction\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)")
++# The parameters before an arrow (=>): either "(a, b)" or a single bare name.
 +JAVASCRIPT_ARROW_PARAMETERS = re.compile(r"(?:\(([^()]*)\)|\b([A-Za-z_$][\w$]*))\s*=>")
++# A named arrow function with a body: "const name = (...) => {".
 +JAVASCRIPT_ARROW_FUNCTION = re.compile(
 +    r"\b(?:const|let)\s+[A-Za-z_$][\w$]*\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{")
++# A condition part that is already a yes-or-no name: "is_ready", "not is_done" or "!isDone".
 +PLAIN_NAME = re.compile(r"^\(?\s*(?:not\s+|!)?[A-Za-z_$][\w$.]*[\s),;]*$")
++# The point between a lower-case letter or digit and the capital that starts the next word.
 +CAMEL_CASE_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 +
 +
@@ -201,12 +284,13 @@ index 0000000..a7a87f8
 +    for word in words:
 +        is_known_word = word in KNOWN_SHORT_WORDS or word in KNOWN_ABBREVIATIONS
 +        is_connecting_word = has_several_words and word in CONNECTING_WORDS
-+        if is_known_word or is_connecting_word or word.isdigit():
++        is_number = word.isdigit()
++        if is_known_word or is_connecting_word or is_number:
 +            continue
 +        if word in GUESSWORK_ABBREVIATIONS:
-+            return '"%s" is an abbreviation; write the whole word' % word
++            return f'"{word}" is an abbreviation; write the whole word'
 +        if len(word) < MIN_WORD_LENGTH:
-+            return '"%s" is too short to say what it holds' % word
++            return f'"{word}" is too short to say what it holds'
 +    return ""
 +
 +
@@ -215,6 +299,7 @@ index 0000000..a7a87f8
 +    names = []
 +    for parameter in parameter_text.split(","):
 +        bare = parameter.split("=")[0].split(":")[0].strip().lstrip("*").strip()
++        # A whole parameter that is one plain name.
 +        if re.match(r"^[A-Za-z_$][\w$]*$", bare):
 +            names.append(bare)
 +    return names
@@ -262,11 +347,39 @@ index 0000000..a7a87f8
 +
 +def has_unnamed_condition(code, joiner_pattern):
 +    """True when a condition joins three or more parts and one is not a plain yes-or-no name."""
++    # The condition is whatever follows the last if, while, return or single equals sign.
 +    condition = re.split(r"\bif\b|\bwhile\b|\breturn\b|=(?!=)", code)[-1].rstrip(":{ ")
 +    parts = re.split(joiner_pattern, condition)
 +    if len(parts) < 3:
 +        return False
 +    return not all(PLAIN_NAME.match(part.strip()) for part in parts)
++
++
++def older_helper_problems(code, existing_names):
++    """Rule 1 for an older private helper that new code calls: it needs a readable name too.
++    A helper the same change also removes or already used is left to the clean-up issue, and a
++    line that only gives an old helper a readable name (run_git_in = _mp_git) is the fix itself."""
++    alias = ALIAS_LINE.match(code)
++    if alias and not name_problem(alias.group(1)):
++        return []
++    problems = []
++    for helper_name in sorted(set(PRIVATE_NAME.findall(code))):
++        if helper_name in existing_names:
++            continue
++        why = name_problem(helper_name)
++        if why:
++            problems.append(f"rule 1, whole-word names: the older helper {helper_name}: {why}; "
++                            "give it a readable name where new code calls it")
++    return problems
++
++
++def text_problems(line):
++    """Rule 7 for one line of Python, read with its quoted text still in place."""
++    for quoted in STRING_LITERAL.findall(line):
++        is_format_string = line[:line.find(quoted)].rstrip().endswith(("f", "rf", "fr"))
++        if PERCENT_PLACEHOLDER.search(quoted) and not is_format_string:
++            return [VALUES_IN_PLACE]
++    return []
 +
 +
 +def python_problems(code, existing_names):
@@ -278,14 +391,20 @@ index 0000000..a7a87f8
 +            continue
 +        why = name_problem(name)
 +        if why:
-+            problems.append("rule 1, whole-word names: %s" % why)
++            problems.append(f"rule 1, whole-word names: {why}")
++    problems.extend(older_helper_problems(code, existing_names))
++    if PERCENT_OPERATOR.search(code):
++        problems.append(VALUES_IN_PLACE)
 +    if ";" in code.split("#")[0]:
 +        problems.append(SPLIT_STATEMENTS)
 +    if has_unnamed_condition(code, r"\band\b|\bor\b"):
 +        problems.append(NAME_THE_CONDITION)
++    # The word lambda.
 +    if re.search(r"\blambda\b", code):
 +        problems.append(NO_LAMBDA)
++    # A leading "for" starts a loop statement, so only the fors after it are comprehensions.
 +    expression = re.sub(r"^\s*for\b", "", code)
++    # Each remaining word for.
 +    if len(re.findall(r"\bfor\b", expression)) >= 2:
 +        problems.append(NO_NESTED_LOOPS)
 +    return problems
@@ -300,7 +419,9 @@ index 0000000..a7a87f8
 +            continue
 +        why = name_problem(name)
 +        if why:
-+            problems.append("rule 1, whole-word names: %s" % why)
++            problems.append(f"rule 1, whole-word names: {why}")
++    problems.extend(older_helper_problems(code, existing_names))
++    # A for loop's brackets hold semicolons that belong together, so they are emptied first.
 +    statement_part = re.sub(r"\bfor\s*\([^)]*\)", "for ()", code.split("//")[0]).rstrip()
 +    if ";" in statement_part.rstrip(";"):
 +        problems.append(SPLIT_STATEMENTS)
@@ -327,12 +448,51 @@ index 0000000..a7a87f8
 +    return ""
 +
 +
++TRIPLE_QUOTES = ('"""', "'''")
++
++
++def python_block_quote_after(line, open_block_quote):
++    """Which triple quote is still open after this line ("" for none). Reads the line one character
++    at a time, so a triple quote written inside an ordinary string does not count."""
++    position = 0
++    open_single_quote = ""
++    while position < len(line):
++        character = line[position]
++        three_characters = line[position:position + 3]
++        if open_block_quote:
++            if three_characters == open_block_quote:
++                open_block_quote = ""
++                position += 3
++                continue
++            position += 2 if character == "\\" else 1
++            continue
++        if open_single_quote:
++            if character == "\\":
++                position += 2
++                continue
++            if character == open_single_quote:
++                open_single_quote = ""
++            position += 1
++            continue
++        if character == "#":
++            break
++        if three_characters in TRIPLE_QUOTES:
++            open_block_quote = three_characters
++            position += 3
++            continue
++        if character in ("'", '"'):
++            open_single_quote = character
++        position += 1
++    return open_block_quote
++
++
 +class LineState:
 +    """Where a line sits in its file: inside a multi-line string, and, in HTML, inside a script."""
 +
 +    def __init__(self):
 +        """Start outside every string and script, as at the top of a file."""
 +        self.in_python_block_string = False
++        self.python_block_quote = ""
 +        self.in_javascript_template = False
 +        self.in_html_script = False
 +
@@ -349,15 +509,17 @@ index 0000000..a7a87f8
 +    def move_past(self, line, language):
 +        """Update the state for what this line opens or closes."""
 +        if language == "python":
-+            block_quotes = line.count('"""') + line.count("'''")
-+            if block_quotes % 2 == 1:
-+                self.in_python_block_string = not self.in_python_block_string
++            self.python_block_quote = python_block_quote_after(line, self.python_block_quote)
++            self.in_python_block_string = bool(self.python_block_quote)
 +            return
 +        if language == "html":
++            # An opening script tag.
 +            if re.search(r"<script\b", line, re.IGNORECASE):
 +                self.in_html_script = True
++            # A closing script tag.
 +            if re.search(r"</script>", line, re.IGNORECASE):
 +                self.in_html_script = False
++        # Each backtick that is not escaped with a backslash.
 +        backticks = len(re.findall(r"(?<!\\)`", line))
 +        if backticks % 2 == 1:
 +            self.in_javascript_template = not self.in_javascript_template
@@ -405,11 +567,27 @@ index 0000000..a7a87f8
 +        if kind != "-":
 +            continue
 +        code = without_strings(text)
-+        if language == "python":
-+            names.update(names_bound_in_python(code))
-+        else:
-+            names.update(names_bound_in_javascript(code))
++        names.update(ANY_NAME.findall(code))
 +    return names
++
++
++def without_comment(code, language):
++    """The code part of a line whose quoted text is blanked: a comment is prose, not code."""
++    comment_mark = "#" if language == "python" else "//"
++    return code.split(comment_mark, 1)[0]
++
++
++def pattern_lacks_comment(code, previous_line, language):
++    """Rule 8: True when this line writes a pattern with no plain comment above it or after it."""
++    if language == "python":
++        writes_pattern = bool(PYTHON_PATTERN_CALL.search(code))
++    else:
++        writes_pattern = bool(JAVASCRIPT_PATTERN.search(code))
++    if not writes_pattern:
++        return False
++    comment_above = previous_line.strip().startswith(("#", "//"))
++    comment_after = "#" in code or "//" in code
++    return not (comment_above or comment_after)
 +
 +
 +def problems_in_file(file_name, hunks, project, read_file=None):
@@ -429,13 +607,14 @@ index 0000000..a7a87f8
 +            is_added = kind == "+"
 +            is_code = state.is_code(language)
 +            if is_added:
-+                where = "%s:%d" % (file_name, new_line_number)
++                where = f"{file_name}:{new_line_number}"
 +                is_table_row = file_name.endswith(".md") and text.lstrip().startswith("|")
 +                if len(text) > MAX_LINE_LENGTH and not is_table_row:
-+                    problems.append("%s: rule 4, short lines: %d characters, at most %d"
-+                                    % (where, len(text), MAX_LINE_LENGTH))
++                    problems.append(f"{where}: rule 4, short lines: {len(text)} characters, "
++                                    f"at most {MAX_LINE_LENGTH}")
 +                if is_code:
-+                    code = without_strings(text)
++                    code_and_comment = without_strings(text)
++                    code = without_comment(code_and_comment, language)
 +                    if language == "python":
 +                        line_problems = python_problems(code, existing_names)
 +                    else:
@@ -446,7 +625,11 @@ index 0000000..a7a87f8
 +                        text, next_lines, previous_line, language)
 +                    if description:
 +                        line_problems.append(description)
-+                    problems.extend("%s: %s" % (where, problem) for problem in line_problems)
++                    if language == "python":
++                        line_problems.extend(text_problems(text))
++                    if pattern_lacks_comment(code_and_comment, previous_line, language):
++                        line_problems.append(EXPLAIN_THE_PATTERN)
++                    problems.extend(f"{where}: {problem}" for problem in line_problems)
 +            state.move_past(text, language)
 +            new_line_number += 1
 +    return problems
@@ -457,15 +640,16 @@ index 0000000..a7a87f8
 +    files = {}
 +    current_file = None
 +    for line in diff_text.splitlines():
-+        if line.startswith("diff --git "):
-+            current_file = line.split(" b/", 1)[-1]
++        if line.startswith(FILE_START_MARKER):
++            current_file = line.split(NEW_PATH_MARKER, 1)[-1]
 +            files[current_file] = []
 +            continue
-+        header = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
++        header = HUNK_HEADER.match(line)
 +        if header and current_file is not None:
 +            files[current_file].append((int(header.group(1)), int(header.group(2)), []))
 +            continue
-+        is_file_header = line.startswith(("--- ", "+++ ", "index ", "new file", "deleted file"))
++        is_file_header = line.startswith((OLD_FILE_MARKER, NEW_FILE_MARKER, "index ", "new file",
++                                          "deleted file"))
 +        is_before_first_hunk = current_file is None or not files[current_file]
 +        if is_before_first_hunk or is_file_header:
 +            continue
@@ -494,15 +678,15 @@ index 0000000..a7a87f8
 +        with open(arguments[1], encoding="utf-8") as draft:
 +            diff_text = draft.read()
 +    except OSError as error:
-+        print("readability: could not read %s: %s" % (arguments[1], error))
++        print(f"readability: could not read {arguments[1]}: {error}")
 +        return 2
 +    problems = find_problems(diff_text, project)
 +    for problem in problems:
 +        print(problem)
 +    if problems:
-+        print("readability: %d problem(s) in %s" % (len(problems), arguments[1]))
++        print(f"readability: {len(problems)} problem(s) in {arguments[1]}")
 +        return 1
-+    print("readability: every added line in %s is readable" % arguments[1])
++    print(f"readability: every added line in {arguments[1]} is readable")
 +    return 0
 +
 +

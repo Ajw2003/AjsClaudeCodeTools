@@ -1,121 +1,247 @@
 {
-  "title": "Code Preview Build Plan",
-  "eyebrow": "Build plan for approval · issue #468 (code preview and issue rule) · redrafted to the readable-code rules",
-  "approval": "Build plan approved: code preview and issue rule",
-  "short": {
-    "lead": "Six steps, each with its full code below. Every added line passed the readability check before this page was built, and the page itself was built by the new plan mode. Open a step, read its plain sentences, glance at the code, and tick Looks right. Your reply is ready once every step is ticked.",
-    "hint": "Tap a step to see what it builds and what it needs from you.",
-    "key": [["I build it", ""], ["You act on it", "you"]],
-    "items": [
-      ["search", "Step 1", "The readability check", "", "Sub-issue #473 (Readable code in build plans). Adds scripts/readability.py and its 15 tests.", "Nothing from you."],
-      ["hammer", "Step 2", "Plan mode and the reading view", "", "Sub-issues #469 (Page builder shows each step's planned code) and #473 (Readable code in build plans). This page is the first real use of plan mode.", "Nothing from you."],
-      ["lock", "Step 3", "The approval waits for the code; one issue", "", "Sub-issue #470 (Build plan approval waits for the code, and needs one issue).", "Nothing from you."],
-      ["check", "Step 4", "The builder follows the draft; QA lists departures", "", "Sub-issue #471 (Builder follows the approved draft; QA page lists every departure).", "Nothing from you."],
-      ["list", "Step 5", "Only a feature's own issues count", "", "Issue #475 (The design loop counts every issue opened during Plan as part of the current feature).", "Nothing from you."],
-      ["file", "Step 6", "Rules, house standard, docs and version", "", "Sub-issue #472 (Rule text, docs, version and a real run).", "Nothing from you."],
-      ["eye", "Review", "You tick each step", "you", "Each step under Changes ends with Looks right and Change something.", "Read each step's sentences and code, then tick it or change it."]
-    ]
-  },
-  "plan": {
-    "steps": [
-      {"name": "The readability check", "draft": "docs/plans/code-preview-and-issue-rule-code/1-readability-check.diff", "size": "large",
-       "summary": "A new script, scripts/readability.py, checks every line a diff adds against the six readable-code rules and names the file, line and rule for each problem.",
-       "changes": [
-         "Tests: one case for each rule refusing a bad line and passing a good one, plus quoted text, HTML, table rows and names that already existed.",
-         "The readability check itself: it reads a diff, works out which lines are Python or JavaScript, and checks each added line against the six rules."]},
-      {"name": "Plan mode and the reading view", "draft": "docs/plans/code-preview-and-issue-rule-code/2-plan-mode-and-view.diff", "size": "large",
-       "summary": "The page builder learns a plan block: it checks each step's draft, splits it into captioned blocks, and the page shows them for reading and ticking.",
-       "changes": [
-         "Tests: refusals for a missing draft, size or captions, and for unreadable or stale code; the tick and edit flow in a real browser; the writing check skipping code.",
-         "The writing check imports json so it can read the page's content.",
-         "The writing check reads a page's sentences but skips the code a build plan carries.",
-         "The page builder's description of plan mode.",
-         "The page builder imports hashlib so it can record each draft's fingerprint.",
-         "Plan mode reads and splits each draft, checks captions and readability, applies the drafts in order to a throwaway copy, and adds one Changes item per step.",
-         "Building a page runs plan mode when the content has a plan block.",
-         "After the page is written, its path and the drafts' fingerprints are recorded for the approval gate.",
-         "The phone-width check lets a code block scroll sideways, because that is on purpose.",
-         "Styles for the code view: captions, line numbers, added and removed lines, the edit box and the Looks right box.",
-         "The code view: plain-sentence list, captioned blocks, folded tests, the tick per step, editing, and the changed-lines text for the reply.",
-         "The Changes list is drawn by a named function instead of one 460-character line, and shows a step's code.",
-         "The reply checks the plan review after the choices, so the approval appears only when every step is ticked."]},
-      {"name": "The approval waits for the code, and needs one issue", "draft": "docs/plans/code-preview-and-issue-rule-code/3-gate-and-issue-rule.diff", "size": "large",
-       "summary": "\"Build plan approved\" is refused until the plan page exists, is linked, and still matches its drafts. A feature needs one issue. When two or more steps are large, it needs one more for each large step.",
-       "changes": [
-         "Tests: a helper that gives a test project a build plan page that passes the gate.",
-         "Tests: the issue gate names the one issue it needs.",
-         "Tests: one issue clears the gate with no large steps; two large steps need three issues.",
-         "Tests: the approval is refused with no page, an unlinked page and a changed draft, then refused for too few issues.",
-         "Tests: a redone design starts with no build plan page.",
-         "Tests: an older test setup gets a passing build plan page.",
-         "Tests: the two-feature test setup gets a build plan page before each approval.",
-         "How many issues a feature needs, and the issue gate's refusal text.",
-         "The issue gate uses the new count: one issue, plus one per large step.",
-         "A function that reads a file's fingerprint safely, and the checks on the build plan page that can stop an approval.",
-         "The approval checks the build plan page first, then the issue count.",
-         "A new or redone design clears the old build plan page.",
-         "The issue record uses the one-plus-one-per-large-step count.",
-         "The end-of-reply reminder uses the one-plus-one-per-large-step count.",
-         "A reply that links the build plan page marks it linked.",
-         "The end of each reply records the link.",
-         "A retried reply records the link too."]},
-      {"name": "The builder follows the draft; QA lists departures", "draft": "docs/plans/code-preview-and-issue-rule-code/4-builder-and-departures.diff", "size": "large",
-       "summary": "Builders get the approved draft as their specification, and the QA page lists every line where the build differs from it.",
-       "changes": [
-         "The builder's instructions: an approved draft is the specification, and every departure is reported with its reason.",
-         "Tests: the Build note names the approved drafts.",
-         "Tests: a matching build lists no departures, a changed line is listed, reformatting is not, and no drafts is said plainly.",
-         "The note that opens the Build stage names the approved drafts.",
-         "The QA page gains the departures item.",
-         "The departures comparison: changed lines by file, with spacing ignored, merged across drafts.",
-         "Finding the stage file now has its own named function."]},
-      {"name": "Only a feature's own issues count", "draft": "docs/plans/code-preview-and-issue-rule-code/5-feature-issues-only.diff", "size": "small",
-       "summary": "After the first issue, an issue counts toward the feature only if it says Part of the feature. Your message \"Not part of <feature>: #N\" takes one out.",
-       "changes": [
-         "Tests: a helper that creates an issue saying Part of another issue.",
-         "Tests: an issue without Part of is not recorded, one with it is, and Not part of takes one out only for the named feature.",
-         "Tests: the issues in a later test setup say Part of the main issue.",
-         "Tests: the two-feature fixture's second issues say Part of their main issues.",
-         "Tests: a plan's not_part_of list puts the Not part of line under the approval.",
-         "Your Not part of message, read before the approvals so it can unblock them.",
-         "Reading Part of #N from a new issue, and deciding whether it belongs to the feature.",
-         "An issue that does not belong gets a note and is not recorded.",
-         "The issue record passes on which issue a new one is part of.",
-         "The page builder's description of not_part_of.",
-         "The page builder turns not_part_of into the Not part of line.",
-         "Plan mode adds that line.",
-         "The reply adds the extra line under the approval once every step is ticked."]},
-      {"name": "Rules, house standard, docs and version", "draft": "docs/plans/code-preview-and-issue-rule-code/6-rules-docs-version.diff", "size": "large",
-       "summary": "The rule text says one issue plus one per large step, and that a build plan shows readable code. The readable-code rules join the house coding standard. The version becomes 2.76.0.",
-       "changes": [
-         "The plugin version goes from 2.75.0 to 2.76.0.",
-         "The issue workflow detail: one issue plus one per large step, Part of, and Not part of.",
-         "The show-don't-tell detail: the issue count, and a new section on how a build plan shows its code.",
-         "The short issue rule in house-rules.md.",
-         "The short show-don't-tell rule: a build plan shows readable code with a tick per step.",
-         "The readable-code rules join the house coding standard, replacing the older abbreviations line they cover.",
-         "Tests: the version check reads the version through a named function.",
-         "Tests: the version check expects 2.76.0.",
-         "The systems doc's issue row describes the new count and Part of.",
-         "The systems doc's code preview section moves to built and describes the check, the view and the gate."]}
-    ]
-  },
-  "changes": [
-    ["keep", "What I have proven, and what I have not", "Tested in scratch copies of the repo; nothing is in the plugin yet.", null,
-     "Proven: the full suite passes 1,023 of 1,023 checks on the final copy, against 973 on the untouched copy. Every step's draft passes the readability check against the step before it, and plan mode checked all six again while building this page. The coding standards text injected in a Unity and Node project measures 9,496 characters against its 9,500-character budget. Not yet run: each middle step's whole test suite on its own, although each step's own test files did pass. Also not proven: the real run in a scratch repo, which happens during the build. Another branch, issue #457 (Design loop fixes), also moves the version to 2.76.0, so whichever merges second takes the next number.", null, null],
-    ["chg", "Two places the rules were adjusted while drafting", "Both made the check fairer without letting dense code through.", null,
-     "First, a name that the same block of the diff also removes already existed, so the check leaves it alone. Renaming every old name a line touches would turn small changes into rewrites, and making old code readable is issue #474 (A readable-code skill, and readable code across every repo the agent has touched). Second, short connecting words such as an, of and to are fine inside a longer name like links_an_artifact, but never as a whole name. Markdown table rows may run long, because a table cannot wrap.", null, null]
+ "title": "Code Preview Build Plan",
+ "eyebrow": "Build plan for approval · issue #468 (code preview and issue rule) · redrafted to the readable-code rules",
+ "approval": "Build plan approved: code preview and issue rule",
+ "short": {
+  "lead": "Six steps, each with its full code below. Every added line passed the readability check, now eight rules, before this page was built, and the page itself was built by the new plan mode. Open a step, read its plain sentences, glance at the code, and tick Looks right. Your reply is ready once every step is ticked.",
+  "hint": "Tap a step to see what it builds and what it needs from you.",
+  "key": [
+   [
+    "I build it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
   ],
-  "choices": [
-    ["unblock", "How should #474 (A readable-code skill) and #475 (The design loop counts every issue opened during Plan as part of the current feature) stop blocking this approval?", [
-      ["A", "Label them in progress until step 5 is built", 1, "I add `in progress` to #474 (A readable-code skill) and #475 with a comment on each saying why. Once step 5 is built, your Not part of line takes them out and I remove the label."],
-      ["B", "Close both as not planned, reopen after the merge", 0, "Closing each issue needs your own message, and both stop showing as open until they are reopened."]],
-      "Your approval goes through the hooks installed now, which do not have step 5's fix yet. Option A keeps both issues open and explains the label in writing; option B hides two planned pieces of work."]
+  "items": [
+   [
+    "search",
+    "Step 1",
+    "The readability check",
+    "",
+    "Sub-issue #473 (Readable code in build plans). Adds scripts/readability.py with eight rules, and its tests.",
+    "Nothing from you."
+   ],
+   [
+    "hammer",
+    "Step 2",
+    "Plan mode and the reading view",
+    "",
+    "Sub-issues #469 (Page builder shows each step's planned code) and #473 (Readable code in build plans). This page is the first real use of plan mode.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Step 3",
+    "The approval waits for the code; one issue",
+    "",
+    "Sub-issue #470 (Build plan approval waits for the code, and needs one issue).",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Step 4",
+    "The builder follows the draft; QA lists departures",
+    "",
+    "Sub-issue #471 (Builder follows the approved draft; QA page lists every departure).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 5",
+    "Only a feature's own issues count",
+    "",
+    "Issue #475 (The design loop counts every issue opened during Plan as part of the current feature).",
+    "Nothing from you."
+   ],
+   [
+    "file",
+    "Step 6",
+    "Rules, house standard, docs and version",
+    "",
+    "Sub-issue #472 (Rule text, docs, version and a real run).",
+    "Nothing from you."
+   ],
+   [
+    "eye",
+    "Review",
+    "You tick each step",
+    "you",
+    "Each step under Changes ends with Looks right and Change something.",
+    "Read each step's sentences and code, then tick it or change it."
+   ]
+  ]
+ },
+ "plan": {
+  "steps": [
+   {
+    "name": "The readability check",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/1-readability-check.diff",
+    "size": "large",
+    "summary": "A new script, scripts/readability.py, checks every line a diff adds against eight rules. The rules are: whole-word names, one statement per line, a yes-or-no name for each part of a long condition, short lines, a plain sentence opening each function, no logic packed into one line, values inside f-strings, and a plain comment on each pattern.",
+    "changes": [
+     "Tests: each of the eight rules refuses a bad line and passes a good one. More tests cover quoted text, comments, HTML, table rows, older helpers and names that already existed.",
+     "The readability check reads a diff, finds which lines are Python or JavaScript, and checks each added line against the rules."
+    ]
+   },
+   {
+    "name": "Plan mode and the reading view",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/2-plan-mode-and-view.diff",
+    "size": "large",
+    "summary": "The page builder learns a plan block: it checks each step's draft, splits it into captioned blocks, and the page shows them for reading and ticking.",
+    "changes": [
+     "Tests: the page builder refuses a missing draft, size or captions, and code that is unreadable or out of date. A real browser tests ticking and editing, and the writing check is tested skipping code.",
+     "The writing check imports json so it can read the page's content.",
+     "The writing check reads a page's sentences but skips the code a build plan carries.",
+     "The writing check's paragraph loop names its variable text instead of s.",
+     "The page builder gets a written description of plan mode.",
+     "The page builder imports hashlib so it can record each draft's fingerprint, a short code that changes whenever the draft changes.",
+     "Plan mode splits and checks each draft, tries them in order on a throwaway copy, and adds one Changes item per step.",
+     "Building a page runs plan mode when the content has a plan block.",
+     "After the page is written, its path and the drafts' fingerprints are recorded for the approval check.",
+     "The phone-width check now allows a code block to scroll sideways, on purpose.",
+     "Styles for the code view: captions, line numbers, added lines, removed lines, greyed existing lines, the edit box and the Looks right box.",
+     "The code view shows the plain-sentence list, captioned blocks, folded tests, a tick per step and editing, and writes the changed-lines text for the reply.",
+     "The Changes list is drawn by a named function instead of one 460-character line, and shows a step's code.",
+     "The reply checks the plan review after the choices, so the approval appears only when every step is ticked."
+    ]
+   },
+   {
+    "name": "The approval waits for the code, and needs one issue",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/3-gate-and-issue-rule.diff",
+    "size": "large",
+    "summary": "\"Build plan approved\" is refused until the plan page exists, is linked, and still matches its drafts. A feature needs one issue. When two or more steps are large, it needs one more for each large step.",
+    "changes": [
+     "Tests: a helper that gives a test project a build plan page that passes the approval check.",
+     "Tests: the issue check names the one issue it needs.",
+     "Tests: one issue clears the issue check when no step is large; two large steps need three issues.",
+     "Tests: approval is refused when there is no page, when the page is unlinked, and when a draft has changed. It is then refused when there are too few issues.",
+     "Tests: a redone design starts with no build plan page.",
+     "Tests: an older test setup gets a passing build plan page.",
+     "Tests: readable names for the two-feature test setup's older helpers.",
+     "Tests: the first feature gets a build plan page before its approval.",
+     "Tests: the second feature gets a build plan page before its approval.",
+     "How many issues a feature needs: one, plus one per large step when two or more are large.",
+     "The note after a plan is approved asks for one issue, plus one per large step.",
+     "The same note says edits stay blocked until those issues exist.",
+     "The issue check's refusal uses the new count, worked out by a named function.",
+     "A function reads a file's fingerprint and treats an unreadable file as changed, and the checks on the build plan page can stop an approval.",
+     "The approval checks the build plan page first, then the issue count.",
+     "A new or redone design clears the old build plan page.",
+     "The issue record uses the same count.",
+     "The end-of-reply reminder uses the same count.",
+     "A reply that links the build plan page marks it linked.",
+     "The end of each reply records the link.",
+     "A retried reply records the link too."
+    ]
+   },
+   {
+    "name": "The builder follows the draft; QA lists departures",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/4-builder-and-departures.diff",
+    "size": "large",
+    "summary": "Builders get the approved draft as their specification, and the QA page lists every line where the build differs from it.",
+    "changes": [
+     "The builder's instructions: an approved draft is the specification, and every departure is reported with its reason.",
+     "Tests: the note shown when the Build stage opens names the approved drafts.",
+     "Tests: a matching build lists no departures, a changed line is listed, reformatting is not listed, and a build with no drafts says so plainly.",
+     "The note that opens the Build stage names the approved drafts.",
+     "The QA page gains the departures item.",
+     "The departures comparison lists changed lines by file, ignores spacing, and merges the drafts.",
+     "Finding the stage file now has its own named function."
+    ]
+   },
+   {
+    "name": "Only a feature's own issues count",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/5-feature-issues-only.diff",
+    "size": "small",
+    "summary": "After the first issue, an issue counts toward the feature only if it says Part of the feature. Your message \"Not part of <feature>: #N\" takes one out.",
+    "changes": [
+     "Tests: a helper that creates an issue saying Part of another issue.",
+     "Tests: an issue without Part of is not recorded, an issue with it is recorded, and Not part of removes an issue only from the named feature.",
+     "Tests: in a later test setup, the issues say Part of the main issue.",
+     "Tests: a readable name for the two-feature test setup's environment.",
+     "Tests: the first feature's second issue says Part of its main issue.",
+     "Tests: the second feature's second issue says Part of its main issue.",
+     "Tests: a plan's not_part_of list puts the Not part of line under the approval.",
+     "Your Not part of message, read before the approvals so it can unblock them.",
+     "Reading Part of #N from a new issue, and deciding whether it belongs to the feature.",
+     "An issue that does not belong gets a note and is not recorded.",
+     "The issue record passes along which issue a new issue is part of.",
+     "The page builder gets a written description of not_part_of.",
+     "The page builder turns not_part_of into the Not part of line.",
+     "Plan mode adds the Not part of line.",
+     "The reply adds the Not part of line under the approval once every step is ticked."
+    ]
+   },
+   {
+    "name": "Rules, house standard, docs and version",
+    "draft": "docs/plans/code-preview-and-issue-rule-code/6-rules-docs-version.diff",
+    "size": "large",
+    "summary": "The rule text says one issue plus one per large step, and that a build plan shows readable code. The readable-code rules join the house coding standard. The version becomes 2.76.0.",
+    "changes": [
+     "The plugin version goes from 2.75.0 to 2.76.0.",
+     "The issue workflow detail file now covers one issue plus one per large step, Part of, and Not part of.",
+     "The show-don't-tell detail file gets the issue count and a new section on how a build plan shows its code.",
+     "The short issue rule in house-rules.md.",
+     "The short show-don't-tell rule: a build plan shows readable code with a tick per step.",
+     "The house coding standard: a shorter line on noise words (vague names such as data or helper), and the readable-code rules in place of the older abbreviations line.",
+     "Tests: the version check reads the version through a named function.",
+     "Tests: the version check expects 2.76.0.",
+     "The systems doc's issue row describes the new count and Part of.",
+     "The systems doc's code preview section moves to built.",
+     "The systems doc describes the readability check, plan mode and the writing check.",
+     "The systems doc describes the departures list and how the page link is recorded."
+    ]
+   }
+  ]
+ },
+ "changes": [
+  [
+   "keep",
+   "What I have proven, and what I have not",
+   "Tested in scratch copies of the repo; nothing is in the plugin yet.",
+   null,
+   "Proven: the full test suite passes 1,031 of 1,031 checks on the final copy, against 973 on the untouched copy. Every step's draft passes the readability check against the step before it. Plan mode checked all six drafts again while building this page. The coding standards text injected in a Unity and Node project measures 9,490 characters against its 9,500-character budget. Not yet run: the whole test suite for each of steps 2 to 5 on its own, although each step's own test files did pass. Also not proven: the real run in a scratch repo, which happens during the build. Issue #457 (Design loop fixes) is on another branch and also moves the version to 2.76.0, so whichever merges second takes the next version number.",
+   null,
+   null
   ],
-  "wrapup": {
-    "summary": "Six steps of readable, tested code for the code preview, the one-issue rule, and counting only a feature's own issues.",
-    "changing": "Nothing in the plugin changes until you approve. Then each step goes to a builder with its draft as the specification.",
-    "blocking": "Your tick on each of the six steps, and your answer to the choice above.",
-    "next": "After you approve, the builders apply the drafts in order and the full suite runs. A real run in a scratch repo goes on the QA page, along with any departures from the drafts."
-  }
+  [
+   "chg",
+   "Where the rules leave older code alone",
+   "New code follows every rule; older code it touches gets a readable name and is not rewritten.",
+   null,
+   "Older helpers with short names, such as _mp and _loop_dir, get readable names where new code calls them: a line like run_page_builder = _mp names each one once. Renaming them everywhere is issue #474 (A readable-code skill, and readable code across every repo the agent has touched). A name that the same diff block also removes already existed, so the check leaves it alone. Only one line of existing code is shown on each side of a change, in grey. Git's diff markers, such as \" b/\" before a file's new path, are named constants with a comment. Short connecting words such as an and of are fine inside a longer name, comments are checked as ordinary sentences, and Markdown table rows may run long because a table cannot wrap.",
+   null,
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "unblock",
+   "How should #474 (A readable-code skill) and #475 (The design loop counts every issue opened during Plan as part of the current feature) stop blocking this approval?",
+   [
+    [
+     "A",
+     "Label them in progress until step 5 is built",
+     1,
+     "I add `in progress` to #474 (A readable-code skill) and #475 with a comment on each saying why. Once step 5 is built, your Not part of line takes them out and I remove the label."
+    ],
+    [
+     "B",
+     "Close both as not planned, reopen after the merge",
+     0,
+     "Closing each issue needs your own message, and both stop showing as open until they are reopened."
+    ]
+   ],
+   "Your approval goes through the hooks installed now, which do not have step 5's fix yet. Option A keeps both issues open and explains the label in writing; option B hides two planned pieces of work."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Six steps of readable, tested code for the code preview, the one-issue rule, and counting only a feature's own issues.",
+  "changing": "Nothing in the plugin changes until you approve. Then each step goes to a builder with its draft as the specification.",
+  "blocking": "Your tick on each of the six steps, and your answer to the choice above.",
+  "next": "After you approve, the builders apply the drafts in order and the full suite runs. A real run in a scratch repo goes on the QA page, along with any departures from the drafts."
+ }
 }

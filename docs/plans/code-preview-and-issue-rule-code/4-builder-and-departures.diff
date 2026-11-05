@@ -2,54 +2,49 @@ diff --git a/claude-house-rules/plugins/house-rules/agents/builder.md b/claude-h
 index 71eaf94..d9d370a 100644
 --- a/claude-house-rules/plugins/house-rules/agents/builder.md
 +++ b/claude-house-rules/plugins/house-rules/agents/builder.md
-@@ -9,6 +9,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob
- You carry out a decided plan for one issue. Do not redesign it.
- 
+@@ -11,2 +11,3 @@ You carry out a decided plan for one issue. Do not redesign it.
  - Do the steps as written, in order. Where they are ambiguous, stop and ask.
 +- An approved draft named in the spawn prompt is the spec; report each departure and its reason.
  - Commit as you go on your own branch, scoped to the paths you changed.
- - While working run only the checks for the code you changed; run the full suites exactly once, at the end.
- - **Two runs per check, at most.** Any in-game, end-to-end or harness check (a play session, a co-op run, a capture script, a benchmark) runs at most twice in total. After a second failure, stop and report, naming what failed.
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
-index e0a8861..0d5f9e3 100644
+index 7642a25..ab2e551 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
-@@ -747,6 +747,9 @@ _loop_cases.append(('"Build plan approved: <feature>" opens code', _loop_stage()
-                     and _loop_edit("app.py") == "allow"))
- _loop_say("hello", session="other")
+@@ -759,2 +759,7 @@ _loop_say("hello", session="other")
  _loop_cases.append(('"Build plan approved" carries the hand-to-a-helper instruction', "@house-rules:builder" in _n))
-+names_the_draft = "The approved code is in docs/plans/blockers-code/1.diff" in _n
++# The note from the "Build plan approved" message above, under a readable name; see issue #474.
++build_note = _n
++names_the_draft = "The approved code is in docs/plans/blockers-code/1.diff" in build_note
 +_loop_cases.append(("#471: the Build note names the approved drafts and that departures are told",
-+                    names_the_draft and "never silently" in _n))
++                    names_the_draft and "never silently" in build_note))
  _g = _loop_say("go ahead and build it")
- _loop_cases.append(("with the loop on, a go-ahead message no longer gets the guess", "reads like a go-ahead" not in _g))
- _sp = {"hook_event_name": "SubagentStart", "session_id": "loop", "agent_id": "h1", "agent_type": "house-rules:builder",
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-index e9d61cc..fa904d4 100644
+index 3e2757b..dac89b9 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-@@ -590,6 +590,69 @@ else:
- for case_title, case_passed in plan_cases:
-     _mp_cases.append(("plan mode (#469, #473): " + case_title, case_passed))
+@@ -603,2 +603,68 @@ for case_title, case_passed in plan_cases:
  
 +# ---- QA mode lists every departure from the approved drafts (#471) ----
++# Readable name for this file's older helper; renaming it everywhere is issue #474.
++qa_content_file_for = _mp_qa_content
 +with open(os.path.join(drafts_folder, "1.diff"), "w", encoding="utf-8") as draft_file:
 +    draft_file.write(REFUSE_EMPTY_DRAFT)
 +exit_code, output, page_data = build_plan_page("plan1", [REFUSE_EMPTY_STEP])
-+_mp_git(plan_project, "add", "-A")
-+_mp_git(plan_project, "commit", "-q", "-m", "plan")
-+plan_commit = _mp_git(plan_project, "rev-parse", "HEAD").strip()
-+_mp_git(plan_project, "apply", os.path.join(drafts_folder, "1.diff"))
-+_mp_git(plan_project, "add", "-A")
-+_mp_git(plan_project, "commit", "-q", "-m", "build as drafted")
++run_git_in(plan_project, "add", "-A")
++run_git_in(plan_project, "commit", "-q", "-m", "plan")
++plan_commit = run_git_in(plan_project, "rev-parse", "HEAD").strip()
++run_git_in(plan_project, "apply", os.path.join(drafts_folder, "1.diff"))
++run_git_in(plan_project, "add", "-A")
++run_git_in(plan_project, "commit", "-q", "-m", "build as drafted")
 +
 +
 +def departures_on_qa_page(page_name, project=plan_project, base=plan_commit):
 +    """Build a QA page against base and return its exit code and its departures item."""
 +    qa_block = dict(_qa, base=base, files={})
-+    exit_code, output = _mp("build", _mp_qa_content(page_name, qa_block), "--project", project)
++    qa_content_path = qa_content_file_for(page_name, qa_block)
++    exit_code, output = run_page_builder("build", qa_content_path, "--project", project)
 +    page_path = os.path.join(project, "docs", "plans", page_name + ".html")
-+    page_data = _mp_page_of(page_path) if os.path.isfile(page_path) else None
++    page_data = page_data_of(page_path) if os.path.isfile(page_path) else None
 +    for item in (page_data or {"changes": []})["changes"]:
 +        if item[1] == "Departures from the approved code":
 +            return exit_code, item
@@ -60,7 +55,7 @@ index e9d61cc..fa904d4 100644
 +    """Replace app.py in the plan project and commit it."""
 +    with open(os.path.join(plan_project, "app.py"), "w", encoding="utf-8") as app_file:
 +        app_file.write(text)
-+    _mp_git(plan_project, "commit", "-q", "-am", "app.py changed")
++    run_git_in(plan_project, "commit", "-q", "-am", "app.py changed")
 +
 +
 +matching_code, matching_item = departures_on_qa_page("departures1")
@@ -71,7 +66,7 @@ index e9d61cc..fa904d4 100644
 +          '        raise ValueError("no items to total")\n'
 +          "    return sum(items)\n")
 +reformatted_code, reformatted_item = departures_on_qa_page("departures3")
-+no_drafts_project = _mp_proj("qa")
++no_drafts_project = make_test_project("qa")
 +no_drafts_code, no_drafts_item = departures_on_qa_page("departures4", project=no_drafts_project,
 +                                                       base="main~1")
 +EXPECTED_CHANGED_ROWS = [["app.py", 1, 1, [
@@ -93,44 +88,33 @@ index e9d61cc..fa904d4 100644
 +     and "no build plan page with drafts" in no_drafts_item[4]),
 +]
 +for case_title, case_passed in departure_cases:
-+    _mp_cases.append(("QA mode (#471): " + case_title, case_passed))
++    page_check_results.append(("QA mode (#471): " + case_title, case_passed))
 +
  # ---- readability.py: the six readable-code rules, checked on the lines a diff adds (#473) ----
- READABILITY = os.path.join(HERE, "readability.py")
- readability_project = tempfile.mkdtemp(prefix="readability-")
 diff --git a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
-index 3d984a0..35f2165 100644
+index 6cdfc60..01f1b8c 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
-@@ -941,6 +941,13 @@ def _loop_apply_one(state, text, top):
-                      "to build it yourself; helpers build only approved steps and never design or approve. When "
-                      "the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA."
+@@ -947,2 +947,10 @@ def _loop_apply_one(state, text, top):
                       % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
 +            plan_page = state.get("plan_page") or {}
 +            approved_drafts = sorted(plan_page.get("drafts") or {})
 +            if approved_drafts:  # #471: the approved code is the builder's specification
-+                note += (" The approved code is in %s: give each builder its step's draft as the "
-+                         "specification. Where the real code has to differ, the builder makes the "
-+                         "change and reports it with the reason, never silently; the QA page lists "
-+                         "every departure." % ", ".join(approved_drafts))
++                approved_list = ", ".join(approved_drafts)
++                note += (f" The approved code is in {approved_list}: give each builder its "
++                         "step's draft as the specification. Where the real code has to differ, "
++                         "the builder makes the change and reports it with the reason, never "
++                         "silently; the QA page lists every departure.")
          elif approval[0] == "QA failed":
-             note += (" Their list of changes starts the next design. Move every issue back to `%s` now; the "
-                      "redo's \"Design approved\" is refused until they are." % LOOP_WORKING)
 diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-index 2fd2ad7..2f708fa 100644
+index 9bce3d8..7539627 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-@@ -299,6 +299,7 @@ def apply_qa(page, project):
-          "%d files, +%d −%d" % (len(seen), tot_a, tot_r),
-          None, "The added and removed counts come from git (git diff --numstat %s...HEAD); the estimates "
+@@ -301,2 +301,3 @@ def apply_qa(page, project):
           "beside them come from the plan." % base, None, rows])
 +    page["changes"].append(departures_item(project, base))
      page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
-                             " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv), None, None])
-     page.setdefault("choices", [])  # a QA page usually has none, and the template maps over the list
-@@ -497,6 +498,133 @@ def apply_plan(page, project):
-             "linked": False}
- 
+@@ -510,2 +511,130 @@ def apply_plan(page, project):
  
 +DEPARTURES_TITLE = "Departures from the approved code"
 +DEPARTURES_SHOWN_PER_FILE = 20  # lines listed per file; the rest are counted
@@ -143,12 +127,12 @@ index 2fd2ad7..2f708fa 100644
 +    changes = {}
 +    current_file = None
 +    for line in diff_text.splitlines():
-+        if line.startswith("diff --git "):
-+            current_file = line.split(" b/", 1)[-1]
++        if line.startswith(FILE_START_MARKER):
++            current_file = line.split(NEW_PATH_MARKER, 1)[-1]
 +            changes.setdefault(current_file, ([], []))
 +            continue
 +        is_before_first_file = current_file is None
-+        is_file_header = line.startswith(("+++ ", "--- "))
++        is_file_header = line.startswith((NEW_FILE_MARKER, OLD_FILE_MARKER))
 +        is_change = line[:1] in ("+", "-") and bool(line[1:].strip())
 +        if is_before_first_file or is_file_header or not is_change:
 +            continue
@@ -179,7 +163,7 @@ index 2fd2ad7..2f708fa 100644
 +        with open(stage_file_path(project), encoding="utf-8") as stage_file:
 +            plan_page = json.load(stage_file).get("plan_page")
 +    except (OSError, ValueError, AttributeError) as error:
-+        return None, "the stage file could not be read (%s)" % error
++        return None, f"the stage file could not be read ({error})"
 +    has_drafts = isinstance(plan_page, dict) and bool(plan_page.get("drafts"))
 +    if not has_drafts:
 +        return None, "the stage file records no build plan page with drafts"
@@ -194,8 +178,8 @@ index 2fd2ad7..2f708fa 100644
 +            with open(os.path.join(project, draft_path), encoding="utf-8") as draft_file:
 +                draft_text = draft_file.read()
 +        except OSError as error:
-+            die("QA mode: the approved draft %s could not be read (%s); restore it from the "
-+                "branch history" % (draft_path, error))
++            die(f"QA mode: the approved draft {draft_path} could not be read ({error}); restore "
++                "it from the branch history")
 +        for file_name, (added_lines, removed_lines) in changed_lines_by_file(draft_text).items():
 +            file_plan = planned.setdefault(file_name, ([], []))
 +            file_plan[0].extend(added_lines)
@@ -225,7 +209,7 @@ index 2fd2ad7..2f708fa 100644
 +    draft_paths, why_none = approved_drafts(project)
 +    if draft_paths is None:
 +        return ["keep", DEPARTURES_TITLE, "Not checked: no approved drafts", None,
-+                "Departures could not be checked because %s." % why_none, None, None]
++                f"Departures could not be checked because {why_none}.", None, None]
 +    planned = planned_lines_by_file(project, draft_paths)
 +    real = changed_lines_by_file(run_git(project, "diff", "-w", base + "...HEAD"))
 +    rows = []
@@ -242,14 +226,15 @@ index 2fd2ad7..2f708fa 100644
 +        shown = departures[:DEPARTURES_SHOWN_PER_FILE]
 +        hidden_count = len(departures) - len(shown)
 +        if hidden_count:
-+            shown.append(["... and %d more lines" % hidden_count, 0, 0])
++            shown.append([f"... and {hidden_count} more lines", 0, 0])
 +        added_count = sum(departure[1] for departure in departures)
 +        removed_count = sum(departure[2] for departure in departures)
 +        rows.append([file_name, added_count, removed_count, shown])
 +    if rows:
 +        tag = "chg"
-+        summary = "%s in %s differ from the drafts" % (counted(total_departures, "line", "lines"),
-+                                                       counted(len(rows), "file", "files"))
++        line_text = counted(total_departures, "line", "lines")
++        file_text = counted(len(rows), "file", "files")
++        summary = f"{line_text} in {file_text} differ from the drafts"
 +    else:
 +        tag = "keep"
 +        summary = "None: the build matches the approved code"
@@ -260,11 +245,7 @@ index 2fd2ad7..2f708fa 100644
 +
 +
  def apply_sweep(page):
-     """Sweep mode (#364): each row becomes a Changes item showing its evidence and suggested action."""
-     rows = page["sweep"]
-@@ -594,9 +722,15 @@ def record_sweep(project, page):
-     record_qa_page(project, None, key="sweep_proposed", value=rows, what="sweep rows")
- 
+@@ -607,5 +736,11 @@ def record_sweep(project, page):
  
 +def stage_file_path(project):
 +    """The design loop's stage file: .claude/ in the main checkout, beside the common git folder."""
@@ -278,5 +259,3 @@ index 2fd2ad7..2f708fa 100644
 -    stage = os.path.join(os.path.dirname(common), ".claude", "house-rules-loop.json")
 +    stage = stage_file_path(project)
      if not os.path.isfile(stage):
-         print("make_page: %s not recorded because no feature is in progress (no %s)" % (what, stage))
-         return

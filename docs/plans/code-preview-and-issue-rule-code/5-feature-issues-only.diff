@@ -1,29 +1,23 @@
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
-index 0d5f9e3..c78bb4f 100644
+index ab2e551..03ed041 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
-@@ -644,6 +644,18 @@ def _loop_issue(number, labelled=True, via="mcp"):
-     run_hook("autosave", json.dumps(p), env=_loop_env)
- 
+@@ -653,2 +653,14 @@ def _loop_issue(number, labelled=True, via="mcp"):
  
 +def create_issue_part_of(number, parent_number, directory=None, environment=None):
 +    """#475: create a labelled issue through the GitHub tool whose body says it is part of
 +    parent_number, in the main loop fixture unless another directory is given."""
-+    directory = directory or _loop_dir
++    directory = directory or loop_project
 +    tool_input = {"method": "create", "title": "t", "labels": ["Feature", "AjsAgent created this"],
-+                  "body": "Part of #%d (the feature)." % parent_number}
++                  "body": f"Part of #{parent_number} (the feature)."}
 +    tool_call = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write",
 +                 "session_id": "loop", "cwd": directory, "tool_input": tool_input,
-+                 "tool_response": {"url": "https://github.com/o/r/issues/%d" % number}}
++                 "tool_response": {"url": f"https://github.com/o/r/issues/{number}"}}
 +    run_hook("autosave", json.dumps(tool_call), env=environment or _loop_env)
 +
 +
  def _loop_stage():
-     try:
-         return json.load(open(os.path.join(_loop_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))["stage"]
-@@ -723,7 +735,28 @@ note = _loop_say("Build plan approved: blockers")
- _loop_cases.append(("an unlabelled issue does not count toward the feature's issues",
-                     "has 0 labelled issue(s)" in note and _loop_stage() == "plan"))
+@@ -735,3 +747,24 @@ _loop_cases.append(("an unlabelled issue does not count toward the feature's iss
  _loop_issue(102)
 -_loop_issue(103, via="bash")
 +create_issue_part_of(103, parent_number=102)
@@ -34,7 +28,7 @@ index 0d5f9e3..c78bb4f 100644
 +GH_CREATE_COMMAND = ('gh issue create --title t --label "AjsAgent created this" '
 +                     '--body "Part of #102 (the feature)"')
 +gh_issue_call = {"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "loop",
-+                 "cwd": _loop_dir, "tool_input": {"command": GH_CREATE_COMMAND},
++                 "cwd": loop_project, "tool_input": {"command": GH_CREATE_COMMAND},
 +                 "tool_response": {"stdout": "https://github.com/o/r/issues/105\n"}}
 +run_hook("autosave", json.dumps(gh_issue_call), env=_loop_env)
 +issue_numbers = [issue["number"] for issue in _loop_state().get("issues", [])]
@@ -48,70 +42,60 @@ index 0d5f9e3..c78bb4f 100644
 +issue_numbers = [issue["number"] for issue in _loop_state().get("issues", [])]
 +_loop_cases.append(('#475: "Not part of" naming another feature takes nothing out, and says so',
 +                    103 in issue_numbers and "no issue was taken out" in note))
- give_build_plan_page(_loop_dir, large=3, steps=3, **BLOCKERS_PAGE)
- note = _loop_say("Build plan approved: blockers")
- _loop_cases.append(("#470: three large steps need four issues; two are refused, naming 4",
-@@ -861,7 +894,8 @@ _loop_cases.append(("#403: '3D printer' and '3D printer 2A' keep the name whole"
- _old = {"feature": "next one", "features": {"background work tracking 1*": {"name": "background work tracking 1*", "issues": []}}}
- _loop_cases.append(("#403: QA for a feature stored under a junk name still finds it",
+ give_build_plan_page(loop_project, large=3, steps=3, **BLOCKERS_PAGE)
+@@ -875,3 +908,4 @@ _loop_cases.append(("#403: QA for a feature stored under a junk name still finds
                      _ig_mod.design_loop._loop_stored(_old, "background work tracking") is not None))
 -_loop_issue(201); _loop_issue(202)
 +create_issue_part_of(201, parent_number=102)
 +create_issue_part_of(202, parent_number=102)
  
- _loop_gh("in progress", 201, 202)
- _loop_post("mcp__github__create_pull_request", {"owner": "o", "repo": "r"}, {"url": "https://github.com/o/r/pull/9"})
-@@ -2141,13 +2175,15 @@ def _pf_two_features():
-     """The 2026-10-21 sequence, through real payloads: A to build with 2 issues, then B to build."""
-     _cl_set({"stage": "design"})
+@@ -2153,2 +2187,3 @@ def _pf_log():
+ closable_project = _cl_dir
++closable_environment = _cl_env
+ 
+@@ -2159,3 +2194,5 @@ def _pf_two_features():
      _pf_log(); _pf_note("Design approved: alpha")
 -    _pf_issue(701); _pf_issue(702)
 +    _pf_issue(701)
-+    create_issue_part_of(702, parent_number=701, directory=_cl_dir, environment=_cl_env)
++    create_issue_part_of(702, parent_number=701, directory=closable_project,
++                         environment=closable_environment)
      _loop_gh("in progress", 701, 702)
-     give_build_plan_page(_cl_dir)
-     _pf_log()
-     _pf_note("Build plan approved: alpha")
+@@ -2165,3 +2202,5 @@ def _pf_two_features():
      _pf_log(); _pf_note("Design approved: beta")
 -    _pf_issue(711); _pf_issue(712)
 +    _pf_issue(711)
-+    create_issue_part_of(712, parent_number=711, directory=_cl_dir, environment=_cl_env)
++    create_issue_part_of(712, parent_number=711, directory=closable_project,
++                         environment=closable_environment)
      _loop_gh("in progress", 711, 712)
-     give_build_plan_page(_cl_dir)
-     _pf_log()
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-index fa904d4..afc4aaa 100644
+index dac89b9..4a13b09 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-@@ -587,6 +587,20 @@ else:
-              and '+         raise ValueError("total() needs an item")' in edit_reply
-              and "Build plan approved" not in edit_reply),
+@@ -600,2 +600,17 @@ else:
          ])
 +exit_code, output, page_data = build_plan_page(
 +    "plan10", [dict(REFUSE_EMPTY_STEP, draft="docs/plans/demo-code/1.diff")])
 +plan_cases.append(("a plan with no not_part_of list adds no extra reply line",
 +                   "replyLines" not in page_data))
-+content_path = _mp_content("plan11", approval="Build plan approved: demo")
++content_path = content_file_for("plan11", approval="Build plan approved: demo")
 +with open(content_path, encoding="utf-8") as content_file:
 +    content = json.load(content_file)
 +content["plan"] = {"steps": [REFUSE_EMPTY_STEP], "not_part_of": [474, 475]}
 +with open(content_path, "w", encoding="utf-8") as content_file:
 +    json.dump(content, content_file)
-+_mp("build", content_path, "--project", plan_project)
-+page_data = _mp_page_of(os.path.join(plan_project, "docs", "plans", "plan11.html")) or {}
++run_page_builder("build", content_path, "--project", plan_project)
++plan11_path = os.path.join(plan_project, "docs", "plans", "plan11.html")
++page_data = page_data_of(plan11_path) or {}
 +plan_cases.append(("#475: not_part_of puts aj's Not part of line under the approval",
 +                   page_data.get("replyLines") == ["Not part of demo: #474 #475"]))
  for case_title, case_passed in plan_cases:
-     _mp_cases.append(("plan mode (#469, #473): " + case_title, case_passed))
- 
 diff --git a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
-index 35f2165..24d78d6 100644
+index 01f1b8c..6fff468 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
-@@ -702,10 +702,43 @@ def _loop_sweep_apply(state, text):
-     return " ".join(notes)
+@@ -707,6 +707,43 @@ def _loop_sweep_apply(state, text):
  
- 
++# aj's message "Not part of <feature>: #N #M": captures the feature name, then the issue numbers.
 +NOT_PART_OF_MESSAGE = re.compile(r"\bnot part of\s+([^:\n]+):\s*((?:#\d+[\s,]*(?:and\s+)?)+)",
 +                                 re.IGNORECASE)
 +
@@ -125,8 +109,10 @@ index 35f2165..24d78d6 100644
 +    named_feature = _loop_name(message.group(1))
 +    current_feature = state.get("feature") or ""
 +    if named_feature.lower() != current_feature.lower():
-+        return ('Design loop: aj wrote "Not part of %s", but the current feature is "%s", so '
-+                "no issue was taken out." % (named_feature, current_feature or "(none)"))
++        current_name = current_feature or "(none)"
++        return (f'Design loop: aj wrote "Not part of {named_feature}", but the current feature is '
++                f'"{current_name}", so no issue was taken out.')
++    # Each issue number written as #N, such as #475.
 +    named_numbers = [int(number) for number in re.findall(r"#(\d+)", message.group(2))]
 +    kept_issues = []
 +    removed_numbers = []
@@ -137,11 +123,12 @@ index 35f2165..24d78d6 100644
 +            kept_issues.append(issue)
 +    state["issues"] = kept_issues
 +    if not removed_numbers:
-+        return ('Design loop: aj wrote "Not part of %s", but none of %s is in its record.'
-+                % (current_feature, ", ".join("#%d" % number for number in named_numbers)))
-+    removed_text = ", ".join("#%d" % number for number in removed_numbers)
-+    return ('Design loop: aj took %s out of "%s"; they no longer count toward it or need its '
-+            "labels." % (removed_text, current_feature))
++        named_text = ", ".join(f"#{number}" for number in named_numbers)
++        return (f'Design loop: aj wrote "Not part of {current_feature}", but none of {named_text} '
++                "is in its record.")
++    removed_text = ", ".join(f"#{number}" for number in removed_numbers)
++    return (f'Design loop: aj took {removed_text} out of "{current_feature}"; they no longer count '
++            "toward it or need its labels.")
 +
 +
  def _loop_apply(state, text, top):
@@ -151,13 +138,10 @@ index 35f2165..24d78d6 100644
 -    return " ".join(n for n in (sweep_note, note) if n)
 +    return " ".join(n for n in (removal_note, sweep_note, note) if n)
  
- 
- def _loop_apply_stage(state, text, top):
-@@ -1188,7 +1221,44 @@ def _origin_slug(top):
-     return (m.group(1) if m else ""), ""
- 
+@@ -1195,3 +1232,45 @@ def _origin_slug(top):
  
 -def _loop_record_issues(git_dir, found, labelled, top=None):
++# The words "Part of #N" in any capitals: captures the parent issue's number N.
 +PART_OF_ISSUE = re.compile(r"\bPart of #(\d+)\b", re.IGNORECASE)
 +
 +
@@ -189,57 +173,45 @@ index 35f2165..24d78d6 100644
 +    return is_main_issue or names_a_feature_issue or not labelled
 +
 +
-+NOT_PART_OF_FEATURE = (
-+    'Design loop: issue #%s doesn\'t say it is part of "%s" (no `Part of #%s` or sub-issue link), '
-+    "so it doesn't count toward that feature and needs no `in progress` label. If it does belong, "
-+    "add `Part of #%s` to its body; the issue record only changes when an issue is created.")
++def not_part_of_feature_message(number, feature_name, main_number):
++    """The note for a new issue that does not say it is part of the feature's main issue."""
++    return (
++        f"Design loop: issue #{number} doesn't say it is part of \"{feature_name}\" "
++        f"(no `Part of #{main_number}` or sub-issue link), so it doesn't count toward that "
++        "feature and needs no `in progress` label. If it does belong, add "
++        f"`Part of #{main_number}` to its body; the issue record only changes when an issue "
++        "is created.")
 +
 +
 +def _loop_record_issues(git_dir, found, labelled, top=None, parent_number=None):
      """#231: issues made while a feature is in Plan count toward its build-plan approval.
- 
-     #308: only issues made in the repo that owns the stage file count. In an Unblocked session, two issues
-@@ -1209,6 +1279,13 @@ def _loop_record_issues(git_dir, found, labelled, top=None):
-             notes.append("Design loop: issue %s#%s was made in another repo, so it doesn't count toward \"%s\" "
-                          "here (this checkout is %s)." % (repo, number, state.get("feature") or "this feature", own))
+@@ -1216,2 +1295,9 @@ def _loop_record_issues(git_dir, found, labelled, top=None):
              continue
 +        if not belongs_to_feature(state, labelled, parent_number):
 +            feature_numbers = [issue["number"] for issue in state.get("issues", [])
 +                               if issue.get("labelled")]
 +            main_number = feature_numbers[0]
 +            feature_name = state.get("feature") or "this feature"
-+            notes.append(NOT_PART_OF_FEATURE % (number, feature_name, main_number, main_number))
++            notes.append(not_part_of_feature_message(number, feature_name, main_number))
 +            continue
          state.setdefault("issues", []).append({"repo": repo, "number": int(number), "labelled": labelled})
-     _loop_write(git_dir, state)
-     return notes
-@@ -1355,7 +1432,8 @@ def _issues_record(payload):
-         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
-         if not git_dir:
+@@ -1362,3 +1448,4 @@ def _issues_record(payload):
              return []
 -        loop_notes = _loop_record_issues(git_dir, found, labelled, top)
 +        parent_number = issue_parent_number(data)
 +        loop_notes = _loop_record_issues(git_dir, found, labelled, top, parent_number=parent_number)
          if not _issues_enabled():
-             return loop_notes
-         state, problem = _issues_read(git_dir)
 diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-index 2f708fa..c43090f 100644
+index 7539627..ff4a809 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-@@ -18,7 +18,8 @@ allows; when `themes` has one entry the page is forced to that theme.
- Plan mode (#469, #473): a `plan` block turns a build plan page into a code review.
-     "plan": {"steps": [{"name": ..., "draft": "docs/plans/<feature>-code/1.diff",
+@@ -20,3 +20,4 @@ Plan mode (#469, #473): a `plan` block turns a build plan page into a code revie
                          "size": "large" or "small", "summary": one sentence,
 -                        "changes": [one caption per block of changed lines, in draft order]}]}
 +                        "changes": [one caption per block of changed lines, in draft order]}],
 +             "not_part_of": [issue numbers to take out of the feature, optional]}
  Each draft is a unified diff. The builder refuses a draft that breaks a readability rule
- (scripts/readability.py), a draft whose caption count does not match its blocks, and a draft
- that does not apply on top of the earlier steps' drafts. The page shows each step as plain
-@@ -471,6 +472,18 @@ def checked_step(step_number, step, project, draft_checker):
-     return draft_relative_path.replace(os.sep, "/"), draft_text, blocks
- 
+@@ -484,2 +485,14 @@ def checked_step(step_number, step, project, draft_checker):
  
 +def add_not_part_of_line(page, issue_numbers):
 +    """#475: put aj's "Not part of <feature>: #N" line under the approval in the copy box."""
@@ -249,28 +221,20 @@ index 2f708fa..c43090f 100644
 +    if not all_numbers:
 +        die("plan 'not_part_of' must be a list of issue numbers, such as [474, 475]")
 +    feature_name = page["approval"].split(":", 1)[1].strip()
-+    numbers_text = " ".join("#%d" % number for number in issue_numbers)
-+    page["replyLines"] = ["Not part of %s: %s" % (feature_name, numbers_text)]
++    numbers_text = " ".join(f"#{number}" for number in issue_numbers)
++    page["replyLines"] = [f"Not part of {feature_name}: {numbers_text}"]
 +
 +
  def apply_plan(page, project):
-     """Plan mode (#469, #473): check every step's draft and add one Changes item per step.
-     Returns the record for the stage file's plan_page."""
-@@ -494,6 +507,7 @@ def apply_plan(page, project):
-         item = plan_step_item(step_number, step, draft_relative_path, draft_text, blocks)
-         page.setdefault("changes", []).append(item)
+@@ -507,2 +520,3 @@ def apply_plan(page, project):
      draft_checker.close()
 +    add_not_part_of_line(page, plan.get("not_part_of"))
      return {"drafts": draft_hashes, "steps": len(plan["steps"]), "large": large_steps,
-             "linked": False}
- 
 diff --git a/claude-house-rules/plugins/house-rules/templates/handover-page.html b/claude-house-rules/plugins/house-rules/templates/handover-page.html
-index 22a93bf..6857a03 100644
+index 8edbc33..0d870e5 100644
 --- a/claude-house-rules/plugins/house-rules/templates/handover-page.html
 +++ b/claude-house-rules/plugins/house-rules/templates/handover-page.html
-@@ -559,6 +559,11 @@ function applyPlanReview() {
-   if (review.unticked.length) {
-     out.textContent = `Still to review: step ${review.unticked.join(", step ")}.`;
+@@ -562,2 +562,7 @@ function applyPlanReview() {
      miss.innerHTML = `<span class="missing">Tick Looks right on each step you have read.</span>`;
 +    return;
 +  }
@@ -278,5 +242,3 @@ index 22a93bf..6857a03 100644
 +  for (const extraLine of PAGE.replyLines || []) {
 +    out.textContent += "\n" + extraLine;
    }
- }
- document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
