@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-05 - Readable code: patterns from named pieces, one line per statement, C# too
+
+**Context.** The redrafted build plan still showed shorthand aj could not read: percent placeholders, git's `a/` and `b/` markers, older helpers such as `_mp`, and raw regular expressions even with a comment above each. aj also found statements split across several lines inside brackets hard to read.
+
+**Decision.** aj asked for all four kinds of shorthand to go (f-strings, named diff markers, readable names for older helpers where new code calls them, patterns explained). Shown three ways to write a pattern, aj chose B: patterns built from named pieces (`scripts/readable_patterns.py`), which reads better than plain string code. Rule 4 changes from "lines of 100 characters at most" to "one line per statement": aj would rather scroll sideways than read a statement spread over several lines inside brackets. A list written one whole item per line still counts as readable (my reading; aj can correct it). The rules cover C# as well as Python and JavaScript; C# has no pattern builder yet, so a raw C# pattern is refused until the readable-code skill (#474) supplies one.
+
+**Rejected.** Plain string code instead of patterns (A, my suggestion, judged less readable than B by aj); patterns spread over lines with a comment per piece (C); the 100-character line limit.
+
+**Status.** Active. Built through #473 (Readable code in build plans).
+
+---
+
 ## 2026-11-04 - Readable code approved: code preview
 
 **Context.** The first build plan with code (`docs/plans/code-preview-and-issue-rule-plan.html`) showed drafts written in the plugin's dense style (`_rc`, `_o`, several things per line), wrapped mid-word on the page. aj, who is ADHD and autistic, could not read it, and said review must be easy and routine, because added friction makes important steps easy to skip.
