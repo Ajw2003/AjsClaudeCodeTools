@@ -463,13 +463,30 @@ def _loop_file_shell_write(cmd):
     """A9: True when a shell statement names the stage file and is not a read-only command, `git add` or
     `git commit`. Python or node count as a read only when they json.load the file and write nothing."""
     import shlex
-    for stmt in re.split(r"&&|\|\||;|\n|\|", _HEREDOC_RE.sub("", cmd)):
+    text = _HEREDOC_RE.sub("", cmd)
+    if LOOP_FILE not in text:
+        return False
+    try:  # quote-aware, so `python3 -c "import json; print(...)"` stays one statement
+        lex = shlex.shlex(text.replace("\n", ";"), posix=True, punctuation_chars=True)
+        lex.whitespace_split = True
+        tokens = list(lex)
+    except ValueError:
+        tokens = None
+    if tokens is None:  # unbalanced quotes around the stage file's name: refuse rather than guess
+        return True
+    stmts, cur = [], []
+    for t in tokens:
+        if t in (";", "&&", "||", "|", "&"):
+            stmts.append(cur)
+            cur = []
+        else:
+            cur.append(t)
+    stmts.append(cur)
+    for toks in stmts:
+        stmt = " ".join(toks)
         if LOOP_FILE not in stmt:
             continue
-        try:
-            words = [w for w in shlex.split(stmt) if "=" not in w.split("/")[0] and w not in ("sudo", "env", "time")]
-        except ValueError:
-            return True  # unbalanced quotes around the stage file's name: refuse rather than guess
+        words = [w for w in toks if "=" not in w.split("/")[0] and w not in ("sudo", "env", "time")]
         first = os.path.basename(words[0]) if words else ""
         if first in _LOOP_READERS:
             continue
@@ -627,8 +644,9 @@ def _loop_labels(state, issues=None, record=True):
         return dict(zip(keys, got)), ""
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
         why = "Labels were taken from the changes this hook recorded, because the GitHub read failed (%s)." % exc
-        if not record:  # D9 (aj chose 6B): the Build edit gate never falls back to the stage file's labels
-            return {k: None for k in keys}, str(exc)
+        failed = str(exc)
+    if not record:  # D9 (aj chose 6B): the Build edit gate never falls back to the stage file's labels
+        return {k: None for k in keys}, failed
     recorded = state.get("labels") if isinstance(state.get("labels"), dict) else {}
     return {k: recorded.get(k) for k in keys}, why
 

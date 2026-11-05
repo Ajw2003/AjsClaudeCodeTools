@@ -113,7 +113,7 @@ commit_case(
     _iss_decision(_oe) == "deny" and _iss_decision(_on) == "deny", "edit %r notebook %r" % (_oe[:60], _on[:60]),
 )
 _allowed = []
-for _rel in ("docs/x.md", "docs/sub/y.json", "README.md", "src/notes.md", ".claude/settings.json"):
+for _rel in ("docs/x.md", "docs/sub/y.json", "README.md", "src/notes.md", ".claude/x.json"):  # D4 (aj approved): .claude/settings.json is now locked, so this uses another .claude/ file
     _, _oa, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _d, file_path=_fp(_rel)), _d)
     if _oa.strip():
         _allowed.append((_rel, _oa[:60]))
@@ -1117,7 +1117,7 @@ def _cl_set(state):
     with open(_cl_file, "w", encoding="utf-8") as f:
         json.dump(dict({"skip": False, "approvals": [], "issues": [],
                         "pr_refs": {"o/r#12": [["o/r", 7]], "o/r#14": [["o/r", 7]], "o/r#16": [["o/r", 7]],
-                                    "ajw2003/ajsclaudecodetools#373": [["ajw2003/ajsclaudecodetools", 7]]}}, **state), f)
+                                    "ajw2003/ajsclaudecodetools#373": [["o/r", 7]]}}, **state), f)
     os.makedirs(os.path.join(_cl_dir, "docs", "6-decisions"), exist_ok=True)
     with open(os.path.join(_cl_dir, "docs", "6-decisions", "Decisions.md"), "a", encoding="utf-8") as f:
         f.write("an entry written at %r\n" % time.time())
