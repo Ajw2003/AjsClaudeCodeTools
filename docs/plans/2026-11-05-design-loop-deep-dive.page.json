@@ -1,0 +1,42 @@
+{
+  "title": "Design Loop Deep Dive",
+  "eyebrow": "Second pass over design_loop.py · nothing changed yet",
+  "approval": "Design approved: design loop fixes",
+  "short": {
+    "lead": "I read the whole design loop and fed its real functions the messages and edits a hook receives, in throwaway repos. The full audit had found four design-loop problems; this pass found twelve more. Four of them let the code lock open without aj: a pull request comment or a scheduled reminder can approve a stage, a question that quotes an approval counts as one, the old stage file in .git/ is still writable, and .claude/settings.json can switch the loop off. Five more make approvals do the wrong thing. The shell-write gap that was switched off in #309 is still the biggest hole.",
+    "hint": "Tap a card to see the evidence behind it.",
+    "key": [["Found in this pass", ""], ["Needs your answer", "you"]],
+    "items": [
+      ["search", "What I read", "All 2281 lines of design_loop.py, plus the parts of core.py it calls", "", "Each finding was proved by a probe script that made a throwaway git repo and called _loop_scope_note for aj's messages and _loop_gate for edits. GitHub labels came from the same stand-in file verify.py uses. Two low findings are by reading only. The full audit's findings 2, 7, 9 and 19 are not repeated.", "Nothing from you."],
+      ["stop", "Must fix", "Four ways the lock opens without aj", "", "1: a GitHub comment event or a scheduled reminder reaches the approval check as if aj typed it; a comment saying 'Build plan approved: feat' moved Plan to Build. 2: 'What would happen if I said Design approved: login page?' moved the stage, and 'Please don't skip design' set the skip. 3: in a project with no stage file yet, writing .git/house-rules-loop.json is allowed and opens Build. 4: .claude/settings.json, source files in .claude/worktrees/ and code under docs/ are all editable in every stage.", "Nothing from you."],
+      ["flask", "Should fix", "Five approvals that do the wrong thing", "", "5: re-approving the design during Build, or 'QA failed: X. Design approved: X' in one message, strands the feature's issues where nothing can find them. 6: approval names are never checked, so 'QA passed: typo' passes the current feature. 7: 'skip design' typed in Build survives into a later stage, and the first edit by anyone spends it. 8: any claude.ai artifact link counts as the QA page. 9: switching to an old branch brings back its stage, and when GitHub can't be read the old labels let edits through.", "Nothing from you."],
+      ["bulb", "Known gap", "Shell writes are still only reported", "", "Since #309, a shell command that writes a source file in Design or Plan is reported and let through. So today the lock stops the Write and Edit tools only, which limits how much findings 1 to 9 matter. It waits on the restructure, and nothing here proposes a fix for it.", "Nothing from you."],
+      ["check", "Your verdict", "Pick what gets fixed", "you", "Choose the scope of the fix. Approving starts it as a feature, with one issue per step and a verify.py case for each finding.", "Send \"Design approved: design loop fixes\" with your pick, or tell me what to change."]
+    ]
+  },
+  "changes": [
+    ["chg", "1. Only aj's own message approves", "core.py:1916-1933, used at design_loop.py:936.", ["Five text markers decide what is not aj; pull request events, scheduled reminders and webhooks are not among them.", "Those markers are added, and one real scheduled-reminder payload becomes a verify.py fixture."], "Proved for the comment event. Unverified: whether Claude Code also sets the payload's origin field for these turns.", null, null],
+    ["chg", "2. Questions and 'don't' stop counting", "design_loop.py:371-383 and :887-889.", ["An approval phrase anywhere in the message counts, inside a question or after 'don't'.", "It counts only at the start of a line, and not on a line that asks a question or says don't, do not or not yet."], "Proved: both messages moved the loop.", null, null],
+    ["chg", "3 and 4. Close the side doors", "design_loop.py:161, :197, :410-411 and :449.", [".git/house-rules-loop.json, .claude/settings.json, .claude/worktrees/ source files and docs/*.py are all editable before Build.", "The legacy stage file is refused or no longer read; settings files are locked; a worktree path is measured from the worktree; only non-code files stay open under docs/."], "Proved: each write got no decision. Unverified: when a settings change reaches hooks.", null, null],
+    ["chg", "5 and 6. Approvals move the feature aj named", "design_loop.py:697-702, :723-725, :778-853.", ["Re-approving the same feature strands its issues; any name moves the current feature.", "The same name keeps its issues in place, pieces apply in the order written, and an unknown name is refused with both names in the note."], "Proved: QA was then refused with 'the stage is Plan', and 'QA passed: typo' wrote a closable record.", null, null],
+    ["chg", "7 and 8. Skip and the QA page mean what they say", "design_loop.py:887-889, :1035-1038, :1877-1887.", ["A skip lasts across stages and goes to whichever edit comes first; any artifact link clears the QA page check.", "Skip is ignored in Build and cleared on every stage change; only the link make_page.py published counts."], "Proved by runs.", null, null],
+    ["chg", "9. An old branch is not a key", "design_loop.py:545-569 and :1024-1031.", ["After git switch to an old branch, a failed GitHub read falls back to that branch's recorded labels and allows the edit.", "A failed GitHub read in Build refuses the edit and says why."], "Proved with the label stand-in removed.", null, null]
+  ],
+  "choices": [
+    ["scope", "What gets fixed?", [
+      ["A", "Findings 1 to 4, each with its verify.py case", 1, "These are the ways the lock opens without aj."],
+      ["B", "Findings 1 to 9 in one feature", 0, "Fixes the wrong-approval bugs too, but it is a bigger change to review."],
+      ["C", "Fold them into the full audit's fix as extra steps", 0, "One feature for everything, but the audit fix grows by nine issues."]
+    ], "My suggestion is findings 1 to 4, because they break the loop's one promise: only aj moves the stage."]
+  ],
+  "wrapup": {
+    "summary": "Twelve design-loop findings the full audit missed. Ten were proved by runs and two are by reading. Four of them open the code lock without aj.",
+    "changing": "Nothing has been changed yet. The report is in docs/audits/2026-11-05-design-loop-deep-dive.md, committed on the branch AjsAgent/audit-2026-11-05.",
+    "blocking": "Waiting on your one choice: what gets fixed.",
+    "next": "After approval: one parent issue with a child per finding in scope, then each fix with its verify.py case.",
+    "todo": [
+      "Pick your answer under Choices.",
+      "Tap <b>Copy my reply</b> and send it to me, or tell me what to change."
+    ]
+  }
+}
