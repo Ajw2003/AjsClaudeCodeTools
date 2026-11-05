@@ -12,8 +12,12 @@ A in `2026-11-05-ponytail-audit-full.md`, D in `2026-11-05-design-loop-deep-dive
 
 ## Rules for every step
 
-1. **One step at a time.** Each step is one child issue, built by one builder in its own worktree,
-   then reviewed. The next step starts only when the one before it is committed and its checks pass.
+1. **All the code is planned first, then approved once, then checked once.** aj decided on
+   2026-11-05 ("plan out all of the code first and then show me it so I can approve or deny it
+   rather than a 6 different QAs"). The exact proposed code for every finding is written in
+   `docs/plans/audit-fixes-code/` before any source file changes. aj approves or denies it on one
+   page. The six steps are then built in order, one builder per step, each committed with its
+   checks passing, and aj gets one QA page for the whole build.
 2. **A test with every fix.** Each fix lands with the `verify.py` case that fails before it and
    passes after it (finding A17). The case is written first and run against the old code.
 3. **The three promises hold.** No fix may let anything other than aj's own message move a stage,
