@@ -72,8 +72,6 @@ _LINE_START = r"\\[nrt]|"
 # none of them changes a branch or deletes saved work, so none of them stops the agent any more.
 
 
-
-
 # Marks a git write that runs unasked on any branch except the repo's default branch, and is
 # refused outright on the default branch: that branch only changes through a pull request (#197).
 BRANCH_WRITE = "branch-write"
@@ -210,15 +208,12 @@ GUARD_REFUSAL = (
 )
 
 
-
 DOCS_COMMIT_REMINDER = (
     "House rules, documentation goes in tiers: this commit stages a source file with nothing "
     "staged under docs/. Before committing, update the tier that changed - usually "
     "docs/3-state/ProjectState.md, for what's built and where it stands - or say in the commit "
     "message why none needed updating."
 )
-
-
 
 
 # A command that names its own repo, git dir or work tree is not talking about the checkout
@@ -248,10 +243,6 @@ def is_protected_branch(branch, start):
     return branch in PROTECTED_BRANCHES or branch == default_branch(start)
 
 
-
-
-
-
 def branch_ownership(start=None):
     """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
     `start` is where the command runs (payload cwd); None keeps CLAUDE_PROJECT_DIR / getcwd.
@@ -276,12 +267,6 @@ def branch_ownership(start=None):
 
     branch = ref[len("refs/heads/") :]
     return branch.startswith(owned_branch_prefixes()), branch, None
-
-
-
-
-
-
 
 
 def _agent_branch_enabled():
@@ -348,7 +333,6 @@ def _agent_identity_block():
                 "run `%s`." % (type(exc).__name__, exc, AGENT_IDENTITY_FIX))
 
 
-
 # tier 3: pull out just "command":"..." — the first one. Allows backslash-escaped quotes.
 _COMMAND_FIELD_RE = re.compile(r'"command"\s*:\s*"(?:[^"\\]|\\.)*"')
 
@@ -410,8 +394,6 @@ def _quiet_subject(subject, messages=True):
     text = _decoded_command(subject)
     quiet = _inert_text_stripped(text, messages)
     return subject if quiet == text else '"command":' + json.dumps(quiet)
-
-
 
 
 def _trace_subject(subject, limit=60):
@@ -1372,16 +1354,6 @@ def _prompt_timeout_seconds():
     )
 
 
-
-
-
-
-
-
-
-
-
-
 def _waiting_clock(ts):
     try:
         return time.strftime("%H:%M", time.localtime(float(ts)))
@@ -1436,8 +1408,6 @@ def _waiting_scope_note(payload):
         sys.stderr.write("house-rules scope: could not report the waiting-on-you list (%s: %s).\n"
                          % (type(exc).__name__, exc))
         return ""
-
-
 
 
 def _waiting_clear_session(entries, session_id, status=None):
@@ -1683,14 +1653,6 @@ def event_prompttimer():
     _prompt_deny(_prompt_refusal(_prompt_minutes(secs), path, summary))
     return 0
 # End of the prompttimer block (verify.py slices the source between its first comment and this line).
-
-
-
-
-
-
-
-
 
 
 # Credit goes to "Edens Agent", with no email and no Claude branding (issue #133). The Claude Code
@@ -1993,34 +1955,11 @@ def event_guardgithub():
     return 0
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # ---------------------------------------------------------------------------------------
 # The commit rule's obligation half. guard only judges git commands that are run, so a session
 # that never runs one produced no signal at all (#97). These helpers answer the one question
 # the Stop, branchnudge and audit checks share: which of these files are still uncommitted?
 # ---------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
 
 
 def _commit_note(uncommitted):

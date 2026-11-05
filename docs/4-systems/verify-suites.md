@@ -238,7 +238,7 @@ the check that follows it.
 Every check appears in exactly one row. "Source lines" is the first and last line in `verify.py` where a
 check in the row is reported (the call site of the case, not the helper). "Also touches" names the other
 part(s) a check exercises (see the two-or-more-parts list below). "First check as printed" is the first 50
-characters of what the run printed under the row's first number; `tools/check_verify_inventory.py` compares
+characters of what the run printed under the row's first number; `tools/check_verify_inventory.py` (deleted in step 6, #482) compared
 it with a real run.
 
 | Checks | Source lines | Part | Also touches | Seconds | What it tests | First check as printed |
@@ -503,7 +503,7 @@ the docref and plain_docs_check case helpers were not read case by case, so that
 
 ### How this inventory was proved
 
-`python tools/check_verify_inventory.py --run` runs `verify.py` once and checks: the grouped list covers
+This table is a snapshot from 2026-10-21; its checker (`tools/check_verify_inventory.py`) was deleted in step 6 (#482) and the table is no longer kept in step with `verify.py`. When written, the checker ran `verify.py` once and checked: the grouped list covers
 checks 1 to 913 once each with no gap or overlap; the list total equals the summary total (913); each part's
 count in the summary equals the sum of its rows; the multi-part count stated above equals the rows with an
 "Also touches" part. Everything above this paragraph is numbered as the single-file `verify.py` printed it
@@ -658,8 +658,8 @@ which is the slowest part (safe_git, 31-32 s) plus start-up: the floor the #369 
 Put it in the part file for the code it exercises, with `report(...)` / `commit_case(...)` as before. Anything
 a second part needs goes in `common.py`; a helper used by one part stays in that part's file. A check that depends
 on state an earlier check leaves must sit in the same file, after it. Run the part alone first
-(`python3 .../checks/<part>.py`), then `verify.py`. `python tools/check_verify_inventory.py --run` proves the table
-above still matches the files.
+(`python3 .../checks/<part>.py`), then `verify.py`. The table above is a snapshot from 2026-10-21 (its checker was deleted, #482); it
+may no longer match the files.
 
 ## Measured after the rework (#371)
 

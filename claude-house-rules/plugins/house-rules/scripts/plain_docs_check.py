@@ -47,7 +47,6 @@ HEADER_RE = re.compile(
     r"^<!--\s*plain copy of:\s*(?P<path>\S+)\s*@\s*(?P<hash>[0-9a-f]{40})\s*-->\s*$"
 )
 FULL_DOC_LINK_RE = re.compile(r"^Full technical doc:\s*\[[^\]]+\]\(([^)]+)\)\s*$")
-FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 MD_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 DASH_RE = re.compile(r"[–—]")  # en dash, em dash
 FILE_LINE_RE = re.compile(r"\b[\w./-]+\.\w+:\d+\b")
@@ -133,21 +132,19 @@ def strip_link_urls(line):
     return MD_LINK_RE.sub(repl, line)
 
 
+from docref import _fence_step  # noqa: E402  A20: one CommonMark fence reader for both checkers
+
+
 def fenced_ranges(lines):
-    """1-indexed (start, end) ranges of fenced code blocks (``` or ~~~), CommonMark-ish."""
-    ranges = []
-    open_fence = None
-    start = 0
+    """1-indexed (start, end) ranges of fenced code blocks (``` or ~~~), read by docref's _fence_step."""
+    ranges, open_fence, start = [], None, 0
     for n, line in enumerate(lines, 1):
-        m = FENCE_RE.match(line.rstrip("\n"))
-        if m:
-            run = m.group(1)
-            if open_fence is None:
-                open_fence = run[0]
-                start = n
-            elif run[0] == open_fence:
-                ranges.append((start, n))
-                open_fence = None
+        was_open = open_fence
+        open_fence, is_fence = _fence_step(line.rstrip("\n"), open_fence)
+        if is_fence and was_open is None and open_fence is not None:
+            start = n
+        elif is_fence and was_open is not None and open_fence is None:
+            ranges.append((start, n))
     if open_fence is not None:
         ranges.append((start, len(lines)))
     return ranges

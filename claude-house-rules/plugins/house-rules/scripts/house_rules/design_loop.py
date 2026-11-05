@@ -1997,8 +1997,7 @@ def _check_plain(ctx):
 
 
 # --- pagecheck (#257): a handover page must come from make_page.py -------------------------
-# PreToolUse on Write and Artifact. The two rows below sit in CHECKPOINTS so the list shows every
-# moment; only "reply ends" rows run at Stop, so these checks do nothing there (pagecheck acts).
+# PreToolUse on Write and Artifact.
 PAGE_MARK_RE = re.compile(r"<!--\s*house-rules make_page\b")
 
 
@@ -2094,10 +2093,6 @@ def event_pagecheck():
     return 0
 
 
-def _check_page_saved(ctx):
-    return ""  # runs as the PreToolUse hook event_pagecheck, never at Stop
-
-
 def _record_qa_link(ctx):
     """True (and qa_page_linked recorded) when the reply links the QA page. Also used on a retry."""
     page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
@@ -2130,8 +2125,6 @@ def _check_qa_page(ctx):
 
 
 CHECKPOINTS = [
-    ("page saved", "page built", _check_page_saved, "block"),
-    ("page published", "page built", _check_page_saved, "block"),
     ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
     ("reply ends", "evidence", _check_evidence, "block"),
@@ -2142,7 +2135,6 @@ CHECKPOINTS = [
 
 
 CHECKPOINT_RULES = {
-    "page built": "A handover page is built by make_page.py, never typed by hand.",
     "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
     "editor": "A page goes past @house-rules:editor before aj reads it; a long reply too when HOUSE_RULES_EDITOR=on.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
