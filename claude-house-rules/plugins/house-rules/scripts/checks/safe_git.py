@@ -1902,5 +1902,48 @@ report("PASS" if _rr_o[0] == 0 and not _rr_denied(_rr_o[1]) and "rerun count cou
        else "FAIL", "rerun limit: a corrupt state file lets the command through, with a message")
 _rr_reset()
 
+# --- #478 (A5): an agent/ branch is the agent's own ---
+_a5 = _commit_repo("agent/optimistic-planck-1h64c9", committed=["a.txt"])
+report("PASS" if not _nb_refused(_nb_bash(_a5, 'git commit --allow-empty -m "x"')) else "FAIL",
+       "A5: a commit on a cloud session's agent/ branch goes through")
+
+# --- #478 (A6, H3): reading or staging a script is not running it ---
+_rr_reset()
+_rr_reads = [_rr_run(c)[1] for c in ("cat tools/x.sh", "sed -n 1p tools/x.sh", "git add tools/x.sh",
+                                       "grep echo tools/x.sh", "cat tools/x.sh")]
+report("PASS" if not any(_rr_denied(o) for o in _rr_reads) and not os.path.exists(_rr_state) else "FAIL",
+       "rerun limit: cat, sed, grep and git add naming the script are never counted")
+_rr_reset()
+_rr_run("python3 -u tools/x.sh"); _rr_run("FOO=1 bash tools/x.sh")
+report("PASS" if _rr_denied(_rr_run("tools/x.sh")[1]) else "FAIL",
+       "rerun limit: an interpreter's first argument and a direct run both count")
+_rr_reset()
+
+# --- #478 (U6, H1): text that can't run is not read as a command; text that runs still is ---
+_q_denied = lambda cmd: '"permissionDecision":"deny"' in _nb_bash(_nb_r, cmd)
+_q_cases = [
+    ("a commit message naming rm -rf goes through", not _q_denied('git commit --allow-empty -m "fix: rm -rf no longer deletes docs"')),
+    ("a commit message naming push --force goes through", not _q_denied('git commit --allow-empty -m "docs: explain git push --force risk"')),
+    ("echo of rm -rf text into a file goes through", not _q_denied("echo 'never run rm -rf /' > notes.txt")),
+    ("a grep for rm -r goes through", not _q_denied("grep -n 'rm -r docs' notes.txt")),
+    ("a cat heredoc naming rm -rf goes through", not _q_denied("cat > n.txt <<'EOF'\nrm -rf docs\nEOF")),
+    ("bash -c with rm -rf is still refused", _q_denied("bash -c 'rm -rf docs'")),
+    ("a bash heredoc with rm -rf is still refused", _q_denied("bash <<'EOF'\nrm -rf docs\nEOF")),
+    ("a quoted --force is still a force push", _q_denied("git push '--force' origin AjsAgent/topic")),
+    ("$(...) in a double-quoted message is still read", '"permissionDecision":"allow"' not in _nb_bash(_nb_r, 'git commit -m "$(rm -rf docs)"')),
+]
+for _t, _ok in _q_cases:
+    report("PASS" if _ok else "FAIL", "quoted text: " + _t)
+
+# --- #478 (U7): session start sets the agent's identity in a repo whose identity is Claude ---
+_u7 = _commit_repo("AjsAgent/u7")
+subprocess.run(["git", "-C", _u7, "config", "user.name", "Claude"], check=True)
+subprocess.run(["git", "-C", _u7, "config", "user.email", "noreply@anthropic.com"], check=True)
+_au_profile(_u7)
+_u7_name = subprocess.run(["git", "-C", _u7, "config", "user.name"], capture_output=True, text=True).stdout.strip()
+report("PASS" if _u7_name == "Edens Agent" else "FAIL", "U7: session start sets this repo's identity to Edens Agent")
+_u7_o = _nb_bash(_u7, 'git commit --allow-empty -m "x\n\nCo-Authored-By: ' + 'Claude <noreply@anthropic.com>"')
+report("PASS" if "Remove every `Co-Authored-By:`" in _u7_o else "FAIL", "U7: the credit refusal names the lines to remove")
+
 
 finish()
