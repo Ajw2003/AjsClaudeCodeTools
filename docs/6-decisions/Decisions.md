@@ -15,7 +15,7 @@ pointer, when a later entry replaces it.
 1. A: quoted text that can't run anything is ignored, including double quotes with no `$`, backtick or backslash (U6).
 2. A: autosave pushes tracked changes plus the files the helper wrote (A11).
 3. A: the model pushes the stage file after an approval (U2).
-4. A, changed: the hook sets the repo's git identity itself, reversing #177's "the hook never runs git config", and the name is "Edens Agent" (U7).
+4. A, changed: the hook sets the repo's git identity itself, reversing #177's "the hook never runs git config", and the name is "Edens Agent" (U7). Asked where the name applies, aj chose everywhere: the commit author, the required "Committed by" and "Opened by" footers, and the rules text. It is built with U7 in step 2 (#478); until then commits still say "AJ's agent", because the current guard requires it.
 5. A: the listed rebuildable folders can be deleted (U4).
 6. B: when GitHub can't be read, every Build edit is refused until it can. This replaces the proposal to keep the labels in the shared git folder (D9).
 7. A: an approval must name the feature exactly (D6).
