@@ -1,0 +1,30 @@
+{
+  "title": "Why the Pull Request Can't Merge",
+  "eyebrow": "The audit fixes pull request, #485 (house-rules 2.76.0) · the verify check never started",
+  "approval": "QA passed: audit fix order",
+  "reply": "",
+  "short": {
+    "lead": "The verify check on the audit fixes pull request did not fail on the code. GitHub never started it, and its log says: The job was not started because your account is locked due to a billing issue. This is not the free plan's minutes running out, because Actions minutes are free on a public repo like this one; the lock is on the GitHub account. I ran all five steps of the check here on the pull request's latest commit, and every one passed. The main branch's merge rule requires this check and applies to admins too, so GitHub shows no bypass button.",
+    "hint": "Tap a row to see the detail.",
+    "key": [["Checked by me", ""], ["Needs your answer", "you"]],
+    "items": [
+      ["check", "Same check, run here", "All five steps pass on commit e08adf5", "", "verify.py passed 1052 of 1052 checks. tools/verify_tools.py passed 52 of 52. The version bump check passed, from 2.75.0 to 2.76.0. The prompt-workshop suite passed 22 of 22, and the agent-router suite passed 41 of 41.", "Nothing from you."],
+      ["lock", "The merge rule", "Main requires verify, admins included", "", "Main's branch protection lists verify as a required check, and it is set to apply to administrators, so no account can merge past it while it shows as failed.", "Nothing from you."],
+      ["hand", "Your choice", "Clear the lock, or lift the rule once", "you", "Both are settings on your GitHub account, so I can't change either from this session.", "Pick A or B under Choices."]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    ["way", "How should the audit fixes pull request get merged?", [
+      ["A", "Clear the billing lock: open GitHub Settings, then Billing and plans, fix what it flags, then choose Re-run jobs on the verify check of the pull request", 1, "Every safeguard stays on, and GitHub checks the code itself."],
+      ["B", "Lift the rule for one merge: open the repo's Settings, then Branches, edit the main rule, untick Require status checks to pass before merging, merge, then tick it again", 0, "Faster, but nothing re-checks the code on GitHub, so you rely on my local runs."]
+    ], "My suggestion is A, because it keeps the check that guards main."]
+  ],
+  "wrapup": {
+    "summary": "The audit fixes pull request is blocked by a billing lock on your GitHub account, not by the code.",
+    "changing": "Nothing until you clear the lock or lift the rule.",
+    "blocking": "Your choice of A or B, done in your GitHub settings.",
+    "next": "Once it merges, you update the plugin on your PC and run the test on the QA page.",
+    "todo": ["Pick A or B under Choices and do it in your GitHub settings.", "Tell me when the pull request has merged, or if anything in the settings looks different."]
+  }
+}
