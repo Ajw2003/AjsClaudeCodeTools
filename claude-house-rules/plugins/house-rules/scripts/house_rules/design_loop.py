@@ -26,6 +26,7 @@ from house_rules.core import (  # noqa: F401
     _PROMPT_VALUE_RE,
     _PR_BODY_FILE_RE,
     _SESSION_ID_RE,
+    _ag,  # #479 (U1): adaptation - the plan's code calls _ag but design_loop.py didn't import it
     _apply_assigns,
     _attribution_enabled,
     _clear_writing_enabled,
