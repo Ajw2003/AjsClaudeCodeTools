@@ -656,6 +656,17 @@ _loop_issue(103, via="bash")
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("issues from the GitHub tool and from gh both count, so the next check is reached",
                     "labelled issue(s)" not in _n and _loop_stage() == "plan"))
+_loop_post("Bash", {"command": "gh issue create --title 'Fix AjsAgent created this' --body x"},
+           {"stdout": "https://github.com/o/r/issues/301\n"})
+_loop_cases.append(("D11: the label name in a title doesn't make an issue labelled",
+                    any(i.get("number") == 301 and not i.get("labelled") for i in _loop_state().get("issues", []))))
+# Every recorded issue, labelled or not, must say `in progress` before the build opens, so the D11 issue is dropped
+# from the stage file here; it was only there to be read back (the plan's case leaves it, which failed 11 later cases).
+_loop_sf = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
+_loop_sd = _loop_state()
+_loop_sd["issues"] = [i for i in _loop_sd.get("issues", []) if i.get("number") != 301]
+with open(_loop_sf, "w", encoding="utf-8") as _f:
+    json.dump(_loop_sd, _f)
 _loop_log("plan decisions for blockers")
 _loop_gh("in progress", 101, 102)
 _n = _loop_say("Build plan approved: blockers")
@@ -703,10 +714,11 @@ _o += _loop_post("Bash", {"command": "gh api -X POST repos/o/r/issues/202/labels
 _loop_cases.append(("#278: a REST label add (gh api .../issues/N/labels) is recorded against the issue in the path",
                     _loop_state().get("labels", {}).get("o/r#201") == ["in progress"]
                     and _loop_state().get("labels", {}).get("o/r#202") == ["needs review", "bug"]))
-_o = _loop_post("Bash", {"command": "gh api -X DELETE repos/o/r/issues/201/labels/in%20progress"}, "")
+_o = _loop_post("Bash", {"command": "gh api -X DELETE repos/o/r/issues/201/labels/in%20progress"},
+                {"stdout": "[]\n", "stderr": ""})  # D12: a real DELETE answers with the remaining labels, not ""
 _loop_cases.append(("#278: a REST label remove with %20 is recorded as removing `in progress`",
                     _loop_state().get("labels", {}).get("o/r#201") == []))
-_loop_post("Bash", {"command": "gh api --method DELETE repos/o/r/issues/202/labels/bug"}, "")
+_loop_post("Bash", {"command": "gh api --method DELETE repos/o/r/issues/202/labels/bug"}, {"stdout": "[]\n", "stderr": ""})  # D12: as above
 _loop_cases.append(("#278: the --method DELETE form is recorded too",
                     _loop_state().get("labels", {}).get("o/r#202") == ["needs review"]))
 _loop_post("Bash", {"command": "gh api repos/o/r/labels"}, [{"name": "bug"}])
@@ -714,6 +726,12 @@ _loop_post("Bash", {"command": 'gh api repos/o/r/issues/203/labels -f "labels[]=
 _loop_cases.append(("#278: a repo label list, or a failed call, records nothing",
                     "o/r#203" not in _loop_state().get("labels", {})
                     and not any(k.endswith("/r") or k == "o/r" for k in _loop_state().get("labels", {}))))
+_loop_post("Bash", {"command": "gh api repos/o/r/issues/204/labels -f 'labels[]=needs review'"},
+           {"stdout": "", "stderr": "To get started with GitHub CLI, please run:  gh auth login", "exit_code": 4})
+_loop_post("Bash", {"command": "gh api repos/o/r/issues/205/labels -f 'labels[]=needs review'"},
+           {"stdout": "", "stderr": "To get started with GitHub CLI, please run:  gh auth login"})
+_loop_cases.append(("D12: a gh api label call that failed, with or without an exit code, records nothing",
+                    not {"o/r#204", "o/r#205"} & set(_loop_state().get("labels", {}))))
 _hook_src = open(DESIGN_LOOP, encoding="utf-8").read()  # #359: the issue workflow lives in the design loop part
 _wf_src = open(os.path.join(HERE, "..", "rules", "detail", "issue-workflow.md"), encoding="utf-8").read()
 _created_note = _hook_src.split("was created without the", 1)[1][:400]

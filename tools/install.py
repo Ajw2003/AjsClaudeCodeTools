@@ -351,8 +351,7 @@ def main():
             run_claude(["plugin", "uninstall", PLUGIN_ID])
             run_claude(["plugin", "install", PLUGIN_ID, "-y"])
 
-        if not verify_and_self_heal(source_root, installed_root, reinstall, ok, bad, info):
-            failures += 1
+        verify_and_self_heal(source_root, installed_root, reinstall, ok, bad, info)  # bad() counts the failure
 
     print()
     print("4. Settings the plugin cannot set itself")

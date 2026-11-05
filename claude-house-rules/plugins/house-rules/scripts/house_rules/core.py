@@ -1324,7 +1324,7 @@ def event_versioncheck():
             return 0
 
         reasons = []
-        if installed and market_version and installed != market_version:
+        if installed and market_version and _version_tuple(installed) < _version_tuple(market_version):
             reasons.append(
                 "installed copy is %s but the local marketplace clone has %s - run `%s`."
                 % (installed, market_version, update_cmd)
@@ -1335,7 +1335,7 @@ def event_versioncheck():
                 "marketplace clone itself has not synced. Run `%s`, then `%s`."
                 % (market_version, github_version, marketplace_cmd, update_cmd)
             )
-        elif not market_version and installed and github_version and installed != github_version:
+        elif not market_version and installed and github_version and _version_tuple(installed) < _version_tuple(github_version):
             # The marketplace clone could not be found/read at all - fall back to comparing
             # the installed copy straight against GitHub so a mismatch is still caught.
             reasons.append(
@@ -1846,6 +1846,7 @@ _GIT = (
 # independent of the second (a commit on my own branch is exempt from asking but still needs
 # the docs reminder).
 _GIT_COMMIT_RE = re.compile(_GIT + r"commit([^0-9A-Za-z-]|$)", re.IGNORECASE)
+_COMMIT_ALL_RE = re.compile(r"\scommit\b[^\n;&|]*?\s(?:-a\b|--all\b|-[A-Za-z]*a[A-Za-z]*\b)")  # A15: one answer for docs and safe_git
 
 
 _STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")

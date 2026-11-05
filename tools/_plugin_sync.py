@@ -22,7 +22,10 @@ def tree_hash(root):
     for dirpath, dirnames, filenames in os.walk(root):
         if os.sep + ".in_use" + os.sep in dirpath + os.sep:
             continue
+        dirnames[:] = [d for d in dirnames if d != "__pycache__"]  # A13: written by running the hooks, never shipped
         for fname in filenames:
+            if fname.endswith(".pyc") or fname == ".python-cache":
+                continue
             full = os.path.join(dirpath, fname)
             rel = os.path.relpath(full, root)
             with open(full, "rb") as f:

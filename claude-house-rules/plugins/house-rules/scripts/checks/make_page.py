@@ -357,6 +357,22 @@ _rc, _o = _mp("build", _c1, "--project", _ds_d)
 _nk_h = open(os.path.join(_ds_d, "docs", "plans", "basic.html"), encoding="utf-8").read() if _rc == 0 else ""
 _mp_cases.append(("summary (#339): a content file with no kind has no kind in its PAGE and still carries the Requires label",
                   _rc == 0 and '"kind"' not in _nk_h.split("const PAGE", 1)[1].split("\n};", 1)[0] and 'ic("hand") + "Requires"' in _nk_h))
+# A14: the node check runs `node -e <script> make_page <page> ...`, so require resolves from the folder the probe ran in
+_nd = os.path.join(_mp_tmp, "fakenode")
+os.makedirs(_nd)
+_nlog = os.path.join(_mp_tmp, "node-args.bin")
+with open(os.path.join(_nd, "node"), "w", encoding="utf-8") as _f:
+    _f.write('#!/bin/sh\nprintf \'%s\\0\' "$@" > "$NODE_ARGS_LOG"\nexit 0\n')
+os.chmod(os.path.join(_nd, "node"), 0o755)
+subprocess.run([sys.executable, "-c",
+                "import importlib.util as u, make_page as m; u.find_spec = lambda n: None; m.visual_check('PAGE.html', {})"],
+               env=dict(os.environ, PATH=_nd, NODE_ARGS_LOG=_nlog, PYTHONPATH=HERE), capture_output=True, text=True, timeout=60)
+try:
+    _nargs = open(_nlog, "rb").read().decode("utf-8").split("\0")
+except OSError:
+    _nargs = []
+_mp_cases.append(("A14: the node check runs `node -e`, with the page path as the fifth word",
+                  len(_nargs) > 4 and _nargs[0] == "-e" and _nargs[3] == "PAGE.html"))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

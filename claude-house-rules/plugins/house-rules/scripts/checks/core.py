@@ -2143,6 +2143,19 @@ else:
     report("FAIL", "versioncheck outside a synced copy keeps its normal behaviour")
     print(f"          rc={rc} out={out[:300]!r}")
 
+# A12: an installed copy that is AHEAD of the published one is not told to update down.
+import importlib  # noqa: E402
+_core = importlib.import_module("house_rules.core")
+report("PASS" if (_core._version_tuple("2.75.0") > _core._version_tuple("1.0.0")
+                  and _core._version_tuple("2.10.0") > _core._version_tuple("2.9.9")) else "FAIL",
+       "A12: versions compare as numbers, so 2.75.0 is newer than 1.0.0 and 2.10.0 newer than 2.9.9")
+rc, out, err = run_hook("versioncheck", vc_payload("vc-ahead"),
+                        vc_env("vc-ahead", HOUSE_RULES_VC_MARKETPLACE="1.0.0", HOUSE_RULES_VC_GITHUB="1.0.0"))
+report("PASS" if (rc == 0 and "claude plugin update" not in out and "OUT OF DATE" not in out) else "FAIL",
+       "A12: installed ahead of the published version prints no update command")
+if "claude plugin update" in out:
+    print(f"          rc={rc} out={out[:300]!r}")
+
 # --- SessionStart loads the newest installed rules after an update (issue #252) -----------
 # An older folder runs SessionStart; installed_plugins.json names a newer folder. inject and
 # showrule must load the newer folder's rule text and say so in one line, and must say it in one

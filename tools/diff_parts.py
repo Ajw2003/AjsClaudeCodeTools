@@ -60,16 +60,18 @@ def parts(repo, base, head, path):
     old, new = _show(repo, base, path), _show(repo, head, path)
     old_own, new_own = owners(old, path), owners(new, path)
     diff = _git(repo, "diff", "-U0", "--no-color", base, head, "--", path)
-    added, removed, o, n = {}, {}, 0, 0
+    added, removed, o, n, in_hunk = {}, {}, 0, 0, False
     for line in diff.splitlines():
         hunk = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
         if hunk:
-            o, n = int(hunk.group(1)), int(hunk.group(2))
-        elif line.startswith("+") and not line.startswith("+++"):
+            o, n, in_hunk = int(hunk.group(1)), int(hunk.group(2)), True
+        elif not in_hunk:
+            continue  # A18: the diff --git, index, --- and +++ header lines come before the first @@
+        elif line.startswith("+"):
             key = new_own[n - 1] if 0 < n <= len(new_own) else "(top of file)"
             added[key] = added.get(key, 0) + 1
             n += 1
-        elif line.startswith("-") and not line.startswith("---"):
+        elif line.startswith("-"):
             key = old_own[o - 1] if 0 < o <= len(old_own) else "(top of file)"
             removed[key] = removed.get(key, 0) + 1
             o += 1
