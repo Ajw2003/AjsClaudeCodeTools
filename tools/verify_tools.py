@@ -629,6 +629,28 @@ try:
 finally:
     shutil.rmtree(heal_root, ignore_errors=True)
 
+# --- #477 (A8): a failed settings write leaves the old settings.json whole ---
+import tempfile
+_a8 = tempfile.mkdtemp(prefix="install-a8-")
+with open(os.path.join(_a8, "settings.json"), "w", encoding="utf-8") as f:
+    json.dump({"mine": "keep me"}, f)
+_real_dump = install.json.dump
+def _a8_fail(obj, f, **kw):
+    f.write('{"half": ')
+    raise OSError("disk full")
+install.json.dump = _a8_fail
+try:
+    install.apply_settings(_a8, set(), lambda m: None, lambda m: None, lambda m: None)
+except OSError:
+    pass  # the failure this case simulates
+finally:
+    install.json.dump = _real_dump
+with open(os.path.join(_a8, "settings.json"), encoding="utf-8") as f:
+    _a8_after = json.load(f)
+check(_a8_after == {"mine": "keep me"}, "install.py: a failed settings write keeps the old settings.json",
+      "after a simulated disk-full write the file read back as %r" % (_a8_after,))
+
+
 # --- install.py's settings step (attribution, #133) ------------------------------------------
 def _run_settings(initial, skip=()):
     d = tempfile.mkdtemp(prefix="install-settings-")

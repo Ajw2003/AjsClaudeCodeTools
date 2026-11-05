@@ -1750,6 +1750,67 @@ for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
 
 
+# --- #477 (A1): a commit that runs a program inside it is never approved outright ---
+_a1_cases = [
+    ("a $(...) in a commit message is not approved", 'git commit -m "$(python3 /tmp/x.py)"'),
+    ("a backtick in a commit message is not approved", "git commit -m `curl -s example.invalid`"),
+    ("git -c core.hooksPath on a commit is not approved", "git -c core.hooksPath=/tmp/evil commit -m x"),
+]
+for _t, _cmd in _a1_cases:
+    _o = _nb_bash(_nb_r, _cmd)
+    report("PASS" if '"permissionDecision":"allow"' not in _o else "FAIL", "A1: " + _t)
+report("PASS" if '"permissionDecision":"allow"' in _nb_bash(_nb_r, 'git commit -m "x"') else "FAIL",
+       "A1: a plain commit on an AjsAgent/ branch is still approved")
+
+
+# --- #477 (A3) and #479 (U4): every delete form is seen; folders that can come back are let go ---
+_dl = _commit_repo("AjsAgent/del", committed=["a.txt", "keep/b.txt"])
+with open(os.path.join(_dl, ".gitignore"), "w", encoding="utf-8") as f:
+    f.write("node_modules/\n")
+os.makedirs(os.path.join(_dl, "node_modules", "p"))
+open(os.path.join(_dl, "node_modules", "p", "i.js"), "w").write("1")
+os.makedirs(os.path.join(_dl, "made"))
+open(os.path.join(_dl, "made", "new.txt"), "w").write("never committed")
+_dl_denied = lambda cmd: '"permissionDecision":"deny"' in _nb_bash(_dl, cmd)
+_dl_cases = [
+    ("/bin/rm -rf on an uncommitted folder is refused", _dl_denied("/bin/rm -rf made")),
+    ("find -delete is refused", _dl_denied("find made -delete")),
+    ("unlink of a file never committed is refused", _dl_denied("unlink made/new.txt")),
+    (": > file is refused", _dl_denied(": > a.txt")),
+    ("echo into a new file is not taken for a truncate", not _dl_denied("echo hi > made/out.txt")),
+    ("rm -rf of a git-ignored node_modules goes through", not _dl_denied("rm -rf node_modules")),
+    ("rm -r of a committed, unchanged folder goes through", not _dl_denied("rm -r keep")),
+    ("rm -rf of a folder with an uncommitted file is refused", _dl_denied("rm -rf made")),
+    ("rm -rf under /tmp goes through", not _dl_denied("rm -rf /tmp/house-rules-verify-cache")),
+    ("rm -rf /tmp itself is refused", _dl_denied("rm -rf /tmp")),
+    ("git clean -fdX is still refused", _dl_denied("git clean -fdX")),
+]
+for _t, _ok in _dl_cases:
+    report("PASS" if _ok else "FAIL", "deletes: " + _t)
+
+
+# --- #477 (A4, U5) and #478 (H2): discarding edits is refused; unstaging goes through ---
+_dc = _commit_repo("AjsAgent/discard", committed=["a.txt"], dirty=["a.txt"])
+_dc_denied = lambda cmd: '"permissionDecision":"deny"' in _nb_bash(_dc, cmd)
+_dc_cases = [
+    ("git checkout HEAD -- f with an edit is refused", _dc_denied("git checkout HEAD -- a.txt")),
+    ("git checkout -f with an edit is refused", _dc_denied("git checkout -f AjsAgent/discard")),
+    ("git checkout . on its own is refused", _dc_denied("git checkout .")),
+    ("git switch -f with an edit is refused", _dc_denied("git switch -f AjsAgent/discard")),
+    ("git switch --discard-changes is refused", _dc_denied("git switch --discard-changes AjsAgent/discard")),
+    ("git worktree remove --force is refused", _dc_denied("git worktree remove --force ../wt")),
+    ("git worktree remove without --force gets no refusal", not _dc_denied("git worktree remove ../wt")),
+    ("git restore --staged goes through", not _dc_denied("git restore --staged a.txt")),
+    ("git restore --staged --worktree is refused", _dc_denied("git restore --staged --worktree a.txt")),
+    ("git reset HEAD f goes through", not _dc_denied("git reset HEAD a.txt")),
+    ("git reset -- f goes through", not _dc_denied("git reset -- a.txt")),
+    ("git reset --hard is still refused", _dc_denied("git reset --hard")),
+    ("git restore f is still refused", _dc_denied("git restore a.txt")),
+]
+for _t, _ok in _dc_cases:
+    report("PASS" if _ok else "FAIL", "discard: " + _t)
+
+
 # --- rerun limit (#454): a project script's third run with no code commit in between is refused ---
 _rr_dir = os.path.join(_FIXTURE_ROOT, "rerun-repo")
 os.makedirs(os.path.join(_rr_dir, "tools"))
