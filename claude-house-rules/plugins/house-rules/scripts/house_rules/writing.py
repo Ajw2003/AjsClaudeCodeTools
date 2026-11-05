@@ -195,20 +195,11 @@ def _editor_owed(written, tool_uses, reply):
     return ""
 
 
-def _writing_note(not_checked, writing, long_words):
-    """#248: one end-of-reply note for every writing finding, in place of separate notes."""
+def _writing_note(not_checked, long_words):
+    """#248: one end-of-reply note for the not-checked and long-reply findings."""
     lines = []
     if not_checked:
         lines.append(_not_checked_note(not_checked))
-    if writing:
-        lines.append(
-            "House rules, write it so nothing is left to guess: aj has already seen this "
-            "reply, so send only the corrected sentences, not the whole reply again:\n" + "\n".join(
-                "- \"%s\": %s" % (phrase, why) for _kind, phrase, why in writing[:12])
-            + ("\n(and %d more)" % (len(writing) - 12) if len(writing) > 12 else "")
-            + "\nCount what can be counted, name what you point at, say each thing once, and give a "
-            "reason in the same sentence for anything that genuinely can't be measured. "
-            "HOUSE_RULES_CLEAR_WRITING=off turns this off.")
     if long_words:
         lines.append(_long_reply_note(long_words))
     return "\n\n".join(lines)

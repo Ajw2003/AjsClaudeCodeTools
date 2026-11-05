@@ -14,8 +14,8 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
 HOUSE_LABELS = (
-    ("AjsAgent created this", "5b6b7a", "Opened by AJ's agent"),
-    ("in progress", "FBCA04", "AJ's agent is working on it"),
+    ("AjsAgent created this", "5b6b7a", "Opened by Edens Agent"),
+    ("in progress", "FBCA04", "Edens Agent is working on it"),
     ("needs review", "0E8A16", "Waiting on aj"),
 )
 

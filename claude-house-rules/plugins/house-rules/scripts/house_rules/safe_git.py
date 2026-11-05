@@ -18,6 +18,7 @@ from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _COMMAND_VALUE_RE,
+    _COMMIT_ALL_RE,
     _GH_PREFIX,
     _GIT,
     _GIT_COMMIT_RE,
@@ -28,6 +29,7 @@ from house_rules.core import (  # noqa: F401
     _TRANSCRIPT_RE,
     _ag,
     _apply_assigns,
+    _write_atomic,
     _attribution_enabled,
     _branch_advice,
     _command_dir,
@@ -68,8 +70,6 @@ _LINE_START = r"\\[nrt]|"
 # #292: the background-work patterns (hidden windows, Start-Process, background jobs, nohup/setsid/
 # disown, a trailing &, a wait piped through tail/head) and the process-kill pattern were removed:
 # none of them changes a branch or deletes saved work, so none of them stops the agent any more.
-
-
 
 
 # Marks a git write that runs unasked on any branch except the repo's default branch, and is
@@ -125,24 +125,38 @@ GUARD_R3 = [
     ),
 ]
 
+# #477: one statement's worth of text in the JSON-encoded subject, stopping at ;, &, | and an encoded new line.
+_STMT = r"(?:(?!\\n)[^;&|])*"
+
 GUARD_R4 = [
     (
         # Was -r/-f only, so a plain `rm styles.css` - no recursive or force flag needed to
         # delete a single existing file - slipped through unasked. Deleting one file this way is
         # exactly the mechanism behind the CSS-file regression this rule now also has to catch.
-        r"(^|" + _LINE_START + r"[^0-9A-Za-z_./-])rm\s+\S",
+        # #477 (A3): /bin/rm and /usr/bin/rm, and unlink, delete the same way.
+        r"(^|" + _LINE_START + r"[^0-9A-Za-z_./-]|/bin/)(rm|unlink)\s+\S",
         "deletes one or more files",
     ),
     (r"Remove-Item", "deletes files (Remove-Item)"),
     (r"(del|erase)\s+/[fqs]|rmdir\s+/s", "deletes files (del /f or rmdir /s)"),
+    (r"\bfind\b" + _STMT + r"\s-delete\b", "deletes files (find -delete)"),
     (
-        r"Clear-Content|truncate\s+-s",
+        # #477 (A3): a statement that is only a redirect (`: > f`, `> f`, `true > f`) empties the file.
+        r"Clear-Content|truncate\s+-s|(:\s*\"|\\[nrt]|[;|(]|&&)\s*(?::|true)?\s*>(?![>&])\s*[^\s>&]",
         "truncates or overwrites file contents in place",
     ),
     (
-        _GIT + r"(checkout\s+(--|\.(\s|$))|restore([^0-9A-Za-z-]|$))",
+        # #477 (A4): `checkout HEAD -- f`, `checkout -f` and `switch -f` discard edits too. #478 (H2):
+        # `restore --staged` only takes a file out of the next commit, unless it also names --worktree.
+        _GIT + r"(checkout\b" + _STMT + r"(\s--(\s|\"|$)|\s-f\b|--force)|checkout\s+\.(\s|\"|$)"
+        r"|switch\b" + _STMT + r"(\s-f\b|--force|--discard-changes)"
+        r"|restore\b(?!" + _STMT + r"(\s--staged\b|\s-S\b))|restore\b" + _STMT + r"(\s--worktree\b|\s-W\b))",
         "throws away uncommitted edits to a file (git checkout -- / git restore)",
         SAVED,
+    ),
+    (
+        _GIT + r"worktree\s+remove\b" + _STMT + r"(\s--force\b|\s-f\b)",
+        "deletes a worktree with its uncommitted changes (git worktree remove --force)",
     ),
     (
         _GIT + r"stash\s+(drop|clear)([^0-9A-Za-z-]|$)",
@@ -171,7 +185,17 @@ SAFE_WAYS = {
     "throws away uncommitted edits to a file (git checkout -- / git restore)":
         "commit the work on a new branch first (`git switch -c AjsAgent/<topic>`, then commit)",
     "deletes stashed work permanently (git stash drop / clear)": "keep the stash",
-    "recursive": "move the folder into a `_to_delete/` folder instead",
+    "deletes a worktree with its uncommitted changes (git worktree remove --force)":
+        "run `git worktree remove <path>` without --force: git refuses it while the worktree has changes, "
+        "so commit them first",
+    # #479 (U4): a move frees no disk space, so the refusal names the deletes that do go through.
+    "recursive": ("`rm -r` goes through for a folder under /tmp or ~/.cache, a git-ignored `node_modules`, "
+                  "`__pycache__`, `.venv`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `dist`, `build`, "
+                  "`.next` or `target`, and a folder whose files are all committed and unchanged. For a helper's "
+                  "worktree, run `git worktree remove <path>`, which git refuses while it holds changes. "
+                  "Anything else: move the folder into a `_to_delete/` folder"),
+    "deletes files (find -delete)": ("delete the files by name with `rm <file>` (a committed, unchanged file goes "
+                                     "through), or move them into a `_to_delete/` folder"),
     "unsaved": "move the file into a `_to_delete/` folder instead",
     "not mine": "make a new branch and commit there: `git switch -c AjsAgent/<topic>`",
 }
@@ -184,15 +208,12 @@ GUARD_REFUSAL = (
 )
 
 
-
 DOCS_COMMIT_REMINDER = (
     "House rules, documentation goes in tiers: this commit stages a source file with nothing "
     "staged under docs/. Before committing, update the tier that changed - usually "
     "docs/3-state/ProjectState.md, for what's built and where it stands - or say in the commit "
     "message why none needed updating."
 )
-
-
 
 
 # A command that names its own repo, git dir or work tree is not talking about the checkout
@@ -222,10 +243,6 @@ def is_protected_branch(branch, start):
     return branch in PROTECTED_BRANCHES or branch == default_branch(start)
 
 
-
-
-
-
 def branch_ownership(start=None):
     """Whose branch is this checkout on? Returns (is_mine, branch_name, note).
     `start` is where the command runs (payload cwd); None keeps CLAUDE_PROJECT_DIR / getcwd.
@@ -252,12 +269,6 @@ def branch_ownership(start=None):
     return branch.startswith(owned_branch_prefixes()), branch, None
 
 
-
-
-
-
-
-
 def _agent_branch_enabled():
     return os.environ.get("HOUSE_RULES_AGENT_BRANCH", "on").strip().lower() not in _TOGGLE_OFF
 
@@ -274,9 +285,9 @@ def _agent_branch_block():
         _mine, branch, note = branch_ownership()
         if branch is None:
             return "\n\n---\n\nAjsAgent branch check: branch not read (%s)." % note
-        if not branch.startswith("claude/"):
+        if not branch.startswith(("claude/", "agent/")):
             return ""
-        name = branch[len("claude/") :]
+        name = branch.split("/", 1)[1]
         target = "AjsAgent/" + name
         cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
         exists = False
@@ -302,19 +313,24 @@ def _agent_branch_block():
 
 
 def _agent_identity_block():
-    """Cloud session whose git identity is Claude: tell the agent to set the repo-local identity.
-
-    Text only - the hook never runs git config. Never raises; adds nothing when fine or unreadable.
-    """
+    """Cloud session whose git identity is Claude: set this repo's own identity to Edens Agent (#478, U7),
+    so the first commit is not refused for it. Repo-local `git config` only, never --global. Never raises."""
     try:
         if not _attribution_enabled():
             return ""
-        ident = _git_author_ident(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+        top = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        ident = _git_author_ident(top)
         if ident is None or not _is_claude_identity(*ident):
             return ""
-        return "\n\n---\n\nGit identity is Claude: before your first commit run `%s`." % AGENT_IDENTITY_FIX
-    except Exception: return ""  # unreadable identity adds no text, by design (#177)
-
+        rc1 = _ag(top, ["config", "user.name", "Edens Agent"], check=False)[0]
+        rc2 = _ag(top, ["config", "user.email", "79066376+Ajw2003@users.noreply.github.com"], check=False)[0]
+        if rc1 == 0 and rc2 == 0:
+            return "\n\n---\n\nGit identity was Claude, so the hook set this repo's identity to Edens Agent."
+        return ("\n\n---\n\nGit identity is Claude, and setting it failed (git config exited %d and %d): before "
+                "your first commit run `%s`." % (rc1, rc2, AGENT_IDENTITY_FIX))
+    except Exception as exc:
+        return ("\n\n---\n\nGit identity check failed (%s: %s); if a commit is refused for the Claude identity, "
+                "run `%s`." % (type(exc).__name__, exc, AGENT_IDENTITY_FIX))
 
 
 # tier 3: pull out just "command":"..." — the first one. Allows backslash-escaped quotes.
@@ -326,8 +342,58 @@ def _guard_subject(payload):
     return m.group(0) if m else payload
 
 
+# #478 (U6): a heredoc fed to cat or tee with a quoted delimiter (<<'EOF') is only text written to a file.
+_HEREDOC_CAT_RE = re.compile(r"(\b(?:cat|tee)\b[^\n]*<<-?\s*(['\"])(\w+)\2[^\n]*\n)(.*?\n)(\s*\3[ \t]*(?:\n|$))",
+                             re.DOTALL)
+_INERT_CMDS = ("echo", "printf", "grep", "egrep", "fgrep", "rg")
+_MESSAGE_FLAGS = ("-m", "--message", "--title", "--body", "-b", "-t", "--notes")
 
 
+def _inert_text_stripped(cmd, messages=True):
+    """#478 (U6, H1): cmd with text that can't run emptied to '' or "": the body of a quoted-delimiter heredoc
+    fed to cat or tee, and a quoted string holding a space that is an argument of echo, printf, grep or rg, or
+    (when `messages`) the value of a message flag such as -m or --body. A double-quoted string holding $, a
+    backtick or a backslash is kept, because $(...) inside it runs; after a backslash the rest is kept whole.
+    A quoted word with no space is kept, because the shell passes '--force' as --force."""
+    if messages:  # the issue check (messages=False) reads heredoc bodies, which carry a PR's Refs line
+        cmd = _HEREDOC_CAT_RE.sub(lambda m: m.group(1) + m.group(5), cmd)
+    out, words, i = [], [], 0
+    while i < len(cmd):
+        c = cmd[i]
+        if c in "'\"":
+            j = cmd.find(c, i + 1)
+            text = cmd[i:] if j < 0 else cmd[i:j + 1]
+            if j < 0 or c == '"' and re.search(r"[$`\\]", text):
+                if j < 0 or "\\" in text:
+                    out.append(cmd[i:])
+                    break
+                out.append(text)
+            else:
+                first = words[0] if words else ""
+                flag = (words[-1] if words else "").rstrip("=")
+                inert = " " in text and (first in _INERT_CMDS or messages and flag in _MESSAGE_FLAGS)
+                out.append(c + c if inert else text)
+            words.append(text)
+            i += len(text)
+            continue
+        if c in ";&|\n()":
+            words = []
+        elif not c.isspace():
+            w = re.match(r"[^\s;&|()'\"]+", cmd[i:]).group(0)
+            words.append(w)
+            out.append(w)
+            i += len(w)
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _quiet_subject(subject, messages=True):
+    """The guard subject, JSON-encoded as the patterns expect, with _inert_text_stripped applied."""
+    text = _decoded_command(subject)
+    quiet = _inert_text_stripped(text, messages)
+    return subject if quiet == text else '"command":' + json.dumps(quiet)
 
 
 def _trace_subject(subject, limit=60):
@@ -381,10 +447,40 @@ def _push_targets_protected(subject, where):
 _ONLY_GIT_STMT_RE = re.compile(r"^\s*(git\s|cd\s)")
 
 
+# #477 (A1): a $(...), backtick or <(...) runs a program, and `git -c key=value` can point git at one
+# (core.hooksPath, core.fsmonitor, gpg.program). A command holding any of them is never approved here.
+_GIT_RUNS_CODE_RE = re.compile(r"\$\(|`|<\(|(?:^|\s)-c\s*[\"']?[\w.-]+=|--config-env\b|--exec-path\b")
+
+
 def _only_git_statements(subject):
-    """True when every statement of the command (pipes split too) is a git or cd statement."""
-    stmts = [x for x in re.split(r"&&|\|\||;|\n|\|", _decoded_command(subject)) if x.strip()]
+    """True when every statement of the command (pipes split too) is a git or cd statement and none of
+    them runs a program inside it or sets git config with -c (#477)."""
+    text = _decoded_command(subject)
+    if _GIT_RUNS_CODE_RE.search(text):
+        return False
+    stmts = [x for x in re.split(r"&&|\|\||;|\n|\|", text) if x.strip()]
     return bool(stmts) and all(_ONLY_GIT_STMT_RE.match(x) for x in stmts)
+
+
+_RESET_STMT_RE = re.compile(_GIT + r"reset\b(?P<rest>.*)", re.IGNORECASE)
+
+
+def _reset_unstages_only(subject):
+    """#478 (H2): True when every `git reset` names paths (`reset HEAD a.py`, `reset -- a.py`). git takes a
+    reset with paths as "unstage these files": the branch and the edits on disk don't move."""
+    found = False
+    for stmt in _STATEMENT_SPLIT_RE.split(_decoded_command(subject)):
+        m = _RESET_STMT_RE.search(stmt)
+        if not m:
+            continue
+        found = True
+        words = m.group("rest").split()
+        if "--" in words:
+            continue
+        flags = [w for w in words if w.startswith("-")]
+        if any(f not in ("-q", "--quiet") for f in flags) or len([w for w in words if not w.startswith("-")]) < 2:
+            return False
+    return found
 
 
 _NB_GIT_RE = re.compile(r"^\s*(cd\s+\S+\s*&&\s*)?" + _GIT + r"(commit|push)\b")
@@ -461,8 +557,15 @@ def _rerun_command(payload, subject):
     return cmd if isinstance(cmd, str) else _decoded_command(subject)
 
 
+_RERUN_INTERPRETER_RE = re.compile(r"(python[\d.]*|py|sh|bash|zsh|node|deno|tsx|ruby|pwsh|powershell|cmd)(\.exe)?$",
+                                   re.IGNORECASE)
+
+
 def _rerun_candidates(cmd, where):
-    """Full paths of the existing script-extension words of the command, in order."""
+    """Full paths of the scripts the command runs, in order: a statement's first word, or the first
+    non-option word after an interpreter (#478, A6: `cat`, `sed`, `git add` and a commit name a script
+    without running it). shortcut: a wrapper such as `env`, `timeout` or `uv run` hides the script; add
+    wrappers here if a builder is seen slipping past."""
     import shlex
     found = []
     for stmt in re.split(r"&&|\|\||;|\||\n", cmd):
@@ -470,11 +573,17 @@ def _rerun_candidates(cmd, where):
             words = shlex.split(stmt)
         except ValueError:
             words = stmt.split()
-        for w in words:
-            if w.lower().endswith(RERUN_EXTS):
-                full = os.path.realpath(w if os.path.isabs(w) else os.path.join(where, w))
-                if os.path.isfile(full):
-                    found.append(full)
+        while words and re.match(r"^[A-Za-z_]\w*=", words[0]):
+            words = words[1:]  # FOO=1 ./x.sh
+        if not words:
+            continue
+        run = words[0]
+        if _RERUN_INTERPRETER_RE.match(os.path.basename(run)):
+            run = next((w for w in words[1:] if not w.startswith("-")), "")
+        if run.lower().endswith(RERUN_EXTS):
+            full = os.path.realpath(run if os.path.isabs(run) else os.path.join(where, run))
+            if os.path.isfile(full):
+                found.append(full)
     return found
 
 
@@ -547,10 +656,7 @@ def _rerun_check(payload, subject):
             return RERUN_DENY % script
         _RERUN_UNDO.append((path, key, rec))
         recs[key] = {"script": script, "head": head, "count": count + 1}
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"records": recs}, f)
-        os.replace(tmp, path)
+        _write_atomic(path, json.dumps({"records": recs}))
     except Exception as exc:  # fail open and loud: noted in the guard's output
         _RERUN_NOTE.append("house-rules: the rerun count could not be checked (%s: %s); the command was allowed."
                            % (type(exc).__name__, str(exc)[:120]))
@@ -568,10 +674,7 @@ def _rerun_take_back():
                 recs.pop(key, None)
             else:
                 recs[key] = before
-            tmp = path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump({"records": recs}, f)
-            os.replace(tmp, path)
+            _write_atomic(path, json.dumps({"records": recs}))
         except Exception as exc:  # loud: the run stays counted, and the note says so
             _RERUN_NOTE.append("house-rules: a refused run could not be taken off the rerun count (%s: %s)."
                                % (type(exc).__name__, str(exc)[:120]))
@@ -621,13 +724,15 @@ def _event_guard_main():
         return 0
 
     subject = _guard_subject(payload)
+    quiet = _quiet_subject(subject)  # #478 (U6, H1): the destructive patterns never read text that can't run
     outdated = _read_and_clear_outdated_marker(_vc_session_id(payload))
 
     # Issue workflow: gh pr create must say Refs, gh issue close always asks. A deny ends here;
     # an ask is folded into the prompt built below so a compound command is asked about once.
     issue_hit = _attribution_guard(subject, payload)
+    issue_subject = _quiet_subject(subject, messages=False)  # #478: keeps --body, which the issue check reads
     for _issue_guard in core.GUARD_ISSUE_HOOKS:  # _author_guard, _issues_guard: registered by hook.py
-        issue_hit = issue_hit or _issue_guard(subject, payload)
+        issue_hit = issue_hit or _issue_guard(issue_subject, payload)
     if issue_hit and issue_hit[0] == "deny":
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": issue_hit[1]}})
@@ -667,8 +772,10 @@ def _event_guard_main():
     for title, patterns in GUARD_BUCKETS:
         for entry in patterns:
             pattern, reason = entry[0], entry[1]
-            if not re.search(pattern, subject, re.IGNORECASE):
+            if not re.search(pattern, quiet, re.IGNORECASE):
                 continue
+            if reason == "discards work (reset)" and _reset_unstages_only(subject):
+                continue  # #478 (H2): unstaging only; the edits stay on disk
             marker = entry[2] if len(entry) > 2 else None
             if reason == "deletes one or more files" and _rm_only_in_scratchpad(subject, payload):
                 continue  # #261: every rm path is inside this session's scratchpad
@@ -884,44 +991,98 @@ def _payload_toplevel(payload):
     return cwd
 
 
-_DELETE_CMD_RE = re.compile(r"(^|[\s;&|(])(rm|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
+# #478: a quote before the word counts too, so bash -c 'rm -rf docs' is read as the delete it runs.
+_DELETE_CMD_RE = re.compile(r"(^|[\s;&|('\"]|/bin/)(rm|unlink|Remove-Item|del|erase|rmdir)(\s|$)", re.IGNORECASE)
 _RECURSIVE_DELETE_RE = re.compile(
-    r"(^|[\s;&|(])rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
+    r"(^|[\s;&|('\"]|/bin/)rm\s+(?:\S+\s+)*?(-[A-Za-z]*[rR][A-Za-z]*|--recursive)(\s|$)"
     r"|rmdir\s+/s|Remove-Item\b.*-Recurse|(del|erase)\s+(?:\S+\s+)*?/s(\s|$)", re.IGNORECASE)
+
+# #479 (U4): folders an install or a build makes again. Deleted only when git ignores them, so a folder
+# that merely shares the name and holds real work is still refused.
+REBUILDABLE_DIRS = ("node_modules", "__pycache__", ".venv", ".pytest_cache", ".mypy_cache", ".ruff_cache",
+                    "dist", "build", ".next", "target")
+
+
+def _temp_roots():
+    """Folders that hold only temporary files by definition: /tmp and ~/.cache."""
+    return [os.path.realpath("/tmp"), os.path.realpath(os.path.expanduser("~/.cache"))]
+
+
+def _in_temp_root(path):
+    """True when path is inside /tmp or ~/.cache and not inside a git work tree there: a repo under /tmp can
+    hold unpushed commits and edits, so it is guarded like any other repo."""
+    real = os.path.realpath(path)
+    root = next((r for r in _temp_roots() if real.startswith(r + os.sep)), None)
+    if root is None:
+        return False
+    probe = real
+    while probe != root:  # any .git (a repo's folder, or a worktree's file) above the path makes it a repo
+        if os.path.exists(os.path.join(probe, ".git")):
+            return False
+        probe = os.path.dirname(probe)
+    return True
+
+
+def _folder_recoverable(path):
+    """#479 (U4): True when deleting this folder loses nothing that can't come back: it is inside /tmp or
+    ~/.cache, or it is a git-ignored folder on REBUILDABLE_DIRS, or every file in it is committed and
+    unchanged, with no untracked or ignored file inside and no separate repo of its own."""
+    real = os.path.realpath(path)
+    if _in_temp_root(real):
+        return True
+    if not os.path.isdir(real):
+        return False
+    parent = os.path.dirname(real)
+    if os.path.basename(real) in REBUILDABLE_DIRS:
+        return _ag(parent, ["check-ignore", "-q", "--", real], check=False)[0] == 0
+    rc, top_in, _e = _ag(real, ["rev-parse", "--show-toplevel"], check=False)
+    rc2, top_out, _e = _ag(parent, ["rev-parse", "--show-toplevel"], check=False)
+    if rc != 0 or rc2 != 0 or top_in.strip() != top_out.strip():
+        return False  # not in a repo, or its own repo (a clone or a worktree), whose unpushed commits would go
+    rc, listed, _e = _ag(real, ["ls-files", "--", "."], check=False)
+    rc2, status, _e = _ag(real, ["status", "--porcelain", "--ignored", "--untracked-files=all", "--", "."], check=False)
+    return rc == 0 and rc2 == 0 and bool(listed.strip()) and not status.strip()
 
 
 def _delete_refusal(subject, where):
-    """#291: "recursive" for a recursive delete, "unsaved" when any target has uncommitted changes, was
-    never committed, or can't be checked (a glob or variable), else None: every target is committed and
-    unchanged, so git can bring it back."""
+    """#291: "recursive" for a recursive delete of a folder that can't come back (#479), "unsaved" when any
+    target has uncommitted changes, was never committed, or can't be checked (a glob or variable), else
+    None: every target can be brought back by git, an install, or is temporary."""
     import shlex
     text = _decoded_command(subject)
-    if _RECURSIVE_DELETE_RE.search(text):
-        return "recursive"
+    recursive = bool(_RECURSIVE_DELETE_RE.search(text))
+    refusal = "recursive" if recursive else "unsaved"
     base = where or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
     for stmt in re.split(r"&&|\|\||;|\n|\|", text):
         m = _DELETE_CMD_RE.search(stmt)
         if not m:
             continue
+        if recursive and m.group(2).lower() not in ("rm",):
+            return "recursive"  # rmdir /s, Remove-Item -Recurse, del /s: their targets are not parsed here
         try:
             words = shlex.split(stmt[m.end(2):])
         except ValueError:
-            return "unsaved"
+            return "recursive" if recursive else "unsaved"  # unparseable quoting: its targets can't be checked
         targets = [w for w in words if not w.startswith(("-", "/")) or os.path.isabs(w) and not re.match(r"^/[a-zA-Z]$", w)]
         if not targets:
-            return "unsaved"
+            return refusal
         for t in targets:
-            if re.search(r"[*?\[\]$`~]", t):
-                return "unsaved"
+            if re.search(r"[*?\[\]$`]", t) or "~" in t[1:]:
+                return refusal
+            t = os.path.expanduser(t)
             path = t if os.path.isabs(t) else os.path.join(base, t)
-            folder = os.path.dirname(os.path.abspath(path))
             try:
+                if os.path.isdir(path) or _in_temp_root(path):
+                    if _folder_recoverable(path):
+                        continue
+                    return "recursive"
+                folder = os.path.dirname(os.path.abspath(path))
                 tracked, _o, _e = _ag(folder, ["ls-files", "--error-unmatch", "--", path], check=False)
                 changed, _o, _e = _ag(folder, ["diff", "--quiet", "HEAD", "--", path], check=False)
             except RuntimeError:
-                return "unsaved"
+                return "recursive" if recursive else "unsaved"  # git couldn't answer, so the target is not proved safe
             if tracked != 0 or changed != 0:
-                return "unsaved"
+                return refusal
     return None
 
 
@@ -1193,16 +1354,6 @@ def _prompt_timeout_seconds():
     )
 
 
-
-
-
-
-
-
-
-
-
-
 def _waiting_clock(ts):
     try:
         return time.strftime("%H:%M", time.localtime(float(ts)))
@@ -1257,8 +1408,6 @@ def _waiting_scope_note(payload):
         sys.stderr.write("house-rules scope: could not report the waiting-on-you list (%s: %s).\n"
                          % (type(exc).__name__, exc))
         return ""
-
-
 
 
 def _waiting_clear_session(entries, session_id, status=None):
@@ -1506,15 +1655,7 @@ def event_prompttimer():
 # End of the prompttimer block (verify.py slices the source between its first comment and this line).
 
 
-
-
-
-
-
-
-
-
-# Credit goes to "aj's agent", with no email and no Claude branding (issue #133). The Claude Code
+# Credit goes to "Edens Agent", with no email and no Claude branding (issue #133). The Claude Code
 # `attribution` setting is the primary mechanism and is written by tools/install.py; this check is
 # the backstop for sessions that never read the settings file (cloud sessions).
 _ATTRIBUTION_TEXT_RES = [
@@ -1536,7 +1677,6 @@ _CLAUDE_LINK_RE = re.compile(
     r"claude\.ai/(?:code/(?:session_|project/|artifact/)|(?:public/)?artifacts?/|share/)[\w-]",
     re.IGNORECASE,
 )
-_COMMIT_ALL_RE = re.compile(r"\scommit\b[^\n;&|]*?\s(?:-a\b|--all\b|-[A-Za-z]*a[A-Za-z]*\b)")
 _GIT_ADD_RE = re.compile(_GIT + r"add\b", re.IGNORECASE)
 CLAUDE_LINK_DENY = (
     "House rules, no published links in git: %s adds a claude.ai link (`%s`). Session, project, "
@@ -1608,9 +1748,10 @@ _ATTRIBUTION_CMD_RE = re.compile(
 _GH_API_WRITE_RE = re.compile(r"(?<![\w-])(?:-X\s*(?:POST|PATCH|PUT)|--method\b|-f\b|-F\b|--field\b|--raw-field\b|--input\b)", re.IGNORECASE)
 _GH_API_FILE_RE = re.compile(r"(?:(?<![\w-])-F|--field)(?:=|\s+)body=@(\"[^\"]+\"|'[^']+'|\S+)|--input(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
 ATTRIBUTION_DENY = (
-    "House rules, credit aj's agent: this %s credits Claude (`%s`). Credit \"aj's agent\" instead, "
-    "with no email and no Claude branding: commits end with `Committed by AJ's agent`, pull requests "
-    "with `Opened by AJ's agent`. HOUSE_RULES_ATTRIBUTION=off disables this check."
+    "House rules, credit Edens Agent: this %s credits Claude (`%s`). Remove every `Co-Authored-By:` and "
+    "`Claude-Session:` line and every claude.ai link, then credit \"Edens Agent\" with no email and no Claude "
+    "branding: commits end with `Committed by Edens Agent`, pull requests with `Opened by Edens Agent`. "
+    "HOUSE_RULES_ATTRIBUTION=off disables this check."
 )
 
 
@@ -1739,7 +1880,7 @@ def event_creditcheck():
 # pass through `guard`. Only title/body/message and branch/head are read, never file content.
 _GITHUB_COMMIT_TOOLS = ("push_files", "create_or_update_file")
 BRANCH_DENY = (
-    "House rules, credit aj's agent: `%s` is a new branch under `claude/`. Name agent branches "
+    "House rules, credit Edens Agent: `%s` is a new branch under `claude/`. Name agent branches "
     "`AjsAgent/<topic>` instead. HOUSE_RULES_ATTRIBUTION=off disables this check."
 )
 
@@ -1814,34 +1955,11 @@ def event_guardgithub():
     return 0
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # ---------------------------------------------------------------------------------------
 # The commit rule's obligation half. guard only judges git commands that are run, so a session
 # that never runs one produced no signal at all (#97). These helpers answer the one question
 # the Stop, branchnudge and audit checks share: which of these files are still uncommitted?
 # ---------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
 
 
 def _commit_note(uncommitted):

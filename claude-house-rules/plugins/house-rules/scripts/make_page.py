@@ -28,7 +28,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGIN = os.path.abspath(os.path.join(HERE, ".."))
@@ -407,9 +406,11 @@ def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
         print("make_page: %s not recorded: %s is unreadable (%s); left untouched" % (what, stage, e))
         return
     data[key] = value if value is not None else os.path.relpath(out, project).replace(os.sep, "/")
-    with open(stage, "w", encoding="utf-8", newline="\n") as f:
+    tmp = "%s.%d.tmp" % (stage, os.getpid())  # A7: never leave a half-written stage file
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write("\n")
+    os.replace(tmp, stage)
     print("make_page: recorded %s %s in %s" % (key, data[key], stage))
 
 
@@ -572,10 +573,9 @@ def visual_check(out, style):
             reasons.append("node playwright probe failed: %s" % e)
         if r is not None:
             if r.returncode == 0:
-                fd, js = tempfile.mkstemp(suffix=".js")
-                with os.fdopen(fd, "w") as f:
-                    f.write(NODE_JS)
-                runs.append(("node playwright", [node, js, out, arg, "(%s)()" % CLIP_JS]))
+                # A14: run from the folder the probe ran in, so require finds the same playwright; "make_page"
+                # fills process.argv[1], keeping the page at argv[2] as NODE_JS expects. No temp file is left behind.
+                runs.append(("node playwright", [node, "-e", NODE_JS, "make_page", out, arg, "(%s)()" % CLIP_JS]))
             else:
                 reasons.append("node has no playwright module")
     for label, cmd in runs:

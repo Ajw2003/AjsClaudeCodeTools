@@ -1324,7 +1324,7 @@ def event_versioncheck():
             return 0
 
         reasons = []
-        if installed and market_version and installed != market_version:
+        if installed and market_version and _version_tuple(installed) < _version_tuple(market_version):
             reasons.append(
                 "installed copy is %s but the local marketplace clone has %s - run `%s`."
                 % (installed, market_version, update_cmd)
@@ -1335,7 +1335,7 @@ def event_versioncheck():
                 "marketplace clone itself has not synced. Run `%s`, then `%s`."
                 % (market_version, github_version, marketplace_cmd, update_cmd)
             )
-        elif not market_version and installed and github_version and installed != github_version:
+        elif not market_version and installed and github_version and _version_tuple(installed) < _version_tuple(github_version):
             # The marketplace clone could not be found/read at all - fall back to comparing
             # the installed copy straight against GitHub so a mismatch is still caught.
             reasons.append(
@@ -1831,7 +1831,7 @@ def event_promptran():
 # verbatim from hook.py.
 # ---------------------------------------------------------------------------------------
 
-# One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
+# One shell word: quoted runs may hold spaces, so -c user.name="Edens Agent" is one word (#189).
 _WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
 # `git` plus any run of global options before the subcommand.
 # Why the alternation's first branch exists: docs/architecture.md, "The pre-existing hole this exposed".
@@ -1846,6 +1846,7 @@ _GIT = (
 # independent of the second (a commit on my own branch is exempt from asking but still needs
 # the docs reminder).
 _GIT_COMMIT_RE = re.compile(_GIT + r"commit([^0-9A-Za-z-]|$)", re.IGNORECASE)
+_COMMIT_ALL_RE = re.compile(r"\scommit\b[^\n;&|]*?\s(?:-a\b|--all\b|-[A-Za-z]*a[A-Za-z]*\b)")  # A15: one answer for docs and safe_git
 
 
 _STATEMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\n")
@@ -1913,9 +1914,12 @@ _PROMPT_VALUE_RE = re.compile(r'"prompt"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
 
 # #253: prompts that reach UserPromptSubmit but are a helper's report or a system notice, not aj.
+# #477 (D1): a pull request event, a webhook delivery and a child session's event arrive as prompts too,
+# and anyone who can comment on a pull request writes their text.
 _RELAYED_PROMPT_RE = re.compile(
     r"<task-notification>|<system-reminder>|<agent-message\b|\[Subagent hand-?back\]"
-    r"|Another Claude session sent a message", re.IGNORECASE)
+    r"|Another Claude session sent a message"
+    r"|<wake\b|<webhook-payload\b|<event\s+source=|<child-session-event\b", re.IGNORECASE)
 
 
 def _is_relayed_prompt(text, payload=None):
@@ -2086,7 +2090,8 @@ def register_docs_status(fn):
 # dispatcher in hook.py, use. The first group came out of the safe git part, the second out of hook.py.
 # ---------------------------------------------------------------------------------------
 
-OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-")  # claude/ = cloud app branches, old branches; ccr- = cloud sessions
+# claude/ = cloud app branches, old branches; ccr- = cloud sessions; agent/ = cloud sessions since 2026-11 (#478)
+OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-", "agent/")
 
 
 def owned_branch_prefixes():
@@ -2195,12 +2200,22 @@ def _waiting_load(path):
     return data
 
 
+def _write_atomic(path, text):
+    """A7: write `text` so a reader never sees a half-written file: a temp file named for this process, then
+    os.replace, which is atomic on one filesystem. The temp file is removed if the write fails."""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    tmp = "%s.%d.tmp" % (path, os.getpid())
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
 def _waiting_save(path, entries):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(entries, f, indent=1)
-    os.replace(tmp, path)
+    _write_atomic(path, json.dumps(entries, indent=1))
 
 
 WAITING_LOCK_WAIT = 3.0
@@ -2306,7 +2321,8 @@ def _waiting_session_note(payload):
         return ""
 
 
-_GH_PREFIX = r"(?:^|[;&|(\n`]|\$\()\s*gh\s+"
+# #479 (U2b): `do gh`, `then gh`, `else gh` and `xargs gh` run gh too (a one-line for or if).
+_GH_PREFIX = r"(?:^|[;&|(\n`]|\$\(|\b(?:do|then|else|xargs))\s*gh\s+"
 
 
 _PR_BODY_FILE_RE = re.compile(r"(?:--body-file|(?<![\w-])-F)(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)")
@@ -2331,7 +2347,7 @@ def _attribution_enabled():
 # The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
 # noreply@anthropic.com, which signs every commit as Claude whatever the message says.
 AGENT_IDENTITY_FIX = (
-    "git config user.name \"AJ's agent\" && "
+    "git config user.name \"Edens Agent\" && "
     "git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
 )
 
@@ -2343,7 +2359,7 @@ _AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
 
 
 def _c_option_re(key):
-    """-c key=value, also with the whole pair quoted (-c "user.name=aj's agent", #189)."""
+    """-c key=value, also with the whole pair quoted (-c "user.name=Edens Agent", #189)."""
     return re.compile(
         r"(?:^|\s)-c\s*(?:\"" + key + r"=([^\"]*)\"|'" + key + r"=([^']*)'|" + key + r"=" + _ARG + r")",
         re.IGNORECASE,

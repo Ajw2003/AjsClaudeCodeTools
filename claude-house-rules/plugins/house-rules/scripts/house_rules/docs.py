@@ -16,6 +16,7 @@ from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _COMMAND_VALUE_RE,
+    _COMMIT_ALL_RE,
     _GIT,
     _GIT_COMMIT_RE,
     _STATEMENT_SPLIT_RE,
@@ -205,7 +206,6 @@ _GIT_ADD_RE = re.compile(_GIT + r"add([^0-9A-Za-z-]|$)", re.IGNORECASE)
 
 # -a/--all/-am/-ma on the COMMIT statement: git stages every tracked, modified/deleted file at
 # commit time, before the commit itself runs - doc-ref c79f docs/6-decisions/Decisions.md.
-_COMMIT_ALL_RE = re.compile(r"(^|\s)(-a\b|--all\b|-am\b|-ma\b)", re.IGNORECASE)
 _ADD_ALL_RE = re.compile(r"(^|\s)(-A\b|--all\b)|(^|\s)\.(\s|$)", re.IGNORECASE)
 _ADD_UPDATE_RE = re.compile(r"(^|\s)(-u\b|--update\b)", re.IGNORECASE)
 

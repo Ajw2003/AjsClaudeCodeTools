@@ -19,6 +19,7 @@ from house_rules.core import (  # noqa: F401
     _PARITY_ACCOUNTED_RE,
     _PARITY_RE,
     _PLAN_VALUE_RE,
+    _write_atomic,
     _PROMPT_VALUE_RE,
     _SESSION_ID_RE,
     _TOGGLE_OFF,
@@ -899,16 +900,17 @@ def _agentcap_load(path):
     return recs
 
 
+AGENT_PENDING_SECONDS = 120  # A10: a launch the cap allowed holds a place until its SubagentStart arrives
+
+
 def _agentcap_live(recs, now=None):
     now = time.time() if now is None else now
-    return [r for r in recs if now - r["start"] <= AGENT_STALE_SECONDS]
+    return [r for r in recs if now - r["start"] <= (AGENT_PENDING_SECONDS if str(r.get("id", "")).startswith("pending:")
+                                                    else AGENT_STALE_SECONDS)]
 
 
 def _agentcap_save(path, recs):
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        json.dump({"agents": recs}, f)
-    os.replace(tmp, path)
+    _write_atomic(path, json.dumps({"agents": recs}))
 
 
 def _agentcap_update(add=None, remove=None):
@@ -930,6 +932,9 @@ def _agentcap_update(add=None, remove=None):
             recs = [r for r in recs if r.get("id") != remove]
         if add:
             recs = [r for r in recs if r.get("id") != add[0]]
+            pending = [r for r in recs if str(r.get("id", "")).startswith("pending:")]
+            if pending and not str(add[0]).startswith("pending:"):
+                recs.remove(min(pending, key=lambda r: r["start"]))  # A10: this agent takes its launch's place
             recs.append({"id": add[0], "type": add[1], "start": time.time()})
         _agentcap_save(path, recs)
     except Exception as exc:
@@ -965,6 +970,9 @@ def event_agentcap():
                       "allowed, the cap is not enforced this time." % (path, type(exc).__name__)})
                 return 0
             if len(recs) < AGENT_CAP:
+                note = _agentcap_update(add=("pending:%s" % (data.get("tool_use_id") or time.time()), "starting"))
+                if note:
+                    emit({"systemMessage": "house-rules: " + note})
                 return 0
             names = ", ".join("%s %s" % (r.get("type") or "agent", r.get("id") or "?") for r in recs)
             reason = (
@@ -1093,10 +1101,9 @@ def event_subagentcommit():
             parts = []
             for top, branch, files in left:
                 if _autosave_enabled() and branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX):
-                    sha, done = _wip_commit(top, WIP_NOT_COMMITTED)
+                    sha, done = _wip_commit(top, branch, WIP_NOT_COMMITTED)
                     note = _autosave_snapshot(top, branch, force_push=True)
-                    parts.append("committed %d file(s) in %s as %s%s"
-                                 % (len(done), top, sha, " | " + note if note else ""))
+                    parts.append("in %s: %s%s" % (top, _saved_text(sha, done, files), " | " + note if note else ""))
                 else:
                     parts.append("%s in %s left uncommitted" % (", ".join(files[:8]), top))
             emit(
@@ -1213,8 +1220,7 @@ def _autosave_read(path):
 
 
 def _autosave_write(path, text):
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+    _write_atomic(path, text)
 
 
 def _dirty_files(top):
@@ -1269,7 +1275,7 @@ def _autosave_snapshot(top, branch, force_push=False):
         if os.path.exists(idx):
             os.remove(idx)
         _ag(top, ["read-tree", "HEAD"], env=env)
-        _ag(top, ["add", "-A"], env=env)
+        _autosave_stage(top, branch, env=env)
         tree = _ag(top, ["write-tree"], env=env)[1].strip()
     finally:
         if os.path.exists(idx):
@@ -1292,17 +1298,50 @@ def _autosave_snapshot(top, branch, force_push=False):
 
 def _wip_message(subject):
     # #405: credited like every other commit; no co-author trailer and no session link.
-    return subject + "\n\nCommitted by AJ's agent"
+    return subject + "\n\nCommitted by Edens Agent"
 
 
-def _wip_commit(top, subject):
-    """Commit everything in the worktree on the subagent's behalf. (short sha, files), or
-    (None, []) when there was nothing to commit. --no-verify: a repo's pre-commit hook must not
+def _autosave_stage(top, branch, env=None):
+    """#477 (A11): stage tracked changes plus the files the helper wrote with Write, Edit or NotebookEdit.
+    Other untracked files are left out: one may be a token or a data dump that must never reach origin."""
+    _ag(top, ["add", "-u"], env=env)
+    written = [p for p in _autosave_read(_autosave_state_path(top, branch, "written")).splitlines()
+               if p and os.path.isfile(os.path.join(top, p))]
+    if written:
+        _ag(top, ["add", "--"] + written, env=env)
+
+
+def _autosave_remember(top, branch, payload):
+    """#477 (A11): record a file the helper wrote with a file tool, so autosave may save it."""
+    ti = json.loads(payload).get("tool_input") or {}
+    path = ti.get("file_path") or ti.get("notebook_path")
+    if not path:
+        return
+    rel = os.path.relpath(os.path.realpath(path), os.path.realpath(top)).replace(os.sep, "/")
+    listed = _autosave_state_path(top, branch, "written")
+    have = _autosave_read(listed).splitlines()
+    if not rel.startswith("../") and rel not in have:
+        _autosave_write(listed, "\n".join(have + [rel]))
+
+
+def _saved_text(sha, done, files):
+    """What a hook commit did, for its message: the files it committed, or why it committed none (#477)."""
+    if sha:
+        return "committed %d file(s) as %s: %s" % (len(done), sha, _shown(done))
+    return ("saved nothing, because %s %s not written with Write or Edit, so it is left for the helper to "
+            "commit (#477)" % (_shown(files), "was" if len(files) == 1 else "were"))
+
+
+def _wip_commit(top, branch, subject):
+    """Commit the helper's work on its behalf: tracked changes and the files it wrote (#477). (short sha,
+    files), or (None, []) when there was nothing to commit. --no-verify: a repo's pre-commit hook must not
     be able to block the one commit that protects the work."""
-    files = _dirty_files(top)
+    if not _dirty_files(top):
+        return None, []
+    _autosave_stage(top, branch)
+    files = [p for p in _ag(top, ["diff", "--cached", "--name-only"])[1].splitlines() if p]
     if not files:
         return None, []
-    _ag(top, ["add", "-A"])
     ident = []
     if _ag(top, ["config", "user.name"], check=False)[0] != 0:
         ident += ["-c", "user.name=house-rules"]
@@ -1339,13 +1378,15 @@ def event_autosave():
                 emit({"systemMessage": " | ".join(issue_notes)})
             return 0
         top, branch, tool = target
+        if tool in ("Write", "Edit", "NotebookEdit"):
+            _autosave_remember(top, branch, payload)
         if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
             return 0
         notes = list(issue_notes)
         if _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
-            sha, done = _wip_commit(top, WIP_CHECKPOINT)
+            sha, done = _wip_commit(top, branch, WIP_CHECKPOINT)
             if sha:
                 notes.append("house-rules autosave: %d min passed without a commit on %s, so the "
                              "hook committed %d file(s) as %s: %s."
@@ -1396,11 +1437,11 @@ def event_commitgate():
             return 0
         head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
         if _autosave_read(counter) == head:
-            sha, done = _wip_commit(top, WIP_NOT_COMMITTED)
+            sha, done = _wip_commit(top, branch, WIP_NOT_COMMITTED)
             os.remove(counter)
             note = _autosave_snapshot(top, branch, force_push=True)
-            text = ("house-rules commitgate: the subagent did not commit when asked, so the hook "
-                    "committed %d file(s) on %s as %s: %s." % (len(done), branch, sha, _shown(done)))
+            text = ("house-rules commitgate: the subagent did not commit when asked, so on %s the hook %s."
+                    % (branch, _saved_text(sha, done, files)))
             emit({"systemMessage": text + (" | " + note if note else "")})
             return 0
         _autosave_write(counter, head)
@@ -1486,10 +1527,9 @@ def event_worktreesweep():
                 files = _dirty_files(top)
                 if not files or now - _newest_mtime(top, files) < CHECKPOINT_MINUTES * 60:
                     continue  # clean, or a live subagent is still editing it
-                sha, done = _wip_commit(top, WIP_PARENT)
+                sha, done = _wip_commit(top, branch, WIP_PARENT)
                 note = _autosave_snapshot(top, branch, force_push=True)
-                swept.append("%s (%s): committed %d file(s) as %s - %s%s"
-                             % (top, branch, len(done), sha, _shown(done), " | " + note if note else ""))
+                swept.append("%s (%s): %s%s" % (top, branch, _saved_text(sha, done, files), " | " + note if note else ""))
             except Exception as exc:
                 problems.append("%s (%s): %s" % (top, branch, exc))
         if not swept and not problems:

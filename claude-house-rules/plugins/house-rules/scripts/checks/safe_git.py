@@ -112,7 +112,9 @@ BRANCH_CASES = [
     # Off the default branch, a commit, an ordinary push and a merge or rebase run unasked (#197).
     (REPO_MINE, "claude/some-topic", "pass", None, 'git commit -m "checkpoint"'),
     (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),
-    (REPO_MINE, "claude/some-topic", "pass", None, "git -c user.name=x commit -m y"),
+    # #477 (A1): `git -c key=value` is never approved by the guard, because -c can point git at a program. It gets no
+    # decision, so Claude Code's own prompt decides; this table reports a reply with no decision as "malformed".
+    (REPO_MINE, "claude/some-topic", "malformed", None, "git -c user.name=x commit -m y"),
     # Force-pushing rewrites history that was already safe, so it is not a checkpoint and the
     # exemption does not reach it - on any branch. #291: refused, naming the safe way.
     (REPO_MINE, "claude/some-topic", "deny", "push a new branch instead", "git push --force-with-lease"),
@@ -439,7 +441,7 @@ for _n, _cmd in (
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
     elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
-for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/../x" % _fr_scratch, "rm -rf /tmp/claude-0/*"):
+for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/sub/../x" % _ua_dir, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)
     if _d != "deny" or (_cmd.startswith("rm -rf /home") and "_to_delete/" not in _r) \
             or (_cmd.startswith("git push") and "Do not retry" not in _r):
@@ -1052,7 +1054,7 @@ _cc_url = "https://github.com/o/r/pull/7"
 out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nGenerated with [Claude Code](https://claude.ai/code)", None))
 commit_case("creditcheck: a body with a Claude credit gets the warning",
             "added a Claude credit to " + _cc_url in out and "say so in your reply" in out, "stdout: %r" % out[:200])
-out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nOpened by AJ's agent", None))
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nOpened by Edens Agent", None))
 commit_case("creditcheck: a clean body gets the clean line",
             "read back " + _cc_url + "; no Claude credit on it." in out, "stdout: %r" % out[:200])
 out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: (None, "gh timed out after 10 seconds"))
@@ -1119,31 +1121,31 @@ commit_case(
     "out %r" % _ab7[-200:],
 )
 
-# -- #133: credit aj's agent, never Claude -------------------------------------------------------------
+# -- #133: credit Edens Agent, never Claude -------------------------------------------------------------
 _att_trailer = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\nEOF\n)\""
 _att_gen = "git commit -m \"feat: x\n\nGenerated with [Claude Code](https://claude.com/claude-code)\""
-_att_ok = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCommitted by AJ's agent\nEOF\n)\""
+_att_ok = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCommitted by Edens Agent\nEOF\n)\""
 _att_word = "git commit -m \"docs: rename the Claude setting\""
 _oa1, _oa2, _oa3, _oa4 = _iss_guard(_att_trailer), _iss_guard(_att_gen), _iss_guard(_att_ok), _iss_guard(_att_word)
 commit_case(
     "attribution: a commit crediting Claude (co-author trailer or Generated-with line) is refused, naming the replacement",
     _iss_decision(_oa1) == "deny" and _iss_decision(_oa2) == "deny"
-    and "Committed by AJ's agent" in _iss_reason(_oa1) and "no email" in _iss_reason(_oa1),
+    and "Committed by Edens Agent" in _iss_reason(_oa1) and "no email" in _iss_reason(_oa1),
     "out %r | %r" % (_oa1[:140], _oa2[:100]),
 )
-_ota3 = _iss_decision(_oa3) != "deny" or "credit aj's agent" not in _iss_reason(_oa3)
+_ota3 = _iss_decision(_oa3) != "deny" or "credit Edens Agent" not in _iss_reason(_oa3)
 commit_case(
-    "attribution: crediting aj's agent with no email passes, and a subject that merely mentions Claude passes",
-    "credit aj's agent" not in _oa3 and "credit aj's agent" not in _oa4,
+    "attribution: crediting Edens Agent with no email passes, and a subject that merely mentions Claude passes",
+    "credit Edens Agent" not in _oa3 and "credit Edens Agent" not in _oa4,
     "out %r | %r" % (_oa3[:100], _oa4[:100]),
 )
 _opr1 = _iss_guard('gh pr create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"')
 _opr2 = _iss_guard('gh pr create --title T --body "Refs #5\n\nOpened by AJ\'s agent"')
 _opr3 = _iss_guard('gh pr create --title T --body "Refs #5\n\nhttps://claude' + '.ai/code/session_abc"')
 commit_case(
-    "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting aj's agent passes",
-    _iss_decision(_opr1) == "deny" and "credit aj's agent" in _iss_reason(_opr1)
-    and _iss_decision(_opr3) == "deny" and "credit aj's agent" not in _opr2 and _opr2.strip() == "",
+    "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting Edens Agent passes",
+    _iss_decision(_opr1) == "deny" and "credit Edens Agent" in _iss_reason(_opr1)
+    and _iss_decision(_opr3) == "deny" and "credit Edens Agent" not in _opr2 and _opr2.strip() == "",
     "out %r | %r | %r" % (_opr1[:90], _opr2[:60], _opr3[:90]),
 )
 # #189: every form from the issue's table, the quoted -c ones included, is refused.
@@ -1153,8 +1155,8 @@ _att_forms = [
     "git commit" + _att_body,
     "git -c user.name=x commit" + _att_body,
     "git -c user.name=aj -c user.email=a@b commit" + _att_heredoc,
-    "git -c user.name=\"aj's agent\" commit" + _att_body,
-    "git -c user.name=\"aj's agent\" -c user.email=a@b commit -q" + _att_heredoc,
+    "git -c user.name=\"Edens Agent\" commit" + _att_body,
+    "git -c user.name=\"Edens Agent\" -c user.email=a@b commit -q" + _att_heredoc,
     "git -c 'user.name=aj s agent' commit" + _att_body,
 ]
 _att_missed = [f for f in _att_forms if _iss_decision(_iss_guard(f)) != "deny"]
@@ -1167,7 +1169,7 @@ _oc1 = _iss_guard('gh issue comment 5 --body "Co-Authored-By: Claude <x>"')
 _off = _iss_guard(_att_trailer, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
     "attribution: an issue comment crediting Claude is refused, and HOUSE_RULES_ATTRIBUTION=off disables the check",
-    _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
+    _iss_decision(_oc1) == "deny" and "credit Edens Agent" not in _off,
     "out %r | off %r" % (_oc1[:90], _off[:80]),
 )
 # -- #316: the credit check also covers gh api and curl writes to GitHub ---------------------------------
@@ -1177,8 +1179,8 @@ _a316_bf = os.path.join(_a316_dir, "bad.txt").replace("\\", "/")
 _a316_cf = os.path.join(_a316_dir, "clean.txt").replace("\\", "/")
 _a316_bj = os.path.join(_a316_dir, "bad.json").replace("\\", "/")
 _a316_cj = os.path.join(_a316_dir, "clean.json").replace("\\", "/")
-for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "Opened by AJ's agent"),
-               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "Opened by AJ's agent"}))):
+for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "Opened by Edens Agent"),
+               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "Opened by Edens Agent"}))):
     with open(_p, "w", encoding="utf-8") as _f:
         _f.write(_t)
 _a316_routes = lambda b, fb, fj: [
@@ -1190,7 +1192,7 @@ _a316_routes = lambda b, fb, fj: [
     "curl -X POST https://api.github.com/repos/o/r/pulls -d '{\"body\":\"%s\"}'" % b,
 ]
 _a316_missed = [c for c in _a316_routes(_a316_bad, _a316_bf, _a316_bj) if _iss_decision(_iss_guard(c)) != "deny"]
-_a316_false = [c for c in _a316_routes("Opened by AJ's agent", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
+_a316_false = [c for c in _a316_routes("Opened by Edens Agent", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
 _a316_get = _iss_guard("gh api repos/o/r/pulls/5")
 commit_case(
     "attribution: gh api and curl writes crediting Claude are refused on every route; clean bodies and a plain GET pass",
@@ -1233,15 +1235,15 @@ def _ggd(out):
 
 _gh = "mcp__github__"
 _g1 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)")
-_g2 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nOpened by AJ's agent")
+_g2 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nOpened by Edens Agent")
 commit_case(
-    "guardgithub: a pull request body crediting Claude is denied; crediting aj's agent is allowed",
+    "guardgithub: a pull request body crediting Claude is denied; crediting Edens Agent is allowed",
     _ggd(_g1) == "deny" and "pull request or issue text" in _g1 and _ggd(_g2) == "allow",
     "out %r | %r" % (_g1[:120], _g2[:80]),
 )
 _g3 = _gg(_gh + "issue_write", method="create", title="T", body="x\n\nCo-Authored-By: Claude <a@b>")
 _g4 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nClaude-Session: https://x", files=[{"path": "a", "content": "x"}])
-_g5 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nCommitted by AJ's agent",
+_g5 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nCommitted by Edens Agent",
           files=[{"path": "a", "content": "Co-Authored-By: Claude <noreply@anthropic.com>"}])
 commit_case(
     "guardgithub: an issue trailer and a push_files commit message are denied; file content naming the patterns is not scanned",
@@ -1250,8 +1252,8 @@ commit_case(
 )
 _g6 = _gg(_gh + "create_branch", branch="claude/x")
 _g7 = _gg(_gh + "create_branch", branch="AjsAgent/x")
-_g8 = _gg(_gh + "create_pull_request", title="T", head="claude/x", body="Opened by AJ's agent")
-_g9 = _gg(_gh + "push_files", branch="claude/x", message="fix\n\nCommitted by AJ's agent", files=[])
+_g8 = _gg(_gh + "create_pull_request", title="T", head="claude/x", body="Opened by Edens Agent")
+_g9 = _gg(_gh + "push_files", branch="claude/x", message="fix\n\nCommitted by Edens Agent", files=[])
 commit_case(
     "guardgithub: a new claude/ branch (create_branch, PR head) is denied naming AjsAgent/; AjsAgent/ and a push to an existing claude/ branch are allowed",
     _ggd(_g6) == "deny" and "AjsAgent/<topic>" in _g6 and _ggd(_g7) == "allow"
@@ -1266,7 +1268,7 @@ commit_case(
     _ggd(_g10) == "deny" and _ggd(_g11) == "deny" and _ggd(_g12) == "allow",
     "out %r | %r | off %r" % (_g10[:60], _g11[:60], _g12[:60]),
 )
-_g13 = _gg(_gh + "push_files", branch="main", message="fix\n\nCommitted by AJ's agent", files=[])
+_g13 = _gg(_gh + "push_files", branch="main", message="fix\n\nCommitted by Edens Agent", files=[])
 _g14 = _gg(_gh + "create_or_update_file", branch="master", message="fix", path="a", content="x")
 _g15 = _gg(_gh + "create_or_update_file", branch="AjsAgent/x", message="fix", path="a", content="x")
 commit_case(
@@ -1279,7 +1281,7 @@ commit_case(
 _l405_host = "https://claude" + ".ai/"
 _l405_art, _l405_share = _l405_host + "artifact/abc123XYZ", _l405_host + "share/1f2e-3d4c"
 _g405a = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\n" + _l405_art)
-_g405b = _gg(_gh + "push_files", branch="AjsAgent/x", message="docs: page\n\nCommitted by AJ's agent",
+_g405b = _gg(_gh + "push_files", branch="AjsAgent/x", message="docs: page\n\nCommitted by Edens Agent",
              files=[{"path": "docs/a.md", "content": "x\nsee " + _l405_share + "\n"}])
 _g405c = _gg(_gh + "create_or_update_file", branch="AjsAgent/x", message="docs", path="b.md",
              content="names claude" + ".ai/code in prose")
@@ -1316,7 +1318,7 @@ _l405_clean = _iss_guard('git commit -m "docs: QA page"', _l405_d)
 _l405_off = _iss_guard('git commit -m "docs: QA page\n\n%s"' % _l405_art, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
     "links: a commit message with an artifact link and a pull request body with a share link are refused",
-    _iss_decision(_l405_msg) == "deny" and "credit aj's agent" in _iss_reason(_l405_msg)
+    _iss_decision(_l405_msg) == "deny" and "credit Edens Agent" in _iss_reason(_l405_msg)
     and _iss_decision(_l405_pr) == "deny",
     "msg %r | pr %r" % (_l405_msg[:120], _l405_pr[:120]),
 )
@@ -1330,13 +1332,13 @@ commit_case(
 commit_case(
     "links: an unrelated commit (prose naming claude.ai/code, no link) passes, and HOUSE_RULES_ATTRIBUTION=off disables the check",
     _iss_decision(_l405_clean) != "deny" and "no published links" not in _l405_clean
-    and "credit aj's agent" not in _l405_off and "no published links" not in _l405_off,
+    and "credit Edens Agent" not in _l405_off and "no published links" not in _l405_off,
     "clean %r | off %r" % (_l405_clean[:160], _l405_off[:120]),
 )
 _opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
 commit_case(
     "attribution: the same refusal applies through the PowerShell tool",
-    _iss_decision(_opw) == "deny" and "credit aj's agent" in _iss_reason(_opw),
+    _iss_decision(_opw) == "deny" and "credit Edens Agent" in _iss_reason(_opw),
     "out %r" % _opw[:140],
 )
 
@@ -1345,13 +1347,17 @@ def _au_profile(d, remote=True, **extra):
     return _ab_out(d, remote=remote, **extra)
 
 
-_ap1 = _au_profile(_au_bad)
+# #478 (U7): the old behaviour (text telling the agent to run the fix) is replaced by the hook setting the
+# repo-local identity itself, so the kill-switch and local cases run first, while _au_bad is still Claude.
 _ap2, _ap3 = _au_profile(_au_good), _au_profile(_au_bad, remote=False)
 _ap4 = _au_profile(_au_bad, HOUSE_RULES_ATTRIBUTION="off")
+_ap1 = _au_profile(_au_bad)
+_ap1_name = subprocess.run(["git", "-C", _au_bad, "config", "user.name"], capture_output=True, text=True).stdout.strip()
 commit_case(
-    "author: a remote profile with a Claude identity says to run the repo-local git config; good identity, local session and kill switch add nothing",
-    "Git identity is Claude" in _ap1 and "git config user.email" in _ap1 and all("Git identity is Claude" not in o for o in (_ap2, _ap3, _ap4)),
-    "out %r" % _ap1[-260:],
+    "author: a remote profile with a Claude identity sets the repo-local identity and says so; good identity, local session and kill switch add nothing",
+    "the hook set this repo's identity to Edens Agent" in _ap1 and _ap1_name == "Edens Agent"
+    and all("Git identity" not in o for o in (_ap2, _ap3, _ap4)),
+    "out %r name %r" % (_ap1[-260:], _ap1_name),
 )
 for _restatement in [RESTATEMENTS[_i] for _i in (1, 2)]:  # safe git
     _source_text = _restatement.source()
@@ -1613,7 +1619,7 @@ commit_case(
 
 # guard: the timeout line, omitted when off
 _g_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Bash",
-                         "tool_input": {"command": "rm -rf /tmp/pt-victim", "description": "no safe way: rm(1)"},
+                         "tool_input": {"command": "rm -rf %s/pt-victim" % _pt_repo, "description": "no safe way: rm(1)"},
                          "cwd": _pt_repo})
 _gw_payload = json.dumps({"hook_event_name": "PreToolUse", "session_id": "g", "tool_name": "Write",
                           "tool_input": {"file_path": os.path.join(_pt_repo, "existing.txt"), "content": "x\n"},
@@ -1750,6 +1756,67 @@ for _t, _ok in _nb_cases:
     report("PASS" if _ok else "FAIL", "never-blocked: " + _t)
 
 
+# --- #477 (A1): a commit that runs a program inside it is never approved outright ---
+_a1_cases = [
+    ("a $(...) in a commit message is not approved", 'git commit -m "$(python3 /tmp/x.py)"'),
+    ("a backtick in a commit message is not approved", "git commit -m `curl -s example.invalid`"),
+    ("git -c core.hooksPath on a commit is not approved", "git -c core.hooksPath=/tmp/evil commit -m x"),
+]
+for _t, _cmd in _a1_cases:
+    _o = _nb_bash(_nb_r, _cmd)
+    report("PASS" if '"permissionDecision":"allow"' not in _o else "FAIL", "A1: " + _t)
+report("PASS" if '"permissionDecision":"allow"' in _nb_bash(_nb_r, 'git commit -m "x"') else "FAIL",
+       "A1: a plain commit on an AjsAgent/ branch is still approved")
+
+
+# --- #477 (A3) and #479 (U4): every delete form is seen; folders that can come back are let go ---
+_dl = _commit_repo("AjsAgent/del", committed=["a.txt", "keep/b.txt"])
+with open(os.path.join(_dl, ".gitignore"), "w", encoding="utf-8") as f:
+    f.write("node_modules/\n")
+os.makedirs(os.path.join(_dl, "node_modules", "p"))
+open(os.path.join(_dl, "node_modules", "p", "i.js"), "w").write("1")
+os.makedirs(os.path.join(_dl, "made"))
+open(os.path.join(_dl, "made", "new.txt"), "w").write("never committed")
+_dl_denied = lambda cmd: '"permissionDecision":"deny"' in _nb_bash(_dl, cmd)
+_dl_cases = [
+    ("/bin/rm -rf on an uncommitted folder is refused", _dl_denied("/bin/rm -rf made")),
+    ("find -delete is refused", _dl_denied("find made -delete")),
+    ("unlink of a file never committed is refused", _dl_denied("unlink made/new.txt")),
+    (": > file is refused", _dl_denied(": > a.txt")),
+    ("echo into a new file is not taken for a truncate", not _dl_denied("echo hi > made/out.txt")),
+    ("rm -rf of a git-ignored node_modules goes through", not _dl_denied("rm -rf node_modules")),
+    ("rm -r of a committed, unchanged folder goes through", not _dl_denied("rm -r keep")),
+    ("rm -rf of a folder with an uncommitted file is refused", _dl_denied("rm -rf made")),
+    ("rm -rf under /tmp goes through", not _dl_denied("rm -rf /tmp/house-rules-verify-cache")),
+    ("rm -rf /tmp itself is refused", _dl_denied("rm -rf /tmp")),
+    ("git clean -fdX is still refused", _dl_denied("git clean -fdX")),
+]
+for _t, _ok in _dl_cases:
+    report("PASS" if _ok else "FAIL", "deletes: " + _t)
+
+
+# --- #477 (A4, U5) and #478 (H2): discarding edits is refused; unstaging goes through ---
+_dc = _commit_repo("AjsAgent/discard", committed=["a.txt"], dirty=["a.txt"])
+_dc_denied = lambda cmd: '"permissionDecision":"deny"' in _nb_bash(_dc, cmd)
+_dc_cases = [
+    ("git checkout HEAD -- f with an edit is refused", _dc_denied("git checkout HEAD -- a.txt")),
+    ("git checkout -f with an edit is refused", _dc_denied("git checkout -f AjsAgent/discard")),
+    ("git checkout . on its own is refused", _dc_denied("git checkout .")),
+    ("git switch -f with an edit is refused", _dc_denied("git switch -f AjsAgent/discard")),
+    ("git switch --discard-changes is refused", _dc_denied("git switch --discard-changes AjsAgent/discard")),
+    ("git worktree remove --force is refused", _dc_denied("git worktree remove --force ../wt")),
+    ("git worktree remove without --force gets no refusal", not _dc_denied("git worktree remove ../wt")),
+    ("git restore --staged goes through", not _dc_denied("git restore --staged a.txt")),
+    ("git restore --staged --worktree is refused", _dc_denied("git restore --staged --worktree a.txt")),
+    ("git reset HEAD f goes through", not _dc_denied("git reset HEAD a.txt")),
+    ("git reset -- f goes through", not _dc_denied("git reset -- a.txt")),
+    ("git reset --hard is still refused", _dc_denied("git reset --hard")),
+    ("git restore f is still refused", _dc_denied("git restore a.txt")),
+]
+for _t, _ok in _dc_cases:
+    report("PASS" if _ok else "FAIL", "discard: " + _t)
+
+
 # --- rerun limit (#454): a project script's third run with no code commit in between is refused ---
 _rr_dir = os.path.join(_FIXTURE_ROOT, "rerun-repo")
 os.makedirs(os.path.join(_rr_dir, "tools"))
@@ -1822,7 +1889,7 @@ _rr_offs = [_rr_run("bash tools/x.sh a", HOUSE_RULES_RERUNS="off")[1] for _ in r
 report("PASS" if not any(_rr_denied(o) for o in _rr_offs) and not os.path.exists(_rr_state)
        else "FAIL", "rerun limit: HOUSE_RULES_RERUNS=off disables the check")
 _rr_reset()
-_rr_refused_cmd = "bash tools/x.sh a && " + "r" + "m -rf" + " tools"  # refused as a recursive delete; never runs
+_rr_refused_cmd = "bash tools/x.sh a && " + "git cl" + "ean -fdX"  # refused (#479 lets a committed folder go); never runs
 _rr_refused = [_rr_run(_rr_refused_cmd, agent="ag3")[1] for _ in range(3)]
 _rr_o = _rr_run("bash tools/x.sh a", agent="ag3")
 report("PASS" if all('"permissionDecision":"deny"' in o or '"permissionDecision":"ask"' in o for o in _rr_refused)
@@ -1838,6 +1905,49 @@ except ValueError:
 report("PASS" if _rr_o[0] == 0 and not _rr_denied(_rr_o[1]) and "rerun count could not be checked" in _rr_msg
        else "FAIL", "rerun limit: a corrupt state file lets the command through, with a message")
 _rr_reset()
+
+# --- #478 (A5): an agent/ branch is the agent's own ---
+_a5 = _commit_repo("agent/optimistic-planck-1h64c9", committed=["a.txt"])
+report("PASS" if not _nb_refused(_nb_bash(_a5, 'git commit --allow-empty -m "x"')) else "FAIL",
+       "A5: a commit on a cloud session's agent/ branch goes through")
+
+# --- #478 (A6, H3): reading or staging a script is not running it ---
+_rr_reset()
+_rr_reads = [_rr_run(c)[1] for c in ("cat tools/x.sh", "sed -n 1p tools/x.sh", "git add tools/x.sh",
+                                       "grep echo tools/x.sh", "cat tools/x.sh")]
+report("PASS" if not any(_rr_denied(o) for o in _rr_reads) and not os.path.exists(_rr_state) else "FAIL",
+       "rerun limit: cat, sed, grep and git add naming the script are never counted")
+_rr_reset()
+_rr_run("python3 -u tools/x.sh"); _rr_run("FOO=1 bash tools/x.sh")
+report("PASS" if _rr_denied(_rr_run("tools/x.sh")[1]) else "FAIL",
+       "rerun limit: an interpreter's first argument and a direct run both count")
+_rr_reset()
+
+# --- #478 (U6, H1): text that can't run is not read as a command; text that runs still is ---
+_q_denied = lambda cmd: '"permissionDecision":"deny"' in _nb_bash(_nb_r, cmd)
+_q_cases = [
+    ("a commit message naming rm -rf goes through", not _q_denied('git commit --allow-empty -m "fix: rm -rf no longer deletes docs"')),
+    ("a commit message naming push --force goes through", not _q_denied('git commit --allow-empty -m "docs: explain git push --force risk"')),
+    ("echo of rm -rf text into a file goes through", not _q_denied("echo 'never run rm -rf /' > notes.txt")),
+    ("a grep for rm -r goes through", not _q_denied("grep -n 'rm -r docs' notes.txt")),
+    ("a cat heredoc naming rm -rf goes through", not _q_denied("cat > n.txt <<'EOF'\nrm -rf docs\nEOF")),
+    ("bash -c with rm -rf is still refused", _q_denied("bash -c 'rm -rf docs'")),
+    ("a bash heredoc with rm -rf is still refused", _q_denied("bash <<'EOF'\nrm -rf docs\nEOF")),
+    ("a quoted --force is still a force push", _q_denied("git push '--force' origin AjsAgent/topic")),
+    ("$(...) in a double-quoted message is still read", '"permissionDecision":"allow"' not in _nb_bash(_nb_r, 'git commit -m "$(rm -rf docs)"')),
+]
+for _t, _ok in _q_cases:
+    report("PASS" if _ok else "FAIL", "quoted text: " + _t)
+
+# --- #478 (U7): session start sets the agent's identity in a repo whose identity is Claude ---
+_u7 = _commit_repo("AjsAgent/u7")
+subprocess.run(["git", "-C", _u7, "config", "user.name", "Claude"], check=True)
+subprocess.run(["git", "-C", _u7, "config", "user.email", "noreply@anthropic.com"], check=True)
+_au_profile(_u7)
+_u7_name = subprocess.run(["git", "-C", _u7, "config", "user.name"], capture_output=True, text=True).stdout.strip()
+report("PASS" if _u7_name == "Edens Agent" else "FAIL", "U7: session start sets this repo's identity to Edens Agent")
+_u7_o = _nb_bash(_u7, 'git commit --allow-empty -m "x\n\nCo-Authored-By: ' + 'Claude <noreply@anthropic.com>"')
+report("PASS" if "Remove every `Co-Authored-By:`" in _u7_o else "FAIL", "U7: the credit refusal names the lines to remove")
 
 
 finish()

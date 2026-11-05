@@ -193,7 +193,6 @@ def repetition(text):
                     found.append(phrase)
             else:
                 seen.setdefault(gram, i)
-        sentences = [s for s in _SENTENCE_SPLIT_RE.split(para) if len(_WORD_RE.findall(s)) >= 4]
         sentences = [s for s in _SENTENCE_SPLIT_RE.split(para) if _WORD_RE.findall(s)]
         openings = [_WORD_RE.findall(s)[0].lower() for s in sentences]
         for i in range(len(openings) - 2):

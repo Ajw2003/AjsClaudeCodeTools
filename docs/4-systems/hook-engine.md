@@ -281,6 +281,16 @@ Plan: `docs/plans/subagent-tiers-build-plan.md`.
 
 ## Traps
 
+- **Merging the small hooks into one process saves almost nothing (measured 2026-11-05, #482).**
+  The audit (finding H4) counted 6 hook processes per shell command and 9 per file write. On a cloud
+  container, 20 runs of each event through `run.sh` with a Bash payload gave these medians. One after
+  another: 155 ms for PreToolUse (`guard`, `commitgate`) and 273 ms for PostToolUse (`creditcheck`,
+  `closablemerge`, `autosave`, `promptran`), about 68 ms per process. Started together, as Claude Code
+  starts the hooks that match one event: 74 ms for PreToolUse, 82 ms for PostToolUse, and 68 ms for a
+  single process. A merge would save about 14 ms of waiting per shell command, under the 100 ms aj set
+  for building it, so it was not built. The one-after-another timing inside Claude Code itself, and the
+  timing on aj's own machine, were not measured.
+
 - **A shim that finds an interpreter on PATH is not proof it runs code.** The `python3` stub
   above is the concrete example this plugin was built around; `run.sh` probing rather than
   checking `command -v` is the fix, and any future interpreter-selection change that reverts to

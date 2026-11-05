@@ -18,8 +18,8 @@ hooks, rules and agents — it cannot set anything the Claude Code harness reads
            Opus/Sonnet split comes from the @house-rules tier subagents (scout, builder, reviewer) the plugin ships,
            not from this key.
 
-  attribution  {"commit": "Committed by AJ's agent", "pr": "Opened by AJ's agent", "sessionUrl": false}
-           so commits and PRs credit aj's agent, with no Claude branding and no email. A plugin
+  attribution  {"commit": "Committed by Edens Agent", "pr": "Opened by Edens Agent", "sessionUrl": false}
+           so commits and PRs credit Edens Agent, with no Claude branding and no email. A plugin
            cannot carry this key (only `agent` and `subagentStatusLine` are read from a plugin's
            settings.json), so it is written here, and the guard hook backs it up in cloud sessions.
 
@@ -185,7 +185,7 @@ def install_steps():
     ]
 
 
-ATTRIBUTION = {"commit": "Committed by AJ's agent", "pr": "Opened by AJ's agent", "sessionUrl": False}
+ATTRIBUTION = {"commit": "Committed by Edens Agent", "pr": "Opened by Edens Agent", "sessionUrl": False}
 
 
 def wanted_settings():
@@ -207,7 +207,7 @@ def wanted_settings():
             "name": "attribution",
             "value": ATTRIBUTION,
             "skip_note": "--no-attribution given, leaving the attribution setting alone",
-            "why": "credit aj's agent on commits and PRs, not Claude",
+            "why": "credit Edens Agent on commits and PRs, not Claude",
         },
     ]
 
@@ -250,8 +250,11 @@ def apply_settings(claude_dir, skip, ok, bad, info):
 
     if changed:
         kept = [k for k in settings if k not in [w["name"] for w in to_apply]]
-        with open(settings_path, "w", encoding="utf-8") as f:
+        # #477 (A8): write beside it and swap, so a failed write never leaves settings.json half-written.
+        tmp = "%s.%d.tmp" % (settings_path, os.getpid())
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(settings, f, indent=2)
+        os.replace(tmp, settings_path)
         if kept:
             info(f"kept: {', '.join(kept)}")
 
@@ -348,8 +351,7 @@ def main():
             run_claude(["plugin", "uninstall", PLUGIN_ID])
             run_claude(["plugin", "install", PLUGIN_ID, "-y"])
 
-        if not verify_and_self_heal(source_root, installed_root, reinstall, ok, bad, info):
-            failures += 1
+        verify_and_self_heal(source_root, installed_root, reinstall, ok, bad, info)  # bad() counts the failure
 
     print()
     print("4. Settings the plugin cannot set itself")

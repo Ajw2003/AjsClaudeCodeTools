@@ -1,0 +1,50 @@
+{
+  "title": "Repo Audit, November 2026",
+  "eyebrow": "Full audit of every code file in AjsClaudeCodeTools · nothing changed yet",
+  "approval": "Design approved: audit fixes",
+  "short": {
+    "lead": "I read every code file in the repo, with two forked helpers taking the two biggest parts of the plugin, and I re-ran every probe they used. All four test suites pass, but the guard that is meant to stop risky commands has six real holes. A commit with a hidden program inside it is approved with no prompt. Four delete forms and four forms that throw away edits get no decision at all. Any merged pull request unlocks closing any issue. Cloud sessions can't commit to the branch they are told to push. Reading a script counts as running it. There are 20 findings in all, plus about 380 lines that can go.",
+    "hint": "Tap a card to see the evidence behind it.",
+    "key": [["Found in the audit", ""], ["Needs your answer", "you"]],
+    "items": [
+      ["search", "What I read", "Every code file, with each helper's result re-run", "", "The main session read tools/, the standalone scripts, both smaller plugins, CI and the guard. One helper read design_loop.py and delegation.py, and the other read core.py, docs.py, writing.py, hook.py and the rest of safe_git.py. Each finding was proved by feeding the real hook a command and reading its decision, except four marked 'by reading' in the report. The test files under checks/ were searched, not read in full.", "Nothing from you."],
+      ["stop", "Must fix", "Six holes in the guard and the issue lock", "", "1: a commit carrying $(...), backticks or -c core.hooksPath is approved, which also skips Claude Code's own prompt. 2: any merged pull request unlocks closing any QA-passed issue. 3: /bin/rm -rf, find -delete, unlink and ': > file' get no decision. 4: git checkout HEAD -- FILE, git checkout HEAD FILE, git checkout -f and git switch -f get no decision. 5: agent/ branches count as not the agent's own, so cloud sessions can't commit where they must push. 6: cat, grep or git commit naming a .py file counts as running it.", "Nothing from you."],
+      ["flask", "Should fix", "Locks that fail open, and tools that report wrongly", "", "The stage file that locks code edits is rewritten in place, so a hook reading it mid-write turns the lock off. A cp from the shell can overwrite it, and three helpers launched together all pass the two-helper cap. The installer can empty settings.json if a write fails, and its check for changed files always reports a difference. Autosave pushes untracked files, a stray token file included. The version check 'updates' a newer copy down to an older one.", "Nothing from you."],
+      ["bulb", "Lean", "About 380 lines can go", "", "tools/check_verify_inventory.py (304 lines) checks a finished test-suite split, and nothing runs it. There are 55 blank lines left over in safe_git.py, a dead line in clarity.py, a never-filled list in hook.py, two checkpoint rows that can't fire, and a second Markdown fence parser beside a correct one.", "Nothing from you."],
+      ["check", "Your verdict", "Pick what gets fixed first", "you", "Choose the scope of the first fix, and whether the unused inventory checker is deleted or added to CI. Approving starts the fix as a feature, with one issue per step and a test for each hole.", "Send \"Design approved: audit fixes\" with your two picks, or tell me what to change."]
+    ]
+  },
+  "changes": [
+    ["chg", "1. Commits that run a program are approved unasked", "safe_git.py:744-745 and _only_git_statements at :384-387.", ["Any statement starting with git is approved, $(...), backticks and -c core.hooksPath included.", "Approved only when there is no $( or backtick outside the $(cat <<'EOF' message form and no core.hooksPath; otherwise Claude Code asks."], "Proved: a commit with $(...), one with backticks and one with core.hooksPath each got allow.", null, null],
+    ["chg", "2. Any merge unlocks any issue close", "design_loop.py:2123-2129.", ["A merge in other/repo#99 stamped and unlocked the close of own/repo#5.", "Only a merge in the same repo that names the issue with Refs #N unlocks its close."], "Proved: the close went from deny to allow after the unrelated merge.", null, null],
+    ["chg", "3 and 4. Delete and discard forms the guard misses", "safe_git.py:133 and :143.", ["The guard gave no allow or refuse decision for any of these commands: /bin/rm -rf, find -delete, unlink, ': > file', checkout HEAD -- FILE, checkout HEAD FILE, checkout -f and switch -f.", "Each form is refused the way rm -rf and checkout -- already are, keeping the saved-work exemption."], "Proved: each command was fed to the real guard.", null, null],
+    ["chg", "5. agent/ branches are the agent's own", "core.py:2089 and safe_git.py:265-301.", ["Commit refused on agent/optimistic-planck-1h64c9, the branch this session must push to.", "agent/ joins AjsAgent/, claude/ and ccr- as an owned prefix."], "Proved: this session's own commit was refused.", null, null],
+    ["chg", "6. Reading a script no longer counts as running it", "safe_git.py:464-478.", ["Any word that names an existing .py, .sh or similar file counts as running it, so a second sed of safe_git.py was refused.", "Only the first word, or the first argument after python, sh, bash, node or pwsh, counts."], "Proved: a second sed of safe_git.py was refused during this audit.", null, null],
+    ["chg", "7, 9 and 10. The stage lock and the helper cap hold", "design_loop.py, delegation.py, safe_git.py and make_page.py writers.", ["State files are emptied and rewritten in place; an empty stage file turns the lock off; cp overwrites it; three helpers launched together all pass.", "Writes go to a per-process temp file and os.replace; a shell command naming the stage file is refused unless read-only; agentcap adds a placeholder record."], "Proved by runs, except the race where two writers overwrite each other's changes, which is by reading.", null, null],
+    ["chg", "8, 12, 13 and 16. Install and update tell the truth", "tools/install.py, core.py:1327-1338, tools/_plugin_sync.py, tools/force_update.py.", ["settings.json is rewritten in place; 2.75.0 is 'updated' to 1.0.0; every install finds __pycache__ as a difference; a failed reinstall leaves no guard without saying so.", "Atomic settings write, an older-than comparison, cache files skipped in the hash, and a clear message when the reinstall fails."], "Proved by runs, except the settings write and the force-update failure, which are by reading.", null, null],
+    ["chg", "11, 14 and 15. Leaks and wrong answers", "delegation.py:1252-1290, make_page.py:569-578, docs.py:208.", ["Autosave adds untracked files with git add -A; the node visual check looks for playwright in a different folder from the probe; two commit -a patterns disagree on whether -sam counts as commit -a.", "git add -u plus files the helper wrote; node -e and a deleted temp file; one shared pattern."], "Autosave is by reading, because a run would push to the real remote.", null, null],
+    ["new", "17. A test for every hole", "One case each in checks/safe_git.py, checks/design_loop.py and checks/delegation.py.", null, "No case covers any of the commands above, which is why every suite passes today.", ["Every suite passes with all six holes open.", "Each fix lands with the test that would have caught it.", "The holes can't come back unnoticed."], null],
+    ["chg", "18 to 20. Lean cleanup", "About 380 lines, no dependencies.", ["check_verify_inventory.py, 55 blank lines, dead code in clarity.py, hook.py and design_loop.py, a second fence parser, a failed self-heal counted twice in tools/install.py, and diff_parts.py dropping lines that start with -- or ++.", "Deleted or merged into the one correct copy."], "Lean figure is approximate because reusing docref.py's fence parser adds a few lines back.", null, null]
+  ],
+  "choices": [
+    ["scope", "What gets fixed first?", [
+      ["A", "The six must-fix holes, each with its test, as one feature", 1, "The holes are the risk; the rest can wait a release."],
+      ["B", "All 20 findings in one feature", 0, "One pass, but a much bigger change to review."],
+      ["C", "Only the guard holes, findings 1, 3 and 4", 0, "Smallest, but leaves the issue lock and cloud commits broken."]
+    ], "My suggestion is the six must-fix holes, because they are where data or a prompt can be lost."],
+    ["inventory", "What happens to tools/check_verify_inventory.py?", [
+      ["A", "Delete it", 1, "The split it checks is finished, and nothing runs it."],
+      ["B", "Add it to CI", 0, "Keeps the inventory table in docs/4-systems/verify-suites.md provably true."]
+    ], "My suggestion is to delete it, since the table is now history."]
+  ],
+  "wrapup": {
+    "summary": "Twenty findings across the whole repo, six of them holes in the guard and the issue lock, each proved by a run except four marked by reading, plus about 380 lines that can go.",
+    "changing": "Nothing has been changed yet. The report is in docs/audits/2026-11-05-ponytail-audit-full.md, and it is committed and pushed on the branch AjsAgent/audit-2026-11-05.",
+    "blocking": "Waiting on your two choices: what gets fixed first, and what happens to tools/check_verify_inventory.py.",
+    "next": "After approval: one parent issue with a child per finding in scope, then each fix with its test, then the four test suites run twice before handing over for QA.",
+    "todo": [
+      "Pick your two answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it to me, or tell me what to change."
+    ]
+  }
+}

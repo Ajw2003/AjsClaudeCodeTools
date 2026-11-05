@@ -25,7 +25,9 @@ from house_rules.core import (  # noqa: F401
     _PLAN_VALUE_RE,
     _PROMPT_VALUE_RE,
     _PR_BODY_FILE_RE,
+    _write_atomic,
     _SESSION_ID_RE,
+    _ag,  # #479 (U1): adaptation - the plan's code calls _ag but design_loop.py didn't import it
     _apply_assigns,
     _attribution_enabled,
     _clear_writing_enabled,
@@ -84,7 +86,7 @@ ISSUE_NOTE = (
     "create`. Show the user the issue numbers. Mark a step `in progress` (`gh api repos/<owner>/<repo>/issues/N/labels "
     "-f \"labels[]=in progress\"`; the `gh issue edit` form fails in cloud sessions) when work on it starts and remove it when the issue closes. "
     "Until a parent and at least one child exist, a hook blocks edits to source files "
-    "(docs/, .md files and .claude/ stay open). Do not close any issue yourself: closing always "
+    "(docs/ pages, .claude/ files other than settings, and .md, .txt and .csv files stay open). Do not close any issue yourself: closing always "
     "asks the user."
 )
 
@@ -107,8 +109,7 @@ def _issues_read(git_dir):
 
 
 def _issues_write(git_dir, state):
-    with open(os.path.join(git_dir, ISSUES_FILE), "w", encoding="utf-8") as f:
-        json.dump(state, f)
+    _write_atomic(os.path.join(git_dir, ISSUES_FILE), json.dumps(state))
 
 
 def _labelled_count(state):
@@ -158,7 +159,10 @@ def _issues_plan_note(payload):
     return ISSUE_NOTE.format(n=n)
 
 
-_ISSUE_EDIT_ALLOWED_TOPS = ("docs", ".claude")
+# D4: under docs/ only code is locked; H5: notes and data files are open everywhere, like .md.
+_CODE_EXTS = (".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".sh", ".bash", ".ps1", ".rb", ".bat",
+              ".cmd", ".cs", ".go", ".rs", ".java", ".c", ".cpp", ".h")
+_OPEN_EXTS = (".md", ".txt", ".csv")  # aj chose 8A: notes and csv data open; .json stays locked
 
 
 def _gated_edit(payload, who):
@@ -185,8 +189,10 @@ def _gated_edit(payload, who):
 
 
 def _is_source_path(fp, cwd, top):
-    """The commitgate test: is `fp` a source file of the checkout at `top`? False for a path
-    outside it, docs/, .claude/, any .md file and the tracker files."""
+    """The commitgate test: is `fp` a source file of the checkout at `top`? False for a path outside it,
+    any .md, .txt or .csv file, the tracker files, and docs/ or .claude/ files that are not code.
+    .claude/settings*.json is locked (it can switch the loop off), and a path inside
+    .claude/worktrees/<name>/ is judged as if from that worktree, which is a whole checkout (D4, H5)."""
     if not os.path.isabs(fp):
         fp = os.path.join(cwd, fp)
     try:
@@ -194,8 +200,16 @@ def _is_source_path(fp, cwd, top):
     except ValueError:
         rel = ".."  # another drive: outside the project
     parts = rel.replace("\\", "/").split("/")
-    return not (parts[0] == ".." or parts[0] in _ISSUE_EDIT_ALLOWED_TOPS or rel.lower().endswith(".md")
-                or os.path.basename(rel) in (ISSUES_FILE, LOOP_FILE))
+    if parts[:2] == [".claude", "worktrees"] and len(parts) > 3:
+        parts = parts[3:]
+    name, low = parts[-1], "/".join(parts).lower()
+    if parts[0] == ".." or low.endswith(_OPEN_EXTS) or name in (ISSUES_FILE, LOOP_FILE):
+        return False
+    if parts[0] == ".claude":
+        return name.lower().startswith("settings") and low.endswith(".json")
+    if parts[0] == "docs":
+        return low.endswith(_CODE_EXTS)
+    return True
 
 
 _SHELL_TOOLS = ("Bash", "PowerShell")
@@ -368,16 +382,26 @@ LOOP_FILE = "house-rules-loop.json"
 LOOP_STAGE_NAMES = {"design": "Design", "plan": "Plan", "build": "Build", "qa": "QA", "done": "Done"}
 
 
-_LOOP_DESIGN_RE = re.compile(r"\bdesign\s+approved\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+# D2: an approval counts only where aj's sentence starts with it (a line start, or after . ! , ; or a tag such as
+# <message>, with optional quote marks or a bullet), and not when it runs into a question mark.
+_LOOP_LEAD = r"(?:^|[.!,;][ \t]+)(?:<[\w/]+>)?[ \t>\"'*\-]*"
+_LOOP_NOT_ASKED = r"(?![^\n.!]*\?)"
 
 
-_LOOP_PLAN_RE = re.compile(r"\bbuild\s+plan\s+approved\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+_LOOP_DESIGN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"design\s+approved" + _LOOP_NOT_ASKED
+                             + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 
 
-_LOOP_QA_RE = re.compile(r"\bqa\s+(passed|failed)\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+_LOOP_PLAN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"build\s+plan\s+approved" + _LOOP_NOT_ASKED
+                           + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 
 
-_LOOP_SKIP_RE = re.compile(r"\bskip\s+design\b", re.IGNORECASE)
+_LOOP_QA_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"qa\s+(passed|failed)" + _LOOP_NOT_ASKED
+                         + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
+
+
+_LOOP_SKIP_RE = re.compile(r"(?<!don't )(?<!dont )(?<!do not )(?<!not )\bskip\s+design\b" + _LOOP_NOT_ASKED,
+                           re.IGNORECASE)
 
 
 _LOOP_BARE_RE = re.compile(r"\b(approved|qa\s+passed|qa\s+failed)\b", re.IGNORECASE)
@@ -423,10 +447,60 @@ def _loop_read(git_dir):
 
 
 def _loop_write(git_dir, state):
-    path = _loop_path(git_dir)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(state, f)
+    _write_atomic(_loop_path(git_dir), json.dumps(state))
+
+
+# A9: commands that only read a file, and the git steps that save it. Anything else naming the stage file is refused.
+# sed, awk, echo and printf are here because their writes (sed -i, a > redirect) are caught by _script_write_targets.
+_LOOP_READERS = {"cat", "head", "tail", "less", "more", "grep", "rg", "jq", "wc", "ls", "stat", "file", "diff",
+                 "sed", "awk", "echo", "printf"}
+_LOOP_GIT_READS = {"add", "commit", "diff", "log", "show", "status", "blame"}
+_LOOP_JSON_READ_RE = re.compile(r"json\.load\(\s*open\(")
+_LOOP_PY_WRITE_RE = re.compile(r"shutil|os\.(?:replace|rename|remove)|\.write|json\.dump\b|copy", re.IGNORECASE)
+
+
+def _loop_file_shell_write(cmd):
+    """A9: True when a shell statement names the stage file and is not a read-only command, `git add` or
+    `git commit`. Python or node count as a read only when they json.load the file and write nothing."""
+    import shlex
+    text = _HEREDOC_RE.sub("", cmd)
+    if LOOP_FILE not in text:
+        return False
+    try:  # quote-aware, so `python3 -c "import json; print(...)"` stays one statement
+        lex = shlex.shlex(text.replace("\n", ";"), posix=True, punctuation_chars=True)
+        lex.whitespace_split = True
+        tokens = list(lex)
+    except ValueError:
+        tokens = None
+    if tokens is None:  # unbalanced quotes around the stage file's name: refuse rather than guess
+        return True
+    stmts, cur = [], []
+    for t in tokens:
+        if t in (";", "&&", "||", "|", "&"):
+            stmts.append(cur)
+            cur = []
+        else:
+            cur.append(t)
+    stmts.append(cur)
+    for toks in stmts:
+        stmt = " ".join(toks)
+        if LOOP_FILE not in stmt:
+            continue
+        words = [w for w in toks if "=" not in w.split("/")[0] and w not in ("sudo", "env", "time")]
+        first = os.path.basename(words[0]) if words else ""
+        if first in _LOOP_READERS:
+            continue
+        if first == "git":
+            rest = words[1:]
+            while rest and rest[0].startswith("-"):  # git's own options, such as -C <path>
+                rest = rest[2:] if rest[0] in ("-C", "-c") else rest[1:]
+            if rest and rest[0] in _LOOP_GIT_READS:
+                continue
+        if re.match(r"(?:python3?|py|node)(?:\.exe)?$", first) and _LOOP_JSON_READ_RE.search(stmt) \
+                and not _LOOP_PY_WRITE_RE.search(stmt):
+            continue
+        return True
+    return False
 
 
 def _loop_file_refusal(payload):
@@ -439,6 +513,10 @@ def _loop_file_refusal(payload):
     if data.get("tool_name") in _GATED_TOOLS:
         paths = [ti.get("file_path") or ti.get("notebook_path")]
     elif data.get("tool_name") in _SHELL_TOOLS and isinstance(ti.get("command"), str):
+        if _loop_file_shell_write(ti["command"]):
+            return ("House rules, design loop: this command names %s and isn't a read, `git add` or `git commit`, "
+                    "so it could overwrite the stage. Only aj's approval messages move the stage. To switch the "
+                    "loop off: HOUSE_RULES_LOOP=off." % LOOP_FILE)
         paths = _script_write_targets(_apply_assigns(ti["command"]))[0]
     else:
         return None
@@ -446,11 +524,12 @@ def _loop_file_refusal(payload):
     top, git_dir = _issues_locate(cwd)
     if not git_dir:
         return None
-    want = os.path.normcase(os.path.abspath(_loop_path(git_dir)))
+    # D3: the old place in the git directory is still read when .claude/ has no stage file, so it is the stage file too.
+    want = {os.path.normcase(os.path.abspath(x)) for x in (_loop_path(git_dir), os.path.join(_loop_dir(git_dir), LOOP_FILE))}
     for p in paths:
         if isinstance(p, str) and p:
             p = p if os.path.isabs(p) else os.path.join(cwd, p)
-            if os.path.normcase(os.path.abspath(p)) == want:
+            if os.path.normcase(os.path.abspath(p)) in want:
                 return ("House rules, design loop: %s is the stage tracker and only aj's approval messages "
                         "move the stage, so it cannot be edited by hand. To switch the loop off: "
                         "HOUSE_RULES_LOOP=off." % LOOP_FILE)
@@ -514,6 +593,16 @@ def _loop_name(raw):
     return cut or raw.strip()
 
 
+def _loop_same(a, b):
+    """D6: True when two feature names agree, ignoring case and _loop_name's clean-up, or when one starts with the
+    other as whole words ("background work tracking" and "background work tracking 1A except ...")."""
+    x, y = _loop_name(a or "").lower(), _loop_name(b or "").lower()
+    if not x or not y:
+        return False
+    short, longer = sorted((x, y), key=len)
+    return longer == short or longer.startswith(short + " ")
+
+
 # #235: an issue's label says whose move it is - `in progress` is mine, `needs review` is aj's - and
 # every stage move checks it. Labels are read from GitHub every time (#236); when that read fails,
 # from the label changes this hook recorded, and the note says why.
@@ -542,7 +631,7 @@ def _loop_gh_labels(repo, number):
     return json.loads(proc.stdout)
 
 
-def _loop_labels(state, issues=None):
+def _loop_labels(state, issues=None, record=True):
     """({key: [labels] or None}, note) for the feature's issues (or, #375, the given list: a stored
     feature's). The note is "" when GitHub answered, else it says the labels came from the record and why."""
     import subprocess
@@ -565,6 +654,9 @@ def _loop_labels(state, issues=None):
         return dict(zip(keys, got)), ""
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
         why = "Labels were taken from the changes this hook recorded, because the GitHub read failed (%s)." % exc
+        failed = str(exc)
+    if not record:  # D9 (aj chose 6B): the Build edit gate never falls back to the stage file's labels
+        return {k: None for k in keys}, failed
     recorded = state.get("labels") if isinstance(state.get("labels"), dict) else {}
     return {k: recorded.get(k) for k in keys}, why
 
@@ -682,9 +774,78 @@ def _loop_sweep_apply(state, text):
 
 
 def _loop_apply(state, text, top):
+    carry = _loop_continue_apply(state, text, top)  # #479: first, so "Continue from: x. Build plan approved: y" works
     sweep_note = _loop_sweep_apply(state, text)
+    issues_note = _loop_issues_for_apply(state, text, top)
     note = _loop_apply_stage(state, text, top)
-    return " ".join(n for n in (sweep_note, note) if n)
+    return " ".join(n for n in (carry, sweep_note, issues_note, note) if n)
+
+
+_LOOP_CONTINUE_RE = re.compile(r"\bcontinue\s+from\s*:\s*([\w./-]+)", re.IGNORECASE)
+
+
+_LOOP_ISSUES_FOR_RE = re.compile(
+    r"\bissues\s+for\s+([^:\n]+?)\s*:\s*((?:[\w.-]+/[\w.-]+)?#\d+(?:[\s,]+(?:and\s+)?(?:[\w.-]+/[\w.-]+)?#\d+)*)",
+    re.IGNORECASE)
+
+
+def _loop_continue_apply(state, text, top):
+    """#479 (U1): "Continue from: <branch>" in aj's own message copies that branch's stage file from origin, so
+    a handoff keeps the approvals aj already gave. It never invents a stage: a branch with no valid stage file
+    moves nothing. Returns a note, or "" when the phrase is absent."""
+    m = _LOOP_CONTINUE_RE.search(text)
+    if not m:
+        return ""
+    branch = m.group(1).rstrip(".,")
+    if branch.startswith("-") or ".." in branch:
+        return 'Design loop: aj wrote "Continue from: %s", which is not a branch name, so nothing moved.' % branch
+    rc, _o, err = _ag(top, ["fetch", "--quiet", "origin", branch], check=False, timeout=20)
+    if rc != 0:
+        return ('Design loop: aj wrote "Continue from: %s", but `git fetch origin %s` failed (%s), so nothing '
+                "moved." % (branch, branch, err[:120] or "exit %d" % rc))
+    rc, out, _e = _ag(top, ["show", "FETCH_HEAD:.claude/" + LOOP_FILE], check=False)
+    try:
+        other = json.loads(out) if rc == 0 else None
+    except ValueError:
+        other = None
+    if not isinstance(other, dict) or other.get("stage") not in LOOP_STAGE_NAMES:
+        return ('Design loop: aj wrote "Continue from: %s", but that branch has no readable stage file '
+                "(.claude/%s), so nothing moved." % (branch, LOOP_FILE))
+    state.clear()
+    state.update(other)
+    state.setdefault("approvals", []).append({"stage": "Continue from", "name": branch, "at": int(time.time())})
+    return ('Design loop: aj wrote "Continue from: %s". This branch now has that branch\'s stage: "%s" in %s, with '
+            "%d recorded issue(s). Commit and push .claude/%s now, so the next session has it too."
+            % (branch, state.get("feature") or "(none)", LOOP_STAGE_NAMES[state["stage"]],
+               len(state.get("issues") or []), LOOP_FILE))
+
+
+def _loop_issues_for_apply(state, text, top):
+    """#479 (U1, U2b): "Issues for <feature>: #N #M" in aj's own message records issues that already exist for
+    the feature in Plan - made by a script, in another session, or any way the hook didn't see. The feature
+    must be the one in Plan. "Build plan approved" still checks each issue's labels on GitHub."""
+    m = _LOOP_ISSUES_FOR_RE.search(text)
+    if not m:
+        return ""
+    name, feature = _loop_name(m.group(1)), state.get("feature") or ""
+    if state["stage"] != "plan" or not _loop_same(name, feature):  # D6: same name matching as the approvals
+        return ('Design loop: aj wrote "Issues for %s:", but %s, so nothing was recorded. Issues attach only to '
+                "the feature being planned." % (name, 'the feature in Plan is "%s"' % feature
+                                                 if state["stage"] == "plan" else "no feature is in Plan"))
+    own, _problem = _origin_slug(top)
+    have = {(str(i.get("repo")).lower(), i.get("number")) for i in state.get("issues", []) if isinstance(i, dict)}
+    added = []
+    for repo, n in re.findall(r"(?:([\w.-]+/[\w.-]+))?#(\d+)", m.group(2)):
+        repo = repo or own
+        if not repo:
+            return ('Design loop: aj wrote "Issues for %s:", but this checkout has no GitHub origin to say which '
+                    "repo #%s is in, so nothing was recorded. Write them as owner/repo#N." % (name, n))
+        if (repo.lower(), int(n)) not in have:
+            state.setdefault("issues", []).append({"repo": repo, "number": int(n), "labelled": True})
+            have.add((repo.lower(), int(n)))
+            added.append("%s#%s" % (repo, n))
+    return ('Design loop: aj wrote "Issues for %s:". Recorded %s for it. "Build plan approved" still checks every '
+            "issue's labels on GitHub." % (name, ", ".join(added) or "nothing new"))
 
 
 def _loop_apply_stage(state, text, top):
@@ -692,14 +853,14 @@ def _loop_apply_stage(state, text, top):
     message approves nothing. Mutates state.
 
     #307: a message can hold more than one approval ("Design approved: X.  Build plan approved: X").
-    Each phrase is cut out up to where the next one starts, and the pieces are applied in stage order -
-    design, then build plan, then QA - so one refusal no longer hides the approvals beside it."""
+    Each phrase is cut out up to where the next one starts, and the pieces are applied in the order aj
+    wrote them (D5), so one refusal no longer hides the approvals beside it."""
     found = sorted((m.start(), order) for rx, order in _LOOP_STAGE_ORDER for m in rx.finditer(text))
     if len(found) < 2:
         return _loop_apply_one(state, text, top)
     pieces = [(order, text[start:found[i + 1][0] if i + 1 < len(found) else len(text)])
               for i, (start, order) in enumerate(found)]
-    notes = [_loop_apply_one(state, piece, top) for _order, piece in sorted(pieces, key=lambda p: p[0])]
+    notes = [_loop_apply_one(state, piece, top) for _order, piece in pieces]  # D5: in the order aj wrote them
     return " ".join(n for n in notes if n)
 
 
@@ -778,6 +939,10 @@ def _loop_apply_one(state, text, top):
     m = _LOOP_PLAN_RE.search(text)
     if m:
         name = _loop_name(m.group(1))
+        if stage == "plan" and not _loop_same(name, feature):
+            return ('Design loop: aj wrote "Build plan approved: %s", but the feature in Plan is "%s", so nothing '
+                    "moved. Ask aj to approve it by that name, or to approve a design for \"%s\" first."
+                    % (name, feature, name))
         if stage != "plan":
             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
@@ -814,9 +979,12 @@ def _loop_apply_one(state, text, top):
             unlogged = _loop_unlogged(state, top, "Design approved", name)
             if unlogged:
                 return unlogged
+            same = stage in ("build", "qa") and _loop_same(name, feature)  # D5: an amended design, not a new feature
             state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
             state["redo"] = False
-            if not redo:
+            if same:
+                state.pop("qa_page", None); state.pop("qa_page_linked", None)  # the amended build gets a new QA page
+            elif not redo:
                 _loop_keep_feature(state, feature, stage)  # #375: a feature in build or QA keeps its issues
                 state["issues"] = []
                 state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: not the next feature's
@@ -827,6 +995,10 @@ def _loop_apply_one(state, text, top):
                 stored = _loop_stored(state, name)
                 if stored is not None:
                     return _loop_stored_qa(state, stored, verdict, name, top)
+                if stage in ("build", "qa") and not _loop_same(name, feature):
+                    return ('Design loop: aj wrote "QA %s: %s", but the feature in %s is "%s" and no kept feature has '
+                            "that name, so nothing moved. Ask aj which feature they meant."
+                            % (verdict, name, LOOP_STAGE_NAMES[stage], feature))
                 if stage == "build":
                     labels, src = _loop_labels(state)
                     if not _loop_to_qa(state, labels):
@@ -856,10 +1028,14 @@ def _loop_apply_one(state, text, top):
                     state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: the redo gets a new page
                 approval = ("QA " + verdict, name)
     if approval:
+        state["skip"] = False  # D7: a skip belongs to the stage it was typed in
         state.setdefault("approvals", []).append(
             {"stage": approval[0], "name": approval[1], "at": int(time.time())})
         note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
             approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        # #479 (U2): the approval is only on this disk until it is pushed, and a session that stops loses it.
+        note += (" Save it now, before anything else: `git add .claude/%s && git commit -m \"chore: record %s\" "
+                 "&& git push`." % (LOOP_FILE, approval[0].lower()))
         if state.pop("log_ask", False):  # #327
             note += (" The decisions log (%s) has nothing new since the last approval: add this stage's "
                      "entry to it before the turn ends." % LOOP_LOG.replace(os.sep, "/"))
@@ -885,6 +1061,9 @@ def _loop_apply_one(state, text, top):
             note += " Code edits stay closed."
         return note
     if _LOOP_SKIP_RE.search(text):
+        if stage == "build":
+            return ('Design loop: aj wrote "skip design", but the stage is Build, so code edits are already open '
+                    "and nothing was stored.")
         state["skip"] = True
         return 'Design loop: aj wrote "skip design", so the next code edit goes through, then the lock is back.'
     if _LOOP_BARE_RE.search(text):
@@ -1022,7 +1201,11 @@ def _loop_gate(payload):
     if script and state["stage"] == "build":
         return None, None  # Build: nothing changes for shell commands
     if state["stage"] == "build":
-        labels, src = _loop_labels(state)
+        labels, src = _loop_labels(state, record=False)
+        if src:  # D9: GitHub could not be read, and the record of an old branch is not evidence
+            return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, but "
+                    "this hook could not read GitHub (%s), so the edit is refused. It will work once gh can read the issues."
+                    % (state.get("feature") or "", LOOP_WORKING, src)), None
         if _loop_to_qa(state, labels):
             _loop_write(git_dir, state)
             return "House rules, design loop:" + _LOOP_QA_NOTE, None
@@ -1048,7 +1231,7 @@ def _loop_gate(payload):
     return (
         "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
         "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
-        "change. docs/, .claude/ and .md files stay open, so write the design or plan as a page "
+        "change. docs/ pages, .claude/ files other than settings, and .md, .txt and .csv files stay open, so write the design or plan as a page "
         "now. To switch this off: HOUSE_RULES_LOOP=off." % (
             LOOP_STAGE_NAMES[state["stage"]], ' of "%s"' % feature if feature else ""),
         None,
@@ -1056,6 +1239,11 @@ def _loop_gate(payload):
 
 
 _GH_ISSUE_CREATE_RE = re.compile(_GH_PREFIX + r"issue\s+create\b")
+# #479 (U2b): the REST form, `gh api repos/O/R/issues -f title=...`, and Python's ['gh', 'issue', 'create'].
+_GH_API_ISSUE_CREATE_RE = re.compile(
+    _GH_PREFIX + r"api\b(?=[^\n]*\brepos/[\w.-]+/[\w.-]+/issues(?![/\w]))(?=[^\n]*(?:-f|-F|--field|--raw-field)"
+    r"[=\s]+[\"']?title=)", re.IGNORECASE)
+_PY_GH_ISSUE_CREATE_RE = re.compile(r"""['"]gh['"]\s*,\s*['"]issue['"]\s*,\s*['"]create['"]""")
 
 
 _GH_PR_CREATE_RE = re.compile(_GH_PREFIX + r"pr\s+create\b")
@@ -1084,18 +1272,23 @@ def _created_issue(data):
     tool = data.get("tool_name") or ""
     if tool == "Bash":
         cmd = ti.get("command") or ""
-        if not _GH_ISSUE_CREATE_RE.search(cmd):
+        if not (_GH_ISSUE_CREATE_RE.search(cmd) or _GH_API_ISSUE_CREATE_RE.search(cmd)
+                or _PY_GH_ISSUE_CREATE_RE.search(cmd)):
             return None
-        label_text, how = cmd, "`gh issue create`"
+        how = "`gh issue create`"
+        if _GH_ISSUE_CREATE_RE.search(cmd):
+            labels = _gh_label_flags(cmd)["add"]  # D11: the label flags, not the title
+        else:  # adapted: the gh api and python forms (step 5) carry no --label flag, so they keep the text search
+            labels = [l for l in (ISSUES_LABEL, ISSUES_LABEL_OLD) if l.lower() in cmd.lower()]
     elif _GITHUB_ISSUE_WRITE_RE.match(tool) and str(ti.get("method", "")).lower() == "create":
-        labels = ti.get("labels") if isinstance(ti.get("labels"), list) else []
-        label_text, how = " ".join(str(l) for l in labels), "GitHub tool issue_write"
+        labels = [str(l) for l in ti["labels"]] if isinstance(ti.get("labels"), list) else []
+        how = "GitHub tool issue_write"
     else:
         return None
     resp = data.get("tool_response")
     text = resp if isinstance(resp, str) else json.dumps(resp)
     found = list(dict.fromkeys(_ISSUE_URL_RE.findall(text)))
-    labelled = any(l.lower() in label_text.lower() for l in (ISSUES_LABEL, ISSUES_LABEL_OLD))
+    labelled = bool({l.lower() for l in labels} & {ISSUES_LABEL.lower(), ISSUES_LABEL_OLD.lower()})
     return found, labelled, how
 
 
@@ -1168,11 +1361,30 @@ _GH_API_LABEL_FIELD_RE = re.compile(r"(?:-f|-F|--raw-field|--field)(?:=|\s+)(?:\
 _GH_API_FAILED_RE = re.compile(r"\(HTTP [45]\d\d\)|^gh: |\"status\":\s*\"[45]\d\d\"", re.M)
 
 
-def _gh_api_label_change(cmd, text):
+def _gh_api_worked(resp):
+    """D12: proof a `gh api` labels call worked: exit code 0, or, where none is reported, the JSON list of labels
+    the endpoint answers with. A sign-in prompt or any other text is not proof."""
+    if isinstance(resp, list):
+        return True
+    if isinstance(resp, str):
+        resp = {"stdout": resp}
+    if not isinstance(resp, dict):
+        return False
+    code = resp.get("exit_code", resp.get("exitCode", resp.get("returncode")))
+    if code is not None:
+        return code == 0
+    try:
+        parsed = json.loads(resp.get("stdout") or "")
+    except ValueError:
+        parsed = None  # not JSON (a sign-in prompt or an error): proves nothing, so the call is not recorded
+    return isinstance(parsed, list)
+
+
+def _gh_api_label_change(cmd, text, resp=None):
     """#278: (repo, number, None, add, remove) for a succeeded `gh api repos/O/R/issues/N/labels` call (the REST
     form that works in cloud sessions), else None. Repo and number come from the path, not the response."""
     m = _GH_API_LABELS_RE.search(cmd)
-    if not m or _GH_API_FAILED_RE.search(text):
+    if not m or _GH_API_FAILED_RE.search(text) or not _gh_api_worked(resp):
         return None
     pre, repo, number, name, post = m.groups()
     method = (_GH_API_METHOD_RE.search(pre + " " + post) or [None, "POST" if "-f" in post or "-F" in post or "field" in post else "GET"])[1].upper()
@@ -1208,7 +1420,7 @@ def _label_changes(data):
     if _GH_ISSUE_CREATE_RE.search(cmd):
         flags = _gh_label_flags(cmd)
         return [(repo, int(n), flags["add"], [], []) for repo, n in urls]
-    api = _gh_api_label_change(cmd, text)
+    api = _gh_api_label_change(cmd, text, resp)
     if api:
         return [api]
     m = _GH_ISSUE_EDIT_RE.search(cmd)
@@ -1253,6 +1465,19 @@ def _loop_record_labels(payload):
             now = [l for l in now if l.lower() not in {r.lower() for r in remove}]
             now += [a for a in add if a.lower() not in {l.lower() for l in now}]
             recorded[key] = now
+        if pr:  # A2: what this pull request links, so its merge stamps only those issues
+            resp = data.get("tool_response")
+            url = re.search(r"github\.com/([\w.-]+/[\w.-]+)/pull/(\d+)", resp if isinstance(resp, str) else json.dumps(resp))
+            ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+            body = ti.get("body") if isinstance(ti.get("body"), str) else ti.get("command") or ""
+            fm = _PR_BODY_FILE_RE.search(body) if "command" in ti else None
+            if fm and fm.group(1).strip("\"'") != "-":
+                try:
+                    body = _read_text(os.path.join(_payload_cwd(payload), fm.group(1).strip("\"'")))
+                except OSError:
+                    pass  # the guard already read this file before the command ran; refs from the command text stand
+            if url:
+                state.setdefault("pr_refs", {})["%s#%s" % (url.group(1).lower(), url.group(2))] = _pr_refs(body, url.group(1))
         notes = []
         if pr and state["stage"] == "build":
             state["stage"] = "qa"
@@ -1367,7 +1592,7 @@ def _author_guard(subject, payload):
     except Exception: return None  # unreadable identity: let the commit through, as for an unreadable body file
     if who is None or not _is_claude_identity(*who):
         return None
-    return ("deny", "House rules, credit aj's agent: this commit would be authored as `%s <%s>`, "
+    return ("deny", "House rules, credit Edens Agent: this commit would be authored as `%s <%s>`, "
             "which signs it as Claude. Set the agent's identity in this repo and retry: `%s`. "
             "HOUSE_RULES_ATTRIBUTION=off disables this check."
             % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
@@ -1773,8 +1998,7 @@ def _check_plain(ctx):
 
 
 # --- pagecheck (#257): a handover page must come from make_page.py -------------------------
-# PreToolUse on Write and Artifact. The two rows below sit in CHECKPOINTS so the list shows every
-# moment; only "reply ends" rows run at Stop, so these checks do nothing there (pagecheck acts).
+# PreToolUse on Write and Artifact.
 PAGE_MARK_RE = re.compile(r"<!--\s*house-rules make_page\b")
 
 
@@ -1870,13 +2094,6 @@ def event_pagecheck():
     return 0
 
 
-def _check_page_saved(ctx):
-    return ""  # runs as the PreToolUse hook event_pagecheck, never at Stop
-
-
-_QA_ARTIFACT_RE = re.compile(r"https://claude\.ai/artifact/\S+|claude\.ai/code/artifact/\S+", re.IGNORECASE)
-
-
 def _record_qa_link(ctx):
     """True (and qa_page_linked recorded) when the reply links the QA page. Also used on a retry."""
     page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
@@ -1884,7 +2101,7 @@ def _record_qa_link(ctx):
     in_reply = page in reply or os.path.basename(page) in reply
     if page and cwd and in_reply:  # #329: the page counts only when its path opens inside the folder
         in_reply = _inside(os.path.normcase(os.path.abspath(os.path.join(cwd, page))), cwd)
-    if not (page and (in_reply or _QA_ARTIFACT_RE.search(reply))):
+    if not (page and in_reply):  # D8: the reply names this feature's QA page; a bare artifact link proves nothing
         return False
     state, problem = _loop_read(ctx["qa_git_dir"])
     if problem:
@@ -1904,13 +2121,11 @@ def _check_qa_page(ctx):
         return ""
     missing = "the QA page is built but not linked in the reply" if page else "no QA page is built yet"
     return ("%s: build it with `python3 %s build docs/plans/<name>-qa.page.json`, where the content file has a "
-            "`qa` block (feature, base, unverified, files), then link the page in the reply"
+            "`qa` block (feature, base, unverified, files), then name the page's file in the reply, beside any link"
             % (missing, os.path.join(SCRIPTS_DIR, "make_page.py")))
 
 
 CHECKPOINTS = [
-    ("page saved", "page built", _check_page_saved, "block"),
-    ("page published", "page built", _check_page_saved, "block"),
     ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
     ("reply ends", "evidence", _check_evidence, "block"),
@@ -1921,7 +2136,6 @@ CHECKPOINTS = [
 
 
 CHECKPOINT_RULES = {
-    "page built": "A handover page is built by make_page.py, never typed by hand.",
     "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
     "editor": "A page goes past @house-rules:editor before aj reads it; a long reply too when HOUSE_RULES_EDITOR=on.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
@@ -1979,9 +2193,7 @@ def _page_blocks(path, session_id, mark, change=None):
     if change:
         count = count + 1 if change == "bump" else 0
         data[session_id] = {"mark": mark, "count": count}
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f)
+        _write_atomic(path, json.dumps(data))
     return count
 
 
@@ -2092,6 +2304,40 @@ def _closed_issue_of(data):
     return None
 
 
+_PR_REF_RE = re.compile(r"\b(?:Refs|Part of)\s+([\w.-]+/[\w.-]+)?#(\d+)", re.IGNORECASE)
+LOOP_PR_BODIES_ENV = "HOUSE_RULES_LOOP_PR_BODIES_FILE"  # tests: {"owner/repo#n": body}; a missing file is a failed read
+
+
+def _pr_refs(body, repo):
+    """A2: [[repo, number]] that a pull request body links with `Refs #N` or `Part of #N`; a bare #N is in `repo`."""
+    return [[(r or repo).lower(), int(n)] for r, n in _PR_REF_RE.findall(body or "")]
+
+
+def _merged_pr_refs(state, repo, number):
+    """(refs, problem) for the merged pull request: the links recorded when it was opened in a session, else
+    its body read once from GitHub. problem says why nothing could be read ("" when it could)."""
+    rec = state.get("pr_refs") if isinstance(state.get("pr_refs"), dict) else {}
+    hit = rec.get("%s#%d" % (repo.lower(), number)) if repo else next(
+        (v for k, v in rec.items() if k.endswith("#%d" % number)), None)
+    if isinstance(hit, list):
+        return hit, ""
+    stand_in = os.environ.get(LOOP_PR_BODIES_ENV)
+    try:
+        if stand_in:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                return _pr_refs(json.load(f)["%s#%d" % (repo, number)], repo), ""
+        if not repo or not shutil.which("gh"):
+            raise RuntimeError("no repo is named" if not repo else "gh is not installed")
+        import subprocess
+        proc = subprocess.run(["gh", "pr", "view", str(number), "--repo", repo, "--json", "body", "--jq", ".body"],
+                              capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+        if proc.returncode != 0:
+            raise RuntimeError(((proc.stderr or "").strip().splitlines() or ["gh exited %d" % proc.returncode])[0])
+        return _pr_refs(proc.stdout, repo), ""
+    except Exception as exc:
+        return [], "its body could not be read (%s: %s)" % (type(exc).__name__, exc)
+
+
 def event_closablemerge():
     try:
         if not _loop_enabled():
@@ -2121,13 +2367,28 @@ def event_closablemerge():
             emit({"systemMessage": problem})
             return 0
         open_ = [e for e in state.get("closable", []) if isinstance(e, dict) and e.get("merged_pr") is None]
-        if not open_:
-            return 0
         repo, number = merged
-        for e in open_:
-            e["merged_pr"] = {"repo": repo, "number": number, "at": int(time.time())}
-        _loop_write(git_dir, state)
-        trace("house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(open_)))
+        notes = []
+        if open_:
+            refs, why = _merged_pr_refs(state, repo, number)
+            hit = [e for e in open_ if any(isinstance(i, dict) and i.get("number") == n
+                                           and _close_repo_match(r, i.get("repo", ""))
+                                           for i in e.get("issues") or [] for r, n in refs)]
+            for e in hit:
+                e["merged_pr"] = {"repo": repo, "number": number, "at": int(time.time())}
+            if hit:
+                _loop_write(git_dir, state)
+            else:
+                notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (
+                    repo, number, why or "it links none of the QA-passed issues with `Refs #N`"))
+            trace("house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit)))
+        if state.get("stage") == "qa":  # U3: the merge never moves the stage; aj is asked for the verdict
+            notes.append('Design loop: pull request %s#%d merged while "%s" is in QA, so the stage file still '
+                         'says QA. Ask aj for "QA passed: %s" or "QA failed: %s"; the stage moves only on their word.'
+                         % ((repo, number) + (state.get("feature") or "this feature",) * 3))
+        if notes:
+            emit({"systemMessage": " ".join(notes),
+                  "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": " ".join(notes)}})
     except Exception as exc:
         emit({"systemMessage": "house-rules plugin: the closable-merge check hit an error (%s: %s) and "
                                "stamped nothing for this call." % (type(exc).__name__, exc)})

@@ -186,7 +186,7 @@ atexit.register(shutil.rmtree, _FIXTURE_ROOT, True)
 # git at a fixture global config with the agent identity so these cases do not depend on the machine.
 _GIT_GLOBAL = os.path.join(_FIXTURE_ROOT, "gitconfig-global")
 with open(_GIT_GLOBAL, "w", encoding="utf-8") as _gf:
-    _gf.write("[user]\n\tname = AJ's agent\n\temail = 79066376+Ajw2003@users.noreply.github.com\n")
+    _gf.write("[user]\n\tname = Edens Agent\n\temail = 79066376+Ajw2003@users.noreply.github.com\n")
 os.environ["GIT_CONFIG_GLOBAL"] = _GIT_GLOBAL
 
 
@@ -408,6 +408,7 @@ def _commit_repo(branch, committed=(), dirty=()):
     git = ["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", d]
     subprocess.run(git + ["init", "-q", "-b", branch], check=True)
     for rel in committed:
+        os.makedirs(os.path.dirname(os.path.join(d, rel)), exist_ok=True)
         with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
             f.write("original\n")
     subprocess.run(git + ["add", "-A"], check=True)
@@ -549,7 +550,7 @@ def _au_repo(name, email):
     return d
 
 
-_AU_GOOD = ("AJ's agent", "79066376+Ajw2003@users.noreply.github.com")
+_AU_GOOD = ("Edens Agent", "79066376+Ajw2003@users.noreply.github.com")
 _au_bad, _au_good = _au_repo("Claude", "noreply@anthropic.com"), _au_repo(*_AU_GOOD)
 # No gh on PATH is tested in-process, with shutil.which patched and then restored. A PATH built
 # from dirname(SH) does not work: on a Linux runner gh lives in /usr/bin beside sh and git.

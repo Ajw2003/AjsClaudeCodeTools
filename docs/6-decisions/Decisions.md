@@ -7,6 +7,26 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-05 - Audit fixes: all the code approved once, one QA, and ten choices
+
+**Context.** The three audits of 2026-11-05 found 45 problems (`docs/audits/2026-11-05-combined-ranked.md`). aj approved the fix order as "Design approved: audit fix order 1A", then turned down six QA rounds: "plan out all of the code first and then show me it so I can approve or deny it rather than a 6 different QAs".
+
+**Decision.** The code for every fix was written out in `docs/plans/audit-fixes-code/` and shown on `docs/plans/2026-11-05-audit-fix-code-approval.html`. aj approved it as "Build plan approved: audit fix order 1A 2A 3A 4* 5A 6B 7A 8A 9A 10A", with choice 4 as "A. but set it to Edens Agent instead of Ajs". The choices are:
+1. A: quoted text that can't run anything is ignored, including double quotes with no `$`, backtick or backslash (U6).
+2. A: autosave pushes tracked changes plus the files the helper wrote (A11).
+3. A: the model pushes the stage file after an approval (U2).
+4. A, changed: the hook sets the repo's git identity itself, reversing #177's "the hook never runs git config", and the name is "Edens Agent" (U7). Asked where the name applies, aj chose everywhere: the commit author, the required "Committed by" and "Opened by" footers, and the rules text. It is built with U7 in step 2 (#478); until then commits still say "AJ's agent", because the current guard requires it.
+5. A: the listed rebuildable folders can be deleted (U4).
+6. B: when GitHub can't be read, every Build edit is refused until it can. This replaces the proposal to keep the labels in the shared git folder (D9).
+7. A: an approval must name the feature exactly (D6).
+8. A: `.json` stays locked outside `docs/` and `.claude/` (H5).
+9. A: a merged feature's stage is kept on `main`, and aj is asked what's next (U3).
+10. A: `tools/check_verify_inventory.py` is deleted (A20).
+
+**Rejected.** Six separate QA rounds; QA after each half; the alternatives on each choice above.
+
+**Status.** Active. Mechanism: `docs/4-systems/audit-fixes.md`.
+
 ## 2026-11-03 - Rerun limit: any project script, reset only by a commit, no override
 
 **Context.** A builder in Ajw2003/PlunderSpell#569 ran one co-op check 12 times in 23 minutes (#453). The builder rule (2.74.3) limits a check to two runs; aj asked for a hook that enforces it in every project.

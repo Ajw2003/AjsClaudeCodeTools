@@ -186,10 +186,6 @@ def event_handover():
         )
 
     long_words = handover_long_reply(payload, have_reply, reply_text)
-    # #324: the writing check no longer runs on chat replies (pages and new issues keep it), so no findings
-    # and no report line here; the not-checked disclosure still goes through _writing_note.
-    writing = []
-
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
     if not retry:
         if handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
@@ -199,7 +195,7 @@ def event_handover():
         handover_qa_retry(payload, have_reply, reply_text, trace_lines)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
-            and not long_words and not label_line and not writing and not editor_owed
+            and not long_words and not label_line and not editor_owed
             and not shell_page_notes and not page_note and not links_owed):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
@@ -216,8 +212,8 @@ def event_handover():
         parts.append(HANDOVER_NOTE)
     if needs_evidence:
         parts.append(_evidence_note(evidence_words, impossible_words))
-    if not_checked or writing or long_words:
-        parts.append(_writing_note(not_checked, writing, long_words))
+    if not_checked or long_words:
+        parts.append(_writing_note(not_checked, long_words))
     if plain_problems:
         parts.append(_plain_summary_note(plain_problems))
     parts.extend(shell_page_notes)
