@@ -382,7 +382,7 @@ const PAGE = {
         "name": "The readability check",
         "draft": "docs/plans/code-preview-and-issue-rule-code/1-readability-check.diff",
         "size": "large",
-        "summary": "A new script, scripts/readability.py, checks every line a diff adds against eight rules. The rules are: whole-word names, one statement per line, a yes-or-no name for each part of a long condition, short lines, a plain sentence opening each function, no logic packed into one line, values inside f-strings, and a plain comment on each pattern.",
+        "summary": "A new script, scripts/readability.py, checks every line a diff adds against eight rules. Names are whole words, each line holds one statement, and each part of a long condition gets a yes-or-no name. Lines stay short, each function opens with a plain sentence, and no logic is packed into one line. Values sit inside f-strings, and each pattern has a plain comment.",
         "changes": [
           "Tests: each of the eight rules refuses a bad line and passes a good one. More tests cover quoted text, comments, HTML, table rows, older helpers and names that already existed.",
           "The readability check reads a diff, finds which lines are Python or JavaScript, and checks each added line against the rules."
@@ -523,7 +523,7 @@ const PAGE = {
       "Step 1: The readability check",
       "Large step · 2 files, 1 change, 1 test block",
       null,
-      "A new script, scripts/readability.py, checks every line a diff adds against eight rules. The rules are: whole-word names, one statement per line, a yes-or-no name for each part of a long condition, short lines, a plain sentence opening each function, no logic packed into one line, values inside f-strings, and a plain comment on each pattern.",
+      "A new script, scripts/readability.py, checks every line a diff adds against eight rules. Names are whole words, each line holds one statement, and each part of a long condition gets a yes-or-no name. Lines stay short, each function opens with a plain sentence, and no logic is packed into one line. Values sit inside f-strings, and each pattern has a plain comment.",
       null,
       [
         [
