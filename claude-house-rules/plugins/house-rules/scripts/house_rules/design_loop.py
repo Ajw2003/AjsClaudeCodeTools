@@ -1374,9 +1374,10 @@ def _gh_api_worked(resp):
     if code is not None:
         return code == 0
     try:
-        return isinstance(json.loads(resp.get("stdout") or ""), list)
+        parsed = json.loads(resp.get("stdout") or "")
     except ValueError:
-        return False
+        parsed = None  # not JSON (a sign-in prompt or an error): proves nothing, so the call is not recorded
+    return isinstance(parsed, list)
 
 
 def _gh_api_label_change(cmd, text, resp=None):

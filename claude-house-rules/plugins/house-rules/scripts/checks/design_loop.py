@@ -660,6 +660,13 @@ _loop_post("Bash", {"command": "gh issue create --title 'Fix AjsAgent created th
            {"stdout": "https://github.com/o/r/issues/301\n"})
 _loop_cases.append(("D11: the label name in a title doesn't make an issue labelled",
                     any(i.get("number") == 301 and not i.get("labelled") for i in _loop_state().get("issues", []))))
+# Every recorded issue, labelled or not, must say `in progress` before the build opens, so the D11 issue is dropped
+# from the stage file here; it was only there to be read back (the plan's case leaves it, which failed 11 later cases).
+_loop_sf = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
+_loop_sd = _loop_state()
+_loop_sd["issues"] = [i for i in _loop_sd.get("issues", []) if i.get("number") != 301]
+with open(_loop_sf, "w", encoding="utf-8") as _f:
+    json.dump(_loop_sd, _f)
 _loop_log("plan decisions for blockers")
 _loop_gh("in progress", 101, 102)
 _n = _loop_say("Build plan approved: blockers")
