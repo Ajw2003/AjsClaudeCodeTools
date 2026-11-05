@@ -45,6 +45,22 @@ marked "hit in this session". Paths are relative to `claude-house-rules/plugins/
 - **Unverified:** a commit failing on a full disk was not reproduced, because filling this container's disk
   would end the session.
 
+### 2b. Issues made by a script or a one-line loop are never counted
+
+- **Where:** `house_rules/core.py:2309` (`_GH_PREFIX`), used by `house_rules/design_loop.py:1058` and `:1087`
+- **Problem:** Reported by aj from another session: six step issues (#708 to #713) opened from a Python
+  loop were not counted, so "Build plan approved" was refused with only #707 recorded. Proved with
+  `_created_issue` and an output holding two issue URLs. None of these is recorded: `python3 make_issues.py`,
+  `python3 -c` calling `subprocess.run(['gh', 'issue', 'create', ...])`, a one-line
+  `for t in a b; do gh issue create ...; done`, or `gh api repos/o/r/issues -f title=...`. The one-line
+  loop fails because `gh` has to follow a line start or one of `; & | ( ` $(`, and `do` is none of them. The
+  same loop split over lines is recorded.
+- **The other session's first option is not safe.** It offered to write #708 to #713 into the stage file by
+  hand. That is the model writing its own approval state, which the Write/Edit refusal exists to stop. Its
+  "state in .git" is also the legacy file of the deep dive's finding 3.
+- **Fix:** Let `gh` follow `do`, `then`, `else` and `xargs`, count `gh api .../issues` POSTs, and give aj the
+  "Issues for <feature>: #N" phrase below for issues made any other way.
+
 ### 3. `main` carries a finished feature's QA stage
 
 - **Where:** `.claude/house-rules-loop.json` on `origin/main`, last changed by `a48c603`
@@ -96,7 +112,9 @@ marked "hit in this session". Paths are relative to `claude-house-rules/plugins/
 
 - **Problem:** Hit twice in this session. A heredoc that wrote a probe script containing `git -C ...`
   was refused as a commit to another repo. A `sed` expression containing the text `rm -r`
-  after a `\n` was refused as a delete. Neither command deleted or committed anything.
+  after a `\n` was refused as a delete. A `git commit` chained after a `grep` whose search text was
+  `gh issue create` was refused for an issue missing its "Done when" section. None of these commands
+  deleted, committed or created anything.
 - **Fix:** Strip heredoc bodies and quoted arguments before the destructive patterns run. The design
   loop already does this for its own checks (`_HEREDOC_RE`, `_QUOTED_RE` in `design_loop.py:204-207`).
 
@@ -121,7 +139,8 @@ marked "hit in this session". Paths are relative to `claude-house-rules/plugins/
 |---|---|---|---|---|
 | **"Continue from: <branch>"**: aj types it and the hook adopts that branch's stage file from the remote | 1 | kept, because aj types it and the approvals it carries were aj's | kept, because the stage is copied, never invented | n/a |
 | A start-up note names remote branches whose stage is Plan, Build or QA | 1 | kept, because it only informs | kept | n/a |
-| "Issues for <feature>: #12 #13": aj attaches existing issues in Plan | 1 | kept | kept, because a build plan still needs aj | n/a |
+| "Issues for <feature>: #12 #13": aj attaches existing issues in Plan | 1, 2b | kept | kept, because a build plan still needs aj | n/a |
+| Count `gh issue create` after `do`, `then`, `else` or `xargs`, and `gh api .../issues` POSTs | 2b | kept | kept, because a build plan still needs aj | n/a |
 | The approval note tells the model to commit and push the stage file at once | 2 | kept | kept | n/a |
 | A merged pull request moves QA to Done when QA passed is recorded | 3 | needs aj's call: a merge is aj's act, but not a message | kept | n/a |
 | Allow a folder delete when every file in it is committed, unchanged and pushed | 4 | n/a | n/a | kept, because git restores it |
