@@ -1831,7 +1831,7 @@ def event_promptran():
 # verbatim from hook.py.
 # ---------------------------------------------------------------------------------------
 
-# One shell word: quoted runs may hold spaces, so -c user.name="aj's agent" is one word (#189).
+# One shell word: quoted runs may hold spaces, so -c user.name="Edens Agent" is one word (#189).
 _WORD = r"""(?:"[^"]*"|'[^']*'|[^\s"'])+"""
 # `git` plus any run of global options before the subcommand.
 # Why the alternation's first branch exists: docs/architecture.md, "The pre-existing hole this exposed".
@@ -2089,7 +2089,8 @@ def register_docs_status(fn):
 # dispatcher in hook.py, use. The first group came out of the safe git part, the second out of hook.py.
 # ---------------------------------------------------------------------------------------
 
-OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-")  # claude/ = cloud app branches, old branches; ccr- = cloud sessions
+# claude/ = cloud app branches, old branches; ccr- = cloud sessions; agent/ = cloud sessions since 2026-11 (#478)
+OWNED_BRANCH_PREFIXES = ("AjsAgent/", "claude/", "ccr-", "agent/")
 
 
 def owned_branch_prefixes():
@@ -2334,7 +2335,7 @@ def _attribution_enabled():
 # The agent's commit identity (issue #177): cloud containers ship user.name=Claude and
 # noreply@anthropic.com, which signs every commit as Claude whatever the message says.
 AGENT_IDENTITY_FIX = (
-    "git config user.name \"AJ's agent\" && "
+    "git config user.name \"Edens Agent\" && "
     "git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
 )
 
@@ -2346,7 +2347,7 @@ _AUTHOR_FLAG_RE = re.compile(r"--author(?:=|\s+)" + _ARG)
 
 
 def _c_option_re(key):
-    """-c key=value, also with the whole pair quoted (-c "user.name=aj's agent", #189)."""
+    """-c key=value, also with the whole pair quoted (-c "user.name=Edens Agent", #189)."""
     return re.compile(
         r"(?:^|\s)-c\s*(?:\"" + key + r"=([^\"]*)\"|'" + key + r"=([^']*)'|" + key + r"=" + _ARG + r")",
         re.IGNORECASE,

@@ -1054,7 +1054,7 @@ _cc_url = "https://github.com/o/r/pull/7"
 out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nGenerated with [Claude Code](https://claude.ai/code)", None))
 commit_case("creditcheck: a body with a Claude credit gets the warning",
             "added a Claude credit to " + _cc_url in out and "say so in your reply" in out, "stdout: %r" % out[:200])
-out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nOpened by AJ's agent", None))
+out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("Done.\n\nOpened by Edens Agent", None))
 commit_case("creditcheck: a clean body gets the clean line",
             "read back " + _cc_url + "; no Claude credit on it." in out, "stdout: %r" % out[:200])
 out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: (None, "gh timed out after 10 seconds"))
@@ -1121,31 +1121,31 @@ commit_case(
     "out %r" % _ab7[-200:],
 )
 
-# -- #133: credit aj's agent, never Claude -------------------------------------------------------------
+# -- #133: credit Edens Agent, never Claude -------------------------------------------------------------
 _att_trailer = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\nEOF\n)\""
 _att_gen = "git commit -m \"feat: x\n\nGenerated with [Claude Code](https://claude.com/claude-code)\""
-_att_ok = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCommitted by AJ's agent\nEOF\n)\""
+_att_ok = "git commit -m \"$(cat <<'EOF'\nfix: thing\n\nCommitted by Edens Agent\nEOF\n)\""
 _att_word = "git commit -m \"docs: rename the Claude setting\""
 _oa1, _oa2, _oa3, _oa4 = _iss_guard(_att_trailer), _iss_guard(_att_gen), _iss_guard(_att_ok), _iss_guard(_att_word)
 commit_case(
     "attribution: a commit crediting Claude (co-author trailer or Generated-with line) is refused, naming the replacement",
     _iss_decision(_oa1) == "deny" and _iss_decision(_oa2) == "deny"
-    and "Committed by AJ's agent" in _iss_reason(_oa1) and "no email" in _iss_reason(_oa1),
+    and "Committed by Edens Agent" in _iss_reason(_oa1) and "no email" in _iss_reason(_oa1),
     "out %r | %r" % (_oa1[:140], _oa2[:100]),
 )
-_ota3 = _iss_decision(_oa3) != "deny" or "credit aj's agent" not in _iss_reason(_oa3)
+_ota3 = _iss_decision(_oa3) != "deny" or "credit Edens Agent" not in _iss_reason(_oa3)
 commit_case(
-    "attribution: crediting aj's agent with no email passes, and a subject that merely mentions Claude passes",
-    "credit aj's agent" not in _oa3 and "credit aj's agent" not in _oa4,
+    "attribution: crediting Edens Agent with no email passes, and a subject that merely mentions Claude passes",
+    "credit Edens Agent" not in _oa3 and "credit Edens Agent" not in _oa4,
     "out %r | %r" % (_oa3[:100], _oa4[:100]),
 )
 _opr1 = _iss_guard('gh pr create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"')
 _opr2 = _iss_guard('gh pr create --title T --body "Refs #5\n\nOpened by AJ\'s agent"')
 _opr3 = _iss_guard('gh pr create --title T --body "Refs #5\n\nhttps://claude' + '.ai/code/session_abc"')
 commit_case(
-    "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting aj's agent passes",
-    _iss_decision(_opr1) == "deny" and "credit aj's agent" in _iss_reason(_opr1)
-    and _iss_decision(_opr3) == "deny" and "credit aj's agent" not in _opr2 and _opr2.strip() == "",
+    "attribution: a pull request body crediting Claude or linking a Claude session is refused; crediting Edens Agent passes",
+    _iss_decision(_opr1) == "deny" and "credit Edens Agent" in _iss_reason(_opr1)
+    and _iss_decision(_opr3) == "deny" and "credit Edens Agent" not in _opr2 and _opr2.strip() == "",
     "out %r | %r | %r" % (_opr1[:90], _opr2[:60], _opr3[:90]),
 )
 # #189: every form from the issue's table, the quoted -c ones included, is refused.
@@ -1155,8 +1155,8 @@ _att_forms = [
     "git commit" + _att_body,
     "git -c user.name=x commit" + _att_body,
     "git -c user.name=aj -c user.email=a@b commit" + _att_heredoc,
-    "git -c user.name=\"aj's agent\" commit" + _att_body,
-    "git -c user.name=\"aj's agent\" -c user.email=a@b commit -q" + _att_heredoc,
+    "git -c user.name=\"Edens Agent\" commit" + _att_body,
+    "git -c user.name=\"Edens Agent\" -c user.email=a@b commit -q" + _att_heredoc,
     "git -c 'user.name=aj s agent' commit" + _att_body,
 ]
 _att_missed = [f for f in _att_forms if _iss_decision(_iss_guard(f)) != "deny"]
@@ -1169,7 +1169,7 @@ _oc1 = _iss_guard('gh issue comment 5 --body "Co-Authored-By: Claude <x>"')
 _off = _iss_guard(_att_trailer, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
     "attribution: an issue comment crediting Claude is refused, and HOUSE_RULES_ATTRIBUTION=off disables the check",
-    _iss_decision(_oc1) == "deny" and "credit aj's agent" not in _off,
+    _iss_decision(_oc1) == "deny" and "credit Edens Agent" not in _off,
     "out %r | off %r" % (_oc1[:90], _off[:80]),
 )
 # -- #316: the credit check also covers gh api and curl writes to GitHub ---------------------------------
@@ -1179,8 +1179,8 @@ _a316_bf = os.path.join(_a316_dir, "bad.txt").replace("\\", "/")
 _a316_cf = os.path.join(_a316_dir, "clean.txt").replace("\\", "/")
 _a316_bj = os.path.join(_a316_dir, "bad.json").replace("\\", "/")
 _a316_cj = os.path.join(_a316_dir, "clean.json").replace("\\", "/")
-for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "Opened by AJ's agent"),
-               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "Opened by AJ's agent"}))):
+for _p, _t in ((_a316_bf, _a316_bad), (_a316_cf, "Opened by Edens Agent"),
+               (_a316_bj, json.dumps({"body": _a316_bad})), (_a316_cj, json.dumps({"body": "Opened by Edens Agent"}))):
     with open(_p, "w", encoding="utf-8") as _f:
         _f.write(_t)
 _a316_routes = lambda b, fb, fj: [
@@ -1192,7 +1192,7 @@ _a316_routes = lambda b, fb, fj: [
     "curl -X POST https://api.github.com/repos/o/r/pulls -d '{\"body\":\"%s\"}'" % b,
 ]
 _a316_missed = [c for c in _a316_routes(_a316_bad, _a316_bf, _a316_bj) if _iss_decision(_iss_guard(c)) != "deny"]
-_a316_false = [c for c in _a316_routes("Opened by AJ's agent", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
+_a316_false = [c for c in _a316_routes("Opened by Edens Agent", _a316_cf, _a316_cj) if _iss_decision(_iss_guard(c)) == "deny"]
 _a316_get = _iss_guard("gh api repos/o/r/pulls/5")
 commit_case(
     "attribution: gh api and curl writes crediting Claude are refused on every route; clean bodies and a plain GET pass",
@@ -1235,15 +1235,15 @@ def _ggd(out):
 
 _gh = "mcp__github__"
 _g1 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)")
-_g2 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nOpened by AJ's agent")
+_g2 = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\nOpened by Edens Agent")
 commit_case(
-    "guardgithub: a pull request body crediting Claude is denied; crediting aj's agent is allowed",
+    "guardgithub: a pull request body crediting Claude is denied; crediting Edens Agent is allowed",
     _ggd(_g1) == "deny" and "pull request or issue text" in _g1 and _ggd(_g2) == "allow",
     "out %r | %r" % (_g1[:120], _g2[:80]),
 )
 _g3 = _gg(_gh + "issue_write", method="create", title="T", body="x\n\nCo-Authored-By: Claude <a@b>")
 _g4 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nClaude-Session: https://x", files=[{"path": "a", "content": "x"}])
-_g5 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nCommitted by AJ's agent",
+_g5 = _gg(_gh + "push_files", branch="AjsAgent/x", message="fix\n\nCommitted by Edens Agent",
           files=[{"path": "a", "content": "Co-Authored-By: Claude <noreply@anthropic.com>"}])
 commit_case(
     "guardgithub: an issue trailer and a push_files commit message are denied; file content naming the patterns is not scanned",
@@ -1252,8 +1252,8 @@ commit_case(
 )
 _g6 = _gg(_gh + "create_branch", branch="claude/x")
 _g7 = _gg(_gh + "create_branch", branch="AjsAgent/x")
-_g8 = _gg(_gh + "create_pull_request", title="T", head="claude/x", body="Opened by AJ's agent")
-_g9 = _gg(_gh + "push_files", branch="claude/x", message="fix\n\nCommitted by AJ's agent", files=[])
+_g8 = _gg(_gh + "create_pull_request", title="T", head="claude/x", body="Opened by Edens Agent")
+_g9 = _gg(_gh + "push_files", branch="claude/x", message="fix\n\nCommitted by Edens Agent", files=[])
 commit_case(
     "guardgithub: a new claude/ branch (create_branch, PR head) is denied naming AjsAgent/; AjsAgent/ and a push to an existing claude/ branch are allowed",
     _ggd(_g6) == "deny" and "AjsAgent/<topic>" in _g6 and _ggd(_g7) == "allow"
@@ -1268,7 +1268,7 @@ commit_case(
     _ggd(_g10) == "deny" and _ggd(_g11) == "deny" and _ggd(_g12) == "allow",
     "out %r | %r | off %r" % (_g10[:60], _g11[:60], _g12[:60]),
 )
-_g13 = _gg(_gh + "push_files", branch="main", message="fix\n\nCommitted by AJ's agent", files=[])
+_g13 = _gg(_gh + "push_files", branch="main", message="fix\n\nCommitted by Edens Agent", files=[])
 _g14 = _gg(_gh + "create_or_update_file", branch="master", message="fix", path="a", content="x")
 _g15 = _gg(_gh + "create_or_update_file", branch="AjsAgent/x", message="fix", path="a", content="x")
 commit_case(
@@ -1281,7 +1281,7 @@ commit_case(
 _l405_host = "https://claude" + ".ai/"
 _l405_art, _l405_share = _l405_host + "artifact/abc123XYZ", _l405_host + "share/1f2e-3d4c"
 _g405a = _gg(_gh + "create_pull_request", title="T", head="AjsAgent/x", body="Refs #5\n\n" + _l405_art)
-_g405b = _gg(_gh + "push_files", branch="AjsAgent/x", message="docs: page\n\nCommitted by AJ's agent",
+_g405b = _gg(_gh + "push_files", branch="AjsAgent/x", message="docs: page\n\nCommitted by Edens Agent",
              files=[{"path": "docs/a.md", "content": "x\nsee " + _l405_share + "\n"}])
 _g405c = _gg(_gh + "create_or_update_file", branch="AjsAgent/x", message="docs", path="b.md",
              content="names claude" + ".ai/code in prose")
@@ -1318,7 +1318,7 @@ _l405_clean = _iss_guard('git commit -m "docs: QA page"', _l405_d)
 _l405_off = _iss_guard('git commit -m "docs: QA page\n\n%s"' % _l405_art, HOUSE_RULES_ATTRIBUTION="off")
 commit_case(
     "links: a commit message with an artifact link and a pull request body with a share link are refused",
-    _iss_decision(_l405_msg) == "deny" and "credit aj's agent" in _iss_reason(_l405_msg)
+    _iss_decision(_l405_msg) == "deny" and "credit Edens Agent" in _iss_reason(_l405_msg)
     and _iss_decision(_l405_pr) == "deny",
     "msg %r | pr %r" % (_l405_msg[:120], _l405_pr[:120]),
 )
@@ -1332,13 +1332,13 @@ commit_case(
 commit_case(
     "links: an unrelated commit (prose naming claude.ai/code, no link) passes, and HOUSE_RULES_ATTRIBUTION=off disables the check",
     _iss_decision(_l405_clean) != "deny" and "no published links" not in _l405_clean
-    and "credit aj's agent" not in _l405_off and "no published links" not in _l405_off,
+    and "credit Edens Agent" not in _l405_off and "no published links" not in _l405_off,
     "clean %r | off %r" % (_l405_clean[:160], _l405_off[:120]),
 )
 _opw = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _dp, command=_att_trailer), _dp)[1]
 commit_case(
     "attribution: the same refusal applies through the PowerShell tool",
-    _iss_decision(_opw) == "deny" and "credit aj's agent" in _iss_reason(_opw),
+    _iss_decision(_opw) == "deny" and "credit Edens Agent" in _iss_reason(_opw),
     "out %r" % _opw[:140],
 )
 
@@ -1347,13 +1347,17 @@ def _au_profile(d, remote=True, **extra):
     return _ab_out(d, remote=remote, **extra)
 
 
-_ap1 = _au_profile(_au_bad)
+# #478 (U7): the old behaviour (text telling the agent to run the fix) is replaced by the hook setting the
+# repo-local identity itself, so the kill-switch and local cases run first, while _au_bad is still Claude.
 _ap2, _ap3 = _au_profile(_au_good), _au_profile(_au_bad, remote=False)
 _ap4 = _au_profile(_au_bad, HOUSE_RULES_ATTRIBUTION="off")
+_ap1 = _au_profile(_au_bad)
+_ap1_name = subprocess.run(["git", "-C", _au_bad, "config", "user.name"], capture_output=True, text=True).stdout.strip()
 commit_case(
-    "author: a remote profile with a Claude identity says to run the repo-local git config; good identity, local session and kill switch add nothing",
-    "Git identity is Claude" in _ap1 and "git config user.email" in _ap1 and all("Git identity is Claude" not in o for o in (_ap2, _ap3, _ap4)),
-    "out %r" % _ap1[-260:],
+    "author: a remote profile with a Claude identity sets the repo-local identity and says so; good identity, local session and kill switch add nothing",
+    "the hook set this repo's identity to Edens Agent" in _ap1 and _ap1_name == "Edens Agent"
+    and all("Git identity" not in o for o in (_ap2, _ap3, _ap4)),
+    "out %r name %r" % (_ap1[-260:], _ap1_name),
 )
 for _restatement in [RESTATEMENTS[_i] for _i in (1, 2)]:  # safe git
     _source_text = _restatement.source()

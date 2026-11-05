@@ -294,21 +294,21 @@ commit_case(
 
 # -- #177: a commit authored as Claude is refused ----------
 AGENT_IDENTITY_FIX_TEXT = (
-    "git config user.name \"AJ's agent\" && git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
+    "git config user.name \"Edens Agent\" && git config user.email \"79066376+Ajw2003@users.noreply.github.com\""
 )
 _au1 = _iss_guard("git commit -m x", _au_bad)
 _au2 = _iss_guard("git commit -m x", _au_good)
 _au3 = _iss_guard('git commit --author "Claude <noreply@anthropic.com>" -m x', _au_good)
-_au4 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=79066376+Ajw2003@users.noreply.github.com commit -m x", _au_bad)
+_au4 = _iss_guard("git -c user.name=\"Edens Agent\" -c user.email=79066376+Ajw2003@users.noreply.github.com commit -m x", _au_bad)
 _au5 = _iss_guard("GIT_AUTHOR_EMAIL=noreply@anthropic.com git commit -m x", _au_good)
 _au6 = _iss_guard("git commit --author='Claudette <c@example.com>' -m x", _au_bad)
 _au7 = _iss_guard("git commit -m x", _au_bad, HOUSE_RULES_ATTRIBUTION="off")
-_au9 = _iss_guard("git -c user.name=\"AJ's agent\" -c user.email=bot@anthropic.com commit -m x", _au_good)
+_au9 = _iss_guard("git -c user.name=\"Edens Agent\" -c user.email=bot@anthropic.com commit -m x", _au_good)
 _au10 = _iss_guard("git -c \"user.name=Claude\" commit -m x", _au_good)
-_au11 = _iss_guard("git -c \"user.name=AJ's agent\" -c 'user.email=79066376+Ajw2003@users.noreply.github.com' commit -m x", _au_bad)
+_au11 = _iss_guard("git -c \"user.name=Edens Agent\" -c 'user.email=79066376+Ajw2003@users.noreply.github.com' commit -m x", _au_bad)
 _au8 = _iss_call("guard", _iss_payload("PreToolUse", "PowerShell", _au_bad, command="git commit -m x"), _au_bad)[1]
 commit_case(
-    "author: a Claude repo identity is refused with the repo-local fix command; AJ's agent passes",
+    "author: a Claude repo identity is refused with the repo-local fix command; Edens Agent passes",
     _iss_decision(_au1) == "deny" and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au1) and "--global" not in _iss_reason(_au1)
     and _iss_decision(_au2) != "deny",
     "out %r | %r" % (_au1[:200], _au2[:80]),
@@ -319,7 +319,7 @@ commit_case(
     "out %r | %r | %r" % (_au3[:80], _au5[:80], _au4[:80]),
 )
 commit_case(
-    "author: a quoted -c identity with a space is read (#189): a Claude email or name is refused, AJ's agent overrides a Claude config",
+    "author: a quoted -c identity with a space is read (#189): a Claude email or name is refused, Edens Agent overrides a Claude config",
     _iss_decision(_au9) == "deny" and _iss_decision(_au10) == "deny" and _iss_decision(_au11) != "deny"
     and AGENT_IDENTITY_FIX_TEXT in _iss_reason(_au9),
     "out %r | %r | %r" % (_au9[:80], _au10[:80], _au11[:80]),
