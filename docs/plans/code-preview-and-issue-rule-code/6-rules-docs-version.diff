@@ -89,7 +89,7 @@ index 0b2224c..50fe12f 100644
 +("Idea A approved", "approved 1A 2C"). A bare
  "approved" does not count. "skip design" lets one change through. Each issue's label says whose move it is (`in progress`
 diff --git a/claude-house-rules/plugins/house-rules/rules/standards/coding-philosophy.md b/claude-house-rules/plugins/house-rules/rules/standards/coding-philosophy.md
-index b0892d0..c1caa01 100644
+index b0892d0..4a8ac8c 100644
 --- a/claude-house-rules/plugins/house-rules/rules/standards/coding-philosophy.md
 +++ b/claude-house-rules/plugins/house-rules/rules/standards/coding-philosophy.md
 @@ -21,5 +21,9 @@
@@ -102,11 +102,11 @@ index b0892d0..c1caa01 100644
 +## Readable code
 +
 +New lines beat a file's style: whole-word names, one statement per line, named parts in
-+3+ part conditions, lines of 100 characters or less, a plain sentence opening each function,
-+no logic in lambdas, f-strings, a comment on each pattern.
++3+ part conditions, no split statements, a plain sentence opening each function,
++no logic in lambdas, f-strings, patterns from named pieces.
  
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
-index 03ed041..c1bccf6 100644
+index 16bd5d4..7ed9d45 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
 @@ -56,2 +56,9 @@ def _iss_stub(body_ok=True):
@@ -119,14 +119,21 @@ index 03ed041..c1bccf6 100644
 +
 +
  def give_build_plan_page(project_directory, **overrides):
-@@ -510,6 +517,6 @@ _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
+@@ -503,7 +510,11 @@ _rules_text = read(RULES_FILE)
+ _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
++rules_name_the_section = "becomes issues" in _rules_text
++rules_point_to_detail = "rules/detail/issue-workflow.md" in _rules_text
++detail_file_exists = os.path.isfile(_detail)
++detail_names_the_switch = "HOUSE_RULES_ISSUES=off" in read(_detail)
++plugin_is_current = plugin_version_in_manifest() == "2.76.0"
++issues_rule_is_complete = rules_name_the_section and rules_point_to_detail and detail_file_exists and detail_names_the_switch and plugin_is_current
  commit_case(
 -    "issues: the rules section and its detail file exist, and the plugin is 2.75.0",
-+    "issues: the rules section and its detail file exist, and the plugin is 2.76.0",
-     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
-     and "HOUSE_RULES_ISSUES=off" in read(_detail)
+-    "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
+-    and "HOUSE_RULES_ISSUES=off" in read(_detail)
 -    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.75.0",
-+    and plugin_version_in_manifest() == "2.76.0",
++    "issues: the rules section and its detail file exist, and the plugin is 2.76.0",
++    issues_rule_is_complete,
      "rules section + detail file + version",
 diff --git a/docs/4-systems/design-loop.md b/docs/4-systems/design-loop.md
 index df3ba78..b87387d 100644

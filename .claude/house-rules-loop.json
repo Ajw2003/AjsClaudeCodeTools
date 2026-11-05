@@ -869,12 +869,12 @@
   },
   "plan_page": {
     "drafts": {
-      "docs/plans/code-preview-and-issue-rule-code/1-readability-check.diff": "defc3535e990402b68ec3815e113c734b7c707e07253378654c98fcef1011193",
-      "docs/plans/code-preview-and-issue-rule-code/2-plan-mode-and-view.diff": "28ee205e73a113a2862703a6dc18dcb37ca60617a007cf5889caccade635fe01",
-      "docs/plans/code-preview-and-issue-rule-code/3-gate-and-issue-rule.diff": "efd5bcaa64ca05040a6baacf87a524145252132e1f9f305c9df1f3c222f3fd6b",
-      "docs/plans/code-preview-and-issue-rule-code/4-builder-and-departures.diff": "5994ac575a225d038a932d4aa0621c0d43e44167343c412152cd0b09f5f6a094",
-      "docs/plans/code-preview-and-issue-rule-code/5-feature-issues-only.diff": "2d4a72e7d8932f8512d786a1d78af38a3d278d936a384f8151af59faef90274c",
-      "docs/plans/code-preview-and-issue-rule-code/6-rules-docs-version.diff": "f2891f24cb0850244fea5497aac5d65b9a62796450428b445324bd342590faad"
+      "docs/plans/code-preview-and-issue-rule-code/1-readability-check.diff": "80920cc85f3a82dabe05b015a407e2405199474aa8ad87dc5a3025ac145beaf6",
+      "docs/plans/code-preview-and-issue-rule-code/2-plan-mode-and-view.diff": "b13b6d2ebcf845ce34e0698464bb4a55b97c0d72d57821b935205a43b30fa607",
+      "docs/plans/code-preview-and-issue-rule-code/3-gate-and-issue-rule.diff": "facdef94a79f8ee7dac25c636e08b159961b4f8a9737f70178df879b453811fa",
+      "docs/plans/code-preview-and-issue-rule-code/4-builder-and-departures.diff": "3972a7561a898d65853b34137737cbd1d6d3f9a14ba8a8ed5a2150e87642c356",
+      "docs/plans/code-preview-and-issue-rule-code/5-feature-issues-only.diff": "de9717c8a8366d9a350964cd70ce577f6ecc6e90c6a5ec8840c46e3f78402b98",
+      "docs/plans/code-preview-and-issue-rule-code/6-rules-docs-version.diff": "b78e53e36543462bda04144373a87fe083e6be9918dd9a15b2632d32813cb565"
     },
     "steps": 6,
     "large": 5,

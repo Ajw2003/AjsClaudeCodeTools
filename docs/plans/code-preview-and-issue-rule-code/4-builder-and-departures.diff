@@ -7,22 +7,21 @@ index 71eaf94..d9d370a 100644
 +- An approved draft named in the spawn prompt is the spec; report each departure and its reason.
  - Commit as you go on your own branch, scoped to the paths you changed.
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
-index 7642a25..ab2e551 100644
+index 6227e2b..3dccb12 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py
-@@ -759,2 +759,7 @@ _loop_say("hello", session="other")
+@@ -742,2 +742,6 @@ _loop_say("hello", session="other")
  _loop_cases.append(('"Build plan approved" carries the hand-to-a-helper instruction', "@house-rules:builder" in _n))
 +# The note from the "Build plan approved" message above, under a readable name; see issue #474.
 +build_note = _n
 +names_the_draft = "The approved code is in docs/plans/blockers-code/1.diff" in build_note
-+_loop_cases.append(("#471: the Build note names the approved drafts and that departures are told",
-+                    names_the_draft and "never silently" in build_note))
++_loop_cases.append(("#471: the Build note names the approved drafts and that departures are told", names_the_draft and "never silently" in build_note))
  _g = _loop_say("go ahead and build it")
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-index 3e2757b..dac89b9 100644
+index 4fda5e9..719d385 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-@@ -603,2 +603,68 @@ for case_title, case_passed in plan_cases:
+@@ -577,2 +577,55 @@ for case_title, case_passed in plan_cases:
  
 +# ---- QA mode lists every departure from the approved drafts (#471) ----
 +# Readable name for this file's older helper; renaming it everywhere is issue #474.
@@ -59,62 +58,46 @@ index 3e2757b..dac89b9 100644
 +
 +
 +matching_code, matching_item = departures_on_qa_page("departures1")
-+write_app('def total(items):\n    if not items:\n        raise ValueError("empty")\n'
-+          "    return sum(items)\n")
++write_app('def total(items):\n    if not items:\n        raise ValueError("empty")\n    return sum(items)\n')
 +changed_code, changed_item = departures_on_qa_page("departures2")
-+write_app("def total(items):\n    if not   items:  \n\n"
-+          '        raise ValueError("no items to total")\n'
-+          "    return sum(items)\n")
++write_app('def total(items):\n    if not   items:  \n\n        raise ValueError("no items to total")\n    return sum(items)\n')
 +reformatted_code, reformatted_item = departures_on_qa_page("departures3")
 +no_drafts_project = make_test_project("qa")
-+no_drafts_code, no_drafts_item = departures_on_qa_page("departures4", project=no_drafts_project,
-+                                                       base="main~1")
++no_drafts_code, no_drafts_item = departures_on_qa_page("departures4", project=no_drafts_project, base="main~1")
 +EXPECTED_CHANGED_ROWS = [["app.py", 1, 1, [
 +    ['Written, not in the draft: raise ValueError("empty")', 1, 0],
 +    ['In the draft, not written: raise ValueError("no items to total")', 0, 1]]]]
 +departure_cases = [
-+    ("a build that matches its approved draft lists no departures",
-+     matching_code == 0 and matching_item is not None
-+     and matching_item[2] == "None: the build matches the approved code"
-+     and matching_item[6] == []),
-+    ("a build that changes a drafted line lists both sides of it, under its file",
-+     changed_code == 0 and changed_item is not None
-+     and changed_item[2] == "2 lines in 1 file differ from the drafts"
-+     and changed_item[6] == EXPECTED_CHANGED_ROWS),
-+    ("a build that only reformats the drafted code lists no departures",
-+     reformatted_code == 0 and reformatted_item is not None and reformatted_item[6] == []),
-+    ("with no approved drafts recorded, the item says it was not checked, and why",
-+     no_drafts_item is not None and no_drafts_item[2] == "Not checked: no approved drafts"
-+     and "no build plan page with drafts" in no_drafts_item[4]),
++    ("a build that matches its approved draft lists no departures", matching_code == 0 and matching_item is not None and matching_item[2] == "None: the build matches the approved code" and matching_item[6] == []),
++    ("a build that changes a drafted line lists both sides of it, under its file", changed_code == 0 and changed_item is not None and changed_item[2] == "2 lines in 1 file differ from the drafts" and changed_item[6] == EXPECTED_CHANGED_ROWS),
++    ("a build that only reformats the drafted code lists no departures", reformatted_code == 0 and reformatted_item is not None and reformatted_item[6] == []),
++    ("with no approved drafts recorded, the item says it was not checked, and why", no_drafts_item is not None and no_drafts_item[2] == "Not checked: no approved drafts" and "no build plan page with drafts" in no_drafts_item[4]),
 +]
 +for case_title, case_passed in departure_cases:
 +    page_check_results.append(("QA mode (#471): " + case_title, case_passed))
 +
- # ---- readability.py: the six readable-code rules, checked on the lines a diff adds (#473) ----
+ # ---- readability.py: the eight readable-code rules, checked on the lines a diff adds (#473) ----
 diff --git a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
-index 6cdfc60..01f1b8c 100644
+index 7da6ba0..6ef1e68 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py
-@@ -947,2 +947,10 @@ def _loop_apply_one(state, text, top):
+@@ -927,2 +927,7 @@ def _loop_apply_one(state, text, top):
                       % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
 +            plan_page = state.get("plan_page") or {}
 +            approved_drafts = sorted(plan_page.get("drafts") or {})
 +            if approved_drafts:  # #471: the approved code is the builder's specification
 +                approved_list = ", ".join(approved_drafts)
-+                note += (f" The approved code is in {approved_list}: give each builder its "
-+                         "step's draft as the specification. Where the real code has to differ, "
-+                         "the builder makes the change and reports it with the reason, never "
-+                         "silently; the QA page lists every departure.")
++                note += f" The approved code is in {approved_list}: give each builder its step's draft as the specification. Where the real code has to differ, the builder makes the change and reports it with the reason, never silently; the QA page lists every departure."
          elif approval[0] == "QA failed":
 diff --git a/claude-house-rules/plugins/house-rules/scripts/make_page.py b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-index 9bce3d8..7539627 100644
+index f72f5d0..4e997db 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/make_page.py
-@@ -301,2 +301,3 @@ def apply_qa(page, project):
+@@ -303,2 +303,3 @@ def apply_qa(page, project):
           "beside them come from the plan." % base, None, rows])
 +    page["changes"].append(departures_item(project, base))
      page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
-@@ -510,2 +511,130 @@ def apply_plan(page, project):
+@@ -495,2 +496,125 @@ def apply_plan(page, project):
  
 +DEPARTURES_TITLE = "Departures from the approved code"
 +DEPARTURES_SHOWN_PER_FILE = 20  # lines listed per file; the rest are counted
@@ -178,8 +161,7 @@ index 9bce3d8..7539627 100644
 +            with open(os.path.join(project, draft_path), encoding="utf-8") as draft_file:
 +                draft_text = draft_file.read()
 +        except OSError as error:
-+            die(f"QA mode: the approved draft {draft_path} could not be read ({error}); restore "
-+                "it from the branch history")
++            die(f"QA mode: the approved draft {draft_path} could not be read ({error}); restore it from the branch history")
 +        for file_name, (added_lines, removed_lines) in changed_lines_by_file(draft_text).items():
 +            file_plan = planned.setdefault(file_name, ([], []))
 +            file_plan[0].extend(added_lines)
@@ -208,8 +190,7 @@ index 9bce3d8..7539627 100644
 +    approved drafts in plan_page, compared with spacing ignored."""
 +    draft_paths, why_none = approved_drafts(project)
 +    if draft_paths is None:
-+        return ["keep", DEPARTURES_TITLE, "Not checked: no approved drafts", None,
-+                f"Departures could not be checked because {why_none}.", None, None]
++        return ["keep", DEPARTURES_TITLE, "Not checked: no approved drafts", None, f"Departures could not be checked because {why_none}.", None, None]
 +    planned = planned_lines_by_file(project, draft_paths)
 +    real = changed_lines_by_file(run_git(project, "diff", "-w", base + "...HEAD"))
 +    rows = []
@@ -218,8 +199,7 @@ index 9bce3d8..7539627 100644
 +        if file_name.startswith(NOT_CODE_FOLDERS):
 +            continue
 +        no_change = ([], [])
-+        departures = departures_in_file(planned.get(file_name, no_change),
-+                                        real.get(file_name, no_change))
++        departures = departures_in_file(planned.get(file_name, no_change), real.get(file_name, no_change))
 +        if not departures:
 +            continue
 +        total_departures += len(departures)
@@ -238,14 +218,12 @@ index 9bce3d8..7539627 100644
 +    else:
 +        tag = "keep"
 +        summary = "None: the build matches the approved code"
-+    detail = ("Every line the build wrote or removed that the approved drafts did not, and every "
-+              "draft line the build did not write, compared with spacing ignored, so reformatting "
-+              "and moved lines are not departures. The builder's report gives the reason for each.")
++    detail = "Every line the build wrote or removed that the approved drafts did not, and every draft line the build did not write, compared with spacing ignored, so reformatting and moved lines are not departures. The builder's report gives the reason for each."
 +    return [tag, DEPARTURES_TITLE, summary, None, detail, None, rows]
 +
 +
  def apply_sweep(page):
-@@ -607,5 +736,11 @@ def record_sweep(project, page):
+@@ -592,5 +716,11 @@ def record_sweep(project, page):
  
 +def stage_file_path(project):
 +    """The design loop's stage file: .claude/ in the main checkout, beside the common git folder."""

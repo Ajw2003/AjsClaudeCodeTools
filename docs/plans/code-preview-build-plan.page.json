@@ -3,7 +3,7 @@
  "eyebrow": "Build plan for approval · issue #468 (code preview and issue rule) · redrafted to the readable-code rules",
  "approval": "Build plan approved: code preview and issue rule",
  "short": {
-  "lead": "Six steps, each with its full code below. Every added line passed the readability check, now eight rules, before this page was built, and the page itself was built by the new plan mode. Open a step, read its plain sentences, glance at the code, and tick Looks right. Your reply is ready once every step is ticked.",
+  "lead": "Six steps, each with its full code below. Every added line passed the readability check's eight rules, before this page was built, and the page itself was built by the new plan mode. Open a step, read its plain sentences, glance at the code, and tick Looks right. Your reply is ready once every step is ticked.",
   "hint": "Tap a step to see what it builds and what it needs from you.",
   "key": [
    [
@@ -21,7 +21,7 @@
     "Step 1",
     "The readability check",
     "",
-    "Sub-issue #473 (Readable code in build plans). Adds scripts/readability.py with eight rules, and its tests.",
+    "Sub-issue #473 (Readable code in build plans). Adds scripts/readability.py, which checks eight rules for Python, JavaScript and C#. It also adds the pattern builder and tests for both.",
     "Nothing from you."
    ],
    [
@@ -80,10 +80,11 @@
     "name": "The readability check",
     "draft": "docs/plans/code-preview-and-issue-rule-code/1-readability-check.diff",
     "size": "large",
-    "summary": "A new script, scripts/readability.py, checks every line a diff adds against eight rules. Names are whole words, each line holds one statement, and each part of a long condition gets a yes-or-no name. Lines stay short, each function opens with a plain sentence, and no logic is packed into one line. Values sit inside f-strings, and each pattern has a plain comment.",
+    "summary": "A new script, scripts/readability.py, checks every line a diff adds, in Python, JavaScript and C#. Names are whole words. Each line holds one statement, and a statement is never split across lines, even if that makes it long. Each part of a long condition gets a yes-or-no name. Each function opens with a plain sentence, and no logic is packed into a one-line lambda (a small unnamed function). Values sit inside f-strings or interpolated strings (strings with the value written in the text), and patterns are built from named pieces.",
     "changes": [
-     "Tests: each of the eight rules refuses a bad line and passes a good one. More tests cover quoted text, comments, HTML, table rows, older helpers and names that already existed.",
-     "The readability check reads a diff, finds which lines are Python or JavaScript, and checks each added line against the rules."
+     "Tests: each rule refuses a bad line and passes a good one, in Python, JavaScript and C#. More tests cover quoted text, comments, two quoted strings side by side on one line, older helpers and names that already existed.",
+     "The pattern builder: named pieces such as spaces, digits and capture(...). Patterns (regular expressions) are built from them, so each one reads as a sentence. It is the one file that holds raw pattern syntax.",
+     "The readability check reads a diff (a list of changed lines), finds which added lines are Python, JavaScript or C#, and checks each one against the rules."
     ]
    },
    {
@@ -98,6 +99,7 @@
      "The writing check's paragraph loop names its variable text instead of s.",
      "The page builder gets a written description of plan mode.",
      "The page builder imports hashlib so it can record each draft's fingerprint, a short code that changes whenever the draft changes.",
+     "The page builder imports the named pattern pieces it uses, from the step 1 pattern builder.",
      "Plan mode splits and checks each draft, tries them in order on a throwaway copy, and adds one Changes item per step.",
      "Building a page runs plan mode when the content has a plan block.",
      "After the page is written, its path and the drafts' fingerprints are recorded for the approval check.",
@@ -165,6 +167,7 @@
      "Tests: the first feature's second issue says Part of its main issue.",
      "Tests: the second feature's second issue says Part of its main issue.",
      "Tests: a plan's not_part_of list puts the Not part of line under the approval.",
+     "The design loop imports the named pattern pieces it uses, from the same step 1 pattern builder.",
      "Your Not part of message, read before the approvals so it can unblock them.",
      "Reading Part of #N from a new issue, and deciding whether it belongs to the feature.",
      "An issue that does not belong gets a note and is not recorded.",
@@ -203,7 +206,7 @@
    "What I have proven, and what I have not",
    "Tested in scratch copies of the repo; nothing is in the plugin yet.",
    null,
-   "Proven: the full test suite passes 1,031 of 1,031 checks on the final copy, against 973 on the untouched copy. Every step's draft passes the readability check against the step before it. Plan mode checked all six drafts again while building this page. The coding standards text injected in a Unity and Node project measures 9,490 characters against its 9,500-character budget. Not yet run: the whole test suite for each of steps 2 to 5 on its own, although each step's own test files did pass. Also not proven: the real run in a scratch repo, which happens during the build. Issue #457 (Design loop fixes) is on another branch and also moves the version to 2.76.0, so whichever merges second takes the next version number.",
+   "Proven: the full test suite passes 1,042 of 1,042 checks on the final copy, against 973 on the untouched copy. Every step's draft passes the readability check against the step before it. Plan mode checked all six drafts again while building this page. The coding standards text injected in a Unity and Node project measures 9,479 characters against its 9,500-character budget. Not yet run: the whole test suite for each of steps 2 to 5 on its own, although each step's own test files did pass. Also not proven: the real run in a scratch repo, which happens during the build. Issue #457 (Design loop fixes) is on another branch and also moves the version to 2.76.0, so whichever merges second takes the next version number.",
    null,
    null
   ],
@@ -212,7 +215,7 @@
    "Where the rules leave older code alone",
    "New code follows every rule; older code it touches gets a readable name and is not rewritten.",
    null,
-   "Older helpers with short names, such as _mp and _loop_dir, get readable names where new code calls them: a line like run_page_builder = _mp names each one once. Renaming them everywhere is issue #474 (A readable-code skill, and readable code across every repo the agent has touched). A name that the same diff block also removes already existed, so the check leaves it alone. Only one line of existing code is shown on each side of a change, in grey. Git's diff markers, such as \" b/\" before a file's new path, are named constants with a comment. Short connecting words such as an and of are fine inside a longer name, comments are checked as ordinary sentences, and Markdown table rows may run long because a table cannot wrap.",
+   "Older helpers with short names, such as _mp and _loop_dir, get a readable name where new code calls them. A line like run_page_builder = _mp names each one once. Renaming them everywhere is issue #474 (A readable-code skill, and readable code across every repo the agent has touched). If the same diff block also removes a name, the name already existed, so the check leaves it alone. Only one line of existing code is shown on each side of a change, in grey. Git's diff markers, such as \" b/\" before a file's new path, are named constants with a comment. A list written with one whole item per line still counts as one statement per line. C# has no pattern builder yet, so a raw C# pattern is refused until the readable-code skill supplies one. Short connecting words such as \"and\" and \"of\" are fine inside a longer name. Comments are checked as ordinary sentences.",
    null,
    null
   ]

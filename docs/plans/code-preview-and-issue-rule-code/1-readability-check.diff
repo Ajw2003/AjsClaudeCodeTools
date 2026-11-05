@@ -1,10 +1,10 @@
 diff --git a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-index 252db05..c085891 100644
+index 252db05..55bf9bb 100644
 --- a/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
 +++ b/claude-house-rules/plugins/house-rules/scripts/checks/make_page.py
-@@ -359,2 +359,129 @@ _mp_cases.append(("summary (#339): a content file with no kind has no kind in it
+@@ -359,2 +359,111 @@ _mp_cases.append(("summary (#339): a content file with no kind has no kind in it
                    _rc == 0 and '"kind"' not in _nk_h.split("const PAGE", 1)[1].split("\n};", 1)[0] and 'ic("hand") + "Requires"' in _nk_h))
-+# ---- readability.py: the six readable-code rules, checked on the lines a diff adds (#473) ----
++# ---- readability.py: the eight readable-code rules, checked on the lines a diff adds (#473) ----
 +READABILITY = os.path.join(HERE, "readability.py")
 +readability_project = tempfile.mkdtemp(prefix="readability-")
 +# Readable names for this file's older helpers; renaming them everywhere is issue #474.
@@ -25,8 +25,7 @@ index 252db05..c085891 100644
 +    """A unified diff that creates file_name holding exactly added_lines."""
 +    file_start = f"{FILE_START_MARKER}a/{file_name}{NEW_PATH_MARKER}{file_name}"
 +    hunk_header = f"{HUNK_MARKER} -0,0 +1,{len(added_lines)} {HUNK_MARKER}"
-+    header = [file_start, "new file mode 100644", f"{OLD_FILE_MARKER}/dev/null",
-+              f"{NEW_FILE_MARKER}b/{file_name}", hunk_header]
++    header = [file_start, "new file mode 100644", f"{OLD_FILE_MARKER}/dev/null", f"{NEW_FILE_MARKER}b/{file_name}", hunk_header]
 +    body = ["+" + line for line in added_lines]
 +    return "\n".join(header + body) + "\n"
 +
@@ -34,9 +33,8 @@ index 252db05..c085891 100644
 +def diff_changing(file_name, removed_lines, added_lines):
 +    """A unified diff that replaces removed_lines with added_lines in an existing file."""
 +    file_start = f"{FILE_START_MARKER}a/{file_name}{NEW_PATH_MARKER}{file_name}"
-+    hunk_header = (f"{HUNK_MARKER} -1,{len(removed_lines)} +1,{len(added_lines)} {HUNK_MARKER}")
-+    header = [file_start, f"{OLD_FILE_MARKER}a/{file_name}", f"{NEW_FILE_MARKER}b/{file_name}",
-+              hunk_header]
++    hunk_header = f"{HUNK_MARKER} -1,{len(removed_lines)} +1,{len(added_lines)} {HUNK_MARKER}"
++    header = [file_start, f"{OLD_FILE_MARKER}a/{file_name}", f"{NEW_FILE_MARKER}b/{file_name}", hunk_header]
 +    removed_body = ["-" + line for line in removed_lines]
 +    added_body = ["+" + line for line in added_lines]
 +    body = removed_body + added_body
@@ -72,89 +70,213 @@ index 252db05..c085891 100644
 +    return exit_code == 0 and "is readable" in findings
 +
 +
++long_statement = "total = first_value + second_value + third_value + fourth_value + fifth_value + sixth_value + seventh_value + eighth_value + ninth_value"
++csharp_method_with_comment = ["/// Adds to the health.", "public void Heal(int amount)", "{", "    _health += amount;", "}"]
++csharp_method_without_comment = ["public void Heal(int amount)", "{", "    _health += amount;", "}"]
++
 +readability_cases = [
-+    ("rule 1: short names such as _rc and _o are refused",
-+     flags_rule(1, "app.py", ["_rc, _o = run_build()"])),
-+    ("rule 1: whole-word names pass",
-+     passes_check("app.py", ["exit_code, output = run_build()"])),
-+    ("rule 1: a connecting word such as an is fine inside a longer name, not alone",
-+     passes_check("app.py", ["links_an_artifact = True"])
-+     and flags_rule(1, "app.py", ["an = True"])),
-+    ("rule 1: a name already in the line a diff replaces is left to the clean-up issue",
-+     not flags_rule(1, "app.py", ["-def record(git_dir):",
-+                                  "+def record(git_dir, parent_number):"])),
-+    ("rule 1: a guesswork abbreviation such as msg is refused",
-+     flags_rule(1, "app.py", ["error_msg = read_error()"])),
-+    ("rule 2: two statements joined by a semicolon are refused",
-+     flags_rule(2, "app.py", ["first_value = 1; second_value = 2"])),
-+    ("rule 3: a three-part condition with an unnamed part is refused",
-+     flags_rule(3, "app.py", ["if count > 0 and is_ready or is_late:", "    start_now()"])),
-+    ("rule 3: a condition made only of named yes-or-no values passes",
-+     passes_check("app.py", ["if is_ready and has_name and not is_done:", "    start_now()"])),
-+    ("rule 4: a line over 100 characters is refused",
-+     flags_rule(4, "notes.md", ["word " * 25])),
-+    ("rule 4: a Markdown table row may run long, because it cannot wrap",
-+     passes_check("notes.md", ["| " + "cell | " * 30])),
-+    ("rule 7: a percent placeholder is refused; the same text as an f-string passes",
-+     flags_rule(7, "app.py", [f'note = "step {PERCENT_SIGN}s failed" {PERCENT_SIGN} step_name'])
-+     and passes_check("app.py", ['note = f"step {step_name} failed"'])),
-+    ("rule 8: a pattern with no comment is refused; with a plain comment above it, it passes",
-+     flags_rule(8, "app.py", ['HEADER = re.compile(r"^@@")'])
-+     and passes_check("app.py", ["# The line that starts a block of changes.",
-+                                 'HEADER = re.compile(r"^@@")'])),
-+    ("rule 1: an older helper with a short name is refused where new code calls it",
-+     flags_rule(1, "app.py", ["exit_code = _mp(page_name)"])),
-+    ("rule 1: a line that only gives an older helper a readable name passes",
-+     passes_check("app.py", ["run_git_in = _mp_git"])),
-+    ("a triple quote written inside an ordinary string does not hide the next lines from the check",
-+     flags_rule(1, "app.py", ['QUOTES = ("x", "\'\'\'")', "_rc = 1"])),
-+    ("rule 8: a pattern held in a named variable needs no second comment where it is used",
-+     passes_check("app.py", ["parts = re.split(joiner_pattern, condition)"])),
-+    ("a comment is prose: words such as or, and, lambda in it are not read as code",
-+     passes_check("app.py", ["total = 0  # one or two and three, not a lambda"])),
-+    ("rule 5: a new function with no description is refused",
-+     flags_rule(5, "app.py", ["def total(items):", "    return sum(items)"])),
-+    ("rule 5: a new function that opens with a plain sentence passes",
-+     passes_check("app.py", ["def total(items):",
-+                             '    """Add up the items."""',
-+                             "    return sum(items)"])),
-+    ("rule 6: a lambda is refused",
-+     flags_rule(6, "app.py", ["sort_key = lambda item: item.size"])),
-+    ("rule 6: a JavaScript one-line arrow holding a choice is refused",
-+     flags_rule(6, "page.js", ["const labels = items.map(item => item.done ? 'Done' : 'Open');"])),
-+    ("text inside quotes is never read as code",
-+     passes_check("app.py", ['warning = "a; b and c or d and e"'])),
-+    ("HTML: style lines are only checked for length; script lines are checked as code",
-+     passes_check("page.html", ["<style>", ".x{color:red}", "</style>"])
-+     and flags_rule(1, "page.html", ["<script>", "const el = find();", "</script>"])),
++    ("rule 1: short names such as _rc and _o are refused", flags_rule(1, "app.py", ["_rc, _o = run_build()"])),
++    ("rule 1: whole-word names pass", passes_check("app.py", ["exit_code, output = run_build()"])),
++    ("rule 1: a connecting word such as an is fine inside a longer name, not alone", passes_check("app.py", ["links_an_artifact = True"]) and flags_rule(1, "app.py", ["an = True"])),
++    ("rule 1: a name already in the line a diff replaces is left to the clean-up issue", not flags_rule(1, "app.py", ["-def record(git_dir):", "+def record(git_dir, parent_number):"])),
++    ("rule 1: a guesswork abbreviation such as msg is refused", flags_rule(1, "app.py", ["error_msg = read_error()"])),
++    ("rule 2: two statements joined by a semicolon are refused", flags_rule(2, "app.py", ["first_value = 1; second_value = 2"])),
++    ("rule 3: a three-part condition with an unnamed part is refused", flags_rule(3, "app.py", ["if count > 0 and is_ready or is_late:", "    start_now()"])),
++    ("rule 3: a condition made only of named yes-or-no values passes", passes_check("app.py", ["if is_ready and has_name and not is_done:", "    start_now()"])),
++    ("rule 4: a long single-line statement passes", passes_check("app.py", [long_statement])),
++    ("rule 4: a call split over two lines is refused", flags_rule(4, "app.py", ["total = add(first_value,", "            second_value)"])),
++    ("rule 4: a list with one whole item per line passes", passes_check("app.py", ["names = [", '    "first",', '    "second",', "]"])),
++    ("rule 4: a line ending in + is refused", flags_rule(4, "app.py", ['label = "step " +', "    step_name"])),
++    ("rule 4: a line starting with . is refused", flags_rule(4, "page.js", ["const names = items", "    .map(readName);"])),
++    ("rule 7: a percent placeholder is refused; the same text as an f-string passes", flags_rule(7, "app.py", [f'note = "step {PERCENT_SIGN}s failed" {PERCENT_SIGN} step_name']) and passes_check("app.py", ['note = f"step {step_name} failed"'])),
++    ("rule 8: raw re.compile(r\"...\") is refused; pattern(...) from readable_patterns passes", flags_rule(8, "app.py", ['HEADER = re.compile(r"^@@")']) and passes_check("app.py", ['HEADER = pattern(line_start, "@@")'])),
++    ("rule 8: a JavaScript pattern written between slashes is refused", flags_rule(8, "page.js", ["const found = text.match(/^step/);"])),
++    ("rule 1: an older helper with a short name is refused where new code calls it", flags_rule(1, "app.py", ["exit_code = _mp(page_name)"])),
++    ("rule 1: a line that only gives an older helper a readable name passes", passes_check("app.py", ["run_git_in = _mp_git"])),
++    ("a triple quote written inside an ordinary string does not hide the next lines from the check", flags_rule(1, "app.py", ['QUOTES = ("x", "\'\'\'")', "_rc = 1"])),
++    ("rule 8: a pattern held in a named variable is not raw pattern text where it is used", passes_check("app.py", ["parts = re.split(joiner_pattern, condition)"])),
++    ("a comment is prose: words such as or, and, lambda in it are not read as code", passes_check("app.py", ["total = 0  # one or two and three, not a lambda"])),
++    ("rule 4: two quoted texts side by side on one line are refused", flags_rule(4, "app.py", ['message = "first half " "second half"'])),
++    ("rule 5: a new function with no description is refused", flags_rule(5, "app.py", ["def total(items):", "    return sum(items)"])),
++    ("rule 5: a new function that opens with a plain sentence passes", passes_check("app.py", ["def total(items):", '    """Add up the items."""', "    return sum(items)"])),
++    ("rule 6: a lambda is refused", flags_rule(6, "app.py", ["sort_key = lambda item: item.size"])),
++    ("rule 6: a JavaScript one-line arrow holding a choice is refused", flags_rule(6, "page.js", ["const labels = items.map(item => item.done ? 'Done' : 'Open');"])),
++    ("text inside quotes is never read as code", passes_check("app.py", ['warning = "a; b and c or d and e"'])),
++    ("HTML: style lines are not checked; script lines are checked as code", passes_check("page.html", ["<style>", ".x{color:red}", "</style>"]) and flags_rule(1, "page.html", ["<script>", "const el = find();", "</script>"])),
++    ("C# rule 1: a Unity-style name such as m_Health is refused; _health passes", flags_rule(1, "Player.cs", ["private int m_Health = 10;"]) and passes_check("Player.cs", ["private int _health = 10;"])),
++    ("C# rule 5: a method with a /// comment passes; without one it is refused", passes_check("Player.cs", csharp_method_with_comment) and flags_rule(5, "Player.cs", csharp_method_without_comment)),
++    ("C# rule 7: string.Format is refused; an interpolated string passes", flags_rule(7, "Player.cs", ['var label = string.Format("step {0}", stepName);']) and passes_check("Player.cs", ['var label = $"step {stepName}";'])),
++    ("C# rule 2: two statements on one line are refused", flags_rule(2, "Player.cs", ["var first = 1; var second = 2;"])),
++    ("C# rule 4: a split call is refused", flags_rule(4, "Player.cs", ["Heal(first,", "    second);"])),
++    ("C# rule 8: new Regex(@\"...\") is refused", flags_rule(8, "Player.cs", ['var found = new Regex(@"^step");'])),
 +]
 +for case_title, case_passed in readability_cases:
 +    page_check_results.append(("readability (#473): " + case_title, case_passed))
 +
  for _t, _ok in _mp_cases:
+diff --git a/claude-house-rules/plugins/house-rules/scripts/house_rules/readable_patterns.py b/claude-house-rules/plugins/house-rules/scripts/house_rules/readable_patterns.py
+new file mode 100644
+index 0000000..c433981
+--- /dev/null
++++ b/claude-house-rules/plugins/house-rules/scripts/house_rules/readable_patterns.py
+@@ -0,0 +1,134 @@
++#!/usr/bin/env python3
++"""readable_patterns.py - builds patterns (regular expressions) from named pieces, so each one reads as a sentence (#473).
++
++    PYTHON_FUNCTION = pattern(line_start, optional_spaces, optional("async", spaces), "def", spaces, capture(PYTHON_NAME), optional_spaces, "(")
++
++Plain text given to pattern() means exactly that text: "def" matches the three letters d, e and f.
++A Piece is a ready-made part with a name, such as spaces or PYTHON_NAME, and is used as it is.
++
++This file is the one place where raw pattern syntax is written. Everywhere else builds patterns from these pieces,
++and the readability check (scripts/readability.py, rule 8) refuses raw pattern text anywhere else.
++
++STDLIB ONLY, Python 3.8+. Never installs anything.
++"""
++
++import re
++
++
++class Piece(str):
++    """A ready-made part of a pattern. Plain text is matched exactly; a Piece is used as it is."""
++
++
++def as_piece(part):
++    """A Piece unchanged, or plain text turned into a Piece that matches exactly that text."""
++    if isinstance(part, Piece):
++        return part
++    return Piece(re.escape(part))
++
++
++def sequence(*parts):
++    """The parts, one straight after another."""
++    return Piece("".join(as_piece(part) for part in parts))
++
++
++def pattern(*parts, ignore_case=False, every_line=False):
++    """A finished pattern matching the parts one after another. every_line lets line_start and line_end match at each line of a longer text."""
++    flags = 0
++    if ignore_case:
++        flags = flags | re.IGNORECASE
++    if every_line:
++        flags = flags | re.MULTILINE
++    return re.compile(sequence(*parts), flags)
++
++
++def capture(*parts):
++    """The parts, kept so the match hands them back as a numbered group."""
++    return Piece("(" + sequence(*parts) + ")")
++
++
++def optional(*parts):
++    """The parts, or nothing at all."""
++    return Piece("(?:" + sequence(*parts) + ")?")
++
++
++def any_of(*choices):
++    """Any one of the choices."""
++    return Piece("(?:" + "|".join(as_piece(choice) for choice in choices) + ")")
++
++
++def one_or_more(*parts):
++    """The parts, once or several times in a row."""
++    return Piece("(?:" + sequence(*parts) + ")+")
++
++
++def zero_or_more(*parts):
++    """The parts, any number of times in a row, including none."""
++    return Piece("(?:" + sequence(*parts) + ")*")
++
++
++def one_character_from(characters):
++    """Exactly one character, which is one of these characters."""
++    return Piece("[" + re.escape(characters) + "]")
++
++
++def one_character_except(characters):
++    """Exactly one character, which is not one of these characters."""
++    return Piece("[^" + re.escape(characters) + "]")
++
++
++def anything_except(characters):
++    """Any run of characters, including none, in which none is one of these characters."""
++    return Piece("[^" + re.escape(characters) + "]*")
++
++
++def followed_by(*parts):
++    """Matches nothing itself, but only where the parts come next."""
++    return Piece("(?=" + sequence(*parts) + ")")
++
++
++def not_followed_by(*parts):
++    """Matches nothing itself, but only where the parts do not come next."""
++    return Piece("(?!" + sequence(*parts) + ")")
++
++
++def preceded_by(*parts):
++    """Matches nothing itself, but only where the parts come just before."""
++    return Piece("(?<=" + sequence(*parts) + ")")
++
++
++def not_preceded_by(*parts):
++    """Matches nothing itself, but only where the parts do not come just before."""
++    return Piece("(?<!" + sequence(*parts) + ")")
++
++
++# Where a line starts and ends.
++line_start = Piece("^")
++line_end = Piece("$")
++
++# The edge of a word: between a letter, digit or underscore and anything else.
++word_edge = Piece(r"\b")
++
++# One space, tab or line break; one or more of them; or any number including none.
++space = Piece(r"\s")
++spaces = Piece(r"\s+")
++optional_spaces = Piece(r"\s*")
++
++# One or more digits, such as 42.
++digits = Piece(r"\d+")
++
++# Any one character, and the rest of a line.
++any_character = Piece(".")
++rest_of_line = Piece(".*")
++
++# A letter or digit in lower case, and a capital letter.
++lower_case_letter_or_digit = Piece("[a-z0-9]")
++capital_letter = Piece("[A-Z]")
++
++# A Python name, such as step_size; and a JavaScript name, which may also use $.
++PYTHON_NAME = Piece(r"[A-Za-z_]\w*")
++JAVASCRIPT_NAME = Piece(r"[A-Za-z_$][\w$]*")
++
++# One letter in either case; one letter, digit or underscore; and any number of those in a row.
++letter = Piece("[A-Za-z]")
++word_character = Piece(r"\w")
++word_characters = Piece(r"\w*")
 diff --git a/claude-house-rules/plugins/house-rules/scripts/readability.py b/claude-house-rules/plugins/house-rules/scripts/readability.py
 new file mode 100644
-index 0000000..160dd1f
+index 0000000..125b760
 --- /dev/null
 +++ b/claude-house-rules/plugins/house-rules/scripts/readability.py
-@@ -0,0 +1,554 @@
+@@ -0,0 +1,708 @@
 +#!/usr/bin/env python3
 +"""readability.py - checks that every line a diff adds is easy to read (#473).
 +
 +    readability.py check <draft.diff> [--project <root>]
 +
-+The six rules are the house coding standard in rules/standards/coding-philosophy.md:
++The eight rules are the house coding standard in rules/standards/coding-philosophy.md:
 +  1. Names say what they hold, in whole words.
 +  2. One thing per line.
 +  3. A condition with more than two parts becomes named yes-or-no values.
-+  4. Lines are at most 100 characters.
++  4. One line per statement: a statement is never split across lines, however long the line gets.
 +  5. Every new function starts with one plain sentence saying what it does.
 +  6. No logic inside one-line lambdas or nested comprehensions.
-+  7. Values sit inside the text they fill: f-strings, not percent placeholders.
-+  8. Every pattern (regular expression) has a plain comment above it saying what it matches.
++  7. Values sit inside the text they fill: f-strings and $"..." strings, not placeholders.
++  8. Patterns (regular expressions) are built from named pieces, never written as raw pattern text.
 +
-+Python and JavaScript lines are checked, including the script part of an HTML file.
-+Markdown, JSON and CSS lines are only checked for length; the writing check reads prose.
++Python, JavaScript and C# lines are checked, including the script part of an HTML file.
++Markdown, JSON and CSS lines are not checked; the writing check reads prose.
 +
 +Exit codes: 0 every added line is readable, 1 a rule is broken (each problem is printed),
 +2 bad input.
@@ -163,41 +285,39 @@ index 0000000..160dd1f
 +"""
 +
 +import os
-+import re
 +import sys
 +
-+MAX_LINE_LENGTH = 100
++from house_rules.readable_patterns import PYTHON_NAME, JAVASCRIPT_NAME, any_character, any_of, anything_except, capital_letter, capture, digits, followed_by, letter, line_end, line_start, lower_case_letter_or_digit, not_followed_by, not_preceded_by, one_character_except, one_character_from, one_or_more, optional, optional_spaces, pattern, preceded_by, rest_of_line, sequence, space, spaces, word_character, word_characters, word_edge, zero_or_more
++
 +MIN_WORD_LENGTH = 3
 +
 +# Short words a reader knows without guessing. Anything else shorter than three letters is refused.
 +KNOWN_SHORT_WORDS = {"i", "j", "id", "ok", "os", "re", "_"}
 +
-+# Short connecting words that read naturally inside a longer name, such as links_an_artifact.
-+# Alone, each is still too short to be a name.
-+CONNECTING_WORDS = {"a", "an", "as", "at", "by", "if", "in", "is", "no", "of", "on", "or", "to",
-+                    "up"}
++# Short connecting words that read naturally inside a longer name, such as links_an_artifact. Alone, each is still too short to be a name.
++CONNECTING_WORDS = {"a", "an", "as", "at", "by", "if", "in", "is", "no", "of", "on", "or", "to", "up"}
 +
 +# Abbreviations so common they read as words.
-+KNOWN_ABBREVIATIONS = {"url", "html", "json", "git", "sha", "css", "env", "args", "kwargs",
-+                       "self", "cls", "sys", "api", "uri", "utf", "http", "https", "js", "py",
-+                       "md", "pr", "gh", "qa"}
++KNOWN_ABBREVIATIONS = {"url", "html", "json", "git", "sha", "css", "env", "args", "kwargs", "self", "cls", "sys", "api", "uri", "utf", "http", "https", "js", "py", "md", "pr", "gh", "qa"}
 +
 +# Abbreviations that make a reader guess. Each is refused even though it is three letters or more.
-+GUESSWORK_ABBREVIATIONS = {"cfg", "msg", "tmp", "val", "idx", "cnt", "num", "obj", "arr",
-+                           "btn", "ctx", "req", "res", "buf", "ptr", "src", "dst", "esc", "pkg",
-+                           "opt", "opts", "seg", "ops", "rel", "pos", "len", "str", "dir", "elt",
-+                           "itm", "lst", "dct", "fnc", "cmd", "iss", "mod"}
++GUESSWORK_ABBREVIATIONS = {"cfg", "msg", "tmp", "val", "idx", "cnt", "num", "obj", "arr", "btn", "ctx", "req", "res", "buf", "ptr", "src", "dst", "esc", "pkg", "opt", "opts", "seg", "ops", "rel", "pos", "len", "str", "dir", "elt", "itm", "lst", "dct", "fnc", "cmd", "iss", "mod"}
 +
 +SPLIT_STATEMENTS = "rule 2, one thing per line: put each statement joined by ; on its own line"
++JOIN_THE_TEXT = "rule 4, one line per statement: join these side-by-side quoted texts into one"
 +NAME_THE_CONDITION = "rule 3, named conditions: give each part of this condition a yes-or-no name"
++KEEP_ON_ONE_LINE = "rule 4, one line per statement: keep this statement on one line, even if it is long"
 +NO_LAMBDA = "rule 6, no packed logic: write a named function instead of a lambda"
 +NO_NESTED_LOOPS = "rule 6, no packed logic: write the nested comprehension as loops"
 +NAME_THE_ARROW = "rule 6, no packed logic: give this one-line arrow function a name and a body"
 +DESCRIBE_THE_FUNCTION = "rule 5, describe each function: open it with one plain sentence"
-+VALUES_IN_PLACE = ("rule 7, values in place: write an f-string such as f\"step {name}\" instead of "
-+                   "percent placeholders")
-+EXPLAIN_THE_PATTERN = ("rule 8, explain patterns: put a plain comment above it saying "
-+                       "what it matches")
++VALUES_IN_PLACE = 'rule 7, values in place: write an f-string such as f"step {name}" instead of percent placeholders'
++VALUES_IN_PLACE_CSHARP = 'rule 7, values in place: write an interpolated string such as $"step {name}"'
++USE_NAMED_PIECES = "rule 8, patterns from named pieces: build it with readable_patterns.pattern(...) instead of raw pattern text"
++NO_CSHARP_BUILDER = "rule 8, patterns from named pieces: C# has no pattern builder yet; it comes with the readable-code skill, issue #474"
++
++# The one file that may write raw pattern text, because it is where the named pieces are made.
++PATTERN_BUILDER_FILE = "readable_patterns.py"
 +
 +# What git writes in a unified diff: "diff --git a/<old path> b/<new path>" starts each file.
 +# The lines "--- <old path>" then "+++ <new path>" name the old file, then the new one.
@@ -207,64 +327,145 @@ index 0000000..160dd1f
 +NEW_FILE_MARKER = "+++ "
 +
 +# A block header such as "@@ -12,3 +14,5 @@": captures the old and new start lines.
-+HUNK_HEADER = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
++HUNK_HEADER = pattern(line_start, "@@ -", capture(digits), optional(",", digits), " +", capture(digits), optional(",", digits), " @@")
 +
-+# A percent placeholder inside quoted text: a percent sign, optional width, then the value's type.
-+PERCENT_PLACEHOLDER = re.compile(r"%[-+ 0-9.]*[sdrfxi]|%\(")
++# A percent placeholder inside quoted text: a percent sign, optional width, then the value's type; or a percent sign and an opening bracket.
++PERCENT_PLACEHOLDER = pattern(any_of(sequence("%", zero_or_more(one_character_from("-+ 0123456789.")), one_character_from("sdrfxi")), sequence("%", "(")))
 +
 +# Quoted text followed by the percent operator that fills it.
-+PERCENT_OPERATOR = re.compile(r"\"\"\s*[%](?!=)")
++PERCENT_OPERATOR = pattern('""', optional_spaces, "%", not_followed_by("="))
 +
-+# A Python pattern written out in place: re.compile(...) always, or another re call whose first
-+# argument is quoted text. A pattern held in a named variable is explained where it is named.
-+PYTHON_PATTERN_CALL = re.compile(
-+    r"\bre\.compile\("
-+    r"|\bre\.(?:search|match|fullmatch|findall|finditer|sub|split)\(\s*[rRbB]*[\"']")
++# A C# composite placeholder inside quoted text, such as {0}, {1:N2} or {2,8}.
++COMPOSITE_PLACEHOLDER = pattern("{", digits, optional(any_of(",", ":"), anything_except("}")), "}")
++
++# A call to C#'s string.Format, which fills composite placeholders.
++CSHARP_FORMAT_CALL = pattern(word_edge, any_of("string", "String"), ".Format", optional_spaces, "(")
++
++# The ways a Python re call can be written with a quoted pattern as its first argument, and re.compile with anything.
++PYTHON_PATTERN_CALL = pattern(word_edge, "re.", any_of("compile(", sequence(any_of("search", "match", "fullmatch", "findall", "finditer", "sub", "split"), "(", optional_spaces, zero_or_more(one_character_from("rRbB")), one_character_from("\"'"))))
++
++# A Piece made from quoted text outside readable_patterns.py.
++PIECE_FROM_TEXT = pattern(word_edge, "Piece(", optional_spaces, one_character_from("\"'"))
 +
 +# A JavaScript pattern written between slashes, right after an opening bracket, comma or equals.
-+JAVASCRIPT_PATTERN = re.compile(r"[(,=]\s*/[^/*\s][^/]*/[gimsuy]*")
++JAVASCRIPT_PATTERN = pattern(one_character_from("(,="), optional_spaces, "/", one_character_except("/* \t"), anything_except("/"), "/", zero_or_more(one_character_from("gimsuy")))
++
++# A C# pattern: new Regex(...) always, or a static Regex call that is given quoted text.
++CSHARP_PATTERN_CALL = pattern(any_of(sequence("new", spaces, "Regex", optional_spaces, "("), sequence(word_edge, "Regex.", any_of("Match", "IsMatch", "Matches", "Replace", "Split"), "(", rest_of_line, '"')))
 +
 +# A private helper's name: an underscore, then a letter. Attribute access (.name) is not one.
-+PRIVATE_NAME = re.compile(r"(?<![\w.])_[A-Za-z]\w*")
++PRIVATE_NAME = pattern(not_preceded_by(any_of(word_character, ".")), "_", letter, word_characters)
 +
 +# A line that only gives an old private helper a new name: readable_name = _old_name
-+ALIAS_LINE = re.compile(r"^\s*([A-Za-z]\w*)\s*=\s*_[A-Za-z]\w*\s*(?:#.*)?$")
-+
-+# Any name in a line of code.
-+ANY_NAME = re.compile(r"[A-Za-z_$][\w$]*")
++ALIAS_LINE = pattern(line_start, optional_spaces, capture(letter, word_characters), optional_spaces, "=", optional_spaces, "_", letter, word_characters, optional_spaces, optional("#", rest_of_line), line_end)
 +
 +PYTHON_EXTENSIONS = (".py",)
 +JAVASCRIPT_EXTENSIONS = (".js", ".mjs", ".ts", ".tsx", ".jsx")
 +HTML_EXTENSIONS = (".html", ".htm")
++CSHARP_EXTENSIONS = (".cs",)
 +
-+# A quoted piece of text: single quotes or double quotes, with backslash escapes allowed inside.
-+STRING_LITERAL = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"")
-+# The start of a triple-quoted string, with a prefix letter like r in front.
++
++def text_between(quote):
++    """Quoted text: this quote mark, anything inside (a backslash escapes the next character), this quote mark."""
++    return sequence(quote, zero_or_more(any_of(one_character_except(quote + "\\"), sequence("\\", any_character))), quote)
++
++
++# A quoted piece of text: single quotes or double quotes, or a C# verbatim @"..." string where "" is a quote inside.
++QUOTED_TEXT = any_of(sequence('@"', zero_or_more(any_of(one_character_except('"'), '""')), '"'), text_between("'"), text_between('"'))
++STRING_LITERAL = pattern(QUOTED_TEXT)
++
++# Two blanked quoted texts side by side with only spaces between, as Python joins them silently: "" f""
++SIDE_BY_SIDE_TEXT = pattern('""', spaces, zero_or_more(one_character_from("rRbBfF")), '""')
++
 +# Where a triple-quoted string opens: an optional r, b, u or f prefix, then three quotes.
-+BLOCK_STRING_START = re.compile(r"[rRbBuUfF]*(\"\"\"|''')")
++BLOCK_STRING_START = sequence(zero_or_more(one_character_from("rRbBuUfF")), any_of('"""', "'''"))
++
++# Quoted text, or a triple-quoted string that opens here (blanked to the end of the line). The earliest one on the line wins, so a triple quote inside an ordinary string does not count.
++TEXT_TO_BLANK = pattern(any_of(sequence(BLOCK_STRING_START, rest_of_line), QUOTED_TEXT))
++
 +# One Python name, or several separated by commas: "a" or "first, second".
-+PYTHON_NAME_LIST =r"([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)"
++PYTHON_NAME_LIST = capture(PYTHON_NAME, zero_or_more(optional_spaces, ",", optional_spaces, PYTHON_NAME))
++
 +# A Python line that assigns to one or more names: "total = 0" or "first, second = pair".
-+PYTHON_ASSIGNMENT = re.compile(r"^\s*" + PYTHON_NAME_LIST + r"\s*(?:[-+*/]?=)(?!=)")
++PYTHON_ASSIGNMENT = pattern(line_start, optional_spaces, PYTHON_NAME_LIST, optional_spaces, optional(one_character_from("-+*/")), "=", not_followed_by("="))
++
 +# A Python function definition: its name, then the text of its parameters.
-+PYTHON_FUNCTION = re.compile(r"^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(([^)]*)")
++PYTHON_FUNCTION = pattern(line_start, optional_spaces, optional("async", spaces), "def", spaces, capture(PYTHON_NAME), optional_spaces, "(", capture(anything_except(")")))
++
 +# The names a Python "for ... in" loop creates.
-+PYTHON_LOOP_NAMES = re.compile(r"\bfor\s+" + PYTHON_NAME_LIST + r"\s+in\b")
++PYTHON_LOOP_NAMES = pattern(word_edge, "for", spaces, PYTHON_NAME_LIST, spaces, "in", word_edge)
++
 +# The name after "as", in "with ... as name" or "except ... as name".
-+PYTHON_AS_NAME = re.compile(r"\bas\s+([A-Za-z_]\w*)")
++PYTHON_AS_NAME = pattern(word_edge, "as", spaces, capture(PYTHON_NAME))
++
 +# The name a JavaScript const, let or var declares.
-+JAVASCRIPT_DECLARATION = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)")
++JAVASCRIPT_DECLARATION = pattern(word_edge, any_of("const", "let", "var"), spaces, capture(JAVASCRIPT_NAME))
++
 +# A JavaScript function definition: its name, then the text of its parameters.
-+JAVASCRIPT_FUNCTION = re.compile(r"\bfunction\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)")
++JAVASCRIPT_FUNCTION = pattern(word_edge, "function", spaces, capture(JAVASCRIPT_NAME), optional_spaces, "(", capture(anything_except(")")))
++
 +# The parameters before an arrow (=>): either "(a, b)" or a single bare name.
-+JAVASCRIPT_ARROW_PARAMETERS = re.compile(r"(?:\(([^()]*)\)|\b([A-Za-z_$][\w$]*))\s*=>")
++ARROW_PARAMETERS = pattern(any_of(sequence("(", capture(anything_except("()")), ")"), sequence(word_edge, capture(JAVASCRIPT_NAME))), optional_spaces, "=>")
++
 +# A named arrow function with a body: "const name = (...) => {".
-+JAVASCRIPT_ARROW_FUNCTION = re.compile(
-+    r"\b(?:const|let)\s+[A-Za-z_$][\w$]*\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{")
++JAVASCRIPT_ARROW_FUNCTION = pattern(word_edge, any_of("const", "let"), spaces, JAVASCRIPT_NAME, optional_spaces, "=", optional_spaces, optional("async", optional_spaces), "(", anything_except(")"), ")", optional_spaces, "=>", optional_spaces, "{")
++
++# Words a C# declaration may begin with, before its type.
++CSHARP_MODIFIER = any_of("public", "private", "protected", "internal", "static", "virtual", "override", "abstract", "async", "sealed", "extern", "unsafe", "partial", "readonly", "const")
++
++# A C# type: a built-in one or a capitalised name, then optional <generic arguments>, [] array marks and a ? mark.
++CSHARP_TYPE = sequence(any_of("var", "void", "int", "uint", "long", "ulong", "short", "byte", "float", "double", "decimal", "bool", "char", "string", "object", sequence(capital_letter, word_characters)), optional("<", anything_except("=;(){}"), ">"), zero_or_more("[]"), optional("?"))
++
++# A C# local or field declaration: "var name =", "int name;", "List<int> name =" or "var name in" of a foreach.
++CSHARP_DECLARATION = pattern(word_edge, CSHARP_TYPE, spaces, capture(PYTHON_NAME), optional_spaces, any_of(sequence("=", not_followed_by(one_character_from("=>"))), ";", sequence("in", space)))
++
++# A C# method definition: modifiers, return type, name, then the text of its parameters.
++CSHARP_METHOD = pattern(line_start, optional_spaces, zero_or_more(CSHARP_MODIFIER, spaces), CSHARP_TYPE, spaces, capture(PYTHON_NAME), optional_spaces, "(", capture(anything_except(")")))
++
++# A C# constructor: at least one modifier, the class name, then the text of its parameters.
++CSHARP_CONSTRUCTOR = pattern(line_start, optional_spaces, one_or_more(CSHARP_MODIFIER, spaces), capture(PYTHON_NAME), optional_spaces, "(", capture(anything_except(")")))
++
++# The name at the end of one C# parameter such as "ref Type name".
++CSHARP_PARAMETER_NAME = pattern(space, capture(PYTHON_NAME), line_end)
++
++# A C# attribute line such as [SerializeField].
++CSHARP_ATTRIBUTE_LINE = pattern(line_start, optional_spaces, "[", anything_except("]"), "]", optional_spaces, line_end)
++
++# Any name in a line of code.
++ANY_NAME = pattern(JAVASCRIPT_NAME)
++
++# A parameter that is one plain name.
++PLAIN_PARAMETER = pattern(line_start, JAVASCRIPT_NAME, line_end)
++
 +# A condition part that is already a yes-or-no name: "is_ready", "not is_done" or "!isDone".
-+PLAIN_NAME = re.compile(r"^\(?\s*(?:not\s+|!)?[A-Za-z_$][\w$.]*[\s),;]*$")
++PLAIN_NAME = pattern(line_start, optional("("), optional_spaces, optional(any_of(sequence("not", spaces), "!")), JAVASCRIPT_NAME, zero_or_more(".", JAVASCRIPT_NAME), zero_or_more(any_of(space, one_character_from("),;"))), line_end)
++
 +# The point between a lower-case letter or digit and the capital that starts the next word.
-+CAMEL_CASE_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
++CAMEL_CASE_BOUNDARY = pattern(preceded_by(lower_case_letter_or_digit), followed_by(capital_letter))
++
++# Where a condition starts: after if, while, return or a single equals sign.
++CONDITION_START = pattern(any_of(sequence(word_edge, "if", word_edge), sequence(word_edge, "while", word_edge), sequence(word_edge, "return", word_edge), sequence("=", not_followed_by("="))))
++
++# What joins the parts of a condition: and, or in Python; && and || elsewhere.
++PYTHON_JOINER = pattern(any_of(sequence(word_edge, "and", word_edge), sequence(word_edge, "or", word_edge)))
++BRACES_JOINER = pattern(any_of("&&", "||"))
++
++LAMBDA_WORD = pattern(word_edge, "lambda", word_edge)
++LEADING_FOR = pattern(line_start, optional_spaces, "for", word_edge)
++FOR_WORD = pattern(word_edge, "for", word_edge)
++
++# A for loop's header, whose semicolons belong together.
++FOR_HEADER = pattern(word_edge, "for", optional_spaces, "(", anything_except(")"), ")")
++
++# A line that ends with a mark or word which says the statement carries on below.
++CONTINUED_BELOW = pattern(any_of(one_character_from("\\+-*/%.?"), "&&", "||", "=>", sequence(word_edge, any_of("and", "or"))), optional_spaces, line_end)
++
++# A line that starts with a mark or word that carries on the statement above.
++CONTINUES_ABOVE = pattern(line_start, optional_spaces, any_of(one_character_from(".+"), "&&", "||", sequence(any_of("and", "or"), space)))
++
++SCRIPT_OPEN = pattern("<script", word_edge, ignore_case=True)
++SCRIPT_CLOSE = pattern("</script>", ignore_case=True)
++UNESCAPED_BACKTICK = pattern(not_preceded_by("\\"), "`")
 +
 +
 +def words_in_name(name):
@@ -299,19 +500,30 @@ index 0000000..160dd1f
 +    names = []
 +    for parameter in parameter_text.split(","):
 +        bare = parameter.split("=")[0].split(":")[0].strip().lstrip("*").strip()
-+        # A whole parameter that is one plain name.
-+        if re.match(r"^[A-Za-z_$][\w$]*$", bare):
++        if PLAIN_PARAMETER.match(bare):
 +            names.append(bare)
 +    return names
 +
 +
++def csharp_parameter_names(parameter_text):
++    """The names in a C# parameter list such as "int count, ref Vector3 where, string label = x"."""
++    names = []
++    for parameter in parameter_text.split(","):
++        bare = parameter.split("=")[0].strip()
++        found = CSHARP_PARAMETER_NAME.search(bare)
++        if found:
++            names.append(found.group(1))
++    return names
++
++
++def blank_text(match):
++    """What replaces a quoted string: an empty pair of quotes."""
++    return '""'
++
++
 +def without_strings(line):
-+    """The line with the inside of every quoted string blanked, so code rules never read text.
-+    A triple-quoted string that opens on this line is blanked to the end of the line."""
-+    block_start = BLOCK_STRING_START.search(line)
-+    if block_start:
-+        line = line[:block_start.start()] + '""'
-+    return STRING_LITERAL.sub('""', line)
++    """The line with the inside of every quoted string blanked, so code rules never read text. A triple-quoted string that opens on this line is blanked to the end of the line."""
++    return TEXT_TO_BLANK.sub(blank_text, line)
 +
 +
 +def names_bound_in_python(code):
@@ -330,13 +542,10 @@ index 0000000..160dd1f
 +    return names
 +
 +
-+def names_bound_in_javascript(code):
-+    """Every name a JavaScript line creates: declarations, functions and arrow parameters."""
-+    names = list(JAVASCRIPT_DECLARATION.findall(code))
-+    for function in JAVASCRIPT_FUNCTION.finditer(code):
-+        names.append(function.group(1))
-+        names.extend(parameter_names(function.group(2)))
-+    for arrow in JAVASCRIPT_ARROW_PARAMETERS.finditer(code):
++def arrow_parameter_names(code):
++    """The parameter names of every arrow function (=>) on a JavaScript or C# line."""
++    names = []
++    for arrow in ARROW_PARAMETERS.finditer(code):
 +        bracketed_parameters, single_parameter = arrow.groups()
 +        if bracketed_parameters is not None:
 +            names.extend(parameter_names(bracketed_parameters))
@@ -345,20 +554,38 @@ index 0000000..160dd1f
 +    return names
 +
 +
-+def has_unnamed_condition(code, joiner_pattern):
++def names_bound_in_javascript(code):
++    """Every name a JavaScript line creates: declarations, functions and arrow parameters."""
++    names = list(JAVASCRIPT_DECLARATION.findall(code))
++    for function in JAVASCRIPT_FUNCTION.finditer(code):
++        names.append(function.group(1))
++        names.extend(parameter_names(function.group(2)))
++    names.extend(arrow_parameter_names(code))
++    return names
++
++
++def names_bound_in_csharp(code):
++    """Every name a C# line creates: declarations, methods, constructors, their parameters and lambda parameters."""
++    names = list(CSHARP_DECLARATION.findall(code))
++    for definition in (CSHARP_METHOD.match(code), CSHARP_CONSTRUCTOR.match(code)):
++        if definition:
++            names.append(definition.group(1))
++            names.extend(csharp_parameter_names(definition.group(2)))
++    names.extend(arrow_parameter_names(code))
++    return names
++
++
++def has_unnamed_condition(code, joiner):
 +    """True when a condition joins three or more parts and one is not a plain yes-or-no name."""
-+    # The condition is whatever follows the last if, while, return or single equals sign.
-+    condition = re.split(r"\bif\b|\bwhile\b|\breturn\b|=(?!=)", code)[-1].rstrip(":{ ")
-+    parts = re.split(joiner_pattern, condition)
++    condition = CONDITION_START.split(code)[-1].rstrip(":{ ")
++    parts = joiner.split(condition)
 +    if len(parts) < 3:
 +        return False
 +    return not all(PLAIN_NAME.match(part.strip()) for part in parts)
 +
 +
 +def older_helper_problems(code, existing_names):
-+    """Rule 1 for an older private helper that new code calls: it needs a readable name too.
-+    A helper the same change also removes or already used is left to the clean-up issue, and a
-+    line that only gives an old helper a readable name (run_git_in = _mp_git) is the fix itself."""
++    """Rule 1 for an older private helper that new code calls: it needs a readable name too. A helper the same change also removes or already used is left to the clean-up issue, and a line that only gives an old helper a readable name (run_git_in = _mp_git) is the fix itself."""
 +    alias = ALIAS_LINE.match(code)
 +    if alias and not name_problem(alias.group(1)):
 +        return []
@@ -368,64 +595,84 @@ index 0000000..160dd1f
 +            continue
 +        why = name_problem(helper_name)
 +        if why:
-+            problems.append(f"rule 1, whole-word names: the older helper {helper_name}: {why}; "
-+                            "give it a readable name where new code calls it")
++            problems.append(f"rule 1, whole-word names: the older helper {helper_name}: {why}; give it a readable name where new code calls it")
 +    return problems
 +
 +
-+def text_problems(line):
-+    """Rule 7 for one line of Python, read with its quoted text still in place."""
++def name_problems(names, existing_names):
++    """Rule 1 for the names a line creates, leaving out names that were already in the file."""
++    problems = []
++    for name in names:
++        if name in existing_names:
++            continue
++        why = name_problem(name)
++        if why:
++            problems.append(f"rule 1, whole-word names: {why}")
++    return problems
++
++
++def text_problems(line, language):
++    """Rule 7 for one line, read with its quoted text still in place."""
 +    for quoted in STRING_LITERAL.findall(line):
-+        is_format_string = line[:line.find(quoted)].rstrip().endswith(("f", "rf", "fr"))
++        text_before = line[:line.find(quoted)].rstrip()
++        if language == "csharp":
++            is_interpolated = text_before.endswith(("$", "$@", "@$"))
++            if COMPOSITE_PLACEHOLDER.search(quoted) and not is_interpolated:
++                return [VALUES_IN_PLACE_CSHARP]
++            continue
++        is_format_string = text_before.endswith(("f", "rf", "fr"))
 +        if PERCENT_PLACEHOLDER.search(quoted) and not is_format_string:
 +            return [VALUES_IN_PLACE]
 +    return []
 +
 +
++def opens_more_than_closes(code, opening, closing):
++    """True when the line opens more of this bracket than it closes."""
++    return code.count(opening) > code.count(closing)
++
++
++def split_statement_problems(code):
++    """Rule 4: a statement is never split across lines. A list, dict or block bracket that is the last thing on its line is allowed."""
++    if CONTINUED_BELOW.search(code) or CONTINUES_ABOVE.match(code):
++        return [KEEP_ON_ONE_LINE]
++    if opens_more_than_closes(code, "(", ")"):
++        return [KEEP_ON_ONE_LINE]
++    for opening, closing in (("[", "]"), ("{", "}")):
++        ends_with_opening = code.rstrip().endswith(opening)
++        if opens_more_than_closes(code, opening, closing) and not ends_with_opening:
++            return [KEEP_ON_ONE_LINE]
++    return []
++
++
 +def python_problems(code, existing_names):
-+    """Rules 1, 2, 3 and 6 for one line of Python with its strings blanked. Names in
-+    existing_names were already in the file, so rule 1 leaves them to the clean-up issue."""
-+    problems = []
-+    for name in names_bound_in_python(code):
-+        if name in existing_names:
-+            continue
-+        why = name_problem(name)
-+        if why:
-+            problems.append(f"rule 1, whole-word names: {why}")
++    """Rules 1, 2, 3 and 6 for one line of Python with its strings blanked. Names in existing_names were already in the file, so rule 1 leaves them to the clean-up issue."""
++    problems = name_problems(names_bound_in_python(code), existing_names)
 +    problems.extend(older_helper_problems(code, existing_names))
 +    if PERCENT_OPERATOR.search(code):
 +        problems.append(VALUES_IN_PLACE)
-+    if ";" in code.split("#")[0]:
++    if SIDE_BY_SIDE_TEXT.search(code):
++        problems.append(JOIN_THE_TEXT)
++    if ";" in code:
 +        problems.append(SPLIT_STATEMENTS)
-+    if has_unnamed_condition(code, r"\band\b|\bor\b"):
++    if has_unnamed_condition(code, PYTHON_JOINER):
 +        problems.append(NAME_THE_CONDITION)
-+    # The word lambda.
-+    if re.search(r"\blambda\b", code):
++    if LAMBDA_WORD.search(code):
 +        problems.append(NO_LAMBDA)
 +    # A leading "for" starts a loop statement, so only the fors after it are comprehensions.
-+    expression = re.sub(r"^\s*for\b", "", code)
-+    # Each remaining word for.
-+    if len(re.findall(r"\bfor\b", expression)) >= 2:
++    expression = LEADING_FOR.sub("", code)
++    if len(FOR_WORD.findall(expression)) >= 2:
 +        problems.append(NO_NESTED_LOOPS)
 +    return problems
 +
 +
-+def javascript_problems(code, existing_names):
-+    """Rules 1, 2, 3 and 6 for one line of JavaScript with its strings blanked. Names in
-+    existing_names were already in the file, so rule 1 leaves them to the clean-up issue."""
-+    problems = []
-+    for name in names_bound_in_javascript(code):
-+        if name in existing_names:
-+            continue
-+        why = name_problem(name)
-+        if why:
-+            problems.append(f"rule 1, whole-word names: {why}")
++def braces_problems(code, existing_names, bound_names):
++    """Rules 1, 2, 3 and 6 for one line of JavaScript or C# with its strings blanked."""
++    problems = name_problems(bound_names, existing_names)
 +    problems.extend(older_helper_problems(code, existing_names))
-+    # A for loop's brackets hold semicolons that belong together, so they are emptied first.
-+    statement_part = re.sub(r"\bfor\s*\([^)]*\)", "for ()", code.split("//")[0]).rstrip()
++    statement_part = FOR_HEADER.sub("for ()", code).rstrip()
 +    if ";" in statement_part.rstrip(";"):
 +        problems.append(SPLIT_STATEMENTS)
-+    if has_unnamed_condition(code, r"&&|\|\|"):
++    if has_unnamed_condition(code, BRACES_JOINER):
 +        problems.append(NAME_THE_CONDITION)
 +    if "=>" in code:
 +        arrow_body = code.split("=>", 1)[1]
@@ -437,12 +684,27 @@ index 0000000..160dd1f
 +    return problems
 +
 +
++def javascript_problems(code, existing_names):
++    """Rules 1, 2, 3 and 6 for one line of JavaScript with its strings blanked."""
++    return braces_problems(code, existing_names, names_bound_in_javascript(code))
++
++
++def csharp_problems(code, existing_names):
++    """Rules 1, 2, 3 and 6 for one line of C# with its strings blanked, and the string.Format part of rule 7."""
++    problems = braces_problems(code, existing_names, names_bound_in_csharp(code))
++    if CSHARP_FORMAT_CALL.search(code):
++        problems.append(VALUES_IN_PLACE_CSHARP)
++    return problems
++
++
 +def language_of(file_name):
-+    """ "python", "javascript", "html" or "" for a file the code rules do not read."""
++    """ "python", "javascript", "csharp", "html" or "" for a file the code rules do not read."""
 +    if file_name.endswith(PYTHON_EXTENSIONS):
 +        return "python"
 +    if file_name.endswith(JAVASCRIPT_EXTENSIONS):
 +        return "javascript"
++    if file_name.endswith(CSHARP_EXTENSIONS):
++        return "csharp"
 +    if file_name.endswith(HTML_EXTENSIONS):
 +        return "html"
 +    return ""
@@ -452,8 +714,7 @@ index 0000000..160dd1f
 +
 +
 +def python_block_quote_after(line, open_block_quote):
-+    """Which triple quote is still open after this line ("" for none). Reads the line one character
-+    at a time, so a triple quote written inside an ordinary string does not count."""
++    """Which triple quote is still open after this line ("" for none). Reads the line one character at a time, so a triple quote written inside an ordinary string does not count."""
 +    position = 0
 +    open_single_quote = ""
 +    while position < len(line):
@@ -502,6 +763,8 @@ index 0000000..160dd1f
 +            return not self.in_python_block_string
 +        if language == "javascript":
 +            return not self.in_javascript_template
++        if language == "csharp":
++            return True
 +        if language == "html":
 +            return self.in_html_script and not self.in_javascript_template
 +        return False
@@ -512,15 +775,14 @@ index 0000000..160dd1f
 +            self.python_block_quote = python_block_quote_after(line, self.python_block_quote)
 +            self.in_python_block_string = bool(self.python_block_quote)
 +            return
++        if language == "csharp":
++            return
 +        if language == "html":
-+            # An opening script tag.
-+            if re.search(r"<script\b", line, re.IGNORECASE):
++            if SCRIPT_OPEN.search(line):
 +                self.in_html_script = True
-+            # A closing script tag.
-+            if re.search(r"</script>", line, re.IGNORECASE):
++            if SCRIPT_CLOSE.search(line):
 +                self.in_html_script = False
-+        # Each backtick that is not escaped with a backslash.
-+        backticks = len(re.findall(r"(?<!\\)`", line))
++        backticks = len(UNESCAPED_BACKTICK.findall(line))
 +        if backticks % 2 == 1:
 +            self.in_javascript_template = not self.in_javascript_template
 +
@@ -542,11 +804,27 @@ index 0000000..160dd1f
 +        return []
 +
 +
-+def function_description_problem(added_line, next_lines, previous_line, language):
++def comment_above_csharp_method(lines_above):
++    """True when a C# method has a comment directly above it, or above the attribute lines such as [SerializeField] that sit directly above it."""
++    for line in reversed(lines_above):
++        if CSHARP_ATTRIBUTE_LINE.match(line):
++            continue
++        return line.strip().startswith(("//", "/*", "*"))
++    return False
++
++
++def function_description_problem(added_line, next_lines, lines_above, language):
 +    """Rule 5: why a new function has no plain description, or ""."""
++    previous_line = lines_above[-1] if lines_above else ""
++    if language == "csharp":
++        is_method = bool(CSHARP_METHOD.match(added_line) or CSHARP_CONSTRUCTOR.match(added_line))
++        if is_method and not comment_above_csharp_method(lines_above):
++            return DESCRIBE_THE_FUNCTION
++        return ""
 +    is_python_function = language == "python" and PYTHON_FUNCTION.match(added_line)
-+    is_javascript_function = language in ("javascript", "html") and (
-+        JAVASCRIPT_FUNCTION.search(added_line) or JAVASCRIPT_ARROW_FUNCTION.search(added_line))
++    is_javascript_language = language in ("javascript", "html")
++    has_javascript_function = bool(JAVASCRIPT_FUNCTION.search(added_line) or JAVASCRIPT_ARROW_FUNCTION.search(added_line))
++    is_javascript_function = is_javascript_language and has_javascript_function
 +    if not (is_python_function or is_javascript_function):
 +        return ""
 +    previous_is_comment = previous_line.strip().startswith(("#", "//", "/*", "*"))
@@ -560,7 +838,7 @@ index 0000000..160dd1f
 +    return DESCRIBE_THE_FUNCTION
 +
 +
-+def names_in_removed_lines(lines, language):
++def names_in_removed_lines(lines):
 +    """Every name the hunk's removed lines bind: names that existed before this change."""
 +    names = set()
 +    for kind, text in lines:
@@ -573,63 +851,62 @@ index 0000000..160dd1f
 +
 +def without_comment(code, language):
 +    """The code part of a line whose quoted text is blanked: a comment is prose, not code."""
-+    comment_mark = "#" if language == "python" else "//"
-+    return code.split(comment_mark, 1)[0]
-+
-+
-+def pattern_lacks_comment(code, previous_line, language):
-+    """Rule 8: True when this line writes a pattern with no plain comment above it or after it."""
 +    if language == "python":
-+        writes_pattern = bool(PYTHON_PATTERN_CALL.search(code))
++        return code.split("#", 1)[0]
++    if code.lstrip().startswith(("/*", "*")):
++        return ""
++    return code.split("//", 1)[0]
++
++
++def raw_pattern_problem(code, language, file_name):
++    """Rule 8: why this line writes raw pattern text instead of building it from named pieces, or ""."""
++    if os.path.basename(file_name) == PATTERN_BUILDER_FILE:
++        return ""
++    if language == "python":
++        writes_pattern = PYTHON_PATTERN_CALL.search(code) or PIECE_FROM_TEXT.search(code)
++        return USE_NAMED_PIECES if writes_pattern else ""
++    if language == "csharp":
++        return NO_CSHARP_BUILDER if CSHARP_PATTERN_CALL.search(code) else ""
++    return USE_NAMED_PIECES if JAVASCRIPT_PATTERN.search(code) else ""
++
++
++def code_problems(text, language, file_name, existing_names, next_lines, lines_above):
++    """Every rule broken by one added line of code."""
++    code = without_comment(without_strings(text), language)
++    if language == "python":
++        problems = python_problems(code, existing_names)
++    elif language == "csharp":
++        problems = csharp_problems(code, existing_names)
 +    else:
-+        writes_pattern = bool(JAVASCRIPT_PATTERN.search(code))
-+    if not writes_pattern:
-+        return False
-+    comment_above = previous_line.strip().startswith(("#", "//"))
-+    comment_after = "#" in code or "//" in code
-+    return not (comment_above or comment_after)
++        problems = javascript_problems(code, existing_names)
++    problems.extend(split_statement_problems(code))
++    description = function_description_problem(text, next_lines, lines_above, language)
++    if description:
++        problems.append(description)
++    if language in ("python", "csharp"):
++        problems.extend(text_problems(text, language))
++    pattern_problem = raw_pattern_problem(code, language, file_name)
++    if pattern_problem:
++        problems.append(pattern_problem)
++    return problems
 +
 +
 +def problems_in_file(file_name, hunks, project, read_file=None):
 +    """Every rule broken by the lines this file's hunks add, as "file:line: problem" strings."""
 +    language = language_of(file_name)
-+    if read_file is None:
-+        original_lines = read_original_file(project, file_name)
-+    else:
-+        original_lines = read_file(file_name)
++    original_lines = read_original_file(project, file_name) if read_file is None else read_file(file_name)
 +    problems = []
 +    for old_start, new_start, lines in hunks:
 +        state = state_before_line(original_lines, old_start, language)
 +        new_line_number = new_start
 +        new_side = [(kind, text) for kind, text in lines if kind != "-"]
-+        existing_names = names_in_removed_lines(lines, language)
++        existing_names = names_in_removed_lines(lines)
 +        for position, (kind, text) in enumerate(new_side):
-+            is_added = kind == "+"
-+            is_code = state.is_code(language)
-+            if is_added:
-+                where = f"{file_name}:{new_line_number}"
-+                is_table_row = file_name.endswith(".md") and text.lstrip().startswith("|")
-+                if len(text) > MAX_LINE_LENGTH and not is_table_row:
-+                    problems.append(f"{where}: rule 4, short lines: {len(text)} characters, "
-+                                    f"at most {MAX_LINE_LENGTH}")
-+                if is_code:
-+                    code_and_comment = without_strings(text)
-+                    code = without_comment(code_and_comment, language)
-+                    if language == "python":
-+                        line_problems = python_problems(code, existing_names)
-+                    else:
-+                        line_problems = javascript_problems(code, existing_names)
-+                    previous_line = new_side[position - 1][1] if position else ""
-+                    next_lines = [line for _, line in new_side[position + 1:position + 4]]
-+                    description = function_description_problem(
-+                        text, next_lines, previous_line, language)
-+                    if description:
-+                        line_problems.append(description)
-+                    if language == "python":
-+                        line_problems.extend(text_problems(text))
-+                    if pattern_lacks_comment(code_and_comment, previous_line, language):
-+                        line_problems.append(EXPLAIN_THE_PATTERN)
-+                    problems.extend(f"{where}: {problem}" for problem in line_problems)
++            if kind == "+" and state.is_code(language):
++                lines_above = [line for _, line in new_side[:position]]
++                next_lines = [line for _, line in new_side[position + 1:position + 4]]
++                found = code_problems(text, language, file_name, existing_names, next_lines, lines_above)
++                problems.extend(f"{file_name}:{new_line_number}: {problem}" for problem in found)
 +            state.move_past(text, language)
 +            new_line_number += 1
 +    return problems
@@ -648,8 +925,7 @@ index 0000000..160dd1f
 +        if header and current_file is not None:
 +            files[current_file].append((int(header.group(1)), int(header.group(2)), []))
 +            continue
-+        is_file_header = line.startswith((OLD_FILE_MARKER, NEW_FILE_MARKER, "index ", "new file",
-+                                          "deleted file"))
++        is_file_header = line.startswith((OLD_FILE_MARKER, NEW_FILE_MARKER, "index ", "new file", "deleted file"))
 +        is_before_first_hunk = current_file is None or not files[current_file]
 +        if is_before_first_hunk or is_file_header:
 +            continue
