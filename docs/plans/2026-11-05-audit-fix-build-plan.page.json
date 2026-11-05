@@ -1,0 +1,36 @@
+{
+  "title": "Audit Fixes Build Plan",
+  "eyebrow": "Build plan for approval · parent issue #476 (\"Fix the 45 findings from the 2026-11-05 audits, in six steps\")",
+  "approval": "Build plan approved: audit fix order",
+  "reply": "",
+  "short": {
+    "lead": "You approved the fix order, picking A for the question 'Which order should the fixes go in?': critical holes first, then the blocks on routine work, then handoff and freeing disk space. That order is now parent issue #476, with one child issue for each of the six steps, #477 to #482. The plan is in docs/4-systems/audit-fixes.md. No code changes until you approve this page. After that, one builder takes one step at a time in its own worktree. Each fix lands with a verify.py case that fails on the old code and passes on the new code.",
+    "hint": "Tap a step to see what it covers and when it counts as done.",
+    "key": [["Planned, not started", ""], ["Needs your answer", "you"]],
+    "items": [
+      ["stop", "Step 1, #477", "Close the holes where harm happens with no prompt", "", "A1: a commit can run any program. A3: /bin/rm and find -delete get past the delete guard. A4: checkout HEAD -- and switch -f discard edits. U5: worktree remove --force gets no decision. A11: autosave pushes untracked files. A8: the installer can empty settings.json. D1: a GitHub comment can approve a stage.", "Done when each finding's verify.py case passes, both test suites (verify.py and tools/verify_tools.py) pass, and the audit's proof commands are now refused or ask you first."],
+      ["unlock", "Step 2, #478", "Stop the guard refusing routine commands", "", "A5: agent/ branches become the agent's own. A6, H3 and U8: only running a script counts as running it. U6 and H1: single-quoted text and quoted heredocs aren't read as commands, but $(...) in double quotes still is. H2: unstaging is allowed. U7: the first cloud commit gets one refusal that names the full fix, not three.", "Done when both test suites (verify.py and tools/verify_tools.py) pass and the verify.py cases for A1 from step 1 still pass."],
+      ["folder", "Step 3, #479", "Hand off and free disk without new approvals", "", "U4: folder deletes that git or an install can undo are allowed. U1: \"Continue from: <branch>\" and \"Issues for <feature>: #N\" work in your own messages only. U2b: issues from scripts and loops are counted. U2: each approval is pushed at once.", "The exact list of deletable folders comes to you on this step's own page before code. Done when a real cloud session shows the handoff and the delete working."],
+      ["lock", "Steps 4 to 6, #480 to #482", "Side doors, approvals, tidying", "", "Step 4 closes the ways around the code lock and opens a separate issue for D10, the shell-write gap. Step 5 makes each approval move only what you named. Step 6 fixes the tooling's wrong answers, removes dead code, and measures the hook cost before changing it.", "Done when both test suites (verify.py and tools/verify_tools.py) pass after each step."],
+      ["check", "Your verdict", "Approve the build plan", "you", "Under Choices, pick A or B for when you check the work (QA).", "Send \"Build plan approved: audit fix order\" with your pick, or tell me what to change."]
+    ]
+  },
+  "changes": [
+    ["chg", "Six steps, in the order you approved", "Each step is one child issue of #476, built and checked before the next starts.",
+      ["45 findings sit in four audit reports, and none is fixed.", "Each fix arrives with its test, one step at a time, with one version bump per step."],
+      "The three promises hold in every step: only your messages move a stage, code stays locked before a build plan is approved, and nothing is deleted that can't be brought back."]
+  ],
+  "choices": [
+    ["qa", "When should you QA the work?", [
+      ["A", "After each step: you get a QA page per step, and the next step waits for your pass", 1, "Six small checks. A problem in step 1's guard patterns is caught before step 2 builds on them."],
+      ["B", "After steps 1 to 3, then after steps 4 to 6", 0, "Two larger checks. Faster, but a problem in step 1 could carry into steps 2 and 3."]
+    ], "My suggestion is A, because steps 1 and 2 change the same guard patterns."]
+  ],
+  "wrapup": {
+    "summary": "A build plan for the audit fixes: parent issue #476 and six step issues, #477 to #482, in the order you approved.",
+    "changing": "Nothing until you approve. After that, a builder starts step 1, #477.",
+    "blocking": "Your approval of this plan and your pick for when QA happens.",
+    "next": "Step 1 is built in its own worktree, checked with verify.py and tools/verify_tools.py, and handed to you with a QA page.",
+    "todo": ["Pick your answer under Choices.", "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."]
+  }
+}
