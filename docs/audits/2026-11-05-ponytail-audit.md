@@ -1,4 +1,7 @@
-# Repo audit, 2026-11-05
+# Repo audit, 2026-11-05 (first pass)
+
+**Superseded:** this first pass read only part of the code. The full audit, with every file read,
+is [2026-11-05-ponytail-audit-full.md](2026-11-05-ponytail-audit-full.md).
 
 A one-shot quality audit of the whole repo, run with the ponytail-audit skill. Nothing was changed
 by it; every finding below is a proposal.
