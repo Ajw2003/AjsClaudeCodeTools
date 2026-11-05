@@ -1,0 +1,40 @@
+{
+  "title": "All Audit Findings, Ranked",
+  "eyebrow": "The full audit, the design loop deep dive, the usability audit and a hook friction pass, in one list · nothing changed yet",
+  "approval": "Design approved: audit fix order",
+  "short": {
+    "lead": "This puts every finding from today in one list, ranked by harm: 20 from the full audit, 12 from the design loop deep dive, 9 from the usability audit, and 5 new ones from running all 17 hooks against routine commands. The new pass found that a commit message mentioning rm -rf or push --force is refused, unstaging a file is refused, and git add can be blocked by the rerun counter. Seven findings are critical, because a program runs, data leaks or files are lost with no prompt. Eleven more block routine work. Blocks rank above lock bypasses because the only way past a block is to switch the whole check off.",
+    "hint": "Tap a card to see the findings at that level.",
+    "key": [["Found today", ""], ["Needs your answer", "you"]],
+    "items": [
+      ["search", "New: hook friction pass", "17 hooks, 25 shell commands, 6 file writes", "", "H1: commit messages and echo text that mention rm -rf or push --force are refused. H2: git restore --staged and git reset HEAD on a file are refused, though both keep the edits. H3: git add was refused by the rerun counter after other commands had named the file. H4: each shell command starts 6 hook processes taking 347 to 490 ms, and each write starts 9 taking 424 to 636 ms. H5: .txt, .csv and .json files are locked like code.", "Nothing from you."],
+      ["stop", "Level 1: Critical", "7 findings: runs, leaks or loss with no prompt", "", "A1 a commit runs any program. A11 autosave pushes untracked files, secrets included. D1 a GitHub comment can approve a stage. A3 /bin/rm and find -delete get past the delete guard. A4 checkout HEAD -- and switch -f discard edits. U5 git worktree remove --force is unguarded. A8 the installer can empty settings.json.", "Nothing from you."],
+      ["stop", "Level 2: Blocks work", "11 findings that push checks to be switched off", "", "A5 cloud sessions can't commit to agent/ branches. U4 nothing can be deleted to free disk. U1 handoff repeats every approval. U2b: issues created by a script aren't counted. A6, H3 and U8: reading a script is treated as running it. U6 and H1: quoted text is treated as a command. H2: unstaging a file is refused. U7 the first cloud commit is refused three times. U2 approvals are saved only on push.", "Nothing from you."],
+      ["flask", "Levels 3 to 5", "Lock bypasses, wrong answers, tidying", "", "Level 3 (9): the model can step around the code lock, with shell writes (D10) the largest. Level 4 (13): approvals and tools give wrong answers but lose nothing. Level 5 (5): missing tests, added alongside each step, the time hooks take to run, and dead code.", "Nothing from you."],
+      ["check", "Your verdict", "Approve the fix order", "you", "Six steps, critical holes first. Each step becomes one feature with its own issues, and each fix lands with a verify.py test case.", "Send \"Design approved: audit fix order\" with your pick under Choices, or tell me what to change."]
+    ]
+  },
+  "changes": [
+    ["chg", "Step 1: Close the critical holes", "A1, A3, A4, U5, A11, A8 and D1.", ["Programs run, files are lost and outsiders can approve, all with no prompt.", "Guard patterns widened, autosave adds only tracked and written files, the installer writes atomically, and four more relayed-message markers are added."], "The only findings where harm happens without any mistake by you.", null, null],
+    ["chg", "Step 2: Stop blocking routine work", "A5, A6 with H3, U6 with H1, H2 and U7.", ["Commits, reads, unstaging and cloud branches are refused.", "agent/ is owned; only interpreter runs count as running a script; single-quoted text and heredocs with a quoted delimiter are skipped, but $(...) in double quotes is still checked; --staged is allowed; the hook sets the git identity."], "Each of these blocks, left as it is, ends with someone switching a check off.", null, null],
+    ["chg", "Step 3: Fix handoff and full disk", "U4, U1, U2 and U2b.", ["A handoff repeats every approval, and a full disk can't be cleared.", "'Continue from: <branch>' and 'Issues for <feature>: #N'; folder deletes git or an install can undo; issue recording sees loops and gh api; approvals are pushed at once."], "The two problems you named: the handoff repeating approvals, and the full disk.", null, null],
+    ["chg", "Steps 4 to 6: Side doors, approvals, tidying", "Levels 3, 4 and 5.", ["The model can step around the lock, and some approvals move the wrong thing.", "Side doors closed (D3, D4, A9, A7, D2, D9, A2), approvals checked (D5 to D8, U3), then tooling and dead code."], "D10, the shell-write gap, stays with the restructure but gets its own issue.", null, null]
+  ],
+  "choices": [
+    ["order", "Which order should the fixes go in?", [
+      ["A", "Critical first, then unblock routine work, then handoff and disk", 1, "Harm with no prompt goes first. The blocks come next because they get checks switched off."],
+      ["B", "Unblock routine work first, then critical", 0, "Faster day-to-day relief, but the critical holes stay open longer."],
+      ["C", "Handoff and disk first", 0, "The two problems you named first, but it leaves the critical holes for later."]
+    ], "My suggestion is A, because step 1 is the only one where harm needs no mistake by you."]
+  ],
+  "wrapup": {
+    "summary": "45 separate findings in one ranked list (U8 is the same as A6): 7 critical, 11 that block work, 9 lock bypasses, 13 wrong results and 5 minor, with a six-step fix order.",
+    "changing": "Nothing has been changed. The list is in docs/audits/2026-11-05-combined-ranked.md, committed on the branch AjsAgent/audit-2026-11-05.",
+    "blocking": "Nothing is blocked. The order waits for you whenever you want the fixes started.",
+    "next": "When you approve an order: one parent issue with a child per step, each fix with its verify.py test case.",
+    "todo": [
+      "Read the levels on this page.",
+      "When you want fixes started, pick an order under Choices and send the reply."
+    ]
+  }
+}
