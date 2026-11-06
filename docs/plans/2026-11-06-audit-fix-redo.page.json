@@ -1,0 +1,46 @@
+{
+  "title": "Audit Fixes Redo: Stage File and Script-Made Issues",
+  "eyebrow": "Design for approval · QA failed on house-rules 2.76.0 · parent issue #476 (\"Fix the 45 findings from the 2026-11-05 audits, in six steps\")",
+  "approval": "Design approved: audit fix order",
+  "reply": "",
+  "short": {
+    "lead": "You failed QA with a screenshot from the PlunderSpell-demand session, and I read that session's record to find out why. It shows two routine failures that 2.76.0 still has. First, after your design approval, the hook said to commit .claude/house-rules-loop.json, and git answered: pathspec '.claude/house-rules-loop.json' did not match any files. When the session then tried to locate the file with find and git check-ignore, the lock on the stage file (added by the audit fixes) refused both commands, even though neither can write anything. Second, the session made nine issues with a Python script saved to a file and run as python /tmp/gb_issues.py. The hook can't see inside a script file, so the Build plan approved step was refused until you typed an Issues for list naming the nine issues by number. This page proposes a fix for each, built on code that already exists.",
+    "hint": "Tap a card to see the cause, the evidence and the fix.",
+    "key": [["Found in the record", ""], ["Needs your answer", "you"]],
+    "items": [
+      ["folder", "Stage file", "The hook names a file that isn't in this checkout", "", "The hook writes the stage file into the main checkout's .claude/ folder, the parent of git's shared folder (design_loop.py, _loop_path). In a second checkout made with git worktree add, the main checkout is somewhere else, so the file exists there and the note's path doesn't exist here. I have not proven that the PlunderSpell-demand checkout is a git worktree. The record holds only the session's last 100 events, and none of them shows where git's shared folder is. I think it is a worktree because that is the only cause I found that fits a path that is missing right after the hook wrote the file.", "Choose under Choices: where a worktree's stage file lives."],
+      ["search", "Finding it", "Read-only commands were refused", "", "The lock on shell commands that name the stage file allows a list of read-only commands. find, test, git ls-files, git check-ignore and git rev-parse are not on it, so the session's search was refused with: this command names house-rules-loop.json and isn't a read. The fix adds those five, which only read.", "Nothing from you."],
+      ["list", "Script-made issues", "Issues made by a script file aren't counted", "", "The hook counts issues by reading each command as it runs: gh issue create, the GitHub tool, one-line loops, python3 -c and gh api. A script saved to a file and then run is invisible to it. GitHub already knows which issues exist. I asked it for this repo's open issues labelled AjsAgent created this and opened after a given time. It returned the seven audit fix issues, all opened at 06:58 UTC on 2026-11-05, right after that day's design approval. The fix asks GitHub that question when Build plan approved finds too few recorded issues.", "Choose under Choices: how the hook finds issues it didn't see made."],
+      ["check", "Your verdict", "Approve the redo design", "you", "Two choices below, then a build plan with the exact code, as last time.", "Send Design approved: audit fix order with your picks, or tell me what to change."]
+    ]
+  },
+  "changes": [
+    ["chg", "Stage file note (design_loop.py)", "The note after an approval names the stage file's real path.",
+      ["It always says .claude/house-rules-loop.json, even where that file doesn't exist.", "It names the file the hook actually wrote, and says when the file belongs to another checkout."],
+      "This part is needed with either answer to the first choice."],
+    ["chg", "Read-only commands (design_loop.py, _LOOP_READERS and _LOOP_GIT_READS)", "Five more read-only commands may name the stage file.",
+      ["find, test, git ls-files, git check-ignore and git rev-parse are refused.", "They are allowed. Every command that can write the file stays refused."],
+      "Promise 1 holds: only your messages move a stage."],
+    ["chg", "Issue counting (design_loop.py)", "Build plan approved looks on GitHub when its record is short.",
+      ["Issues made by a script file are refused until you type Issues for.", "The hook records this repo's open issues labelled AjsAgent created this that were opened after your Design approved, then checks their labels as it does now."],
+      "Issues for stays, for issues made before the design approval or in another repo."]
+  ],
+  "choices": [
+    ["stage", "Where should a git worktree's stage file live?", [
+      ["A", "Each git worktree you make yourself keeps the stage file in its own .claude/ folder, committed on its own branch. Helper worktrees under .claude/worktrees/ keep sharing the main checkout's file.", 1, "A worktree you make yourself is a separate line of work on its own branch, so it gets its own stage, and the file is where the note says."],
+      ["B", "Keep one shared file in the main checkout, and only fix the note to name that path", 0, "No behaviour change, but approvals in the worktree are saved only by committing in the main checkout, on whatever branch that has."]
+    ], "My suggestion is A, because the file then lives on the branch the work is on."],
+    ["issues", "How should the hook find issues it didn't see being made?", [
+      ["A", "Ask GitHub at Build plan approved, as described on the Script-made issues card", 1, "Works however the issues were made, with no message from you."],
+      ["B", "Also tell the model, in the Plan note, to make issues with gh issue create or the GitHub tool, never a script file", 0, "Smaller, but it relies on the model following an instruction it has already ignored twice."],
+      ["C", "Keep Issues for as the only way", 0, "No change, and you keep typing the list."]
+    ], "My suggestion is A. It uses the same REST read the hook already uses for labels."]
+  ],
+  "wrapup": {
+    "summary": "QA failed on two routine design loop problems, both traced in the PlunderSpell-demand session's record, with a fix proposed for each.",
+    "changing": "Nothing yet. The seven issues are back to in progress, and the stage is Design.",
+    "blocking": "Your answers to the two choices and your design approval.",
+    "next": "After you approve, I write the exact code for the redo on a build plan page, as last time, then build it and send one QA page.",
+    "todo": ["Under Choices, pick A or B for where a worktree's stage file lives, and A, B or C for how the hook finds issues it didn't see made.", "Send Design approved: audit fix order with your picks, or tell me what to change."]
+  }
+}
