@@ -283,6 +283,7 @@ EVENTS = {
     "verdict": event_verdict,
     "subagentcommit": event_subagentcommit,
     "autosave": event_autosave,
+    "autosavefinal": event_autosave_final,
     "commitgate": event_commitgate,
     "worktreesweep": event_worktreesweep,
     "agentcap": event_agentcap,

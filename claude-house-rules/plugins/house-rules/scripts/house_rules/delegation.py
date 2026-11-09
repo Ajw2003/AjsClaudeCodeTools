@@ -1489,6 +1489,40 @@ def event_autosave():
     return 0
 
 
+def event_autosave_final():
+    """Stop / StopFailure (#487): save at once, skipping the 60 s window, when the folder has changes
+    (tracked, or files the helper wrote) or the autosave ref is older than HEAD. No WIP commit, ever."""
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit({"systemMessage": "house-rules plugin: autosave (end of turn) got an empty payload and did not run."})
+            return 0
+        target = _autosave_target(payload)
+        if target is None or target[1] is None:  # not in a repo, or detached HEAD (said by the edit hook)
+            return 0
+        top, branch, _tool = target
+        written = set(_autosave_read(_autosave_state_path(top, branch, "written")).splitlines())
+        saved = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
+        since = float(saved[0]) if len(saved) == 2 else 0.0  # a file changed after the last save
+        tracked = [p for p, _t in _parse_status_porcelain(_ag(top, ["status", "--porcelain", "-uno"])[1].splitlines())]
+        changed = [p for p in set(tracked) | (written & set(_dirty_files(top)))
+                   if os.path.exists(os.path.join(top, p)) and os.path.getmtime(os.path.join(top, p)) > since]
+        rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", AUTOSAVE_REF_PREFIX + branch], check=False)
+        head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+        stale = rc != 0 or _ag(top, ["rev-parse", cur.strip() + "^"], check=False)[1].strip() != head
+        if not (changed or stale):
+            return 0
+        msg = _autosave_snapshot(top, branch, force_push=True)
+        if msg:
+            emit({"systemMessage": msg})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: autosave (end of turn) hit an error (%s: %s) and did not save."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
 def event_commitgate():
     """PreToolUse (Write|Edit|NotebookEdit) on a worktree-agent- branch: once COMMITGATE_THRESHOLD
     files are uncommitted, deny the edit and say commit first. Asked once and ignored (HEAD has not

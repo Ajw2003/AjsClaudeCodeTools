@@ -241,6 +241,36 @@ commit_case(
     "autosave: does nothing with HOUSE_RULES_AUTOSAVE=off (main-session branches are no longer ignored, #486)",
     not _quiet, "; ".join(_quiet) or "no ref and no output",
 )
+# #487: Stop / StopFailure save at once, inside the 60 s window.
+for _ev, _extra in (("Stop", {}), ("StopFailure", {"error": "rate_limit"})):
+    _bn = "worktree-agent-fin-" + _ev.lower()
+    _df, _bf = _as_repo(_bn)
+    _pf = _as_write(_df, "a.py")
+    run_hook("autosave", _as_payload("PostToolUse", "Write", _pf, _df), env=_as_env())
+    _r1 = _as_ref(_df, _bn)
+    _as_write(_df, "a.py", "changed\n")  # inside the window: the edit hook would stay silent
+    _fp = json.dumps(dict({"hook_event_name": _ev, "session_id": "s1", "cwd": _df}, **_extra))
+    _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
+    _r2 = _as_ref(_df, _bn)
+    commit_case(
+        "autosavefinal: a %s payload inside the 60 s window pushes a fresh snapshot" % _ev,
+        bool(_r1) and _r2 != _r1 and _as_remote_ref(_bf, _bn) == _r2 and not _fo.strip(),
+        "first %s, now %s, origin %s, out %r" % (_r1[:9], _r2[:9], _as_remote_ref(_bf, _bn)[:9], _fo[:120]),
+    )
+    _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
+    commit_case(
+        "autosavefinal: a clean, already-saved folder gives no output and no new ref (%s)" % _ev,
+        _as_ref(_df, _bn) == _r2 and not _fo.strip(),
+        "ref %s -> %s, out %r" % (_r2[:9], _as_ref(_df, _bn)[:9], _fo[:120]),
+    )
+_dof, _ = _as_repo("worktree-agent-finoff")
+_as_write(_dof, "a.py")
+_, _oo, _ = run_hook("autosavefinal", json.dumps({"hook_event_name": "Stop", "cwd": _dof}),
+                     env=_as_env(HOUSE_RULES_AUTOSAVE="off"))
+commit_case("autosavefinal: does nothing with HOUSE_RULES_AUTOSAVE=off",
+            not _as_ref(_dof, "worktree-agent-finoff") and not _oo.strip(), "out %r" % _oo[:80])
+commit_case("autosavefinal is wired to Stop and StopFailure in hooks.json",
+            hooks_json_text.count('run.sh\\" autosavefinal') == 2, "hooks.json entries")
 # .git/HEAD fast path (2.48.0): a branch that is not worktree-agent-* is ruled out by reading
 # .git/HEAD, so no git subprocess is spawned. The probe counts subprocess.Popen constructions
 # (subprocess.run goes through Popen) while running hook.py unmodified.
