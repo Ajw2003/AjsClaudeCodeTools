@@ -148,7 +148,7 @@ def event_handover():
         if turn_records is not None:
             written_now, committed_now = handover_turn_writes(turn_records)
             plain_problems = handover_plain_check(written_now, committed_now, have_reply, reply_text)
-            handoff = handover_handoff_check(written_now, committed_now, _payload_cwd(payload))
+            handoff = handover_handoff_check(written_now, committed_now, core._payload_cwd(payload))
             if written_now and _parity_enabled():
                 pm = _PARITY_RE.search(_last_user_text(transcript_path))
                 reply_for_parity = reply_text if have_reply else ""
