@@ -265,6 +265,7 @@ EVENTS = {
     "inject": event_inject,
     "showrule": event_showrule,
     "issuelist": event_issuelist,
+    "pickup": event_pickup,
     "profile": event_profile,
     "standards": event_standards,
     "docstiers": event_docstiers,

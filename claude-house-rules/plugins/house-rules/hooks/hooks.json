@@ -39,6 +39,15 @@
             "timeout": 90
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" pickup",
+            "timeout": 15
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

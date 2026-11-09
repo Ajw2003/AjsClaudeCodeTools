@@ -1796,4 +1796,99 @@ _wt_check("links owed: silent outside a project thread",
           [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
 
 
+# --- #408: pickup (SessionStart) - note, snapshot facts, missing work; temp repos with a bare origin
+_PK_BR = "AjsAgent/feat"
+_PK_NOTE = "docs/5-today/handoff-AjsAgent-feat.md"
+
+
+def _pk_env(**extra):
+    e = _project_env(_FIXTURE_ROOT)
+    e["HOUSE_RULES_HANDOFF"] = "on"
+    e.update(extra)
+    return e
+
+
+def _pk_run(cwd, **extra):
+    return run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": cwd}), env=_pk_env(**extra))[1]
+
+
+def _pk_ctx(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _pk_producer(note_text="Where it stands: step 2.\n"):
+    d, bare = _as_repo(_PK_BR)
+    os.makedirs(os.path.join(d, "docs", "5-today"), exist_ok=True)
+    _as_write(d, _PK_NOTE, note_text)
+    _as_git(d, "add", "-A")
+    _as_git(d, "commit", "-q", "-m", "note")
+    _as_git(d, "push", "-q", "origin", _PK_BR)
+    _as_write(d, "only.txt", "only in the snapshot\n")
+    _as_write(d, "base.py", "base changed\n")
+    os.makedirs(os.path.join(d, ".house-rules"), exist_ok=True)
+    _as_write(d, ".house-rules/handoff-facts.md", "FACTS-MARKER branch feat\n")
+    _as_git(d, "add", "-A")
+    snap = _as_git(d, "stash", "create")
+    _as_git(d, "update-ref", "refs/house-rules/autosave/" + _PK_BR, snap)
+    _as_git(d, "push", "-q", "origin", "refs/house-rules/autosave/" + _PK_BR)
+    return d, bare
+
+
+def _pk_clone(bare):
+    c = tempfile.mkdtemp(prefix="house-rules-pickup-", dir=_FIXTURE_ROOT)
+    subprocess.run(["git", "clone", "-q", "-b", _PK_BR, bare, c], check=True, stderr=subprocess.DEVNULL)
+    return c
+
+
+_pk_d, _pk_bare = _pk_producer()
+_pk_c = _pk_clone(_pk_bare)
+_pk_text = _pk_ctx(_pk_run(_pk_c))
+commit_case(
+    "pickup: a fresh clone with a pushed snapshot shows the note, the facts and the missing files with the restore command",
+    _pk_text.startswith("house-rules pickup: loaded from") and "Where it stands: step 2." in _pk_text
+    and "FACTS-MARKER" in _pk_text and "only.txt" in _pk_text
+    and "git restore --source=refs/house-rules/remote-autosave/%s -- " % _PK_BR in _pk_text
+    and "Ask aj before running it" in _pk_text,
+    "got %r" % _pk_text[:400],
+)
+_as_write(_pk_c, "base.py", "my own edit\n")
+_pk_text = _pk_ctx(_pk_run(_pk_c))
+_pk_cmd = [l for l in _pk_text.splitlines() if l.startswith("Restore command:")]
+commit_case(
+    "pickup: a file changed in both is listed as a conflict and is absent from the restore command",
+    "conflict" in _pk_text and "base.py" in _pk_text and bool(_pk_cmd) and "base.py" not in _pk_cmd[0]
+    and "only.txt" in _pk_cmd[0],
+    "got %r" % _pk_text[:500],
+)
+_pk_e, _ = _as_repo(_PK_BR)
+_as_git(_pk_e, "remote", "remove", "origin")
+_pk_out = _pk_run(_pk_e)
+_pk_one = json.loads(_pk_out)["systemMessage"].splitlines() if _pk_out.strip() else []
+commit_case(
+    "pickup: no origin says so in one line",
+    len(_pk_one) == 1 and "could not be reached" in _pk_one[0] and "local snapshots are used" in _pk_one[0]
+    and _pk_ctx(_pk_out) == "",
+    "got %r" % _pk_out[:300],
+)
+_pk_d2, _pk_bare2 = _as_repo(_PK_BR)
+_as_git(_pk_d2, "push", "-q", "origin", _PK_BR)
+_pk_out = _pk_run(_pk_d2)
+commit_case("pickup: no snapshot and no note is silent", _pk_out.strip() == "", "got %r" % _pk_out[:200])
+_pk_d3, _pk_bare3 = _pk_producer("N" * 9000)
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare3)))
+commit_case(
+    "pickup: an oversized note is cut and the cut is named",
+    "is cut at" in _pk_text and len(_pk_text) <= 6200 and _PK_NOTE in _pk_text,
+    "len %d, tail %r" % (len(_pk_text), _pk_text[-200:]),
+)
+_pk_out = _pk_run(_pk_c, HOUSE_RULES_HANDOFF="off")
+commit_case("pickup: HOUSE_RULES_HANDOFF=off is silent", _pk_out.strip() == "", "got %r" % _pk_out[:200])
+_pk_none = tempfile.mkdtemp(prefix="house-rules-norepo-", dir=_FIXTURE_ROOT)
+_pk_out = _pk_run(_pk_none)
+commit_case("pickup: outside a repo is silent", _pk_out.strip() == "", "got %r" % _pk_out[:200])
+
+
 finish()
