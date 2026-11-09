@@ -341,3 +341,5 @@ invocation.
 - **`docs/sessions/` has exactly one recorded ledger** (2026-09-09), despite
   `tools/session_ledger.py` existing to produce one per session. The tool works; running it
   isn't yet a habit.
+
+2026-11-08, branch `AjsAgent/session-handoff`, plugin 2.77.0: usage handoff (#406) is built in steps #486 to #409 (autosave on every branch, save at turn end, the handoff check, the session-start pickup) and documented in `docs/4-systems/usage-handoff.md`; the real two-account run and QA are still to do (#410).
