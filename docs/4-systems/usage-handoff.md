@@ -1,4 +1,4 @@
-# Usage handoff (planned)
+# Usage handoff (built)
 
 How a session's work stays saved and handed off, so a usage limit, a closed window or a switch of
 Claude account never strands it, and the next session carries on from where the last one stopped.
@@ -20,6 +20,21 @@ design (`docs/plans/2026-11-08-session-handoff-design.html`, 1A 2A 3A), combined
 - **The handoff note.** `docs/5-today/handoff-<branch>.md`, one per branch, `/` replaced by `-`,
   written and committed by the agent.
 - **The pickup.** A `SessionStart` block that fetches the snapshots and shows the note and facts.
+
+## What was built, where it differs from the plan
+
+Built as #486 (autosave), #487 (save at once on `Stop`/`StopFailure`), #407 (the handoff check),
+#408 (the pickup) and #409 (quoted approvals move nothing), merged into `AjsAgent/session-handoff`.
+Plugin 2.77.0. The differences:
+
+- The end-of-turn save (`event_autosave_final`) saves only when the folder has changes (tracked, or
+  files the agent wrote) or the autosave ref is older than `HEAD`; otherwise it skips, so a turn that
+  changed nothing pushes nothing. It never makes a work-in-progress commit.
+- The pickup keeps fetched snapshots under `refs/house-rules/remote-autosave/` (`PICKUP_REMOTE_PREFIX`),
+  not in the local `autosave` namespace.
+- The pickup output is capped at 6000 characters (`PICKUP_CAP`), the note alone at 3500, with a line
+  saying where it was cut. The fetch times out at 5 seconds.
+- The rule text is one sentence in "Commit constantly on my own branches".
 
 ## Why it doesn't wait for a usage percentage
 
@@ -74,3 +89,6 @@ note can't crowd the context.
 - 2026-11-08: a session opened on `AjsAgent/issue-281-fix`, 367 commits behind `main`, and planned
   from stale files. The pickup's fetch is the guard against that; the facts file names the commit a
   snapshot sits on so a stale folder shows.
+- 2026-11-08: the end-of-turn save must not push when nothing changed, or every read-only reply would
+  move the autosave ref; the skip-when-unchanged rule above is what prevents it.
+- The pickup cap cuts a long note at 3500 characters; keep the note's first lines the next step.
