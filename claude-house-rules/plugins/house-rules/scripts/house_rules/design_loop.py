@@ -404,6 +404,12 @@ _LOOP_SKIP_RE = re.compile(r"(?<!don't )(?<!dont )(?<!do not )(?<!not )\bskip\s+
                            re.IGNORECASE)
 
 
+# #409: an approval that is only quoted (a `>` line, or a quote opened after "said ...:") is another
+# thread's message passed along, not aj approving here.
+_LOOP_PHRASE = r"(?:design\s+approved|build\s+plan\s+approved|qa\s+(?:passed|failed))\b"
+_LOOP_QUOTED_RE = re.compile(r"(?mi)(?:^[ \t]*>[ \t>\"'*\-]*|:[ \t]*[\"'“])" + _LOOP_PHRASE)
+
+
 _LOOP_BARE_RE = re.compile(r"\b(approved|qa\s+passed|qa\s+failed)\b", re.IGNORECASE)
 
 
@@ -1115,6 +1121,11 @@ def _loop_scope_note(payload):
         if _is_relayed_prompt(text, payload):
             return ("Design loop: this message is a helper's report or a notification, not aj, "
                     "so it moved nothing.")
+        if _LOOP_QUOTED_RE.search(text):
+            own = "\n".join(l for l in text.split("\n") if not l.lstrip().startswith(">"))
+            if not any(rx.search(own) for rx, _ in _LOOP_STAGE_ORDER):
+                return ("Design loop: this message only quotes an approval (a `>` line or a quoted message "
+                        "from another thread), not aj approving here, so it moved nothing.")
         top, git_dir, missed = _loop_locate_prompt(_payload_cwd(payload))
         if not git_dir:
             return missed if _LOOP_BARE_RE.search(text) else ""
