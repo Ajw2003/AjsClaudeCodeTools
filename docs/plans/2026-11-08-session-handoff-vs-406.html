@@ -487,8 +487,12 @@ function reply() {
 document.addEventListener("change", reply);
 document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
 document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
-  navigator.clipboard.writeText(out.textContent).then(() => st.textContent = "Copied. Paste it into the chat.")
-  .catch(() => { const r = document.createRange(); r.selectNodeContents(out); getSelection().removeAllRanges(); getSelection().addRange(r); st.textContent = "Couldn't copy automatically. The reply is selected; copy it by hand."; }); };
+  // navigator.clipboard is missing on file:// and other non-https pages, so it is called inside a promise and falls back to execCommand.
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(out); getSelection().removeAllRanges(); getSelection().addRange(r);
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    st.textContent = ok ? "Copied. Paste it into the chat." : "Couldn't copy automatically. The reply is selected; copy it by hand."; };
+  Promise.resolve().then(() => navigator.clipboard.writeText(out.textContent))
+  .then(() => st.textContent = "Copied. Paste it into the chat.").catch(fallback); };
 
 let cur = 1;
 const stepper = document.getElementById("stepper");
