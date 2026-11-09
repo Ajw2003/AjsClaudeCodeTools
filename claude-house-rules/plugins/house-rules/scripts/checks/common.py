@@ -138,6 +138,7 @@ def run_hook(event, payload="", env=None):
     # #397: a sandbox that is itself a project thread would otherwise write test work trails into
     # the real shared project folder.
     e.setdefault("HOUSE_RULES_WORKTRAIL_DIR", os.path.join(tempfile.gettempdir(), "house-rules-verify-worktrail"))
+    e.setdefault("HOUSE_RULES_HANDOFF", "off")  # #407: other cases test other checkpoints; handoff cases set it on
     proc = subprocess.run(
         [sys.executable, HOOK, event],
         input=payload.encode("utf-8"),
