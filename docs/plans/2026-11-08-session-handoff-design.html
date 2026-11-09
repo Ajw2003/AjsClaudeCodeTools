@@ -328,7 +328,7 @@ const PAGE = {
         "New",
         "The handoff file, rewritten every turn",
         "",
-        "At the end of every turn, a hook writes docs/5-today/Handoff.md from facts it can read: the branch, unpushed commits, unsaved files, the current stage of the design loop, open issues and their labels, your last request and the last recap. The file is saved with the snapshot.",
+        "At the end of every turn, a hook writes docs/5-today/Handoff.md from facts it can read. Those facts are the branch, unpushed commits, unsaved files, the current stage of the design loop, open issues and their labels, your last request and the last recap. The file is saved with the snapshot.",
         "Works even when the agent never gets to write anything itself."
       ],
       [
@@ -336,7 +336,7 @@ const PAGE = {
         "New",
         "Docs kept current",
         "",
-        "When a turn changed files but did not change docs/5-today/Today.md, a check at the end of the turn asks the agent, once, to update Today.md and the section of docs/ that changed (the docs are split into tiers such as 5-today). This is the existing docs rule, now enforced instead of only reminded.",
+        "Sometimes a turn changes files but leaves docs/5-today/Today.md alone. Then a check at the end of the turn asks the agent, once, to update Today.md and the section of docs/ that changed (the docs are split into tiers such as 5-today). This is the existing docs rule, now enforced instead of only reminded.",
         "Today.md stops going stale."
       ],
       [
