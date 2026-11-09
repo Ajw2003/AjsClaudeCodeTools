@@ -1504,12 +1504,15 @@ def event_autosave_final():
             return 0
         top, branch, _tool = target
         written = set(_autosave_read(_autosave_state_path(top, branch, "written")).splitlines())
-        changed = [p for p in _dirty_files(top) if p in written]
-        tracked = _ag(top, ["status", "--porcelain", "-uno"])[1].strip()
+        saved = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
+        since = float(saved[0]) if len(saved) == 2 else 0.0  # a file changed after the last save
+        tracked = [p for p, _t in _parse_status_porcelain(_ag(top, ["status", "--porcelain", "-uno"])[1].splitlines())]
+        changed = [p for p in set(tracked) | (written & set(_dirty_files(top)))
+                   if os.path.exists(os.path.join(top, p)) and os.path.getmtime(os.path.join(top, p)) > since]
         rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", AUTOSAVE_REF_PREFIX + branch], check=False)
         head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
         stale = rc != 0 or _ag(top, ["rev-parse", cur.strip() + "^"], check=False)[1].strip() != head
-        if not (changed or tracked or stale):
+        if not (changed or stale):
             return 0
         msg = _autosave_snapshot(top, branch, force_push=True)
         if msg:
