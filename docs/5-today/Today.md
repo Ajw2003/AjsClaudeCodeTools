@@ -1,4 +1,15 @@
-# Today — 2026-10-15
+# Today — 2026-11-08
+
+Session handoff, plugin 2.77.0 (issue #406, steps #486, #487, #407, #408, #409, #410), on the branch
+`AjsAgent/session-handoff`. Work now survives a usage limit or a switch of Claude account. After each
+edit, at most once a minute, and again when a turn ends or is cut off, the working folder is saved to
+`refs/house-rules/autosave/<branch>` on GitHub with a facts file inside, without touching any branch.
+At session start the pickup fetches those saves and shows the branch's handoff note, the facts, how
+far the folder is behind GitHub, and any files the save has that the folder lacks, with the restore
+command; it asks before restoring. The end-of-reply check sends a turn back once when its work is not
+committed, pushed, described in `docs/5-today/handoff-<branch>.md`, or noted here. A quoted approval
+from another thread no longer moves the design stage (#409). The copy button on pages now falls back
+when the clipboard is unavailable. Built and merged on the branch; the two-account run is still owed.
 
 Handover pages and checkpoints, plugin 2.66.0 (issues #251 to #258). Every page is now made by
 `scripts/make_page.py` from the template, with picture slots and before-and-after compare, and takes its look from
