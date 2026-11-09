@@ -7,6 +7,27 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-08 - Session handoff: automatic save, hook-written note, ask before restoring
+
+**Context.** aj asked that every session's work be saved and handed off automatically, so the next
+session can continue it whatever the account, and nothing is ever lost or left half done. aj
+approved "Design approved Session handoff: 1A 2A 3A" on
+`docs/plans/2026-11-08-session-handoff-design.html`.
+
+**Decision.** 1A: the whole working folder is pushed to `refs/autosave/<branch>` at most once a
+minute, outside aj's branches. 2A: a hook writes the handoff facts every turn, and the agent adds a
+short summary when it can. 3A: saved work found at session start is restored only after aj says yes.
+
+**Open.** While planning, it turned out the working folder had been on `AjsAgent/issue-281-fix`,
+367 commits behind `main`, and the design page missed issue #406 (approved 2026-10-27, "usage limit
+handoff 1A 2A 3A"), which covers the same goal. How the two combine is asked on
+`docs/plans/2026-11-08-session-handoff-vs-406.html`. The work moved to `AjsAgent/session-handoff`,
+cut from `main`.
+
+**Status.** Design approved; the plan waits on the #406 answer.
+
+---
+
 ## 2026-11-05 - Audit fixes: all the code approved once, one QA, and ten choices
 
 **Context.** The three audits of 2026-11-05 found 45 problems (`docs/audits/2026-11-05-combined-ranked.md`). aj approved the fix order as "Design approved: audit fix order 1A", then turned down six QA rounds: "plan out all of the code first and then show me it so I can approve or deny it rather than a 6 different QAs".
