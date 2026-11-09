@@ -2115,6 +2115,21 @@ _ck_b, _ck_r, _o = _ck_run(_ho_t, "Done.", env=_ho_env, cwd=_ho_d)
 _ck_cases.append(("handoff: a fully saved turn passes", not _ck_b and "handoff" not in _o))
 _ck_b, _ck_r, _o = _ck_run(_hand_transcript("ck-ho-none", _ck_user("what is up")), "Fine.", env=_ho_env, cwd=_ho_d)
 _ck_cases.append(("handoff: a turn that changed nothing is silent", not _ck_b and "handoff" not in _o))
+_ho_d, _ho_t = _ho_repo(note_text="tested with Claude Code desktop\n")
+_ck_b, _ck_r, _o = _ck_run(_ho_t, "Done.", env=_ho_env, cwd=_ho_d)
+_ck_cases.append(("handoff: a note saying 'tested with Claude Code desktop' is not credit and passes",
+                  not _ck_b and "handoff" not in _o))
+# a commit-only turn: nothing written, one commit made (carrying work, note and Today.md), not pushed
+_ho_d, _ = _ho_repo()
+for _ho_rel in ("work.py", "docs/5-today/Today.md", "docs/5-today/handoff-AjsAgent-ho.md"):
+    with open(os.path.join(_ho_d, _ho_rel), "a", encoding="utf-8") as _ho_f:
+        _ho_f.write("more\n")
+_ho_git(_ho_d, "commit", "-qam", "work and note")
+_ho_t = _hand_transcript("ck-ho-commitonly", _ck_user("commit it", [json.dumps({"type": "assistant", "message": {
+    "content": [{"type": "tool_use", "id": "c1", "name": "Bash", "input": {"command": "git commit -am x"}}]}})]))
+_ck_b, _ck_r, _ = _ck_run(_ho_t, "Committed.", env=_ho_env, cwd=_ho_d)
+_ck_cases.append(("handoff: a commit-only turn that is not pushed is caught",
+                  _ck_b and "- handoff:" in _ck_r and "not pushed" in _ck_r))
 _ho_d, _ho_t = _ho_repo(push=False)
 _ck_b, _, _ = _ck_run(_ho_t, "Done.", env=dict(_ho_env, HOUSE_RULES_HANDOFF="off"), cwd=_ho_d)
 _ck_cases.append(("handoff: HOUSE_RULES_HANDOFF=off turns it off", not _ck_b))
