@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Build plan approved: Session handoff",
   "reply": "",
   "short": {
-    "lead": "This is how the combined design you approved (1A on the overlap page) gets built: five steps under issue #406. Four of them already exist as issues #407 to #410 from October. The new one, the automatic save, is drafted but not opened yet, because the permission prompt for creating it timed out. The system document is docs/4-systems/usage-handoff.md. Everything is on the branch AjsAgent/session-handoff, which starts from main.",
+    "lead": "This is how the combined design you approved (1A on the overlap page: today's design and issue #406 as one feature) gets built: five steps under issue #406. Four of them already exist as issues #407 to #410 from October. The new one, the automatic save, is drafted but not opened yet, because the permission prompt for creating it timed out. The system document is docs/4-systems/usage-handoff.md. Everything is on the branch AjsAgent/session-handoff, which starts from main.",
     "hint": "Tap a step to see what it does and when it counts as done.",
     "key": [
       [
@@ -294,14 +294,14 @@ const PAGE = {
         "Automatic save on every branch (new step 5)",
         "",
         "The existing subagent autosave is widened to every branch: at most once a minute, it saves a snapshot to refs/house-rules/autosave/<branch> and pushes it. A facts file goes inside each snapshot. The end of a turn, and a turn stopped by a usage limit, force one more save. Only files the agent wrote, plus changes to files git already tracks, are saved, so a stray secrets file is never pushed.",
-        "Done when verify.py finds the snapshot after an edit on an AjsAgent/ branch and on main, the branch itself is unchanged, and a live edit shows the snapshot on GitHub."
+        "Done when verify.py finds the snapshot after an edit on an AjsAgent/ branch and after an edit on main, confirms the branch itself is unchanged, and a live edit makes the snapshot appear on GitHub."
       ],
       [
         "check",
         "Step 1, #407",
         "The end-of-reply save check",
         "",
-        "As approved in October, plus one row: a turn that changed files but left docs/5-today/Today.md alone is sent back once. Kept as a backstop behind the automatic save.",
+        "As approved in October, plus one new case: a turn that changed files but did not touch docs/5-today/Today.md is sent back once. This check stays as a backstop behind the automatic save.",
         "Done when verify.py replays each case (unpushed branch, stale note, forbidden link, Today.md untouched, nothing changed, fully saved) with the expected result."
       ],
       [
@@ -318,7 +318,7 @@ const PAGE = {
         "Two design-loop bugs in project threads",
         "",
         "Unchanged from October: a feature name that swallows message markup, and a quoted message from another thread that moves this thread's stage.",
-        "Done as written in #409."
+        "Done when the conditions written in issue #409 are met."
       ],
       [
         "check",
@@ -326,7 +326,7 @@ const PAGE = {
         "Rule text, docs, tests, version, a real run",
         "",
         "The house-rules text names the save and the pickup, Today.md and ProjectState.md are updated, the plugin version goes up, and one real session on a second account picks up the first one's work.",
-        "Done when that second-account run is recorded with its output."
+        "Done when the real session on the second account is recorded together with its output."
       ],
       [
         "hand",
@@ -334,7 +334,7 @@ const PAGE = {
         "Approve the issue creation",
         "you",
         "Creating the step 5 issue needs your yes on the GitHub permission prompt. Its text is drafted and goes in unchanged.",
-        "When you approve the plan, I open it and the prompt comes up once."
+        "When you approve the plan, I open the step 5 issue and the GitHub permission prompt comes up once."
       ]
     ]
   },
@@ -344,7 +344,7 @@ const PAGE = {
     "summary": "The build plan for the session handoff: five steps under issue #406, the automatic save first.",
     "changing": "Nothing yet. The system document and the decision are committed on AjsAgent/session-handoff.",
     "blocking": "Your approval of this plan, and a yes on the issue permission prompt when it comes up.",
-    "next": "Once you approve, I open the step 5 issue, update #406, #407 and #408 to match, and build step 5 first, one helper per step.",
+    "next": "Once you approve, I open the step 5 issue, update issues #406, #407 and #408 to match the new step, and build step 5 first, using one helper agent for each step.",
     "todo": [
       "Type \"Build plan approved: Session handoff\" in the chat, or say what to change.",
       "Tap <b>Copy my reply<\/b> and send it: \"Build plan approved: Session handoff\", or say what to change."
