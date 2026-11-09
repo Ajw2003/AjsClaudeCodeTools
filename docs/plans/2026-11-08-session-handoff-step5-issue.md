@@ -1,4 +1,9 @@
-# Draft: usage handoff step 5 issue (not opened yet)
+# Draft: usage handoff step 5 issue (superseded)
+
+Opened on 2026-11-08 as #486, with the text updated to match
+`docs/plans/2026-11-08-session-handoff-mechanism.html`; the turn-end and usage-limit save moved to
+its own issue, #487 (draft: `docs/plans/2026-11-08-session-handoff-step6-issue.md`). The issue on
+GitHub is the current text; this draft is kept as the planning record.
 
 Title: Usage handoff step 5: save the working folder automatically on every branch
 Labels: AjsAgent created this, Feature, in progress. Sub-issue of #406.
