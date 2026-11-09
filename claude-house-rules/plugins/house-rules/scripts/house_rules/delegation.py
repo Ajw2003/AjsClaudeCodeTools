@@ -2025,3 +2025,137 @@ def _append_thread_link(body):
 core.register_session_start("inject", _strip_subagent_markers)
 core.register_session_start("inject", _append_thread_link)
 core.register_prompt(_scope_delegate_link)
+
+
+# --- #408: pickup (SessionStart) - the handoff note, the newest snapshot, and what the folder lacks
+PICKUP_CAP = 6000
+PICKUP_NOTE_CAP = 3500
+PICKUP_FETCH_TIMEOUT = 5
+PICKUP_REMOTE_PREFIX = "refs/house-rules/remote-autosave/"
+
+
+def _pickup_cut(text, cap, what):
+    if len(text) <= cap:
+        return text
+    return text[:cap] + "\n[house-rules pickup: %s was %d characters and is cut at %d; read it directly for the rest]" % (
+        what, len(text), cap)
+
+
+def _pickup_build(top, branch):
+    """(context lines, problem line or ""). Lines are empty when there is nothing to report."""
+    import shlex
+    g = lambda *a: _ag(top, list(a), check=False)
+    problem = ""
+    if g("remote", "get-url", "origin")[0] != 0:
+        problem = "no `origin` remote, so GitHub was not asked"
+    else:
+        try:
+            rc, _o, err = _ag(top, ["fetch", "--quiet", "origin", "+refs/house-rules/autosave/*:" + PICKUP_REMOTE_PREFIX + "*"],
+                              timeout=PICKUP_FETCH_TIMEOUT, check=False)
+            if rc == 0:
+                rc, _o, err = _ag(top, ["fetch", "--quiet", "origin", "+refs/heads/%s:refs/remotes/origin/%s" % (branch, branch)],
+                                  timeout=PICKUP_FETCH_TIMEOUT, check=False)
+                if rc != 0 and "couldn't find remote ref" in err:
+                    rc = 0  # the branch is not on origin yet: nothing to be behind
+            if rc != 0:
+                problem = (err.splitlines() or ["exit %d" % rc])[0][:120]
+        except RuntimeError as exc:
+            problem = str(exc)
+        if problem:
+            problem = "GitHub could not be reached (%s)" % problem
+    if problem:
+        problem += "; local snapshots are used"
+    paths, parts = [], []
+    behind_line = ""
+    rc, out, _e = g("rev-list", "--left-right", "--count", "HEAD...origin/" + branch)
+    if rc == 0 and len(out.split()) == 2:
+        ahead, behind = (int(x) for x in out.split())
+        if ahead or behind:
+            behind_line = "This folder is %d commit(s) behind and %d ahead of origin/%s." % (behind, ahead, branch)
+    note_rel = "docs/5-today/handoff-%s.md" % branch.replace("/", "-")
+    rc, note, _e = g("show", "HEAD:" + note_rel)
+    if rc != 0:
+        wp = os.path.join(top, note_rel)
+        note = _read_text(wp) if os.path.isfile(wp) else ""
+    if note.strip():
+        paths.append(note_rel)
+        parts.append("Handoff note (%s):\n%s" % (note_rel, _pickup_cut(note.strip(), PICKUP_NOTE_CAP, note_rel)))
+    snaps = {}
+    for ref in (AUTOSAVE_REF_PREFIX, PICKUP_REMOTE_PREFIX):
+        rc, out, _e = g("log", "-1", "--format=%ct", ref + branch)
+        if rc == 0 and out.strip().isdigit():
+            snaps[ref + branch] = int(out.strip())
+    snap = max(snaps, key=snaps.get) if snaps else ""
+    missing_block = ""
+    if snap:
+        paths.append(snap)
+        rc, facts, _e = g("show", "%s:%s" % (snap, HANDOFF_FACTS))
+        if rc == 0 and facts.strip():
+            parts.append("Facts from the newest snapshot (%s):\n%s" % (snap, facts.strip()))
+        rc, names, _e = g("diff", "--name-only", "-z", snap + "^", snap)
+        only, both = [], []
+        for f in [n for n in names.split("\0") if n and n != HANDOFF_FACTS] if rc == 0 else []:
+            sb = g("rev-parse", "--verify", "-q", "%s:%s" % (snap, f))
+            if sb[0] != 0:
+                continue  # deleted in the snapshot: nothing to restore
+            wp = os.path.join(top, f)
+            work = g("hash-object", "--", f)[1].strip() if os.path.isfile(wp) else None
+            if work == sb[1].strip():
+                continue
+            hb = g("rev-parse", "--verify", "-q", "HEAD:" + f)
+            head = hb[1].strip() if hb[0] == 0 else None
+            (only if work == head else both).append(f)
+        if only:
+            missing_block = ("Only in the snapshot, not in this folder: %s.\nRestore command: git restore --source=%s -- %s\n"
+                             "Ask aj before running it; the hook never restores anything."
+                             % (", ".join(only), snap, " ".join(shlex.quote(f) for f in only)))
+        if both:
+            missing_block += ("\n" if missing_block else "") + (
+                "Changed in both this folder and the snapshot (conflict, never restored by the hook): %s." % ", ".join(both))
+    now = time.time()
+    rc, out, _e = g("for-each-ref", "--format=%(refname) %(committerdate:unix)", AUTOSAVE_REF_PREFIX, PICKUP_REMOTE_PREFIX)
+    recent = set()
+    for line in out.splitlines() if rc == 0 else []:
+        ref, _s, ts = line.rpartition(" ")
+        name = ref[len(AUTOSAVE_REF_PREFIX):] if ref.startswith(AUTOSAVE_REF_PREFIX) else ref[len(PICKUP_REMOTE_PREFIX):]
+        if name != branch and ts.isdigit() and now - int(ts) < 86400:
+            recent.add(name)
+    if not (parts or behind_line or missing_block):
+        return [], problem
+    lines = ["house-rules pickup: loaded from %s" % " and ".join(paths or ["origin state"])]
+    if problem:
+        lines.append(problem + ".")
+    lines += [x for x in (behind_line, missing_block) if x]
+    lines += parts
+    if recent:
+        lines.append("Other branches with a snapshot under 24 h old: %s." % ", ".join(sorted(recent)))
+    return lines, problem
+
+
+def event_pickup():
+    """SessionStart (#408): the branch's handoff note, the newest snapshot's facts, how far behind
+    origin the folder is, and files the snapshot has that the folder lacks. Never restores anything."""
+    try:
+        if os.environ.get("HOUSE_RULES_HANDOFF", "on").strip().lower() in _TOGGLE_OFF:
+            return 0
+        payload = read_payload()
+        top = _git_top(core._payload_cwd(payload or ""))
+        if not top:
+            return 0
+        rc, branch, _e = _ag(top, ["symbolic-ref", "-q", "--short", "HEAD"], check=False)
+        if rc != 0 or not branch.strip():
+            return 0  # detached HEAD
+        lines, problem = _pickup_build(top, branch.strip())
+        out = {}
+        if lines:
+            text = "\n".join(lines)
+            if len(text) > PICKUP_CAP:
+                text = text[:PICKUP_CAP] + "\n[house-rules pickup: output was %d characters and is cut at %d]" % (len(text), PICKUP_CAP)
+            out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": text}
+        if problem:
+            out["systemMessage"] = "house-rules pickup: " + problem + "."
+        if out:
+            emit(out)
+    except Exception as exc:
+        emit({"systemMessage": "house-rules pickup: could not check for a handoff (%s: %s)" % (type(exc).__name__, exc)})
+    return 0
