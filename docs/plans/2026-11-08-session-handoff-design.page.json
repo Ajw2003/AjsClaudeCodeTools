@@ -55,7 +55,7 @@
         "New",
         "Save after every edit",
         "",
-        "After each file edit (at most once a minute), the whole working folder is saved as a snapshot and pushed to the remote under refs/autosave/<branch>. The snapshot includes files git is not tracking yet. Your branch, its history and the staging area are never changed.",
+        "After each file edit (at most once a minute), the whole working folder is saved as a snapshot and pushed to the remote under a separate name, refs/autosave/<branch>, that sits outside your branches. The snapshot includes files git is not tracking yet. Your branch, its history and the staging area are never changed.",
         "The most work a sudden stop can lose is the last minute."
       ],
       [
@@ -63,7 +63,7 @@
         "New",
         "The handoff file, rewritten every turn",
         "",
-        "At the end of every turn, a hook writes docs/5-today/Handoff.md from facts it can read: the branch, unpushed commits, unsaved files, the design-loop stage, open issues and their labels, your last request and the last recap. The file is saved with the snapshot.",
+        "At the end of every turn, a hook writes docs/5-today/Handoff.md from facts it can read: the branch, unpushed commits, unsaved files, the current stage of the design loop, open issues and their labels, your last request and the last recap. The file is saved with the snapshot.",
         "Works even when the agent never gets to write anything itself."
       ],
       [
@@ -71,7 +71,7 @@
         "New",
         "Docs kept current",
         "",
-        "When a turn changed files but did not change docs/5-today/Today.md, the check at the end of the turn asks the agent, once, to update Today.md and the docs tier that changed. This is the existing docs-tier rule, now enforced instead of only reminded.",
+        "When a turn changed files but did not change docs/5-today/Today.md, a check at the end of the turn asks the agent, once, to update Today.md and the section of docs/ that changed (the docs are split into tiers such as 5-today). This is the existing docs rule, now enforced instead of only reminded.",
         "Today.md stops going stale."
       ],
       [
@@ -161,7 +161,7 @@
   "wrapup": {
     "summary": "A design for saving every session's work and handoff into the repo as it happens, so any next session can carry on.",
     "changing": "Nothing yet. No code is written until you approve.",
-    "blocking": "Your pick of option for each of the 3 questions above, or what you want changed.",
+    "blocking": "Your pick of one option for each of the 3 questions above, or what you want changed.",
     "next": "Once you approve, I will check the one unknown (whether turn-end hooks run when a usage limit cuts a turn), open a parent issue with one child issue per step, and build it on an AjsAgent/ branch.",
     "todo": [
       "Type your picks in the chat, for example \"Session handoff design approved 1A 2A 3A\" (1A means question 1, option A).",
