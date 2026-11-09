@@ -1864,6 +1864,7 @@ commit_case(
     "got %r" % _pk_text[:500],
 )
 _pk_e, _ = _as_repo(_PK_BR)
+_as_git(_pk_e, "remote", "remove", "origin")
 _pk_out = _pk_run(_pk_e)
 _pk_one = json.loads(_pk_out)["systemMessage"].splitlines() if _pk_out.strip() else []
 commit_case(
