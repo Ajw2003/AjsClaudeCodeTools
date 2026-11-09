@@ -2036,8 +2036,8 @@ def handover_commit_check(payload):
 
 
 _HANDOFF_BAD_RE = re.compile(
-    r"claude\.ai/(?:code/)?artifact/|claude\.ai/code/session|Co-Authored-By:\s*Claude|Generated with Claude"
-    r"|with Claude", re.I)
+    r"claude\.ai/(?:code/)?artifact/|claude\.ai/code/session|Co-Authored-By:\s*Claude|Generated with \[?Claude"
+    r"|Made with Claude", re.I)
 _HANDOFF_SECTIONS = ("what the work is for, where it stands, the next step, what is unverified, "
                      "the issue numbers")
 

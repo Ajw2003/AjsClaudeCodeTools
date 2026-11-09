@@ -1946,7 +1946,8 @@ for _t, _ok in _cw_cases:
 
 # --- the checkpoint table (#256): a miss blocks once, then only reports on the retry -----------
 _ck_cases = []
-_CK_ENV = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_LOOP="on")
+_CK_ENV = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_LOOP="on",
+               HOUSE_RULES_HANDOFF="off")
 
 
 def _ck_user(text, extra=()):
