@@ -272,7 +272,7 @@ const PAGE = {
   "title": "Handoff QA",
   "eyebrow": "QA · session handoff, issue #406, plugin 2.77.0",
   "short": {
-    "lead": "The session handoff is built on the branch AjsAgent/session-handoff as plugin 2.77.0. Each edit is saved to GitHub without touching your branches, and the next session in any folder picks that work up and offers to restore it. Every row below was run for real, against the real GitHub repo. The one thing not yet proven is a second Claude account, because installs come from main, so that check happens after the merge.",
+    "lead": "The session handoff is built on the branch AjsAgent/session-handoff as plugin 2.77.0. Each edit is saved to GitHub without touching your branches, and the next session in any folder picks that work up and offers to restore it. Every row below was run live against the real GitHub repo. The one thing not yet proven is a second Claude account. Installs come from main, so that check can only happen after the merge.",
     "hint": "Tap a row to see what was run and what it showed.",
     "key": [
       [
@@ -286,7 +286,7 @@ const PAGE = {
         "Live save",
         "An edit is saved to GitHub",
         "",
-        "A live headless session (claude -p with the plugin loaded from this branch) edited docs/5-today/Today.md in a fresh clone and did not commit. git ls-remote then showed refs/house-rules/autosave/AjsAgent/session-handoff at 3111948, which held the edited line and a facts file saying the folder was 1 commit behind GitHub.",
+        "A live session run without a screen (claude -p, with the plugin loaded from this branch) edited docs/5-today/Today.md in a fresh clone and did not commit. git ls-remote then showed refs/house-rules/autosave/AjsAgent/session-handoff at commit 3111948, which held the edited line and a facts file saying the folder was 1 commit behind GitHub.",
         "Nothing from you."
       ],
       [
@@ -294,7 +294,7 @@ const PAGE = {
         "Live pickup",
         "A new folder picks the work up",
         "",
-        "A second live session in another fresh clone opened with: \"house-rules pickup: loaded from docs/5-today/handoff-AjsAgent-session-handoff.md and refs/house-rules/remote-autosave/AjsAgent/session-handoff\", then listed Today.md as only in the snapshot, with its restore command and \"Ask aj before running it\".",
+        "A second live session in another fresh clone opened with: \"house-rules pickup: loaded from docs/5-today/handoff-AjsAgent-session-handoff.md and refs/house-rules/remote-autosave/AjsAgent/session-handoff\", then listed Today.md as existing only in the saved snapshot, followed by the command to restore it and the words \"Ask aj before running it\".",
         "Nothing from you."
       ],
       [
@@ -302,7 +302,7 @@ const PAGE = {
         "Restore",
         "The restored file is identical",
         "",
-        "Running the printed git restore command in a fresh clone brought back Today.md, and cmp found it byte-for-byte identical to the original folder's file.",
+        "Running the printed git restore command in a fresh clone brought back Today.md, and the cmp comparison tool found it byte-for-byte identical to the original folder's file.",
         "Nothing from you."
       ],
       [
@@ -310,7 +310,7 @@ const PAGE = {
         "Live check",
         "The end-of-reply check fires",
         "",
-        "In the live session that edited without committing, the new check sent the turn back, asking it to commit and write the handoff note.",
+        "In the live session that edited without committing, the new end-of-reply check sent Claude's reply back and asked it to commit and write the handoff note.",
         "Nothing from you."
       ],
       [
@@ -327,14 +327,14 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "40 files, +3319 −58",
+      "42 files, +5250 −58",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          1,
+          908,
           1,
           [
             [
@@ -705,6 +705,30 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/2026-11-08-session-handoff-qa.html",
+          980,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-08-session-handoff-qa.page.json",
+          44,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/2026-11-08-session-handoff-step5-issue.md",
           38,
           0,
@@ -819,7 +843,7 @@ const PAGE = {
       "Still unverified",
       "3 things not yet proven",
       null,
-      "A second Claude account picking the work up; every live run used this account, and the handoff relies only on git, so the account should not matter, but that is not proven. A turn actually cut off by a usage limit; the StopFailure save has only been run with replayed payloads, because a real limit can't be triggered on purpose. The Code tab in the desktop app; the live runs were headless terminal sessions.",
+      "A second Claude account picking the work up; every live run used this account, and the handoff relies only on git, so the account should not matter, but that is not proven. A turn actually cut off by a usage limit; the save that runs when a turn stops on an error (StopFailure) has only been tested with recorded inputs replayed, because a real limit can't be triggered on purpose. The Code tab in the desktop app; the live runs were headless terminal sessions.",
       null,
       null
     ]
@@ -829,14 +853,14 @@ const PAGE = {
     "base": "origin/main",
     "unverified": [
       "A second Claude account picking the work up; every live run used this account, and the handoff relies only on git, so the account should not matter, but that is not proven",
-      "A turn actually cut off by a usage limit; the StopFailure save has only been run with replayed payloads, because a real limit can't be triggered on purpose",
+      "A turn actually cut off by a usage limit; the save that runs when a turn stops on an error (StopFailure) has only been tested with recorded inputs replayed, because a real limit can't be triggered on purpose",
       "The Code tab in the desktop app; the live runs were headless terminal sessions"
     ],
     "files": {}
   },
   "wrapup": {
     "summary": "QA for the session handoff: built, run live against GitHub, waiting on your QA.",
-    "changing": "Plugin 2.77.0 on the branch AjsAgent/session-handoff. Nothing reaches main until a pull request you merge.",
+    "changing": "Plugin 2.77.0 on the branch AjsAgent/session-handoff. Nothing reaches main until you merge a pull request.",
     "blocking": "Your QA verdict.",
     "next": "If QA passes, I open a pull request to main. After you merge it and installs update, the first session on your second account in this repo should open with the pickup.",
     "todo": [
