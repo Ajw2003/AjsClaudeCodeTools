@@ -20,10 +20,13 @@ aj's QA: install 2.77.0 from this branch, then run the two-account test from the
 
 ## Unverified
 
-- The hooks firing inside a live Claude Code session (this session runs the installed plugin, not
-  this branch).
-- A second Claude account picking the work up.
-- `tools/verify_tools.py` check A16 fails here; not yet compared with `main`.
+- A second Claude account picking the work up. Live headless sessions (`claude -p --plugin-dir`, this
+  branch, same account) did run on 2026-11-08: an edit in one fresh clone was saved to GitHub
+  (ref 3111948), the end-of-reply check fired, and a session in a second fresh clone opened with the
+  pickup listing that file and its restore command.
+- A turn actually cut off by a usage limit (`StopFailure`); only replayed payloads have run.
+- `tools/verify_tools.py` check A16 fails here and on a clean `main` alike (1 of 52, checked
+  2026-11-08), so it is not caused by this work.
 
 ## Issues
 
