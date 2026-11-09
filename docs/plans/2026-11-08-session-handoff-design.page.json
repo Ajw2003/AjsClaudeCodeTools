@@ -1,0 +1,50 @@
+{
+  "title": "Session Handoff",
+  "eyebrow": "Design · picking up where the last session stopped",
+  "approval": "Session handoff design",
+  "replyPrefix": "Session handoff design",
+  "reply": "",
+  "short": {
+    "lead": "Today a session's work survives only if the agent remembers to commit, push and write a handoff note. The last handoff note, docs/handoff-2026-10-15.md, and docs/5-today/Today.md were both last written on 2026-10-15, and issue #140 (make a handoff document and commit everything at 95% usage) is still open. A different account shares nothing with the last one except the git remote and, on the same machine, the folder. So everything a next session needs has to be written into the repo and pushed, while the work happens, not at the end: a usage limit can stop a session mid-turn, before any end-of-session step runs.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      ["Already exists", ""],
+      ["New", ""],
+      ["Unknown", ""],
+      ["You decide", "you"]
+    ],
+    "items": [
+      ["check", "Exists, reused", "The autosave hook", "", "hook.py event_autosave already saves a subagent's work after each edit and pushes it, without touching the branch. It only runs on subagent worktree branches today.", "The same mechanism is extended to the main session, so no second saving system is built."],
+      ["check", "Exists, replaced", "Hand-written handoff notes", "", "docs/handoff-2026-10-15.md is the only one, written by hand, and now 24 days stale.", "Replaced by one rolling file, docs/5-today/Handoff.md, that is rewritten every turn. Old note moves to docs/archive."],
+      ["check", "Exists, folded in", "Issue #140, handoff at 95% usage", "", "Asks for a save at 95% usage.", "Covered by saving continuously instead, so no usage threshold is needed. #140 gets a comment pointing here."],
+      ["plus", "New", "Save after every edit", "", "After each file edit (at most once a minute) the whole working folder, including files git does not track yet, is saved as a snapshot and pushed to the remote under refs/autosave/<branch>. Your branch, its history and the staging area are never touched.", "The most work a sudden stop can lose is the last minute."],
+      ["plus", "New", "The handoff file, rewritten every turn", "", "At every turn end a hook writes docs/5-today/Handoff.md from facts it can read: branch, unpushed commits, unsaved files, design-loop stage, open issues and their labels, the last request and the last recap. It is saved with the snapshot.", "Works even when the agent never gets to write anything itself."],
+      ["plus", "New", "Docs kept current", "", "When a turn changed files but did not touch docs/5-today/Today.md, the turn-end check asks the agent once to update it (and the tier that changed). That is the existing docs-tier rule, enforced instead of reminded.", "Today.md stops going stale."],
+      ["plus", "New", "Pick up at session start", "", "At session start the plugin fetches the snapshot refs from the remote, reads the newest Handoff.md, and puts it at the top of the session. If a snapshot holds work the folder does not, it says so and offers to restore it.", "Same account or not, same folder or a fresh clone, the next session starts from where the last stopped."],
+      ["search", "Unknown", "Whether a turn-end hook runs when a usage limit cuts a turn", "", "Not checked against Claude Code's docs yet. This is why saving also happens after each edit, not only at turn end.", "Checked before building; the answer goes on the build plan."]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    ["q1", "1. Where does the saved work go?", [
+      ["A", "A snapshot pushed to refs/autosave/<branch>, outside your branch", 1, "Nothing lands on your branch or in its history, so the rule against finishing what you started holds on every branch, main included."],
+      ["B", "Work-in-progress commits straight onto the current branch", 0, "Easiest to find, but it fills history with WIP commits and cannot run on main or your own branches."]
+    ], "Either way it is pushed, because a different account can only see what is on the remote."],
+    ["q2", "2. Who writes the handoff?", [
+      ["A", "The hook writes the facts every turn; the agent adds a short plain summary when it can", 1, "The facts survive a sudden stop; the summary makes it readable."],
+      ["B", "The hook only, facts and no summary", 0, "Fully mechanical, but a reader has to piece together what was going on."],
+      ["C", "The agent only, asked at turn end", 0, "Most readable, but lost whenever the session is cut off."]
+    ], ""],
+    ["q3", "3. When saved work is found at session start?", [
+      ["A", "Say what was found and ask before restoring it", 1, "Nothing in the folder is overwritten without your yes."],
+      ["B", "Restore it automatically", 0, "No question to answer, but it can overwrite something you changed by hand since."]
+    ], ""]
+  ],
+  "wrapup": {
+    "summary": "A design for saving every session's work and handoff into the repo as it happens, so any next session can carry on.",
+    "changing": "Nothing yet. No code is written until you approve.",
+    "blocking": "Your picks for the 3 questions, or what to change.",
+    "next": "Once approved, I check the unknown (turn-end hooks under a usage limit), open a parent issue with one child issue per step, and build it on an AjsAgent branch.",
+    "todo": ["Type your picks in the chat, such as \"Session handoff design approved 1A 2A 3A\".", "Send them."]
+  }
+}
