@@ -2002,6 +2002,10 @@ def _check_commit(ctx):
     return "commit %s on your own branch" % ", ".join(ctx["uncommitted"][:8])
 
 
+def _check_handoff(ctx):
+    return ctx.get("handoff") or ""
+
+
 def _check_plain(ctx):
     if not ctx.get("plain_problems"):
         return ""
@@ -2141,6 +2145,7 @@ CHECKPOINTS = [
     ("reply ends", "editor", _check_editor, "block"),
     ("reply ends", "evidence", _check_evidence, "block"),
     ("reply ends", "commit", _check_commit, "block"),
+    ("reply ends", "handoff", _check_handoff, "block"),
     ("reply ends", "plain summary", _check_plain, "block"),
     ("reply ends", "qa page", _check_qa_page, "block"),
 ]
@@ -2151,6 +2156,7 @@ CHECKPOINT_RULES = {
     "editor": "A page goes past @house-rules:editor before aj reads it; a long reply too when HOUSE_RULES_EDITOR=on.",
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
+    "handoff": "A turn that wrote files is pushed, with a fresh clean handoff note and Today.md updated.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
@@ -2492,7 +2498,7 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
 
 
 def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                         needs_evidence, uncommitted, plain_problems, trace_lines):
+                         needs_evidence, uncommitted, plain_problems, trace_lines, handoff=""):
     """The blocking checkpoints at "reply ends" (first reply only). True when the reply was blocked (the
     block is emitted here). An error is added to trace_lines and nothing is blocked."""
     try:
@@ -2501,7 +2507,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             "long_words": long_words,
             "editor_owed": editor_owed,
             "needs_evidence": needs_evidence,
-            "uncommitted": uncommitted,
+            "uncommitted": uncommitted, "handoff": handoff,
             "plain_problems": plain_problems, "cwd": _payload_cwd(payload),
             "user_text": _last_user_text(transcript_path) if transcript_path else "",
         }

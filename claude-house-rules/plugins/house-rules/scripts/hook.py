@@ -136,16 +136,19 @@ def event_handover():
     parity_word = None
     visual_files = []
     plain_problems = []
+    written_now, committed_now = [], False
+    handoff = ""
     editor_owed = None
     shell_page_notes = []
     trace_lines_early = []
     transcript_path = _field(_TRANSCRIPT_RE, payload)
     if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
-                            or _clear_writing_enabled()):
+                            or _clear_writing_enabled() or handoff_enabled()):
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
             written_now, committed_now = handover_turn_writes(turn_records)
             plain_problems = handover_plain_check(written_now, committed_now, have_reply, reply_text)
+            handoff = handover_handoff_check(written_now, committed_now, _payload_cwd(payload))
             if written_now and _parity_enabled():
                 pm = _PARITY_RE.search(_last_user_text(transcript_path))
                 reply_for_parity = reply_text if have_reply else ""
@@ -189,14 +192,14 @@ def event_handover():
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
     if not retry:
         if handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                                needs_evidence, uncommitted, plain_problems, trace_lines):
+                                needs_evidence, uncommitted, plain_problems, trace_lines, handoff):
             return 0
     else:
         handover_qa_retry(payload, have_reply, reply_text, trace_lines)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not editor_owed
-            and not shell_page_notes and not page_note and not links_owed):
+            and not shell_page_notes and not page_note and not links_owed and not handoff):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -227,6 +230,8 @@ def event_handover():
         parts.append(_visual_note(visual_files))
     if uncommitted:
         parts.append(_commit_note(uncommitted))
+    if handoff:
+        parts.append("House rules, handoff: %s." % handoff)
     if issue_line:
         parts.append(issue_line)
     if label_line:
