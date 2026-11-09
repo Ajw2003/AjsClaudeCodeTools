@@ -1953,8 +1953,8 @@ def _ck_user(text, extra=()):
     return [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": text}})] + list(extra)
 
 
-def _ck_run(transcript, reply, active=False, env=None):
-    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=_loop_dir, stop_hook_active=active,
+def _ck_run(transcript, reply, active=False, env=None, cwd=None):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=cwd or _loop_dir, stop_hook_active=active,
                                                   transcript_path=transcript), env=env or _CK_ENV)
     try:
         data = json.loads(out)
@@ -2056,7 +2056,7 @@ _ck_repo_dirty = _commit_repo("claude/topic", committed=["a.py"], dirty=["a.py"]
 _ck_repo_clean = _commit_repo("claude/topic", committed=["a.py"])
 _ck_t_w_dirty = _wrote_transcript("ck-w-dirty", [os.path.join(_ck_repo_dirty, "a.py")])
 _ck_t_w_clean = _wrote_transcript("ck-w-clean", [os.path.join(_ck_repo_clean, "a.py")])
-_ck_cenv = lambda root: _project_env(root, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
+_ck_cenv = lambda root: _project_env(root, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off", HOUSE_RULES_HANDOFF="off",
                                      HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
 _ck_b, _ck_r, _ = _ck_run(_ck_t_w_dirty, "Changed the file.", env=_ck_cenv(_ck_repo_dirty))
 _ck_cases.append(("commit: a turn that left its file uncommitted blocks once, naming the commit rule", _ck_b and "- commit:" in _ck_r))
@@ -2064,6 +2064,59 @@ _ck_b, _, _o = _ck_run(_ck_t_w_dirty, "Changed the file.", active=True, env=_ck_
 _ck_cases.append(("commit: the same reply on the retry only reports", not _ck_b and "uncommitted" in _o))
 _ck_b, _, _ = _ck_run(_ck_t_w_clean, "Changed the file.", env=_ck_cenv(_ck_repo_clean))
 _ck_cases.append(("commit: a committed file passes", not _ck_b))
+# 4b handoff (#407): pushed, fresh clean note, Today.md touched
+_ho_git = lambda d, *a: subprocess.run(["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", d]
+                                       + list(a), check=True, capture_output=True)
+
+
+def _ho_repo(note_text="Goal. Stands. Next. Unverified. #407\n", push=True, today=True, extra_commit=False):
+    """A repo on AjsAgent/ho with a note; returns (repo, transcript of a turn that edited work.py)."""
+    d = tempfile.mkdtemp(prefix="house-rules-handoff-", dir=_FIXTURE_ROOT)
+    bare = tempfile.mkdtemp(prefix="house-rules-handoff-bare-", dir=_FIXTURE_ROOT)
+    _ho_git(bare, "init", "-q", "--bare")
+    _ho_git(d, "init", "-q", "-b", "AjsAgent/ho")
+    os.makedirs(os.path.join(d, "docs", "5-today"))
+    for rel, txt in {"work.py": "x\n", "docs/5-today/Today.md": "t\n",
+                     "docs/5-today/handoff-AjsAgent-ho.md": note_text}.items():
+        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+            f.write(txt)
+    _ho_git(d, "add", "-A")
+    _ho_git(d, "commit", "-q", "-m", "base")
+    if push:
+        _ho_git(d, "remote", "add", "origin", bare)
+        _ho_git(d, "push", "-q", "-u", "origin", "AjsAgent/ho")
+    if extra_commit:
+        with open(os.path.join(d, "work.py"), "a", encoding="utf-8") as f:
+            f.write("more\n")
+        _ho_git(d, "commit", "-qam", "work only")
+        _ho_git(d, "push", "-q") if push else None
+    wrote = [os.path.join(d, "work.py")] + ([os.path.join(d, "docs", "5-today", "Today.md")] if today else [])
+    return d, _wrote_transcript("ck-ho-" + os.path.basename(d), wrote)
+
+
+_ho_env = _project_env(_loop_dir, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
+                       HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_HANDOFF="on",
+                       HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+for _ho_label, _ho_kw, _ho_word in [
+        ("unpushed branch (no upstream)", dict(push=False), "no upstream"),
+        ("stale note", dict(extra_commit=True), "older than HEAD"),
+        ("note with a forbidden link", dict(note_text="see https://claude" + ".ai/artifact/abc\n"), "contains"),
+        ("Today.md untouched", dict(today=False), "Today.md")]:
+    _ho_d, _ho_t = _ho_repo(**_ho_kw)
+    _ck_b, _ck_r, _ = _ck_run(_ho_t, "Done.", env=_ho_env, cwd=_ho_d)
+    _ck_cases.append(("handoff: %s blocks once, naming the fix" % _ho_label,
+                      _ck_b and "- handoff:" in _ck_r and _ho_word in _ck_r))
+    if _ho_label.startswith("unpushed"):
+        _ck_b, _, _o = _ck_run(_ho_t, "Done.", active=True, env=_ho_env, cwd=_ho_d)
+        _ck_cases.append(("handoff: the retry only reports", not _ck_b and "House rules, handoff" in _o))
+_ho_d, _ho_t = _ho_repo()
+_ck_b, _ck_r, _o = _ck_run(_ho_t, "Done.", env=_ho_env, cwd=_ho_d)
+_ck_cases.append(("handoff: a fully saved turn passes", not _ck_b and "handoff" not in _o))
+_ck_b, _ck_r, _o = _ck_run(_hand_transcript("ck-ho-none", _ck_user("what is up")), "Fine.", env=_ho_env, cwd=_ho_d)
+_ck_cases.append(("handoff: a turn that changed nothing is silent", not _ck_b and "handoff" not in _o))
+_ho_d, _ho_t = _ho_repo(push=False)
+_ck_b, _, _ = _ck_run(_ho_t, "Done.", env=dict(_ho_env, HOUSE_RULES_HANDOFF="off"), cwd=_ho_d)
+_ck_cases.append(("handoff: HOUSE_RULES_HANDOFF=off turns it off", not _ck_b))
 # 5 plain summary
 _ck_t_ps_wrote = _turn_transcript("ck-ps", "add the commit hooks", [("Edit", "/proj/src/app.py")])
 _ck_triple("plain summary", "plain summary", _ck_t_ps_wrote, _PS_TECH, _PS_PLAIN)
