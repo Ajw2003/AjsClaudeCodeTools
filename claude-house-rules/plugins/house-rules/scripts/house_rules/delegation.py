@@ -1172,9 +1172,23 @@ def _autosave_enabled():
     return os.environ.get("HOUSE_RULES_AUTOSAVE", "on").strip().lower() not in _TOGGLE_OFF
 
 
-def _autosave_target(payload):
-    """(repo top, branch, tool_name) when the edited file (or, for Bash, the payload
-    cwd) is in a repo on a worktree-agent- branch; None otherwise - not a subagent worktree."""
+def _git_top(start):
+    """The directory holding `.git` (a folder, or a file in a linked worktree), walking up from
+    `start`; a file check per level, no git process."""
+    d = os.path.abspath(start)
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def _autosave_target(payload, agent_only=False):
+    """(repo top, branch, tool_name) when the edited file (or, for Bash, the payload cwd) is in
+    a repo on an attached branch; branch is None on a detached HEAD. None when not in a repo, or
+    (agent_only) not on a worktree-agent- branch. Reads .git/HEAD only: no git process (#486)."""
     try:
         data = json.loads(payload)
     except ValueError:
@@ -1188,27 +1202,39 @@ def _autosave_target(payload):
         return None
     if not os.path.isabs(path) and data.get("cwd"):
         path = os.path.join(data["cwd"], path)
-    # Fast path: .git/HEAD is a file read, so a branch that is not a subagent worktree branch
-    # is ruled out with zero git subprocesses. An unreadable HEAD raises (loud, as before).
     start = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+    while start and not os.path.isdir(start):  # a written file may since have been moved
+        parent = os.path.dirname(start)
+        if parent == start:
+            return None
+        start = parent
+    top = _git_top(start)
     git_dir = _git_dir(start)
-    if not git_dir:
+    if not top or not git_dir:
         return None
     head = _read_text(os.path.join(git_dir, "HEAD")).strip()
-    if not head.startswith("ref: refs/heads/" + AUTOSAVE_BRANCH_PREFIX):
-        return None
-    top = _repo_top(os.path.join(path, "x") if os.path.isdir(path) else path, {})
-    if not top:
-        return None
-    branch = _repo_branch(top)
-    if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX):
+    if head.startswith("ref: refs/heads/"):
+        branch = head[len("ref: refs/heads/"):]
+    elif head:
+        branch = None
+    else:
+        raise RuntimeError("%s/HEAD is empty or unreadable" % git_dir)
+    if agent_only and not (branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX)):
         return None
     return top, branch, tool
 
 
 def _autosave_state_path(top, branch, kind):
-    gitdir = _ag(top, ["rev-parse", "--absolute-git-dir"])[1].strip()
+    gitdir = _git_dir(top)  # a file read; handles .git being a file in a linked worktree
+    if not gitdir:
+        raise RuntimeError("no git directory under %s" % top)
     return os.path.join(gitdir, "house-rules-autosave-%s.%s" % (branch.replace("/", "_"), kind))
+
+
+def _autosave_throttled(top, branch, now):
+    """True when the last save was under AUTOSAVE_PUSH_INTERVAL ago (one stamp-file read)."""
+    prev = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
+    return len(prev) == 2 and now - float(prev[0]) < AUTOSAVE_PUSH_INTERVAL
 
 
 def _autosave_read(path):
@@ -1246,6 +1272,7 @@ def _autosave_push(top, branch, sha, now, force=False):
         return None  # saved locally; the next edit after the window pushes the latest
     if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
         marker = _autosave_state_path(top, branch, "noorigin")
+        _autosave_write(stamp, "%s %s" % (now, prev[1] if len(prev) == 2 else "-"))  # throttle this too
         if _autosave_read(marker):
             return None
         _autosave_write(marker, "1")
@@ -1262,6 +1289,46 @@ def _autosave_push(top, branch, sha, now, force=False):
     return None
 
 
+HANDOFF_FACTS = ".house-rules/handoff-facts.md"
+
+
+def _autosave_facts(top, branch, env, now):
+    """#486: the handoff facts file, written only into the temporary index. No absolute paths."""
+    import time as _t
+
+    def one(args, **kw):
+        rc, out, _e = _ag(top, args, check=False, **kw)
+        return out.strip() if rc == 0 else ""
+
+    ab = one(["rev-list", "--left-right", "--count", "@{u}...HEAD"]).split()
+    ahead = ("%s ahead, %s behind %s" % (ab[1], ab[0], one(["rev-parse", "--abbrev-ref", "@{u}"]))
+             if len(ab) == 2 else "no upstream")
+    files = [f for f in one(["diff", "--cached", "--name-only", "HEAD"], env=env).splitlines() if f]
+    shown = "\n".join("- " + f for f in files[:20])
+    if len(files) > 20:
+        shown += "\n- ... and %d more" % (len(files) - 20)
+    loop = "none"
+    try:
+        from house_rules import design_loop as _dl
+
+        state, problem = _dl._loop_read(_git_dir(top))
+        if problem:
+            loop = "could not read: " + problem
+        elif state.get("feature"):
+            lab = state.get("labels") or {}
+            issues = []
+            for i in state.get("issues") or []:
+                key = "%s#%s" % (i.get("repo"), i.get("number"))
+                issues.append("%s: %s" % (key, ", ".join(lab.get(key, [])) or "no labels"))
+            loop = "feature %s, stage %s\n" % (state["feature"], state.get("stage")) + "\n".join("- " + i for i in issues)
+    except Exception as exc:
+        loop = "could not read (%s: %s)" % (type(exc).__name__, exc)
+    return ("# Handoff facts\n\n- Branch: %s\n- Last commit: %s\n- Upstream: %s\n- Saved (UTC): %s\n\n"
+            "## Uncommitted files (%d)\n%s\n\n## Design loop\n%s\n"
+            % (branch, one(["log", "-1", "--format=%h %s"]) or "none", ahead,
+               _t.strftime("%Y-%m-%d %H:%M:%SZ", _t.gmtime(now)), len(files), shown or "none", loop))
+
+
 def _autosave_snapshot(top, branch, force_push=False):
     """Snapshot the worktree, untracked files included, to the autosave ref without touching
     the real index, branch or working tree, then push it. Returns a systemMessage or None."""
@@ -1276,6 +1343,9 @@ def _autosave_snapshot(top, branch, force_push=False):
             os.remove(idx)
         _ag(top, ["read-tree", "HEAD"], env=env)
         _autosave_stage(top, branch, env=env)
+        facts = _autosave_facts(top, branch, env, now)
+        blob = _ag(top, ["hash-object", "-w", "--stdin"], input_bytes=facts.encode("utf-8"))[1].strip()
+        _ag(top, ["update-index", "--add", "--cacheinfo", "100644,%s,%s" % (blob, HANDOFF_FACTS)], env=env)
         tree = _ag(top, ["write-tree"], env=env)[1].strip()
     finally:
         if os.path.exists(idx):
@@ -1378,14 +1448,27 @@ def event_autosave():
                 emit({"systemMessage": " | ".join(issue_notes)})
             return 0
         top, branch, tool = target
+        if branch is None:  # detached HEAD: skipped, said once
+            marker = _autosave_state_path(top, "detached", "said")
+            if not _autosave_read(marker):
+                _autosave_write(marker, "1")
+                issue_notes.append("house-rules autosave: HEAD is detached, so nothing is saved for this "
+                                   "checkout. (Said once.)")
+            if issue_notes:
+                emit({"systemMessage": " | ".join(issue_notes)})
+            return 0
         if tool in ("Write", "Edit", "NotebookEdit"):
             _autosave_remember(top, branch, payload)
+        if _autosave_throttled(top, branch, time.time()):  # no git process inside the window
+            if issue_notes:
+                emit({"systemMessage": " | ".join(issue_notes)})
+            return 0
         if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
             return 0
         notes = list(issue_notes)
-        if _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
+        if branch.startswith(AUTOSAVE_BRANCH_PREFIX) and _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
             sha, done = _wip_commit(top, branch, WIP_CHECKPOINT)
             if sha:
                 notes.append("house-rules autosave: %d min passed without a commit on %s, so the "
@@ -1423,7 +1506,7 @@ def event_commitgate():
                 return 0
         if not _autosave_enabled():
             return 0
-        target = _autosave_target(payload)
+        target = _autosave_target(payload, agent_only=True)
         if target is None:
             return 0
         top, branch, tool = target
