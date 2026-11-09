@@ -1489,6 +1489,37 @@ def event_autosave():
     return 0
 
 
+def event_autosave_final():
+    """Stop / StopFailure (#487): save at once, skipping the 60 s window, when the folder has changes
+    (tracked, or files the helper wrote) or the autosave ref is older than HEAD. No WIP commit, ever."""
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit({"systemMessage": "house-rules plugin: autosave (end of turn) got an empty payload and did not run."})
+            return 0
+        target = _autosave_target(payload)
+        if target is None or target[1] is None:  # not in a repo, or detached HEAD (said by the edit hook)
+            return 0
+        top, branch, _tool = target
+        written = set(_autosave_read(_autosave_state_path(top, branch, "written")).splitlines())
+        changed = [p for p in _dirty_files(top) if p in written]
+        tracked = _ag(top, ["status", "--porcelain", "-uno"])[1].strip()
+        rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", AUTOSAVE_REF_PREFIX + branch], check=False)
+        head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+        stale = rc != 0 or _ag(top, ["rev-parse", cur.strip() + "^"], check=False)[1].strip() != head
+        if not (changed or tracked or stale):
+            return 0
+        msg = _autosave_snapshot(top, branch, force_push=True)
+        if msg:
+            emit({"systemMessage": msg})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: autosave (end of turn) hit an error (%s: %s) and did not save."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
 def event_commitgate():
     """PreToolUse (Write|Edit|NotebookEdit) on a worktree-agent- branch: once COMMITGATE_THRESHOLD
     files are uncommitted, deny the edit and say commit first. Asked once and ignored (HEAD has not
