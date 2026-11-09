@@ -1,0 +1,44 @@
+{
+  "title": "Handoff QA",
+  "eyebrow": "QA · session handoff, issue #406, plugin 2.77.0",
+  "short": {
+    "lead": "The session handoff is built on the branch AjsAgent/session-handoff as plugin 2.77.0. Each edit is saved to GitHub without touching your branches, and the next session in any folder picks that work up and offers to restore it. Every row below was run for real, against the real GitHub repo. The one thing not yet proven is a second Claude account, because installs come from main, so that check happens after the merge.",
+    "hint": "Tap a row to see what was run and what it showed.",
+    "key": [["Proven by a real run", ""]],
+    "items": [
+      ["check", "Live save", "An edit is saved to GitHub", "",
+        "A live headless session (claude -p with the plugin loaded from this branch) edited docs/5-today/Today.md in a fresh clone and did not commit. git ls-remote then showed refs/house-rules/autosave/AjsAgent/session-handoff at 3111948, which held the edited line and a facts file saying the folder was 1 commit behind GitHub.",
+        "Nothing from you."],
+      ["check", "Live pickup", "A new folder picks the work up", "",
+        "A second live session in another fresh clone opened with: \"house-rules pickup: loaded from docs/5-today/handoff-AjsAgent-session-handoff.md and refs/house-rules/remote-autosave/AjsAgent/session-handoff\", then listed Today.md as only in the snapshot, with its restore command and \"Ask aj before running it\".",
+        "Nothing from you."],
+      ["check", "Restore", "The restored file is identical", "",
+        "Running the printed git restore command in a fresh clone brought back Today.md, and cmp found it byte-for-byte identical to the original folder's file.",
+        "Nothing from you."],
+      ["check", "Live check", "The end-of-reply check fires", "",
+        "In the live session that edited without committing, the new check sent the turn back, asking it to commit and write the handoff note.",
+        "Nothing from you."],
+      ["check", "Tests", "No new failures", "",
+        "verify.py: 7 of 1080 checks fail, the same 7 that fail on a clean main. tools/verify_tools.py: 1 of 52 fails (A16), also failing on a clean main.",
+        "Nothing from you."]
+    ]
+  },
+  "changes": [],
+  "qa": {
+    "feature": "Session handoff",
+    "base": "origin/main",
+    "unverified": [
+      "A second Claude account picking the work up; every live run used this account, and the handoff relies only on git, so the account should not matter, but that is not proven",
+      "A turn actually cut off by a usage limit; the StopFailure save has only been run with replayed payloads, because a real limit can't be triggered on purpose",
+      "The Code tab in the desktop app; the live runs were headless terminal sessions"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "QA for the session handoff: built, run live against GitHub, waiting on your QA.",
+    "changing": "Plugin 2.77.0 on the branch AjsAgent/session-handoff. Nothing reaches main until a pull request you merge.",
+    "blocking": "Your QA verdict.",
+    "next": "If QA passes, I open a pull request to main. After you merge it and installs update, the first session on your second account in this repo should open with the pickup.",
+    "todo": ["Read the rows above.", "Type \"QA passed: Session handoff\", or \"QA failed: Session handoff\" with what is wrong."]
+  }
+}
