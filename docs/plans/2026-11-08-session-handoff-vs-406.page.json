@@ -5,7 +5,7 @@
   "replyPrefix": "Design approved: Session handoff",
   "reply": "",
   "short": {
-    "lead": "You approved the session handoff design today (picks 1A 2A 3A). While planning it, I found that this folder was on an old branch, 367 commits behind main, so my first page missed an open issue that covers the same goal. That issue is #406, \"Keep work saved and handed off on every reply, so a usage limit never strands it\". You approved its design on 2026-10-27, and it was paused behind the restructure (issue #306), which is now closed. Its design document, docs/4-systems/usage-handoff.md, was removed from main when the restructure merge was reverted. It still exists on the branch AjsAgent/issue-281-fix. The two designs differ in who does the saving, so one has to give way before I plan the build.",
+    "lead": "You approved the session handoff design today, choosing option A on each of the three questions on that page (1A, 2A, 3A). While planning it, I found that this repository's working folder was on an old branch, 367 commits behind main, so my first page missed an open issue that covers the same goal. That issue is #406, \"Keep work saved and handed off on every reply, so a usage limit never strands it\". You approved its design on 2026-10-27, and it was paused until the plugin restructure (issue #306) finished, and that issue is now closed. Its design document, docs/4-systems/usage-handoff.md, was removed from main when the restructure merge was reverted. The document still exists on the branch AjsAgent/issue-281-fix. The two designs differ in who does the saving: in #406 the agent saves, and today's design saves automatically. One has to give way before I plan the build.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       ["Already approved in October (#406)", ""],
@@ -15,7 +15,7 @@
     "items": [
       ["check", "#406", "The hook only checks; the agent saves", "", "At the end of a reply that changed files, a check sends the reply back once if the work is not committed, not pushed, or not described in a handoff note. The agent writes the commit, the push and the note.", "Commit messages stay meaningful, but nothing is saved if the session is cut off before the agent acts."],
       ["check", "#406", "One handoff note per branch", "", "Each branch gets its own note, docs/5-today/handoff-<branch>.md, rewritten in place.", "Two branches never fight over one file when they are merged."],
-      ["check", "#406", "Rules for the note", "", "The note carries no published page links, no session links and no Claude credit. HOUSE_RULES_HANDOFF=off turns the check off.", "Kept in every option below."],
+      ["check", "#406", "Rules for the note", "", "The note carries no published page links, no session links and no Claude credit. HOUSE_RULES_HANDOFF=off turns the check off.", "These rules are kept in every option of question 1 below."],
       ["plus", "Today", "Automatic snapshot after every edit", "", "The whole working folder is pushed to refs/autosave/<branch> at most once a minute. Your branches are never changed.", "A sudden stop loses at most the last minute."],
       ["plus", "Today", "The hook writes the facts every turn", "", "Branch, unpushed commits, unsaved files, stage and issues are written by the hook, and the agent adds a short summary when it can.", "The note exists even when the agent never gets to write it."],
       ["plus", "Today", "Ask before restoring", "", "At session start, saved work that the folder lacks is reported, and restored only after you say yes.", "Nothing is overwritten without your yes."]
@@ -24,7 +24,7 @@
   "changes": [],
   "choices": [
     ["q1", "1. How do today's design and #406 fit together?", [
-      ["A", "One feature under #406: today's three picks replace the October design where they differ, and #406's per-branch note and note rules stay", 1, "Nothing approved is thrown away, the note uses #406's per-branch file name instead of one shared Handoff.md, and the October check still runs as a backstop behind the automatic save."],
+      ["A", "One feature under #406: today's three picks (1A, 2A, 3A) replace the October design where they differ, and #406's per-branch note and note rules stay", 1, "Nothing approved is thrown away, the note uses #406's per-branch file name instead of one shared Handoff.md, and the October check still runs as a backstop behind the automatic save."],
       ["B", "Today's design alone, with #406 closed as replaced by it", 0, "Simplest to explain, but it drops the per-branch note and the October note rules."],
       ["C", "The October design as approved, with today's design dropped", 0, "Least new code, but a session cut off mid-turn still loses whatever the agent had not committed."]
     ], "Whichever you pick, the build happens on the new branch AjsAgent/session-handoff, which starts from main."]
