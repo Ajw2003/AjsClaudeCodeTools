@@ -1495,6 +1495,23 @@ _n3, _s3 = _ma_say("<message>Thanks. Design approved: login page 1A</message>")
 report("PASS" if (_s["stage"] == "design" and not _s2.get("skip") and _s3["stage"] == "plan"
                   and _s3.get("feature") == "login page") else "FAIL",
        "design loop (D2): a question or a don't moves nothing; an approval after a sentence or a tag still counts")
+# --- #409: replay the October project-thread prompts ---
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("<message>Design approved: usage limit handoff 1A 2A 3A</message>")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "usage limit handoff") else "FAIL",
+       "#409: the October prompt shape stores the feature name exactly, without the tag or answer codes")
+_q409 = ['> "Design approved: background work tracking 1*"',
+         '<message>aj said in the other thread: "Design approved: background work tracking 1*"</message>',
+         "> Design approved: background work tracking 1*"]
+for _q in _q409:
+    _ma_set({"feature": "Other", "stage": "design"})
+    _n, _s = _ma_say(_q)
+    report("PASS" if (_s["stage"] == "design" and _s.get("feature") == "Other" and "moved nothing" in _n) else "FAIL",
+           "#409: a quoted approval from another thread moves nothing (%s)" % _q[:40])
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("Design approved: login page 1A")
+report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "login page") else "FAIL",
+       "#409: an approval typed directly still moves the stage")
 _ma_set({"feature": "Label setup", "stage": "design"})
 _n, _s = _ma_say("Design approved: importer.  Build plan approved: Importer")
 report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "importer"
