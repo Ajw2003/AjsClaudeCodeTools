@@ -7,6 +7,24 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-08 - Session handoff and #406 become one feature
+
+**Context.** The session handoff design overlapped issue #406, approved 2026-10-27. aj picked
+"Design approved: Session handoff 1A" on `docs/plans/2026-11-08-session-handoff-vs-406.html`.
+
+**Decision.** One feature under #406. The November picks (automatic save, hook-written facts, ask
+before restoring) replace the October design where they differ. #406's per-branch note,
+`docs/5-today/handoff-<branch>.md`, its note rules and its end-of-reply check stay, the check as a
+backstop. Rejected: November design alone (1B), October design alone (1C).
+
+**Planning notes.** The automatic save keeps #477's rule that new files reach a snapshot only when
+the agent wrote them, so "including untracked files" on the November page narrows to that. The facts
+go inside the snapshot, not into the working folder. System doc: `docs/4-systems/usage-handoff.md`.
+
+**Status.** Design approved; build plan next.
+
+---
+
 ## 2026-11-08 - Session handoff: automatic save, hook-written note, ask before restoring
 
 **Context.** aj asked that every session's work be saved and handed off automatically, so the next
