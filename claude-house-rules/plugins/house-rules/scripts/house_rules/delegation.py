@@ -2047,7 +2047,7 @@ def _pickup_build(top, branch):
     g = lambda *a: _ag(top, list(a), check=False)
     problem = ""
     if g("remote", "get-url", "origin")[0] != 0:
-        problem = "no `origin` remote, so GitHub was not asked"
+        problem = "GitHub could not be reached (no `origin` remote)"
     else:
         try:
             rc, _o, err = _ag(top, ["fetch", "--quiet", "origin", "+refs/house-rules/autosave/*:" + PICKUP_REMOTE_PREFIX + "*"],
