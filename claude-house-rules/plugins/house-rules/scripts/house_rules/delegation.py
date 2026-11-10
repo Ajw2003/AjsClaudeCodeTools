@@ -2094,7 +2094,9 @@ def _pickup_build(top, branch):
             parts.append("Facts from the newest snapshot (%s):\n%s" % (snap, facts.strip()))
         rc, names, _e = g("diff", "--name-only", "-z", snap + "^", snap)
         only, both = [], []
-        for f in [n for n in names.split("\0") if n and n != HANDOFF_FACTS] if rc == 0 else []:
+        # The design-loop stage file is never offered: only aj's approvals move the stage, and the guard refuses it.
+        skip = (HANDOFF_FACTS, ".claude/house-rules-loop.json")
+        for f in [n for n in names.split("\0") if n and n not in skip] if rc == 0 else []:
             sb = g("rev-parse", "--verify", "-q", "%s:%s" % (snap, f))
             if sb[0] != 0:
                 continue  # deleted in the snapshot: nothing to restore
@@ -2106,9 +2108,11 @@ def _pickup_build(top, branch):
             head = hb[1].strip() if hb[0] == 0 else None
             (only if work == head else both).append(f)
         if only:
-            missing_block = ("Only in the snapshot, not in this folder: %s.\nRestore command: git restore --source=%s -- %s\n"
+            # Applying the snapshot's own diff, not `git restore`: the guard refuses restore (it can throw edits away),
+            # while `git apply` stops on any file that changed since, so it never overwrites anything.
+            missing_block = ("Only in the snapshot, not in this folder: %s.\nRestore command: git diff %s^ %s -- %s | git apply\n"
                              "Ask aj before running it; the hook never restores anything."
-                             % (", ".join(only), snap, " ".join(shlex.quote(f) for f in only)))
+                             % (", ".join(only), snap, snap, " ".join(shlex.quote(f) for f in only)))
         if both:
             missing_block += ("\n" if missing_block else "") + (
                 "Changed in both this folder and the snapshot (conflict, never restored by the hook): %s." % ", ".join(both))
