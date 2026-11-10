@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Design approved: Roadmap",
   "reply": "",
   "short": {
-    "lead": "All 226 open issues were read and checked against the code. 145 are still needed and 37 need a closer look, while 38 are already built, duplicated or replaced, and 6 are built on the branch AjsAgent/session-handoff but not merged. The proposal: close every one of the 226, and open one issue per phase in their place. Each phase issue lists every old issue it absorbs, so nothing is lost. The phases run one at a time, each with its own design, plan and QA (your testing pass), and the next starts only when the last one passes QA. Phase 2 makes any of your four accounts pick up where the last one stopped, and is tested on the desktop app, in the cloud and on a second account. The full per-issue verdicts are in docs/2-roadmap/triage/.",
+    "lead": "All 226 open issues were read and checked against the code. 145 are still needed and 37 need a closer look, while 38 are already built, duplicated or replaced, and 6 are built on the branch AjsAgent/session-handoff but not merged. The proposal: close every one of the 226, and open one issue per phase in their place. Each phase issue lists every old issue it absorbs, so nothing is lost. The phases run one at a time, each with its own design, plan and QA (your testing pass), and the next starts only when the last one passes QA. Phase 2 makes any of your four accounts pick up where the last one stopped, and phase 4 makes every page fit its idea, show its work and follow the calm-by-default research, each tested where you use it. The full per-issue verdicts are in docs/2-roadmap/triage/.",
     "hint": "Tap a phase to see what it covers, the old issues it absorbs, and what done looks like.",
     "key": [
       [
@@ -294,10 +294,23 @@ const PAGE = {
     "items": [
       [
         "plus",
-        "Phase 1, 26 issues",
+        "At a glance",
+        "The eight phases, in order",
+        "",
+        "Each phase is one feature with its own design, plan and QA, and the next starts when the last passes. Phase 4 is where pages change.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgMjQwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48ZGVmcz48bWFya2VyIGlkPSJhIiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjgiIHJlZlk9IjUiIG1hcmtlcldpZHRoPSI3IiBtYXJrZXJIZWlnaHQ9IjciIG9yaWVudD0iYXV0byI+PHBhdGggZD0iTTAgMEwxMCA1TDAgMTB6IiBmaWxsPSIjN2Q4MzhjIi8+PC9tYXJrZXI+PC9kZWZzPjxyZWN0IHg9IjIwIiB5PSIyNCIgd2lkdGg9IjE2MCIgaGVpZ2h0PSI4NCIgcng9IjEwIiBmaWxsPSIjNGY3ZmQ5IiBmaWxsLW9wYWNpdHk9IjAuMTMiIHN0cm9rZT0iIzRmN2ZkOSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMzQiIHk9IjQ2IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjNGY3ZmQ5Ij5QaGFzZSAxPC90ZXh0Pjx0ZXh0IHg9IjM0IiB5PSI2NiIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzNmNDQ0YiI+PHRzcGFuIHg9IjM0IiBkeT0iMCI+QXBwcm92YWxzIGp1c3Qgd29yazwvdHNwYW4+PC90ZXh0PjxwYXRoIGQ9Ik0xODQgNjYgaDE4IiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhKSIvPjxyZWN0IHg9IjIxMCIgeT0iMjQiIHdpZHRoPSIxNjAiIGhlaWdodD0iODQiIHJ4PSIxMCIgZmlsbD0iIzJmOWE3MCIgZmlsbC1vcGFjaXR5PSIwLjEzIiBzdHJva2U9IiMyZjlhNzAiIHN0cm9rZS13aWR0aD0iMiIvPjx0ZXh0IHg9IjIyNCIgeT0iNDYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjlhNzAiPlBoYXNlIDI8L3RleHQ+PHRleHQgeD0iMjI0IiB5PSI2NiIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzNmNDQ0YiI+PHRzcGFuIHg9IjIyNCIgZHk9IjAiPlBpY2sgdXAgb24gYW55IG9mPC90c3Bhbj48dHNwYW4geD0iMjI0IiBkeT0iMTciPnlvdXIgZm91ciBhY2NvdW50czwvdHNwYW4+PC90ZXh0PjxwYXRoIGQ9Ik0zNzQgNjYgaDE4IiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhKSIvPjxyZWN0IHg9IjQwMCIgeT0iMjQiIHdpZHRoPSIxNjAiIGhlaWdodD0iODQiIHJ4PSIxMCIgZmlsbD0iIzdkODM4YyIgZmlsbC1vcGFjaXR5PSIwLjEzIiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS13aWR0aD0iMiIvPjx0ZXh0IHg9IjQxNCIgeT0iNDYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPlBoYXNlIDM8L3RleHQ+PHRleHQgeD0iNDE0IiB5PSI2NiIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzNmNDQ0YiI+PHRzcGFuIHg9IjQxNCIgZHk9IjAiPkd1YXJkIHJlZnVzZXMgb25seTwvdHNwYW4+PHRzcGFuIHg9IjQxNCIgZHk9IjE3Ij50aGUgaXJyZXZlcnNpYmxlPC90c3Bhbj48L3RleHQ+PHBhdGggZD0iTTU2NCA2NiBoMTgiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2EpIi8+PHJlY3QgeD0iNTkwIiB5PSIyNCIgd2lkdGg9IjE2MCIgaGVpZ2h0PSI4NCIgcng9IjEwIiBmaWxsPSIjYzc3YTJjIiBmaWxsLW9wYWNpdHk9IjAuMTMiIHN0cm9rZT0iI2M3N2EyYyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iNjA0IiB5PSI0NiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2M3N2EyYyI+UGhhc2UgNDwvdGV4dD48dGV4dCB4PSI2MDQiIHk9IjY2IiBmb250LXNpemU9IjEzIiBmaWxsPSIjM2Y0NDRiIj48dHNwYW4geD0iNjA0IiBkeT0iMCI+UGFnZXMgdGhhdCBmaXQsIHNob3c8L3RzcGFuPjx0c3BhbiB4PSI2MDQiIGR5PSIxNyI+dGhlIHdvcmssIHN0YXkgY2FsbTwvdHNwYW4+PC90ZXh0PjxwYXRoIGQ9Ik02NzAgMTExIHYxNiBIMTAwIHYxNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48cmVjdCB4PSIyMCIgeT0iMTUyIiB3aWR0aD0iMTYwIiBoZWlnaHQ9Ijg0IiByeD0iMTAiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4xMyIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIzNCIgeT0iMTc0IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5QaGFzZSA1PC90ZXh0Pjx0ZXh0IHg9IjM0IiB5PSIxOTQiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiMzZjQ0NGIiPjx0c3BhbiB4PSIzNCIgZHk9IjAiPkhlbHBlcnMgeW91IGNhbjwvdHNwYW4+PHRzcGFuIHg9IjM0IiBkeT0iMTciPmZvbGxvdzwvdHNwYW4+PC90ZXh0PjxwYXRoIGQ9Ik0xODQgMTk0IGgxOCIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48cmVjdCB4PSIyMTAiIHk9IjE1MiIgd2lkdGg9IjE2MCIgaGVpZ2h0PSI4NCIgcng9IjEwIiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMTMiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMjI0IiB5PSIxNzQiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPlBoYXNlIDY8L3RleHQ+PHRleHQgeD0iMjI0IiB5PSIxOTQiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiMzZjQ0NGIiPjx0c3BhbiB4PSIyMjQiIGR5PSIwIj5Zb3VyIGNyZWRpdDwvdHNwYW4+PHRzcGFuIHg9IjIyNCIgZHk9IjE3Ij5ldmVyeXdoZXJlPC90c3Bhbj48L3RleHQ+PHBhdGggZD0iTTM3NCAxOTQgaDE4IiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhKSIvPjxyZWN0IHg9IjQwMCIgeT0iMTUyIiB3aWR0aD0iMTYwIiBoZWlnaHQ9Ijg0IiByeD0iMTAiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4xMyIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSI0MTQiIHk9IjE3NCIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzdkODM4YyI+UGhhc2UgNzwvdGV4dD48dGV4dCB4PSI0MTQiIHk9IjE5NCIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzNmNDQ0YiI+PHRzcGFuIHg9IjQxNCIgZHk9IjAiPkRvY3MgYW5kIGNoYW5nZWxvZzwvdHNwYW4+PC90ZXh0PjxwYXRoIGQ9Ik01NjQgMTk0IGgxOCIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48cmVjdCB4PSI1OTAiIHk9IjE1MiIgd2lkdGg9IjE2MCIgaGVpZ2h0PSI4NCIgcng9IjEwIiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMTMiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iNjA0IiB5PSIxNzQiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPlBoYXNlIDg8L3RleHQ+PHRleHQgeD0iNjA0IiB5PSIxOTQiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiMzZjQ0NGIiPjx0c3BhbiB4PSI2MDQiIGR5PSIwIj5QbHVnaW4gc3BsaXQsIGZhc3RlcjwvdHNwYW4+PHRzcGFuIHg9IjYwNCIgZHk9IjE3Ij5ob29rczwvdHNwYW4+PC90ZXh0Pjwvc3ZnPgo=",
+          "alt": "Eight boxes in two rows of four, joined by arrows: phase 1 approvals just work, 2 pick up on any of your four accounts, 3 guard refuses only the irreversible, 4 pages that fit, show the work, stay calm, 5 helpers you can follow, 6 your credit everywhere, 7 docs and changelog, 8 plugin split and faster hooks.",
+          "caption": "The phases run left to right, top row first."
+        }
+      ],
+      [
+        "plus",
+        "Phase 1, 22 issues",
         "Approvals and the design loop just work",
         "",
-        "Every way you approve moves the stage, and the plugin never offers you a line or a button that won't work. A fault found in QA goes back to Build with one message, and \"skip design\" covers one change across its files. Absorbs the approval issues (#491, #481, #475, #429, #379, #296, #273, #155, #141, #131, #132) and the design-loop flow issues (#480, #459, #460, #458, #457, #468, #470, #471, #473, #110, #107, #128, #129, #130, #102). The five approvals that moved nothing today become its first tests.",
+        "Every way you approve moves the stage, and the plugin never offers you a line or a button that won't work. A fault found in QA goes back to Build with one message, and \"skip design\" covers one change across its files. Absorbs the approval issues (#491, #481, #475, #429, #379, #296, #273, #155, #141, #131, #132) and the design-loop flow issues (#480, #459, #460, #458, #457, #110, #107, #128, #129, #130, #102). The five approvals that moved nothing today become its first tests.",
         "Done when each of today's failed approvals gets the right answer, a QA fix needs one message from you, and both pass a real session in the desktop app."
       ],
       [
@@ -318,11 +331,11 @@ const PAGE = {
       ],
       [
         "plus",
-        "Phase 4, 31 issues",
-        "Pages always work",
+        "Phase 4, 36 issues",
+        "Pages that fit the idea, show the work, and stay calm",
         "",
-        "Pictures written into the page, a copy box that works wherever the page opens, a page builder that refuses any page missing a required part, QA pages that prove each change with evidence, and the accessibility fixes. Covers #490, #462, #313, #464, #466, #377, #378, #411 to #417, #419 to #424, #461, #469, #283, #284, #158, #194, #297 to #300 and #302.",
-        "Passed when a page with pictures, published and opened in the browser, shows them all, its copy box works, and the builder refuses each kind of incomplete page."
+        "Every proposal and build plan carries a picture of what it changes. Every build plan also shows the code each step will write, editable on the page, before it is written. When the standard layout doesn't fit an idea, the page gets a layout made for it, and a design page can offer you two or three looks to pick from. The builder checks what a page must carry (the choice, the approval line, the picture, the plain summary), not its shape, so no page is skipped for not fitting. Every page follows the calm-by-default research in the focus-deck-app repo (docs/plans/calm-by-default.md, on its branch AjsAgent/sort-steps). That means less at once with detail on request, a predictable layout, literal words, calm colour and motion you control, and a clear next step. Related things sit together, and a glance layer of colour and icons always has its words beside it. Pictures go inside the page and the copy box works wherever it opens. Brings in #490, #462, #313, #302, #158, #464, #466, #377, #378, #411 to #417, #419 to #424, #461, #468 to #473, #283, #284, #194 and #297 to #300. The accessibility plugin's own design (#448) stays in phase 8, built on what this phase proves.",
+        "Complete when a build plan shows its planned code and a picture, an idea that doesn't fit the template still gets a page in a fitting layout, and every page passes a calm-by-default check with its pictures and copy box working once published."
       ],
       [
         "plus",
@@ -342,10 +355,10 @@ const PAGE = {
       ],
       [
         "plus",
-        "Phase 7, 17 issues",
+        "Phase 7, 16 issues",
         "Docs and a changelog that keep themselves current",
         "",
-        "A changelog in every repo, a research-and-sources tier, and a check per house rule. Brings in #384 to #388, #336, #45, #117, #228, #244, #301, #399, #404, #436, #463, #472 and #199.",
+        "A changelog in every repo, a research-and-sources tier, and a check per house rule. Brings in #384 to #388, #336, #45, #117, #228, #244, #301, #399, #404, #436, #463 and #199.",
         "Settled when a pull request that changes behaviour without a changelog line is flagged, in this repo and one other."
       ],
       [
@@ -378,7 +391,7 @@ const PAGE = {
   "choices": [
     [
       "q1",
-      "1. Which phase comes first?",
+      "1. Which phases come first?",
       [
         [
           "A",
@@ -391,6 +404,12 @@ const PAGE = {
           "Picking up on any account first",
           0,
           "Multi-account continuity arrives sooner, but its own design and plan approvals still run on the current loop, with today's friction."
+        ],
+        [
+          "C",
+          "Approvals, then pages, then picking up on any account",
+          0,
+          "Pages that fit and show their work arrive second, so every later design and plan is easier to read; multi-account pickup waits one phase longer."
         ]
       ],
       "Phases 3 to 8 follow in the order shown either way; any phase can be moved later by a dated decision entry."
