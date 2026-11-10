@@ -76,3 +76,30 @@ The loop accepted only the stage words first ("Design approved: <feature>"). It 
 feature name ("<feature> design approved <picks>", "<feature> build plan approved", "<feature> QA passed"), with
 the same rules as before: not inside a question, not quoted from another message. aj's three approvals of
 2026-11-09 that moved nothing ("Handoff overwrite design approved 1A" among them) become `verify.py` cases.
+
+## Planned: phase 1, approvals just work (2026-11-10, "Phase 1" 1A 2A 3A)
+
+Issue #493; page `docs/plans/2026-11-10-phase-1-approvals.html`. Seven build steps, one sub-issue each, all in
+`scripts/house_rules/design_loop.py` unless named, built one after another because they share that file:
+
+1. **Matching.** The stage words may follow the feature name ("Phase 1 design approved 1A"). A leading
+   `<system-reminder>` block is stripped before matching, unless it carries a relayed-message marker (cloud
+   sessions, #429). A "don't" or "not" before any approval stops it (D2). Outside a repo the note names the folder
+   searched and says to open the repo (#296).
+2. **Lines and buttons.** `make_page.py check_approval` refuses a design or build plan page whose copy-box line the
+   loop would reject. The end-of-reply check records the approval lines a reply offered; aj's next message, when it
+   is exactly "Approve" plus optional picks and that reply offered exactly one line, is read as that line (2A).
+3. **The feature's issues.** The feature issue is the one the others name in "Part of #N". "Build plan approved"
+   reads open issues with "Part of #N" in their body from GitHub, plus #N itself; an issue that names no part of
+   the feature no longer counts (1A, #475).
+4. **One-message QA fix.** "QA failed: <feature> <what's wrong>" moves the stage to Build with the issues kept, not
+   to Design; the agent moves the labels back to `in progress`.
+5. **Lock gaps.** D3 (the old `.git` stage file is not read), D6 (a new design name is checked first), D9 (a branch
+   switch does not bring back that branch's stage), U3 (a merged feature leaves no QA stage on `main`).
+6. **Decisions only from aj** (#458, #459, #460): no judgement-call exception in the rules, helper questions go to
+   aj, a question asked in Build holds code edits until aj answers, and a reply that settles a design point alone
+   is sent back once.
+7. **Issues follow the work, and proof.** After "QA passed" and a merge the reply offers the close line (#132,
+   #141); the label line is said once per set of labels (#273). `verify.py` cases for the eight findings already
+   fixed, for #107, #110 and #128, and for #102, #129 and #130 (3A); then this doc's "How it works" is updated and
+   the QA page is built.

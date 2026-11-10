@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-10 - Phase 1: approvals and the design loop just work
+
+**Context.** On 2026-11-09 five of aj's approvals moved nothing: two typed lines with the feature name first, a
+copy-box line with no stage words, a button labelled "Send it", and a build plan approval refused because the loop
+had not counted issues it never saw being opened. Phase 1 of the roadmap (#493) carries the 20 old issues about
+approvals and the design loop. Checking them against the code on 2026-11-10 found eight audit findings already
+fixed (D4, A9, A7, A2, A10, D5, D7, D8) and the rest still open.
+
+**Decision.** aj approved "Design approved: Phase 1 1A 2A 3A" on `docs/plans/2026-11-10-phase-1-approvals.html`.
+1A: a build plan approval reads the feature's issues from GitHub ("Part of #<feature issue>") instead of only
+counting issues seen being opened during Plan. 2A: a short reply button such as "Approve 1A" counts as the one
+approval line the same reply offered. 3A: #102, #129 and #130 close with a `verify.py` case proving what the QA page
+and the code-edit lock already do.
+
+**Why.** 1A fixes both ways issue counting failed (a separate feature's issue counted, an unseen issue missed). 2A
+gives one-tap approval without trusting a label on its own. 3A: the lock is stricter than #129 and #130 asked for.
+Rejected: 1B (still misses unseen issues), 2B (every approval needs the page open), 3B (duplicates the lock).
+
+**Status.** Design approved; the build plan is next.
+
+---
+
 ## 2026-11-09 - Roadmap: eight phases in sequence replace 226 open issues
 
 **Context.** 226 issues were open, and work had become one-off fixes that kept failing aj in the same places:
