@@ -36,6 +36,6 @@
     "changing": "Nothing yet. No code is written until you approve.",
     "blocking": "Your pick for question 1, or what you want changed.",
     "next": "Once you approve, I open an issue for the fix, build it, and run both desktop sessions again in fresh clones. Then I write exact steps for you to follow for the cloud test and the second-account test.",
-    "todo": ["Type \"Handoff overwrite design approved 1A\" in this chat (1A means question 1, option A), or type the same line with 1B or 1C."]
+    "todo": ["Type \"Design approved: Handoff overwrite 1A\" in this chat (1A means question 1, option A), or type the same line with 1B or 1C."]
   }
 }
