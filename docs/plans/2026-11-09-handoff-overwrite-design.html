@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Handoff overwrite design",
   "reply": "",
   "short": {
-    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to one place on GitHub, refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch, which had none of that work, saved its own state to the same place as snapshot 32fb8c8 and replaced A's. The pickup now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a second account could not get it back. The restore command fix (commit d62be1a) stays either way.",
+    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       [
@@ -297,7 +297,7 @@ const PAGE = {
         "Exists, kept",
         "The save, the facts file and the pickup",
         "",
-        "The save runs after edits and at the end of each turn, writes a facts file into the snapshot, and pushes it. The pickup fetches snapshots when a session starts. All of this stays; only where a snapshot is stored changes.",
+        "The save runs after edits and at the end of each turn, writes a facts file (a short record of the branch, its commit and the uncommitted files) into the snapshot, and pushes it. The pickup fetches snapshots when a session starts. All of this stays; only where a snapshot is stored changes.",
         "Nothing from you."
       ],
       [
@@ -305,7 +305,7 @@ const PAGE = {
         "Broken",
         "One storage place per branch",
         "",
-        "refs/house-rules/autosave/<branch> is shared by every folder on that branch. The newest save wins, whether or not it holds the older folder's work. The pickup also preferred clone B's own newer local snapshot over clone A's on GitHub, which is why session B2 was offered nothing.",
+        "refs/house-rules/autosave/<branch> is shared by every folder on that branch. The newest save wins, whether or not it holds the older folder's work. The pickup also chose clone B's own newer local snapshot over clone A's snapshot on GitHub, which is why the second desktop session in clone B was offered nothing.",
         "Pick a fix below."
       ],
       [
@@ -313,8 +313,8 @@ const PAGE = {
         "You decide",
         "How saves from different folders are kept apart",
         "you",
-        "Question 1 below.",
-        "Pick one option."
+        "Question 1 below asks which of three ways to keep each folder's saves apart.",
+        "Choose from the three options in question 1."
       ]
     ]
   },
@@ -328,19 +328,19 @@ const PAGE = {
           "A",
           "Each folder saves under its own name: refs/house-rules/autosave/<branch>/<folder id>",
           1,
-          "The folder id is a random id written once into that folder's .git directory. A save only ever replaces its own folder's snapshot. The pickup lists every snapshot for the current branch that holds files this folder lacks, newest first, each with its own restore command. Old snapshots pile up on GitHub until removed; the save could delete its own snapshot once its folder has nothing uncommitted."
+          "The folder id is a random id written once into that folder's .git directory. A save only ever replaces its own folder's snapshot. The pickup lists every snapshot for the current branch that holds files this folder lacks, newest first, each with its own restore command. Old snapshots pile up on GitHub until someone removes them. The save could delete its own snapshot once its folder has nothing uncommitted."
         ],
         [
           "B",
           "One place per branch, but a save refuses to replace a snapshot holding work it lacks",
           0,
-          "Before pushing, the save fetches the current snapshot and compares it with this folder. If the snapshot holds files this folder doesn't have, the save is skipped and says so in one line. Nothing is lost, but the second folder's own work is not saved until the first folder's work is committed."
+          "Before pushing, the save fetches the current snapshot and compares it with this folder. If the snapshot holds files this folder doesn't have, the save is skipped and prints one line saying so. Nothing is lost, but the second folder's own work stays unsaved on GitHub until the first folder's work is committed."
         ],
         [
           "C",
           "One place per branch, each save stacked on the one before it",
           0,
-          "Each new snapshot keeps the previous one as a second parent, so older saves stay reachable from the newest. The pickup walks back through the chain to find work this folder lacks. Nothing is lost and there is one name per branch, but the chain grows with every save and the pickup gets slower and harder to read."
+          "Each new snapshot keeps the previous one as a second parent, so older saves stay reachable from the newest. The pickup walks back through the chain to find work this folder lacks. Nothing is lost and there is one name per branch, but the chain grows with every save, so the pickup gets slower and its output harder to read."
         ]
       ],
       "Each option keeps the restore command fix from commit d62be1a."
@@ -350,7 +350,7 @@ const PAGE = {
     "summary": "A design to stop a second folder's save erasing the first folder's saved work on the same branch.",
     "changing": "Nothing yet. No code is written until you approve.",
     "blocking": "Your pick for question 1, or what you want changed.",
-    "next": "Once you approve, I open an issue for the fix, build it, and run both desktop sessions again in fresh clones. Then I write exact steps for the cloud test and the second-account test.",
+    "next": "Once you approve, I open an issue for the fix, build it, and run both desktop sessions again in fresh clones. Then I write exact steps for you to follow for the cloud test and the second-account test.",
     "todo": [
       "Tap <b>Copy my reply<\/b> and send it: \"Handoff overwrite design\", or say what to change."
     ]
