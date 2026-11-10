@@ -1,41 +1,115 @@
 {
-  "title": "Handoff Overwrite",
-  "eyebrow": "Design · two folders on one branch must not erase each other's saved work",
-  "approval": "Handoff overwrite design",
-  "replyPrefix": "Handoff overwrite design",
+  "title": "Handoff and Pictures",
+  "eyebrow": "Design · saved work that no other folder can erase, and page pictures that always show",
+  "approval": "Handoff overwrite",
+  "replyPrefix": "Handoff overwrite",
   "reply": "",
   "short": {
-    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back.",
+    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back. Second, as you asked: pictures on pages built by make_page.py break once a page is published or opened anywhere else. The builder copies each picture into a folder beside the page, named <page>-pics, and links it by a relative path. A published page carries only the HTML file, so the pictures are missing, which is what you keep seeing in other repos.",
     "hint": "Tap a row to see what it covers.",
-    "key": [["Already exists", ""], ["Broken", ""], ["You decide", "you"]],
+    "key": [
+      [
+        "Already exists",
+        ""
+      ],
+      [
+        "Broken",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
     "items": [
-      ["check", "Exists, kept", "The save, the facts file and the pickup", "",
+      [
+        "check",
+        "Exists, kept",
+        "The save, the facts file and the pickup",
+        "",
         "The save runs after edits and at the end of each turn, writes a facts file (a short record of the branch, its commit and the uncommitted files) into the snapshot, and pushes it. The pickup fetches snapshots when a session starts. All of this stays; only where a snapshot is stored changes.",
-        "Nothing from you."],
-      ["cross", "Broken", "One storage place per branch", "",
+        "Nothing from you."
+      ],
+      [
+        "cross",
+        "Broken",
+        "One storage place per branch",
+        "",
         "refs/house-rules/autosave/<branch> is shared by every folder on that branch. The newest save wins, whether or not it holds the older folder's work. The pickup also chose clone B's own newer local snapshot over clone A's snapshot on GitHub, which is why the second desktop session in clone B was offered nothing.",
-        "Pick a fix below."],
-      ["search", "You decide", "How saves from different folders are kept apart", "you",
-        "Question 1 below asks which of three ways to keep each folder's saves apart.",
-        "Choose from the three options in question 1."]
+        "Pick a fix below."
+      ],
+      [
+        "cross",
+        "Broken",
+        "Pictures live in a folder beside the page",
+        "",
+        "copy_pictures in scripts/make_page.py (line 149) copies each picture into <page>-pics/ and points the page at it. Publishing sends only the .html, and a page moved, previewed or opened from another repo loses the folder too. The same builder runs in every repo with the plugin, so the fix reaches all of them on the next update.",
+        "Pick a fix in question 2."
+      ],
+      [
+        "search",
+        "You decide",
+        "How saves from different folders are kept apart",
+        "you",
+        "Question 1 asks which of three ways to keep each folder's saves apart. Question 2 asks how pictures should travel with a page.",
+        "Choose one option in each question."
+      ]
     ]
   },
   "changes": [],
   "choices": [
-    ["q1", "1. How are saves from different folders kept apart?", [
-      ["A", "Each folder saves under its own name: refs/house-rules/autosave/<branch>/<folder id>", 1,
-        "The folder id is a random id written once into that folder's .git directory. A save only ever replaces its own folder's snapshot. The pickup lists every snapshot for the current branch that holds files this folder lacks, newest first, each with its own restore command. Old snapshots pile up on GitHub until someone removes them. The save could delete its own snapshot once its folder has nothing uncommitted."],
-      ["B", "One place per branch, but a save refuses to replace a snapshot holding work it lacks", 0,
-        "Before pushing, the save fetches the current snapshot and compares it with this folder. If the snapshot holds files this folder doesn't have, the save is skipped and prints one line saying so. Nothing is lost, but the second folder's own work stays unsaved on GitHub until the first folder's work is committed."],
-      ["C", "One place per branch, each save stacked on the one before it", 0,
-        "Each new snapshot keeps the previous one as a second parent, so older saves stay reachable from the newest. The pickup walks back through the chain to find work this folder lacks. Nothing is lost and there is one name per branch, but the chain grows with every save, so the pickup gets slower and its output harder to read."]
-    ], "Each option keeps the restore command fix from commit d62be1a."]
+    [
+      "q1",
+      "1. How are saves from different folders kept apart?",
+      [
+        [
+          "A",
+          "Each folder saves under its own name: refs/house-rules/autosave/<branch>/<folder id>",
+          1,
+          "The folder id is a random id written once into that folder's .git directory. A save only ever replaces its own folder's snapshot. The pickup lists every snapshot for the current branch that holds files this folder lacks, newest first, each with its own restore command. Old snapshots pile up on GitHub until someone removes them. The save could delete its own snapshot once its folder has nothing uncommitted."
+        ],
+        [
+          "B",
+          "One place per branch, but a save refuses to replace a snapshot holding work it lacks",
+          0,
+          "Before pushing, the save fetches the current snapshot and compares it with this folder. If the snapshot holds files this folder doesn't have, the save is skipped and prints one line saying so. Nothing is lost, but the second folder's own work stays unsaved on GitHub until the first folder's work is committed."
+        ],
+        [
+          "C",
+          "One place per branch, each save stacked on the one before it",
+          0,
+          "Each new snapshot keeps the previous one as a second parent, so older saves stay reachable from the newest. The pickup walks back through the chain to find work this folder lacks. Nothing is lost and there is one name per branch, but the chain grows with every save, so the pickup gets slower and its output harder to read."
+        ]
+      ],
+      "Each option keeps the restore command fix from commit d62be1a."
+    ],
+    [
+      "q2",
+      "2. How do pictures travel with a page?",
+      [
+        [
+          "A",
+          "Each picture is written into the page file itself",
+          1,
+          "The builder reads each picture and puts its bytes straight into the HTML as a data: address, so the page is one self-contained file. It shows its pictures when published, previewed, moved, emailed or opened from any repo. The page gets bigger by roughly a third more than the pictures' own size; a published page may be up to 16 MB, and the builder refuses one over that with a message naming the largest pictures. The <page>-pics folder is no longer written."
+        ],
+        [
+          "B",
+          "Keep the folder, and publish it beside the page",
+          0,
+          "The builder keeps writing <page>-pics/, and every publish must also send that folder as the page's extra files. Published pages work, but a page opened from disk elsewhere, previewed, or published by a session that forgets the folder still loses its pictures."
+        ]
+      ],
+      "A is the only option where nothing can forget to bring the pictures along."
+    ]
   ],
   "wrapup": {
-    "summary": "A design to stop a second folder's save erasing the first folder's saved work on the same branch.",
+    "summary": "A design to stop a second folder's save erasing saved work on the same branch, and to make page pictures always show.",
     "changing": "Nothing yet. No code is written until you approve.",
-    "blocking": "Your pick for question 1, or what you want changed.",
-    "next": "Once you approve, I open an issue for the fix, build it, and run both desktop sessions again in fresh clones. Then I write exact steps for you to follow for the cloud test and the second-account test.",
-    "todo": ["Type \"Design approved: Handoff overwrite 1A\" in this chat (1A means question 1, option A), or type the same line with 1B or 1C."]
+    "blocking": "Your pick for questions 1 and 2, or what you want changed.",
+    "next": "Once you approve, I open one issue per fix, build both on this branch before it goes to main, and test each for real: two desktop sessions in fresh clones for the handoff, and a published page with pictures. Then I write exact steps for you to follow for the cloud test and the second-account test.",
+    "todo": [
+      "Type \"Design approved: Handoff overwrite 1A 2A\" in this chat (1A means question 1, option A), or swap in the letters you pick."
+    ]
   }
 }
