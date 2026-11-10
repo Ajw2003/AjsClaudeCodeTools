@@ -13,6 +13,17 @@ turn end and on a usage-limit stop, #407 end-of-reply check, #408 pickup, #409 q
 checks). A real run against GitHub on 2026-11-08 saved an uncommitted `docs/5-today/Today.md`, and a
 fresh clone's pickup listed it, and its restore command brought back an identical file.
 
+## Desktop app QA, 2026-11-09 (failed on the restore)
+
+Two desktop sessions ran in fresh clones on `AjsAgent/session-handoff-qa`, using each clone's own
+hooks through `.claude/settings.local.json`. Session A's uncommitted edit reached GitHub (snapshot
+e724bf2, with its facts file). Session B opened with the pickup, and its snapshot copy of `Today.md`
+matched A's file apart from Windows line endings. The restore command the pickup prints is refused
+twice. It names `.claude/house-rules-loop.json`, which the design-loop guard blocks, and the main
+guard blocks any `git restore`. The fix needs a code change, and code is locked in QA. Also seen:
+the desktop app's synced copy of the plugin (2.76.0) still ran alongside, even though the clone's
+settings turned it off.
+
 ## Next step
 
 aj's QA: install 2.77.0 from this branch, then run the two-account test from the QA page
