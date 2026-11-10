@@ -5,7 +5,7 @@
   "replyPrefix": "Handoff overwrite",
   "reply": "",
   "short": {
-    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back. Second, as you asked: pictures on pages built by make_page.py break once a page is published or opened anywhere else. The builder copies each picture into a folder beside the page, named <page>-pics, and links it by a relative path. A published page carries only the HTML file, so the pictures are missing, which is what you keep seeing in other repos.",
+    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back. Second, as you asked: pictures on pages built by make_page.py break once a page is published or opened anywhere else. The builder copies each picture into a folder beside the page, named <page>-pics, and links it by a relative path. A published page carries only the HTML file, so the pictures are missing, which is why you keep seeing broken pictures in other repos.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       [
@@ -36,20 +36,20 @@
         "One storage place per branch",
         "",
         "refs/house-rules/autosave/<branch> is shared by every folder on that branch. The newest save wins, whether or not it holds the older folder's work. The pickup also chose clone B's own newer local snapshot over clone A's snapshot on GitHub, which is why the second desktop session in clone B was offered nothing.",
-        "Pick a fix below."
+        "Pick a fix in question 1."
       ],
       [
         "cross",
         "Broken",
         "Pictures live in a folder beside the page",
         "",
-        "copy_pictures in scripts/make_page.py (line 149) copies each picture into <page>-pics/ and points the page at it. Publishing sends only the .html, and a page moved, previewed or opened from another repo loses the folder too. The same builder runs in every repo with the plugin, so the fix reaches all of them on the next update.",
+        "copy_pictures in scripts/make_page.py (line 149) copies each picture into <page>-pics/ and points the page at it. Publishing sends only the .html, and a page that is moved, previewed or opened from another repo also loses the folder. The same builder runs in every repo with the plugin, so the fix reaches all of them on the next update.",
         "Pick a fix in question 2."
       ],
       [
         "search",
         "You decide",
-        "How saves from different folders are kept apart",
+        "How saves are kept apart, and how pictures travel with a page",
         "you",
         "Question 1 asks which of three ways to keep each folder's saves apart. Question 2 asks how pictures should travel with a page.",
         "Choose one option in each question."
@@ -91,7 +91,7 @@
           "A",
           "Each picture is written into the page file itself",
           1,
-          "The builder reads each picture and puts its bytes straight into the HTML as a data: address, so the page is one self-contained file. It shows its pictures when published, previewed, moved, emailed or opened from any repo. The page gets bigger by roughly a third more than the pictures' own size; a published page may be up to 16 MB, and the builder refuses one over that with a message naming the largest pictures. The <page>-pics folder is no longer written."
+          "The builder reads each picture and writes its contents straight into the HTML as a data: address (the picture stored as text inside the page), so the page is one self-contained file. It shows its pictures when published, previewed, moved, emailed or opened from any repo. The page gets bigger by roughly a third more than the pictures' own size; a published page can be at most 16 MB, and the builder refuses a bigger one with a message naming the largest pictures. The <page>-pics folder is no longer written."
         ],
         [
           "B",
