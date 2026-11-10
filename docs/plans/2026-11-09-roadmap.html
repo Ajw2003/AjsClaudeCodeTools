@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Design approved: Roadmap",
   "reply": "",
   "short": {
-    "lead": "All 226 open issues were read and checked against the code. 145 are still needed and 37 need a closer look, while 38 are already built, duplicated or replaced, and 6 are built on this branch but not merged. The proposal: close every one of the 226, and open one issue per phase in their place. Each phase issue lists every old issue it absorbs, so nothing is lost. The phases run one at a time, each with its own design, plan and QA, and the next starts only when the last passes. Phase 2 makes any of your four accounts pick up where the last one stopped, and is tested on the desktop app, in the cloud and on a second account. The full per-issue verdicts are in docs/2-roadmap/triage/.",
+    "lead": "All 226 open issues were read and checked against the code. 145 are still needed and 37 need a closer look, while 38 are already built, duplicated or replaced, and 6 are built on the branch AjsAgent/session-handoff but not merged. The proposal: close every one of the 226, and open one issue per phase in their place. Each phase issue lists every old issue it absorbs, so nothing is lost. The phases run one at a time, each with its own design, plan and QA (your testing pass), and the next starts only when the last one passes QA. Phase 2 makes any of your four accounts pick up where the last one stopped, and is tested on the desktop app, in the cloud and on a second account. The full per-issue verdicts are in docs/2-roadmap/triage/.",
     "hint": "Tap a phase to see what it covers, the old issues it absorbs, and what done looks like.",
     "key": [
       [
@@ -297,7 +297,7 @@ const PAGE = {
         "Phase 1, 26 issues",
         "Approvals and the design loop just work",
         "",
-        "Every way you approve moves the stage, and the plugin never offers you a line or a button that won't work. A fault found in QA goes back to Build with one message, and \"skip design\" covers one change across its files. Absorbs the approval issues (#491, #481, #475, #429, #379, #296, #273, #155, #141, #131, #132) and the design-loop flow issues (#480, #459, #460, #458, #457, #468, #470, #471, #473, #110, #107, #128, #129, #130, #102). Today's three approval mix-ups become its first tests.",
+        "Every way you approve moves the stage, and the plugin never offers you a line or a button that won't work. A fault found in QA goes back to Build with one message, and \"skip design\" covers one change across its files. Absorbs the approval issues (#491, #481, #475, #429, #379, #296, #273, #155, #141, #131, #132) and the design-loop flow issues (#480, #459, #460, #458, #457, #468, #470, #471, #473, #110, #107, #128, #129, #130, #102). The five approvals that moved nothing today become its first tests.",
         "Done when each of today's failed approvals gets the right answer, a QA fix needs one message from you, and both pass a real session in the desktop app."
       ],
       [
@@ -305,56 +305,56 @@ const PAGE = {
         "Phase 2, 17 issues",
         "Pick up on any of your four accounts",
         "",
-        "Finishes the session handoff already on the branch AjsAgent/session-handoff: a save per folder (no folder erases another's work), the pickup and its restore, and a save when a usage limit cuts a turn off. It also adds one command that points the desktop app and cloud sessions at a branch build and back, so every later phase can be tested where you use it. Absorbs #406 to #410, #486 to #489, #140, #479, #44, #46, #137, #202, #205 and #215.",
-        "Done when work started on one account is picked up on another, in the desktop app and in a cloud session, by steps you follow yourself on a second account."
+        "Finishes the session handoff already on the branch AjsAgent/session-handoff: a save per folder (no folder erases another's work), the pickup and its restore, and a save when a usage limit cuts a turn off. It also adds one command that points the desktop app and cloud sessions at a branch build and back, so every later phase can be tested where you use it. Takes in #406 to #410, #486 to #489, #140, #479, #44, #46, #137, #202, #205 and #215.",
+        "Finished when work started on one account is picked up on another, in the desktop app and in a cloud session, by steps you follow yourself on a second account."
       ],
       [
         "plus",
         "Phase 3, 17 issues",
-        "The guard refuses only what can't be undone",
+        "The command guard refuses only what can't be undone",
         "",
-        "Routine, recoverable commands run without a prompt, and every refusal names a way forward that works. Permission prompts are readable and never leave a helper stalled. Absorbs #476 to #478, #484, #285, #200, #189, #156, #142, #145 to #147, #149, #152, #159, #196 and #260.",
-        "Done when a recorded day of real commands runs with no refusal of a recoverable action, and a helper never waits on a prompt nobody can answer."
+        "Routine, recoverable commands run without a prompt, and every refusal names a way forward that works. Permission prompts are readable and never leave a helper stalled. Carries #476 to #478, #484, #285, #200, #189, #156, #142, #145 to #147, #149, #152, #159, #196 and #260.",
+        "Complete when a recorded day of real commands runs with no refusal of a recoverable action, and a helper never waits on a prompt nobody can answer."
       ],
       [
         "plus",
         "Phase 4, 31 issues",
         "Pages always work",
         "",
-        "Pictures written into the page, a copy box that works wherever the page opens, a builder that refuses a page missing what it owes, QA pages that prove each change with evidence, and the accessibility fixes. Absorbs #490, #462, #313, #464, #466, #377, #378, #411 to #417, #419 to #424, #461, #469, #283, #284, #158, #194, #297 to #300 and #302.",
-        "Done when a page with pictures, published and opened in the browser, shows them all, its copy box works, and the builder refuses each kind of incomplete page."
+        "Pictures written into the page, a copy box that works wherever the page opens, a page builder that refuses any page missing a required part, QA pages that prove each change with evidence, and the accessibility fixes. Covers #490, #462, #313, #464, #466, #377, #378, #411 to #417, #419 to #424, #461, #469, #283, #284, #158, #194, #297 to #300 and #302.",
+        "Passed when a page with pictures, published and opened in the browser, shows them all, its copy box works, and the builder refuses each kind of incomplete page."
       ],
       [
         "plus",
         "Phase 5, 31 issues",
         "Helpers you can follow, and that behave",
         "",
-        "Every helper's progress and transcript one tap away, stall alerts that fire once per stall, and builder rules that stop reruns, over-testing and polling. Absorbs the stall-check issues (#120, #123 to #125, #127, #150), the visibility issues (#396, #400, #403, #430 to #436) and the builder issues (#304, #69, #95, #138, #139, #160, #172, #201, #218 to #222, #455, #474).",
-        "Done when a real build with two helpers can be followed from your phone and no helper reruns a check it already ran."
+        "Every helper's progress and transcript one tap away, stall alerts that fire once per stall, and builder rules that stop repeated runs, over-testing and constant status-checking. Folds in the stall-check issues (#120, #123 to #125, #127, #150), the visibility issues (#396, #400, #403, #430 to #436) and the builder issues (#304, #69, #95, #138, #139, #160, #172, #201, #218 to #222, #455, #474).",
+        "Proven when a real build with two helpers can be followed from your phone and no helper reruns a check it already ran."
       ],
       [
         "plus",
         "Phase 6, 16 issues",
         "Your credit everywhere, and your names configurable",
         "",
-        "No Claude credit reaches any repo you own, checked on GitHub as well as locally; the agent's name, credit and branch prefix come from one setting. Absorbs #350 to #355, #174, #177, #179, #180, #181, #182, #191, #287, #321 and #405.",
-        "Done when a pull request opened from a cloud session carries your credit and the GitHub check refuses one that doesn't."
+        "No Claude credit reaches any repo you own, checked on GitHub as well as locally; the agent's name, credit and branch prefix come from one setting. Gathers #350 to #355, #174, #177, #179, #180, #181, #182, #191, #287, #321 and #405.",
+        "Met when a pull request opened from a cloud session carries your credit and the GitHub check refuses one that doesn't."
       ],
       [
         "plus",
         "Phase 7, 17 issues",
         "Docs and a changelog that keep themselves current",
         "",
-        "A changelog in every repo, a research-and-sources tier, and a check per house rule. Absorbs #384 to #388, #336, #45, #117, #228, #244, #301, #399, #404, #436, #463, #472 and #199.",
-        "Done when a pull request that changes behaviour without a changelog line is flagged, in this repo and one other."
+        "A changelog in every repo, a research-and-sources tier, and a check per house rule. Brings in #384 to #388, #336, #45, #117, #228, #244, #301, #399, #404, #436, #463, #472 and #199.",
+        "Settled when a pull request that changes behaviour without a changelog line is flagged, in this repo and one other."
       ],
       [
         "plus",
         "Phase 8, 22 issues",
         "The plugin split, and faster hooks",
         "",
-        "House-rules split into the nine plugins and a shared library already designed, with hook speed and the duplicated code paths fixed on the way. Absorbs #437 to #450, #41 to #43, #62, #204, #206, #382 and #482.",
-        "Done when the nine plugins install together on a fresh machine and every hook runs at least as fast as today."
+        "House-rules split into the nine plugins and a shared library already designed, with hook speed and the duplicated code paths fixed on the way. Replaces #437 to #450, #41 to #43, #62, #204, #206, #382 and #482.",
+        "Closed when the nine plugins install together on a fresh machine and every hook runs at least as fast as today."
       ],
       [
         "check",
@@ -370,7 +370,7 @@ const PAGE = {
         "The order, the other products, and how the closes happen",
         "you",
         "Question 1 asks the order of phases 1 and 2, question 2 what happens to the 17 issues about other products (art-pipeline, Eldritch goose, Focus Deck, the Unity workflow), and question 3 when the old issues close.",
-        "Choose one option in each question."
+        "Answer questions 1, 2 and 3 below."
       ]
     ]
   },
@@ -403,7 +403,7 @@ const PAGE = {
           "A",
           "Closed here, and listed in the roadmap under Other products",
           1,
-          "Each closes with a comment pointing to the roadmap's Other products section, which names the product and the old issue numbers. The art-pipeline work lives on its branch origin/claude/art-pipeline; Focus Deck's issue belongs in the focus-deck-app repo."
+          "Each gets a closing note pointing to the roadmap's Other products section, which names the product and the old issue numbers. The art-pipeline work lives on its branch origin/claude/art-pipeline; Focus Deck's issue belongs in the focus-deck-app repo."
         ],
         [
           "B",
@@ -428,7 +428,7 @@ const PAGE = {
           "B",
           "Each phase closes its own issues when it starts",
           0,
-          "Nothing closes until its phase begins, so the open list shrinks slowly and the stale labels keep causing wrong reminders until then."
+          "Nothing closes until its phase begins, so the open list shrinks slowly and the stale labels keep triggering wrong end-of-turn reminders until then."
         ]
       ],
       "No issue is closed without this approval."
