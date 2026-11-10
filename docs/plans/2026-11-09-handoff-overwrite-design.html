@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.76.0 -->
 <meta charset="utf-8">
-<title>Handoff and Pictures</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<title>Handoff, Pictures, Approvals</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 /* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
@@ -269,13 +269,13 @@ dialog.lightbox button{margin-top:10px}
 const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
-  "title": "Handoff and Pictures",
-  "eyebrow": "Design · saved work that no other folder can erase, and page pictures that always show",
-  "approval": "Handoff overwrite",
-  "replyPrefix": "Handoff overwrite",
+  "title": "Handoff, Pictures, Approvals",
+  "eyebrow": "Design · saved work no other folder can erase, pictures that always show, approvals that always register",
+  "approval": "Design approved: Handoff overwrite",
+  "replyPrefix": "Design approved: Handoff overwrite",
   "reply": "",
   "short": {
-    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back. Second, as you asked: pictures on pages built by make_page.py break once a page is published or opened anywhere else. The builder copies each picture into a folder beside the page, named <page>-pics, and links it by a relative path. A published page carries only the HTML file, so the pictures are missing, which is why you keep seeing broken pictures in other repos.",
+    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back. Second, as you asked: pictures on pages built by make_page.py break once a page is published or opened anywhere else. The builder copies each picture into a folder beside the page, named <page>-pics, and links it by a relative path. A published page carries only the HTML file, so the pictures are missing, which is why you keep seeing broken pictures in other repos. Third: three of your approvals for this page registered nothing. The page's Copy my reply box built your reply from the page's approval field, which I had set to \"Handoff overwrite\" instead of \"Design approved: Handoff overwrite\", so the box gave you a line the design loop does not accept. The page builder only printed a note about it instead of refusing. The loop also rejects natural word orders such as \"Handoff overwrite design approved 1A\". This page's copy box is now fixed, so tapping it sends a line that works.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       [
@@ -317,11 +317,19 @@ const PAGE = {
         "Pick a fix in question 2."
       ],
       [
+        "cross",
+        "Broken",
+        "Approvals that look right register nothing",
+        "",
+        "make_page.py (check_approval, line 347) builds a page whose approval field is not a phrase the loop accepts, and only prints a note. The loop (design_loop.py, line 391) accepts only \"Design approved: <feature>\" with the stage words first, so \"<feature> design approved 1A\" moves nothing.",
+        "Pick a fix in question 3."
+      ],
+      [
         "search",
         "You decide",
-        "How saves are kept apart, and how pictures travel with a page",
+        "Three questions: saves, pictures and approvals",
         "you",
-        "Question 1 asks which of three ways to keep each folder's saves apart. Question 2 asks how pictures should travel with a page.",
+        "Question 1 asks how to keep each folder's saves apart, question 2 how pictures travel with a page, and question 3 how approvals are made to always register.",
         "Choose one option in each question."
       ]
     ]
@@ -371,15 +379,34 @@ const PAGE = {
         ]
       ],
       "A is the only option where nothing can forget to bring the pictures along."
+    ],
+    [
+      "q3",
+      "3. How are approvals made to always register?",
+      [
+        [
+          "A",
+          "The builder only makes pages whose reply works, and the loop accepts the stage words before or after the feature name",
+          1,
+          "The builder refuses to build a design or plan page whose copy box would send a line the loop rejects, and names the fix. The page for another repo's work (#309) stays allowed, but only when the page says so in a field. The loop also accepts \"<feature> design approved <picks>\" and \"<feature> build plan approved\". A test runs every page's copy-box line through the loop's own check, so the two can never disagree again."
+        ],
+        [
+          "B",
+          "Only the builder check",
+          0,
+          "The builder refuses a page whose reply would not register, but a reply typed by hand in another word order still moves nothing."
+        ]
+      ],
+      "A fixes both ways an approval can go wrong: a page offering a bad line, and a person typing a natural one."
     ]
   ],
   "wrapup": {
-    "summary": "A design to stop a second folder's save erasing saved work on the same branch, and to make page pictures always show.",
-    "changing": "Nothing yet. No code is written until you approve.",
-    "blocking": "Your pick for questions 1 and 2, or what you want changed.",
-    "next": "Once you approve, I open one issue per fix, build both on this branch before it goes to main, and test each for real: two desktop sessions in fresh clones for the handoff, and a published page with pictures. Then I write exact steps for you to follow for the cloud test and the second-account test.",
+    "summary": "A design that stops a second folder erasing saved work, makes page pictures always show, and makes approvals always register.",
+    "changing": "Only this page so far. No code is written until you approve.",
+    "blocking": "Your pick for questions 1, 2 and 3, or what you want changed.",
+    "next": "Once you approve, I open one issue per fix, build all three on this branch before it goes to main, and test each for real: two desktop sessions in fresh clones for the handoff, a published page with pictures, and every approval form you tried run through the loop. Then I write exact steps for you to follow for the cloud test and the second-account test.",
     "todo": [
-      "Tap <b>Copy my reply<\/b> and send it: \"Handoff overwrite\", or say what to change."
+      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: Handoff overwrite\", or say what to change."
     ]
   }
 };
