@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Design approved: Friction fixes",
   "reply": "",
   "short": {
-    "lead": "The plugin is meant to save your effort, and right now it costs you effort in six places. This page lists each one, from three sources: what went wrong in this session, the 226 issues open on GitHub today (counted with gh issue list), and the traps already written in the docs. Many open issues describe the same problem more than once (pictures in pages has three, approvals that don't register has five), and most are labelled \"in progress\" with no work under way. The proposal is to stop adding one-off fixes, fix the six areas in order, one feature each, and close the duplicates as each area lands. The session handoff work pauses until area 5, because it can't be tested for real before then.",
+    "lead": "The plugin is meant to save your effort, and right now it costs you effort in six places. This page lists each one, from three sources: what went wrong in this session, the 226 issues open on GitHub today (counted with gh issue list), and the traps already written in the docs. Many open issues describe the same problem as other issues (pictures in pages has three, approvals that don't register has five), and 83 of them are labelled \"in progress\", most with no work going on. The proposal is to stop adding one-off fixes, fix the six areas in order, one feature each, and close the duplicates as each area lands. The session handoff work pauses until area 5, because it can't be tested for real before then.",
     "hint": "Tap an area to see what goes wrong, the issues that already describe it, and what done looks like.",
     "key": [
       [
@@ -297,7 +297,7 @@ const PAGE = {
         "Area 1",
         "Approvals that look right register nothing",
         "",
-        "Today alone, five messages meant as approvals moved nothing: \"Handoff overwrite design 1A\", \"Handoff overwrite design approved 1A\", \"Handoff overwrite 1A 2A\" (which the page's own copy box gave you), \"Send it\" (a button I offered, which sends only its label), and a build plan approval refused because the loop missed issues I had opened. Open issues on the same problem: #491 (word order and copy box), #481 (an approval moves only what you named), #475 (the loop counts every issue opened during Plan), #429 (approvals ignored in cloud sessions), #379 (approvals ignored from the Claude app), #296 (approvals dropped when the folder isn't a repo).",
+        "Today alone, five messages meant as approvals moved nothing. Three were lines you typed or copied: \"Handoff overwrite design 1A\", \"Handoff overwrite design approved 1A\" and \"Handoff overwrite 1A 2A\", which the page's own copy box gave you. One was \"Send it\", a button I offered that sends only its label. The fifth was a build plan approval, refused because the design loop didn't count issues I had opened. Six open issues describe the same problem. #491 covers word order and the copy box, and #481 makes an approval move only what you named. #475 is the loop counting every issue opened during Plan. #429, #379 and #296 are approvals ignored in cloud sessions, from the Claude app, and when the folder isn't a repo.",
         "Done when every way you naturally approve, including a reply button, moves the stage or says plainly why not, and the plugin never offers you a line or a button that won't work."
       ],
       [
@@ -311,9 +311,9 @@ const PAGE = {
       [
         "cross",
         "Area 3",
-        "The guard refuses routine, safe commands",
+        "The command guard refuses routine, safe commands",
         "",
-        "Today it refused the pickup's own restore command, every git command run in another folder with cd or -C, a read-only script that named the stage file, and a third run of a check script. Open issues: #478 (stop the guard refusing routine commands), #465 and #467 (rerun limit counts reading a script as running it), #203 and #192 (commits prompt after a cd), #134 and #136 (helpers stall on approvals), #200 and #198 (refusing instead of asking).",
+        "Today it refused the pickup's own restore command, every git command run in another folder with cd or -C, a read-only script that named the stage file, and a third run of the same check script. Open issues on it: #478 stops the guard refusing routine commands, and #465 and #467 stop the rerun limit counting a read as a run. #203 and #192 are commits that prompt after a cd. #134 and #136 are helpers stalled on approvals, and #200 and #198 are refusals where asking would do.",
         "Done when the guard refuses only what can't be undone, and every refusal names a way forward that works."
       ],
       [
@@ -329,7 +329,7 @@ const PAGE = {
         "Area 5",
         "A build can't be tested where you use it",
         "",
-        "Installs come from main, so a branch's changes reach the desktop app, cloud sessions and other accounts only after a merge. Today's desktop test needed throwaway clones with hand-written settings, and the desktop app ran your installed copy of the plugin alongside the test copy anyway. Cloud sessions couldn't be started from here at all. Open issues: #179 (cloud environments install the plugin), #438 (plugin dependencies proven together). The session handoff (#406 and #488) waits here: its QA needs the desktop app, a cloud session and a second account.",
+        "Installs come from main, so a branch's changes reach the desktop app, cloud sessions and other accounts only after a merge. Today's desktop test needed throwaway clones with hand-written settings, and the desktop app ran your installed copy of the plugin alongside the test copy anyway. I couldn't start a cloud session from this conversation at all. Open issues: #179 (cloud environments install the plugin), #438 (plugin dependencies proven together). The session handoff (#406 and #488) waits here: its QA needs the desktop app, a cloud session and a second account.",
         "Done when one command points the desktop app and cloud sessions at a branch build and back again, with nothing else running beside it, and the session handoff passes QA on all three surfaces."
       ],
       [
@@ -337,15 +337,15 @@ const PAGE = {
         "Area 6",
         "226 open issues, many stale or duplicated",
         "",
-        "Two full sets of \"QA evidence\" issues (#389 to #395 and #411 to #417), three picture issues, five approval issues, and dozens labelled \"in progress\" with no work under way. The end-of-turn checks read these labels, so stale ones cause wrong reminders and refusals.",
-        "Done when every open issue is either real remaining work or gone. I propose the closes as one list you approve, so nothing is closed without you."
+        "Two full sets of \"QA evidence\" issues (#389 to #395 and #411 to #417), three picture issues, five approval issues, and 83 labelled \"in progress\", most with no work going on. The end-of-turn checks read these labels, so stale ones cause wrong reminders and refusals.",
+        "Done when every open issue is either real remaining work or gone. I propose the closes as one list for you to approve."
       ],
       [
         "check",
         "Partly fixed",
         "Already on the branch AjsAgent/session-handoff",
         "",
-        "The pickup's restore command now uses git apply and leaves out the stage file (commit d62be1a). The design page for the handoff overwrite, pictures and approvals is approved, and issues #488 to #491 are open. Those carry into areas 1, 4 and 5 rather than being built separately.",
+        "The pickup's restore command now uses git apply and leaves out the stage file (commit d62be1a). The design page for the handoff overwrite, pictures and approvals is approved, and issues #488 to #491 are open. Issues #488 to #491 are folded into areas 1, 4 and 5 rather than built separately.",
         "Nothing from you."
       ],
       [
