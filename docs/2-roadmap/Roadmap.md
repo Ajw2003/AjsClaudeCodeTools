@@ -76,184 +76,36 @@ just its decision logic in isolation) — the higher bar `clean_install_test.py`
 re-run as part of writing this roadmap; see [`ProjectState.md`](../3-state/ProjectState.md) for what that
 means for how fresh this claim is.
 
-## Open issues, in the order to take them
+## The roadmap: eight phases, in order (approved 2026-11-09)
 
-Triaged 2026-10-09 against `main` at `34639ce` (house-rules 2.59.1), with every one of the 97 open
-issues read in full, the open pull requests (Ajw2003/AjsClaudeCodeTools#166, #190) and the unmerged
-`ccr-9ab94e76-iufs44` branch checked for work already under way. Updated the same day after that
-branch merged as #207 (2.60.0).
+The issue list triaged on 2026-10-09 that used to sit here is replaced. Every issue open on 2026-11-09 (226) was
+checked against the code, and the work now runs as eight phases, one at a time, each with its own design, build
+plan and QA. The next phase starts only when the one before it passes. The page is
+[`docs/plans/2026-11-09-roadmap.html`](../plans/2026-11-09-roadmap.html); the per-issue verdicts and each
+issue's phase are in [`triage/`](triage/). The decision is in
+[`Decisions.md`](../6-decisions/Decisions.md) under 2026-11-09. The old list is in git history before this change.
 
-**How the order was set.** Each issue is placed by two things together: how bad it is when it bites
-(a safety hole or lost work beats an annoyance), and how often it gets in the way of a normal working
-day (every session beats once a month). Where those disagree, a safety hole wins. Issues that are the
-same change are listed together, so they can be done in one go. Within a tier, the first item goes
-first.
+1. **Approvals and the design loop just work** (20 old issues). Done when each of the failed approvals from
+   2026-11-09 gets the right answer and a QA fix needs one message from aj, in a real desktop app session.
+2. **Docs and files you can trust** (17). Done when a drift check flags a doc that disagrees with the code, here
+   and in PlunderSpell, PlunderSpell's folders are back to a size aj agrees is right, and nothing unsaved was deleted.
+3. **Pick up on any of aj's four accounts** (15). Done when work started on one account is picked up on another,
+   in the desktop app and in a cloud session.
+4. **The command guard refuses only what can't be undone** (15). Done when a recorded day of real commands has no
+   refusal of a recoverable action.
+5. **Pages that fit the idea, show the work, and stay calm** (36). Done when a build plan shows its planned code
+   and a picture, an idea that doesn't fit the template still gets a fitting page, and each page passes a
+   calm-by-default check.
+6. **Helpers you can follow, and that behave** (31). Done when a build with two helpers can be followed from a
+   phone and no helper reruns a check it already ran.
+7. **aj's credit everywhere, names configurable** (15). Done when a cloud pull request carries aj's credit and the
+   GitHub check refuses one that doesn't.
+8. **The plugin split, and faster hooks** (22). Done when the nine plugins install together on a fresh machine and
+   every hook runs at least as fast as before.
 
-The previous version of this section (triaged 2026-09-28) listed groups A and B. Every issue in them
-is now closed (#47, #85, #87-#93, #96-#98), so they are dropped here. Its unnumbered efficiency and
-issue-workflow follow-ups are kept, in P2.
+**No new work** (38): already built, duplicated or replaced. **Other products** (17): #116 (Unity workflow), #161
+to #164 and #167 to #171 (art-pipeline, on the branch `origin/claude/art-pipeline`), #180 (Focus Deck, belongs in
+the focus-deck-app repo), #183 to #187 (Eldritch goose) and #334 (Unity docs layer).
 
-### P0. Safety holes and things that stop work every day
-
-Fix these first. Each one either lets something risky through unchecked, or halts a session or a
-helper on ordinary work.
-
-1. **#200 The guard misses `rm`, `nohup` and background jobs on a second line.** A multi-line
-   command can delete files or hide a process with no prompt. It's a one-pattern fix plus a test.
-   It's been there since 2026-09-11, and neither open branch changes it.
-2. **#203 Any "cd" in a command, even in a commit message, makes commits prompt.** It's daily
-   friction on exactly the commits the #196 work (shipped in 2.60.0, below) meant to free up.
-   `_ANY_CD_RE` is unchanged on `main` after that merge. It's a one-line fix.
-   - **Do with it:** #193 (prompts say in plain words what they're asking). Now that only
-     destructive prompts are left, each one needs to be readable from a phone at a glance.
-3. **#189 The attribution guard misses commits that set the author with a quoted `-c` value.**
-   Commits credited to Claude went out unchecked in another repo. The fix is pull request #190
-   (`AjsAgent/quoted-git-options`), which is open and ready to review. The same `_GIT` prefix is
-   shared by every git rule, so this also closes a way around the other git guards.
-4. **#201 The two-subagent limit loses agents started at the same time.** In a test, 100 of 100
-   simultaneous starts lost a record, and 24 left the state file broken, which wipes the list. The
-   fix is to reuse the lock that `_waiting_update` already has.
-5. **#179 Cloud sessions get the attribution setting, and every cloud environment installs the
-   plugin.** Every cloud session starts from the environment's filesystem snapshot. That snapshot
-   is rebuilt only when the setup script changes or about every seven days. This environment's was
-   taken on 2026-10-07, so sessions start on house-rules 2.53.0 and only load the update the session
-   after. Installing from `main` in the setup script fixes both that and the missing attribution
-   setting.
-6. **#191 Pull requests opened from a cloud session still get a Claude footer added after creation.**
-   Every pull request a cloud session opens credits Claude. The checked fix: re-read the body after
-   creating it and edit the footer out. The "with Claude" label can't be removed from a cloud
-   session; the rule should say so.
-7. **#114 The installer reports a false failure right after an update.** It's the moment you most
-   need to trust the result, and it sends you investigating a problem that doesn't exist. Labelled
-   high priority.
-
-### P1. Rules that don't fire yet, and friction you hit most weeks
-
-The rule text covers these, or you've asked for them, but nothing enforces them yet, or they slow a
-working day down without stopping it.
-
-1. **#128 The issue workflow works however the work was planned** (children #129, #130, #131,
-   #132). Today it's only enforced after plan mode. #119 is the same problem, written up before the
-   split, so close it as covered once this lands. Your older requests #94 and #103 (open issues
-   automatically and track progress through them) are what this delivers.
-   - **Do with it:** #141 (ask to close each finished issue, so they stop piling up). It's the
-     closing half of the same loop.
-2. **#194 Steps that aren't shell commands skip the step-card check.** Browser and app steps (make a
-   token, paste a secret) reach you as a bare list. It happened on 2026-10-09.
-   - **Related:** #155 (waiting-on-you items as clear cards, or as multiple-choice questions in the
-     app).
-3. **#150 A running builder's progress can't be followed from the phone.** You only see the start
-   and the final report. Pairs with the stall-check work below.
-4. **Builder behaviour rules,** all for `agents/builder.md`, one change:
-   - #160: builders over-test;
-   - #139: one run per in-game or harness check;
-   - #138: wait loops grep raw Unity JSON and never match.
-
-   Each one costs minutes to hours per build in game projects.
-5. **#140 Make a handoff document and commit everything at 95% usage.** Without it, work in flight
-   at the usage limit is lost.
-6. **#156 Delete Claude's branches once their pull request has merged.** This repo has 74 branches,
-   and about 25 of them share no history with `main`.
-7. **#158, #102 A plain-language "here's what changed", with a visual check, before finishing and
-   pushing.** Partly built already: the plain summary first (#98) and the screenshot rule (#88/#96).
-   What's left is the end-of-task pass and fail conversation.
-8. **#137 Handed-over Windows commands that start with `&` keep failing.** Pick one form that works
-   in both PowerShell and cmd, then update `docs/example-environment.md` and `handover-command.md`.
-9. **#118 Skip delegation when the session is already on Sonnet.** It saves a cold start on every
-   delegated job there.
-10. **#127 stallcheck counts a just-resumed agent's age from before the watch started.** It isn't
-    reproduced yet; the next step is to reproduce it.
-11. **#117 Never hardcode values; expose them to the user.** A rule request for the code standards.
-12. **#116 Unity work opens a fresh project, or a second editor, by default.** A rule request for the
-    Unity standards.
-
-### P2. Upkeep: speed, tidiness and the engine's own structure
-
-Nothing breaks for you if these wait, but each one makes the next change slower or riskier.
-
-1. **#202 `docref check` always fails here,** because it reads `verify.py`'s own test pointers. It
-   can't join CI until this is fixed.
-2. **#204 Every hook call recompiles all of `hook.py`.** That's about 47 of 87 ms per call, and an
-   Edit fires up to eight hooks.
-3. **#41 One failure-mode contract,** in the `EVENTS` table.
-   - **Do with it:** #205 (with no Python, `guardgithub` and `commitgate` let everything through
-     silently). It's the `run.sh` copy of the same contract.
-4. **#42 One payload-field extractor.**
-   - **Do with it:** #206 (two copies of "which folder does this command run in").
-5. **#44 `verify.py` gets a name filter.** It's now over 8,000 lines and always runs every check.
-6. **#43 Split `event_standards` into detect and render.**
-7. **#46 Re-check the agent frontmatter fields `verify.py` forbids.**
-8. **#45 A glossary and one decision record per reversal.**
-9. **Hooks-efficiency follow-ups** (from `docs/plans/hooks-efficiency-review.md`; findings 1-3
-   shipped in 2.48.0):
-   - 2b/2c: one dispatcher per event, then per-event modules;
-   - 4: duplicated resolvers in `hook.py`;
-   - 5: rule-base weight and repetition, and the stale token figure in `docs/architecture.md`;
-   - 6: rules that conflict or over-fire;
-   - 7: make the docs-tier reminder cheaper to resolve;
-   - 8: repo maintenance (one shared `run.sh`, offshoot overlap, `worktreesweep`'s per-prompt walk).
-10. **Issue-workflow leftovers** (from `docs/plans/issue-workflow-build-plan.md`):
-    - commits with no issue number get an end-of-turn check;
-    - `gh issue create` through PowerShell isn't recorded by the gate;
-    - win back the inject size margin.
-11. **#95 Cost of delegating versus doing it on the main thread, with a chart.** Builds on
-    `tools/measure_footprint.py`.
-12. **#71 Archive a whole session,** subagents included. It extends `tools/session_ledger.py`.
-
-### P3. Separate tracks: worth doing, but they don't touch the daily workflow here
-
-- **The art-pipeline plugin (#161),** on pull request #166 (`claude/art-pipeline`):
-  - #167: get pull request #166 green and installable first;
-  - then #162, #163, #164, #168, #169, #170, #171;
-  - the eldritch goose asset (#183, children #184-#187) is its first real use, so it waits on
-    #167.
-- **Retroactive attribution across aj's repos,** in this order:
-  - #181: a report only;
-  - #182: renames, after you've read the report;
-  - #180: Focus Deck's reserved label (work happens in Ajw2003/focus-deck-app).
-- **#105 Dynamic subagent dispatch.** Largely overtaken by the three helper tiers (#111, closed).
-  Re-scope it or close it.
-- **Research with nothing to build yet:**
-  - #69: port the superpowers subagent-driven-development workflow;
-  - #62: the agyrules dynamic subagents, which need that plugin's source.
-
-### Built, waiting on your test before closing
-
-Each of these is on `main` with tests passing. It's open only because closing needs your yes after
-you've tried it (rule: a pull request never closes an issue). Some also need a check in a real
-session that can't be done from the test suite. That check is noted where it applies.
-
-- **Stall check:**
-  - #120, #122, #123, #124, #125: re-alerts, session scoping, STALLED guidance, waits with a time
-    limit.
-- **Prompt timer:** #142 and its children.
-  - #144, #145, #146, #149, #151, #152 are built.
-  - #147 still needs the overnight-style check in a real session.
-  - #159 isn't fixable from the plugin as it stands; #198 (built) removes the case.
-- **Permission stalls:** #196 and its children #197, #198, #199 (2.60.0, merged as #207). Still
-  needs a live session showing a helper commit and push with no prompt, and a commit on `main`
-  refused at once. This also covers:
-  - #134: helpers prompt on every commit;
-  - #136: builders blocked on deletes and scripted writes;
-  - #173: a timeout blocks safe work;
-  - #159: the timer is lost on a worker restart;
-  - the `-C` half of #192;
-  - the timed-out part of #172.
-- **Destructive steps on a pushed agent branch:** #153. Still needs a real session confirming the
-  prompt disappears.
-- **Attribution:**
-  - #133: the rule and the guard;
-  - #174: the parent;
-  - #175: `AjsAgent/` branches and label;
-  - #176: cloud sessions move to `AjsAgent/`. Still unchecked: whether the app's "Create PR" button
-    follows the new branch;
-  - #177: commit author;
-  - #178: GitHub tool calls.
-- **#192 Commits on an agent branch prompt outside the session's main folder.** The `cd` and
-  worktree half shipped in 2.59.1. The `git -C` half shipped with #197 in 2.60.0.
-- **Issue workflow:**
-  - #110: approved plans become issues (2.49.0);
-  - #107: the parent plan, with the helper tiers (#111, #112, closed).
-- **#113 The note that said helpers never see the project instructions file.** Fixed in 7c57cf4.
-- **#172 Builders can't recover from failed or timed-out tasks.** This issue has no description. The
-  timed-out part is covered by #196 (built). Say what else it meant, or close it.
+**Where it stands (2026-11-09).** Approved. The eight phase issues are not opened yet and the 226 are not closed:
+both wait on aj approving the GitHub issue command.

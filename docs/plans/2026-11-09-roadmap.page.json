@@ -37,34 +37,34 @@
       ],
       [
         "plus",
-        "Phase 1, 22 issues",
+        "Phase 1, 20 issues",
         "Approvals and the design loop just work",
         "",
-        "Every way you approve moves the stage, and the plugin never offers you a line or a button that won't work. A fault found in QA goes back to Build with one message, and \"skip design\" covers one change across its files. Absorbs the approval issues (#491, #481, #475, #429, #379, #296, #273, #155, #141, #131, #132) and the design-loop flow issues (#480, #459, #460, #458, #457, #110, #107, #128, #129, #130, #102). The five approvals that moved nothing today become its first tests.",
+        "Every way you approve moves the stage, and the plugin never offers you a line or a button that won't work. A fault found in QA goes back to Build with one message, and \"skip design\" covers one change across its files. Absorbs the approval issues (#491, #481, #475, #429, #296, #273, #155, #141, #132) and the design-loop flow issues (#480, #459, #460, #458, #457, #110, #107, #128, #129, #130, #102). The five approvals that moved nothing today become its first tests.",
         "Done when each of today's failed approvals gets the right answer, a QA fix needs one message from you, and the approvals and the QA fix both pass in a real session in the desktop app."
       ],
       [
         "plus",
-        "Phase 2, 18 issues",
+        "Phase 2, 17 issues",
         "Docs and files you can trust",
         "",
-        "Before any account can pick up where another stopped, the record of where it stopped has to be right. Every session ends with the docs agreeing with the code: drift is caught where it happens, stale docs are fixed or removed, the decisions log says why, and a changelog records what changed. Work is committed and pushed, and merged branches and finished worktrees are deleted locally once their work is safe on GitHub. Large generated or cached files never reach git. You found PlunderSpell's folders taking over 153 GB today, for a game that should need under an eighth of that, and this machine has 6 GB free. This phase finds out why and keeps it from happening again. Covers #384 to #388, #336, #45, #117, #228, #244, #301, #399, #404, #436, #463 and #199, #479 and #156.",
+        "Before any account can pick up where another stopped, the record of where it stopped has to be right. Every session ends with the docs agreeing with the code: drift is caught where it happens, stale docs are fixed or removed, the decisions log says why, and a changelog records what changed. Work is committed and pushed, and merged branches and finished worktrees are deleted locally once their work is safe on GitHub. Large generated or cached files never reach git. You found PlunderSpell's folders taking over 153 GB today, for a game that should need under an eighth of that. This phase finds out why and keeps it from happening again. Covers #384 to #388, #336, #45, #117, #228, #244, #301, #399, #404, #463 and #199, #479 and #156.",
         "Proven when a drift check flags a doc that disagrees with the code in this repo and in PlunderSpell, PlunderSpell's folders are back to a size you agree is right, and nothing unsaved was deleted."
       ],
       [
         "plus",
-        "Phase 3, 16 issues",
+        "Phase 3, 15 issues",
         "Pick up on any of your four accounts",
         "",
-        "Finishes the session handoff already on the branch AjsAgent/session-handoff: a save per folder (no folder erases another's work), the pickup and its restore, and a save when a usage limit cuts a turn off. It also adds one command that points the desktop app and cloud sessions at a branch build and back, so every later phase can be tested where you use it. Takes in #406 to #410, #486 to #489, #140, #44, #46, #137, #202, #205 and #215.",
+        "Finishes the session handoff already on the branch AjsAgent/session-handoff: a save per folder (no folder erases another's work), the pickup and its restore, and a save when a usage limit cuts a turn off. It also adds one command that points the desktop app and cloud sessions at a branch build and back, so every later phase can be tested where you use it. Takes in #406 to #410, #486 to #489, #44, #46, #137, #202, #205 and #215.",
         "Finished when work started on one account is picked up on another, in the desktop app and in a cloud session, by steps you follow yourself on a second account."
       ],
       [
         "plus",
-        "Phase 4, 16 issues",
+        "Phase 4, 15 issues",
         "The command guard refuses only what can't be undone",
         "",
-        "Routine, recoverable commands run without a prompt, and every refusal names a way forward that works. Permission prompts are readable and never leave a helper stalled. Carries #476 to #478, #484, #285, #200, #189, #142, #145 to #147, #149, #152, #159, #196 and #260.",
+        "Routine, recoverable commands run without a prompt, and every refusal names a way forward that works. Permission prompts are readable and never leave a helper stalled. Carries #476 to #478, #285, #200, #189, #142, #145 to #147, #149, #152, #159, #196 and #260.",
         "Complete when a recorded day of real commands runs with no refusal of a recoverable action, and a helper never waits on a prompt nobody can answer."
       ],
       [
@@ -85,10 +85,10 @@
       ],
       [
         "plus",
-        "Phase 7, 16 issues",
+        "Phase 7, 15 issues",
         "Your credit everywhere, and your names configurable",
         "",
-        "No Claude credit reaches any repo you own, checked on GitHub as well as locally; the agent's name, credit and branch prefix come from one setting. Gathers #350 to #355, #174, #177, #179, #180, #181, #182, #191, #287, #321 and #405.",
+        "No Claude credit reaches any repo you own, checked on GitHub as well as locally; the agent's name, credit and branch prefix come from one setting. Gathers #350 to #355, #174, #177, #179, #181, #182, #191, #287, #321 and #405.",
         "Met when a pull request opened from a cloud session carries your credit and the GitHub check refuses one that doesn't."
       ],
       [

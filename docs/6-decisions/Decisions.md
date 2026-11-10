@@ -7,6 +7,30 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-09 - Roadmap: eight phases in sequence replace 226 open issues
+
+**Context.** 226 issues were open, and work had become one-off fixes that kept failing aj in the same places:
+approvals that registered nothing, a page that lost its pictures, a handoff that let one folder erase another's
+save. aj asked for every issue to be triaged and closed, and for numbered phases worked in order in their place.
+All 226 were checked against the code (`docs/2-roadmap/triage/`; each issue's single home is in `homes.json`).
+
+**Decision.** aj approved "Design approved: Roadmap 1A 2A" on `docs/plans/2026-11-09-roadmap.html`. The phases
+are: 1 approvals and the design loop just work; 2 docs and files you can trust; 3 pick up on any of aj's four
+accounts; 4 the command guard refuses only what can't be undone; 5 pages that fit the idea, show the work and
+stay calm; 6 helpers you can follow; 7 aj's credit everywhere; 8 the plugin split and faster hooks. 1A: the 17
+issues about other products close here and are listed under Other products. 2A: all 226 close now, each with a
+comment naming the phase issue that carries it, or its evidence or duplicate.
+
+**Why this order.** aj set it. Approvals come first because every later phase moves through them. Docs and files
+come second because pickup on another account is only as good as the record it picks up from: the docs must agree
+with the code, stale docs must go, and work must be committed, pushed and cleaned up locally when safe (aj found
+PlunderSpell's folders over 153 GB on 2026-11-09). Rejected: pickup second, ahead of the docs.
+
+**Status.** Design approved. Opening the phase issues and closing the old ones wait on aj approving the GitHub
+issue command, whose prompt timed out unanswered on 2026-11-09.
+
+---
+
 ## 2026-11-09 - Handoff overwrite: a save per folder, pictures inside the page, approvals that always register
 
 **Context.** The desktop app QA of the session handoff (`docs/plans/2026-11-09-session-handoff-desktop-qa.html`)
