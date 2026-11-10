@@ -69,3 +69,10 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
   `gh issue create`; cloud sessions use the GitHub tool (aj chose to record both, #231).
 - **Writing the tracker on every message** gave a fresh project a file on a bare "approved"; the
   write now happens only on a real change.
+
+## Planned: approvals in natural word order (2026-11-09, "Handoff overwrite" 3A)
+
+The loop accepted only the stage words first ("Design approved: <feature>"). It now also accepts them after the
+feature name ("<feature> design approved <picks>", "<feature> build plan approved", "<feature> QA passed"), with
+the same rules as before: not inside a question, not quoted from another message. aj's three approvals of
+2026-11-09 that moved nothing ("Handoff overwrite design approved 1A" among them) become `verify.py` cases.

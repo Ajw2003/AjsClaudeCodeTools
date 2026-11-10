@@ -92,3 +92,14 @@ note can't crowd the context.
 - 2026-11-08: the end-of-turn save must not push when nothing changed, or every read-only reply would
   move the autosave ref; the skip-when-unchanged rule above is what prevents it.
 - The pickup cap cuts a long note at 3500 characters; keep the note's first lines the next step.
+
+## Planned: a save per folder (2026-11-09, "Handoff overwrite" 1A)
+
+Every folder on a branch saved to one ref, so the newest save replaced another folder's unrestored work; the
+desktop QA lost session A's snapshot e724bf2 this way. Each folder now gets a random id, written once to
+`.git/house-rules-folder-id`, and saves to `refs/house-rules/autosave/<branch>/<folder id>`. A save only ever
+replaces its own folder's ref. The pickup fetches `refs/house-rules/autosave/*`, and for the current branch lists
+each other folder's snapshot that holds files this folder lacks, newest first, each with its own restore command
+(`git diff <snap>^ <snap> -- <files> | git apply`, which the guard allows and which stops rather than overwrite).
+The folder's own snapshot is skipped, since its work is already in the folder. Old single-ref snapshots
+(`refs/house-rules/autosave/<branch>`) are still read, so work saved before the change is not stranded.

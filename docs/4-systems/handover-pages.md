@@ -88,3 +88,17 @@ page's file name alone (`_record_qa_link`, `hook.py:7648`).
 | Tests | `scripts/verify.py` | Seven link-test cases (inside, `../` sibling, `file:///` outside, artifact, bare name, outside link with a bare-name link text, the note naming the path) and two warning cases (outside prints the line, inside does not). |
 
 Depends on: the hook payload's `cwd` field. Depended on by: the page checkpoint, the long-reply note and the QA stage.
+
+## Planned: pictures inside the page (2026-11-09, "Handoff overwrite" 2A)
+
+`copy_pictures` (`scripts/make_page.py`) copied each picture into `<page>-pics/` and linked it by a relative
+path, so a published page, a preview or a page opened from another repo showed broken pictures. The builder now
+reads each picture and writes it into the page as a `data:` address, so the page is one self-contained file. A
+page over 16 MB, the publish limit, is refused with a message naming the largest pictures.
+
+## Planned: a copy box that always registers (2026-11-09, "Handoff overwrite" 3A)
+
+`check_approval` only printed a note when a page's `approval` field was not a phrase the design loop accepts, so
+a page could offer aj a reply that moved nothing. The builder now refuses that for design and plan pages, unless
+the page names another repo in `forRepo` (the #309 case). A `verify.py` case runs each built page's copy-box line
+through the loop's own patterns.

@@ -7,6 +7,30 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-09 - Handoff overwrite: a save per folder, pictures inside the page, approvals that always register
+
+**Context.** The desktop app QA of the session handoff (`docs/plans/2026-11-09-session-handoff-desktop-qa.html`)
+found three faults. A second clone on the same branch saved over desktop session A's snapshot, so the
+uncommitted work was no longer on GitHub. Page pictures live in a `<page>-pics/` folder that a published page
+never carries. And three of aj's approvals registered nothing, because the page's copy box held a line the loop
+rejects. aj picked "Design approved: Handoff overwrite 1A 2A 3A" on
+`docs/plans/2026-11-09-handoff-overwrite-design.html`.
+
+**Decision.** 1A: each folder saves under `refs/house-rules/autosave/<branch>/<folder id>`, and the pickup lists
+every snapshot for the branch that holds files the folder lacks. 2A: `make_page.py` writes each picture into the
+page as a data: address and stops writing `<page>-pics/`. 3A: the builder refuses a design or plan page whose copy
+box would send a line the loop rejects (a page for another repo names it in `forRepo`), and the loop accepts the
+stage words after the feature name too. Rejected: one place per branch with refusals (1B) or a chain (1C); keeping
+the pictures folder and publishing it (2B); the builder check alone (3B).
+
+**Planning notes.** The restore command change already on the branch (commit d62be1a, `git diff <snap>^ <snap> --
+<files> | git apply`, stage file left out) stays. System docs: `docs/4-systems/usage-handoff.md`,
+`docs/4-systems/handover-pages.md`, `docs/4-systems/design-loop.md`.
+
+**Status.** Design approved; build plan next.
+
+---
+
 ## 2026-11-08 - Session handoff and #406 become one feature
 
 **Context.** The session handoff design overlapped issue #406, approved 2026-10-27. aj picked
