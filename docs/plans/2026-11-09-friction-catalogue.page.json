@@ -28,7 +28,7 @@
         "Two full sets of \"QA evidence\" issues (#389 to #395 and #411 to #417), three picture issues, five approval issues, and 83 labelled \"in progress\", most with no work going on. The end-of-turn checks read these labels, so stale ones cause wrong reminders and refusals.",
         "Done when every open issue is either real remaining work or gone. I propose the closes as one list for you to approve."],
       ["check", "Partly fixed", "Already on the branch AjsAgent/session-handoff", "",
-        "The pickup's restore command now uses git apply and leaves out the stage file (commit d62be1a). The design page for the handoff overwrite, pictures and approvals is approved, and issues #488 to #491 are open. Issues #488 to #491 are folded into areas 1, 4 and 5 rather than built separately.",
+        "The pickup's restore command now uses git apply and leaves out the stage file (commit d62be1a). The design page for the handoff overwrite, pictures and approvals is approved, and its four issues (#488 to #491) are open. They are folded into areas 1, 4 and 5 rather than built separately.",
         "Nothing from you."],
       ["search", "You decide", "The order, and what happens to the open issues", "you",
         "Question 1 below asks the order; question 2 asks how the duplicates are handled.",
