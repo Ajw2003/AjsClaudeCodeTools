@@ -1,0 +1,72 @@
+{
+  "title": "House-rules Roadmap",
+  "eyebrow": "Design · 226 open issues triaged into eight phases, worked one at a time",
+  "approval": "Design approved: Roadmap",
+  "replyPrefix": "Design approved: Roadmap",
+  "reply": "",
+  "short": {
+    "lead": "All 226 open issues were read and checked against the code. 145 are still needed and 37 need a closer look, while 38 are already built, duplicated or replaced, and 6 are built on this branch but not merged. The proposal: close every one of the 226, and open one issue per phase in their place. Each phase issue lists every old issue it absorbs, so nothing is lost. The phases run one at a time, each with its own design, plan and QA, and the next starts only when the last passes. Phase 2 makes any of your four accounts pick up where the last one stopped, and is tested on the desktop app, in the cloud and on a second account. The full per-issue verdicts are in docs/2-roadmap/triage/.",
+    "hint": "Tap a phase to see what it covers, the old issues it absorbs, and what done looks like.",
+    "key": [["Phase, in order", ""], ["Closed now", ""], ["You decide", "you"]],
+    "items": [
+      ["plus", "Phase 1, 26 issues", "Approvals and the design loop just work", "",
+        "Every way you approve moves the stage, and the plugin never offers you a line or a button that won't work. A fault found in QA goes back to Build with one message, and \"skip design\" covers one change across its files. Absorbs the approval issues (#491, #481, #475, #429, #379, #296, #273, #155, #141, #131, #132) and the design-loop flow issues (#480, #459, #460, #458, #457, #468, #470, #471, #473, #110, #107, #128, #129, #130, #102). Today's three approval mix-ups become its first tests.",
+        "Done when each of today's failed approvals gets the right answer, a QA fix needs one message from you, and both pass a real session in the desktop app."],
+      ["plus", "Phase 2, 17 issues", "Pick up on any of your four accounts", "",
+        "Finishes the session handoff already on the branch AjsAgent/session-handoff: a save per folder (no folder erases another's work), the pickup and its restore, and a save when a usage limit cuts a turn off. It also adds one command that points the desktop app and cloud sessions at a branch build and back, so every later phase can be tested where you use it. Absorbs #406 to #410, #486 to #489, #140, #479, #44, #46, #137, #202, #205 and #215.",
+        "Done when work started on one account is picked up on another, in the desktop app and in a cloud session, by steps you follow yourself on a second account."],
+      ["plus", "Phase 3, 17 issues", "The guard refuses only what can't be undone", "",
+        "Routine, recoverable commands run without a prompt, and every refusal names a way forward that works. Permission prompts are readable and never leave a helper stalled. Absorbs #476 to #478, #484, #285, #200, #189, #156, #142, #145 to #147, #149, #152, #159, #196 and #260.",
+        "Done when a recorded day of real commands runs with no refusal of a recoverable action, and a helper never waits on a prompt nobody can answer."],
+      ["plus", "Phase 4, 31 issues", "Pages always work", "",
+        "Pictures written into the page, a copy box that works wherever the page opens, a builder that refuses a page missing what it owes, QA pages that prove each change with evidence, and the accessibility fixes. Absorbs #490, #462, #313, #464, #466, #377, #378, #411 to #417, #419 to #424, #461, #469, #283, #284, #158, #194, #297 to #300 and #302.",
+        "Done when a page with pictures, published and opened in the browser, shows them all, its copy box works, and the builder refuses each kind of incomplete page."],
+      ["plus", "Phase 5, 31 issues", "Helpers you can follow, and that behave", "",
+        "Every helper's progress and transcript one tap away, stall alerts that fire once per stall, and builder rules that stop reruns, over-testing and polling. Absorbs the stall-check issues (#120, #123 to #125, #127, #150), the visibility issues (#396, #400, #403, #430 to #436) and the builder issues (#304, #69, #95, #138, #139, #160, #172, #201, #218 to #222, #455, #474).",
+        "Done when a real build with two helpers can be followed from your phone and no helper reruns a check it already ran."],
+      ["plus", "Phase 6, 16 issues", "Your credit everywhere, and your names configurable", "",
+        "No Claude credit reaches any repo you own, checked on GitHub as well as locally; the agent's name, credit and branch prefix come from one setting. Absorbs #350 to #355, #174, #177, #179, #180, #181, #182, #191, #287, #321 and #405.",
+        "Done when a pull request opened from a cloud session carries your credit and the GitHub check refuses one that doesn't."],
+      ["plus", "Phase 7, 17 issues", "Docs and a changelog that keep themselves current", "",
+        "A changelog in every repo, a research-and-sources tier, and a check per house rule. Absorbs #384 to #388, #336, #45, #117, #228, #244, #301, #399, #404, #436, #463, #472 and #199.",
+        "Done when a pull request that changes behaviour without a changelog line is flagged, in this repo and one other."],
+      ["plus", "Phase 8, 22 issues", "The plugin split, and faster hooks", "",
+        "House-rules split into the nine plugins and a shared library already designed, with hook speed and the duplicated code paths fixed on the way. Absorbs #437 to #450, #41 to #43, #62, #204, #206, #382 and #482.",
+        "Done when the nine plugins install together on a fresh machine and every hook runs at least as fast as today."],
+      ["check", "No new work, 38 issues", "Already built, duplicated or replaced", "",
+        "21 already built (for example #454 and #465, the rerun limit, at safe_git.py:533-603), 10 duplicates (#389 to #395 repeat #411 to #417), and 7 replaced by later issues. Each closes with a comment naming the evidence or the issue that replaced it.",
+        "Nothing beyond your approval."],
+      ["search", "You decide", "The order, the other products, and how the closes happen", "you",
+        "Question 1 asks the order of phases 1 and 2, question 2 what happens to the 17 issues about other products (art-pipeline, Eldritch goose, Focus Deck, the Unity workflow), and question 3 when the old issues close.",
+        "Choose one option in each question."]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    ["q1", "1. Which phase comes first?", [
+      ["A", "Approvals first, then picking up on any account", 1,
+        "Every later phase needs your approvals to register, so fixing them first saves a round trip on every design and plan after it. Phase 2 starts as soon as phase 1 passes QA."],
+      ["B", "Picking up on any account first", 0,
+        "Multi-account continuity arrives sooner, but its own design and plan approvals still run on the current loop, with today's friction."]
+    ], "Phases 3 to 8 follow in the order shown either way; any phase can be moved later by a dated decision entry."],
+    ["q2", "2. What happens to the 17 issues about other products?", [
+      ["A", "Closed here, and listed in the roadmap under Other products", 1,
+        "Each closes with a comment pointing to the roadmap's Other products section, which names the product and the old issue numbers. The art-pipeline work lives on its branch origin/claude/art-pipeline; Focus Deck's issue belongs in the focus-deck-app repo."],
+      ["B", "Kept open here, labelled as another product", 0,
+        "Nothing is closed, but they stay in this repo's open list and keep showing up in the end-of-turn checks."]
+    ], ""],
+    ["q3", "3. When do the old issues close?", [
+      ["A", "All 226 now, each pointing at the phase issue that carries it", 1,
+        "One approval of this page closes them, each with a comment naming its phase issue, or the evidence or duplicate. The 37 unsure ones become a check at the start of their phase, so nothing in them is lost. Code on the branch AjsAgent/session-handoff stays and is carried by phase 2."],
+      ["B", "Each phase closes its own issues when it starts", 0,
+        "Nothing closes until its phase begins, so the open list shrinks slowly and the stale labels keep causing wrong reminders until then."]
+    ], "No issue is closed without this approval."]
+  ],
+  "wrapup": {
+    "summary": "A roadmap replacing 226 open issues with eight phases worked in sequence, phase 2 being pickup on any of your four accounts.",
+    "changing": "Nothing yet. The triage is committed in docs/2-roadmap/triage/; no issue is closed and no code changes until you approve.",
+    "blocking": "Your pick of one option in each of questions 1 to 3, or what you want changed.",
+    "next": "Once you approve, I add the phases to docs/2-roadmap/Roadmap.md, open the eight phase issues, and close the old ones with their pointers. Then phase 1 starts with its own design page.",
+    "todo": ["Pick one option in each question."]
+  }
+}
