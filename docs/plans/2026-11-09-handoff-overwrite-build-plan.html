@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Build plan approved: Handoff overwrite",
   "reply": "",
   "short": {
-    "lead": "This is how the design you approved (\"Design approved: Handoff overwrite 1A 2A 3A\") gets built: three steps under parent issue #488, all on the branch AjsAgent/session-handoff, before anything reaches main. Each step is built by one helper agent in its own copy of the repo, one at a time, and I check each before the next starts. The plan is written up in docs/4-systems/usage-handoff.md, docs/4-systems/handover-pages.md and docs/4-systems/design-loop.md, with the decision in docs/6-decisions/Decisions.md.",
+    "lead": "This is how the design you approved (\"Design approved: Handoff overwrite 1A 2A 3A\") gets built: three steps under parent issue #488, all on the branch AjsAgent/session-handoff. Nothing reaches main until all three are built and pass your QA. Each step is built by one helper agent in its own copy of the repo, one at a time, and I check each before the next starts. The plan is written up in docs/4-systems/usage-handoff.md, docs/4-systems/handover-pages.md and docs/4-systems/design-loop.md, and the decision is recorded in docs/6-decisions/Decisions.md.",
     "hint": "Tap a step to see what it does and when it counts as done.",
     "key": [
       [
@@ -293,15 +293,15 @@ const PAGE = {
         "Step 1, #491",
         "Every approval line registers",
         "",
-        "Built first, because every later approval depends on it. The page builder refuses a design or plan page whose Copy my reply line the design loop would reject, unless the page names another repo in a forRepo field. The loop also accepts the stage words after the feature name, as in \"Handoff overwrite design approved 1A\".",
-        "Done when verify.py checks your three lines from today: the one with \"approved\" moves the stage, the two without it still don't and say why. A page with a bad approval field is refused, and every built page's copy line passes the loop's own check."
+        "Built first, because every later approval depends on it. The page builder refuses a design or plan page whose copy-box reply line the design loop would reject, unless the page is for a different repo and names it in its forRepo field. The loop also accepts the stage words after the feature name, as in \"Handoff overwrite design approved 1A\".",
+        "Done when verify.py checks the three reply lines you sent today. \"Handoff overwrite design approved 1A\" moves the stage; \"Handoff overwrite design 1A\" and \"Handoff overwrite 1A 2A\" still don't, and the loop says why. A page with a bad approval field is refused, and every built page's copy line passes the loop's own check."
       ],
       [
         "plus",
         "Step 2, #490",
         "Pictures are written into the page file",
         "",
-        "make_page.py writes each picture into the HTML as a data: address (the picture stored as text inside the page) and stops writing the <page>-pics folder. A page over 16 MB, the publish limit, is refused with a message naming the largest pictures.",
+        "make_page.py writes each picture into the HTML as a data: address (the picture stored as text inside the page) and stops creating the separate <page>-pics folder. A page over 16 MB, the publish limit, is refused with a message naming the largest pictures.",
         "Done when verify.py builds a page with a PNG and an SVG and finds both inside the HTML, with no pics folder. A page with pictures, published and opened in the browser, shows every picture."
       ],
       [
@@ -309,7 +309,7 @@ const PAGE = {
         "Step 3, #489",
         "Each folder saves under its own name",
         "",
-        "Each folder gets a random id in its .git folder and saves to refs/house-rules/autosave/<branch>/<folder id>, so no save replaces another folder's. The pickup lists every other folder's snapshot on the branch that holds files this folder lacks, each with its own restore command. Old single-name snapshots are still read.",
+        "Each folder gets a random folder id stored in its .git folder and saves to refs/house-rules/autosave/<branch>/<folder id>, so no save replaces another folder's. The pickup lists every snapshot from another folder on the branch that holds files this folder lacks, each with its own restore command. Snapshots saved under the old single name are still read.",
         "Done when verify.py proves two folders on one branch keep separate snapshots and each pickup's restore command, run as printed, brings the other's file back."
       ],
       [
@@ -317,8 +317,8 @@ const PAGE = {
         "Then, real test",
         "Two desktop sessions and a published page",
         "",
-        "Fresh clones of the branch, two desktop app sessions: one edits without committing, the other opens, sees the pickup, runs its restore command as printed, and gets the identical file, while the first folder's snapshot stays on GitHub. Then I write exact steps for you to follow for the cloud test and the second-account test, and update the QA page.",
-        "Nothing from you until the QA page."
+        "Fresh clones of the branch, two desktop app sessions: one edits without committing, the other opens, sees the pickup, runs its restore command as printed, and gets the identical file, and the first folder's snapshot stays on GitHub. Then I write exact steps for you to follow in the cloud test and the second-account test, and update the QA page.",
+        "Nothing is needed from you until the QA page is ready."
       ]
     ]
   },
@@ -326,7 +326,7 @@ const PAGE = {
   "choices": [],
   "wrapup": {
     "summary": "The build plan for three fixes under issue #488: approvals first, then pictures, then a save per folder.",
-    "changing": "Nothing in code yet. The plan docs, the decision and the four issues are committed and open.",
+    "changing": "No code has changed yet. The plan docs and the decision are committed, and the four issues (#488 to #491) are open.",
     "blocking": "Your approval of this plan.",
     "next": "Once you approve, I build step 1 with one helper agent, check it, then step 2, then step 3, then run the desktop test.",
     "todo": [
