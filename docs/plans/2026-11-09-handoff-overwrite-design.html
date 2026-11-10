@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Design approved: Handoff overwrite",
   "reply": "",
   "short": {
-    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back. Second, as you asked: pictures on pages built by make_page.py break once a page is published or opened anywhere else. The builder copies each picture into a folder beside the page, named <page>-pics, and links it by a relative path. A published page carries only the HTML file, so the pictures are missing, which is why you keep seeing broken pictures in other repos. Third: three of your approvals for this page registered nothing. The page's Copy my reply box built your reply from the page's approval field, which I had set to \"Handoff overwrite\" instead of \"Design approved: Handoff overwrite\", so the box gave you a line the design loop does not accept. The page builder only printed a note about it instead of refusing. The loop also rejects natural word orders such as \"Handoff overwrite design approved 1A\". This page's copy box is now fixed, so tapping it sends a line that works.",
+    "lead": "The desktop retest found a way to lose work. Every folder on a branch saves to the same place on GitHub, the ref refs/house-rules/autosave/<branch>. Desktop session A saved an uncommitted line there as snapshot e724bf2. Then a session in a second clone of the same branch (call it clone B), which had none of that work, saved its own state to that same place as snapshot 32fb8c8. That replaced A's snapshot. The pickup, which shows saved work when a session starts, now finds nothing to restore. A's line still exists, but only in clone A's folder and in a local copy of the old snapshot in this repo. Nothing on GitHub holds it any more, so a session on a second account could not get it back. Second, as you asked: pictures on pages built by make_page.py break once a page is published or opened anywhere else. The builder copies each picture into a folder beside the page, named <page>-pics, and links it by a relative path. A published page carries only the HTML file, so the pictures are missing, which is why you keep seeing broken pictures in other repos. Third: three of your approvals for this page registered nothing. The page's Copy my reply box built your reply from the page's approval field. I had set that field to \"Handoff overwrite\" instead of \"Design approved: Handoff overwrite\", so the box gave you a line the design loop does not accept. The page builder only printed a note about it instead of refusing to build the page. The loop also rejects natural word orders such as \"Handoff overwrite design approved 1A\". This page's copy box is now fixed, so tapping it sends a line the loop accepts.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       [
@@ -321,7 +321,7 @@ const PAGE = {
         "Broken",
         "Approvals that look right register nothing",
         "",
-        "make_page.py (check_approval, line 347) builds a page whose approval field is not a phrase the loop accepts, and only prints a note. The loop (design_loop.py, line 391) accepts only \"Design approved: <feature>\" with the stage words first, so \"<feature> design approved 1A\" moves nothing.",
+        "make_page.py (check_approval, line 347) still builds a page whose approval field is not a phrase the loop accepts, and only prints a note. The loop (design_loop.py, line 391) accepts only \"Design approved: <feature>\", with the stage words first, so a reply like \"<feature> design approved 1A\" changes nothing.",
         "Pick a fix in question 3."
       ],
       [
@@ -386,9 +386,9 @@ const PAGE = {
       [
         [
           "A",
-          "The builder only makes pages whose reply works, and the loop accepts the stage words before or after the feature name",
+          "The builder refuses pages whose reply would not register, and the loop accepts the stage words before or after the feature name",
           1,
-          "The builder refuses to build a design or plan page whose copy box would send a line the loop rejects, and names the fix. The page for another repo's work (#309) stays allowed, but only when the page says so in a field. The loop also accepts \"<feature> design approved <picks>\" and \"<feature> build plan approved\". A test runs every page's copy-box line through the loop's own check, so the two can never disagree again."
+          "The builder refuses to build a design or plan page whose copy box would send a line the loop rejects, and names the fix. A page for another repo's work (#309) is still allowed, but only when the page names that repo in a field such as \"forRepo\": \"owner/name\". The loop also accepts \"<feature> design approved <picks>\" and \"<feature> build plan approved\". A test runs the copy-box line of every page through the loop's own check, so the two cannot disagree without the test failing."
         ],
         [
           "B",
@@ -397,14 +397,14 @@ const PAGE = {
           "The builder refuses a page whose reply would not register, but a reply typed by hand in another word order still moves nothing."
         ]
       ],
-      "A fixes both ways an approval can go wrong: a page offering a bad line, and a person typing a natural one."
+      "A fixes both ways an approval can go wrong: a page offering a line the loop rejects, and a person typing a natural word order the loop rejects."
     ]
   ],
   "wrapup": {
     "summary": "A design that stops a second folder erasing saved work, makes page pictures always show, and makes approvals always register.",
-    "changing": "Only this page so far. No code is written until you approve.",
-    "blocking": "Your pick for questions 1, 2 and 3, or what you want changed.",
-    "next": "Once you approve, I open one issue per fix, build all three on this branch before it goes to main, and test each for real: two desktop sessions in fresh clones for the handoff, a published page with pictures, and every approval form you tried run through the loop. Then I write exact steps for you to follow for the cloud test and the second-account test.",
+    "changing": "Only this page so far. I write no code until you approve.",
+    "blocking": "Your pick of one option in each of questions 1, 2 and 3, or what you want changed.",
+    "next": "Once you approve, I open one issue per fix and build all three on this branch before it goes to main. I test each for real: two desktop sessions in fresh clones for the handoff, a published page with pictures, and every approval form you tried run through the loop. Then I write exact steps for you to follow for the cloud test and the second-account test.",
     "todo": [
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: Handoff overwrite\", or say what to change."
     ]
