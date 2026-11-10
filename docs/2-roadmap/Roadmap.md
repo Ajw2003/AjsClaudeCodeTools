@@ -108,5 +108,6 @@ to #164 and #167 to #171 (art-pipeline, on the branch `origin/claude/art-pipelin
 the focus-deck-app repo), #183 to #187 (Eldritch goose) and #334 (Unity docs layer).
 
 **Where it stands (2026-11-10).** Approved. The roadmap issue is #492 and the phases are #493 to #500, in the
-order above. The 226 old issues close once aj sends the line in
-[`triage/close-line.txt`](triage/close-line.txt), which puts each on the close guard's list beside its phase issue.
+order above. The 226 old issues were closed on 2026-11-10 after aj sent the line in
+[`triage/close-line.txt`](triage/close-line.txt); each carries a comment naming its phase issue, or its evidence or
+duplicate. Phase 1 (#493) is next, starting with its design page.
