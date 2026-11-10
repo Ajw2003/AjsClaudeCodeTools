@@ -1,6 +1,6 @@
 {
   "title": "Handoff QA",
-  "eyebrow": "QA round 2 · session handoff in the desktop app, issue #406, plugin 2.77.0",
+  "eyebrow": "QA round 2 · session handoff, desktop app, issue #406, plugin 2.77.0",
   "short": {
     "lead": "QA failed in the desktop app. Two desktop sessions ran this branch's hooks in separate fresh clones. The save and the pickup both worked, but the session that picked the work up could not restore it, because the plugin's own guards refuse the restore command the pickup prints. The fix needs a code change, and code edits are locked in the QA stage until you type \"skip design\". The cloud test and the second-account test have not started.",
     "hint": "Tap a row to see what was run and what it showed.",
@@ -15,8 +15,8 @@
       ["cross", "Desktop restore", "The restore command is refused", "",
         "Session B ran the printed command and the design-loop guard (the check that locks code edits by stage) refused it, because the command names the stage file .claude/house-rules-loop.json. When I ran the same command with only Today.md, the main guard (the general safety check on shell commands) refused it too, because it refuses every git restore. My earlier terminal test missed this because I ran the restore from my own shell, where those guards do not apply. The fix has two parts. First, the pickup leaves the stage file out of the restore command. Second, the main guard allows a restore from a handoff snapshot when none of the files named in the command has unsaved edits.",
         "Type \"skip design\" in this chat so I can make the fix."],
-      ["cross", "Plugin overlap", "The installed copy still ran in the desktop app", "",
-        "Each test clone's .claude/settings.local.json turned off the installed plugin (2.76.0), and claude plugin list showed it as disabled there. In the desktop app, the copy it syncs from claude.ai (also 2.76.0) ran anyway: session B's end-of-reply feedback came from both the clone's plugin and the installed one. This did not change the handoff results, but a folder's settings cannot fully switch off the installed copy in the desktop app.",
+      ["cross", "Plugin overlap", "The installed copy still ran alongside", "",
+        "Each test clone's .claude/settings.local.json turned off the installed plugin (2.76.0), and claude plugin list showed it as disabled there. In the desktop app, the copy it syncs from claude.ai (also 2.76.0) ran anyway: session B's end-of-reply feedback came from both the clone's plugin and the installed one. This did not change the handoff results, but a folder's settings cannot fully switch off the installed copy there.",
         "Nothing from you."],
       ["search", "Cloud", "A cloud session picks the work up", "",
         "Not run yet. The desktop app would not offer a cloud session from this conversation, so I could not start one.",
@@ -25,7 +25,7 @@
         "Not run yet. I cannot sign in to a second account, so you will get exact steps to follow after the fix.",
         "Nothing yet; the steps come after the fix."],
       ["check", "Tests", "No new failures", "",
-        "verify.py: 7 of 1080 checks fail, and the same 7 fail on a clean main. tools/verify_tools.py: 1 of 52 checks fails (check A16), and it also fails on a clean main.",
+        "verify.py: 7 of 1080 checks fail, and the same 7 fail on a clean main. tools/verify_tools.py: 1 of 52 checks fails (check A16), and it fails there too.",
         "Nothing from you."]
     ]
   },
@@ -34,14 +34,14 @@
     "feature": "Session handoff",
     "base": "origin/main",
     "unverified": [
-      "A cloud session picking the work up; the app would not offer a cloud session from here",
-      "A second Claude account picking the work up; I cannot sign in to one",
+      "A cloud session resuming the saved work; the app would not offer a cloud session from here",
+      "A second Claude account resuming it; I cannot sign in to one",
       "A turn actually cut off by a usage limit. The save that runs when a turn stops on an error (the StopFailure hook) has only been tested by replaying recorded inputs, because a real limit can't be triggered on purpose."
     ],
     "files": {}
   },
   "wrapup": {
-    "summary": "QA failed: in the desktop app the work is saved and found, but the plugin's own guards refuse the restore.",
+    "summary": "QA failed: on the desktop the work is saved and found, but the plugin's own guards refuse the restore.",
     "changing": "Nothing yet. The fix will change the pickup code in delegation.py and the main guard.",
     "blocking": "Code edits are locked in the QA stage until you type \"skip design\" in this chat.",
     "next": "After the fix, I rerun both desktop sessions, then send you exact steps for the cloud and second-account tests.",

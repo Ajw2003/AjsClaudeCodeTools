@@ -270,7 +270,7 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Handoff QA",
-  "eyebrow": "QA round 2 · session handoff in the desktop app, issue #406, plugin 2.77.0",
+  "eyebrow": "QA round 2 · session handoff, desktop app, issue #406, plugin 2.77.0",
   "short": {
     "lead": "QA failed in the desktop app. Two desktop sessions ran this branch's hooks in separate fresh clones. The save and the pickup both worked, but the session that picked the work up could not restore it, because the plugin's own guards refuse the restore command the pickup prints. The fix needs a code change, and code edits are locked in the QA stage until you type \"skip design\". The cloud test and the second-account test have not started.",
     "hint": "Tap a row to see what was run and what it showed.",
@@ -316,9 +316,9 @@ const PAGE = {
       [
         "cross",
         "Plugin overlap",
-        "The installed copy still ran in the desktop app",
+        "The installed copy still ran alongside",
         "",
-        "Each test clone's .claude/settings.local.json turned off the installed plugin (2.76.0), and claude plugin list showed it as disabled there. In the desktop app, the copy it syncs from claude.ai (also 2.76.0) ran anyway: session B's end-of-reply feedback came from both the clone's plugin and the installed one. This did not change the handoff results, but a folder's settings cannot fully switch off the installed copy in the desktop app.",
+        "Each test clone's .claude/settings.local.json turned off the installed plugin (2.76.0), and claude plugin list showed it as disabled there. In the desktop app, the copy it syncs from claude.ai (also 2.76.0) ran anyway: session B's end-of-reply feedback came from both the clone's plugin and the installed one. This did not change the handoff results, but a folder's settings cannot fully switch off the installed copy there.",
         "Nothing from you."
       ],
       [
@@ -342,7 +342,7 @@ const PAGE = {
         "Tests",
         "No new failures",
         "",
-        "verify.py: 7 of 1080 checks fail, and the same 7 fail on a clean main. tools/verify_tools.py: 1 of 52 checks fails (check A16), and it also fails on a clean main.",
+        "verify.py: 7 of 1080 checks fail, and the same 7 fail on a clean main. tools/verify_tools.py: 1 of 52 checks fails (check A16), and it fails there too.",
         "Nothing from you."
       ]
     ]
@@ -351,7 +351,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "42 files, +5285 −58",
+      "44 files, +6358 −58",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -801,6 +801,30 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/2026-11-09-session-handoff-desktop-qa.html",
+          1023,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-09-session-handoff-desktop-qa.page.json",
+          50,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/session-handoff-diagrams/step-1-check.svg",
           1,
           0,
@@ -867,7 +891,7 @@ const PAGE = {
       "Still unverified",
       "3 things not yet proven",
       null,
-      "A cloud session picking the work up; the app would not offer a cloud session from here. A second Claude account picking the work up; I cannot sign in to one. A turn actually cut off by a usage limit. The save that runs when a turn stops on an error (the StopFailure hook) has only been tested by replaying recorded inputs, because a real limit can't be triggered on purpose.",
+      "A cloud session resuming the saved work; the app would not offer a cloud session from here. A second Claude account resuming it; I cannot sign in to one. A turn actually cut off by a usage limit. The save that runs when a turn stops on an error (the StopFailure hook) has only been tested by replaying recorded inputs, because a real limit can't be triggered on purpose.",
       null,
       null
     ]
@@ -876,14 +900,14 @@ const PAGE = {
     "feature": "Session handoff",
     "base": "origin/main",
     "unverified": [
-      "A cloud session picking the work up; the app would not offer a cloud session from here",
-      "A second Claude account picking the work up; I cannot sign in to one",
+      "A cloud session resuming the saved work; the app would not offer a cloud session from here",
+      "A second Claude account resuming it; I cannot sign in to one",
       "A turn actually cut off by a usage limit. The save that runs when a turn stops on an error (the StopFailure hook) has only been tested by replaying recorded inputs, because a real limit can't be triggered on purpose."
     ],
     "files": {}
   },
   "wrapup": {
-    "summary": "QA failed: in the desktop app the work is saved and found, but the plugin's own guards refuse the restore.",
+    "summary": "QA failed: on the desktop the work is saved and found, but the plugin's own guards refuse the restore.",
     "changing": "Nothing yet. The fix will change the pickup code in delegation.py and the main guard.",
     "blocking": "Code edits are locked in the QA stage until you type \"skip design\" in this chat.",
     "next": "After the fix, I rerun both desktop sessions, then send you exact steps for the cloud and second-account tests.",
