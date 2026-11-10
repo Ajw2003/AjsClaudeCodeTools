@@ -1,0 +1,437 @@
+{
+ "title": "Phase 1 Build Plan",
+ "eyebrow": "Build plan for approval · roadmap phase 1 (#493) · seven steps, nothing built yet",
+ "approval": "Build plan approved: Phase 1",
+ "replyPrefix": "Build plan approved: Phase 1",
+ "reply": "",
+ "short": {
+  "lead": "You approved the phase 1 design, choosing option A in each of its three choices (1A, 2A, 3A). This is how it gets built: seven steps, one issue each (#501 to #507), built one after another because they all change scripts/house_rules/design_loop.py, the file that runs the design loop. Each step shows its planned code as a picture, and the line counts are estimates until the code is written. Two choices remain, both about step 5, which closes the ways around the code-edit lock (the rule that refuses code edits outside the Build stage).",
+  "hint": "Tap a step to see what it creates and what it needs from you.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "search",
+    "Match",
+    "Step 1: approvals match",
+    "",
+    "Approvals match in either word order, work in cloud sessions, and never fail silently.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NjAgMjkwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48ZGVmcz48bWFya2VyIGlkPSJhIiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjgiIHJlZlk9IjUiIG1hcmtlcldpZHRoPSI3IiBtYXJrZXJIZWlnaHQ9IjciIG9yaWVudD0iYXV0byI+PHBhdGggZD0iTTAgMEwxMCA1TDAgMTB6IiBmaWxsPSIjN2Q4MzhjIi8+PC9tYXJrZXI+PC9kZWZzPjx0ZXh0IHg9IjIwIiB5PSIzNCIgZm9udC1zaXplPSIxMiIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzdkODM4YyI+V2hhdCB5b3Ugc2VudDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9IjM0IiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5Ub2RheTwvdGV4dD48dGV4dCB4PSI1NjAiIHk9IjM0IiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5BZnRlciBwaGFzZSAxPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSI1MCIgd2lkdGg9IjgzMiIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4wNiIvPjx0ZXh0IHg9IjI0IiB5PSI2OCIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNmNDQ0YiI+SGFuZG9mZiBvdmVyd3JpdGUgZGVzaWduIGFwcHJvdmVkIDFBPC90ZXh0Pjx0ZXh0IHg9IjI0IiB5PSI4NCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzdkODM4YyI+ZnJvbSB0eXBlZDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9Ijc1IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYjU1MzNjIj5tb3ZlZCBub3RoaW5nPC90ZXh0PjxwYXRoIGQ9Ik01MjAgNzAgaDI2IiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhKSIvPjx0ZXh0IHg9IjU2MCIgeT0iNzUiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjlhNzAiPk1vdmVzIHRoZSBzdGFnZTwvdGV4dD48cmVjdCB4PSIxNCIgeT0iOTYiIHdpZHRoPSI4MzIiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyNCIgeT0iMTE0IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5IYW5kb2ZmIG92ZXJ3cml0ZSBkZXNpZ24gMUE8L3RleHQ+PHRleHQgeD0iMjQiIHk9IjEzMCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzdkODM4YyI+ZnJvbSB0eXBlZDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9IjEyMSIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2I1NTMzYyI+bW92ZWQgbm90aGluZzwvdGV4dD48cGF0aCBkPSJNNTIwIDExNiBoMjYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2EpIi8+PHRleHQgeD0iNTYwIiB5PSIxMjEiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNjNzdhMmMiPlJlZnVzZWQsIGFuZCB0aGUgcmVwbHkgc2F5cyB3aHk8L3RleHQ+PHJlY3QgeD0iMTQiIHk9IjE0MiIgd2lkdGg9IjgzMiIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4wNiIvPjx0ZXh0IHg9IjI0IiB5PSIxNjAiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzZjQ0NGIiPkhhbmRvZmYgb3ZlcndyaXRlIDFBIDJBPC90ZXh0Pjx0ZXh0IHg9IjI0IiB5PSIxNzYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM3ZDgzOGMiPmZyb20gdGhlIHBhZ2UncyBjb3B5IGJveDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9IjE2NyIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2I1NTMzYyI+bW92ZWQgbm90aGluZzwvdGV4dD48cGF0aCBkPSJNNTIwIDE2MiBoMjYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2EpIi8+PHRleHQgeD0iNTYwIiB5PSIxNjciIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNjNzdhMmMiPlRoZSBidWlsZGVyIG5ldmVyIHB1dHMgaXQgb24gYSBwYWdlPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIxODgiIHdpZHRoPSI4MzIiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyNCIgeT0iMjA2IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5TZW5kIGl0PC90ZXh0Pjx0ZXh0IHg9IjI0IiB5PSIyMjIiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM3ZDgzOGMiPmZyb20gYSBidXR0b24gSSBvZmZlcmVkPC90ZXh0Pjx0ZXh0IHg9IjMzMCIgeT0iMjEzIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYjU1MzNjIj5tb3ZlZCBub3RoaW5nPC90ZXh0PjxwYXRoIGQ9Ik01MjAgMjA4IGgyNiIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48dGV4dCB4PSI1NjAiIHk9IjIxMyIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOWE3MCI+VGhlIGJ1dHRvbiBjYXJyaWVzIHRoZSBhcHByb3ZhbCAoY2hvaWNlIDIpPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIyMzQiIHdpZHRoPSI4MzIiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyNCIgeT0iMjUyIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5CdWlsZCBwbGFuIGFwcHJvdmVkOiAuLi48L3RleHQ+PHRleHQgeD0iMjQiIHk9IjI2OCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzdkODM4YyI+ZnJvbSB0eXBlZDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9IjI1OSIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2I1NTMzYyI+cmVmdXNlZDogaXNzdWVzIG5vdCBjb3VudGVkPC90ZXh0PjxwYXRoIGQ9Ik01MjAgMjU0IGgyNiIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48dGV4dCB4PSI1NjAiIHk9IjI1OSIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOWE3MCI+SXNzdWVzIGNvdW50ZWQgKGNob2ljZSAxKTwvdGV4dD48L3N2Zz4=",
+     "alt": "The five approvals of 2026-11-09, what happened to each, and what happens after phase 1",
+     "caption": "The five approvals that moved nothing on 2026-11-09, and the answer each gets after this phase."
+    }
+   ],
+   [
+    "hand",
+    "Offer",
+    "Step 2: lines and buttons work",
+    "",
+    "Dead copy-box lines refused; \"Approve\" buttons count.",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Count",
+    "Step 3: the right issues",
+    "",
+    "Issues marked \"Part of\" the feature are read from GitHub.",
+    "Nothing from you."
+   ],
+   [
+    "loop",
+    "Redo",
+    "Step 4: one-message QA fix",
+    "",
+    "\"QA failed\" returns to Build.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Lock",
+    "Step 5: lock gaps",
+    "",
+    "Four audit gaps (D3, D6, D9, U3) closed.",
+    "Your answers to the two choices below."
+   ],
+   [
+    "stop",
+    "Decide",
+    "Step 6: decisions from you",
+    "",
+    "No judgement-call exception; held questions.",
+    "Nothing from you."
+   ],
+   [
+    "flask",
+    "Prove",
+    "Step 7: proof and QA page",
+    "you",
+    "A test per fix, then the QA page.",
+    "About ten minutes in the desktop app, following the QA page."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Step 1: approvals match in either word order (#501)",
+   "Accepts the feature name first, works in cloud sessions, ignores a line after a \"don't\", and never fails silently outside a repo.",
+   [
+    "\"Phase 1 design approved 1A\" moves nothing",
+    "It moves the feature to its next stage, like \"Design approved: Phase 1 1A\""
+   ],
+   "A new pattern rewrites a line with the feature name first into the usual order, then the existing checks run unchanged. The feature name may not contain \"not\" or \"n't\", so \"I don't think Phase 1 design approved\" moves nothing. In core.py, a system note at the start of your message is set aside before matching, unless it carries a helper's message. Done when the five lines of 2026-11-09 each get their right answer in verify.py.",
+   null,
+   [
+    [
+     "scripts/house_rules/design_loop.py",
+     14,
+     0,
+     [
+      [
+       "Feature-name-first pattern",
+       10,
+       0
+      ],
+      [
+       "Never silent outside a repo",
+       4,
+       0
+      ]
+     ]
+    ],
+    [
+     "scripts/house_rules/core.py",
+     9,
+     0,
+     [
+      [
+       "Set aside a leading system note",
+       9,
+       0
+      ]
+     ]
+    ]
+   ],
+   {
+    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4OTQgMzcwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPmRlc2lnbl9sb29wLnB5IGFuZCBjb3JlLnB5LCBzdGVwIDEgKCM1MDEpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI1MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICMgIzQ5MTogdGhlIHN0YWdlIHdvcmRzIG1heSBmb2xsb3cgdGhlIGZlYXR1cmUgbmFtZSwgbmV2ZXIgYWZ0ZXIgYSBuZWdhdGlvbiBvciBpbnNpZGUgYSBxdWVzdGlvbjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNjgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBfTE9PUF9BRlRFUl9SRSA9IHJlLmNvbXBpbGUociIoP21pKSIgKyBfTE9PUF9MRUFEICsgciIoKD86KD8hXGJub3RcYnxuJ3RcYilbXlxuLj8hXSkrPylccysiPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI4NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICByIihkZXNpZ25ccythcHByb3ZlZHxidWlsZFxzK3BsYW5ccythcHByb3ZlZHxxYVxzK3Bhc3NlZHxxYVxzK2ZhaWxlZCkiICsgX0xPT1BfTk9UX0FTS0VEPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMDQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgKyByIlsgXHRdKjo/WyBcdF0qKFteXG5dKikiKTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTIyIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgZGVmIF9sb29wX25vcm1hbGlzZSh0ZXh0KTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE0MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICAiIiInUGhhc2UgMSBkZXNpZ24gYXBwcm92ZWQgMUEnIC0mZ3Q7ICdEZXNpZ24gYXBwcm92ZWQ6IFBoYXNlIDEgMUEnLCB0aGVuIHRoZSBvbGQgcGF0dGVybnMgcnVuLiIiIjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTU4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIHJldHVybiBfTE9PUF9BRlRFUl9SRS5zdWIobGFtYmRhIG06ICIlczogJXMgJXMiICUgKG0uZ3JvdXAoMikuY2FwaXRhbGl6ZSgpLCBtLmdyb3VwKDEpLCBtLmdyb3VwKDMpKSwgdGV4dCk8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE3NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmIyZjM1IiB4bWw6c3BhY2U9InByZXNlcnZlIj48L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE5NCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICMgIzQyOSAoY29yZS5weSk6IGEgY2xvdWQgc2Vzc2lvbiBwdXRzIGEgc3lzdGVtIG5vdGUgYmVmb3JlIGFqJ3Mgd29yZHM8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjIxMiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIF9MRUFESU5HX05PVEVfUkUgPSByZS5jb21waWxlKHIiXEFccyooPzombHQ7c3lzdGVtLXJlbWluZGVyXGIuKj8mbHQ7L3N5c3RlbS1yZW1pbmRlciZndDtccyopKyIsIHJlLlMpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBkZWYgX293bl93b3Jkcyh0ZXh0KTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjI0OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBtID0gX0xFQURJTkdfTk9URV9SRS5tYXRjaCh0ZXh0KTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMjY2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIGlmIG0gYW5kIF9SRUxBWUVEX01BUktFUl9SRS5zZWFyY2gobS5ncm91cCgwKSk6ICAgIyBhbiBhZ2VudCBtZXNzYWdlIG9yIHRhc2sgbm90aWNlIGluc2lkZTogbm90IGFqPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyODQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgICAgIHJldHVybiBOb25lPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIzMDIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgcmV0dXJuIHRleHRbbS5lbmQoKTpdIGlmIG0gZWxzZSB0ZXh0PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIzMjAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIzMzgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iI2I1NTMzYyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+LSByZXR1cm4gbWlzc2VkIGlmIF9MT09QX0JBUkVfUkUuc2VhcmNoKHRleHQpIGVsc2UgIiI8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjM1NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIHJldHVybiBtaXNzZWQgaWYgX0xPT1BfQkFSRV9SRS5zZWFyY2godGV4dCkgb3IgX2xvb3BfYW55X3BocmFzZSh0ZXh0KSBlbHNlICIiICAgIyAjMjk2OiBuZXZlciBzaWxlbnQ8L3RleHQ+PC9zdmc+",
+    "alt": "Planned code: design_loop.py and core.py, step 1 (#501)",
+    "caption": "Planned code, not yet written: design_loop.py and core.py, step 1 (#501). Green lines are added, red removed."
+   }
+  ],
+  [
+   "chg",
+   "Step 2: copy boxes and buttons that approve (#502)",
+   "The page builder refuses a dead line, and \"Approve 1A\" counts as the one line offered.",
+   [
+    "A button sends only its label",
+    "\"Approve\" plus picks becomes the line the last reply offered"
+   ],
+   "The end-of-reply check stores the approval lines the reply offered. When your next message is exactly \"Approve\" with optional picks, and that reply offered exactly one line, it is read as that line. With two or more lines offered it moves nothing and says why. Done when a button approval moves the stage in verify.py.",
+   null,
+   [
+    [
+     "scripts/make_page.py",
+     1,
+     1,
+     [
+      [
+       "Refuse a dead copy-box line",
+       1,
+       1
+      ]
+     ]
+    ],
+    [
+     "scripts/house_rules/design_loop.py",
+     14,
+     0,
+     [
+      [
+       "Remember offered lines",
+       3,
+       0
+      ],
+      [
+       "Read a button label",
+       11,
+       0
+      ]
+     ]
+    ]
+   ],
+   {
+    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MjUgMzM0Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPm1ha2VfcGFnZS5weSBhbmQgZGVzaWduX2xvb3AucHksIHN0ZXAgMiAoIzUwMik8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjUwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPiAgaWYgbm90IGFueShwLnNlYXJjaCh0ZXh0KSBmb3IgcCBpbiBwYXRzKTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjY4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiNiNTUzM2MiIHhtbDpzcGFjZT0icHJlc2VydmUiPi0gICAgIGlmIHFhX3BhZ2U6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI4NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBpZiBxYV9wYWdlIG9yIG5vdCBwYWdlLmdldCgiZm9yUmVwbyIpOiAgICMgIzQ5MTogbmV2ZXIgb2ZmZXIgYWogYSBsaW5lIHRoYXQgbW92ZXMgbm90aGluZzwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTA0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPiAgICAgICAgICBkaWUoImFwcHJvdmFsICVyIHdvdWxkIG5vdCBvcGVuIHRoZSBkZXNpZ24tbG9vcCBnYXRlIC4uLiIpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNDAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAjIGVuZCBvZiByZXBseTogcmVtZW1iZXIgdGhlIGFwcHJvdmFsIGxpbmVzIHRoaXMgcmVwbHkgb2ZmZXJlZCAoMkEpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNTgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBzdGF0ZVsib2ZmZXJlZCJdID0gc29ydGVkKHttLmdyb3VwKDApLnN0cmlwKCkgZm9yIHJ4LCBfIGluIF9MT09QX1NUQUdFX09SREVSIGZvciBtIGluIHJ4LmZpbmRpdGVyKHJlcGx5KX0pPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNzYiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxOTQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAjIGFqJ3MgbWVzc2FnZTogYSBidXR0b24gc2VuZHMgb25seSBpdHMgbGFiZWw8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjIxMiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIF9MT09QX0JVVFRPTl9SRSA9IHJlLmNvbXBpbGUociIoP2kpXlxzKmFwcHJvdmUoKD86XHMrXGQrW2EteipdKSopXHMqJCIpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBiID0gX0xPT1BfQlVUVE9OX1JFLm1hdGNoKHRleHQpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyNDgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBpZiBiOjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMjY2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIG9mZmVyZWQgPSBzdGF0ZS5nZXQoIm9mZmVyZWQiKSBvciBbXTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMjg0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIGlmIGxlbihvZmZlcmVkKSAhPSAxOjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMzAyIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgICAgICByZXR1cm4gJ0Rlc2lnbiBsb29wOiBhaiB0YXBwZWQgIkFwcHJvdmUiLCBidXQgdGhlIGxhc3QgcmVwbHkgb2ZmZXJlZCAlZCBhcHByb3ZhbCBsaW5lcyAuLi4nICUgbGVuKG9mZmVyZWQpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIzMjAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgdGV4dCA9IG9mZmVyZWRbMF0gKyBiLmdyb3VwKDEpPC90ZXh0Pjwvc3ZnPg==",
+    "alt": "Planned code: make_page.py and design_loop.py, step 2 (#502)",
+    "caption": "Planned code, not yet written: make_page.py and design_loop.py, step 2 (#502). Green lines are added, red removed."
+   }
+  ],
+  [
+   "chg",
+   "Step 3: a build plan counts the feature's issues (#503)",
+   "Issues that say \"Part of #<feature issue>\" count, read from GitHub (choice 1A).",
+   [
+    "Every issue opened during Plan counts",
+    "The feature issue and its \"Part of\" issues count"
+   ],
+   "The search on GitHub is loose, so each result is checked again for the exact \"Part of\" line. Done when, in verify.py with GitHub stubbed, a separate feature's issue doesn't count and an issue opened before Plan does.",
+   null,
+   [
+    [
+     "scripts/house_rules/design_loop.py",
+     16,
+     2,
+     [
+      [
+       "Only \"Part of\" issues are recorded",
+       5,
+       0
+      ],
+      [
+       "Read the feature's issues",
+       11,
+       2
+      ]
+     ]
+    ]
+   ],
+   {
+    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MjUgMzE2Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPmRlc2lnbl9sb29wLnB5LCBzdGVwIDMgKCM1MDMpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI1MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIF9QQVJUX09GX1JFID0gcmUuY29tcGlsZShyIig/aSlcYnBhcnQgb2YgIyhcZCspXGIiKTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNjgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI4NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmIyZjM1IiB4bWw6c3BhY2U9InByZXNlcnZlIj4gIGRlZiBfbG9vcF9yZWNvcmRfaXNzdWVzKGdpdF9kaXIsIGZvdW5kLCBsYWJlbGxlZCwgdG9wPU5vbmUsIGJvZHk9IiIpOjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTA0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIHBhcnQgPSBfUEFSVF9PRl9SRS5zZWFyY2goYm9keSk8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjEyMiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBpZiBub3QgcGFydDogICAgICAgICAgIyAjNDc1OiBhbiBpc3N1ZSBmb3IgYSBzZXBhcmF0ZSBmZWF0dXJlIGlzIG5vdCB0aGlzIGZlYXR1cmUnczwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTQwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgICAgICByZXR1cm4gWyJEZXNpZ24gbG9vcDogIyVzIG5hbWVzIG5vIHBhcnQgb2YgdGhpcyBmZWF0dXJlLCBzbyBpdCBpc24ndCBjb3VudGVkLiIgJSBmb3VuZFswXVsxXV08L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE1OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBzdGF0ZS5zZXRkZWZhdWx0KCJwYXJlbnQiLCBpbnQocGFydC5ncm91cCgxKSkpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNzYiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxOTQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBkZWYgX2xvb3BfZmVhdHVyZV9pc3N1ZXMoc3RhdGUsIHRvcCk6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMTIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgIiIiMUE6IHRoZSBmZWF0dXJlJ3MgaXNzdWVzLCByZWFkIGZyb20gR2l0SHViIHdoZW4gYWogYXBwcm92ZXMgdGhlIGJ1aWxkIHBsYW4uIiIiPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgcGFyZW50ID0gc3RhdGVbInBhcmVudCJdPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyNDgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgcm93cyA9IF9naF9qc29uKHRvcCwgWyJpc3N1ZSIsICJsaXN0IiwgIi0tc3RhdGUiLCAib3BlbiIsICItLWpzb24iLCAibnVtYmVyLGJvZHkiLDwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMjY2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgICAgICAgICAgICAgICAgICAgICAgICAiLS1zZWFyY2giLCAnIlBhcnQgb2YgIyVkIiBpbjpib2R5JyAlIHBhcmVudF0pPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyODQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgcmV0dXJuIFtwYXJlbnRdICsgW3JbIm51bWJlciJdIGZvciByIGluIHJvd3M8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjMwMiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICAgICAgICAgICAgICAgICAgICAgaWYgYW55KGludChuKSA9PSBwYXJlbnQgZm9yIG4gaW4gX1BBUlRfT0ZfUkUuZmluZGFsbChyWyJib2R5Il0pKV08L3RleHQ+PC9zdmc+",
+    "alt": "Planned code: design_loop.py, step 3 (#503)",
+    "caption": "Planned code, not yet written: design_loop.py, step 3 (#503). Green lines are added, red removed."
+   }
+  ],
+  [
+   "chg",
+   "Step 4: one message sends a QA fault back to Build (#504)",
+   "\"QA failed: Phase 1 the button is grey\" reopens the build with the issues kept.",
+   [
+    "QA failed goes to Design: three messages to resume",
+    "QA failed goes to Build: one message"
+   ],
+   "Your words after the feature name are the fix list. A changed design still goes through \"Design approved\". Done when verify.py shows code edits open after one \"QA failed\" message and the labels moved back.",
+   null,
+   [
+    [
+     "scripts/house_rules/design_loop.py",
+     3,
+     2,
+     [
+      [
+       "QA failed returns to Build",
+       3,
+       2
+      ]
+     ]
+    ]
+   ],
+   {
+    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MTcgMTcyIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPmRlc2lnbl9sb29wLnB5LCBzdGVwIDQgKCM1MDQpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI1MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjYjU1MzNjIiB4bWw6c3BhY2U9InByZXNlcnZlIj4tIHN0YXRlWyJzdGFnZSJdID0gImRvbmUiIGlmIHZlcmRpY3QgPT0gInBhc3NlZCIgZWxzZSAiZGVzaWduIjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNjgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBzdGF0ZVsic3RhZ2UiXSA9ICJkb25lIiBpZiB2ZXJkaWN0ID09ICJwYXNzZWQiIGVsc2UgImJ1aWxkIiAgICMgb25lIG1lc3NhZ2Ugc2VuZHMgYSBRQSBmYXVsdCBiYWNrPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI4NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmIyZjM1IiB4bWw6c3BhY2U9InByZXNlcnZlIj48L3RleHQ+PHRleHQgeD0iMTYiIHk9IjEwNCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmIyZjM1IiB4bWw6c3BhY2U9InByZXNlcnZlIj4gIGVsaWYgYXBwcm92YWxbMF0gPT0gIlFBIGZhaWxlZCI6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iI2I1NTMzYyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+LSAgICAgbm90ZSArPSAiIFRoZWlyIGxpc3Qgb2YgY2hhbmdlcyBzdGFydHMgdGhlIG5leHQgZGVzaWduLiAuLi4iPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNDAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgbm90ZSArPSAoIiBhaidzIHdvcmRzIGFyZSB0aGUgZml4IGxpc3QuIE1vdmUgZXZlcnkgaXNzdWUgYmFjayB0byBgaW4gcHJvZ3Jlc3NgOyBjb2RlIGVkaXRzIG9wZW4iPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNTgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgICAgICAgICAgIiBvbmNlIHRoZXkgYXJlLiBBIGNoYW5nZWQgZGVzaWduIHN0aWxsIG5lZWRzICdEZXNpZ24gYXBwcm92ZWQnLiIpPC90ZXh0Pjwvc3ZnPg==",
+    "alt": "Planned code: design_loop.py, step 4 (#504)",
+    "caption": "Planned code, not yet written: design_loop.py, step 4 (#504). Green lines are added, red removed."
+   }
+  ],
+  [
+   "chg",
+   "Step 5: the last four ways around the code-edit lock (#505)",
+   "Four gaps from the earlier audit (D3, D6, D9 and U3); choices 1 and 2 below settle D6 and D9.",
+   null,
+   "D3: the old stage file in .git is never read. D6 and D9 follow your picks below. U3: on main, a feature in QA whose pull request merged reads as Done; nothing is written to main. Each finding gets a verify.py case that fails on today's code.",
+   null,
+   [
+    [
+     "scripts/house_rules/design_loop.py",
+     22,
+     4,
+     [
+      [
+       "D3",
+       0,
+       3
+      ],
+      [
+       "D6",
+       6,
+       1
+      ],
+      [
+       "D9",
+       10,
+       0
+      ],
+      [
+       "U3",
+       6,
+       0
+      ]
+     ]
+    ]
+   ],
+   {
+    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MzIgMjgwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPmRlc2lnbl9sb29wLnB5LCBzdGVwIDUgKCM1MDUpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI1MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjYjU1MzNjIiB4bWw6c3BhY2U9InByZXNlcnZlIj4tIGxlZ2FjeSA9IG9zLnBhdGguam9pbihnaXRfZGlyLCBMT09QX0ZJTEUpICAgICAgICAgICMgRDM6IHRoZSBvbGQgLmdpdCBzdGFnZSBmaWxlPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI2OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjYjU1MzNjIiB4bWw6c3BhY2U9InByZXNlcnZlIj4tIGlmIG9zLnBhdGguaXNmaWxlKGxlZ2FjeSk6IHJldHVybiBsZWdhY3k8L3RleHQ+PHRleHQgeD0iMTYiIHk9Ijg2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTA0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyBENjogYSBkaWZmZXJlbnQgZGVzaWduIG5hbWUgc3RhcnRzIGEgbmV3IGZlYXR1cmUgb24gcHVycG9zZTsgdGhlIG9sZCBvbmUgaXMga2VwdCwgaW4gYW55IHN0YWdlPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBpZiBmZWF0dXJlIGFuZCBub3QgX2xvb3Bfc2FtZShuYW1lLCBmZWF0dXJlKTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE0MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBfbG9vcF9rZWVwX2ZlYXR1cmUoc3RhdGUsIGZlYXR1cmUsIHN0YWdlLCBhbnlfc3RhZ2U9VHJ1ZSk8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE1OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBub3RlX2V4dHJhID0gJyBUaGlzIHN0YXJ0cyBhIG5ldyBmZWF0dXJlOyAiJXMiIGlzIGtlcHQgd2l0aCBpdHMgaXNzdWVzLicgJSBmZWF0dXJlPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNzYiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxOTQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAjIEQ5OiBhIGJyYW5jaCdzIHN0YWdlIG9sZGVyIHRoYW4gdGhlIG5ld2VzdCBzZWVuIGluIHRoaXMgY2xvbmUgaG9sZHMgY29kZSBlZGl0cyAoY2hvaWNlIDIpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMTIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBpZiBfbG9vcF9uZXdlc3Qoc3RhdGUpICZsdDsgX2xvb3Bfc2VlbihnaXRfY29tbW9uX2Rpcik6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgcmV0dXJuICJyZWZ1c2VkOiB0aGlzIGJyYW5jaCdzIHN0YWdlIGlzIG9sZGVyIHRoYW4gLi4uIHdyaXRlICdDb250aW51ZSBmcm9tOiAmbHQ7YnJhbmNoJmd0OyciPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyNDgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyNjYiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAjIFUzOiBvbiB0aGUgZGVmYXVsdCBicmFuY2gsIGEgZmVhdHVyZSBpbiBRQSB3aG9zZSBwdWxsIHJlcXVlc3QgbWVyZ2VkIHJlYWRzIGFzIERvbmUgKG5vdGhpbmcgd3JpdHRlbik8L3RleHQ+PC9zdmc+",
+    "alt": "Planned code: design_loop.py, step 5 (#505)",
+    "caption": "Planned code, not yet written: design_loop.py, step 5 (#505). Green lines are added, red removed."
+   }
+  ],
+  [
+   "chg",
+   "Step 6: design decisions come only from you (#506)",
+   "Finishes the design you approved on 2026-11-03 (issue #457).",
+   null,
+   "The judgement-call exception leaves the rules. A helper's question comes to you as a question. A reply in Build that asks you something holds code edits until you answer. A reply saying \"I went with\" or \"I chose\" on a design point is sent back once. Done when verify.py covers all three.",
+   null,
+   [
+    [
+     "rules/show-dont-tell.md",
+     1,
+     1,
+     []
+    ],
+    [
+     "rules/detail/clear-writing.md",
+     1,
+     1,
+     []
+    ],
+    [
+     "agents/builder.md",
+     2,
+     1,
+     []
+    ],
+    [
+     "scripts/house_rules/design_loop.py",
+     24,
+     1,
+     [
+      [
+       "Held state",
+       14,
+       0
+      ],
+      [
+       "Decided-for-you check",
+       9,
+       0
+      ],
+      [
+       "Helper note",
+       1,
+       1
+      ]
+     ]
+    ]
+   ],
+   {
+    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NDggMjA4Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPnJ1bGVzIGFuZCBkZXNpZ25fbG9vcC5weSwgc3RlcCA2ICgjNTA2KTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNTAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iI2I1NTMzYyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+LSBJIGJyaW5nIG9wdGlvbnMgLi4uIHJvdXRpbmUganVkZ2VtZW50IGNhbGxzIGdvIHRvIHRoZSB1c2VyIHRoZSBzYW1lIHdheSB1bmxlc3MgdGhleSBoYXZlIHNhaWQgb3RoZXJ3aXNlLjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNjgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBJIGJyaW5nIG9wdGlvbnMgLi4uIHJvdXRpbmUganVkZ2VtZW50IGNhbGxzIGdvIHRvIHRoZSB1c2VyIHRoZSBzYW1lIHdheS48L3RleHQ+PHRleHQgeD0iMTYiIHk9Ijg2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiNiNTUzM2MiIHhtbDpzcGFjZT0icHJlc2VydmUiPi0gQW55dGhpbmcgdW5leHBlY3RlZCBjb21lcyBiYWNrIHRvIHRoZSBtYWluIHNlc3Npb24sIG5vdCBpbnRvIHRoZSBjb2RlLjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTA0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgQW55dGhpbmcgdW5leHBlY3RlZCBpcyBhIHF1ZXN0aW9uIGZvciBhajogdGhlIG1haW4gc2Vzc2lvbiBwdXRzIGl0IG9uIGEgcGFnZSBhbmQgZG9lcyBub3QgYW5zd2VyIGl0LjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTIyIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTQwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyAjNDU5OiBhIHJlcGx5IGluIEJ1aWxkIHRoYXQgYXNrcyBhaiBzb21ldGhpbmcgaG9sZHMgY29kZSBlZGl0cyB1bnRpbCBhaidzIG5leHQgbWVzc2FnZTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTU4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgaWYgc3RhdGVbInN0YWdlIl0gPT0gImJ1aWxkIiBhbmQgX2Fza3NfYWoocmVwbHkpOiBzdGF0ZVsiaGVsZCJdID0gVHJ1ZTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTc2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyAjNDYwOiBhIHJlcGx5IHRoYXQgc2V0dGxlcyBhIGRlc2lnbiBwb2ludCBvbiBpdHMgb3duIGlzIHNlbnQgYmFjayBvbmNlPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxOTQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBfREVDSURFRF9SRSA9IHJlLmNvbXBpbGUociIoP2kpXGJJICg/OndlbnQgd2l0aHxjaG9zZXxwaWNrZWR8ZGVjaWRlZCBvbnxzZXR0bGVkIG9uKVxiIik8L3RleHQ+PC9zdmc+",
+    "alt": "Planned code: rules and design_loop.py, step 6 (#506)",
+    "caption": "Planned code, not yet written: rules and design_loop.py, step 6 (#506). Green lines are added, red removed."
+   }
+  ],
+  [
+   "chg",
+   "Step 7: issues follow the work, proof, and the QA page (#507)",
+   "The close line is offered, the label line stops repeating, and every fix has a test.",
+   null,
+   "verify.py gets a case for each of the eight audit findings already fixed. It also gets a case for each of issues #107, #110, #128, #102, #129 and #130 (choice 3A on the design page). Then docs/4-systems/design-loop.md is updated, verify.py and tools/verify_tools.py run in full, and the QA page is built for you.",
+   null,
+   [
+    [
+     "scripts/house_rules/design_loop.py",
+     9,
+     0,
+     [
+      [
+       "Close-line offer",
+       3,
+       0
+      ],
+      [
+       "Label line said once",
+       6,
+       0
+      ]
+     ]
+    ],
+    [
+     "scripts/verify.py",
+     160,
+     0,
+     [
+      [
+       "14 cases proving fixes already in the code",
+       160,
+       0
+      ]
+     ]
+    ]
+   ],
+   {
+    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MjUgMjI2Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPmRlc2lnbl9sb29wLnB5IGFuZCB2ZXJpZnkucHksIHN0ZXAgNyAoIzUwNyk8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjUwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyAjMTMyLCAjMTQxOiBhZnRlciBRQSBwYXNzZWQgYW5kIHRoZSBtZXJnZSwgb2ZmZXIgdGhlIGNsb3NlIGxpbmUgZm9yIHRoZSBmZWF0dXJlJ3MgaXNzdWVzPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI2OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIG5vdGUgKz0gJyBPZmZlciBhajogIkNsb3NlIGFzIGNvbXBsZXRlZDogJXMiLicgJSAiLCAiLmpvaW4oIiMlZCIgJSBuIGZvciBuIGluIG51bWJlcnMpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI4NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmIyZjM1IiB4bWw6c3BhY2U9InByZXNlcnZlIj48L3RleHQ+PHRleHQgeD0iMTYiIHk9IjEwNCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICMgIzI3MzogdGhlIGxhYmVsIGxpbmUgaXMgc2FpZCBvbmNlIHBlciBzZXQgb2Ygd3JvbmcgbGFiZWxzPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBzYWlkID0gaGFzaGxpYi5zaGExKCI7ICIuam9pbih3cm9uZykuZW5jb2RlKCkpLmhleGRpZ2VzdCgpWzoxMl08L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE0MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIGlmIHN0YXRlLmdldCgibGFiZWxfc2FpZCIpID09IHNhaWQ6IHJldHVybiBOb25lLCBzcmMgb3IgTm9uZTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTU4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgc3RhdGVbImxhYmVsX3NhaWQiXSA9IHNhaWQ8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE3NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmIyZjM1IiB4bWw6c3BhY2U9InByZXNlcnZlIj48L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE5NCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICMgdmVyaWZ5LnB5OiBvbmUgY2FzZSBwZXIgZmluZGluZyBhbHJlYWR5IGZpeGVkLCBhbmQgdGhlIDNBIHByb29mczwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMjEyIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgZm9yIGNhc2UgaW4gKCJENCIsICJBOSIsICJBNyIsICJBMiIsICJBMTAiLCAiRDUiLCAiRDciLCAiRDgiLCAiIzEwMiIsICIjMTA3IiwgIiMxMTAiLCAiIzEyOCIsICIjMTI5IiwgIiMxMzAiKTogLi4uPC90ZXh0Pjwvc3ZnPg==",
+    "alt": "Planned code: design_loop.py and verify.py, step 7 (#507)",
+    "caption": "Planned code, not yet written: design_loop.py and verify.py, step 7 (#507). Green lines are added, red removed."
+   }
+  ]
+ ],
+ "choices": [
+  [
+   "d6",
+   "You approve a design with a different name while another feature is still in progress. What happens?",
+   [
+    [
+     "A",
+     "A new feature starts, and the old one is kept with its issues",
+     1,
+     "No extra words from you, and nothing is lost: the old feature's QA message still works later."
+    ],
+    [
+     "B",
+     "Nothing moves until you add \"new feature\" to the line",
+     0,
+     "Safer against a typo in the name, but one more thing to type."
+    ]
+   ],
+   "The old feature's issues are kept either way, so a typo costs nothing, and you asked for minimal effort."
+  ],
+  [
+   "d9",
+   "You switch to an older branch whose saved stage is behind the newest one in this clone. What happens?",
+   [
+    [
+     "A",
+     "Code edits are held until you write \"Continue from: <branch>\" or approve anew",
+     1,
+     "The old stage can never reopen code on its own."
+    ],
+    [
+     "B",
+     "A note only, and the branch's own stage applies",
+     0,
+     "No interruption, but the gap stays open."
+    ]
+   ],
+   "A is what closing the gap means; B is roughly today's behaviour with a warning."
+  ]
+ ],
+ "wrapup": {
+  "summary": "The build plan for phase 1: seven steps, issues #501 to #507, each with its planned code.",
+  "changing": "Nothing yet. After approval, steps 1 to 7 change design_loop.py, core.py, make_page.py, the rules and verify.py.",
+  "blocking": "Your pick in each of the two choices, or any change you want to the plan.",
+  "next": "I build the steps in order with the builder helper, then hand you the QA page to test in the desktop app.",
+  "todo": [
+   "Pick one option in each choice.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it. It starts \"Build plan approved: Phase 1\"."
+  ]
+ }
+}
