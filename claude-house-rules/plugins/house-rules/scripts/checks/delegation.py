@@ -1850,7 +1850,8 @@ commit_case(
     "pickup: a fresh clone with a pushed snapshot shows the note, the facts and the missing files with the restore command",
     _pk_text.startswith("house-rules pickup: loaded from") and "Where it stands: step 2." in _pk_text
     and "FACTS-MARKER" in _pk_text and "only.txt" in _pk_text
-    and "git restore --source=refs/house-rules/remote-autosave/%s -- " % _PK_BR in _pk_text
+    and "git diff refs/house-rules/remote-autosave/%s^ refs/house-rules/remote-autosave/%s -- " % (_PK_BR, _PK_BR)
+    in _pk_text and "| git apply" in _pk_text
     and "Ask aj before running it" in _pk_text,
     "got %r" % _pk_text[:400],
 )
