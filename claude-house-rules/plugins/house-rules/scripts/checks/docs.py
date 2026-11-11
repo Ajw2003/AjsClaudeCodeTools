@@ -119,6 +119,34 @@ else:
     report("FAIL", "docstiers: a repo with every tier but no CHANGELOG.md is told to start one")
     print(f"          exit {_code}, got: {_out[:200]!r}")
 
+# Step 6 (#513): Research.md and Vocabulary.md are optional - never required, never nagged for.
+sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+sys.path.insert(0, HERE)
+_opt_names = ["docs/6-decisions/Research.md", "docs/6-decisions/Vocabulary.md"]
+try:
+    from house_rules import docs as _opt_mod
+    _opt_have = getattr(_opt_mod, "OPTIONAL_TIER_FILES", None)
+    _opt_req = getattr(_opt_mod, "DOCS_TIER_FILES", [])
+except Exception as _e:  # noqa: BLE001
+    _opt_have, _opt_req = None, []
+if _opt_have == _opt_names and not any(n in _opt_req for n in _opt_names):
+    report("PASS", "docstiers: OPTIONAL_TIER_FILES names Research.md and Vocabulary.md, neither is required")
+else:
+    report("FAIL", "docstiers: OPTIONAL_TIER_FILES names Research.md and Vocabulary.md, neither is required")
+    print(f"          OPTIONAL_TIER_FILES={_opt_have!r}")
+_code, _out, _err = run_hook("docstiers", "", env=env_in(DOCSTIERS_COMPLETE))
+_has_opt = any(os.path.exists(os.path.join(DOCSTIERS_COMPLETE, *n.split("/"))) for n in _opt_names)
+if _code == 0 and not _has_opt and not _out.strip() and _opt_have:
+    report("PASS", "docstiers: every tier and a CHANGELOG.md but no Research.md or Vocabulary.md gets no note")
+else:
+    report("FAIL", "docstiers: every tier and a CHANGELOG.md but no Research.md or Vocabulary.md gets no note")
+    print(f"          exit {_code}, optional files present={_has_opt}, got: {_out[:200]!r}")
+_skill_t = read(DOCSKILL) if os.path.isfile(DOCSKILL) else ""
+if all(n in _skill_t for n in _opt_names):
+    report("PASS", "project-docs SKILL.md describes the optional Research.md and Vocabulary.md")
+else:
+    report("FAIL", "project-docs SKILL.md describes the optional Research.md and Vocabulary.md")
+
 # docstiers's fail-loud path (systemMessage on an internal error, like inject) is covered by
 # main()'s generic exception net, proven generically further down this file rather than with a
 # docstiers-specific fixture - every input docstiers actually reads already degrades gracefully

@@ -24,6 +24,8 @@ Four habits, and they matter more than the layout:
 - **Cite claims to `file:line`.** It is what makes an audit mechanical instead of a matter of
   opinion.
 
+Two optional tier-6 files may sit beside Decisions.md, `Research.md` and `Vocabulary.md`; `docstiers` never requires or mentions them.
+
 `house-rules:project-docs` carries the full tier spec, the per-tier templates, and the
 scaffolding for a repo that has none of this yet. I load it before creating or restructuring a
 repo's documentation — not for an ordinary edit to a doc that already exists.

@@ -45,6 +45,10 @@ DOCS_TIER_FILES = [
     "docs/6-decisions/Decisions.md",
 ]
 DOCS_TIER4_DIR = "docs/4-systems"
+# Optional tier-6 companions to Decisions.md. Never required and never nagged for: a missing one
+# adds nothing to the session-start note, and a present one is not listed (the note reports
+# problems only). Kept apart from DOCS_TIER_FILES on purpose.
+OPTIONAL_TIER_FILES = ["docs/6-decisions/Research.md", "docs/6-decisions/Vocabulary.md"]
 # The pre-folder layout, kept only so a project still on it gets a "move X to Y" message
 # instead of being told to scaffold tiers it already has. See docs/6-decisions/Decisions.md,
 # 2026-09-24.

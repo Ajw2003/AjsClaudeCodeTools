@@ -145,6 +145,14 @@ Entry shape:
 **Status.** Standing. / Superseded by [<date> — <title>](#anchor) on <date>.
 ```
 
+**Two optional companions** sit beside Decisions.md. Neither is required and nothing nags for them.
+Start each from the repo's real record, never a placeholder:
+
+- `docs/6-decisions/Research.md` — what was researched, what was found, and the sources cited,
+  newest first. A finding that turns out wrong gets a dated note under it, never a silent edit.
+- `docs/6-decisions/Vocabulary.md` — the project's terms, what each means here, and the
+  Decisions.md entry that settled it. A changed meaning keeps the old one below it, dated.
+
 **Boundaries with what already exists**, so this tier doesn't get reinvented:
 
 - `docs/plans/` stays forward-looking intent, live until executed, then archived — unchanged. A
