@@ -870,6 +870,11 @@ def _event_guard_main():
             # PreToolUse's additionalContext reaches the model on an "allow" decision (probed
             # live, doc-ref 8713 docs/6-decisions/Decisions.md).
             out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
+            if not (docs_status == "needs-docs" or approve or docs_note):
+                # #509: a reminder alone (the pull request changelog note) carries no decision, so Claude Code's
+                # own permission prompt still applies. Context-only output reaches the model (probed live on
+                # 2.1.322, 2026-11-11).
+                del out["hookSpecificOutput"]["permissionDecision"]
             if docs_status == "needs-docs":
                 out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
             if docs_note:
@@ -1966,7 +1971,7 @@ def event_guardgithub():
     elif short == "create_pull_request":
         note = core.pr_changelog_note(_payload_cwd(raw), str(args.get("base") or ""))  # #387
         if note:
-            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse",  # no decision: the normal prompt stays
                                          "additionalContext": note}})
     return 0
 
