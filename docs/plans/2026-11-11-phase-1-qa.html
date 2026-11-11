@@ -272,7 +272,7 @@ const PAGE = {
   "title": "Phase 1 QA",
   "eyebrow": "QA · roadmap phase 1, approvals and the design loop just work, issue #493, plugin 2.78.0",
   "short": {
-    "lead": "Phase 1 is built on the branch AjsAgent/session-handoff as plugin 2.78.0: seven steps, issues #501 to #507, built in a cloud session after the session on your PC was cut off. verify.py passes 1135 of 1135 checks and tools/verify_tools.py 52 of 52. Three approvals were also sent to real headless Claude sessions (sessions with no screen) running this branch's plugin, and each did what the design says. What is left is your own try in the desktop app.",
+    "lead": "Phase 1 is built on the branch AjsAgent/session-handoff as plugin 2.78.0: seven steps, issues #501 to #507. Everything that can run outside your own desktop app has now run. verify.py passes 1135 of 1135 checks and tools/verify_tools.py 52 of 52. 14 real headless Claude sessions (sessions with no screen) took a test repo through the whole design loop using only this branch's plugin, and all 14 steps did what the design says. Real branch switches and a real merge passed 6 of 6. The hooks run as fast as 2.76.0's, and 2.78.0 installs straight from the branch, so you can try it without merging to main.",
     "hint": "Tap a row to see what was run and what it showed.",
     "key": [
       [
@@ -280,7 +280,7 @@ const PAGE = {
         ""
       ],
       [
-        "Proven by verify.py only",
+        "Not proven yet",
         ""
       ]
     ],
@@ -318,35 +318,43 @@ const PAGE = {
         "Nothing from you."
       ],
       [
-        "search",
+        "check",
+        "Full loop",
+        "Design to Build to QA, in real sessions",
+        "",
+        "Live sessions 1 to 4: \"Widget design approved 1A\" moved to Plan, \"Issues for Widget: #10 #11 #12\" recorded the issues, \"Widget build plan approved\" moved to Build, and a real Edit of app.py went through. The script and its saved output are in docs/plans/2026-11-11-phase-1-live-tests/.",
+        "Nothing from you."
+      ],
+      [
+        "check",
         "Approve button",
         "\"Approve 1A\" sends the one line offered",
         "",
-        "verify.py cases: after a reply offering \"Design approved: X\", a message of just \"Approve 1A\" moves to Plan exactly as typing the line would. After a reply offering two lines, it moves nothing and says why. The page builder now refuses a design or build plan page whose copy-box line would move nothing. Step 2, #502.",
+        "Live sessions 13 and 14: a reply that ended with the line \"Design approved: Gadget\" was recorded as the one line offered, and the next message, just \"Approve 2B\", moved the stage to Plan with the feature \"Gadget\". The old feature \"Widget\" was kept with its issues. verify.py also covers a reply offering two lines (moves nothing, says why). Step 2, #502.",
         "Nothing from you."
       ],
       [
-        "search",
+        "check",
         "QA failed",
         "One message sends a fault back to Build",
         "",
-        "verify.py cases: \"QA failed: blockers - the list is too long\" moves the test feature back to Build with all three of its issues kept. Code opens once the issues are back to in progress, and the stage does not bounce straight back to QA meanwhile. Step 4, #504.",
+        "Live sessions 5 to 9: once the issues said needs review, the stage moved to QA and an edit was refused. \"QA failed: Widget the button is grey\" moved it back to Build with all 3 issues kept. An edit was still refused while the issues said needs review, and went through once they were back to in progress, with no bounce back to QA. Step 4, #504.",
         "Nothing from you."
       ],
       [
-        "search",
+        "check",
         "Lock gaps",
         "Four ways around the code lock are closed",
         "",
-        "verify.py cases, one per gap, each named by its code. D3: a stage file hidden in .git opens nothing. D6 (the option you picked, A): a different design name starts a new feature and keeps the old one with its issues. D9 (the option you picked, A): on an older branch, code waits for \"Continue from: <branch>\" or a new approval. U3: on main, a merged feature's QA stage reads as Done. Step 5, #505.",
+        "Real git, real hooks: after checking out an older branch, the code edit was refused with \"Write Continue from: older\"; a new approval there released it. After a real merge of a branch in QA into main, an edit on main got the Done-stage message, not the QA lock, and the stage file was left unchanged. D3 (a stage file hidden in .git) and D6 (a new name keeps the old feature, also seen live in session 14) are in verify.py. Step 5, #505.",
         "Nothing from you."
       ],
       [
-        "search",
+        "check",
         "Your decisions",
         "Design points come back to you",
         "",
-        "verify.py cases: the \"unless they have said otherwise\" exception is gone from the rules. In Build, a reply that ends by asking you a question pauses code edits until your next message, and a helper's report does not count as your answer. A reply saying \"I went with option B\" is sent back once. Step 6, #506.",
+        "Live sessions 10 to 12: a reply ending \"Should the button be blue or green?\" set the hold; the next message, \"Blue\" plus an edit request, cleared it and the edit went through. A reply of \"I went with option B for the layout.\" was sent back once and rewritten. The rule text has no \"unless they have said otherwise\" exception (verify.py). Step 6, #506.",
         "Nothing from you."
       ],
       [
@@ -358,12 +366,12 @@ const PAGE = {
         "Nothing from you."
       ],
       [
-        "flask",
-        "Your try",
-        "Approve something in the desktop app",
-        "you",
-        "In a desktop session on this branch with plugin 2.78.0, type a feature-first approval such as \"Test thing design approved 1A\", and later try a bare \"Approve\" after a reply that offers one approval line. The note under your message should say the stage moved.",
-        "About ten minutes in the desktop app."
+        "check",
+        "Speed and install",
+        "No slower; installs from the branch",
+        "",
+        "Timed five times each on a fresh clone: the end-of-reply hook takes 0.79 s (2.76.0: 0.82 s), the others 0.05 to 0.06 s, every exit code 0. In an empty Claude config, adding the marketplace as https://github.com/Ajw2003/AjsClaudeCodeTools.git#AjsAgent/session-handoff and installing gave 2.78.0; adding the plain URL back and reinstalling gave 2.76.0.",
+        "Nothing from you."
       ]
     ]
   },
@@ -371,11 +379,23 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against 13484b8",
-      "16 files, +979 −79",
+      "19 files, +1777 −80",
       null,
       "The added and removed counts come from git (git diff --numstat 13484b8...HEAD); the estimates beside them come from the plan.",
       null,
       [
+        [
+          ".claude/house-rules-loop.json",
+          1,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
         [
           "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json",
           1,
@@ -567,6 +587,30 @@ const PAGE = {
               0
             ]
           ]
+        ],
+        [
+          "docs/plans/2026-11-11-phase-1-qa.html",
+          737,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-11-phase-1-qa.page.json",
+          60,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
         ]
       ]
     ],
@@ -575,7 +619,7 @@ const PAGE = {
       "Still unverified",
       "4 things not yet proven",
       null,
-      "The desktop app itself: the live runs were headless terminal sessions in this cloud container, not the Code tab. A real Approve button in the claude.ai app: verify.py sends the button's text as a typed message, and whether the app's button sends exactly that text has not been seen. The D9 branch hold (code waiting on an older branch) and the U3 read-as-Done (a merged feature's QA stage shown as Done), each on a real branch switch and a real merge; they are proven only in throwaway repos made by verify.py. The close-line offer after a real pull request merge; only replayed merge events have run.",
+      "Your desktop app on Windows: every run was Linux, in this cloud container. The new code reads files and runs gh the same way the existing hooks do, but Windows itself has not run it. The real Approve button in the claude.ai app: the live sessions sent the text \"Approve 2B\", and whether the app's button sends exactly its label has not been seen. Real GitHub labels and issues in the live loop: those sessions used the plugin's stand-in files; the GitHub read itself was run once against this repo and returned #493 and #501 to #507. The close-line offer after a real pull request merge; only replayed merge events have run (verify.py).",
       null,
       null
     ]
@@ -584,20 +628,20 @@ const PAGE = {
     "feature": "Phase 1",
     "base": "13484b8",
     "unverified": [
-      "The desktop app itself: the live runs were headless terminal sessions in this cloud container, not the Code tab",
-      "A real Approve button in the claude.ai app: verify.py sends the button's text as a typed message, and whether the app's button sends exactly that text has not been seen",
-      "The D9 branch hold (code waiting on an older branch) and the U3 read-as-Done (a merged feature's QA stage shown as Done), each on a real branch switch and a real merge; they are proven only in throwaway repos made by verify.py",
-      "The close-line offer after a real pull request merge; only replayed merge events have run"
+      "Your desktop app on Windows: every run was Linux, in this cloud container. The new code reads files and runs gh the same way the existing hooks do, but Windows itself has not run it",
+      "The real Approve button in the claude.ai app: the live sessions sent the text \"Approve 2B\", and whether the app's button sends exactly its label has not been seen",
+      "Real GitHub labels and issues in the live loop: those sessions used the plugin's stand-in files; the GitHub read itself was run once against this repo and returned #493 and #501 to #507",
+      "The close-line offer after a real pull request merge; only replayed merge events have run (verify.py)"
     ],
     "files": {}
   },
   "wrapup": {
-    "summary": "QA for phase 1: built, all checks pass, three approvals proven live, waiting on your try in the desktop app.",
-    "changing": "Plugin 2.78.0 on the branch AjsAgent/session-handoff, which also carries the session handoff work still waiting on its own QA. Nothing reaches main until you merge a pull request.",
-    "blocking": "Your QA verdict.",
+    "summary": "QA for phase 1: every test that can run here passed; what is left needs your Windows desktop app.",
+    "changing": "Plugin 2.78.0 on the branch AjsAgent/session-handoff, which also carries the session handoff work. Nothing reaches main until you merge a pull request.",
+    "blocking": "Your QA verdict. If you want to try it first, 2.78.0 can be installed from the branch and removed again without touching main.",
     "next": "If QA passes, I open a pull request to main that says Refs #493, and offer you the close line for #501 to #507 after it merges.",
     "todo": [
-      "Try an approval in the desktop app, as the \"Your try\" row says.",
+      "Read the rows above.",
       "Tap <b>Copy my reply<\/b> and send it: \"QA passed: Phase 1\", or send \"QA failed: Phase 1\" with what to change."
     ]
   },
