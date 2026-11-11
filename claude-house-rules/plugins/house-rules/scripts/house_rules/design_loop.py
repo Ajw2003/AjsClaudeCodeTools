@@ -45,6 +45,7 @@ from house_rules.core import (  # noqa: F401
     _last_user_text,
     _loop_enabled,
     _outside_page_links,
+    _own_words,
     _payload_cwd,
     _plugin_root,
     _read_text,
@@ -388,15 +389,15 @@ _LOOP_LEAD = r"(?:^|[.!,;][ \t]+)(?:<[\w/]+>)?[ \t>\"'*\-]*"
 _LOOP_NOT_ASKED = r"(?![^\n.!]*\?)"
 
 
-_LOOP_DESIGN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"design\s+approved" + _LOOP_NOT_ASKED
+_LOOP_DESIGN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"(?<!don't )(?<!dont )(?<!do not )(?<!not )design\s+approved" + _LOOP_NOT_ASKED
                              + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 
 
-_LOOP_PLAN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"build\s+plan\s+approved" + _LOOP_NOT_ASKED
+_LOOP_PLAN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"(?<!don't )(?<!dont )(?<!do not )(?<!not )build\s+plan\s+approved" + _LOOP_NOT_ASKED
                            + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 
 
-_LOOP_QA_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"qa\s+(passed|failed)" + _LOOP_NOT_ASKED
+_LOOP_QA_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"(?<!don't )(?<!dont )(?<!do not )(?<!not )qa\s+(passed|failed)" + _LOOP_NOT_ASKED
                          + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 
 
@@ -411,6 +412,29 @@ _LOOP_QUOTED_RE = re.compile(r"(?mi)(?:^[ \t]*>[ \t>\"'*\-]*|:[ \t]*[\"'“])" +
 
 
 _LOOP_BARE_RE = re.compile(r"\b(approved|qa\s+passed|qa\s+failed)\b", re.IGNORECASE)
+
+
+# #491: the stage words may follow the feature name, never after a negation or inside a question
+_LOOP_STAGE_WORDS = r"(design\s+approved|build\s+plan\s+approved|qa\s+passed|qa\s+failed)"
+_LOOP_AFTER_RE = re.compile(r"(?mi)(" + _LOOP_LEAD + r")((?!" + _LOOP_STAGE_WORDS
+                            + r")(?:(?!\bnot\b|n't\b)[^\n.?!:])+?)\s+"
+                            + _LOOP_STAGE_WORDS + _LOOP_NOT_ASKED + r"[ \t]*:?[ \t]*([^\n]*)")
+_LOOP_STAGE_TEXT = {"design": "Design approved", "build": "Build plan approved", "qa passed": "QA passed",
+                    "qa failed": "QA failed"}
+
+
+def _loop_normalise(text):
+    """'Phase 1 design approved 1A' -> 'Design approved: Phase 1 1A', then the old patterns run."""
+    def fix(m):
+        words = re.sub(r"\s+", " ", m.group(4).lower())
+        key = words if words.startswith("qa") else words.split()[0]
+        return "%s%s: %s %s" % (m.group(1), _LOOP_STAGE_TEXT[key], m.group(2).strip(), m.group(5))
+    return _LOOP_AFTER_RE.sub(fix, text)
+
+
+def _loop_any_phrase(text):
+    """True when the text holds an approval phrase in either word order (for the not-a-repo note)."""
+    return bool(_LOOP_BARE_RE.search(text) or _LOOP_AFTER_RE.search(text))
 
 
 def _loop_dir(git_dir):
@@ -1118,9 +1142,11 @@ def _loop_scope_note(payload):
         if not m:
             return ""
         text = json.loads('"%s"' % m.group(1))
-        if _is_relayed_prompt(text, payload):
+        text = _own_words(text)
+        if text is None or _is_relayed_prompt(text, payload):
             return ("Design loop: this message is a helper's report or a notification, not aj, "
                     "so it moved nothing.")
+        text = _loop_normalise(text)
         if _LOOP_QUOTED_RE.search(text):
             own = "\n".join(l for l in text.split("\n") if not l.lstrip().startswith(">"))
             if not any(rx.search(own) for rx, _ in _LOOP_STAGE_ORDER):
@@ -1128,7 +1154,7 @@ def _loop_scope_note(payload):
                         "from another thread), not aj approving here, so it moved nothing.")
         top, git_dir, missed = _loop_locate_prompt(_payload_cwd(payload))
         if not git_dir:
-            return missed if _LOOP_BARE_RE.search(text) else ""
+            return missed if _loop_any_phrase(text) else ""
         state, problem = _loop_read(git_dir)
         if problem:
             return problem

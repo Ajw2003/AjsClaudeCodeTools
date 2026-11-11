@@ -1922,6 +1922,22 @@ _RELAYED_PROMPT_RE = re.compile(
     r"|<wake\b|<webhook-payload\b|<event\s+source=|<child-session-event\b", re.IGNORECASE)
 
 
+# #429: a cloud session puts a <system-reminder> block before aj's words; strip it unless a relayed message is inside.
+_RELAYED_MARKER_RE = re.compile(
+    r"<task-notification>|<agent-message\b|\[Subagent hand-?back\]"
+    r"|Another Claude session sent a message"
+    r"|<wake\b|<webhook-payload\b|<event\s+source=|<child-session-event\b", re.IGNORECASE)
+_LEADING_NOTE_RE = re.compile(r"\A\s*(?:<system-reminder\b.*?</system-reminder>\s*)+", re.S)
+
+
+def _own_words(text):
+    """aj's words with a leading system-reminder block removed; None when the block holds a relayed message."""
+    m = _LEADING_NOTE_RE.match(text)
+    if m and _RELAYED_MARKER_RE.search(m.group(0)):
+        return None
+    return text[m.end():] if m else text
+
+
 def _is_relayed_prompt(text, payload=None):
     """True when the prompt is a subagent hand-back, agent message or task/system notification, or
     the payload carries a non-human `origin` (as _is_genuine_user_message honours)."""
