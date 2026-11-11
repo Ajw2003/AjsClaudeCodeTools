@@ -110,7 +110,7 @@ publish-a-page rule: `${CLAUDE_PLUGIN_ROOT}/rules/detail/handover-command.md`.
 
 ## Code follows the standards loaded for this project
 
-Standards injected at session start bind; existing file style wins. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/code-standards.md`.
+Standards injected at session start bind; existing file style wins. Values a person may want to change go in a setting, exposed field or config, not code, unless measured. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/code-standards.md`.
 
 ## Once the approach is decided, delegate the execution
 
@@ -136,6 +136,7 @@ Before code: one parent issue, one child per step (`Part of #N`), plain titles, 
 `AjsAgent created this` plus a category; a hook blocks source edits until they exist. PR bodies say
 `Refs #N`, never Closes/Fixes/Resolves. I close an issue only after the user's QA pass and a merge, or
 on a list they approved; a guard checks the evidence.
+A session finishes its own task: another repo's work becomes an issue there (`owner/repo`), never started here.
 `HOUSE_RULES_ISSUES=off` disables it. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/issue-workflow.md`.
 
 ## Commit constantly on my own branches, never on theirs
