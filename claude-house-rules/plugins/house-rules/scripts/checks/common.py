@@ -265,6 +265,8 @@ def _docstiers_repo(name, all_tiers, git_config_text=None, config_is_dir=False, 
 DOCSTIERS_COMPLETE = _docstiers_repo(
     "docstiers-complete", True, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n'
 )
+with open(os.path.join(DOCSTIERS_COMPLETE, "CHANGELOG.md"), "w", encoding="utf-8") as _f:
+    _f.write("# Changelog\n")
 DOCSTIERS_OWNED = _docstiers_repo(
     "docstiers-owned", False, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n'
 )
@@ -282,6 +284,9 @@ DOCSTIERS_UNREADABLE_CONFIG = _docstiers_repo("docstiers-unreadable-config", Fal
 DOCSTIERS_OLD_LAYOUT = _docstiers_repo(
     "docstiers-old-layout", True, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n',
     old_layout=True,
+)
+DOCSTIERS_NO_CHANGELOG = _docstiers_repo(
+    "docstiers-no-changelog", True, '[remote "origin"]\n\turl = https://github.com/Ajw2003/repo.git\n'
 )
 
 

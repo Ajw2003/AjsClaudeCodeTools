@@ -1963,6 +1963,11 @@ def event_guardgithub():
     if reason:
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": reason}})
+    elif short == "create_pull_request":
+        note = core.pr_changelog_note(_payload_cwd(raw), str(args.get("base") or ""))  # #387
+        if note:
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                                         "additionalContext": note}})
     return 0
 
 

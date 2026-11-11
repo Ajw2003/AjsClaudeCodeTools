@@ -110,6 +110,15 @@ for _title, _path, _expect in _docstiers_cases:
         report("FAIL", f"docstiers: {_title}")
         print(f"          {'; '.join(_problems)}")
 
+# #386: a repo with all six tiers but no CHANGELOG.md is named; one with it is silent (the first case above).
+_code, _out, _err = run_hook("docstiers", "", env=env_in(DOCSTIERS_NO_CHANGELOG))
+if _code == 0 and "no CHANGELOG.md at its root" in _out and "missing" not in _out.split("CHANGELOG")[0]:
+    report("PASS", "docstiers: a repo with every tier but no CHANGELOG.md is told to start one")
+    print(f"          {len(_out)} chars emitted")
+else:
+    report("FAIL", "docstiers: a repo with every tier but no CHANGELOG.md is told to start one")
+    print(f"          exit {_code}, got: {_out[:200]!r}")
+
 # docstiers's fail-loud path (systemMessage on an internal error, like inject) is covered by
 # main()'s generic exception net, proven generically further down this file rather than with a
 # docstiers-specific fixture - every input docstiers actually reads already degrades gracefully

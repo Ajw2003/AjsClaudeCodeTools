@@ -194,7 +194,7 @@ def event_handover():
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
     if not retry:
         if handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                                needs_evidence, uncommitted, plain_problems, trace_lines, handoff):
+                                needs_evidence, uncommitted, plain_problems, trace_lines, handoff, written_now):
             return 0
     else:
         handover_qa_retry(payload, have_reply, reply_text, trace_lines)

@@ -22,7 +22,7 @@ Verify docs against code/tree/history; disagree → say so, follow observed beha
 
 `docs/` has six tiers: landing, roadmap, state, systems, today, decisions (the `docstiers` hook
 checks). Write to the tier that changed. Reversal: dated
-`docs/6-decisions/Decisions.md` entry, tier fixed, pointer left. Cite to `file:line`. See
+`docs/6-decisions/Decisions.md` entry, tier fixed, pointer left. Every change adds a `CHANGELOG.md` line. Cite to `file:line`. See
 `${CLAUDE_PLUGIN_ROOT}/rules/detail/docs-tiers.md`.
 
 ## Long-form reasoning goes in a document, not in a comment

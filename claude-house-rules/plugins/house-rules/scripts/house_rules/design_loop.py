@@ -2115,7 +2115,9 @@ def _issues_guard(subject, payload):
             return ("deny", "House rules, pull requests link issues without closing them: the body needs "
                     "`Refs #N`, `Refs owner/repo#N` or `Part of #N`, or a line `No-issue: <reason>`. "
                     "Add it and run the command again.", None)
-        return None
+        bm = re.search(r"(?:--base|(?<![\w-])-B)(?:=|\s+)[\"']?([^\s\"']+)", cmd)
+        note = core.pr_changelog_note(_command_dir(payload)[0], bm.group(1) if bm else "")
+        return ("allow", "", note) if note else None
     if _GH_ISSUE_CREATE_RE.search(cmd) and _clear_writing_enabled() and clarity is not None:
         body = cmd
         fm = _PR_BODY_FILE_RE.search(cmd)
@@ -2459,6 +2461,36 @@ def _check_qa_page(ctx):
             % (missing, os.path.join(SCRIPTS_DIR, "make_page.py")))
 
 
+def _repo_root_of(path):
+    """The nearest folder at or above `path` holding .git (a folder or a worktree file), else ""."""
+    d = os.path.dirname(os.path.abspath(path))
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        up = os.path.dirname(d)
+        if up == d:
+            return ""
+        d = up
+
+
+def _check_changelog(ctx):
+    """#387/#244: a turn that wrote files in a repo whose root has a CHANGELOG.md, and left it alone, is sent back."""
+    touched = {}
+    for fp in ctx.get("written") or []:
+        if "/.claude/" in str(fp).replace("\\", "/"):
+            continue
+        root = _repo_root_of(fp)
+        if root and os.path.isfile(os.path.join(root, "CHANGELOG.md")):
+            touched.setdefault(root, False)
+            if os.path.abspath(fp) == os.path.join(root, "CHANGELOG.md"):
+                touched[root] = True
+    stale = sorted(r for r, done in touched.items() if not done)
+    if not stale:
+        return ""
+    return ("add one line under Unreleased in %s (plain words first, exact detail after)"
+            % ", ".join(os.path.join(r, "CHANGELOG.md") for r in stale))
+
+
 CHECKPOINTS = [
     ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
@@ -2468,6 +2500,7 @@ CHECKPOINTS = [
     ("reply ends", "plain summary", _check_plain, "block"),
     ("reply ends", "qa page", _check_qa_page, "block"),
     ("reply ends", "decided for you", _check_decided, "block"),
+    ("reply ends", "changelog", _check_changelog, "block"),
 ]
 
 
@@ -2479,6 +2512,7 @@ CHECKPOINT_RULES = {
     "handoff": "A turn that wrote files is pushed, with a fresh clean handoff note and Today.md updated.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
     "decided for you": "Design points are aj's to decide; a reply puts them as options, not as \"I went with ...\".",
+    "changelog": "Every change adds a line to the repo's CHANGELOG.md, in the same turn.",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
 
@@ -2826,7 +2860,7 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
 
 
 def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                         needs_evidence, uncommitted, plain_problems, trace_lines, handoff=""):
+                         needs_evidence, uncommitted, plain_problems, trace_lines, handoff="", written=None):
     """The blocking checkpoints at "reply ends" (first reply only). True when the reply was blocked (the
     block is emitted here). An error is added to trace_lines and nothing is blocked."""
     try:
@@ -2835,7 +2869,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             "long_words": long_words,
             "editor_owed": editor_owed,
             "needs_evidence": needs_evidence,
-            "uncommitted": uncommitted, "handoff": handoff,
+            "uncommitted": uncommitted, "handoff": handoff, "written": list(written or []),
             "plain_problems": plain_problems, "cwd": _payload_cwd(payload),
             "user_text": _last_user_text(transcript_path) if transcript_path else "",
         }

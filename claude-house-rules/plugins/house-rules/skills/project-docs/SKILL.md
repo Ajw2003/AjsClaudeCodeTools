@@ -203,7 +203,10 @@ reverse.
 8. Move anything inert into `docs/archive/` with a `README.md` saying why each item is there.
    Fix every pointer into the moved documents — do not leave the link graph broken. Code
    pointers in the `doc-ref` form are repaired mechanically by `/house-rules:docref fix --write`.
-9. If the repo has a `CLAUDE.md`, point it at `docs/1-landing/README.md` as the entry point
+9. Start `CHANGELOG.md` at the repo root from `templates/CHANGELOG.md`, filled from the repo's real
+   history (`git log`, tags, releases), never placeholders. Every later change adds a line under
+   Unreleased: plain words first, exact detail after.
+10. If the repo has a `CLAUDE.md`, point it at `docs/1-landing/README.md` as the entry point
    rather than duplicating any of this into it. Two copies drift.
 
 **Never invent content to fill a tier.** A row that says `TODO` is honest; a row with a plausible

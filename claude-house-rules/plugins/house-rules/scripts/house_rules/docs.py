@@ -92,9 +92,16 @@ def _repo_owner_from_config(git_dir):
     return None, "no remote url matched a recognizable owner/repo form (%s)" % urls[0]
 
 
+CHANGELOG_NOTE = (
+    "This repo also has no CHANGELOG.md at its root: start one from templates/CHANGELOG.md and the repo's real "
+    "history (house-rules:project-docs, scaffolding)."
+)
+
+
 def event_docstiers():
     try:
         root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        changelog_note = "" if os.path.isfile(os.path.join(root, "CHANGELOG.md")) else " " + CHANGELOG_NOTE
         missing = []
         moves = []
         for new_path, old_path in zip(DOCS_TIER_FILES, OLD_DOCS_TIER_FILES):
@@ -127,6 +134,7 @@ def event_docstiers():
                         else "Load house-rules:project-docs for the current folder layout."
                     ),
                 )
+                + changelog_note
             )
             emit(
                 {
@@ -142,7 +150,12 @@ def event_docstiers():
         if not missing:
             # All six tiers present - the one other deliberate silent exception besides
             # handover. This runs every session; a trace here costs something on every one of
-            # them for a fact that is true almost always.
+            # them for a fact that is true almost always. A missing CHANGELOG.md (#386) is the
+            # one thing it still says.
+            if changelog_note:
+                emit({"suppressOutput": True, "hookSpecificOutput": {
+                    "hookEventName": "SessionStart",
+                    "additionalContext": "House rules, every repo keeps a changelog:" + changelog_note}})
             return 0
 
         git_dir = _git_dir(root)
@@ -170,7 +183,7 @@ def event_docstiers():
             "documentation tiers - %s. Load house-rules:project-docs and scaffold the missing "
             "tiers before any other work, in every repo. %s"
             % (len(missing), ", ".join(missing), ownership_note)
-        )
+        ) + changelog_note
         emit(
             {
                 "suppressOutput": True,

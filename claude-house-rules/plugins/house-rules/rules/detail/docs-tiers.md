@@ -8,7 +8,7 @@ runtime-critical piece works, one document each), **today** (what is being worke
 project too small for milestones still has milestones, it just has fewer of them. Scale the
 contents, never drop a tier.
 
-Three habits, and they matter more than the layout:
+Four habits, and they matter more than the layout:
 
 - **Write to the tier that changed.** State moved, not the definition of done — so update state
   and leave the roadmap alone. Changing the roadmap means the *definition* moved, which is rare
@@ -17,6 +17,10 @@ Three habits, and they matter more than the layout:
   `docs/6-decisions/Decisions.md` recording what changed and why, then fix the tier document's body to state
   the new truth and leave a one-line pointer into that entry — never stack a "superseded" note on
   top of text that still says the old thing, and never silently overwrite.
+- **Keep a changelog.** Every repo has a `CHANGELOG.md` at its root (`templates/CHANGELOG.md`), and
+  every change adds one line under Unreleased, plain words first. Session start names a repo without
+  one; a turn that edits files without touching it is sent back once; a pull request that leaves it
+  unchanged gets a reminder.
 - **Cite claims to `file:line`.** It is what makes an audit mechanical instead of a matter of
   opinion.
 
