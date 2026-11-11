@@ -2741,6 +2741,11 @@ shutil.rmtree(_p5_root, True)
 # ---- #459, #460: a question to aj holds code edits; a design point is not decided for aj ----
 _hq_root = tempfile.mkdtemp(prefix="held-")
 _hq_cases = []
+_ex = [run_hook(_e, "", env=env_in(ROOT))[1] for _e in ("inject", "showrule")]
+_hq_text = " ".join(_ex) + read(os.path.join(DETAIL_DIR, "clear-writing.md"))
+_hq_cases.append(("#458: the injected rule text and its detail carry no 'unless they have said otherwise' exception",
+                    "said otherwise" not in _hq_text and "said to make them myself" not in _hq_text
+                    and "judgement calls go to the user the same way" in " ".join(_ex).replace("\\n", " ")))
 _loop_gh("in progress", 7)
 _hq_build = {"feature": "F", "stage": "build", "issues": [{"repo": "o/r", "number": 7, "labelled": True}],
              "approvals": [{"stage": "Build plan approved", "name": "F", "at": 1000}]}
