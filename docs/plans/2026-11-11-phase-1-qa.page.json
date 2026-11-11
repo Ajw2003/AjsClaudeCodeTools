@@ -2,7 +2,7 @@
   "title": "Phase 1 QA",
   "eyebrow": "QA \u00b7 roadmap phase 1, approvals and the design loop just work, issue #493, plugin 2.78.0",
   "short": {
-    "lead": "Phase 1 is built on the branch AjsAgent/session-handoff as plugin 2.78.0: seven steps, issues #501 to #507. Everything that can run outside your own desktop app has now run. verify.py passes 1135 of 1135 checks and tools/verify_tools.py 52 of 52. 14 real headless Claude sessions (sessions with no screen) took a test repo through the whole design loop using only this branch's plugin, and all 14 steps did what the design says. Real branch switches and a real merge passed 6 of 6. The hooks run as fast as 2.76.0's, and 2.78.0 installs straight from the branch, so you can try it without merging to main.",
+    "lead": "Phase 1 is built on the branch AjsAgent/session-handoff as plugin 2.78.0: seven steps, issues #501 to #507. Everything that can run outside your own desktop app has now run. verify.py passes 1135 of 1135 checks and tools/verify_tools.py 52 of 52. 14 real headless Claude sessions (sessions with no screen) took a test repo through the whole design loop using only this branch's plugin, and all 14 did what the design says. Real branch switches and a real merge passed 6 of 6 checks. The hooks run as fast as those in 2.76.0, and 2.78.0 installs straight from the branch, so you can try it without merging to main.",
     "hint": "Tap a row to see what was run and what it showed.",
     "key": [
       [
@@ -76,7 +76,7 @@
         "Lock gaps",
         "Four ways around the code lock are closed",
         "",
-        "Real git, real hooks: after checking out an older branch, the code edit was refused with \"Write Continue from: older\"; a new approval there released it. After a real merge of a branch in QA into main, an edit on main got the Done-stage message, not the QA lock, and the stage file was left unchanged. D3 (a stage file hidden in .git) and D6 (a new name keeps the old feature, also seen live in session 14) are in verify.py. Step 5, #505.",
+        "Real git, real hooks: after checking out an older branch, the code edit was refused with \"Write Continue from: older\"; a new approval there released it. After a real merge of a branch in QA into main, an edit on main got the Done-stage message, not the QA lock, and the stage file was left unchanged. Two more cases are in verify.py: a stage file hidden in .git (case D3), and a new name keeping the old feature (case D6, also seen live in session 14). Step 5, #505.",
         "Nothing from you."
       ],
       [
@@ -110,15 +110,15 @@
     "feature": "Phase 1",
     "base": "13484b8",
     "unverified": [
-      "Your desktop app on Windows: every run was Linux, in this cloud container. The new code reads files and runs gh the same way the existing hooks do, but Windows itself has not run it",
+      "Your desktop app on Windows: every run was on Linux, in this cloud container. The new code reads files and runs gh (the GitHub command-line tool) the same way the existing hooks do, but it has not been run on Windows itself",
       "The real Approve button in the claude.ai app: the live sessions sent the text \"Approve 2B\", and whether the app's button sends exactly its label has not been seen",
       "Real GitHub labels and issues in the live loop: those sessions used the plugin's stand-in files; the GitHub read itself was run once against this repo and returned #493 and #501 to #507",
-      "The close-line offer after a real pull request merge; only replayed merge events have run (verify.py)"
+      "The close-line offer after a real pull request merge: only replayed merge events have run (verify.py)"
     ],
     "files": {}
   },
   "wrapup": {
-    "summary": "QA for phase 1: every test that can run here passed; what is left needs your Windows desktop app.",
+    "summary": "QA for phase 1: every test that can run here passed; what is left is the four items listed as unverified.",
     "changing": "Plugin 2.78.0 on the branch AjsAgent/session-handoff, which also carries the session handoff work. Nothing reaches main until you merge a pull request.",
     "blocking": "Your QA verdict. If you want to try it first, 2.78.0 can be installed from the branch and removed again without touching main.",
     "next": "If QA passes, I open a pull request to main that says Refs #493, and offer you the close line for #501 to #507 after it merges.",
