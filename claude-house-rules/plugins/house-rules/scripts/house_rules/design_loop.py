@@ -690,13 +690,15 @@ def _loop_feature_issues(state, top):
                 raise RuntimeError("gh is not installed")
             if not own:
                 raise RuntimeError("this checkout has no GitHub origin")
-            proc = subprocess.run(["gh", "issue", "list", "-R", own, "--state", "open", "--limit", "200",
-                                   "--json", "number,body,labels", "--search", '"Part of #%d" in:body' % parent],
+            # The REST list, not `gh issue list`: that one uses GraphQL, which cloud sessions refuse (403), and
+            # GitHub's search index lags behind issues made a moment ago. Pull requests are dropped below.
+            proc = subprocess.run(["gh", "api", "repos/%s/issues?state=open&per_page=100" % own, "--paginate",
+                                   "--jq", ".[] | select(.pull_request == null) | {number, body, labels}"],
                                   capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
             if proc.returncode != 0:
                 detail = (proc.stderr or proc.stdout).strip().splitlines()
                 raise RuntimeError(detail[0] if detail else "gh exited %d" % proc.returncode)
-            rows = json.loads(proc.stdout)
+            rows = [json.loads(line) for line in proc.stdout.splitlines() if line.strip()]
         if not isinstance(rows, list):
             raise ValueError("the issue list was not a JSON list")
         mark = {ISSUES_LABEL.lower(), ISSUES_LABEL_OLD.lower()}
