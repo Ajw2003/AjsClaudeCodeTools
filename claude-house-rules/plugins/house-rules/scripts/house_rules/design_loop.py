@@ -2710,6 +2710,153 @@ def _merged_pr_refs(state, repo, number):
         return [], "its body could not be read (%s: %s)" % (type(exc).__name__, exc)
 
 
+# #510: after a merge, the local branch of the merged pull request and the finished helper worktrees are deleted
+# when nothing unsaved goes with them. Runs inside the hook (not through Bash, so the guard is not involved).
+CLEANUP_ENV = "HOUSE_RULES_CLEANUP"  # "off" turns the cleanup off
+PR_FILE_ENV = "HOUSE_RULES_PR_FILE"  # tests: JSON {"ref", "sha", "merged"} that replaces the gh api read
+CLEANUP_SECONDS = 6  # inside hooks.json's 10s for closablemerge
+_HELPER_WT = ".claude/worktrees/"
+
+
+class _CleanupBudget(Exception):
+    pass
+
+
+def _cleanup_pr(repo, number, left):
+    """(ref, sha, merged) of the pull request's head, from the stand-in file or `gh api`. Raises on a failed read."""
+    stand_in = os.environ.get(PR_FILE_ENV)
+    if stand_in:
+        with open(stand_in, "r", encoding="utf-8") as f:
+            d = json.load(f)
+        return d["ref"], d["sha"], d["merged"] is True
+    if not shutil.which("gh"):
+        raise RuntimeError("gh is not installed")
+    import subprocess
+    proc = subprocess.run(["gh", "api", "repos/%s/pulls/%d" % (repo or "{owner}/{repo}", number), "--jq",
+                           "{ref: .head.ref, sha: .head.sha, merged: .merged}"],
+                          capture_output=True, text=True, timeout=min(LOOP_GH_SECONDS, left()))
+    if proc.returncode != 0:
+        raise RuntimeError(((proc.stderr or "").strip().splitlines() or ["gh exited %d" % proc.returncode])[0])
+    d = json.loads(proc.stdout)
+    return d["ref"], d["sha"], d["merged"] is True
+
+
+def _merge_cleanup(cwd, repo, number):
+    """The note for the cleanup after the merge of repo#number ("" when it is off). Never raises."""
+    if os.environ.get(CLEANUP_ENV, "").strip().lower() == "off":
+        trace("house-rules plugin: cleanup after a merge is off (%s=off), so it did nothing." % CLEANUP_ENV)
+        return ""
+    name = "%s#%d" % (repo or "this repo", number)
+    deadline = time.time() + CLEANUP_SECONDS
+
+    def left():
+        rest = deadline - time.time()
+        if rest <= 0.3:
+            raise _CleanupBudget()
+        return rest
+
+    def git(top, args):
+        return _ag(top, args, timeout=left(), check=False)
+
+    deleted, kept = [], []
+    try:
+        try:
+            ref, sha, merged = _cleanup_pr(repo, number, left)
+        except _CleanupBudget:
+            raise
+        except Exception as exc:
+            return "Cleanup after the merge of %s did not run: GitHub could not be read (%s: %s). Nothing was deleted." % (
+                name, type(exc).__name__, exc)
+        if not merged:
+            return "Cleanup after the merge of %s did not run: GitHub does not say it is merged. Nothing was deleted." % name
+        rc, out, _e = git(cwd, ["worktree", "list", "--porcelain"])
+        if rc != 0:
+            return "Cleanup after the merge of %s did not run: %s is not a git repository. Nothing was deleted." % (name, cwd)
+        wts, cur = [], None
+        for line in out.splitlines():
+            if line.startswith("worktree "):
+                cur = {"path": line[9:], "branch": "", "head": ""}
+                wts.append(cur)
+            elif cur is not None and line.startswith("branch refs/heads/"):
+                cur["branch"] = line[18:]
+            elif cur is not None and line.startswith("HEAD "):
+                cur["head"] = line[5:]
+        main = wts[0]["path"]
+        here = git(cwd, ["rev-parse", "--show-toplevel"])[1].strip()
+        norm = os.path.realpath
+        rel = lambda p: os.path.relpath(p, main).replace(os.sep, "/")
+        default = ""
+        rc, out, _e = git(main, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])
+        if rc == 0 and out.strip():
+            default = out.strip()
+        else:
+            for cand in ("origin/main", "origin/master"):
+                if git(main, ["rev-parse", "--verify", "-q", "refs/remotes/" + cand])[0] == 0:
+                    default = cand
+                    break
+        fetched = None
+        # Helper worktrees: on the merged branch, or finished on their own (merged into the default and pushed).
+        for w in wts[1:]:
+            if not w["branch"] or _HELPER_WT not in w["path"].replace(os.sep, "/") or norm(w["path"]) == norm(here):
+                continue
+            tip = w["head"]
+            why = ""
+            if w["branch"] == ref:
+                if tip != sha:
+                    why = "its branch has commits not in the merged pull request"
+            elif not default:
+                why = "the default branch could not be found, so whether it is merged is unknown"
+            else:
+                if fetched is None:
+                    frc, _o, ferr = git(main, ["fetch", "-q", "origin", default.split("/", 1)[1]])
+                    fetched = "" if frc == 0 else (ferr or "git fetch failed")
+                if fetched:
+                    why = "the default branch could not be fetched (%s)" % fetched
+                elif git(main, ["merge-base", "--is-ancestor", tip, default])[0] != 0:
+                    continue  # not merged: still somebody's work, not named
+                elif not git(main, ["branch", "-r", "--contains", tip])[1].strip():
+                    why = "its commits are not on any remote branch"
+            if not why and git(w["path"], ["status", "--porcelain"])[1].strip():
+                why = "it has uncommitted changes"
+            if not why:
+                rc, _o, err = git(main, ["worktree", "remove", w["path"]])
+                if rc == 0:
+                    deleted.append("worktree " + rel(w["path"]))
+                    w["gone"] = True
+                    continue
+                why = "git refused to remove it (%s)" % ((err.splitlines() or ["?"])[0])
+            kept.append("worktree %s (%s)" % (rel(w["path"]), why))
+        # The local branch of the merged pull request.
+        if git(main, ["rev-parse", "--verify", "-q", "refs/heads/" + ref])[0] != 0:
+            kept.append("branch %s (there is no local branch of that name)" % ref)
+        else:
+            tip = git(main, ["rev-parse", "refs/heads/" + ref])[1].strip()
+            holders = [w for w in wts if w["branch"] == ref and not w.get("gone")]
+            if holders:
+                where = "the main checkout" if holders[0]["path"] == main else (
+                    "this checkout" if norm(holders[0]["path"]) == norm(here) else rel(holders[0]["path"]))
+                kept.append("branch %s (checked out in %s)" % (ref, where))
+            elif tip != sha:
+                rc, out, _e = git(main, ["rev-list", "--count", "%s..%s" % (sha, tip)])
+                n = out.strip() if rc == 0 and out.strip().isdigit() else ""
+                kept.append("branch %s (%s)" % (ref, ("has %s commit%s not in the merged pull request" % (n, "" if n == "1" else "s"))
+                                                if n and n != "0" else "its tip is not the merged pull request's head"))
+            else:
+                rc, _o, err = git(main, ["branch", "-d", ref])
+                if rc != 0:  # squash- or rebase-merged: git does not see it as merged; the tip equals the PR head, so -D loses nothing
+                    rc, _o, err = git(main, ["branch", "-D", ref])
+                if rc == 0:
+                    deleted.append("branch " + ref)
+                else:
+                    kept.append("branch %s (git refused to delete it: %s)" % (ref, (err.splitlines() or ["?"])[0]))
+    except _CleanupBudget:
+        kept.append("the rest was not checked (the %d s cleanup budget ran out)" % CLEANUP_SECONDS)
+    except Exception as exc:
+        kept.append("the rest was not checked (%s: %s)" % (type(exc).__name__, exc))
+    return "Deleted after the merge of %s: %s. Kept: %s." % (
+        name, "; ".join(deleted) or "nothing", "; ".join(kept) or "nothing")
+
+
 def event_closablemerge():
     try:
         if not _loop_enabled():
@@ -2731,16 +2878,20 @@ def event_closablemerge():
         merged = _closable_merge_of(data)
         if not merged:
             return 0
+        cleanup = _merge_cleanup(_payload_cwd(payload), merged[0], merged[1])
         _, git_dir = _issues_locate(_payload_cwd(payload))
         if not git_dir:
+            if cleanup:
+                emit({"systemMessage": cleanup,
+                      "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": cleanup}})
             return 0
         state, problem = _loop_read(git_dir)
         if problem:
-            emit({"systemMessage": problem})
+            emit({"systemMessage": " ".join([problem, cleanup]).strip()})
             return 0
         open_ = [e for e in state.get("closable", []) if isinstance(e, dict) and e.get("merged_pr") is None]
         repo, number = merged
-        notes = []
+        notes = [cleanup] if cleanup else []
         if open_:
             refs, why = _merged_pr_refs(state, repo, number)
             hit = [e for e in open_ if any(isinstance(i, dict) and i.get("number") == n

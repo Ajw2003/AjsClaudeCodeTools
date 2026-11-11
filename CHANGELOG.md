@@ -4,6 +4,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+- After a pull request merges, the local copy of its branch and any finished helper worktree are deleted when nothing unsaved goes with them, and the note says what was deleted or kept and why (#510; `HOUSE_RULES_CLEANUP=off` turns it off; nothing is deleted if GitHub cannot be read).
 - Docs are named at the commit: a commit's guard message lists each living doc that cites a changed file, and any citation that has drifted (#508; `scripts/docs_drift.py` lists all drift, 27 found on first run).
 - Every repo keeps a changelog: session start names a repo without one, a turn that edits files without touching it is sent back once, and a pull request that leaves it unchanged gets a reminder (#509).
 - Aj's close line is offered after a merge: after "QA passed" and the merge, "Close as completed: #N ..." is put to aj; the wrong-labels line is said once per set (#507; plugin 2.78.0).

@@ -1144,7 +1144,7 @@ subprocess.run(["git", "init", "-q", _cl_dir], check=True)
 with open(os.path.join(_cl_dir, ".git", "HEAD"), "w") as _f:  # U3: a feature branch, so QA is not read as Done here
     _f.write("ref: refs/heads/feature-loop\n")
 _cl_file = os.path.join(_cl_dir, ".claude", "house-rules-loop.json")
-_cl_env = dict(_loop_env, HOUSE_RULES_LOOP="on")
+_cl_env = dict(_loop_env, HOUSE_RULES_LOOP="on", HOUSE_RULES_CLEANUP="off")  # #510: the cleanup has its own cases below
 
 
 def _cl_set(state):
@@ -1250,6 +1250,100 @@ _cl_cases.append(("U3: a merge while the feature is in QA leaves the stage alone
                   _cl_state()["stage"] == "qa" and "QA passed: f" in _o))
 for _t, _ok in _cl_cases:
     report("PASS" if _ok else "FAIL", "closable record: " + _t)
+
+# ---- #510: cleanup after a merge ----
+_cu_env = dict(_cl_env, HOUSE_RULES_CLEANUP="on")
+_cu_n = [0]
+
+
+def _cu_git(d, *args):
+    e = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+    r = subprocess.run(["git"] + list(args), cwd=d, capture_output=True, text=True, env=e)
+    return r.stdout.strip()
+
+
+def _cu_commit(d, fname, text="x"):
+    with open(os.path.join(d, fname), "w") as f:
+        f.write(text)
+    _cu_git(d, "add", fname)
+    _cu_git(d, "commit", "-q", "-m", "add " + fname)
+    return _cu_git(d, "rev-parse", "HEAD")
+
+
+def _cu_repo():
+    """(main clone, branch tip sha): origin is a local bare repo; feat has one pushed commit; main is checked out."""
+    _cu_n[0] += 1
+    base = tempfile.mkdtemp(prefix="house-rules-cleanup-%d-" % _cu_n[0], dir=_FIXTURE_ROOT)
+    bare, d = os.path.join(base, "origin.git"), os.path.join(base, "main")
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", bare], check=True)
+    subprocess.run(["git", "clone", "-q", bare, d], check=True, capture_output=True)
+    _cu_git(d, "checkout", "-q", "-b", "main")
+    _cu_commit(d, "base.txt")
+    _cu_git(d, "push", "-q", "origin", "main")
+    _cu_git(d, "checkout", "-q", "-b", "feat")
+    tip = _cu_commit(d, "feat.txt")
+    _cu_git(d, "push", "-q", "origin", "feat")
+    _cu_git(d, "checkout", "-q", "main")
+    return d, tip
+
+
+def _cu_run(d, sha, merged=True, ref="feat", pr_file=True):
+    f = os.path.join(os.path.dirname(d), "pr.json")
+    if pr_file:
+        json.dump({"ref": ref, "sha": sha, "merged": merged}, open(f, "w"))
+    p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__merge_pull_request", "session_id": "cu", "cwd": d,
+         "tool_input": {"owner": "o", "repo": "r", "pullNumber": 51}, "tool_response": {"merged": True}}
+    return run_hook("closablemerge", json.dumps(p), env=dict(_cu_env, HOUSE_RULES_PR_FILE=f))[1]
+
+
+def _cu_has(d, branch):
+    return branch in _cu_git(d, "branch", "--list", branch)
+
+
+_cu_cases = []
+_d, _tip = _cu_repo()
+_cu_git(_d, "merge", "-q", "--no-ff", "-m", "merge feat", "feat")
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("a merged, pushed branch whose tip is the PR head is deleted", not _cu_has(_d, "feat") and "branch feat" in _o))
+_d, _tip = _cu_repo()
+_cu_commit(_d, "feat.txt", "x")  # the same content on main as another commit: a squash merge
+_cu_git(_d, "push", "-q", "origin", "main")
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("a squash-merged branch (tip not on main) whose tip is the PR head is deleted",
+                  not _cu_has(_d, "feat") and "Deleted after the merge of o/r#51: branch feat" in _o))
+_d, _tip = _cu_repo()
+_cu_git(_d, "checkout", "-q", "feat")
+_cu_commit(_d, "more.txt")
+_cu_git(_d, "checkout", "-q", "main")
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("a branch with a commit not in the PR is kept, and the note says why",
+                  _cu_has(_d, "feat") and "1 commit not in the merged pull request" in _o))
+_d, _tip = _cu_repo()
+_cu_git(_d, "checkout", "-q", "feat")
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("the branch checked out in the main checkout is kept and named",
+                  _cu_has(_d, "feat") and "checked out in the main checkout" in _o))
+_d, _tip = _cu_repo()
+_wt = os.path.join(_d, ".claude", "worktrees", "w1")
+_cu_git(_d, "worktree", "add", "-q", _wt, "feat")
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("a clean finished worktree on the merged branch is removed",
+                  not os.path.exists(_wt) and "worktree .claude/worktrees/w1" in _o and not _cu_has(_d, "feat")))
+_d, _tip = _cu_repo()
+_wt = os.path.join(_d, ".claude", "worktrees", "w2")
+_cu_git(_d, "worktree", "add", "-q", _wt, "feat")
+with open(os.path.join(_wt, "wip.txt"), "w") as _f:
+    _f.write("unsaved")
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("a worktree with an uncommitted file is kept, the file survives, and the note names it",
+                  os.path.isfile(os.path.join(_wt, "wip.txt")) and "worktree .claude/worktrees/w2 (it has uncommitted changes)" in _o
+                  and _cu_has(_d, "feat")))
+_d, _tip = _cu_repo()
+_o = _cu_run(_d, _tip, pr_file=False)
+_cu_cases.append(("GitHub unreadable: nothing is deleted and the note says the cleanup did not run",
+                  _cu_has(_d, "feat") and "did not run" in _o and "could not be read" in _o))
+for _t, _ok in _cu_cases:
+    report("PASS" if _ok else "FAIL", "#510 cleanup: " + _t)
 
 # --- #363: the close guard - an issue closes only on recorded QA + merge evidence or an approved list ---
 def _cg_gh(cmd, env=None):
