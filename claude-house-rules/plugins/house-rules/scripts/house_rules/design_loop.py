@@ -2117,7 +2117,7 @@ def _issues_guard(subject, payload):
                     "Add it and run the command again.", None)
         bm = re.search(r"(?:--base|(?<![\w-])-B)(?:=|\s+)[\"']?([^\s\"']+)", cmd)
         note = core.pr_changelog_note(_command_dir(payload)[0], bm.group(1) if bm else "")
-        return ("allow", "", note) if note else None
+        return ("note", "", note) if note else None  # #509: a reminder, never a decision
     if _GH_ISSUE_CREATE_RE.search(cmd) and _clear_writing_enabled() and clarity is not None:
         body = cmd
         fm = _PR_BODY_FILE_RE.search(cmd)

@@ -745,8 +745,11 @@ def _event_guard_main():
         return 0
 
     allow_ctx = None  # #363: an allowed close carries its follow-up instruction
+    note_ctx = None  # #509: a reminder with no decision (the pull request changelog note)
     if issue_hit and issue_hit[0] == "allow":
         allow_ctx, issue_hit = issue_hit[2], None
+    elif issue_hit and issue_hit[0] == "note":
+        note_ctx, issue_hit = issue_hit[2], None
 
     where, moved_unclear = _command_dir(payload)
     _mine, branch, ownership_note = branch_ownership(where)
@@ -870,11 +873,6 @@ def _event_guard_main():
             # PreToolUse's additionalContext reaches the model on an "allow" decision (probed
             # live, doc-ref 8713 docs/6-decisions/Decisions.md).
             out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
-            if not (docs_status == "needs-docs" or approve or docs_note):
-                # #509: a reminder alone (the pull request changelog note) carries no decision, so Claude Code's
-                # own permission prompt still applies. Context-only output reaches the model (probed live on
-                # 2.1.322, 2026-11-11).
-                del out["hookSpecificOutput"]["permissionDecision"]
             if docs_status == "needs-docs":
                 out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
             if docs_note:
@@ -888,6 +886,11 @@ def _event_guard_main():
             elif trace_verbose():
                 out["systemMessage"] = allow_trace
             emit(out)
+            return 0
+        if note_ctx:
+            # #509: a reminder alone carries no decision, so Claude Code's own permission prompt still applies.
+            # Context-only output reaches the model (probed live on 2.1.322, 2026-11-11).
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": note_ctx}})
             return 0
         if docs_status == "unknown":
             trace("%s - docs check could not tell: %s." % (allow_trace, docs_detail))
