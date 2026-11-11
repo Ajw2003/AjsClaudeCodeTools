@@ -299,6 +299,11 @@ def _lfs_one(state, top, raw):
                                                                                   _gb(LFS_FREE_BYTES), rel))
 
 
+def without_lfs_lines(text):
+    """The message with its "LFS approved:" lines taken out, so the stage reader never sees them."""
+    return _LFS_LINE_RE.sub("", text)
+
+
 def lfs_apply(state, text, top):
     """Note for the model, or "" when the message has no "LFS approved:" line. Mutates state. Quoted (`>`) lines
     do not count; the caller has already thrown out relayed messages."""

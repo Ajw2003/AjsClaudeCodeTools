@@ -951,8 +951,8 @@ def _loop_apply(state, text, top):
     carry = _loop_continue_apply(state, text, top)  # #479: first, so "Continue from: x. Build plan approved: y" works
     sweep_note = _loop_sweep_apply(state, text)
     issues_note = _loop_issues_for_apply(state, text, top)
-    note = _loop_apply_stage(state, text, top)
     from house_rules import bigfiles  # #511: "LFS approved: <path>", beside the other phrases
+    note = _loop_apply_stage(state, bigfiles.without_lfs_lines(text), top)  # its word "approved" is not a stage approval
     lfs_note = bigfiles.lfs_apply(state, text, top)
     return " ".join(n for n in (carry, sweep_note, issues_note, note, lfs_note) if n)
 
