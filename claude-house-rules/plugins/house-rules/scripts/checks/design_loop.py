@@ -1305,6 +1305,27 @@ _d, _tip = _cu_repo()
 _cu_git(_d, "merge", "-q", "--no-ff", "-m", "merge feat", "feat")
 _o = _cu_run(_d, _tip)
 _cu_cases.append(("a merged, pushed branch whose tip is the PR head is deleted", not _cu_has(_d, "feat") and "branch feat" in _o))
+
+
+def _cu_one_json(o):
+    try:
+        json.loads(o)
+        return True
+    except ValueError:
+        return False
+
+
+_cu_cases.append(("the merge hook's output is exactly one JSON object (two back to back is not valid hook output)",
+                  _cu_one_json(_o)))
+_cl_set({"stage": "done", "closable": [{"feature": "f", "issues": [{"repo": "o/r", "number": 7}], "qa_at": 1,
+                                        "qa": "QA passed: f", "merged_pr": None}]})
+_o = run_hook("closablemerge", json.dumps({"hook_event_name": "PostToolUse", "tool_name": "mcp__github__merge_pull_request",
+                                            "session_id": "cu", "cwd": _cl_dir,
+                                            "tool_input": {"owner": "o", "repo": "r", "pullNumber": 52},
+                                            "tool_response": {"merged": True}}),
+              env=dict(_cl_env, HOUSE_RULES_TRACE="on"))[1]
+_cu_cases.append(("with a closable record open and tracing on, the merge hook still prints one JSON object",
+                  _cu_one_json(_o), ))
 _d, _tip = _cu_repo()
 _cu_commit(_d, "feat.txt", "x")  # the same content on main as another commit: a squash merge
 _cu_git(_d, "push", "-q", "origin", "main")

@@ -2701,7 +2701,8 @@ def _merged_pr_refs(state, repo, number):
         if not repo or not shutil.which("gh"):
             raise RuntimeError("no repo is named" if not repo else "gh is not installed")
         import subprocess
-        proc = subprocess.run(["gh", "pr", "view", str(number), "--repo", repo, "--json", "body", "--jq", ".body"],
+        # REST, not `gh pr view`: that one uses GraphQL, which cloud sessions refuse (403, seen 2026-11-11).
+        proc = subprocess.run(["gh", "api", "repos/%s/pulls/%d" % (repo, number), "--jq", ".body // \"\""],
                               capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
         if proc.returncode != 0:
             raise RuntimeError(((proc.stderr or "").strip().splitlines() or ["gh exited %d" % proc.returncode])[0])
@@ -2913,6 +2914,7 @@ def event_closablemerge():
         open_ = [e for e in state.get("closable", []) if isinstance(e, dict) and e.get("merged_pr") is None]
         repo, number = merged
         notes = [cleanup] if cleanup else []
+        stamp_trace = ""  # #510: said through the one emit below, never as a second JSON object on stdout
         if open_:
             refs, why = _merged_pr_refs(state, repo, number)
             hit = [e for e in open_ if any(isinstance(i, dict) and i.get("number") == n
@@ -2932,11 +2934,13 @@ def event_closablemerge():
             else:
                 notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (
                     repo, number, why or "it links none of the QA-passed issues with `Refs #N`"))
-            trace("house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit)))
+            stamp_trace = "house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit))
         if state.get("stage") == "qa":  # U3: the merge never moves the stage; aj is asked for the verdict
             notes.append('Design loop: pull request %s#%d merged while "%s" is in QA, so the stage file still '
                          'says QA. Ask aj for "QA passed: %s" or "QA failed: %s"; the stage moves only on their word.'
                          % ((repo, number) + (state.get("feature") or "this feature",) * 3))
+        if not notes and stamp_trace:
+            trace(stamp_trace)
         if notes:
             emit({"systemMessage": " ".join(notes),
                   "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": " ".join(notes)}})
