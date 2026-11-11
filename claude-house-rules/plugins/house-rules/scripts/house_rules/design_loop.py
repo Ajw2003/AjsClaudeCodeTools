@@ -2760,8 +2760,7 @@ def _cleanup_pr(repo, number, left):
 def _merge_cleanup(cwd, repo, number):
     """The note for the cleanup after the merge of repo#number ("" when it is off). Never raises."""
     if os.environ.get(CLEANUP_ENV, "").strip().lower() == "off":
-        trace("house-rules plugin: cleanup after a merge is off (%s=off), so it did nothing." % CLEANUP_ENV)
-        return ""
+        return ""  # switched off by aj; no trace here, so the hook still prints exactly one JSON object
     name = "%s#%d" % (repo or "this repo", number)
     deadline = time.time() + CLEANUP_SECONDS
 
