@@ -2835,8 +2835,7 @@ _as_git(_d, "add", "-A")
 _as_git(_d, "commit", "-q", "-m", "code only")
 _cl_cases.append(("a repo with no CHANGELOG.md gets none", "CHANGELOG" not in _iss_guard(_cmd, _d)))
 _d = _cl_repo(True)
-_as_write(_d, "a.py", "y
-")
+_as_write(_d, "a.py", "y\n")
 _as_git(_d, "add", "-A")
 _as_git(_d, "commit", "-q", "-m", "code only")
 _cl_cases.append(("the GitHub tool create_pull_request gets the reminder too",
