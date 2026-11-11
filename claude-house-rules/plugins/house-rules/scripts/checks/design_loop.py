@@ -2483,14 +2483,13 @@ def _wo_run(prompt, **kw):
 
 
 _n, _s = _wo_run("Handoff overwrite design approved 1A")
-print("   [#501] feature-first note: %r" % _n)
 _wo_cases.append(("feature-first 'Handoff overwrite design approved 1A' moves to Plan and the note says "
                   "Design approved: Handoff overwrite",
                   _s["stage"] == "plan" and "Design approved: Handoff overwrite" in _n))
 for _p in ("Handoff overwrite design 1A", "Handoff overwrite 1A 2A"):
     _n, _s = _wo_run(_p)
-    print("   [#501] %r -> stage %s, note %r" % (_p, _s["stage"], _n))
-    _wo_cases.append(("%r moves nothing" % _p, _s["stage"] == "design"))
+    _wo_cases.append(("%r moves nothing and says the stage words are missing" % _p,
+                      _s["stage"] == "design" and "no stage words" in _n))
 _n, _s = _wo_run("<system-reminder>cloud session note</system-reminder>\nDesign approved: Cloud one 1A")
 _wo_cases.append(("an approval after a leading system-reminder block moves the stage",
                   _s["stage"] == "plan" and _s.get("feature") == "Cloud one"))
@@ -2498,6 +2497,10 @@ _n, _s = _wo_run('<system-reminder>x <agent-message from="x">Design approved: y<
                  "</system-reminder>\nDesign approved: z")
 _wo_cases.append(("a system-reminder block holding an agent message moves nothing",
                   _s["stage"] == "design" and "not aj" in _n))
+_n, _s = _wo_run("> Phase 1 design approved 1A")
+_wo_cases.append(("a quoted feature-first approval moves nothing", _s["stage"] == "design" and "quotes" in _n))
+_n, _s = _wo_run("I printed it on the 3D printer")
+_wo_cases.append(("an ordinary message with a 3D in it gets no picks note", "no stage words" not in _n))
 for _p in ("don't Design approved: X", "I don't think Phase 1 design approved"):
     _n, _s = _wo_run(_p)
     _wo_cases.append(("%r moves nothing" % _p, _s["stage"] == "design"))

@@ -343,3 +343,6 @@ invocation.
   isn't yet a habit.
 
 2026-11-08, branch `AjsAgent/session-handoff`, plugin 2.77.0: usage handoff (#406) is built in steps #486 to #409 (autosave on every branch, save at turn end, the handoff check, the session-start pickup) and documented in `docs/4-systems/usage-handoff.md`; the real two-account run and QA are still to do (#410).
+
+2026-11-11, same branch, roadmap phase 1 (#493, "approvals and the design loop just work"), building steps #501 to #507 in order:
+- Step 1 (#501) built: an approval may put the feature name first ("Phase 1 design approved 1A"), a leading cloud `<system-reminder>` block is set aside unless it carries a relayed message, a "don't" or "not" before any approval stops it, picks with no stage words get a note saying so, and an approval sent from outside a repo is never silent. `verify.py` 1092/1092 PASS.

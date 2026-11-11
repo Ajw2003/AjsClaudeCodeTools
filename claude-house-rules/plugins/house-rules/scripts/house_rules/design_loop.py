@@ -414,10 +414,15 @@ _LOOP_QUOTED_RE = re.compile(r"(?mi)(?:^[ \t]*>[ \t>\"'*\-]*|:[ \t]*[\"'“])" +
 _LOOP_BARE_RE = re.compile(r"\b(approved|qa\s+passed|qa\s+failed)\b", re.IGNORECASE)
 
 
+# #501: a line that names something and ends in answer picks ("1A 2A", "3*"), the shape of an approval
+# missing its stage words. A pick is a digit run plus one letter A-H or a star, so "3D printer" never fits.
+_LOOP_PICKS_ONLY_RE = re.compile(r"(?m)^[ \t]*[A-Za-z][^\n?]*?(?:[ \t]+\d+[A-Ha-h*])+[ \t]*[.!]?[ \t]*$")
+
+
 # #491: the stage words may follow the feature name, never after a negation or inside a question
 _LOOP_STAGE_WORDS = r"(design\s+approved|build\s+plan\s+approved|qa\s+passed|qa\s+failed)"
 _LOOP_AFTER_RE = re.compile(r"(?mi)(" + _LOOP_LEAD + r")((?!" + _LOOP_STAGE_WORDS
-                            + r")(?:(?!\bnot\b|n't\b)[^\n.?!:])+?)\s+"
+                            + r")(?=\w)(?:(?!\bnot\b|n't\b)[^\n.?!:])+?)\s+"
                             + _LOOP_STAGE_WORDS + _LOOP_NOT_ASKED + r"[ \t]*:?[ \t]*([^\n]*)")
 _LOOP_STAGE_TEXT = {"design": "Design approved", "build": "Build plan approved", "qa passed": "QA passed",
                     "qa failed": "QA failed"}
@@ -1100,6 +1105,10 @@ def _loop_apply_one(state, text, top):
         return ('Design loop: aj\'s message says "approved" but names no stage and feature, so nothing moved. '
                 'Ask which they mean; an approval reads like "Design approved: <feature>", '
                 '"Build plan approved: <feature>", "QA passed: <feature>" or "QA failed: <feature>".')
+    if _LOOP_PICKS_ONLY_RE.search(text):  # #501: picks with no stage words ("Handoff overwrite 1A 2A")
+        return ('Design loop: aj\'s message ends in picks but has no stage words ("design approved", "build plan '
+                'approved", "QA passed" or "QA failed"), so nothing moved. Ask whether they meant to approve; an '
+                'approval reads like "Design approved: <feature> 1A" or "<feature> design approved 1A".')
     return ""
 
 
