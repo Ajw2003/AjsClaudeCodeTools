@@ -1890,21 +1890,30 @@ if shutil.which("git"):
     finally:
         shutil.rmtree(_d, ignore_errors=True)
 
-    _d = _dd_repo({"gone.py": "x\n", "a.py": _DD_HEAD, "docs/4-systems/s.md": "See `gone.py:1`.\n"})
+    _d = _dd_repo({"src/gone.py": "x\n", "a.py": _DD_HEAD,
+                   "docs/4-systems/s.md": "See `src/gone.py:1`. Settings live in `settings.json`.\n"})
     try:
-        os.remove(os.path.join(_d, "gone.py"))
+        os.remove(os.path.join(_d, "src", "gone.py"))
         _rc, _out = _dd_run(_d)
-        _dd_case("docs_drift: a doc citing a deleted file is flagged by the command",
-                 _rc == 1 and "cites  gone.py:1  (gone)" in _out, (_rc, _out))
+        _dd_case("docs_drift: a doc citing a deleted file by its path is flagged by the command",
+                 _rc == 1 and "cites  src/gone.py:1  (gone)" in _out, (_rc, _out))
+        _dd_case("docs_drift: a bare name that is no repo file (a runtime file like settings.json) is not flagged",
+                 "settings.json" not in _out, _out)
     finally:
         shutil.rmtree(_d, ignore_errors=True)
 
-    _d = _dd_repo({"x/dup.py": "1\n", "y/dup.py": "1\n", "docs/4-systems/s.md": "See `dup.py:50`.\n",
-                   "docs/6-decisions/Decisions.md": "old `gone.py:3`\n"})
+    _d = _dd_repo({"x/dup.py": "1\n", "y/dup.py": "1\n2\n", "docs/4-systems/s.md": "See `dup.py:2`.\n",
+                   "docs/6-decisions/Decisions.md": "old `x/gone.py:3`\n"})
     try:
         _rc, _out = _dd_run(_d)
-        _dd_case("docs_drift: an ambiguous basename is skipped and docs/6-decisions/ is never scanned",
-                 _rc == 0 and "docs_drift: 0 drifted" in _out, (_rc, _out))
+        _dd_case("docs_drift: a shared basename whose line fits one of its files is skipped, and docs/6-decisions/ "
+                 "is never scanned", _rc == 0 and "docs_drift: 0 drifted" in _out, (_rc, _out))
+        with open(os.path.join(_d, "docs", "4-systems", "s.md"), "w", encoding="utf-8") as f:
+            f.write("See `dup.py:50`.\n")
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift: a shared basename (hook.py) cited past the end of every file with that name is flagged",
+                 _rc == 1 and "line 50 past the end of all 2 files with that name, the longest has 2 lines" in _out,
+                 (_rc, _out))
     finally:
         shutil.rmtree(_d, ignore_errors=True)
 else:

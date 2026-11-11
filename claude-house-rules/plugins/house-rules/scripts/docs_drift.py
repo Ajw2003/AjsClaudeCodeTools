@@ -78,7 +78,7 @@ def citations(text):
 
 
 def resolve(root, cited, tracked):
-    """('file', repo_path) | ('gone', None) | ('ambiguous', None)."""
+    """('file', repo_path) | ('gone', None) | ('ambiguous', [repo paths])."""
     if os.path.isfile(os.path.join(root, cited)):
         return "file", cited
     matches = [t for t in tracked if (t == cited or t.endswith("/" + cited))
@@ -87,7 +87,7 @@ def resolve(root, cited, tracked):
         return "file", matches[0]
     if not matches:
         return "gone", None
-    return "ambiguous", None
+    return "ambiguous", matches
 
 
 def _line_count(root, rel):
@@ -111,7 +111,17 @@ def scan(root, tracked, deadline=None, docs=None):
             continue
         for n, cited, cline, written in citations(text):
             kind, path = resolve(root, cited, tracked)
+            if kind == "gone" and "/" not in cited:
+                continue  # a bare name that is no repo file is usually a runtime file (settings.json)
             if kind == "ambiguous":
+                # several files share the name (hook.py): drift only when the line is past the end of every one
+                if cline is None:
+                    continue
+                biggest = max(_line_count(root, p) for p in path)
+                if cline <= biggest:
+                    continue
+                rows.append({"doc": doc, "line": n, "cited": cited, "as_written": written, "path": None,
+                             "cited_line": cline, "total": biggest, "status": "past", "every": len(path)})
                 continue
             row = {"doc": doc, "line": n, "cited": cited, "as_written": written, "path": path,
                    "cited_line": cline, "total": None, "status": "ok"}
@@ -128,8 +138,13 @@ def scan(root, tracked, deadline=None, docs=None):
 
 def drift_line(r):
     cite = "%s:%d" % (r["cited"], r["cited_line"]) if r["cited_line"] is not None else r["cited"]
-    why = "gone" if r["status"] == "gone" else \
-        "line %d past the end, file has %d lines" % (r["cited_line"], r["total"])
+    if r["status"] == "gone":
+        why = "gone"
+    elif r.get("every"):
+        why = "line %d past the end of all %d files with that name, the longest has %d lines" % (
+            r["cited_line"], r["every"], r["total"])
+    else:
+        why = "line %d past the end, file has %d lines" % (r["cited_line"], r["total"])
     return "%s:%d  cites  %s  (%s)" % (r["doc"], r["line"], cite, why)
 
 
