@@ -1142,6 +1142,42 @@ def _loop_locate_prompt(start):
                         "directly inside it has a design-loop stage file, so nothing moved." % start)
 
 
+# #502: a reply button sends only its label ("Approve", or "Approve 1A 2B" when it carries picks).
+_LOOP_BUTTON_RE = re.compile(r"(?i)^\s*approve((?:\s+\d+[a-z*])*)\s*$")
+
+
+def _offered_lines(reply):
+    """#502: the clean approval lines a reply offers ("Design approved: X"), without picks or trailing text."""
+    out = set()
+    for rx, _ in _LOOP_STAGE_ORDER:
+        for m in rx.finditer(reply or ""):
+            head = m.group(0)[:m.start(1) - m.start(0)]
+            name = _loop_name(m.group(1))
+            out.add((head + name).strip())
+    return sorted(out)
+
+
+def handover_record_offers(payload, have_reply, reply_text, trace_lines):
+    """#502: remember which approval lines this reply offered, so a bare "Approve" button can be matched to one.
+    Only a real reply is recorded; the stage file is written only when the list changed."""
+    if not have_reply or not _loop_enabled():
+        return
+    try:
+        _top, _gd = _issues_locate(_payload_cwd(payload))
+        if not _gd or not os.path.isfile(_loop_path(_gd)):
+            return
+        _st, _pr = _loop_read(_gd)
+        if _pr:
+            raise OSError(_pr)
+        offered = _offered_lines(reply_text)
+        if _st.get("offered", []) != offered:
+            _st["offered"] = offered
+            _loop_write(_gd, _st)
+    except Exception as exc:
+        trace_lines.append("house-rules: the offered approval lines could not be recorded (%s: %s), so an "
+                           "Approve button may not be matched." % (type(exc).__name__, exc))
+
+
 def _loop_scope_note(payload):
     """scope's half: read aj's message, move the stage, say what happened. Never raises."""
     if not _loop_enabled():
@@ -1168,6 +1204,15 @@ def _loop_scope_note(payload):
         if problem:
             return problem
         before = json.dumps(state, sort_keys=True)
+        b = _LOOP_BUTTON_RE.match(text)
+        if b:
+            # #502: an Approve button sends only its label; the line it stands for is the one the last reply offered.
+            offered = state.get("offered") or []
+            if len(offered) != 1:
+                return ('Design loop: aj tapped "Approve", but the last reply offered %d approval lines (%s), so '
+                        "it is not clear which one, and nothing moved. Ask aj to type the line they mean."
+                        % (len(offered), "; ".join(offered) or "none"))
+            text = offered[0] + b.group(1)
         note = _loop_apply(state, text, top)
         if json.dumps(state, sort_keys=True) != before:
             _loop_write(git_dir, state)

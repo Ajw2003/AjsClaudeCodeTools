@@ -2521,4 +2521,42 @@ for _t, _ok in _wo_cases:
     report("PASS" if _ok else "FAIL", "approval word order (#501): " + _t)
 shutil.rmtree(_wo_root, True)
 
+# ---- #502: an "Approve" button sends only its label; it stands for the one line the last reply offered ----
+_bt_root = tempfile.mkdtemp(prefix="button-")
+_bt_cases = []
+_bt_n = [0]
+
+
+def _bt_run(reply, prompt):
+    _bt_n[0] += 1
+    d = _ma_repo(_bt_root, "b%d" % _bt_n[0])
+    os.makedirs(os.path.join(d, "docs", "6-decisions"), exist_ok=True)
+    with open(os.path.join(d, "docs", "6-decisions", "Decisions.md"), "w", encoding="utf-8") as f:
+        f.write("an entry\n")
+    if reply is not None:
+        run_hook("handover", stop_payload(last_assistant_message=reply, cwd=d), env=_loop_env)
+    note = _ma_say(d, prompt)
+    return note, _ma_stage(d)
+
+
+_n, _s = _bt_run("Here is the plan.\n\nDesign approved: X 1A\n\nReply with it to go on.", "Approve 1A")
+_n2, _s2 = _bt_run(None, "Design approved: X 1A")
+_bt_cases.append(("one offered line then 'Approve 1A' moves to Plan, feature X, and records the approval "
+                  "exactly as a typed 'Design approved: X 1A' does",
+                  _s["stage"] == "plan" and _s.get("feature") == "X" and "Design approved: X" in _n
+                  and [(a["stage"], a["name"]) for a in _s["approvals"]]
+                  == [(a["stage"], a["name"]) for a in _s2["approvals"]] and len(_s["approvals"]) == 1))
+_n, _s = _bt_run("Two ways.\n\nDesign approved: X\nBuild plan approved: Y\n", "Approve")
+_bt_cases.append(("two offered lines then 'Approve' moves nothing and the note says how many were offered",
+                  _s["stage"] == "design" and "offered 2 approval lines" in _n))
+_n, _s = _bt_run("Nothing to approve here.", "Approve")
+_bt_cases.append(("'Approve' when the last reply offered no line moves nothing and says why",
+                  _s["stage"] == "design" and "offered 0 approval lines" in _n))
+_n, _s = _bt_run(None, "approve")
+_bt_cases.append(("'Approve' with no reply ever recorded moves nothing and says why",
+                  _s["stage"] == "design" and "offered 0 approval lines" in _n))
+for _t, _ok in _bt_cases:
+    report("PASS" if _ok else "FAIL", "approve button (#502): " + _t)
+shutil.rmtree(_bt_root, True)
+
 finish()

@@ -6,7 +6,8 @@
     make_page.py style --draft [--from <tokens.json>] [--project <root>]
 
 Content JSON has the same keys as the template's PAGE block (title, eyebrow, approval,
-short, changes, choices, wrapup). A Changes item may carry `{"visual": true}` as a trailing object
+short, changes, choices, wrapup, and optionally `forRepo`: "owner/name", which marks a proposal for
+another repo's work so its approval line may be one this repo's design loop does not accept). A Changes item may carry `{"visual": true}` as a trailing object
 element (any position after the detail); it marks a visual change. The template ignores it. In a
 project whose style file says `"pictures": "required"`, such an item must also carry a picture
 (`{src, alt, caption}`) or a compare (`{before, after, caption}`) object, or the build refuses.
@@ -358,8 +359,14 @@ def check_approval(page):
     want = "QA passed: <feature>" if qa_page else "Design approved: <feature> or Build plan approved: <feature>"
     for text in (appr, appr + " 1A"):
         if not any(p.search(text) for p in pats):
-            if qa_page:
-                die("approval %r would not open the design-loop gate (checked %r); write it as %s" % (appr, text, want))
+            # #491: never offer aj a line that moves nothing. Exempt: a page for another repo's work (`forRepo`) and a
+            # summary page (`kind: summary`), which is a record and asks aj to approve nothing.
+            # A sweep page's "Sweep approved: issues" is read by the loop's sweep step, not the stage gate.
+            if qa_page or not (page.get("forRepo") or page.get("kind") == "summary"
+                               or appr.startswith("Sweep approved:")):
+                die("approval %r would not open the design-loop gate (checked %r); write it as %s%s"
+                    % (appr, text, want, "" if qa_page else " (a proposal for another repo's work names it in a "
+                       "'forRepo' field, \"owner/name\")"))
             # #309 (incident 7 of #303): any approval line builds. A proposal for another repo's work must not
             # carry a phrase that would move this repo's stage when aj sends it back.
             print("make_page: note - approval %r is not a design-loop phrase, so sending it back moves no stage "

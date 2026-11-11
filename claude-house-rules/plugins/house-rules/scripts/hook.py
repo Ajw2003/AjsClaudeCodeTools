@@ -90,7 +90,8 @@ from house_rules.writing import (  # noqa: F401
 #   safe_git      handover_commit_check
 #   writing       handover_turn_writes, handover_plain_check, handover_page_editor_check, handover_visual_check,
 #                 handover_long_reply
-#   design_loop   handover_stop_lines, handover_page_row, handover_checkpoints, handover_qa_retry
+#   design_loop   handover_stop_lines, handover_page_row, handover_checkpoints, handover_qa_retry,
+#                 handover_record_offers
 # ---------------------------------------------------------------------------------------
 
 def event_handover():
@@ -188,6 +189,7 @@ def event_handover():
             "(%s)." % commit_could_not_tell
         )
 
+    handover_record_offers(payload, have_reply, reply_text, trace_lines)
     long_words = handover_long_reply(payload, have_reply, reply_text)
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
     if not retry:
