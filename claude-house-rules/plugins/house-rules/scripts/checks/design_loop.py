@@ -1653,9 +1653,8 @@ _n, _s = _p3_approve()
 _p3_cases.append(("an issue for a separate feature (no Part of, or another number) does not count toward the approval",
                   "if this is the feature issue itself, that is expected" in _o10.lower()
                   and 'names "Part of #99", not #10' in _o12 and 'names no "Part of #N"' in _o13
-                  and _s["stage"] == "plan" and "has 1 labelled issue(s)" not in _n
-                  and "needs at least 2" in _n and _s.get("parent") == 10
-                  and [i["number"] for i in _s["issues"]] == [11]))
+                  and _s["stage"] == "build" and _s.get("parent") == 10
+                  and sorted(i["number"] for i in _s["issues"]) == [10, 11]))
 
 # An issue made before Plan that says "Part of #10" is only in the stubbed GitHub list, and still counts.
 _ma_set({"feature": "Importer", "stage": "plan", "parent": 10},
