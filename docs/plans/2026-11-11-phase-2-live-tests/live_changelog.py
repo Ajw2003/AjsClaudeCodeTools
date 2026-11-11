@@ -67,7 +67,7 @@ a = os.path.join(work, "with-changelog")
 repo(a, dict(tiers, **{"app.py": "x = 1\n", "CHANGELOG.md": "# Changelog\n\n## Unreleased\n"}))
 hooks = session(a, "skip design. Use the Edit tool to change app.py so it says x = 2. Then reply 'done.' "
                    "If a hook sends your reply back, do what it asks.")
-sent_back = [h for h in hooks if "- changelog:" in h and '"decision"' in h]  # the checkpoint row itself, not the word
+sent_back = [h for h in hooks if "changelog: Every change adds a line" in h]  # the checkpoint row's own rule text
 check("a turn that edited app.py without a changelog line was sent back by the changelog check", bool(sent_back),
       " | ".join(h[:200] for h in hooks if "Stop" in h)[:500])
 with open(os.path.join(a, "CHANGELOG.md")) as f:
