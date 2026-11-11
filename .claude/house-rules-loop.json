@@ -1,6 +1,6 @@
 {
   "feature": "Phase 2",
-  "stage": "build",
+  "stage": "qa",
   "skip": false,
   "approvals": [
     {
@@ -2392,5 +2392,6 @@
       "stage": "qa"
     }
   },
-  "qa_page": "docs/plans/2026-11-11-phase-2-qa.html"
+  "qa_page": "docs/plans/2026-11-11-phase-2-qa.html",
+  "qa_page_linked": true
 }
