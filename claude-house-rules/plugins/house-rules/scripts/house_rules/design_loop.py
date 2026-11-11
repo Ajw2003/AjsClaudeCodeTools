@@ -2831,11 +2831,12 @@ def _merge_cleanup(cwd, repo, number):
                     continue  # not merged: still somebody's work, not named
                 elif not git(main, ["branch", "-r", "--contains", tip])[1].strip():
                     why = "its commits are not on any remote branch"
-            if not why and git(w["path"], ["status", "--porcelain"])[1].strip():
-                why = "it has uncommitted changes"
+            # Recency first: `git status` below can rewrite the index and make an idle copy look just used.
             if not why and w["branch"] != ref and _worktree_recent(git, w["path"]):
                 why = "it was used in the last %d minutes, so a helper may still be working in it" % (
                     CLEANUP_IDLE_SECONDS // 60)
+            if not why and git(w["path"], ["status", "--porcelain"])[1].strip():
+                why = "it has uncommitted changes"
             if not why:
                 rc, _o, err = git(main, ["worktree", "remove", w["path"]])
                 if rc == 0:
