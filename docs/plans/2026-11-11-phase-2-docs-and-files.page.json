@@ -5,7 +5,7 @@
   "replyPrefix": "Design approved: Phase 2",
   "reply": "",
   "short": {
-    "lead": "Before another account can pick up where a session stopped (phase 3), the record of where it stopped has to be right. This phase makes every session end with the docs agreeing with the code, a changelog line for what changed, merged branches and finished helper copies cleaned up once their work is safe on GitHub, and no big generated files reaching git. I checked the 17 old issues this phase carries against the code on 2026-11-11. Five are already built and only need proof, and the other 12 are covered by the changes below. One part needs your PC: why PlunderSpell's folders take over 153 GB.",
+    "lead": "Before another account can pick up where a session stopped (phase 3), the record of where it stopped has to be right. This phase makes every session end with the docs agreeing with the code and a changelog line for what changed. Merged branches and finished helper copies are cleaned up once their work is safe on GitHub, and no big generated files reach git. I checked the 17 old issues this phase carries against the code on 2026-11-11. Five are already built and only need proof, and the other 12 are covered by the changes below. One part needs your PC: why PlunderSpell's folders take over 153 GB.",
     "hint": "Tap an item to see what it creates and what it needs from you.",
     "key": [["We work on it", ""], ["You act on it", "you"]],
     "items": [
@@ -57,7 +57,7 @@
     ["new", "Big generated files never reach git, and disk use is visible",
       "A commit that adds a large or generated file is refused, and session start reports where the disk went (choice 4).",
       null,
-      "The guard refuses a commit adding a file over a size limit (a starting value of 50 MB, to be tuned) or a file inside a folder a game engine or build regenerates (Unity's Library/, Temp/, obj/, Builds/, node_modules/) when .gitignore does not cover it, and names the .gitignore line to add. Session start reports the size of each helper worktree and generated folder when they pass a starting threshold of 5 GB.",
+      "The guard refuses a commit that adds a file over a size limit, with a starting value of 50 MB to be tuned. It also refuses a file inside a folder a game engine or build regenerates (Unity's Library/, Temp/, obj/, Builds/, node_modules/) when .gitignore does not cover it. Each refusal names the .gitignore line to add. Session start reports the size of each helper worktree and generated folder when they pass a starting threshold of 5 GB.",
       ["Nothing stops a generated folder being committed, and nothing reports disk use.",
        "The commit is refused with the fix named, and session start names the big folders.",
        "PlunderSpell's 153 GB is explained on your PC, and the cause can't grow back unnoticed."]],
