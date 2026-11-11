@@ -3312,4 +3312,75 @@ for _t, _ok in _bf_cases:
     report("PASS" if _ok else "FAIL", "big files (#511): " + _t)
 
 
+# ---- #514: proof for old issues already built ----
+_pf14 = []
+_pf14_guard = lambda repo, cmd: run_hook("guard", json.dumps({"session_id": "verify", "cwd": repo, "tool_name": "Bash",
+                                                              "tool_input": {"command": cmd}}), env=_project_env(repo))[1]
+_pf14_refused = lambda out: '"permissionDecision":"ask"' in out or '"permissionDecision":"deny"' in out
+_pf14_deny = lambda out: '"permissionDecision":"deny"' in out
+
+# #199: a commit on an AjsAgent/ branch is let through; a commit on main is refused at once.
+_pf14_a = _commit_repo("AjsAgent/x", committed=["a.py"], dirty=["a.py"])
+_pf14_m = _commit_repo("main", committed=["a.py"], dirty=["a.py"])
+_pf14.append(("proof (#514) #199: a commit on AjsAgent/x goes through with no prompt, a commit on main is refused at once",
+              not _pf14_refused(_pf14_guard(_pf14_a, 'git commit -am "x"')) and _pf14_deny(_pf14_guard(_pf14_m, 'git commit -am "x"'))))
+
+# #399: rclink is registered, in the hook table, and work-tracking.md says built.
+_pf14_hooks = read(os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "hooks", "hooks.json"))
+_pf14_arch = read(os.path.join(ROOT, "docs", "architecture.md"))
+_pf14_wt = read(os.path.join(ROOT, "docs", "4-systems", "work-tracking.md"))
+_pf14.append(("proof (#514) #399: rclink is in hooks.json and the hook table, and work-tracking.md says built",
+              'run.sh\\" rclink' in _pf14_hooks and "| `PostToolUse` | `rclink` |" in _pf14_arch
+              and "Status: **built**" in _pf14_wt))
+
+# #404: the gap fixes it documented: the credit guard refuses a session link, and the docs name the fixes.
+_pf14_c = _commit_repo("AjsAgent/link", committed=["a.py"], dirty=["a.py"])
+_pf14_guards = read(os.path.join(ROOT, "docs", "4-systems", "guards.md"))
+_pf14_link = "https://claude" + ".ai/code/session_abc123"
+_pf14.append(("proof (#514) #404: a commit message with a session link is refused, and the docs describe the gap fixes",
+              _pf14_refused(_pf14_guard(_pf14_c, 'git commit -am "x %s"' % _pf14_link))
+              and "Gap fixes after the first QA" in _pf14_wt and "No claude.ai links in git (#405)" in _pf14_guards))
+
+# #479 U4: rm -r of a git-ignored node_modules goes through; of a tracked folder with uncommitted work it is refused.
+_pf14_r = _commit_repo("AjsAgent/del", committed=["src/a.py", ".gitignore"])
+with open(os.path.join(_pf14_r, ".gitignore"), "w", encoding="utf-8") as _f:
+    _f.write("node_modules/\n")
+subprocess.run(["git", "-C", _pf14_r, "-c", "user.name=v", "-c", "user.email=v@example.invalid", "commit", "-qam", "ign"], check=True)
+os.makedirs(os.path.join(_pf14_r, "node_modules", "p"))
+open(os.path.join(_pf14_r, "node_modules", "p", "i.js"), "w").write("1")
+open(os.path.join(_pf14_r, "src", "a.py"), "w").write("edited, not committed\n")
+_pf14.append(("proof (#514) #479 U4: rm -r of a git-ignored node_modules goes through, rm -r of a tracked source folder with uncommitted work is refused",
+              not _pf14_refused(_pf14_guard(_pf14_r, "rm -r node_modules")) and _pf14_refused(_pf14_guard(_pf14_r, "rm -r src"))))
+
+# #479 U1: "Continue from: <branch>" and "Issues for <feature>: #N" in aj's own message are understood.
+_u1_say("Continue from: AjsAgent/old")
+_pf14_s1 = _u1_state()
+with open(os.path.join(_u1_dir, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as _f:
+    json.dump(dict(_pf14_s1, stage="plan", issues=[]), _f)
+_u1_say("Issues for login: o/r#41 o/r#42")
+_pf14_nums = sorted(i.get("number") for i in _u1_state().get("issues", []))
+_pf14.append(("proof (#514) #479 U1: Continue from copies the other branch's stage, and Issues for records the named issues",
+              _pf14_s1.get("feature") == "login" and _pf14_s1.get("stage") == "build" and _pf14_nums == [41, 42]))
+
+# #479 U2b: an issue created with gh api is recorded.
+_pf14_got = _u2b_dl._created_issue({"tool_name": "Bash", "tool_input": {"command": "gh api repos/o/r/issues -f title=t"},
+                                    "tool_response": {"stdout": "https://github.com/o/r/issues/9"}})
+_pf14.append(("proof (#514) #479 U2b: an issue created with gh api repos/o/r/issues -f title=t is recorded",
+              bool(_pf14_got) and len(_pf14_got[0]) == 1))
+
+# #463: "I went with option B" is sent back; a question in Build sets the hold.
+_pf14_root = tempfile.mkdtemp(prefix="pf14-", dir=_FIXTURE_ROOT)
+_loop_gh("in progress", 7)
+_p5_root, _p5_old = _pf14_root, _p5_root
+_d = _p5_repo(_hq_build)
+run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
+_pf14_held = _ma_stage(_d).get("held") is True
+_p5_root = _p5_old
+_pf14.append(("proof (#514) #463: 'I went with option B' is sent back as decided for you, and a question in Build sets the hold",
+              _hq_stop("I went with option B for the layout.", False) and _pf14_held))
+
+for _t, _ok in _pf14:
+    report("PASS" if _ok else "FAIL", _t)
+
+
 finish()
