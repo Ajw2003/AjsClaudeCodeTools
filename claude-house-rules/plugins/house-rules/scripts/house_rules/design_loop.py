@@ -1309,6 +1309,15 @@ def _offered_lines(reply):
     return sorted(out)
 
 
+def _asks_aj(reply):
+    """#459: True when a reply asks aj something. Conservative: the last paragraph, outside code fences, ends
+    with a question mark."""
+    text = _MD_FENCED_BLOCK_RE.sub("", reply or "").strip()
+    if not text:
+        return False
+    return text.split("\n\n")[-1].rstrip().endswith("?")
+
+
 def handover_record_offers(payload, have_reply, reply_text, trace_lines):
     """#502: remember which approval lines this reply offered, so a bare "Approve" button can be matched to one.
     Only a real reply is recorded; the stage file is written only when the list changed."""
@@ -1322,8 +1331,14 @@ def handover_record_offers(payload, have_reply, reply_text, trace_lines):
         if _pr:
             raise OSError(_pr)
         offered = _offered_lines(reply_text)
-        if _st.get("offered", []) != offered:
+        changed = _st.get("offered", []) != offered
+        if changed:
             _st["offered"] = offered
+        # #459: a reply in Build that asks aj something holds code edits until aj's next message
+        if _st.get("stage") == "build" and _asks_aj(reply_text) and not _st.get("held"):
+            _st["held"] = True
+            changed = True
+        if changed:
             _loop_write(_gd, _st)
     except Exception as exc:
         trace_lines.append("house-rules: the offered approval lines could not be recorded (%s: %s), so an "
@@ -1356,6 +1371,8 @@ def _loop_scope_note(payload):
         if problem:
             return problem
         before = json.dumps(state, sort_keys=True)
+        if state.get("held"):
+            state["held"] = False  # #459: aj's next real message answers the held question
         b = _LOOP_BUTTON_RE.match(text)
         if b:
             # #502: an Approve button sends only its label; the line it stands for is the one the last reply offered.
@@ -1389,8 +1406,8 @@ def _loop_helper_note(payload):
     return (
         "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
         "build plan; you never design, change the plan, or approve anything - an approval only counts from "
-        "aj's own message. Anything unexpected comes back to the main session, not into the code. Code edits "
-        "are refused outside Build." % (
+        "aj's own message. Anything unexpected is a question for aj: the main session puts it on a page and "
+        "does not answer it. Code edits are refused outside Build." % (
             '"%s"' % state["feature"] if state.get("feature") else "not started",
             LOOP_STAGE_NAMES[state["stage"]],
             "; its issues are %s" % issues if issues else ""))
@@ -1450,6 +1467,9 @@ def _loop_gate(payload):
             return hold, None
     if script and state["stage"] == "build":
         return None, None  # Build: nothing changes for shell commands
+    if state["stage"] == "build" and state.get("held"):
+        return ("House rules, design loop: the last reply asked aj a question, so code edits wait for their "
+                "answer."), None
     if state["stage"] == "build":
         labels, src = _loop_labels(state, record=False)
         if src:  # D9: GitHub could not be read, and the record of an old branch is not evidence
@@ -2404,6 +2424,19 @@ def _record_qa_link(ctx):
     return True
 
 
+_DECIDED_RE = re.compile(r"(?i)\bI (?:went with|chose|picked|decided on|settled on)\b")
+
+
+def _check_decided(ctx):
+    """#460: a reply that settles a design point on its own is sent back once."""
+    text = _MD_FENCED_BLOCK_RE.sub("", ctx.get("reply") or "")
+    for line in text.split("\n"):
+        if not line.lstrip().startswith(">") and _DECIDED_RE.search(line):
+            return ("a design point is aj's to decide; put the choice to aj as options with one marked as the "
+                    "suggestion instead of saying \"I went with ...\"")
+    return ""
+
+
 def _check_qa_page(ctx):
     """#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not
     skipped by "no page": a QA page is mandatory."""
@@ -2426,6 +2459,7 @@ CHECKPOINTS = [
     ("reply ends", "handoff", _check_handoff, "block"),
     ("reply ends", "plain summary", _check_plain, "block"),
     ("reply ends", "qa page", _check_qa_page, "block"),
+    ("reply ends", "decided for you", _check_decided, "block"),
 ]
 
 
@@ -2436,6 +2470,7 @@ CHECKPOINT_RULES = {
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "handoff": "A turn that wrote files is pushed, with a fresh clean handoff note and Today.md updated.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
+    "decided for you": "Design points are aj's to decide; a reply puts them as options, not as \"I went with ...\".",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
 

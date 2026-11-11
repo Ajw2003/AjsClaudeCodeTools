@@ -2738,4 +2738,47 @@ for _t, _ok in _p5_cases:
     report("PASS" if _ok else "FAIL", "last four ways around the lock (#505): " + _t)
 shutil.rmtree(_p5_root, True)
 
+# ---- #459, #460: a question to aj holds code edits; a design point is not decided for aj ----
+_hq_root = tempfile.mkdtemp(prefix="held-")
+_hq_cases = []
+_loop_gh("in progress", 7)
+_hq_build = {"feature": "F", "stage": "build", "issues": [{"repo": "o/r", "number": 7, "labelled": True}],
+             "approvals": [{"stage": "Build plan approved", "name": "F", "at": 1000}]}
+_p5_root, _p5_old = _hq_root, _p5_root
+_d = _p5_repo(_hq_build)
+_hq_cases.append(("a Build edit is allowed before any question", _p5_edit(_d)[0] == "allow"))
+run_hook("handover", stop_payload(last_assistant_message="Step done.", cwd=_d), env=_loop_env)
+_hq_cases.append(("a Build reply with no question holds nothing", not _ma_stage(_d).get("held") and _p5_edit(_d)[0] == "allow"))
+run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
+_dec, _why = _p5_edit(_d)
+_hq_cases.append(("a Build reply ending with a question to aj sets held and the next code edit is refused with the note",
+                  _ma_stage(_d).get("held") is True and _dec == "deny"
+                  and "the last reply asked aj a question, so code edits wait for their answer." in _why))
+_ma_say(_d, "[Subagent hand-back] The builder finished.")
+_hq_cases.append(("a helper hand-back does not clear it", _ma_stage(_d).get("held") is True and _p5_edit(_d)[0] == "deny"))
+_ma_say(_d, "Blue, please.")
+_hq_cases.append(("aj's next real message clears it and the edit is allowed",
+                  not _ma_stage(_d).get("held") and _p5_edit(_d)[0] == "allow"))
+_d = _p5_repo(dict(_hq_build, stage="design"))
+run_hook("handover", stop_payload(last_assistant_message="Which one?", cwd=_d), env=_loop_env)
+_hq_cases.append(("a question outside Build holds nothing", not _ma_stage(_d).get("held")))
+_p5_root = _p5_old
+
+
+def _hq_stop(reply, active):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=_loop_dir,
+                                                  stop_hook_active=active, session_id="verify-decided"), env=_loop_env)
+    return "decided for you" in out
+
+
+_hq_cases.append(('"I went with option B for the layout." is sent back once',
+                  _hq_stop("I went with option B for the layout.", False)))
+_hq_cases.append(("the retry (stop_hook_active) passes", not _hq_stop("I went with option B for the layout.", True)))
+_hq_cases.append(("a quoted line or a code fence does not fire",
+                  not _hq_stop("> I went with option B\n\n```\nI chose x\n```", False)))
+_hq_cases.append(("a reply that deals in options does not fire", not _hq_stop("Option A or B? I suggest A.", False)))
+for _t, _ok in _hq_cases:
+    report("PASS" if _ok else "FAIL", "held question and decided-for-you (#459, #460): " + _t)
+shutil.rmtree(_hq_root, True)
+
 finish()
