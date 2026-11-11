@@ -7,6 +7,23 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-11 - Phase 1 passed QA
+
+**Context.** Phase 1 (#493) was built as plugin 2.78.0 on `AjsAgent/session-handoff`, steps #501 to #507, after
+"Build plan approved: Phase 1 1A 2A" (D6: a new design name starts a new feature and keeps the old one; D9: an
+older branch's stage holds code edits). aj could not run the QA themselves, so it was run here:
+`verify.py` 1135/1135, `tools/verify_tools.py` 52/52, 14 of 14 real headless sessions through the whole loop, and
+6 of 6 real-git branch and merge checks (`docs/plans/2026-11-11-phase-1-live-tests/`).
+
+**Decision.** aj wrote "QA passed: Phase 1" on the QA page `docs/plans/2026-11-11-phase-1-qa.html`.
+
+**Not proven.** Windows, the app's real Approve button, and the close-line offer after a real merge.
+
+**Status.** QA passed; the stage is Done. Merging to `main` waits on aj, because this branch also carries the
+session handoff work (#406), whose own QA is still open.
+
+---
+
 ## 2026-11-10 - Phase 1: approvals and the design loop just work
 
 **Context.** On 2026-11-09 five of aj's approvals moved nothing: two typed lines with the feature name first, a
