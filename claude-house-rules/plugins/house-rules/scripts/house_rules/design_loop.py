@@ -2934,7 +2934,9 @@ def event_closablemerge():
                 notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (
                     repo, number, why or "it links none of the QA-passed issues with `Refs #N`"))
             stamp_trace = "house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit))
-        if state.get("stage") == "qa":  # U3: the merge never moves the stage; aj is asked for the verdict
+        # U3: the merge never moves the stage; aj is asked for the verdict. On the default branch a QA stage file
+        # already reads as Done (_loop_read_merged), so asking there would be noise.
+        if state.get("stage") == "qa" and _loop_branch(git_dir) not in _loop_default_branches(git_dir):
             notes.append('Design loop: pull request %s#%d merged while "%s" is in QA, so the stage file still '
                          'says QA. Ask aj for "QA passed: %s" or "QA failed: %s"; the stage moves only on their word.'
                          % ((repo, number) + (state.get("feature") or "this feature",) * 3))

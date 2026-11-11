@@ -1383,6 +1383,13 @@ _cu_git(_d, "checkout", "-q", "feat")
 _o = _cu_run(_d, _cu_git(_d, "rev-parse", "main"), ref="main")
 _cu_cases.append(("a pull request whose head is main never deletes the local main branch",
                   _cu_has(_d, "main") and "branch main (the default branch is never deleted)" in _o))
+_d, _tip = _cu_repo()
+os.makedirs(os.path.join(_d, ".claude"), exist_ok=True)
+json.dump({"feature": "old thing", "stage": "qa", "skip": False, "approvals": []},
+          open(os.path.join(_d, ".claude", "house-rules-loop.json"), "w"))
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("U3: on main, a merge does not ask for a QA verdict for the stage file's old feature",
+                  "is in QA" not in _o and "Deleted after the merge" in _o))
 for _t, _ok in _cu_cases:
     report("PASS" if _ok else "FAIL", "#510 cleanup: " + _t)
 
