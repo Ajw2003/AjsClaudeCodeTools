@@ -1,4 +1,12 @@
-# Today — 2026-11-08
+# Today — 2026-11-11
+
+Roadmap phase 1, "approvals and the design loop just work", plugin 2.78.0 (issue #493, steps #501 to #507), on the
+branch `AjsAgent/session-handoff`. Approvals may put the feature name first ("Phase 1 design approved 1A") and work
+in cloud sessions; a "don't" before one stops it; a bare "Approve" button sends the one line the last reply
+offered; a build plan approval reads the feature's issues from GitHub; "QA failed" sends the feature back to Build
+in one message; four ways around the code lock are closed; a question to aj holds code edits until aj answers;
+"I went with ..." is sent back once; after QA passed and the merge, the close line is offered; the label line is
+said once. Built, `verify.py` 1135/1135 PASS; waiting on aj's QA.
 
 Session handoff, plugin 2.77.0 (issue #406, steps #486, #487, #407, #408, #409, #410), on the branch
 `AjsAgent/session-handoff`. Work now survives a usage limit or a switch of Claude account. After each

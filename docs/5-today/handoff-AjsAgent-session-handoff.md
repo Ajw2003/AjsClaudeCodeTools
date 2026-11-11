@@ -5,7 +5,16 @@
 Session handoff (issue #406): a session's work is saved as it happens and picked up by the next
 session, whatever the Claude account or folder, so nothing is lost or left half done.
 
-## Where it stands
+## Phase 1, 2026-11-11 (built, waiting on aj's QA)
+
+Roadmap phase 1 (#493, "approvals and the design loop just work") is built on this branch as plugin 2.78.0,
+steps #501 to #507, after the build plan was approved as "Build plan approved: Phase 1 1A 2A". The session that
+started it on aj's PC was cut off by an account switch before any code was written; a cloud session built all
+seven steps on 2026-11-11. `verify.py` 1135/1135 PASS, `tools/verify_tools.py` 52/52 PASS. What each step does is
+in `docs/3-state/ProjectState.md` and `docs/4-systems/design-loop.md`. Next: aj's QA from the phase 1 QA page;
+the usage-handoff QA below is still owed too.
+
+## Where it stood on 2026-11-09 (usage handoff)
 
 All six steps are built and merged on this branch, plugin 2.77.0: #486 automatic save, #487 save at
 turn end and on a usage-limit stop, #407 end-of-reply check, #408 pickup, #409 quoted approvals,
@@ -41,4 +50,4 @@ aj's QA: install 2.77.0 from this branch, then run the two-account test from the
 
 ## Issues
 
-#406 (parent), #486, #487, #407, #408, #409, #410.
+#406 (parent), #486, #487, #407, #408, #409, #410. Phase 1: #493 (parent), #501 to #507.
