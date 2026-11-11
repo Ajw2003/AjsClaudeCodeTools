@@ -275,7 +275,7 @@ const PAGE = {
   "replyPrefix": "Design approved: Phase 2",
   "reply": "",
   "short": {
-    "lead": "Before another account can pick up where a session stopped (phase 3), the record of where it stopped has to be right. This phase makes every session end with the docs agreeing with the code and a changelog line for what changed. Merged branches and finished helper copies are cleaned up once their work is safe on GitHub, Big files reach git through Git LFS (Large File Storage), and folders a build regenerates stay out. I checked the 17 old issues this phase carries against the code on 2026-11-11. Five are already built and only need proof, and the other 12 are covered by the changes below. One part needs your PC: why PlunderSpell's folders take over 153 GB.",
+    "lead": "Before another account can pick up where a session stopped (phase 3), the record of where it stopped has to be right. This phase makes every session end with the docs agreeing with the code and a changelog line for what changed. Merged branches and finished helper copies are cleaned up once their work is safe on GitHub. Big files reach git through Git LFS (Large File Storage), and folders a build regenerates stay out. I checked the 17 old issues this phase carries against the code on 2026-11-11. Five are already built and only need proof, and the other 12 are covered by the changes below. One part needs your PC: why PlunderSpell's folders take over 153 GB.",
     "hint": "Tap an item to see what it creates and what it needs from you.",
     "key": [
       [
@@ -319,7 +319,7 @@ const PAGE = {
         "Unknown",
         "Why PlunderSpell takes 153 GB",
         "",
-        "Not measured: that folder is on your PC, and this cloud session was refused access to the PlunderSpell repo. The likeliest cause is helper copies (git worktrees) that are never removed: this session alone made 6 of them in this repo. Each is a full checkout, and in a Unity project each copy can also grow its own Library folder of generated files. The new disk report (choice 4) measures it on your PC at the next session start, with no command for you to run.",
+        "Not measured: that folder is on your PC, and this cloud session was refused access to the PlunderSpell repo. The likeliest cause is helper copies (git worktrees) that are never removed: this session alone made 6 of them in this repo. Each is a full checkout, and in a Unity project each copy can also grow its own Library folder of generated files. The new disk report (choice 4 below) measures it on your PC at the next session start, with no command for you to run.",
         "Nothing now; the first session on PlunderSpell after this ships shows the numbers."
       ],
       [
@@ -382,7 +382,7 @@ const PAGE = {
       "Big files go through Git LFS, generated folders stay out, and disk use is visible",
       "A big file is committed through Git LFS, never as a plain git file; a generated folder never reaches git; session start reports where the disk went (choice 4).",
       null,
-      "Git LFS keeps a small pointer in git and stores the file itself separately, so big assets such as textures, models and audio are versioned without bloating every clone. The guard refuses a commit that adds a file over a size limit (a starting value of 50 MB, to be tuned) as a plain git file, and names the `git lfs track` line that sends it through LFS instead. It also refuses a file inside a folder a game engine or build regenerates (Unity's Library/, Temp/, obj/, Builds/, node_modules/) when .gitignore does not cover it, and names the .gitignore line to add. Session start reports the size of each helper worktree and generated folder when they pass a starting threshold of 5 GB.",
+      "Git LFS keeps a small pointer in git and stores the file itself separately, so big assets such as textures, models and audio are versioned without bloating every clone. The guard refuses a commit that adds a plain git file over a size limit (a starting value of 50 MB, to be tuned). It names the `git lfs track` line that sends the file through LFS instead. The guard also refuses a file inside a folder that a game engine or build regenerates (Unity's Library/, Temp/, obj/, Builds/, node_modules/) when .gitignore does not cover it, and names the .gitignore line to add. Session start reports the size of each helper worktree and generated folder that passes a starting threshold of 5 GB.",
       [
         "Nothing checks whether a big file goes through LFS or a generated folder is committed, and nothing reports disk use.",
         "Big files are versioned through LFS, generated folders stay out, and session start names the big folders.",
@@ -425,7 +425,7 @@ const PAGE = {
       "Risk: Git LFS storage and install",
       "Two things could get in the way of LFS; both are named here, not yet measured.",
       null,
-      "First, GitHub limits free Git LFS storage and download bandwidth per account, and the current limits were not checked here. A repo with many gigabytes of assets could pass them, and going further costs money. Second, git-lfs must be installed on every machine that clones the repo. It is installed in this cloud session (git-lfs 3.4.1); your PC is not checked. The build plan measures PlunderSpell's real asset sizes against the current limit before anything is moved to LFS, and the refusal message says how to install git-lfs when it is missing. Files already in plain git history stay where they are; moving them is a separate decision for you."
+      "First, GitHub limits free Git LFS storage and download bandwidth per account, and the current limits were not checked here. A repo with many gigabytes of assets could pass them, and going further costs money. Second, git-lfs must be installed on every machine that clones the repo. It is installed in this cloud session (git-lfs 3.4.1); your PC is not checked. The build plan measures PlunderSpell's real asset sizes against the current limits before anything is moved to LFS, and the refusal message says how to install git-lfs when it is missing. Files already in plain git history stay where they are; moving them is a separate decision for you."
     ]
   ],
   "choices": [
@@ -500,7 +500,7 @@ const PAGE = {
           "B",
           "A warning only; the commit goes through",
           0,
-          "Never blocks, but one missed warning puts the file into plain git history, where moving it to LFS later means rewriting history."
+          "Never blocks the commit, but one missed warning puts the file into plain git history."
         ]
       ],
       "A: once a big file is pushed as a plain git file, moving it to LFS means rewriting history, so catching it first is the cheap fix."
