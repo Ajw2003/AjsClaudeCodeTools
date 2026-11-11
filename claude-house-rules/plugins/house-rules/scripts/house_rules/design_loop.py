@@ -462,12 +462,10 @@ def _loop_path(git_dir):
 
 
 def _loop_read(git_dir):
-    """(state, problem). No file means a project that has not started a feature: Design. The old
-    place, LOOP_FILE in the git directory, is read until the next write moves it."""
+    """(state, problem). No file means a project that has not started a feature: Design. D3: the old
+    place, LOOP_FILE in the git directory, is no longer read, so a file written there opens nothing."""
     fresh = {"feature": "", "stage": "design", "skip": False, "approvals": []}
     path = _loop_path(git_dir)
-    if not os.path.isfile(path):
-        path = os.path.join(_loop_dir(git_dir), LOOP_FILE)
     if not os.path.isfile(path):
         return fresh, None
     try:
@@ -478,11 +476,82 @@ def _loop_read(git_dir):
     except (OSError, ValueError) as exc:
         return None, ("house-rules: could not read %s (%s), so the design-loop lock is off for this call."
                       % (LOOP_FILE, exc))
-    return dict(fresh, **data), None
+    state = dict(fresh, **data)
+    _loop_note_seen(git_dir, state)
+    return state, None
 
 
 def _loop_write(git_dir, state):
     _write_atomic(_loop_path(git_dir), json.dumps(state))
+    _loop_note_seen(git_dir, state)
+
+
+SEEN_FILE = "house-rules-loop-seen.json"
+
+
+def _loop_branch(git_dir):
+    """D9/U3: the branch this git directory has checked out, read from its HEAD file (no git process on
+    every edit). "" for a detached HEAD or an unreadable file."""
+    m = re.match(r"ref:\s*refs/heads/(\S+)", _read_text(os.path.join(git_dir, "HEAD")).strip())
+    return m.group(1) if m else ""
+
+
+def _loop_newest(state):
+    """The `at` of the newest approval a stage file records (0 when there is none)."""
+    return max([a["at"] for a in state.get("approvals") or []
+                if isinstance(a, dict) and isinstance(a.get("at"), int)] or [0])
+
+
+def _loop_seen(git_dir):
+    """D9: the clone-wide record of the newest approval seen, in the common git directory: {} when none."""
+    try:
+        with open(os.path.join(_loop_dir(git_dir), SEEN_FILE), "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) and isinstance(data.get("at"), int) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _loop_note_seen(git_dir, state):
+    """D9: record this branch's newest approval when it is newer than the one on record. A failed write
+    is reported on stderr, never silent."""
+    at = _loop_newest(state)
+    if at and at > (_loop_seen(git_dir).get("at") or 0):
+        try:
+            _write_atomic(os.path.join(_loop_dir(git_dir), SEEN_FILE), json.dumps(
+                {"at": at, "branch": _loop_branch(git_dir), "feature": state.get("feature") or ""}))
+        except OSError as exc:
+            sys.stderr.write("house-rules: could not record the newest approval seen (%s).\n" % exc)
+
+
+def _loop_stale_hold(git_dir, state):
+    """D9: a refusal when this branch's newest approval is OLDER than the newest recorded from a different
+    branch (an old branch checked out brings back its older stage), else None."""
+    seen, here = _loop_seen(git_dir), _loop_branch(git_dir)
+    if seen and seen.get("branch") and seen["branch"] != here and _loop_newest(state) < seen["at"]:
+        return ("House rules, design loop: this branch's stage (%s, branch \"%s\") is older than the newest "
+                "approval in this clone, which was given on branch \"%s\", so code edits stay closed. Write "
+                "\"Continue from: %s\" to take that branch's stage, or approve anew on this branch."
+                % (LOOP_STAGE_NAMES[state["stage"]], here or "detached HEAD", seen["branch"], seen["branch"]))
+    return None
+
+
+def _loop_default_branches(git_dir):
+    """U3: the default branch names: origin/HEAD's target when the common git directory has it (a loose ref;
+    packed-refs cannot hold a symbolic ref), else main and master."""
+    m = re.match(r"ref:\s*refs/remotes/origin/(\S+)",
+                 _read_text(os.path.join(_loop_dir(git_dir), "refs", "remotes", "origin", "HEAD")).strip())
+    return {m.group(1)} if m else {"main", "master"}
+
+
+def _loop_read_merged(git_dir):
+    """U3: _loop_read, except that on the default branch a feature in QA reads as Done (its pull request
+    merged and main carries the branch's stage file). Nothing is written. Used by the gate, the stop line
+    and the approvals; a write after it saves "done" only when an approval moved the state."""
+    state, problem = _loop_read(git_dir)
+    if state and state["stage"] == "qa" and _loop_branch(git_dir) in _loop_default_branches(git_dir):
+        state = dict(state, stage="done")
+    return state, problem
 
 
 # A9: commands that only read a file, and the git steps that save it. Anything else naming the stage file is refused.
@@ -960,15 +1029,18 @@ def _loop_apply_stage(state, text, top):
     return " ".join(n for n in notes if n)
 
 
-def _loop_keep_feature(state, feature, stage):
+def _loop_keep_feature(state, feature, stage, any_stage=False):
     """#375: a new design approval replaces `feature`. If it is in build or QA and has recorded issues,
     keep them under state["features"][name.lower()] so its own "QA passed" still has them. A feature in
-    design, plan or done, or one with no issues, has nothing to keep."""
+    design, plan or done, or one with no issues, has nothing to keep. D6: any_stage keeps it in design or
+    plan too (a different design name starts a new feature on purpose); a done one is still not kept."""
     issues = [dict(i) for i in state.get("issues", []) if isinstance(i, dict)]
-    if feature and stage in ("build", "qa") and issues:
+    if feature and (stage in ("build", "qa") or (any_stage and stage != "done")) and issues:
         if not isinstance(state.get("features"), dict):
             state["features"] = {}
         state["features"][feature.lower()] = {"name": feature, "issues": issues, "stage": stage}
+        if any_stage and state.get("parent"):  # D6: the kept feature keeps its "Part of #N"
+            state["features"][feature.lower()]["parent"] = state["parent"]
 
 
 def _loop_stored(state, name):
@@ -1083,6 +1155,10 @@ def _loop_apply_one(state, text, top):
                 state.pop("qa_page", None); state.pop("qa_page_linked", None)  # the amended build gets a new QA page
             elif not redo:
                 _loop_keep_feature(state, feature, stage)  # #375: a feature in build or QA keeps its issues
+                if feature and not _loop_same(name, feature) and stage != "done":
+                    # D6: a different name starts a new feature on purpose; the old one is kept in any stage
+                    _loop_keep_feature(state, feature, stage, any_stage=True)
+                    issues_note = ' This starts a new feature; "%s" is kept with its issues.' % feature
                 state["issues"] = []
                 state.pop("parent", None)  # a new feature's issues name a new "Part of #N"
                 state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: not the next feature's
@@ -1267,7 +1343,7 @@ def _loop_scope_note(payload):
         top, git_dir, missed = _loop_locate_prompt(_payload_cwd(payload))
         if not git_dir:
             return missed if _loop_any_phrase(text) else ""
-        state, problem = _loop_read(git_dir)
+        state, problem = _loop_read_merged(git_dir)
         if problem:
             return problem
         before = json.dumps(state, sort_keys=True)
@@ -1319,7 +1395,7 @@ def _loop_stop_line(payload):
     _, git_dir = _issues_locate(_payload_cwd(payload))
     if not git_dir:
         return None, None
-    state, problem = _loop_read(git_dir)
+    state, problem = _loop_read_merged(git_dir)
     if problem:
         return None, problem
     stage = state["stage"]
@@ -1356,9 +1432,13 @@ def _loop_gate(payload):
         script = bool(git_dir)
     if not git_dir:
         return None, problem
-    state, problem = _loop_read(git_dir)
+    state, problem = _loop_read_merged(git_dir)
     if problem:
         return None, problem
+    if state["stage"] == "build" or state.get("skip"):
+        hold = _loop_stale_hold(git_dir, state)  # D9: an older branch's stage never reopens code on its own
+        if hold:
+            return hold, None
     if script and state["stage"] == "build":
         return None, None  # Build: nothing changes for shell commands
     if state["stage"] == "build":

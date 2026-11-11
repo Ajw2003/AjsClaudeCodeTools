@@ -929,8 +929,8 @@ _stage_sh = _wt_bash("echo '{}' > .claude/house-rules-loop.json")[0]
 _leg = tempfile.mkdtemp(prefix="house-rules-legacy-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _leg], check=True)
 with open(os.path.join(_leg, ".git", "house-rules-loop.json"), "w") as _f:
-    json.dump({"feature": "old", "stage": "design", "skip": False, "approvals": []}, _f)
-_leg_a = _wt_gate("Edit", {"file_path": os.path.join(_leg, "app.py")}, _leg)[0]  # Design: deny proves it was read
+    json.dump({"feature": "old", "stage": "design", "skip": True, "approvals": []}, _f)
+_leg_a = _wt_gate("Edit", {"file_path": os.path.join(_leg, "app.py")}, _leg)[0]  # D3: a skip in the old place opens nothing
 _leg_p = {"hook_event_name": "UserPromptSubmit", "session_id": "leg", "cwd": _leg, "prompt": "skip design"}
 run_hook("scope", json.dumps(_leg_p), env=_loop_env)
 _leg_new = os.path.join(_leg, ".claude", "house-rules-loop.json")
@@ -938,9 +938,9 @@ for _t, _ok in (
         ("the stage committed in one checkout reads back in a fresh git clone", _clone_edit == "allow"),
         ("a Write and an Edit of the stage file are refused in Build and in Design", _stage_edits == ["deny"] * 4),
         ("a shell redirect into the stage file is refused", _stage_sh == "deny"),
-        ("a legacy .git stage file is read (its Design stage refuses the edit)", _leg_a == "deny"),
-        ("the next write after a legacy read lands in .claude/", os.path.isfile(_leg_new)
-         and json.load(open(_leg_new, encoding="utf-8")).get("feature") == "old")):
+        ("D3: a legacy .git stage file is no longer read (its pending skip opens nothing)", _leg_a == "deny"),
+        ("D3: the next write lands in .claude/ and holds nothing from the legacy file", os.path.isfile(_leg_new)
+         and json.load(open(_leg_new, encoding="utf-8")).get("feature") == "")):
     _loop_cases.append((_t, _ok))
 _d3 = tempfile.mkdtemp(prefix="house-rules-d3-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _d3], check=True)
@@ -2650,5 +2650,86 @@ _bt_cases.append(("'Approve' with no reply ever recorded moves nothing and says 
 for _t, _ok in _bt_cases:
     report("PASS" if _ok else "FAIL", "approve button (#502): " + _t)
 shutil.rmtree(_bt_root, True)
+
+# ---- #505: the last four ways around the code-edit lock (D3, D6, D9, U3) ----
+_p5_root = tempfile.mkdtemp(prefix="phase1-step5-")
+_p5_n = [0]
+
+
+def _p5_repo(state, branch="feature-x", seen=None, legacy=None):
+    _p5_n[0] += 1
+    d = _ma_repo(_p5_root, "r%d" % _p5_n[0])
+    base = _ma_stage(d)
+    base.update(state)
+    with open(os.path.join(d, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+        json.dump(base, f)
+    with open(os.path.join(d, ".git", "HEAD"), "w") as f:
+        f.write("ref: refs/heads/%s\n" % branch)
+    if seen:
+        with open(os.path.join(d, ".git", "house-rules-loop-seen.json"), "w") as f:
+            json.dump(seen, f)
+    if legacy:
+        with open(os.path.join(d, ".git", "house-rules-loop.json"), "w") as f:
+            json.dump(legacy, f)
+    os.makedirs(os.path.join(d, "docs", "6-decisions"), exist_ok=True)
+    with open(os.path.join(d, "docs", "6-decisions", "Decisions.md"), "w", encoding="utf-8") as f:
+        f.write("an entry\n")
+    return d
+
+
+def _p5_edit(d):
+    p = {"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "p5", "cwd": d,
+         "tool_input": {"file_path": os.path.join(d, "app.py")}}
+    _, out, _ = run_hook("commitgate", json.dumps(p), env=_loop_env)
+    try:
+        h = json.loads(out)["hookSpecificOutput"]
+        return h.get("permissionDecision") or "allow", h.get("permissionDecisionReason") or ""
+    except Exception:
+        return "allow", ""
+
+
+_p5_cases = []
+_d = _p5_repo({}, legacy={"feature": "old", "stage": "design", "skip": True, "approvals": []})
+_p5_cases.append(("D3: a skip written into the old .git stage file opens nothing", _p5_edit(_d)[0] == "deny"))
+
+_d = _p5_repo({"feature": "Old", "stage": "plan", "parent": "#9", "issues": [{"repo": "o/r", "number": 7, "labelled": True}]})
+_n = _ma_say(_d, "Design approved: New one 1A")
+_s = _ma_stage(_d)
+_k = (_s.get("features") or {}).get("old") or {}
+_p5_cases.append(("D6: a different design name keeps the feature in Plan with its issues, its stage and its "
+                  "parent, and the note says so",
+                  _s["feature"] == "New one" and _s["issues"] == [] and _k.get("stage") == "plan"
+                  and _k.get("issues") and _k.get("parent") == "#9"
+                  and 'This starts a new feature; "Old" is kept with its issues.' in _n))
+_d = _p5_repo({"feature": "Old", "stage": "plan", "issues": [{"repo": "o/r", "number": 7, "labelled": True}]})
+_n = _ma_say(_d, "Design approved: Old 1A")
+_p5_cases.append(("D6: the same name (an amended design) keeps nothing and adds no new-feature note",
+                  not _ma_stage(_d).get("features") and "starts a new feature" not in _n))
+
+_seen = {"at": 2000, "branch": "newer-branch", "feature": "F"}
+_old = {"feature": "F", "stage": "design", "skip": True, "approvals": [{"stage": "Design approved", "name": "F", "at": 1000}]}
+_d = _p5_repo(_old, branch="older-branch", seen=_seen)
+_dec, _why = _p5_edit(_d)
+_p5_cases.append(("D9: an older branch's stage is refused when a newer approval came from another branch, "
+                  "naming both and 'Continue from'",
+                  _dec == "deny" and "older-branch" in _why and "newer-branch" in _why and "Continue from: newer-branch" in _why))
+_d = _p5_repo(dict(_old, approvals=[{"stage": "Design approved", "name": "F", "at": 3000}]), branch="older-branch", seen=_seen)
+_d2 = _p5_repo(_old, branch="newer-branch", seen=_seen)
+_d3 = _p5_repo(_old, branch="older-branch")
+_p5_cases.append(("D9: a newer approval on this branch, the same branch, or a clone with no seen file holds nothing",
+                  [_p5_edit(x)[0] for x in (_d, _d2, _d3)] == ["allow"] * 3))
+
+_qa = {"feature": "F", "stage": "qa", "issues": [{"repo": "o/r", "number": 7, "labelled": True}],
+       "approvals": [{"stage": "Build plan approved", "name": "F", "at": 1000}]}
+_d = _p5_repo(_qa, branch="main")
+_dec, _why = _p5_edit(_d)
+_d2 = _p5_repo(_qa, branch="feature-x")
+_p5_cases.append(("U3: on the default branch a feature in QA reads as Done and nothing is written; on a feature "
+                  "branch it is still QA",
+                  _dec == "deny" and "Done stage" in _why and _ma_stage(_d)["stage"] == "qa"
+                  and "QA stage" in _p5_edit(_d2)[1]))
+for _t, _ok in _p5_cases:
+    report("PASS" if _ok else "FAIL", "last four ways around the lock (#505): " + _t)
+shutil.rmtree(_p5_root, True)
 
 finish()
