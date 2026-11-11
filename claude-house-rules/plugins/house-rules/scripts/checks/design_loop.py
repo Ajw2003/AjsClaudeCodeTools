@@ -1138,6 +1138,8 @@ for _t, _ok in _loop_cases:
 # --- #362: the closable record - a QA pass saves the feature's issues, a merge stamps them ------
 _cl_dir = tempfile.mkdtemp(prefix="house-rules-closable-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _cl_dir], check=True)
+with open(os.path.join(_cl_dir, ".git", "HEAD"), "w") as _f:  # U3: a feature branch, so QA is not read as Done here
+    _f.write("ref: refs/heads/feature-loop\n")
 _cl_file = os.path.join(_cl_dir, ".claude", "house-rules-loop.json")
 _cl_env = dict(_loop_env, HOUSE_RULES_LOOP="on")
 
@@ -1471,6 +1473,8 @@ for _t, _ok in _sw_cases:
 # only the build plan was read; and a stale stored feature name stopped a redo after "QA failed" counting.
 _ma_dir = tempfile.mkdtemp(prefix="house-rules-multi-approval-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _ma_dir], check=True)
+with open(os.path.join(_ma_dir, ".git", "HEAD"), "w") as _f:  # U3: a feature branch, so QA is not read as Done here
+    _f.write("ref: refs/heads/feature-loop\n")
 _ma_labels = os.path.join(_FIXTURE_ROOT, "multi-approval-labels.json")
 _ma_env = dict(_loop_env, HOUSE_RULES_LOOP_LABELS_FILE=_ma_labels)
 
