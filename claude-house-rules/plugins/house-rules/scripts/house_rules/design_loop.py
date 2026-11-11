@@ -1242,8 +1242,9 @@ def _loop_apply_one(state, text, top):
                      "Move every issue back to `%s` now: code edits open once they are. A changed design still "
                      "needs \"Design approved\"." % LOOP_WORKING)
         elif approval[0] == "QA passed":
-            note += (" Code edits stay closed. The issues keep `%s` until aj closes them; never close one."
-                     % LOOP_REVIEW)
+            note += (" Code edits stay closed. The issues keep `%s` until aj closes them; never close one. "
+                     "The close line (\"Close as completed: #N\") is offered to aj after the feature's pull "
+                     "request merges." % LOOP_REVIEW)
         else:
             note += " Code edits stay closed."
         return note
@@ -1437,7 +1438,14 @@ def _loop_stop_line(payload):
     want = LOOP_REVIEW if stage == "qa" else LOOP_WORKING
     wrong = _loop_wrong(labels, want)
     if not wrong:
+        if state.pop("label_said", None) is not None:
+            _loop_write(git_dir, state)
         return None, src or None
+    said = hashlib.sha1("; ".join(wrong).encode()).hexdigest()[:12]
+    if state.get("label_said") == said:  # #273: said once per set of wrong labels
+        return None, src or None
+    state["label_said"] = said
+    _loop_write(git_dir, state)
     return ("House rules, design loop: \"%s\" is in %s, so every issue should be labelled `%s`, and these "
             "are not: %s. Fix the labels before this turn ends.%s"
             % (state.get("feature") or "", LOOP_STAGE_NAMES[stage], want, "; ".join(wrong),
@@ -2708,6 +2716,13 @@ def event_closablemerge():
                 e["merged_pr"] = {"repo": repo, "number": number, "at": int(time.time())}
             if hit:
                 _loop_write(git_dir, state)
+                nums = sorted({("#%d" % i["number"]) if _close_repo_match(repo, i.get("repo", ""))
+                               else "%s#%d" % (i.get("repo"), i["number"])
+                               for e in hit for i in e.get("issues") or []
+                               if isinstance(i, dict) and "number" in i})
+                notes.append('Design loop: the merge of %s#%d is stamped on the QA-passed record, so the close '
+                             'guard allows those closes once aj says yes. Offer aj: "Close as completed: %s". '
+                             "Never close without aj's word." % (repo, number, ", ".join(nums)))
             else:
                 notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (
                     repo, number, why or "it links none of the QA-passed issues with `Refs #N`"))
