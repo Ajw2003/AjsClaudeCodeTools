@@ -7,6 +7,28 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-11 - Phase 2: docs and files you can trust (design)
+
+**Context.** Phase 2 of the roadmap (#494) carries 17 old issues. Checked against the code on 2026-11-11: #199, #399,
+#404, #479 and #463 are already built and need only proof; the other 12 need building. PlunderSpell's folders were
+reported at over 153 GB; this cloud session could not reach that repo or aj's PC, so the cause is unmeasured.
+
+**Decision.** aj approved "Design approved: Phase 2 1A 2A 3A 4A 5A" on
+`docs/plans/2026-11-11-phase-2-docs-and-files.html`. 1A: drift is caught at the commit that changes the code. 2A: the
+session writes the changelog line, and the end-of-turn check sends a turn back once without one. 3A: a merged,
+pushed branch and its clean finished worktrees are deleted locally, and the session says which. 4A: a big file goes
+into git only when aj names it ("LFS approved: <file>"), one file at a time, and only through Git LFS after the
+free allowance is checked; otherwise big files stay out. 5A: all three rule changes (#117, #301, #228) go in.
+
+**Why.** aj asked for big files to reach git with LFS, then narrowed it the same day: only when asked for, and only
+within the allowance (GitHub's free tier is quoted as 10 GiB of LFS storage and 10 GiB of bandwidth a month).
+Rejected: keeping big files out of git entirely (aj's first correction), warning-only checks (a missed warning puts a
+file in history), and asking before every branch delete (more work for aj with no extra safety).
+
+**Status.** Design approved; the build plan is next.
+
+---
+
 ## 2026-11-11 - Phase 1 passed QA
 
 **Context.** Phase 1 (#493) was built as plugin 2.78.0 on `AjsAgent/session-handoff`, steps #501 to #507, after
