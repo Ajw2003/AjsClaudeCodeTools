@@ -343,11 +343,11 @@ def _citing_docs_note(root, effective, deadline):
         text = ", ".join(names[:DOCS_CITE_CAP])
         if len(names) > DOCS_CITE_CAP:
             text += ", and %d more" % (len(names) - DOCS_CITE_CAP)
-        lines.append("These docs cite files this commit changes: " + text)
+        lines.append("These docs cite files this commit changes: " + text + ".")
     if drift:
         shown = drift[:DOCS_CITE_CAP]
         extra = " (and %d more)" % (len(drift) - len(shown)) if len(drift) > len(shown) else ""
-        lines.append("Drifted citations of those files: " + "; ".join(shown) + extra)
+        lines.append("Drifted citations of those files: " + "; ".join(shown) + extra + ".")
     if not complete:
         lines.append("The docs-citation scan did not finish in the time budget; this list may be incomplete.")
     return " ".join(lines) if lines else None
