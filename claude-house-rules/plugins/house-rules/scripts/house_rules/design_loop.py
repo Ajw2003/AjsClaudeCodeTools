@@ -2715,6 +2715,21 @@ def _merged_pr_refs(state, repo, number):
 CLEANUP_ENV = "HOUSE_RULES_CLEANUP"  # "off" turns the cleanup off
 PR_FILE_ENV = "HOUSE_RULES_PR_FILE"  # tests: JSON {"ref", "sha", "merged"} that replaces the gh api read
 CLEANUP_SECONDS = 6  # inside hooks.json's 10s for closablemerge
+CLEANUP_IDLE_SECONDS = 30 * 60  # a helper copy touched more recently may still be in use, so it is kept
+
+
+def _worktree_recent(git, path):
+    """True when the worktree's index or HEAD changed in the last CLEANUP_IDLE_SECONDS: a helper may still be
+    working in it. A brand-new helper copy has no commits of its own, so "merged and pushed" alone can't tell."""
+    rc, gd, _e = git(path, ["rev-parse", "--absolute-git-dir"])
+    if rc != 0:
+        return True  # can't tell: keep it
+    newest = 0
+    for name in ("index", "HEAD", "logs/HEAD"):
+        p = os.path.join(gd.strip(), name)
+        if os.path.exists(p):
+            newest = max(newest, os.path.getmtime(p))
+    return time.time() - newest < CLEANUP_IDLE_SECONDS
 _HELPER_WT = ".claude/worktrees/"
 
 
@@ -2818,6 +2833,9 @@ def _merge_cleanup(cwd, repo, number):
                     why = "its commits are not on any remote branch"
             if not why and git(w["path"], ["status", "--porcelain"])[1].strip():
                 why = "it has uncommitted changes"
+            if not why and w["branch"] != ref and _worktree_recent(git, w["path"]):
+                why = "it was used in the last %d minutes, so a helper may still be working in it" % (
+                    CLEANUP_IDLE_SECONDS // 60)
             if not why:
                 rc, _o, err = git(main, ["worktree", "remove", w["path"]])
                 if rc == 0:
@@ -2826,8 +2844,10 @@ def _merge_cleanup(cwd, repo, number):
                     continue
                 why = "git refused to remove it (%s)" % ((err.splitlines() or ["?"])[0])
             kept.append("worktree %s (%s)" % (rel(w["path"]), why))
-        # The local branch of the merged pull request.
-        if git(main, ["rev-parse", "--verify", "-q", "refs/heads/" + ref])[0] != 0:
+        # The local branch of the merged pull request. The default branch is never deleted, whatever was merged.
+        if ref in ("main", "master") or (default and ref == default.split("/", 1)[1]):
+            kept.append("branch %s (the default branch is never deleted)" % ref)
+        elif git(main, ["rev-parse", "--verify", "-q", "refs/heads/" + ref])[0] != 0:
             kept.append("branch %s (there is no local branch of that name)" % ref)
         else:
             tip = git(main, ["rev-parse", "refs/heads/" + ref])[1].strip()

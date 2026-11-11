@@ -1342,6 +1342,26 @@ _d, _tip = _cu_repo()
 _o = _cu_run(_d, _tip, pr_file=False)
 _cu_cases.append(("GitHub unreadable: nothing is deleted and the note says the cleanup did not run",
                   _cu_has(_d, "feat") and "did not run" in _o and "could not be read" in _o))
+_d, _tip = _cu_repo()
+_cu_git(_d, "merge", "-q", "--no-ff", "-m", "merge feat", "feat")
+_cu_git(_d, "push", "-q", "origin", "main")
+_wt = os.path.join(_d, ".claude", "worktrees", "fresh")
+_cu_git(_d, "worktree", "add", "-q", "-b", "helper-fresh", _wt, "main")
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("a helper copy made a moment ago, with no commits of its own, is kept: a helper may be working in it",
+                  os.path.isdir(_wt) and "worktree .claude/worktrees/fresh (it was used in the last 30 minutes" in _o))
+_gd = _cu_git(_wt, "rev-parse", "--absolute-git-dir")
+for _name in ("index", "HEAD", "logs/HEAD"):
+    if os.path.exists(os.path.join(_gd, _name)):
+        os.utime(os.path.join(_gd, _name), (time.time() - 7200, time.time() - 7200))
+_o = _cu_run(_d, _tip)
+_cu_cases.append(("the same copy, idle for two hours, merged and pushed, is removed",
+                  not os.path.exists(_wt) and "worktree .claude/worktrees/fresh" in _o))
+_d, _tip = _cu_repo()
+_cu_git(_d, "checkout", "-q", "feat")
+_o = _cu_run(_d, _cu_git(_d, "rev-parse", "main"), ref="main")
+_cu_cases.append(("a pull request whose head is main never deletes the local main branch",
+                  _cu_has(_d, "main") and "branch main (the default branch is never deleted)" in _o))
 for _t, _ok in _cu_cases:
     report("PASS" if _ok else "FAIL", "#510 cleanup: " + _t)
 
