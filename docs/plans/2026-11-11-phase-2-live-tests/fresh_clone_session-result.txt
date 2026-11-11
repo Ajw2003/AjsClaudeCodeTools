@@ -1,0 +1,5 @@
+fresh clone of AjsAgent/session-handoff at bd43858
+  12 x SessionStart:startup, exit 0
+  3 x Stop, exit 0
+  3 x UserPromptSubmit, exit 0
+PASS  every hook in a real session exited 0 with one JSON object at most
