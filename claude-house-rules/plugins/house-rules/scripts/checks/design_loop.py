@@ -1652,7 +1652,8 @@ _o13 = _p3_create(13, "")
 _n, _s = _p3_approve()
 _p3_cases.append(("an issue for a separate feature (no Part of, or another number) does not count toward the approval",
                   "if this is the feature issue itself, that is expected" in _o10.lower()
-                  and 'names "Part of #99", not #10' in _o12 and 'names no "Part of #N"' in _o13
+                  and "Part of #99" in _o12 and "not #10" in _o12 and "names no" in _o13
+                  and "not counted as a step" in _o13
                   and _s["stage"] == "build" and _s.get("parent") == 10
                   and sorted(i["number"] for i in _s["issues"]) == [10, 11]))
 
