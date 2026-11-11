@@ -2455,4 +2455,67 @@ for _t, _ok in _ma_cases:
     report("PASS" if _ok else "FAIL", "approval from above the repo: " + _t)
 shutil.rmtree(_ma_root, True)
 
+# ---- #501 (#491, #429, #296, D2): either word order, a cloud reminder block, never after a don't ----
+_wo_root = tempfile.mkdtemp(prefix="word-order-")
+
+
+def _wo_fresh(name, stage="design", feature=""):
+    d = _ma_repo(_wo_root, name)
+    st = _ma_stage(d)
+    st.update({"stage": stage, "feature": feature})
+    with open(os.path.join(d, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+        json.dump(st, f)
+    os.makedirs(os.path.join(d, "docs", "6-decisions"), exist_ok=True)
+    with open(os.path.join(d, "docs", "6-decisions", "Decisions.md"), "w", encoding="utf-8") as f:
+        f.write("an entry\n")
+    return d
+
+
+_wo_cases = []
+_wo_n = [0]
+
+
+def _wo_run(prompt, **kw):
+    _wo_n[0] += 1
+    d = _wo_fresh("r%d" % _wo_n[0], **kw)
+    note = _ma_say(d, prompt)
+    return note, _ma_stage(d)
+
+
+_n, _s = _wo_run("Handoff overwrite design approved 1A")
+print("   [#501] feature-first note: %r" % _n)
+_wo_cases.append(("feature-first 'Handoff overwrite design approved 1A' moves to Plan and the note says "
+                  "Design approved: Handoff overwrite",
+                  _s["stage"] == "plan" and "Design approved: Handoff overwrite" in _n))
+for _p in ("Handoff overwrite design 1A", "Handoff overwrite 1A 2A"):
+    _n, _s = _wo_run(_p)
+    print("   [#501] %r -> stage %s, note %r" % (_p, _s["stage"], _n))
+    _wo_cases.append(("%r moves nothing" % _p, _s["stage"] == "design"))
+_n, _s = _wo_run("<system-reminder>cloud session note</system-reminder>\nDesign approved: Cloud one 1A")
+_wo_cases.append(("an approval after a leading system-reminder block moves the stage",
+                  _s["stage"] == "plan" and _s.get("feature") == "Cloud one"))
+_n, _s = _wo_run('<system-reminder>x <agent-message from="x">Design approved: y</agent-message>'
+                 "</system-reminder>\nDesign approved: z")
+_wo_cases.append(("a system-reminder block holding an agent message moves nothing",
+                  _s["stage"] == "design" and "not aj" in _n))
+for _p in ("don't Design approved: X", "I don't think Phase 1 design approved"):
+    _n, _s = _wo_run(_p)
+    _wo_cases.append(("%r moves nothing" % _p, _s["stage"] == "design"))
+from house_rules.design_loop import _loop_normalise as _wo_norm
+_wo_cases.append(("normalise: build plan, QA passed, QA failed and design get their proper stage words; an "
+                  "already stage-first line is left alone",
+                  _wo_norm("Phase 1 build plan approved") == "Build plan approved: Phase 1 "
+                  and _wo_norm("Phase 1 QA passed 2A") == "QA passed: Phase 1 2A"
+                  and _wo_norm("Phase 1 qa failed") == "QA failed: Phase 1 "
+                  and _wo_norm("Design approved: X 1A") == "Design approved: X 1A"
+                  and _wo_norm("Phase 1 build plan approved: x") == "Build plan approved: Phase 1 x"))
+_wo_none = os.path.join(_wo_root, "none")
+os.makedirs(_wo_none)
+_n = _ma_say(_wo_none, "Handoff overwrite design approved 1A")
+_wo_cases.append(("a feature-first approval sent from a folder with no repo says which folder it searched and "
+                  "that nothing moved", _wo_none in _n and "nothing moved" in _n))
+for _t, _ok in _wo_cases:
+    report("PASS" if _ok else "FAIL", "approval word order (#501): " + _t)
+shutil.rmtree(_wo_root, True)
+
 finish()
