@@ -3191,7 +3191,7 @@ def _bf_say(d, text, used=None, source="api", origin=None):
     p = {"hook_event_name": "UserPromptSubmit", "session_id": "bf", "cwd": d, "prompt": text}
     if origin:
         p["origin"] = {"kind": origin}
-    envx = {}
+    envx = {"HOUSE_RULES_LOOP": "on"}  # common.py turns the loop off for every check
     if used is not None:
         envx["HOUSE_RULES_LFS_USED_BYTES"] = str(used)
         envx["HOUSE_RULES_LFS_USED_SOURCE"] = source
