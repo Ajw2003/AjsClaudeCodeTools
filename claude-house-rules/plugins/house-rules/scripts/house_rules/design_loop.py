@@ -763,7 +763,14 @@ def _loop_wrong(labels, want):
 
 
 def _loop_to_qa(state, labels):
-    """Build becomes QA once every issue says needs review and none says in progress. True if it moved."""
+    """Build becomes QA once every issue says needs review and none says in progress. True if it moved.
+
+    #504: after "QA failed" the stage is Build while every issue still says needs review. That is not a
+    finished build, so the move waits (state["reopened"]) until an issue has been seen back at in progress."""
+    if state.get("reopened"):
+        if state["stage"] != "build" or any(LOOP_WORKING in (l or []) for l in labels.values()):
+            state["reopened"] = False
+        return False
     if state["stage"] == "build" and labels and not _loop_wrong(labels, LOOP_REVIEW):
         state["stage"] = "qa"
         return True
@@ -1105,7 +1112,8 @@ def _loop_apply_one(state, text, top):
                 unlogged = _loop_unlogged(state, top, "QA " + verdict, name)
                 if unlogged:
                     return unlogged
-                state["stage"] = "done" if verdict == "passed" else "design"
+                state["stage"] = "done" if verdict == "passed" else "build"  # #504: one message sends a QA fault back
+                state["reopened"] = verdict == "failed"
                 if verdict == "passed":  # #362: the closable record; "Design approved" never touches it
                     if not isinstance(state.get("closable"), list):
                         state["closable"] = []
@@ -1145,8 +1153,9 @@ def _loop_apply_one(state, text, top):
                      "the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA."
                      % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
         elif approval[0] == "QA failed":
-            note += (" Their list of changes starts the next design. Move every issue back to `%s` now; the "
-                     "redo's \"Design approved\" is refused until they are." % LOOP_WORKING)
+            note += (" aj's words after the feature name are the fix list; the issues and the build plan are kept. "
+                     "Move every issue back to `%s` now: code edits open once they are. A changed design still "
+                     "needs \"Design approved\"." % LOOP_WORKING)
         elif approval[0] == "QA passed":
             note += (" Code edits stay closed. The issues keep `%s` until aj closes them; never close one."
                      % LOOP_REVIEW)
@@ -1317,9 +1326,12 @@ def _loop_stop_line(payload):
     if stage == "done" or (stage == "design" and not state.get("redo")) or not state.get("issues"):
         return None, None
     labels, src = _loop_labels(state)
+    reopened = state.get("reopened")
     if _loop_to_qa(state, labels):
         _loop_write(git_dir, state)
         return "House rules, design loop:" + _LOOP_QA_NOTE, src or None
+    if state.get("reopened") != reopened:  # #504: the issues are back at in progress
+        _loop_write(git_dir, state)
     want = LOOP_REVIEW if stage == "qa" else LOOP_WORKING
     wrong = _loop_wrong(labels, want)
     if not wrong:
@@ -1355,9 +1367,12 @@ def _loop_gate(payload):
             return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, but "
                     "this hook could not read GitHub (%s), so the edit is refused. It will work once gh can read the issues."
                     % (state.get("feature") or "", LOOP_WORKING, src)), None
+        reopened = state.get("reopened")
         if _loop_to_qa(state, labels):
             _loop_write(git_dir, state)
             return "House rules, design loop:" + _LOOP_QA_NOTE, None
+        if state.get("reopened") != reopened:  # #504: the issues are back at in progress
+            _loop_write(git_dir, state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
         if not wrong:
             return None, src or None
