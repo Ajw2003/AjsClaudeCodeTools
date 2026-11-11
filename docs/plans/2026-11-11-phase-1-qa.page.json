@@ -1,0 +1,60 @@
+{
+  "title": "Phase 1 QA",
+  "eyebrow": "QA · roadmap phase 1, approvals and the design loop just work, issue #493, plugin 2.78.0",
+  "short": {
+    "lead": "Phase 1 is built on the branch AjsAgent/session-handoff as plugin 2.78.0: seven steps, issues #501 to #507, built in a cloud session after the session on your PC was cut off. verify.py passes 1135 of 1135 checks and tools/verify_tools.py 52 of 52. Three approvals were also sent to real headless Claude sessions (sessions with no screen) running this branch's plugin, and each did what the design says. What is left is your own try in the desktop app.",
+    "hint": "Tap a row to see what was run and what it showed.",
+    "key": [["Proven by a real run", ""], ["Proven by verify.py only", ""]],
+    "items": [
+      ["check", "Word order", "\"Demo widget design approved 1A\" moves the stage", "",
+        "A live headless session (claude -p, plugin loaded from this branch) in a throwaway repo got \"Demo widget design approved 1A\". The stage file then said Plan, feature \"Demo widget\". Step 1, #501.",
+        "Nothing from you."],
+      ["check", "Don't", "\"don't Design approved: Gadget\" moves nothing", "",
+        "The next live session got \"don't Design approved: Gadget\". The stage stayed Plan with the feature \"Demo widget\". Step 1, #501.",
+        "Nothing from you."],
+      ["check", "Cloud note", "An approval after a cloud system note counts", "",
+        "A live session got a message that opened with a system-reminder block, the way cloud sessions deliver your words, then \"Design approved: Gadget 2B\". The stage moved to Plan with the feature \"Gadget\". Before this phase, the whole message was read as a relayed notice and moved nothing. Step 1, #501.",
+        "Nothing from you."],
+      ["check", "Feature's issues", "A build plan approval reads the issues from GitHub", "",
+        "Run against this repo, the new read returned exactly #493 and #501 to #507, all labelled, in 0.7 seconds. The helper's first version used gh issue list, which cloud sessions refuse with a 403 error, so it was switched to GitHub's REST API issue list (a plain web request that cloud sessions allow). Step 3, #503.",
+        "Nothing from you."],
+      ["search", "Approve button", "\"Approve 1A\" sends the one line offered", "",
+        "verify.py cases: after a reply offering \"Design approved: X\", a message of just \"Approve 1A\" moves to Plan exactly as typing the line would. After a reply offering two lines, it moves nothing and says why. The page builder now refuses a design or build plan page whose copy-box line would move nothing. Step 2, #502.",
+        "Nothing from you."],
+      ["search", "QA failed", "One message sends a fault back to Build", "",
+        "verify.py cases: \"QA failed: blockers - the list is too long\" moves the test feature back to Build with all three of its issues kept. Code opens once the issues are back to in progress, and the stage does not bounce straight back to QA meanwhile. Step 4, #504.",
+        "Nothing from you."],
+      ["search", "Lock gaps", "Four ways around the code lock are closed", "",
+        "verify.py cases, one per gap, each named by its code. D3: a stage file hidden in .git opens nothing. D6 (the option you picked, A): a different design name starts a new feature and keeps the old one with its issues. D9 (the option you picked, A): on an older branch, code waits for \"Continue from: <branch>\" or a new approval. U3: on main, a merged feature's QA stage reads as Done. Step 5, #505.",
+        "Nothing from you."],
+      ["search", "Your decisions", "Design points come back to you", "",
+        "verify.py cases: the \"unless they have said otherwise\" exception is gone from the rules. In Build, a reply that ends by asking you a question pauses code edits until your next message, and a helper's report does not count as your answer. A reply saying \"I went with option B\" is sent back once. Step 6, #506.",
+        "Nothing from you."],
+      ["search", "Issues follow", "The close line is offered; the label line is said once", "",
+        "verify.py cases: when a QA-passed feature's pull request merges, the note offers you \"Close as completed: ...\" with its issues. The end-of-reply label reminder is said once per set of wrong labels instead of on every reply. 15 proof cases cover the eight audit findings already fixed and old issues #102, #107, #110, #128, #129 and #130. Step 7, #507.",
+        "Nothing from you."],
+      ["flask", "Your try", "Approve something in the desktop app", "you",
+        "In a desktop session on this branch with plugin 2.78.0, type a feature-first approval such as \"Test thing design approved 1A\", and later try a bare \"Approve\" after a reply that offers one approval line. The note under your message should say the stage moved.",
+        "About ten minutes in the desktop app."]
+    ]
+  },
+  "changes": [],
+  "qa": {
+    "feature": "Phase 1",
+    "base": "13484b8",
+    "unverified": [
+      "The desktop app itself: the live runs were headless terminal sessions in this cloud container, not the Code tab",
+      "A real Approve button in the claude.ai app: verify.py sends the button's text as a typed message, and whether the app's button sends exactly that text has not been seen",
+      "The D9 branch hold (code waiting on an older branch) and the U3 read-as-Done (a merged feature's QA stage shown as Done), each on a real branch switch and a real merge; they are proven only in throwaway repos made by verify.py",
+      "The close-line offer after a real pull request merge; only replayed merge events have run"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "QA for phase 1: built, all checks pass, three approvals proven live, waiting on your try in the desktop app.",
+    "changing": "Plugin 2.78.0 on the branch AjsAgent/session-handoff, which also carries the session handoff work still waiting on its own QA. Nothing reaches main until you merge a pull request.",
+    "blocking": "Your QA verdict.",
+    "next": "If QA passes, I open a pull request to main that says Refs #493, and offer you the close line for #501 to #507 after it merges.",
+    "todo": ["Try an approval in the desktop app, as the \"Your try\" row says.", "Type \"QA passed: Phase 1\", or \"QA failed: Phase 1\" with what is wrong."]
+  }
+}
