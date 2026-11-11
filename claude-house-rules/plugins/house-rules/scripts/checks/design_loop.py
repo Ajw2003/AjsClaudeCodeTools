@@ -536,6 +536,8 @@ else:
 # --- the design loop: stage tracker, approvals and the code lock (#225) ------------------------
 _loop_dir = tempfile.mkdtemp(prefix="house-rules-loop-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _loop_dir], check=True)
+with open(os.path.join(_loop_dir, ".git", "HEAD"), "w") as _f:  # U3: a feature branch, so QA is not read as Done here
+    _f.write("ref: refs/heads/feature-loop\n")
 _loop_labels_file = os.path.join(_FIXTURE_ROOT, "loop-labels.json")
 _loop_env = dict(os.environ, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
                  HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file,
