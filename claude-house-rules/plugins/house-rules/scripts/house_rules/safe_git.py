@@ -844,6 +844,8 @@ def _event_guard_main():
 
     is_commit = bool(_GIT_COMMIT_RE.search(subject))
     docs_status, docs_detail = _docs_status(subject, elsewhere, where) if is_commit else (None, None)
+    # #508: for 'needs-docs'/'clear' the detail is the line naming the docs that cite what this commit changes.
+    docs_note = docs_detail if docs_status in ("needs-docs", "clear") else None
 
     if not any(hits.values()) and not outdated and not issue_hit:
         # The allow path. Silent, this is the plugin's least distinguishable "ran and decided
@@ -864,12 +866,15 @@ def _event_guard_main():
         # either (#197) - only when every statement is git or cd, so the approval never carries an
         # unrelated command along. docs/plans/2026-10-09-stop-permission-stalls.md
         approve = bool(exempted) and _only_git_statements(subject)
-        if docs_status == "needs-docs" or approve or allow_ctx:
+        if docs_status == "needs-docs" or approve or allow_ctx or docs_note:
             # PreToolUse's additionalContext reaches the model on an "allow" decision (probed
             # live, doc-ref 8713 docs/6-decisions/Decisions.md).
             out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
             if docs_status == "needs-docs":
                 out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
+            if docs_note:
+                _dc = out["hookSpecificOutput"].get("additionalContext")
+                out["hookSpecificOutput"]["additionalContext"] = (_dc + " " if _dc else "") + docs_note
             if allow_ctx:
                 _ac = out["hookSpecificOutput"].get("additionalContext")
                 out["hookSpecificOutput"]["additionalContext"] = (_ac + " " if _ac else "") + allow_ctx
@@ -890,6 +895,9 @@ def _event_guard_main():
         out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}
         if docs_status == "needs-docs":
             out["hookSpecificOutput"]["additionalContext"] = DOCS_COMMIT_REMINDER
+        if docs_note:
+            _dc = out["hookSpecificOutput"].get("additionalContext")
+            out["hookSpecificOutput"]["additionalContext"] = (_dc + " " if _dc else "") + docs_note
         emit(out)
         return 0
 
@@ -951,6 +959,9 @@ def _event_guard_main():
         lines.append(
             "  Could not tell whether docs need updating for this commit: %s." % docs_detail
         )
+    if docs_note:
+        lines.append("")
+        lines.append("  " + docs_note)
 
     lines.append("")
     _tl = _prompt_timeout_line()

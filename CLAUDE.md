@@ -49,6 +49,8 @@ All commands run from the repo root; each is detailed in docs/architecture.md or
   archivist's `doc-ref` pointers still resolve (`fix --write` repairs, `new` prints an unused id).
 - `python claude-house-rules/plugins/house-rules/scripts/plain_docs_check.py` — checks the
   plain-English doc copies under `docs/plain/` against the `plain-docs` skill's rules.
+- `python claude-house-rules/plugins/house-rules/scripts/docs_drift.py` — lists living-doc citations of code
+  that is gone or shorter than the cited line (exit 1 when any).
 
 [`.github/workflows/verify.yml`](.github/workflows/verify.yml) runs the first two on every push
 and pull request.

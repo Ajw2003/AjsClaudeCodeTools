@@ -1818,7 +1818,98 @@ else:
         expect_rc=1,
     )
 
+# --- docs_drift (#508): a commit names the docs that cite what it changes; drift is listed ------
+DOCS_DRIFT = os.path.join(HERE, "docs_drift.py")
+_DD_HEAD = "".join("line %d\n" % i for i in range(1, 21))
+
+
+def _dd_git(d, *args):
+    subprocess.run(["git", "-C", d] + list(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
+
+def _dd_repo(files, stage=()):
+    d = make_fixture(files)
+    _dd_git(d, "init", "-q")
+    _dd_git(d, "config", "user.email", "t@t.com")
+    _dd_git(d, "config", "user.name", "t")
+    _dd_git(d, "add", "-A")
+    _dd_git(d, "commit", "-q", "-m", "init")
+    return d
+
+
+def _dd_commit_note(d, staged_edit):
+    """The detail _staged_docs_status gives for a commit of one edited file (None when no note)."""
+    with open(os.path.join(d, staged_edit), "a", encoding="utf-8") as f:
+        f.write("# changed\n")
+    _dd_git(d, "add", staged_edit)
+    mod = importlib.import_module("house_rules.docs")
+    return mod._staged_docs_status('"command":"git commit -m x"', False, d)
+
+
+def _dd_run(d):
+    proc = subprocess.run([sys.executable, DOCS_DRIFT, "--root", d], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return proc.returncode, proc.stdout.decode("utf-8", "replace")
+
+
+def _dd_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    if not ok:
+        print("          " + str(detail)[:400])
+
+
 import importlib  # noqa: E402
+
+if shutil.which("git"):
+    _d = _dd_repo({"a.py": _DD_HEAD, "docs/4-systems/s.md": "See `a.py:10` for it.\n",
+                   "docs/6-decisions/Decisions.md": "old `a.py:999` and `gone.py:3`\n"})
+    try:
+        _st, _note = _dd_commit_note(_d, "a.py")
+        _dd_case("docs_drift: a commit changing a.py names the doc citing a.py:10",
+                 bool(_note) and "docs/4-systems/s.md (a.py:10)" in _note, (_st, _note))
+        _dd_case("docs_drift: a citation in docs/6-decisions/ is never flagged at commit",
+                 bool(_note) and "Decisions" not in _note and "999" not in _note, _note)
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _d = _dd_repo({"a.py": _DD_HEAD, "b.py": _DD_HEAD, "docs/4-systems/s.md": "See `a.py:10`.\n"})
+    try:
+        _st, _note = _dd_commit_note(_d, "b.py")
+        _dd_case("docs_drift: a commit touching no cited file adds nothing to the detail", _note is None, _note)
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _d = _dd_repo({"a.py": _DD_HEAD, "docs/4-systems/s.md": "See `a.py:999`.\n"})
+    try:
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift: a doc citing a.py:999 in a 20-line file is flagged",
+                 _rc == 1 and "docs/4-systems/s.md:1  cites  a.py:999  (line 999 past the end, file has 20 lines)" in _out,
+                 (_rc, _out))
+        _st, _note = _dd_commit_note(_d, "a.py")
+        _dd_case("docs_drift: at commit, drift in a changed file's citation is reported",
+                 bool(_note) and "past the end" in _note, _note)
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _d = _dd_repo({"gone.py": "x\n", "a.py": _DD_HEAD, "docs/4-systems/s.md": "See `gone.py:1`.\n"})
+    try:
+        os.remove(os.path.join(_d, "gone.py"))
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift: a doc citing a deleted file is flagged by the command",
+                 _rc == 1 and "cites  gone.py:1  (gone)" in _out, (_rc, _out))
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _d = _dd_repo({"x/dup.py": "1\n", "y/dup.py": "1\n", "docs/4-systems/s.md": "See `dup.py:50`.\n",
+                   "docs/6-decisions/Decisions.md": "old `gone.py:3`\n"})
+    try:
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift: an ambiguous basename is skipped and docs/6-decisions/ is never scanned",
+                 _rc == 0 and "docs_drift: 0 drifted" in _out, (_rc, _out))
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+else:
+    report("FAIL", "docs_drift: git is not on PATH; this machine's environment says it should be")
+
 _ca = importlib.import_module("house_rules.core")._COMMIT_ALL_RE
 report("PASS" if ([bool(_ca.search(c)) for c in ("git commit -sam x", "git commit -qa -m x", "git commit -am x",
                                                   "git commit --amend -m x", "git commit -m x")]

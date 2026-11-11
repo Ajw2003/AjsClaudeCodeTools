@@ -288,11 +288,69 @@ def _staged_docs_status(subject, elsewhere, root=None):
     except Exception as exc:
         return "unknown", "could not resolve what this commit will include (%s)" % exc
 
+    note = _citing_docs_note(root, effective, deadline)
     has_source = any(_HARVEST_EXT_RE.search(p) for p in effective)
     has_docs = any(p == "docs" or p.startswith("docs/") for p in effective)
     if has_source and not has_docs:
-        return "needs-docs", None
-    return "clear", None
+        return "needs-docs", note
+    return "clear", note
+
+
+DOCS_CITE_CAP = 8
+
+
+def _citing_docs_note(root, effective, deadline):
+    """One or two lines naming the living docs that cite code files this commit changes, and any
+    drifted citation of such a file (#508). None when nothing applies. Never raises and never
+    changes the caller's decision; a scan that cannot finish says so."""
+    import time as _t
+
+    try:
+        scripts_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        import docs_drift
+
+        code = [p for p in effective if re.search(r"\.(py|sh|js|mjs|ts|tsx|cs|ps1|bat|json)$", p)]
+        if not code:
+            return None
+        remaining = deadline - _t.time()
+        if remaining <= 0:
+            return "The docs-citation scan did not run: the docs check's time budget ran out."
+        tracked = docs_drift.tracked_files(root, timeout=remaining)
+        rows, complete = docs_drift.scan(root, tracked, deadline=deadline)
+    except Exception as exc:
+        return "The docs-citation scan could not run (%s)." % exc
+
+    cites = {}
+    drift = []
+    for r in rows:
+        if r["status"] == "gone":
+            hit = any(p == r["cited"] or p.endswith("/" + r["cited"]) for p in code)
+        else:
+            hit = r["path"] in code
+        if not hit:
+            continue
+        cites.setdefault(r["doc"], [])
+        if r["as_written"] not in cites[r["doc"]]:
+            cites[r["doc"]].append(r["as_written"])
+        if r["status"] != "ok":
+            drift.append(docs_drift.drift_line(r))
+
+    lines = []
+    if cites:
+        names = ["%s (%s)" % (d, ", ".join(c[:3])) for d, c in sorted(cites.items())]
+        text = ", ".join(names[:DOCS_CITE_CAP])
+        if len(names) > DOCS_CITE_CAP:
+            text += ", and %d more" % (len(names) - DOCS_CITE_CAP)
+        lines.append("These docs cite files this commit changes: " + text)
+    if drift:
+        shown = drift[:DOCS_CITE_CAP]
+        extra = " (and %d more)" % (len(drift) - len(shown)) if len(drift) > len(shown) else ""
+        lines.append("Drifted citations of those files: " + "; ".join(shown) + extra)
+    if not complete:
+        lines.append("The docs-citation scan did not finish in the time budget; this list may be incomplete.")
+    return " ".join(lines) if lines else None
 
 
 
