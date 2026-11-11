@@ -36,6 +36,20 @@ Seven build steps, one sub-issue each (#508 to #514), built one after another:
 7. **Proof, docs, version, QA (#514).** `verify.py` cases for #199, #399, #404, #479 and #463, this doc moved to
    built, plugin 2.79.0, live tests, and the QA page.
 
+## Testing (every check phase 1 had, at aj's word on 2026-11-11)
+
+1. Every step: its own verify.py cases, each written to fail on today's code and pass after, then the full verify.py (the baseline is 1135 of 1135) before the step merges.
+2. Every helper's work is read as a diff and merged only after the full verify.py passes again on the branch; each claimed fix is checked by running it, not by the helper's report.
+3. Real headless Claude sessions (claude -p) loading only this branch's plugin, with the installed copy switched off, walk a throwaway repo through every new behaviour: a commit naming the docs that cite it, a turn sent back for a missing changelog line, a branch and worktree deleted after a real merge and kept when unpushed, a big file refused, then let in after "LFS approved", and refused again when it would pass the allowance.
+4. Real git and real Git LFS: a real 60 MB file, a real git lfs track and commit, a real merge followed by the cleanup, and a real dirty worktree that must survive.
+5. The drift check run on this whole repo, with its list of dead citations on the QA page.
+6. Each hook phase 2 changes, timed five times against 2.78.0 on a fresh clone; every exit code must be 0.
+7. A real session in a fresh clone of the branch, listing every hook's result, with no hook error.
+8. Install from the branch URL into an empty Claude config, then roll back to main, checking the version each time.
+9. tools/verify_tools.py in full.
+10. The test scripts and their saved results committed under docs/plans/, as phase 1's were.
+11. The QA page lists anything that could not run here and says what stopped it (for example: your Windows PC, the billing API from a cloud session, PlunderSpell's 153 GB).
+
 ## Not known yet
 
 - Why PlunderSpell's folders take over 153 GB. Not measured: the folder is on aj's PC and this cloud session was
