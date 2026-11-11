@@ -36,7 +36,7 @@
         "Cleanup",
         "Merged branches and finished copies are deleted, nothing unsaved",
         "",
-        "Live against real GitHub, 4 of 4: in a fresh clone of this repo, the real merge hook read pull request #485 from GitHub, deleted its local branch AjsAgent/audit-2026-11-05, and kept a helper copy holding an unsaved file, naming why. It took 1.4 s of its 10 s limit. A copy used in the last 30 minutes, the default branch, and any branch with commits not in the merge are always kept. Step 3, #510.",
+        "Live against real GitHub, 4 of 4. In a fresh clone of this repo, the real merge hook read pull request #485 from GitHub. It deleted the local branch AjsAgent/audit-2026-11-05, and kept a helper copy holding an unsaved file, naming why. It took 1.4 s of its 10 s limit. A copy used in the last 30 minutes, the default branch, and any branch with commits not in the merge are always kept. Step 3, #510.",
         "Nothing from you."
       ],
       [
@@ -44,7 +44,7 @@
         "Big files",
         "Big files only on your word, within the Git LFS (Large File Storage) allowance",
         "",
-        "Live with real Git LFS, 5 of 5: a real session's commit of a real 60 MB file was refused; your \"LFS approved: big.bin\" was held until you confirmed a second time, because this cloud session cannot read GitHub's billing figures and counts this repo only; after that second confirmation, the file was committed through LFS and git stores a pointer, not 60 MB. A session start in a repo with a 6 GB generated folder named it. A commit check takes 0.10 s against 0.06 s before. Step 4, #511.",
+        "Live with real Git LFS, 5 of 5. A real session's commit of a real 60 MB file was refused. Your \"LFS approved: big.bin\" was then held until you confirmed a second time, because this cloud session cannot read GitHub's billing figures and counts this repo only. After that second confirmation, the file was committed through LFS, so git stores a pointer, not 60 MB. A session start in a repo with a 6 GB generated folder named it. A commit check takes 0.10 s against 0.06 s before. Step 4, #511.",
         "Nothing from you."
       ],
       [
@@ -68,7 +68,7 @@
         "Proof",
         "Five old issues proven built",
         "",
-        "Seven verify.py cases prove #199 (a commit on an AjsAgent/ branch goes through, one on main is refused), #399 and #404 (work tracking is registered and documented, a session link in a commit is refused), #479 (an ignored node_modules can be deleted, \"Continue from\" and \"Issues for\" work, a gh api issue is recorded) and #463 (\"I went with option B\" is sent back, a question in Build holds edits). Step 7, #514.",
+        "Seven verify.py cases prove five old issues. #199: a commit on an AjsAgent/ branch goes through, and one on main is refused. #399 and #404: work tracking is registered and documented, and a session link in a commit is refused. #479: an ignored node_modules can be deleted, \"Continue from\" and \"Issues for\" work, and a gh api issue is recorded. #463: \"I went with option B\" is sent back, and a question in Build holds edits. Step 7, #514.",
         "Nothing from you."
       ],
       [
@@ -84,7 +84,7 @@
         "Fixed in review",
         "Eleven problems caught before merging",
         "",
-        "The drift check skipped hook.py:7746 and flagged runtime names such as settings.json. About 1,500 lines of tests were pasted in twice. One test could never fail (\"or True\"). The pull request reminder skipped Claude Code's own permission prompt. Cleanup would have deleted a helper copy in use, and could delete local main. The merge hook printed two JSON objects, so its note could be lost. It also read pull request bodies over GraphQL (GitHub's query interface), which cloud sessions refuse, so phase 1's close offer never fired in the cloud. After a merge on main, it asked you for a QA verdict on an old feature left in main's stage file. One idle-copy check ran after git status changed the copy's timestamps. Each has a test now.",
+        "The drift check skipped hook.py:7746 and flagged runtime names such as settings.json. 1,537 lines of tests were pasted in twice. One test could never fail (\"or True\"). The pull request reminder skipped Claude Code's own permission prompt. Cleanup would have deleted a helper copy in use, and could delete local main. The merge hook printed two JSON objects, so its note could be lost. It also read pull request bodies over GraphQL (GitHub's query interface), which cloud sessions refuse, so phase 1's close offer never fired in the cloud. After a merge on main, it asked you for a QA verdict on an old feature left in main's stage file. One idle-copy check ran after git status changed the copy's timestamps. Each has a test now.",
         "Nothing from you."
       ]
     ]
