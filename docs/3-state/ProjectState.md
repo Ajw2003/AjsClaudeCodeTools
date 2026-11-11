@@ -22,9 +22,9 @@ obstructing, `handover`/`announce`/`subagentrules`/`verdict`/`audit` open and lo
 see its own `## Result`) closed the gap where `inject` emitted 44,506 chars against a proven
 10,000-char per-hook limit ([`claude-house-rules/plugins/house-rules/scripts/hook.py:71`](../../claude-house-rules/plugins/house-rules/scripts/hook.py#L71),
 `INJECT_CHAR_LIMIT`), added a `SubagentStart` handler that re-injects a subagent-scoped core of
-the rules (`hook.py:1886`, `_subagent_core`) since `SessionStart`'s own `additionalContext` never
+the rules (`_subagent_core` in `claude-house-rules/plugins/house-rules/scripts/house_rules/delegation.py`) since `SessionStart`'s own `additionalContext` never
 reaches a spawned subagent, and added a commit-time docs-tier reminder to `guard` itself
-(`hook.py:1174`, `_staged_docs_status`) rather than only once per session. What's not built:
+(`_staged_docs_status` in `claude-house-rules/plugins/house-rules/scripts/house_rules/docs.py`) rather than only once per session. What's not built:
 nothing against the current rule set — the seven candidate refactors in
 [`docs/architecture-backlog.md`](../architecture-backlog.md) are real friction (see Cross-cutting,
 below) but none blocks this milestone's own acceptance criterion, which is about behavior, not
