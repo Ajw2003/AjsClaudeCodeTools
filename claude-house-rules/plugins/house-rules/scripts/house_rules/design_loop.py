@@ -489,10 +489,18 @@ def _loop_write(git_dir, state):
 SEEN_FILE = "house-rules-loop-seen.json"
 
 
+def _loop_ref_text(path):
+    """The text of a small git file, or "" when it is absent (a missing ref is an answer, not an error)."""
+    try:
+        return _read_text(path).strip()
+    except OSError:
+        return ""
+
+
 def _loop_branch(git_dir):
     """D9/U3: the branch this git directory has checked out, read from its HEAD file (no git process on
     every edit). "" for a detached HEAD or an unreadable file."""
-    m = re.match(r"ref:\s*refs/heads/(\S+)", _read_text(os.path.join(git_dir, "HEAD")).strip())
+    m = re.match(r"ref:\s*refs/heads/(\S+)", _loop_ref_text(os.path.join(git_dir, "HEAD")))
     return m.group(1) if m else ""
 
 
@@ -540,7 +548,7 @@ def _loop_default_branches(git_dir):
     """U3: the default branch names: origin/HEAD's target when the common git directory has it (a loose ref;
     packed-refs cannot hold a symbolic ref), else main and master."""
     m = re.match(r"ref:\s*refs/remotes/origin/(\S+)",
-                 _read_text(os.path.join(_loop_dir(git_dir), "refs", "remotes", "origin", "HEAD")).strip())
+                 _loop_ref_text(os.path.join(_loop_dir(git_dir), "refs", "remotes", "origin", "HEAD")))
     return {m.group(1)} if m else {"main", "master"}
 
 
