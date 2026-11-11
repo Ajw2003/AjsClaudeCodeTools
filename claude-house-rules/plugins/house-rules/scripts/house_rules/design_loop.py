@@ -952,7 +952,9 @@ def _loop_apply(state, text, top):
     sweep_note = _loop_sweep_apply(state, text)
     issues_note = _loop_issues_for_apply(state, text, top)
     note = _loop_apply_stage(state, text, top)
-    return " ".join(n for n in (carry, sweep_note, issues_note, note) if n)
+    from house_rules import bigfiles  # #511: "LFS approved: <path>", beside the other phrases
+    lfs_note = bigfiles.lfs_apply(state, text, top)
+    return " ".join(n for n in (carry, sweep_note, issues_note, note, lfs_note) if n)
 
 
 _LOOP_CONTINUE_RE = re.compile(r"\bcontinue\s+from\s*:\s*([\w./-]+)", re.IGNORECASE)

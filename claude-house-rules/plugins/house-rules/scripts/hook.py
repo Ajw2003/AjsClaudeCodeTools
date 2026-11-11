@@ -49,13 +49,14 @@ import sys
 # back (EVENTS below needs the event_* handlers); the underscore names this file uses are listed.
 # The sys.path line makes `house_rules` and `clarity` importable when run.sh starts this file.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from house_rules import core, docs, safe_git, design_loop, delegation, writing
+from house_rules import core, docs, safe_git, design_loop, delegation, writing, bigfiles
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.docs import *  # noqa: F401,F403
 from house_rules.safe_git import *  # noqa: F401,F403
 from house_rules.design_loop import *  # noqa: F401,F403
 from house_rules.delegation import *  # noqa: F401,F403
 from house_rules.writing import *  # noqa: F401,F403
+from house_rules.bigfiles import event_diskreport  # noqa: F401
 from house_rules.core import (  # noqa: F401
     _PARITY_ACCOUNTED_RE,
     _PARITY_RE,
@@ -271,6 +272,7 @@ EVENTS = {
     "profile": event_profile,
     "standards": event_standards,
     "docstiers": event_docstiers,
+    "diskreport": event_diskreport,
     "versioncheck": event_versioncheck,
     "scope": event_scope,
     "guard": event_guard,

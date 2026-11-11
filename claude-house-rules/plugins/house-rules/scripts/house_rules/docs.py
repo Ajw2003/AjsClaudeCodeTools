@@ -223,6 +223,53 @@ _ADD_ALL_RE = re.compile(r"(^|\s)(-A\b|--all\b)|(^|\s)\.(\s|$)", re.IGNORECASE)
 _ADD_UPDATE_RE = re.compile(r"(^|\s)(-u\b|--update\b)", re.IGNORECASE)
 
 
+def _commit_effective_files(decoded, run_git):
+    """The set of files a `git commit` command will include: what is staged, plus -a, `git add -A`/-u and
+    literal paths named earlier in the command. run_git(args) -> list of lines; raises on failure."""
+    import shlex
+
+    effective = set(p.strip() for p in run_git(["diff", "--cached", "--name-only"]))
+
+    statements = _STATEMENT_SPLIT_RE.split(decoded)
+    commit_stmt = next((s for s in statements if _GIT_COMMIT_RE.search(s)), "")
+    commit_all = bool(_COMMIT_ALL_RE.search(commit_stmt))
+
+    add_all = False
+    add_tracked_only = False
+    literal_paths = []
+    for s in statements:
+        m = _GIT_ADD_RE.search(s)
+        if not m:
+            continue
+        args_part = s[m.end() :]
+        if _ADD_ALL_RE.search(args_part):
+            add_all = True
+        elif _ADD_UPDATE_RE.search(args_part):
+            add_tracked_only = True
+        else:
+            # shlex, not .split(): a quoted path with a space ("my file.py") is one
+            # argument, not two. posix=True so quotes/backslashes resolve the way a real
+            # shell would read them. Unbalanced quotes raise ValueError, which the outer
+            # try/except below turns into "unknown" - never a guess at what was meant.
+            literal_paths.extend(
+                tok for tok in shlex.split(args_part, posix=True) if not tok.startswith("-")
+            )
+
+    status = None  # lazy: only fetched if something below actually needs it
+    if commit_all:
+        effective.update(p.strip() for p in run_git(["diff", "HEAD", "--name-only"]))
+    if add_all or add_tracked_only or literal_paths:
+        status = _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))
+    if add_all:
+        effective.update(p for p, _tracked in status)
+    elif add_tracked_only:
+        effective.update(p for p, tracked in status if tracked)
+    for lp in literal_paths:
+        lp_norm = lp.rstrip("/")
+        effective.update(p for p, _tracked in status if p == lp_norm or p.startswith(lp_norm + "/"))
+    return effective
+
+
 def _staged_docs_status(subject, elsewhere, root=None):
     """('needs-docs'|'clear'|'unknown', detail) for what this commit will ACTUALLY include -
     not just what is staged right now, since guard runs before the command it is judging.
@@ -236,7 +283,6 @@ def _staged_docs_status(subject, elsewhere, root=None):
         return "unknown", "the command names another repo (-C/--git-dir/--work-tree) or changes directory"
     root = root or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
-    import shlex
     import subprocess
     import time as _t
 
@@ -259,45 +305,7 @@ def _staged_docs_status(subject, elsewhere, root=None):
         return [p for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
 
     try:
-        effective = set(p.strip() for p in run_git(["diff", "--cached", "--name-only"]))
-
-        statements = _STATEMENT_SPLIT_RE.split(decoded)
-        commit_stmt = next((s for s in statements if _GIT_COMMIT_RE.search(s)), "")
-        commit_all = bool(_COMMIT_ALL_RE.search(commit_stmt))
-
-        add_all = False
-        add_tracked_only = False
-        literal_paths = []
-        for s in statements:
-            m = _GIT_ADD_RE.search(s)
-            if not m:
-                continue
-            args_part = s[m.end() :]
-            if _ADD_ALL_RE.search(args_part):
-                add_all = True
-            elif _ADD_UPDATE_RE.search(args_part):
-                add_tracked_only = True
-            else:
-                # shlex, not .split(): a quoted path with a space ("my file.py") is one
-                # argument, not two. posix=True so quotes/backslashes resolve the way a real
-                # shell would read them. Unbalanced quotes raise ValueError, which the outer
-                # try/except below turns into "unknown" - never a guess at what was meant.
-                literal_paths.extend(
-                    tok for tok in shlex.split(args_part, posix=True) if not tok.startswith("-")
-                )
-
-        status = None  # lazy: only fetched if something below actually needs it
-        if commit_all:
-            effective.update(p.strip() for p in run_git(["diff", "HEAD", "--name-only"]))
-        if add_all or add_tracked_only or literal_paths:
-            status = _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))
-        if add_all:
-            effective.update(p for p, _tracked in status)
-        elif add_tracked_only:
-            effective.update(p for p, tracked in status if tracked)
-        for lp in literal_paths:
-            lp_norm = lp.rstrip("/")
-            effective.update(p for p, _tracked in status if p == lp_norm or p.startswith(lp_norm + "/"))
+        effective = _commit_effective_files(decoded, run_git)
     except Exception as exc:
         return "unknown", "could not resolve what this commit will include (%s)" % exc
 
