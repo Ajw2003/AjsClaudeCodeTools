@@ -699,8 +699,11 @@ _loop_cases.append(("label check: quiet at the end of a reply when every label f
 _loop_gh("needs review", 102)
 _loop_cases.append(("label check: in Build, a code edit is refused while an issue isn't in progress",
                     _loop_edit("app.py") == "deny"))
+_first_stop = _loop_stop()  # #273: the line is said once, so one call is read twice
 _loop_cases.append(("label check: the end-of-reply check names the wrong label",
-                    "should be labelled `in progress`" in _loop_stop() and "#102" in _loop_stop()))
+                    "should be labelled `in progress`" in _first_stop and "#102" in _first_stop))
+_loop_cases.append(("label check (#273): the same wrong labels are not said again on the next reply",
+                    "design loop" not in _loop_stop() and _loop_edit("app.py") == "deny"))
 _n = _loop_say("QA passed: blockers")
 _loop_cases.append(("label check: a QA answer before every issue says needs review moves nothing",
                     "QA starts only once" in _n and "#101" in _n and _loop_stage() == "build"))
@@ -2785,5 +2788,180 @@ _hq_cases.append(("a reply that deals in options does not fire", not _hq_stop("O
 for _t, _ok in _hq_cases:
     report("PASS" if _ok else "FAIL", "held question and decided-for-you (#459, #460): " + _t)
 shutil.rmtree(_hq_root, True)
+
+# ---- #507: proof for what is already fixed ----
+# One case per item, each run against the real hook in a throwaway repo or the fixtures above, so the whole
+# proof list sits in one place. Where a case also exists higher up, it is repeated here on purpose.
+_pf7 = []
+_pf7_edit = lambda rel, tool="Edit": _wt_gate(tool, {"file_path": os.path.join(_wt_main, rel)}, _wt_main)[0]
+
+# D4: .claude/settings.json, source files under .claude/worktrees/ and code under docs/ are locked outside Build.
+_wt_stage("design")
+_pf7.append(("proof (#507) D4: .claude/settings.json, a worktree's source file and code under docs/ are refused outside Build",
+             [_pf7_edit(r) for r in (".claude/settings.json", ".claude/worktrees/agent-1/src/a.py", "docs/tool.py")] == ["deny"] * 3))
+_wt_stage("build")
+_pf7.append(("proof (#507) D4: the same three paths are open in Build",
+             [_pf7_edit(r) for r in (".claude/settings.json", ".claude/worktrees/agent-1/src/a.py", "docs/tool.py")] == ["allow"] * 3))
+
+# A9: cp, mv or git checkout REV -- onto the stage file are refused (in Build, where code edits are open).
+_pf7.append(("proof (#507) A9: cp, mv and git checkout REV -- onto the stage file are refused",
+             [_wt_bash(c)[0] for c in ("cp /tmp/x.json .claude/house-rules-loop.json",
+                                       "mv x .claude/house-rules-loop.json",
+                                       "git checkout HEAD~3 -- .claude/house-rules-loop.json")] == ["deny"] * 3))
+
+# A7: the stage file goes through a temp file and os.replace, so a half-written file cannot turn the lock off.
+_pf7_core = importlib.import_module("house_rules.core")
+_pf7_target = os.path.join(_FIXTURE_ROOT, "pf7-atomic", "house-rules-loop.json")
+_pf7_core._write_atomic(_pf7_target, '{"stage": "design"}')
+_pf7_real, _pf7_seen = _pf7_core.os.replace, []
+
+
+def _pf7_crash(a, b):
+    raise OSError("simulated crash before the swap")
+
+
+_pf7_core.os.replace = _pf7_crash
+try:
+    _pf7_core._write_atomic(_pf7_target, '{"stage": "bu')
+    _pf7_raised = False
+except OSError:
+    _pf7_raised = True
+finally:
+    _pf7_core.os.replace = _pf7_real
+_pf7_kept = json.load(open(_pf7_target, encoding="utf-8")) == {"stage": "design"}
+
+
+def _pf7_spy(a, b):
+    _pf7_seen.append((a, b))
+    _pf7_real(a, b)
+
+
+_pf7_core.os.replace = _pf7_spy
+try:
+    _pf7_core._write_atomic(_pf7_target, '{"stage": "build"}')
+finally:
+    _pf7_core.os.replace = _pf7_real
+_pf7.append(("proof (#507) A7: a write that dies before the swap leaves the old stage file whole; a good one goes through a temp file and os.replace",
+             _pf7_raised and _pf7_kept and json.load(open(_pf7_target, encoding="utf-8")) == {"stage": "build"}
+             and len(_pf7_seen) == 1 and _pf7_seen[0][0] != _pf7_target and _pf7_seen[0][1] == _pf7_target
+             and os.listdir(os.path.dirname(_pf7_target)) == ["house-rules-loop.json"]))
+
+# A2: only a merged pull request that links the QA-passed issue (Refs #N) unlocks closing it.
+_cl_set({"stage": "done", "closable": [dict(_cl_open)], "pr_refs": {"other/repo#99": [["other/repo", 1]]}})
+_o = _cl_merge("mcp__github__merge_pull_request", {"owner": "other", "repo": "repo", "pullNumber": 99}, {"merged": True})
+_pf7_unlinked = _cl_state()["closable"][0]["merged_pr"] is None
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_o2 = _cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 12}, {"merged": True})
+_pf7.append(("proof (#507) A2: a merge that doesn't link the QA-passed issue stamps nothing; one with Refs #7 stamps its record and the note offers the close line",
+             _pf7_unlinked and (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 12
+             and 'Close as completed: #7' in _o2))
+
+# A10: three helpers launched together - the third is refused (two-helper cap).
+_pf7_cap = os.path.join(_FIXTURE_ROOT, "pf7-cap-agents.json")
+if os.path.exists(_pf7_cap):
+    os.remove(_pf7_cap)
+_pf7_capenv = dict(os.environ, HOUSE_RULES_AGENTS_STATE=_pf7_cap)
+_pf7_capenv.pop("HOUSE_RULES_AGENTS", None)
+
+
+def _pf7_spawn():
+    pl = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {"prompt": "x"}}
+    out = run_hook("agentcap", json.dumps(pl), env=_pf7_capenv)[1]
+    try:
+        return json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    except Exception:
+        return False
+
+
+_pf7_denied = [_pf7_spawn() for _ in range(3)]
+_pf7.append(("proof (#507) A10: three helpers launched together - the first two pass, the third is refused",
+             _pf7_denied == [False, False, True]))
+
+# D5: re-approving a design in Build, or "QA failed: X. Design approved: X" in one message, keeps the issues.
+_pf7_iss = [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)]
+_pf7_lab = {"o/r#%d" % n: ["Feature", "in progress"] for n in (1, 2)}
+def _pf7_say(prompt):  # _ma_say is redefined further up with another signature, so this one is local
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "multi", "cwd": _ma_dir, "prompt": prompt}
+    run_hook("scope", json.dumps(p), env=_ma_env)
+    return json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+
+
+_ma_set({"feature": "feat", "stage": "build", "issues": list(_pf7_iss)}, _pf7_lab)
+_s = _pf7_say("Design approved: feat")
+_pf7_d5a = _s["stage"] == "plan" and [i["number"] for i in _s.get("issues", [])] == [1, 2]
+_ma_set({"feature": "feat", "stage": "qa", "issues": list(_pf7_iss)}, _pf7_lab)
+_s = _pf7_say("QA failed: feat. Design approved: feat")
+_pf7.append(("proof (#507) D5: re-approving a design in Build, and QA failed + Design approved in one message, both keep the feature's issues",
+             _pf7_d5a and _s["stage"] == "plan" and len(_s.get("issues", [])) == 2))
+
+# D7: "skip design" ends with its stage.
+_ma_set({"feature": "x", "stage": "plan", "skip": True, "issues": list(_pf7_iss)}, _pf7_lab)
+_s = _pf7_say("Build plan approved: x")
+_pf7.append(('proof (#507) D7: "skip design" is cleared when the stage moves to Build', _s["stage"] == "build" and not _s["skip"]))
+
+# D8: only the QA page built for this feature counts as the QA page (not any claude.ai link).
+_pf7_sf_old = open(_ck_sf, encoding="utf-8").read() if os.path.isfile(_ck_sf) else None
+_ck_stage("qa", qa_page="docs/plans/feat-qa.html")
+_pf7_qa = {"qa_stage": "qa", "qa_page": "docs/plans/feat-qa.html", "cwd": _loop_dir, "qa_git_dir": os.path.join(_loop_dir, ".git")}
+_pf7.append(("proof (#507) D8: a bare claude.ai link is not the QA page; this feature's page file name is",
+             _dl_mod._check_qa_page(dict(_pf7_qa, reply="QA page: https://claude" ".ai/artifact/abc")) != ""
+             and _dl_mod._check_qa_page(dict(_pf7_qa, reply="QA page: docs/plans/feat-qa.html")) == ""))
+
+# #102: before a change ships aj gets a final pass/fail through a QA page: in QA, a reply with no page is blocked.
+_ck_stage("qa")
+_pf7_b, _pf7_r, _ = _ck_run(_ck_t_plain, "The build is ready.")
+_ck_stage("qa", qa_page="docs/plans/f-qa.html")
+_pf7_b2, _pf7_r2, _ = _ck_run(_ck_t_plain, "The build is ready.")
+_pf7.append(("proof (#507) #102: in QA a reply with no QA page is blocked by the qa page checkpoint, built or not linked",
+             _pf7_b and "- qa page:" in _pf7_r and _pf7_b2 and "not linked" in _pf7_r2))
+if _pf7_sf_old is None:
+    os.remove(_ck_sf)
+else:
+    open(_ck_sf, "w", encoding="utf-8").write(_pf7_sf_old)
+
+# #107 / #110: a plan over three steps becomes issues before code: the 4-step plan arms the gate, a source edit is
+# refused until a parent and a step issue exist, then it goes through.
+_pf7_plan4 = "# Plan\n\n1. one\n2. two\n3. three\n4. four\n"
+_pf7_d = _iss_repo()
+_, _o, _ = _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _pf7_d, plan=_pf7_plan4), _pf7_d)
+_pf7_src = os.path.join(_pf7_d, "src", "a.py")
+_, _og, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _pf7_d, file_path=_pf7_src, content="x"), _pf7_d)
+_pf7_refused = _iss_decision(_og) == "deny"
+_iss_created(_pf7_d, _label_cmd, 81)
+_iss_created(_pf7_d, _label_cmd, 82)
+_, _og2, _ = _iss_call("commitgate", _iss_payload("PreToolUse", "Write", _pf7_d, file_path=_pf7_src, content="x"), _pf7_d)
+_pf7.append(("proof (#507) #107/#110: a 4-step plan arms the issue gate, a source edit is refused until a parent and a step issue exist",
+             (_iss_state(_pf7_d) or {}).get("plan_steps") == 4 and _pf7_refused and _og2.strip() == ""))
+
+# #128: the workflow holds however the work was planned: a plan made in chat (no plan mode, no ExitPlanMode) still
+# meets the design-loop lock, which refuses code in every stage but Build.
+_pf7_stages = []
+for _st in ("design", "plan", "build"):
+    _wt_stage(_st)
+    _pf7_stages.append(_pf7_edit("app.py", "Write"))
+_pf7.append(("proof (#507) #128: with the plan only in chat, the design-loop lock refuses code in Design and Plan, and opens in Build",
+             _pf7_stages == ["deny", "deny", "allow"]))
+
+# #129: the lock is stricter than a third-file rule: in Design even the first source edit is refused.
+_wt_stage("design")
+_pf7.append(("proof (#507) #129: in Design even the first source edit is refused",
+             _pf7_edit("first.py", "Write") == "deny"))
+
+# #130: a 4-step plan written to a docs/plans/ file arms the gate; a 3-step one does not. The plan text, read back
+# from the saved file, is what the delegate hook counts.
+_pf7_arm = []
+for _pf7_text in (_pf7_plan4, _ISS_PLAN3):
+    _pf7_dd = _iss_repo()
+    _pf7_pf = os.path.join(_pf7_dd, "docs", "plans", "plan.md")
+    os.makedirs(os.path.dirname(_pf7_pf))
+    open(_pf7_pf, "w", encoding="utf-8").write(_pf7_text)
+    _iss_call("delegate", _iss_payload("PostToolUse", "ExitPlanMode", _pf7_dd,
+                                       plan=open(_pf7_pf, encoding="utf-8").read()), _pf7_dd)
+    _pf7_arm.append((_iss_state(_pf7_dd) or {}).get("needs_issues"))
+_pf7.append(("proof (#507) #130: a 4-step plan from a docs/plans/ file arms the gate; a 3-step one does not",
+             _pf7_arm == [True, None]))
+
+for _t, _ok in _pf7:
+    report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
 finish()
