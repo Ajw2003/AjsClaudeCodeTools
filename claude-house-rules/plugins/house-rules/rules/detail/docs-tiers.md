@@ -60,3 +60,5 @@ into the prompt `guard` already shows. It can never block on its own and never c
 underlying decision - a missing `git`, a timeout, or a command naming another repo all say "could
 not tell" rather than guessing.
 
+
+`rules/checks.json` maps each `## ` section of `house-rules.md` to the hook handler or verify case that enforces it; a new section with no entry, or an empty one not in its `unenforced` list, fails `verify.py` (#228).

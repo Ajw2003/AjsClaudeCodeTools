@@ -285,6 +285,38 @@ def handover_turn_writes(turn_records):
     return written_now, committed_now
 
 
+def handover_multirepo_note(written_now):
+    """One line ("" when none) when this turn wrote files in two or more git repositories (#301): the other
+    repo's work belongs in an issue there. Paths under .claude/ and paths in no repo (scratch/temp) are ignored."""
+    import subprocess
+    tops = []
+    for fp in written_now:
+        norm = fp.replace("\\", "/")
+        if "/.claude/" in norm or norm.startswith(".claude/"):
+            continue
+        d = os.path.dirname(fp)
+        while d and not os.path.isdir(d):
+            nd = os.path.dirname(d)
+            if nd == d:
+                break
+            d = nd
+        if not d or not os.path.isdir(d):
+            continue
+        try:
+            r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=d, capture_output=True,
+                               text=True, timeout=10)
+        except Exception:
+            continue
+        top = r.stdout.strip()
+        if r.returncode == 0 and top and top not in tops:
+            tops.append(top)
+    if len(tops) < 2:
+        return ""
+    return ("House rules, one task per session: this turn wrote files in %d repositories (%s). Work for "
+            "another repo belongs in an issue in that repo (owner/repo); go back to this session's own task."
+            % (len(tops), ", ".join(tops)))
+
+
 def handover_plain_check(written_now, committed_now, have_reply, reply_text):
     """The plain-summary problems of the reply ([] when none)."""
     plain_problems = []

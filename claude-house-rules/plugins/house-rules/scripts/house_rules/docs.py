@@ -653,6 +653,55 @@ def _harvest_trace(base, blocks, misses, min_chars, ranged, verbose):
     return head + " | runs considered: " + detail
 
 
+# #117: values a person may want to change are never hardcoded. REPORT ONLY.
+_TUNING_WORDS = frozenset(
+    "speed delay timeout cooldown duration damage health rate scale limit max min threshold "
+    "count interval force gravity volume".split()
+)
+_TUNING_LINE_RE = re.compile(
+    r"^\s*(?:(?:public|private|protected|internal|static|readonly|const|final|var|let|val|float|double|int|long|number)\s+)*"
+    r"([A-Za-z_]\w*)\s*(?::\s*[\w\[\]]+\s*)?=\s*-?\d+(?:\.\d+)?[fFdDlL]?\s*;?\s*((?:#|//).*)?$"
+)
+_TEST_PATH_RE = re.compile(
+    r"(^|[\\/])(tests?|__tests__|spec)[\\/]|(^|[\\/])test_[^\\/]*$|[_.-]tests?\.[^\\/]*$|Tests?\.[A-Za-z]+$|[_.]spec\.",
+    re.IGNORECASE,
+)
+_MEASURED_RE = re.compile(r"measured|empirical", re.IGNORECASE)
+_STARTING_RE = re.compile(r"a starting value|measured", re.IGNORECASE)
+
+
+def _tuning_hits(text, file_path):
+    """[(line number in text, stripped line)] for bare numeric literals assigned to tuning-shaped names."""
+    if _TEST_PATH_RE.search(file_path):
+        return []
+    hits = []
+    for i, line in enumerate(text.splitlines(), 1):
+        m = _TUNING_LINE_RE.match(line)
+        if not m:
+            continue
+        name, comment = m.group(1), m.group(2) or ""
+        if _MEASURED_RE.search(comment):
+            continue
+        if name.isupper() and _STARTING_RE.search(comment):
+            continue
+        parts = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name).replace("_", " ").lower().split()
+        if _TUNING_WORDS.intersection(parts):
+            hits.append((i, line.strip()))
+    return hits
+
+
+def _tuning_note(hits, base, ranged):
+    shown = hits[:3]
+    where = ", ".join(("%s:%d" % (base, n) if ranged else "%s (%s)" % (base, t)) + (" `%s`" % t if ranged else "")
+                      for n, t in shown)
+    more = " (and %d more)" % (len(hits) - 3) if len(hits) > 3 else ""
+    return (
+        "House rules, tuning values (report only): %s%s assign a bare number to a value a person may want "
+        "to change. Put it in a settings file, an exposed field (a Unity serialized field or ScriptableObject) "
+        "or a config value, unless it was set by measurement (say so in a comment)." % (where, more)
+    )
+
+
 def event_harvest():
     try:
         toggle = os.environ.get("HOUSE_RULES_HARVEST", "on").strip().lower()
@@ -765,6 +814,12 @@ def event_harvest():
                     n=len(blocks), s="" if len(blocks) == 1 else "s", where=where
                 ),
             }
+
+        tuning = _tuning_hits(text, file_path)
+        if tuning:
+            note = _tuning_note(tuning, base, ranged)
+            hso = out.setdefault("hookSpecificOutput", {"hookEventName": "PostToolUse", "additionalContext": ""})
+            hso["additionalContext"] = (hso["additionalContext"] + "\n\n" + note).strip()
 
         # Default: speak only when something was found or an override was bad. The
         # "no comment runs found / none met the threshold" line is a no-op trace, verbose only.

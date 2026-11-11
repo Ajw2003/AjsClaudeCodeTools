@@ -1935,4 +1935,81 @@ report("PASS" if ([bool(_ca.search(c)) for c in ("git commit -sam x", "git commi
        "A15: one commit -a pattern, which sees -sam and -qa and not --amend")
 
 
+# --- #117: tuning values are reported, never blocked ------------------------------------------
+_TV = "House rules, tuning values"
+harv_case("remind+trace", "#117: `speed = 5` added in a .py file is named by file:line", "/proj/game/mover.py",
+          "import os\nspeed = 5\n", expect_in=[_TV, "mover.py:2"])
+harv_case("remind+trace", "#117: `public float moveSpeed = 5f;` in a .cs file is named", "/proj/Assets/Mover.cs",
+          "class M {\n    public float moveSpeed = 5f;\n}\n", expect_in=[_TV, "Mover.cs:2"])
+harv_case("trace", "#117: `SPEED = 5  # a starting value` is not named", "/proj/game/mover.py",
+          "SPEED = 5  # a starting value\n")
+harv_case("trace", "#117: a value with a measured comment is not named", "/proj/game/mover.py",
+          "speed = 5  # measured on the rig\n")
+harv_case("trace", "#117: a test file is not named", "/proj/tests/test_mover.py", "speed = 5\n")
+harv_case("trace", "#117: a non-tuning name is not named", "/proj/game/mover.py", "index = 5\n")
+harv_case("remind+trace", "#117: only the first 3 hits are named", "/proj/game/mover.py",
+          "speed = 1\ndelay = 2\ntimeout = 3\ncooldown = 4\n", expect_in=["and 1 more"])
+
+# --- #301: a turn that wrote in two repos gets one line ---------------------------------------
+_mr_a = _commit_repo("AjsAgent/mr", committed=("a.txt",))
+_mr_b = _commit_repo("AjsAgent/mr", committed=("b.txt",))
+_mr_scratch = tempfile.mkdtemp(prefix="house-rules-scratch-", dir=_FIXTURE_ROOT)
+_, _, _mr_two = _stop_notes(_wrote_transcript("mr-two", [os.path.join(_mr_a, "a.txt"), os.path.join(_mr_b, "b.txt")]),
+                            "Done.")
+_, _, _mr_one = _stop_notes(_wrote_transcript("mr-one", [os.path.join(_mr_a, "a.txt")]), "Done.")
+_, _, _mr_scr = _stop_notes(_wrote_transcript("mr-scr", [os.path.join(_mr_a, "a.txt"),
+                                                         os.path.join(_mr_scratch, "x.txt"),
+                                                         os.path.join(_mr_b, ".claude", "n.md")]), "Done.")
+report("PASS" if ("one task per session" in _mr_two and _mr_a in _mr_two and _mr_b in _mr_two) else "FAIL",
+       "#301: a turn that wrote files in two repos gets the one-line report naming both")
+report("PASS" if "one task per session" not in _mr_one else "FAIL", "#301: a turn in one repo gets no report")
+report("PASS" if "one task per session" not in _mr_scr else "FAIL",
+       "#301: .claude/ paths and files outside any repo are ignored")
+
+# --- #228: every rule section maps to a check -------------------------------------------------
+import json as _cj
+
+
+def _checks_problems(rules_text, checks, hooks_text, check_sources):
+    """Problems ([] when fine) between the ## sections, rules/checks.json and the real handlers."""
+    handlers = set(re.findall(r'run\.sh\\?"? (\w+)', hooks_text))
+    secs = re.findall(r"^## (.+?)\s*$", rules_text, re.M)
+    mapped = checks.get("sections", {})
+    unenforced = checks.get("unenforced", {})
+    bad = []
+    for sec in secs:
+        if sec not in mapped:
+            bad.append("section has no key in checks.json: %s" % sec)
+            continue
+        if not mapped[sec] and not unenforced.get(sec):
+            bad.append("section maps to [] and is not in unenforced with a reason: %s" % sec)
+        for name in mapped[sec]:
+            if name not in handlers and name not in check_sources:
+                bad.append("%s names %r, which is neither a hooks.json handler nor a verify case title" % (sec, name))
+    return bad
+
+
+_cj_root = os.path.join(HERE, "..")
+_cj_rules = read(RULES_FILE)
+_cj_checks = _cj.loads(read(os.path.join(_cj_root, "rules", "checks.json")))
+_cj_hooks = read(os.path.join(_cj_root, "hooks", "hooks.json"))
+_cj_src = "".join(read(os.path.join(HERE, "checks", n)) for n in os.listdir(os.path.join(HERE, "checks"))
+                  if n.endswith(".py"))
+_cj_real = _checks_problems(_cj_rules, _cj_checks, _cj_hooks, _cj_src)
+report("PASS" if not _cj_real else "FAIL", "#228: every house-rules.md section has a check in rules/checks.json")
+print("          " + ("; ".join(_cj_real) if _cj_real else "%d sections, %d named unenforced" % (
+    len(_cj_checks["sections"]), len(_cj_checks["unenforced"]))))
+_cj_new = _checks_problems(_cj_rules + "\n## A brand new rule\n\nText.\n", _cj_checks, _cj_hooks, _cj_src)
+report("PASS" if any("brand new rule" in b for b in _cj_new) else "FAIL",
+       "#228: a stand-in rules file with a new section missing from checks.json fails")
+_cj_ghost = "no" + "such" + "handler"
+_cj_bad = dict(_cj_checks, sections=dict(_cj_checks["sections"], **{"Nothing fails silently": [_cj_ghost],
+                                                                      "Evidence before claims": []}))
+_cj_bad_p = _checks_problems(_cj_rules, _cj_bad, _cj_hooks, _cj_src)
+report("PASS" if (any(_cj_ghost in b for b in _cj_bad_p)
+                  and any("Evidence before claims" in b for b in _cj_bad_p)) else "FAIL",
+       "#228: an unknown handler, and a [] section outside the unenforced list, both fail")
+
+
+
 finish()

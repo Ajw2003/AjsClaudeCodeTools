@@ -140,6 +140,7 @@ def event_handover():
     plain_problems = []
     written_now, committed_now = [], False
     handoff = ""
+    multirepo = ""
     editor_owed = None
     shell_page_notes = []
     trace_lines_early = []
@@ -151,6 +152,7 @@ def event_handover():
             written_now, committed_now = handover_turn_writes(turn_records)
             plain_problems = handover_plain_check(written_now, committed_now, have_reply, reply_text)
             handoff = handover_handoff_check(written_now, committed_now, core._payload_cwd(payload))
+            multirepo = handover_multirepo_note(written_now)
             if written_now and _parity_enabled():
                 pm = _PARITY_RE.search(_last_user_text(transcript_path))
                 reply_for_parity = reply_text if have_reply else ""
@@ -202,7 +204,7 @@ def event_handover():
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not editor_owed
-            and not shell_page_notes and not page_note and not links_owed and not handoff):
+            and not shell_page_notes and not page_note and not links_owed and not handoff and not multirepo):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -235,6 +237,8 @@ def event_handover():
         parts.append(_commit_note(uncommitted))
     if handoff:
         parts.append("House rules, handoff: %s." % handoff)
+    if multirepo:
+        parts.append(multirepo)
     if issue_line:
         parts.append(issue_line)
     if label_line:

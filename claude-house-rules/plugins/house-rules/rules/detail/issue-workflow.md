@@ -35,3 +35,10 @@ this, in the same style as `HOUSE_RULES_AUTOSAVE=off`.
 
 The session also starts with the open issue titles (up to 10, `gh issue list`, 5 s timeout, cached
 60 s) when `gh` is installed and the repo has a GitHub remote.
+
+## A session finishes its own task (#301)
+
+A session finishes its own task. Work for another repo becomes an issue in that repo (`owner/repo`), and
+the session goes back to its task; it never starts that work itself. At turn end the `handover` hook adds
+one line (a report, never a block) when the turn wrote files in two or more git repositories, naming them.
+`.claude/` paths and scratch files outside any repo are ignored.

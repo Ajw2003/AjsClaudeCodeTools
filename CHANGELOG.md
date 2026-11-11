@@ -4,6 +4,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+- Three old rules get checks: tunable values hardcoded as bare numbers are reported by harvest (#117), a turn that wrote in two repos is told to file an issue in the other (#301), and every house-rules.md section must map to a check in `rules/checks.json` or be named unenforced (#228; #512).
 - Big files go into git only when aj asks: a commit with a file over 50 MB, or inside Library/Temp/obj/Builds/node_modules, is refused unless aj wrote "LFS approved: <path>" and the file fits the LFS allowance (one file at a time); session start names helper worktrees and regenerated folders over 5 GB (#511; `HOUSE_RULES_DISKREPORT=off` turns the report off).
 - After a pull request merges, the local copy of its branch and any finished helper worktree are deleted when nothing unsaved goes with them, and the note says what was deleted or kept and why (#510; `HOUSE_RULES_CLEANUP=off` turns it off; nothing is deleted if GitHub cannot be read).
 - Docs are named at the commit: a commit's guard message lists each living doc that cites a changed file, and any citation that has drifted (#508; `scripts/docs_drift.py` lists all drift, 27 found on first run).
