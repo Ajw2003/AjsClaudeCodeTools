@@ -346,3 +346,4 @@ invocation.
 
 2026-11-11, same branch, roadmap phase 1 (#493, "approvals and the design loop just work"), building steps #501 to #507 in order:
 - Step 1 (#501) built: an approval may put the feature name first ("Phase 1 design approved 1A"), a leading cloud `<system-reminder>` block is set aside unless it carries a relayed message, a "don't" or "not" before any approval stops it, picks with no stage words get a note saying so, and an approval sent from outside a repo is never silent. `verify.py` 1092/1092 PASS.
+- Step 2 (#502) built: the page builder refuses a design or build plan page whose copy-box line the loop would reject (pages for another repo, summary pages and sweep pages are exempt), the end-of-reply check records the approval lines a reply offered, and a bare "Approve" (plus picks) is read as the one line offered, or moves nothing and says why. `verify.py` 1097/1097 PASS.

@@ -169,6 +169,10 @@ each project, and nothing else uses it; the default is orange; green is done); I
 dark, every tap tried, and a search for bare numbers. My chat reply around a page is a plain
 summary, the link, then numbered steps for what the user needs to do (#233).
 
+Anything waiting on the user is a button or a step card, never a bare line to work out. A page's
+copy-box line is one the design loop accepts, or the page builder refuses the page; an "Approve"
+button sends the one approval line the last reply offered, plus any picks (#155, #502).
+
 ## Helpers build only approved steps
 
 A helper (subagent) starts knowing the feature, its stage and its issues, and that it builds only
