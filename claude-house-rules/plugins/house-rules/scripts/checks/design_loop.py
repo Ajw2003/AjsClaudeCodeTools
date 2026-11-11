@@ -600,12 +600,12 @@ def _loop_log(line):
 def _loop_issue(number, labelled=True, via="mcp"):
     if via == "mcp":
         p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "loop",
-             "cwd": _loop_dir, "tool_input": {"method": "create", "title": "t",
+             "cwd": _loop_dir, "tool_input": {"method": "create", "title": "t", "body": "Part of #900",
              "labels": ["Feature", "AjsAgent created this"] if labelled else ["Feature"]},
              "tool_response": {"url": "https://github.com/o/r/issues/%d" % number}}
     else:
         p = {"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "loop", "cwd": _loop_dir,
-             "tool_input": {"command": 'gh issue create --title t --label "%s"' % ("AjsAgent created this" if labelled else "x")},
+             "tool_input": {"command": 'gh issue create --title t --body "Part of #900" --label "%s"' % ("AjsAgent created this" if labelled else "x")},
              "tool_response": {"stdout": "https://github.com/o/r/issues/%d\n" % number}}
     run_hook("autosave", json.dumps(p), env=_loop_env)
 
@@ -1591,7 +1591,7 @@ _ma_set({"feature": "Importer", "stage": "plan"})
 
 def _ma_issue(url):
     p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "multi",
-         "cwd": _ma_dir, "tool_input": {"method": "create", "title": "t", "labels": ["AjsAgent created this"]},
+         "cwd": _ma_dir, "tool_input": {"method": "create", "title": "t", "body": "Part of #900", "labels": ["AjsAgent created this"]},
          "tool_response": {"url": url}}
     out = run_hook("autosave", json.dumps(p), env=_ma_env)[1]
     state = json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
@@ -2314,7 +2314,7 @@ for _t, _ok in _nb_cases:
 # --- #375: one issue list per feature - a second design approval keeps the first feature's issues ----
 def _pf_issue(number):
     p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "cl",
-         "cwd": _cl_dir, "tool_input": {"method": "create", "title": "t", "labels": ["Feature", "AjsAgent created this"]},
+         "cwd": _cl_dir, "tool_input": {"method": "create", "title": "t", "body": "Part of #900", "labels": ["Feature", "AjsAgent created this"]},
          "tool_response": {"url": "https://github.com/o/r/issues/%d" % number}}
     run_hook("autosave", json.dumps(p), env=_cl_env)
 

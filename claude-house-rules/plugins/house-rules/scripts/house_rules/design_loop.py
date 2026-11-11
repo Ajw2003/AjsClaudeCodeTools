@@ -666,6 +666,58 @@ def _loop_gh_labels(repo, number):
     return json.loads(proc.stdout)
 
 
+LOOP_ISSUES_FILE_ENV = "HOUSE_RULES_LOOP_ISSUES_FILE"  # tests: a JSON list of {number, body, labels} rows
+
+
+def _loop_feature_issues(state, top):
+    """(issues, note): the feature's issues read from GitHub at "Build plan approved" - the parent plus every
+    open issue whose body says "Part of #<parent>" - merged with what was recorded (hand-recorded
+    "Issues for" included). On a missing parent or a failed read, the recorded issues and a note saying why."""
+    import subprocess
+    recorded = [i for i in state.get("issues", []) if isinstance(i, dict)]
+    parent = state.get("parent")
+    if parent is None:
+        return recorded, ('No step issue named "Part of #N" was seen in Plan, so the feature\'s issues were not '
+                          "read from GitHub; the %d recorded issue(s) were used." % len(recorded))
+    own, _problem = _origin_slug(top)
+    try:
+        stand_in = os.environ.get(LOOP_ISSUES_FILE_ENV)
+        if stand_in:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                rows = json.load(f)
+        else:
+            if not shutil.which("gh"):
+                raise RuntimeError("gh is not installed")
+            if not own:
+                raise RuntimeError("this checkout has no GitHub origin")
+            proc = subprocess.run(["gh", "issue", "list", "-R", own, "--state", "open", "--limit", "200",
+                                   "--json", "number,body,labels", "--search", '"Part of #%d" in:body' % parent],
+                                  capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+            if proc.returncode != 0:
+                detail = (proc.stderr or proc.stdout).strip().splitlines()
+                raise RuntimeError(detail[0] if detail else "gh exited %d" % proc.returncode)
+            rows = json.loads(proc.stdout)
+        if not isinstance(rows, list):
+            raise ValueError("the issue list was not a JSON list")
+        mark = {ISSUES_LABEL.lower(), ISSUES_LABEL_OLD.lower()}
+        repo = own or next((i.get("repo") for i in recorded if i.get("repo")), "")
+        merged = [{"repo": repo, "number": int(parent), "labelled": True}]
+        for r in rows:  # the GitHub search is loose, so each body is re-checked for the exact number
+            if any(int(n) == int(parent) for n in _PART_OF_RE.findall(r.get("body") or "")):
+                names = {(l.get("name") if isinstance(l, dict) else str(l)).lower() for l in r.get("labels") or []}
+                merged.append({"repo": repo, "number": int(r["number"]), "labelled": bool(names & mark)})
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError, subprocess.TimeoutExpired) as exc:
+        return recorded, ("The feature's issues could not be read from GitHub (%s), so the %d recorded issue(s) "
+                          "were used." % (exc, len(recorded)))
+    have = {(str(i["repo"]).lower(), i["number"]) for i in merged}
+    for i in recorded:  # hand-recorded ones still count
+        key = (str(i.get("repo")).lower(), i.get("number"))
+        if key not in have:
+            merged.append(i)
+            have.add(key)
+    return merged, ""
+
+
 def _loop_labels(state, issues=None, record=True):
     """({key: [labels] or None}, note) for the feature's issues (or, #375, the given list: a stored
     feature's). The note is "" when GitHub answered, else it says the labels came from the record and why."""
@@ -970,7 +1022,7 @@ def _loop_apply_one(state, text, top):
     """Move the stage for one approval phrase (or none). Returns a note for the model, or "" when the
     text approves nothing. Mutates state."""
     stage, feature = state["stage"], state.get("feature") or ""
-    approval = None
+    approval, issues_note = None, ""
     m = _LOOP_PLAN_RE.search(text)
     if m:
         name = _loop_name(m.group(1))
@@ -981,9 +1033,10 @@ def _loop_apply_one(state, text, top):
         if stage != "plan":
             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
+        state["issues"], issues_note = _loop_feature_issues(state, top)
         have = sum(1 for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled"))
         if have < ISSUES_NEEDED:
-            return ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
+            return (issues_note + " " if issues_note else "") + ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
                     "made since its design was approved, and needs at least %d: one issue for the feature "
                     "and a sub-issue per step, each naming what it depends on, what depends on it and when "
                     "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again."
@@ -1022,6 +1075,7 @@ def _loop_apply_one(state, text, top):
             elif not redo:
                 _loop_keep_feature(state, feature, stage)  # #375: a feature in build or QA keeps its issues
                 state["issues"] = []
+                state.pop("parent", None)  # a new feature's issues name a new "Part of #N"
                 state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: not the next feature's
         else:
             m = _LOOP_QA_RE.search(text)
@@ -1068,6 +1122,8 @@ def _loop_apply_one(state, text, top):
             {"stage": approval[0], "name": approval[1], "at": int(time.time())})
         note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
             approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        if issues_note:
+            note += " " + issues_note
         # #479 (U2): the approval is only on this disk until it is pushed, and a session that stops loses it.
         note += (" Save it now, before anything else: `git add .claude/%s && git commit -m \"chore: record %s\" "
                  "&& git push`." % (LOOP_FILE, approval[0].lower()))
@@ -1383,6 +1439,28 @@ def _created_issue(data):
     return found, labelled, how
 
 
+_BODY_FILE_RE = re.compile(r"--body-file(?:=|\s+)(\"[^\"]*\"|'[^']*'|[^\s\"']+)|-F\s+(\"[^\"]*\"|'[^']*'|[^\s\"']+)")
+
+
+def _issue_body(data):
+    """The text an issue-creating call carries as its body: the GitHub tool's `body`, or the whole Bash command
+    (which holds --body / a heredoc / -f body=...) plus the contents of a --body-file it names, when readable."""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    if data.get("tool_name") != "Bash":
+        return str(ti.get("body") or "")
+    cmd = ti.get("command") or ""
+    text = cmd
+    for m in _BODY_FILE_RE.finditer(cmd):
+        path = (m.group(1) or m.group(2)).strip("\"'")
+        try:
+            base = data.get("cwd") or os.getcwd()
+            with open(os.path.join(base, path), "r", encoding="utf-8") as f:
+                text += "\n" + f.read()
+        except OSError:
+            pass  # unreadable: the command text alone is searched, so a missing "Part of" shows in the note
+    return text
+
+
 _GITHUB_SLUG_RE = re.compile(r"github\.com[:/]+([^/\s]+/[^/\s]+?)(?:\.git)?/?\s*$", re.IGNORECASE)
 
 
@@ -1399,7 +1477,10 @@ def _origin_slug(top):
     return (m.group(1) if m else ""), ""
 
 
-def _loop_record_issues(git_dir, found, labelled, top=None):
+_PART_OF_RE = re.compile(r"(?i)\bpart of #(\d+)\b")
+
+
+def _loop_record_issues(git_dir, found, labelled, top=None, body=""):
     """#231: issues made while a feature is in Plan count toward its build-plan approval.
 
     #308: only issues made in the repo that owns the stage file count. In an Unblocked session, two issues
@@ -1415,6 +1496,17 @@ def _loop_record_issues(git_dir, found, labelled, top=None):
     own, slug_problem = _origin_slug(top) if top else ("", "")
     own = own.lower()
     notes = [slug_problem + ", so every new issue counts toward this feature."] if slug_problem else []
+    part = _PART_OF_RE.search(body or "")
+    parent = state.get("parent")
+    if not part or (parent is not None and int(part.group(1)) != int(parent)):
+        # #475: an issue for a separate feature is not this feature's. The feature issue itself is made
+        # first, with no "Part of" line; it enters the list as `parent` once a step issue names it.
+        why = 'names no "Part of #N"' if not part else 'names "Part of #%s", not #%s' % (part.group(1), parent)
+        expected = "" if parent is not None else " If this is the feature issue itself, that is expected."
+        return notes + ['Design loop: issue #%s %s, so it is not counted as a step of "%s".%s'
+                        % (found[0][1], why, state.get("feature") or "this feature", expected)]
+    if parent is None:
+        state["parent"] = int(part.group(1))
     for repo, number in found:
         if own and str(repo).lower() != own:
             notes.append("Design loop: issue %s#%s was made in another repo, so it doesn't count toward \"%s\" "
@@ -1598,7 +1690,7 @@ def _issues_record(payload):
         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return []
-        loop_notes = _loop_record_issues(git_dir, found, labelled, top)
+        loop_notes = _loop_record_issues(git_dir, found, labelled, top, _issue_body(data))
         if not _issues_enabled():
             return loop_notes
         state, problem = _issues_read(git_dir)
