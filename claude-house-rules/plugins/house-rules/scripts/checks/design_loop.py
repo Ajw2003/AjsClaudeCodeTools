@@ -538,7 +538,8 @@ _loop_dir = tempfile.mkdtemp(prefix="house-rules-loop-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _loop_dir], check=True)
 _loop_labels_file = os.path.join(_FIXTURE_ROOT, "loop-labels.json")
 _loop_env = dict(os.environ, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
-                 HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+                 HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file,
+                 HOUSE_RULES_LOOP_ISSUES_FILE=os.path.join(_FIXTURE_ROOT, "no-such-issues.json"))  # #503: a failed GitHub read
 
 
 def _loop_gh(label, *numbers):
@@ -656,7 +657,7 @@ _loop_issue(103, via="bash")
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("issues from the GitHub tool and from gh both count, so the next check is reached",
                     "labelled issue(s)" not in _n and _loop_stage() == "plan"))
-_loop_post("Bash", {"command": "gh issue create --title 'Fix AjsAgent created this' --body x"},
+_loop_post("Bash", {"command": "gh issue create --title 'Fix AjsAgent created this' --body 'Part of #900'"},
            {"stdout": "https://github.com/o/r/issues/301\n"})
 _loop_cases.append(("D11: the label name in a title doesn't make an issue labelled",
                     any(i.get("number") == 301 and not i.get("labelled") for i in _loop_state().get("issues", []))))
@@ -1606,6 +1607,88 @@ if _rec:
 _out, _rec = _ma_issue("https://github.com/me/own/issues/12")
 report("PASS" if _rec == [("me/own", 12)] else "FAIL",
        "design loop (#308): an issue made in the stage file's own repo is recorded as before")
+
+# --- #503: a build plan approval counts the feature's issues from GitHub (stubbed) -------------
+_p3_issues_file = os.path.join(_FIXTURE_ROOT, "p3-issues.json")
+_p3_env = dict(_ma_env, HOUSE_RULES_LOOP_ISSUES_FILE=_p3_issues_file)
+
+
+def _p3_create(number, body):
+    p = {"hook_event_name": "PostToolUse", "tool_name": "mcp__github__issue_write", "session_id": "multi",
+         "cwd": _ma_dir, "tool_input": {"method": "create", "title": "t", "body": body,
+                                        "labels": ["AjsAgent created this"]},
+         "tool_response": {"url": "https://github.com/me/own/issues/%d" % number}}
+    return run_hook("autosave", json.dumps(p), env=_p3_env)[1]
+
+
+def _p3_approve():
+    p = {"hook_event_name": "UserPromptSubmit", "session_id": "multi", "cwd": _ma_dir,
+         "prompt": "Build plan approved: Importer"}
+    out = run_hook("scope", json.dumps(p), env=_p3_env)[1]
+    try:
+        note = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        note = ""
+    state = json.load(open(os.path.join(_ma_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))
+    return note, state
+
+
+def _p3_stub(rows):
+    with open(_p3_issues_file, "w", encoding="utf-8") as f:
+        json.dump(rows, f)
+
+
+_p3_working = ["AjsAgent created this", "in progress"]
+_p3_cases = []
+
+# A separate feature's issue does not count; the feature issue itself gets a mild note and isn't recorded.
+_ma_set({"feature": "Importer", "stage": "plan"},
+        labels={"me/own#%d" % n: _p3_working for n in (10, 11, 12, 13)})
+_p3_stub([{"number": 11, "body": "Part of #10", "labels": [{"name": "AjsAgent created this"}]}])
+_o10 = _p3_create(10, "The feature issue.")
+_o11 = _p3_create(11, "Part of #10")
+_o12 = _p3_create(12, "Part of #99")
+_o13 = _p3_create(13, "")
+_n, _s = _p3_approve()
+_p3_cases.append(("an issue for a separate feature (no Part of, or another number) does not count toward the approval",
+                  "if this is the feature issue itself, that is expected" in _o10.lower()
+                  and 'names "Part of #99", not #10' in _o12 and 'names no "Part of #N"' in _o13
+                  and _s["stage"] == "plan" and "has 1 labelled issue(s)" not in _n
+                  and "needs at least 2" in _n and _s.get("parent") == 10
+                  and [i["number"] for i in _s["issues"]] == [11]))
+
+# An issue made before Plan that says "Part of #10" is only in the stubbed GitHub list, and still counts.
+_ma_set({"feature": "Importer", "stage": "plan", "parent": 10},
+        labels={"me/own#%d" % n: _p3_working for n in (10, 20)})
+_p3_stub([{"number": 20, "body": "Part of #10", "labels": [{"name": "AjsAgent created this"}]},
+          {"number": 21, "body": "Part of #100 (a loose search hit)", "labels": [{"name": "AjsAgent created this"}]}])
+_n, _s = _p3_approve()
+_p3_cases.append(('an issue opened before Plan that says "Part of #N" counts, so "Build plan approved" goes through',
+                  _s["stage"] == "build" and sorted(i["number"] for i in _s["issues"]) == [10, 20]))
+
+# A failed GitHub read falls back to the recorded issues, says so, and a hand-recorded issue still counts.
+_ma_set({"feature": "Importer", "stage": "plan", "parent": 10,
+         "issues": [{"repo": "me/own", "number": 30, "labelled": True},
+                    {"repo": "me/own", "number": 31, "labelled": True}]},
+        labels={"me/own#%d" % n: _p3_working for n in (30, 31)})
+if os.path.exists(_p3_issues_file):
+    os.remove(_p3_issues_file)
+_n, _s = _p3_approve()
+_p3_cases.append(("a failed GitHub read falls back to the recorded issues and the note says so",
+                  _s["stage"] == "build" and "could not be read from GitHub" in _n
+                  and sorted(i["number"] for i in _s["issues"]) == [30, 31]))
+
+# An issue aj recorded by hand ("Issues for") is merged with the GitHub list, de-duplicated.
+_ma_set({"feature": "Importer", "stage": "plan", "parent": 10,
+         "issues": [{"repo": "me/own", "number": 20, "labelled": True},
+                    {"repo": "me/own", "number": 40, "labelled": True}]},
+        labels={"me/own#%d" % n: _p3_working for n in (10, 20, 40)})
+_p3_stub([{"number": 20, "body": "Part of #10", "labels": [{"name": "AjsAgent created this"}]}])
+_n, _s = _p3_approve()
+_p3_cases.append(("an issue recorded by hand still counts and is not listed twice",
+                  _s["stage"] == "build" and sorted(i["number"] for i in _s["issues"]) == [10, 20, 40]))
+for _t, _ok in _p3_cases:
+    report("PASS" if _ok else "FAIL", "build plan issues from GitHub (#503): " + _t)
 
 # --- label setup: create only the missing house labels (#275) ---------------------------------
 import labels as _lb
