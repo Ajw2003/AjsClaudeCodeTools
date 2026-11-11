@@ -491,10 +491,7 @@ SEEN_FILE = "house-rules-loop-seen.json"
 
 def _loop_ref_text(path):
     """The text of a small git file, or "" when it is absent (a missing ref is an answer, not an error)."""
-    try:
-        return _read_text(path).strip()
-    except OSError:
-        return ""
+    return _read_text(path).strip() if os.path.isfile(path) else ""
 
 
 def _loop_branch(git_dir):
@@ -512,12 +509,16 @@ def _loop_newest(state):
 
 def _loop_seen(git_dir):
     """D9: the clone-wide record of the newest approval seen, in the common git directory: {} when none."""
-    try:
-        with open(os.path.join(_loop_dir(git_dir), SEEN_FILE), "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) and isinstance(data.get("at"), int) else {}
-    except (OSError, ValueError):
+    path = os.path.join(_loop_dir(git_dir), SEEN_FILE)
+    if not os.path.isfile(path):
         return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError) as exc:
+        sys.stderr.write("house-rules: could not read %s (%s), so no newer-branch hold applies.\n" % (SEEN_FILE, exc))
+        return {}
+    return data if isinstance(data, dict) and isinstance(data.get("at"), int) else {}
 
 
 def _loop_note_seen(git_dir, state):
