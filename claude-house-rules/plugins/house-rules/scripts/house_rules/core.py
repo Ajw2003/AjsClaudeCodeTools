@@ -25,7 +25,19 @@ import urllib.parse
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+# stdin can be read once, and the speed switches need it too (see _mode_state). hook.py's main() reads it
+# first and keeps it here for the call; tests that call handlers in-process never set it.
+_PAYLOAD_CACHE = None
+
+
+def keep_payload():
+    global _PAYLOAD_CACHE
+    _PAYLOAD_CACHE = read_payload()
+
+
 def read_payload():
+    if _PAYLOAD_CACHE is not None:
+        return _PAYLOAD_CACHE
     try:
         raw = sys.stdin.buffer.read().decode("utf-8", "replace")
     except Exception as exc:
@@ -472,6 +484,16 @@ def _apply_voice_toggle(body):
     return body[:start] + (body[nxt + 1 :] if nxt != -1 else "")
 
 
+def _drop_section(body, heading):
+    """body without the `## ` section that starts at heading (and its ### subsections)."""
+    start = body.find(heading)
+    if start == -1:
+        sys.stderr.write("house-rules: the %r section was not found, so it was not removed.\n" % heading)
+        return body
+    nxt = body.find("\n## ", start + len(heading))
+    return body[:start] + (body[nxt + 1:] if nxt != -1 else "")
+
+
 def _plugin_root():
     return os.path.normpath(os.path.join(SCRIPTS_DIR, ".."))
 
@@ -584,6 +606,8 @@ def event_inject():
     # rather than substituted into every pointer: 26 copies of a long install path pushed this
     # past its size margin on a CI runner whose checkout path was merely 26 chars longer.
     body = _expand_detail_paths(body, root)
+    if not _builders_enabled():
+        body = _drop_section(body, "## Once the approach is decided, delegate the execution")
 
     preamble = (
         "The following are the user standing house rules. They apply to every project and "
@@ -597,7 +621,7 @@ def event_inject():
         "suppressOutput": True,
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": preamble + body,
+            "additionalContext": preamble + body + ("\n\n" + _mode_note() if _mode_note() else ""),
         },
     }
     if note:
@@ -621,6 +645,8 @@ def event_showrule():
     root, note = _rules_root(tuple(n for n, _ in SHOWRULE_FILES))
     bodies, missing = [], []
     for name, label in SHOWRULE_FILES:
+        if name == "show-dont-tell.md" and not _loop_enabled():
+            continue  # speed switches: the design loop is off, so its rule text is not loaded
         try:
             body = _read_text(os.path.join(root, "rules", name)).replace("\r\n", "\n")
         except OSError:
@@ -2073,6 +2099,20 @@ def register_prompt(fn):
     return fn
 
 
+def _scope_mode_link(payload, field):
+    """Speed switches: aj's own "design loop off" / "builders on" saves the switch; whatever is off is restated."""
+    try:
+        m = _PROMPT_VALUE_RE.search(payload or "")
+        text = _own_words(json.loads('"%s"' % m.group(1))) if m else None
+        if text is not None and not _is_relayed_prompt(text, payload):
+            saved = _mode_apply(text, payload)
+            if saved:
+                return "", saved
+        return "", _mode_note(payload)
+    except Exception as exc:
+        return "", "House rules: the speed switches could not be read (%s: %s)." % (type(exc).__name__, exc)
+
+
 def register_post_tool(consumer, fn):
     _register(POST_TOOL_HOOKS, (consumer, fn))
     return fn
@@ -2568,7 +2608,109 @@ _GATED_TOOLS = {"Write", "Edit", "NotebookEdit"}
 
 
 def _issues_enabled():
-    return os.environ.get("HOUSE_RULES_ISSUES", "on").strip().lower() not in _TOGGLE_OFF
+    return not _switch_off("design", "HOUSE_RULES_ISSUES")
+
+
+# Speed switches (#524, docs/4-systems/speed-switches.md): two switches aj types in chat, saved per repo.
+# "design" covers the design loop and the issue gate; "builders" covers delegation and the agent cap.
+MODE_FILE = "house-rules-mode.json"  # .claude/ of the main checkout, beside the design loop's stage file
+MODE_SWITCHES = ("design", "builders")
+_MODE_SWITCH_RE = re.compile(r"\b(design\s+loop|builders)\s+(on|off)\b", re.IGNORECASE)
+# A switch counts only when its sentence or line holds nothing else, so a quoted mention does not flip it.
+_MODE_LINE_RE = re.compile(r"\s*(?:/house-rules:mode\s+)?(?:(?:design\s+loop|builders)\s+(?:on|off)[\s,]*(?:and\s+)?)+",
+                           re.IGNORECASE)
+_MODE_CACHE = {}
+
+
+def _mode_file(cwd):
+    """The repo's switch file, or None outside a git checkout."""
+    top, _gd = _issues_locate(cwd)
+    common = _common_git_dir(top) if top else None
+    return os.path.join(os.path.dirname(common), ".claude", MODE_FILE) if common else None
+
+
+def _mode_typed(cwd):
+    """{switch: "on"|"off"} aj typed for this repo; {} when none or unreadable (said on stderr)."""
+    path = _mode_file(cwd)
+    if not path or not os.path.isfile(path):
+        return {}
+    try:
+        data = json.loads(_read_text(path))
+        return {k: v for k, v in data.items() if k in MODE_SWITCHES and v in ("on", "off")}
+    except (OSError, ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: could not read %s (%s), so its switches were ignored.\n" % (path, exc))
+        return {}
+
+
+def _mode_state(payload=None):
+    """{switch: (off?, why)} for this hook call: aj's typed switch for the repo, else on. There is no model
+    default: hooks are not told the model at session start (probed 2026-11-12), so aj chose typed switches only.
+    Cached per process."""
+    raw = payload if payload is not None else _PAYLOAD_CACHE
+    if raw in _MODE_CACHE:
+        return _MODE_CACHE[raw]
+    typed = _mode_typed(_payload_cwd(raw)) if raw else {}
+    state = {}
+    for name in MODE_SWITCHES:
+        if name in typed:
+            state[name] = (typed[name] == "off", "you typed \"%s %s\"" % (
+                "design loop" if name == "design" else name, typed[name]))
+        else:
+            state[name] = (False, "")
+    _MODE_CACHE[raw] = state
+    return state
+
+
+def _switch_off(name, env_var):
+    """True when `name` is off. A typed switch wins; otherwise env_var=off in settings.json turns it off."""
+    off, why = _mode_state().get(name, (False, ""))
+    if why.startswith("you typed"):
+        return off
+    return os.environ.get(env_var, "on").strip().lower() in _TOGGLE_OFF or off
+
+
+def _builders_enabled():
+    return not _switch_off("builders", "HOUSE_RULES_DELEGATION")
+
+
+def _mode_apply(text, payload):
+    """aj's own message "design loop off" / "builders on" saves the switch. Returns a note, or ""."""
+    found = [m for part in re.split(r"[.\n;!?]", text or "") if _MODE_LINE_RE.fullmatch(part)
+             for m in _MODE_SWITCH_RE.findall(part)]
+    if not found:
+        return ""
+    path = _mode_file(_payload_cwd(payload))
+    if not path:
+        return "House rules: you typed a switch, but this folder is not in a git repo, so nothing was saved."
+    typed = _mode_typed(_payload_cwd(payload))
+    for which, value in found:
+        typed["design" if which.lower().startswith("design") else "builders"] = value.lower()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        _write_atomic(path, json.dumps(typed, indent=1, sort_keys=True))
+    except OSError as exc:
+        return "House rules: could not save the switch to %s (%s), so nothing changed." % (path, exc)
+    _MODE_CACHE.clear()
+    return ("House rules: saved %s for this repo in %s; commit it with the next commit. %s" % (
+        ", ".join("%s %s" % ("design loop" if k == "design" else k, v) for k, v in sorted(typed.items())),
+        path, _mode_note(payload)))
+
+
+def _mode_note(payload=None):
+    """The standing note for whatever is off, said on every prompt so it overrides rule text loaded earlier."""
+    st = _mode_state(payload)
+    parts = []
+    if _switch_off("design", "HOUSE_RULES_LOOP"):
+        parts.append("Design loop OFF (%s): the \"Show, don't tell\" rule and the issue-before-code part of the "
+                     "issue rule do not apply. No design or build plan page, no approval wait, no editor pass, "
+                     "no page for long replies; just do the work. The destructive and main-branch guards and the "
+                     "evidence and commit checks still apply." % (st["design"][1] or "HOUSE_RULES_LOOP=off"))
+    if _switch_off("builders", "HOUSE_RULES_DELEGATION"):
+        parts.append("Builders OFF (%s): the \"delegate the execution\" rule does not apply; build it yourself in "
+                     "this conversation." % (st["builders"][1] or "HOUSE_RULES_DELEGATION=off"))
+    if parts:
+        parts.append("Type \"design loop on\" or \"builders on\" to switch back.")
+    return " ".join(parts)
 
 
 def _issues_locate(start):
@@ -2584,7 +2726,7 @@ def _issues_locate(start):
 
 
 def _loop_enabled():
-    return os.environ.get("HOUSE_RULES_LOOP", "on").strip().lower() not in _TOGGLE_OFF
+    return not _switch_off("design", "HOUSE_RULES_LOOP")
 
 
 # ---------------------------------------------------------------------------------------
@@ -3088,3 +3230,6 @@ def handover_evidence_check(payload):
                     evidence_words = claims
                     impossible_words = impossible
     return reply_text, needs_evidence, evidence_words, impossible_words, not_checked, could_not_tell
+
+
+register_prompt(_scope_mode_link)

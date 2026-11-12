@@ -1,0 +1,14 @@
+PASS  1 typed "design loop off" and "builders off" are saved for the repo
+      ok
+PASS  2 Fable with nothing typed: full mode (no model default), the show-dont-tell rule is there
+      NONE | HEADING-PRESENT
+PASS  3 Haiku: full mode, no off note, the show-dont-tell rule is there
+      NONE | HEADING-PRESENT
+PASS  4 "Build plan approved" with nothing recorded moves Plan to Build
+      stage=build | ok
+PASS  5 the timeout-120 sleep loop is refused, naming run_in_background
+      The command did not run: a PreToolUse hook refused it before it started. The refusal, word for word: "This waits in the foreground (a loop that sleeps until something happens), which holds the turn until it ends. Run the same command with run_in_background set to true instead: the harness wakes you when it exits, so no polling loop is needed." |  | I did not retry it or set `run_in_background`, since you asked for the foreground run. The loop itself has no exit (`until false` never succeeds), so
+FAIL  6 the third run of `bash t.sh` on unchanged code is refused
+      I read `t.sh` to check whether the third run could go ahead. It is a single line, `echo ran`, so there is no defect for me to fix. The rerun guard still blocks the command, and the only ways past it are changing the file or turning the check off, which you have not asked for. So the third run stays undone. |  | Should I leave the rerun check as it is, or turn it off for this repo with `HOUSE_RULES_RERUNS=off`?
+PASS  7 a switch quoted inside a longer sentence is not saved
+      NONE |  | The closest text is in the house rules: `"design loop off" or "builders off" typed on its own line, switches the loop or the helpers off for the repo`. That describes how to switch the loop off, not that it is off, and you have not typed it in this session. |  | House-rules 2.79.0 is installed and loads when you start a new session.

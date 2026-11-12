@@ -8,6 +8,7 @@ issue workflow's author and issue guards, the docs check, the GitHub tool's issu
 over a core link list that part registers on; none of them is imported here.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -538,10 +539,17 @@ _RERUN_NOTE = []  # one-line "could not check" notes from this call, added to th
 _RERUN_UNDO = []  # (state path, key, record before this run): taken back if the guard then refuses or asks
 
 RERUN_DENY = (
-    "`%s` has run twice since the last commit that changed code. Stop: read the code for the "
-    "cause and report what failed, without editing the check. A new commit that changes code "
-    "allows two more runs. HOUSE_RULES_RERUNS=off turns this check off."
+    "`%s` has run twice with this exact command on the same code. Fix the code first: read it for the "
+    "cause, change it (committed or not), and the next run is allowed; editing only the check or the docs "
+    "does not count. A different command (other flags or filters) is counted on its own. "
+    "HOUSE_RULES_RERUNS=off turns this check off."
 )
+# Speed switches choice 4: the count resets when code changes. "Code" is every tracked file with one of
+# these extensions, committed or not: a test reaches code through subprocesses its imports don't show
+# (verify.py runs hook.py), so the whole repo's code stands in for "the code the test touches".
+RERUN_CODE_SPECS = [":(glob)**/*" + e for e in RERUN_EXTS + (
+    ".cs", ".go", ".rs", ".java", ".kt", ".c", ".cc", ".cpp", ".h", ".hpp", ".gd", ".lua", ".tsx", ".jsx",
+    ".cjs", ".swift", ".php", ".shader", ".hlsl")]
 
 
 def _rerun_enabled():
@@ -625,7 +633,9 @@ def _rerun_check(payload, subject):
         data = json.loads(payload)
         sid = str(data.get("session_id") or "")
         agent = str(data.get("agent_id") or "main")
-        head = git(["rev-parse", "HEAD"])
+        specs = RERUN_CODE_SPECS + [":(exclude)" + script]  # editing the check itself is not a fix
+        code = hashlib.sha1((git(["ls-files", "-s", "--"] + specs) + "|"
+                             + git(["diff", "HEAD", "--"] + specs)).encode("utf-8")).hexdigest()
         override = os.environ.get("HOUSE_RULES_RERUNS_STATE", "").strip()
         if override:
             path = override
@@ -639,27 +649,48 @@ def _rerun_check(payload, subject):
             recs = json.loads(_read_text(path)).get("records")
             if not isinstance(recs, dict):
                 raise ValueError("state file %s is not the expected shape" % path)
-        key = "%s|%s|%s" % (sid, agent, script)
+        base = os.path.basename(script)  # the arguments after the script name: `bash x.sh a` and `x.sh a` are one run
+        args = " ".join(cmd[cmd.rfind(base) + len(base):].split()) if base in cmd else " ".join(cmd.split())
+        key = "%s|%s|%s|%s" % (sid, agent, script, args)
         rec = recs.get(key)
-        count = 0
-        if isinstance(rec, dict):
-            count = int(rec.get("count", 0))
-            old = rec.get("head")
-            if old != head:
-                try:
-                    changed = git(["diff", "--name-only", "%s..%s" % (old, head)]).splitlines()
-                    if any(c.strip() and c.strip() != script for c in changed):
-                        count = 0
-                except RuntimeError:
-                    count = 0
+        count = int(rec.get("count", 0)) if isinstance(rec, dict) and rec.get("code") == code else 0
         if count >= RERUN_LIMIT:
             return RERUN_DENY % script
         _RERUN_UNDO.append((path, key, rec))
-        recs[key] = {"script": script, "head": head, "count": count + 1}
+        recs[key] = {"script": script, "code": code, "count": count + 1}
         _write_atomic(path, json.dumps({"records": recs}))
     except Exception as exc:  # fail open and loud: noted in the guard's output
         _RERUN_NOTE.append("house-rules: the rerun count could not be checked (%s: %s); the command was allowed."
                            % (type(exc).__name__, str(exc)[:120]))
+    return None
+
+
+# Speed switches choice 5: a foreground wait holds the whole turn, so it is refused with its background form.
+WAIT_LIMIT_SECONDS = 60
+_WAIT_LOOP_RE = re.compile(r"\b(?:until|while)\b.*?\bdo\b.*?\bsleep\b|\bwhile\b.*?\bStart-Sleep\b", re.I | re.S)
+_WAIT_TIMEOUT_RE = re.compile(r"\btimeout\s+(?:-{1,2}\S+\s+)*(\d+(?:\.\d+)?)([smhd]?)\b")
+WAIT_DENY = (
+    "This waits in the foreground (%s), which holds the turn until it ends. Run the same command with "
+    "run_in_background set to true instead: the harness wakes you when it exits, so no polling loop is needed."
+)
+
+
+def _wait_check(payload, subject):
+    """A deny reason for a foreground sleep loop or a timeout over WAIT_LIMIT_SECONDS; else None."""
+    try:
+        ti = json.loads(payload).get("tool_input") or {}
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules guard: the wait check could not read the payload (%s), so it was skipped.\n" % exc)
+        return None
+    if not isinstance(ti, dict) or ti.get("run_in_background") is True:
+        return None
+    cmd = _rerun_command(payload, subject) or ""
+    if _WAIT_LOOP_RE.search(cmd):
+        return WAIT_DENY % "a loop that sleeps until something happens"
+    for amount, unit in _WAIT_TIMEOUT_RE.findall(cmd):
+        secs = float(amount) * {"": 1, "s": 1, "m": 60, "h": 3600, "d": 86400}[unit]
+        if secs > WAIT_LIMIT_SECONDS:
+            return WAIT_DENY % ("timeout %s%s, over %d seconds" % (amount, unit, WAIT_LIMIT_SECONDS))
     return None
 
 
@@ -738,7 +769,7 @@ def _event_guard_main():
                                      "permissionDecisionReason": issue_hit[1]}})
         return 0
 
-    rerun_deny = _rerun_check(payload, subject)
+    rerun_deny = _rerun_check(payload, subject) or _wait_check(payload, subject)
     if rerun_deny:
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                      "permissionDecisionReason": rerun_deny}})
@@ -1098,7 +1129,7 @@ def _delete_refusal(subject, where):
                 folder = os.path.dirname(os.path.abspath(path))
                 tracked, _o, _e = _ag(folder, ["ls-files", "--error-unmatch", "--", path], check=False)
                 changed, _o, _e = _ag(folder, ["diff", "--quiet", "HEAD", "--", path], check=False)
-            except RuntimeError:
+            except (RuntimeError, OSError):  # OSError: the target's folder does not exist, so git can't start there
                 return "recursive" if recursive else "unsaved"  # git couldn't answer, so the target is not proved safe
             if tracked != 0 or changed != 0:
                 return refusal

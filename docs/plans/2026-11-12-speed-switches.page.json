@@ -1,0 +1,65 @@
+{
+ "title": "Speed Switches",
+ "eyebrow": "Friction audit and design for approval · nothing built yet",
+ "approval": "Design approved: Speed switches",
+ "replyPrefix": "Design approved: Speed switches",
+ "reply": "",
+ "short": {
+  "lead": "A Fable 5.2 session spent half your usage on design steps before any code was written. The audit below found why. Switches already exist, but they are environment settings in settings.json that need a restart, and switching the design loop off removes only the hooks. The rule text that tells the model to make pages, wait for approvals and send work to builder helpers is still injected every session, so the model keeps doing the ceremony anyway. This design adds two switches you type in chat, makes them remove the rule text as well as the hooks, and fixes the foreground waits and the two-run test limit.",
+  "hint": "Tap a part to see what changes and what it needs from you.",
+  "key": [["We work on it", ""], ["You act on it", "you"]],
+  "items": [
+   ["unlock", "The moment", "You type \"design loop off\" and the next reply just does the work", "", "No design page, no approval lock, no issues-before-code and no editor pass. The safety guards stay on: no destructive commands, no commits on main, success claims still need a run behind them.", "You type the line once; it holds for this repo until you type \"design loop on\"."],
+   ["hand", "Builders", "\"builders off\" keeps the work in the main conversation", "", "The delegation rule stops being injected and its hooks stop counting, so artistic work is done by the model you chose instead of a cheaper helper that falls short.", "You type the line once."],
+   ["stop", "Waits", "A foreground wait loop is refused before it runs", "", "The command in your screenshot, a 10-minute `until grep ...; do sleep 20; done` wrapped in `timeout 595 bash -c`, is refused with a pointer to run_in_background, which wakes the model when the task ends instead of holding the turn.", "Nothing from you."],
+   ["flask", "Tests", "Reruns are counted against changes, not commits", "", "Today a test script may run twice, then is refused until a new code commit. After this, the count resets whenever any file changes, and only a third run of the same command on unchanged files is refused.", "Nothing from you."]
+  ]
+ },
+ "changes": [
+  ["keep", "What exists today: six switches, all in settings.json", "HOUSE_RULES_LOOP, HOUSE_RULES_ISSUES, HOUSE_RULES_DELEGATION, HOUSE_RULES_AGENTS, HOUSE_RULES_EDITOR and HOUSE_RULES_RERUNS are read from the env block of settings.json. Changing one means editing that file by hand and starting a new session. These stay as the long-term default; the typed switches sit on top.", "list", "Read in scripts/house_rules/design_loop.py (_loop_enabled, line 2536), delegation.py (lines 165 and 877) and safe_git.py (line 548)."],
+  ["cross", "Friction 1: the off switch leaves the rules text in place", "With HOUSE_RULES_LOOP=off the hooks stop, but event_showrule in scripts/house_rules/core.py (line 620) still injects show-dont-tell.md, the rule that says every plan is a page and every session starts locked. The model obeys the text, so the tokens are spent anyway.", "list", "Fix: when a switch is off, its rule section is left out of the injected text and a one-line note says which switch removed it, the same way HOUSE_RULES_VOICE=off already removes the voice section (core.py line 454)."],
+  ["cross", "Friction 2: three approval pages per change", "A change goes design page, then build plan page with drawn pictures of the planned code, then QA page. Each page also goes past the editor helper. Phase 1 (#493) produced a design page and a build plan page before any code. For a capable model and a clear request this is where most of the usage goes.", "list", "Light mode skips the design and build plan pages. The QA page stays optional: offered, not required."],
+  ["cross", "Friction 3: six end-of-reply checks that each force another turn", "The checkpoint table in design_loop.py (line 2143) runs page, editor, evidence, commit, handoff, plain summary and QA page checks. Six of the seven block, and every block makes the model write the reply again, which costs a whole extra turn.", "list", "Light mode keeps evidence and commit (they protect your work) and drops editor, handoff, plain summary and QA page."],
+  ["cross", "Friction 4: delegation is mandatory past one file or three steps", "The rule in house-rules.md (line 118) sends every settled plan to builder helpers, one per issue, at most two at a time, each in its own worktree. Each helper starts cold and rereads what the main conversation already knew. For art, layout and feel, helpers fall short and the work is redone.", "list", "\"builders off\" removes that rule section and turns off HOUSE_RULES_DELEGATION and HOUSE_RULES_AGENTS checks for the repo."],
+  ["cross", "Friction 5: a plan over three steps needs GitHub issues before any code", "The issue gate refuses source edits until a parent issue and one child per step exist, each labelled. That is several GitHub calls and a written issue body per step before work starts.", "list", "Light mode turns this gate off too (it is the HOUSE_RULES_ISSUES switch today)."],
+  ["cross", "Friction 6: foreground waits are not caught", "Nothing in the guard looks at sleep loops. Claude Code refuses a bare foreground sleep, but wrapping it in bash -c with timeout gets through, and the turn sits blocked for up to ten minutes.", "list", "A new guard pattern in scripts/house_rules/safe_git.py refuses a foreground Bash command that loops with sleep, or uses timeout over 60 seconds, unless run_in_background is set."],
+  ["cross", "Friction 7: two runs per test script per commit", "RERUN_LIMIT = 2 in safe_git.py (line 533) counts runs since the last code commit. A flaky test, a suite run with different filters, or the rule's own \"run what you touched twice\" uses both runs, and the third is refused even after files were fixed but not yet committed.", "list", "The count is keyed on the command plus a hash of the working tree. Any file change resets it; a third identical run on identical files is refused."],
+  ["cross", "Friction 8: your approval is refused when the bookkeeping is incomplete", "In the merge roadmap session, \"Build plan approved: merge roadmap 1A 2A\" moved nothing. _loop_apply_one in design_loop.py (line 954) needs two labelled issues recorded since the design was approved. #841 was opened before that, so it was not recorded, and the GitHub lookup that should have found it timed out after 5 seconds (LOOP_GH_SECONDS, line 618). You were then asked to send two more messages. The same function also refuses for the wrong stage, a different feature name, wrong labels and a missing decisions-log entry: six ways for your own word to be thrown away.", "list", "Fix: your approval always moves the stage. Anything missing (issues, labels, the log entry, a name that differs slightly) becomes a to-do note for the agent to fix in the same turn, never a refusal sent back to you. Issues count however they were made: through gh, the GitHub tool, the web, before or after the design, or named in your message. A GitHub lookup that fails or times out adds a note and does not block."],
+  ["new", "One fix carried in from #515", "Phase 1 step 8 (#515) found that with the loop off, the close guard still demands QA evidence only the loop can record. The switch design here covers it: every guard fed by a switched-off part is off with it.", "list", "#515 stays the issue for that part; this design decides its open question."]
+ ],
+ "choices": [
+  ["q1", "How do you flip the switches?", [
+    ["A", "Type a line in chat: \"design loop off\", \"builders off\" (and \"on\"), saved for this repo; /house-rules:mode does the same and shows the current state", 1, "Works in the desktop app, on your phone and in cloud sessions, takes effect on the next message, needs no restart. It is how approvals already work."],
+    ["B", "A slash command only: /house-rules:mode light or full", 0, "One clear place, but it is unavailable where slash commands are not, and still writes the same state file."],
+    ["C", "Keep settings.json only, and just make it remove the rule text", 0, "Smallest change, but still a hand edit and a restart for each flip."]
+  ], "A matches how you already approve things and needs nothing outside the chat."],
+  ["q2", "What is the starting state for a repo nobody has switched?", [
+    ["A", "Chosen by model: light for Opus and Fable, full for Sonnet and Haiku; your typed switch always wins", 1, "The session start hook already sees the model name, and it matches your point that the full loop suits smaller models."],
+    ["B", "Always full until you switch it", 0, "Predictable, but every frontier session pays the cost until you remember to switch."]
+  ], "A puts the default where you said it belongs and keeps the override one line away."],
+  ["q3", "What does \"design loop off\" turn off?", [
+    ["A", "Design and build plan pages, the approval lock, issues-before-code, the editor pass, the 160-word page rule, and the handoff, plain summary and QA page checks. Kept: destructive-command guard, main-branch guard, evidence and commit checks", 1, "Removes the ceremony and keeps everything that protects your files and your history."],
+    ["B", "All of the above, plus the evidence and commit checks", 0, "Cheapest, but a success claim with no run behind it would go through unchallenged."]
+  ], "A keeps the two checks that have caught real mistakes."],
+  ["q4", "How strict is the test rerun check?", [
+    ["A", "Reset on any file change; refuse the third identical run on unchanged files", 1, "Stops the edit-nothing-and-retry loop it was built for, without blocking real fix-and-rerun cycles."],
+    ["B", "Keep counting since the last commit, but raise the limit to five", 0, "One-line change, but the friction comes back on longer debugging."],
+    ["C", "Off by default, on only in full mode", 0, "No friction, but loses the guard for frontier models too."]
+  ], "A targets the thrashing the check exists for and leaves real work alone."],
+  ["q5", "What happens to a long foreground wait?", [
+    ["A", "Refused, with the run_in_background form of the same command in the refusal", 1, "The turn is never held, and the model has the fix in hand."],
+    ["B", "Allowed, with a note afterwards", 0, "Softer, but the ten minutes are already spent when the note arrives."]
+  ], "A prevents the wait instead of reporting it."],
+  ["q6", "What happens when you approve and something the loop expects is missing?", [
+    ["A", "Your approval always moves the stage; whatever is missing becomes a note the agent must fix in that turn", 1, "Your word is never thrown away and you never have to resend it. The checks still run, but they put the work on the agent instead of you."],
+    ["B", "Keep refusing, but fix the causes: count issues made any way, wait longer for GitHub, match names loosely", 0, "Closes the failures known today, but the next unforeseen gap refuses you again."]
+  ], "A ends this whole class of failure instead of patching each cause."]
+ ],
+ "wrapup": {
+  "summary": "An audit of the house-rules design loop found eight points of friction. This design adds two typed switches (design loop and builders) that remove both the hooks and the rule text, a guard against foreground waits, and a rerun check that counts changes instead of commits.",
+  "changing": "Nothing yet. After approval: scripts/house_rules/core.py, design_loop.py, delegation.py, safe_git.py, verify.py cases, and the docs tier for the design loop.",
+  "blocking": "Your pick in choices 1 to 6, or what you want changed.",
+  "next": "A short build plan, then the build. If you would rather skip the build plan page, say \"skip design\" with your picks.",
+  "todo": ["Pick one option in each of choices 1 to 6.", "Reply with the approval line, for example \"Design approved: Speed switches 1A 2A 3A 4A 5A 6A\"."]
+ }
+}

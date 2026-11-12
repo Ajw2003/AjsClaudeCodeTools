@@ -1,0 +1,114 @@
+"""Live tests for the speed switches (#524): real headless Claude Code sessions with the branch's plugin.
+
+Each case runs `claude -p` in its own throwaway git repo, loads the branch checkout's plugin with --plugin-dir and
+switches the installed house-rules off for that run only (--settings), so nothing on the machine changes.
+Writes live-result.txt into the repo's docs/plans/2026-11-12-speed-switches-live-tests/.
+"""
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+REPO = r"C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools"
+OUT = os.path.join(REPO, "docs", "plans", "2026-11-12-speed-switches-live-tests")
+PLUGIN = os.path.join(REPO, "claude-house-rules", "plugins", "house-rules")
+SETTINGS = json.dumps({"enabledPlugins": {"house-rules@aj-house-rules": False}})
+CHEAP = "haiku"
+FABLE = "claude-fable-5-2"
+
+
+def repo(stage=None):
+    d = tempfile.mkdtemp(prefix="speed-live-")
+    git = lambda *a: subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t"] + list(a), cwd=d,
+                                    check=True, capture_output=True)
+    git("init", "-q", "-b", "feature-live")
+    with open(os.path.join(d, "t.sh"), "w", encoding="utf-8") as f:
+        f.write("echo ran\n")
+    if stage:
+        os.makedirs(os.path.join(d, ".claude"))
+        with open(os.path.join(d, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as f:
+            json.dump(stage, f)
+    git("add", "-A")
+    git("commit", "-qm", "init")
+    return d
+
+
+def claude(d, prompt, model=CHEAP, tools=False):
+    cmd = ["claude", "-p", "--model", model, "--plugin-dir", PLUGIN, "--settings", SETTINGS]
+    if tools:
+        cmd += ["--allowedTools", "Bash"]
+    try:
+        r = subprocess.run(cmd, input=prompt, cwd=d, capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=300)
+    except subprocess.TimeoutExpired:
+        return "TIMED OUT after 300 s"
+    return (r.stdout or "") + (r.stderr or "")
+
+
+def read(path):
+    try:
+        return json.load(open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+results = []
+
+
+def case(title, ok, detail):
+    results.append(("PASS" if ok else "FAIL", title, detail.strip().replace("\n", " | ")[:500]))
+    print("%s  %s\n      %s" % results[-1], flush=True)
+
+
+only = sys.argv[1:]
+
+if not only or "1" in only:
+    d = repo()
+    out = claude(d, "design loop off. builders off. Reply with just: ok")
+    case("1 typed \"design loop off\" and \"builders off\" are saved for the repo",
+         read(os.path.join(d, ".claude", "house-rules-mode.json")) == {"builders": "off", "design": "off"}, out)
+
+ASK = ("Do not use any tools. Answer in exactly two lines. Line 1: quote the first sentence in your context that "
+       "starts with the words Design, loop and OFF in that order (in capitals as written there), or write NONE. Line 2: write HEADING-PRESENT if your context contains the "
+       "heading \"Show, don't tell; the user designs\", otherwise HEADING-ABSENT.")
+if not only or "2" in only:
+    out = claude(repo(), ASK, model=FABLE)
+    case("2 Fable with nothing typed: full mode (no model default), the show-dont-tell rule is there",
+         "NONE" in out and "HEADING-PRESENT" in out, out)
+if not only or "3" in only:
+    out = claude(repo(), ASK)
+    case("3 Haiku: full mode, no off note, the show-dont-tell rule is there",
+         "NONE" in out and "HEADING-PRESENT" in out, out)
+
+if not only or "4" in only:
+    d = repo({"feature": "Demo", "stage": "plan", "issues": [], "approvals": []})
+    out = claude(d, "Build plan approved: Demo. Do not use any tools. Reply with just: ok")
+    st = read(os.path.join(d, ".claude", "house-rules-loop.json")) or {}
+    case("4 \"Build plan approved\" with nothing recorded moves Plan to Build", st.get("stage") == "build",
+         "stage=%s | %s" % (st.get("stage"), out))
+
+if not only or "5" in only:
+    out = claude(repo(), "Run exactly this Bash command in the foreground, do not set run_in_background, do not "
+                         "change it: timeout 120 bash -c 'until false; do sleep 5; done'. Then say in one line what "
+                         "happened and quote any refusal reason word for word.", tools=True)
+    case("5 the timeout-120 sleep loop is refused, naming run_in_background", "run_in_background" in out, out)
+
+if not only or "6" in only:
+    out = claude(repo(), "Run the Bash command `bash t.sh` three separate times, one tool call each, never changing "
+                         "it. Then quote word for word any refusal you got.", tools=True)
+    case("6 the third run of `bash t.sh` on unchanged code is refused",
+         "Fix the code first" in out or "run twice" in out, out)
+
+if not only or "7" in only:
+    d = repo()
+    out = claude(d, "Line 1: quote the sentence that says Design loop OFF, or write NONE. Do not use tools.")
+    case("7 a switch quoted inside a longer sentence is not saved",
+         not os.path.isfile(os.path.join(d, ".claude", "house-rules-mode.json")), out)
+
+with open(os.path.join(OUT, "live-result.txt"), "w", encoding="utf-8") as f:
+    for r in results:
+        f.write("%s  %s\n      %s\n" % r)
+passed = sum(1 for r in results if r[0] == "PASS")
+print("RESULT: %d of %d live cases passed." % (passed, len(results)))
+sys.exit(0 if passed == len(results) else 1)

@@ -18,6 +18,7 @@ import urllib.parse
 from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
+    _builders_enabled,
     _GATED_TOOLS,
     _GH_PREFIX,
     _GIT_COMMIT_RE,
@@ -662,6 +663,12 @@ def _loop_log_mark(top):
         return hashlib.sha256(f.read()).hexdigest()
 
 
+def _loop_owe_log(state, top, label, name, owed):
+    """Speed switches 6A: a missing decisions log is owed work, not a refusal."""
+    if _loop_unlogged(state, top, label, name):
+        owed.append("create the decisions log (%s) and log this stage" % LOOP_LOG.replace(os.sep, "/"))
+
+
 def _loop_unlogged(state, top, label, name):
     """#230: an approval counts only once the stage being closed is in the decisions log - the log
     must exist and have changed since the last approval. A refusal note, or "" when it may count."""
@@ -1078,14 +1085,8 @@ def _loop_stored_qa(state, entry, verdict, name, top):
     issues = [i for i in entry.get("issues", []) if isinstance(i, dict)]
     labels, src = _loop_labels(state, issues)
     wrong = _loop_wrong(labels, LOOP_REVIEW)
-    if wrong or not labels:
-        return ('Design loop: aj wrote "QA %s: %s", but that feature is still being built beside the current '
-                "one, and QA needs every one of its issues to say `needs review`; these don't: %s. Nothing "
-                "moved. Swap their labels when its build is ready for aj, then ask again.%s"
-                % (verdict, name, "; ".join(wrong) or "no issues are recorded", " " + src if src else ""))
-    unlogged = _loop_unlogged(state, top, "QA " + verdict, name)
-    if unlogged:
-        return unlogged
+    owed = ["these issues should say `needs review`: %s" % "; ".join(wrong)] if wrong else []  # 6A
+    _loop_owe_log(state, top, "QA " + verdict, name, owed)
     key = (entry.get("name") or name).lower()
     if verdict == "passed":
         if not isinstance(state.get("closable"), list):
@@ -1105,6 +1106,8 @@ def _loop_stored_qa(state, entry, verdict, name, top):
         tail = (" It stays in the kept features, back in build: move its issues back to `%s`, fix the changes "
                 "aj listed, then swap them to `%s` again for a new QA message." % (LOOP_WORKING, LOOP_REVIEW))
     state.setdefault("approvals", []).append({"stage": "QA " + verdict, "name": name, "at": int(time.time())})
+    if owed:
+        tail += " aj's approval counts as sent, so fix these in this turn without asking aj again: %s." % "; ".join(owed)
     return ('Design loop: aj wrote "QA %s: %s". That feature moved, not the current one.%s The current feature '
             '"%s" is unchanged: stage %s.' % (verdict, name, tail, state.get("feature") or "(none)",
                                               LOOP_STAGE_NAMES[state["stage"]]))
@@ -1115,31 +1118,34 @@ def _loop_apply_one(state, text, top):
     text approves nothing. Mutates state."""
     stage, feature = state["stage"], state.get("feature") or ""
     approval, issues_note = None, ""
+    owed = []  # speed switches 6A: what an approval is missing becomes the agent's to-do, never a refusal
     m = _LOOP_PLAN_RE.search(text)
     if m:
         name = _loop_name(m.group(1))
-        if stage == "plan" and not _loop_same(name, feature):
-            return ('Design loop: aj wrote "Build plan approved: %s", but the feature in Plan is "%s", so nothing '
-                    "moved. Ask aj to approve it by that name, or to approve a design for \"%s\" first."
-                    % (name, feature, name))
-        if stage != "plan":
-            return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
-                    "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
+        if stage in ("build", "qa"):
+            return ('Design loop: aj wrote "Build plan approved: %s", but the stage is already %s, so there was '
+                    "nothing to move." % (name, LOOP_STAGE_NAMES[stage]))
+        if stage == "plan" and feature and not _loop_same(name, feature):
+            owed.append('aj wrote "%s" but the feature in Plan is "%s", so it was approved as "%s"; say so to aj'
+                        % (name, feature, feature))
+            name = feature
+        elif stage != "plan":
+            owed.append("no design was approved first, so log this feature's decisions in the decisions log")
+            if feature and stage != "done":
+                _loop_keep_feature(state, feature, stage, any_stage=True)
+            state["feature"], state["issues"] = name, []
+            state.pop("parent", None)
         state["issues"], issues_note = _loop_feature_issues(state, top)
         have = sum(1 for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled"))
         if have < ISSUES_NEEDED:
-            return (issues_note + " " if issues_note else "") + ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
-                    "made since its design was approved, and needs at least %d: one issue for the feature "
-                    "and a sub-issue per step, each naming what it depends on, what depends on it and when "
-                    "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again."
-                    % (name, have, ISSUES_NEEDED, ISSUES_LABEL))
+            owed.append("the feature has %d labelled issue(s) on record and needs %d (one for the feature and a "
+                        "sub-issue per step, labelled `%s` and `%s`): open or label them"
+                        % (have, ISSUES_NEEDED, ISSUES_LABEL, LOOP_WORKING))
         labels, src = _loop_labels(state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
         if wrong:
-            return _loop_label_refusal("Build plan approved: %s" % name, LOOP_WORKING, wrong, src, top)
-        unlogged = _loop_unlogged(state, top, "Build plan approved", name)
-        if unlogged:
-            return unlogged
+            owed.append("label these `%s`: %s%s" % (LOOP_WORKING, "; ".join(wrong), " (" + src + ")" if src else ""))
+        _loop_owe_log(state, top, "Build plan approved", name, owed)
         state["stage"], approval = "build", ("Build plan approved", name)
     else:
         m = _LOOP_DESIGN_RE.search(text)
@@ -1155,10 +1161,8 @@ def _loop_apply_one(state, text, top):
                 labels, src = _loop_labels(state)
                 wrong = _loop_wrong(labels, LOOP_WORKING)
                 if wrong:
-                    return _loop_label_refusal("Design approved: %s" % name, LOOP_WORKING, wrong, src, top)
-            unlogged = _loop_unlogged(state, top, "Design approved", name)
-            if unlogged:
-                return unlogged
+                    owed.append("label these `%s`: %s" % (LOOP_WORKING, "; ".join(wrong)))
+            _loop_owe_log(state, top, "Design approved", name, owed)
             same = stage in ("build", "qa") and _loop_same(name, feature)  # D5: an amended design, not a new feature
             state["feature"], state["stage"], approval = name, "plan", ("Design approved", name)
             state["redo"] = False
@@ -1188,17 +1192,12 @@ def _loop_apply_one(state, text, top):
                     labels, src = _loop_labels(state)
                     if not _loop_to_qa(state, labels):
                         wrong = _loop_wrong(labels, LOOP_REVIEW)
-                        return ('Design loop: aj wrote "QA %s: %s", but QA starts only once every issue of the '
-                                "feature says `needs review`, and these don't: %s. Nothing moved. Swap their "
-                                "labels when the build is ready for aj, then ask again.%s"
-                                % (verdict, name, "; ".join(wrong) or "no issues are recorded",
-                                   " " + src if src else ""))
+                        if wrong:
+                            owed.append("these issues should say `needs review`: %s" % "; ".join(wrong))
                 elif stage != "qa":
                     return ('Design loop: aj wrote "QA %s: %s", but the stage is %s, so nothing moved. QA '
                             "follows a build." % (verdict, name, LOOP_STAGE_NAMES[stage]))
-                unlogged = _loop_unlogged(state, top, "QA " + verdict, name)
-                if unlogged:
-                    return unlogged
+                _loop_owe_log(state, top, "QA " + verdict, name, owed)
                 state["stage"] = "done" if verdict == "passed" else "build"  # #504: one message sends a QA fault back
                 state["reopened"] = verdict == "failed"
                 if verdict == "passed":  # #362: the closable record; "Design approved" never touches it
@@ -1221,6 +1220,9 @@ def _loop_apply_one(state, text, top):
             approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
         if issues_note:
             note += " " + issues_note
+        if owed:
+            note += (" aj's approval counts as sent, so fix these in this turn without asking aj again: %s."
+                     % "; ".join(owed))
         # #479 (U2): the approval is only on this disk until it is pushed, and a session that stops loses it.
         note += (" Save it now, before anything else: `git add .claude/%s && git commit -m \"chore: record %s\" "
                  "&& git push`." % (LOOP_FILE, approval[0].lower()))
@@ -1234,11 +1236,12 @@ def _loop_apply_one(state, text, top):
             made = _house_labels_note(top)  # #276: planning is when the labels are first needed
             return note + (" " + made if made else "")
         if state["stage"] == "build":
-            note += (" Code edits are open for the approved steps while every issue says `%s`. Hand each "
-                     "approved step to @house-rules:builder (one per issue; at most two running) unless aj said "
-                     "to build it yourself; helpers build only approved steps and never design or approve. When "
+            hand = ("Hand each approved step to @house-rules:builder (one per issue; at most two running) unless "
+                    "aj said to build it yourself; helpers build only approved steps and never design or approve. "
+                    if _builders_enabled() else "Builders are off, so build it yourself in this conversation. ")
+            note += (" Code edits are open for the approved steps while every issue says `%s`. %sWhen "
                      "the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA."
-                     % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
+                     % (LOOP_WORKING, hand, LOOP_WORKING, LOOP_REVIEW))
         elif approval[0] == "QA failed":
             note += (" aj's words after the feature name are the fix list; the issues and the build plan are kept. "
                      "Move every issue back to `%s` now: code edits open once they are. A changed design still "
@@ -1970,6 +1973,8 @@ def _close_check(repo, number, reason, state):
     """(allowed, reason_text) for closing issue `number` of `repo` with state reason `reason`
     ("completed", "not_planned" or "" for none), from the design-loop `state` (#363)."""
     reason = (reason or "completed").strip().lower().replace(" ", "_")
+    if not _loop_enabled():  # #515: never demand evidence only a switched-off loop can record
+        return True, "the design loop is off, so the QA and sweep records it keeps are not required"
     if not isinstance(state, dict):
         state = {}
     sweep = [x for x in (state.get("sweep") or []) if isinstance(x, dict) and x.get("number") == number
@@ -2515,7 +2520,7 @@ CHECKPOINT_RULES = {
 
 def _missed_checkpoints(ctx):
     """[(rule name, fix)] for every blocking checkpoint at 'reply ends' that the reply misses."""
-    if not _loop_enabled():
+    if not _loop_enabled():  # light mode: evidence and commit still arrive, as the stop hook's reminders
         return []
     return [(name, fix) for moment, name, fn, mode in CHECKPOINTS
             if moment == "reply ends" and mode == "block" for fix in [fn(ctx)] if fix]
@@ -2527,7 +2532,7 @@ def _checkpoint_reason(missed):
     for name, fix in missed:
         lines.append("- %s: %s Fix: %s." % (name, CHECKPOINT_RULES[name], fix))
     lines.append("Fix these and send only what changed, not the whole reply again. A missing page blocks every retry "
-                 "until the reply links one; the other checks block once. HOUSE_RULES_LOOP=off turns it off.")
+                 "until the reply links one; the other checks block once. aj typing \"design loop off\" keeps only the evidence and commit checks.")
     return "\n".join(lines)
 
 

@@ -4,6 +4,14 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Plugin 2.80.0: speed switches (#524, #525).
+
+- Two switches aj types in chat: "design loop off" / "design loop on" and "builders off" / "builders on", saved for the repo in `.claude/house-rules-mode.json`; `/house-rules:mode` shows them. A switch that is off also leaves its rule text out of the session, so the model stops following it. A switch counts only when typed as its own sentence or line, never when quoted. Every model starts full; there is no Fable default, because hooks are not told the model at session start.
+- aj's approvals always move the stage: missing issues, labels, a decisions-log entry or a slightly different feature name become a to-do for the agent in that turn, never a refusal. With the design loop off, closing an issue no longer asks for QA records the loop never kept (#515).
+- A foreground command that waits in a sleep loop, or with `timeout` over 60 seconds, is refused and pointed at run_in_background.
+- The rerun limit counts the same command on the same code: any code change, committed or not, allows two more runs, and a different command is counted on its own. Editing only the test script or docs does not reset it.
+- Live tests in real headless sessions (`claude -p --plugin-dir`, installed plugin switched off for each run) passed 5 of 6; they found that a quoted "design loop off" flips the switch and that hooks cannot see the model at session start, so Fable starts full. Results in `docs/plans/2026-11-12-speed-switches-live-tests/`.
+- A delete whose folder does not exist is refused on Linux instead of slipping past the guard: `_delete_refusal` now treats git failing to start there (`OSError`) like any other unanswerable check (CI case 81). The same case now expects a foreground wait loop (sub-case 7b) to be refused with the run_in_background hint.
 - Fixed after phase 2 QA: the two-repo note works with Windows paths, and the drift check no longer counts history (dated log lines, deleted files) or shell variables (#517, #518). This repo's docs now have 0 out-of-date citations.
 
 Plugin 2.79.0: roadmap phases 1 (#493) and 2 (#494). The session handoff (#406) is not included; it moves to phase 3.

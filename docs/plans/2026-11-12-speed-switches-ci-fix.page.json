@@ -1,0 +1,46 @@
+{
+ "title": "Speed Switches CI Fix",
+ "eyebrow": "Pull request #526 · verify check · safe_git case 81",
+ "short": {
+  "lead": "CI on pull request #526 failed one check, safe_git case 81, for two reasons. One is fixed and pushed as 4221232. The other needs one more test edit, which waits on your \"skip design\", because the design loop lets only one code edit through each time.",
+  "hint": "Tap a row to see what was checked and how.",
+  "key": [
+   [
+    "Done",
+    ""
+   ],
+   [
+    "Waits on you",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "Delete guard",
+    "A delete in a missing folder is refused",
+    "",
+    "On Linux, git cannot start inside a folder that does not exist and raises OSError. The delete check caught only RuntimeError, so the guard gave `rm -rf /home/user/x` no decision. It now catches both and refuses. I worked this out from the code; there is no Linux on this machine, so the next CI run is the real test.",
+    "Nothing from you."
+   ],
+   [
+    "hand",
+    "Test 7b",
+    "The test still expects a wait loop to run",
+    "you",
+    "Sub-case 7b feeds `until grep x f; do sleep 1; done | tail` through the guard and expects it to pass. The wait guard you approved in 5A now refuses it, so the test must expect the refusal and the run_in_background hint. The edit is written but was refused by the code lock.",
+    "Type \"Build plan approved: Speed switches CI fix\" (or \"skip design\")."
+   ]
+  ]
+ },
+ "wrapup": {
+  "summary": "Half the CI fix is pushed; the test edit waits on you.",
+  "changing": "scripts/house_rules/safe_git.py (pushed), scripts/checks/safe_git.py (waiting), CHANGELOG.md (pushed).",
+  "blocking": "Your approval for the test edit.",
+  "next": "I make the test edit, rerun the safe_git checks, push, and read the CI result.",
+  "todo": [
+   "Type \"Build plan approved: Speed switches CI fix\"."
+  ]
+ },
+ "approval": "Build plan approved: Speed switches CI fix"
+}

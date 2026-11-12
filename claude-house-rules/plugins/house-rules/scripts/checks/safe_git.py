@@ -46,8 +46,9 @@ GUARD_CASES = [
     ("pass", None, 'Start-Process powershell -WindowStyle Hidden -ArgumentList "-File build.ps1"'),
     ("pass", None, "npm run dev > dev.log 2>&1 &"),
     ("pass", None, "nohup ./long-task.sh"),
-    ("pass", None, "until grep -q done status.txt; do sleep 5; done | tail -5"),
-    ("pass", None, "timeout 600 ./run_tests.sh | head -40"),
+    # Speed switches (#525) supersede #292 for these two: a foreground wait is refused with its background form.
+    ("deny", "run_in_background", "until grep -q done status.txt; do sleep 5; done | tail -5"),
+    ("deny", "run_in_background", "timeout 600 ./run_tests.sh | head -40"),
     ("pass", None, "git log | head -5"),
     ("pass", None, "cat build.log | tail -50"),
     ("pass", None, "python sleepy.py | tail"),
@@ -439,7 +440,9 @@ for _n, _cmd in (
     elif _n == "9" and not (_d == "deny" and ("run it as plain `git ...` from %s, with no cd, -C or variables, "
                                               "and it will be checked normally" % _fr_top) in _r):
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
-    elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
+    elif _n == "7b" and not (_d == "deny" and "run_in_background" in _r):  # 2.80.0: a foreground wait loop is refused
+        _fr_fail.append("7b: %s %r" % (_d, _r[-160:]))
+    elif _n not in ("9", "7b") and _d == "deny":
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
 for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/sub/../x" % _ua_dir, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)
@@ -1857,10 +1860,13 @@ def _rr_commit(rel, text):
 
 
 _rr_a = _rr_run("bash tools/x.sh a")
+_rr_a2 = _rr_run("bash tools/x.sh a")
 _rr_b = _rr_run("bash tools/x.sh b")
 _rr_c = _rr_run("bash tools/x.sh a")
-report("PASS" if not _rr_denied(_rr_a[1]) and not _rr_denied(_rr_b[1]) and _rr_denied(_rr_c[1]) and "tools/x.sh" in _rr_c[1]
-       else "FAIL", "rerun limit: the first two runs pass (different arguments too) and the third is refused, naming the script")
+report("PASS" if not _rr_denied(_rr_a[1]) and not _rr_denied(_rr_a2[1]) and not _rr_denied(_rr_b[1])
+       and _rr_denied(_rr_c[1]) and "tools/x.sh" in _rr_c[1] and "Fix the code first" in _rr_c[1]
+       else "FAIL", "rerun limit: the third identical run is refused, naming the script and asking for a fix; "
+                    "other arguments are counted on their own")
 _rr_reset()
 _rr_st = [_rr_run("git status")[1] for _ in range(4)]
 report("PASS" if not any(_rr_denied(o) for o in _rr_st) and not os.path.exists(_rr_state)
@@ -1870,7 +1876,16 @@ _rr_run("bash tools/x.sh a")
 _rr_run("bash tools/x.sh a")
 _rr_commit("other.txt", "2\n")
 _rr_o = _rr_run("bash tools/x.sh a")
-report("PASS" if not _rr_denied(_rr_o[1]) else "FAIL", "rerun limit: a commit that changes another file resets the count")
+report("PASS" if _rr_denied(_rr_o[1]) else "FAIL", "rerun limit: a commit that changes only a non-code file does not reset the count")
+_rr_reset()
+_rr_run("bash tools/x.sh a")
+_rr_run("bash tools/x.sh a")
+with open(os.path.join(_rr_dir, "tools", "lib.sh"), "w", encoding="utf-8") as _f:
+    _f.write("echo lib\n")
+_as_git(_rr_dir, "add", "tools/lib.sh")  # staged, not committed: a fix in progress still counts
+_rr_o = _rr_run("bash tools/x.sh a")
+report("PASS" if not _rr_denied(_rr_o[1]) else "FAIL", "rerun limit: an uncommitted change to other code resets the count")
+_as_git(_rr_dir, "commit", "-q", "-m", "lib")
 _rr_reset()
 _rr_run("bash tools/x.sh a")
 _rr_run("bash tools/x.sh a")
@@ -1905,6 +1920,25 @@ except ValueError:
 report("PASS" if _rr_o[0] == 0 and not _rr_denied(_rr_o[1]) and "rerun count could not be checked" in _rr_msg
        else "FAIL", "rerun limit: a corrupt state file lets the command through, with a message")
 _rr_reset()
+
+# --- speed switches (#525): a foreground wait is refused with its background form ---
+def _wait_run(cmd, background=None):
+    ti = {"command": cmd}
+    if background is not None:
+        ti["run_in_background"] = background
+    pl = {"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash", "tool_input": ti}
+    return run_hook("guard", json.dumps(pl), env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]
+
+
+_wait_shot = "timeout 595 bash -c 'until grep -q \"^exit\" out.txt; do sleep 20; done'; grep -c x out.txt"
+report("PASS" if '"permissionDecision":"deny"' in _wait_run(_wait_shot) and "run_in_background" in _wait_run(_wait_shot)
+       else "FAIL", "wait guard: the screenshot's sleep loop is refused in the foreground, naming run_in_background")
+report("PASS" if '"permissionDecision":"deny"' in _wait_run("timeout 5m python long.py")
+       and '"permissionDecision":"deny"' not in _wait_run("timeout 30 python short.py")
+       else "FAIL", "wait guard: timeout over 60 seconds is refused, timeout 30 is not")
+report("PASS" if '"permissionDecision":"deny"' not in _wait_run(_wait_shot, background=True)
+       and '"permissionDecision":"deny"' not in _wait_run("python -c 'import time; time.sleep(1)'")
+       else "FAIL", "wait guard: the same loop in the background is allowed, and a one-off command is not touched")
 
 # --- #478 (A5): an agent/ branch is the agent's own ---
 _a5 = _commit_repo("agent/optimistic-planck-1h64c9", committed=["a.txt"])
