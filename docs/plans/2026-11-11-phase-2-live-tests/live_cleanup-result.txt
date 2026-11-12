@@ -1,0 +1,6 @@
+PASS  setup: the local branch exists at the merged commit
+hook output: {"systemMessage":"Deleted after the merge of Ajw2003/AjsClaudeCodeTools#485: branch AjsAgent/audit-2026-11-05. Kept: worktree .claude/worktrees/unsaved (it was used in the last 30 minutes, so a helper may still be working in it). house-rules: the merge of Ajw2003/AjsClaudeCodeTools#485 stamped no closable record, because it links none of the QA-passed issues with `Refs #N`.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Deleted after the merge of Ajw2003/AjsClaudeCodeTools#485: branch AjsAgent/audit-2026-11-05. Kept: worktree .claude/worktrees/unsaved (it was used in the last 30 minutes, so a helper may still be working in it). house-rules: the merge of Ajw2003/AjsClaudeCodeTools#485 stamped no closable record, because it links none of the QA-passed issues with `Refs #N`."}}
+PASS  the hook exited 0 inside its 10-second limit (1.0 s)
+PASS  the merged branch was deleted, read from real GitHub
+PASS  the helper copy with an unsaved file was kept, the file is still there, and the note names it
+LIVE CLEANUP RESULT: 4 of 4 passed

@@ -7,6 +7,198 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-12 - Cloud saves for the session handoff move to phase 3
+
+**Context.** The handoff re-test found that a cloud session's push to `refs/house-rules/autosave/<branch>` is refused,
+while branch pushes work; every save on GitHub came from aj's PC (Research.md, 2026-11-12).
+
+**Decision.** aj chose to fold this into phase 3 (#495, pick up on any of aj's four accounts): its design covers a
+save that reaches GitHub from cloud sessions too (for example an `AjsAgent/` branch when the hidden ref is refused),
+re-tested from both a cloud session and the PC. Rejected for now: re-testing from the PC alone, and opening the pull
+request with PC-only saves.
+
+**Status.** Phase 3 is next.
+
+---
+
+## 2026-11-12 - Phase 2 passed QA
+
+aj wrote "QA passed: Phase 2 Windows and drift fixes" after the Windows rerun on aj's PC: `verify.py` failed only the
+7 older tests `main` also fails there, `tools/verify_tools.py` only A16, and the drift check listed 0. **Status.** Done;
+issues #508 to #514 and #516 to #518 keep `needs review` until aj closes them after a merge. Next: the session
+handoff re-test aj asked for, then one pull request to `main`.
+
+---
+
+## 2026-11-12 - Phase 2 fixes approved to build
+
+aj wrote "Issues for Phase 2 Windows and drift fixes: #516 #517 #518. Build plan approved: Phase 2 Windows and drift
+fixes". The plan is `docs/4-systems/docs-and-files.md`, "Fixes after QA". **Status.** Build.
+
+---
+
+## 2026-11-12 - Phase 2 QA failed: Windows paths and drift-check history
+
+**Context.** Using the drift check on this repo's own docs fixed 21 stale citations; the 6 left are history (dated log
+entries, a deleted file named on purpose) and one shell variable, which the checker should not count. The first
+Windows run (aj's PC, 2026-11-12) failed one new check: #301's two-repo report, whose paths come from git as `C:/...`.
+
+**Decision.** aj wrote "QA failed: Phase 2 fix the two-repo check's Windows paths, and make the drift check skip dated
+log lines, deleted-file mentions and shell variables".
+
+**Status.** Back in Design (the installed 2.76.0 in this cloud session sends QA failed to Design; the branch's own
+one-message return to Build is not what runs here). The issues are back to `in progress`.
+
+---
+
+## 2026-11-11 - Phase 2: docs and files you can trust (design)
+
+**Context.** Phase 2 of the roadmap (#494) carries 17 old issues. Checked against the code on 2026-11-11: #199, #399,
+#404, #479 and #463 are already built and need only proof; the other 12 need building. PlunderSpell's folders were
+reported at over 153 GB; this cloud session could not reach that repo or aj's PC, so the cause is unmeasured.
+
+**Decision.** aj approved "Design approved: Phase 2 1A 2A 3A 4A 5A" on
+`docs/plans/2026-11-11-phase-2-docs-and-files.html`. 1A: drift is caught at the commit that changes the code. 2A: the
+session writes the changelog line, and the end-of-turn check sends a turn back once without one. 3A: a merged,
+pushed branch and its clean finished worktrees are deleted locally, and the session says which. 4A: a big file goes
+into git only when aj names it ("LFS approved: <file>"), one file at a time, and only through Git LFS after the
+free allowance is checked; otherwise big files stay out. 5A: all three rule changes (#117, #301, #228) go in.
+
+**Why.** aj asked for big files to reach git with LFS, then narrowed it the same day: only when asked for, and only
+within the allowance (GitHub's free tier is quoted as 10 GiB of LFS storage and 10 GiB of bandwidth a month).
+Rejected: keeping big files out of git entirely (aj's first correction), warning-only checks (a missed warning puts a
+file in history), and asking before every branch delete (more work for aj with no extra safety).
+
+**Status.** Design approved; the build plan is next.
+
+---
+
+## 2026-11-11 - Phase 1 passed QA
+
+**Context.** Phase 1 (#493) was built as plugin 2.78.0 on `AjsAgent/session-handoff`, steps #501 to #507, after
+"Build plan approved: Phase 1 1A 2A" (D6: a new design name starts a new feature and keeps the old one; D9: an
+older branch's stage holds code edits). aj could not run the QA themselves, so it was run here:
+`verify.py` 1135/1135, `tools/verify_tools.py` 52/52, 14 of 14 real headless sessions through the whole loop, and
+6 of 6 real-git branch and merge checks (`docs/plans/2026-11-11-phase-1-live-tests/`).
+
+**Decision.** aj wrote "QA passed: Phase 1" on the QA page `docs/plans/2026-11-11-phase-1-qa.html`.
+
+**Not proven.** Windows, the app's real Approve button, and the close-line offer after a real merge.
+
+**Status.** QA passed; the stage is Done. Merging to `main` waits on aj, because this branch also carries the
+session handoff work (#406), whose own QA is still open.
+
+---
+
+## 2026-11-10 - Phase 1: approvals and the design loop just work
+
+**Context.** On 2026-11-09 five of aj's approvals moved nothing: two typed lines with the feature name first, a
+copy-box line with no stage words, a button labelled "Send it", and a build plan approval refused because the loop
+had not counted issues it never saw being opened. Phase 1 of the roadmap (#493) carries the 20 old issues about
+approvals and the design loop. Checking them against the code on 2026-11-10 found eight audit findings already
+fixed (D4, A9, A7, A2, A10, D5, D7, D8) and the rest still open.
+
+**Decision.** aj approved "Design approved: Phase 1 1A 2A 3A" on `docs/plans/2026-11-10-phase-1-approvals.html`.
+1A: a build plan approval reads the feature's issues from GitHub ("Part of #<feature issue>") instead of only
+counting issues seen being opened during Plan. 2A: a short reply button such as "Approve 1A" counts as the one
+approval line the same reply offered. 3A: #102, #129 and #130 close with a `verify.py` case proving what the QA page
+and the code-edit lock already do.
+
+**Why.** 1A fixes both ways issue counting failed (a separate feature's issue counted, an unseen issue missed). 2A
+gives one-tap approval without trusting a label on its own. 3A: the lock is stricter than #129 and #130 asked for.
+Rejected: 1B (still misses unseen issues), 2B (every approval needs the page open), 3B (duplicates the lock).
+
+**Status.** Design approved; the build plan is next.
+
+---
+
+## 2026-11-09 - Roadmap: eight phases in sequence replace 226 open issues
+
+**Context.** 226 issues were open, and work had become one-off fixes that kept failing aj in the same places:
+approvals that registered nothing, a page that lost its pictures, a handoff that let one folder erase another's
+save. aj asked for every issue to be triaged and closed, and for numbered phases worked in order in their place.
+All 226 were checked against the code (`docs/2-roadmap/triage/`; each issue's single home is in `homes.json`).
+
+**Decision.** aj approved "Design approved: Roadmap 1A 2A" on `docs/plans/2026-11-09-roadmap.html`. The phases
+are: 1 approvals and the design loop just work; 2 docs and files you can trust; 3 pick up on any of aj's four
+accounts; 4 the command guard refuses only what can't be undone; 5 pages that fit the idea, show the work and
+stay calm; 6 helpers you can follow; 7 aj's credit everywhere; 8 the plugin split and faster hooks. 1A: the 17
+issues about other products close here and are listed under Other products. 2A: all 226 close now, each with a
+comment naming the phase issue that carries it, or its evidence or duplicate.
+
+**Why this order.** aj set it. Approvals come first because every later phase moves through them. Docs and files
+come second because pickup on another account is only as good as the record it picks up from: the docs must agree
+with the code, stale docs must go, and work must be committed, pushed and cleaned up locally when safe (aj found
+PlunderSpell's folders over 153 GB on 2026-11-09). Rejected: pickup second, ahead of the docs.
+
+**Status.** Design approved. Opening the phase issues and closing the old ones wait on aj approving the GitHub
+issue command, whose prompt timed out unanswered on 2026-11-09.
+
+---
+
+## 2026-11-09 - Handoff overwrite: a save per folder, pictures inside the page, approvals that always register
+
+**Context.** The desktop app QA of the session handoff (`docs/plans/2026-11-09-session-handoff-desktop-qa.html`)
+found three faults. A second clone on the same branch saved over desktop session A's snapshot, so the
+uncommitted work was no longer on GitHub. Page pictures live in a `<page>-pics/` folder that a published page
+never carries. And three of aj's approvals registered nothing, because the page's copy box held a line the loop
+rejects. aj picked "Design approved: Handoff overwrite 1A 2A 3A" on
+`docs/plans/2026-11-09-handoff-overwrite-design.html`.
+
+**Decision.** 1A: each folder saves under `refs/house-rules/autosave/<branch>/<folder id>`, and the pickup lists
+every snapshot for the branch that holds files the folder lacks. 2A: `make_page.py` writes each picture into the
+page as a data: address and stops writing `<page>-pics/`. 3A: the builder refuses a design or plan page whose copy
+box would send a line the loop rejects (a page for another repo names it in `forRepo`), and the loop accepts the
+stage words after the feature name too. Rejected: one place per branch with refusals (1B) or a chain (1C); keeping
+the pictures folder and publishing it (2B); the builder check alone (3B).
+
+**Planning notes.** The restore command change already on the branch (commit d62be1a, `git diff <snap>^ <snap> --
+<files> | git apply`, stage file left out) stays. System docs: `docs/4-systems/usage-handoff.md`,
+`docs/4-systems/handover-pages.md`, `docs/4-systems/design-loop.md`.
+
+**Status.** Design approved; build plan next.
+
+---
+
+## 2026-11-08 - Session handoff and #406 become one feature
+
+**Context.** The session handoff design overlapped issue #406, approved 2026-10-27. aj picked
+"Design approved: Session handoff 1A" on `docs/plans/2026-11-08-session-handoff-vs-406.html`.
+
+**Decision.** One feature under #406. The November picks (automatic save, hook-written facts, ask
+before restoring) replace the October design where they differ. #406's per-branch note,
+`docs/5-today/handoff-<branch>.md`, its note rules and its end-of-reply check stay, the check as a
+backstop. Rejected: November design alone (1B), October design alone (1C).
+
+**Planning notes.** The automatic save keeps #477's rule that new files reach a snapshot only when
+the agent wrote them, so "including untracked files" on the November page narrows to that. The facts
+go inside the snapshot, not into the working folder. System doc: `docs/4-systems/usage-handoff.md`.
+
+**Status.** Design approved; build plan next.
+
+---
+
+## 2026-11-08 - Session handoff: automatic save, hook-written note, ask before restoring
+
+**Context.** aj asked that every session's work be saved and handed off automatically, so the next
+session can continue it whatever the account, and nothing is ever lost or left half done. aj
+approved "Design approved Session handoff: 1A 2A 3A" on
+`docs/plans/2026-11-08-session-handoff-design.html`.
+
+**Decision.** 1A: the whole working folder is pushed to `refs/autosave/<branch>` at most once a
+minute, outside aj's branches. 2A: a hook writes the handoff facts every turn, and the agent adds a
+short summary when it can. 3A: saved work found at session start is restored only after aj says yes.
+
+**Open.** While planning, it turned out the working folder had been on `AjsAgent/issue-281-fix`,
+367 commits behind `main`, and the design page missed issue #406 (approved 2026-10-27, "usage limit
+handoff 1A 2A 3A"), which covers the same goal. How the two combine is asked on
+`docs/plans/2026-11-08-session-handoff-vs-406.html`. The work moved to `AjsAgent/session-handoff`,
+cut from `main`.
+
+**Status.** Design approved; the plan waits on the #406 answer.
+
+---
+
 ## 2026-11-05 - Audit fixes: all the code approved once, one QA, and ten choices
 
 **Context.** The three audits of 2026-11-05 found 45 problems (`docs/audits/2026-11-05-combined-ranked.md`). aj approved the fix order as "Design approved: audit fix order 1A", then turned down six QA rounds: "plan out all of the code first and then show me it so I can approve or deny it rather than a 6 different QAs".

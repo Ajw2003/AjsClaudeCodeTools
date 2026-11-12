@@ -1,0 +1,9 @@
+== install from the branch
+√ Successfully added marketplace: aj-house-rules (declared in user settings)
+Installing plugin "house-rules@aj-house-rules"...√ Successfully installed plugin: house-rules@aj-house-rules (scope: user)
+    Version: 2.79.0
+== roll back to main
+To use a plugin again, add the marketplace back and reinstall the plugin.
+√ Successfully added marketplace: aj-house-rules (declared in user settings)
+Installing plugin "house-rules@aj-house-rules"...√ Successfully installed plugin: house-rules@aj-house-rules (scope: user)
+    Version: 2.76.0

@@ -1,0 +1,3 @@
+exit 0
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","additionalContext":"House rules, documentation goes in tiers: this commit stages a source file with nothing staged under docs/. Before committing, update the tier that changed - usually docs/3-state/ProjectState.md, for what's built and where it stands - or say in the commit message why none needed updating. These docs cite files this commit changes: docs/4-systems/app.md (app.py:5, app.py:400). Drifted citations of those files: docs/4-systems/app.md:1  cites  app.py:400  (line 400 past the end, file has 21 lines)."}}
+PASS  the real guard names the citing doc and the drifted line for a real commit

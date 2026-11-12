@@ -1,4 +1,13 @@
-# Today — 2026-10-15
+# Today — 2026-11-12
+
+Roadmap phases 1 and 2, plugin 2.79.0, on the branch `AjsAgent/qol-phases-1-2`, both passed by aj's QA. Phase 1 (#493):
+approvals work with the feature name first and in cloud sessions, an "Approve" button counts, a build plan reads the
+feature's issues from GitHub, "QA failed" returns to Build in one message, the last ways around the code lock are
+closed, and design decisions come only from aj. Phase 2 (#494): a commit names the docs that cite what it changes and
+`scripts/docs_drift.py` finds stale citations (this repo now has 0), every repo keeps a CHANGELOG.md, merged branches
+and finished helper copies are cleaned up, big files reach git only on aj's word through Git LFS, three rules gained
+checks, and Research.md and Vocabulary.md join the decisions tier. The session handoff (#406) is not in this branch: it
+moves to phase 3, because its saves do not reach GitHub from cloud sessions yet.
 
 Handover pages and checkpoints, plugin 2.66.0 (issues #251 to #258). Every page is now made by
 `scripts/make_page.py` from the template, with picture slots and before-and-after compare, and takes its look from

@@ -1,0 +1,4 @@
+PASS  a turn that edited app.py without a changelog line was sent back by the changelog check
+PASS  after being sent back, the session added a line under Unreleased
+PASS  session start names the missing CHANGELOG.md
+LIVE CHANGELOG RESULT: 3 of 3 passed

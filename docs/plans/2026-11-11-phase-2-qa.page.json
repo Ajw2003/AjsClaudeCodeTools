@@ -1,0 +1,131 @@
+{
+  "title": "Phase 2 QA",
+  "eyebrow": "QA · roadmap phase 2, docs and files you can trust, issue #494, plugin 2.79.0",
+  "short": {
+    "lead": "Phase 2 is built on the branch AjsAgent/session-handoff as plugin 2.79.0: seven steps, issues #508 to #514. Every check the build plan listed has run here. verify.py passes 1204 of 1204 checks and tools/verify_tools.py 52 of 52. Each step was also tried in real headless Claude sessions (sessions with no screen) running only this branch's plugin, with real git, real Git LFS and real GitHub where they were needed. Checking the helpers' work found and fixed eleven problems before anything merged; the last row lists them.",
+    "hint": "Tap a row to see what was run and what it showed.",
+    "key": [
+      [
+        "Proven by a real run",
+        ""
+      ],
+      [
+        "Not proven yet",
+        ""
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Docs at commit",
+        "A commit names the docs that cite what it changes",
+        "",
+        "The real guard, on a real commit of app.py in a test repo, named docs/4-systems/app.md (app.py:5, app.py:400) and flagged app.py:400 as past the end of a 21-line file. Run on this repo, scripts/docs_drift.py found 27 citations that no longer fit, mostly hook.py and verify.py line numbers from before hook.py was split up; the list is in docs/plans/2026-11-11-phase-2-live-tests/docs_drift-this-repo.txt. Step 1, #508.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Changelog",
+        "Every change adds a changelog line",
+        "",
+        "Live, 3 of 3: in a repo with CHANGELOG.md, a real session that edited app.py was sent back by the changelog check and then added \"Changed app.py so x is set to 2 instead of 1\". In a repo without one, session start named the missing CHANGELOG.md. A repo with no changelog is never sent back; it is only named at session start. This repo's own CHANGELOG.md now lists phases 1 and 2. Step 2, #509.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Cleanup",
+        "Merged branches and finished copies are deleted, nothing unsaved",
+        "",
+        "Live against real GitHub, 4 of 4 checks. In a fresh clone of this repo, the real merge hook read pull request #485 from GitHub. It deleted the local branch AjsAgent/audit-2026-11-05, and kept a helper copy holding an unsaved file, and said why. It took 1.4 seconds of its 10-second limit. A helper copy used in the last 30 minutes, the default branch, and any branch with commits not in the merge are always kept. Step 3, #510.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Big files",
+        "Big files only on your word, within the Git LFS (Large File Storage) allowance",
+        "",
+        "Live with real Git LFS, 5 of 5 checks. A real session's commit of a real 60 MB file was refused. Your \"LFS approved: big.bin\" was then held until you confirmed a second time, because this cloud session cannot read GitHub's billing figures and counts this repo only. After that second confirmation, the file was committed through LFS, so git stores a pointer, not 60 MB. A session start in a repo with a 6 GB generated folder named that folder. A commit check now takes 0.10 seconds, against 0.06 seconds before. Step 4, #511.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Rules",
+        "Three rule changes, each with its check",
+        "",
+        "Live, 2 of 2: a real session that wrote speed = 5 into player.py got a note suggesting a setting instead, and a session that wrote files in two repos got a line naming both. rules/checks.json maps every rule section to the check that enforces it, and verify.py fails if a new rule has none; nine sections have no check today and are listed with the reason for each. Step 5, #512.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Research",
+        "A research log and a vocabulary list",
+        "",
+        "docs/6-decisions/Research.md and Vocabulary.md exist in this repo, started from what this session actually found and decided, for example the GitHub calls cloud sessions refuse and GitHub's LFS limits. The plugin treats both as optional and never asks for them (verify.py checks this). Step 6, #513.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Proof",
+        "Five old issues proven built",
+        "",
+        "Seven verify.py cases prove five old issues. #199: a commit on an AjsAgent/ branch goes through, and one on main is refused. #399 and #404: work tracking is registered and documented, and a session link in a commit is refused. #479: an ignored node_modules can be deleted, \"Continue from\" and \"Issues for\" work, and an issue created through gh api is recorded. #463: \"I went with option B\" is sent back, and a question asked in the Build stage holds edits. Step 7, #514.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Whole plugin",
+        "No slowdown, every hook clean, installs and rolls back",
+        "",
+        "Every hook phase 2 changed, timed five times against 2.78.0 on a fresh clone: no slowdown (for example the end-of-reply check 0.74 s against 0.80 s), every exit code 0. A real session in a fresh clone of the pushed branch: all 18 hook runs exited 0 with valid output. In an empty Claude config, installing from https://github.com/Ajw2003/AjsClaudeCodeTools.git#AjsAgent/session-handoff gave 2.79.0, and going back to the plain URL gave 2.76.0.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "QA fixes",
+        "Your two QA failures, fixed",
+        "",
+        "The two-repo report now puts git's C:/ paths in Windows form before comparing them, and a test feeds it both spellings of one Windows folder (#517). The drift check now skips dated log lines, lines saying a file was deleted or removed, and shell variables such as $HERE (#518). This repo's docs went from 27 out-of-date citations to 0, while the 2 real ones in PlunderSpell's docs are still caught. verify.py passes 1209 of 1209 checks, and the two-repo live test passed 2 of 2 again.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "Windows rerun",
+        "One line for your PC session",
+        "you",
+        "Your first Windows run failed one new check, the two-repo report; it is fixed here but has not run on Windows yet. In your PC session, in the claude-qa folder, ask: \"Run git pull, then rerun verify.py, tools/verify_tools.py and docs_drift.py --root . with git's safe.directory set for this folder as before, and report each RESULT line.\" Expected results: the same 7 older failures that main has, the A16 failure in verify_tools, and 0 citations listed by docs_drift.",
+        "About five minutes in your PC session."
+      ],
+      [
+        "check",
+        "Fixed in review",
+        "Eleven problems caught before merging",
+        "",
+        "The drift check skipped hook.py:7746 and flagged runtime names such as settings.json. 1,537 lines of tests were pasted in twice. One test could never fail (\"or True\"). The pull request reminder skipped Claude Code's own permission prompt. Cleanup would have deleted a helper copy in use, and could delete local main. The merge hook printed two JSON objects, so its note could be lost. The merge hook also read pull request bodies over GraphQL (GitHub's query interface), which cloud sessions refuse, so phase 1's close offer never fired in the cloud. On main, the same hook asked you for a QA verdict on an old feature left in main's stage file. One idle-copy check ran after git status had changed the copy's timestamps. Each has a test now.",
+        "Nothing from you."
+      ]
+    ]
+  },
+  "changes": [],
+  "qa": {
+    "feature": "Phase 2",
+    "base": "32887f4",
+    "unverified": [
+      "The fixes on Windows: they pass here, and have not yet run on your PC; they wait for the rerun in your PC session",
+      "Your Windows PC: every run was Linux, in this cloud container",
+      "GitHub's billing figures from your own gh login: the cloud session is refused, so the LFS allowance was only tested with this repo's own count and the confirm-once step",
+      "PlunderSpell's 153 GB: this session was refused access to that repo and cannot see your PC; the new disk report measures it at your next session there",
+      "A real merge done from a session: the cleanup was run on an already-merged pull request (#485), so GitHub's own merge step itself was not part of the test"
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "QA for phase 2: every planned check ran and passed; what is left needs your PC or your own GitHub login.",
+    "changing": "Plugin 2.79.0 on the branch AjsAgent/session-handoff, which also carries phase 1 and the session handoff work. Nothing reaches main until you merge a pull request.",
+    "blocking": "Your QA verdict.",
+    "next": "If QA passes, the session handoff re-test you asked for comes next, then one pull request to main.",
+    "todo": [
+      "Read the rows above.",
+      "Type \"QA passed: Phase 2\", or \"QA failed: Phase 2\" with what is wrong."
+    ]
+  }
+}

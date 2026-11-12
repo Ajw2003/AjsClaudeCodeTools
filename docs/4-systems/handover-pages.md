@@ -76,15 +76,29 @@ Decisions: `docs/6-decisions/Decisions.md`, "2026-10-18 - Design approved: page 
 
 The Claude desktop app opens files only inside the session's folder. Outside it, a link does nothing, or the browser
 pane shows the file as a snapshot with scripts off, and a `make_page.py` page then shows an empty card. Before this fix,
-any ".html" in a reply counted as a page link (`_PAGE_LINK_RE`, `hook.py:7299`), and the QA link check matched the
-page's file name alone (`_record_qa_link`, `hook.py:7648`).
+any ".html" in a reply counted as a page link (`_PAGE_LINK_RE`, then in hook.py, now in `house_rules/core.py`), and the QA link check matched the
+page's file name alone (`_record_qa_link`, now in `house_rules/design_loop.py`).
 
 | Piece | Where | What it does |
 |---|---|---|
-| Link test | `_reply_links_page(reply, cwd)`, `hook.py:7326`, with `_html_paths` (`hook.py:7305`) and `_outside_page_links` (`hook.py:7344`) | True for an artifact link or a picture. An .html path in a markdown link, a `file:///` link or a bare path counts only when it resolves inside `cwd`. A bare file name with no folder counts only when the reply has no .html path at all, so the link text of `[x.html](../elsewhere/x.html)` can't pass for the link. An empty `cwd` falls back to the old pattern. |
-| Callers | `_long_reply_words` (`hook.py:7352`), `_check_page` (`hook.py:7559`), the owed-page counter in the Stop handler, `_record_qa_link` (`hook.py:7701`) | All four call the link test, with `cwd` from the hook payload. |
+| Link test | `_reply_links_page(reply, cwd)`, with `_html_paths` and `_outside_page_links`, all in `house_rules/core.py` | True for an artifact link or a picture. An .html path in a markdown link, a `file:///` link or a bare path counts only when it resolves inside `cwd`. A bare file name with no folder counts only when the reply has no .html path at all, so the link text of `[x.html](../elsewhere/x.html)` can't pass for the link. An empty `cwd` falls back to the old pattern. |
+| Callers | `_long_reply_words` (`house_rules/writing.py`), `_check_page` (`house_rules/design_loop.py`), the owed-page counter in the Stop handler, `_record_qa_link` (`house_rules/design_loop.py`) | All four call the link test, with `cwd` from the hook payload. |
 | Note | `_check_page` | Names the outside path and says to copy it into `<cwd>/docs/plans/` and link the copy. Report only, like the rest of the page checkpoint since #309. |
 | Builder warning | `make_page.py build`, `make_page.py:424` | Prints one line when the page it writes is outside the folder it runs in. The build is unchanged. |
 | Tests | `scripts/verify.py` | Seven link-test cases (inside, `../` sibling, `file:///` outside, artifact, bare name, outside link with a bare-name link text, the note naming the path) and two warning cases (outside prints the line, inside does not). |
 
 Depends on: the hook payload's `cwd` field. Depended on by: the page checkpoint, the long-reply note and the QA stage.
+
+## Planned: pictures inside the page (2026-11-09, "Handoff overwrite" 2A)
+
+`copy_pictures` (`scripts/make_page.py`) copied each picture into `<page>-pics/` and linked it by a relative
+path, so a published page, a preview or a page opened from another repo showed broken pictures. The builder now
+reads each picture and writes it into the page as a `data:` address, so the page is one self-contained file. A
+page over 16 MB, the publish limit, is refused with a message naming the largest pictures.
+
+## Planned: a copy box that always registers (2026-11-09, "Handoff overwrite" 3A)
+
+`check_approval` only printed a note when a page's `approval` field was not a phrase the design loop accepts, so
+a page could offer aj a reply that moved nothing. The builder now refuses that for design and plan pages, unless
+the page names another repo in `forRepo` (the #309 case). A `verify.py` case runs each built page's copy-box line
+through the loop's own patterns.
