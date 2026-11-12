@@ -1,0 +1,204 @@
+{
+  "title": "Phase 2 Build Plan",
+  "eyebrow": "Build plan for approval · roadmap phase 2 (#494) · seven steps, nothing built yet",
+  "approval": "Build plan approved: Phase 2",
+  "replyPrefix": "Build plan approved: Phase 2",
+  "reply": "",
+  "short": {
+    "lead": "You approved the phase 2 design, picking option A in all five choices. This is how it gets built: seven steps, one issue each (#508 to #514), one after another. Each step shows its planned code as a picture. The code is not written yet, so names and details may shift while building; the behaviour each step promises will not. There are no new choices on this page. The last item lists every check the build runs, the same set phase 1 had.",
+    "hint": "Tap a step to see what it creates.",
+    "key": [
+      [
+        "We work on it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "search",
+        "Step 1",
+        "Step 1: docs named at the commit",
+        "",
+        "Issue #508. The commit reminder names each doc that cites a file the commit changes.",
+        "Nothing from you."
+      ],
+      [
+        "list",
+        "Step 2",
+        "Step 2: a changelog in every repo",
+        "",
+        "Issue #509. Every repo gets CHANGELOG.md, and each change adds a line to it.",
+        "Nothing from you."
+      ],
+      [
+        "loop",
+        "Step 3",
+        "Step 3: cleanup after a merge",
+        "",
+        "Issue #510. Merged branches and finished helper copies are deleted once their work is on GitHub.",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Step 4",
+        "Step 4: big files only on your word",
+        "",
+        "Issue #511. A file over 50 MB goes into git only after \"LFS approved: <file>\" and an allowance check.",
+        "Nothing from you."
+      ],
+      [
+        "check",
+        "Step 5",
+        "Step 5: three rule changes",
+        "",
+        "Issue #512. Rules on hardcoding and on task switching, and a test that every rule names its check.",
+        "Nothing from you."
+      ],
+      [
+        "search",
+        "Step 6",
+        "Step 6: research and vocabulary",
+        "",
+        "Issue #513. Research.md and Vocabulary.md are added beside Decisions.md; both are optional.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "Step 7",
+        "Step 7: proof, docs, version and QA",
+        "you",
+        "Issue #514. verify.py proves five older issues (#199, #399, #404, #479 and #463); then version 2.79.0, live tests and the QA page.",
+        "Your QA verdict once the QA page is up."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Step 1: Docs named at the commit (#508)",
+      "Docs that go wrong are named in the commit that made them wrong.",
+      [
+        "Only whether some docs/ file was staged is checked",
+        "Each doc citing a changed file is named, and dead citations are flagged"
+      ],
+      "The commit reminder already computes the exact set of files a commit will include (_staged_docs_status in scripts/house_rules/docs.py). The new part reads docs/ for citations of those files, by path or as file:line, inside the reminder's existing time budget. The drift check lists citations to files that are gone or lines past the end of the file. Done when the four verify.py cases in #508 pass and the drift list for this repo is on the QA page.",
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MjggMjgyIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPmRvY3MucHksIHN0ZXAgMSAoIzUwOCk8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjUwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPiAgZGVmIF9zdGFnZWRfZG9jc19zdGF0dXMoc3ViamVjdCwgZWxzZXdoZXJlLCByb290PU5vbmUpOjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNjgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+ICAgICAgZWZmZWN0aXZlID0gc2V0KHAuc3RyaXAoKSBmb3IgcCBpbiBydW5fZ2l0KFsmcXVvdDtkaWZmJnF1b3Q7LCAmcXVvdDstLWNhY2hlZCZxdW90OywgJnF1b3Q7LS1uYW1lLW9ubHkmcXVvdDtdKSk8L3RleHQ+PHRleHQgeD0iMTYiIHk9Ijg2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIGNpdGluZyA9IF9kb2NzX2NpdGluZyhyb290LCBlZmZlY3RpdmUpICAgICAgICAgICMgMUE6IG5hbWUgZWFjaCBkb2MgdGhhdCBjaXRlcyBhIGNoYW5nZWQgZmlsZTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTA0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIGlmIGNpdGluZzo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjEyMiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICAgICAgZGV0YWlsICs9ICZxdW90OyBUaGVzZSBkb2NzIGNpdGUgZmlsZXMgdGhpcyBjb21taXQgY2hhbmdlczogJXMuJnF1b3Q7ICUgJnF1b3Q7LCAmcXVvdDsuam9pbihjaXRpbmcpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNDAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KzwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTU4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgX0NJVEVfUkUgPSByZS5jb21waWxlKHImcXVvdDtgPyhbXHcuLy1dK1wuKD86cHl8anN8dHN8Y3N8bWR8anNvbnxzaCkpKD86OihcZCspKT9gPyZxdW90Oyk8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE3NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIGRlZiBfZG9jc19kcmlmdChyb290KTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE5NCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICAmcXVvdDsmcXVvdDsmcXVvdDtDaXRhdGlvbnMgdW5kZXIgZG9jcy8gdG8gYSBmaWxlIHRoYXQgaXMgZ29uZSwgb3IgdG8gYSBsaW5lIHBhc3QgdGhlIGVuZCBvZiB0aGUgZmlsZS4mcXVvdDsmcXVvdDsmcXVvdDs8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjIxMiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBmb3IgZG9jLCBwYXRoLCBsaW5lIGluIF9jaXRhdGlvbnMocm9vdCk6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgICAgIGlmIG5vdCBvcy5wYXRoLmlzZmlsZShwYXRoKSBvciAobGluZSBhbmQgbGluZSAmZ3Q7IF9saW5lX2NvdW50KHBhdGgpKTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjI0OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICAgICAgICAgIHlpZWxkIGRvYywgcGF0aCwgbGluZTwvdGV4dD48L3N2Zz4=",
+        "alt": "Planned code: docs.py, step 1",
+        "caption": "Planned code, not yet written: docs.py, step 1. Green lines are added, red removed; \"...\" marks code left out of the picture."
+      }
+    ],
+    [
+      "chg",
+      "Step 2: A changelog in every repo (#509)",
+      "What changed in a repo can be read without reading commits.",
+      [
+        "No repo has a changelog",
+        "A line per change, checked at turn end and when a pull request opens"
+      ],
+      "The end-of-turn check is the existing checkpoint table in design_loop.py, so the changelog is one more row that sends a turn back once (your pick in choice 2, option A). The pull request reminder sits beside the existing \"Refs #N\" check. This repo gets its own CHANGELOG.md, started from the decisions log.",
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4OTIgMzAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPnRlbXBsYXRlcywgZG9jcy5weSwgZGVzaWduX2xvb3AucHkgYW5kIHNhZmVfZ2l0LnB5LCBzdGVwIDIgKCM1MDkpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI1MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIHRlbXBsYXRlcy9DSEFOR0VMT0cubWQ6ICAjIENoYW5nZWxvZyAvICMjIFVucmVsZWFzZWQgLyAtIGFkZHMgMiBydWxlcyAoKzE0IGxpbmVzIGluIHJ1bGVzL2hvdXNlLXJ1bGVzLm1kKTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNjgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBET0NTX1RJRVJfRklMRVMuYXBwZW5kKCZxdW90O0NIQU5HRUxPRy5tZCZxdW90OykgICAgICAgICAgICAgICMgZG9jc3RpZXJzIG5hbWVzIGEgcmVwbyB3aXRob3V0IG9uZSAoIzM4Nik8L3RleHQ+PHRleHQgeD0iMTYiIHk9Ijg2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTA0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPiAgQ0hFQ0tQT0lOVFMgPSBbPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+ICAgICAgKCZxdW90O3JlcGx5IGVuZHMmcXVvdDssICZxdW90O3FhIHBhZ2UmcXVvdDssIF9jaGVja19xYV9wYWdlLCAmcXVvdDtibG9jayZxdW90OyksPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNDAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgKCZxdW90O3JlcGx5IGVuZHMmcXVvdDssICZxdW90O2NoYW5nZWxvZyZxdW90OywgX2NoZWNrX2NoYW5nZWxvZywgJnF1b3Q7YmxvY2smcXVvdDspLCAgICMgMkE6IHdyb3RlIGZpbGVzLCBubyBuZXcgbGluZTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTU4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPiAgXTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTc2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgZGVmIF9jaGVja19jaGFuZ2Vsb2coY3R4KTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE5NCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBpZiBjdHhbJnF1b3Q7d3JpdHRlbl9ub3cmcXVvdDtdIGFuZCAmcXVvdDtDSEFOR0VMT0cubWQmcXVvdDsgbm90IGluIGN0eFsmcXVvdDt3cml0dGVuX25vdyZxdW90O106PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMTIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgICAgIHJldHVybiAmcXVvdDtmaWxlcyBjaGFuZ2VkIHRoaXMgdHVybiBhbmQgQ0hBTkdFTE9HLm1kIGhhcyBubyBuZXcgbGluZSB1bmRlciBVbnJlbGVhc2VkJnF1b3Q7PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyNDgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAjICMzODc6IGdoIHByIGNyZWF0ZSAvIGNyZWF0ZV9wdWxsX3JlcXVlc3Qgb24gYSBicmFuY2ggd2hvc2UgZGlmZiBsZWF2ZXMgQ0hBTkdFTE9HLm1kIHVuY2hhbmdlZDwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMjY2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgaWYgbm90IF9icmFuY2hfdG91Y2hlcyh0b3AsICZxdW90O0NIQU5HRUxPRy5tZCZxdW90Oyk6IG5vdGVzLmFwcGVuZChDSEFOR0VMT0dfUFJfTk9URSk8L3RleHQ+PC9zdmc+",
+        "alt": "Planned code: templates, docs.py, design_loop.py and safe_git.py, step 2",
+        "caption": "Planned code, not yet written: templates, docs.py, design_loop.py and safe_git.py, step 2. Green lines are added, red removed; \"...\" marks code left out of the picture."
+      }
+    ],
+    [
+      "chg",
+      "Step 3: Cleanup after a merge (#510)",
+      "Finished work stops filling your disk and branch list.",
+      [
+        "Merged branches and finished helper copies pile up",
+        "They are deleted once merged and pushed, and the session lists them"
+      ],
+      "The plugin's merge check (event_closablemerge, which runs after every merge) already sees each merged pull request. Deletes use git's own safe forms: branch -d refuses unmerged work, and worktree remove (the command that deletes a helper copy) without --force refuses a copy with uncommitted changes. Anything kept is named with the reason. Remote branches are left to GitHub's own setting.",
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NDQgMjgyIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPmRlc2lnbl9sb29wLnB5IGFuZCBkZWxlZ2F0aW9uLnB5LCBzdGVwIDMgKCM1MTApPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI1MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmIyZjM1IiB4bWw6c3BhY2U9InByZXNlcnZlIj4gIGRlZiBldmVudF9jbG9zYWJsZW1lcmdlKCk6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI2OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmIyZjM1IiB4bWw6c3BhY2U9InByZXNlcnZlIj4gICAgICBtZXJnZWQgPSBfY2xvc2FibGVfbWVyZ2Vfb2YoZGF0YSk8L3RleHQ+PHRleHQgeD0iMTYiIHk9Ijg2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIGNsZWFuZWQsIGtlcHQgPSBfY2xlYW51cF9hZnRlcl9tZXJnZSh0b3AsIG1lcmdlZCkgICAgICMgM0E8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjEwNCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBub3Rlcy5hcHBlbmQoJnF1b3Q7RGVsZXRlZCBhZnRlciB0aGUgbWVyZ2U6ICVzLiBLZXB0OiAlcy4mcXVvdDsgJSAoY2xlYW5lZCwga2VwdCkpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNDAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBkZWYgX2NsZWFudXBfYWZ0ZXJfbWVyZ2UodG9wLCBtZXJnZWQpOjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTU4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgICAgIGZvciBicmFuY2ggaW4gX2xvY2FsX2JyYW5jaGVzKHRvcCk6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNzYiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgICAgIGlmIF9hbGxfY29tbWl0c19vbih0b3AsIGJyYW5jaCwgJnF1b3Q7b3JpZ2luLyZxdW90OyArIGRlZmF1bHQpIGFuZCBub3QgX3VucHVzaGVkKHRvcCwgYnJhbmNoKTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE5NCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICAgICAgICAgIF9hZyh0b3AsIFsmcXVvdDticmFuY2gmcXVvdDssICZxdW90Oy1kJnF1b3Q7LCBicmFuY2hdKSAgICAgICAgICAgICMgLWQsIG5ldmVyIC1EOiBnaXQgcmVmdXNlcyB1bm1lcmdlZCB3b3JrPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMTIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgZm9yIHd0IGluIF93b3JrdHJlZXModG9wKTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjIzMCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICAgICAgaWYgX2NsZWFuKHd0KSBhbmQgbm90IF91bnB1c2hlZCh3dCwgd3QuYnJhbmNoKTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjI0OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICAgICAgICAgIF9hZyh0b3AsIFsmcXVvdDt3b3JrdHJlZSZxdW90OywgJnF1b3Q7cmVtb3ZlJnF1b3Q7LCB3dC5wYXRoXSkgICAgICMgbmV2ZXIgLS1mb3JjZTwvdGV4dD48L3N2Zz4=",
+        "alt": "Planned code: design_loop.py and delegation.py, step 3",
+        "caption": "Planned code, not yet written: design_loop.py and delegation.py, step 3. Green lines are added, red removed; \"...\" marks code left out of the picture."
+      }
+    ],
+    [
+      "chg",
+      "Step 4: big files only on your word (#511)",
+      "Nothing big reaches git without your word, and big folders are named at session start.",
+      [
+        "Any file can be committed, and disk use is unknown",
+        "Big files need your word and room in the LFS allowance"
+      ],
+      "The size check runs on the same set of files the docs check computes. \"LFS approved\" counts only in your own message, never a relayed one, like the other approval phrases. The check of your Git LFS (Large File Storage) allowance falls back to this repo's LFS files in cloud sessions and says so; you are asked before the file is committed. The 50 MB limit on a file and the 5 GB limit on a helper copy or generated folder are starting values.",
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NjAgMzE4Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPmRvY3MucHksIGRlc2lnbl9sb29wLnB5IGFuZCBjb3JlLnB5LCBzdGVwIDQgKCM1MTEpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI1MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIEJJR19GSUxFX0JZVEVTID0gNTAgKiAxMDI0ICogMTAyNCAgICAgICAgICAgICAgICAgICAgIyBhIHN0YXJ0aW5nIHZhbHVlLCB0byBiZSB0dW5lZDwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNjgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBSRUdFTkVSQVRFRCA9ICgmcXVvdDtMaWJyYXJ5LyZxdW90OywgJnF1b3Q7VGVtcC8mcXVvdDssICZxdW90O29iai8mcXVvdDssICZxdW90O0J1aWxkcy8mcXVvdDssICZxdW90O25vZGVfbW9kdWxlcy8mcXVvdDspPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI4NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIGZvciBwYXRoIGluIGVmZmVjdGl2ZTo8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjEwNCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBpZiBfc2l6ZShwYXRoKSAmZ3Q7IEJJR19GSUxFX0JZVEVTIGFuZCBwYXRoIG5vdCBpbiBzdGF0ZS5nZXQoJnF1b3Q7bGZzX2FwcHJvdmVkJnF1b3Q7LCBbXSk6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgICAgIHJldHVybiByZWZ1c2UoJnF1b3Q7JXMgaXMgJWQgTUI7IGFkZCBpdCB0byAuZ2l0aWdub3JlLCBvciBhaiB3cml0ZXMgJiN4Mjc7TEZTIGFwcHJvdmVkOiAlcyYjeDI3OyZxdW90OyAlIC4uLik8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjE0MCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rICAgICBpZiBwYXRoLnN0YXJ0c3dpdGgoUkVHRU5FUkFURUQpIGFuZCBub3QgX2lnbm9yZWQocGF0aCk6IHJldHVybiByZWZ1c2UoLi4uKTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTU4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTc2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyBhaiYjeDI3O3Mgb3duIG1lc3NhZ2UsIG9uZSBmaWxlIGF0IGEgdGltZSAoNEEpPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxOTQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBfTEZTX0FQUFJPVkVEX1JFID0gcmUuY29tcGlsZShyJnF1b3Q7KD9taSleXHMqTEZTIGFwcHJvdmVkOlxzKihcUyspXHMqJCZxdW90Oyk8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjIxMiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIHVzZWQsIGhvdyA9IF9sZnNfdXNlZCh0b3ApICAgICAgICMgYmlsbGluZyBBUEk7IGluIGEgY2xvdWQgc2Vzc2lvbjogdGhpcyByZXBvJiN4Mjc7cyBMRlMgZmlsZXMsIGFuZCBzYXkgc288L3RleHQ+PHRleHQgeD0iMTYiIHk9IjIzMCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIGlmIHVzZWQgKyBfc2l6ZShwYXRoKSAmZ3Q7IExGU19GUkVFX0JZVEVTOiBub3RlID0gJnF1b3Q7d291bGQgcGFzcyB0aGUgZnJlZSAxMCBHaUI6ICVzIHVzZWQgKyAlcyZxdW90OyAlIC4uLjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMjQ4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgZWxzZTogc3RhdGUuc2V0ZGVmYXVsdCgmcXVvdDtsZnNfYXBwcm92ZWQmcXVvdDssIFtdKS5hcHBlbmQocGF0aCkgICAjIHRoZW46IGdpdCBsZnMgdHJhY2ssIGFkZCwgY29tbWl0PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyNjYiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJiMmYzNSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyODQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAjIHNlc3Npb24gc3RhcnQ6IG5hbWUgaGVscGVyIHdvcmt0cmVlcyBhbmQgZ2VuZXJhdGVkIGZvbGRlcnMgb3ZlciA1IEdCIChhIHN0YXJ0aW5nIHZhbHVlKTwvdGV4dD48L3N2Zz4=",
+        "alt": "Planned code: docs.py, design_loop.py and core.py, step 4",
+        "caption": "Planned code, not yet written: docs.py, design_loop.py and core.py, step 4. Green lines are added, red removed; \"...\" marks code left out of the picture."
+      }
+    ],
+    [
+      "chg",
+      "Step 5: Three rule changes (#512)",
+      "A rule the agent could quietly skip can no longer be written.",
+      [
+        "Hardcoding and task switching have no rule, and some rules name no check",
+        "Each rule names its check, and the suite fails when one does not"
+      ],
+      "The rule text goes in rules/house-rules.md, with the detail in the rules detail files, inside the injected size limit. The test from issue #228 fails the whole suite when a rule section names no check.",
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MjAgMjQ2Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPnJ1bGVzIGFuZCB2ZXJpZnkucHksIHN0ZXAgNSAoIzUxMik8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjUwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyMgVmFsdWVzIGEgcGVyc29uIG1heSB0dW5lIGFyZSBuZXZlciBoYXJkY29kZWQ8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjY4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgQSB2YWx1ZSBzb21lb25lIG1heSB3YW50IHRvIGNoYW5nZSBnb2VzIGluIGEgc2V0dGluZ3MgZmlsZSBvciBhbiBleHBvc2VkIGZpZWxkLCB1bmxlc3MgaXQgd2FzPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSI4NiIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMi41IiBmaWxsPSIjMmY3ZDVhIiB4bWw6c3BhY2U9InByZXNlcnZlIj4rIHNldCBieSBtZWFzdXJlbWVudC4gQ2hlY2s6IGhhcnZlc3QgZmxhZ3MgYSBuZXcgbnVtZXJpYyBsaXRlcmFsIGFzc2lnbmVkIHRvIGEgdHVuaW5nLXNoYXBlZCBuYW1lLjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTA0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyMgQSBzZXNzaW9uIGZpbmlzaGVzIGl0cyBvd24gdGFzazwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTIyIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgV29yayBmb3IgYW5vdGhlciByZXBvIGJlY29tZXMgYW4gaXNzdWUgaW4gdGhhdCByZXBvOyB0aGUgc2Vzc2lvbiBnb2VzIGJhY2sgdG8gaXRzIHRhc2suPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxNDAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBDaGVjazogdGhlIGVuZC1vZi10dXJuIGNoZWNrIG5hbWVzIGEgdHVybiB0aGF0IGVkaXRlZCBmaWxlcyBpbiBhIHNlY29uZCByZXBvLjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTU4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyYjJmMzUiIHhtbDpzcGFjZT0icHJlc2VydmUiPjwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTc2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyAjMjI4OiBldmVyeSBydWxlIHNlY3Rpb24gbmFtZXMgaXRzIGNoZWNrPC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxOTQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBmb3Igc2VjdGlvbiBpbiBfcnVsZV9zZWN0aW9ucygmcXVvdDtydWxlcy9ob3VzZS1ydWxlcy5tZCZxdW90Oyk6PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIyMTIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAgICAgYXNzZXJ0IHJlLnNlYXJjaChyJnF1b3Q7XGJDaGVjazp8aG9va3x2ZXJpZnlcLnB5JnF1b3Q7LCBzZWN0aW9uLmJvZHkpLCBzZWN0aW9uLnRpdGxlPC90ZXh0Pjwvc3ZnPg==",
+        "alt": "Planned code: rules and verify.py, step 5",
+        "caption": "Planned code, not yet written: rules and verify.py, step 5. Green lines are added, red removed; \"...\" marks code left out of the picture."
+      }
+    ],
+    [
+      "chg",
+      "Step 6: Research and vocabulary (#513)",
+      "Why something was decided, and what a word means, have a place.",
+      [
+        "Research and settled terms have no file",
+        "Two optional files, listed when present, never required"
+      ],
+      "This repo's two files start from its real decisions log, not placeholders, as the project-docs skill already requires.",
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3ODAgMTM4Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPnByb2plY3QtZG9jcyBza2lsbCBhbmQgZG9jcy5weSwgc3RlcCA2ICgjNTEzKTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNTAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBPUFRJT05BTF9USUVSX0ZJTEVTID0gWyZxdW90O2RvY3MvNi1kZWNpc2lvbnMvUmVzZWFyY2gubWQmcXVvdDssICZxdW90O2RvY3MvNi1kZWNpc2lvbnMvVm9jYWJ1bGFyeS5tZCZxdW90O108L3RleHQ+PHRleHQgeD0iMTYiIHk9IjY4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgIyBsaXN0ZWQgd2hlbiBwcmVzZW50LCBuZXZlciByZXF1aXJlZDogYSBtaXNzaW5nIG9uZSBhZGRzIG5vdGhpbmcgdG8gdGhlIHNlc3Npb24tc3RhcnQgbm90ZTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iODYiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBSZXNlYXJjaC5tZDogICAjIyAmbHQ7ZGF0ZSZndDsgLSAmbHQ7cXVlc3Rpb24mZ3Q7IC8gd2hhdCB3YXMgZm91bmQgLyBTb3VyY2VzOiAmbHQ7bGlua3MmZ3Q7PC90ZXh0Pjx0ZXh0IHg9IjE2IiB5PSIxMDQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyBWb2NhYnVsYXJ5Lm1kOiAqKiZsdDt0ZXJtJmd0OyoqIC0gd2hhdCBpdCBtZWFucyBoZXJlOyBzZXR0bGVkIGJ5ICZsdDtEZWNpc2lvbnMubWQgZW50cnkmZ3Q7PC90ZXh0Pjwvc3ZnPg==",
+        "alt": "Planned code: project-docs skill and docs.py, step 6",
+        "caption": "Planned code, not yet written: project-docs skill and docs.py, step 6. Green lines are added, red removed; \"...\" marks code left out of the picture."
+      }
+    ],
+    [
+      "chg",
+      "Step 7: Proof, docs, version and QA (#514)",
+      "The phase ends with proof you can read, not a claim.",
+      [
+        "Five old issues are built but unproven",
+        "Each has a verify.py case, and the QA page shows the live tests"
+      ],
+      "Live tests run in real headless sessions with only this branch's plugin, as phase 1's did, then the QA page.",
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgMTU2Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTAiIGZpbGw9IiNmNmY1ZjEiLz48dGV4dCB4PSIxNiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPnZlcmlmeS5weSBhbmQgZG9jcywgc3RlcCA3ICgjNTE0KTwvdGV4dD48dGV4dCB4PSIxNiIgeT0iNTAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIuNSIgZmlsbD0iIzJmN2Q1YSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+KyAjIHByb29mIGZvciB3aGF0IGlzIGFscmVhZHkgYnVpbHQ8L3RleHQ+PHRleHQgeD0iMTYiIHk9IjY4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgZm9yIGNhc2UgaW4gKCZxdW90OyMxOTkmcXVvdDssICZxdW90OyMzOTkmcXVvdDssICZxdW90OyM0MDQmcXVvdDssICZxdW90OyM0NzkmcXVvdDssICZxdW90OyM0NjMmcXVvdDspOiAuLi48L3RleHQ+PHRleHQgeD0iMTYiIHk9Ijg2IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiNiNTUzM2MiIHhtbDpzcGFjZT0icHJlc2VydmUiPi0gJnF1b3Q7dmVyc2lvbiZxdW90OzogJnF1b3Q7Mi43OC4wJnF1b3Q7LDwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTA0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgJnF1b3Q7dmVyc2lvbiZxdW90OzogJnF1b3Q7Mi43OS4wJnF1b3Q7LDwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMTIyIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjEyLjUiIGZpbGw9IiMyZjdkNWEiIHhtbDpzcGFjZT0icHJlc2VydmUiPisgZG9jcy80LXN5c3RlbXMvZG9jcy1hbmQtZmlsZXMubWQ6ICZxdW90O1BsYW5uZWQ6IHBoYXNlIDImcXVvdDsgYmVjb21lcyAmcXVvdDtIb3cgaXQgd29ya3MmcXVvdDssIHdpdGggZmlsZSBhbmQgbGluZSByZWZlcmVuY2VzPC90ZXh0Pjwvc3ZnPg==",
+        "alt": "Planned code: verify.py and docs, step 7",
+        "caption": "Planned code, not yet written: verify.py and docs, step 7. Green lines are added, red removed; \"...\" marks code left out of the picture."
+      }
+    ],
+    [
+      "new",
+      "How every step is tested",
+      "Every check phase 1 had, as you asked on 2026-11-11.",
+      null,
+      "(1) Every step: its own verify.py cases, each written to fail on today's code and pass after the step. Then the full verify.py must pass before the step merges; today it passes all 1135 of its 1135 checks. (2) Every helper's work is read as a diff (the list of changed lines). It is merged only after the whole suite passes again on the branch. Each claimed fix is checked by running it, not by the helper's report. (3) Real headless Claude sessions (claude -p, which runs Claude from the command line with no window) load only this branch's plugin, with the installed copy switched off. They walk a throwaway repo through every new behaviour. A commit names the docs that cite it. A turn is sent back for a missing changelog line. A branch and worktree are deleted after a real merge, and kept when unpushed. A big file is refused, then let in after \"LFS approved\", then refused again when it would pass the allowance. (4) Real git and real Git LFS (Large File Storage, git's store for big files). A real 60 MB file is tracked and committed through LFS. A real merge is followed by the cleanup, and a real worktree with uncommitted changes must survive it. (5) The drift check run on this whole repo, with its list of dead citations on the QA page. (6) Each hook phase 2 changes, timed five times against 2.78.0 on a fresh clone; every exit code must be 0, which means success. (7) A real session in a fresh clone of the branch, listing every hook's result, with no hook error. (8) Install from the branch URL into an empty Claude config, then roll back to main, checking the version each time. (9) tools/verify_tools.py in full. (10) The test scripts and their saved results committed under docs/plans/, as phase 1's were. (11) The QA page lists anything that could not run here and says what stopped it, for example your Windows PC, the billing API from a cloud session, or PlunderSpell's 153 GB."
+    ]
+  ],
+  "wrapup": {
+    "summary": "The build plan for phase 2: seven steps, issues #508 to #514, each with its planned code.",
+    "changing": "Nothing yet. After approval, steps 1 to 7 change docs.py, design_loop.py, safe_git.py, delegation.py, core.py, the rules, a new changelog template and verify.py.",
+    "blocking": "Your approval, or any change you want to the plan.",
+    "next": "I build the steps in order with the builder helper, test them live here, then hand you the QA page.",
+    "todo": [
+      "Read the steps.",
+      "Tap <b>Copy my reply</b>.",
+      "Send it. It reads \"Build plan approved: Phase 2\"."
+    ]
+  }
+}

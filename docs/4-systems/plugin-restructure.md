@@ -31,7 +31,7 @@ transcripts usable as evidence without leaking secrets.
 
 Each optional part declares the core in its `plugin.json` `dependencies`, so installing it installs
 the core. Updates come from marketplace `autoUpdate` and load with `/reload-plugins`; the
-self-updater (`hook.py:1471-1633`) goes. The 28 rule contradictions are settled in a grilling
+self-updater (then hook.py lines 1471 to 1633) goes. The 28 rule contradictions are settled in a grilling
 session before any of this is built.
 
 ## The 2.68.1 patch
@@ -41,14 +41,14 @@ issue "the design loop is broken and blocks sessions" (#303), and each gets a `v
 reproduces the incident first.
 
 ### Every approval in a message is read
-`_loop_apply` (`hook.py:5467`) tests the build-plan phrase first and returns as soon as it refuses,
+`_loop_apply` (then hook.py line 5467; now `house_rules/design_loop.py`) tested the build-plan phrase first and returns as soon as it refuses,
 so a message holding "Design approved: X" and "Build plan approved: X" never has its design approval
 read (incident 1). The patch finds every approval phrase in the message and applies them in stage
 order: design, then build plan, then QA. A design approval always sets the feature name, so a stale
 name can't survive into the next feature (incident 2).
 
 ### Only this repo's issues count
-`_loop_record_issues` (`hook.py:5737`) records any issue the session creates, so issues opened in
+`_loop_record_issues` (then hook.py line 5737; now `house_rules/design_loop.py`) recorded any issue the session creates, so issues opened in
 another repo were counted as the current feature's, and the end-of-reply label check then blocked the
 session seven times (incident 3). The patch records an issue only when its repo matches the repo that
 owns the stage file (`.claude/house-rules-loop.json`).
@@ -56,9 +56,9 @@ owns the stage file (`.claude/house-rules-loop.json`).
 ### Four checks report instead of blocking
 | Check | Where | Incident |
 |---|---|---|
-| The refusal of shell commands that write files while code is locked | `_loop_gate`, message at `hook.py:5685` | 4 |
-| The re-creation (parity) check at the end of a reply | `hook.py:7698` | 5 |
-| The page checkpoint | `_check_page`, `hook.py:7354` | 6 |
+| The refusal of shell commands that write files while code is locked | `_loop_gate` in `house_rules/design_loop.py` | 4 |
+| The re-creation (parity) check at the end of a reply | `_PARITY_RE` in `house_rules/core.py`, used by the Stop handler in `hook.py` | 5 |
+| The page checkpoint | `_check_page` in `house_rules/design_loop.py` | 6 |
 | The bare-reference writing check | `clarity.py:135`, row at `clarity.py:213` | 8 |
 
 Each still prints what it would have blocked, so the grilling session has evidence. The page builder
@@ -66,9 +66,9 @@ Each still prints what it would have blocked, so the grilling session has eviden
 phrases move a stage when aj types them (incident 7).
 
 ### A blocked page stays owed
-The page checkpoint counts words in the newest message only (`hook.py:7746`), so a shorter retry
+The page checkpoint counted words in the newest message only (then hook.py line 7746), so a shorter retry
 cleared it. The patch records the page as owed against aj's message (the page-blocks file,
-`hook.py:7561-7576`), and the reminder repeats on every reply to that message until one links a page.
+`_page_blocks` in `house_rules/design_loop.py`), and the reminder repeats on every reply to that message until one links a page.
 
 ## Not changed by the patch
 Everything else in 2.68.0, including the guard work from the issue "Guards block only unrecoverable
@@ -128,7 +128,7 @@ Session triage has no code in `hook.py` today; its module is created empty and f
 
 **What changes in `verify.py`.** 211 of its tests run `hook.py` through `run.sh` and are unaffected.
 Six load `hook.py` in-process and call nine internal names; each is pointed at the module that owns
-the name. One test (`verify.py:3236`) replaces `_read_back_body` before running the credit check; it
+the name. One test (then verify.py line 3236; now `scripts/checks/common.py`) replaces `_read_back_body` before running the credit check; it
 replaces it on the safe git module instead. Every changed test line is listed in the step's pull
 request.
 

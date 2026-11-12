@@ -1,0 +1,269 @@
+{
+  "title": "Phase 2: Docs and Files You Can Trust",
+  "eyebrow": "Design for approval · roadmap phase 2 (#494) · nothing built yet",
+  "approval": "Design approved: Phase 2",
+  "replyPrefix": "Design approved: Phase 2",
+  "reply": "",
+  "short": {
+    "lead": "Before another account can pick up where a session stopped (phase 3), the record of where it stopped has to be right. This phase makes every session end with the docs agreeing with the code and a changelog line for what changed. Merged branches and finished helper copies are cleaned up once their work is safe on GitHub. Big files stay out of git unless you ask for one by name, and then it goes through Git LFS (Large File Storage) only if it fits the free allowance. Folders a build regenerates always stay out. I checked the 17 old issues this phase carries against the code on 2026-11-11. Five are already built and only need proof, and the other 12 are covered by the changes below. One part needs your PC: why PlunderSpell's folders take over 153 GB.",
+    "hint": "Tap an item to see what it creates and what it needs from you.",
+    "key": [
+      [
+        "We work on it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "The moment",
+        "A session ends with nothing left to drift",
+        "",
+        "At the end of every session the docs match the code, the changelog says what changed, and nothing unsaved or oversized is left behind.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4ODAgMzMwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48dGV4dCB4PSIyMCIgeT0iMzQiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPkF0IHRoZSBlbmQgb2YgYSBzZXNzaW9uPC90ZXh0Pjx0ZXh0IHg9IjE3MCIgeT0iMzQiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPlRvZGF5PC90ZXh0Pjx0ZXh0IHg9IjUyMCIgeT0iMzQiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPkFmdGVyIHBoYXNlIDI8L3RleHQ+PHJlY3QgeD0iMTQiIHk9IjUwIiB3aWR0aD0iODUyIiBoZWlnaHQ9IjQ2IiByeD0iOCIgZmlsbD0iIzdkODM4YyIgZmlsbC1vcGFjaXR5PSIwLjA2Ii8+PHRleHQgeD0iMjQiIHk9Ijc4IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5Eb2NzPC90ZXh0Pjx0ZXh0IHg9IjE3MCIgeT0iNzgiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiNiNTUzM2MiPkEgZG9jIGNhbiBjaXRlIGNvZGUgdGhhdCBjaGFuZ2VkIG9yIGlzIGdvbmU8L3RleHQ+PHRleHQgeD0iNTIwIiB5PSI3OCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJmN2Q1YSI+VGhlIGNvbW1pdCB0aGF0IGNoYW5nZXMgdGhlIGNvZGUgbmFtZXMgdGhlIGRvY3MgY2l0aW5nIGl0PC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIxMDQiIHdpZHRoPSI4NTIiIGhlaWdodD0iNDYiIHJ4PSI4IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyNCIgeT0iMTMyIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5DaGFuZ2Vsb2c8L3RleHQ+PHRleHQgeD0iMTcwIiB5PSIxMzIiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiNiNTUzM2MiPk5vIHJlY29yZCBvZiB3aGF0IGNoYW5nZWQsIHBlciByZXBvPC90ZXh0Pjx0ZXh0IHg9IjUyMCIgeT0iMTMyIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmY3ZDVhIj5FYWNoIGNoYW5nZSBnZXRzIGEgbGluZSBpbiBDSEFOR0VMT0cubWQ8L3RleHQ+PHJlY3QgeD0iMTQiIHk9IjE1OCIgd2lkdGg9Ijg1MiIgaGVpZ2h0PSI0NiIgcng9IjgiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4wNiIvPjx0ZXh0IHg9IjI0IiB5PSIxODYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzZjQ0NGIiPkJyYW5jaGVzPC90ZXh0Pjx0ZXh0IHg9IjE3MCIgeT0iMTg2IiBmb250LXNpemU9IjEyIiBmaWxsPSIjYjU1MzNjIj5NZXJnZWQgYnJhbmNoZXMgcGlsZSB1cCBsb2NhbGx5PC90ZXh0Pjx0ZXh0IHg9IjUyMCIgeT0iMTg2IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmY3ZDVhIj5BIGJyYW5jaCB3aG9zZSB3b3JrIGlzIG1lcmdlZCBhbmQgb24gR2l0SHViIGlzIGRlbGV0ZWQ8L3RleHQ+PHJlY3QgeD0iMTQiIHk9IjIxMiIgd2lkdGg9Ijg1MiIgaGVpZ2h0PSI0NiIgcng9IjgiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4wNiIvPjx0ZXh0IHg9IjI0IiB5PSIyNDAiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzZjQ0NGIiPldvcmt0cmVlczwvdGV4dD48dGV4dCB4PSIxNzAiIHk9IjI0MCIgZm9udC1zaXplPSIxMiIgZmlsbD0iI2I1NTMzYyI+RmluaXNoZWQgaGVscGVyIGNvcGllcyBzdGF5IG9uIGRpc2s8L3RleHQ+PHRleHQgeD0iNTIwIiB5PSIyNDAiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyZjdkNWEiPkNsZWFuLCBmaW5pc2hlZCBjb3BpZXMgYXJlIHJlbW92ZWQ7IHRoZSBkaXNrIHVzZSBpcyByZXBvcnRlZDwvdGV4dD48cmVjdCB4PSIxNCIgeT0iMjY2IiB3aWR0aD0iODUyIiBoZWlnaHQ9IjQ2IiByeD0iOCIgZmlsbD0iIzdkODM4YyIgZmlsbC1vcGFjaXR5PSIwLjA2Ii8+PHRleHQgeD0iMjQiIHk9IjI5NCIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNmNDQ0YiI+QmlnIGZpbGVzPC90ZXh0Pjx0ZXh0IHg9IjE3MCIgeT0iMjk0IiBmb250LXNpemU9IjEyIiBmaWxsPSIjYjU1MzNjIj5Ob3RoaW5nIGNoZWNrcyBob3cgYSBiaWcgZmlsZSBnb2VzIGludG8gZ2l0PC90ZXh0Pjx0ZXh0IHg9IjUyMCIgeT0iMjk0IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmY3ZDVhIj5CaWcgZmlsZXMgc3RheSBvdXQgdW5sZXNzIHlvdSBhc2s7IHRoZW4gTEZTLCBpZiBpdCBmaXRzPC90ZXh0Pjwvc3ZnPg==",
+          "alt": "Five rows, docs, changelog, branches, worktrees and big files, each showing today and after phase 2",
+          "caption": "What the end of a session looks like today, and after phase 2. A plain diagram, not a screenshot."
+        }
+      ],
+      [
+        "loop",
+        "How",
+        "Mostly existing hooks, adapted",
+        "",
+        "Three existing pieces are reused as they are, four are adapted and four are new. Nothing replaces a working hook.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4OTAgMjAwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48cmVjdCB4PSIxNCIgeT0iMTYiIHdpZHRoPSIyODIiIGhlaWdodD0iMTUyIiByeD0iMTAiIGZpbGw9IiM5YWEwYTYiIGZpbGwtb3BhY2l0eT0iMC4xMCIgc3Ryb2tlPSIjOWFhMGE2Ii8+PHRleHQgeD0iMjgiIHk9IjQwIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjOWFhMGE2Ij5SZXVzZWQ8L3RleHQ+PHRleHQgeD0iMjgiIHk9IjcwIiBmb250LXNpemU9IjExLjUiIGZpbGw9IiMyYjJmMzUiPmRvY3JlZi5weTogZG9jLXJlZiBwb2ludGVyIGNoZWNrPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSIxMDQiIGZvbnQtc2l6ZT0iMTEuNSIgZmlsbD0iIzJiMmYzNSI+bWFrZV9wYWdlLnB5OiBidWlsZHMgcGFnZXM8L3RleHQ+PHRleHQgeD0iMjgiIHk9IjEzOCIgZm9udC1zaXplPSIxMS41IiBmaWxsPSIjMmIyZjM1Ij5hdXRvc2F2ZTogd29yayBpcyBvbiBHaXRIdWIgZmlyc3Q8L3RleHQ+PHJlY3QgeD0iMzA2IiB5PSIxNiIgd2lkdGg9IjI4MiIgaGVpZ2h0PSIxODYiIHJ4PSIxMCIgZmlsbD0iI2Q5ODIyYiIgZmlsbC1vcGFjaXR5PSIwLjEwIiBzdHJva2U9IiNkOTgyMmIiLz48dGV4dCB4PSIzMjAiIHk9IjQwIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZDk4MjJiIj5BZGFwdGVkPC90ZXh0Pjx0ZXh0IHg9IjMyMCIgeT0iNzAiIGZvbnQtc2l6ZT0iMTEuNSIgZmlsbD0iIzJiMmYzNSI+Z3VhcmQ6IG5hbWVzIGRvY3MgY2l0aW5nIGNoYW5nZWQgY29kZTwvdGV4dD48dGV4dCB4PSIzMjAiIHk9IjEwNCIgZm9udC1zaXplPSIxMS41IiBmaWxsPSIjMmIyZjM1Ij5kb2NzdGllcnM6IG5hbWVzIGEgbWlzc2luZyBjaGFuZ2Vsb2c8L3RleHQ+PHRleHQgeD0iMzIwIiB5PSIxMzgiIGZvbnQtc2l6ZT0iMTEuNSIgZmlsbD0iIzJiMmYzNSI+d29ya3RyZWVzd2VlcDogcmVtb3ZlcyBmaW5pc2hlZCBjb3BpZXM8L3RleHQ+PHRleHQgeD0iMzIwIiB5PSIxNzIiIGZvbnQtc2l6ZT0iMTEuNSIgZmlsbD0iIzJiMmYzNSI+Z3VhcmQ6IGJpZyBmaWxlcyBvbmx5IHdoZW4geW91IGFzazwvdGV4dD48cmVjdCB4PSI1OTgiIHk9IjE2IiB3aWR0aD0iMjgyIiBoZWlnaHQ9IjE4NiIgcng9IjEwIiBmaWxsPSIjM2I3ZGQ4IiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzNiN2RkOCIvPjx0ZXh0IHg9IjYxMiIgeT0iNDAiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzYjdkZDgiPk5ldzwvdGV4dD48dGV4dCB4PSI2MTIiIHk9IjcwIiBmb250LXNpemU9IjExLjUiIGZpbGw9IiMyYjJmMzUiPmRyaWZ0IGNoZWNrOiBjaXRhdGlvbnMgdG8gbm90aGluZzwvdGV4dD48dGV4dCB4PSI2MTIiIHk9IjEwNCIgZm9udC1zaXplPSIxMS41IiBmaWxsPSIjMmIyZjM1Ij5jaGFuZ2Vsb2cgdGVtcGxhdGUsIFBSIHJlbWluZGVyPC90ZXh0Pjx0ZXh0IHg9IjYxMiIgeT0iMTM4IiBmb250LXNpemU9IjExLjUiIGZpbGw9IiMyYjJmMzUiPmJyYW5jaCBjbGVhbnVwIGFmdGVyIGEgbWVyZ2U8L3RleHQ+PHRleHQgeD0iNjEyIiB5PSIxNzIiIGZvbnQtc2l6ZT0iMTEuNSIgZmlsbD0iIzJiMmYzNSI+ZGlzayByZXBvcnQgYXQgc2Vzc2lvbiBzdGFydDwvdGV4dD48L3N2Zz4=",
+          "alt": "Three columns: reused, adapted and new parts of the plugin for phase 2",
+          "caption": "Which parts are reused (grey), adapted (orange) and new (blue)."
+        }
+      ],
+      [
+        "search",
+        "Unknown",
+        "Why PlunderSpell takes 153 GB",
+        "",
+        "Not measured: that folder is on your PC, and this cloud session was refused access to the PlunderSpell repo. The likeliest cause is helper copies (git worktrees) that are never removed: this session alone made 6 of them in this repo. Each is a full checkout, and in a Unity project each copy can also grow its own Library folder of generated files. The new disk report (choice 4 below) measures it on your PC at the next session start, with no command for you to run.",
+        "Nothing now; the first session on PlunderSpell after this ships shows the numbers."
+      ],
+      [
+        "lock",
+        "Approve",
+        "You pick five choices and approve",
+        "you",
+        "A build plan page next, with the planned code shown.",
+        "Your pick of option A or B in each of the five choices further down, then the line \"Design approved: Phase 2\"."
+      ],
+      [
+        "flask",
+        "Prove it",
+        "Tested here, as phase 1 was",
+        "",
+        "Live headless sessions and real git in throwaway repos, then a QA page. The drift check is proven on this repo; PlunderSpell's numbers come from your next session there.",
+        "Nothing from you until the QA (test results) page."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "Docs that disagree with the code are caught when the code changes",
+      "Drift is caught at the commit that causes it (choice 1).",
+      null,
+      "Docs in this repo cite code as file:line (for example design_loop.py:1322) and by file path. Today nothing checks those citations after the code moves. docref.py checks only the archivist's doc-ref pointers, and the commit reminder only asks whether some doc was staged.",
+      [
+        "The commit reminder in the guard hook asks only whether any docs/ file was staged.",
+        "The reminder names each doc that cites a changed file, and a drift check flags citations to files or lines that no longer exist.",
+        "A wrong doc is named in the commit that made it wrong, so it can't sit unnoticed."
+      ]
+    ],
+    [
+      "new",
+      "A changelog in every repo",
+      "Each repo keeps CHANGELOG.md, and every change adds a plain line to it (issues #384 to #388 and #244; choice 2).",
+      null,
+      "The plugin ships a changelog template. The session-start docs check (the docstiers hook) names a repo that has none. Opening a pull request whose branch leaves the changelog unchanged gets a reminder. The documentation rule names the changelog. Lines lead with plain words (\"adds 2 rules\"), then the exact detail (\"+14 lines in the rules file\"), as you asked in #244.",
+      [
+        "No repo has a changelog; what changed is only in commit messages.",
+        "CHANGELOG.md, scaffolded with the docs tiers, with an Unreleased section each change adds to.",
+        "You can read what changed in a repo without reading commits."
+      ]
+    ],
+    [
+      "new",
+      "Merged branches and finished copies are cleaned up",
+      "Local branches and helper worktrees go once their work is safe on GitHub (#156; choice 3).",
+      null,
+      "A local branch is deleted only when everything on it is in a merged pull request and pushed. A helper worktree (a separate working copy of the repo that a helper builds in) is removed only when it is clean and its commits are on a pushed branch. Nothing with unsaved work is ever deleted; the guard's existing rules still apply. Remote branches are left to GitHub's own \"delete branch after merge\" setting.",
+      [
+        "The worktreesweep hook only commits work a killed helper left behind.",
+        "After a merge, the merged branch and its finished worktrees are deleted, and the session says which.",
+        "Your disk and branch list stop filling with finished work."
+      ]
+    ],
+    [
+      "new",
+      "Big files only when you ask for them, generated folders stay out, and disk use is visible",
+      "A big file goes into git only when you ask for it by name, and then only through Git LFS once the allowance is checked. A generated folder never goes in. Session start reports where the disk went (choice 4).",
+      null,
+      "Git LFS keeps a small pointer in git and stores the file itself separately. By default the guard refuses a commit that adds a file over a size limit (a starting value of 50 MB, to be tuned), and names the .gitignore line that keeps it out. A big file goes in only when your own message names it, for example \"LFS approved: Assets/Audio/theme.wav\". Before that commit, the allowance check reads how much of the free 10 GiB of LFS storage your GitHub account already uses. If the file would not fit, the commit is refused and you are told the numbers. If it fits, the session tracks it with `git lfs track` and commits it through LFS. The guard also refuses a file inside a folder that a game engine or build regenerates (Unity's Library/, Temp/, obj/, Builds/, node_modules/) when .gitignore does not cover that folder, and tells you which folder to add. Session start reports the size of each helper worktree and generated folder that passes a starting threshold of 5 GB.",
+      [
+        "Nothing stops a big file or a generated folder being committed, and nothing reports disk use.",
+        "No big file reaches git without your word and room in the allowance, generated folders stay out, and session start names the big folders.",
+        "PlunderSpell's 153 GB is explained on your PC, and the cause can't grow back unnoticed."
+      ]
+    ],
+    [
+      "new",
+      "Three rules from old issues",
+      "Never hardcode tunable values (#117), a session finishes its own task (#301), and no rule ships without a check (#228; choice 5).",
+      null,
+      "#117: values a person may want to change go in a settings file or an exposed field, not in code, unless they were set by measurement. #301: work for another repo becomes an issue in that repo, and the session returns to its own task. #228: a verify.py case fails when a rule in rules/house-rules.md names no check that enforces it.",
+      [
+        "The rules say nothing about hardcoding or switching tasks, and some rules have no check.",
+        "Two rule lines, each with a check, and a test that every rule names its check.",
+        "A rule the agent could quietly skip can no longer be written."
+      ]
+    ],
+    [
+      "new",
+      "A place for research, sources and vocabulary",
+      "A research log and a vocabulary list beside the decisions log (#336, #45).",
+      null,
+      "docs/6-decisions/ gains Research.md (what was researched, with sources cited) and Vocabulary.md (the project's terms and the reversals that settled them). The docs-tier check names them as optional, not required.",
+      [
+        "Research and settled terms live in chat or nowhere.",
+        "Two files beside Decisions.md, scaffolded with the docs tiers.",
+        "A later session can find why something was decided and what a word means."
+      ]
+    ],
+    [
+      "keep",
+      "Already built: five old issues",
+      "Five old issues, #199, #399, #404, #479 and #463, are already in the code; each gets a verify.py case so it can close with proof.",
+      null,
+      "#199: the branch rule (\"Off main: commit, push, merge freely\") is in rules/house-rules.md. #399 and #404: docs/4-systems/work-tracking.md says built, and the rclink hook is in docs/architecture.md. #479: folder deletes git can undo, \"Continue from\" and \"Issues for\" are in safe_git.py and design_loop.py. #463: finished by phase 1."
+    ],
+    [
+      "new",
+      "Risk: Git LFS storage and install",
+      "Three things could get in the way when you do ask for a big file.",
+      null,
+      "First, the free allowance. GitHub's current billing docs give a free personal account 10 GiB of Git LFS storage and 10 GiB of LFS download bandwidth a month, which unused months do not carry over. Use beyond that is billed per GiB when a payment method is on file (quoted as $0.07 per GiB stored and $0.0875 per GiB downloaded), not blocked. These figures come from a web search of GitHub's docs on 2026-11-11, because this session cannot open docs.github.com directly. A Unity project's assets could pass 10 GiB, so this matters. Second, whether the check can read how much of the allowance your account has used. GitHub's billing API is the planned source. When tried from this cloud session on 2026-11-11, it was refused: cloud sessions may only call GitHub for their own repositories. On your PC, the GitHub command-line tool (gh) may be able to read it; that can't be tested from here. If it can't be read, the check adds up the LFS files in this repo, says other repos were not counted, and asks you before going on. Third, git-lfs must be installed on every machine that clones the repo. It is installed in this cloud session (git-lfs 3.4.1); your PC is not checked. The refusal message says how to install git-lfs when it is missing. Files already in plain git history stay where they are; moving them is a separate decision for you."
+    ]
+  ],
+  "choices": [
+    [
+      "q1",
+      "Where is a doc that disagrees with the code caught?",
+      [
+        [
+          "A",
+          "At the commit that changes the code: the reminder names each doc citing a changed file, and a citation to a missing file or line is flagged",
+          1,
+          "Caught where it happens, by the session that knows why the code changed."
+        ],
+        [
+          "B",
+          "Only by a check you or a session runs on request",
+          0,
+          "Nothing new at commit time, but drift waits until someone looks."
+        ]
+      ],
+      "A matches \"drift is caught where it happens\" in the phase's goal; B leaves the gap that let docs drift."
+    ],
+    [
+      "q2",
+      "What does a changelog line come from?",
+      [
+        [
+          "A",
+          "The session writes it, and the end-of-turn check sends the turn back once if files changed but no changelog line was added",
+          1,
+          "Written while the work is fresh, never skipped (#244's \"done automatically\")."
+        ],
+        [
+          "B",
+          "Only a reminder when a pull request opens",
+          0,
+          "Less noise per turn, but lines are written later from memory."
+        ]
+      ],
+      "A is what #244 asked for; the end-of-turn check already exists, so this only extends it."
+    ],
+    [
+      "q3",
+      "What happens to a merged branch and its finished helper copies?",
+      [
+        [
+          "A",
+          "Deleted locally once everything on them is merged and pushed; the session says which",
+          1,
+          "No action from you, and nothing unsaved can go."
+        ],
+        [
+          "B",
+          "Listed at session start; deleted only when you say so",
+          0,
+          "You see every deletion first, but it is one more thing for you to answer."
+        ]
+      ],
+      "A keeps your hands free; the safety rule (merged and pushed, nothing uncommitted) is what protects the work."
+    ],
+    [
+      "q4",
+      "How do you ask for a big file to go into git?",
+      [
+        [
+          "A",
+          "One file at a time: your message names the file, as in \"LFS approved: Assets/Audio/theme.wav\"",
+          1,
+          "Nothing big goes in without you naming it."
+        ],
+        [
+          "B",
+          "A pattern or folder at a time, as in \"LFS approved: Assets/Audio/*.wav\"",
+          0,
+          "Less typing for many assets; the allowance is still checked for every file."
+        ]
+      ],
+      "A asks for your word on every big file, as you wanted; B saves typing for a folder of assets, but a new file in that folder goes in without you seeing it."
+    ],
+    [
+      "q5",
+      "Which of the three rule changes go in this phase?",
+      [
+        [
+          "A",
+          "All three: no hardcoding, a session finishes its own task, and every rule names its check",
+          1,
+          "The phase closes all 17 of its issues."
+        ],
+        [
+          "B",
+          "Only \"every rule names its check\" now; the other two wait for a later phase",
+          0,
+          "A smaller phase, but #117 and #301 stay open."
+        ]
+      ],
+      "A: each rule is a short text change plus one check, and the check rule makes the other two enforceable."
+    ]
+  ],
+  "wrapup": {
+    "summary": "The design for phase 2: docs agree with the code, every repo has a changelog, finished branches and copies are cleaned up, and big files reach git only when you ask and the allowance has room.",
+    "changing": "Nothing yet. After approval, a build plan page with the planned code, then issues for each step.",
+    "blocking": "Your pick in each of the five choices, or any change you want.",
+    "next": "I write the build plan page with the planned code and the step issues, then build after you approve it.",
+    "todo": [
+      "Pick one option in each choice.",
+      "Tap <b>Copy my reply</b>.",
+      "Send it. It starts \"Design approved: Phase 2\"."
+    ]
+  }
+}

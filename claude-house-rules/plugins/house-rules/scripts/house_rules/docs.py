@@ -45,6 +45,10 @@ DOCS_TIER_FILES = [
     "docs/6-decisions/Decisions.md",
 ]
 DOCS_TIER4_DIR = "docs/4-systems"
+# Optional tier-6 companions to Decisions.md. Never required and never nagged for: a missing one
+# adds nothing to the session-start note, and a present one is not listed (the note reports
+# problems only). Kept apart from DOCS_TIER_FILES on purpose.
+OPTIONAL_TIER_FILES = ["docs/6-decisions/Research.md", "docs/6-decisions/Vocabulary.md"]
 # The pre-folder layout, kept only so a project still on it gets a "move X to Y" message
 # instead of being told to scaffold tiers it already has. See docs/6-decisions/Decisions.md,
 # 2026-09-24.
@@ -92,9 +96,16 @@ def _repo_owner_from_config(git_dir):
     return None, "no remote url matched a recognizable owner/repo form (%s)" % urls[0]
 
 
+CHANGELOG_NOTE = (
+    "This repo also has no CHANGELOG.md at its root: start one from templates/CHANGELOG.md and the repo's real "
+    "history (house-rules:project-docs, scaffolding)."
+)
+
+
 def event_docstiers():
     try:
         root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        changelog_note = "" if os.path.isfile(os.path.join(root, "CHANGELOG.md")) else " " + CHANGELOG_NOTE
         missing = []
         moves = []
         for new_path, old_path in zip(DOCS_TIER_FILES, OLD_DOCS_TIER_FILES):
@@ -127,6 +138,7 @@ def event_docstiers():
                         else "Load house-rules:project-docs for the current folder layout."
                     ),
                 )
+                + changelog_note
             )
             emit(
                 {
@@ -142,7 +154,12 @@ def event_docstiers():
         if not missing:
             # All six tiers present - the one other deliberate silent exception besides
             # handover. This runs every session; a trace here costs something on every one of
-            # them for a fact that is true almost always.
+            # them for a fact that is true almost always. A missing CHANGELOG.md (#386) is the
+            # one thing it still says.
+            if changelog_note:
+                emit({"suppressOutput": True, "hookSpecificOutput": {
+                    "hookEventName": "SessionStart",
+                    "additionalContext": "House rules, every repo keeps a changelog:" + changelog_note}})
             return 0
 
         git_dir = _git_dir(root)
@@ -170,7 +187,7 @@ def event_docstiers():
             "documentation tiers - %s. Load house-rules:project-docs and scaffold the missing "
             "tiers before any other work, in every repo. %s"
             % (len(missing), ", ".join(missing), ownership_note)
-        )
+        ) + changelog_note
         emit(
             {
                 "suppressOutput": True,
@@ -210,6 +227,53 @@ _ADD_ALL_RE = re.compile(r"(^|\s)(-A\b|--all\b)|(^|\s)\.(\s|$)", re.IGNORECASE)
 _ADD_UPDATE_RE = re.compile(r"(^|\s)(-u\b|--update\b)", re.IGNORECASE)
 
 
+def _commit_effective_files(decoded, run_git):
+    """The set of files a `git commit` command will include: what is staged, plus -a, `git add -A`/-u and
+    literal paths named earlier in the command. run_git(args) -> list of lines; raises on failure."""
+    import shlex
+
+    effective = set(p.strip() for p in run_git(["diff", "--cached", "--name-only"]))
+
+    statements = _STATEMENT_SPLIT_RE.split(decoded)
+    commit_stmt = next((s for s in statements if _GIT_COMMIT_RE.search(s)), "")
+    commit_all = bool(_COMMIT_ALL_RE.search(commit_stmt))
+
+    add_all = False
+    add_tracked_only = False
+    literal_paths = []
+    for s in statements:
+        m = _GIT_ADD_RE.search(s)
+        if not m:
+            continue
+        args_part = s[m.end() :]
+        if _ADD_ALL_RE.search(args_part):
+            add_all = True
+        elif _ADD_UPDATE_RE.search(args_part):
+            add_tracked_only = True
+        else:
+            # shlex, not .split(): a quoted path with a space ("my file.py") is one
+            # argument, not two. posix=True so quotes/backslashes resolve the way a real
+            # shell would read them. Unbalanced quotes raise ValueError, which the outer
+            # try/except below turns into "unknown" - never a guess at what was meant.
+            literal_paths.extend(
+                tok for tok in shlex.split(args_part, posix=True) if not tok.startswith("-")
+            )
+
+    status = None  # lazy: only fetched if something below actually needs it
+    if commit_all:
+        effective.update(p.strip() for p in run_git(["diff", "HEAD", "--name-only"]))
+    if add_all or add_tracked_only or literal_paths:
+        status = _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))
+    if add_all:
+        effective.update(p for p, _tracked in status)
+    elif add_tracked_only:
+        effective.update(p for p, tracked in status if tracked)
+    for lp in literal_paths:
+        lp_norm = lp.rstrip("/")
+        effective.update(p for p, _tracked in status if p == lp_norm or p.startswith(lp_norm + "/"))
+    return effective
+
+
 def _staged_docs_status(subject, elsewhere, root=None):
     """('needs-docs'|'clear'|'unknown', detail) for what this commit will ACTUALLY include -
     not just what is staged right now, since guard runs before the command it is judging.
@@ -223,7 +287,6 @@ def _staged_docs_status(subject, elsewhere, root=None):
         return "unknown", "the command names another repo (-C/--git-dir/--work-tree) or changes directory"
     root = root or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
-    import shlex
     import subprocess
     import time as _t
 
@@ -246,53 +309,73 @@ def _staged_docs_status(subject, elsewhere, root=None):
         return [p for p in proc.stdout.decode("utf-8", "replace").splitlines() if p.strip()]
 
     try:
-        effective = set(p.strip() for p in run_git(["diff", "--cached", "--name-only"]))
-
-        statements = _STATEMENT_SPLIT_RE.split(decoded)
-        commit_stmt = next((s for s in statements if _GIT_COMMIT_RE.search(s)), "")
-        commit_all = bool(_COMMIT_ALL_RE.search(commit_stmt))
-
-        add_all = False
-        add_tracked_only = False
-        literal_paths = []
-        for s in statements:
-            m = _GIT_ADD_RE.search(s)
-            if not m:
-                continue
-            args_part = s[m.end() :]
-            if _ADD_ALL_RE.search(args_part):
-                add_all = True
-            elif _ADD_UPDATE_RE.search(args_part):
-                add_tracked_only = True
-            else:
-                # shlex, not .split(): a quoted path with a space ("my file.py") is one
-                # argument, not two. posix=True so quotes/backslashes resolve the way a real
-                # shell would read them. Unbalanced quotes raise ValueError, which the outer
-                # try/except below turns into "unknown" - never a guess at what was meant.
-                literal_paths.extend(
-                    tok for tok in shlex.split(args_part, posix=True) if not tok.startswith("-")
-                )
-
-        status = None  # lazy: only fetched if something below actually needs it
-        if commit_all:
-            effective.update(p.strip() for p in run_git(["diff", "HEAD", "--name-only"]))
-        if add_all or add_tracked_only or literal_paths:
-            status = _parse_status_porcelain(run_git(["status", "--porcelain", "-uall"]))
-        if add_all:
-            effective.update(p for p, _tracked in status)
-        elif add_tracked_only:
-            effective.update(p for p, tracked in status if tracked)
-        for lp in literal_paths:
-            lp_norm = lp.rstrip("/")
-            effective.update(p for p, _tracked in status if p == lp_norm or p.startswith(lp_norm + "/"))
+        effective = _commit_effective_files(decoded, run_git)
     except Exception as exc:
         return "unknown", "could not resolve what this commit will include (%s)" % exc
 
+    note = _citing_docs_note(root, effective, deadline)
     has_source = any(_HARVEST_EXT_RE.search(p) for p in effective)
     has_docs = any(p == "docs" or p.startswith("docs/") for p in effective)
     if has_source and not has_docs:
-        return "needs-docs", None
-    return "clear", None
+        return "needs-docs", note
+    return "clear", note
+
+
+DOCS_CITE_CAP = 8
+
+
+def _citing_docs_note(root, effective, deadline):
+    """One or two lines naming the living docs that cite code files this commit changes, and any
+    drifted citation of such a file (#508). None when nothing applies. Never raises and never
+    changes the caller's decision; a scan that cannot finish says so."""
+    import time as _t
+
+    try:
+        scripts_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        import docs_drift
+
+        code = [p for p in effective if re.search(r"\.(py|sh|js|mjs|ts|tsx|cs|ps1|bat|json)$", p)]
+        if not code:
+            return None
+        remaining = deadline - _t.time()
+        if remaining <= 0:
+            return "The docs-citation scan did not run: the docs check's time budget ran out."
+        tracked = docs_drift.tracked_files(root, timeout=remaining)
+        rows, complete = docs_drift.scan(root, tracked, deadline=deadline)
+    except Exception as exc:
+        return "The docs-citation scan could not run (%s)." % exc
+
+    cites = {}
+    drift = []
+    for r in rows:
+        if r["status"] == "gone":
+            hit = any(p == r["cited"] or p.endswith("/" + r["cited"]) for p in code)
+        else:
+            hit = r["path"] in code
+        if not hit:
+            continue
+        cites.setdefault(r["doc"], [])
+        if r["as_written"] not in cites[r["doc"]]:
+            cites[r["doc"]].append(r["as_written"])
+        if r["status"] != "ok":
+            drift.append(docs_drift.drift_line(r))
+
+    lines = []
+    if cites:
+        names = ["%s (%s)" % (d, ", ".join(c[:3])) for d, c in sorted(cites.items())]
+        text = ", ".join(names[:DOCS_CITE_CAP])
+        if len(names) > DOCS_CITE_CAP:
+            text += ", and %d more" % (len(names) - DOCS_CITE_CAP)
+        lines.append("These docs cite files this commit changes: " + text + ".")
+    if drift:
+        shown = drift[:DOCS_CITE_CAP]
+        extra = " (and %d more)" % (len(drift) - len(shown)) if len(drift) > len(shown) else ""
+        lines.append("Drifted citations of those files: " + "; ".join(shown) + extra + ".")
+    if not complete:
+        lines.append("The docs-citation scan did not finish in the time budget; this list may be incomplete.")
+    return " ".join(lines) if lines else None
 
 
 
@@ -574,6 +657,55 @@ def _harvest_trace(base, blocks, misses, min_chars, ranged, verbose):
     return head + " | runs considered: " + detail
 
 
+# #117: values a person may want to change are never hardcoded. REPORT ONLY.
+_TUNING_WORDS = frozenset(
+    "speed delay timeout cooldown duration damage health rate scale limit max min threshold "
+    "count interval force gravity volume".split()
+)
+_TUNING_LINE_RE = re.compile(
+    r"^\s*(?:(?:public|private|protected|internal|static|readonly|const|final|var|let|val|float|double|int|long|number)\s+)*"
+    r"([A-Za-z_]\w*)\s*(?::\s*[\w\[\]]+\s*)?=\s*-?\d+(?:\.\d+)?[fFdDlL]?\s*;?\s*((?:#|//).*)?$"
+)
+_TEST_PATH_RE = re.compile(
+    r"(^|[\\/])(tests?|__tests__|spec)[\\/]|(^|[\\/])test_[^\\/]*$|[_.-]tests?\.[^\\/]*$|Tests?\.[A-Za-z]+$|[_.]spec\.",
+    re.IGNORECASE,
+)
+_MEASURED_RE = re.compile(r"measured|empirical", re.IGNORECASE)
+_STARTING_RE = re.compile(r"a starting value|measured", re.IGNORECASE)
+
+
+def _tuning_hits(text, file_path):
+    """[(line number in text, stripped line)] for bare numeric literals assigned to tuning-shaped names."""
+    if _TEST_PATH_RE.search(file_path):
+        return []
+    hits = []
+    for i, line in enumerate(text.splitlines(), 1):
+        m = _TUNING_LINE_RE.match(line)
+        if not m:
+            continue
+        name, comment = m.group(1), m.group(2) or ""
+        if _MEASURED_RE.search(comment):
+            continue
+        if name.isupper() and _STARTING_RE.search(comment):
+            continue
+        parts = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name).replace("_", " ").lower().split()
+        if _TUNING_WORDS.intersection(parts):
+            hits.append((i, line.strip()))
+    return hits
+
+
+def _tuning_note(hits, base, ranged):
+    shown = hits[:3]
+    where = ", ".join(("%s:%d" % (base, n) if ranged else "%s (%s)" % (base, t)) + (" `%s`" % t if ranged else "")
+                      for n, t in shown)
+    more = " (and %d more)" % (len(hits) - 3) if len(hits) > 3 else ""
+    return (
+        "House rules, tuning values (report only): %s%s assign a bare number to a value a person may want "
+        "to change. Put it in a settings file, an exposed field (a Unity serialized field or ScriptableObject) "
+        "or a config value, unless it was set by measurement (say so in a comment)." % (where, more)
+    )
+
+
 def event_harvest():
     try:
         toggle = os.environ.get("HOUSE_RULES_HARVEST", "on").strip().lower()
@@ -686,6 +818,12 @@ def event_harvest():
                     n=len(blocks), s="" if len(blocks) == 1 else "s", where=where
                 ),
             }
+
+        tuning = _tuning_hits(text, file_path)
+        if tuning:
+            note = _tuning_note(tuning, base, ranged)
+            hso = out.setdefault("hookSpecificOutput", {"hookEventName": "PostToolUse", "additionalContext": ""})
+            hso["additionalContext"] = (hso["additionalContext"] + "\n\n" + note).strip()
 
         # Default: speak only when something was found or an override was bad. The
         # "no comment runs found / none met the threshold" line is a no-op trace, verbose only.

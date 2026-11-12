@@ -69,7 +69,7 @@ file there is still a real failure.
   with `git add -A`, expecting a prompt, saw none and could reasonably conclude the hook was
   broken rather than working as designed. Tokenizing the table means a future re-narrowing (or
   re-widening) of the guarded verbs breaks this check instead of silently leaving the table
-  wrong again (`verify.py:2372-2393`).
+  wrong again (the "What trips the guard" case in `claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py`).
 
 ## Traps
 

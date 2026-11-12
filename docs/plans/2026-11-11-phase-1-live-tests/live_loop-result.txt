@@ -1,0 +1,17 @@
+PASS  1 feature-first design approval                         stage=plan feature='Widget' held=None reopened=None (7.5s)
+PASS  2 issues recorded by aj                                 stage=plan feature='Widget' held=None reopened=None (11.7s)
+PASS  3 feature-first build plan approval                     stage=build feature='Widget' held=None reopened=None (9.9s)
+PASS  4 code edit open in Build                               stage=build feature='Widget' held=None reopened=None (34.4s)
+PASS  5 needs review starts QA at reply end                   stage=qa feature='Widget' held=None reopened=None (13.2s)
+PASS  6 code edit refused in QA                               stage=qa feature='Widget' held=None reopened=None (24.2s)
+PASS  7 QA failed returns to Build in one message             stage=build feature='Widget' held=None reopened=True (16.7s)
+PASS  8 edit refused while issues still say needs review      stage=build feature='Widget' held=None reopened=True (18.3s)
+PASS  9 edit opens once issues are back to in progress        stage=build feature='Widget' held=None reopened=False (34.9s)
+PASS  10 a reply ending in a question holds code edits        stage=build feature='Widget' held=True reopened=False (3.0s)
+PASS  11 aj's next message clears the hold and the edit goes through stage=build feature='Widget' held=False reopened=False (27.4s)
+PASS  12 'I went with' is sent back once                      stage=build feature='Widget' held=False reopened=False (11.5s)
+PASS  13 a reply offering one approval line is recorded       stage=plan feature='Gadget' held=False reopened=False (11.1s)
+PASS  14 a bare 'Approve 2B' sends that line; the old feature is kept stage=plan feature='Gadget' held=False reopened=False (22.0s)
+LIVE RESULT: 14 of 14 steps passed
+
+[exited with code 0]

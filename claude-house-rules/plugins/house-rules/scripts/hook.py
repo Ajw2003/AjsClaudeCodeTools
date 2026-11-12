@@ -49,13 +49,14 @@ import sys
 # back (EVENTS below needs the event_* handlers); the underscore names this file uses are listed.
 # The sys.path line makes `house_rules` and `clarity` importable when run.sh starts this file.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from house_rules import core, docs, safe_git, design_loop, delegation, writing
+from house_rules import core, docs, safe_git, design_loop, delegation, writing, bigfiles
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.docs import *  # noqa: F401,F403
 from house_rules.safe_git import *  # noqa: F401,F403
 from house_rules.design_loop import *  # noqa: F401,F403
 from house_rules.delegation import *  # noqa: F401,F403
 from house_rules.writing import *  # noqa: F401,F403
+from house_rules.bigfiles import event_diskreport  # noqa: F401
 from house_rules.core import (  # noqa: F401
     _PARITY_ACCOUNTED_RE,
     _PARITY_RE,
@@ -90,7 +91,8 @@ from house_rules.writing import (  # noqa: F401
 #   safe_git      handover_commit_check
 #   writing       handover_turn_writes, handover_plain_check, handover_page_editor_check, handover_visual_check,
 #                 handover_long_reply
-#   design_loop   handover_stop_lines, handover_page_row, handover_checkpoints, handover_qa_retry
+#   design_loop   handover_stop_lines, handover_page_row, handover_checkpoints, handover_qa_retry,
+#                 handover_record_offers
 # ---------------------------------------------------------------------------------------
 
 def event_handover():
@@ -136,6 +138,8 @@ def event_handover():
     parity_word = None
     visual_files = []
     plain_problems = []
+    written_now, committed_now = [], False
+    multirepo = ""
     editor_owed = None
     shell_page_notes = []
     trace_lines_early = []
@@ -146,6 +150,7 @@ def event_handover():
         if turn_records is not None:
             written_now, committed_now = handover_turn_writes(turn_records)
             plain_problems = handover_plain_check(written_now, committed_now, have_reply, reply_text)
+            multirepo = handover_multirepo_note(written_now)
             if written_now and _parity_enabled():
                 pm = _PARITY_RE.search(_last_user_text(transcript_path))
                 reply_for_parity = reply_text if have_reply else ""
@@ -185,18 +190,19 @@ def event_handover():
             "(%s)." % commit_could_not_tell
         )
 
+    handover_record_offers(payload, have_reply, reply_text, trace_lines)
     long_words = handover_long_reply(payload, have_reply, reply_text)
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
     if not retry:
         if handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                                needs_evidence, uncommitted, plain_problems, trace_lines):
+                                needs_evidence, uncommitted, plain_problems, trace_lines, written=written_now):
             return 0
     else:
         handover_qa_retry(payload, have_reply, reply_text, trace_lines)
     if (not needs_card and not needs_evidence and not not_checked and not uncommitted
             and not parity_word and not visual_files and not plain_problems and not issue_line
             and not long_words and not label_line and not editor_owed
-            and not shell_page_notes and not page_note and not links_owed):
+            and not shell_page_notes and not page_note and not links_owed and not multirepo):
         if trace_lines:
             emit({"systemMessage": " ".join(trace_lines)})
         # The one handler that must NOT trace when no check fires - direct rule conflict,
@@ -227,6 +233,8 @@ def event_handover():
         parts.append(_visual_note(visual_files))
     if uncommitted:
         parts.append(_commit_note(uncommitted))
+    if multirepo:
+        parts.append(multirepo)
     if issue_line:
         parts.append(issue_line)
     if label_line:
@@ -263,6 +271,7 @@ EVENTS = {
     "profile": event_profile,
     "standards": event_standards,
     "docstiers": event_docstiers,
+    "diskreport": event_diskreport,
     "versioncheck": event_versioncheck,
     "scope": event_scope,
     "guard": event_guard,

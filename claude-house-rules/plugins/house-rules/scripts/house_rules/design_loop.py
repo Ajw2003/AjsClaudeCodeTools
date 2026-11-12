@@ -45,6 +45,7 @@ from house_rules.core import (  # noqa: F401
     _last_user_text,
     _loop_enabled,
     _outside_page_links,
+    _own_words,
     _payload_cwd,
     _plugin_root,
     _read_text,
@@ -388,15 +389,15 @@ _LOOP_LEAD = r"(?:^|[.!,;][ \t]+)(?:<[\w/]+>)?[ \t>\"'*\-]*"
 _LOOP_NOT_ASKED = r"(?![^\n.!]*\?)"
 
 
-_LOOP_DESIGN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"design\s+approved" + _LOOP_NOT_ASKED
+_LOOP_DESIGN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"(?<!don't )(?<!dont )(?<!do not )(?<!not )design\s+approved" + _LOOP_NOT_ASKED
                              + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 
 
-_LOOP_PLAN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"build\s+plan\s+approved" + _LOOP_NOT_ASKED
+_LOOP_PLAN_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"(?<!don't )(?<!dont )(?<!do not )(?<!not )build\s+plan\s+approved" + _LOOP_NOT_ASKED
                            + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 
 
-_LOOP_QA_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"qa\s+(passed|failed)" + _LOOP_NOT_ASKED
+_LOOP_QA_RE = re.compile(r"(?m)" + _LOOP_LEAD + r"(?<!don't )(?<!dont )(?<!do not )(?<!not )qa\s+(passed|failed)" + _LOOP_NOT_ASKED
                          + r"\s*:?[ \t]*(\S[^\n]*)", re.IGNORECASE)
 
 
@@ -404,7 +405,41 @@ _LOOP_SKIP_RE = re.compile(r"(?<!don't )(?<!dont )(?<!do not )(?<!not )\bskip\s+
                            re.IGNORECASE)
 
 
+# #409: an approval that is only quoted (a `>` line, or a quote opened after "said ...:") is another
+# thread's message passed along, not aj approving here.
+_LOOP_PHRASE = r"(?:design\s+approved|build\s+plan\s+approved|qa\s+(?:passed|failed))\b"
+_LOOP_QUOTED_RE = re.compile(r"(?mi)(?:^[ \t]*>[ \t>\"'*\-]*|:[ \t]*[\"'“])" + _LOOP_PHRASE)
+
+
 _LOOP_BARE_RE = re.compile(r"\b(approved|qa\s+passed|qa\s+failed)\b", re.IGNORECASE)
+
+
+# #501: a line that names something and ends in answer picks ("1A 2A", "3*"), the shape of an approval
+# missing its stage words. A pick is a digit run plus one letter A-H or a star, so "3D printer" never fits.
+_LOOP_PICKS_ONLY_RE = re.compile(r"(?m)^[ \t]*[A-Za-z][^\n?]*?(?:[ \t]+\d+[A-Ha-h*])+[ \t]*[.!]?[ \t]*$")
+
+
+# #491: the stage words may follow the feature name, never after a negation or inside a question
+_LOOP_STAGE_WORDS = r"(design\s+approved|build\s+plan\s+approved|qa\s+passed|qa\s+failed)"
+_LOOP_AFTER_RE = re.compile(r"(?mi)(" + _LOOP_LEAD + r")((?!" + _LOOP_STAGE_WORDS
+                            + r")(?=\w)(?:(?!\bnot\b|n't\b)[^\n.?!:])+?)\s+"
+                            + _LOOP_STAGE_WORDS + _LOOP_NOT_ASKED + r"[ \t]*:?[ \t]*([^\n]*)")
+_LOOP_STAGE_TEXT = {"design": "Design approved", "build": "Build plan approved", "qa passed": "QA passed",
+                    "qa failed": "QA failed"}
+
+
+def _loop_normalise(text):
+    """'Phase 1 design approved 1A' -> 'Design approved: Phase 1 1A', then the old patterns run."""
+    def fix(m):
+        words = re.sub(r"\s+", " ", m.group(4).lower())
+        key = words if words.startswith("qa") else words.split()[0]
+        return "%s%s: %s %s" % (m.group(1), _LOOP_STAGE_TEXT[key], m.group(2).strip(), m.group(5))
+    return _LOOP_AFTER_RE.sub(fix, text)
+
+
+def _loop_any_phrase(text):
+    """True when the text holds an approval phrase in either word order (for the not-a-repo note)."""
+    return bool(_LOOP_BARE_RE.search(text) or _LOOP_AFTER_RE.search(text))
 
 
 def _loop_dir(git_dir):
@@ -427,12 +462,10 @@ def _loop_path(git_dir):
 
 
 def _loop_read(git_dir):
-    """(state, problem). No file means a project that has not started a feature: Design. The old
-    place, LOOP_FILE in the git directory, is read until the next write moves it."""
+    """(state, problem). No file means a project that has not started a feature: Design. D3: the old
+    place, LOOP_FILE in the git directory, is no longer read, so a file written there opens nothing."""
     fresh = {"feature": "", "stage": "design", "skip": False, "approvals": []}
     path = _loop_path(git_dir)
-    if not os.path.isfile(path):
-        path = os.path.join(_loop_dir(git_dir), LOOP_FILE)
     if not os.path.isfile(path):
         return fresh, None
     try:
@@ -443,11 +476,91 @@ def _loop_read(git_dir):
     except (OSError, ValueError) as exc:
         return None, ("house-rules: could not read %s (%s), so the design-loop lock is off for this call."
                       % (LOOP_FILE, exc))
-    return dict(fresh, **data), None
+    state = dict(fresh, **data)
+    _loop_note_seen(git_dir, state)
+    return state, None
 
 
 def _loop_write(git_dir, state):
     _write_atomic(_loop_path(git_dir), json.dumps(state))
+    _loop_note_seen(git_dir, state)
+
+
+SEEN_FILE = "house-rules-loop-seen.json"
+
+
+def _loop_ref_text(path):
+    """The text of a small git file, or "" when it is absent (a missing ref is an answer, not an error)."""
+    return _read_text(path).strip() if os.path.isfile(path) else ""
+
+
+def _loop_branch(git_dir):
+    """D9/U3: the branch this git directory has checked out, read from its HEAD file (no git process on
+    every edit). "" for a detached HEAD or an unreadable file."""
+    m = re.match(r"ref:\s*refs/heads/(\S+)", _loop_ref_text(os.path.join(git_dir, "HEAD")))
+    return m.group(1) if m else ""
+
+
+def _loop_newest(state):
+    """The `at` of the newest approval a stage file records (0 when there is none)."""
+    return max([a["at"] for a in state.get("approvals") or []
+                if isinstance(a, dict) and isinstance(a.get("at"), int)] or [0])
+
+
+def _loop_seen(git_dir):
+    """D9: the clone-wide record of the newest approval seen, in the common git directory: {} when none."""
+    path = os.path.join(_loop_dir(git_dir), SEEN_FILE)
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError) as exc:
+        sys.stderr.write("house-rules: could not read %s (%s), so no newer-branch hold applies.\n" % (SEEN_FILE, exc))
+        return {}
+    return data if isinstance(data, dict) and isinstance(data.get("at"), int) else {}
+
+
+def _loop_note_seen(git_dir, state):
+    """D9: record this branch's newest approval when it is newer than the one on record. A failed write
+    is reported on stderr, never silent."""
+    at = _loop_newest(state)
+    if at and at > (_loop_seen(git_dir).get("at") or 0):
+        try:
+            _write_atomic(os.path.join(_loop_dir(git_dir), SEEN_FILE), json.dumps(
+                {"at": at, "branch": _loop_branch(git_dir), "feature": state.get("feature") or ""}))
+        except OSError as exc:
+            sys.stderr.write("house-rules: could not record the newest approval seen (%s).\n" % exc)
+
+
+def _loop_stale_hold(git_dir, state):
+    """D9: a refusal when this branch's newest approval is OLDER than the newest recorded from a different
+    branch (an old branch checked out brings back its older stage), else None."""
+    seen, here = _loop_seen(git_dir), _loop_branch(git_dir)
+    if seen and seen.get("branch") and seen["branch"] != here and _loop_newest(state) < seen["at"]:
+        return ("House rules, design loop: this branch's stage (%s, branch \"%s\") is older than the newest "
+                "approval in this clone, which was given on branch \"%s\", so code edits stay closed. Write "
+                "\"Continue from: %s\" to take that branch's stage, or approve anew on this branch."
+                % (LOOP_STAGE_NAMES[state["stage"]], here or "detached HEAD", seen["branch"], seen["branch"]))
+    return None
+
+
+def _loop_default_branches(git_dir):
+    """U3: the default branch names: origin/HEAD's target when the common git directory has it (a loose ref;
+    packed-refs cannot hold a symbolic ref), else main and master."""
+    m = re.match(r"ref:\s*refs/remotes/origin/(\S+)",
+                 _loop_ref_text(os.path.join(_loop_dir(git_dir), "refs", "remotes", "origin", "HEAD")))
+    return {m.group(1)} if m else {"main", "master"}
+
+
+def _loop_read_merged(git_dir):
+    """U3: _loop_read, except that on the default branch a feature in QA reads as Done (its pull request
+    merged and main carries the branch's stage file). Nothing is written. Used by the gate, the stop line
+    and the approvals; a write after it saves "done" only when an approval moved the state."""
+    state, problem = _loop_read(git_dir)
+    if state and state["stage"] == "qa" and _loop_branch(git_dir) in _loop_default_branches(git_dir):
+        state = dict(state, stage="done")
+    return state, problem
 
 
 # A9: commands that only read a file, and the git steps that save it. Anything else naming the stage file is refused.
@@ -631,6 +744,60 @@ def _loop_gh_labels(repo, number):
     return json.loads(proc.stdout)
 
 
+LOOP_ISSUES_FILE_ENV = "HOUSE_RULES_LOOP_ISSUES_FILE"  # tests: a JSON list of {number, body, labels} rows
+
+
+def _loop_feature_issues(state, top):
+    """(issues, note): the feature's issues read from GitHub at "Build plan approved" - the parent plus every
+    open issue whose body says "Part of #<parent>" - merged with what was recorded (hand-recorded
+    "Issues for" included). On a missing parent or a failed read, the recorded issues and a note saying why."""
+    import subprocess
+    recorded = [i for i in state.get("issues", []) if isinstance(i, dict)]
+    parent = state.get("parent")
+    if parent is None:
+        return recorded, ('No step issue named "Part of #N" was seen in Plan, so the feature\'s issues were not '
+                          "read from GitHub; the %d recorded issue(s) were used." % len(recorded))
+    own, _problem = _origin_slug(top)
+    try:
+        stand_in = os.environ.get(LOOP_ISSUES_FILE_ENV)
+        if stand_in:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                rows = json.load(f)
+        else:
+            if not shutil.which("gh"):
+                raise RuntimeError("gh is not installed")
+            if not own:
+                raise RuntimeError("this checkout has no GitHub origin")
+            # The REST list, not `gh issue list`: that one uses GraphQL, which cloud sessions refuse (403), and
+            # GitHub's search index lags behind issues made a moment ago. Pull requests are dropped below.
+            proc = subprocess.run(["gh", "api", "repos/%s/issues?state=open&per_page=100" % own, "--paginate",
+                                   "--jq", ".[] | select(.pull_request == null) | {number, body, labels}"],
+                                  capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+            if proc.returncode != 0:
+                detail = (proc.stderr or proc.stdout).strip().splitlines()
+                raise RuntimeError(detail[0] if detail else "gh exited %d" % proc.returncode)
+            rows = [json.loads(line) for line in proc.stdout.splitlines() if line.strip()]
+        if not isinstance(rows, list):
+            raise ValueError("the issue list was not a JSON list")
+        mark = {ISSUES_LABEL.lower(), ISSUES_LABEL_OLD.lower()}
+        repo = own or next((i.get("repo") for i in recorded if i.get("repo")), "")
+        merged = [{"repo": repo, "number": int(parent), "labelled": True}]
+        for r in rows:  # the GitHub search is loose, so each body is re-checked for the exact number
+            if any(int(n) == int(parent) for n in _PART_OF_RE.findall(r.get("body") or "")):
+                names = {(l.get("name") if isinstance(l, dict) else str(l)).lower() for l in r.get("labels") or []}
+                merged.append({"repo": repo, "number": int(r["number"]), "labelled": bool(names & mark)})
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError, subprocess.TimeoutExpired) as exc:
+        return recorded, ("The feature's issues could not be read from GitHub (%s), so the %d recorded issue(s) "
+                          "were used." % (exc, len(recorded)))
+    have = {(str(i["repo"]).lower(), i["number"]) for i in merged}
+    for i in recorded:  # hand-recorded ones still count
+        key = (str(i.get("repo")).lower(), i.get("number"))
+        if key not in have:
+            merged.append(i)
+            have.add(key)
+    return merged, ""
+
+
 def _loop_labels(state, issues=None, record=True):
     """({key: [labels] or None}, note) for the feature's issues (or, #375, the given list: a stored
     feature's). The note is "" when GitHub answered, else it says the labels came from the record and why."""
@@ -674,7 +841,14 @@ def _loop_wrong(labels, want):
 
 
 def _loop_to_qa(state, labels):
-    """Build becomes QA once every issue says needs review and none says in progress. True if it moved."""
+    """Build becomes QA once every issue says needs review and none says in progress. True if it moved.
+
+    #504: after "QA failed" the stage is Build while every issue still says needs review. That is not a
+    finished build, so the move waits (state["reopened"]) until an issue has been seen back at in progress."""
+    if state.get("reopened"):
+        if state["stage"] != "build" or any(LOOP_WORKING in (l or []) for l in labels.values()):
+            state["reopened"] = False
+        return False
     if state["stage"] == "build" and labels and not _loop_wrong(labels, LOOP_REVIEW):
         state["stage"] = "qa"
         return True
@@ -777,8 +951,10 @@ def _loop_apply(state, text, top):
     carry = _loop_continue_apply(state, text, top)  # #479: first, so "Continue from: x. Build plan approved: y" works
     sweep_note = _loop_sweep_apply(state, text)
     issues_note = _loop_issues_for_apply(state, text, top)
-    note = _loop_apply_stage(state, text, top)
-    return " ".join(n for n in (carry, sweep_note, issues_note, note) if n)
+    from house_rules import bigfiles  # #511: "LFS approved: <path>", beside the other phrases
+    note = _loop_apply_stage(state, bigfiles.without_lfs_lines(text), top)  # its word "approved" is not a stage approval
+    lfs_note = bigfiles.lfs_apply(state, text, top)
+    return " ".join(n for n in (carry, sweep_note, issues_note, note, lfs_note) if n)
 
 
 _LOOP_CONTINUE_RE = re.compile(r"\bcontinue\s+from\s*:\s*([\w./-]+)", re.IGNORECASE)
@@ -864,15 +1040,18 @@ def _loop_apply_stage(state, text, top):
     return " ".join(n for n in notes if n)
 
 
-def _loop_keep_feature(state, feature, stage):
+def _loop_keep_feature(state, feature, stage, any_stage=False):
     """#375: a new design approval replaces `feature`. If it is in build or QA and has recorded issues,
     keep them under state["features"][name.lower()] so its own "QA passed" still has them. A feature in
-    design, plan or done, or one with no issues, has nothing to keep."""
+    design, plan or done, or one with no issues, has nothing to keep. D6: any_stage keeps it in design or
+    plan too (a different design name starts a new feature on purpose); a done one is still not kept."""
     issues = [dict(i) for i in state.get("issues", []) if isinstance(i, dict)]
-    if feature and stage in ("build", "qa") and issues:
+    if feature and (stage in ("build", "qa") or (any_stage and stage != "done")) and issues:
         if not isinstance(state.get("features"), dict):
             state["features"] = {}
         state["features"][feature.lower()] = {"name": feature, "issues": issues, "stage": stage}
+        if any_stage and state.get("parent"):  # D6: the kept feature keeps its "Part of #N"
+            state["features"][feature.lower()]["parent"] = state["parent"]
 
 
 def _loop_stored(state, name):
@@ -935,7 +1114,7 @@ def _loop_apply_one(state, text, top):
     """Move the stage for one approval phrase (or none). Returns a note for the model, or "" when the
     text approves nothing. Mutates state."""
     stage, feature = state["stage"], state.get("feature") or ""
-    approval = None
+    approval, issues_note = None, ""
     m = _LOOP_PLAN_RE.search(text)
     if m:
         name = _loop_name(m.group(1))
@@ -946,9 +1125,10 @@ def _loop_apply_one(state, text, top):
         if stage != "plan":
             return ('Design loop: aj wrote "Build plan approved: %s", but the stage is %s, not Plan, so '
                     "nothing moved. A build plan is approved after its design." % (name, LOOP_STAGE_NAMES[stage]))
+        state["issues"], issues_note = _loop_feature_issues(state, top)
         have = sum(1 for i in state.get("issues", []) if isinstance(i, dict) and i.get("labelled"))
         if have < ISSUES_NEEDED:
-            return ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
+            return (issues_note + " " if issues_note else "") + ('Design loop: aj wrote "Build plan approved: %s", but the feature has %d labelled issue(s) '
                     "made since its design was approved, and needs at least %d: one issue for the feature "
                     "and a sub-issue per step, each naming what it depends on, what depends on it and when "
                     "it counts as done, labelled `%s`. Nothing moved. Create them, then ask aj to approve again."
@@ -986,7 +1166,12 @@ def _loop_apply_one(state, text, top):
                 state.pop("qa_page", None); state.pop("qa_page_linked", None)  # the amended build gets a new QA page
             elif not redo:
                 _loop_keep_feature(state, feature, stage)  # #375: a feature in build or QA keeps its issues
+                if feature and not _loop_same(name, feature) and stage != "done":
+                    # D6: a different name starts a new feature on purpose; the old one is kept in any stage
+                    _loop_keep_feature(state, feature, stage, any_stage=True)
+                    issues_note = ' This starts a new feature; "%s" is kept with its issues.' % feature
                 state["issues"] = []
+                state.pop("parent", None)  # a new feature's issues name a new "Part of #N"
                 state.pop("qa_page", None); state.pop("qa_page_linked", None)  # #269: not the next feature's
         else:
             m = _LOOP_QA_RE.search(text)
@@ -1014,7 +1199,8 @@ def _loop_apply_one(state, text, top):
                 unlogged = _loop_unlogged(state, top, "QA " + verdict, name)
                 if unlogged:
                     return unlogged
-                state["stage"] = "done" if verdict == "passed" else "design"
+                state["stage"] = "done" if verdict == "passed" else "build"  # #504: one message sends a QA fault back
+                state["reopened"] = verdict == "failed"
                 if verdict == "passed":  # #362: the closable record; "Design approved" never touches it
                     if not isinstance(state.get("closable"), list):
                         state["closable"] = []
@@ -1033,6 +1219,8 @@ def _loop_apply_one(state, text, top):
             {"stage": approval[0], "name": approval[1], "at": int(time.time())})
         note = 'Design loop: aj wrote "%s: %s". The stage is now %s.' % (
             approval[0], approval[1], LOOP_STAGE_NAMES[state["stage"]])
+        if issues_note:
+            note += " " + issues_note
         # #479 (U2): the approval is only on this disk until it is pushed, and a session that stops loses it.
         note += (" Save it now, before anything else: `git add .claude/%s && git commit -m \"chore: record %s\" "
                  "&& git push`." % (LOOP_FILE, approval[0].lower()))
@@ -1052,11 +1240,13 @@ def _loop_apply_one(state, text, top):
                      "the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA."
                      % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
         elif approval[0] == "QA failed":
-            note += (" Their list of changes starts the next design. Move every issue back to `%s` now; the "
-                     "redo's \"Design approved\" is refused until they are." % LOOP_WORKING)
+            note += (" aj's words after the feature name are the fix list; the issues and the build plan are kept. "
+                     "Move every issue back to `%s` now: code edits open once they are. A changed design still "
+                     "needs \"Design approved\"." % LOOP_WORKING)
         elif approval[0] == "QA passed":
-            note += (" Code edits stay closed. The issues keep `%s` until aj closes them; never close one."
-                     % LOOP_REVIEW)
+            note += (" Code edits stay closed. The issues keep `%s` until aj closes them; never close one. "
+                     "The close line (\"Close as completed: #N\") is offered to aj after the feature's pull "
+                     "request merges." % LOOP_REVIEW)
         else:
             note += " Code edits stay closed."
         return note
@@ -1070,6 +1260,10 @@ def _loop_apply_one(state, text, top):
         return ('Design loop: aj\'s message says "approved" but names no stage and feature, so nothing moved. '
                 'Ask which they mean; an approval reads like "Design approved: <feature>", '
                 '"Build plan approved: <feature>", "QA passed: <feature>" or "QA failed: <feature>".')
+    if _LOOP_PICKS_ONLY_RE.search(text):  # #501: picks with no stage words ("Handoff overwrite 1A 2A")
+        return ('Design loop: aj\'s message ends in picks but has no stage words ("design approved", "build plan '
+                'approved", "QA passed" or "QA failed"), so nothing moved. Ask whether they meant to approve; an '
+                'approval reads like "Design approved: <feature> 1A" or "<feature> design approved 1A".')
     return ""
 
 
@@ -1103,6 +1297,57 @@ def _loop_locate_prompt(start):
                         "directly inside it has a design-loop stage file, so nothing moved." % start)
 
 
+# #502: a reply button sends only its label ("Approve", or "Approve 1A 2B" when it carries picks).
+_LOOP_BUTTON_RE = re.compile(r"(?i)^\s*approve((?:\s+\d+[a-z*])*)\s*$")
+
+
+def _offered_lines(reply):
+    """#502: the clean approval lines a reply offers ("Design approved: X"), without picks or trailing text."""
+    out = set()
+    for rx, _ in _LOOP_STAGE_ORDER:
+        for m in rx.finditer(reply or ""):
+            head = m.group(0)[:m.start(1) - m.start(0)]
+            name = _loop_name(m.group(1))
+            out.add((head + name).strip())
+    return sorted(out)
+
+
+def _asks_aj(reply):
+    """#459: True when a reply asks aj something. Conservative: the last paragraph, outside code fences, ends
+    with a question mark."""
+    text = _MD_FENCED_BLOCK_RE.sub("", reply or "").strip()
+    if not text:
+        return False
+    return text.split("\n\n")[-1].rstrip().endswith("?")
+
+
+def handover_record_offers(payload, have_reply, reply_text, trace_lines):
+    """#502: remember which approval lines this reply offered, so a bare "Approve" button can be matched to one.
+    Only a real reply is recorded; the stage file is written only when the list changed."""
+    if not have_reply or not _loop_enabled():
+        return
+    try:
+        _top, _gd = _issues_locate(_payload_cwd(payload))
+        if not _gd or not os.path.isfile(_loop_path(_gd)):
+            return
+        _st, _pr = _loop_read(_gd)
+        if _pr:
+            raise OSError(_pr)
+        offered = _offered_lines(reply_text)
+        changed = _st.get("offered", []) != offered
+        if changed:
+            _st["offered"] = offered
+        # #459: a reply in Build that asks aj something holds code edits until aj's next message
+        if _st.get("stage") == "build" and _asks_aj(reply_text) and not _st.get("held"):
+            _st["held"] = True
+            changed = True
+        if changed:
+            _loop_write(_gd, _st)
+    except Exception as exc:
+        trace_lines.append("house-rules: the offered approval lines could not be recorded (%s: %s), so an "
+                           "Approve button may not be matched." % (type(exc).__name__, exc))
+
+
 def _loop_scope_note(payload):
     """scope's half: read aj's message, move the stage, say what happened. Never raises."""
     if not _loop_enabled():
@@ -1112,16 +1357,34 @@ def _loop_scope_note(payload):
         if not m:
             return ""
         text = json.loads('"%s"' % m.group(1))
-        if _is_relayed_prompt(text, payload):
+        text = _own_words(text)
+        if text is None or _is_relayed_prompt(text, payload):
             return ("Design loop: this message is a helper's report or a notification, not aj, "
                     "so it moved nothing.")
+        text = _loop_normalise(text)
+        if _LOOP_QUOTED_RE.search(text):
+            own = "\n".join(l for l in text.split("\n") if not l.lstrip().startswith(">"))
+            if not any(rx.search(own) for rx, _ in _LOOP_STAGE_ORDER):
+                return ("Design loop: this message only quotes an approval (a `>` line or a quoted message "
+                        "from another thread), not aj approving here, so it moved nothing.")
         top, git_dir, missed = _loop_locate_prompt(_payload_cwd(payload))
         if not git_dir:
-            return missed if _LOOP_BARE_RE.search(text) else ""
-        state, problem = _loop_read(git_dir)
+            return missed if _loop_any_phrase(text) else ""
+        state, problem = _loop_read_merged(git_dir)
         if problem:
             return problem
         before = json.dumps(state, sort_keys=True)
+        if state.get("held"):
+            state["held"] = False  # #459: aj's next real message answers the held question
+        b = _LOOP_BUTTON_RE.match(text)
+        if b:
+            # #502: an Approve button sends only its label; the line it stands for is the one the last reply offered.
+            offered = state.get("offered") or []
+            if len(offered) != 1:
+                return ('Design loop: aj tapped "Approve", but the last reply offered %d approval lines (%s), so '
+                        "it is not clear which one, and nothing moved. Ask aj to type the line they mean."
+                        % (len(offered), "; ".join(offered) or "none"))
+            text = offered[0] + b.group(1)
         note = _loop_apply(state, text, top)
         if json.dumps(state, sort_keys=True) != before:
             _loop_write(git_dir, state)
@@ -1146,8 +1409,8 @@ def _loop_helper_note(payload):
     return (
         "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
         "build plan; you never design, change the plan, or approve anything - an approval only counts from "
-        "aj's own message. Anything unexpected comes back to the main session, not into the code. Code edits "
-        "are refused outside Build." % (
+        "aj's own message. Anything unexpected is a question for aj: the main session puts it on a page and "
+        "does not answer it. Code edits are refused outside Build." % (
             '"%s"' % state["feature"] if state.get("feature") else "not started",
             LOOP_STAGE_NAMES[state["stage"]],
             "; its issues are %s" % issues if issues else ""))
@@ -1161,20 +1424,30 @@ def _loop_stop_line(payload):
     _, git_dir = _issues_locate(_payload_cwd(payload))
     if not git_dir:
         return None, None
-    state, problem = _loop_read(git_dir)
+    state, problem = _loop_read_merged(git_dir)
     if problem:
         return None, problem
     stage = state["stage"]
     if stage == "done" or (stage == "design" and not state.get("redo")) or not state.get("issues"):
         return None, None
     labels, src = _loop_labels(state)
+    reopened = state.get("reopened")
     if _loop_to_qa(state, labels):
         _loop_write(git_dir, state)
         return "House rules, design loop:" + _LOOP_QA_NOTE, src or None
+    if state.get("reopened") != reopened:  # #504: the issues are back at in progress
+        _loop_write(git_dir, state)
     want = LOOP_REVIEW if stage == "qa" else LOOP_WORKING
     wrong = _loop_wrong(labels, want)
     if not wrong:
+        if state.pop("label_said", None) is not None:
+            _loop_write(git_dir, state)
         return None, src or None
+    said = hashlib.sha1("; ".join(wrong).encode()).hexdigest()[:12]
+    if state.get("label_said") == said:  # #273: said once per set of wrong labels
+        return None, src or None
+    state["label_said"] = said
+    _loop_write(git_dir, state)
     return ("House rules, design loop: \"%s\" is in %s, so every issue should be labelled `%s`, and these "
             "are not: %s. Fix the labels before this turn ends.%s"
             % (state.get("feature") or "", LOOP_STAGE_NAMES[stage], want, "; ".join(wrong),
@@ -1195,20 +1468,30 @@ def _loop_gate(payload):
         script = bool(git_dir)
     if not git_dir:
         return None, problem
-    state, problem = _loop_read(git_dir)
+    state, problem = _loop_read_merged(git_dir)
     if problem:
         return None, problem
+    if state["stage"] == "build" or state.get("skip"):
+        hold = _loop_stale_hold(git_dir, state)  # D9: an older branch's stage never reopens code on its own
+        if hold:
+            return hold, None
     if script and state["stage"] == "build":
         return None, None  # Build: nothing changes for shell commands
+    if state["stage"] == "build" and state.get("held"):
+        return ("House rules, design loop: the last reply asked aj a question, so code edits wait for their "
+                "answer."), None
     if state["stage"] == "build":
         labels, src = _loop_labels(state, record=False)
         if src:  # D9: GitHub could not be read, and the record of an old branch is not evidence
             return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, but "
                     "this hook could not read GitHub (%s), so the edit is refused. It will work once gh can read the issues."
                     % (state.get("feature") or "", LOOP_WORKING, src)), None
+        reopened = state.get("reopened")
         if _loop_to_qa(state, labels):
             _loop_write(git_dir, state)
             return "House rules, design loop:" + _LOOP_QA_NOTE, None
+        if state.get("reopened") != reopened:  # #504: the issues are back at in progress
+            _loop_write(git_dir, state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
         if not wrong:
             return None, src or None
@@ -1292,6 +1575,28 @@ def _created_issue(data):
     return found, labelled, how
 
 
+_BODY_FILE_RE = re.compile(r"--body-file(?:=|\s+)(\"[^\"]*\"|'[^']*'|[^\s\"']+)|-F\s+(\"[^\"]*\"|'[^']*'|[^\s\"']+)")
+
+
+def _issue_body(data):
+    """The text an issue-creating call carries as its body: the GitHub tool's `body`, or the whole Bash command
+    (which holds --body / a heredoc / -f body=...) plus the contents of a --body-file it names, when readable."""
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    if data.get("tool_name") != "Bash":
+        return str(ti.get("body") or "")
+    cmd = ti.get("command") or ""
+    text = cmd
+    for m in _BODY_FILE_RE.finditer(cmd):
+        path = (m.group(1) or m.group(2)).strip("\"'")
+        try:
+            base = data.get("cwd") or os.getcwd()
+            with open(os.path.join(base, path), "r", encoding="utf-8") as f:
+                text += "\n" + f.read()
+        except OSError:
+            pass  # unreadable: the command text alone is searched, so a missing "Part of" shows in the note
+    return text
+
+
 _GITHUB_SLUG_RE = re.compile(r"github\.com[:/]+([^/\s]+/[^/\s]+?)(?:\.git)?/?\s*$", re.IGNORECASE)
 
 
@@ -1308,7 +1613,10 @@ def _origin_slug(top):
     return (m.group(1) if m else ""), ""
 
 
-def _loop_record_issues(git_dir, found, labelled, top=None):
+_PART_OF_RE = re.compile(r"(?i)\bpart of #(\d+)\b")
+
+
+def _loop_record_issues(git_dir, found, labelled, top=None, body=""):
     """#231: issues made while a feature is in Plan count toward its build-plan approval.
 
     #308: only issues made in the repo that owns the stage file count. In an Unblocked session, two issues
@@ -1324,6 +1632,17 @@ def _loop_record_issues(git_dir, found, labelled, top=None):
     own, slug_problem = _origin_slug(top) if top else ("", "")
     own = own.lower()
     notes = [slug_problem + ", so every new issue counts toward this feature."] if slug_problem else []
+    part = _PART_OF_RE.search(body or "")
+    parent = state.get("parent")
+    if not part or (parent is not None and int(part.group(1)) != int(parent)):
+        # #475: an issue for a separate feature is not this feature's. The feature issue itself is made
+        # first, with no "Part of" line; it enters the list as `parent` once a step issue names it.
+        why = 'names no "Part of #N"' if not part else 'names "Part of #%s", not #%s' % (part.group(1), parent)
+        expected = "" if parent is not None else " If this is the feature issue itself, that is expected."
+        return notes + ['Design loop: issue #%s %s, so it is not counted as a step of "%s".%s'
+                        % (found[0][1], why, state.get("feature") or "this feature", expected)]
+    if parent is None:
+        state["parent"] = int(part.group(1))
     for repo, number in found:
         if own and str(repo).lower() != own:
             notes.append("Design loop: issue %s#%s was made in another repo, so it doesn't count toward \"%s\" "
@@ -1507,7 +1826,7 @@ def _issues_record(payload):
         top, git_dir = _issues_locate(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
         if not git_dir:
             return []
-        loop_notes = _loop_record_issues(git_dir, found, labelled, top)
+        loop_notes = _loop_record_issues(git_dir, found, labelled, top, _issue_body(data))
         if not _issues_enabled():
             return loop_notes
         state, problem = _issues_read(git_dir)
@@ -1798,7 +2117,9 @@ def _issues_guard(subject, payload):
             return ("deny", "House rules, pull requests link issues without closing them: the body needs "
                     "`Refs #N`, `Refs owner/repo#N` or `Part of #N`, or a line `No-issue: <reason>`. "
                     "Add it and run the command again.", None)
-        return None
+        bm = re.search(r"(?:--base|(?<![\w-])-B)(?:=|\s+)[\"']?([^\s\"']+)", cmd)
+        note = core.pr_changelog_note(_command_dir(payload)[0], bm.group(1) if bm else "")
+        return ("note", "", note) if note else None  # #509: a reminder, never a decision
     if _GH_ISSUE_CREATE_RE.search(cmd) and _clear_writing_enabled() and clarity is not None:
         body = cmd
         fm = _PR_BODY_FILE_RE.search(cmd)
@@ -2111,6 +2432,19 @@ def _record_qa_link(ctx):
     return True
 
 
+_DECIDED_RE = re.compile(r"(?i)\bI (?:went with|chose|picked|decided on|settled on)\b")
+
+
+def _check_decided(ctx):
+    """#460: a reply that settles a design point on its own is sent back once."""
+    text = _MD_FENCED_BLOCK_RE.sub("", ctx.get("reply") or "")
+    for line in text.split("\n"):
+        if not line.lstrip().startswith(">") and _DECIDED_RE.search(line):
+            return ("a design point is aj's to decide; put the choice to aj as options with one marked as the "
+                    "suggestion instead of saying \"I went with ...\"")
+    return ""
+
+
 def _check_qa_page(ctx):
     """#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not
     skipped by "no page": a QA page is mandatory."""
@@ -2125,6 +2459,36 @@ def _check_qa_page(ctx):
             % (missing, os.path.join(SCRIPTS_DIR, "make_page.py")))
 
 
+def _repo_root_of(path):
+    """The nearest folder at or above `path` holding .git (a folder or a worktree file), else ""."""
+    d = os.path.dirname(os.path.abspath(path))
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        up = os.path.dirname(d)
+        if up == d:
+            return ""
+        d = up
+
+
+def _check_changelog(ctx):
+    """#387/#244: a turn that wrote files in a repo whose root has a CHANGELOG.md, and left it alone, is sent back."""
+    touched = {}
+    for fp in ctx.get("written") or []:
+        if "/.claude/" in str(fp).replace("\\", "/"):
+            continue
+        root = _repo_root_of(fp)
+        if root and os.path.isfile(os.path.join(root, "CHANGELOG.md")):
+            touched.setdefault(root, False)
+            if os.path.abspath(fp) == os.path.join(root, "CHANGELOG.md"):
+                touched[root] = True
+    stale = sorted(r for r, done in touched.items() if not done)
+    if not stale:
+        return ""
+    return ("add one line under Unreleased in %s (plain words first, exact detail after)"
+            % ", ".join(os.path.join(r, "CHANGELOG.md") for r in stale))
+
+
 CHECKPOINTS = [
     ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
@@ -2132,6 +2496,8 @@ CHECKPOINTS = [
     ("reply ends", "commit", _check_commit, "block"),
     ("reply ends", "plain summary", _check_plain, "block"),
     ("reply ends", "qa page", _check_qa_page, "block"),
+    ("reply ends", "decided for you", _check_decided, "block"),
+    ("reply ends", "changelog", _check_changelog, "block"),
 ]
 
 
@@ -2141,6 +2507,8 @@ CHECKPOINT_RULES = {
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
+    "decided for you": "Design points are aj's to decide; a reply puts them as options, not as \"I went with ...\".",
+    "changelog": "Every change adds a line to the repo's CHANGELOG.md, in the same turn.",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
 
@@ -2329,13 +2697,181 @@ def _merged_pr_refs(state, repo, number):
         if not repo or not shutil.which("gh"):
             raise RuntimeError("no repo is named" if not repo else "gh is not installed")
         import subprocess
-        proc = subprocess.run(["gh", "pr", "view", str(number), "--repo", repo, "--json", "body", "--jq", ".body"],
+        # REST, not `gh pr view`: that one uses GraphQL, which cloud sessions refuse (403, seen 2026-11-11).
+        proc = subprocess.run(["gh", "api", "repos/%s/pulls/%d" % (repo, number), "--jq", ".body // \"\""],
                               capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
         if proc.returncode != 0:
             raise RuntimeError(((proc.stderr or "").strip().splitlines() or ["gh exited %d" % proc.returncode])[0])
         return _pr_refs(proc.stdout, repo), ""
     except Exception as exc:
         return [], "its body could not be read (%s: %s)" % (type(exc).__name__, exc)
+
+
+# #510: after a merge, the local branch of the merged pull request and the finished helper worktrees are deleted
+# when nothing unsaved goes with them. Runs inside the hook (not through Bash, so the guard is not involved).
+CLEANUP_ENV = "HOUSE_RULES_CLEANUP"  # "off" turns the cleanup off
+PR_FILE_ENV = "HOUSE_RULES_PR_FILE"  # tests: JSON {"ref", "sha", "merged"} that replaces the gh api read
+CLEANUP_SECONDS = 6  # inside hooks.json's 10s for closablemerge
+CLEANUP_IDLE_SECONDS = 30 * 60  # a helper copy touched more recently may still be in use, so it is kept
+
+
+def _worktree_recent(git, path):
+    """True when the worktree's index or HEAD changed in the last CLEANUP_IDLE_SECONDS: a helper may still be
+    working in it. A brand-new helper copy has no commits of its own, so "merged and pushed" alone can't tell."""
+    rc, gd, _e = git(path, ["rev-parse", "--absolute-git-dir"])
+    if rc != 0:
+        return True  # can't tell: keep it
+    newest = 0
+    for name in ("index", "HEAD", "logs/HEAD"):
+        p = os.path.join(gd.strip(), name)
+        if os.path.exists(p):
+            newest = max(newest, os.path.getmtime(p))
+    return time.time() - newest < CLEANUP_IDLE_SECONDS
+_HELPER_WT = ".claude/worktrees/"
+
+
+class _CleanupBudget(Exception):
+    pass
+
+
+def _cleanup_pr(repo, number, left):
+    """(ref, sha, merged) of the pull request's head, from the stand-in file or `gh api`. Raises on a failed read."""
+    stand_in = os.environ.get(PR_FILE_ENV)
+    if stand_in:
+        with open(stand_in, "r", encoding="utf-8") as f:
+            d = json.load(f)
+        return d["ref"], d["sha"], d["merged"] is True
+    if not shutil.which("gh"):
+        raise RuntimeError("gh is not installed")
+    import subprocess
+    proc = subprocess.run(["gh", "api", "repos/%s/pulls/%d" % (repo or "{owner}/{repo}", number), "--jq",
+                           "{ref: .head.ref, sha: .head.sha, merged: .merged}"],
+                          capture_output=True, text=True, timeout=min(LOOP_GH_SECONDS, left()))
+    if proc.returncode != 0:
+        raise RuntimeError(((proc.stderr or "").strip().splitlines() or ["gh exited %d" % proc.returncode])[0])
+    d = json.loads(proc.stdout)
+    return d["ref"], d["sha"], d["merged"] is True
+
+
+def _merge_cleanup(cwd, repo, number):
+    """The note for the cleanup after the merge of repo#number ("" when it is off). Never raises."""
+    if os.environ.get(CLEANUP_ENV, "").strip().lower() == "off":
+        return ""  # switched off by aj; no trace here, so the hook still prints exactly one JSON object
+    name = "%s#%d" % (repo or "this repo", number)
+    deadline = time.time() + CLEANUP_SECONDS
+
+    def left():
+        rest = deadline - time.time()
+        if rest <= 0.3:
+            raise _CleanupBudget()
+        return rest
+
+    def git(top, args):
+        return _ag(top, args, timeout=left(), check=False)
+
+    deleted, kept = [], []
+    try:
+        try:
+            ref, sha, merged = _cleanup_pr(repo, number, left)
+        except _CleanupBudget:
+            raise
+        except Exception as exc:
+            return "Cleanup after the merge of %s did not run: GitHub could not be read (%s: %s). Nothing was deleted." % (
+                name, type(exc).__name__, exc)
+        if not merged:
+            return "Cleanup after the merge of %s did not run: GitHub does not say it is merged. Nothing was deleted." % name
+        rc, out, _e = git(cwd, ["worktree", "list", "--porcelain"])
+        if rc != 0:
+            return "Cleanup after the merge of %s did not run: %s is not a git repository. Nothing was deleted." % (name, cwd)
+        wts, cur = [], None
+        for line in out.splitlines():
+            if line.startswith("worktree "):
+                cur = {"path": line[9:], "branch": "", "head": ""}
+                wts.append(cur)
+            elif cur is not None and line.startswith("branch refs/heads/"):
+                cur["branch"] = line[18:]
+            elif cur is not None and line.startswith("HEAD "):
+                cur["head"] = line[5:]
+        main = wts[0]["path"]
+        here = git(cwd, ["rev-parse", "--show-toplevel"])[1].strip()
+        norm = os.path.realpath
+        rel = lambda p: os.path.relpath(p, main).replace(os.sep, "/")
+        default = ""
+        rc, out, _e = git(main, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])
+        if rc == 0 and out.strip():
+            default = out.strip()
+        else:
+            for cand in ("origin/main", "origin/master"):
+                if git(main, ["rev-parse", "--verify", "-q", "refs/remotes/" + cand])[0] == 0:
+                    default = cand
+                    break
+        fetched = None
+        # Helper worktrees: on the merged branch, or finished on their own (merged into the default and pushed).
+        for w in wts[1:]:
+            if not w["branch"] or _HELPER_WT not in w["path"].replace(os.sep, "/") or norm(w["path"]) == norm(here):
+                continue
+            tip = w["head"]
+            why = ""
+            if w["branch"] == ref:
+                if tip != sha:
+                    why = "its branch has commits not in the merged pull request"
+            elif not default:
+                why = "the default branch could not be found, so whether it is merged is unknown"
+            else:
+                if fetched is None:
+                    frc, _o, ferr = git(main, ["fetch", "-q", "origin", default.split("/", 1)[1]])
+                    fetched = "" if frc == 0 else (ferr or "git fetch failed")
+                if fetched:
+                    why = "the default branch could not be fetched (%s)" % fetched
+                elif git(main, ["merge-base", "--is-ancestor", tip, default])[0] != 0:
+                    continue  # not merged: still somebody's work, not named
+                elif not git(main, ["branch", "-r", "--contains", tip])[1].strip():
+                    why = "its commits are not on any remote branch"
+            # Recency first: `git status` below can rewrite the index and make an idle copy look just used.
+            if not why and w["branch"] != ref and _worktree_recent(git, w["path"]):
+                why = "it was used in the last %d minutes, so a helper may still be working in it" % (
+                    CLEANUP_IDLE_SECONDS // 60)
+            if not why and git(w["path"], ["status", "--porcelain"])[1].strip():
+                why = "it has uncommitted changes"
+            if not why:
+                rc, _o, err = git(main, ["worktree", "remove", w["path"]])
+                if rc == 0:
+                    deleted.append("worktree " + rel(w["path"]))
+                    w["gone"] = True
+                    continue
+                why = "git refused to remove it (%s)" % ((err.splitlines() or ["?"])[0])
+            kept.append("worktree %s (%s)" % (rel(w["path"]), why))
+        # The local branch of the merged pull request. The default branch is never deleted, whatever was merged.
+        if ref in ("main", "master") or (default and ref == default.split("/", 1)[1]):
+            kept.append("branch %s (the default branch is never deleted)" % ref)
+        elif git(main, ["rev-parse", "--verify", "-q", "refs/heads/" + ref])[0] != 0:
+            kept.append("branch %s (there is no local branch of that name)" % ref)
+        else:
+            tip = git(main, ["rev-parse", "refs/heads/" + ref])[1].strip()
+            holders = [w for w in wts if w["branch"] == ref and not w.get("gone")]
+            if holders:
+                where = "the main checkout" if holders[0]["path"] == main else (
+                    "this checkout" if norm(holders[0]["path"]) == norm(here) else rel(holders[0]["path"]))
+                kept.append("branch %s (checked out in %s)" % (ref, where))
+            elif tip != sha:
+                rc, out, _e = git(main, ["rev-list", "--count", "%s..%s" % (sha, tip)])
+                n = out.strip() if rc == 0 and out.strip().isdigit() else ""
+                kept.append("branch %s (%s)" % (ref, ("has %s commit%s not in the merged pull request" % (n, "" if n == "1" else "s"))
+                                                if n and n != "0" else "its tip is not the merged pull request's head"))
+            else:
+                rc, _o, err = git(main, ["branch", "-d", ref])
+                if rc != 0:  # squash- or rebase-merged: git does not see it as merged; the tip equals the PR head, so -D loses nothing
+                    rc, _o, err = git(main, ["branch", "-D", ref])
+                if rc == 0:
+                    deleted.append("branch " + ref)
+                else:
+                    kept.append("branch %s (git refused to delete it: %s)" % (ref, (err.splitlines() or ["?"])[0]))
+    except _CleanupBudget:
+        kept.append("the rest was not checked (the %d s cleanup budget ran out)" % CLEANUP_SECONDS)
+    except Exception as exc:
+        kept.append("the rest was not checked (%s: %s)" % (type(exc).__name__, exc))
+    return "Deleted after the merge of %s: %s. Kept: %s." % (
+        name, "; ".join(deleted) or "nothing", "; ".join(kept) or "nothing")
 
 
 def event_closablemerge():
@@ -2359,16 +2895,21 @@ def event_closablemerge():
         merged = _closable_merge_of(data)
         if not merged:
             return 0
+        cleanup = _merge_cleanup(_payload_cwd(payload), merged[0], merged[1])
         _, git_dir = _issues_locate(_payload_cwd(payload))
         if not git_dir:
+            if cleanup:
+                emit({"systemMessage": cleanup,
+                      "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": cleanup}})
             return 0
         state, problem = _loop_read(git_dir)
         if problem:
-            emit({"systemMessage": problem})
+            emit({"systemMessage": " ".join([problem, cleanup]).strip()})
             return 0
         open_ = [e for e in state.get("closable", []) if isinstance(e, dict) and e.get("merged_pr") is None]
         repo, number = merged
-        notes = []
+        notes = [cleanup] if cleanup else []
+        stamp_trace = ""  # #510: said through the one emit below, never as a second JSON object on stdout
         if open_:
             refs, why = _merged_pr_refs(state, repo, number)
             hit = [e for e in open_ if any(isinstance(i, dict) and i.get("number") == n
@@ -2378,14 +2919,25 @@ def event_closablemerge():
                 e["merged_pr"] = {"repo": repo, "number": number, "at": int(time.time())}
             if hit:
                 _loop_write(git_dir, state)
+                nums = sorted({("#%d" % i["number"]) if _close_repo_match(repo, i.get("repo", ""))
+                               else "%s#%d" % (i.get("repo"), i["number"])
+                               for e in hit for i in e.get("issues") or []
+                               if isinstance(i, dict) and "number" in i})
+                notes.append('Design loop: the merge of %s#%d is stamped on the QA-passed record, so the close '
+                             'guard allows those closes once aj says yes. Offer aj: "Close as completed: %s". '
+                             "Never close without aj's word." % (repo, number, ", ".join(nums)))
             else:
                 notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (
                     repo, number, why or "it links none of the QA-passed issues with `Refs #N`"))
-            trace("house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit)))
-        if state.get("stage") == "qa":  # U3: the merge never moves the stage; aj is asked for the verdict
+            stamp_trace = "house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit))
+        # U3: the merge never moves the stage; aj is asked for the verdict. On the default branch a QA stage file
+        # already reads as Done (_loop_read_merged), so asking there would be noise.
+        if state.get("stage") == "qa" and _loop_branch(git_dir) not in _loop_default_branches(git_dir):
             notes.append('Design loop: pull request %s#%d merged while "%s" is in QA, so the stage file still '
                          'says QA. Ask aj for "QA passed: %s" or "QA failed: %s"; the stage moves only on their word.'
                          % ((repo, number) + (state.get("feature") or "this feature",) * 3))
+        if not notes and stamp_trace:
+            trace(stamp_trace)
         if notes:
             emit({"systemMessage": " ".join(notes),
                   "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": " ".join(notes)}})
@@ -2481,7 +3033,7 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
 
 
 def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                         needs_evidence, uncommitted, plain_problems, trace_lines):
+                         needs_evidence, uncommitted, plain_problems, trace_lines, written=None):
     """The blocking checkpoints at "reply ends" (first reply only). True when the reply was blocked (the
     block is emitted here). An error is added to trace_lines and nothing is blocked."""
     try:
@@ -2490,7 +3042,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             "long_words": long_words,
             "editor_owed": editor_owed,
             "needs_evidence": needs_evidence,
-            "uncommitted": uncommitted,
+            "uncommitted": uncommitted, "written": list(written or []),
             "plain_problems": plain_problems, "cwd": _payload_cwd(payload),
             "user_text": _last_user_text(transcript_path) if transcript_path else "",
         }

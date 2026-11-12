@@ -1,0 +1,10 @@
+scope | 2.78.0 0.05s exit [0] | 2.79.0 0.05s exit [0] | out: {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"House rules reminder: update the docs tier that changed; no success claim without a run you can quote; commit finished w
+commitgate | 2.78.0 0.83s exit [0] | 2.79.0 0.78s exit [0] | out: 
+guard | 2.78.0 0.05s exit [0] | 2.79.0 0.06s exit [0] | out: 
+handover | 2.78.0 0.80s exit [0] | 2.79.0 0.74s exit [0] | out: 
+subagentrules | 2.78.0 0.05s exit [0] | 2.79.0 0.06s exit [0] | out: {"systemMessage":"house-rules subagentrules COULD NOT TELL: not enough of agent_id/transcript_path/session_id in the payload to predict the transcript path","hookSpecificOutput":{"hookEventNa
+docstiers | 2.78.0 0.05s exit [0] | 2.79.0 0.06s exit [0] | out: 
+diskreport | 2.78.0 0.05s exit [0] | 2.79.0 0.06s exit [0] | out: 
+harvest | 2.78.0 0.05s exit [0] | 2.79.0 0.07s exit [0] | out: 
+closablemerge | 2.78.0 0.05s exit [0] | 2.79.0 0.05s exit [0] | out: 
+guard-commit | 2.78.0 0.06s exit [0] | 2.79.0 0.06s exit [0] | out: {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"House rules, credit Edens Agent: this commit would be authored as `Claude <noreply@a

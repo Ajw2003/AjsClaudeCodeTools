@@ -1,0 +1,6 @@
+PASS  a real session's commit of a real 60 MB file is refused
+PASS  aj's first 'LFS approved: big.bin' in a cloud session is pending (the billing read falls back to this repo)
+PASS  the same line again records it as approved
+PASS  the approved file is committed through Git LFS (git holds a pointer, not 60 MB)
+PASS  session start names the 6 GB generated folder
+LIVE BIG FILES RESULT: 5 of 5 passed

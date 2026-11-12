@@ -1,0 +1,3 @@
+PASS  harvest names `speed = 5` in player.py as a value someone may want to tune
+PASS  a turn that wrote files in two repos gets the report naming both
+LIVE RULES RESULT: 2 of 2 passed

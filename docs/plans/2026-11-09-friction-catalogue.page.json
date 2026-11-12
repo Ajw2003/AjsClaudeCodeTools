@@ -1,0 +1,62 @@
+{
+  "title": "Friction Catalogue",
+  "eyebrow": "Design · every known point where house-rules makes your work harder, and one order to fix them in",
+  "approval": "Design approved: Friction fixes",
+  "replyPrefix": "Design approved: Friction fixes",
+  "reply": "",
+  "short": {
+    "lead": "The plugin is meant to save your effort, and right now it costs you effort in six places. This page lists each one, from three sources: what went wrong in this session, the 226 issues open on GitHub today (counted with gh issue list), and the traps already written in the docs. Many open issues describe the same problem as other issues (pictures in pages has three, approvals that don't register has five), and 83 of them are labelled \"in progress\", most with no work going on. The proposal is to stop adding one-off fixes, fix the six areas in order, one feature each, and close the duplicates as each area lands. The session handoff work pauses until area 5, because it can't be tested for real before then.",
+    "hint": "Tap an area to see what goes wrong, the issues that already describe it, and what done looks like.",
+    "key": [["Friction you hit", ""], ["Already partly fixed", ""], ["You decide", "you"]],
+    "items": [
+      ["cross", "Area 1", "Approvals that look right register nothing", "",
+        "Today alone, five messages meant as approvals moved nothing. Three were lines you typed or copied: \"Handoff overwrite design 1A\", \"Handoff overwrite design approved 1A\" and \"Handoff overwrite 1A 2A\", which the page's own copy box gave you. One was \"Send it\", a button I offered that sends only its label. The fifth was a build plan approval, refused because the design loop didn't count issues I had opened. Six open issues describe the same problem. #491 covers word order and the copy box, and #481 makes an approval move only what you named. #475 is the loop counting every issue opened during Plan. #429, #379 and #296 are approvals ignored in cloud sessions, from the Claude app, and when the folder isn't a repo.",
+        "Done when every way you naturally approve, including a reply button, moves the stage or says plainly why not, and the plugin never offers you a line or a button that won't work."],
+      ["cross", "Area 2", "The code lock costs a round trip for every small fix", "",
+        "\"skip design\" lets one file edit through, so a fix plus its test needs two unlocks. A fault found in QA needs a whole new design, plan and approval before a one-line fix, which happened twice today. Open issues: #480 (ways around the code lock), #484 (shell writes outside Build), #459 (a question mid-build locks code).",
+        "Done when a fix found in QA goes back to Build with one message from you, and \"skip design\" covers one change across its files, not one edit."],
+      ["cross", "Area 3", "The command guard refuses routine, safe commands", "",
+        "Today it refused the pickup's own restore command, every git command run in another folder with cd or -C, a read-only script that named the stage file, and a third run of the same check script. Open issues on it: #478 stops the guard refusing routine commands, and #465 and #467 stop the rerun limit counting a read as a run. #203 and #192 are commits that prompt after a cd. #134 and #136 are helpers stalled on approvals, and #200 and #198 are refusals where asking would do.",
+        "Done when the guard refuses only what can't be undone, and every refusal names a way forward that works."],
+      ["cross", "Area 4", "Pages lose their pictures and their copy box", "",
+        "Pictures break once a page is published or opened elsewhere, in every repo. Copy my reply has failed in the app's browser pane, and gave you a line the loop rejects. A small wording change costs an editor pass, then a phrase check, then another rebuild. Open issues: #490, #462 and #313 (pictures), #464 and #335 (copy box), #466 and #377 (the builder accepts broken pages), #419 to #424 (the builder refuses a page missing what it owes).",
+        "Done when every page shows its pictures and its copy box works wherever it is opened, and a page the builder accepts passes every later check."],
+      ["cross", "Area 5", "A build can't be tested where you use it", "",
+        "Installs come from main, so a branch's changes reach the desktop app, cloud sessions and other accounts only after a merge. Today's desktop test needed throwaway clones with hand-written settings, and the desktop app ran your installed copy of the plugin alongside the test copy anyway. I couldn't start a cloud session from this conversation at all. Open issues: #179 (cloud environments install the plugin), #438 (plugin dependencies proven together). The session handoff (#406 and #488) waits here: its QA needs the desktop app, a cloud session and a second account.",
+        "Done when one command points the desktop app and cloud sessions at a branch build and back again, with nothing else running beside it, and the session handoff passes QA on all three surfaces."],
+      ["cross", "Area 6", "226 open issues, many stale or duplicated", "",
+        "Two full sets of \"QA evidence\" issues (#389 to #395 and #411 to #417), three picture issues, five approval issues, and 83 labelled \"in progress\", most with no work going on. The end-of-turn checks read these labels, so stale ones cause wrong reminders and refusals.",
+        "Done when every open issue is either real remaining work or gone. I propose the closes as one list for you to approve."],
+      ["check", "Partly fixed", "Already on the branch AjsAgent/session-handoff", "",
+        "The pickup's restore command now uses git apply and leaves out the stage file (commit d62be1a). The design page for the handoff overwrite, pictures and approvals is approved, and its four issues (#488 to #491) are open. They are folded into areas 1, 4 and 5 rather than built separately.",
+        "Nothing from you."],
+      ["search", "You decide", "The order, and what happens to the open issues", "you",
+        "Question 1 below asks the order; question 2 asks how the duplicates are handled.",
+        "Choose one option in each question."]
+    ]
+  },
+  "changes": [],
+  "choices": [
+    ["q1", "1. In what order are the areas fixed?", [
+      ["A", "Approvals, code lock, guard, pages, testing on real surfaces, then the issue cleanup", 1,
+        "Each area makes the next one cheaper: once approvals register and the lock is proportionate, every later fix costs you one message instead of several. Testing on real surfaces comes after the plugin stops getting in the way, and the handoff finishes there. Cleanup comes last, because each area closes its own duplicates as it lands."],
+      ["B", "Issue cleanup first, then the same order", 0,
+        "A clean list first makes the rest easier to follow and stops stale labels causing wrong reminders, but nothing you feel day to day changes until the second area starts."],
+      ["C", "Finish the session handoff first, then the areas in order", 0,
+        "The handoff is closest to done, but its remaining QA needs area 5, so finishing it first means more throwaway clones and hand-written settings."]
+    ], "Each area is one feature: one design page, one build plan, built and checked before the next starts."],
+    ["q2", "2. What happens to the issues that describe the same problem?", [
+      ["A", "Each area starts by folding its issues into one, and proposes the rest for closing", 1,
+        "When an area starts, its design page lists every open issue it covers. On approval, one issue carries the work, and the others are put on a close list you approve, with each one pointing at the issue that replaced it. Nothing is closed without you."],
+      ["B", "Leave the existing issues and open new ones per area", 0,
+        "Nothing old is touched, but the list keeps growing and the stale labels keep causing wrong reminders."]
+    ], "Either way, no issue is closed without your approval."]
+  ],
+  "wrapup": {
+    "summary": "A catalogue of the six areas where house-rules costs you effort, and one order to fix them in.",
+    "changing": "Only this page. No code is written, and nothing is closed, until you approve.",
+    "blocking": "Your pick of one option in each of questions 1 and 2, or what you want changed.",
+    "next": "Once you approve, area 1 starts with its own design page listing every issue it covers. The session handoff branch stays as it is until area 5.",
+    "todo": ["Pick one option in each question."]
+  }
+}

@@ -19,7 +19,7 @@ How the agent closes GitHub issues itself, under a guard that checks the evidenc
 closing commands into a prompt. A close through the GitHub MCP tool (`issue_write` with `state:
 closed`) was not checked at all. The design loop records the current feature's issues in
 `state["issues"]` and aj's approvals in `state["approvals"]`, but a new "Design approved" clears
-`state["issues"]` (`hook.py:5533`), so nothing about a finished feature survives the next one.
+`state["issues"]` (then hook.py line 5533; today `_loop_apply_one` in `house_rules/design_loop.py`), so nothing about a finished feature survives the next one.
 
 **The closable record.** When aj's "QA passed: <feature>" moves the loop on, the hook copies that
 feature's recorded issues into a new list in the stage file, `closable`, as one entry: the feature

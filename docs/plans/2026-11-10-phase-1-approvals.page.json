@@ -1,0 +1,224 @@
+{
+ "title": "Phase 1: Approvals Just Work",
+ "eyebrow": "Design for approval · roadmap phase 1 (#493) · nothing built yet",
+ "approval": "Design approved: Phase 1",
+ "replyPrefix": "Design approved: Phase 1",
+ "reply": "",
+ "short": {
+  "lead": "On 2026-11-09 five of your approvals moved nothing. This phase fixes that in three ways. Every way you approve will move the stage. The plugin will offer you only lines and buttons that work. One message from you will send a QA fault back to Build. The design loop is the plugin's tracker for where a feature stands. It has four stages, in order: Design, Plan, Build and QA, and only your messages move it from one stage to the next. I checked the 20 old issues this phase carries against the code on 2026-11-10. Eight findings from the design-loop audit are already in the code and only need a test. The changes below cover everything else.",
+  "hint": "Tap a step to see what it creates and what it needs from you.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "The moment",
+    "Every approval you send moves the stage, or says why not",
+    "",
+    "Each of the five approvals you sent on 2026-11-09 gets the right answer: the stage moves, or the reply says why not. Each also becomes a test in verify.py, the plugin's self-check script.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NjAgMjkwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48ZGVmcz48bWFya2VyIGlkPSJhIiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjgiIHJlZlk9IjUiIG1hcmtlcldpZHRoPSI3IiBtYXJrZXJIZWlnaHQ9IjciIG9yaWVudD0iYXV0byI+PHBhdGggZD0iTTAgMEwxMCA1TDAgMTB6IiBmaWxsPSIjN2Q4MzhjIi8+PC9tYXJrZXI+PC9kZWZzPjx0ZXh0IHg9IjIwIiB5PSIzNCIgZm9udC1zaXplPSIxMiIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzdkODM4YyI+V2hhdCB5b3Ugc2VudDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9IjM0IiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5Ub2RheTwvdGV4dD48dGV4dCB4PSI1NjAiIHk9IjM0IiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5BZnRlciBwaGFzZSAxPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSI1MCIgd2lkdGg9IjgzMiIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4wNiIvPjx0ZXh0IHg9IjI0IiB5PSI2OCIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNmNDQ0YiI+SGFuZG9mZiBvdmVyd3JpdGUgZGVzaWduIGFwcHJvdmVkIDFBPC90ZXh0Pjx0ZXh0IHg9IjI0IiB5PSI4NCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzdkODM4YyI+ZnJvbSB0eXBlZDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9Ijc1IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYjU1MzNjIj5tb3ZlZCBub3RoaW5nPC90ZXh0PjxwYXRoIGQ9Ik01MjAgNzAgaDI2IiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhKSIvPjx0ZXh0IHg9IjU2MCIgeT0iNzUiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjlhNzAiPk1vdmVzIHRoZSBzdGFnZTwvdGV4dD48cmVjdCB4PSIxNCIgeT0iOTYiIHdpZHRoPSI4MzIiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyNCIgeT0iMTE0IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5IYW5kb2ZmIG92ZXJ3cml0ZSBkZXNpZ24gMUE8L3RleHQ+PHRleHQgeD0iMjQiIHk9IjEzMCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzdkODM4YyI+ZnJvbSB0eXBlZDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9IjEyMSIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2I1NTMzYyI+bW92ZWQgbm90aGluZzwvdGV4dD48cGF0aCBkPSJNNTIwIDExNiBoMjYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2EpIi8+PHRleHQgeD0iNTYwIiB5PSIxMjEiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNjNzdhMmMiPlJlZnVzZWQsIGFuZCB0aGUgcmVwbHkgc2F5cyB3aHk8L3RleHQ+PHJlY3QgeD0iMTQiIHk9IjE0MiIgd2lkdGg9IjgzMiIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4wNiIvPjx0ZXh0IHg9IjI0IiB5PSIxNjAiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzZjQ0NGIiPkhhbmRvZmYgb3ZlcndyaXRlIDFBIDJBPC90ZXh0Pjx0ZXh0IHg9IjI0IiB5PSIxNzYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM3ZDgzOGMiPmZyb20gdGhlIHBhZ2UncyBjb3B5IGJveDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9IjE2NyIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2I1NTMzYyI+bW92ZWQgbm90aGluZzwvdGV4dD48cGF0aCBkPSJNNTIwIDE2MiBoMjYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2EpIi8+PHRleHQgeD0iNTYwIiB5PSIxNjciIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNjNzdhMmMiPlRoZSBidWlsZGVyIG5ldmVyIHB1dHMgaXQgb24gYSBwYWdlPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIxODgiIHdpZHRoPSI4MzIiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyNCIgeT0iMjA2IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5TZW5kIGl0PC90ZXh0Pjx0ZXh0IHg9IjI0IiB5PSIyMjIiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM3ZDgzOGMiPmZyb20gYSBidXR0b24gSSBvZmZlcmVkPC90ZXh0Pjx0ZXh0IHg9IjMzMCIgeT0iMjEzIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYjU1MzNjIj5tb3ZlZCBub3RoaW5nPC90ZXh0PjxwYXRoIGQ9Ik01MjAgMjA4IGgyNiIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48dGV4dCB4PSI1NjAiIHk9IjIxMyIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOWE3MCI+VGhlIGJ1dHRvbiBjYXJyaWVzIHRoZSBhcHByb3ZhbCAoY2hvaWNlIDIpPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIyMzQiIHdpZHRoPSI4MzIiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyNCIgeT0iMjUyIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5CdWlsZCBwbGFuIGFwcHJvdmVkOiAuLi48L3RleHQ+PHRleHQgeD0iMjQiIHk9IjI2OCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzdkODM4YyI+ZnJvbSB0eXBlZDwvdGV4dD48dGV4dCB4PSIzMzAiIHk9IjI1OSIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2I1NTMzYyI+cmVmdXNlZDogaXNzdWVzIG5vdCBjb3VudGVkPC90ZXh0PjxwYXRoIGQ9Ik01MjAgMjU0IGgyNiIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48dGV4dCB4PSI1NjAiIHk9IjI1OSIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOWE3MCI+SXNzdWVzIGNvdW50ZWQgKGNob2ljZSAxKTwvdGV4dD48L3N2Zz4=",
+     "alt": "The five approvals of 2026-11-09, what happened to each, and what happens after phase 1",
+     "caption": "The five approvals that moved nothing on 2026-11-09, and the answer each gets after this phase."
+    }
+   ],
+   [
+    "loop",
+    "How",
+    "One path for every approval",
+    "",
+    "Typed lines, copy-box lines and buttons all go through the same checks in scripts/house_rules/design_loop.py, and a refusal always names the reason.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NjAgMjUwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48ZGVmcz48bWFya2VyIGlkPSJhIiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjgiIHJlZlk9IjUiIG1hcmtlcldpZHRoPSI3IiBtYXJrZXJIZWlnaHQ9IjciIG9yaWVudD0iYXV0byI+PHBhdGggZD0iTTAgMEwxMCA1TDAgMTB6IiBmaWxsPSIjN2Q4MzhjIi8+PC9tYXJrZXI+PC9kZWZzPjxyZWN0IHg9IjIwIiB5PSIzMCIgd2lkdGg9IjI1MCIgaGVpZ2h0PSI2MiIgcng9IjEwIiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMTMiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMzIiIHk9IjU2IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5Zb3VyIG1lc3NhZ2U8L3RleHQ+PHJlY3QgeD0iMzA1IiB5PSIzMCIgd2lkdGg9IjI1MCIgaGVpZ2h0PSI2MiIgcng9IjEwIiBmaWxsPSIjNGY3ZmQ5IiBmaWxsLW9wYWNpdHk9IjAuMTMiIHN0cm9rZT0iIzRmN2ZkOSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMzE3IiB5PSI1NiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNmNDQ0YiI+U3RyaXAgYSBsZWFkaW5nIHN5c3RlbSBub3RlPC90ZXh0Pjx0ZXh0IHg9IjMxNyIgeT0iNzYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM0ZjdmZDkiPm5ldzogY2xvdWQgc2Vzc2lvbnM8L3RleHQ+PHJlY3QgeD0iNTkwIiB5PSIzMCIgd2lkdGg9IjI1MCIgaGVpZ2h0PSI2MiIgcng9IjEwIiBmaWxsPSIjYzc3YTJjIiBmaWxsLW9wYWNpdHk9IjAuMTMiIHN0cm9rZT0iI2M3N2EyYyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iNjAyIiB5PSI1NiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNmNDQ0YiI+RmluZCB0aGUgYXBwcm92YWw8L3RleHQ+PHRleHQgeD0iNjAyIiB5PSI3NiIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2M3N2EyYyI+YWRhcHRlZDogZWl0aGVyIHdvcmQgb3JkZXI7IG5ldzogYnV0dG9uczwvdGV4dD48cmVjdCB4PSI1OTAiIHk9IjE0MCIgd2lkdGg9IjI1MCIgaGVpZ2h0PSI2MiIgcng9IjEwIiBmaWxsPSIjYzc3YTJjIiBmaWxsLW9wYWNpdHk9IjAuMTMiIHN0cm9rZT0iI2M3N2EyYyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iNjAyIiB5PSIxNjYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzZjQ0NGIiPkNoZWNrIHRoZSBmZWF0dXJlIG5hbWU8L3RleHQ+PHRleHQgeD0iNjAyIiB5PSIxODYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiNjNzdhMmMiPmFkYXB0ZWQ8L3RleHQ+PHJlY3QgeD0iMzA1IiB5PSIxNDAiIHdpZHRoPSIyNTAiIGhlaWdodD0iNjIiIHJ4PSIxMCIgZmlsbD0iI2M3N2EyYyIgZmlsbC1vcGFjaXR5PSIwLjEzIiBzdHJva2U9IiNjNzdhMmMiIHN0cm9rZS13aWR0aD0iMiIvPjx0ZXh0IHg9IjMxNyIgeT0iMTY2IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5Db3VudCB0aGUgZmVhdHVyZSdzIGlzc3VlczwvdGV4dD48dGV4dCB4PSIzMTciIHk9IjE4NiIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2M3N2EyYyI+YWRhcHRlZDwvdGV4dD48cmVjdCB4PSIyMCIgeT0iMTQwIiB3aWR0aD0iMjUwIiBoZWlnaHQ9IjYyIiByeD0iMTAiIGZpbGw9IiNjNzdhMmMiIGZpbGwtb3BhY2l0eT0iMC4xMyIgc3Ryb2tlPSIjYzc3YTJjIiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIzMiIgeT0iMTY2IiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5TdGFnZSBtb3Zlcywgb3IgdGhlIHJlcGx5IHNheXMgd2h5PC90ZXh0Pjx0ZXh0IHg9IjMyIiB5PSIxODYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiNjNzdhMmMiPmFkYXB0ZWQ6IG5ldmVyIHNpbGVudDwvdGV4dD48cGF0aCBkPSJNMjc0IDYxIGgyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48cGF0aCBkPSJNNTU5IDYxIGgyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48cGF0aCBkPSJNNzE1IDk2IHYzNyIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYSkiLz48cGF0aCBkPSJNNTg0IDE3MSBoLTIyIiBmaWxsPSJub25lIiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhKSIvPjxwYXRoIGQ9Ik0yOTkgMTcxIGgtMjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2EpIi8+PHRleHQgeD0iMjAiIHk9IjIzMiIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzdkODM4YyI+Z3JleTogYXMgdG9kYXkgICBvcmFuZ2U6IGFkYXB0ZWQgICBibHVlOiBuZXc8L3RleHQ+PC9zdmc+",
+     "alt": "The path an approval takes through the design loop, with each step marked as reused, adapted or new",
+     "caption": "How your message becomes a stage change. Grey is today's code, orange is adapted, blue is new."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You pick three choices and approve",
+    "you",
+    "A build plan page next, with the planned code shown.",
+    "Your pick of option A or B in each of the three choices further down this page, then the line \"Design approved: Phase 1\"."
+   ],
+   [
+    "flask",
+    "Prove it",
+    "You test it in a real desktop app session",
+    "you",
+    "A QA page with one line per test.",
+    "About ten minutes: send the test lines the QA page gives you."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Approvals in either word order",
+   "A line such as \"Handoff overwrite design approved 1A\" (feature name first) will count as an approval (#491, make every approval line register).",
+   [
+    "Only \"Design approved: <feature>\" counts",
+    "\"<feature> design approved <picks>\" counts too"
+   ],
+   "The approval patterns in design_loop.py (_LOOP_DESIGN_RE and the matching patterns for the other stages) will also accept the words \"design approved\" after the feature name. The old rules stay. An approval inside a question does not count. An approval quoted from another message does not count. A line without those words, such as \"Handoff overwrite 1A 2A\", still moves nothing, but the reply now says why."
+  ],
+  [
+   "chg",
+   "The page builder refuses a copy box that moves nothing",
+   "A page can't offer you a dead line (#491).",
+   [
+    "make_page.py prints a note and builds the page",
+    "make_page.py refuses to build it"
+   ],
+   "check_approval in scripts/make_page.py refuses a design or build plan page whose copy-box line the loop would reject, unless the page names another repo (the #309 case). It already refuses this for QA pages."
+  ],
+  [
+   "new",
+   "Buttons that approve",
+   "A reply button can carry an approval (choice 2 below). When something is waiting on you, the reply will always show it as a button or a step card, the boxed handover note at the end of a reply (#155).",
+   null,
+   "The reply buttons in the Claude app send only their label, at most 24 characters. So a button labelled \"Send it\" carried no approval. If you pick option A in choice 2, a short label such as \"Approve 1A\" will count as the approval line the same reply offered. This only works when that reply offered exactly one approval line.",
+   [
+    "Buttons send only their label, so an approval needs the copy box or typing.",
+    "The loop remembers the one approval line the last reply offered, and maps the button label to it.",
+    "You can approve with one tap."
+   ]
+  ],
+  [
+   "chg",
+   "A build plan counts the right issues",
+   "Separate features' issues stop counting, and missed ones start (#475).",
+   [
+    "Every issue opened during Plan counts",
+    "Issues that say \"Part of #<feature issue>\" count"
+   ],
+   "Today _loop_record_issues (design_loop.py:1322) adds every labelled issue opened in this repo while the stage is Plan. So an issue for a separate future feature blocks the approval. And an issue the loop never saw being opened is missed. That second case is why the fifth approval of 2026-11-09 failed. Choice 1 below picks the fix."
+  ],
+  [
+   "chg",
+   "Approvals in cloud sessions and outside a repo",
+   "A message that starts with an automatic system note will still approve, and an approval outside a repo will say why it failed (#429, #296).",
+   [
+    "Cloud: refused. Not a repo: a note.",
+    "Cloud: counts. Not a repo: the folder is named and the fix given."
+   ],
+   "Cloud sessions put a system note before your words, and the loop refuses the approval (core.py:1920). The loop will strip a leading system note before matching. Outside a repo the approval moves nothing (design_loop.py:1108); the note will name the folder searched and the folder to open instead."
+  ],
+  [
+   "chg",
+   "The last ways around the code-edit lock",
+   "Five audit gaps are closed. The lock is the rule that refuses code edits outside the Build stage (#480, #481).",
+   null,
+   "The codes D2, D3, D6, D9 and U3 are labels from the audit of the design loop (issues #480 and #481). Each is one gap. D2: a \"don't\" before any approval now stops it, not only before \"skip design\". D3: the old stage file in .git is no longer read. D6: a new design name is checked against the current feature before it replaces it. D9: switching to an old branch no longer brings back that branch's old stage. U3: merging a feature's pull request clears its QA stage on main (design_loop.py:2402 only adds a note today). Each gets a verify.py case that fails on today's code."
+  ],
+  [
+   "chg",
+   "Decisions only from you",
+   "We finish the design you approved on 2026-11-03 (#457, design loop fixes). A helper loses its \"judgement call\" exception, a question asked during a build holds code edits until you answer, and a reply that settles a design point on its own is sent back.",
+   null,
+   "You approved this on 2026-11-03 (\"Design approved: design loop fixes\", picks 1A 2A 3A). Still to build, in three parts. First, drop \"unless they have said otherwise\" from rules/show-dont-tell.md:12, and send questions from helper agents to you, not to the main session (#458). Second, a question asked mid-build locks code edits until you answer (#459). Third, a reply that settles a design point on its own is sent back (#460)."
+  ],
+  [
+   "chg",
+   "Issues follow the work",
+   "Issue labels will update on their own, the reply will offer to close issues at the right time, and the label reminder will stop repeating itself (#132, #141, #273).",
+   null,
+   "After \"QA passed\" and a merge, the reply offers the close line for the feature's issues, already approved for you to send. The end-of-reply label check (_loop_stop_line, design_loop.py:1167) says its piece once per set of labels and then stays quiet until the labels change."
+  ],
+  [
+   "keep",
+   "Already fixed: eight audit findings",
+   "D4, A9, A7, A2, A10, D5, D7 and D8 are in the code.",
+   null,
+   "Each gets a verify.py case so the issue can close with evidence. Examples: the stage file is written through a temp file (design_loop.py:456), and three helpers launched at once are held to two (delegation.py:903)."
+  ],
+  [
+   "keep",
+   "Plans become issues",
+   "The issue rule already blocks code until a plan's issues exist (#107, #110, #128).",
+   null,
+   "Issues #107, #110 and #128 close when a verify.py case shows that an approved build plan with no issues is refused, however the plan was made. Three other old issues, #102, #129 and #130, are decided in choice 3 below."
+  ]
+ ],
+ "choices": [
+  [
+   "q1",
+   "How does a build plan approval know which issues are the feature's?",
+   [
+    [
+     "A",
+     "Read them from GitHub at approval time: issues that say \"Part of #<feature issue>\"",
+     1,
+     "Counts issues opened in any stage, and never counts a separate feature's issue."
+    ],
+    [
+     "B",
+     "Keep recording issues as they are opened in Plan, but only those that say \"Part of\"",
+     0,
+     "Smaller change, but an issue the loop didn't see opening is still missed, as in the fifth failure."
+    ]
+   ],
+   "A fixes both ways it failed, and GitHub is already read at that moment for the label check."
+  ],
+  [
+   "q2",
+   "Can a reply button approve?",
+   [
+    [
+     "A",
+     "Yes: a short label such as \"Approve 1A\" counts as the one approval line the same reply offered",
+     1,
+     "One tap. A button counts only when that reply offered exactly one approval."
+    ],
+    [
+     "B",
+     "No: approval buttons are never offered; you copy the line from the page or type it",
+     0,
+     "Nothing new to trust, but every approval needs the page open."
+    ]
+   ],
+   "You asked for minimal manual effort, and the label is tied to the reply that offered it."
+  ],
+  [
+   "q3",
+   "What happens to three old asks the code now covers in another way?",
+   [
+    [
+     "A",
+     "Close each with a verify.py case proving today's behaviour",
+     1,
+     "#102 (a plain final pass before push) is the QA page. #129 (block code after three files without a plan) and #130 (treat a plan file as an approved plan) are covered by the lock, which refuses every code edit outside Build."
+    ],
+    [
+     "B",
+     "Build each as its issue was written",
+     0,
+     "Three more parts to build, mostly duplicating the lock."
+    ]
+   ],
+   "The lock is stricter than what #129 and #130 asked for."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Phase 1 of the roadmap: every approval you send moves the stage or says why, and the plugin offers only lines and buttons that work.",
+  "changing": "Nothing yet. After approval: scripts/house_rules/design_loop.py, scripts/house_rules/core.py, scripts/make_page.py, rules/show-dont-tell.md and verify.py.",
+  "blocking": "Your pick in choices 1 to 3, or what you want changed.",
+  "next": "A build plan page showing the planned code, then the build in steps, then a QA page you test in the desktop app.",
+  "todo": [
+   "Pick one option in each of choices 1 to 3.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it. It starts \"Design approved: Phase 1\"."
+  ]
+ }
+}

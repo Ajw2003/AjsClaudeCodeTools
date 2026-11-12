@@ -110,6 +110,43 @@ for _title, _path, _expect in _docstiers_cases:
         report("FAIL", f"docstiers: {_title}")
         print(f"          {'; '.join(_problems)}")
 
+# #386: a repo with all six tiers but no CHANGELOG.md is named; one with it is silent (the first case above).
+_code, _out, _err = run_hook("docstiers", "", env=env_in(DOCSTIERS_NO_CHANGELOG))
+if _code == 0 and "no CHANGELOG.md at its root" in _out and "missing" not in _out.split("CHANGELOG")[0]:
+    report("PASS", "docstiers: a repo with every tier but no CHANGELOG.md is told to start one")
+    print(f"          {len(_out)} chars emitted")
+else:
+    report("FAIL", "docstiers: a repo with every tier but no CHANGELOG.md is told to start one")
+    print(f"          exit {_code}, got: {_out[:200]!r}")
+
+# Step 6 (#513): Research.md and Vocabulary.md are optional - never required, never nagged for.
+sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+sys.path.insert(0, HERE)
+_opt_names = ["docs/6-decisions/Research.md", "docs/6-decisions/Vocabulary.md"]
+try:
+    from house_rules import docs as _opt_mod
+    _opt_have = getattr(_opt_mod, "OPTIONAL_TIER_FILES", None)
+    _opt_req = getattr(_opt_mod, "DOCS_TIER_FILES", [])
+except Exception as _e:  # noqa: BLE001
+    _opt_have, _opt_req = None, []
+if _opt_have == _opt_names and not any(n in _opt_req for n in _opt_names):
+    report("PASS", "docstiers: OPTIONAL_TIER_FILES names Research.md and Vocabulary.md, neither is required")
+else:
+    report("FAIL", "docstiers: OPTIONAL_TIER_FILES names Research.md and Vocabulary.md, neither is required")
+    print(f"          OPTIONAL_TIER_FILES={_opt_have!r}")
+_code, _out, _err = run_hook("docstiers", "", env=env_in(DOCSTIERS_COMPLETE))
+_has_opt = any(os.path.exists(os.path.join(DOCSTIERS_COMPLETE, *n.split("/"))) for n in _opt_names)
+if _code == 0 and not _has_opt and not _out.strip() and _opt_have:
+    report("PASS", "docstiers: every tier and a CHANGELOG.md but no Research.md or Vocabulary.md gets no note")
+else:
+    report("FAIL", "docstiers: every tier and a CHANGELOG.md but no Research.md or Vocabulary.md gets no note")
+    print(f"          exit {_code}, optional files present={_has_opt}, got: {_out[:200]!r}")
+_skill_t = read(DOCSKILL) if os.path.isfile(DOCSKILL) else ""
+if all(n in _skill_t for n in _opt_names):
+    report("PASS", "project-docs SKILL.md describes the optional Research.md and Vocabulary.md")
+else:
+    report("FAIL", "project-docs SKILL.md describes the optional Research.md and Vocabulary.md")
+
 # docstiers's fail-loud path (systemMessage on an internal error, like inject) is covered by
 # main()'s generic exception net, proven generically further down this file rather than with a
 # docstiers-specific fixture - every input docstiers actually reads already degrades gracefully
@@ -1818,12 +1855,214 @@ else:
         expect_rc=1,
     )
 
+# --- docs_drift (#508): a commit names the docs that cite what it changes; drift is listed ------
+DOCS_DRIFT = os.path.join(HERE, "docs_drift.py")
+_DD_HEAD = "".join("line %d\n" % i for i in range(1, 21))
+
+
+def _dd_git(d, *args):
+    subprocess.run(["git", "-C", d] + list(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
+
+def _dd_repo(files, stage=()):
+    d = make_fixture(files)
+    _dd_git(d, "init", "-q")
+    _dd_git(d, "config", "user.email", "t@t.com")
+    _dd_git(d, "config", "user.name", "t")
+    _dd_git(d, "add", "-A")
+    _dd_git(d, "commit", "-q", "-m", "init")
+    return d
+
+
+def _dd_commit_note(d, staged_edit):
+    """The detail _staged_docs_status gives for a commit of one edited file (None when no note)."""
+    with open(os.path.join(d, staged_edit), "a", encoding="utf-8") as f:
+        f.write("# changed\n")
+    _dd_git(d, "add", staged_edit)
+    mod = importlib.import_module("house_rules.docs")
+    return mod._staged_docs_status('"command":"git commit -m x"', False, d)
+
+
+def _dd_run(d):
+    proc = subprocess.run([sys.executable, DOCS_DRIFT, "--root", d], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return proc.returncode, proc.stdout.decode("utf-8", "replace")
+
+
+def _dd_case(title, ok, detail):
+    report("PASS" if ok else "FAIL", title)
+    if not ok:
+        print("          " + str(detail)[:400])
+
+
 import importlib  # noqa: E402
+
+if shutil.which("git"):
+    _d = _dd_repo({"a.py": _DD_HEAD, "docs/4-systems/s.md": "See `a.py:10` for it.\n",
+                   "docs/6-decisions/Decisions.md": "old `a.py:999` and `gone.py:3`\n"})
+    try:
+        _st, _note = _dd_commit_note(_d, "a.py")
+        _dd_case("docs_drift: a commit changing a.py names the doc citing a.py:10",
+                 bool(_note) and "docs/4-systems/s.md (a.py:10)" in _note, (_st, _note))
+        _dd_case("docs_drift: a citation in docs/6-decisions/ is never flagged at commit",
+                 bool(_note) and "Decisions" not in _note and "999" not in _note, _note)
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _d = _dd_repo({"a.py": _DD_HEAD, "b.py": _DD_HEAD, "docs/4-systems/s.md": "See `a.py:10`.\n"})
+    try:
+        _st, _note = _dd_commit_note(_d, "b.py")
+        _dd_case("docs_drift: a commit touching no cited file adds nothing to the detail", _note is None, _note)
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _d = _dd_repo({"a.py": _DD_HEAD, "docs/4-systems/s.md": "See `a.py:999`.\n"})
+    try:
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift: a doc citing a.py:999 in a 20-line file is flagged",
+                 _rc == 1 and "docs/4-systems/s.md:1  cites  a.py:999  (line 999 past the end, file has 20 lines)" in _out,
+                 (_rc, _out))
+        _st, _note = _dd_commit_note(_d, "a.py")
+        _dd_case("docs_drift: at commit, drift in a changed file's citation is reported",
+                 bool(_note) and "past the end" in _note, _note)
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _d = _dd_repo({"src/gone.py": "x\n", "a.py": _DD_HEAD,
+                   "docs/4-systems/s.md": "See `src/gone.py:1`. Settings live in `settings.json`.\n"})
+    try:
+        os.remove(os.path.join(_d, "src", "gone.py"))
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift: a doc citing a deleted file by its path is flagged by the command",
+                 _rc == 1 and "cites  src/gone.py:1  (gone)" in _out, (_rc, _out))
+        _dd_case("docs_drift: a bare name that is no repo file (a runtime file like settings.json) is not flagged",
+                 "settings.json" not in _out, _out)
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+
+    _d = _dd_repo({"x/dup.py": "1\n", "y/dup.py": "1\n2\n", "docs/4-systems/s.md": "See `dup.py:2`.\n",
+                   "docs/6-decisions/Decisions.md": "old `x/gone.py:3`\n"})
+    try:
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift: a shared basename whose line fits one of its files is skipped, and docs/6-decisions/ "
+                 "is never scanned", _rc == 0 and "docs_drift: 0 drifted" in _out, (_rc, _out))
+        with open(os.path.join(_d, "docs", "4-systems", "s.md"), "w", encoding="utf-8") as f:
+            f.write("See `dup.py:50`.\n")
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift: a shared basename (hook.py) cited past the end of every file with that name is flagged",
+                 _rc == 1 and "line 50 past the end of all 2 files with that name, the longest has 2 lines" in _out,
+                 (_rc, _out))
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+    # #518: history and shell variables are not drift; a real drifted citation still is.
+    _d = _dd_repo({"a.py": _DD_HEAD,
+                   "docs/3-state/ProjectState.md": "2026-11-03, branch x: ran `tools/x.sh` and `a.py:500`.\n",
+                   "docs/4-systems/s.md": ("`tools/old_check.py` was deleted in step 6.\n"
+                                           "The shim ends `exec \"$HERE/hook.py\"`.\n"
+                                           "Still current: `a.py:999`.\n")})
+    try:
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift (#518): a citation on a dated log line is not drift", "x.sh" not in _out
+                 and "a.py:500" not in _out, _out)
+        _dd_case("docs_drift (#518): a citation on a line saying the file was deleted is not drift",
+                 "old_check.py" not in _out, _out)
+        _dd_case("docs_drift (#518): a shell variable path ($HERE/hook.py) is not drift", "hook.py" not in _out, _out)
+        _dd_case("docs_drift (#518): a real drifted citation beside them is still flagged",
+                 _rc == 1 and "cites  a.py:999" in _out and "docs_drift: 1 drifted" in _out, (_rc, _out))
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
+else:
+    report("FAIL", "docs_drift: git is not on PATH; this machine's environment says it should be")
+
 _ca = importlib.import_module("house_rules.core")._COMMIT_ALL_RE
 report("PASS" if ([bool(_ca.search(c)) for c in ("git commit -sam x", "git commit -qa -m x", "git commit -am x",
                                                   "git commit --amend -m x", "git commit -m x")]
                   == [True, True, True, False, False]) else "FAIL",
        "A15: one commit -a pattern, which sees -sam and -qa and not --amend")
+
+
+# --- #117: tuning values are reported, never blocked ------------------------------------------
+_TV = "House rules, tuning values"
+harv_case("remind+trace", "#117: `speed = 5` added in a .py file is named by file:line", "/proj/game/mover.py",
+          "import os\nspeed = 5\n", expect_in=[_TV, "mover.py:2"])
+harv_case("remind+trace", "#117: `public float moveSpeed = 5f;` in a .cs file is named", "/proj/Assets/Mover.cs",
+          "class M {\n    public float moveSpeed = 5f;\n}\n", expect_in=[_TV, "Mover.cs:2"])
+harv_case("trace", "#117: `SPEED = 5  # a starting value` is not named", "/proj/game/mover.py",
+          "SPEED = 5  # a starting value\n")
+harv_case("trace", "#117: a value with a measured comment is not named", "/proj/game/mover.py",
+          "speed = 5  # measured on the rig\n")
+harv_case("trace", "#117: a test file is not named", "/proj/tests/test_mover.py", "speed = 5\n")
+harv_case("trace", "#117: a non-tuning name is not named", "/proj/game/mover.py", "index = 5\n")
+harv_case("remind+trace", "#117: only the first 3 hits are named", "/proj/game/mover.py",
+          "speed = 1\ndelay = 2\ntimeout = 3\ncooldown = 4\n", expect_in=["and 1 more"])
+
+# --- #301: a turn that wrote in two repos gets one line ---------------------------------------
+_mr_a = _commit_repo("AjsAgent/mr", committed=("a.txt",))
+_mr_b = _commit_repo("AjsAgent/mr", committed=("b.txt",))
+_mr_scratch = tempfile.mkdtemp(prefix="house-rules-scratch-", dir=_FIXTURE_ROOT)
+_, _, _mr_two = _stop_notes(_wrote_transcript("mr-two", [os.path.join(_mr_a, "a.txt"), os.path.join(_mr_b, "b.txt")]),
+                            "Done.")
+_, _, _mr_one = _stop_notes(_wrote_transcript("mr-one", [os.path.join(_mr_a, "a.txt")]), "Done.")
+_, _, _mr_scr = _stop_notes(_wrote_transcript("mr-scr", [os.path.join(_mr_a, "a.txt"),
+                                                         os.path.join(_mr_scratch, "x.txt"),
+                                                         os.path.join(_mr_b, ".claude", "n.md")]), "Done.")
+# #517: git prints C:/... on Windows; compare by folder name so the test holds on every platform.
+report("PASS" if ("one task per session" in _mr_two and os.path.basename(_mr_a) in _mr_two
+                  and os.path.basename(_mr_b) in _mr_two) else "FAIL",
+       "#301: a turn that wrote files in two repos gets the one-line report naming both")
+import ntpath as _nt  # noqa: E402
+from house_rules import writing as _wr_mod  # noqa: E402
+_k1 = _wr_mod._repo_key("C:/Users/aj/claude-qa/AjsClaudeCodeTools", _nt)
+_k2 = _wr_mod._repo_key("C:\\Users\\aj\\claude-qa\\AjsClaudeCodeTools", _nt)
+report("PASS" if (_k1[0] == _k2[0] and _k1[1] == "C:\\Users\\aj\\claude-qa\\AjsClaudeCodeTools") else "FAIL",
+       "#517: a Windows repo path from git (C:/...) and the same path written C:\\... count as one repo, shown in Windows form")
+report("PASS" if "one task per session" not in _mr_one else "FAIL", "#301: a turn in one repo gets no report")
+report("PASS" if "one task per session" not in _mr_scr else "FAIL",
+       "#301: .claude/ paths and files outside any repo are ignored")
+
+# --- #228: every rule section maps to a check -------------------------------------------------
+import json as _cj
+
+
+def _checks_problems(rules_text, checks, hooks_text, check_sources):
+    """Problems ([] when fine) between the ## sections, rules/checks.json and the real handlers."""
+    handlers = set(re.findall(r'run\.sh\\?"? (\w+)', hooks_text))
+    secs = re.findall(r"^## (.+?)\s*$", rules_text, re.M)
+    mapped = checks.get("sections", {})
+    unenforced = checks.get("unenforced", {})
+    bad = []
+    for sec in secs:
+        if sec not in mapped:
+            bad.append("section has no key in checks.json: %s" % sec)
+            continue
+        if not mapped[sec] and not unenforced.get(sec):
+            bad.append("section maps to [] and is not in unenforced with a reason: %s" % sec)
+        for name in mapped[sec]:
+            if name not in handlers and name not in check_sources:
+                bad.append("%s names %r, which is neither a hooks.json handler nor a verify case title" % (sec, name))
+    return bad
+
+
+_cj_root = os.path.join(HERE, "..")
+_cj_rules = read(RULES_FILE)
+_cj_checks = _cj.loads(read(os.path.join(_cj_root, "rules", "checks.json")))
+_cj_hooks = read(os.path.join(_cj_root, "hooks", "hooks.json"))
+_cj_src = "".join(read(os.path.join(HERE, "checks", n)) for n in os.listdir(os.path.join(HERE, "checks"))
+                  if n.endswith(".py"))
+_cj_real = _checks_problems(_cj_rules, _cj_checks, _cj_hooks, _cj_src)
+report("PASS" if not _cj_real else "FAIL", "#228: every house-rules.md section has a check in rules/checks.json")
+print("          " + ("; ".join(_cj_real) if _cj_real else "%d sections, %d named unenforced" % (
+    len(_cj_checks["sections"]), len(_cj_checks["unenforced"]))))
+_cj_new = _checks_problems(_cj_rules + "\n## A brand new rule\n\nText.\n", _cj_checks, _cj_hooks, _cj_src)
+report("PASS" if any("brand new rule" in b for b in _cj_new) else "FAIL",
+       "#228: a stand-in rules file with a new section missing from checks.json fails")
+_cj_ghost = "no" + "such" + "handler"
+_cj_bad = dict(_cj_checks, sections=dict(_cj_checks["sections"], **{"Nothing fails silently": [_cj_ghost],
+                                                                      "Evidence before claims": []}))
+_cj_bad_p = _checks_problems(_cj_rules, _cj_bad, _cj_hooks, _cj_src)
+report("PASS" if (any(_cj_ghost in b for b in _cj_bad_p)
+                  and any("Evidence before claims" in b for b in _cj_bad_p)) else "FAIL",
+       "#228: an unknown handler, and a [] section outside the unenforced list, both fail")
+
 
 
 finish()
