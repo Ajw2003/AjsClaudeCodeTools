@@ -440,7 +440,9 @@ for _n, _cmd in (
     elif _n == "9" and not (_d == "deny" and ("run it as plain `git ...` from %s, with no cd, -C or variables, "
                                               "and it will be checked normally" % _fr_top) in _r):
         _fr_fail.append("9: %s %r" % (_d, _r[-160:]))
-    elif _n != "9" and _d == "deny":  # #292: 7b (a wait piped through tail) now runs too
+    elif _n == "7b" and not (_d == "deny" and "run_in_background" in _r):  # 2.80.0: a foreground wait loop is refused
+        _fr_fail.append("7b: %s %r" % (_d, _r[-160:]))
+    elif _n not in ("9", "7b") and _d == "deny":
         _fr_fail.append("%s: refused %r" % (_n, _r[-160:]))
 for _cmd in ("rm -rf /home/user/x", "git push origin main", "rm -rf %s/sub/../x" % _ua_dir, "rm -rf /tmp/claude-0/*"):
     _d, _r = _fr(_cmd)
