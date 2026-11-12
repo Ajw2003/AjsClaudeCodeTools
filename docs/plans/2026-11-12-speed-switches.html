@@ -380,6 +380,13 @@ const PAGE = {
       "The count is keyed on the command plus a hash of the working tree. Any file change resets it; a third identical run on identical files is refused."
     ],
     [
+      "cross",
+      "Friction 8: your approval is refused when the bookkeeping is incomplete",
+      "In the merge roadmap session, \"Build plan approved: merge roadmap 1A 2A\" moved nothing. _loop_apply_one in design_loop.py (line 954) needs two labelled issues recorded since the design was approved. #841 was opened before that, so it was not recorded, and the GitHub lookup that should have found it timed out after 5 seconds (LOOP_GH_SECONDS, line 618). You were then asked to send two more messages. The same function also refuses for the wrong stage, a different feature name, wrong labels and a missing decisions-log entry: six ways for your own word to be thrown away.",
+      "list",
+      "Fix: your approval always moves the stage. Anything missing (issues, labels, the log entry, a name that differs slightly) becomes a to-do note for the agent to fix in the same turn, never a refusal sent back to you. Issues count however they were made: through gh, the GitHub tool, the web, before or after the design, or named in your message. A GitHub lookup that fails or times out adds a note and does not block."
+    ],
+    [
       "new",
       "One fix carried in from #515",
       "Phase 1 step 8 (#515) found that with the loop off, the close guard still demands QA evidence only the loop can record. The switch design here covers it: every guard fed by a switched-off part is off with it.",
@@ -494,15 +501,34 @@ const PAGE = {
         ]
       ],
       "A prevents the wait instead of reporting it."
+    ],
+    [
+      "q6",
+      "What happens when you approve and something the loop expects is missing?",
+      [
+        [
+          "A",
+          "Your approval always moves the stage; whatever is missing becomes a note the agent must fix in that turn",
+          1,
+          "Your word is never thrown away and you never have to resend it. The checks still run, but they put the work on the agent instead of you."
+        ],
+        [
+          "B",
+          "Keep refusing, but fix the causes: count issues made any way, wait longer for GitHub, match names loosely",
+          0,
+          "Closes the failures known today, but the next unforeseen gap refuses you again."
+        ]
+      ],
+      "A ends this whole class of failure instead of patching each cause."
     ]
   ],
   "wrapup": {
-    "summary": "An audit of the house-rules design loop found seven points of friction. This design adds two typed switches (design loop and builders) that remove both the hooks and the rule text, a guard against foreground waits, and a rerun check that counts changes instead of commits.",
+    "summary": "An audit of the house-rules design loop found eight points of friction. This design adds two typed switches (design loop and builders) that remove both the hooks and the rule text, a guard against foreground waits, and a rerun check that counts changes instead of commits.",
     "changing": "Nothing yet. After approval: scripts/house_rules/core.py, design_loop.py, delegation.py, safe_git.py, verify.py cases, and the docs tier for the design loop.",
-    "blocking": "Your pick in choices 1 to 5, or what you want changed.",
+    "blocking": "Your pick in choices 1 to 6, or what you want changed.",
     "next": "A short build plan, then the build. If you would rather skip the build plan page, say \"skip design\" with your picks.",
     "todo": [
-      "Pick one option in each of choices 1 to 5.",
+      "Pick one option in each of choices 1 to 6.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: Speed switches\", or say what to change."
     ]
   }
