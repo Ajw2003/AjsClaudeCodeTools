@@ -4,6 +4,20 @@ What was looked into, what was found, and where it came from. Newest first. A fi
 wrong gets a dated note under it, never a silent edit. Decisions that rest on these entries are in
 [Decisions.md](Decisions.md).
 
+## 2026-11-12 - Can a cloud session push the handoff's save refs?
+
+**Why it mattered.** The session handoff (#406) saves work to `refs/house-rules/autosave/<branch>` on GitHub, and phase 3
+depends on picking that save up from any account.
+
+**Found.** No. From this cloud session, `git push origin <ref>:refs/house-rules/autosave/AjsAgent/handoff-qa-2` fails
+every time with "send-pack: unexpected disconnect" and "the remote end hung up" (4 tries with backoff; the network
+proxy listed no failure of its own), while pushing a branch from the same clone works. Every save ref already on
+GitHub was made in aj's PC's time zone (-0700): 2026-11-08, 2026-11-09 and 2026-11-11. So the save works from a
+session on aj's PC and not from a cloud session.
+
+**Source.** The pushes and `git ls-remote`, run 2026-11-12 in this repo's cloud session
+(`docs/plans/2026-11-12-handoff-retest/live_handoff-result.txt`).
+
 ## 2026-11-11 - Does context from a PreToolUse hook reach Claude without a permission decision?
 
 **Why it mattered.** The pull request changelog reminder (#509) first went out with an "allow" decision, because a

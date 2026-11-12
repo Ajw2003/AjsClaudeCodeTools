@@ -1,0 +1,22 @@
+PASS  test branch pushed
+PASS  session A left Today.md edited and uncommitted
+FAIL  the snapshot ref is on GitHub
+   
+FAIL  session B opened with the pickup
+   {"type": "system", "subtype": "hook_response", "hook_id": "76d53b4e-657e-4275-a471-7875efd5a43a", "hook_name": "SessionStart:startup", "hook_event": "SessionStart", "output": "/watch: needs ffmpeg + yt-dlp. Run `python3 $CLAUDE_PLUGIN_ROOT/skills/watch/scripts/setup.py` once to install and scaffold config.\n", "stdout": "/watch: needs ffmpeg + yt-dlp. Run `python3 $CLAUDE_PLUGIN_ROOT/skills/watch/
+FAIL  the pickup's restore command leaves out the stage file
+   
+FAIL  session B ran the restore and Today.md now has session A's line
+   tools: {"command": "git rev-parse --show-toplevel && git branch --show-current && ls docs/5-today/ 2>/dev/null; grep -rl \"Restore command\" . --include=*.md 2>/dev/null | head; grep -rl \"Restore command\" docs 2>/dev/null | head", "description": "Locate handoff files and search for restore command"} || RESULT /tmp/claude-0/-home-user-AjsClaudeCodeTools/92135c9a-a481-510b-9a2c-54e60ac2beb0/scratchpad/handoff2/B
+AjsAgent/handoff-qa-2
+Today.md
+handoff-AjsAgent-session-handoff.md || {"command": "grep -rin \"restore\" docs/5-today/ 2>/dev/null | head -20; echo \"--- autosave refs ---\"; git for-e
+FAIL  no guard refused the restore
+   ["RESULT docs/5-today/handoff-AjsAgent-session-handoff.md:23:fresh clone's pickup listed it, and its restore command brought back an identical file.\ndocs/5-today/handoff-AjsAgent-session-handoff.md:25:## Desktop app QA, 2026-11-09 (failed on the restore)\ndocs/5-today/handoff-AjsAgent-session-handoff.md:30:matched A's file apart from Windows line endings. The restore command the pickup prints is refused\ndoc"]
+FAIL  B's restored Today.md is identical to A's
+   lengths 16352 vs 16379
+Traceback (most recent call last):
+  File "/home/user/AjsClaudeCodeTools/docs/plans/2026-11-12-handoff-retest/live_handoff.py", line 108, in <module>
+    print("LIVE HANDOFF RESULT: %d of %d passed" % (sum(results), len(results)))
+                                                    ~~~^^^^^^^^^
+TypeError: unsupported operand type(s) for +: 'int' and 'str'
