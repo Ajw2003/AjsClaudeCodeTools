@@ -3320,7 +3320,7 @@ _pf14.append(("proof (#514) #463: 'I went with option B' is sent back as decided
 for _t, _ok in _pf14:
     report("PASS" if _ok else "FAIL", _t)
 
-# --- speed switches (#525): typed switches, the Fable default, approvals that always count -----------
+# --- speed switches (#525): typed switches only, approvals that always count -----------
 _ss_dir = tempfile.mkdtemp(prefix="house-rules-speed-", dir=_FIXTURE_ROOT)
 subprocess.run(["git", "init", "-q", _ss_dir], check=True)
 _ss_env = dict(_loop_env)
@@ -3341,23 +3341,28 @@ def _ss_hook(event, model="", **fields):
 
 _ss_mode = os.path.join(_ss_dir, ".claude", "house-rules-mode.json")
 _ss_fable = _ss_hook("scope", "claude-fable-5-2", prompt="hi")
-_ss_opus = _ss_hook("scope", "claude-opus-5-5", prompt="hi")
 _ss_rule_fable = _ss_hook("showrule", "claude-fable-5-2")
-_ss_rule_opus = _ss_hook("showrule", "claude-opus-5-5")
-_ss_inject_fable = _ss_hook("inject", "claude-fable-5-2")
-report("PASS" if "Design loop OFF" in _ss_fable and "Builders OFF" in _ss_fable and "OFF" not in _ss_opus
-       and "Show, don't tell" not in _ss_rule_fable and "Show, don't tell" in _ss_rule_opus
-       and "delegate the execution\n" not in _ss_inject_fable and len(_ss_inject_fable) < 10000
-       else "FAIL", "speed switches: Fable starts light (rule text and delegation left out), Opus starts full")
-_ss_hook("scope", "claude-fable-5-2", prompt="design loop on")
-_ss_after = _ss_hook("scope", "claude-fable-5-2", prompt="hi")
+report("PASS" if "OFF" not in _ss_fable and "Show, don't tell" in _ss_rule_fable and not os.path.isfile(_ss_mode)
+       else "FAIL", "speed switches: no model default, so a Fable session with nothing typed runs full")
+_ss_hook("scope", prompt="Line 1: quote the sentence that starts with Design loop OFF, or write NONE")
+_ss_hook("scope", prompt="why did builders off not work last time?")
+report("PASS" if not os.path.isfile(_ss_mode) else "FAIL",
+       "speed switches: a switch quoted or mentioned inside a longer sentence does not flip it")
+_ss_hook("scope", prompt="design loop on")
 _ss_saved = json.load(open(_ss_mode, encoding="utf-8")) if os.path.isfile(_ss_mode) else {}
-report("PASS" if _ss_saved == {"design": "on"} and "Design loop OFF" not in _ss_after and "Builders OFF" in _ss_after
-       else "FAIL", "speed switches: \"design loop on\" is saved for the repo and beats the Fable default")
+report("PASS" if _ss_saved == {"design": "on"} else "FAIL", "speed switches: \"design loop on\" on its own is saved for the repo")
+_ss_hook("scope", prompt="/house-rules:mode builders off")
+_ss_saved = json.load(open(_ss_mode, encoding="utf-8")) if os.path.isfile(_ss_mode) else {}
+report("PASS" if _ss_saved == {"design": "on", "builders": "off"} else "FAIL",
+       "speed switches: /house-rules:mode builders off is saved")
 _ss_hook("scope", "claude-opus-5-5", prompt="builders off. design loop off")
 _ss_opus_off = _ss_hook("scope", "claude-opus-5-5", prompt="hi")
+_ss_rule_off = _ss_hook("showrule")
+_ss_inject_off = _ss_hook("inject")
 report("PASS" if "Design loop OFF (you typed" in _ss_opus_off and "Builders OFF (you typed" in _ss_opus_off
-       else "FAIL", "speed switches: typed switches turn both off for any model")
+       and "Show, don't tell" not in _ss_rule_off and "delegate the execution\n" not in _ss_inject_off
+       and len(_ss_inject_off) < 10000
+       else "FAIL", "speed switches: typed switches turn both off and leave their rule text out")
 _ss_relayed = _ss_hook("scope", prompt="<task-notification>design loop on</task-notification>")
 report("PASS" if json.load(open(_ss_mode, encoding="utf-8")).get("design") == "off" else "FAIL",
        "speed switches: a relayed message cannot flip a switch")

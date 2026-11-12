@@ -11,8 +11,7 @@ this the switch in `$ARGUMENTS` is already saved, and the hook's note above says
 Reply in two or three plain sentences:
 
 - What is on and what is off now, and why. Read `.claude/house-rules-mode.json` in the main checkout
-  for what aj typed. A switch with no entry there follows the default: light (both off) when this
-  session's model is Fable, full for every other model, and off when `HOUSE_RULES_LOOP` or
+  for what aj typed. A switch with no entry there is on, for every model, unless `HOUSE_RULES_LOOP` or
   `HOUSE_RULES_DELEGATION` is `off` in settings.json.
 - What that means for this session: with the design loop off there are no design or build plan
   pages, no wait for approvals and no issues before code, while the destructive and main-branch

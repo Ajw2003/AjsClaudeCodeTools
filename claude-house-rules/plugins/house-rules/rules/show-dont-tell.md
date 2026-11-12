@@ -27,6 +27,6 @@ reply of 160 words or more needs a page (see above).
 
 Ideas come before code. Every session starts locked: a hook refuses source edits until the user
 types "approved" naming what was approved ("Idea A approved", "approved 1A 2C"). A bare
-"approved" does not count. "skip design" lets one change through; "design loop off" or "builders off" switches the loop or the helpers off for the repo, and Fable starts with both off. Each issue's label says whose move it is (`in progress`
+"approved" does not count. "skip design" lets one change through; "design loop off" or "builders off" typed on its own line, switches the loop or the helpers off for the repo. Each issue's label says whose move it is (`in progress`
 mine, `needs review` the user's) and every step checks it. A build is handed over for QA with a QA page built by the page builder (`make_page.py` QA mode); QA starts when a pull request opens or every issue says `needs review`. Docs and `.md` files stay
 editable. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/show-dont-tell.md`.

@@ -2615,8 +2615,10 @@ def _issues_enabled():
 # "design" covers the design loop and the issue gate; "builders" covers delegation and the agent cap.
 MODE_FILE = "house-rules-mode.json"  # .claude/ of the main checkout, beside the design loop's stage file
 MODE_SWITCHES = ("design", "builders")
-LIGHT_MODEL_RE = re.compile(r"fable", re.IGNORECASE)  # models that start light (aj's answer to choice 2)
 _MODE_SWITCH_RE = re.compile(r"\b(design\s+loop|builders)\s+(on|off)\b", re.IGNORECASE)
+# A switch counts only when its sentence or line holds nothing else, so a quoted mention does not flip it.
+_MODE_LINE_RE = re.compile(r"\s*(?:/house-rules:mode\s+)?(?:(?:design\s+loop|builders)\s+(?:on|off)[\s,]*(?:and\s+)?)+",
+                           re.IGNORECASE)
 _MODE_CACHE = {}
 
 
@@ -2640,47 +2642,19 @@ def _mode_typed(cwd):
         return {}
 
 
-def _session_model(data):
-    """The session's model id: the payload's own field, else the last one in the transcript's tail."""
-    model = data.get("model")
-    if isinstance(model, dict):
-        model = model.get("id") or model.get("display_name")
-    if isinstance(model, str) and model:
-        return model
-    path = data.get("transcript_path")
-    if not isinstance(path, str) or not os.path.isfile(path):
-        return ""
-    try:
-        with open(path, "rb") as f:
-            f.seek(max(0, os.path.getsize(path) - 65536))
-            tail = f.read().decode("utf-8", "replace")
-    except OSError as exc:
-        sys.stderr.write("house-rules: could not read the transcript for the model name (%s), so full mode applies.\n" % exc)
-        return ""
-    found = re.findall(r'"model"\s*:\s*"([^"]+)"', tail)
-    return found[-1] if found else ""
-
-
 def _mode_state(payload=None):
-    """{switch: (off?, why)} for this hook call. Order: aj's typed switch for the repo, then the
-    settings.json variable, then the model default (light only for Fable). Cached per process."""
+    """{switch: (off?, why)} for this hook call: aj's typed switch for the repo, else on. There is no model
+    default: hooks are not told the model at session start (probed 2026-11-12), so aj chose typed switches only.
+    Cached per process."""
     raw = payload if payload is not None else _PAYLOAD_CACHE
     if raw in _MODE_CACHE:
         return _MODE_CACHE[raw]
-    try:
-        data = json.loads(raw) if raw else {}
-        data = data if isinstance(data, dict) else {}
-    except ValueError:
-        data = {}
     typed = _mode_typed(_payload_cwd(raw)) if raw else {}
-    model = _session_model(data) if raw else ""
     state = {}
     for name in MODE_SWITCHES:
         if name in typed:
             state[name] = (typed[name] == "off", "you typed \"%s %s\"" % (
                 "design loop" if name == "design" else name, typed[name]))
-        elif model and LIGHT_MODEL_RE.search(model):
-            state[name] = (True, "the session's model is %s, which starts light" % model)
         else:
             state[name] = (False, "")
     _MODE_CACHE[raw] = state
@@ -2688,8 +2662,7 @@ def _mode_state(payload=None):
 
 
 def _switch_off(name, env_var):
-    """True when `name` is off. A typed switch wins; then env_var=off; then the model default. An env value
-    of "on" is the plain default, so it does not hold a Fable session in full mode."""
+    """True when `name` is off. A typed switch wins; otherwise env_var=off in settings.json turns it off."""
     off, why = _mode_state().get(name, (False, ""))
     if why.startswith("you typed"):
         return off
@@ -2702,7 +2675,8 @@ def _builders_enabled():
 
 def _mode_apply(text, payload):
     """aj's own message "design loop off" / "builders on" saves the switch. Returns a note, or ""."""
-    found = _MODE_SWITCH_RE.findall(text or "")
+    found = [m for part in re.split(r"[.\n;!?]", text or "") if _MODE_LINE_RE.fullmatch(part)
+             for m in _MODE_SWITCH_RE.findall(part)]
     if not found:
         return ""
     path = _mode_file(_payload_cwd(payload))
