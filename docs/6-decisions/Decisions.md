@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-12 - Phase 2 QA failed: Windows paths and drift-check history
+
+**Context.** Using the drift check on this repo's own docs fixed 21 stale citations; the 6 left are history (dated log
+entries, a deleted file named on purpose) and one shell variable, which the checker should not count. The first
+Windows run (aj's PC, 2026-11-12) failed one new check: #301's two-repo report, whose paths come from git as `C:/...`.
+
+**Decision.** aj wrote "QA failed: Phase 2 fix the two-repo check's Windows paths, and make the drift check skip dated
+log lines, deleted-file mentions and shell variables".
+
+**Status.** Back in Design (the installed 2.76.0 in this cloud session sends QA failed to Design; the branch's own
+one-message return to Build is not what runs here). The issues are back to `in progress`.
+
+---
+
 ## 2026-11-11 - Phase 2: docs and files you can trust (design)
 
 **Context.** Phase 2 of the roadmap (#494) carries 17 old issues. Checked against the code on 2026-11-11: #199, #399,
