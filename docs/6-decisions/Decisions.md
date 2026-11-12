@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-12 - Cloud saves for the session handoff move to phase 3
+
+**Context.** The handoff re-test found that a cloud session's push to `refs/house-rules/autosave/<branch>` is refused,
+while branch pushes work; every save on GitHub came from aj's PC (Research.md, 2026-11-12).
+
+**Decision.** aj chose to fold this into phase 3 (#495, pick up on any of aj's four accounts): its design covers a
+save that reaches GitHub from cloud sessions too (for example an `AjsAgent/` branch when the hidden ref is refused),
+re-tested from both a cloud session and the PC. Rejected for now: re-testing from the PC alone, and opening the pull
+request with PC-only saves.
+
+**Status.** Phase 3 is next.
+
+---
+
 ## 2026-11-12 - Phase 2 passed QA
 
 aj wrote "QA passed: Phase 2 Windows and drift fixes" after the Windows rerun on aj's PC: `verify.py` failed only the
