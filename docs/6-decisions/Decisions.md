@@ -7,6 +7,13 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-12 - Phase 2 fixes approved to build
+
+aj wrote "Issues for Phase 2 Windows and drift fixes: #516 #517 #518. Build plan approved: Phase 2 Windows and drift
+fixes". The plan is `docs/4-systems/docs-and-files.md`, "Fixes after QA". **Status.** Build.
+
+---
+
 ## 2026-11-12 - Phase 2 QA failed: Windows paths and drift-check history
 
 **Context.** Using the drift check on this repo's own docs fixed 21 stale citations; the 6 left are history (dated log
