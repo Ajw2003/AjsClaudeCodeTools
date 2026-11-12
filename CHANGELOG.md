@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+- Fixed after phase 2 QA: the two-repo note works with Windows paths, and the drift check no longer counts history (dated log lines, deleted files) or shell variables (#517, #518). This repo's docs now have 0 out-of-date citations.
+
 Plugin 2.79.0 (roadmap phase 2, #494) and 2.78.0 (phase 1, #493), on the branch `AjsAgent/session-handoff`.
 
 - Two optional docs sit beside the decisions log: `Research.md` (what was researched, found, and cited) and `Vocabulary.md` (the project's terms); session start never asks for them (#513).
