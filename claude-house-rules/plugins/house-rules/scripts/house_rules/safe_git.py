@@ -1129,7 +1129,7 @@ def _delete_refusal(subject, where):
                 folder = os.path.dirname(os.path.abspath(path))
                 tracked, _o, _e = _ag(folder, ["ls-files", "--error-unmatch", "--", path], check=False)
                 changed, _o, _e = _ag(folder, ["diff", "--quiet", "HEAD", "--", path], check=False)
-            except RuntimeError:
+            except (RuntimeError, OSError):  # OSError: the target's folder does not exist, so git can't start there
                 return "recursive" if recursive else "unsaved"  # git couldn't answer, so the target is not proved safe
             if tracked != 0 or changed != 0:
                 return refusal
