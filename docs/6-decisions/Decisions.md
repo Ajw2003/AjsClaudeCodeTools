@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-12 - Phase 2 passed QA
+
+aj wrote "QA passed: Phase 2 Windows and drift fixes" after the Windows rerun on aj's PC: `verify.py` failed only the
+7 older tests `main` also fails there, `tools/verify_tools.py` only A16, and the drift check listed 0. **Status.** Done;
+issues #508 to #514 and #516 to #518 keep `needs review` until aj closes them after a merge. Next: the session
+handoff re-test aj asked for, then one pull request to `main`.
+
+---
+
 ## 2026-11-12 - Phase 2 fixes approved to build
 
 aj wrote "Issues for Phase 2 Windows and drift fixes: #516 #517 #518. Build plan approved: Phase 2 Windows and drift
