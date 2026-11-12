@@ -3369,3 +3369,28 @@ sub-plugin later. Design: `docs/4-systems/guards.md`, "Credit on GitHub".
 keep it off; reporting it honestly is the part the agent controls.
 
 **Status.** Standing.
+
+## 2026-11-12 — Speed switches: a lighter design loop for Fable, typed switches, approvals that always count
+
+**Context.** A Fable 5.2 session spent half of aj's usage on design steps before any code was
+written. A merge-roadmap build plan approval in another session moved nothing because a GitHub read
+timed out, and aj had to send two more messages. The audit is
+`docs/plans/2026-11-12-speed-switches.html`; it found eight points of friction.
+
+**Decision.** aj approved "Design approved: Speed switches 1A 2* 3A 4* 5A 6A":
+1A, two switches typed in chat ("design loop off/on", "builders off/on"), saved per repo, and a
+`/house-rules:mode` command that does the same and shows the state. 2, aj's own answer: light by
+default only for Fable; every other model is full unless switched. 3A, light mode drops the design
+and build plan pages, the approval lock, issues-before-code, the editor pass, the 160-word page rule
+and the handoff, plain summary and QA page checks, and keeps the destructive and main-branch guards
+and the evidence and commit checks. 4, aj's own answer: the rerun count resets only when the code
+the test touches changes; a third identical run is refused and a fix is required first. 5A, a
+foreground wait loop is refused with its run_in_background form. 6A, aj's approval always moves the
+stage; anything missing becomes a note the agent must fix in that turn. Design:
+`docs/4-systems/speed-switches.md`.
+
+**Why.** A switch that turns off the hooks but leaves the rule text in place saves nothing, because
+the model follows the text. And a refused approval puts the loop's bookkeeping on aj.
+
+**Status.** Standing. Supersedes the "refuse until issues exist" behaviour of "Build plan approved"
+(`docs/4-systems/design-loop.md`) once built.
