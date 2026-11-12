@@ -2520,13 +2520,10 @@ CHECKPOINT_RULES = {
 
 def _missed_checkpoints(ctx):
     """[(rule name, fix)] for every blocking checkpoint at 'reply ends' that the reply misses."""
-    keep = None if _loop_enabled() else LIGHT_CHECKPOINTS  # speed switches 3A: light mode keeps only these
+    if not _loop_enabled():  # light mode: evidence and commit still arrive, as the stop hook's reminders
+        return []
     return [(name, fix) for moment, name, fn, mode in CHECKPOINTS
-            if moment == "reply ends" and mode == "block" and (keep is None or name in keep)
-            for fix in [fn(ctx)] if fix]
-
-
-LIGHT_CHECKPOINTS = ("evidence", "commit")
+            if moment == "reply ends" and mode == "block" for fix in [fn(ctx)] if fix]
 
 
 def _checkpoint_reason(missed):

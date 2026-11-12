@@ -14,6 +14,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *  # noqa: F401,F403 - common.py sets __all__ to everything it defines
 
+# common.py turns the design loop off for the fixtures' code edits. Since the speed switches (#525) an off
+# loop also leaves the show-don't-tell rule and its note out, and this module checks that text, so it runs on.
+os.environ["HOUSE_RULES_LOOP"] = "on"
+_LOOP_OFF = dict(os.environ, HOUSE_RULES_LOOP="off")
+
 print()
 print("house-rules hooks - verification (Python) - part: core")
 print("=" * 43)
@@ -950,7 +955,7 @@ for ev, needle in (
 
 # --- the command-handover check at Stop --------------------------------------------------------
 def hand_case(expect, title, payload, mode=""):
-    env = dict(os.environ)
+    env = dict(os.environ, HOUSE_RULES_LOOP="off")  # these cases check the stop hook's own reminders
     if mode == "toggle":
         env["HOUSE_RULES_HANDOVER"] = "off"
     elif mode == "nopath":
@@ -1156,7 +1161,7 @@ hand_case(
         last_assistant_message='Adding checks for "can\'t be done" claims and for a bare "untested".',
     ),
 )
-_, _out92, _ = run_hook("handover", stop_payload(
+_, _out92, _ = run_hook("handover", env=_LOOP_OFF, payload=stop_payload(
     transcript_path=_HAND_NO_TOOL,
     last_assistant_message="That setting doesn't exist.",
 ))
@@ -1183,8 +1188,7 @@ hand_case(
 # A shell fence always satisfies the evidence check's own "quotes evidence" exemption, so the
 # two checks can never both fire live on one reply - see doc-ref 6534 docs/6-decisions/Decisions.md.
 code, out, err = run_hook(
-    "handover",
-    stop_payload(
+    "handover", env=_LOOP_OFF, payload=stop_payload(
         transcript_path=_HAND_NO_TOOL,
         last_assistant_message="Fixed the bug, it works now:\n\n```bash\ndeploy.sh\n```\n",
     ),

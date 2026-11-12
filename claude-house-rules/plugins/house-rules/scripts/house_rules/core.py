@@ -25,11 +25,17 @@ import urllib.parse
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-_PAYLOAD_CACHE = None  # stdin can be read once; the speed switches read it too (see _mode_state)
+# stdin can be read once, and the speed switches need it too (see _mode_state). hook.py's main() reads it
+# first and keeps it here for the call; tests that call handlers in-process never set it.
+_PAYLOAD_CACHE = None
+
+
+def keep_payload():
+    global _PAYLOAD_CACHE
+    _PAYLOAD_CACHE = read_payload()
 
 
 def read_payload():
-    global _PAYLOAD_CACHE
     if _PAYLOAD_CACHE is not None:
         return _PAYLOAD_CACHE
     try:
@@ -38,9 +44,8 @@ def read_payload():
         # Loud, not silent: an unreadable stdin and an empty stdin both return "" to the
         # caller, so without this line the two are indistinguishable downstream.
         sys.stderr.write("house-rules: could not read the hook payload from stdin: %s\n" % exc)
-        raw = ""
-    _PAYLOAD_CACHE = raw.strip()
-    return _PAYLOAD_CACHE
+        return ""
+    return raw.strip()
 
 
 def emit(obj):
@@ -2649,7 +2654,8 @@ def _session_model(data):
         with open(path, "rb") as f:
             f.seek(max(0, os.path.getsize(path) - 65536))
             tail = f.read().decode("utf-8", "replace")
-    except OSError:
+    except OSError as exc:
+        sys.stderr.write("house-rules: could not read the transcript for the model name (%s), so full mode applies.\n" % exc)
         return ""
     found = re.findall(r'"model"\s*:\s*"([^"]+)"', tail)
     return found[-1] if found else ""

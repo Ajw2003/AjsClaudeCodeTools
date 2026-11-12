@@ -336,7 +336,7 @@ commit_case(
 )
 
 # -- #109: gh issue close ---------------------------------------------------------------------------
-_occ = _iss_guard("gh issue close 5")
+_occ = _iss_guard("gh issue close 5", HOUSE_RULES_LOOP="on")  # #525: the close guard needs the loop on
 _issues_outputs.append(("issue close", _occ))
 commit_case(
     "close: `gh issue close` with nothing recorded is refused (#363), naming what is missing",
@@ -346,7 +346,7 @@ commit_case(
 _bad = []
 for _c in ("gh issue close 5 --comment done", "gh issue edit 5 --state closed", "cd x && gh issue close 5",
            "gh api -X PATCH repos/o/r/issues/5 -f state=closed", "gh api repos/o/r/issues/5 --method PATCH -f state=closed"):
-    if _iss_decision(_iss_guard(_c)) != "deny":
+    if _iss_decision(_iss_guard(_c, HOUSE_RULES_LOOP="on")) != "deny":
         _bad.append(_c)
 commit_case("close: edit --state closed, a chained close and gh api PATCH to closed are also refused (#363)", not _bad, "not refused: %r" % _bad)
 _bad = []
@@ -467,10 +467,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.79.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.80.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.79.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.80.0",
     "rules section + detail file + version",
 )
 
@@ -634,12 +634,24 @@ _loop_cases.append(("D4/H5: pages, .claude/ state, a worktree's .md and plain da
 _n = _loop_say("looks good, approved")
 _loop_cases.append(('a bare "approved" moves nothing and asks which', "names no stage and feature" in _n
                     and _loop_stage() == "design (no file)"))
+_loop_sf = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
+
+
+def _loop_set_stage(stage):
+    """#525 (6A): an approval now always moves the stage, so a case that checks its to-do puts the stage back."""
+    sd = _loop_state()
+    sd["stage"] = stage
+    with open(_loop_sf, "w", encoding="utf-8") as f:
+        json.dump(sd, f)
+
+
 _n = _loop_say("Build plan approved: blockers")
-_loop_cases.append(("a build-plan approval before its design moves nothing", "nothing moved" in _n
-                    and _loop_stage() == "design (no file)"))
+_loop_cases.append(("6A: a build-plan approval before its design moves to Build, owing the design's log entry",
+                    "no design was approved first" in _n and _loop_stage() == "build"))
+os.remove(_loop_sf)
 _n = _loop_say("Design approved: blockers")
-_loop_cases.append(("an approval in a project with no decisions log moves nothing",
-                    "no decisions log" in _n and _loop_stage() == "design (no file)"))
+_loop_cases.append(("6A: an approval in a project with no decisions log moves the stage, owing the log",
+                    "create the decisions log" in _n and _loop_stage() == "plan"))
 _loop_log("design decisions for blockers")
 _n = _loop_say("Design approved: blockers")
 _loop_cases.append(('"Design approved: <feature>" moves to Plan, code still closed',
@@ -648,24 +660,26 @@ _loop_cases.append(('"Design approved: <feature>" moves to Plan, code still clos
 _loop_cases.append(("an approval note tells the model to commit and push the stage file",
                     "git add .claude/house-rules-loop.json" in _n and "git push" in _n))
 _n = _loop_say("Build plan approved: blockers")
-_loop_cases.append(("a build-plan approval with no feature issues moves nothing",
-                    "labelled issue(s)" in _n and _loop_stage() == "plan"))
+_loop_cases.append(("6A: a build-plan approval with no feature issues moves to Build, owing the issues",
+                    "labelled issue(s)" in _n and "fix these in this turn" in _n and _loop_stage() == "build"))
+_loop_set_stage("plan")
 _loop_issue(101, labelled=False)
 _loop_issue(102)
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("an unlabelled issue does not count toward the feature's issues",
-                    "has 1 labelled issue(s)" in _n and _loop_stage() == "plan"))
+                    "has 1 labelled issue(s)" in _n))
+_loop_set_stage("plan")
 _loop_issue(103, via="bash")
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(("issues from the GitHub tool and from gh both count, so the next check is reached",
-                    "labelled issue(s)" not in _n and _loop_stage() == "plan"))
+                    "labelled issue(s)" not in _n))
+_loop_set_stage("plan")
 _loop_post("Bash", {"command": "gh issue create --title 'Fix AjsAgent created this' --body 'Part of #900'"},
            {"stdout": "https://github.com/o/r/issues/301\n"})
 _loop_cases.append(("D11: the label name in a title doesn't make an issue labelled",
                     any(i.get("number") == 301 and not i.get("labelled") for i in _loop_state().get("issues", []))))
 # Every recorded issue, labelled or not, must say `in progress` before the build opens, so the D11 issue is dropped
 # from the stage file here; it was only there to be read back (the plan's case leaves it, which failed 11 later cases).
-_loop_sf = os.path.join(_loop_dir, ".claude", "house-rules-loop.json")
 _loop_sd = _loop_state()
 _loop_sd["issues"] = [i for i in _loop_sd.get("issues", []) if i.get("number") != 301]
 with open(_loop_sf, "w", encoding="utf-8") as _f:
@@ -673,8 +687,9 @@ with open(_loop_sf, "w", encoding="utf-8") as _f:
 _loop_log("plan decisions for blockers")
 _loop_gh("in progress", 101, 102)
 _n = _loop_say("Build plan approved: blockers")
-_loop_cases.append(("label check: a build-plan approval is refused while an issue isn't in progress, naming it",
-                    "not labelled `in progress`: #103" in _n and _loop_stage() == "plan"))
+_loop_cases.append(("6A: label check: an issue not in progress is named as a to-do, and the build still opens",
+                    "label these `in progress`: #103" in _n and _loop_stage() == "build"))
+_loop_set_stage("plan")
 _loop_gh("in progress", 103)
 _n = _loop_say("Build plan approved: blockers")
 _loop_cases.append(('"Build plan approved: <feature>" opens code', _loop_stage() == "build"
@@ -704,9 +719,12 @@ _loop_cases.append(("label check: the end-of-reply check names the wrong label",
                     "should be labelled `in progress`" in _first_stop and "#102" in _first_stop))
 _loop_cases.append(("label check (#273): the same wrong labels are not said again on the next reply",
                     "design loop" not in _loop_stop() and _loop_edit("app.py") == "deny"))
+_loop_snap = _loop_state()
 _n = _loop_say("QA passed: blockers")
-_loop_cases.append(("label check: a QA answer before every issue says needs review moves nothing",
-                    "QA starts only once" in _n and "#101" in _n and _loop_stage() == "build"))
+_loop_cases.append(("6A: label check: a QA answer before every issue says needs review still counts, naming the issue",
+                    "should say `needs review`" in _n and "#101" in _n and _loop_stage() == "done"))
+with open(_loop_sf, "w", encoding="utf-8") as _f:  # back to Build, so the cases below run as before
+    json.dump(_loop_snap, _f)
 os.remove(_loop_labels_file)
 _o = _loop_post("mcp__github__issue_write", {"method": "update", "owner": "o", "repo": "r", "issue_number": 101,
                 "labels": ["Feature", "needs review"]}, {"url": "https://github.com/o/r/issues/101"})
@@ -760,9 +778,12 @@ _loop_cases.append(('#504: "QA failed" goes back to Build in one message, keeps 
 _loop_cases.append(('label check: after "QA failed", the end-of-reply check asks for in progress again',
                     "should be labelled `in progress`" in _loop_stop() and _loop_stage() == "build"))
 _loop_log("redo design for blockers")
+_loop_snap = _loop_state()
 _n = _loop_say("Design approved: blockers")
-_loop_cases.append(("label check: the redo's design approval is refused until the issues are back in progress",
-                    "not labelled `in progress`" in _n and _loop_stage() == "build"))
+_loop_cases.append(("6A: label check: the redo's design approval counts and names the issues not back in progress",
+                    "label these `in progress`" in _n and _loop_stage() == "plan"))
+with open(_loop_sf, "w", encoding="utf-8") as _f:
+    json.dump(_loop_snap, _f)
 _loop_gh("in progress", 101, 102, 103)
 _loop_cases.append(('#504: once the issues are back at in progress, code edits open with no other approval and '
                     "the stage does not bounce to QA", _loop_edit("app.py") == "allow" and _loop_stage() == "build"
@@ -1397,13 +1418,13 @@ for _t, _ok in _cu_cases:
 def _cg_gh(cmd, env=None):
     p = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "cg", "cwd": _cl_dir,
          "tool_input": {"command": cmd}}
-    return run_hook("guard", json.dumps(p), env=env or _iss_env())[1]
+    return run_hook("guard", json.dumps(p), env=env or _iss_env(HOUSE_RULES_LOOP="on"))[1]
 
 
 def _cg_mcp(ti, env=None):
     p = {"hook_event_name": "PreToolUse", "tool_name": "mcp__github__issue_write", "session_id": "cg",
          "cwd": _cl_dir, "tool_input": ti}
-    return run_hook("guardgithub", json.dumps(p), env=env or _iss_env())[1]
+    return run_hook("guardgithub", json.dumps(p), env=env or _iss_env(HOUSE_RULES_LOOP="on"))[1]
 
 
 def _cg_ctx(o):
@@ -1658,11 +1679,10 @@ report("PASS" if (_s["stage"] == "design" and not _s2.get("skip") and _s3["stage
        "design loop (D2): a question or a don't moves nothing; an approval after a sentence or a tag still counts")
 _ma_set({"feature": "Label setup", "stage": "design"})
 _n, _s = _ma_say("Design approved: importer.  Build plan approved: Importer")
-report("PASS" if (_s["stage"] == "plan" and _s.get("feature") == "importer"
-                  and 'Design approved: importer' in _n and "Build plan approved: Importer" in _n) else "FAIL",
-       "design loop (#307): a design and a build-plan approval in one message - the design moves the stage, "
-       "and the build plan gets its own refusal")
-if _s["stage"] != "plan":
+report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "importer"
+                  and 'Design approved: importer' in _n and "build plan approved: importer" in _n.lower()) else "FAIL",
+       "design loop (#307, 6A): a design and a build-plan approval in one message both count, in order")
+if _s["stage"] != "build":
     print("          stage %r, feature %r, note %r" % (_s["stage"], _s.get("feature"), _n[:300]))
 
 _ma_set({"feature": "Label setup", "stage": "design", "redo": True,
@@ -1691,9 +1711,13 @@ report("PASS" if (_s["stage"] == "plan" and len(_s.get("issues", [])) == 2) else
 _ma_set({"feature": "login", "stage": "plan", "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)]},
         {"o/r#%d" % n: ["Feature", "in progress"] for n in (1, 2)})
 _n, _s = _ma_say("Build plan approved: payments")
+_ma_set({"feature": "login", "stage": "plan", "issues": [{"repo": "o/r", "number": n, "labelled": True} for n in (1, 2)]},
+        {"o/r#%d" % n: ["Feature", "in progress"] for n in (1, 2)})
 _n2, _s2 = _ma_say("Build plan approved: login 1A except keep the old flag")
-report("PASS" if (_s["stage"] == "plan" and '"login"' in _n and _s2["stage"] == "build") else "FAIL",
-       "design loop (D6): a build plan approval naming another feature moves nothing; a longer form of the name counts")
+report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "login" and '"payments"' in _n and '"login"' in _n
+                  and _s2["stage"] == "build" and "fix these" not in _n2) else "FAIL",
+       "design loop (D6, 6A): a build plan approval naming another feature builds the one in Plan and says so; "
+       "a longer form of the name counts")
 _ma_set({"feature": "x", "stage": "build", "issues": [{"repo": "o/r", "number": 1, "labelled": True}]},
         {"o/r#1": ["in progress"]})
 _n, _s = _ma_say("skip design")
@@ -2526,9 +2550,9 @@ _pf_two_features()
 _loop_gh("in progress", 702)
 _n = _pf_note("QA passed: alpha")
 _st = _cl_state()
-_pf_cases.append(("QA passed for a stored feature with an issue still in progress is refused, naming it, and nothing moves",
-                  "#702" in _n and "Nothing moved" in _n and not _st.get("closable")
-                  and "alpha" in (_st.get("features") or {}) and _st.get("stage") == "build"))
+_pf_cases.append(("6A: QA passed for a stored feature with an issue still in progress counts, naming the issue",
+                  "#702" in _n and "fix these" in _n and len(_st.get("closable") or []) == 1
+                  and _st.get("stage") == "build"))
 _cl_set({"feature": "alpha", "stage": "qa", "issues": _cl_issues})
 _st = _cl_state(); _st.pop("features", None)
 with open(_cl_file, "w", encoding="utf-8") as f:
@@ -2800,7 +2824,7 @@ shutil.rmtree(_p5_root, True)
 # ---- #459, #460: a question to aj holds code edits; a design point is not decided for aj ----
 _hq_root = tempfile.mkdtemp(prefix="held-")
 _hq_cases = []
-_ex = [run_hook(_e, "", env=env_in(ROOT))[1] for _e in ("inject", "showrule")]
+_ex = [run_hook(_e, "", env=env_in(ROOT, HOUSE_RULES_LOOP="on"))[1] for _e in ("inject", "showrule")]  # #525: rule text needs the loop on
 _hq_text = " ".join(_ex) + read(os.path.join(DETAIL_DIR, "clear-writing.md"))
 _hq_cases.append(("#458: the injected rule text and its detail carry no 'unless they have said otherwise' exception",
                     "said otherwise" not in _hq_text and "said to make them myself" not in _hq_text
@@ -3295,6 +3319,70 @@ _pf14.append(("proof (#514) #463: 'I went with option B' is sent back as decided
 
 for _t, _ok in _pf14:
     report("PASS" if _ok else "FAIL", _t)
+
+# --- speed switches (#525): typed switches, the Fable default, approvals that always count -----------
+_ss_dir = tempfile.mkdtemp(prefix="house-rules-speed-", dir=_FIXTURE_ROOT)
+subprocess.run(["git", "init", "-q", _ss_dir], check=True)
+_ss_env = dict(_loop_env)
+_ss_env.pop("HOUSE_RULES_LOOP", None)
+_ss_env.pop("HOUSE_RULES_DELEGATION", None)
+
+
+def _ss_hook(event, model="", **fields):
+    p = dict({"session_id": "ss", "cwd": _ss_dir}, **fields)
+    if model:
+        p["model"] = model
+    out = run_hook(event, json.dumps(p), env=_ss_env)[1]
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return out
+
+
+_ss_mode = os.path.join(_ss_dir, ".claude", "house-rules-mode.json")
+_ss_fable = _ss_hook("scope", "claude-fable-5-2", prompt="hi")
+_ss_opus = _ss_hook("scope", "claude-opus-5-5", prompt="hi")
+_ss_rule_fable = _ss_hook("showrule", "claude-fable-5-2")
+_ss_rule_opus = _ss_hook("showrule", "claude-opus-5-5")
+_ss_inject_fable = _ss_hook("inject", "claude-fable-5-2")
+report("PASS" if "Design loop OFF" in _ss_fable and "Builders OFF" in _ss_fable and "OFF" not in _ss_opus
+       and "Show, don't tell" not in _ss_rule_fable and "Show, don't tell" in _ss_rule_opus
+       and "delegate the execution\n" not in _ss_inject_fable and len(_ss_inject_fable) < 10000
+       else "FAIL", "speed switches: Fable starts light (rule text and delegation left out), Opus starts full")
+_ss_hook("scope", "claude-fable-5-2", prompt="design loop on")
+_ss_after = _ss_hook("scope", "claude-fable-5-2", prompt="hi")
+_ss_saved = json.load(open(_ss_mode, encoding="utf-8")) if os.path.isfile(_ss_mode) else {}
+report("PASS" if _ss_saved == {"design": "on"} and "Design loop OFF" not in _ss_after and "Builders OFF" in _ss_after
+       else "FAIL", "speed switches: \"design loop on\" is saved for the repo and beats the Fable default")
+_ss_hook("scope", "claude-opus-5-5", prompt="builders off. design loop off")
+_ss_opus_off = _ss_hook("scope", "claude-opus-5-5", prompt="hi")
+report("PASS" if "Design loop OFF (you typed" in _ss_opus_off and "Builders OFF (you typed" in _ss_opus_off
+       else "FAIL", "speed switches: typed switches turn both off for any model")
+_ss_relayed = _ss_hook("scope", prompt="<task-notification>design loop on</task-notification>")
+report("PASS" if json.load(open(_ss_mode, encoding="utf-8")).get("design") == "off" else "FAIL",
+       "speed switches: a relayed message cannot flip a switch")
+os.remove(_ss_mode)
+
+# 6A: an approval with no issues, no labels and no decisions log still moves the stage, with a to-do note.
+os.makedirs(os.path.join(_ss_dir, ".claude"), exist_ok=True)
+with open(os.path.join(_ss_dir, ".claude", "house-rules-loop.json"), "w", encoding="utf-8") as _f:
+    json.dump({"feature": "Speed", "stage": "plan", "issues": [], "approvals": []}, _f)
+_ss_note = _ss_hook("scope", "claude-opus-5-5", prompt="Build plan approved: Speed")
+_ss_stage = json.load(open(os.path.join(_ss_dir, ".claude", "house-rules-loop.json"), encoding="utf-8"))["stage"]
+report("PASS" if _ss_stage == "build" and "fix these in this turn" in _ss_note and "decisions log" in _ss_note
+       else "FAIL", "speed switches 6A: a build plan approval short of issues and a log moves to Build with a to-do note")
+from house_rules import design_loop as _ss_dl  # noqa: E402
+_ss_env_was = os.environ.get("HOUSE_RULES_LOOP")
+os.environ["HOUSE_RULES_LOOP"] = "off"
+try:
+    _ss_close = _ss_dl._close_check("o/r", 5, "completed", {})
+finally:
+    if _ss_env_was is None:
+        os.environ.pop("HOUSE_RULES_LOOP", None)
+    else:
+        os.environ["HOUSE_RULES_LOOP"] = _ss_env_was
+report("PASS" if _ss_close[0] and "loop is off" in _ss_close[1] else "FAIL",
+       "speed switches (#515): with the design loop off, closing an issue needs no QA record")
 
 
 finish()

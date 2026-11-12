@@ -633,8 +633,9 @@ def _rerun_check(payload, subject):
         data = json.loads(payload)
         sid = str(data.get("session_id") or "")
         agent = str(data.get("agent_id") or "main")
-        code = hashlib.sha1((git(["ls-tree", "-r", "HEAD", "--"] + RERUN_CODE_SPECS) + "|"
-                             + git(["diff", "HEAD", "--"] + RERUN_CODE_SPECS)).encode("utf-8")).hexdigest()
+        specs = RERUN_CODE_SPECS + [":(exclude)" + script]  # editing the check itself is not a fix
+        code = hashlib.sha1((git(["ls-files", "-s", "--"] + specs) + "|"
+                             + git(["diff", "HEAD", "--"] + specs)).encode("utf-8")).hexdigest()
         override = os.environ.get("HOUSE_RULES_RERUNS_STATE", "").strip()
         if override:
             path = override
@@ -648,7 +649,9 @@ def _rerun_check(payload, subject):
             recs = json.loads(_read_text(path)).get("records")
             if not isinstance(recs, dict):
                 raise ValueError("state file %s is not the expected shape" % path)
-        key = "%s|%s|%s|%s" % (sid, agent, script, " ".join(cmd.split()))
+        base = os.path.basename(script)  # the arguments after the script name: `bash x.sh a` and `x.sh a` are one run
+        args = " ".join(cmd[cmd.rfind(base) + len(base):].split()) if base in cmd else " ".join(cmd.split())
+        key = "%s|%s|%s|%s" % (sid, agent, script, args)
         rec = recs.get(key)
         count = int(rec.get("count", 0)) if isinstance(rec, dict) and rec.get("code") == code else 0
         if count >= RERUN_LIMIT:
@@ -676,7 +679,8 @@ def _wait_check(payload, subject):
     """A deny reason for a foreground sleep loop or a timeout over WAIT_LIMIT_SECONDS; else None."""
     try:
         ti = json.loads(payload).get("tool_input") or {}
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules guard: the wait check could not read the payload (%s), so it was skipped.\n" % exc)
         return None
     if not isinstance(ti, dict) or ti.get("run_in_background") is True:
         return None
