@@ -81,6 +81,22 @@
       ],
       [
         "check",
+        "QA fixes",
+        "Your two QA failures, fixed",
+        "",
+        "The two-repo report now puts git's C:/ paths in Windows form before comparing them, and a test feeds it both spellings of one Windows folder (#517). The drift check now skips dated log lines, lines saying a file was deleted or removed, and shell variables such as $HERE (#518). This repo's docs went from 27 out-of-date citations to 0, while PlunderSpell's 2 real ones are still caught. verify.py passes 1209 of 1209; the two-repo live test passed 2 of 2 again.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "Windows rerun",
+        "One line for your PC session",
+        "you",
+        "Your first Windows run failed one new check, the two-repo report; it is fixed here but has not run on Windows yet. In your PC session, in the claude-qa folder, ask: \"Run git pull, then rerun verify.py, tools/verify_tools.py and docs_drift.py --root . with git's safe.directory set for this folder as before, and report each RESULT line.\" Expected: the same 7 older failures that main has, A16 in verify_tools, and docs_drift listing 0.",
+        "About five minutes in your PC session."
+      ],
+      [
+        "check",
         "Fixed in review",
         "Eleven problems caught before merging",
         "",
@@ -94,11 +110,11 @@
     "feature": "Phase 2",
     "base": "32887f4",
     "unverified": [
+      "The fixes on Windows: they pass here, and await your PC session's rerun",
       "Your Windows PC: every run was Linux, in this cloud container",
       "GitHub's billing figures from your own gh login: the cloud session is refused, so the LFS allowance was only tested with this repo's own count and the confirm-once step",
       "PlunderSpell's 153 GB: this session was refused access to that repo and cannot see your PC; the new disk report measures it at your next session there",
-      "A real merge done from a session: the cleanup was run on an already-merged pull request (#485), so GitHub's own merge step itself was not part of the test",
-      "The 27 drifted citations in this repo's docs are listed, not fixed; fixing them is not part of this phase's issues"
+      "A real merge done from a session: the cleanup was run on an already-merged pull request (#485), so GitHub's own merge step itself was not part of the test"
     ],
     "files": {}
   },
