@@ -308,6 +308,7 @@ def main(argv):
     if handler is None:
         return 0
     try:
+        core.read_payload()  # cached: the speed switches need the payload before some handlers read it
         return handler()
     except BaseException as exc:
         # The last-resort net. A stack trace on stdout would be read as a malformed hook

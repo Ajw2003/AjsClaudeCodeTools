@@ -18,6 +18,7 @@ import urllib.parse
 from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
+    _builders_enabled,
     _GATED_TOOLS,
     _GH_PREFIX,
     _GIT_COMMIT_RE,
@@ -1234,11 +1235,12 @@ def _loop_apply_one(state, text, top):
             made = _house_labels_note(top)  # #276: planning is when the labels are first needed
             return note + (" " + made if made else "")
         if state["stage"] == "build":
-            note += (" Code edits are open for the approved steps while every issue says `%s`. Hand each "
-                     "approved step to @house-rules:builder (one per issue; at most two running) unless aj said "
-                     "to build it yourself; helpers build only approved steps and never design or approve. When "
+            hand = ("Hand each approved step to @house-rules:builder (one per issue; at most two running) unless "
+                    "aj said to build it yourself; helpers build only approved steps and never design or approve. "
+                    if _builders_enabled() else "Builders are off, so build it yourself in this conversation. ")
+            note += (" Code edits are open for the approved steps while every issue says `%s`. %sWhen "
                      "the build is ready for aj, swap every issue's `%s` for `%s`: that starts QA."
-                     % (LOOP_WORKING, LOOP_WORKING, LOOP_REVIEW))
+                     % (LOOP_WORKING, hand, LOOP_WORKING, LOOP_REVIEW))
         elif approval[0] == "QA failed":
             note += (" aj's words after the feature name are the fix list; the issues and the build plan are kept. "
                      "Move every issue back to `%s` now: code edits open once they are. A changed design still "

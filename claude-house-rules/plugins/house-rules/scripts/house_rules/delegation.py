@@ -31,6 +31,7 @@ from house_rules.core import (  # noqa: F401
     _expand_detail_paths,
     _field,
     _git_dir,
+    _builders_enabled,
     _issues_enabled,
     _loop_enabled,
     _parity_enabled,
@@ -82,7 +83,7 @@ DELEGATE_PARITY_NOTE = (
 
 def event_delegate():
     try:
-        note = DELEGATE_NOTE
+        note = DELEGATE_NOTE if _builders_enabled() else ""  # speed switches: "builders off"
         payload = read_payload() or ""
         if _parity_enabled():
             plan = _field(_PLAN_VALUE_RE, payload) or ""
@@ -1813,7 +1814,7 @@ def _strip_subagent_markers(body):
 def _scope_delegate_link(payload, field):
     # With the design loop on, only "Build plan approved" starts a build (#232), so the
     # go-ahead guess runs only when the loop is off.
-    if field is not None and _SCOPE_GOAHEAD_RE.search(field) and not _loop_enabled():
+    if field is not None and _SCOPE_GOAHEAD_RE.search(field) and not _loop_enabled() and _builders_enabled():
         return SCOPE_DELEGATE_CLAUSE, ""
     return "", ""
 
