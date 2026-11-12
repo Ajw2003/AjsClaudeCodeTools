@@ -17,12 +17,16 @@ in `design_loop.py`; `_rerun_check` and `_wait_check` in `safe_git.py`; `command
 - **Where the state lives:** one small file in `.claude/` of the main checkout, next to the
   design loop's stage file, so it holds for the repo across sessions and branches.
 - **Who can change it:** only aj's own message, or `/house-rules:mode`, which sends the same line.
-  The agent cannot flip a switch.
-- **Starting state:** light (both off) when the session's model is Fable; full for every other
-  model. The model comes from the hook payload's `model` field, or else the last `"model"` in the
-  transcript's last 64 KB. A typed switch always wins. `HOUSE_RULES_LOOP=off` (design) and
-  `HOUSE_RULES_DELEGATION=off` (builders) in settings.json still force a switch off machine-wide; a
-  value of `on` is the plain default and does not hold a Fable session in full mode.
+  The agent cannot flip a switch. The line must stand alone as its own sentence or line ("design
+  loop off.", "builders off, design loop off"); a switch quoted or mentioned inside a longer
+  sentence is ignored (`_MODE_LINE_RE` in `scripts/house_rules/core.py`).
+- **Starting state:** both on, for every model, until aj types a switch for the repo; then it
+  stays as typed. `HOUSE_RULES_LOOP=off` (design) and `HOUSE_RULES_DELEGATION=off` (builders) in
+  settings.json still force a switch off machine-wide when nothing is typed.
+- **No model default (changed 2026-11-12, after QA):** the approved design started Fable light.
+  Live tests showed hooks are not told the model at session start: neither the SessionStart nor
+  the UserPromptSubmit payload carries it, no environment variable does, and the transcript names
+  it only after the first reply. aj chose to drop the default rather than guess from settings.json.
 - **Rule text:** when a switch is off, its rule section is left out of the injected rules and one
   line says which switch removed it. Rule text already loaded in a session cannot be taken back, so
   a switch flipped mid-session also adds a note to each prompt saying the section no longer applies.

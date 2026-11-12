@@ -10,8 +10,8 @@ Rule: `rules/show-dont-tell.md`, detail in `rules/detail/show-dont-tell.md`. Iss
 **Changed in 2.80.0 (speed switches, #525):** aj's approval always moves the stage. What a refusal
 below used to send back to aj (too few issues, wrong labels, no log entry, a different feature name)
 is now a to-do for the agent in the same turn; only an unknown feature name and a QA verdict before
-any build still move nothing. The loop can be switched off per repo by typing "design loop off", and
-starts off for Fable. See `speed-switches.md`.
+any build still move nothing. The loop can be switched off per repo by typing "design loop off"
+on its own line. See `speed-switches.md`.
 
 ## How it works
 

@@ -3394,3 +3394,21 @@ the model follows the text. And a refused approval puts the loop's bookkeeping o
 
 **Status.** Standing. Supersedes the "refuse until issues exist" behaviour of "Build plan approved"
 (`docs/4-systems/design-loop.md`) once built.
+
+## 2026-11-12 — Speed switches: QA failed, Fable default dropped
+
+**Context.** Live headless tests of 2.80.0 (`docs/plans/2026-11-12-speed-switches-live-tests/`)
+found two faults: a prompt that only quoted "Design loop OFF" flipped the switch, and the Fable
+default could not work, because no hook is told the model at session start (the SessionStart and
+UserPromptSubmit payloads have no model field, no environment variable carries it, and the
+transcript names it only after the first reply).
+
+**Decision.** aj wrote "QA failed: Speed switches - phrase match and Fable default", then chose
+"Drop the automatic default: you type 'design loop off' once per repo, and it stays off." A switch
+now counts only when it stands alone as its own sentence or line.
+
+**Why.** Guessing the model from settings.json would miss `/model` changes and still run the first
+turn of a Fable session in full mode; a typed switch is saved per repo, so it is typed once.
+
+**Status.** Standing. Supersedes choice 2 ("light by default only for Fable") of
+"Design approved: Speed switches 1A 2* 3A 4* 5A 6A" above.
