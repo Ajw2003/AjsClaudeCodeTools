@@ -285,11 +285,18 @@ def handover_turn_writes(turn_records):
     return written_now, committed_now
 
 
+def _repo_key(top, pathmod=os.path):
+    """(key, shown) for a repo path from `git rev-parse --show-toplevel`. Git prints `C:/...` on Windows, so the path
+    is put in the platform's own form before it is compared (#517). pathmod is os.path; tests pass ntpath."""
+    shown = pathmod.normpath(top)
+    return pathmod.normcase(shown), shown
+
+
 def handover_multirepo_note(written_now):
     """One line ("" when none) when this turn wrote files in two or more git repositories (#301): the other
     repo's work belongs in an issue there. Paths under .claude/ and paths in no repo (scratch/temp) are ignored."""
     import subprocess
-    tops = []
+    tops, keys = [], set()
     for fp in written_now:
         norm = fp.replace("\\", "/")
         if "/.claude/" in norm or norm.startswith(".claude/"):
@@ -308,8 +315,11 @@ def handover_multirepo_note(written_now):
         except Exception:
             continue
         top = r.stdout.strip()
-        if r.returncode == 0 and top and top not in tops:
-            tops.append(top)
+        if r.returncode == 0 and top:
+            key, shown = _repo_key(top)
+            if key not in keys:
+                keys.add(key)
+                tops.append(shown)
     if len(tops) < 2:
         return ""
     return ("House rules, one task per session: this turn wrote files in %d repositories (%s). Work for "

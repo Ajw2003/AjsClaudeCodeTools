@@ -1953,6 +1953,23 @@ if shutil.which("git"):
                  (_rc, _out))
     finally:
         shutil.rmtree(_d, ignore_errors=True)
+    # #518: history and shell variables are not drift; a real drifted citation still is.
+    _d = _dd_repo({"a.py": _DD_HEAD,
+                   "docs/3-state/ProjectState.md": "2026-11-03, branch x: ran `tools/x.sh` and `a.py:500`.\n",
+                   "docs/4-systems/s.md": ("`tools/old_check.py` was deleted in step 6.\n"
+                                           "The shim ends `exec \"$HERE/hook.py\"`.\n"
+                                           "Still current: `a.py:999`.\n")})
+    try:
+        _rc, _out = _dd_run(_d)
+        _dd_case("docs_drift (#518): a citation on a dated log line is not drift", "x.sh" not in _out
+                 and "a.py:500" not in _out, _out)
+        _dd_case("docs_drift (#518): a citation on a line saying the file was deleted is not drift",
+                 "old_check.py" not in _out, _out)
+        _dd_case("docs_drift (#518): a shell variable path ($HERE/hook.py) is not drift", "hook.py" not in _out, _out)
+        _dd_case("docs_drift (#518): a real drifted citation beside them is still flagged",
+                 _rc == 1 and "cites  a.py:999" in _out and "docs_drift: 1 drifted" in _out, (_rc, _out))
+    finally:
+        shutil.rmtree(_d, ignore_errors=True)
 else:
     report("FAIL", "docs_drift: git is not on PATH; this machine's environment says it should be")
 
@@ -1988,8 +2005,16 @@ _, _, _mr_one = _stop_notes(_wrote_transcript("mr-one", [os.path.join(_mr_a, "a.
 _, _, _mr_scr = _stop_notes(_wrote_transcript("mr-scr", [os.path.join(_mr_a, "a.txt"),
                                                          os.path.join(_mr_scratch, "x.txt"),
                                                          os.path.join(_mr_b, ".claude", "n.md")]), "Done.")
-report("PASS" if ("one task per session" in _mr_two and _mr_a in _mr_two and _mr_b in _mr_two) else "FAIL",
+# #517: git prints C:/... on Windows; compare by folder name so the test holds on every platform.
+report("PASS" if ("one task per session" in _mr_two and os.path.basename(_mr_a) in _mr_two
+                  and os.path.basename(_mr_b) in _mr_two) else "FAIL",
        "#301: a turn that wrote files in two repos gets the one-line report naming both")
+import ntpath as _nt  # noqa: E402
+from house_rules import writing as _wr_mod  # noqa: E402
+_k1 = _wr_mod._repo_key("C:/Users/aj/claude-qa/AjsClaudeCodeTools", _nt)
+_k2 = _wr_mod._repo_key("C:\\Users\\aj\\claude-qa\\AjsClaudeCodeTools", _nt)
+report("PASS" if (_k1[0] == _k2[0] and _k1[1] == "C:\\Users\\aj\\claude-qa\\AjsClaudeCodeTools") else "FAIL",
+       "#517: a Windows repo path from git (C:/...) and the same path written C:\\... count as one repo, shown in Windows form")
 report("PASS" if "one task per session" not in _mr_one else "FAIL", "#301: a turn in one repo gets no report")
 report("PASS" if "one task per session" not in _mr_scr else "FAIL",
        "#301: .claude/ paths and files outside any repo are ignored")

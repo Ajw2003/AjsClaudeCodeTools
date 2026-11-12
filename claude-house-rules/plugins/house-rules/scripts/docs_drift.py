@@ -64,11 +64,22 @@ def tracked_files(root, timeout=None):
     return [p for p in proc.stdout.decode("utf-8", "replace").splitlines() if p]
 
 
+# #518: three kinds of citation that are history or not a path at all, so never drift.
+# A dated log entry ("2026-11-03, branch ...") was true on its date; so was a line saying the file was deleted.
+_DATED_LINE_RE = re.compile(r"^\s*(?:[-*]\s+)?(?:\*\*)?\d{4}-\d{2}-\d{2}\b")
+_HISTORY_WORDS_RE = re.compile(r"\b(?:deleted|removed)\b", re.IGNORECASE)
+
+
 def citations(text):
-    """[(line_number, cited_path, cited_line_or_None, as_written)] found in a doc's text."""
+    """[(line_number, cited_path, cited_line_or_None, as_written)] found in a doc's text. Lines that record history
+    (a dated log entry, or one saying the file was deleted or removed) and shell variables ($HERE/x.py) are skipped."""
     found = []
     for n, line in enumerate(text.splitlines(), 1):
+        if _DATED_LINE_RE.match(line) or _HISTORY_WORDS_RE.search(line):
+            continue
         for m in CITE_RE.finditer(line):
+            if m.start() > 0 and line[m.start() - 1] == "$":
+                continue  # a shell variable such as $HERE/hook.py, not a path in the repo
             path = m.group(1)
             if path.startswith("./"):
                 path = path[2:]
