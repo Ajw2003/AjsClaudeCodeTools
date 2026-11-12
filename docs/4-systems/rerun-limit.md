@@ -7,6 +7,11 @@ rerunning the same check: a builder rule and a hook that enforces it"). aj appro
 The builder rule half shipped in 2.74.3; this hook is built in 2.75.0 (#454), in `_rerun_check` in
 `scripts/house_rules/safe_git.py`, with cases 191 to 197 in `scripts/checks/safe_git.py`.
 
+**Changed in 2.80.0 (speed switches, #525):** the count is kept per command (the same script with
+the same arguments) and resets when any code file changes, committed or not, rather than on a new
+commit. Editing only the script or the docs still does not reset it. See `speed-switches.md`,
+"Rerun check"; the sections below describe the 2.75.0 design.
+
 ## Why it exists
 
 In Ajw2003/PlunderSpell#569, on 2026-11-02, a builder ran one co-op check 12 times in 23 minutes.

@@ -1,0 +1,41 @@
+{
+ "title": "Speed Switches QA",
+ "eyebrow": "QA · #524 and #525 · house-rules 2.80.0 on AjsAgent/speed-switches",
+ "short": {
+  "lead": "The speed switches are built as house-rules 2.80.0 on branch AjsAgent/speed-switches. You can type \"design loop off\" or \"builders off\" in chat to switch either off for a repo, and Fable starts with both off. Your approvals now always move the stage, a foreground wait loop is refused, and the test rerun limit resets when code changes. verify.py passes 1,182 of 1,189; the 7 failures are the same 7 that main fails on Windows (safe_git 79, 81, 177, 203; design_loop 259, 326; make_page A14), and tools/verify_tools.py fails only A16, as main does.",
+  "hint": "Tap a row to see what was checked and how.",
+  "key": [["Checked by me", ""], ["Your test", "you"]],
+  "items": [
+   ["unlock", "Switches", "Typed switches are saved and take the rule text out", "", "Running the real hooks: as Fable, the prompt note says both are off, the show-dont-tell rule is not loaded and the delegation section is gone from the injected rules (9,193 characters, under the 10,000 limit). As Opus, nothing changes. \"design loop on\" is saved to .claude/house-rules-mode.json and beats the Fable default; a relayed notification cannot flip a switch.", "Nothing from you."],
+   ["check", "Approvals", "An approval always moves the stage", "", "\"Build plan approved\" with no issues, no labels and no decisions log now moves to Build and tells the agent what to fix in the same turn. The same holds for wrong labels, a slightly different name, and QA verdicts. An unknown feature name and a QA verdict before any build still move nothing, because those need you to say which feature you meant.", "Nothing from you."],
+   ["stop", "Waits", "The screenshot's wait loop is refused", "", "The exact command from your screenshot, timeout 595 with an until-sleep loop, is refused and pointed at run_in_background. timeout 30 and one-off commands are untouched, and the same loop with run_in_background set is allowed.", "Nothing from you."],
+   ["flask", "Tests", "Reruns reset on a code change", "", "The third run of the same command on the same code is refused and asks for a fix first. An uncommitted change to any code file resets it; a docs change or an edit to the test script alone does not. A different command (other flags) is counted on its own.", "Nothing from you."],
+   ["hand", "Your test", "Try it in a real session", "you", "Install the branch, open a new session in any repo and type \"design loop off\". The next reply should say the design loop is off and do the work without a page. Then type \"design loop on\" to switch back.", "Run the three steps in the reply that linked this page."]
+  ]
+ },
+ "changes": [
+  ["chg", "Two typed switches", "\"design loop off/on\", \"builders off/on\", and /house-rules:mode", ["Switching off meant editing settings.json and restarting, and the rule text stayed loaded, so the model kept doing the ceremony.", "One line in chat switches it for the repo from the next message, and the rule text is left out."], "core.py: _mode_state, _switch_off, _mode_apply, _scope_mode_link; commands/mode.md."],
+  ["chg", "Fable starts light", "Only Fable; every other model starts full", ["Every model ran the full loop.", "Fable starts with both switches off; a typed switch always wins."], "core.py: LIGHT_MODEL_RE and _session_model."],
+  ["chg", "Approvals never refused (6A)", "Bookkeeping gaps become the agent's to-do", ["Your approval was dropped when issues, labels or the log entry were missing, and you had to send it again.", "The stage moves, and the note lists what the agent must fix in that turn."], "design_loop.py: _loop_apply_one, _loop_stored_qa, _loop_owe_log."],
+  ["chg", "Loop off means the close guard is off (#515)", "No demand for QA records the loop never kept", ["With the loop off, issue closes were still refused for missing QA records.", "With the loop off, the close guard stands down."], "design_loop.py: _close_check."],
+  ["chg", "Foreground wait guard", "Sleep loops and timeouts over 60 seconds", ["A wrapped sleep loop could hold a turn for ten minutes.", "It is refused with the background form named."], "safe_git.py: _wait_check."],
+  ["chg", "Rerun check", "Same command, same code", ["Two runs per script until the next commit that changed code.", "Two runs per exact command; any code change, committed or not, allows two more."], "safe_git.py: _rerun_check, RERUN_CODE_SPECS."]
+ ],
+ "qa": {
+  "feature": "Speed switches (#524, #525)",
+  "base": "origin/main",
+  "unverified": [
+   "No live desktop-app session has run 2.80.0 yet, because hooks load at session start; every check above ran the real hook.py as a subprocess.",
+   "Whether Claude Code's SessionStart payload carries a model field is not confirmed. If it does not, the Fable default applies from the first reply onward (read from the transcript), and the first injected rule text is the full one.",
+   "Your answer to choice 4 asked for a reset on the code the test touches. It resets on any code file in the repo instead, because a test reaches code through subprocesses its imports do not show (verify.py runs hook.py that way)."
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "The speed switches are built as house-rules 2.80.0 and wait for your QA.",
+  "changing": "core.py, design_loop.py, safe_git.py, hook.py, three test modules, commands/mode.md, the show-dont-tell rule, CHANGELOG.md, the speed-switches, design-loop and rerun-limit docs, and ProjectState.md.",
+  "blocking": "Your QA of #524.",
+  "next": "On a pass I open a pull request into main. On a fail I fix it on this branch.",
+  "todo": ["Run the three steps in the reply that linked this page.", "Reply \"QA passed: Speed switches\" or \"QA failed: Speed switches\" with what is wrong."]
+ }
+}
