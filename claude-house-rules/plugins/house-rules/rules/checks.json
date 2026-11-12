@@ -1,0 +1,79 @@
+{
+  "_about": "Maps each ## section of house-rules.md to the hook handler(s) in hooks/hooks.json, or verify.py case title fragment(s), that enforce it. A section mapped to [] must be listed in unenforced with a reason; a new rule with no check fails verify.py (#228).",
+  "sections": {
+    "Find out what machine you are on, then build for that": [
+      "profile"
+    ],
+    "Open source first; paid is the last resort": [],
+    "Read the docs first, then check them against the code": [],
+    "Documentation goes in tiers, and I update the tier that changed": [
+      "docstiers"
+    ],
+    "Long-form reasoning goes in a document, not in a comment": [
+      "harvest"
+    ],
+    "Build for a human working alone": [],
+    "I say what prompted me, and I check the record before I claim anything": [],
+    "Nothing fails silently": [],
+    "Evidence before claims": [
+      "handover"
+    ],
+    "The user's hands are for decisions, not labour": [],
+    "Plain language and the voice": [
+      "handover",
+      "pagecheck"
+    ],
+    "Deliver a whole workflow, not a starting point": [],
+    "A green test suite is not proof it works": [
+      "handover"
+    ],
+    "A shim that compiles is not proof the real code does": [],
+    "A reported update is not a completed one": [],
+    "Never hand over a command I have not run where they will run it": [
+      "runnable",
+      "handover"
+    ],
+    "Code follows the standards loaded for this project": [
+      "standards",
+      "harvest"
+    ],
+    "Once the approach is decided, delegate the execution": [
+      "delegate",
+      "agentcap"
+    ],
+    "Every artifact lives in the project directory": [
+      "artifact"
+    ],
+    "Never name a local path in an issue or a pull request": [
+      "guardgithub"
+    ],
+    "A plan over three steps becomes issues; a pull request links, never closes": [
+      "delegate",
+      "commitgate",
+      "guardgithub"
+    ],
+    "Commit constantly on my own branches, never on theirs": [
+      "guard",
+      "creditcheck",
+      "branchnudge",
+      "autosave"
+    ],
+    "Never take a destructive action without checking first": [
+      "guard"
+    ],
+    "Edit in place; a full rewrite is a delete, not an edit": [
+      "guardwrite"
+    ]
+  },
+  "unenforced": {
+    "Open source first; paid is the last resort": "a judgement about choosing tools; no hook or verify case can tell what was weighed",
+    "Read the docs first, then check them against the code": "reading order is not observable; docs_drift.py only names drift at commit time, it does not enforce reading",
+    "Build for a human working alone": "a design stance for what gets built; nothing inspects the built output for it",
+    "I say what prompted me, and I check the record before I claim anything": "announce and verdict report which agent and model ran, but nothing checks that a reply names what prompted it",
+    "Nothing fails silently": "verify.py cases test individual handlers for it, but no handler checks a session's own work for silent failure",
+    "The user's hands are for decisions, not labour": "a judgement about what to ask aj; no check can tell labour from a decision",
+    "Deliver a whole workflow, not a starting point": "no check can tell a whole workflow from a starting point",
+    "A shim that compiles is not proof the real code does": "the evidence handler checks claims in general, nothing specific to compiler runs or UNTESTED: labels",
+    "A reported update is not a completed one": "versioncheck reports the installed version at session start but does not check a claimed update took effect"
+  }
+}

@@ -40,7 +40,7 @@ def _mp_proj(name, style=None):
     return d
 
 
-def _mp_content(name, extra_changes=None, text="Plain.", approval="Build plan approved: demo thing", choices=None):
+def _mp_content(name, extra_changes=None, text="Plain.", approval="Build plan approved: demo thing", choices=None, forRepo=None):
     page = {"title": "T " + name, "eyebrow": "e", "approval": approval,
             "short": {"lead": text, "hint": "h", "key": [["We", ""]], "items": [["bulb", "Idea", "The idea", "", "c", "r"]]},
             "changes": [["new", "A thing", "One line.", None, "Detail.", None, None]] + (extra_changes or []),
@@ -49,6 +49,8 @@ def _mp_content(name, extra_changes=None, text="Plain.", approval="Build plan ap
         del page["approval"]
     if choices is not None:
         page["choices"] = choices
+    if forRepo is not None:
+        page["forRepo"] = forRepo
     path = os.path.join(_mp_tmp, name + ".page.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(page, f)
@@ -252,7 +254,10 @@ _rc, _o = _mp("build", _mp_content("noappr", approval=None), "--project", _d)
 _mp_cases.append(("make_page: a non-QA page with no approval field is refused with exit 2 naming approval",
                   _rc == 2 and "approval" in _o))
 _rc, _o = _mp("build", _mp_content("badappr", approval="Guards audit"), "--project", _d)
-_mp_cases.append(("make_page (#309): an approval that isn't a design-loop phrase builds, with a note that it moves no stage",
+_mp_cases.append(("make_page (#502): a design page whose approval line the gate rejects is refused (exit non-zero)",
+                  _rc != 0 and "would not open the design-loop gate" in _o))
+_rc, _o = _mp("build", _mp_content("forrepo", approval="Guards audit", forRepo="owner/other"), "--project", _d)
+_mp_cases.append(("make_page (#309, #502): the same line builds with forRepo set, with a note that it moves no stage",
                   _rc == 0 and "moves no stage" in _o))
 _ch = [["c1", "Which?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""]]
 _ph = "Build plan approved: guards <audit> & more"

@@ -145,6 +145,14 @@ Entry shape:
 **Status.** Standing. / Superseded by [<date> — <title>](#anchor) on <date>.
 ```
 
+**Two optional companions** sit beside Decisions.md. Neither is required and nothing nags for them.
+Start each from the repo's real record, never a placeholder:
+
+- `docs/6-decisions/Research.md` — what was researched, what was found, and the sources cited,
+  newest first. A finding that turns out wrong gets a dated note under it, never a silent edit.
+- `docs/6-decisions/Vocabulary.md` — the project's terms, what each means here, and the
+  Decisions.md entry that settled it. A changed meaning keeps the old one below it, dated.
+
 **Boundaries with what already exists**, so this tier doesn't get reinvented:
 
 - `docs/plans/` stays forward-looking intent, live until executed, then archived — unchanged. A
@@ -203,7 +211,10 @@ reverse.
 8. Move anything inert into `docs/archive/` with a `README.md` saying why each item is there.
    Fix every pointer into the moved documents — do not leave the link graph broken. Code
    pointers in the `doc-ref` form are repaired mechanically by `/house-rules:docref fix --write`.
-9. If the repo has a `CLAUDE.md`, point it at `docs/1-landing/README.md` as the entry point
+9. Start `CHANGELOG.md` at the repo root from `templates/CHANGELOG.md`, filled from the repo's real
+   history (`git log`, tags, releases), never placeholders. Every later change adds a line under
+   Unreleased: plain words first, exact detail after.
+10. If the repo has a `CLAUDE.md`, point it at `docs/1-landing/README.md` as the entry point
    rather than duplicating any of this into it. Two copies drift.
 
 **Never invent content to fill a tier.** A row that says `TODO` is honest; a row with a plausible

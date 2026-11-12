@@ -83,7 +83,8 @@ is swapped for `needs review`. The user then closes it, or asks for changes and 
 `in progress`. Every step checks this, reading the labels from GitHub (or, when GitHub can't be read,
 from the label changes I made, and saying so): "Build plan approved" needs every issue `in progress`;
 swapping them all to `needs review`, or a pull request opening during Build, starts the QA stage and closes code, and the build is handed over with a QA page built by `make_page.py` in QA mode (its reply is "QA passed: <feature>"); a QA answer counts only in
-QA; after "QA failed" the redo's "Design approved" needs them back to `in progress`; in Build a code
+QA; "QA failed: <feature> <what's wrong>" sends the feature back to Build with its issues kept, and code
+opens once they are back to `in progress` (a changed design still needs "Design approved"); in Build a code
 edit is refused while any label is wrong; and the end-of-reply check names any label that doesn't
 fit (#235). The plan adds a sub-issue per step. Every
 issue and sub-issue names what it depends on, what depends on it, and when it counts as done, so a
@@ -168,6 +169,10 @@ on tap; names, never bare numbers; one colour, one meaning (one colour means the
 each project, and nothing else uses it; the default is orange; green is done); I check it first, at phone width in light and
 dark, every tap tried, and a search for bare numbers. My chat reply around a page is a plain
 summary, the link, then numbered steps for what the user needs to do (#233).
+
+Anything waiting on the user is a button or a step card, never a bare line to work out. A page's
+copy-box line is one the design loop accepts, or the page builder refuses the page; an "Approve"
+button sends the one approval line the last reply offered, plus any picks (#155, #502).
 
 ## Helpers build only approved steps
 

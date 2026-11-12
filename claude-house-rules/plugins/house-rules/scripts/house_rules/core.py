@@ -1922,6 +1922,22 @@ _RELAYED_PROMPT_RE = re.compile(
     r"|<wake\b|<webhook-payload\b|<event\s+source=|<child-session-event\b", re.IGNORECASE)
 
 
+# #429: a cloud session puts a <system-reminder> block before aj's words; strip it unless a relayed message is inside.
+_RELAYED_MARKER_RE = re.compile(
+    r"<task-notification>|<agent-message\b|\[Subagent hand-?back\]"
+    r"|Another Claude session sent a message"
+    r"|<wake\b|<webhook-payload\b|<event\s+source=|<child-session-event\b", re.IGNORECASE)
+_LEADING_NOTE_RE = re.compile(r"\A\s*(?:<system-reminder\b.*?</system-reminder>\s*)+", re.S)
+
+
+def _own_words(text):
+    """aj's words with a leading system-reminder block removed; None when the block holds a relayed message."""
+    m = _LEADING_NOTE_RE.match(text)
+    if m and _RELAYED_MARKER_RE.search(m.group(0)):
+        return None
+    return text[m.end():] if m else text
+
+
 def _is_relayed_prompt(text, payload=None):
     """True when the prompt is a subagent hand-back, agent message or task/system notification, or
     the payload carries a non-human `origin` (as _is_genuine_user_message honours)."""
@@ -2068,6 +2084,40 @@ def _session_start_hooks(consumer):
 
 def _post_tool_hooks(consumer):
     return [fn for name, fn in POST_TOOL_HOOKS if name == consumer]
+
+
+def pr_changelog_note(cwd, base=""):
+    """#387: "" when the pull request needs no changelog reminder (no CHANGELOG.md at the repo root, or the branch
+    changes it), else a one-line reminder; one line saying so when the diff cannot be read. Never refuses."""
+    import subprocess
+    try:
+        def run_git(*a):
+            r = subprocess.run(["git"] + list(a), cwd=cwd, capture_output=True, text=True, timeout=10)
+            if r.returncode != 0:
+                raise RuntimeError((r.stderr.strip().splitlines() or ["git exited %d" % r.returncode])[0])
+            return r.stdout.strip()
+        root = run_git("rev-parse", "--show-toplevel")
+        if not os.path.isfile(os.path.join(root, "CHANGELOG.md")):
+            return ""
+        if not base:
+            try:
+                base = run_git("symbolic-ref", "--short", "refs/remotes/origin/HEAD").split("/", 1)[-1]
+            except RuntimeError:
+                base = "main"
+        changed, err = None, ""
+        for ref in ("origin/" + base, base):
+            try:
+                changed = run_git("diff", "--name-only", "%s...HEAD" % ref).splitlines()
+                break
+            except RuntimeError as exc:
+                err = str(exc)
+        if changed is None:
+            return "House rules, changelog: could not read the diff against %s (%s), so CHANGELOG.md was not checked." % (base, err)
+        if "CHANGELOG.md" in changed:
+            return ""
+        return "House rules, changelog: this branch leaves CHANGELOG.md unchanged; add a line under Unreleased before merging."
+    except Exception as exc:
+        return "House rules, changelog: could not read the diff (%s: %s), so CHANGELOG.md was not checked." % (type(exc).__name__, exc)
 
 
 def register_guard_issue(fn):
