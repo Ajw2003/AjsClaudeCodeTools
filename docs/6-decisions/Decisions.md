@@ -7,6 +7,14 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-12 - Leftover fixes from phases 1 and 2 join phase 3
+
+**Context.** Testing 2.79.0 after the merge turned up four problems not covered by any open issue: the close guard refused #501 after pull request #519 merged, the docs-tiers note ordered scaffolding in a throwaway folder, the guard refused `git switch -c AjsAgent/... && git commit` on `master`, and 8 tests still fail only on Windows. #515, filed after phase 1's build, was also still unfixed.
+
+**Decision.** aj chose to fold all five into phase 3 (#495) as #515 and #520 to #523. Rejected: a separate fix release before phase 3.
+
+**Status.** Phase 3's design page covers them.
+
 ## 2026-11-12 - Cloud saves for the session handoff move to phase 3
 
 **Context.** The handoff re-test found that a cloud session's push to `refs/house-rules/autosave/<branch>` is refused,
