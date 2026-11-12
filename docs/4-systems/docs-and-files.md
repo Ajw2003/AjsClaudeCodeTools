@@ -23,6 +23,16 @@ approved 2026-11-11 as "Design approved: Phase 2 1A 2A 3A 4A 5A".
 The approved plan, step by step, with what changed while building, is in `docs/3-state/ProjectState.md` (the
 2026-11-11 phase 2 lines) and the commits that say `Refs #508` to `Refs #514`.
 
+## Fixes after QA (2026-11-12, "Design approved: Phase 2 Windows and drift fixes")
+
+aj's QA failed with two changes; parent issue #516.
+
+1. **Windows paths in the two-repo report (#517).** `handover_multirepo_note` in `scripts/house_rules/writing.py`
+   normalises each repo path git prints (`C:/...` on Windows) to the platform's form before comparing and printing it.
+2. **Drift-check history (#518).** `scripts/docs_drift.py` skips a citation on a dated log line (one starting with a
+   date), on a line saying the file was deleted or removed, and a shell-variable path such as `$HERE/hook.py`. A real
+   drifted citation is still flagged, and this repo's docs then list 0.
+
 ## Testing (every check phase 1 had, at aj's word on 2026-11-11)
 
 1. Every step: its own verify.py cases, each written to fail on today's code and pass after, then the full verify.py (the baseline is 1135 of 1135) before the step merges.
