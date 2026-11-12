@@ -74,8 +74,8 @@ ASK = ("Do not use any tools. Answer in exactly two lines. Line 1: quote the fir
        "heading \"Show, don't tell; the user designs\", otherwise HEADING-ABSENT.")
 if not only or "2" in only:
     out = claude(repo(), ASK, model=FABLE)
-    case("2 Fable: context says the design loop is off and has no show-dont-tell rule",
-         "Design loop OFF" in out and "HEADING-ABSENT" in out, out)
+    case("2 Fable with nothing typed: full mode (no model default), the show-dont-tell rule is there",
+         "NONE" in out and "HEADING-PRESENT" in out, out)
 if not only or "3" in only:
     out = claude(repo(), ASK)
     case("3 Haiku: full mode, no off note, the show-dont-tell rule is there",
@@ -99,6 +99,12 @@ if not only or "6" in only:
                          "it. Then quote word for word any refusal you got.", tools=True)
     case("6 the third run of `bash t.sh` on unchanged code is refused",
          "Fix the code first" in out or "run twice" in out, out)
+
+if not only or "7" in only:
+    d = repo()
+    out = claude(d, "Line 1: quote the sentence that says Design loop OFF, or write NONE. Do not use tools.")
+    case("7 a switch quoted inside a longer sentence is not saved",
+         not os.path.isfile(os.path.join(d, ".claude", "house-rules-mode.json")), out)
 
 with open(os.path.join(OUT, "live-result.txt"), "w", encoding="utf-8") as f:
     for r in results:

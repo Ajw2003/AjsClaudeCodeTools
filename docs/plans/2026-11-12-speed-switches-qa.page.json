@@ -2,7 +2,7 @@
  "title": "Speed Switches QA",
  "eyebrow": "QA · #524 and #525 · house-rules 2.80.0 on AjsAgent/speed-switches",
  "short": {
-  "lead": "The speed switches are built as house-rules 2.80.0 on branch AjsAgent/speed-switches, now with the two fixes from your first QA. You type \"design loop off\" or \"builders off\" as its own line to switch either off for a repo, and it stays off; a switch quoted inside a longer sentence is ignored. There is no Fable default any more: every model starts full. verify.py fails only the 7 checks main also fails on Windows (safe_git 79, 81, 177, 203; design_loop 259, 326; make_page A14).",
+  "lead": "The speed switches are built as house-rules 2.80.0 on branch AjsAgent/speed-switches, now with the two fixes from your first QA: a switch counts only on its own line, and there is no Fable default. You type \"design loop off\" or \"builders off\" as its own line to switch either off for a repo, and it stays off; a switch quoted inside a longer sentence is ignored. Every model starts with the full rules. verify.py fails only the 7 checks main also fails on Windows (safe_git 79, 81, 177, 203; design_loop 259, 326; make_page A14), and the live headless sessions passed 6 of 7.",
   "hint": "Tap a row to see what was checked and how.",
   "key": [
    [
@@ -20,7 +20,7 @@
     "Switches",
     "Typed switches are saved, quoted ones are not",
     "",
-    "Running the real hooks: \"design loop on\" and \"/house-rules:mode builders off\" are saved to .claude/house-rules-mode.json; a prompt that quotes \"Design loop OFF\" inside a sentence saves nothing. With both off, the show-dont-tell rule and the delegation section leave the injected rules. A Fable session with nothing typed runs full. A relayed notification cannot flip a switch.",
+    "Running the real hooks: \"design loop on\" and \"/house-rules:mode builders off\" are saved to .claude/house-rules-mode.json; a prompt that quotes \"Design loop OFF\" inside a sentence saves nothing. With both off, the show-dont-tell rule and the delegation section are no longer added to the session's rules. A Fable session where you typed no switch runs with the full rules. A relayed notification cannot flip a switch.",
     "Nothing from you."
    ],
    [
@@ -62,16 +62,19 @@
    "chg",
    "Two typed switches",
    "\"design loop off/on\", \"builders off/on\", and /house-rules:mode",
-   "core.py: _MODE_LINE_RE, _mode_state, _switch_off, _mode_apply, _scope_mode_link; commands/mode.md.",
-   "core.py: _mode_state, _switch_off, _mode_apply, _scope_mode_link; commands/mode.md."
+   [
+    "Switching off meant editing settings.json and restarting, and the rule text stayed loaded, so the model kept doing the ceremony.",
+    "One line in chat, typed on its own, switches it for the repo from the next message, and the rule text is left out. A switch quoted inside a sentence is ignored."
+   ],
+   "core.py: _MODE_LINE_RE, _mode_state, _switch_off, _mode_apply, _scope_mode_link; commands/mode.md."
   ],
   [
    "chg",
    "No model default",
    "Every model starts full until you type a switch",
    [
-    "The approved design started Fable light, but hooks are not told the model at session start, so it could not work.",
-    "Every model starts full; one typed line per repo switches it, and it stays switched."
+    "The approved design started Fable on the light setting, but hooks are not told which model is running at session start, so that default could not work.",
+    "Every model starts with the full rules; one typed line per repo switches a feature off, and it stays off."
    ],
    "core.py: _mode_state (LIGHT_MODEL_RE and _session_model removed)."
   ],
@@ -120,8 +123,8 @@
   "feature": "Speed switches (#524, #525)",
   "base": "origin/main",
   "unverified": [
-   "No desktop-app session has run 2.80.0 yet; the live tests ran real headless claude -p sessions with this branch's plugin (see the live-tests folder beside this page).",
-   "Your answer to choice 4 asked for a reset on the code the test touches. It resets on any code file in the repo instead, because a test reaches code through subprocesses its imports do not show (verify.py runs hook.py that way)."
+   "No desktop-app session has run 2.80.0 yet; the live tests ran real headless claude -p sessions with this branch's plugin (docs/plans/2026-11-12-speed-switches-live-tests/live-result.txt). Case 6, the third identical test run, was refused, but the model described the refusal instead of quoting it, so the check's wording match failed.",
+   "Your answer to choice 4, on when a rerun count resets, asked for a reset only when the code the test touches changes. It resets on a change to any code file in the repo instead, because a test can reach code through subprocesses that its imports do not show (verify.py runs hook.py that way)."
   ],
   "files": {}
  },
