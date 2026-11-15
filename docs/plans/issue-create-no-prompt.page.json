@@ -1,0 +1,37 @@
+{
+  "title": "Issue Create Without Prompt",
+  "eyebrow": "Stop Claude Code asking permission each time `gh issue create` runs on a repo you own",
+  "approval": "Design approved: issue create without prompt",
+  "short": {
+    "lead": "The prompt does not come from the house-rules guard. For a normal `gh issue create`, the guard in design_loop.py only checks that the issue has its three required sections and otherwise says nothing. The prompt comes from Claude Code itself, because none of your settings files has an allow rule for this command. The guard already returns \"allow\" for issue closes that pass the close check, so issue creation can use the same path. The owner check also already exists: docs.py has DEFAULT_GITHUB_OWNER (set to Ajw2003) and _repo_owner_from_config, which reads the owner from .git/config.",
+    "hint": "Tap an option to see what it changes.",
+    "key": [
+      [
+        "My suggestion",
+        ""
+      ],
+      [
+        "Alternative",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "code",
+        "A (suggested)",
+        "The guard allows `gh issue create` on a repo you own",
+        "",
+        "In _issues_guard, a `gh issue create` (or the matching `gh api repos/o/r/issues` call) that passes the section check returns \"allow\" when the target owner is Ajw2003. The guard reads the owner from `--repo owner/name`, or from .git/config when there is no `--repo` flag. If the owner is anyone else, or the guard cannot read it, the command falls through to Claude Code's normal prompt. A verify.py case covers three situations: an owned repo, a foreign repo and an unreadable owner. The change ships with the plugin, so it applies on every device.",
+        "To approve this option, say \"Design approved: issue create without prompt\"."
+      ],
+      [
+        "file",
+        "B",
+        "A settings allow rule instead of code",
+        "",
+        "Add `Bash(gh issue create:*)` to the permissions allow list in your user settings. It needs no code, but it cannot check the owner, so Claude Code would also stop prompting for repos you do not own. It applies on this machine only.",
+        "To choose this option, say \"use the settings rule\" and I will add it."
+      ]
+    ]
+  }
+}
