@@ -100,10 +100,11 @@ file there is still a real failure.
   repo exploration in the same turn (2026-09-17). The two checks are kept separate rather than
   merged, because a banner that names the right command but drops the handling instructions (or
   the reverse) should fail exactly one of them, not neither.
-- **There is still no way to run one check, only one part.** Since #370 `verify.py --parts safe_git`
-  or `--changed` runs one part (11 to 281 checks), not one check; see "The split layout (#370)"
-  below. Editing a single `guard` pattern still re-runs the 186 safe-git checks to find the ~28
-  that were relevant.
+- **One check by name (#44, phase 3 step 7, 2026-11-16).** `verify.py --only <text>` reports only
+  the checks whose title contains the text, case-insensitive, in the chosen parts. The other checks
+  still run (their output is hidden and not counted), so the part keeps its setup order; zero matches
+  exits 1 with a `RESULT: FAIL` line. It sets `HOUSE_RULES_VERIFY_ONLY`, which `checks/common.py`
+  `report()` reads.
 - **A suite testing branch-dependent behavior must not inherit the developer's actual branch.**
   `house-rules`' guard/branch-ownership cases use hand-written fixture `.git/HEAD` files under
   throwaway directories rather than reading whatever branch the suite happens to run from — the
@@ -559,6 +560,7 @@ session name, scratchpad path, stage file, waiting-on-you list or git config.
 | none | runs every part at the same time, in subprocesses, as many at once as the machine has cores (slowest parts started first) |
 | `--parts core,safe_git` | runs only the named parts; an unknown name exits 2 and lists the parts |
 | `--changed` | runs only the parts a change touched (mapping below); cannot be combined with `--parts` |
+| `--only <text>` | reports only the checks whose title contains the text; zero matches exits 1 |
 | `--serial` | one part after another, in the fixed order, for debugging |
 | `--timeout N` | seconds before a part counts as hung (default 900) |
 
