@@ -114,7 +114,7 @@ build plan page, `docs/plans/2026-11-16-phase-3-build-plan.html`.
   (`_autosave_target`, `delegation.py:1176`). There is no facts file, no `event_autosave_final`, no pickup, no
   handoff check and no rule sentence. The quoted-approval guard from #409 is already on `main` (`_LOOP_QUOTED_RE`,
   `scripts/house_rules/design_loop.py:412`).
-- **A save per folder (#489).** As planned in the section above.
+- **A save per folder (#489, built in #527).** As planned in the section above, but under `refs/house-rules/saves/<branch>/<folder id>`, not `autosave/<branch>/<folder id>`: git cannot hold a ref and refs nested under the same name, and old single saves under `autosave/<branch>` exist on GitHub (a verify case covers it). Old saves stay readable for the pickup. Saves run on every branch, `main` included; a save is a ref only and never a commit there. Work-in-progress commits stay for `worktree-agent-*` branches.
 - **Cloud sessions (1A).** When `CLAUDE_CODE_REMOTE=true`, the save skips the hidden ref, which a cloud session cannot
   push (Research.md, 2026-11-12 and its 2026-11-16 note). Instead it commits the tracked changes and the files the
   agent wrote as `wip: autosave` on the session's own branch and pushes the branch, on the same one-minute window and

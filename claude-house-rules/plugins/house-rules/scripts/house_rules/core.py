@@ -2016,7 +2016,7 @@ AUTOSAVE_BRANCH_PREFIX = "worktree-agent-"
 AUTOSAVE_GIT_TIMEOUT = 4.0
 
 
-def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True):
+def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True, input_bytes=None):
     """Run git in `top`; (returncode, stdout, stderr). Raises RuntimeError on failure when
     `check`, and on a timeout always - every caller turns that into a systemMessage."""
     import subprocess
@@ -2028,7 +2028,7 @@ def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True):
     try:
         proc = subprocess.run(
             ["git"] + args, cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            timeout=timeout, env=e,
+            timeout=timeout, env=e, input=input_bytes,
         )
     except subprocess.TimeoutExpired:
         raise RuntimeError("git %s timed out after %ss" % (args[0], timeout))
