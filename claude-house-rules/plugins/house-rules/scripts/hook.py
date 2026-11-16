@@ -312,6 +312,7 @@ def main(argv):
         return 0
     try:
         core.keep_payload()  # the speed switches need the payload before some handlers read it
+        core.apply_switches()  # typed feature switches set the HOUSE_RULES_ values every check reads
         return handler()
     except BaseException as exc:
         # The last-resort net. A stack trace on stdout would be read as a malformed hook

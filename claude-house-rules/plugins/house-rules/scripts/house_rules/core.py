@@ -2620,25 +2620,47 @@ def _issues_enabled():
 # Speed switches (#524, docs/4-systems/speed-switches.md): two switches aj types in chat, saved per repo.
 # "design" covers the design loop and the issue gate; "builders" covers delegation and the agent cap.
 MODE_FILE = "house-rules-mode.json"  # .claude/ of the main checkout, beside the design loop's stage file
-MODE_SWITCHES = ("design", "builders")
-_MODE_SWITCH_RE = re.compile(r"\b(design\s+loop|builders)\s+(on|off)\b", re.IGNORECASE)
+# Feature switches (#536): each typed group is stored under a short key and maps onto the HOUSE_RULES_ settings the
+# plugin already reads. The guards and the credit check have no setting here, so no typed line reaches them.
+_MODE_GROUPS = {
+    "design": ("HOUSE_RULES_LOOP", "HOUSE_RULES_ISSUES"),
+    "pages": ("HOUSE_RULES_PAGES",),
+    "builders": ("HOUSE_RULES_DELEGATION", "HOUSE_RULES_AGENTS"),
+    "issues": ("HOUSE_RULES_ISSUES",),
+    "writing": ("HOUSE_RULES_CLEAR_WRITING", "HOUSE_RULES_PLAIN_SUMMARY", "HOUSE_RULES_VISUAL_CHECK",
+                "HOUSE_RULES_PARITY", "HOUSE_RULES_VOICE"),
+    "autosave": ("HOUSE_RULES_AUTOSAVE", "HOUSE_RULES_HANDOFF"),
+}
+_MODE_GROUPS["house"] = tuple(dict.fromkeys(v for g in _MODE_GROUPS.values() for v in g)) + (
+    "HOUSE_RULES_HARVEST", "HOUSE_RULES_COMMIT_CHECK", "HOUSE_RULES_HANDOVER", "HOUSE_RULES_RERUNS",
+    "HOUSE_RULES_DISKREPORT")
+MODE_SWITCHES = tuple(_MODE_GROUPS)
+_MODE_NAMES = {"design loop": "design", "writing checks": "writing", "house rules": "house"}
+_MODE_NAME_RE = r"(?:design\s+loop|pages|builders|issues|writing\s+checks|autosave|house\s+rules)"
+_MODE_ONE = _MODE_NAME_RE + r"\s+(?:on|off)(?:\s+everywhere)?"
+_MODE_SWITCH_RE = re.compile(r"\b(%s)\s+(on|off)(\s+everywhere)?\b" % _MODE_NAME_RE, re.IGNORECASE)
 # A switch counts only when its sentence or line holds nothing else, so a quoted mention does not flip it.
-_MODE_LINE_RE = re.compile(r"\s*(?:/house-rules:mode\s+)?(?:(?:design\s+loop|builders)\s+(?:on|off)[\s,]*(?:and\s+)?)+",
-                           re.IGNORECASE)
+_MODE_LINE_RE = re.compile(r"\s*(?:/house-rules:mode\s+)?(?:%s[\s,]*(?:and\s+)?)+" % _MODE_ONE, re.IGNORECASE)
 _MODE_CACHE = {}
 
 
-def _mode_file(cwd):
-    """The repo's switch file, or None outside a git checkout."""
+def _mode_key(name):
+    name = " ".join(name.lower().split())
+    return _MODE_NAMES.get(name, name)
+
+
+def _mode_files(cwd):
+    """(folder file, everywhere file). The folder file is the main checkout's in a repo, else <cwd>/.claude."""
     top, _gd = _issues_locate(cwd)
     common = _common_git_dir(top) if top else None
-    return os.path.join(os.path.dirname(common), ".claude", MODE_FILE) if common else None
+    folder = os.path.join(os.path.dirname(common) if common else os.path.abspath(cwd), ".claude", MODE_FILE)
+    config = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    return folder, os.path.join(config, MODE_FILE)
 
 
-def _mode_typed(cwd):
-    """{switch: "on"|"off"} aj typed for this repo; {} when none or unreadable (said on stderr)."""
-    path = _mode_file(cwd)
-    if not path or not os.path.isfile(path):
+def _mode_read(path):
+    """{group: "on"|"off"} saved in one file; {} when none or unreadable (said on stderr)."""
+    if not os.path.isfile(path):
         return {}
     try:
         data = json.loads(_read_text(path))
@@ -2648,8 +2670,24 @@ def _mode_typed(cwd):
         return {}
 
 
+def _mode_typed(cwd):
+    """{group: "on"|"off"} aj typed: this folder's file wins, then the everywhere file, group by group."""
+    folder, everywhere = _mode_files(cwd)
+    return dict(_mode_read(everywhere), **_mode_read(folder))
+
+
+def apply_switches():
+    """Set the mapped HOUSE_RULES_ values for this hook call from the typed groups (typed beats settings.json).
+    "house rules" goes first so a more specific group typed beside it wins. Nothing typed: environment untouched."""
+    raw = _PAYLOAD_CACHE
+    typed = _mode_typed(_payload_cwd(raw)) if raw else {}
+    for group in sorted(typed, key=lambda g: g != "house"):
+        for var in _MODE_GROUPS[group]:
+            os.environ[var] = typed[group]
+
+
 def _mode_state(payload=None):
-    """{switch: (off?, why)} for this hook call: aj's typed switch for the repo, else on. There is no model
+    """{switch: (off?, why)} for design and builders this hook call: aj's typed switch, else on. There is no model
     default: hooks are not told the model at session start (probed 2026-11-12), so aj chose typed switches only.
     Cached per process."""
     raw = payload if payload is not None else _PAYLOAD_CACHE
@@ -2657,7 +2695,7 @@ def _mode_state(payload=None):
         return _MODE_CACHE[raw]
     typed = _mode_typed(_payload_cwd(raw)) if raw else {}
     state = {}
-    for name in MODE_SWITCHES:
+    for name in ("design", "builders"):
         if name in typed:
             state[name] = (typed[name] == "off", "you typed \"%s %s\"" % (
                 "design loop" if name == "design" else name, typed[name]))
@@ -2680,26 +2718,33 @@ def _builders_enabled():
 
 
 def _mode_apply(text, payload):
-    """aj's own message "design loop off" / "builders on" saves the switch. Returns a note, or ""."""
+    """aj's own message "pages off" / "builders on everywhere" saves the switch. Returns a note, or ""."""
     found = [m for part in re.split(r"[.\n;!?]", text or "") if _MODE_LINE_RE.fullmatch(part)
              for m in _MODE_SWITCH_RE.findall(part)]
     if not found:
         return ""
-    path = _mode_file(_payload_cwd(payload))
-    if not path:
-        return "House rules: you typed a switch, but this folder is not in a git repo, so nothing was saved."
-    typed = _mode_typed(_payload_cwd(payload))
-    for which, value in found:
-        typed["design" if which.lower().startswith("design") else "builders"] = value.lower()
-    try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        _write_atomic(path, json.dumps(typed, indent=1, sort_keys=True))
-    except OSError as exc:
-        return "House rules: could not save the switch to %s (%s), so nothing changed." % (path, exc)
+    folder, everywhere = _mode_files(_payload_cwd(payload))
+    notes = []
+    for path, wanted in ((folder, False), (everywhere, True)):
+        mine = [(n, v) for n, v, e in found if bool(e) == wanted]
+        if not mine:
+            continue
+        saved = _mode_read(path)
+        for name, value in mine:
+            saved[_mode_key(name)] = value.lower()
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            _write_atomic(path, json.dumps(saved, indent=1, sort_keys=True))
+        except OSError as exc:
+            notes.append("could not save the switch to %s (%s), so nothing changed." % (path, exc))
+            continue
+        top, _gd = _issues_locate(_payload_cwd(payload))
+        notes.append("saved %s %s in %s%s." % (
+            ", ".join("%s %s" % (k, v) for k, v in sorted(saved.items())),
+            "everywhere" if wanted else "for this folder", path,
+            "; commit it with the next commit" if top and not wanted else ""))
     _MODE_CACHE.clear()
-    return ("House rules: saved %s for this repo in %s; commit it with the next commit. %s" % (
-        ", ".join("%s %s" % ("design loop" if k == "design" else k, v) for k, v in sorted(typed.items())),
-        path, _mode_note(payload)))
+    return "House rules: %s %s" % (" ".join(notes), _mode_note(payload))
 
 
 def _mode_note(payload=None):
