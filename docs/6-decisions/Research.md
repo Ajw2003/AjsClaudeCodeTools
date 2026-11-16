@@ -18,6 +18,8 @@ session on aj's PC and not from a cloud session.
 **Source.** The pushes and `git ls-remote`, run 2026-11-12 in this repo's cloud session
 (`docs/plans/2026-11-12-handoff-retest/live_handoff-result.txt`).
 
+**2026-11-16 note.** Re-tested from a new cloud session: `git push origin HEAD:refs/house-rules/autosave/AjsAgent/phase-3-probe` failed both tries with the same "unexpected disconnect". Still refused.
+
 ## 2026-11-11 - Does context from a PreToolUse hook reach Claude without a permission decision?
 
 **Why it mattered.** The pull request changelog reminder (#509) first went out with an "allow" decision, because a

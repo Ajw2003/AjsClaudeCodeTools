@@ -1,0 +1,225 @@
+{
+ "title": "Phase 3: Pick Up on Any of Your Four Accounts",
+ "eyebrow": "Design for approval \u00b7 roadmap phase 3 (#495) \u00b7 nothing built yet",
+ "approval": "Design approved: Phase 3",
+ "replyPrefix": "Design approved: Phase 3",
+ "reply": "",
+ "short": {
+  "lead": "Phase 3 finishes the session handoff: work saved as it happens, so a usage limit, a closed window or a switch of Claude account never strands it, and the next session picks it up. The handoff code was built on the branch AjsAgent/session-handoff (plugin 2.77.0) but left out of main when phases 1 and 2 merged, because a cloud session cannot upload its saves to GitHub. I re-tested that today from this cloud session. Uploading to the hidden save location on GitHub (a git reference named refs/house-rules/autosave/...) was still refused, both times. Uploading to the session's own branch works. So the design question is where a cloud session's save goes. The per-folder save (#489, so one folder never erases another's save) was planned but never built.",
+  "hint": "Tap an item to see what it is and what it needs from you.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "The moment",
+    "Start on one account, carry on from another",
+    "",
+    "You stop mid-task on one account, desktop or cloud. You open a session on another account, and it opens with the note of where the work stood, the files that were not committed yet, and the command that brings them back.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4ODAgMjUwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz4KPHRleHQgeD0iMjAiIHk9IjMyIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5XaGVyZSBlYWNoIHNlc3Npb24ncyBzYXZlIGdvZXMgdG9kYXk8L3RleHQ+CjxyZWN0IHg9IjIwIiB5PSI1MCIgd2lkdGg9IjI1MCIgaGVpZ2h0PSI3MCIgcng9IjEwIiBmaWxsPSIjM2I3ZGQ4IiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzNiN2RkOCIvPjx0ZXh0IHg9IjM0IiB5PSI3OCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNiN2RkOCI+U2Vzc2lvbiBvbiB5b3VyIFBDPC90ZXh0Pjx0ZXh0IHg9IjM0IiB5PSIxMDAiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPmVkaXRzIGZpbGVzPC90ZXh0Pgo8cmVjdCB4PSIyMCIgeT0iMTUwIiB3aWR0aD0iMjUwIiBoZWlnaHQ9IjcwIiByeD0iMTAiIGZpbGw9IiNkOTgyMmIiIGZpbGwtb3BhY2l0eT0iMC4xMCIgc3Ryb2tlPSIjZDk4MjJiIi8+PHRleHQgeD0iMzQiIHk9IjE3OCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2Q5ODIyYiI+Q2xvdWQgc2Vzc2lvbjwvdGV4dD48dGV4dCB4PSIzNCIgeT0iMjAwIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5lZGl0cyBmaWxlczwvdGV4dD4KPGxpbmUgeDE9IjI3MCIgeTE9Ijg1IiB4Mj0iNTYwIiB5Mj0iODUiIHN0cm9rZT0iIzJmN2Q1YSIgc3Ryb2tlLXdpZHRoPSIzIi8+PHRleHQgeD0iMzAwIiB5PSI3NiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJmN2Q1YSI+aGlkZGVuIHNhdmUgbG9jYXRpb246IHVwbG9hZGVkLCB3b3JrczwvdGV4dD4KPGxpbmUgeDE9IjI3MCIgeTE9IjE4NSIgeDI9IjQyMCIgeTI9IjE4NSIgc3Ryb2tlPSIjYjU1MzNjIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1kYXNoYXJyYXk9IjYgNSIvPjx0ZXh0IHg9IjMwMCIgeT0iMTc2IiBmb250LXNpemU9IjEyIiBmaWxsPSIjYjU1MzNjIj5oaWRkZW4gc2F2ZSBsb2NhdGlvbjogcmVmdXNlZDwvdGV4dD48dGV4dCB4PSI0MzAiIHk9IjE5MCIgZm9udC1zaXplPSIyMiIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2I1NTMzYyI+eDwvdGV4dD4KPGxpbmUgeDE9IjI3MCIgeTE9IjIxMCIgeDI9IjU2MCIgeTI9IjIxMCIgc3Ryb2tlPSIjMmY3ZDVhIiBzdHJva2Utd2lkdGg9IjMiLz48dGV4dCB4PSIzMDAiIHk9IjIzMiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJmN2Q1YSI+aXRzIG93biBicmFuY2g6IHVwbG9hZGVkLCB3b3JrczwvdGV4dD4KPHJlY3QgeD0iNTYwIiB5PSI1MCIgd2lkdGg9IjMwMCIgaGVpZ2h0PSIxODAiIHJ4PSIxMCIgZmlsbD0iIzlhYTBhNiIgZmlsbC1vcGFjaXR5PSIwLjEwIiBzdHJva2U9IiM5YWEwYTYiLz48dGV4dCB4PSI1NzYiIHk9Ijc4IiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2Y0NDRiIj5HaXRIdWI8L3RleHQ+PHRleHQgeD0iNTc2IiB5PSIxMDQiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPnJlZnMvaG91c2UtcnVsZXMvYXV0b3NhdmUvLi4uPC90ZXh0Pjx0ZXh0IHg9IjU3NiIgeT0iMTI0IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij4oOSBzYXZlcywgYWxsIGZyb20gdGhlIFBDKTwvdGV4dD48dGV4dCB4PSI1NzYiIHk9IjIwMCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+dGhlIHNlc3Npb24ncyBicmFuY2g8L3RleHQ+PC9zdmc+",
+     "alt": "A session on the PC uploads its save to the hidden save location on GitHub; a cloud session's upload there is refused, while its upload to its own branch works",
+     "caption": "Measured 2026-11-16 from this cloud session: the upload to the hidden save location failed twice with the error \"unexpected disconnect\". This is a plain diagram, not a screenshot."
+    }
+   ],
+   [
+    "loop",
+    "What exists",
+    "Most of it is built, on a branch",
+    "",
+    "On AjsAgent/session-handoff: the save after every edit (issue #486), the save at the end of a turn and when a usage limit cuts it off (#487), the end-of-reply check (#407), the pickup at session start (#408), the rule that an approval quoted from earlier text does not count (#409), and the rule text (#410). Main has none of it. That branch is 27 commits behind main. Most of its other 205 commits reached main in a different form through pull request #519.",
+    "Nothing from you."
+   ],
+   [
+    "search",
+    "Unknown",
+    "Whether a cloud session may push a second branch",
+    "",
+    "Today a cloud session is told to upload only to its one session branch. The guard (the plugin check that blocks unsafe git commands) refuses even that branch, because its name starts with lowercase \"ajsagent/\". I have not tested whether the cloud's git connection would accept a save branch under another name. The test means uploading a branch this session was told not to upload. Choice 1 option B needs that test first.",
+    "Only if you pick choice 1 option B: reply \"probe allowed\" and I will upload one throwaway test branch to see whether GitHub accepts it."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You pick four choices and approve",
+    "you",
+    "A build plan page comes next, with the planned code shown, then one issue per step.",
+    "Your pick in each of the four choices further down, then the line \"Design approved: Phase 3\"."
+   ],
+   [
+    "flask",
+    "Prove it",
+    "Tested on both kinds of session",
+    "",
+    "Live headless sessions and real uploads to GitHub, from this cloud session and, by your steps, from your PC on a second account. That is the phase's own done-when line.",
+    "The second-account steps, on the QA page at the end."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "A save that reaches GitHub from cloud sessions too",
+   "Cloud saves go to a place GitHub is known to accept uploads (choice 1).",
+   null,
+   "The PC keeps using the hidden save location, which works there. A cloud session needs a different place, because GitHub refuses its upload to that location.",
+   [
+    "Saves only work from your PC; a cloud session's work exists only in its container until it commits.",
+    "Every session's unsaved work reaches GitHub, PC or cloud.",
+    "A cloud container is thrown away when the session ends, so this is where work is most often lost."
+   ]
+  ],
+  [
+   "new",
+   "One save per folder",
+   "Each working folder saves under its own name (issues #488 and #489).",
+   null,
+   "Each folder gets a random id, written once inside .git, and saves under its own name in the hidden save location. A save only ever replaces its own folder's save. Saves made before the change are still read.",
+   [
+    "Two folders on one branch share one save, so the newer one erases the other; the desktop QA lost a save this way.",
+    "No folder can erase another's save.",
+    "The pickup lists each other folder's save, newest first, with its own restore command."
+   ]
+  ],
+  [
+   "new",
+   "The handoff code comes back onto main",
+   "Copied over from AjsAgent/session-handoff onto a new branch cut from main (choice 2).",
+   null,
+   "Before I copy anything, I show you a list of every handoff piece on the old branch, each marked keep, change or drop. Your house rules require this list for any move of old code.",
+   [
+    "Main has no automatic save for your own branches, no pickup at session start and no handoff note.",
+    "Main gets the handoff, on top of phases 1 and 2 and the speed switches.",
+    "Everything else in phase 3 builds on it."
+   ]
+  ],
+  [
+   "new",
+   "One command points the app at a branch build and back",
+   "So every later phase can be tested in the desktop app you use.",
+   null,
+   "I design this on its own page after the handoff is built, because it changes how the plugin is installed, not how work is saved.",
+   [
+    "Testing a branch build in the desktop app means hand-editing settings.",
+    "One command switches to a branch build, and one switches back.",
+    "Later phases are tested in the app you use, not only in a headless run."
+   ]
+  ],
+  [
+   "change",
+   "Eleven smaller fixes ride along",
+   "The six verify and handover issues this phase carries (#44, #46, #137, #202, #205, #215) and the five leftovers from phases 1 and 2 (#515, #520 to #523).",
+   null,
+   "Each is checked against the code before its build plan, as the roadmap says for this phase.",
+   [
+    "All eleven are still open, and for some I have not been able to reproduce the problem.",
+    "Each one fixed, or closed with the evidence that it is already fixed.",
+    "They are small and independent, so they go last."
+   ]
+  ]
+ ],
+ "choices": [
+  [
+   "q1",
+   "Where does a cloud session's save go?",
+   [
+    [
+     "A",
+     "Onto the session's own branch, as an extra commit labelled \"work in progress\", uploaded at the same moments the PC uploads its save",
+     1,
+     "Uses only the upload measured to work today. It adds those \"work in progress\" commits to the branch history. The PC's save never does that, because it goes to the hidden save location instead."
+    ],
+    [
+     "B",
+     "Onto a separate save branch, AjsAgent/autosave/<branch>/<folder id>, only when the hidden ref is refused",
+     0,
+     "Keeps the branch history clean, but fills the GitHub branch list with save branches, and needs the upload test first."
+    ],
+    [
+     "C",
+     "Leave cloud sessions as they are and save only from the PC",
+     0,
+     "Nothing new to build, but it fails the phase's done-when line, and you rejected it on 2026-11-12."
+    ]
+   ],
+   "A is the only option built on an upload measured to work from here. B is cleaner if the test passes."
+  ],
+  [
+   "q2",
+   "How does the handoff code reach main?",
+   [
+    [
+     "A",
+     "A new branch cut from main; I copy the handoff pieces over after you see the keep, change and drop list",
+     1,
+     "Starts from today's main, so nothing in phases 1 and 2 or the speed switches is undone."
+    ],
+    [
+     "B",
+     "Merge AjsAgent/session-handoff into a fresh branch and resolve the conflicts",
+     0,
+     "Keeps the old commits, but 205 commits overlap main's newer versions of the same files, so conflicts are likely in most hook files."
+    ]
+   ],
+   "A is smaller to check and cannot bring back an older version of a hook by accident."
+  ],
+  [
+   "q3",
+   "In what order does the phase go?",
+   [
+    [
+     "A",
+     "Handoff first, then the branch-build command, then the eleven small fixes, each with its own build plan and QA",
+     1,
+     "The handoff is what the done-when line tests; the rest waits behind it."
+    ],
+    [
+     "B",
+     "Everything in one build plan and one QA",
+     0,
+     "Fewer pages, but one failure holds up the whole phase."
+    ]
+   ],
+   "A matches how phases 1 and 2 ran."
+  ],
+  [
+   "q4",
+   "Which branch does this phase's work go on?",
+   [
+    [
+     "A",
+     "A new AjsAgent/phase-3-handoff branch; you allow me to upload it from this cloud session",
+     1,
+     "The guard accepts it as mine. It needs your word, because this session was told to upload only to ajsagent/zen-bell-9wcapi."
+    ],
+    [
+     "B",
+     "This session's branch, ajsagent/zen-bell-9wcapi, after the guard is taught that lowercase ajsagent/ is mine too",
+     0,
+     "Follows the cloud session's branch rule, but changes the guard first, which is a fix of its own."
+    ]
+   ],
+   "A needs no guard change. B is worth filing as an issue either way, since every cloud session gets a lowercase branch name."
+  ]
+ ],
+ "wrapup": {
+  "summary": "The design for phase 3: the session handoff comes back onto main, cloud sessions can save too, each folder saves under its own name, then a command for testing branch builds, then eleven small fixes.",
+  "changing": "Nothing yet. After approval, a build plan page with the planned code and the keep, change and drop list, then one issue per step.",
+  "blocking": "Your pick in each of the four choices, or any change you want.",
+  "next": "I write the build plan page and the step issues, then build after you approve it.",
+  "todo": [
+   "Pick one option in each choice.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it. It starts \"Design approved: Phase 3\"."
+  ]
+ }
+}
