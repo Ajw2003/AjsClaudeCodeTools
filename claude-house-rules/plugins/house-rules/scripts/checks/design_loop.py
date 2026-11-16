@@ -2694,8 +2694,13 @@ def _ma_say(cwd, prompt):
 
 
 def _ma_stage(d):
+    """The stage file without approval times: two calls a second apart would otherwise differ (a flaky FAIL)."""
     with open(os.path.join(d, ".claude", "house-rules-loop.json"), encoding="utf-8") as f:
-        return json.load(f)
+        state = json.load(f)
+    for a in state.get("approvals") or []:
+        if isinstance(a, dict):
+            a.pop("at", None)
+    return state
 
 
 _ma_root = tempfile.mkdtemp(prefix="above-")
