@@ -2317,6 +2317,12 @@ def _check_commit(ctx):
     return "commit %s on your own branch" % ", ".join(ctx["uncommitted"][:8])
 
 
+def _check_handoff(ctx):
+    # #530: the work is uploaded and described. Lazy import: safe_git is loaded after this module.
+    from house_rules.safe_git import handover_handoff_check
+    return handover_handoff_check(ctx.get("written") or [], ctx.get("committed"), ctx.get("cwd"))
+
+
 def _check_plain(ctx):
     if not ctx.get("plain_problems"):
         return ""
@@ -2503,6 +2509,7 @@ CHECKPOINTS = [
     ("reply ends", "qa page", _check_qa_page, "block"),
     ("reply ends", "decided for you", _check_decided, "block"),
     ("reply ends", "changelog", _check_changelog, "block"),
+    ("reply ends", "handoff", _check_handoff, "block"),
 ]
 
 
@@ -2513,6 +2520,7 @@ CHECKPOINT_RULES = {
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
     "decided for you": "Design points are aj's to decide; a reply puts them as options, not as \"I went with ...\".",
+    "handoff": "A turn that wrote or committed files is pushed, with a fresh clean handoff note.",
     "changelog": "Every change adds a line to the repo's CHANGELOG.md, in the same turn.",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
@@ -3038,7 +3046,7 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
 
 
 def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                         needs_evidence, uncommitted, plain_problems, trace_lines, written=None):
+                         needs_evidence, uncommitted, plain_problems, trace_lines, written=None, committed=False):
     """The blocking checkpoints at "reply ends" (first reply only). True when the reply was blocked (the
     block is emitted here). An error is added to trace_lines and nothing is blocked."""
     try:
@@ -3047,7 +3055,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             "long_words": long_words,
             "editor_owed": editor_owed,
             "needs_evidence": needs_evidence,
-            "uncommitted": uncommitted, "written": list(written or []),
+            "uncommitted": uncommitted, "written": list(written or []), "committed": committed,
             "plain_problems": plain_problems, "cwd": _payload_cwd(payload),
             "user_text": _last_user_text(transcript_path) if transcript_path else "",
         }
