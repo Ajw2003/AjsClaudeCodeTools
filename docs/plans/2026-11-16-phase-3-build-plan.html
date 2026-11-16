@@ -322,7 +322,7 @@ const PAGE = {
         "Steps 7-11",
         "Small fixes",
         "",
-        "#534 four older fixes (#44, #46, #137, #205); #520 merged phase pull requests count toward closing their step issues; #521 the docs-tiers reminder suggests instead of commands; #522 switching branch and committing in one command; #523 the 8 test failures that happen only on Windows.",
+        "#534 covers four older fixes: #44 (verify.py --only), #46 (the agent-field checks), #137 (no leading & in handed-over commands) and #205 (a warning when Python is missing). #520 lets a merged phase pull request close its step issues. #521 makes the docs-tiers reminder suggest instead of command. #522 allows switching branch and committing in one command. #523 fixes the 8 test failures that happen only on Windows.",
         "#523 needs your PC to run the suites after the fix."
       ],
       [
@@ -354,7 +354,7 @@ const PAGE = {
         "The cloud save is refused, so nothing is saved",
         "A commit labelled \"wip: autosave\" (work in progress) on the session's own branch, pushed to GitHub"
       ],
-      "Runs only in cloud sessions, which the setting CLAUDE_CODE_REMOTE=true marks (checked in this one), and only on a branch the guard counts as the agent's. The guard is the check that blocks commits to branches that are not the agent's. The guard learns that lowercase ajsagent/ is the agent's, which is what blocked this session's own branch today."
+      "Runs only in cloud sessions, which the setting CLAUDE_CODE_REMOTE=true marks (checked in this cloud session). It commits only on a branch the guard, the check that blocks commits to other people's branches, counts as the agent's own. Today the guard refused this session's own branch because its name starts with lowercase ajsagent/; this step teaches it that prefix."
     ],
     [
       "chg",
@@ -392,7 +392,7 @@ const PAGE = {
       "Later phases are tested in the app you use.",
       [
         "Switching means hand-editing",
-        "tools/use_branch.py <branch>, and tools/use_branch.py main to go back"
+        "One command takes a branch name and switches the plugin to that branch's build; the same command with main switches back to main's build"
       ],
       "Prints the installed version and commit afterwards, so the switch is shown, not assumed. Tested both ways in a throwaway config folder by tools/verify_tools.py."
     ],
