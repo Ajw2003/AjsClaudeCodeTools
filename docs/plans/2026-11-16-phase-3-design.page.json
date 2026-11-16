@@ -36,7 +36,7 @@
     "What exists",
     "Most of it is built, on a branch",
     "",
-    "On AjsAgent/session-handoff: the save after every edit (issue #486), the save at the end of a turn and when a usage limit cuts it off (#487), the end-of-reply check (#407), the pickup at session start (#408), the rule that an approval quoted from earlier text does not count (#409), and the rule text (#410). Main has none of it. That branch is 27 commits behind main. Most of its other 205 commits reached main in a different form through pull request #519.",
+    "The branch AjsAgent/session-handoff holds six built pieces. Two are saves: one after every edit (issue #486), and one at the end of a turn or when a usage limit cuts it off (#487). The other four are the end-of-reply check (#407), the pickup at session start (#408), the rule that an approval quoted from earlier text does not count (#409), and the rule text (#410). Main has none of it. That branch is 27 commits behind main. Most of its other 205 commits reached main in a different form through pull request #519.",
     "Nothing from you."
    ],
    [
