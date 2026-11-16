@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-16 - Phase 3 design approved
+
+aj wrote "Design approved: Phase 3 1A 2A 3B 4A" on the design page `docs/plans/2026-11-16-phase-3-design.html`.
+1A: a cloud session saves by committing its work in progress to its own branch and uploading it, because the hidden
+save ref is refused from cloud sessions (Research.md, 2026-11-12 and its 2026-11-16 note); the PC keeps the hidden ref.
+2A: the handoff code is copied from `AjsAgent/session-handoff` onto `AjsAgent/phase-3-handoff`, cut from `main`, after a
+keep, change and drop list. 3B: one build plan and one QA for the whole phase, not one per part. 4A: the work goes on
+`AjsAgent/phase-3-handoff`, uploaded from this cloud session with aj's permission. Rejected: a separate save branch per
+folder (1B, untested and clutters the branch list), merging the old branch (2B), and one plan per part (3A).
+**Status.** Plan.
+
+---
+
 ## 2026-11-12 - Cloud saves for the session handoff move to phase 3
 
 **Context.** The handoff re-test found that a cloud session's push to `refs/house-rules/autosave/<branch>` is refused,
