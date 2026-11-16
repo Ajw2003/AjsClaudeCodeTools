@@ -1115,7 +1115,7 @@ def event_subagentcommit():
             )
             return 0
         advice = " ".join(
-            _branch_advice(bool(branch and branch.startswith(owned_branch_prefixes())), branch,
+            _branch_advice(is_owned_branch(branch), branch,
                            "HEAD is detached in %s" % top)
             for top, branch, _files in left
         )
@@ -1435,6 +1435,41 @@ def _head_age_seconds(top):
     return _t.time() - int(_ag(top, ["log", "-1", "--format=%ct"])[1].strip() or "0")
 
 
+def _cloud_autosave(top, branch, tool, payload, force=False):
+    """#528: a cloud session cannot push the hidden saves ref, so on the agent's own branch commit the
+    tracked changes plus the files it wrote as `wip: autosave` and push the branch, at most once per
+    AUTOSAVE_PUSH_INTERVAL unless `force`. Returns systemMessage lines."""
+    import time as _t
+    from house_rules.safe_git import is_protected_branch
+
+    if is_protected_branch(branch, top) or not is_owned_branch(branch):
+        marker = _autosave_state_path(top, branch, "cloudsaid")
+        if _autosave_read(marker):
+            return []
+        _autosave_write(marker, "1")
+        return ["house-rules autosave: `%s` is not the agent's own branch (or is the default branch), so a cloud "
+                "session saves nothing here. Branch off to `ajsagent/<topic>` to be saved. (Said once.)" % branch]
+    if tool in ("Write", "Edit", "NotebookEdit"):
+        _autosave_remember(top, branch, payload)
+    if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
+        return []
+    now = _t.time()
+    stamp = _autosave_state_path(top, branch, "cloudpushed")
+    prev = _autosave_read(stamp).strip()
+    if not force and prev and now - float(prev) < AUTOSAVE_PUSH_INTERVAL:
+        return []  # commit and push together, so edits inside the window make no commit
+    _autosave_write(stamp, str(now))  # before the attempt: a dead origin costs one timeout a minute
+    try:
+        sha, done = _wip_commit(top, branch, "wip: autosave")
+    except RuntimeError as exc:
+        return ["house-rules autosave: could not commit on %s (%s). Nothing was saved." % (branch, exc)]
+    try:
+        _ag(top, ["push", "--quiet", "-u", "origin", branch], timeout=AUTOSAVE_PUSH_TIMEOUT)
+    except RuntimeError as exc:
+        return ["house-rules autosave: could not push %s to origin (%s). It is committed locally only." % (branch, exc)]
+    return []
+
+
 def event_autosave():
     """PostToolUse (Write|Edit|NotebookEdit|Bash) on a worktree-agent- branch: after a
     CHECKPOINT_MINUTES stretch with no commit, commit for the subagent; then snapshot the
@@ -1464,6 +1499,11 @@ def event_autosave():
                                    "checkout. (Said once.)")
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
+            return 0
+        if os.environ.get("CLAUDE_CODE_REMOTE") == "true":
+            notes = issue_notes + _cloud_autosave(top, branch, tool, payload, force=bool(issue_notes))
+            if notes:
+                emit({"systemMessage": " | ".join(notes)})
             return 0
         if tool in ("Write", "Edit", "NotebookEdit"):
             _autosave_remember(top, branch, payload)

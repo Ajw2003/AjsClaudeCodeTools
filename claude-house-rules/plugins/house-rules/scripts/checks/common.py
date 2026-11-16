@@ -201,6 +201,7 @@ def _repo_on(name, head_line):
 
 REPO_THEIRS = _repo_on("theirs", "ref: refs/heads/main\n")
 REPO_MINE = _repo_on("mine", "ref: refs/heads/claude/some-topic\n")
+REPO_CLOUD = _repo_on("cloud", "ref: refs/heads/ajsagent/x\n")
 REPO_DETACHED = _repo_on("detached", "9f1c0de0000000000000000000000000000000ab\n")
 REPO_THEIRS_FEATURE = _repo_on("theirs-feature", "ref: refs/heads/feature/theirs\n")
 REPO_NONE = os.path.join(_FIXTURE_ROOT, "not-a-repo")
@@ -437,6 +438,7 @@ def _project_env(root, **extra):
     e = dict(os.environ)
     e["CLAUDE_PROJECT_DIR"] = root
     e.pop("HOUSE_RULES_COMMIT_CHECK", None)
+    e.pop("CLAUDE_CODE_REMOTE", None)  # a cloud sandbox sets it; cases that want the cloud path pass it in
     e.update(extra)
     return e
 

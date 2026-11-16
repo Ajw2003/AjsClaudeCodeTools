@@ -231,6 +231,34 @@ commit_case(
     "second edit local-only: %s; after the window origin matches: %s"
     % (_rate_ok, _as_remote_ref(_bare, "worktree-agent-x") == _as_ref(_d, "worktree-agent-x")),
 )
+# --- #528: a cloud session saves to its own branch, never to the hidden ref ---
+_dc, _bc = _as_repo("ajsagent/x")
+_cenv = _as_env(CLAUDE_CODE_REMOTE="true")
+_pc = _as_write(_dc, "new.py")
+_junk = os.path.join(_dc, "token.txt")
+with open(_junk, "w", encoding="utf-8") as _f:
+    _f.write("secret\n")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _pc, _dc), env=_cenv)
+_cmsgs = _as_git(_dc, "log", "--format=%s").split("\n")
+_crefs = _as_git(_bc, "for-each-ref", "--format=%(refname)", "refs/house-rules/saves/")
+commit_case(
+    "autosave (#528): a cloud session on ajsagent/x makes one `wip: autosave` commit, pushes the branch, and pushes no saves ref",
+    _cmsgs == ["wip: autosave", "base"] and _as_git(_bc, "rev-parse", "ajsagent/x") == _as_git(_dc, "rev-parse", "HEAD")
+    and _crefs == "" and _as_ref(_dc, "ajsagent/x") == "",
+    "log %r, origin saves %r" % (_cmsgs, _crefs),
+)
+commit_case(
+    "autosave (#528): the cloud wip commit holds the file the agent wrote and not an untracked file it did not write",
+    _as_git(_dc, "show", "--name-only", "--format=", "HEAD").split() == ["new.py"],
+    "files %r" % _as_git(_dc, "show", "--name-only", "--format=", "HEAD"),
+)
+_dm, _bm = _as_repo("main")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _as_write(_dm, "new.py"), _dm), env=_cenv)
+commit_case(
+    "autosave (#528): a cloud session on main makes no commit and pushes nothing",
+    _as_git(_dm, "rev-list", "--count", "HEAD") == "1" and _as_git(_bm, "for-each-ref", "--format=%(refname)") == "",
+    "origin refs %r" % _as_git(_bm, "for-each-ref", "--format=%(refname)"),
+)
 # --- #527: every branch is saved, one save per folder ---
 def _as_saves(d, branch):
     """(ref name, sha) pairs under refs/house-rules/saves/<branch>/ in repo or bare repo `d`."""

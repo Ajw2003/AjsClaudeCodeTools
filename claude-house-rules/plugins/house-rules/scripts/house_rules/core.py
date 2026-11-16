@@ -2190,6 +2190,12 @@ def owned_branch_prefixes():
     return OWNED_BRANCH_PREFIXES + extra
 
 
+def is_owned_branch(branch, extra=()):
+    """Is `branch` the agent's own? An `ajsagent/` prefix in any case counts (cloud sessions lowercase it)."""
+    return bool(branch) and (branch.startswith(owned_branch_prefixes() + tuple(extra))
+                             or branch.lower().startswith("ajsagent/"))
+
+
 # Any -C at all, broad on purpose (`grep -C 3` included); only the `git -C <dir>` form below is
 # resolved to a directory, and a -C it does not explain leaves where the command runs unclear.
 _ANY_C_FLAG_RE = re.compile(r"(^|\s)-C(\s|=)")

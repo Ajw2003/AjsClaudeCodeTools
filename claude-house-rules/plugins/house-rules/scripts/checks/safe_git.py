@@ -110,6 +110,9 @@ print()
 
 # --- branch-aware guard: the same command, judged by whose branch the checkout is on ---------
 BRANCH_CASES = [
+    # #528: a cloud session's lowercase ajsagent/ branch is the agent's own; main stays refused.
+    (REPO_CLOUD, "ajsagent/x", "pass", None, "git commit -m x"),
+    (REPO_THEIRS, "main", "deny", DEFAULT, "git commit -m x"),
     # Off the default branch, a commit, an ordinary push and a merge or rebase run unasked (#197).
     (REPO_MINE, "claude/some-topic", "pass", None, 'git commit -m "checkpoint"'),
     (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),

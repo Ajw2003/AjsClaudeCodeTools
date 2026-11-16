@@ -267,7 +267,7 @@ def branch_ownership(start=None):
         return False, None, "HEAD points at %s, which is not a branch" % ref
 
     branch = ref[len("refs/heads/") :]
-    return branch.startswith(owned_branch_prefixes()), branch, None
+    return is_owned_branch(branch), branch, None
 
 
 def _agent_branch_enabled():
@@ -494,7 +494,7 @@ def _never_blocked_git(subject, branch, where):
     are not routine, so they fall through to the normal guard. The design loop is not consulted here."""
     if not branch or is_protected_branch(branch, where):
         return False
-    if not branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+    if not is_owned_branch(branch, (AUTOSAVE_BRANCH_PREFIX,)):
         return False
     if not _only_git_statements(subject):
         return False
@@ -821,7 +821,7 @@ def _event_guard_main():
             if marker == BRANCH_WRITE and known:
                 if protected:
                     refused.append(reason)
-                elif branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+                elif is_owned_branch(branch, (AUTOSAVE_BRANCH_PREFIX,)):
                     exempted.append(reason)
                 else:
                     not_mine.append(reason)
