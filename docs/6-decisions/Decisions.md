@@ -7,6 +7,13 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-16 - Feature switches build plan approved
+
+aj wrote "Build plan approved: Feature switches" on `docs/plans/2026-11-16-feature-switches-build-plan.html`: steps
+#536, #537 and #538 under #535, built on `AjsAgent/phase-3-handoff`, tested in phase 3's QA. **Status.** Build.
+
+---
+
 ## 2026-11-16 - Feature switches design approved
 
 aj asked for a stop-gap: every plugin feature can be switched off or on easily in any folder, not only a git repo,
