@@ -1999,7 +1999,9 @@ def _close_check(repo, number, reason, state):
         return False, ("a not-planned close needs an approved sweep or a named list, and #%d is not on one "
                        "with the action not_planned" % number)
     if holders:
-        return False, "#%d's feature passed QA but no merged pull request is recorded since" % number
+        miss = next((e["merge_miss"] for e in holders if e.get("merge_miss")), "")
+        return False, "#%d's feature passed QA but no merged pull request is recorded since%s" % (
+            number, (" (" + miss + ")") if miss else "")
     if sweep:
         return False, "#%d is on the approved sweep list with a different action than completed" % number
     return False, ("no QA pass is recorded for a feature that holds #%d, and it is on no approved sweep or "
@@ -2720,6 +2722,33 @@ def _merged_pr_refs(state, repo, number):
         return [], "its body could not be read (%s: %s)" % (type(exc).__name__, exc)
 
 
+LOOP_ISSUE_BODIES_ENV = "HOUSE_RULES_LOOP_ISSUE_BODIES_FILE"  # tests: {"owner/repo#n": issue body}
+_PART_OF_RE = re.compile(r"\bPart of\s+#(\d+)", re.IGNORECASE)
+
+
+def _issue_parent(repo, number):
+    """(parent number or None, problem) from the `Part of #N` line of issue `number`'s body, read through REST
+    (not GraphQL, which cloud sessions refuse). problem says why the body could not be read ("" when it could)."""
+    stand_in = os.environ.get(LOOP_ISSUE_BODIES_ENV)
+    try:
+        if stand_in:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                body = json.load(f)["%s#%d" % (repo, number)]
+        else:
+            if not repo or not shutil.which("gh"):
+                raise RuntimeError("no repo is named" if not repo else "gh is not installed")
+            import subprocess
+            proc = subprocess.run(["gh", "api", "repos/%s/issues/%d" % (repo, number), "--jq", ".body // \"\""],
+                                  capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+            if proc.returncode != 0:
+                raise RuntimeError(((proc.stderr or "").strip().splitlines() or ["gh exited %d" % proc.returncode])[0])
+            body = proc.stdout
+        m = _PART_OF_RE.search(body or "")
+        return (int(m.group(1)) if m else None), ""
+    except Exception as exc:
+        return None, "#%d's body could not be read (%s: %s)" % (number, type(exc).__name__, exc)
+
+
 # #510: after a merge, the local branch of the merged pull request and the finished helper worktrees are deleted
 # when nothing unsaved goes with them. Runs inside the hook (not through Bash, so the guard is not involved).
 CLEANUP_ENV = "HOUSE_RULES_CLEANUP"  # "off" turns the cleanup off
@@ -2925,9 +2954,25 @@ def event_closablemerge():
         stamp_trace = ""  # #510: said through the one emit below, never as a second JSON object on stdout
         if open_:
             refs, why = _merged_pr_refs(state, repo, number)
-            hit = [e for e in open_ if any(isinstance(i, dict) and i.get("number") == n
-                                           and _close_repo_match(r, i.get("repo", ""))
-                                           for i in e.get("issues") or [] for r, n in refs)]
+            have = {(r.lower(), n) for r, n in refs}
+            looked = {}  # (repo, issue) -> parent number or None, for the refusal text
+            miss = []
+
+            def _entry_hit(e):
+                for i in e.get("issues") or []:
+                    if not isinstance(i, dict) or not isinstance(i.get("number"), int):
+                        continue
+                    irepo = (i.get("repo") or repo or "").lower()
+                    if any(n == i["number"] and _close_repo_match(r, i.get("repo", "")) for r, n in refs):
+                        return True
+                    par, perr = _issue_parent(irepo, i["number"])
+                    looked[(irepo, i["number"])] = par
+                    if perr:
+                        miss.append(perr)
+                    if par is not None and (irepo, par) in have:
+                        return True
+                return False
+            hit = [e for e in open_ if _entry_hit(e)]
             for e in hit:
                 e["merged_pr"] = {"repo": repo, "number": number, "at": int(time.time())}
             if hit:
@@ -2940,8 +2985,16 @@ def event_closablemerge():
                              'guard allows those closes once aj says yes. Offer aj: "Close as completed: %s". '
                              "Never close without aj's word." % (repo, number, ", ".join(nums)))
             else:
-                notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (
-                    repo, number, why or "it links none of the QA-passed issues with `Refs #N`"))
+                found = ", ".join("%s#%d" % tuple(r) if isinstance(r, (list, tuple)) else str(r) for r in sorted(have)) or "no refs"
+                looked_txt = "; ".join("#%d (parent %s)" % (n, ("#%d" % p) if p is not None else "none")
+                                       for (_, n), p in sorted(looked.items()))
+                detail = "looked for a Refs/Part of link to %s, found %s%s%s" % (
+                    looked_txt or "any QA-passed issue", found, ("; could not tell: " + "; ".join(miss)) if miss else "",
+                    ("; " + why) if why else "")
+                for e in open_:
+                    e["merge_miss"] = "pull request %s#%d: %s" % (repo, number, detail)
+                _loop_write(git_dir, state)
+                notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (repo, number, detail))
             stamp_trace = "house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit))
         # U3: the merge never moves the stage; aj is asked for the verdict. On the default branch a QA stage file
         # already reads as Done (_loop_read_merged), so asking there would be noise.

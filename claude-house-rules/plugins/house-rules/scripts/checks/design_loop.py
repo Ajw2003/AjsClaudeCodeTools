@@ -1438,6 +1438,28 @@ _cg_mrg = {"repo": "o/r", "number": 20, "at": 1}
 _cg_ready = {"feature": "f", "issues": [{"repo": "o/r", "number": 7}], "qa_at": 1, "qa": "QA passed: f", "merged_pr": _cg_mrg}
 _cg_nomerge = dict(_cg_ready, merged_pr=None)
 _cg_cases = []
+_p5_cases = []
+# #520: a merged pull request naming the phase issue lets its `Part of #<phase>` steps close.
+_ib = os.path.join(_FIXTURE_ROOT, "issue-bodies.json")
+json.dump({"o/r#7": "Step.\n\nPart of #5", "o/r#8": "A step with no parent line."}, open(_ib, "w", encoding="utf-8"))
+_ib_env = dict(_cl_env, HOUSE_RULES_LOOP_PR_BODIES_FILE=_bodies, HOUSE_RULES_LOOP_ISSUE_BODIES_FILE=_ib)
+json.dump({"o/r#22": "Refs #5", "o/r#23": "Refs #99", "o/r#24": "Refs #5"}, open(_bodies, "w", encoding="utf-8"))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 22}, {"merged": True}, env=_ib_env)
+_p5_cases.append(("#520: a merged PR that Refs the phase #5 stamps the record of step #7 (Part of #5)",
+                  (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 22))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_o = _cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 23}, {"merged": True}, env=_ib_env)
+_ib_why = _cg_gh("gh issue close 7 -R o/r")
+_p5_cases.append(("#520: a merged PR that Refs neither #7 nor its parent #5 stays refused, naming what it looked for",
+                  _cl_state()["closable"][0]["merged_pr"] is None and _iss_decision(_ib_why) == "deny"
+                  and "#7" in _iss_reason(_ib_why) and "#5" in _iss_reason(_ib_why) and "#99" in _iss_reason(_ib_why)))
+_cl_set({"stage": "done", "closable": [dict(_cl_open, issues=[{"repo": "o/r", "number": 8}])]})
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 24}, {"merged": True}, env=_ib_env)
+_p5_cases.append(("#520: a step with no Part of line is not stamped by a PR that Refs some other issue",
+                  _cl_state()["closable"][0]["merged_pr"] is None))
+for _t, _ok in _p5_cases:
+    report("PASS" if _ok else "FAIL", "closable record: " + _t)
 _cg_mc = {"method": "update", "owner": "o", "repo": "r", "issue_number": 7, "state": "closed", "state_reason": "completed"}
 _cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[dict(i) for i in _cg_ready["issues"]])]})
 _o = _cg_gh("gh issue close 7 -R o/r")
