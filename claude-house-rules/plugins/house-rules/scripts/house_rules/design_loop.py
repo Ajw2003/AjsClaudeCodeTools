@@ -17,6 +17,7 @@ import urllib.parse
 
 from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
+from house_rules.writing import _pages_enabled  # noqa: F401  (#537)
 from house_rules.core import (  # noqa: F401
     _builders_enabled,
     _GATED_TOOLS,
@@ -3073,7 +3074,7 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
     # #309 (incident 6 of #303): the page row reports instead of blocking, on the first reply and the retry
     # alike, until the restructure. It pushed another repo's work into a session as a proposal page.
     page_note = ""
-    if _loop_enabled():
+    if _loop_enabled() and _pages_enabled():
         try:
             pctx = {"reply": reply_text if have_reply else "", "long_words": long_words,
                     "cwd": _payload_cwd(payload),

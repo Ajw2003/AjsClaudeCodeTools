@@ -1058,6 +1058,22 @@ _loop_cases.append(("words inside a code block are not counted",
 _loop_env["HOUSE_RULES_LOOP"] = "off"
 _loop_cases.append(("HOUSE_RULES_LOOP=off also turns the reminder off", not _long_reply(_words250)))
 _loop_env["HOUSE_RULES_LOOP"] = "on"
+# #537: HOUSE_RULES_PAGES=off silences the page rule alone; the default (on) is unchanged
+_loop_env["HOUSE_RULES_PAGES"] = "off"
+_loop_cases.append(("#537: loop on, HOUSE_RULES_PAGES=off: a 200-word reply with no page is not held and gets no page note",
+                    not _long_reply(" ".join(["word"] * 200))))
+_sf_before = open(_loop_sf, encoding="utf-8").read() if os.path.exists(_loop_sf) else None
+if _sf_before is not None:
+    os.remove(_loop_sf)
+_n = _loop_say("Design approved: pagesoff")
+_loop_cases.append(("#537: loop on, HOUSE_RULES_PAGES=off: an approval still moves the stage", _loop_stage() == "plan"))
+if _sf_before is None:
+    os.remove(_loop_sf)
+else:
+    open(_loop_sf, "w", encoding="utf-8").write(_sf_before)
+del _loop_env["HOUSE_RULES_PAGES"]
+_loop_cases.append(("#537: loop on, pages on (default): a 200-word reply with no page is still held",
+                    _long_reply(" ".join(["word"] * 200))))
 
 # -- #233: the handover page template -----------------------------------------------------------
 _tpl_path = os.path.join(HERE, "..", "templates", "handover-page.html")
@@ -2124,6 +2140,10 @@ def _cw_editor(transcript, text="The page is up."):
 
 _cw_cases.append(("editor: writing a page under docs/plans with no editor run gets the reminder",
                   "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+_cw_cases.append(("#537: HOUSE_RULES_PAGES=off: a written docs/plans page with no editor run is not asked for the editor pass",
+        "no @house-rules:editor helper ran" not in run_hook("handover", stop_payload(
+            last_assistant_message="The page is up.", cwd=_loop_dir, stop_hook_active=True, transcript_path=_cw_t_page),
+            env=dict(_loop_env, HOUSE_RULES_PAGES="off"))[1]))
 _cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
                   "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
 def _cw_editor_on(transcript, text):
