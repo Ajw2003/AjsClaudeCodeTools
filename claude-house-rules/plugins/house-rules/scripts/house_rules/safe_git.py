@@ -738,6 +738,25 @@ def event_guard():
     return rc
 
 
+_CREATE_OWNED_RE = re.compile(r"\s*git\s+(?:switch\s+(?:-c|--create)|checkout\s+-b)\s+([^\s;&|'\"$`\\]+)\s*(&&.*)?$", re.S)
+
+
+def _created_owned_branch(subject):
+    """#522: the branch a leading `git switch -c / checkout -b <owned>` creates, when every later
+    statement is `&&`-joined (so they only run on it); else None. -B/-C are left out: they can reset an existing branch."""
+    inner = re.match(r'"command"\s*:\s*"(.*)"$', subject, re.S)  # subject is the JSON field text
+    m = _CREATE_OWNED_RE.match(inner.group(1)) if inner else None
+    if not m or not is_owned_branch(m.group(1)):
+        return None
+    rest = m.group(2) or ""
+    # shortcut: any ; | newline or lone & anywhere later (even inside a quoted message) refuses the exemption.
+    if re.search(r"[;|\n]|\\[nr]|(?<!&)&(?!&)", rest.replace("&&", "", 1) if rest else ""):
+        return None
+    if re.search(r"\bgit\s+(?:switch|checkout)\b", rest):  # a later switch moves off the new branch
+        return None
+    return m.group(1)
+
+
 def _event_guard_main():
     try:
         payload = read_payload()
@@ -787,6 +806,7 @@ def _event_guard_main():
     # --git-dir / --work-tree, or a cd / -C that could not be followed, acts on a repo other than
     # the one we just read the branch from, so the branch cannot justify anything.
     elsewhere = bool(_OTHER_REPO_RE.search(subject)) or moved_unclear
+    branch = _created_owned_branch(subject) or branch if not elsewhere else branch
     known = branch is not None and not elsewhere
     protected = known and is_protected_branch(branch, where)
     # A push naming the default branch as its destination writes to it from any branch.
