@@ -1855,4 +1855,122 @@ _wt_check("links owed: silent outside a project thread",
           [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
 
 
+# --- #531: pickup (SessionStart) - note, snapshot facts, other folders' saves; temp repos with a bare origin
+_PK_BR = "AjsAgent/feat"
+_PK_NOTE = "docs/5-today/handoff-AjsAgent-feat.md"
+_PK_OLD = "refs/house-rules/autosave/" + _PK_BR
+_PK_NEW = "refs/house-rules/saves/%s/" % _PK_BR
+
+
+def _pk_run(cwd, **extra):
+    e = _project_env(_FIXTURE_ROOT)
+    e.pop("CLAUDE_CODE_REMOTE", None)  # this sandbox may be a cloud session; the cases must not inherit it
+    e["HOUSE_RULES_HANDOFF"] = "on"
+    e.update(extra)
+    return run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": cwd}), env=e)[1]
+
+
+def _pk_ctx(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _pk_snap(d, ref, fname, minutes_ago):
+    """A save of `fname` (plus the facts file) on top of HEAD, dated minutes_ago, pushed to origin as `ref`."""
+    _as_write(d, fname, "only in the snapshot\n")
+    os.makedirs(os.path.join(d, ".house-rules"), exist_ok=True)
+    _as_write(d, ".house-rules/handoff-facts.md", "FACTS-MARKER branch feat\n")
+    _as_git(d, "add", "-A")
+    when = "@%d +0000" % int(time.time() - minutes_ago * 60)
+    snap = _as_git(d, "stash", "create", env=dict(os.environ, GIT_COMMITTER_DATE=when, GIT_AUTHOR_DATE=when))
+    _as_git(d, "reset", "-q")
+    os.remove(os.path.join(d, fname))
+    _as_git(d, "update-ref", ref, snap)
+    _as_git(d, "push", "-q", "origin", ref)
+    return snap
+
+
+def _pk_producer(note_text="Where it stands: step 2.\n", ref=_PK_OLD, fname="only.txt"):
+    d, bare = _as_repo(_PK_BR)
+    os.makedirs(os.path.join(d, "docs", "5-today"), exist_ok=True)
+    _as_write(d, _PK_NOTE, note_text)
+    _as_git(d, "add", "-A")
+    _as_git(d, "commit", "-q", "-m", "note")
+    _as_git(d, "push", "-q", "origin", _PK_BR)
+    _pk_snap(d, ref, fname, 5)
+    return d, bare
+
+
+def _pk_clone(bare, fid="cccc3333"):
+    c = tempfile.mkdtemp(prefix="house-rules-pickup-", dir=_FIXTURE_ROOT)
+    subprocess.run(["git", "clone", "-q", "-b", _PK_BR, bare, c], check=True, stderr=subprocess.DEVNULL)
+    _as_write(os.path.join(c, ".git"), "house-rules-folder-id", fid + "\n")
+    return c
+
+
+_pk_d, _pk_bare = _pk_producer()
+_pk_c = _pk_clone(_pk_bare)
+_pk_text = _pk_ctx(_pk_run(_pk_c))
+_pk_rcmd = [l for l in _pk_text.splitlines() if l.startswith("Restore command:")]
+commit_case(
+    "pickup: an old single save is read; note, facts and the missing files with the git-apply restore command",
+    _pk_text.startswith("house-rules pickup: loaded from") and "Where it stands: step 2." in _pk_text
+    and "FACTS-MARKER" in _pk_text and "only.txt" in _pk_text and bool(_pk_rcmd)
+    and "git diff refs/house-rules/remote-autosave/%s^ refs/house-rules/remote-autosave/%s -- only.txt | git apply" % (_PK_BR, _PK_BR)
+    in _pk_rcmd[0] and "Ask aj before running" in _pk_text,
+    "got %r" % _pk_text[:500],
+)
+_pk_e, _ = _as_repo(_PK_BR)
+_as_git(_pk_e, "remote", "remove", "origin")
+_pk_out = _pk_run(_pk_e)
+_pk_one = json.loads(_pk_out)["systemMessage"].splitlines() if _pk_out.strip() else []
+commit_case(
+    "pickup: no origin says so in one line",
+    len(_pk_one) == 1 and "could not be reached" in _pk_one[0] and _pk_ctx(_pk_out) == "",
+    "got %r" % _pk_out[:300],
+)
+_pk_d2, _pk_bare2 = _as_repo(_PK_BR)
+_as_git(_pk_d2, "push", "-q", "origin", _PK_BR)
+commit_case("pickup: no save and no note is silent", _pk_run(_pk_d2).strip() == "", "")
+_pk_d3, _pk_bare3 = _pk_producer("N" * 9000)
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare3)))
+commit_case(
+    "pickup: an oversized note is cut and the cut is named",
+    "is cut at" in _pk_text and len(_pk_text) <= 6200 and _PK_NOTE in _pk_text,
+    "len %d, tail %r" % (len(_pk_text), _pk_text[-200:]),
+)
+commit_case("pickup: HOUSE_RULES_HANDOFF=off is silent", _pk_run(_pk_c, HOUSE_RULES_HANDOFF="off").strip() == "", "")
+
+# (a) two other folders' saves on one branch, newest first; this folder's own save skipped
+_pk_d4, _pk_bare4 = _as_repo(_PK_BR)
+_as_git(_pk_d4, "push", "-q", "origin", _PK_BR)
+_pk_snap(_pk_d4, _PK_NEW + "aaaa1111", "older.txt", 30)
+_pk_snap(_pk_d4, _PK_NEW + "bbbb2222", "newer.txt", 5)
+_pk_snap(_pk_d4, _PK_NEW + "cccc3333", "mine.txt", 1)
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare4)))
+_pk_rcmds = [l for l in _pk_text.splitlines() if l.startswith("Restore command:")]
+commit_case(
+    "pickup: other folders' saves are listed newest first, each with its own restore command; own folder skipped",
+    len(_pk_rcmds) == 2 and "newer.txt" in _pk_rcmds[0] and "bbbb2222" in _pk_rcmds[0]
+    and "older.txt" in _pk_rcmds[1] and "aaaa1111" in _pk_rcmds[1] and "mine.txt" not in _pk_text
+    and all("| git apply" in l for l in _pk_rcmds),
+    "got %r" % _pk_text[:900],
+)
+# (b) an old refs/house-rules/autosave/<branch> save is still listed beside the per-folder saves
+_pk_snap(_pk_d4, _PK_OLD, "legacy.txt", 60)
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare4)))
+commit_case(
+    "pickup: an old autosave/<branch> save is still listed beside the per-folder saves",
+    "legacy.txt" in _pk_text and "newer.txt" in _pk_text and "remote-autosave/" in _pk_text,
+    "got %r" % _pk_text[:900],
+)
+# other branches with a recent save are named
+_as_git(_pk_d4, "push", "-q", "origin", _PK_OLD + ":refs/house-rules/saves/AjsAgent/other/dddd4444")
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare4)))
+commit_case("pickup: another branch's recent save is named in one line",
+            "Other branches with a save under 24 h old: AjsAgent/other" in _pk_text, "got %r" % _pk_text[-300:])
+
+
 finish()

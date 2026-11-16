@@ -2075,3 +2075,173 @@ def _append_thread_link(body):
 core.register_session_start("inject", _strip_subagent_markers)
 core.register_session_start("inject", _append_thread_link)
 core.register_prompt(_scope_delegate_link)
+
+
+# --- #531: pickup (SessionStart) - the handoff note, the newest save's facts, and what other folders' saves hold
+PICKUP_CAP = 6000
+PICKUP_NOTE_CAP = 3500
+PICKUP_FETCH_TIMEOUT = 5
+# Two separate namespaces so a <branch>/<id> save never has to nest under an old <branch> save (git's D/F rule).
+PICKUP_REMOTE_PREFIX = "refs/house-rules/remote-saves/"
+PICKUP_REMOTE_OLD_PREFIX = "refs/house-rules/remote-autosave/"
+_PICKUP_OLD_PREFIX = "refs/house-rules/autosave/"
+
+
+def _pickup_cut(text, cap, what):
+    if len(text) <= cap:
+        return text
+    return text[:cap] + "\n[house-rules pickup: %s was %d characters and is cut at %d; read it directly for the rest]" % (
+        what, len(text), cap)
+
+
+def _pickup_fetch(top, branch):
+    """"" when fetched, else why GitHub could not be reached."""
+    if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
+        return "no `origin` remote"
+    try:
+        for src, dst in ((AUTOSAVE_REF_PREFIX, PICKUP_REMOTE_PREFIX), (_PICKUP_OLD_PREFIX, PICKUP_REMOTE_OLD_PREFIX),
+                         ("refs/heads/" + branch, "refs/remotes/origin/" + branch)):
+            glob = "*" if src.endswith("/") else ""
+            rc, _o, err = _ag(top, ["fetch", "--quiet", "origin", "+%s%s:%s%s" % (src, glob, dst, glob)],
+                              timeout=PICKUP_FETCH_TIMEOUT, check=False)
+            if rc != 0 and not (not glob and "couldn't find remote ref" in err):  # a branch not on origin yet is fine
+                return (err.splitlines() or ["exit %d" % rc])[0][:120]
+    except RuntimeError as exc:
+        return "git fetch failed: %s" % exc
+    return ""
+
+
+def _pickup_missing(top, snap, g):
+    """(files only in the snapshot, files changed in both it and this folder). Never the facts file or the
+    design-loop stage file: only aj's approvals move the stage, and the guard refuses it."""
+    rc, names, _e = g("diff", "--name-only", "-z", snap + "^", snap)
+    only, both = [], []
+    skip = (HANDOFF_FACTS, ".claude/house-rules-loop.json")
+    for f in [n for n in names.split("\0") if n and n not in skip] if rc == 0 else []:
+        sb = g("rev-parse", "--verify", "-q", "%s:%s" % (snap, f))
+        if sb[0] != 0:
+            continue  # deleted in the save: nothing to restore
+        work = g("hash-object", "--", f)[1].strip() if os.path.isfile(os.path.join(top, f)) else None
+        if work == sb[1].strip():
+            continue
+        hb = g("rev-parse", "--verify", "-q", "HEAD:" + f)
+        (only if work == (hb[1].strip() if hb[0] == 0 else None) else both).append(f)
+    return only, both
+
+
+def _pickup_build(top, branch):
+    """(context lines, problem line or ""). Lines are empty when there is nothing to report."""
+    import shlex
+    g = lambda *a: _ag(top, list(a), check=False)
+    problem = _pickup_fetch(top, branch)
+    if problem:
+        problem = "GitHub could not be reached (%s); local saves are used" % problem
+    paths, parts = [], []
+    behind_line = ""
+    rc, out, _e = g("rev-list", "--left-right", "--count", "HEAD...origin/" + branch)
+    if rc == 0 and len(out.split()) == 2:
+        ahead, behind = (int(x) for x in out.split())
+        if ahead or behind:
+            behind_line = "This folder is %d commit(s) behind and %d ahead of origin/%s." % (behind, ahead, branch)
+    note_rel = "docs/5-today/handoff-%s.md" % branch.replace("/", "-")
+    rc, note, _e = g("show", "HEAD:" + note_rel)
+    if rc != 0:
+        wp = os.path.join(top, note_rel)
+        note = _read_text(wp) if os.path.isfile(wp) else ""
+    if note.strip():
+        paths.append(note_rel)
+        parts.append("Handoff note (%s):\n%s" % (note_rel, _pickup_cut(note.strip(), PICKUP_NOTE_CAP, note_rel)))
+    fid_path = os.path.join(_git_dir(top) or "", "house-rules-folder-id")
+    own = _read_text(fid_path).strip() if os.path.isfile(fid_path) else ""
+    # Every save of this branch: (commit time, ref, folder id or "" for an old single save). Other folders' only.
+    saves, seen, newest = [], set(), None
+    for prefix in (AUTOSAVE_REF_PREFIX, PICKUP_REMOTE_PREFIX):
+        rc, out, _e = g("for-each-ref", "--format=%(committerdate:unix) %(objectname) %(refname)", prefix + branch + "/")
+        for line in out.splitlines() if rc == 0 else []:
+            ts, sha, ref = line.split(" ", 2)
+            if not ts.isdigit():
+                continue
+            newest = max(newest or (0, ""), (int(ts), ref))  # the facts come from the newest save, this folder's included
+            fid = ref.rsplit("/", 1)[1]
+            if fid != own and sha not in seen:
+                seen.add(sha)
+                saves.append((int(ts), ref, fid))
+    olds = []
+    for ref in (_PICKUP_OLD_PREFIX + branch, PICKUP_REMOTE_OLD_PREFIX + branch):
+        rc, out, _e = g("log", "-1", "--format=%ct %H", ref)
+        f = out.split()
+        if rc == 0 and len(f) == 2 and f[0].isdigit():
+            newest = max(newest or (0, ""), (int(f[0]), ref))
+            if f[1] not in seen:
+                seen.add(f[1])
+                olds.append((int(f[0]), ref, ""))
+    saves.sort(reverse=True)
+    olds.sort(reverse=True)
+    missing_blocks = []
+    if newest:
+        paths.append(newest[1])
+        rc, facts, _e = g("show", "%s:%s" % (newest[1], HANDOFF_FACTS))
+        if rc == 0 and facts.strip():
+            parts.append("Facts from the newest save (%s):\n%s" % (newest[1], facts.strip()))
+    for ts, snap, fid in saves + olds:
+        only, both = _pickup_missing(top, snap, g)
+        label = "folder %s" % fid if fid else "an old single save"
+        if only:
+            # Applying the save's own diff, not `git restore`: the guard refuses restore (it can throw edits away),
+            # while `git apply` stops on any file that changed since, so it never overwrites anything.
+            missing_blocks.append("Only in the save from %s (%d min old), not in this folder: %s.\nRestore command: git diff %s^ %s -- %s | git apply"
+                                  % (label, max(0, int((time.time() - ts) / 60)), ", ".join(only), snap, snap,
+                                     " ".join(shlex.quote(f) for f in only)))
+        if both:
+            missing_blocks.append("Changed in both this folder and the save from %s (conflict, never restored by the hook): %s." % (label, ", ".join(both)))
+    if missing_blocks:
+        missing_blocks.append("Ask aj before running any restore command; the hook never restores anything.")
+    now = time.time()
+    recent = set()
+    for prefix, nested in ((AUTOSAVE_REF_PREFIX, 1), (PICKUP_REMOTE_PREFIX, 1), (_PICKUP_OLD_PREFIX, 0), (PICKUP_REMOTE_OLD_PREFIX, 0)):
+        rc, out, _e = g("for-each-ref", "--format=%(refname) %(committerdate:unix)", prefix)
+        for line in out.splitlines() if rc == 0 else []:
+            ref, _s, ts = line.rpartition(" ")
+            name = ref[len(prefix):]
+            name = name.rsplit("/", 1)[0] if nested else name
+            if name != branch and ts.isdigit() and now - int(ts) < 86400:
+                recent.add(name)
+    if not (parts or behind_line or missing_blocks):
+        return [], problem
+    lines = ["house-rules pickup: loaded from %s" % " and ".join(paths or ["origin state"])]
+    if problem:
+        lines.append(problem + ".")
+    lines += [x for x in [behind_line] + missing_blocks if x]
+    lines += parts
+    if recent:
+        lines.append("Other branches with a save under 24 h old: %s." % ", ".join(sorted(recent)))
+    return lines, problem
+
+
+def event_pickup():
+    """SessionStart (#531): the branch's handoff note, the newest save's facts, how far behind origin the
+    folder is, and files other folders' saves hold that this folder lacks. Never restores anything."""
+    try:
+        if os.environ.get("HOUSE_RULES_HANDOFF", "on").strip().lower() in _TOGGLE_OFF:
+            return 0
+        payload = read_payload()
+        top = _git_top(core._payload_cwd(payload or ""))
+        if not top:
+            return 0
+        rc, branch, _e = _ag(top, ["symbolic-ref", "-q", "--short", "HEAD"], check=False)
+        if rc != 0 or not branch.strip():
+            return 0  # detached HEAD
+        lines, problem = _pickup_build(top, branch.strip())
+        out = {}
+        if lines:
+            text = "\n".join(lines)
+            if len(text) > PICKUP_CAP:
+                text = text[:PICKUP_CAP] + "\n[house-rules pickup: output was %d characters and is cut at %d]" % (len(text), PICKUP_CAP)
+            out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": text}
+        if problem:
+            out["systemMessage"] = "house-rules pickup: " + problem + "."
+        if out:
+            emit(out)
+    except Exception as exc:
+        emit({"systemMessage": "house-rules pickup: could not check for a handoff (%s: %s)" % (type(exc).__name__, exc)})
+    return 0
