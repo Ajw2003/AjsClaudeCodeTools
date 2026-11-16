@@ -41,9 +41,9 @@ least one file under `docs/4-systems/`, `docs/5-today/Today.md` and
 tier order. All six present: it emits nothing at all — this is the one other deliberate silent
 exception besides `handover`, because it runs every session and a trace here would cost
 something on every single one for a fact that is true almost always. Any missing outright: it
-names exactly which tiers are missing and instructs loading `house-rules:project-docs` and
-scaffolding them before any other work, in every repo — including one that is not a git
-repository at all. A project still on the pre-folder flat layout (`docs/Roadmap.md` etc., no
+names exactly which tiers are missing and tells the agent to offer aj scaffolding them with
+`house-rules:project-docs`; aj's own request comes first, and nothing is scaffolded unasked (#521).
+A folder that is not inside a git repository gets no scaffolding note. A project still on the pre-folder flat layout (`docs/Roadmap.md` etc., no
 numbered folders) is not told to scaffold tiers it already has: it is told which file moves to
 which new path. When the repo *is* a git repository, it also checks
 whether the remote's owner (read from `.git/config`, both the `https://` and `git@host:` URL

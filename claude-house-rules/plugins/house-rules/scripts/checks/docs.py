@@ -56,9 +56,9 @@ _docstiers_cases = [
         {"missing": True, "exclude": False, "owned": True},
     ),
     (
-        "missing tiers, not a git repository at all - no exclude instruction",
+        "not a git repository at all - no scaffolding note (#521)",
         DOCSTIERS_NO_GIT,
-        {"missing": True, "exclude": False, "not_git": True},
+        {"not_git": True},
     ),
     (
         "missing tiers, garbage .git/config - falls to not-owned and says so",
@@ -93,15 +93,20 @@ for _title, _path, _expect in _docstiers_cases:
             _problems.append("expected a named move for docs/systems/*.md")
         if "missing" in _out.lower() and "outright" in _out.lower():
             _problems.append("an all-present old layout should not also claim tiers are missing")
+    elif _expect.get("not_git"):  # #521: no scaffolding note outside git; a short trace is fine
+        if "project-docs" in _out or "scaffold" in _out.lower():
+            _problems.append(f"a folder outside git must get no scaffolding note, got: {_out[:200]!r}")
     else:
         if "house-rules:project-docs" not in _out:
             _problems.append("missing the load-and-scaffold instruction")
+        if "before any other work" in _out or "offer" not in _out.lower() or "docs/1-landing/README.md" not in _out:
+            _problems.append("#521: note must name the missing tiers and offer scaffolding, not order it first")
         _exclude_instruction = "add every scaffolded path to .git/info/exclude" in _out
         if _expect.get("exclude") and not _exclude_instruction:
             _problems.append("expected the .git/info/exclude instruction, not present")
         if not _expect.get("exclude") and _exclude_instruction:
             _problems.append("the .git/info/exclude instruction leaked into an owned/no-git case")
-        if _expect.get("not_git") and "not a git repository" not in _out.lower():
+        if False:
             _problems.append("expected a not-a-git-repository note")
     if not _problems:
         report("PASS", f"docstiers: {_title}")
