@@ -4,7 +4,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-Phase 3 design page (#495): `docs/plans/2026-11-16-phase-3-design.html`, waiting on aj's four choices; nothing built.
+Phase 3 (#495): design approved 1A 2A 3B 4A; build plan `docs/plans/2026-11-16-phase-3-build-plan.html` waiting on aj; nothing built.
 
 Plugin 2.80.0: speed switches (#524, #525).
 
