@@ -1,0 +1,10 @@
+PASS control-pages-on: reply 59 words, page reminder given (21 hook responses)
+    Stop {"hookSpecificOutput":{"hookEventName":"Stop","additionalContext":"House rules, show don't tell: this reply is 395 words and links no page or picture. At 160 words or more, the detail belongs on 
+PASS pages-off: reply 34 words, page reminder not given (21 hook responses)
+PASS note-control: Pages OFF note on the next prompt absent
+PASS note-pages-off: Pages OFF note on the next prompt present
+    SessionStart:startup {"suppressOutput":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The following are the user standing house rules. They apply to every project and override default beha
+    UserPromptSubmit {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"House rules reminder: update the docs tier that changed; no success claim without a run you can quote; commit finished work 
+PASS direct Stop hook, 250 words, pages on: reminder given
+PASS direct Stop hook, 250 words, pages off: reminder not given
+exit 0
