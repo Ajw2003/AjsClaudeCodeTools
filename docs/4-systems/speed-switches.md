@@ -52,3 +52,32 @@ test script itself. aj asked for the reset to follow "the code the test touches"
 was not enough, because a test reaches code through subprocesses its imports don't show
 (`verify.py` runs `hook.py` that way), so any code change stands in for it. Docs, pages and state
 files never reset the count. See `rerun-limit.md` for the rest.
+
+## Feature switches anywhere (planned 2026-11-16, "Design approved: Feature switches 1A 2A 3A")
+
+A stop-gap aj asked for while pages cannot yet fit each project: any feature group can be switched off or on by
+typing one line, in any folder, git repository or not. Page: `docs/plans/2026-11-16-feature-switches.html`.
+
+- **Where a switch is saved (1A).** Typed alone ("pages off"): in this folder's `.claude/house-rules-mode.json`. Inside
+  a git repository that is still the main checkout's `.claude/`, as today; outside one it is the folder the session
+  runs in. With "everywhere" ("pages off everywhere"): in `~/.claude/house-rules-mode.json` (the Claude config folder,
+  `CLAUDE_CONFIG_DIR` when set), used wherever a folder has said nothing. Order: this folder, then everywhere, then
+  `HOUSE_RULES_*` in settings.json, then on. A cloud container is thrown away when the session ends, so "everywhere"
+  lasts only that session there.
+- **The groups (2A).** One typed name each, mapped onto the settings the plugin already reads:
+
+  | Typed name | Settings it switches |
+  |---|---|
+  | design loop | `HOUSE_RULES_LOOP`, `HOUSE_RULES_ISSUES` |
+  | pages | `HOUSE_RULES_PAGES` (new: the page rule, the 160-word page rule and the editor pass a page needs; approvals still count) |
+  | builders | `HOUSE_RULES_DELEGATION`, `HOUSE_RULES_AGENTS` |
+  | issues | `HOUSE_RULES_ISSUES` |
+  | writing checks | `HOUSE_RULES_CLEAR_WRITING`, `HOUSE_RULES_PLAIN_SUMMARY`, `HOUSE_RULES_VISUAL_CHECK`, `HOUSE_RULES_PARITY`, `HOUSE_RULES_VOICE` |
+  | autosave | `HOUSE_RULES_AUTOSAVE`, `HOUSE_RULES_HANDOFF` |
+  | house rules | every group above, plus `HOUSE_RULES_HARVEST`, `HOUSE_RULES_COMMIT_CHECK`, `HOUSE_RULES_HANDOVER`, `HOUSE_RULES_RERUNS`, `HOUSE_RULES_DISKREPORT` |
+
+- **How it reaches every check.** `hook.py`'s `main()` already keeps the payload first (`core.keep_payload()`). Right
+  after it, the switch layer reads the two files and sets each mapped `HOUSE_RULES_*` value for that hook call, so
+  every existing check obeys without being edited. A typed "on" wins over an "off" in settings.json.
+- **Never switchable (3A).** The destructive-command guard, the main-branch guard and the credit check have no setting
+  in any group, so no typed line can turn them off.
