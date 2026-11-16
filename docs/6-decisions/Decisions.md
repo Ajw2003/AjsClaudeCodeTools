@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-16 - Feature switches design approved
+
+aj asked for a stop-gap: every plugin feature can be switched off or on easily in any folder, not only a git repo,
+because builders and pages are stifling some projects until pages can fit each project. aj wrote "Design approved:
+Feature switches 1A 2A 3A" on `docs/plans/2026-11-16-feature-switches.html`. 1A: a typed switch is saved in the folder
+(git or not), or machine-wide with "everywhere"; the folder's own switch wins. 2A: seven groups plus a master "house
+rules" switch. 3A: the destructive-command and main-branch guards are never switched off from chat. Rejected: folder
+only (1B), machine-wide only (1C), a switch per setting (2B), a master switch only (2C), a master that also drops the
+guards (3B). Built on `AjsAgent/phase-3-handoff`, tested in phase 3's QA. **Status.** Plan.
+
+---
+
 ## 2026-11-16 - Phase 3 build plan approved
 
 aj wrote "Build plan approved: Phase 3" on `docs/plans/2026-11-16-phase-3-build-plan.html`: twelve steps, #527 to #534
