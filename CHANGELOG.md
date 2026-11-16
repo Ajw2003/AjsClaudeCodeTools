@@ -4,9 +4,14 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-Phase 3 (#495): design approved 1A 2A 3B 4A; build plan `docs/plans/2026-11-16-phase-3-build-plan.html` waiting on aj; nothing built.
+Plugin 2.81.0: phase 3, pick up on any account (#495), and feature switches anywhere (#535). Waiting on aj's QA.
 
-Feature switches step 3 (#538): the prompt note names every group that is off and where it was set, "house rules off" leaves out the same rule text as design loop and builders, and `/house-rules:mode` lists every group.
+- Work is saved as it happens: on every edit (at most once a minute) and at once when a turn ends or a usage limit cuts it off. On a PC each folder saves under `refs/house-rules/saves/<branch>/<folder id>`, so no folder erases another's save; a cloud session, which cannot push that ref, commits `wip: autosave` on its own branch and pushes it (#527, #528, #529).
+- A reply that changed files is sent back once when the branch is not pushed, the handoff note `docs/5-today/handoff-<branch>.md` is older than the newest commit, or `docs/5-today/Today.md` was not touched (#530).
+- A new session opens with the handoff note, the newest save's facts and the files other folders' saves hold, each with a restore command it never runs itself (#531).
+- `python tools/use_branch.py <branch>` switches the installed plugin to a branch build and `main` switches back, printing what is really installed (#532).
+- Any feature group can be switched by typing one line, in any folder, git or not: design loop, pages, builders, issues, writing checks, autosave, house rules; add "everywhere" for the whole machine. The destructive-command guard, the main-branch guard and the credit check never switch off (#536, #537, #538).
+- Fixes: `verify.py --only <text>` (#44); agent frontmatter fields no longer forbidden (#46); no leading `&` in handed-over commands unless PowerShell-only (#137); a warning when Python is missing for two checks (#205); a merged phase pull request lets its step issues close (#520); the docs-tiers note offers instead of orders (#521); switching to a new owned branch and committing in one command is allowed (#522); the guard counts lowercase `ajsagent/` branches as the agent's (#528); a flaky approval check fixed.
 
 Plugin 2.80.0: speed switches (#524, #525).
 
