@@ -259,6 +259,44 @@ commit_case(
     _as_git(_dm, "rev-list", "--count", "HEAD") == "1" and _as_git(_bm, "for-each-ref", "--format=%(refname)") == "",
     "origin refs %r" % _as_git(_bm, "for-each-ref", "--format=%(refname)"),
 )
+# --- #529: Stop / StopFailure save at once, inside the one-minute window ---
+for _ev, _extra in (("Stop", {}), ("StopFailure", {"error": "rate_limit"})):
+    _bn = "worktree-agent-fin-" + _ev.lower()
+    _df, _bf = _as_repo(_bn)
+    _pf = _as_write(_df, "a.py")
+    run_hook("autosave", _as_payload("PostToolUse", "Write", _pf, _df), env=_as_env())
+    _r1 = _as_ref(_df, _bn)
+    _as_write(_df, "a.py", "changed\n")  # inside the window: the edit hook would stay silent
+    _fp = json.dumps(dict({"hook_event_name": _ev, "session_id": "s1", "cwd": _df}, **_extra))
+    _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
+    _r2 = _as_ref(_df, _bn)
+    commit_case(
+        "autosavefinal (#529): a %s payload inside the one-minute window pushes a fresh save" % _ev,
+        bool(_r1) and _r2 != _r1 and _as_remote_ref(_bf, _bn) == _r2 and not _fo.strip(),
+        "first %s, now %s, origin %s, out %r" % (_r1[:9], _r2[:9], _as_remote_ref(_bf, _bn)[:9], _fo[:120]),
+    )
+    _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
+    commit_case(
+        "autosavefinal (#529): an unchanged folder pushes nothing (%s)" % _ev,
+        _as_ref(_df, _bn) == _r2 and _as_remote_ref(_bf, _bn) == _r2 and not _fo.strip(),
+        "ref %s -> %s, out %r" % (_r2[:9], _as_ref(_df, _bn)[:9], _fo[:120]),
+    )
+_dcf, _bcf = _as_repo("ajsagent/x")
+_dmf, _bmf = _as_repo("main")
+for _dd in (_dcf, _dmf):
+    _pw = _as_write(_dd, "new.py")
+    run_hook("autosave", _as_payload("PostToolUse", "Write", _pw, _dd), env=_cenv)  # first commit; opens the window
+    _as_write(_dd, "new.py", "later\n")
+    run_hook("autosavefinal", json.dumps({"hook_event_name": "Stop", "cwd": _dd}), env=_cenv)
+commit_case(
+    "autosavefinal (#529): cloud Stop makes the wip commit on ajsagent/x and nothing on main",
+    _as_git(_dcf, "log", "--format=%s").split("\n") == ["wip: autosave", "wip: autosave", "base"]
+    and _as_git(_bcf, "rev-parse", "ajsagent/x") == _as_git(_dcf, "rev-parse", "HEAD")
+    and _as_git(_dmf, "rev-list", "--count", "HEAD") == "1" and _as_git(_bmf, "for-each-ref", "--format=%(refname)") == "",
+    "x log %r, main origin refs %r" % (_as_git(_dcf, "log", "--format=%s"), _as_git(_bmf, "for-each-ref")),
+)
+commit_case("autosavefinal (#529) is wired to Stop and StopFailure in hooks.json",
+            hooks_json_text.count('run.sh\\" autosavefinal') == 2, "hooks.json entries")
 # --- #527: every branch is saved, one save per folder ---
 def _as_saves(d, branch):
     """(ref name, sha) pairs under refs/house-rules/saves/<branch>/ in repo or bare repo `d`."""
