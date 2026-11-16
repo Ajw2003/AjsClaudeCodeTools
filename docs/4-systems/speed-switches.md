@@ -53,7 +53,7 @@ was not enough, because a test reaches code through subprocesses its imports don
 (`verify.py` runs `hook.py` that way), so any code change stands in for it. Docs, pages and state
 files never reset the count. See `rerun-limit.md` for the rest.
 
-## Feature switches anywhere (planned 2026-11-16, "Design approved: Feature switches 1A 2A 3A")
+## Feature switches anywhere (built 2026-11-16, "Design approved: Feature switches 1A 2A 3A")
 
 A stop-gap aj asked for while pages cannot yet fit each project: any feature group can be switched off or on by
 typing one line, in any folder, git repository or not. Page: `docs/plans/2026-11-16-feature-switches.html`.
@@ -81,3 +81,9 @@ typing one line, in any folder, git repository or not. Page: `docs/plans/2026-11
   every existing check obeys without being edited. A typed "on" wins over an "off" in settings.json.
 - **Never switchable (3A).** The destructive-command guard, the main-branch guard and the credit check have no setting
   in any group, so no typed line can turn them off.
+- **Where it is built.** The files, groups and hook layer: `core.py:2625` (`_MODE_GROUPS`), `core.py:2652` (`_mode_files`),
+  `core.py:2679` (`apply_switches`), `core.py:2720` (`_mode_apply`). Pages: `writing.py:73` (`_pages_enabled`). The
+  prompt note naming every group that is off and where it was set: `core.py:2750` (`_mode_note`). Rule text: a switched-off
+  design loop leaves out `show-dont-tell.md` (`event_showrule`) and builders leave out their section (`event_inject`);
+  "house rules off" sets both off. The page rule is one block inside `show-dont-tell.md`, so "pages off" keeps it
+  loaded and relies on the note. Command: `commands/mode.md`. Checks: `scripts/checks/design_loop.py`, "feature switches".

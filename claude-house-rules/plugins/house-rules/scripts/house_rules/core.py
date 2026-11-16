@@ -2697,12 +2697,18 @@ def _mode_state(payload=None):
     state = {}
     for name in ("design", "builders"):
         if name in typed:
-            state[name] = (typed[name] == "off", "you typed \"%s %s\"" % (
-                "design loop" if name == "design" else name, typed[name]))
+            state[name] = (typed[name] == "off", "you typed \"%s %s\"%s" % (
+                "design loop" if name == "design" else name, typed[name], _mode_where(name, raw)))
         else:
             state[name] = (False, "")
     _MODE_CACHE[raw] = state
     return state
+
+
+def _mode_where(group, raw):
+    """", in this folder" / ", everywhere" for a typed group, "" when nothing typed it."""
+    folder, everywhere = _mode_files(_payload_cwd(raw)) if raw else ("", "")
+    return ", in this folder" if group in _mode_read(folder) else ", everywhere" if group in _mode_read(everywhere) else ""
 
 
 def _switch_off(name, env_var):
@@ -2759,8 +2765,21 @@ def _mode_note(payload=None):
     if _switch_off("builders", "HOUSE_RULES_DELEGATION"):
         parts.append("Builders OFF (%s): the \"delegate the execution\" rule does not apply; build it yourself in "
                      "this conversation." % (st["builders"][1] or "HOUSE_RULES_DELEGATION=off"))
+    raw = payload if payload is not None else _PAYLOAD_CACHE
+    typed = _mode_typed(_payload_cwd(raw)) if raw else {}
+    # settings.json only counts for a group nothing typed, and not once "house rules off" has set every value
+    sj = lambda g, var: g not in typed and typed.get("house") != "off" and os.environ.get(var, "on").strip().lower() in _TOGGLE_OFF
+    extra = (("pages", "HOUSE_RULES_PAGES", "Pages OFF (%s): no page, no 160-word page rule, no page editor pass; approvals still count."),
+             ("issues", "HOUSE_RULES_ISSUES", "Issues OFF (%s): no issue-before-code gate."),
+             ("writing", "HOUSE_RULES_CLEAR_WRITING", "Writing checks OFF (%s): the clear-writing, plain-summary, visual and parity checks are skipped."),
+             ("autosave", "HOUSE_RULES_AUTOSAVE", "Autosave OFF (%s): no autosave or handoff."),
+             ("house", None, "House rules OFF (%s): everything is off except the destructive-command guard, the main-branch guard and the credit check, which still apply."))
+    for g, var, text in extra:
+        if typed.get(g) == "off" or (var and g != "issues" and sj(g, var)) or (g == "issues" and "design" not in typed and sj(g, var)):
+            parts.append(text % ((("you typed \"%s off\"" % {"writing": "writing checks", "house": "house rules"}.get(g, g)) + _mode_where(g, raw))
+                                 if g in typed else "%s=off in settings.json" % var))
     if parts:
-        parts.append("Type \"design loop on\" or \"builders on\" to switch back.")
+        parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules) to switch back; add \"everywhere\" for all folders.")
     return " ".join(parts)
 
 

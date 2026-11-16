@@ -3458,7 +3458,8 @@ def _ss_hook(event, model="", **fields):
 _ss_mode = os.path.join(_ss_dir, ".claude", "house-rules-mode.json")
 _ss_fable = _ss_hook("scope", "claude-fable-5-2", prompt="hi")
 _ss_rule_fable = _ss_hook("showrule", "claude-fable-5-2")
-report("PASS" if "OFF" not in _ss_fable and "Show, don't tell" in _ss_rule_fable and not os.path.isfile(_ss_mode)
+# #538: the fixture turns issues/autosave off in settings, which the note now reports; the model-default claim is about these two
+report("PASS" if "Design loop OFF" not in _ss_fable and "Builders OFF" not in _ss_fable and "Show, don't tell" in _ss_rule_fable and not os.path.isfile(_ss_mode)
        else "FAIL", "speed switches: no model default, so a Fable session with nothing typed runs full")
 _ss_hook("scope", prompt="Line 1: quote the sentence that starts with Design loop OFF, or write NONE")
 _ss_hook("scope", prompt="why did builders off not work last time?")
@@ -3483,6 +3484,27 @@ _ss_relayed = _ss_hook("scope", prompt="<task-notification>design loop on</task-
 report("PASS" if json.load(open(_ss_mode, encoding="utf-8")).get("design") == "off" else "FAIL",
        "speed switches: a relayed message cannot flip a switch")
 os.remove(_ss_mode)
+# Feature switches #538: the note names each group that is off and where it was set.
+_ss_hook("scope", prompt="pages off")
+_ss_pages = _ss_hook("scope", prompt="hi")
+report("PASS" if "Pages OFF (you typed \"pages off\", in this folder)" in _ss_pages else "FAIL",
+       "feature switches: pages off in the folder file is named in the note with \"this folder\"")
+os.remove(_ss_mode)
+_ss_home = tempfile.mkdtemp(prefix="house-rules-cfg-", dir=_FIXTURE_ROOT)
+_ss_env["CLAUDE_CONFIG_DIR"] = _ss_home
+_ss_hook("scope", prompt="builders off everywhere")
+_ss_bld = _ss_hook("scope", prompt="hi")
+report("PASS" if "Builders OFF (you typed \"builders off\", everywhere)" in _ss_bld and not os.path.isfile(_ss_mode) else "FAIL",
+       "feature switches: builders off in the everywhere file only says \"everywhere\"")
+os.remove(os.path.join(_ss_home, "house-rules-mode.json"))
+_ss_hook("scope", prompt="house rules off")
+_ss_house = _ss_hook("scope", prompt="hi")
+_ss_house_inj = _ss_hook("showrule")
+report("PASS" if "House rules OFF" in _ss_house and "main-branch guard" in _ss_house and "still apply" in _ss_house
+       and "Show, don't tell" not in _ss_house_inj else "FAIL",
+       "feature switches: house rules off says the guards still apply and leaves the design loop rule out")
+os.remove(_ss_mode)
+del _ss_env["CLAUDE_CONFIG_DIR"]
 
 # 6A: an approval with no issues, no labels and no decisions log still moves the stage, with a to-do note.
 os.makedirs(os.path.join(_ss_dir, ".claude"), exist_ok=True)

@@ -6,6 +6,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 Phase 3 (#495): design approved 1A 2A 3B 4A; build plan `docs/plans/2026-11-16-phase-3-build-plan.html` waiting on aj; nothing built.
 
+Feature switches step 3 (#538): the prompt note names every group that is off and where it was set, "house rules off" leaves out the same rule text as design loop and builders, and `/house-rules:mode` lists every group.
+
 Plugin 2.80.0: speed switches (#524, #525).
 
 - Two switches aj types in chat: "design loop off" / "design loop on" and "builders off" / "builders on", saved for the repo in `.claude/house-rules-mode.json`; `/house-rules:mode` shows them. A switch that is off also leaves its rule text out of the session, so the model stops following it. A switch counts only when typed as its own sentence or line, never when quoted. Every model starts full; there is no Fable default, because hooks are not told the model at session start.
