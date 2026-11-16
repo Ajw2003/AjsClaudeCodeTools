@@ -40,9 +40,10 @@ called by full path:
     C:\Program Files\Git\git-bash.exe
 
 So a bare `sh some-script.sh` **fails in PowerShell**, which is the shell aj actually uses.
-From PowerShell, invoke it as:
+From PowerShell, invoke it as (the `&` is PowerShell-only; cmd takes the quoted path with no `&`):
 
-    & "C:\Program Files\Git\bin\sh.exe" path/to/script.sh
+    & "C:\Program Files\Git\bin\sh.exe" path/to/script.sh      (PowerShell)
+    "C:\Program Files\Git\bin\sh.exe" path/to/script.sh        (cmd)
 
 The short `sh path/to/script.sh` form only works inside a Git Bash window.
 

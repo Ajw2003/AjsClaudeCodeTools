@@ -81,8 +81,16 @@ SKIPPED = []
 IN_REPO = os.path.isfile(os.path.join(ROOT, ".claude-plugin", "marketplace.json"))
 
 
+_ONLY = os.environ.get("HOUSE_RULES_VERIFY_ONLY", "").lower()   # verify.py --only: run all, report only matching titles
+_REAL_STDOUT = sys.stdout
+
+
 def report(result, title):
     global STEP, FAILURES
+    sys.stdout = _REAL_STDOUT
+    if _ONLY and _ONLY not in title.lower():
+        sys.stdout = open(os.devnull, "w")   # hides this case's detail lines too, until the next report()
+        return
     STEP += 1
     if result == "FAIL":
         FAILURES += 1
@@ -819,6 +827,7 @@ _e293 = dict(os.environ, HOUSE_RULES_ATTRIBUTION="on", HOUSE_RULES_ISSUES="on", 
 
 def finish():
     """Print this part's verdict and exit. The same RESULT lines verify.py always printed."""
+    sys.stdout = _REAL_STDOUT
     print()
     print("-" * 32)
     if FAILURES == 0 and not SKIPPED:

@@ -712,9 +712,6 @@ for _name, _model in TIERS.items():
     _body = _t.split("---", 2)[-1].strip().splitlines()
     if len(_body) > 15:
         agentdrift.append(f"{_name}.md body is {len(_body)} lines, the limit is 15")
-    for dead in ["hooks", "mcpServers", "permissionMode"]:
-        if re.search(rf"^{dead}:", _t, re.MULTILINE):
-            agentdrift.append(f"{_name}.md sets {dead}, which plugin subagents ignore")
 if os.path.isfile(os.path.join(AGENTS_DIR, "executor.md")):
     agentdrift.append("agents/executor.md still exists, it was retired")
 if not agentdrift:

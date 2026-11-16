@@ -576,9 +576,6 @@ if not re.search(r"^name: archivist$", archivist, re.MULTILINE):
     problems.append("name: archivist is missing from the frontmatter")
 if not re.search(r"^model: sonnet$", archivist, re.MULTILINE):
     problems.append("model: sonnet is missing - the whole point is not running this on Opus")
-for forbidden in ("hooks:", "mcpServers:", "permissionMode:"):
-    if re.search(r"^%s" % re.escape(forbidden), archivist, re.MULTILINE):
-        problems.append(f"{forbidden} is set, and plugin subagents silently ignore it")
 desc = ""
 for line in archivist.split("\n"):
     if line.startswith("description:"):
@@ -2064,5 +2061,33 @@ report("PASS" if (any(_cj_ghost in b for b in _cj_bad_p)
        "#228: an unknown handler, and a [] section outside the unenforced list, both fail")
 
 
+# --- #44 / #46 / #137 / #205 (Refs #534) -------------------------------------------------------
+_ov = subprocess.run([sys.executable, os.path.join(HERE, "verify.py"), "--parts", "writing", "--only", "clear-writing rule carries"],
+                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300).stdout.decode("utf-8", "replace")
+_on = subprocess.run([sys.executable, os.path.join(HERE, "verify.py"), "--parts", "writing", "--only", "zz no such title zz"],
+                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+report("PASS" if ("matched 1 check(s)" in _ov and _on.returncode != 0 and b"matched 0 check(s)" in _on.stdout) else "FAIL",
+       "verify.py --only runs just the matching check and exits non-zero when none match (#44)")
+
+_fm = ("which plugin subagents ignore", "silently ignore it")
+report("PASS" if not any(t in read(os.path.join(HERE, "checks", f)) for f in ("delegation.py",) for t in _fm[:1])
+       and "plugin subagents silently ignore" not in read(os.path.join(HERE, "checks", "docs.py")).split("# --- #44")[0]
+       else "FAIL", "the agent checks no longer forbid hooks / mcpServers / permissionMode frontmatter (#46)")
+
+_envdoc = os.path.join(ROOT, "docs", "example-environment.md")
+if IN_REPO:
+    _bad = [l for l in read(_envdoc).splitlines() if l.startswith('& "') or l.lstrip().startswith('& "') and "PowerShell" not in l]
+    report("PASS" if not _bad else "FAIL", "example-environment.md has no bare `& \"` command line without a PowerShell-only note (#137)")
+    for l in _bad:
+        print(f"          {l}")
+else:
+    report("SKIP", "example-environment.md has no bare `& \"` command line without a PowerShell-only note (#137)")
+_hc = read(os.path.join(HERE, "..", "rules", "detail", "handover-command.md"))
+report("PASS" if "must not start with `&`" in _hc else "FAIL", "handover-command.md says a handed-over command must not start with & (#137)")
+
+_c, _o, _e = run_shell([RUN, "guardgithub"], env={**os.environ, "PATH": ""})
+_c2, _o2, _e2 = run_shell([RUN, "commitgate"], env={**os.environ, "PATH": ""})
+report("PASS" if (_c == 0 and _c2 == 0 and "systemMessage" in _o and "systemMessage" in _o2) else "FAIL",
+       "guardgithub and commitgate with no working Python warn loudly and still exit 0 (#205)")
 
 finish()

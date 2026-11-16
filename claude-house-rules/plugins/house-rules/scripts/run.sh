@@ -153,6 +153,10 @@ if [ -z "$PY" ]; then
       printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. rclink did not run, so the Remote Control transcript link was NOT prompted. Run /house-rules:doctor."}'
       exit 0
       ;;
+    guardgithub|commitgate)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The %s check did not run, so this call went through unchecked. Run /house-rules:doctor."}' "$EVENT"
+      exit 0
+      ;;
     *)
       exit 0
       ;;

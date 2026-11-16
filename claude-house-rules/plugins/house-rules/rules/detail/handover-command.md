@@ -175,3 +175,5 @@ the first they hear of it is a link they now have to evaluate. Offering costs on
 the choice where it was always meant to sit. Two steps rather than four because the offer is cheap
 enough to make early — it was the *publishing* that needed a high bar, not the asking.
 
+
+A handed-over command must not start with `&` unless the step names PowerShell and says it is PowerShell-only: the Run button may use cmd, where a leading `&` fails.

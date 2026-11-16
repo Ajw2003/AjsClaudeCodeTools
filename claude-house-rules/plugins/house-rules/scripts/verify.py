@@ -245,6 +245,7 @@ def main(argv):
     ap = argparse.ArgumentParser(description="Run the house-rules hook checks (every part, at the same time, by default).")
     ap.add_argument("--parts", help="comma-separated parts to run: " + ", ".join(PARTS))
     ap.add_argument("--changed", action="store_true", help="run only the parts a change touched (git diff against the merge base with origin/main, plus uncommitted files)")
+    ap.add_argument("--only", help="run only the checks whose title contains this text (case-insensitive), across the chosen parts")
     ap.add_argument("--serial", action="store_true", help="run the parts one after another instead of at the same time")
     ap.add_argument("--timeout", type=int, default=PART_TIMEOUT_SECONDS, help="seconds before a part counts as hung (default %(default)s)")
     args = ap.parse_args(argv)
@@ -264,6 +265,8 @@ def main(argv):
         chosen = list(PARTS)
         why = ["no option given: every part (%s)." % ", ".join(chosen)]
 
+    if args.only:
+        os.environ["HOUSE_RULES_VERIFY_ONLY"] = args.only     # the part subprocesses inherit it; common.report() reads it
     cores = os.cpu_count() or 1
     workers = 1 if args.serial else max(1, min(cores, len(chosen)))
     print()
@@ -333,6 +336,11 @@ def main(argv):
     print("Matching is textual, so a command that merely mentions a tripwire word will also")
     print("prompt. That is deliberate - an extra keypress is cheaper than a missed commit.")
     print()
+    if args.only:
+        print("--only %r matched %d check(s)." % (args.only, total))
+        if total == 0:
+            print("RESULT: FAIL - --only matched no check title in the chosen parts, so nothing was verified.")
+            return 1
     return 0 if not bad_parts else 1
 
 
