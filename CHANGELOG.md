@@ -4,7 +4,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-Plugin 2.81.0: phase 3, pick up on any account (#495), and feature switches anywhere (#535). Waiting on aj's QA.
+Plugin 2.81.1 (2.81.0 plus the desktop QA fixes): phase 3, pick up on any account (#495), and feature switches anywhere (#535). Waiting on aj's QA.
 
 - Work is saved as it happens: on every edit (at most once a minute) and at once when a turn ends or a usage limit cuts it off. On a PC each folder saves under `refs/house-rules/saves/<branch>/<folder id>`, so no folder erases another's save; a cloud session, which cannot push that ref, commits `wip: autosave` on its own branch and pushes it (#527, #528, #529).
 - A reply that changed files is sent back once when the branch is not pushed, the handoff note `docs/5-today/handoff-<branch>.md` is older than the newest commit, or `docs/5-today/Today.md` was not touched (#530).
