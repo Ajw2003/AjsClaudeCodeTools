@@ -313,3 +313,54 @@ that session, which is the answer I need.
 
 **When you are done:** send the screenshot, then `QA passed: Feature switches` if all three lines say saved or
 pushed, or `QA failed: Feature switches` with the screenshot if not.
+
+---
+
+## Second retest: plugin 2.81.2 (desktop app, account copy switched off)
+
+Found on 2026-11-17: the desktop app runs the house-rules copy added to your claude.ai account, not the one
+`tools/use_branch.py` installs, so keep that account copy switched off for this test. 2.81.2 changes two things: the
+end-of-turn line says your work is saved, and Claude opens its first reply with one line saying what the pickup found.
+
+**Second retest: 3 steps.** Do them in order; each step's output tells you it worked.
+
+---
+
+### Step 1 of 3 — Install 2.81.2
+
+UNTESTED: run on Linux in the cloud session for 2.81.1; I will run it for 2.81.2 before you do, but never in Windows PowerShell on your PC.
+
+In **Windows PowerShell**, opened anywhere:
+
+```powershell
+python "C:\Users\aj\Desktop\phase-3-qa\tools\use_branch.py" AjsAgent/phase-3-handoff
+```
+
+**You should see:** `plugin version  : 2.81.2` and `OK: installed build matches the request.`
+
+*Next: step 2 restarts the app.*
+
+---
+
+### Step 2 of 3 — Quit and reopen the desktop app
+
+No command. Right-click the tray icon, choose **Quit**, then open Claude from the Start menu.
+
+**You should see:** the app open as normal.
+
+*Next: step 3 runs one session.*
+
+---
+
+### Step 3 of 3 — Run one session
+
+No command. Open `C:\Users\aj\Desktop\phase-3-qa` in a new Code session and send exactly:
+
+`Run this shell command and nothing else: echo retest > qa-note-9.txt`
+
+**You should see:** Claude's reply opens with one line about the pickup (the save's file count and time); after the
+command, `house-rules autosave: saved ... and pushed the save to GitHub.`; and at the end, a notice
+`house-rules autosave (end of turn): your work is saved on GitHub: ... Nothing changed after that.`
+
+**When you are done:** send a screenshot, then `QA passed: Feature switches.` or `QA failed: Feature switches.` with
+what is wrong.

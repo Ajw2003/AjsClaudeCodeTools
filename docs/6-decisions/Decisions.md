@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-17 - QA failed again: say the work is saved, and have Claude announce the pickup
+
+**Context.** With the claude.ai account copy of house-rules switched off, the desktop app ran 2.81.1: it saved and
+pushed, and a new session quoted the pickup note. Two things still read wrong to aj: the end-of-turn line said only
+"nothing changed since the last save", and the pickup's on-screen line never showed, because the desktop app shows no
+session-start notice. aj typed "QA failed: Feature switches. Reword the end-of-turn save line and have Claude announce
+the pickup."
+
+**Decision.** The end-of-turn line says the work is saved, on GitHub or on this computer only, with the file count and
+save time. The pickup note ends by asking Claude to open its first reply with one line saying what it found. Rejected: a
+fresh save every turn (a push on every read-only reply). **Status.** Build, plugin 2.81.2.
+
+---
+
 ## 2026-11-17 - QA failed: the desktop app does not save; three fixes before QA again
 
 **Context.** aj's QA on the PC (`docs/plans/2026-11-17-phase-3-qa-steps.md`, step 8) found that sessions in the Claude

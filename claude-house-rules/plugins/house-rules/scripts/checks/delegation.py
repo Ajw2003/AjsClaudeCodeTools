@@ -282,7 +282,7 @@ for _ev, _extra in (("Stop", {}), ("StopFailure", {"error": "rate_limit"})):
     _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
     commit_case(
         "autosavefinal (#529): an unchanged folder pushes nothing and says so (%s)" % _ev,
-        _as_ref(_df, _bn) == _r2 and _as_remote_ref(_bf, _bn) == _r2 and "changed since the last save" in _fo,
+        _as_ref(_df, _bn) == _r2 and _as_remote_ref(_bf, _bn) == _r2 and "your work is saved on GitHub: 1 file(s) on %s" % _bn in _fo,
         "ref %s -> %s, out %r" % (_r2[:9], _as_ref(_df, _bn)[:9], _fo[:120]),
     )
 _dcf, _bcf = _as_repo("ajsagent/x")
@@ -455,7 +455,8 @@ time.sleep(1.1)  # the end-of-turn check compares file times to the last save, i
 open(os.path.join(_ps_d, "second.txt"), "w").write("later\n")
 _, _ps_o2, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
 _, _ps_o3, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_as_env(HOUSE_RULES_TRACE="off"))
-_ps_ok = ("(end of turn): nothing on AjsAgent/ps changed since the last save" in _ps_o1
+_ps_ok = ("(end of turn): your work is saved on GitHub: 1 file(s) on AjsAgent/ps, saved at " in _ps_o1
+          and " UTC. Nothing changed after that." in _ps_o1
           and "(end of turn): saved 2 changed file(s) on AjsAgent/ps" in _ps_o2 and "pushed the save to GitHub" in _ps_o2
           and not _ps_o3.strip())
 report("PASS" if _ps_ok else "FAIL",
@@ -1972,7 +1973,9 @@ commit_case(
     _pk_text.startswith("house-rules pickup: loaded from") and "Where it stands: step 2." in _pk_text
     and "FACTS-MARKER" in _pk_text and "only.txt" in _pk_text and bool(_pk_rcmd)
     and "git diff refs/house-rules/remote-autosave/%s^ refs/house-rules/remote-autosave/%s -- only.txt | git apply" % (_PK_BR, _PK_BR)
-    in _pk_rcmd[0] and "Ask aj before running" in _pk_text,
+    in _pk_rcmd[0] and "Ask aj before running" in _pk_text
+    and _pk_text.rstrip().endswith("that a restore command is ready and you will ask before running it.")
+    and "Open your first reply to the user with one line saying what this pickup found on %s" % _PK_BR in _pk_text,
     "got %r" % _pk_text[:500],
 )
 _pk_e, _ = _as_repo(_PK_BR)

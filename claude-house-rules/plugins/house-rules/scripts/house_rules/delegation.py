@@ -1605,8 +1605,16 @@ def event_autosave_final():
         head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
         stale = rc != 0 or _ag(top, ["rev-parse", cur.strip() + "^"], check=False)[1].strip() != head
         if not (changed or stale):
-            trace("house-rules autosave (end of turn): nothing on %s changed since the last save, so nothing new was "
-                  "sent to GitHub." % branch)
+            # aj, 2026-11-17: say the work is saved, not only that nothing changed (the mid-turn save already pushed it)
+            n = len(_dirty_files(top))
+            if not n:
+                trace("house-rules autosave (end of turn): nothing on %s is uncommitted; your work is in its commits." % branch)
+                return 0
+            on_github = len(saved) == 2 and rc == 0 and saved[1] == cur.strip()
+            at = time.strftime("%H:%M UTC", time.gmtime(since)) if since else "earlier"
+            trace("house-rules autosave (end of turn): your work is saved %s: %d file(s) on %s, saved at %s. Nothing "
+                  "changed after that." % ("on GitHub" if on_github else "on this computer only, not yet on GitHub",
+                                           n, branch, at))
             return 0
         msg = _autosave_snapshot(top, branch, force_push=True)
         emit({"systemMessage": msg}) if msg else trace(_save_said(top, branch, " (end of turn)"))
@@ -2122,6 +2130,9 @@ core.register_prompt(_scope_delegate_link)
 
 # --- #531: pickup (SessionStart) - the handoff note, the newest save's facts, and what other folders' saves hold
 PICKUP_CAP = 6000
+PICKUP_ANNOUNCE = ("Open your first reply to the user with one line saying what this pickup found on %s: how many "
+                   "uncommitted files the newest save holds and when it was saved (from the facts above), and, if files "
+                   "are listed as missing here, that a restore command is ready and you will ask before running it.")
 PICKUP_NOTE_CAP = 3500
 PICKUP_FETCH_TIMEOUT = 5
 # Two separate namespaces so a <branch>/<id> save never has to nest under an old <branch> save (git's D/F rule).
@@ -2284,6 +2295,8 @@ def event_pickup():
             text = "\n".join(lines)
             if len(text) > PICKUP_CAP:
                 text = text[:PICKUP_CAP] + "\n[house-rules pickup: output was %d characters and is cut at %d]" % (len(text), PICKUP_CAP)
+            # aj, 2026-11-17: the desktop app shows no SessionStart notice, so Claude says it instead
+            text += "\n\n" + PICKUP_ANNOUNCE % branch.strip()
             out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": text}
         if problem:
             out["systemMessage"] = "house-rules pickup: " + problem + "."

@@ -86,6 +86,9 @@ note can't crowd the context.
 - Every save and pickup decision is said in one line too (2026-11-17, after the desktop app saved nothing and said
   nothing): saved and pushed, saved on this computer, nothing changed, not a git repository, nothing to pick up
   (`_save_said` and `event_pickup` in `scripts/house_rules/delegation.py`). `HOUSE_RULES_TRACE=off` hides them.
+  At the end of a reply with nothing new, the line says the work is saved, with its file count and save time.
+  The desktop app shows no session-start notice, so the pickup note also asks Claude to open its first reply with
+  one line saying what was picked up (`PICKUP_ANNOUNCE`).
 
 ## Traps that have already cost time
 
