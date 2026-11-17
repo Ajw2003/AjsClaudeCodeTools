@@ -1166,7 +1166,7 @@ WIP_CHECKPOINT = "wip: checkpoint - %d min without a commit" % CHECKPOINT_MINUTE
 WIP_PARENT = "wip: parent checkpoint of subagent work"
 
 
-_AUTOSAVE_TOOLS = {"Write", "Edit", "NotebookEdit", "Bash"}
+_AUTOSAVE_TOOLS = {"Write", "Edit", "NotebookEdit", "Bash", "PowerShell"}  # PowerShell: the Windows shell tool (#535 QA)
 
 
 def _autosave_enabled():
@@ -1489,8 +1489,20 @@ def _cloud_autosave(top, branch, tool, payload, force=False):
     return [x for x in (_autosave_big_note(),) if x]
 
 
+def _save_said(top, branch, when=""):
+    """#535 QA: the visible line for a save that went through, naming the files and whether the save
+    is on GitHub yet, so a save that never happens is noticed (the desktop app saved nothing, silently)."""
+    files = _dirty_files(top)
+    pushed = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
+    rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", _autosave_ref(top, branch)], check=False)
+    on_github = len(pushed) == 2 and rc == 0 and pushed[1] == cur.strip()
+    return "house-rules autosave%s: saved %d changed file(s) on %s (%s) %s." % (
+        when, len(files), branch, _shown(files),
+        "and pushed the save to GitHub" if on_github else "on this computer; it goes to GitHub at the end of the turn")
+
+
 def event_autosave():
-    """PostToolUse (Write|Edit|NotebookEdit|Bash) on a worktree-agent- branch: after a
+    """PostToolUse (Write|Edit|NotebookEdit|Bash|PowerShell) on a worktree-agent- branch: after a
     CHECKPOINT_MINUTES stretch with no commit, commit for the subagent; then snapshot the
     worktree to the autosave ref and push it. The same entry records `gh issue create` calls for
     the issue gate (_issues_record), which is why it runs on any branch."""
@@ -1508,6 +1520,8 @@ def event_autosave():
         if target is None:
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
+            elif _autosave_enabled():
+                trace_noop("house-rules autosave: this call was outside a git repository, so there is nothing to save.")
             return 0
         top, branch, tool = target
         if branch is None:  # detached HEAD: skipped, said once
@@ -1529,6 +1543,8 @@ def event_autosave():
         if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
+            elif tool in _AUTOSAVE_TOOLS:
+                trace_noop("house-rules autosave: nothing on %s differs from the last commit, so there is nothing to save." % branch)
             return 0
         notes = list(issue_notes)
         if branch.startswith(AUTOSAVE_BRANCH_PREFIX) and _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
@@ -1545,7 +1561,7 @@ def event_autosave():
         if notes:
             emit({"systemMessage": " | ".join(notes)})
         else:
-            trace("autosave: %s saved." % _autosave_ref(top, branch))
+            trace(_save_said(top, branch))
     except Exception as exc:
         emit({"systemMessage": "house-rules plugin: autosave hit an error (%s: %s) and did not run for this call."
                                % (type(exc).__name__, exc)})
@@ -1564,13 +1580,21 @@ def event_autosave_final():
             emit({"systemMessage": "house-rules plugin: autosave (end of turn) got an empty payload and did not run."})
             return 0
         target = _autosave_target(payload)
-        if target is None or target[1] is None:  # not in a repo, or detached HEAD (said by the edit hook)
+        if target is None or target[1] is None:  # not in a repo (said by the pickup), or detached HEAD (said by the edit hook)
+            trace_noop("house-rules autosave (end of turn): not on a branch of a git repository, so nothing was saved.")
             return 0
         top, branch, _tool = target
         if os.environ.get("CLAUDE_CODE_REMOTE") == "true":
+            before = _ag(top, ["rev-parse", "HEAD"])[1].strip()
             notes = _cloud_autosave(top, branch, "Bash", payload, force=True)  # no-op when clean
+            after = _ag(top, ["rev-parse", "HEAD"])[1].strip()
             if notes:
                 emit({"systemMessage": " | ".join(notes)})
+            elif after != before:
+                trace("house-rules autosave (end of turn): committed %s as `wip: autosave` on %s and pushed it to GitHub."
+                      % (after[:7], branch))
+            elif is_owned_branch(branch):
+                trace("house-rules autosave (end of turn): nothing changed on %s since the last commit, so nothing was saved." % branch)
             return 0
         saved = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
         since = float(saved[0]) if len(saved) == 2 else 0.0  # a file changed after the last save
@@ -1581,10 +1605,11 @@ def event_autosave_final():
         head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
         stale = rc != 0 or _ag(top, ["rev-parse", cur.strip() + "^"], check=False)[1].strip() != head
         if not (changed or stale):
+            trace("house-rules autosave (end of turn): nothing on %s changed since the last save, so nothing new was "
+                  "sent to GitHub." % branch)
             return 0
         msg = _autosave_snapshot(top, branch, force_push=True)
-        if msg:
-            emit({"systemMessage": msg})
+        emit({"systemMessage": msg}) if msg else trace(_save_said(top, branch, " (end of turn)"))
     except Exception as exc:
         emit({"systemMessage": "house-rules plugin: autosave (end of turn) hit an error (%s: %s) and did not save."
                                % (type(exc).__name__, exc)})
@@ -2243,12 +2268,16 @@ def event_pickup():
         if os.environ.get("HOUSE_RULES_HANDOFF", "on").strip().lower() in _TOGGLE_OFF:
             return 0
         payload = read_payload()
-        top = _git_top(core._payload_cwd(payload or ""))
+        cwd = core._payload_cwd(payload or "")
+        top = _git_top(cwd)
         if not top:
+            trace("house-rules pickup: this folder (%s) is not inside a git repository, so nothing is saved or "
+                  "picked up here." % (os.path.basename(cwd.rstrip("/\\")) or cwd or "unknown"))
             return 0
         rc, branch, _e = _ag(top, ["symbolic-ref", "-q", "--short", "HEAD"], check=False)
         if rc != 0 or not branch.strip():
-            return 0  # detached HEAD
+            trace("house-rules pickup: HEAD is detached, so there is no branch to pick up and nothing is saved.")
+            return 0
         lines, problem = _pickup_build(top, branch.strip())
         out = {}
         if lines:
@@ -2258,6 +2287,10 @@ def event_pickup():
             out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": text}
         if problem:
             out["systemMessage"] = "house-rules pickup: " + problem + "."
+        elif trace_enabled():
+            out["systemMessage"] = ("house-rules pickup: gave Claude the handoff for %s (its note, save facts or missing files)." % branch.strip()
+                                    if lines else "house-rules pickup: nothing to pick up on %s: no handoff note and no "
+                                    "save from another folder." % branch.strip())
         if out:
             emit(out)
     except Exception as exc:

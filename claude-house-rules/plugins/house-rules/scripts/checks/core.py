@@ -2160,6 +2160,41 @@ report("PASS" if (rc == 0 and "claude plugin update" not in out and "OUT OF DATE
 if "claude plugin update" in out:
     print(f"          rc={rc} out={out[:300]!r}")
 
+# #535 QA: a branch build (marketplace added as owner/repo#<branch>) is compared with that branch on
+# GitHub, never with main, so a 2.81.0 branch build is not told 2.80.0 is newer.
+_br_dir = tempfile.mkdtemp(prefix="house-rules-vc-branch-")
+_br_inst = os.path.join(_br_dir, "installed_plugins.json")
+with open(os.path.join(_br_dir, "known_marketplaces.json"), "w", encoding="utf-8") as f:
+    json.dump({"aj-house-rules": {"source": {"source": "github", "repo": "Ajw2003/AjsClaudeCodeTools",
+                                             "ref": "AjsAgent/phase-3-handoff"}}}, f)
+_br_old = os.environ.get("HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON")
+os.environ["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = _br_inst
+_br_ref = _core._vc_branch_ref([])
+_br_raw, _br_api = _core._github_urls(_br_ref)
+os.environ["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = os.path.join(_br_dir, "none", "installed_plugins.json")
+_br_none = _core._vc_branch_ref([])
+_main_raw, _main_api = _core._github_urls(_br_none)
+if _br_old is None:
+    os.environ.pop("HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON")
+else:
+    os.environ["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = _br_old
+_br_ok = (_br_ref == "AjsAgent/phase-3-handoff"
+          and _br_raw.endswith("/refs/heads/AjsAgent/phase-3-handoff/claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json")
+          and _br_api.endswith("?ref=AjsAgent%2Fphase-3-handoff")
+          and _br_none == "" and "/main/" in _main_raw and _main_api.endswith("?ref=main"))
+report("PASS" if _br_ok else "FAIL",
+       "versioncheck reads a branch build's ref and fetches GitHub's version from that branch, not main")
+if not _br_ok:
+    print(f"          ref={_br_ref!r} raw={_br_raw!r} api={_br_api!r} none={_br_none!r} main={_main_raw!r}")
+rc, out, err = run_hook("versioncheck", vc_payload("vc-branch"),
+                        vc_env("vc-branch", HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON=_br_inst,
+                               HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB=_installed_version))
+_br_ok = rc == 0 and "OUT OF DATE" not in out and "the AjsAgent/phase-3-handoff branch on" in out and not vc_fake_calls("vc-branch")
+report("PASS" if _br_ok else "FAIL",
+       "versioncheck on a branch build that matches its branch names the branch and runs no update")
+if not _br_ok:
+    print(f"          rc={rc} out={out[:300]!r} calls={vc_fake_calls('vc-branch')}")
+
 # --- SessionStart loads the newest installed rules after an update (issue #252) -----------
 # An older folder runs SessionStart; installed_plugins.json names a newer folder. inject and
 # showrule must load the newer folder's rule text and say so in one line, and must say it in one
@@ -2358,7 +2393,7 @@ marker_d = vc_marker_path(session_d)
 ok = (
     rc == 0
     and "OUT OF DATE" in out
-    and "GitHub's default branch has 99.0.0" in out
+    and "the default branch on GitHub has 99.0.0" in out
     and os.path.isfile(marker_d)
 )
 if ok:

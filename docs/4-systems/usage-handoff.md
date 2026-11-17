@@ -46,7 +46,7 @@ saves continuously and does not depend on either.
 
 ## How it works
 
-**The automatic save (November pick 1A).** After a `Write`, `Edit`, `NotebookEdit` or `Bash` call, at
+**The automatic save (November pick 1A).** After a `Write`, `Edit`, `NotebookEdit`, `Bash` or `PowerShell` call (PowerShell added 2026-11-17: it is the shell tool on Windows, and the desktop app's QA run saved nothing without it), at
 most once a minute (`AUTOSAVE_PUSH_INTERVAL`, 60 s), the working folder is snapshotted to
 `refs/house-rules/autosave/<branch>` through a temporary index and pushed to `origin`. The branch,
 its index and its working tree are never changed. What goes into the snapshot: tracked changes and every new file git does not ignore
@@ -83,6 +83,9 @@ note can't crowd the context.
 - Nothing is ever committed on `main` or on aj's branches by this system.
 - The hook never restores files on its own.
 - Every failure (no `origin`, a push that times out, a fetch that fails) is said in one line.
+- Every save and pickup decision is said in one line too (2026-11-17, after the desktop app saved nothing and said
+  nothing): saved and pushed, saved on this computer, nothing changed, not a git repository, nothing to pick up
+  (`_save_said` and `event_pickup` in `scripts/house_rules/delegation.py`). `HOUSE_RULES_TRACE=off` hides them.
 
 ## Traps that have already cost time
 

@@ -238,3 +238,78 @@ Then quit the Claude desktop app fully and open it again.
 **When you are done:** send me `QA passed: Phase 3`, or `QA failed: Phase 3` with what went wrong, and paste the
 `FAIL` lines from step 12. The test folders (`phase-3-qa`, `phase-3-qa-b`, `pages-test`) and the branch
 `AjsAgent/qa-pickup` can stay; I will not delete anything without your word.
+
+---
+
+## Retest after "QA failed: Feature switches" (desktop app only)
+
+The first run found that sessions in the Claude desktop app saved nothing and said nothing. Plugin 2.81.1 adds
+three fixes: the save also runs after the PowerShell tool, every save and pickup decision prints one line on screen,
+and the version check compares this branch build with its own branch instead of main. This retest only needs the
+desktop app. Whatever those lines say, or if no line appears at all, tells me where the save stops.
+
+**Desktop retest: 4 steps.** Do them in order; each step's output tells you it worked.
+
+---
+
+### Step 1 of 4 — Install the fixed build
+
+UNTESTED: the same script ran on Linux in the cloud session for 2.81.0, not yet for 2.81.1, and not in Windows PowerShell on your PC.
+
+In **Windows PowerShell**, opened anywhere (Start, type `PowerShell`, Enter):
+
+```powershell
+python "C:\Users\aj\Desktop\phase-3-qa\tools\use_branch.py" AjsAgent/phase-3-handoff
+```
+
+**You should see:** these lines at the end, with **2.81.1** as the version. That means the fixed build is installed.
+
+```text
+marketplace ref : AjsAgent/phase-3-handoff
+plugin version  : 2.81.1
+checkout commit : <a 7-letter commit>
+OK: installed build matches the request. Restart Claude Code to load it.
+```
+
+*Next: step 2 restarts the desktop app so it loads 2.81.1.*
+
+---
+
+### Step 2 of 4 — Quit the desktop app fully and reopen it
+
+No command. Right-click the Claude icon in the Windows taskbar tray (bottom right, by the clock) and choose
+**Quit**. Closing the window is not enough, because the app keeps running in the tray. Then open Claude again from the
+Start menu.
+
+**You should see:** the app open as normal.
+
+*Next: step 3 runs one session in the test folder.*
+
+---
+
+### Step 3 of 4 — Run one session in the test folder
+
+No command. In the **Claude desktop app**, signed in as either account:
+
+1. Open the folder `C:\Users\aj\Desktop\phase-3-qa` in a new Code session.
+2. Send exactly: `Run this shell command and nothing else: echo retest > qa-note-6.txt`
+3. Wait for the reply to finish.
+
+**You should see:** grey lines from the plugin, starting `house-rules`:
+
+- at the start, one starting `house-rules pickup:`;
+- after the command, `house-rules autosave: saved ... changed file(s) on AjsAgent/qa-pickup (...) and pushed the save to GitHub.`;
+- when the reply ends, `house-rules autosave (end of turn): ...`.
+
+*Next: step 4 sends me what you saw.*
+
+---
+
+### Step 4 of 4 — Send me what you saw
+
+No command. Take a screenshot of the session, showing every line that starts `house-rules`, and send it to me. If no
+line starting `house-rules` appears at all, say so: that means the desktop app is not running the plugin's hooks in
+that session, which is the answer I need.
+
+**When you are done:** send the screenshot, then `QA passed: Feature switches` if all three lines say saved or
+pushed, or `QA failed: Feature switches` with the screenshot if not.

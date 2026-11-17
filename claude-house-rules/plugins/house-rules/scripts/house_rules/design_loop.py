@@ -695,7 +695,7 @@ def _loop_unlogged(state, top, label, name):
 # A capitalised header before a colon ends it only when an answer code does not follow (#266): "enforced QA
 # stage: 1A" is a name and its codes, but a pasted "Build plan: 1A" header is cut whole.
 _LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+(?:Build|Design) plan:|\s+[A-Z][A-Za-z ]{0,30}:\s(?!\d+[A-Za-z*](?:\s|$))"
-                               r"|\s+[-–—]\s|\s*:\s*\d+[A-Za-z*](?:\s|$)")
+                               r"|\s+[-–—]\s|,\s|\s*:\s*\d+[A-Za-z*](?:\s|$)")  # ",\s": #535 QA, aj's "QA failed: X, why"
 
 
 # #403: a name also ends at the first `<` that starts a tag ("</message>" pasted from a reply), and

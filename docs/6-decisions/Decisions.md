@@ -7,6 +7,25 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-17 - QA failed: the desktop app does not save; three fixes before QA again
+
+**Context.** aj's QA on the PC (`docs/plans/2026-11-17-phase-3-qa-steps.md`, step 8) found that sessions in the Claude
+desktop app saved nothing and picked nothing up, and nothing on screen said so. The same 2.81.0 code saved from a hand
+run, through `run.sh`, and from a CLI session (`claude -p --debug-file`), so the save code works on Windows; the cause in
+the desktop app is still not known. aj typed "QA failed: Feature switches. The desktop app does not save; fix
+PowerShell matching, save traces and the branch-build version check."
+
+**Decision.** Build exactly those three. (1) The save also runs after the `PowerShell` tool, the shell tool on Windows,
+which its matcher in `hooks/hooks.json` never named. (2) Every save and pickup decision prints one line (saved and
+pushed, saved on this computer, nothing changed, not a git repository, nothing to pick up), so the next desktop run shows
+where it stops; `HOUSE_RULES_TRACE=off` silences them. This bends "silence means looked, nothing to do" for these three
+hooks only, because a silent save is how this failure hid. (3) versioncheck compares a branch build with that branch on
+GitHub, read from `known_marketplaces.json`, never with main, so it no longer asks a 2.81.0 branch build to update to
+2.80.0. Also: a comma now ends a feature name in aj's loop lines, as promised when "QA failed: Feature switches, the
+desktop..." was read as one long name. **Status.** Build.
+
+---
+
 ## 2026-11-17 - Saves include every new file git does not ignore (reverses #477's file-tool-only rule)
 
 **Context.** The real-GitHub cloud test (`docs/plans/2026-11-16-phase-3-live-tests/live_cloud_github-result.txt`) found

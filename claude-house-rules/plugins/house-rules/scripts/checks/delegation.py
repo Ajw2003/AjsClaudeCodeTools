@@ -276,13 +276,13 @@ for _ev, _extra in (("Stop", {}), ("StopFailure", {"error": "rate_limit"})):
     _r2 = _as_ref(_df, _bn)
     commit_case(
         "autosavefinal (#529): a %s payload inside the one-minute window pushes a fresh save" % _ev,
-        bool(_r1) and _r2 != _r1 and _as_remote_ref(_bf, _bn) == _r2 and not _fo.strip(),
+        bool(_r1) and _r2 != _r1 and _as_remote_ref(_bf, _bn) == _r2 and "(end of turn): saved" in _fo,
         "first %s, now %s, origin %s, out %r" % (_r1[:9], _r2[:9], _as_remote_ref(_bf, _bn)[:9], _fo[:120]),
     )
     _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
     commit_case(
-        "autosavefinal (#529): an unchanged folder pushes nothing (%s)" % _ev,
-        _as_ref(_df, _bn) == _r2 and _as_remote_ref(_bf, _bn) == _r2 and not _fo.strip(),
+        "autosavefinal (#529): an unchanged folder pushes nothing and says so (%s)" % _ev,
+        _as_ref(_df, _bn) == _r2 and _as_remote_ref(_bf, _bn) == _r2 and "changed since the last save" in _fo,
         "ref %s -> %s, out %r" % (_r2[:9], _as_ref(_df, _bn)[:9], _fo[:120]),
     )
 _dcf, _bcf = _as_repo("ajsagent/x")
@@ -430,6 +430,48 @@ report("PASS" if "made.py" in _as_tree and "shell.txt" in _as_tree and "secret.t
        and "big.bin" not in _as_tree and "big.bin" in _as_out else "FAIL",
        "A11: the autosave holds every new file git does not ignore (shell-made too), never an ignored one, and names a big file it left out")
 print("          tree %r, out %r" % (_as_tree, _as_out[:200]))
+
+# --- #535 QA: the desktop app on Windows runs shell commands through the PowerShell tool, which the save never
+# matched, and every skip was silent. A PowerShell call now saves, and each save decision says what it did. ---
+with open(os.path.join(HERE, "..", "hooks", "hooks.json"), encoding="utf-8") as _f:
+    _ps_hooks = json.load(_f)["hooks"]["PostToolUse"]
+_ps_matcher = [h["matcher"] for h in _ps_hooks if any("run.sh\" autosave" in x["command"] for x in h["hooks"])]
+_ps_d, _ps_bare = _as_repo("AjsAgent/ps")
+open(os.path.join(_ps_d, "shell.txt"), "w").write("made by PowerShell\n")
+_ps_env = _as_env(HOUSE_RULES_TRACE="on", HOUSE_RULES_HANDOFF="on")
+_ps_pl = {"hook_event_name": "PostToolUse", "tool_name": "PowerShell", "session_id": "ps", "cwd": _ps_d,
+          "tool_input": {"command": "echo hi > shell.txt"}, "tool_response": {}}
+_, _ps_out, _ = run_hook("autosave", json.dumps(_ps_pl), env=_ps_env)
+_ps_ok = (len(_ps_matcher) == 1 and re.fullmatch(_ps_matcher[0], "PowerShell") and bool(_as_ref(_ps_d, "AjsAgent/ps"))
+          and "saved 1 changed file(s) on AjsAgent/ps (shell.txt) and pushed the save to GitHub" in _ps_out
+          and _as_git(_ps_bare, "for-each-ref", "refs/house-rules/saves/").strip() != "")
+report("PASS" if _ps_ok else "FAIL",
+       "#535 QA: a PowerShell call is matched and saved, and the save says which files went to GitHub")
+if not _ps_ok:
+    print("          matcher %r, out %r" % (_ps_matcher, _ps_out[:300]))
+_ps_stop = {"hook_event_name": "Stop", "session_id": "ps", "cwd": _ps_d}
+_, _ps_o1, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
+time.sleep(1.1)  # the end-of-turn check compares file times to the last save, in whole seconds on some systems
+open(os.path.join(_ps_d, "second.txt"), "w").write("later\n")
+_, _ps_o2, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
+_, _ps_o3, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_as_env(HOUSE_RULES_TRACE="off"))
+_ps_ok = ("(end of turn): nothing on AjsAgent/ps changed since the last save" in _ps_o1
+          and "(end of turn): saved 2 changed file(s) on AjsAgent/ps" in _ps_o2 and "pushed the save to GitHub" in _ps_o2
+          and not _ps_o3.strip())
+report("PASS" if _ps_ok else "FAIL",
+       "#535 QA: the end-of-turn save always says what it did (saved and pushed, or nothing changed), and is quiet with traces off")
+if not _ps_ok:
+    print("          o1 %r o2 %r o3 %r" % (_ps_o1[:200], _ps_o2[:200], _ps_o3[:120]))
+_ps_plain = tempfile.mkdtemp(prefix="house-rules-plain-", dir=_FIXTURE_ROOT)
+_, _ps_p1, _ = run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": _ps_plain}), env=_ps_env)
+_ps_d2, _ = _as_repo("AjsAgent/ps-quiet")
+_, _ps_p2, _ = run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": _ps_d2}), env=_ps_env)
+_ps_ok = ("is not inside a git repository, so nothing is saved or picked up here" in _ps_p1
+          and "nothing to pick up on AjsAgent/ps-quiet" in _ps_p2)
+report("PASS" if _ps_ok else "FAIL",
+       "#535 QA: the session-start pickup says when the folder is not a git repo, and when there is nothing to pick up")
+if not _ps_ok:
+    print("          plain %r quiet %r" % (_ps_p1[:200], _ps_p2[:200]))
 
 
 _dq, _ = _as_repo("worktree-agent-det")
@@ -1944,7 +1986,8 @@ commit_case(
 )
 _pk_d2, _pk_bare2 = _as_repo(_PK_BR)
 _as_git(_pk_d2, "push", "-q", "origin", _PK_BR)
-commit_case("pickup: no save and no note is silent", _pk_run(_pk_d2).strip() == "", "")
+commit_case("pickup: no save and no note says so in one line, and is silent with traces off (#535 QA)",
+            "nothing to pick up on" in _pk_run(_pk_d2) and _pk_run(_pk_d2, HOUSE_RULES_TRACE="off").strip() == "", "")
 _pk_d3, _pk_bare3 = _pk_producer("N" * 9000)
 _pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare3)))
 commit_case(

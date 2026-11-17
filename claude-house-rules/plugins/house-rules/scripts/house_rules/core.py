@@ -1083,25 +1083,58 @@ def _describe_fetch_error(exc):
     return "%s: %s" % (type(exc).__name__, detail) if detail else type(exc).__name__
 
 
-def _github_version(problems):
-    """GitHub's published version: raw.githubusercontent first, then the contents API, both
-    inside one _GITHUB_FETCH_TIMEOUT budget. Two routes because some sandboxes reset
-    connections to raw.githubusercontent.com while api.github.com works (docs/architecture.md,
-    "versioncheck checks three copies of the version"). Each failed route goes into problems."""
+def _vc_branch_ref(problems):
+    """The branch the house-rules marketplace is pinned to (tools/use_branch.py adds it as
+    owner/repo#<branch>), or "" for the default branch. Read from known_marketplaces.json beside
+    installed_plugins.json; unreadable counts as the default branch."""
+    path = os.path.join(os.path.dirname(_installed_plugins_path()), "known_marketplaces.json")
+    if not os.path.isfile(path):
+        return ""
+    try:
+        entry = json.loads(_read_text(path)).get(_VC_DEFAULT_MARKETPLACE) or {}
+    except Exception as exc:
+        problems.append("could not read known_marketplaces.json (%s), so main was used" % type(exc).__name__)
+        return ""
+    src = entry.get("source") if isinstance(entry.get("source"), dict) else {}
+    return src.get("ref") or entry.get("ref") or ""
+
+
+def _github_urls(ref):
+    """(raw URL, contents-API URL) for plugin.json on `ref`, or on main when ref is ""."""
+    raw_url = os.environ.get("HOUSE_RULES_VC_GITHUB_URL") or _GITHUB_PLUGIN_JSON_URL
+    if not ref:
+        return raw_url, _github_api_url(raw_url)
+    from urllib.parse import quote
+
+    m = _RAW_URL_RE.match(raw_url)
+    if not m:
+        return raw_url, ""
+    owner, repo, _main, path = m.groups()
+    # a branch name holds "/", so the raw URL spells it refs/heads/<branch> and the API takes it quoted
+    return ("https://raw.githubusercontent.com/%s/%s/refs/heads/%s/%s" % (owner, repo, ref, path),
+            "https://api.github.com/repos/%s/%s/contents/%s?ref=%s" % (owner, repo, path, quote(ref, safe="")))
+
+
+def _github_version(problems, ref=""):
+    """GitHub's published version, on the marketplace's branch when it is pinned to one (#535 QA:
+    a branch build compared with main was told to update down). raw.githubusercontent first, then
+    the contents API, both inside one _GITHUB_FETCH_TIMEOUT budget. Two routes because some
+    sandboxes reset connections to raw.githubusercontent.com while api.github.com works
+    (docs/architecture.md, "versioncheck checks three copies of the version"). Each failed route
+    goes into problems."""
     override = os.environ.get("HOUSE_RULES_VC_GITHUB")
     if override is not None:
         return override
     import time
 
     deadline = time.monotonic() + _GITHUB_FETCH_TIMEOUT
-    raw_url = os.environ.get("HOUSE_RULES_VC_GITHUB_URL") or _GITHUB_PLUGIN_JSON_URL
+    raw_url, api_url = _github_urls(ref)
     failures = []
     try:
         return _fetch_version(raw_url, {}, _GITHUB_FETCH_TIMEOUT)
     except Exception as exc:
         failures.append("raw.githubusercontent.com (%s)" % _describe_fetch_error(exc))
 
-    api_url = _github_api_url(raw_url)
     remaining = deadline - time.monotonic()
     if not api_url:
         failures.append("no GitHub API fallback (HOUSE_RULES_VC_GITHUB_URL is not a raw URL)")
@@ -1320,7 +1353,9 @@ def event_versioncheck():
         installed = _plugin_version(problems)
         plugin_id, on_disk = _installed_on_disk(problems)
         market_version = _marketplace_version(problems)
-        github_version = _github_version(problems)
+        branch_ref = _vc_branch_ref(problems)
+        where = "the %s branch" % branch_ref if branch_ref else "the default branch"
+        github_version = _github_version(problems, branch_ref)
         latest = github_version or market_version
 
         if _is_synced_copy():
@@ -1357,17 +1392,17 @@ def event_versioncheck():
             )
         if market_version and github_version and market_version != github_version:
             reasons.append(
-                "the local marketplace clone is %s but GitHub's default branch has %s - the "
+                "the local marketplace clone is %s but %s on GitHub has %s - the "
                 "marketplace clone itself has not synced. Run `%s`, then `%s`."
-                % (market_version, github_version, marketplace_cmd, update_cmd)
+                % (market_version, where, github_version, marketplace_cmd, update_cmd)
             )
         elif not market_version and installed and github_version and _version_tuple(installed) < _version_tuple(github_version):
             # The marketplace clone could not be found/read at all - fall back to comparing
             # the installed copy straight against GitHub so a mismatch is still caught.
             reasons.append(
-                "installed copy is %s but GitHub's default branch has %s (the local "
+                "installed copy is %s but %s on GitHub has %s (the local "
                 "marketplace clone could not be checked). Run `%s`, then `%s`."
-                % (installed, github_version, marketplace_cmd, update_cmd)
+                % (installed, where, github_version, marketplace_cmd, update_cmd)
             )
 
         if not reasons:
@@ -1396,8 +1431,8 @@ def event_versioncheck():
                 emit(out)
             else:
                 trace(
-                    "versioncheck: installed %s matches the marketplace clone and GitHub's "
-                    "default branch." % (installed or "unknown")
+                    "versioncheck: installed %s matches the marketplace clone and %s on "
+                    "GitHub." % (installed or "unknown", where)
                 )
             return 0
 

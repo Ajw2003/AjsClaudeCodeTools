@@ -772,6 +772,9 @@ _loop_gh("needs review", 101, 102, 103)
 _n = _loop_say("QA failed: blockers - the list is too long")
 _loop_cases.append(("the feature name stops at a spaced dash (found in the label check's real run)",
                     _loop_state().get("approvals", [{}])[-1].get("name") == "blockers"))
+_loop_cases.append(("#535 QA: a comma ends the feature name too, so \"QA failed: Feature switches, the app\" names Feature switches",
+                    __import__("house_rules.design_loop", fromlist=["x"])._loop_name("Feature switches, the desktop app does not save") == "Feature switches"
+                    and __import__("house_rules.design_loop", fromlist=["x"])._loop_name("Phase 3 1A 2A, as discussed") == "Phase 3"))
 _loop_cases.append(('#504: "QA failed" goes back to Build in one message, keeps the issues, and code stays closed '
                     "while they still say needs review", _loop_stage() == "build"
                     and len(_loop_state().get("issues", [])) == 3 and _loop_edit("app.py") == "deny"))
