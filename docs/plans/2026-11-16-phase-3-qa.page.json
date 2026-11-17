@@ -1,0 +1,115 @@
+{
+ "title": "Phase 3 QA",
+ "eyebrow": "QA \u00b7 roadmap phase 3 (#495) and feature switches (#535) \u00b7 plugin 2.81.0 on AjsAgent/phase-3-handoff",
+ "short": {
+  "lead": "Phase 3 and the feature switches are built on the branch AjsAgent/phase-3-handoff as plugin 2.81.0: fourteen steps, and four older issues closed with evidence instead of rebuilt. Here, the hook check script (verify.py) passes 1247 of 1247 checks, the tools check (tools/verify_tools.py) passes 54 of 54, and the doc drift check finds 0 out-of-date citations. Real headless Claude sessions, running only this branch's plugin, saved work, picked it up in a second folder and switched pages off outside git. Reviewing the helper agents' work found and fixed seven problems before anything merged (see the Review found row). What is left needs you: a second Claude account, your Windows PC, and a real cloud session.",
+  "hint": "Tap a row to see what was run and what it showed.",
+  "key": [
+   [
+    "Proven by a real run",
+    ""
+   ],
+   [
+    "Needs you",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "Save on a PC",
+    "Every branch is saved, one save per folder",
+    "",
+    "Live: a session that created notes.txt and did not commit left the test's stand-in for GitHub holding a hidden save, refs/house-rules/saves/AjsAgent/live/e9979774, with notes.txt and a facts file naming the branch, its last commit and the unsaved files. The branch itself got no new commit. verify.py proves two clones keep two saves, and that an old autosave/<branch> save cannot block a new one. Steps 1 and 3, #527 and #529.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Save in the cloud",
+    "A cloud session commits to its own branch",
+    "",
+    "Live, with the cloud-session setting CLAUDE_CODE_REMOTE=true, on branch ajsagent/live: the branch on the stand-in for GitHub got a commit named \"wip: autosave\" holding notes.txt, and no hidden save was pushed. On main, nothing is committed. Step 2, issue #528. The guard now counts lowercase ajsagent/ branches as the agent's own.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Pickup",
+    "A new folder opens with where the work stood",
+    "",
+    "Live: a session in a second clone listed notes.txt from the first folder's save, the handoff note, and the restore command git diff <save>^ <save> -- notes.txt | git apply. Running that command brought back notes.txt, which contained \"hello\". The session-start hook never restores anything itself. Step 5, issue #531.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "End of reply",
+    "A reply that leaves work unsaved is sent back once",
+    "",
+    "Checked by verify.py. Each of these gets the reply sent back once: a branch not pushed, a handoff note older than the newest commit, a note holding a page or session link, and a turn that changed files without updating Today.md. The retry never blocks the reply. Step 4, issue #530.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Feature switches",
+    "Type a switch in any folder",
+    "",
+    "Live: \"pages off\" in a folder outside git saved {\"pages\":\"off\"} there; the next prompt carried the Pages OFF note, and a control folder did not. A control reply of 395 words got the page reminder; with pages off it did not. A quoted \"should I type pages off?\" saved nothing. verify.py also proves three things. A switch set \"everywhere\" applies in a second folder. A switch set for one folder overrides it. With \"house rules off\", the guard still refuses git reset --hard and a commit on main. Issues #536 to #538.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Branch builds",
+    "One command switches the plugin build",
+    "",
+    "tools/verify_tools.py, in a throwaway config folder: switching to AjsAgent/phase-3-handoff installed that branch's commit, and main switched back. A switch to a branch that does not exist exits 1 and puts the normal build back. Step 6, #532.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Fixes",
+    "Eight smaller fixes, four closed with evidence",
+    "",
+    "Fixed, each with a test that failed first: verify.py --only (#44), the settings block at the top of agent files (#46), a command starting with & (#137), a warning when Python is missing (#205), a merged phase pull request now closing its step issues (#520, read live from this cloud session on #531's parent issue), the docs-tiers note offers instead of orders (#521), switch-then-commit in one command (#522). Already fixed, closed with evidence after QA: #202, #215, #515, #409.",
+    "Nothing from you."
+   ],
+   [
+    "search",
+    "Review found",
+    "Seven problems caught before merging",
+    "",
+    "1: a save name that git could not nest under an old save (renamed to refs/house-rules/saves/). 2: the Today.md rule dropped from the end-of-reply check (restored). 3: a guard loophole, git switch -c AjsAgent/x && git checkout main && git commit (now refused). 4: switching to a branch build could leave you with no plugin installed (a failed switch now puts the normal build back). 5: the pickup's fetches could hit its 15-second limit (raised to 25). 6: a flaky approval test, timestamps a second apart (fixed). 7: the new rule sentence pushed the rules loaded at session start to 9798 characters, over the 9700 limit (shortened to 9675, detail moved).",
+    "Nothing from you."
+   ],
+   [
+    "flask",
+    "Your steps",
+    "Pick up on a second account, then Windows",
+    "you",
+    "1. On your PC, switch the plugin to this branch with tools/use_branch.py AjsAgent/phase-3-handoff (exact command once you tell me your clone's folder), and restart the desktop app. 2. Account A: in a test repo on an AjsAgent/ branch, ask for an edit and do not commit; end the session. 3. Account B: open the same repo and branch in a new session; it should open with the file listed and a restore command. 4. Type \"pages off\" in a folder that is not a git repo and ask something long: no page reminder. 5. Run verify.py on your PC for #523; the 8 Windows-only failures are the last open fix. 6. tools/use_branch.py main to switch back.",
+    "Steps 1 to 6, then your verdict."
+   ]
+  ]
+ },
+ "qa": {
+  "feature": "Phase 3",
+  "base": "2c373be",
+  "unverified": [
+   "A second Claude account: every run here used this session's one account",
+   "Your Windows PC: every run was Linux in this cloud container, and #523's 8 Windows-only failures are not fixed yet",
+   "A real cloud session saving to GitHub with this plugin: the cloud save was tested against a local stand-in for GitHub, because a cloud session runs the installed plugin, not this branch's",
+   "A turn really cut off by a usage limit (the StopFailure event Claude Code sends when a turn ends on an error): only replayed test inputs have run",
+   "Whether a cloud session follows a branch build: tools/use_branch.py was tested for your user settings only"
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "QA for phase 3 and the feature switches: every check that can run here passed; what is left needs a second account, your PC and a real cloud session.",
+  "changing": "Plugin 2.81.0 on AjsAgent/phase-3-handoff. Nothing reaches main until you merge a pull request.",
+  "blocking": "Your clone's folder on your PC, for exact commands, then your QA verdict.",
+  "next": "With your folder I add the exact commands to step 1 and 5; after QA, #523 on your PC, then one pull request to main.",
+  "todo": [
+   "Tell me the folder this repo is cloned to on your PC.",
+   "Follow the steps in the Your steps row.",
+   "Type \"QA passed: Phase 3\", or \"QA failed: Phase 3\" with what is wrong."
+  ]
+ }
+}
