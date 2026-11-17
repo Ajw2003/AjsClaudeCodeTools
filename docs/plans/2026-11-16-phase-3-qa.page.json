@@ -2,7 +2,7 @@
  "title": "Phase 3 QA",
  "eyebrow": "QA \u00b7 roadmap phase 3 (#495) and feature switches (#535) \u00b7 plugin 2.81.0 on AjsAgent/phase-3-handoff",
  "short": {
-  "lead": "Phase 3 and the feature switches are built on the branch AjsAgent/phase-3-handoff as plugin 2.81.0: fourteen steps, and four older issues closed with evidence instead of rebuilt. Here, the hook check script (verify.py) passes 1247 of 1247 checks, the tools check (tools/verify_tools.py) passes 54 of 54, and the doc drift check finds 0 out-of-date citations. Real headless Claude sessions, running only this branch's plugin, saved work, picked it up in a second folder and switched pages off outside git. Reviewing the helper agents' work found and fixed seven problems before anything merged (see the Review found row). What is left needs you: a second Claude account, your Windows PC, and a real cloud session.",
+  "lead": "Phase 3 and the feature switches are built on the branch AjsAgent/phase-3-handoff as plugin 2.81.0: fourteen steps, and four older issues to be closed with evidence instead of rebuilt. The hook check script (verify.py) passes 1247 of 1247 checks, the tools check (tools/verify_tools.py) passes 54 of 54, and the doc drift check finds 0 out-of-date citations. Real Claude sessions ran without a screen (headless), using only this branch's plugin. They saved work, picked it up in a second folder, and turned the page reminders off in a folder outside git. Reviewing the helper agents' work found and fixed seven problems before anything merged (see the Review found row). Your 2026-11-17 choice, that a save holds every new file git does not ignore, is built too. What is left needs you: a second Claude account, your Windows PC, and a real cloud session.",
   "hint": "Tap a row to see what was run and what it showed.",
   "key": [
    [
@@ -20,7 +20,7 @@
     "Save on a PC",
     "Every branch is saved, one save per folder",
     "",
-    "Live: a session created notes.txt and did not commit. Afterwards the test's stand-in for GitHub held a hidden save, refs/house-rules/saves/AjsAgent/live/e9979774. The save contained notes.txt and a facts file naming the branch, its last commit and the unsaved files. The branch itself got no new commit. verify.py proves two clones keep two saves, and that an old autosave/<branch> save cannot block a new one. Build steps 1 and 3 (issues #527 and #529).",
+    "Live: a session created notes.txt and did not commit. Afterwards the test's stand-in for GitHub (a local copy playing its part) held a hidden save, refs/house-rules/saves/AjsAgent/live/e9979774. The save contained notes.txt and a facts file. The facts file named the branch, the branch's latest commit and the unsaved files. The branch itself got no new commit. verify.py proves two clones keep two saves, and that an old autosave/<branch> save cannot block a new one. Build steps 1 and 3 (issues #527 and #529). Since your choice on 2026-11-17, a save holds every new file git does not ignore, however it was made. A git-ignored file stays out, and a file over 50 MB is left out and named.",
     "Nothing from you."
    ],
    [
@@ -28,7 +28,7 @@
     "Save in the cloud",
     "A cloud session commits to its own branch",
     "",
-    "Live, with the cloud-session setting CLAUDE_CODE_REMOTE=true, on branch ajsagent/live: the branch on the stand-in for GitHub got a commit named \"wip: autosave\" holding notes.txt, and no hidden save was pushed. On main, nothing is committed. Step 2, issue #528. The guard now counts lowercase ajsagent/ branches as the agent's own. Against real GitHub too, from this cloud container on the throwaway branch ajsagent/phase-3-live-cloud: a file the agent wrote with its Write tool was committed and pushed (commit b800544 on GitHub). A file made by a shell command was not saved, and nothing said so (see the unverified list).",
+    "Live, with the cloud-session setting CLAUDE_CODE_REMOTE=true: on branch ajsagent/live, the branch on the stand-in for GitHub got a commit named \"wip: autosave\" holding notes.txt, and no hidden save was pushed. On the main branch, the save never commits. It was also run against real GitHub, from this cloud container. On the throwaway branch ajsagent/phase-3-live-cloud-2, a session made notes.txt with a shell command. The save committed and pushed it (commit ab9f2de on GitHub). A fresh clone from GitHub had the file. Step 2, issue #528.",
     "Nothing from you."
    ],
    [
@@ -95,9 +95,8 @@
   "unverified": [
    "A second Claude account: every run here used this session's one account",
    "Your Windows PC: every run was Linux in this cloud container, and #523's 8 Windows-only failures are not fixed yet",
-   "A turn really cut off by a usage limit (the StopFailure event Claude Code sends when a turn ends on an error): only replayed test inputs have run",
-   "Whether a cloud session follows a branch build: tools/use_branch.py was tested for your user settings only",
-   "A new file the agent makes with a shell command (for example echo hello > notes.txt) is not saved, by design from #477, and nothing says so; found by the real-GitHub test on 2026-11-17 and waiting on your call"
+   "A turn really cut off by a usage limit: only replayed test inputs have run. (Claude Code sends a StopFailure event when a turn ends on an error.)",
+   "Whether a cloud session follows a branch build: tools/use_branch.py was tested for your user settings only"
   ],
   "files": {}
  },
