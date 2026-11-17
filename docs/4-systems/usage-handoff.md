@@ -49,9 +49,9 @@ saves continuously and does not depend on either.
 **The automatic save (November pick 1A).** After a `Write`, `Edit`, `NotebookEdit` or `Bash` call, at
 most once a minute (`AUTOSAVE_PUSH_INTERVAL`, 60 s), the working folder is snapshotted to
 `refs/house-rules/autosave/<branch>` through a temporary index and pushed to `origin`. The branch,
-its index and its working tree are never changed. What goes into the snapshot follows #477: tracked
-changes, plus new files the agent wrote with `Write`, `Edit` or `NotebookEdit`. Other new files stay
-out, because one may be a token or a data dump. On the main session's branches the hook makes no
+its index and its working tree are never changed. What goes into the snapshot: tracked changes and every new file git does not ignore
+(aj, 2026-11-17, reversing #477's file-tool-only rule after a shell-made file was never saved). A new file over
+the 50 MB big-file limit is left out and named. On the main session's branches the hook makes no
 work-in-progress commit; that stays for subagent branches only. The end of a turn (`Stop`) and a turn
 ended by an API error (`StopFailure`) force one save and push regardless of the one-minute window.
 

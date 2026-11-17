@@ -5,7 +5,7 @@ real repo. Session 1 in clone A creates notes.txt without committing; after it e
 import json, os, shutil, subprocess, sys
 
 URL = "https://github.com/Ajw2003/AjsClaudeCodeTools.git"
-BR = "ajsagent/phase-3-live-cloud"
+BR = sys.argv[2] if len(sys.argv) > 2 else "ajsagent/phase-3-live-cloud"
 PLUGIN = "/home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules"
 ROOT = sys.argv[1]
 
@@ -47,7 +47,7 @@ git(a, "push", "-q", "-u", "origin", BR)
 start = git(a, "rev-parse", "HEAD")
 print("branch", BR, "pushed at", start[:7])
 
-hooks = session(a, "Create a file named notes.txt containing the single word hello. Do not commit anything.")
+hooks = session(a, "Run this shell command and nothing else: echo hello > notes.txt")
 remote = git(a, "ls-remote", "origin", "refs/heads/" + BR).split()[0]
 git(a, "fetch", "-q", "origin", BR)
 subj = git(a, "log", "-1", "--format=%s", remote)
