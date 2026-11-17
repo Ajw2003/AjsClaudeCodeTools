@@ -1,6 +1,6 @@
 {
   "feature": "Feature switches",
-  "stage": "build",
+  "stage": "qa",
   "skip": false,
   "approvals": [
     {
@@ -761,82 +761,87 @@
     ],
     "Ajw2003/AjsClaudeCodeTools#527": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#528": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#529": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#530": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#531": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#532": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#533": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#534": [
       "bug",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#520": [
       "bug",
-      "AjsAgent created this",
-      "in progress"
+      "needs review",
+      "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#521": [
       "bug",
-      "AjsAgent created this",
-      "in progress"
+      "needs review",
+      "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#522": [
       "bug",
-      "AjsAgent created this",
-      "in progress"
+      "needs review",
+      "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#523": [
       "bug",
-      "AjsAgent created this",
-      "in progress"
+      "needs review",
+      "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#535": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#536": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#537": [
       "Feature",
-      "in progress",
+      "needs review",
       "AjsAgent created this"
     ],
     "Ajw2003/AjsClaudeCodeTools#538": [
       "Feature",
-      "in progress",
+      "needs review",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#495": [
+      "Feature",
+      "needs review",
       "AjsAgent created this"
     ]
   },
@@ -2648,5 +2653,6 @@
     ]
   },
   "parent": 495,
-  "qa_page": "docs/plans/2026-11-16-phase-3-qa.html"
+  "qa_page": "docs/plans/2026-11-16-phase-3-qa.html",
+  "label_said": "5c2ce13d79f7"
 }

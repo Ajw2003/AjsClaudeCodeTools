@@ -20,7 +20,7 @@
     "Save on a PC",
     "Every branch is saved, one save per folder",
     "",
-    "Live: a session that created notes.txt and did not commit left the test's stand-in for GitHub holding a hidden save, refs/house-rules/saves/AjsAgent/live/e9979774, with notes.txt and a facts file naming the branch, its last commit and the unsaved files. The branch itself got no new commit. verify.py proves two clones keep two saves, and that an old autosave/<branch> save cannot block a new one. Steps 1 and 3, #527 and #529.",
+    "Live: a session created notes.txt and did not commit. Afterwards the test's stand-in for GitHub held a hidden save, refs/house-rules/saves/AjsAgent/live/e9979774. The save contained notes.txt and a facts file naming the branch, its last commit and the unsaved files. The branch itself got no new commit. verify.py proves two clones keep two saves, and that an old autosave/<branch> save cannot block a new one. Build steps 1 and 3 (issues #527 and #529).",
     "Nothing from you."
    ],
    [
@@ -66,9 +66,9 @@
    [
     "check",
     "Fixes",
-    "Eight smaller fixes, four closed with evidence",
+    "Seven fixes built, four closed with evidence",
     "",
-    "Fixed, each with a test that failed first: verify.py --only (#44), the settings block at the top of agent files (#46), a command starting with & (#137), a warning when Python is missing (#205), a merged phase pull request now closing its step issues (#520, read live from this cloud session on #531's parent issue), the docs-tiers note offers instead of orders (#521), switch-then-commit in one command (#522). Already fixed, closed with evidence after QA: #202, #215, #515, #409.",
+    "Fixed, each with a test that failed first: verify.py --only (#44); the settings block at the top of agent files (#46); a command starting with & (#137); a warning when Python is missing (#205). A merged phase pull request now closes its step issues (#520); this cloud session read the parent issue of #531 live. The docs-tiers note offers instead of orders (#521), and switching branch then committing works in one command (#522). Already fixed, and to be closed with evidence after QA: #202 (the docref check), #215 (guard checks after 5 minutes), #515 (the close guard with the loop off) and #409 (quoted approvals).",
     "Nothing from you."
    ],
    [
@@ -84,7 +84,7 @@
     "Your steps",
     "Pick up on a second account, then Windows",
     "you",
-    "1. On your PC, switch the plugin to this branch with tools/use_branch.py AjsAgent/phase-3-handoff (exact command once you tell me your clone's folder), and restart the desktop app. 2. Account A: in a test repo on an AjsAgent/ branch, ask for an edit and do not commit; end the session. 3. Account B: open the same repo and branch in a new session; it should open with the file listed and a restore command. 4. Type \"pages off\" in a folder that is not a git repo and ask something long: no page reminder. 5. Run verify.py on your PC for #523; the 8 Windows-only failures are the last open fix. 6. tools/use_branch.py main to switch back.",
+    "1. On your PC, switch the plugin to this branch with tools/use_branch.py AjsAgent/phase-3-handoff (exact command once you tell me your clone's folder), and restart the desktop app. 2. Account A: in a test repo on an AjsAgent/ branch, ask for an edit and do not commit; end the session. 3. Account B: open the same repo and branch in a new session. The session should open by listing the file you edited and giving a restore command. 4. Type \"pages off\" in a folder that is not a git repo and ask something long. You should see no page reminder. 5. Run verify.py on your PC. It is the check for issue #523, the last open fix, which covers 8 failures that happen only on Windows. 6. Run the same switch command with main in place of the branch name to switch back.",
     "Steps 1 to 6, then your verdict."
    ]
   ]
