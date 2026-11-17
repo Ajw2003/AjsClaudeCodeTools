@@ -84,8 +84,8 @@
     "Your steps",
     "Pick up on a second account, then Windows",
     "you",
-    "1. On your PC, switch the plugin to this branch with tools/use_branch.py AjsAgent/phase-3-handoff (exact command once you tell me your clone's folder), and restart the desktop app. 2. Account A: in a test repo on an AjsAgent/ branch, ask for an edit and do not commit; end the session. 3. Account B: open the same repo and branch in a new session. The session should open by listing the file you edited and giving a restore command. 4. Type \"pages off\" in a folder that is not a git repo and ask something long. You should see no page reminder. 5. Run verify.py on your PC. It is the check for issue #523, the last open fix, which covers 8 failures that happen only on Windows. 6. Run the same switch command with main in place of the branch name to switch back.",
-    "Steps 1 to 6, then your verdict."
+    "UNTESTED in your shell: these were not run in Windows PowerShell on your PC (this session is Linux), so read each step's result before the next. Open Windows PowerShell anywhere (Start, type PowerShell, Enter); every command uses full paths, so the folder you start in does not matter. 1. Fetch the branch: git -C \"C:\\Users\\aj\\Desktop\\AjsClaudeCodeTools\" fetch origin AjsAgent/phase-3-handoff  You should see a line ending in AjsAgent/phase-3-handoff -> FETCH_HEAD. 2. Put the branch in its own folder, leaving your Desktop clone as it is: git -C \"C:\\Users\\aj\\Desktop\\AjsClaudeCodeTools\" worktree add --detach \"C:\\Users\\aj\\Desktop\\phase-3-qa\" FETCH_HEAD  Expect Preparing worktree (detached HEAD ...), then HEAD is now at and the branch's latest commit. 3. Switch the plugin to this build: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\tools\\use_branch.py\" AjsAgent/phase-3-handoff  Expect marketplace ref : AjsAgent/phase-3-handoff, plugin version : 2.81.0 and OK: installed build matches the request. Then quit and reopen the Claude desktop app so it loads the new build. 4. Signed in as your first Claude account (A), in a test repo on an AjsAgent/ branch, ask Claude to create a file with a shell command and not commit it, then end the session. 5. Sign in as your second Claude account (B) and open the same repo and branch in a new session. The session should open by listing that file and giving a restore command. 6. In a folder that is not a git repo, type pages off, then ask for a long explanation. You should see no page reminder (the note that a reply of 160 words or more belongs on a page). 7. Run the tests for #523: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\claude-house-rules\\plugins\\house-rules\\scripts\\verify.py\"  The last line starts with RESULT. Paste me every line that says FAIL. Eight failures are expected, all Windows-only, and they are the ones #523 covers. 8. Switch back: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\tools\\use_branch.py\" main  Expect marketplace ref : (none - default branch), plugin version : 2.80.0 and OK. Quit and reopen the desktop app.",
+    "Steps 1 to 8, then your verdict and the FAIL lines from step 7."
    ]
   ]
  },
@@ -103,12 +103,11 @@
  "wrapup": {
   "summary": "QA for phase 3 and the feature switches: every check that can run here passed; what is left needs a second account, your PC and a real cloud session.",
   "changing": "Plugin 2.81.0 on AjsAgent/phase-3-handoff. Nothing reaches main until you merge a pull request.",
-  "blocking": "Your clone's folder on your PC, for exact commands, then your QA verdict.",
-  "next": "With your folder I add the exact commands to step 1 and 5; after QA, #523 on your PC, then one pull request to main.",
+  "blocking": "Your QA verdict, and the FAIL lines from step 7.",
+  "next": "After QA, I fix #523 from your FAIL lines, then open one pull request to main.",
   "todo": [
-   "Tell me the folder this repo is cloned to on your PC.",
-   "Follow the steps in the Your steps row.",
-   "Type \"QA passed: Phase 3\", or \"QA failed: Phase 3\" with what is wrong."
+   "Follow steps 1 to 8 in the Your steps row.",
+   "Type \"QA passed: Phase 3\", or \"QA failed: Phase 3\" with what is wrong, and paste the FAIL lines from step 7."
   ]
  }
 }
