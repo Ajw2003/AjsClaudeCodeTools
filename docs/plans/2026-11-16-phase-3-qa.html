@@ -298,7 +298,7 @@ const PAGE = {
         "Save in the cloud",
         "A cloud session commits to its own branch",
         "",
-        "Live, with the cloud-session setting CLAUDE_CODE_REMOTE=true, on branch ajsagent/live: the branch on the stand-in for GitHub got a commit named \"wip: autosave\" holding notes.txt, and no hidden save was pushed. On main, nothing is committed. Step 2, issue #528. The guard now counts lowercase ajsagent/ branches as the agent's own.",
+        "Live, with the cloud-session setting CLAUDE_CODE_REMOTE=true, on branch ajsagent/live: the branch on the stand-in for GitHub got a commit named \"wip: autosave\" holding notes.txt, and no hidden save was pushed. On main, nothing is committed. Step 2, issue #528. The guard now counts lowercase ajsagent/ branches as the agent's own. Against real GitHub too, from this cloud container on the throwaway branch ajsagent/phase-3-live-cloud: a file the agent wrote with its Write tool was committed and pushed (commit b800544 on GitHub). A file made by a shell command was not saved, and nothing said so (see the unverified list).",
         "Nothing from you."
       ],
       [
@@ -365,9 +365,9 @@ const PAGE = {
     "unverified": [
       "A second Claude account: every run here used this session's one account",
       "Your Windows PC: every run was Linux in this cloud container, and #523's 8 Windows-only failures are not fixed yet",
-      "A real cloud session saving to GitHub with this plugin: the cloud save was tested against a local stand-in for GitHub, because a cloud session runs the installed plugin, not this branch's",
       "A turn really cut off by a usage limit (the StopFailure event Claude Code sends when a turn ends on an error): only replayed test inputs have run",
-      "Whether a cloud session follows a branch build: tools/use_branch.py was tested for your user settings only"
+      "Whether a cloud session follows a branch build: tools/use_branch.py was tested for your user settings only",
+      "A new file the agent makes with a shell command (for example echo hello > notes.txt) is not saved, by design from #477, and nothing says so; found by the real-GitHub test on 2026-11-17 and waiting on your call"
     ],
     "files": {}
   },
@@ -386,14 +386,14 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against 2c373be",
-      "50 files, +8694 −134",
+      "52 files, +6143 −134",
       null,
       "The added and removed counts come from git (git diff --numstat 2c373be...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          2652,
+          1,
           1,
           [
             [
@@ -705,7 +705,7 @@ const PAGE = {
         ],
         [
           "docs/3-state/ProjectState.md",
-          21,
+          22,
           0,
           [
             [
@@ -896,6 +896,30 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/2026-11-16-phase-3-live-tests/live_cloud_github-result.txt",
+          11,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-16-phase-3-live-tests/live_cloud_github.py",
+          64,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/2026-11-16-phase-3-live-tests/live_pages-result.txt",
           10,
           0,
@@ -945,7 +969,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-16-phase-3-qa.html",
-          1115,
+          1139,
           0,
           [
             [
@@ -998,7 +1022,7 @@ const PAGE = {
       "Still unverified",
       "5 things not yet proven",
       null,
-      "A second Claude account: every run here used this session's one account. Your Windows PC: every run was Linux in this cloud container, and #523's 8 Windows-only failures are not fixed yet. A real cloud session saving to GitHub with this plugin: the cloud save was tested against a local stand-in for GitHub, because a cloud session runs the installed plugin, not this branch's. A turn really cut off by a usage limit (the StopFailure event Claude Code sends when a turn ends on an error): only replayed test inputs have run. Whether a cloud session follows a branch build: tools/use_branch.py was tested for your user settings only.",
+      "A second Claude account: every run here used this session's one account. Your Windows PC: every run was Linux in this cloud container, and #523's 8 Windows-only failures are not fixed yet. A turn really cut off by a usage limit (the StopFailure event Claude Code sends when a turn ends on an error): only replayed test inputs have run. Whether a cloud session follows a branch build: tools/use_branch.py was tested for your user settings only. A new file the agent makes with a shell command (for example echo hello > notes.txt) is not saved, by design from #477, and nothing says so; found by the real-GitHub test on 2026-11-17 and waiting on your call.",
       null,
       null
     ]
