@@ -1,0 +1,11 @@
+branch ajsagent/phase-3-live-cloud pushed at 9e94127
+FAIL session 1: GitHub's ajsagent/phase-3-live-cloud moved 9e94127 -> 9e94127, newest commit 'docs: QA page wording; every phase 3 issue needs review (Refs #533)' with ['.claude/house-rules-loop.json', 'docs/3-state/ProjectState.md', 'docs/plans/2026-11-16-phase-3-qa.html', 'docs/plans/2026-11-16-phase-3-qa.page.json']
+FAIL fresh clone from GitHub has notes.txt: None
+exit 0
+
+Follow-up, same day, in clone A, calling the autosave hook directly with CLAUDE_CODE_REMOTE=true:
+  Bash tool, "echo hello > notes.txt" -> nothing saved, nothing said (HEAD stays 9e94127)
+  Write tool, notes.txt               -> commit b800544 "wip: autosave", pushed: GitHub's ajsagent/phase-3-live-cloud = b800544
+Cause of the FAIL above: the session made notes.txt with a shell command. By design (#477) only files the agent
+writes with Write/Edit/NotebookEdit, plus tracked changes, are saved; other new files stay out (they may be tokens
+or data dumps). The cloud save to real GitHub works; the gap is that the skip is silent.
