@@ -238,6 +238,10 @@ _pc = _as_write(_dc, "new.py")
 _junk = os.path.join(_dc, "token.txt")
 with open(_junk, "w", encoding="utf-8") as _f:
     _f.write("secret\n")
+with open(os.path.join(_dc, ".git", "info", "exclude"), "a", encoding="utf-8") as _f:
+    _f.write("token.txt\n")  # git-ignored, so never saved (2026-11-17: every other new file is)
+with open(os.path.join(_dc, "shell.txt"), "w", encoding="utf-8") as _f:
+    _f.write("made by a shell command\n")
 run_hook("autosave", _as_payload("PostToolUse", "Write", _pc, _dc), env=_cenv)
 _cmsgs = _as_git(_dc, "log", "--format=%s").split("\n")
 _crefs = _as_git(_bc, "for-each-ref", "--format=%(refname)", "refs/house-rules/saves/")
@@ -248,8 +252,8 @@ commit_case(
     "log %r, origin saves %r" % (_cmsgs, _crefs),
 )
 commit_case(
-    "autosave (#528): the cloud wip commit holds the file the agent wrote and not an untracked file it did not write",
-    _as_git(_dc, "show", "--name-only", "--format=", "HEAD").split() == ["new.py"],
+    "autosave (#528): the cloud wip commit holds every new file git does not ignore (shell-made too) and not an ignored one",
+    sorted(_as_git(_dc, "show", "--name-only", "--format=", "HEAD").split()) == ["new.py", "shell.txt"],
     "files %r" % _as_git(_dc, "show", "--name-only", "--format=", "HEAD"),
 )
 _dm, _bm = _as_repo("main")
