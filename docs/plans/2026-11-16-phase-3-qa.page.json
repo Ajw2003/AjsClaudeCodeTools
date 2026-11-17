@@ -2,7 +2,7 @@
  "title": "Phase 3 QA",
  "eyebrow": "QA \u00b7 roadmap phase 3 (#495) and feature switches (#535) \u00b7 plugin 2.81.0 on AjsAgent/phase-3-handoff",
  "short": {
-  "lead": "Phase 3 and the feature switches are built on the branch AjsAgent/phase-3-handoff as plugin 2.81.0: fourteen steps, and four older issues to be closed with evidence instead of rebuilt. The hook check script (verify.py) passes 1247 of 1247 checks, the tools check (tools/verify_tools.py) passes 54 of 54, and the doc drift check finds 0 out-of-date citations. Real Claude sessions ran without a screen (headless), using only this branch's plugin. They saved work, picked it up in a second folder, and turned the page reminders off in a folder outside git. Reviewing the helper agents' work found and fixed seven problems before anything merged (see the Review found row). Your 2026-11-17 choice, that a save holds every new file git does not ignore, is built too. What is left needs you: a second Claude account, your Windows PC, and a real cloud session.",
+  "lead": "Phase 3 and the feature switches are built on the branch AjsAgent/phase-3-handoff as plugin 2.81.0: fourteen build steps, and four older issues to be closed with evidence instead of rebuilt. The hook check script (verify.py) passes 1247 of 1247 checks, the tools check (tools/verify_tools.py) passes 54 of 54, and the doc drift check finds 0 out-of-date citations. Real Claude sessions ran without a screen (headless), using only this branch's plugin. They saved work, picked it up in a second folder, and turned the page reminders off in a folder outside git. Reviewing the helper agents' work found and fixed seven problems before anything merged (see the Review found row). Your 2026-11-17 choice, that a save holds every new file git does not ignore, is built too. What is left needs you: a second Claude account, your Windows PC, and a real cloud session.",
   "hint": "Tap a row to see what was run and what it showed.",
   "key": [
    [
@@ -82,10 +82,10 @@
    [
     "flask",
     "Your steps",
-    "Pick up on a second account, then Windows",
+    "Thirteen steps on your PC, one action each",
     "you",
-    "UNTESTED in your shell: these were not run in Windows PowerShell on your PC (this session is Linux), so read each step's result before the next. Open Windows PowerShell anywhere (Start, type PowerShell, Enter); every command uses full paths, so the folder you start in does not matter. 1. Fetch the branch: git -C \"C:\\Users\\aj\\Desktop\\AjsClaudeCodeTools\" fetch origin AjsAgent/phase-3-handoff  You should see a line ending in AjsAgent/phase-3-handoff -> FETCH_HEAD. 2. Put the branch in its own folder. Your Desktop clone stays as it is: git -C \"C:\\Users\\aj\\Desktop\\AjsClaudeCodeTools\" worktree add --detach \"C:\\Users\\aj\\Desktop\\phase-3-qa\" FETCH_HEAD  Expect Preparing worktree (detached HEAD ...), then a line starting HEAD is now at, followed by the branch's latest commit. 3. Switch the plugin to this build: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\tools\\use_branch.py\" AjsAgent/phase-3-handoff  Expect marketplace ref : AjsAgent/phase-3-handoff, plugin version : 2.81.0 and OK: installed build matches the request. Then quit and reopen the Claude desktop app so it loads the new build. 4. Signed in as your first Claude account (A), in a test repo on an AjsAgent/ branch, ask Claude to create a file with a shell command and not commit it, then end the session. 5. Sign in as your second Claude account (B) and open the same repo and branch in a new session. The session should open by listing that file and giving a restore command. 6. In a folder that is not a git repo, type pages off, then ask for a long explanation. You should see no page reminder (the note that a reply of 160 words or more belongs on a page). 7. Run the tests for #523: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\claude-house-rules\\plugins\\house-rules\\scripts\\verify.py\"  The last line starts with RESULT. Paste me every line that says FAIL. Eight failures are expected, all Windows-only, and they are the ones #523 covers. 8. Switch back: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\tools\\use_branch.py\" main  Expect marketplace ref : (none - default branch), plugin version : 2.80.0 and OK: installed build matches the request. Restart the desktop app once more.",
-    "Steps 1 to 8, then your verdict and the FAIL lines from step 7."
+    "The steps are step cards, with the exact command, where to run it and what you should see: docs/plans/2026-11-17-phase-3-qa-steps.md in this repo, and in my chat message. They cover switching to this build, a pickup from your first Claude account to your second, the pages switch in a folder outside git, the Windows test run for #523, and switching back.",
+    "All 13 steps, then your verdict and the FAIL lines from step 12."
    ]
   ]
  },
@@ -103,11 +103,11 @@
  "wrapup": {
   "summary": "QA for phase 3 and the feature switches: every check that can run here passed; what is left needs a second account, your PC and a real cloud session.",
   "changing": "Plugin 2.81.0 on AjsAgent/phase-3-handoff. Nothing reaches main until you merge a pull request.",
-  "blocking": "Your QA verdict, and the FAIL lines from step 7.",
+  "blocking": "Your QA verdict, and the FAIL lines from step 12.",
   "next": "After QA, I fix #523 from your FAIL lines, then open one pull request to main.",
   "todo": [
-   "Follow steps 1 to 8 in the Your steps row.",
-   "Type \"QA passed: Phase 3\", or \"QA failed: Phase 3\" with what is wrong, and paste the FAIL lines from step 7."
+   "Follow the 13 steps in docs/plans/2026-11-17-phase-3-qa-steps.md.",
+   "Type \"QA passed: Phase 3\", or \"QA failed: Phase 3\" with what is wrong, and paste the FAIL lines from step 12."
   ]
  }
 }
