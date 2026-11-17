@@ -11,6 +11,8 @@ Plugin 2.81.0: phase 3, pick up on any account (#495), and feature switches anyw
 - A new session opens with the handoff note, the newest save's facts and the files other folders' saves hold, each with a restore command it never runs itself (#531).
 - `python tools/use_branch.py <branch>` switches the installed plugin to a branch build and `main` switches back, printing what is really installed (#532).
 - Any feature group can be switched by typing one line, in any folder, git or not: design loop, pages, builders, issues, writing checks, autosave, house rules; add "everywhere" for the whole machine. The destructive-command guard, the main-branch guard and the credit check never switch off (#536, #537, #538).
+- Saves now hold every new file git does not ignore, however it was made; a file over 50 MB is left out and named (aj, 2026-11-17, after a real-GitHub test showed a shell-made file was never saved).
+- QA steps for aj's PC as 13 step cards in `docs/plans/2026-11-17-phase-3-qa-steps.md`.
 - Fixes: `verify.py --only <text>` (#44); agent frontmatter fields no longer forbidden (#46); no leading `&` in handed-over commands unless PowerShell-only (#137); a warning when Python is missing for two checks (#205); a merged phase pull request lets its step issues close (#520); the docs-tiers note offers instead of orders (#521); switching to a new owned branch and committing in one command is allowed (#522); the guard counts lowercase `ajsagent/` branches as the agent's (#528); a flaky approval check fixed.
 
 Plugin 2.80.0: speed switches (#524, #525).
