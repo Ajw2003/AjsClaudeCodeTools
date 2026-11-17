@@ -254,7 +254,7 @@ desktop app. Whatever those lines say, or if no line appears at all, tells me wh
 
 ### Step 1 of 4 — Install the fixed build
 
-UNTESTED: the same script ran on Linux in the cloud session for 2.81.0, not yet for 2.81.1, and not in Windows PowerShell on your PC.
+UNTESTED: run on Linux in the cloud session in a throwaway settings folder (it printed 2.81.1, commit 90f68b1), not in Windows PowerShell on your PC.
 
 In **Windows PowerShell**, opened anywhere (Start, type `PowerShell`, Enter):
 
@@ -262,7 +262,7 @@ In **Windows PowerShell**, opened anywhere (Start, type `PowerShell`, Enter):
 python "C:\Users\aj\Desktop\phase-3-qa\tools\use_branch.py" AjsAgent/phase-3-handoff
 ```
 
-**You should see:** these lines at the end, with **2.81.1** as the version. That means the fixed build is installed.
+**You should see:** these lines at the end, with **2.81.1** as the version and `90f68b1` or a later commit. That means the fixed build is installed.
 
 ```text
 marketplace ref : AjsAgent/phase-3-handoff
