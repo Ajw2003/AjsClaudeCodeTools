@@ -405,20 +405,27 @@ commit_case(
     _n > 0 and bool(_as_ref(_dq, "worktree-agent-fast")),
     "%d spawns, autosave ref %r" % (_n, _as_ref(_dq, "worktree-agent-fast")[:9]),
 )
-# --- #477 (A11): autosave saves the helper's written files, never other untracked files ---
+# --- A11 (#477, reversed by aj 2026-11-17): autosave saves every new file git does not ignore, but never an
+# ignored one, and leaves out a file over the big-file limit (and says so) ---
 _as = _commit_repo("worktree-agent-a11", committed=["a.txt"])
+open(os.path.join(_as, ".gitignore"), "w").write("secret.token\n")
 open(os.path.join(_as, "secret.token"), "w").write("ghp_not_a_real_token")
 open(os.path.join(_as, "made.py"), "w").write("print(1)\n")
+open(os.path.join(_as, "shell.txt"), "w").write("made by a shell command, not a file tool\n")
+with open(os.path.join(_as, "big.bin"), "wb") as _f:
+    _f.truncate(51 * 1024 * 1024)  # sparse: 51 MB on paper, no real disk use
 _as_pl = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": "a11", "cwd": _as,
           "tool_input": {"file_path": os.path.join(_as, "made.py")}, "tool_response": {}}
-run_hook("autosave", json.dumps(_as_pl), env=_project_env(_as, HOUSE_RULES_AUTOSAVE="on"))
+_, _as_out, _ = run_hook("autosave", json.dumps(_as_pl), env=_project_env(_as, HOUSE_RULES_AUTOSAVE="on"))
 _as_refs = subprocess.run(["git", "-C", _as, "for-each-ref", "--format=%(refname)", "refs/"],
                          capture_output=True, text=True).stdout.split()
 _as_saved = [r for r in _as_refs if r.startswith("refs/house-rules/saves/")]
 _as_tree = subprocess.run(["git", "-C", _as, "ls-tree", "-r", "--name-only", _as_saved[0]],
                           capture_output=True, text=True).stdout.split() if _as_saved else []
-report("PASS" if "made.py" in _as_tree and "secret.token" not in _as_tree else "FAIL",
-       "A11: the autosave snapshot holds the written file and not the untracked token")
+report("PASS" if "made.py" in _as_tree and "shell.txt" in _as_tree and "secret.token" not in _as_tree
+       and "big.bin" not in _as_tree and "big.bin" in _as_out else "FAIL",
+       "A11: the autosave holds every new file git does not ignore (shell-made too), never an ignored one, and names a big file it left out")
+print("          tree %r, out %r" % (_as_tree, _as_out[:200]))
 
 
 _dq, _ = _as_repo("worktree-agent-det")

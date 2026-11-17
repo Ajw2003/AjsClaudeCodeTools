@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-17 - Saves include every new file git does not ignore (reverses #477's file-tool-only rule)
+
+**Context.** The real-GitHub cloud test (`docs/plans/2026-11-16-phase-3-live-tests/live_cloud_github-result.txt`) found
+that a file the agent makes with a shell command was never saved and nothing said so: since #477 (A11) a save held only
+tracked changes and files written with Write, Edit or NotebookEdit, so a stray token or data dump could not reach GitHub.
+
+**Decision.** aj chose "Save them too": every new file git does not ignore is saved, on the PC, in a cloud session and
+on helper branches. Kept: a file over the big-file limit (50 MB, `BIG_FILE_BYTES`) is left out and named, so phase 2's
+"big files only on aj's word" still holds. Rejected: naming skipped files without saving them, and leaving the gap.
+The risk aj accepted: a secret that is not git-ignored is pushed with the save. **Status.** Build, in phase 3's QA.
+
+---
+
 ## 2026-11-16 - Feature switches build plan approved
 
 aj wrote "Build plan approved: Feature switches" on `docs/plans/2026-11-16-feature-switches-build-plan.html`: steps

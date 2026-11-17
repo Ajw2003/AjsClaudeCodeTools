@@ -1371,7 +1371,9 @@ def _autosave_snapshot(top, branch, force_push=False):
                         "commit-tree", tree, "-p", "HEAD", "-m",
                         "house-rules autosave: %s %s" % (branch, stamp)])[1].strip()
         _ag(top, ["update-ref", ref, sha])
-    return _autosave_push(top, branch, sha, now, force=force_push)
+    msg = _autosave_push(top, branch, sha, now, force=force_push)
+    big = _autosave_big_note()
+    return " | ".join(x for x in (msg, big) if x) or None
 
 
 def _wip_message(subject):
@@ -1379,14 +1381,31 @@ def _wip_message(subject):
     return subject + "\n\nCommitted by Edens Agent"
 
 
+_AUTOSAVE_BIG_SKIPPED = []  # the last _autosave_stage call's files left out for size, for the caller's note
+
+
 def _autosave_stage(top, branch, env=None):
-    """#477 (A11): stage tracked changes plus the files the helper wrote with Write, Edit or NotebookEdit.
-    Other untracked files are left out: one may be a token or a data dump that must never reach origin."""
+    """Stage tracked changes plus every new file git does not ignore (aj, 2026-11-17, reversing #477's
+    file-tool-only rule: a file made by a shell command was never saved). A new file over BIG_FILE_BYTES is
+    left out and kept in _AUTOSAVE_BIG_SKIPPED, so big files still reach git only on aj's word."""
+    from house_rules.bigfiles import BIG_FILE_BYTES
+
     _ag(top, ["add", "-u"], env=env)
-    written = [p for p in _autosave_read(_autosave_state_path(top, branch, "written")).splitlines()
-               if p and os.path.isfile(os.path.join(top, p))]
-    if written:
-        _ag(top, ["add", "--"] + written, env=env)
+    new = [p for p in _ag(top, ["ls-files", "--others", "--exclude-standard", "-z"], env=env)[1].split("\0") if p]
+    keep, big = [], []
+    for p in new:
+        full = os.path.join(top, p)
+        (big if os.path.isfile(full) and os.path.getsize(full) > BIG_FILE_BYTES else keep).append(p)
+    for i in range(0, len(keep), 200):  # stays under the command-line length limit on Windows
+        _ag(top, ["add", "--"] + keep[i:i + 200], env=env)
+    _AUTOSAVE_BIG_SKIPPED[:] = big
+
+
+def _autosave_big_note():
+    from house_rules.bigfiles import BIG_FILE_BYTES
+
+    return ("house-rules autosave: left out %s, over the %d MB big-file limit; it reaches git only with "
+            "\"LFS approved: <file>\"." % (", ".join(_AUTOSAVE_BIG_SKIPPED), BIG_FILE_BYTES // (1024 * 1024))) if _AUTOSAVE_BIG_SKIPPED else ""
 
 
 def _autosave_remember(top, branch, payload):
@@ -1467,7 +1486,7 @@ def _cloud_autosave(top, branch, tool, payload, force=False):
         _ag(top, ["push", "--quiet", "-u", "origin", branch], timeout=AUTOSAVE_PUSH_TIMEOUT)
     except RuntimeError as exc:
         return ["house-rules autosave: could not push %s to origin (%s). It is committed locally only." % (branch, exc)]
-    return []
+    return [x for x in (_autosave_big_note(),) if x]
 
 
 def event_autosave():
@@ -1553,11 +1572,10 @@ def event_autosave_final():
             if notes:
                 emit({"systemMessage": " | ".join(notes)})
             return 0
-        written = set(_autosave_read(_autosave_state_path(top, branch, "written")).splitlines())
         saved = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
         since = float(saved[0]) if len(saved) == 2 else 0.0  # a file changed after the last save
-        tracked = [p for p, _t in _parse_status_porcelain(_ag(top, ["status", "--porcelain", "-uno"])[1].splitlines())]
-        changed = [p for p in set(tracked) | (written & set(_dirty_files(top)))
+        # every changed or new file git does not ignore (2026-11-17: saves no longer depend on how a file was made)
+        changed = [p for p in set(_dirty_files(top))
                    if os.path.exists(os.path.join(top, p)) and os.path.getmtime(os.path.join(top, p)) > since]
         rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", _autosave_ref(top, branch)], check=False)
         head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
