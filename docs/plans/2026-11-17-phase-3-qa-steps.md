@@ -328,7 +328,7 @@ end-of-turn line says your work is saved, and Claude opens its first reply with 
 
 ### Step 1 of 3 — Install 2.81.2
 
-UNTESTED: run on Linux in the cloud session for 2.81.1; I will run it for 2.81.2 before you do, but never in Windows PowerShell on your PC.
+UNTESTED: run on Linux in the cloud session in a throwaway settings folder (it printed 2.81.2, commit 8ab0039), not in Windows PowerShell on your PC.
 
 In **Windows PowerShell**, opened anywhere:
 

@@ -1,35 +1,94 @@
 {
- "title": "Feature switches QA: desktop retest",
- "eyebrow": "QA · feature switches (#535) and phase 3 (#495) · plugin 2.81.1 on AjsAgent/phase-3-handoff",
+ "title": "Feature switches QA: second desktop retest",
+ "eyebrow": "QA \u00b7 feature switches (#535) and phase 3 (#495) \u00b7 plugin 2.81.2 on AjsAgent/phase-3-handoff",
  "short": {
-  "lead": "Your first QA run found that sessions in the Claude desktop app saved nothing, and nothing on screen said so. Plugin 2.81.1 makes the three fixes you named: the save also runs after the PowerShell tool, every save and pickup decision prints one grey line starting house-rules, and the version check compares a branch build with its own branch instead of main. A comma now also ends a feature name in your loop lines. verify.py passes 1253 of 1253 checks and tools/verify_tools.py passes 54 of 54. The real cause in the desktop app is still unknown; your retest shows where the save stops.",
+  "lead": "The desktop app runs the house-rules copy added to your claude.ai account, never the one tools/use_branch.py installs; with that account copy switched off, 2.81.1 saved and pushed from the desktop app, and the pickup note reached Claude. Plugin 2.81.2 makes your two changes: the end-of-turn line says your work is saved, with the file count and save time, and Claude opens its first reply with one line saying what the pickup found, because the desktop app shows no session-start notice. verify.py passes 1253 of 1253 checks and tools/verify_tools.py 54 of 54.",
   "hint": "Tap a row to see what was run and what it showed.",
-  "key": [["Proven by a real run", ""], ["Needs you", "you"]],
+  "key": [
+   [
+    "Proven by a real run",
+    ""
+   ],
+   [
+    "Needs you",
+    "you"
+   ]
+  ],
   "items": [
-   ["check", "PowerShell save", "A save runs after the PowerShell tool", "", "The save's matcher in hooks/hooks.json now names PowerShell, the shell tool on Windows. Live through the shipped run.sh here: a PowerShell call that made ps.txt printed \"house-rules autosave: saved 1 changed file(s) on AjsAgent/live (ps.txt) and pushed the save to GitHub.\" and the test's stand-in for GitHub held refs/house-rules/saves/AjsAgent/live/bc682dda.", ""],
-   ["check", "Save lines", "Every save and pickup says what it did", "", "Live through run.sh: the end of a turn printed \"saved 2 changed file(s) ... and pushed the save to GitHub\", then \"nothing on AjsAgent/live changed since the last save\". The pickup printed \"gave Claude the handoff for AjsAgent/live\". verify.py also proves the not-a-git-folder line, the nothing-to-pick-up line, and silence with HOUSE_RULES_TRACE=off.", ""],
-   ["check", "Version check", "A branch build is checked against its own branch", "", "versioncheck reads the branch from known_marketplaces.json. Against real GitHub, both download routes returned 2.81.0 for AjsAgent/phase-3-handoff (before the bump). tools/use_branch.py, run here in a throwaway settings folder, installed 2.81.1 at commit 90f68b1.", ""],
-   ["check", "Comma", "A comma ends a feature name", "", "\"Feature switches, the desktop app does not save\" now reads as the feature Feature switches (verify.py, design_loop part).", ""],
-   ["flask", "Your steps", "Four steps in the desktop app", "you", "Follow the four step cards under \"Retest after QA failed\" at the end of docs/plans/2026-11-17-phase-3-qa-steps.md: install 2.81.1, quit the app from the tray and reopen it, run one session in C:\\Users\\aj\\Desktop\\phase-3-qa, and screenshot every line starting house-rules.", "Your screenshot and verdict."]
+   [
+    "check",
+    "Desktop cause",
+    "The desktop app runs the account copy",
+    "",
+    "Your search found house-rules 2.80.0 under AppData\\Local\\Claude-Data\\...\\rpm\\..., and the session's notice said installed copy is 2.80.0. With the account copy switched off, the desktop session printed saved 8 changed file(s) on AjsAgent/qa-pickup ... and pushed the save to GitHub; I fetched that save here and it holds qa-note.txt to qa-note-8.txt. The version-check gap for the account copy is issue #539.",
+    ""
+   ],
+   [
+    "check",
+    "New wording",
+    "End-of-turn line and pickup announcement",
+    "",
+    "verify.py checks the end-of-turn line reads your work is saved on GitHub: 1 file(s) on AjsAgent/ps, saved at HH:MM UTC. Nothing changed after that., and that the pickup note ends by asking Claude to open its first reply with one line about what it found. tools/use_branch.py installed 2.81.2 at commit 8ab0039 in a throwaway settings folder here.",
+    ""
+   ],
+   [
+    "check",
+    "PowerShell save",
+    "A save runs after the PowerShell tool",
+    "",
+    "The save's matcher in hooks/hooks.json now names PowerShell, the shell tool on Windows. Live through the shipped run.sh here: a PowerShell call that made ps.txt printed \"house-rules autosave: saved 1 changed file(s) on AjsAgent/live (ps.txt) and pushed the save to GitHub.\" and the test's stand-in for GitHub held refs/house-rules/saves/AjsAgent/live/bc682dda.",
+    ""
+   ],
+   [
+    "check",
+    "Save lines",
+    "Every save and pickup says what it did",
+    "",
+    "Live through run.sh: the end of a turn printed \"saved 2 changed file(s) ... and pushed the save to GitHub\", then \"nothing on AjsAgent/live changed since the last save\". The pickup printed \"gave Claude the handoff for AjsAgent/live\". verify.py also proves the not-a-git-folder line, the nothing-to-pick-up line, and silence with HOUSE_RULES_TRACE=off.",
+    ""
+   ],
+   [
+    "check",
+    "Version check",
+    "A branch build is checked against its own branch",
+    "",
+    "versioncheck reads the branch from known_marketplaces.json. Against real GitHub, both download routes returned 2.81.0 for AjsAgent/phase-3-handoff (before the bump). tools/use_branch.py, run here in a throwaway settings folder, installed 2.81.1 at commit 90f68b1.",
+    ""
+   ],
+   [
+    "check",
+    "Comma",
+    "A comma ends a feature name",
+    "",
+    "\"Feature switches, the desktop app does not save\" now reads as the feature Feature switches (verify.py, design_loop part).",
+    ""
+   ],
+   [
+    "flask",
+    "Your steps",
+    "Four steps in the desktop app",
+    "you",
+    "Keep the account copy of house-rules switched off in the desktop app. Follow the 3 step cards under \"Second retest: plugin 2.81.2\" at the end of docs/plans/2026-11-17-phase-3-qa-steps.md.",
+    "Your screenshot and verdict."
+   ]
   ]
  },
  "qa": {
   "feature": "Feature switches",
   "base": "f60ea19",
   "unverified": [
-   "The desktop app: every run here was a headless session or a direct hook call on Linux",
-   "Why the desktop app saved nothing before: unknown until your retest shows which line appears",
-   "Your Windows PC with 2.81.1: the switch command ran here only"
+   "Whether Claude really opens its first reply with the pickup line in the desktop app: it is an instruction to the model, not a notice the app shows",
+   "Your Windows PC with 2.81.2: the install command ran here only"
   ],
   "files": {}
  },
  "wrapup": {
-  "summary": "The three fixes you named are built and tested here; the desktop app itself needs your retest.",
-  "changing": "Plugin 2.81.1 on AjsAgent/phase-3-handoff. Nothing reaches main until you merge a pull request.",
+  "summary": "Both changes you asked for are built in 2.81.2 and pass every check here; the desktop app needs your retest.",
+  "changing": "Plugin 2.81.2 on AjsAgent/phase-3-handoff. Nothing reaches main until you merge a pull request.",
   "blocking": "Your screenshot of the house-rules lines, and your verdict.",
   "next": "If the lines show the save working, I finish #523 and open one pull request to main; if not, the screenshot names the next fix.",
   "todo": [
-   "Follow the 4 retest steps at the end of docs/plans/2026-11-17-phase-3-qa-steps.md.",
+   "Follow the 3 second-retest steps at the end of docs/plans/2026-11-17-phase-3-qa-steps.md.",
    "Type \"QA passed: Feature switches.\" or \"QA failed: Feature switches.\" with the screenshot."
   ]
  }

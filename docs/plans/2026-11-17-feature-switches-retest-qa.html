@@ -1,7 +1,7 @@
 <!doctype html>
-<!-- house-rules make_page 2.81.1 -->
+<!-- house-rules make_page 2.81.2 -->
 <meta charset="utf-8">
-<title>Feature switches QA: desktop retest</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<title>Feature switches QA: second desktop retest</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 /* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
@@ -269,10 +269,10 @@ dialog.lightbox button{margin-top:10px}
 const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
-  "title": "Feature switches QA: desktop retest",
-  "eyebrow": "QA · feature switches (#535) and phase 3 (#495) · plugin 2.81.1 on AjsAgent/phase-3-handoff",
+  "title": "Feature switches QA: second desktop retest",
+  "eyebrow": "QA · feature switches (#535) and phase 3 (#495) · plugin 2.81.2 on AjsAgent/phase-3-handoff",
   "short": {
-    "lead": "Your first QA run found that sessions in the Claude desktop app saved nothing, and nothing on screen said so. Plugin 2.81.1 makes the three fixes you named: the save also runs after the PowerShell tool, every save and pickup decision prints one grey line starting house-rules, and the version check compares a branch build with its own branch instead of main. A comma now also ends a feature name in your loop lines. verify.py passes 1253 of 1253 checks and tools/verify_tools.py passes 54 of 54. The real cause in the desktop app is still unknown; your retest shows where the save stops.",
+    "lead": "The desktop app runs the house-rules copy added to your claude.ai account, never the one tools/use_branch.py installs; with that account copy switched off, 2.81.1 saved and pushed from the desktop app, and the pickup note reached Claude. Plugin 2.81.2 makes your two changes: the end-of-turn line says your work is saved, with the file count and save time, and Claude opens its first reply with one line saying what the pickup found, because the desktop app shows no session-start notice. verify.py passes 1253 of 1253 checks and tools/verify_tools.py 54 of 54.",
     "hint": "Tap a row to see what was run and what it showed.",
     "key": [
       [
@@ -285,6 +285,22 @@ const PAGE = {
       ]
     ],
     "items": [
+      [
+        "check",
+        "Desktop cause",
+        "The desktop app runs the account copy",
+        "",
+        "Your search found house-rules 2.80.0 under AppData\\Local\\Claude-Data\\...\\rpm\\..., and the session's notice said installed copy is 2.80.0. With the account copy switched off, the desktop session printed saved 8 changed file(s) on AjsAgent/qa-pickup ... and pushed the save to GitHub; I fetched that save here and it holds qa-note.txt to qa-note-8.txt. The version-check gap for the account copy is issue #539.",
+        ""
+      ],
+      [
+        "check",
+        "New wording",
+        "End-of-turn line and pickup announcement",
+        "",
+        "verify.py checks the end-of-turn line reads your work is saved on GitHub: 1 file(s) on AjsAgent/ps, saved at HH:MM UTC. Nothing changed after that., and that the pickup note ends by asking Claude to open its first reply with one line about what it found. tools/use_branch.py installed 2.81.2 at commit 8ab0039 in a throwaway settings folder here.",
+        ""
+      ],
       [
         "check",
         "PowerShell save",
@@ -322,7 +338,7 @@ const PAGE = {
         "Your steps",
         "Four steps in the desktop app",
         "you",
-        "Follow the four step cards under \"Retest after QA failed\" at the end of docs/plans/2026-11-17-phase-3-qa-steps.md: install 2.81.1, quit the app from the tray and reopen it, run one session in C:\\Users\\aj\\Desktop\\phase-3-qa, and screenshot every line starting house-rules.",
+        "Keep the account copy of house-rules switched off in the desktop app. Follow the 3 step cards under \"Second retest: plugin 2.81.2\" at the end of docs/plans/2026-11-17-phase-3-qa-steps.md.",
         "Your screenshot and verdict."
       ]
     ]
@@ -331,19 +347,18 @@ const PAGE = {
     "feature": "Feature switches",
     "base": "f60ea19",
     "unverified": [
-      "The desktop app: every run here was a headless session or a direct hook call on Linux",
-      "Why the desktop app saved nothing before: unknown until your retest shows which line appears",
-      "Your Windows PC with 2.81.1: the switch command ran here only"
+      "Whether Claude really opens its first reply with the pickup line in the desktop app: it is an instruction to the model, not a notice the app shows",
+      "Your Windows PC with 2.81.2: the install command ran here only"
     ],
     "files": {}
   },
   "wrapup": {
-    "summary": "The three fixes you named are built and tested here; the desktop app itself needs your retest.",
-    "changing": "Plugin 2.81.1 on AjsAgent/phase-3-handoff. Nothing reaches main until you merge a pull request.",
+    "summary": "Both changes you asked for are built in 2.81.2 and pass every check here; the desktop app needs your retest.",
+    "changing": "Plugin 2.81.2 on AjsAgent/phase-3-handoff. Nothing reaches main until you merge a pull request.",
     "blocking": "Your screenshot of the house-rules lines, and your verdict.",
     "next": "If the lines show the save working, I finish #523 and open one pull request to main; if not, the screenshot names the next fix.",
     "todo": [
-      "Follow the 4 retest steps at the end of docs/plans/2026-11-17-phase-3-qa-steps.md.",
+      "Follow the 3 second-retest steps at the end of docs/plans/2026-11-17-phase-3-qa-steps.md.",
       "Tap <b>Copy my reply<\/b> and send it: \"QA passed: Feature switches\", or send \"QA failed: Feature switches\" with what to change."
     ]
   },
@@ -351,7 +366,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against f60ea19",
-      "16 files, +286 −37",
+      "18 files, +1112 −38",
       null,
       "The added and removed counts come from git (git diff --numstat f60ea19...HEAD); the estimates beside them come from the plan.",
       null,
@@ -370,7 +385,7 @@ const PAGE = {
         ],
         [
           "CHANGELOG.md",
-          2,
+          4,
           1,
           [
             [
@@ -430,8 +445,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/delegation.py",
-          47,
-          4,
+          51,
+          5,
           [
             [
               "Not in the plan",
@@ -466,7 +481,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/delegation.py",
-          41,
+          54,
           8,
           [
             [
@@ -490,7 +505,7 @@ const PAGE = {
         ],
         [
           "docs/3-state/ProjectState.md",
-          2,
+          9,
           0,
           [
             [
@@ -502,7 +517,7 @@ const PAGE = {
         ],
         [
           "docs/4-systems/usage-handoff.md",
-          4,
+          7,
           1,
           [
             [
@@ -514,7 +529,7 @@ const PAGE = {
         ],
         [
           "docs/6-decisions/Decisions.md",
-          19,
+          33,
           0,
           [
             [
@@ -537,8 +552,32 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/2026-11-17-feature-switches-retest-qa.html",
+          696,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-17-feature-switches-retest-qa.page.json",
+          36,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/2026-11-17-phase-3-qa-steps.md",
-          75,
+          126,
           0,
           [
             [
@@ -553,9 +592,9 @@ const PAGE = {
     [
       "keep",
       "Still unverified",
-      "3 things not yet proven",
+      "2 things not yet proven",
       null,
-      "The desktop app: every run here was a headless session or a direct hook call on Linux. Why the desktop app saved nothing before: unknown until your retest shows which line appears. Your Windows PC with 2.81.1: the switch command ran here only.",
+      "Whether Claude really opens its first reply with the pickup line in the desktop app: it is an instruction to the model, not a notice the app shows. Your Windows PC with 2.81.2: the install command ran here only.",
       null,
       null
     ]
