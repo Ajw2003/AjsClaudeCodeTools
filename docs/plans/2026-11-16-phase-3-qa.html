@@ -354,7 +354,7 @@ const PAGE = {
         "Your steps",
         "Pick up on a second account, then Windows",
         "you",
-        "UNTESTED in your shell: these were not run in Windows PowerShell on your PC (this session is Linux), so read each step's result before the next. Open Windows PowerShell anywhere (Start, type PowerShell, Enter); every command uses full paths, so the folder you start in does not matter. 1. Fetch the branch: git -C \"C:\\Users\\aj\\Desktop\\AjsClaudeCodeTools\" fetch origin AjsAgent/phase-3-handoff  You should see a line ending in AjsAgent/phase-3-handoff -> FETCH_HEAD. 2. Put the branch in its own folder, leaving your Desktop clone as it is: git -C \"C:\\Users\\aj\\Desktop\\AjsClaudeCodeTools\" worktree add --detach \"C:\\Users\\aj\\Desktop\\phase-3-qa\" FETCH_HEAD  Expect Preparing worktree (detached HEAD ...), then HEAD is now at and the branch's latest commit. 3. Switch the plugin to this build: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\tools\\use_branch.py\" AjsAgent/phase-3-handoff  Expect marketplace ref : AjsAgent/phase-3-handoff, plugin version : 2.81.0 and OK: installed build matches the request. Then quit and reopen the Claude desktop app so it loads the new build. 4. Signed in as your first Claude account (A), in a test repo on an AjsAgent/ branch, ask Claude to create a file with a shell command and not commit it, then end the session. 5. Sign in as your second Claude account (B) and open the same repo and branch in a new session. The session should open by listing that file and giving a restore command. 6. In a folder that is not a git repo, type pages off, then ask for a long explanation. You should see no page reminder (the note that a reply of 160 words or more belongs on a page). 7. Run the tests for #523: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\claude-house-rules\\plugins\\house-rules\\scripts\\verify.py\"  The last line starts with RESULT. Paste me every line that says FAIL. Eight failures are expected, all Windows-only, and they are the ones #523 covers. 8. Switch back: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\tools\\use_branch.py\" main  Expect marketplace ref : (none - default branch), plugin version : 2.80.0 and OK. Quit and reopen the desktop app.",
+        "UNTESTED in your shell: these were not run in Windows PowerShell on your PC (this session is Linux), so read each step's result before the next. Open Windows PowerShell anywhere (Start, type PowerShell, Enter); every command uses full paths, so the folder you start in does not matter. 1. Fetch the branch: git -C \"C:\\Users\\aj\\Desktop\\AjsClaudeCodeTools\" fetch origin AjsAgent/phase-3-handoff  You should see a line ending in AjsAgent/phase-3-handoff -> FETCH_HEAD. 2. Put the branch in its own folder. Your Desktop clone stays as it is: git -C \"C:\\Users\\aj\\Desktop\\AjsClaudeCodeTools\" worktree add --detach \"C:\\Users\\aj\\Desktop\\phase-3-qa\" FETCH_HEAD  Expect Preparing worktree (detached HEAD ...), then a line starting HEAD is now at, followed by the branch's latest commit. 3. Switch the plugin to this build: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\tools\\use_branch.py\" AjsAgent/phase-3-handoff  Expect marketplace ref : AjsAgent/phase-3-handoff, plugin version : 2.81.0 and OK: installed build matches the request. Then quit and reopen the Claude desktop app so it loads the new build. 4. Signed in as your first Claude account (A), in a test repo on an AjsAgent/ branch, ask Claude to create a file with a shell command and not commit it, then end the session. 5. Sign in as your second Claude account (B) and open the same repo and branch in a new session. The session should open by listing that file and giving a restore command. 6. In a folder that is not a git repo, type pages off, then ask for a long explanation. You should see no page reminder (the note that a reply of 160 words or more belongs on a page). 7. Run the tests for #523: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\claude-house-rules\\plugins\\house-rules\\scripts\\verify.py\"  The last line starts with RESULT. Paste me every line that says FAIL. Eight failures are expected, all Windows-only, and they are the ones #523 covers. 8. Switch back: python \"C:\\Users\\aj\\Desktop\\phase-3-qa\\tools\\use_branch.py\" main  Expect marketplace ref : (none - default branch), plugin version : 2.80.0 and OK: installed build matches the request. Restart the desktop app once more.",
         "Steps 1 to 8, then your verdict and the FAIL lines from step 7."
       ]
     ]
@@ -384,7 +384,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against 2c373be",
-      "53 files, +8893 −145",
+      "53 files, +8892 −145",
       null,
       "The added and removed counts come from git (git diff --numstat 2c373be...HEAD); the estimates beside them come from the plan.",
       null,
@@ -703,7 +703,7 @@ const PAGE = {
         ],
         [
           "docs/3-state/ProjectState.md",
-          24,
+          25,
           0,
           [
             [
@@ -979,7 +979,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-16-phase-3-qa.html",
-          1174,
+          1173,
           0,
           [
             [
@@ -991,7 +991,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-16-phase-3-qa.page.json",
-          114,
+          113,
           0,
           [
             [
