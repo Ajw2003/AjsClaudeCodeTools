@@ -143,7 +143,7 @@ A session finishes its own task: another repo's work becomes an issue there (`ow
 <!-- subagent -->
 
 Read-only inspection is always fine. **Off `main`**: commit, push, merge freely. **`main`**: only
-by pull request; the guard refuses. On aj's branch, branch off first; never delete one unasked. Commit scoped to changed paths, never finish what they started, say what/where. Credit "Edens Agent", never Claude, on every route (commit, gh, api, curl); the body is read back, and the cloud "with Claude" badge and footer are reported, not promised away. Work is saved on every edit and at turn end, and picked up at session start from `docs/5-today/handoff-<branch>.md`. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
+by pull request; the guard refuses. On aj's branch, branch off first; never delete one unasked. Commit scoped to changed paths, never finish what they started, say what/where. Credit "Edens Agent", never Claude, on every route (commit, gh, api, curl); the body is read back, and the cloud "with Claude" badge and footer are reported, not promised away. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/commit-branches.md`.
 
 ## Never take a destructive action without checking first
 <!-- subagent -->
