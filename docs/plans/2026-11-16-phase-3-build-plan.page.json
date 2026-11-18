@@ -1,0 +1,158 @@
+{
+ "title": "Phase 3 Build Plan",
+ "eyebrow": "Build plan for approval \u00b7 roadmap phase 3 (#495) \u00b7 twelve steps, nothing built yet",
+ "approval": "Build plan approved: Phase 3",
+ "replyPrefix": "Build plan approved: Phase 3",
+ "reply": "",
+ "short": {
+  "lead": "You approved the phase 3 design (choices 1A, 2A, 3B, 4A). Cloud sessions save to their own branch. The handoff is copied onto a fresh branch, AjsAgent/phase-3-handoff, which is now on GitHub. There is one build plan and one QA. This page is the build plan: twelve steps, one issue each, tested together in one QA at the end. Steps 1 to 5 bring the handoff to main, step 6 adds the branch-build command, and steps 7 to 11 are eight small fixes. Step 12 is the proof and the QA page. The first item lists what happens to each piece of the old handoff code. Four carried issues turned out to be already fixed and are closed with evidence, not rebuilt. There are no new choices on this page.",
+  "hint": "Tap an item to see what it covers.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Old code",
+    "What happens to the old handoff code",
+    "",
+    "Nine pieces on AjsAgent/session-handoff: three are copied as they are, three are changed to fit today's main, two were planned but never built there, and one is dropped because main already has it.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4ODAgMzU2IiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48dGV4dCB4PSIyMCIgeT0iMjgiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPk9sZCBicmFuY2ggcGllY2U8L3RleHQ+PHRleHQgeD0iMzMwIiB5PSIyOCIgZm9udC1zaXplPSIxMiIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzdkODM4YyI+VmVyZGljdDwvdGV4dD48dGV4dCB4PSI0NDAiIHk9IjI4IiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5XaGF0IGhhcHBlbnMgdG8gaXQ8L3RleHQ+PHJlY3QgeD0iMTQiIHk9IjQwIiB3aWR0aD0iODUyIiBoZWlnaHQ9IjI4IiByeD0iNiIgZmlsbD0iIzdkODM4YyIgZmlsbC1vcGFjaXR5PSIwLjA2Ii8+PHRleHQgeD0iMjIiIHk9IjU5IiBmb250LXNpemU9IjEzIiBmaWxsPSIjMmIyZjM1Ij5TYXZlIGFmdGVyIGV2ZXJ5IGVkaXQgKCM0ODYpPC90ZXh0PjxyZWN0IHg9IjMyNiIgeT0iNDQiIHdpZHRoPSI3OCIgaGVpZ2h0PSIyMCIgcng9IjEwIiBmaWxsPSIjZDk4MjJiIiBmaWxsLW9wYWNpdHk9IjAuMTUiIHN0cm9rZT0iI2Q5ODIyYiIvPjx0ZXh0IHg9IjM2NSIgeT0iNTgiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNkOTgyMmIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNIQU5HRTwvdGV4dD48dGV4dCB4PSI0NDAiIHk9IjU5IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5vbiBldmVyeSBicmFuY2gsIGtlZXAgbWFpbidzIDEtbWludXRlIHdpbmRvdzwvdGV4dD48cmVjdCB4PSIxNCIgeT0iNzQiIHdpZHRoPSI4NTIiIGhlaWdodD0iMjgiIHJ4PSI2IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyMiIgeT0iOTMiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiMyYjJmMzUiPkZhY3RzIGZpbGUgaW4gZWFjaCBzYXZlPC90ZXh0PjxyZWN0IHg9IjMyNiIgeT0iNzgiIHdpZHRoPSI3OCIgaGVpZ2h0PSIyMCIgcng9IjEwIiBmaWxsPSIjMmY3ZDVhIiBmaWxsLW9wYWNpdHk9IjAuMTUiIHN0cm9rZT0iIzJmN2Q1YSIvPjx0ZXh0IHg9IjM2NSIgeT0iOTIiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjdkNWEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPktFRVA8L3RleHQ+PHRleHQgeD0iNDQwIiB5PSI5MyIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+Y29waWVkIGFzIGlzPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIxMDgiIHdpZHRoPSI4NTIiIGhlaWdodD0iMjgiIHJ4PSI2IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyMiIgeT0iMTI3IiBmb250LXNpemU9IjEzIiBmaWxsPSIjMmIyZjM1Ij5PbmUgc2F2ZSBwZXIgZm9sZGVyICgjNDg5KTwvdGV4dD48cmVjdCB4PSIzMjYiIHk9IjExMiIgd2lkdGg9Ijc4IiBoZWlnaHQ9IjIwIiByeD0iMTAiIGZpbGw9IiMzYjdkZDgiIGZpbGwtb3BhY2l0eT0iMC4xNSIgc3Ryb2tlPSIjM2I3ZGQ4Ii8+PHRleHQgeD0iMzY1IiB5PSIxMjYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzYjdkZDgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5FVzwvdGV4dD48dGV4dCB4PSI0NDAiIHk9IjEyNyIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+cGxhbm5lZCBvbiB0aGUgb2xkIGJyYW5jaCwgbmV2ZXIgYnVpbHQ8L3RleHQ+PHJlY3QgeD0iMTQiIHk9IjE0MiIgd2lkdGg9Ijg1MiIgaGVpZ2h0PSIyOCIgcng9IjYiIGZpbGw9IiM3ZDgzOGMiIGZpbGwtb3BhY2l0eT0iMC4wNiIvPjx0ZXh0IHg9IjIyIiB5PSIxNjEiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiMyYjJmMzUiPkNsb3VkIHNhdmUgdG8gb3duIGJyYW5jaCAoMUEpPC90ZXh0PjxyZWN0IHg9IjMyNiIgeT0iMTQ2IiB3aWR0aD0iNzgiIGhlaWdodD0iMjAiIHJ4PSIxMCIgZmlsbD0iIzNiN2RkOCIgZmlsbC1vcGFjaXR5PSIwLjE1IiBzdHJva2U9IiMzYjdkZDgiLz48dGV4dCB4PSIzNjUiIHk9IjE2MCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNiN2RkOCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TkVXPC90ZXh0Pjx0ZXh0IHg9IjQ0MCIgeT0iMTYxIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5yZXBsYWNlcyB0aGUgcmVmdXNlZCBoaWRkZW4gc2F2ZTwvdGV4dD48cmVjdCB4PSIxNCIgeT0iMTc2IiB3aWR0aD0iODUyIiBoZWlnaHQ9IjI4IiByeD0iNiIgZmlsbD0iIzdkODM4YyIgZmlsbC1vcGFjaXR5PSIwLjA2Ii8+PHRleHQgeD0iMjIiIHk9IjE5NSIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzJiMmYzNSI+U2F2ZSBhdCB0dXJuIGVuZCAvIGxpbWl0ICgjNDg3KTwvdGV4dD48cmVjdCB4PSIzMjYiIHk9IjE4MCIgd2lkdGg9Ijc4IiBoZWlnaHQ9IjIwIiByeD0iMTAiIGZpbGw9IiMyZjdkNWEiIGZpbGwtb3BhY2l0eT0iMC4xNSIgc3Ryb2tlPSIjMmY3ZDVhIi8+PHRleHQgeD0iMzY1IiB5PSIxOTQiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjdkNWEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPktFRVA8L3RleHQ+PHRleHQgeD0iNDQwIiB5PSIxOTUiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPmNvcGllZCwgdXNlcyB0aGUgdHdvIHNhdmVzIGFib3ZlPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIyMTAiIHdpZHRoPSI4NTIiIGhlaWdodD0iMjgiIHJ4PSI2IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyMiIgeT0iMjI5IiBmb250LXNpemU9IjEzIiBmaWxsPSIjMmIyZjM1Ij5FbmQtb2YtcmVwbHkgY2hlY2sgKCM0MDcpPC90ZXh0PjxyZWN0IHg9IjMyNiIgeT0iMjE0IiB3aWR0aD0iNzgiIGhlaWdodD0iMjAiIHJ4PSIxMCIgZmlsbD0iI2Q5ODIyYiIgZmlsbC1vcGFjaXR5PSIwLjE1IiBzdHJva2U9IiNkOTgyMmIiLz48dGV4dCB4PSIzNjUiIHk9IjIyOCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2Q5ODIyYiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0hBTkdFPC90ZXh0Pjx0ZXh0IHg9IjQ0MCIgeT0iMjI5IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij53aXJlZCB0aHJvdWdoIG1haW4ncyBuZXdlciBhcmd1bWVudDwvdGV4dD48cmVjdCB4PSIxNCIgeT0iMjQ0IiB3aWR0aD0iODUyIiBoZWlnaHQ9IjI4IiByeD0iNiIgZmlsbD0iIzdkODM4YyIgZmlsbC1vcGFjaXR5PSIwLjA2Ii8+PHRleHQgeD0iMjIiIHk9IjI2MyIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzJiMmYzNSI+UGlja3VwIGF0IHNlc3Npb24gc3RhcnQgKCM0MDgpPC90ZXh0PjxyZWN0IHg9IjMyNiIgeT0iMjQ4IiB3aWR0aD0iNzgiIGhlaWdodD0iMjAiIHJ4PSIxMCIgZmlsbD0iI2Q5ODIyYiIgZmlsbC1vcGFjaXR5PSIwLjE1IiBzdHJva2U9IiNkOTgyMmIiLz48dGV4dCB4PSIzNjUiIHk9IjI2MiIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2Q5ODIyYiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0hBTkdFPC90ZXh0Pjx0ZXh0IHg9IjQ0MCIgeT0iMjYzIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5yZWFkcyBldmVyeSBmb2xkZXIncyBzYXZlPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIyNzgiIHdpZHRoPSI4NTIiIGhlaWdodD0iMjgiIHJ4PSI2IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyMiIgeT0iMjk3IiBmb250LXNpemU9IjEzIiBmaWxsPSIjMmIyZjM1Ij5RdW90ZWQgYXBwcm92YWxzICgjNDA5KTwvdGV4dD48cmVjdCB4PSIzMjYiIHk9IjI4MiIgd2lkdGg9Ijc4IiBoZWlnaHQ9IjIwIiByeD0iMTAiIGZpbGw9IiM5YWEwYTYiIGZpbGwtb3BhY2l0eT0iMC4xNSIgc3Ryb2tlPSIjOWFhMGE2Ii8+PHRleHQgeD0iMzY1IiB5PSIyOTYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM5YWEwYTYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkRST1A8L3RleHQ+PHRleHQgeD0iNDQwIiB5PSIyOTciIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPmFscmVhZHkgb24gbWFpbiwgZGVzaWduX2xvb3AucHk6NDEyPC90ZXh0PjxyZWN0IHg9IjE0IiB5PSIzMTIiIHdpZHRoPSI4NTIiIGhlaWdodD0iMjgiIHJ4PSI2IiBmaWxsPSIjN2Q4MzhjIiBmaWxsLW9wYWNpdHk9IjAuMDYiLz48dGV4dCB4PSIyMiIgeT0iMzMxIiBmb250LXNpemU9IjEzIiBmaWxsPSIjMmIyZjM1Ij5SdWxlIHNlbnRlbmNlICgjNDEwKTwvdGV4dD48cmVjdCB4PSIzMjYiIHk9IjMxNiIgd2lkdGg9Ijc4IiBoZWlnaHQ9IjIwIiByeD0iMTAiIGZpbGw9IiMyZjdkNWEiIGZpbGwtb3BhY2l0eT0iMC4xNSIgc3Ryb2tlPSIjMmY3ZDVhIi8+PHRleHQgeD0iMzY1IiB5PSIzMzAiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjdkNWEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPktFRVA8L3RleHQ+PHRleHQgeD0iNDQwIiB5PSIzMzEiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPmNvcGllZCBpbnRvIENvbW1pdCBjb25zdGFudGx5PC90ZXh0Pjwvc3ZnPg==",
+     "alt": "Table of the nine handoff pieces on the old branch: three kept, three changed, two new, one dropped",
+     "caption": "Checked against the code on 2026-11-16: the old branch AjsAgent/session-handoff and today's main. A plain diagram, not a screenshot."
+    }
+   ],
+   [
+    "loop",
+    "Steps 1-5",
+    "The handoff comes to main",
+    "",
+    "#527 save on every branch, one per folder; #528 cloud sessions save to their own branch; #529 save at turn end and on a usage-limit stop; #530 end-of-reply check; #531 pickup at session start.",
+    "Nothing from you."
+   ],
+   [
+    "search",
+    "Step 6",
+    "Branch builds in one command",
+    "",
+    "#532 tools/use_branch.py switches the plugin to a branch build and back. The branch part is proven: the marketplace accepted Ajw2003/AjsClaudeCodeTools#AjsAgent/phase-3-handoff and checked that branch out. Whether a cloud session also picks up the branch build is tested during this step.",
+    "Nothing until QA."
+   ],
+   [
+    "check",
+    "Steps 7-11",
+    "Small fixes",
+    "",
+    "#534 covers four older fixes: #44 (verify.py --only), #46 (the agent-field checks), #137 (no leading & in handed-over commands) and #205 (a warning when Python is missing). #520 lets a merged phase pull request close its step issues. #521 makes the docs-tiers reminder suggest instead of command. #522 allows switching branch and committing in one command. #523 fixes the 8 test failures that happen only on Windows.",
+    "#523 needs your PC to run the suites after the fix."
+   ],
+   [
+    "flask",
+    "Step 12",
+    "Proof and QA",
+    "you",
+    "#533: rule text, docs, version, live tests from this cloud session, then the QA page with your second-account steps. Four older issues were already fixed, so they are closed with evidence and not rebuilt: #202 (docref check failing on test pointers), #215 (guard checks failing after 5 minutes), #515 (close guard with the loop off) and #409 (quoted approvals).",
+    "Your QA verdict, including the second-account pickup."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Step 1: Save on every branch, one save per folder (#527)",
+   "Your own branch is saved, and no folder erases another's save.",
+   [
+    "Only helper branches are saved",
+    "Every branch, each folder under its own name"
+   ],
+   "Copies the functions _autosave_target(agent_only=False) and _autosave_facts from the old branch into main's delegation.py. Main's one-minute gap between saves stays. A random id in .git/house-rules-folder-id names each folder's save, stored as the git ref refs/house-rules/autosave/<branch>/<folder id> (a ref is a named pointer to a save)."
+  ],
+  [
+   "chg",
+   "Step 2: Cloud sessions save to their own branch (#528)",
+   "A cloud session's unsaved work reaches GitHub.",
+   [
+    "The cloud save is refused, so nothing is saved",
+    "A commit labelled \"wip: autosave\" (work in progress) on the session's own branch, pushed to GitHub"
+   ],
+   "Runs only in cloud sessions, which the setting CLAUDE_CODE_REMOTE=true marks (checked in this cloud session). It commits only on a branch the guard, the check that blocks commits to other people's branches, counts as the agent's own. Today the guard refused this session's own branch because its name starts with lowercase ajsagent/; this step teaches it that prefix."
+  ],
+  [
+   "chg",
+   "Step 3: Save at turn end and on a usage-limit stop (#529)",
+   "A turn cut off by a limit is still saved.",
+   [
+    "No save when a turn ends",
+    "One save when a turn ends normally (Stop) or fails on a limit (StopFailure), skipped when nothing changed"
+   ],
+   "Copies event_autosave_final and the two settings entries that trigger it. Claude Code's documentation doesn't say whether Stop runs when a limit cuts a turn, so both events save."
+  ],
+  [
+   "chg",
+   "Step 4: End-of-reply check (#530)",
+   "A reply that leaves work unsaved or undescribed is sent back once.",
+   [
+    "Nothing checks the handoff note",
+    "The handoff note and the push to GitHub are checked, once per reply"
+   ],
+   "Copies handover_handoff_check, called through the written argument main already passes (design_loop.py:3040). HOUSE_RULES_HANDOFF=off still turns it off."
+  ],
+  [
+   "chg",
+   "Step 5: Pickup at session start (#531)",
+   "A new session opens with where the work stood.",
+   [
+    "A new session starts blank",
+    "The note, the facts and a restore command per other folder"
+   ],
+   "Copies event_pickup with the restore fix from commit d62be1a. It reads every folder's save, newest first, and the old single saves too. The hook never restores on its own."
+  ],
+  [
+   "chg",
+   "Step 6: Branch builds in one command (#532)",
+   "Later phases are tested in the app you use.",
+   [
+    "Switching means hand-editing",
+    "One command takes a branch name and switches the plugin to that branch's build; the same command with main switches back to main's build"
+   ],
+   "Prints the installed version and commit afterwards, so the switch is shown, not assumed. Tested both ways in a throwaway config folder by tools/verify_tools.py."
+  ],
+  [
+   "chg",
+   "Steps 7 to 11: Small fixes (#534, #520 to #523)",
+   "Eight leftover problems end.",
+   [
+    "Each still true when checked on 2026-11-16",
+    "Each fixed with a test that failed before"
+   ],
+   "verify.py --only for #44; the agent-field checks for #46; no leading & in handed-over commands for #137; a warning when Python is missing for #205; then #520, #521, #522 and #523 as their issues say. #523 is finished on your PC."
+  ],
+  [
+   "new",
+   "How every step is tested",
+   "The same checks as phases 1 and 2.",
+   null,
+   "(1) Each step's own verify.py cases, written to fail on today's code first, then the full verify.py and tools/verify_tools.py. (2) Each helper's work is read as a diff (the list of lines it changed) and re-run, never taken from its report. (3) Live tests in real headless sessions (claude -p, the command-line Claude with no window) with only this branch's plugin: an edit saved, a session cut off, a second folder picking it up. (4) A real cloud save from this session to GitHub. (5) Your steps on a second account, desktop and cloud, on the QA page."
+  ]
+ ],
+ "wrapup": {
+  "summary": "The build plan for phase 3: twelve steps bring the handoff to main, let cloud sessions save, add the branch-build command and finish eight small fixes, all in one QA.",
+  "changing": "Nothing yet. After approval I build the steps in order on AjsAgent/phase-3-handoff.",
+  "blocking": "Your approval of this plan, or any change you want.",
+  "next": "I build steps 1 to 12, then hand you the QA page.",
+  "todo": [
+   "Read the steps.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it. It starts \"Build plan approved: Phase 3\"."
+  ]
+ }
+}

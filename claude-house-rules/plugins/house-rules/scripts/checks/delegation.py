@@ -188,11 +188,11 @@ def _as_env(**extra):
 
 
 def _as_ref(d, branch):
-    return _as_git(d, "rev-parse", "--verify", "-q", "refs/house-rules/autosave/" + branch)
+    """The folder's save (#527: refs/house-rules/saves/<branch>/<folder id>), or ""."""
+    return _as_git(d, "for-each-ref", "--format=%(objectname)", "refs/house-rules/saves/%s/" % branch).split("\n")[0]
 
 
-def _as_remote_ref(bare, branch):
-    return _as_git(bare, "rev-parse", "--verify", "-q", "refs/house-rules/autosave/" + branch)
+_as_remote_ref = _as_ref
 
 
 _d, _bare = _as_repo("worktree-agent-x")
@@ -231,21 +231,137 @@ commit_case(
     "second edit local-only: %s; after the window origin matches: %s"
     % (_rate_ok, _as_remote_ref(_bare, "worktree-agent-x") == _as_ref(_d, "worktree-agent-x")),
 )
+# --- #528: a cloud session saves to its own branch, never to the hidden ref ---
+_dc, _bc = _as_repo("ajsagent/x")
+_cenv = _as_env(CLAUDE_CODE_REMOTE="true")
+_pc = _as_write(_dc, "new.py")
+_junk = os.path.join(_dc, "token.txt")
+with open(_junk, "w", encoding="utf-8") as _f:
+    _f.write("secret\n")
+with open(os.path.join(_dc, ".git", "info", "exclude"), "a", encoding="utf-8") as _f:
+    _f.write("token.txt\n")  # git-ignored, so never saved (2026-11-17: every other new file is)
+with open(os.path.join(_dc, "shell.txt"), "w", encoding="utf-8") as _f:
+    _f.write("made by a shell command\n")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _pc, _dc), env=_cenv)
+_cmsgs = _as_git(_dc, "log", "--format=%s").split("\n")
+_crefs = _as_git(_bc, "for-each-ref", "--format=%(refname)", "refs/house-rules/saves/")
+commit_case(
+    "autosave (#528): a cloud session on ajsagent/x makes one `wip: autosave` commit, pushes the branch, and pushes no saves ref",
+    _cmsgs == ["wip: autosave", "base"] and _as_git(_bc, "rev-parse", "ajsagent/x") == _as_git(_dc, "rev-parse", "HEAD")
+    and _crefs == "" and _as_ref(_dc, "ajsagent/x") == "",
+    "log %r, origin saves %r" % (_cmsgs, _crefs),
+)
+commit_case(
+    "autosave (#528): the cloud wip commit holds every new file git does not ignore (shell-made too) and not an ignored one",
+    sorted(_as_git(_dc, "show", "--name-only", "--format=", "HEAD").split()) == ["new.py", "shell.txt"],
+    "files %r" % _as_git(_dc, "show", "--name-only", "--format=", "HEAD"),
+)
+_dm, _bm = _as_repo("main")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _as_write(_dm, "new.py"), _dm), env=_cenv)
+commit_case(
+    "autosave (#528): a cloud session on main makes no commit and pushes nothing",
+    _as_git(_dm, "rev-list", "--count", "HEAD") == "1" and _as_git(_bm, "for-each-ref", "--format=%(refname)") == "",
+    "origin refs %r" % _as_git(_bm, "for-each-ref", "--format=%(refname)"),
+)
+# --- #529: Stop / StopFailure save at once, inside the one-minute window ---
+for _ev, _extra in (("Stop", {}), ("StopFailure", {"error": "rate_limit"})):
+    _bn = "worktree-agent-fin-" + _ev.lower()
+    _df, _bf = _as_repo(_bn)
+    _pf = _as_write(_df, "a.py")
+    run_hook("autosave", _as_payload("PostToolUse", "Write", _pf, _df), env=_as_env())
+    _r1 = _as_ref(_df, _bn)
+    _as_write(_df, "a.py", "changed\n")  # inside the window: the edit hook would stay silent
+    _fp = json.dumps(dict({"hook_event_name": _ev, "session_id": "s1", "cwd": _df}, **_extra))
+    _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
+    _r2 = _as_ref(_df, _bn)
+    commit_case(
+        "autosavefinal (#529): a %s payload inside the one-minute window pushes a fresh save" % _ev,
+        bool(_r1) and _r2 != _r1 and _as_remote_ref(_bf, _bn) == _r2 and "(end of turn): saved" in _fo,
+        "first %s, now %s, origin %s, out %r" % (_r1[:9], _r2[:9], _as_remote_ref(_bf, _bn)[:9], _fo[:120]),
+    )
+    _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
+    commit_case(
+        "autosavefinal (#529): an unchanged folder pushes nothing and says so (%s)" % _ev,
+        _as_ref(_df, _bn) == _r2 and _as_remote_ref(_bf, _bn) == _r2 and "your work is saved on GitHub: 1 file(s) on %s" % _bn in _fo,
+        "ref %s -> %s, out %r" % (_r2[:9], _as_ref(_df, _bn)[:9], _fo[:120]),
+    )
+_dcf, _bcf = _as_repo("ajsagent/x")
+_dmf, _bmf = _as_repo("main")
+for _dd in (_dcf, _dmf):
+    _pw = _as_write(_dd, "new.py")
+    run_hook("autosave", _as_payload("PostToolUse", "Write", _pw, _dd), env=_cenv)  # first commit; opens the window
+    _as_write(_dd, "new.py", "later\n")
+    run_hook("autosavefinal", json.dumps({"hook_event_name": "Stop", "cwd": _dd}), env=_cenv)
+commit_case(
+    "autosavefinal (#529): cloud Stop makes the wip commit on ajsagent/x and nothing on main",
+    _as_git(_dcf, "log", "--format=%s").split("\n") == ["wip: autosave", "wip: autosave", "base"]
+    and _as_git(_bcf, "rev-parse", "ajsagent/x") == _as_git(_dcf, "rev-parse", "HEAD")
+    and _as_git(_dmf, "rev-list", "--count", "HEAD") == "1" and _as_git(_bmf, "for-each-ref", "--format=%(refname)") == "",
+    "x log %r, main origin refs %r" % (_as_git(_dcf, "log", "--format=%s"), _as_git(_bmf, "for-each-ref")),
+)
+commit_case("autosavefinal (#529) is wired to Stop and StopFailure in hooks.json",
+            hooks_json_text.count('run.sh\\" autosavefinal') == 2, "hooks.json entries")
+# --- #527: every branch is saved, one save per folder ---
+def _as_saves(d, branch):
+    """(ref name, sha) pairs under refs/house-rules/saves/<branch>/ in repo or bare repo `d`."""
+    out = _as_git(d, "for-each-ref", "--format=%(refname) %(objectname)", "refs/house-rules/saves/%s/" % branch)
+    return [tuple(line.split()) for line in out.splitlines() if line.strip()]
+
+
+_d5, _b5 = _as_repo("AjsAgent/x")
+_h5 = _as_git(_d5, "rev-parse", "HEAD")
+_p5 = _as_write(_d5, "new.py")
+run_hook("autosave", _as_payload("PostToolUse", "Write", _p5, _d5), env=_as_env())
+_s5, _o5 = _as_saves(_d5, "AjsAgent/x"), _as_saves(_b5, "AjsAgent/x")
+commit_case(
+    "autosave (#527): an edit on a non-helper branch saves to refs/house-rules/saves/<branch>/<folder id> on origin and adds no commit to the branch",
+    len(_s5) == 1 and _o5 == _s5 and re.fullmatch(r"refs/house-rules/saves/AjsAgent/x/[0-9a-f]+", _s5[0][0])
+    and _as_git(_d5, "rev-parse", "HEAD") == _h5 and _as_git(_d5, "rev-list", "--count", "HEAD") == "1",
+    "local %r, origin %r" % (_s5, _o5),
+)
+# An old single save (refs/house-rules/autosave/<branch>, made before #527) must not block the new one,
+# locally or on origin: git cannot hold a ref and refs nested under the same name.
+_d7, _b7 = _as_repo("AjsAgent/old")
+_as_git(_d7, "update-ref", "refs/house-rules/autosave/AjsAgent/old", "HEAD")
+_as_git(_d7, "push", "-q", "origin", "refs/house-rules/autosave/AjsAgent/old")
+_, _out7, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _as_write(_d7, "new.py"), _d7), env=_as_env())
+commit_case(
+    "autosave (#527): a folder that still holds an old autosave/<branch> save saves under saves/<branch>/<folder id> on origin",
+    len(_as_saves(_b7, "AjsAgent/old")) == 1 and "error" not in _out7.lower(),
+    "origin %r, out %r" % (_as_saves(_b7, "AjsAgent/old"), _out7[:160]),
+)
+_d6, _b6 = _as_repo("AjsAgent/x")
+_c6 = tempfile.mkdtemp(prefix="house-rules-clone-", dir=_FIXTURE_ROOT)
+_as_git(_c6, "clone", "-q", _b6, _c6)  # origin has no branch yet: clone is empty, so copy the first folder instead
+shutil.rmtree(_c6)
+_as_git(_d6, "push", "-q", "origin", "AjsAgent/x")
+_as_git(_FIXTURE_ROOT, "clone", "-q", "-b", "AjsAgent/x", _b6, _c6)
+for _dd in (_d6, _c6):
+    _as_git(_dd, "config", "user.name", "t")
+    _as_git(_dd, "config", "user.email", "t@t")
+    run_hook("autosave", _as_payload("PostToolUse", "Write", _as_write(_dd, "mine.py", os.path.basename(_dd) + "\n"), _dd), env=_as_env())
+_o6 = _as_saves(_b6, "AjsAgent/x")
+commit_case(
+    "autosave (#527): two clones on the same branch keep two separate saves on origin",
+    len(_o6) == 2 and len({r for r, _ in _o6}) == 2,
+    "origin saves %r" % (_o6,),
+)
+_f7 = _as_saves(_d5, "AjsAgent/x")
+_t7 = _as_git(_d5, "ls-tree", "-r", "--name-only", _f7[0][1]).split() if _f7 else []
+commit_case(
+    "autosave (#527): the snapshot holds .house-rules/handoff-facts.md and the working folder does not",
+    ".house-rules/handoff-facts.md" in _t7 and not os.path.exists(os.path.join(_d5, ".house-rules")),
+    "tree %r" % (_t7,),
+)
 _quiet = []
-for _br in ("main", "claude/x"):
-    _dq, _ = _as_repo(_br)
-    _pq = _as_write(_dq, "new.py")
-    _, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env())
-    if _as_ref(_dq, _br) or oq.strip():
-        _quiet.append("%s: ref %r, out %r" % (_br, _as_ref(_dq, _br), oq[:80]))
 _dq, _ = _as_repo("worktree-agent-off")
 _pq = _as_write(_dq, "new.py")
 _, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), env=_as_env(HOUSE_RULES_AUTOSAVE="off"))
 if _as_ref(_dq, "worktree-agent-off") or oq.strip():
     _quiet.append("HOUSE_RULES_AUTOSAVE=off still acted: out %r" % oq[:80])
 commit_case(
-    "autosave: does nothing on main, on a claude/ branch, or with HOUSE_RULES_AUTOSAVE=off",
-    not _quiet, "; ".join(_quiet) or "no ref and no output in all three",
+    "autosave: does nothing with HOUSE_RULES_AUTOSAVE=off",
+    not _quiet, "; ".join(_quiet) or "no ref and no output",
 )
 # .git/HEAD fast path (2.48.0): a branch that is not worktree-agent-* is ruled out by reading
 # .git/HEAD, so no git subprocess is spawned. The probe counts subprocess.Popen constructions
@@ -275,15 +391,15 @@ def _as_spawns(event, payload, env):
 
 
 _fast = []
-for _ev in ("autosave", "commitgate"):
+for _ev in ("commitgate",):
     _dq, _ = _as_repo("main")
     _pq = _as_write(_dq, "new.py")
-    _n, _o = _as_spawns(_ev, _as_payload("PostToolUse" if _ev == "autosave" else "PreToolUse", "Write", _pq, _dq), _as_env())
+    _n, _o = _as_spawns(_ev, _as_payload("PreToolUse", "Write", _pq, _dq), _as_env())
     if _n != 0 or _o.strip():
         _fast.append("%s on main: %d spawns, out %r" % (_ev, _n, _o[:60]))
 commit_case(
-    "autosave/commitgate: a non-subagent branch is ruled out from .git/HEAD with zero git subprocesses",
-    not _fast, "; ".join(_fast) or "0 spawns and no output on main for both handlers",
+    "commitgate: a non-subagent branch is ruled out from .git/HEAD with zero git subprocesses",
+    not _fast, "; ".join(_fast) or "0 spawns and no output on main",
 )
 _dq, _ = _as_repo("worktree-agent-fast")
 _pq = _as_write(_dq, "new.py")
@@ -293,20 +409,70 @@ commit_case(
     _n > 0 and bool(_as_ref(_dq, "worktree-agent-fast")),
     "%d spawns, autosave ref %r" % (_n, _as_ref(_dq, "worktree-agent-fast")[:9]),
 )
-# --- #477 (A11): autosave saves the helper's written files, never other untracked files ---
+# --- A11 (#477, reversed by aj 2026-11-17): autosave saves every new file git does not ignore, but never an
+# ignored one, and leaves out a file over the big-file limit (and says so) ---
 _as = _commit_repo("worktree-agent-a11", committed=["a.txt"])
+open(os.path.join(_as, ".gitignore"), "w").write("secret.token\n")
 open(os.path.join(_as, "secret.token"), "w").write("ghp_not_a_real_token")
 open(os.path.join(_as, "made.py"), "w").write("print(1)\n")
+open(os.path.join(_as, "shell.txt"), "w").write("made by a shell command, not a file tool\n")
+with open(os.path.join(_as, "big.bin"), "wb") as _f:
+    _f.truncate(51 * 1024 * 1024)  # sparse: 51 MB on paper, no real disk use
 _as_pl = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": "a11", "cwd": _as,
           "tool_input": {"file_path": os.path.join(_as, "made.py")}, "tool_response": {}}
-run_hook("autosave", json.dumps(_as_pl), env=_project_env(_as, HOUSE_RULES_AUTOSAVE="on"))
+_, _as_out, _ = run_hook("autosave", json.dumps(_as_pl), env=_project_env(_as, HOUSE_RULES_AUTOSAVE="on"))
 _as_refs = subprocess.run(["git", "-C", _as, "for-each-ref", "--format=%(refname)", "refs/"],
                          capture_output=True, text=True).stdout.split()
-_as_saved = [r for r in _as_refs if "autosave" in r]
+_as_saved = [r for r in _as_refs if r.startswith("refs/house-rules/saves/")]
 _as_tree = subprocess.run(["git", "-C", _as, "ls-tree", "-r", "--name-only", _as_saved[0]],
                           capture_output=True, text=True).stdout.split() if _as_saved else []
-report("PASS" if "made.py" in _as_tree and "secret.token" not in _as_tree else "FAIL",
-       "A11: the autosave snapshot holds the written file and not the untracked token")
+report("PASS" if "made.py" in _as_tree and "shell.txt" in _as_tree and "secret.token" not in _as_tree
+       and "big.bin" not in _as_tree and "big.bin" in _as_out else "FAIL",
+       "A11: the autosave holds every new file git does not ignore (shell-made too), never an ignored one, and names a big file it left out")
+print("          tree %r, out %r" % (_as_tree, _as_out[:200]))
+
+# --- #535 QA: the desktop app on Windows runs shell commands through the PowerShell tool, which the save never
+# matched, and every skip was silent. A PowerShell call now saves, and each save decision says what it did. ---
+with open(os.path.join(HERE, "..", "hooks", "hooks.json"), encoding="utf-8") as _f:
+    _ps_hooks = json.load(_f)["hooks"]["PostToolUse"]
+_ps_matcher = [h["matcher"] for h in _ps_hooks if any("run.sh\" autosave" in x["command"] for x in h["hooks"])]
+_ps_d, _ps_bare = _as_repo("AjsAgent/ps")
+open(os.path.join(_ps_d, "shell.txt"), "w").write("made by PowerShell\n")
+_ps_env = _as_env(HOUSE_RULES_TRACE="on", HOUSE_RULES_HANDOFF="on")
+_ps_pl = {"hook_event_name": "PostToolUse", "tool_name": "PowerShell", "session_id": "ps", "cwd": _ps_d,
+          "tool_input": {"command": "echo hi > shell.txt"}, "tool_response": {}}
+_, _ps_out, _ = run_hook("autosave", json.dumps(_ps_pl), env=_ps_env)
+_ps_ok = (len(_ps_matcher) == 1 and re.fullmatch(_ps_matcher[0], "PowerShell") and bool(_as_ref(_ps_d, "AjsAgent/ps"))
+          and "saved 1 changed file(s) on AjsAgent/ps (shell.txt) and pushed the save to GitHub" in _ps_out
+          and _as_git(_ps_bare, "for-each-ref", "refs/house-rules/saves/").strip() != "")
+report("PASS" if _ps_ok else "FAIL",
+       "#535 QA: a PowerShell call is matched and saved, and the save says which files went to GitHub")
+if not _ps_ok:
+    print("          matcher %r, out %r" % (_ps_matcher, _ps_out[:300]))
+_ps_stop = {"hook_event_name": "Stop", "session_id": "ps", "cwd": _ps_d}
+_, _ps_o1, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
+time.sleep(1.1)  # the end-of-turn check compares file times to the last save, in whole seconds on some systems
+open(os.path.join(_ps_d, "second.txt"), "w").write("later\n")
+_, _ps_o2, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
+_, _ps_o3, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_as_env(HOUSE_RULES_TRACE="off"))
+_ps_ok = ("(end of turn): your work is saved on GitHub: 1 file(s) on AjsAgent/ps, saved at " in _ps_o1
+          and " UTC. Nothing changed after that." in _ps_o1
+          and "(end of turn): saved 2 changed file(s) on AjsAgent/ps" in _ps_o2 and "pushed the save to GitHub" in _ps_o2
+          and not _ps_o3.strip())
+report("PASS" if _ps_ok else "FAIL",
+       "#535 QA: the end-of-turn save always says what it did (saved and pushed, or nothing changed), and is quiet with traces off")
+if not _ps_ok:
+    print("          o1 %r o2 %r o3 %r" % (_ps_o1[:200], _ps_o2[:200], _ps_o3[:120]))
+_ps_plain = tempfile.mkdtemp(prefix="house-rules-plain-", dir=_FIXTURE_ROOT)
+_, _ps_p1, _ = run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": _ps_plain}), env=_ps_env)
+_ps_d2, _ = _as_repo("AjsAgent/ps-quiet")
+_, _ps_p2, _ = run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": _ps_d2}), env=_ps_env)
+_ps_ok = ("is not inside a git repository, so nothing is saved or picked up here" in _ps_p1
+          and "nothing to pick up on AjsAgent/ps-quiet" in _ps_p2)
+report("PASS" if _ps_ok else "FAIL",
+       "#535 QA: the session-start pickup says when the folder is not a git repo, and when there is nothing to pick up")
+if not _ps_ok:
+    print("          plain %r quiet %r" % (_ps_p1[:200], _ps_p2[:200]))
 
 
 _dq, _ = _as_repo("worktree-agent-det")
@@ -314,8 +480,9 @@ _as_git(_dq, "checkout", "-q", "--detach")
 _pq = _as_write(_dq, "new.py")
 _n, _o = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), _as_env())
 commit_case(
-    "autosave: a detached HEAD spawns no git subprocess and saves nothing",
-    _n == 0 and not _o.strip() and not _as_ref(_dq, "worktree-agent-det"),
+    "autosave: a detached HEAD spawns no git subprocess, saves nothing and says so once",
+    _n == 0 and "HEAD is detached" in _o and not _as_ref(_dq, "worktree-agent-det")
+    and not _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), _as_env())[1].strip(),
     "%d spawns, out %r" % (_n, _o[:60]),
 )
 _dq, _ = _as_repo("main")
@@ -330,7 +497,7 @@ _pq2 = _as_write(_wt2, "new.py")
 _n2, _o2 = _as_spawns("autosave", _as_payload("PostToolUse", "Write", _pq2, _wt2), _as_env())
 commit_case(
     "autosave: a linked worktree (.git is a file) is resolved for both branch kinds",
-    _wf_is_file and _n > 0 and bool(_as_ref(_wt, "worktree-agent-wt")) and _n2 == 0 and not _o2.strip(),
+    _wf_is_file and _n > 0 and bool(_as_ref(_wt, "worktree-agent-wt")) and _n2 > 0 and bool(_as_ref(_wt2, "feature-plain")),
     ".git file %s; agent branch: %d spawns, ref %r; plain branch: %d spawns" % (_wf_is_file, _n, _as_ref(_wt, "worktree-agent-wt")[:9], _n2),
 )
 _dq, _ = _as_repo("worktree-agent-noreach")
@@ -340,7 +507,7 @@ _, oq, _ = run_hook("autosave", _as_payload("PostToolUse", "Write", _pq, _dq), e
 oq_unreach = oq
 commit_case(
     "autosave: an unreachable origin is said out loud, and the save is still kept locally",
-    "could not push refs/house-rules/autosave/worktree-agent-noreach" in oq and bool(_as_ref(_dq, "worktree-agent-noreach")),
+    "could not push refs/house-rules/saves/worktree-agent-noreach" in oq and bool(_as_ref(_dq, "worktree-agent-noreach")),
     "out %r" % oq[:160],
 )
 _dq, _ = _as_repo("worktree-agent-old", backdate_minutes=20)
@@ -599,9 +766,6 @@ for _name, _model in TIERS.items():
     _body = _t.split("---", 2)[-1].strip().splitlines()
     if len(_body) > 15:
         agentdrift.append(f"{_name}.md body is {len(_body)} lines, the limit is 15")
-    for dead in ["hooks", "mcpServers", "permissionMode"]:
-        if re.search(rf"^{dead}:", _t, re.MULTILINE):
-            agentdrift.append(f"{_name}.md sets {dead}, which plugin subagents ignore")
 if os.path.isfile(os.path.join(AGENTS_DIR, "executor.md")):
     agentdrift.append("agents/executor.md still exists, it was retired")
 if not agentdrift:
@@ -1743,6 +1907,127 @@ _wt_check("links owed: a checklist header with the thread link is fine",
 _lo_ctx, _lo_sys = _lo_run(_lo_a)
 _wt_check("links owed: silent outside a project thread",
           [] if "links owed" not in _lo_ctx + _lo_sys else [f"got {_lo_ctx!r}"])
+
+
+# --- #531: pickup (SessionStart) - note, snapshot facts, other folders' saves; temp repos with a bare origin
+_PK_BR = "AjsAgent/feat"
+_PK_NOTE = "docs/5-today/handoff-AjsAgent-feat.md"
+_PK_OLD = "refs/house-rules/autosave/" + _PK_BR
+_PK_NEW = "refs/house-rules/saves/%s/" % _PK_BR
+
+
+def _pk_run(cwd, **extra):
+    e = _project_env(_FIXTURE_ROOT)
+    e.pop("CLAUDE_CODE_REMOTE", None)  # this sandbox may be a cloud session; the cases must not inherit it
+    e["HOUSE_RULES_HANDOFF"] = "on"
+    e.update(extra)
+    return run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": cwd}), env=e)[1]
+
+
+def _pk_ctx(out):
+    try:
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    except Exception:
+        return ""
+
+
+def _pk_snap(d, ref, fname, minutes_ago):
+    """A save of `fname` (plus the facts file) on top of HEAD, dated minutes_ago, pushed to origin as `ref`."""
+    _as_write(d, fname, "only in the snapshot\n")
+    os.makedirs(os.path.join(d, ".house-rules"), exist_ok=True)
+    _as_write(d, ".house-rules/handoff-facts.md", "FACTS-MARKER branch feat\n")
+    _as_git(d, "add", "-A")
+    when = "@%d +0000" % int(time.time() - minutes_ago * 60)
+    snap = _as_git(d, "stash", "create", env=dict(os.environ, GIT_COMMITTER_DATE=when, GIT_AUTHOR_DATE=when))
+    _as_git(d, "reset", "-q")
+    os.remove(os.path.join(d, fname))
+    _as_git(d, "update-ref", ref, snap)
+    _as_git(d, "push", "-q", "origin", ref)
+    return snap
+
+
+def _pk_producer(note_text="Where it stands: step 2.\n", ref=_PK_OLD, fname="only.txt"):
+    d, bare = _as_repo(_PK_BR)
+    os.makedirs(os.path.join(d, "docs", "5-today"), exist_ok=True)
+    _as_write(d, _PK_NOTE, note_text)
+    _as_git(d, "add", "-A")
+    _as_git(d, "commit", "-q", "-m", "note")
+    _as_git(d, "push", "-q", "origin", _PK_BR)
+    _pk_snap(d, ref, fname, 5)
+    return d, bare
+
+
+def _pk_clone(bare, fid="cccc3333"):
+    c = tempfile.mkdtemp(prefix="house-rules-pickup-", dir=_FIXTURE_ROOT)
+    subprocess.run(["git", "clone", "-q", "-b", _PK_BR, bare, c], check=True, stderr=subprocess.DEVNULL)
+    _as_write(os.path.join(c, ".git"), "house-rules-folder-id", fid + "\n")
+    return c
+
+
+_pk_d, _pk_bare = _pk_producer()
+_pk_c = _pk_clone(_pk_bare)
+_pk_text = _pk_ctx(_pk_run(_pk_c))
+_pk_rcmd = [l for l in _pk_text.splitlines() if l.startswith("Restore command:")]
+commit_case(
+    "pickup: an old single save is read; note, facts and the missing files with the git-apply restore command",
+    _pk_text.startswith("house-rules pickup: loaded from") and "Where it stands: step 2." in _pk_text
+    and "FACTS-MARKER" in _pk_text and "only.txt" in _pk_text and bool(_pk_rcmd)
+    and "git diff refs/house-rules/remote-autosave/%s^ refs/house-rules/remote-autosave/%s -- only.txt | git apply" % (_PK_BR, _PK_BR)
+    in _pk_rcmd[0] and "Ask aj before running" in _pk_text
+    and _pk_text.rstrip().endswith("that a restore command is ready and you will ask before running it.")
+    and "Open your first reply to the user with one line saying what this pickup found on %s" % _PK_BR in _pk_text,
+    "got %r" % _pk_text[:500],
+)
+_pk_e, _ = _as_repo(_PK_BR)
+_as_git(_pk_e, "remote", "remove", "origin")
+_pk_out = _pk_run(_pk_e)
+_pk_one = json.loads(_pk_out)["systemMessage"].splitlines() if _pk_out.strip() else []
+commit_case(
+    "pickup: no origin says so in one line",
+    len(_pk_one) == 1 and "could not be reached" in _pk_one[0] and _pk_ctx(_pk_out) == "",
+    "got %r" % _pk_out[:300],
+)
+_pk_d2, _pk_bare2 = _as_repo(_PK_BR)
+_as_git(_pk_d2, "push", "-q", "origin", _PK_BR)
+commit_case("pickup: no save and no note says so in one line, and is silent with traces off (#535 QA)",
+            "nothing to pick up on" in _pk_run(_pk_d2) and _pk_run(_pk_d2, HOUSE_RULES_TRACE="off").strip() == "", "")
+_pk_d3, _pk_bare3 = _pk_producer("N" * 9000)
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare3)))
+commit_case(
+    "pickup: an oversized note is cut and the cut is named",
+    "is cut at" in _pk_text and len(_pk_text) <= 6200 and _PK_NOTE in _pk_text,
+    "len %d, tail %r" % (len(_pk_text), _pk_text[-200:]),
+)
+commit_case("pickup: HOUSE_RULES_HANDOFF=off is silent", _pk_run(_pk_c, HOUSE_RULES_HANDOFF="off").strip() == "", "")
+
+# (a) two other folders' saves on one branch, newest first; this folder's own save skipped
+_pk_d4, _pk_bare4 = _as_repo(_PK_BR)
+_as_git(_pk_d4, "push", "-q", "origin", _PK_BR)
+_pk_snap(_pk_d4, _PK_NEW + "aaaa1111", "older.txt", 30)
+_pk_snap(_pk_d4, _PK_NEW + "bbbb2222", "newer.txt", 5)
+_pk_snap(_pk_d4, _PK_NEW + "cccc3333", "mine.txt", 1)
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare4)))
+_pk_rcmds = [l for l in _pk_text.splitlines() if l.startswith("Restore command:")]
+commit_case(
+    "pickup: other folders' saves are listed newest first, each with its own restore command; own folder skipped",
+    len(_pk_rcmds) == 2 and "newer.txt" in _pk_rcmds[0] and "bbbb2222" in _pk_rcmds[0]
+    and "older.txt" in _pk_rcmds[1] and "aaaa1111" in _pk_rcmds[1] and "mine.txt" not in _pk_text
+    and all("| git apply" in l for l in _pk_rcmds),
+    "got %r" % _pk_text[:900],
+)
+# (b) an old refs/house-rules/autosave/<branch> save is still listed beside the per-folder saves
+_pk_snap(_pk_d4, _PK_OLD, "legacy.txt", 60)
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare4)))
+commit_case(
+    "pickup: an old autosave/<branch> save is still listed beside the per-folder saves",
+    "legacy.txt" in _pk_text and "newer.txt" in _pk_text and "remote-autosave/" in _pk_text,
+    "got %r" % _pk_text[:900],
+)
+# other branches with a recent save are named
+_as_git(_pk_d4, "push", "-q", "origin", _PK_OLD + ":refs/house-rules/saves/AjsAgent/other/dddd4444")
+_pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare4)))
+commit_case("pickup: another branch's recent save is named in one line",
+            "Other branches with a save under 24 h old: AjsAgent/other" in _pk_text, "got %r" % _pk_text[-300:])
 
 
 finish()

@@ -1,0 +1,56 @@
+PASS 1 live_save_pc: origin has a save ref with notes.txt and handoff-facts.md
+    evidence: refs ['refs/house-rules/saves/AjsAgent/live/e9979774']
+    tree .house-rules/handoff-facts.md
+    README.md
+    notes.txt
+PASS 1 live_save_pc: branch got no new commit
+    evidence: a3cd35e init
+PASS 2 live_save_cloud: origin branch has `wip: autosave` commit with notes.txt
+    evidence: log wip: autosave
+    init
+    files README.md
+    notes.txt
+PASS 2 live_save_cloud: no saves ref on origin
+PASS 3 live_pickup: SessionStart output lists notes.txt, restore command, and the note
+    evidence: 
+    {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Only `coding-philosophy.md` applies to this project \u2014 no ecosystem-specific markers were found.
+    
+    ---
+    
+    ### coding-philosophy.md
+    
+    # Coding Philosophy (Global)
+    
+    > Scope: applies to every project, every language. Ecosystem-specific rules live in
+    > `csharp-unity-standards.md` and `web-js-ts-node-standards.md`. Project-specific facts
+    > (build commands, architecture, folder layout) live in that project's own `CLAUDE.md`.
+    
+    ## Core principles
+    
+    - **Clarity over cleverness.** If a teammate (or future me, or Claude) needs a comment to
+      parse a one-liner, it's not actually clean \u2014 rewrite it plainly instead.
+    - **Explicit over implicit.** Prefer naming things, passing values explicitly, and avoiding
+      hidden state/side effects over \"magic\" that saves a few keystrokes.
+    - **Small, reversible changes.** Prefer a sequence of small diffs over one large one. Easier
+      to review, easier to revert, easier for an AI assistant to reason about.
+    - **Delete before you add.** Before introducing a new abstraction, dependency, or file, check
+      whether an existing one already does the job.
+    
+    ## Naming
+    
+    - Names describe *what*, not *how* (`GetActiveUsers()` not `LoopThroughUsersAndFilter()`).
+    - Booleans read as a yes/no question: `isReady`, `hasPermission`, `canRetry`.
+    - No abbreviations unless they're domain-standard (`id`, `url`, `http` are fine; `usrCfg` is not).
+    - Avoid noise words: `data`, `info`, `manager`, `helper`
+PASS 3 live_pickup: restore command ran, notes.txt contains hello
+    evidence: cmd git diff refs/house-rules/remote-saves/AjsAgent/live/e9979774^ refs/house-rules/remote-saves/AjsAgent/live/e9979774 -- notes.txt | git apply
+    rc 0 
+    content 'hello\n'
+PASS 4 live_pages_off: mode file has pages off
+    evidence: {
+     "pages": "off"
+    }
+FAIL 4 live_pages_off: no Stop hook block about a page after pages off
+    evidence: 21 hook responses; offenders ['{"suppressOutput":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Standing house rules, loaded separately from the rest:\\n\\n<plugin> in the paths below is the plugin root: /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules\\n\\n## Show, don\'t tell; the ', '{"suppressOutput":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The following are the user standing house rules. They apply to every project and override default behaviour. A PreToolUse hook also refuses destructive commands, naming the safe way, and refuses commit/p', '{"decision":"block","reason":"House rules, the reply is not done yet. It misses 1 checkpoint:\\n- evidence: A success claim needs a tool run and its quoted output behind it. Fix: run the check and quote its real output, or restate the claim as untested and say why.\\nFix these and send only what chang']
+PASS 4 live_pages_off: 'should I type pages off?' saves nothing
+    evidence: no .claude folder

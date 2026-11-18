@@ -467,10 +467,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.80.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.81.2",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.80.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.81.2",
     "rules section + detail file + version",
 )
 
@@ -772,6 +772,9 @@ _loop_gh("needs review", 101, 102, 103)
 _n = _loop_say("QA failed: blockers - the list is too long")
 _loop_cases.append(("the feature name stops at a spaced dash (found in the label check's real run)",
                     _loop_state().get("approvals", [{}])[-1].get("name") == "blockers"))
+_loop_cases.append(("#535 QA: a comma ends the feature name too, so \"QA failed: Feature switches, the app\" names Feature switches",
+                    __import__("house_rules.design_loop", fromlist=["x"])._loop_name("Feature switches, the desktop app does not save") == "Feature switches"
+                    and __import__("house_rules.design_loop", fromlist=["x"])._loop_name("Phase 3 1A 2A, as discussed") == "Phase 3"))
 _loop_cases.append(('#504: "QA failed" goes back to Build in one message, keeps the issues, and code stays closed '
                     "while they still say needs review", _loop_stage() == "build"
                     and len(_loop_state().get("issues", [])) == 3 and _loop_edit("app.py") == "deny"))
@@ -1058,6 +1061,22 @@ _loop_cases.append(("words inside a code block are not counted",
 _loop_env["HOUSE_RULES_LOOP"] = "off"
 _loop_cases.append(("HOUSE_RULES_LOOP=off also turns the reminder off", not _long_reply(_words250)))
 _loop_env["HOUSE_RULES_LOOP"] = "on"
+# #537: HOUSE_RULES_PAGES=off silences the page rule alone; the default (on) is unchanged
+_loop_env["HOUSE_RULES_PAGES"] = "off"
+_loop_cases.append(("#537: loop on, HOUSE_RULES_PAGES=off: a 200-word reply with no page is not held and gets no page note",
+                    not _long_reply(" ".join(["word"] * 200))))
+_sf_before = open(_loop_sf, encoding="utf-8").read() if os.path.exists(_loop_sf) else None
+if _sf_before is not None:
+    os.remove(_loop_sf)
+_n = _loop_say("Design approved: pagesoff")
+_loop_cases.append(("#537: loop on, HOUSE_RULES_PAGES=off: an approval still moves the stage", _loop_stage() == "plan"))
+if _sf_before is None:
+    os.remove(_loop_sf)
+else:
+    open(_loop_sf, "w", encoding="utf-8").write(_sf_before)
+del _loop_env["HOUSE_RULES_PAGES"]
+_loop_cases.append(("#537: loop on, pages on (default): a 200-word reply with no page is still held",
+                    _long_reply(" ".join(["word"] * 200))))
 
 # -- #233: the handover page template -----------------------------------------------------------
 _tpl_path = os.path.join(HERE, "..", "templates", "handover-page.html")
@@ -1438,6 +1457,28 @@ _cg_mrg = {"repo": "o/r", "number": 20, "at": 1}
 _cg_ready = {"feature": "f", "issues": [{"repo": "o/r", "number": 7}], "qa_at": 1, "qa": "QA passed: f", "merged_pr": _cg_mrg}
 _cg_nomerge = dict(_cg_ready, merged_pr=None)
 _cg_cases = []
+_p5_cases = []
+# #520: a merged pull request naming the phase issue lets its `Part of #<phase>` steps close.
+_ib = os.path.join(_FIXTURE_ROOT, "issue-bodies.json")
+json.dump({"o/r#7": "Step.\n\nPart of #5", "o/r#8": "A step with no parent line."}, open(_ib, "w", encoding="utf-8"))
+_ib_env = dict(_cl_env, HOUSE_RULES_LOOP_PR_BODIES_FILE=_bodies, HOUSE_RULES_LOOP_ISSUE_BODIES_FILE=_ib)
+json.dump({"o/r#22": "Refs #5", "o/r#23": "Refs #99", "o/r#24": "Refs #5"}, open(_bodies, "w", encoding="utf-8"))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 22}, {"merged": True}, env=_ib_env)
+_p5_cases.append(("#520: a merged PR that Refs the phase #5 stamps the record of step #7 (Part of #5)",
+                  (_cl_state()["closable"][0]["merged_pr"] or {}).get("number") == 22))
+_cl_set({"stage": "done", "closable": [dict(_cl_open)]})
+_o = _cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 23}, {"merged": True}, env=_ib_env)
+_ib_why = _cg_gh("gh issue close 7 -R o/r")
+_p5_cases.append(("#520: a merged PR that Refs neither #7 nor its parent #5 stays refused, naming what it looked for",
+                  _cl_state()["closable"][0]["merged_pr"] is None and _iss_decision(_ib_why) == "deny"
+                  and "#7" in _iss_reason(_ib_why) and "#5" in _iss_reason(_ib_why) and "#99" in _iss_reason(_ib_why)))
+_cl_set({"stage": "done", "closable": [dict(_cl_open, issues=[{"repo": "o/r", "number": 8}])]})
+_cl_merge("mcp__github__merge_pull_request", {"owner": "o", "repo": "r", "pullNumber": 24}, {"merged": True}, env=_ib_env)
+_p5_cases.append(("#520: a step with no Part of line is not stamped by a PR that Refs some other issue",
+                  _cl_state()["closable"][0]["merged_pr"] is None))
+for _t, _ok in _p5_cases:
+    report("PASS" if _ok else "FAIL", "closable record: " + _t)
 _cg_mc = {"method": "update", "owner": "o", "repo": "r", "issue_number": 7, "state": "closed", "state_reason": "completed"}
 _cl_set({"stage": "done", "closable": [dict(_cg_ready, issues=[dict(i) for i in _cg_ready["issues"]])]})
 _o = _cg_gh("gh issue close 7 -R o/r")
@@ -2102,6 +2143,10 @@ def _cw_editor(transcript, text="The page is up."):
 
 _cw_cases.append(("editor: writing a page under docs/plans with no editor run gets the reminder",
                   "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+_cw_cases.append(("#537: HOUSE_RULES_PAGES=off: a written docs/plans page with no editor run is not asked for the editor pass",
+        "no @house-rules:editor helper ran" not in run_hook("handover", stop_payload(
+            last_assistant_message="The page is up.", cwd=_loop_dir, stop_hook_active=True, transcript_path=_cw_t_page),
+            env=dict(_loop_env, HOUSE_RULES_PAGES="off"))[1]))
 _cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
                   "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
 def _cw_editor_on(transcript, text):
@@ -2196,15 +2241,16 @@ for _t, _ok in _cw_cases:
 
 # --- the checkpoint table (#256): a miss blocks once, then only reports on the retry -----------
 _ck_cases = []
-_CK_ENV = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_LOOP="on")
+_CK_ENV = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_LOOP="on",
+               HOUSE_RULES_HANDOFF="off")
 
 
 def _ck_user(text, extra=()):
     return [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": text}})] + list(extra)
 
 
-def _ck_run(transcript, reply, active=False, env=None):
-    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=_loop_dir, stop_hook_active=active,
+def _ck_run(transcript, reply, active=False, env=None, cwd=None):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=cwd or _loop_dir, stop_hook_active=active,
                                                   transcript_path=transcript), env=env or _CK_ENV)
     try:
         data = json.loads(out)
@@ -2314,6 +2360,74 @@ _ck_b, _, _o = _ck_run(_ck_t_w_dirty, "Changed the file.", active=True, env=_ck_
 _ck_cases.append(("commit: the same reply on the retry only reports", not _ck_b and "uncommitted" in _o))
 _ck_b, _, _ = _ck_run(_ck_t_w_clean, "Changed the file.", env=_ck_cenv(_ck_repo_clean))
 _ck_cases.append(("commit: a committed file passes", not _ck_b))
+# 4b handoff (#530): pushed, fresh clean note, Today.md touched
+_ho_git = lambda d, *a: subprocess.run(["git", "-c", "user.name=verify", "-c", "user.email=verify@example.invalid", "-C", d]
+                                       + list(a), check=True, capture_output=True)
+
+
+def _ho_repo(note_text="Goal. Stands. Next. Unverified. #530\n", push=True, extra_commit=False, today=True):
+    """A repo on AjsAgent/ho with a note; returns (repo, transcript of a turn that edited work.py)."""
+    d = tempfile.mkdtemp(prefix="house-rules-handoff-", dir=_FIXTURE_ROOT)
+    bare = tempfile.mkdtemp(prefix="house-rules-handoff-bare-", dir=_FIXTURE_ROOT)
+    _ho_git(bare, "init", "-q", "--bare")
+    _ho_git(d, "init", "-q", "-b", "AjsAgent/ho")
+    os.makedirs(os.path.join(d, "docs", "5-today"))
+    for rel, txt in {"work.py": "x\n", "docs/5-today/Today.md": "t\n",
+                     "docs/5-today/handoff-AjsAgent-ho.md": note_text}.items():
+        with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+            f.write(txt)
+    _ho_git(d, "add", "-A")
+    _ho_git(d, "commit", "-q", "-m", "base")
+    if push:
+        _ho_git(d, "remote", "add", "origin", bare)
+        _ho_git(d, "push", "-q", "-u", "origin", "AjsAgent/ho")
+    if extra_commit:
+        with open(os.path.join(d, "work.py"), "a", encoding="utf-8") as f:
+            f.write("more\n")
+        _ho_git(d, "commit", "-qam", "work only")
+        _ho_git(d, "push", "-q")
+    wrote = [os.path.join(d, "work.py")] + ([os.path.join(d, "docs", "5-today", "Today.md")] if today else [])
+    return d, _wrote_transcript("ck-ho-" + os.path.basename(d), wrote)
+
+
+_ho_env = _project_env(_loop_dir, HOUSE_RULES_LOOP="on", HOUSE_RULES_ISSUES="off", HOUSE_RULES_AUTOSAVE="off",
+                       HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_HANDOFF="on",
+                       HOUSE_RULES_LOOP_LABELS_FILE=_loop_labels_file)
+for _ho_label, _ho_kw, _ho_word in [
+        ("unpushed branch (no upstream)", dict(push=False), "no upstream"),
+        ("stale note", dict(extra_commit=True), "older than HEAD"),
+        ("note with a forbidden link", dict(note_text="see https://claude" + ".ai/artifact/abc\n"), "contains"),
+        ("Today.md untouched", dict(today=False), "Today.md")]:
+    _ho_d, _ho_t = _ho_repo(**_ho_kw)
+    _ck_b, _ck_r, _ = _ck_run(_ho_t, "Done.", env=_ho_env, cwd=_ho_d)
+    _ck_cases.append(("handoff: %s blocks once, naming the fix" % _ho_label,
+                      _ck_b and "- handoff:" in _ck_r and _ho_word in _ck_r))
+    if _ho_label.startswith("unpushed"):
+        _ck_b, _, _o = _ck_run(_ho_t, "Done.", active=True, env=_ho_env, cwd=_ho_d)
+        _ck_cases.append(("handoff: it fires once, the retry never blocks", not _ck_b))
+_ho_d, _ho_t = _ho_repo()
+_ck_b, _ck_r, _o = _ck_run(_ho_t, "Done.", env=_ho_env, cwd=_ho_d)
+_ck_cases.append(("handoff: a fully saved turn passes", not _ck_b and "handoff" not in _o))
+_ck_b, _ck_r, _o = _ck_run(_hand_transcript("ck-ho-none", _ck_user("what is up")), "Fine.", env=_ho_env, cwd=_ho_d)
+_ck_cases.append(("handoff: a turn that changed nothing is silent", not _ck_b and "handoff" not in _o))
+_ho_d, _ho_t = _ho_repo(note_text="tested with Claude Code desktop\n")
+_ck_b, _ck_r, _o = _ck_run(_ho_t, "Done.", env=_ho_env, cwd=_ho_d)
+_ck_cases.append(("handoff: a note saying 'tested with Claude Code desktop' is not credit and passes",
+                  not _ck_b and "handoff" not in _o))
+# a commit-only turn: nothing written, one commit made (work, note and Today.md), not pushed
+_ho_d, _ = _ho_repo()
+for _ho_rel in ("work.py", "docs/5-today/Today.md", "docs/5-today/handoff-AjsAgent-ho.md"):
+    with open(os.path.join(_ho_d, _ho_rel), "a", encoding="utf-8") as _ho_f:
+        _ho_f.write("more\n")
+_ho_git(_ho_d, "commit", "-qam", "work and note")
+_ho_t = _hand_transcript("ck-ho-commitonly", _ck_user("commit it", [json.dumps({"type": "assistant", "message": {
+    "content": [{"type": "tool_use", "id": "c1", "name": "Bash", "input": {"command": "git commit -am x"}}]}})]))
+_ck_b, _ck_r, _ = _ck_run(_ho_t, "Committed.", env=_ho_env, cwd=_ho_d)
+_ck_cases.append(("handoff: a commit-only turn that is not pushed is caught",
+                  _ck_b and "- handoff:" in _ck_r and "not pushed" in _ck_r))
+_ho_d, _ho_t = _ho_repo(push=False)
+_ck_b, _, _ = _ck_run(_ho_t, "Done.", env=dict(_ho_env, HOUSE_RULES_HANDOFF="off"), cwd=_ho_d)
+_ck_cases.append(("handoff: HOUSE_RULES_HANDOFF=off turns it off", not _ck_b))
 # 5 plain summary
 _ck_t_ps_wrote = _turn_transcript("ck-ps", "add the commit hooks", [("Edit", "/proj/src/app.py")])
 _ck_triple("plain summary", "plain summary", _ck_t_ps_wrote, _PS_TECH, _PS_PLAIN)
@@ -2603,8 +2717,13 @@ def _ma_say(cwd, prompt):
 
 
 def _ma_stage(d):
+    """The stage file without approval times: two calls a second apart would otherwise differ (a flaky FAIL)."""
     with open(os.path.join(d, ".claude", "house-rules-loop.json"), encoding="utf-8") as f:
-        return json.load(f)
+        state = json.load(f)
+    for a in state.get("approvals") or []:
+        if isinstance(a, dict):
+            a.pop("at", None)
+    return state
 
 
 _ma_root = tempfile.mkdtemp(prefix="above-")
@@ -3342,7 +3461,8 @@ def _ss_hook(event, model="", **fields):
 _ss_mode = os.path.join(_ss_dir, ".claude", "house-rules-mode.json")
 _ss_fable = _ss_hook("scope", "claude-fable-5-2", prompt="hi")
 _ss_rule_fable = _ss_hook("showrule", "claude-fable-5-2")
-report("PASS" if "OFF" not in _ss_fable and "Show, don't tell" in _ss_rule_fable and not os.path.isfile(_ss_mode)
+# #538: the fixture turns issues/autosave off in settings, which the note now reports; the model-default claim is about these two
+report("PASS" if "Design loop OFF" not in _ss_fable and "Builders OFF" not in _ss_fable and "Show, don't tell" in _ss_rule_fable and not os.path.isfile(_ss_mode)
        else "FAIL", "speed switches: no model default, so a Fable session with nothing typed runs full")
 _ss_hook("scope", prompt="Line 1: quote the sentence that starts with Design loop OFF, or write NONE")
 _ss_hook("scope", prompt="why did builders off not work last time?")
@@ -3367,6 +3487,27 @@ _ss_relayed = _ss_hook("scope", prompt="<task-notification>design loop on</task-
 report("PASS" if json.load(open(_ss_mode, encoding="utf-8")).get("design") == "off" else "FAIL",
        "speed switches: a relayed message cannot flip a switch")
 os.remove(_ss_mode)
+# Feature switches #538: the note names each group that is off and where it was set.
+_ss_hook("scope", prompt="pages off")
+_ss_pages = _ss_hook("scope", prompt="hi")
+report("PASS" if "Pages OFF (you typed \"pages off\", in this folder)" in _ss_pages else "FAIL",
+       "feature switches: pages off in the folder file is named in the note with \"this folder\"")
+os.remove(_ss_mode)
+_ss_home = tempfile.mkdtemp(prefix="house-rules-cfg-", dir=_FIXTURE_ROOT)
+_ss_env["CLAUDE_CONFIG_DIR"] = _ss_home
+_ss_hook("scope", prompt="builders off everywhere")
+_ss_bld = _ss_hook("scope", prompt="hi")
+report("PASS" if "Builders OFF (you typed \"builders off\", everywhere)" in _ss_bld and not os.path.isfile(_ss_mode) else "FAIL",
+       "feature switches: builders off in the everywhere file only says \"everywhere\"")
+os.remove(os.path.join(_ss_home, "house-rules-mode.json"))
+_ss_hook("scope", prompt="house rules off")
+_ss_house = _ss_hook("scope", prompt="hi")
+_ss_house_inj = _ss_hook("showrule")
+report("PASS" if "House rules OFF" in _ss_house and "main-branch guard" in _ss_house and "still apply" in _ss_house
+       and "Show, don't tell" not in _ss_house_inj else "FAIL",
+       "feature switches: house rules off says the guards still apply and leaves the design loop rule out")
+os.remove(_ss_mode)
+del _ss_env["CLAUDE_CONFIG_DIR"]
 
 # 6A: an approval with no issues, no labels and no decisions log still moves the stage, with a to-do note.
 os.makedirs(os.path.join(_ss_dir, ".claude"), exist_ok=True)

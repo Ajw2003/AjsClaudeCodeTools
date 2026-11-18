@@ -2160,6 +2160,41 @@ report("PASS" if (rc == 0 and "claude plugin update" not in out and "OUT OF DATE
 if "claude plugin update" in out:
     print(f"          rc={rc} out={out[:300]!r}")
 
+# #535 QA: a branch build (marketplace added as owner/repo#<branch>) is compared with that branch on
+# GitHub, never with main, so a 2.81.0 branch build is not told 2.80.0 is newer.
+_br_dir = tempfile.mkdtemp(prefix="house-rules-vc-branch-")
+_br_inst = os.path.join(_br_dir, "installed_plugins.json")
+with open(os.path.join(_br_dir, "known_marketplaces.json"), "w", encoding="utf-8") as f:
+    json.dump({"aj-house-rules": {"source": {"source": "github", "repo": "Ajw2003/AjsClaudeCodeTools",
+                                             "ref": "AjsAgent/phase-3-handoff"}}}, f)
+_br_old = os.environ.get("HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON")
+os.environ["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = _br_inst
+_br_ref = _core._vc_branch_ref([])
+_br_raw, _br_api = _core._github_urls(_br_ref)
+os.environ["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = os.path.join(_br_dir, "none", "installed_plugins.json")
+_br_none = _core._vc_branch_ref([])
+_main_raw, _main_api = _core._github_urls(_br_none)
+if _br_old is None:
+    os.environ.pop("HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON")
+else:
+    os.environ["HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON"] = _br_old
+_br_ok = (_br_ref == "AjsAgent/phase-3-handoff"
+          and _br_raw.endswith("/refs/heads/AjsAgent/phase-3-handoff/claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json")
+          and _br_api.endswith("?ref=AjsAgent%2Fphase-3-handoff")
+          and _br_none == "" and "/main/" in _main_raw and _main_api.endswith("?ref=main"))
+report("PASS" if _br_ok else "FAIL",
+       "versioncheck reads a branch build's ref and fetches GitHub's version from that branch, not main")
+if not _br_ok:
+    print(f"          ref={_br_ref!r} raw={_br_raw!r} api={_br_api!r} none={_br_none!r} main={_main_raw!r}")
+rc, out, err = run_hook("versioncheck", vc_payload("vc-branch"),
+                        vc_env("vc-branch", HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON=_br_inst,
+                               HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB=_installed_version))
+_br_ok = rc == 0 and "OUT OF DATE" not in out and "the AjsAgent/phase-3-handoff branch on" in out and not vc_fake_calls("vc-branch")
+report("PASS" if _br_ok else "FAIL",
+       "versioncheck on a branch build that matches its branch names the branch and runs no update")
+if not _br_ok:
+    print(f"          rc={rc} out={out[:300]!r} calls={vc_fake_calls('vc-branch')}")
+
 # --- SessionStart loads the newest installed rules after an update (issue #252) -----------
 # An older folder runs SessionStart; installed_plugins.json names a newer folder. inject and
 # showrule must load the newer folder's rule text and say so in one line, and must say it in one
@@ -2358,7 +2393,7 @@ marker_d = vc_marker_path(session_d)
 ok = (
     rc == 0
     and "OUT OF DATE" in out
-    and "GitHub's default branch has 99.0.0" in out
+    and "the default branch on GitHub has 99.0.0" in out
     and os.path.isfile(marker_d)
 )
 if ok:
@@ -2539,6 +2574,75 @@ _core._write_atomic(_aw, '{"a": 2}')
 report("PASS" if (json.load(open(_aw, encoding="utf-8")) == {"a": 2}
                   and os.listdir(os.path.dirname(_aw)) == ["state.json"]) else "FAIL",
        "A7: _write_atomic replaces the file whole and leaves no temp file behind")
+
+# --- feature switches anywhere (#536) ---------------------------------------------------------------------
+_fs_root = tempfile.mkdtemp(prefix="house-rules-fs-")
+_fs_cfg = os.path.join(_fs_root, "cfg")
+_fs_env = {k: v for k, v in os.environ.items() if not k.startswith("HOUSE_RULES_")}
+_fs_env["CLAUDE_CONFIG_DIR"] = _fs_cfg
+_fs_env["HOUSE_RULES_HANDOFF"] = "off"
+
+
+def _fs_dir(name, git=False):
+    d = os.path.join(_fs_root, name)
+    os.makedirs(d)
+    if git:
+        subprocess.run(["git", "init", "-q", "-b", "main", d], check=True)
+        subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty",
+                        "-m", "x"], check=True)
+    return d
+
+
+def _fs_type(d, prompt):
+    run_hook("scope", json.dumps({"session_id": "fs", "cwd": d, "prompt": prompt}), env=_fs_env)
+
+
+def _fs_env_seen(d, var):
+    """What `var` is after the hook's switch layer ran for a call in folder d."""
+    code = ("import sys; sys.path.insert(0, %r); from house_rules import core; import os; core.keep_payload(); "
+            "core.apply_switches(); print(os.environ.get(%r, 'unset'))" % (os.path.dirname(HOOK), var))
+    proc = subprocess.run([sys.executable, "-c", code], input=json.dumps({"cwd": d}).encode(), env=_fs_env,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return proc.stdout.decode().strip() or proc.stderr.decode()[-200:]
+
+
+def _fs_json(path):
+    return json.load(open(path, encoding="utf-8")) if os.path.isfile(path) else None
+
+
+_fs_a = _fs_dir("plain")
+_fs_type(_fs_a, "pages off")
+report("PASS" if _fs_json(os.path.join(_fs_a, ".claude", "house-rules-mode.json")) == {"pages": "off"}
+       and _fs_env_seen(_fs_a, "HOUSE_RULES_PAGES") == "off" else "FAIL",
+       "feature switches (a): 'pages off' in a non-git folder is saved there and a later hook call sees PAGES=off")
+_fs_b, _fs_c = _fs_dir("other"), _fs_dir("third")
+_fs_type(_fs_b, "builders off everywhere")
+report("PASS" if _fs_json(os.path.join(_fs_cfg, "house-rules-mode.json")) == {"builders": "off"}
+       and _fs_env_seen(_fs_c, "HOUSE_RULES_DELEGATION") == "off" else "FAIL",
+       "feature switches (b): 'builders off everywhere' applies in a different folder")
+_fs_type(_fs_c, "builders on")
+report("PASS" if _fs_env_seen(_fs_c, "HOUSE_RULES_DELEGATION") == "on"
+       and _fs_env_seen(_fs_b, "HOUSE_RULES_DELEGATION") == "off" else "FAIL",
+       "feature switches (c): a folder 'builders on' beats an everywhere 'builders off'")
+_fs_g = _fs_dir("repo", git=True)
+_fs_type(_fs_g, "house rules off")
+_fs_deny = run_hook("guard", json.dumps({"session_id": "fs", "cwd": _fs_g, "tool_name": "Bash",
+                                         "tool_input": {"command": "git reset --hard origin/main"}}), env=_fs_env)[1]
+_fs_deny2 = run_hook("guard", json.dumps({"session_id": "fs", "cwd": _fs_g, "tool_name": "Bash",
+                                          "tool_input": {"command": "git commit -m x"}}), env=_fs_env)[1]
+report("PASS" if _fs_json(os.path.join(_fs_g, ".claude", "house-rules-mode.json")) == {"house": "off"}
+       and '"deny"' in _fs_deny and '"deny"' in _fs_deny2 else "FAIL",
+       "feature switches (d): 'house rules off' leaves the guard refusing git reset --hard and a commit on main")
+_fs_q = _fs_dir("quoted")
+_fs_type(_fs_q, "should I type pages off?")
+report("PASS" if not os.path.exists(os.path.join(_fs_q, ".claude")) else "FAIL",
+       "feature switches (e): a switch quoted in a sentence saves nothing")
+_fs_o = _fs_dir("old")
+os.makedirs(os.path.join(_fs_o, ".claude"))
+with open(os.path.join(_fs_o, ".claude", "house-rules-mode.json"), "w") as _f:
+    json.dump({"design": "off"}, _f)
+report("PASS" if _fs_env_seen(_fs_o, "HOUSE_RULES_LOOP") == "off" else "FAIL",
+       "feature switches (f): an old file {\"design\": \"off\"} still turns the loop off")
 
 
 finish()

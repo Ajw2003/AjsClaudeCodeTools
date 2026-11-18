@@ -110,6 +110,9 @@ print()
 
 # --- branch-aware guard: the same command, judged by whose branch the checkout is on ---------
 BRANCH_CASES = [
+    # #528: a cloud session's lowercase ajsagent/ branch is the agent's own; main stays refused.
+    (REPO_CLOUD, "ajsagent/x", "pass", None, "git commit -m x"),
+    (REPO_THEIRS, "main", "deny", DEFAULT, "git commit -m x"),
     # Off the default branch, a commit, an ordinary push and a merge or rebase run unasked (#197).
     (REPO_MINE, "claude/some-topic", "pass", None, 'git commit -m "checkpoint"'),
     (REPO_MINE, "claude/some-topic", "pass", None, "git push origin HEAD"),
@@ -354,6 +357,23 @@ if shutil.which("git"):
     else:
         report("FAIL", "guard judges the branch by the payload cwd, a leading cd and git -C")
         print(f"          got: {_own_res}")
+    # #522: a switch/checkout that creates an owned branch, then only && statements, is judged on the new branch.
+    _sw = {
+        "a switch -c owned && commit": ("git switch -c AjsAgent/x && git commit -m x", "allow"),
+        "b checkout -b chain + push": ("git checkout -b AjsAgent/x && git add a && git commit -m x && git push -u origin AjsAgent/x", "allow"),
+        "c switch existing main": ("git switch main && git commit -m x", "deny"),
+        "d semicolon as today": ("git switch -c AjsAgent/x; git commit -m x", "deny"),
+        "e not owned": ("git switch -c feature/x && git commit -m x", "deny"),
+        "f lowercase ajsagent": ("git switch -c ajsagent/x && git commit -m x", "allow"),
+        "g switches back before committing": ("git switch -c AjsAgent/x && git checkout main && git commit -m x", "deny"),
+    }
+    _sw_res = {k: _own_ask(c, _own_main, _own_main) for k, (c, _w) in _sw.items()}
+    if _sw_res == {k: w for k, (_c, w) in _sw.items()}:
+        report("PASS", "guard judges a create-owned-branch-then-commit chain on the new branch (#522)")
+        print("          && chain after switch -c / checkout -b allowed; ; chain, existing branch, unowned name refused")
+    else:
+        report("FAIL", "guard judges a create-owned-branch-then-commit chain on the new branch (#522)")
+        print(f"          got: {_sw_res}")
 else:
     report("SKIP", "guard judges ownership by the payload cwd (real git worktree)")
     print("          no git binary on PATH")

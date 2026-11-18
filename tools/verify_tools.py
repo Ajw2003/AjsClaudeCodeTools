@@ -768,6 +768,44 @@ check(len(_hb) == 1 and "if not verify_and_self_heal(" not in inspect.getsource(
       f"bad() called {len(_hb)} time(s)")
 shutil.rmtree(_hs, True); shutil.rmtree(_hd, True)
 
+# --- #532: use_branch.py switches the plugin to a branch build and back (needs network + claude) ---
+def _use_branch_case():
+    import use_branch
+    if shutil.which("claude") is None or shutil.which("git") is None:
+        print("SKIP  #532 use_branch: 'claude' or 'git' is not on PATH, so the switch was NOT tested.")
+        return
+    br = "AjsAgent/phase-3-handoff"
+    ls = subprocess.run(["git", "ls-remote", "origin", f"refs/heads/{br}", "refs/heads/main"],
+                        capture_output=True, text=True, timeout=60)
+    heads = {l.split()[1]: l.split()[0][:7] for l in ls.stdout.splitlines()}
+    if ls.returncode != 0 or len(heads) != 2:
+        print(f"SKIP  #532 use_branch: git ls-remote origin failed or lacks {br}/main "
+              f"({ls.stderr.strip() or 'no output'}), so the switch was NOT tested.")
+        return
+    old = os.environ.get("CLAUDE_CONFIG_DIR")
+    cfg = tempfile.mkdtemp(prefix="use-branch-")
+    os.environ["CLAUDE_CONFIG_DIR"] = cfg
+    try:
+        try:
+            got = use_branch.switch(br)
+        except SystemExit as e:
+            print(f"SKIP  #532 use_branch: claude could not reach the repo ({e}), so the switch was NOT tested.")
+            return
+        want = heads[f"refs/heads/{br}"]
+        check(got[0] == br and got[2][:7] == want, "#532: use_branch switches to the branch: ref and commit match origin",
+              f"got ref={got[0]} commit={got[2]}, origin {br}={want}")
+        got = use_branch.switch("main")
+        want = heads["refs/heads/main"]
+        check(got[0] is None and got[2][:7] == want, "#532: use_branch main: ref gone, commit equals origin/main",
+              f"got ref={got[0]} commit={got[2]}, origin main={want}")
+    finally:
+        if old is None:
+            os.environ.pop("CLAUDE_CONFIG_DIR", None)
+        else:
+            os.environ["CLAUDE_CONFIG_DIR"] = old
+        shutil.rmtree(cfg, True)
+_use_branch_case()
+
 print()
 print("-" * 32)
 if FAILURES:

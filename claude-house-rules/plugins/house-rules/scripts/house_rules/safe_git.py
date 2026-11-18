@@ -267,7 +267,7 @@ def branch_ownership(start=None):
         return False, None, "HEAD points at %s, which is not a branch" % ref
 
     branch = ref[len("refs/heads/") :]
-    return branch.startswith(owned_branch_prefixes()), branch, None
+    return is_owned_branch(branch), branch, None
 
 
 def _agent_branch_enabled():
@@ -494,7 +494,7 @@ def _never_blocked_git(subject, branch, where):
     are not routine, so they fall through to the normal guard. The design loop is not consulted here."""
     if not branch or is_protected_branch(branch, where):
         return False
-    if not branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+    if not is_owned_branch(branch, (AUTOSAVE_BRANCH_PREFIX,)):
         return False
     if not _only_git_statements(subject):
         return False
@@ -738,6 +738,25 @@ def event_guard():
     return rc
 
 
+_CREATE_OWNED_RE = re.compile(r"\s*git\s+(?:switch\s+(?:-c|--create)|checkout\s+-b)\s+([^\s;&|'\"$`\\]+)\s*(&&.*)?$", re.S)
+
+
+def _created_owned_branch(subject):
+    """#522: the branch a leading `git switch -c / checkout -b <owned>` creates, when every later
+    statement is `&&`-joined (so they only run on it); else None. -B/-C are left out: they can reset an existing branch."""
+    inner = re.match(r'"command"\s*:\s*"(.*)"$', subject, re.S)  # subject is the JSON field text
+    m = _CREATE_OWNED_RE.match(inner.group(1)) if inner else None
+    if not m or not is_owned_branch(m.group(1)):
+        return None
+    rest = m.group(2) or ""
+    # shortcut: any ; | newline or lone & anywhere later (even inside a quoted message) refuses the exemption.
+    if re.search(r"[;|\n]|\\[nr]|(?<!&)&(?!&)", rest.replace("&&", "", 1) if rest else ""):
+        return None
+    if re.search(r"\bgit\s+(?:switch|checkout)\b", rest):  # a later switch moves off the new branch
+        return None
+    return m.group(1)
+
+
 def _event_guard_main():
     try:
         payload = read_payload()
@@ -787,6 +806,7 @@ def _event_guard_main():
     # --git-dir / --work-tree, or a cd / -C that could not be followed, acts on a repo other than
     # the one we just read the branch from, so the branch cannot justify anything.
     elsewhere = bool(_OTHER_REPO_RE.search(subject)) or moved_unclear
+    branch = _created_owned_branch(subject) or branch if not elsewhere else branch
     known = branch is not None and not elsewhere
     protected = known and is_protected_branch(branch, where)
     # A push naming the default branch as its destination writes to it from any branch.
@@ -821,7 +841,7 @@ def _event_guard_main():
             if marker == BRANCH_WRITE and known:
                 if protected:
                     refused.append(reason)
-                elif branch.startswith(owned_branch_prefixes() + (AUTOSAVE_BRANCH_PREFIX,)):
+                elif is_owned_branch(branch, (AUTOSAVE_BRANCH_PREFIX,)):
                     exempted.append(reason)
                 else:
                     not_mine.append(reason)
@@ -2088,6 +2108,80 @@ def handover_commit_check(payload):
             elif written is None:
                 commit_could_not_tell = detail
     return uncommitted, commit_could_not_tell
+
+
+_HANDOFF_BAD_RE = re.compile(
+    r"claude\.ai/(?:code/)?artifact/|claude\.ai/code/session|Co-Authored-By:\s*Claude|Generated with \[?Claude"
+    r"|Made with Claude", re.I)
+_HANDOFF_SECTIONS = ("what the work is for, where it stands, the next step, what is unverified, "
+                     "the issue numbers")
+
+
+def handoff_enabled():
+    return os.environ.get("HOUSE_RULES_HANDOFF", "on").strip().lower() not in ("off", "0", "false", "no")
+
+
+def handover_handoff_check(written_now, committed_now, cwd):
+    """Fix text ("" when saved) for the end-of-reply handoff checkpoint (#530): work pushed, note fresh and
+    clean, Today.md touched. Silent when the turn wrote and committed nothing, or HOUSE_RULES_HANDOFF=off.
+    Any git error is "could not tell", never a pass."""
+    import subprocess
+    if not handoff_enabled() or not (written_now or committed_now):
+        return ""
+
+    def git(*a):
+        r = subprocess.run(["git"] + list(a), cwd=cwd, capture_output=True, text=True, timeout=30)
+        return r.returncode, r.stdout.strip(), r.stderr.strip()
+
+    try:
+        rc, top, err = git("rev-parse", "--show-toplevel")
+        if rc:
+            return "could not tell if the work is saved (%s)" % err
+        rc, branch, err = git("rev-parse", "--abbrev-ref", "HEAD")
+        if rc:
+            return "could not tell if the work is saved (%s)" % err
+        note = "docs/5-today/handoff-%s.md" % branch.replace("/", "-")
+        fixes = []
+        rc, out, _e = git("rev-list", "@{u}..HEAD")
+        if rc:
+            where = ("you are on %s, so branch off to an AjsAgent/ branch first (git switch -c AjsAgent/<topic>), "
+                     "then " % branch if branch in ("main", "master") else "")
+            fixes.append("the branch has no upstream, so nothing is pushed: %spush it (git push -u origin HEAD)" % where)
+        elif out:
+            fixes.append("%d commit(s) are not pushed: git push" % len(out.splitlines()))
+        rc, last, err = git("log", "-1", "--format=%H", "--", note)
+        if rc:
+            return "could not tell if the work is saved (%s)" % err
+        if not last:
+            fixes.append("the note %s is missing: write and commit it with five sections (%s), no page or session "
+                         "links and no Claude credit" % (note, _HANDOFF_SECTIONS))
+        else:
+            rc, newer, err = git("rev-list", "%s..HEAD" % last)
+            if rc:
+                return "could not tell if the work is saved (%s)" % err
+            if newer:
+                fixes.append("the note %s is older than HEAD: update its five sections (%s) and commit it with the "
+                             "work" % (note, _HANDOFF_SECTIONS))
+            try:
+                with open(os.path.join(top, note), encoding="utf-8", errors="replace") as fh:
+                    m = _HANDOFF_BAD_RE.search(fh.read())
+            except OSError as exc:
+                return "could not tell if the work is saved (%s: %s)" % (type(exc).__name__, exc)
+            if m:
+                fixes.append('%s contains "%s": remove published-page links, session links and Claude credit'
+                             % (note, m.group(0)))
+        changed = [os.path.relpath(p, top).replace("\\", "/") if os.path.isabs(p) else p for p in written_now]
+        if committed_now:
+            rc, out, err = git("show", "--name-only", "--format=", "HEAD")
+            if rc:
+                return "could not tell if the work is saved (%s)" % err
+            changed += out.splitlines()
+        if (any(not c.startswith("docs/5-today/") for c in changed)
+                and "docs/5-today/Today.md" not in changed):
+            fixes.append("this turn changed files but not docs/5-today/Today.md: update it with what changed")
+        return "handoff not saved: " + "; ".join(fixes) if fixes else ""
+    except Exception as exc:
+        return "could not tell if the work is saved (%s: %s)" % (type(exc).__name__, exc)
 
 
 core.register_prompt(_scope_waiting_link)

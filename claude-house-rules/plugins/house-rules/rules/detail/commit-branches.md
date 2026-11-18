@@ -92,3 +92,11 @@ a write, the `creditcheck` hook reads the pull request or issue body back and sa
 footer is on it. The "with Claude" badge (the GitHub App's token) and the platform's creation
 footer cannot be removed from a cloud session, so the reply reports them instead of promising to
 remove them. Design: `docs/4-systems/guards.md`, "Credit on GitHub".
+
+## Saves and pickup (#527 to #531)
+
+On a PC each folder's work is saved on every edit (at most once a minute) and at once when a turn ends or a usage
+limit cuts it off, to `refs/house-rules/saves/<branch>/<folder id>` on GitHub; nothing is committed. A cloud session
+cannot push that ref, so on my own branch it commits `wip: autosave` and pushes the branch instead. A new session
+shows `docs/5-today/handoff-<branch>.md`, the newest save's facts and the files other folders' saves hold, each with a
+restore command it never runs itself. See `docs/4-systems/usage-handoff.md` in this plugin's repo.

@@ -70,6 +70,11 @@ _MD_CODE_SPAN_RE = re.compile(r"`[^`\n]+`")
 _MD_LEADING_HEADING_RE = re.compile(r"^\s*#+ .*\n+")
 
 
+def _pages_enabled():
+    # #537: the page rule, the 160-word rule and the page editor pass, switched apart from the design loop.
+    return os.environ.get("HOUSE_RULES_PAGES", "on").strip().lower() not in _TOGGLE_OFF
+
+
 def _plain_summary_enabled():
     return os.environ.get("HOUSE_RULES_PLAIN_SUMMARY", "on").strip().lower() not in _TOGGLE_OFF
 
@@ -184,7 +189,7 @@ def _editor_owed(written, tool_uses, reply):
         inp = block.get("input") if isinstance(block.get("input"), dict) else {}
         if block.get("name") in ("Agent", "Task") and str(inp.get("subagent_type", "")).endswith("editor"):
             return ""
-    pages = [os.path.basename(p) for p in written if _PLANS_PAGE_RE.search(str(p).replace("\\", "/"))]
+    pages = [os.path.basename(p) for p in written if _pages_enabled() and _PLANS_PAGE_RE.search(str(p).replace("\\", "/"))]
     if pages:
         return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
     if not _editor_enabled():  # #325: the long-reply trigger needs HOUSE_RULES_EDITOR=on
@@ -367,7 +372,7 @@ def handover_visual_check(written_now, turn_records):
 
 
 def handover_long_reply(payload, have_reply, reply_text):
-    return _long_reply_words(reply_text, _payload_cwd(payload)) if (have_reply and _loop_enabled()) else 0
+    return _long_reply_words(reply_text, _payload_cwd(payload)) if (have_reply and _loop_enabled() and _pages_enabled()) else 0
 
 
 core.register_post_tool("artifact", _page_writing_note)

@@ -1,0 +1,105 @@
+{
+ "title": "Feature Switches Build Plan",
+ "eyebrow": "Build plan for approval \u00b7 feature switches (#535) \u00b7 three steps, nothing built yet",
+ "approval": "Build plan approved: Feature switches",
+ "replyPrefix": "Build plan approved: Feature switches",
+ "reply": "",
+ "short": {
+  "lead": "You approved the feature switches with choices 1A, 2A and 3A. Here is how they get built: three steps, one issue each (#536, #537 and #538), on the branch AjsAgent/phase-3-handoff with the rest of phase 3, and tested in phase 3's QA. The hook script hook.py already reads its input first. One new call right after that read sets every existing HOUSE_RULES_ setting for that prompt. Every check then obeys the switches without being edited. Only the rule for writing pages needs a new setting, because today it is switched together with the design loop. You have no new choices to make on this page.",
+  "hint": "Tap a step to see what it changes.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "loop",
+    "Step 1",
+    "Saved anywhere, applied everywhere",
+    "",
+    "#536: a switch you type in any folder is saved for that folder, or for the whole machine if you add \"everywhere\". Once the hook has read its input, one call turns each switch group into the HOUSE_RULES_ settings it covers.",
+    "Nothing from you."
+   ],
+   [
+    "search",
+    "Step 2",
+    "Pages on their own",
+    "",
+    "#537: a new HOUSE_RULES_PAGES setting. Off means three things stop: the page-writing rule, the rule that a reply of 160 words or more needs a page, and the editor pass on pages. Approvals still move the feature to its next stage.",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 3",
+    "What you see",
+    "",
+    "#538: the note on each prompt says which groups are off and where each was set. Switched-off rule text is left out of the session, and /house-rules:mode lists every group.",
+    "Nothing from you."
+   ],
+   [
+    "flask",
+    "Prove it",
+    "Tested as the rest of phase 3",
+    "you",
+    "Each step's cases fail before the change and pass after; the full verify.py passes. A live headless session in a folder that is not a git repository shows \"pages off\" working.",
+    "Your QA verdict, with phase 3's."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Step 1: Saved anywhere, applied everywhere (#536)",
+   "No folder, git or not, is stuck with every feature on.",
+   [
+    "Two switches, git repositories only",
+    "Seven groups plus a master switch, in any folder or machine-wide"
+   ],
+   "In core.py, the function _mode_file now finds a switch file outside git folders too. A line ending in \"everywhere\" writes the copy in the Claude config folder. A small table maps each group to its settings. The new call in hook.py, right after core.keep_payload(), applies them. A folder's switch beats a machine-wide one, and a machine-wide one beats settings.json. The guards and the credit check belong to no group, so they stay on."
+  ],
+  [
+   "chg",
+   "Step 2: Pages on their own (#537)",
+   "You can keep approvals and drop pages.",
+   [
+    "Pages switch only with the whole design loop",
+    "HOUSE_RULES_PAGES turns the page rule off alone"
+   ],
+   "handover_page_row, the 160-word rule and the page editor check read the new setting as well as the loop's."
+  ],
+  [
+   "chg",
+   "Step 3: What you see (#538)",
+   "You always know what is off and why.",
+   [
+    "The note names only two switches",
+    "Every off group, and where it was set"
+   ],
+   "The prompt note (_mode_note in the code) and the filter that leaves out switched-off rule text now know the new groups. The command /house-rules:mode prints a table of all the groups."
+  ],
+  [
+   "new",
+   "How it is tested",
+   "The same checks as the rest of phase 3.",
+   null,
+   "Cases written to fail first, the full verify.py, one live headless session outside git, and your QA."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Three steps make any feature switchable in any folder, with the safety guards always on.",
+  "changing": "Nothing yet.",
+  "blocking": "Your approval of this plan.",
+  "next": "I build the three steps, then go on to phase 3's QA.",
+  "todo": [
+   "Read the steps.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it. It starts \"Build plan approved: Feature switches\"."
+  ]
+ }
+}

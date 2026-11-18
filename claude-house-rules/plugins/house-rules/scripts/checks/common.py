@@ -81,8 +81,16 @@ SKIPPED = []
 IN_REPO = os.path.isfile(os.path.join(ROOT, ".claude-plugin", "marketplace.json"))
 
 
+_ONLY = os.environ.get("HOUSE_RULES_VERIFY_ONLY", "").lower()   # verify.py --only: run all, report only matching titles
+_REAL_STDOUT = sys.stdout
+
+
 def report(result, title):
     global STEP, FAILURES
+    sys.stdout = _REAL_STDOUT
+    if _ONLY and _ONLY not in title.lower():
+        sys.stdout = open(os.devnull, "w")   # hides this case's detail lines too, until the next report()
+        return
     STEP += 1
     if result == "FAIL":
         FAILURES += 1
@@ -138,6 +146,7 @@ def run_hook(event, payload="", env=None):
     # #397: a sandbox that is itself a project thread would otherwise write test work trails into
     # the real shared project folder.
     e.setdefault("HOUSE_RULES_WORKTRAIL_DIR", os.path.join(tempfile.gettempdir(), "house-rules-verify-worktrail"))
+    e.setdefault("HOUSE_RULES_HANDOFF", "off")  # #530: other cases test other checkpoints; handoff cases set it on
     proc = subprocess.run(
         [sys.executable, HOOK, event],
         input=payload.encode("utf-8"),
@@ -200,6 +209,7 @@ def _repo_on(name, head_line):
 
 REPO_THEIRS = _repo_on("theirs", "ref: refs/heads/main\n")
 REPO_MINE = _repo_on("mine", "ref: refs/heads/claude/some-topic\n")
+REPO_CLOUD = _repo_on("cloud", "ref: refs/heads/ajsagent/x\n")
 REPO_DETACHED = _repo_on("detached", "9f1c0de0000000000000000000000000000000ab\n")
 REPO_THEIRS_FEATURE = _repo_on("theirs-feature", "ref: refs/heads/feature/theirs\n")
 REPO_NONE = os.path.join(_FIXTURE_ROOT, "not-a-repo")
@@ -436,6 +446,7 @@ def _project_env(root, **extra):
     e = dict(os.environ)
     e["CLAUDE_PROJECT_DIR"] = root
     e.pop("HOUSE_RULES_COMMIT_CHECK", None)
+    e.pop("CLAUDE_CODE_REMOTE", None)  # a cloud sandbox sets it; cases that want the cloud path pass it in
     e.update(extra)
     return e
 
@@ -816,6 +827,7 @@ _e293 = dict(os.environ, HOUSE_RULES_ATTRIBUTION="on", HOUSE_RULES_ISSUES="on", 
 
 def finish():
     """Print this part's verdict and exit. The same RESULT lines verify.py always printed."""
+    sys.stdout = _REAL_STDOUT
     print()
     print("-" * 32)
     if FAILURES == 0 and not SKIPPED:

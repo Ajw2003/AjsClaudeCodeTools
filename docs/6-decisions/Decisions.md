@@ -7,6 +7,91 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-17 - QA failed again: say the work is saved, and have Claude announce the pickup
+
+**Context.** With the claude.ai account copy of house-rules switched off, the desktop app ran 2.81.1: it saved and
+pushed, and a new session quoted the pickup note. Two things still read wrong to aj: the end-of-turn line said only
+"nothing changed since the last save", and the pickup's on-screen line never showed, because the desktop app shows no
+session-start notice. aj typed "QA failed: Feature switches. Reword the end-of-turn save line and have Claude announce
+the pickup."
+
+**Decision.** The end-of-turn line says the work is saved, on GitHub or on this computer only, with the file count and
+save time. The pickup note ends by asking Claude to open its first reply with one line saying what it found. Rejected: a
+fresh save every turn (a push on every read-only reply). **Status.** Build, plugin 2.81.2.
+
+---
+
+## 2026-11-17 - QA failed: the desktop app does not save; three fixes before QA again
+
+**Context.** aj's QA on the PC (`docs/plans/2026-11-17-phase-3-qa-steps.md`, step 8) found that sessions in the Claude
+desktop app saved nothing and picked nothing up, and nothing on screen said so. The same 2.81.0 code saved from a hand
+run, through `run.sh`, and from a CLI session (`claude -p --debug-file`), so the save code works on Windows; the cause in
+the desktop app is still not known. aj typed "QA failed: Feature switches. The desktop app does not save; fix
+PowerShell matching, save traces and the branch-build version check."
+
+**Decision.** Build exactly those three. (1) The save also runs after the `PowerShell` tool, the shell tool on Windows,
+which its matcher in `hooks/hooks.json` never named. (2) Every save and pickup decision prints one line (saved and
+pushed, saved on this computer, nothing changed, not a git repository, nothing to pick up), so the next desktop run shows
+where it stops; `HOUSE_RULES_TRACE=off` silences them. This bends "silence means looked, nothing to do" for these three
+hooks only, because a silent save is how this failure hid. (3) versioncheck compares a branch build with that branch on
+GitHub, read from `known_marketplaces.json`, never with main, so it no longer asks a 2.81.0 branch build to update to
+2.80.0. Also: a comma now ends a feature name in aj's loop lines, as promised when "QA failed: Feature switches, the
+desktop..." was read as one long name. **Status.** Build.
+
+---
+
+## 2026-11-17 - Saves include every new file git does not ignore (reverses #477's file-tool-only rule)
+
+**Context.** The real-GitHub cloud test (`docs/plans/2026-11-16-phase-3-live-tests/live_cloud_github-result.txt`) found
+that a file the agent makes with a shell command was never saved and nothing said so: since #477 (A11) a save held only
+tracked changes and files written with Write, Edit or NotebookEdit, so a stray token or data dump could not reach GitHub.
+
+**Decision.** aj chose "Save them too": every new file git does not ignore is saved, on the PC, in a cloud session and
+on helper branches. Kept: a file over the big-file limit (50 MB, `BIG_FILE_BYTES`) is left out and named, so phase 2's
+"big files only on aj's word" still holds. Rejected: naming skipped files without saving them, and leaving the gap.
+The risk aj accepted: a secret that is not git-ignored is pushed with the save. **Status.** Build, in phase 3's QA.
+
+---
+
+## 2026-11-16 - Feature switches build plan approved
+
+aj wrote "Build plan approved: Feature switches" on `docs/plans/2026-11-16-feature-switches-build-plan.html`: steps
+#536, #537 and #538 under #535, built on `AjsAgent/phase-3-handoff`, tested in phase 3's QA. **Status.** Build.
+
+---
+
+## 2026-11-16 - Feature switches design approved
+
+aj asked for a stop-gap: every plugin feature can be switched off or on easily in any folder, not only a git repo,
+because builders and pages are stifling some projects until pages can fit each project. aj wrote "Design approved:
+Feature switches 1A 2A 3A" on `docs/plans/2026-11-16-feature-switches.html`. 1A: a typed switch is saved in the folder
+(git or not), or machine-wide with "everywhere"; the folder's own switch wins. 2A: seven groups plus a master "house
+rules" switch. 3A: the destructive-command and main-branch guards are never switched off from chat. Rejected: folder
+only (1B), machine-wide only (1C), a switch per setting (2B), a master switch only (2C), a master that also drops the
+guards (3B). Built on `AjsAgent/phase-3-handoff`, tested in phase 3's QA. **Status.** Plan.
+
+---
+
+## 2026-11-16 - Phase 3 build plan approved
+
+aj wrote "Build plan approved: Phase 3" on `docs/plans/2026-11-16-phase-3-build-plan.html`: twelve steps, #527 to #534
+and #520 to #523, built on `AjsAgent/phase-3-handoff`, one QA at the end. **Status.** Build.
+
+---
+
+## 2026-11-16 - Phase 3 design approved
+
+aj wrote "Design approved: Phase 3 1A 2A 3B 4A" on the design page `docs/plans/2026-11-16-phase-3-design.html`.
+1A: a cloud session saves by committing its work in progress to its own branch and uploading it, because the hidden
+save ref is refused from cloud sessions (Research.md, 2026-11-12 and its 2026-11-16 note); the PC keeps the hidden ref.
+2A: the handoff code is copied from `AjsAgent/session-handoff` onto `AjsAgent/phase-3-handoff`, cut from `main`, after a
+keep, change and drop list. 3B: one build plan and one QA for the whole phase, not one per part. 4A: the work goes on
+`AjsAgent/phase-3-handoff`, uploaded from this cloud session with aj's permission. Rejected: a separate save branch per
+folder (1B, untested and clutters the branch list), merging the old branch (2B), and one plan per part (3A).
+**Status.** Plan.
+
+---
+
 ## 2026-11-12 - Cloud saves for the session handoff move to phase 3
 
 **Context.** The handoff re-test found that a cloud session's push to `refs/house-rules/autosave/<branch>` is refused,
